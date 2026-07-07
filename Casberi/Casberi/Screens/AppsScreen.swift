@@ -1,0 +1,444 @@
+import SwiftUI
+import SwiftData
+
+/// Apps — store anatomy (docs/handoff-apps-page.md, mock M4): the connected
+/// strip (management) sits above a hairline; everything below the "Discover"
+/// heading is the store — a swipeable story carousel, a Browse category
+/// shelf, and one ranked "For you" chart. The grouped directory and the
+/// hardcoded featured hero died with it (singleton section headers, a wall of
+/// "Soon"); `CatalogScreen` is deleted — this page IS the catalog.
+///
+/// LAYOUT LAW (the doc's): no fixed heights anywhere — every card, pill, and
+/// row sizes to its content plus token padding (minHeight only where a target
+/// needs it). Capsule verbs are honest: Connect / Pair / Fix / Open / Soon.
+struct AppsScreen: View {
+    @Environment(BridgeStore.self) private var store
+    @Environment(\.modelContext) private var modelContext
+    @State private var pairing = false
+    @State private var selectedCategory: String?
+    @State private var storyID: String?
+    #if DEBUG
+    @State private var probe: AppsProbe?
+    #endif
+
+    // MARK: - Categories (merge map over Offer.group — Browse + chart filter ONLY,
+    // never vertical section headers)
+
+    private static let categories: [(name: String, exemplar: String, groups: Set<String>)] = [
+        ("Your life",   "Photos",  ["Your photos", "Your schedule", "Your wallet"]),
+        ("Your agents", "Claude",  ["Your agent", "Your machines"]),
+        ("Your mail",   "Gmail",   ["Your mail"]),
+        ("Your work",   "GitHub",  ["Your work"]),
+        ("Your media",  "Spotify", ["Your saves", "Your watching", "Your listening", "Your messages"]),
+    ]
+
+    private func category(of offer: BridgeCatalog.Offer) -> String {
+        Self.categories.first { $0.groups.contains(offer.group) }?.name ?? "Your life"
+    }
+
+    // MARK: - Ranking (the For-you chart's one order)
+
+    private struct Ranked: Identifiable {
+        let offer: BridgeCatalog.Offer
+        let bridge: BridgeApp?
+        let tier: Int
+        var id: String { offer.name }
+    }
+
+    /// Claude is pair-able (MCP), so it acts even though no bridge is wired.
+    private func actionable(_ offer: BridgeCatalog.Offer) -> Bool {
+        offer.connectable || offer.name == "Claude"
+    }
+
+    /// The chart is SMART (ruling 2026-07-06): it never repeats what the
+    /// strip already shows. Connected apps — healthy or broken — live in the
+    /// strip (breakage = the attention-dot grammar + Fix on the detail);
+    /// the chart is only what you can ADD: ready bridges, then coming ones.
+    private var ranked: [Ranked] {
+        BridgeCatalog.offers.compactMap { offer in
+            let bridge = store.bridges.first { $0.name == offer.name }
+            // In the strip → not in the chart.
+            if let bridge, bridge.status != .paused { return nil }
+            let tier = actionable(offer) ? 1 : 3           // ready → Connect / Pair; coming → Soon
+            return Ranked(offer: offer, bridge: bridge, tier: tier)
+        }
+        .sorted { $0.tier < $1.tier }
+    }
+
+    private var chart: [Ranked] {
+        guard let selectedCategory else { return ranked }
+        return ranked.filter { category(of: $0.offer) == selectedCategory }
+    }
+
+    private var toConnectCount: Int {
+        ranked.filter { $0.tier == 1 }.count
+    }
+
+    // MARK: - Stories (selection rules; never a "Soon" app, never a connected one)
+
+    private struct Story: Identifiable {
+        enum Kind { case bridge(BridgeCatalog.Offer), pair }
+        let kind: Kind
+        var id: String {
+            switch kind { case .bridge(let o): o.name; case .pair: "pair" }
+        }
+    }
+
+    private var stories: [Story] {
+        var out: [Story] = []
+        // (1) + (3): connectable bridges not yet connected, catalog order.
+        for entry in ranked where entry.tier <= 1 && entry.offer.connectable {
+            out.append(Story(kind: .bridge(entry.offer)))
+        }
+        // (2) Pair-a-client when no client is paired (replaces pairEntryRow).
+        let clientPaired = store.bridges.contains { $0.name == "Claude" && $0.status == .connected }
+        if !clientPaired {
+            out.insert(Story(kind: .pair), at: min(1, out.count))
+        }
+        return Array(out.prefix(3))
+    }
+
+    // MARK: - Body
+
+    /// The strip = active seats only. Paused bridges aren't connected — they
+    /// move to the chart as Connect, so nothing appears twice on this page.
+    private var connected: [BridgeApp] {
+        store.bridges.filter { $0.status != .paused }
+            .sorted { $0.status.rank < $1.status.rank }
+    }
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: DS.Space.s6) {
+                if !connected.isEmpty { connectedStrip }
+                discoverDivide
+                if !stories.isEmpty {
+                    storyCarousel
+                    pageDots
+                }
+                browseShelf
+                forYouChart
+            }
+            .padding(.vertical, DS.Space.s4)
+            .padding(.bottom, ShellMetrics.bottomInset)
+        }
+        .scrollIndicators(.hidden)
+        .dsPageBackground()
+        .navigationTitle("Apps")
+        .navigationBarTitleDisplayMode(.large)
+        .sheet(isPresented: $pairing) { PairClientSheet() }
+        #if DEBUG
+        .navigationDestination(item: $probe) { p in
+            switch p {
+            case .wallet: ZerionScreen()
+            case .app(let name):
+                if let offer = BridgeCatalog.offers.first(where: { $0.name == name }) {
+                    AppDetailScreen(offer: offer)
+                }
+            }
+        }
+        #endif
+        .onAppear {
+            #if DEBUG
+            if UserDefaults.standard.bool(forKey: "openPair") { pairing = true }
+            if UserDefaults.standard.bool(forKey: "openWallet") { probe = .wallet }
+            if let name = UserDefaults.standard.string(forKey: "openApp") { probe = .app(name) }
+            #endif
+        }
+    }
+
+    // MARK: - Connected strip (management — it never merchandises)
+
+    private var connectedStrip: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+            sectionHeader("CONNECTED")
+                .padding(.horizontal, DS.Space.s4)
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(alignment: .top, spacing: DS.Space.s4) {
+                    ForEach(connected) { app in
+                        NavigationLink { connectedDestination(id: app.id) } label: {
+                            connectedChip(app)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(.vertical, 4)
+            }
+            .contentMargins(.horizontal, DS.Space.s4, for: .scrollContent)
+        }
+    }
+
+    private func connectedChip(_ app: BridgeApp) -> some View {
+        let paused = app.status == .paused
+        return VStack(spacing: DS.Space.s1) {
+            BridgeIcon(name: app.name, size: 56)
+                .overlay(alignment: .topTrailing) {
+                    if !paused {
+                        Circle()
+                            .fill(app.status.color)
+                            .frame(width: 12, height: 12)
+                            .overlay(Circle().strokeBorder(DS.themedPage, lineWidth: 2))
+                            .offset(x: 3, y: -3)
+                    }
+                }
+            Text(paused ? "Paused" : app.name)
+                .dsText(.subhead13)
+                .foregroundStyle(paused ? DS.textTertiary : DS.textPrimary)
+                .lineLimit(1)
+        }
+        .frame(width: 64)
+        .opacity(paused ? 0.5 : 1)
+    }
+
+    @ViewBuilder
+    private func connectedDestination(id: String) -> some View {
+        if id == "zerion" {
+            ZerionScreen()
+        } else {
+            BridgeDetailScreen(bridgeID: id)
+        }
+    }
+
+    // MARK: - The divide (management above, store below)
+
+    private var discoverDivide: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s4) {
+            if !connected.isEmpty {
+                Rectangle().fill(DS.fillLine).frame(height: 1)
+                    .padding(.horizontal, DS.Space.s4)
+            }
+            HStack(alignment: .firstTextBaseline) {
+                Text("Discover").dsText(.heading22).foregroundStyle(DS.textPrimary)
+                Spacer()
+                Text("\(toConnectCount) to connect")
+                    .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+            }
+            .padding(.horizontal, DS.Space.s4)
+        }
+    }
+
+    // MARK: - Story carousel (the ONE brand-gradient license)
+
+    private var storyCarousel: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(alignment: .top, spacing: DS.Space.s3) {
+                ForEach(stories) { story in
+                    storyCard(story)
+                        .containerRelativeFrame(.horizontal) { length, _ in length - 12 }
+                        .frame(maxHeight: .infinity, alignment: .topLeading)
+                        .id(story.id)
+                }
+            }
+            .fixedSize(horizontal: false, vertical: true)
+            .scrollTargetLayout()
+        }
+        .scrollTargetBehavior(.viewAligned)
+        .scrollPosition(id: $storyID)
+        .contentMargins(.horizontal, DS.Space.s4, for: .scrollContent)
+    }
+
+    @ViewBuilder
+    private func storyCard(_ story: Story) -> some View {
+        switch story.kind {
+        case .bridge(let offer):
+            storyCardBody(
+                eyebrow: "New",
+                headline: offer.tagline,
+                iconName: offer.name,
+                name: offer.name,
+                brand: BridgeGlyph.color(for: offer.name),
+                verb: .connect
+            ) { BridgeConnect.connect(offer, store: store, context: modelContext) }
+        case .pair:
+            storyCardBody(
+                eyebrow: "Pair a client",
+                headline: "Let Claude or Raycast reach your things",
+                iconName: "Claude",
+                name: "Claude",
+                brand: DS.tint,
+                verb: .pair
+            ) { pairing = true }
+        }
+    }
+
+    /// LAYOUT LAW: content + token padding define the card — no fixed heights,
+    /// nothing absolutely positioned, no clipping. The padding is the edge.
+    private func storyCardBody(eyebrow: String, headline: String, iconName: String,
+                               name: String, brand: Color, verb: CapsuleVerb,
+                               action: @escaping () -> Void) -> some View {
+        VStack(alignment: .leading, spacing: DS.Space.s3) {
+            Text(eyebrow.uppercased())
+                .dsText(.label12).kerning(1)
+                .foregroundStyle(.white.opacity(0.7))
+            Text(headline)
+                .font(.system(size: 24, weight: .heavy))
+                .foregroundStyle(.white)
+                .lineLimit(2)
+                .minimumScaleFactor(0.7)
+                .fixedSize(horizontal: false, vertical: true)
+            // App-Store presence: the card breathes — the headline sits high,
+            // the footer sits low, air between them (minHeight, never fixed).
+            Spacer(minLength: DS.Space.s8)
+            HStack(spacing: DS.Space.s2) {
+                BridgeIcon(name: iconName, size: 32)
+                Text(name).dsText(.callout15).foregroundStyle(.white)
+                Spacer()
+                Button(action: action) {
+                    Text(verb.label)
+                        .dsText(.label12).foregroundStyle(brand)
+                        .padding(.horizontal, DS.Space.s4)
+                        .frame(minHeight: 32)
+                        .background(.white, in: Capsule(style: .continuous))
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(DS.Space.s4)
+        .frame(maxWidth: .infinity, minHeight: 220, alignment: .topLeading)
+        .background(
+            LinearGradient(colors: [brand, brand.opacity(0.65)],
+                           startPoint: .topLeading, endPoint: .bottomTrailing),
+            in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous)
+        )
+    }
+
+    private var pageDots: some View {
+        HStack(spacing: DS.Space.s2) {
+            ForEach(stories) { story in
+                Circle()
+                    .fill(story.id == (storyID ?? stories.first?.id) ? DS.tint : DS.gray300)
+                    .frame(width: 7, height: 7)
+            }
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    // MARK: - Browse shelf (categories live HERE and in the filter, nowhere else)
+
+    private var browseShelf: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: DS.Space.s2) {
+                ForEach(Self.categories, id: \.name) { cat in
+                    let count = BridgeCatalog.offers.filter { cat.groups.contains($0.group) }.count
+                    let active = selectedCategory == cat.name
+                    HStack(spacing: DS.Space.s2) {
+                        Image(systemName: BridgeGlyph.symbol(for: cat.exemplar))
+                            .font(.system(size: 15, weight: .medium))
+                            .foregroundStyle(active ? DS.page : BridgeGlyph.color(for: cat.exemplar))
+                        Text(cat.name)
+                            .dsText(.callout15).fontWeight(.medium)
+                            .foregroundStyle(active ? DS.page : DS.textPrimary)
+                        Text("\(count)")
+                            .dsText(.subhead13)
+                            .foregroundStyle(active ? DS.page.opacity(0.7) : DS.textTertiary)
+                    }
+                    .padding(.horizontal, DS.Space.s3)
+                    .frame(minHeight: 44)
+                    .background(active ? DS.textPrimary : DS.surfaceSheet,
+                                in: RoundedRectangle(cornerRadius: DS.Radius.control, style: .continuous))
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        DSHaptic.selection()
+                        withAnimation(DS.Motion.standard) {
+                            selectedCategory = active ? nil : cat.name
+                        }
+                    }
+                    .accessibilityLabel("\(cat.name), \(count) apps")
+                }
+            }
+        }
+        .contentMargins(.horizontal, DS.Space.s4, for: .scrollContent)
+    }
+
+    // MARK: - "For you" chart (one ranked list — the store's spine)
+
+    private var forYouChart: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+            sectionHeader((selectedCategory ?? "For you").uppercased())
+                .padding(.horizontal, DS.Space.s4)
+            VStack(spacing: DS.Space.s1) {
+                ForEach(Array(chart.enumerated()), id: \.element.id) { index, entry in
+                    chartRow(rank: index + 1, entry: entry)
+                }
+            }
+            .padding(.vertical, DS.Space.s1)
+            .background(DS.surfaceSheet,
+                        in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+            .padding(.horizontal, DS.Space.s4)
+        }
+    }
+
+    private func chartRow(rank: Int, entry: Ranked) -> some View {
+        let soon = entry.tier == 3
+        return HStack(spacing: DS.Space.s3) {
+            // Row tap (anywhere but the capsule) → the product page.
+            NavigationLink { AppDetailScreen(offer: entry.offer) } label: {
+                HStack(spacing: DS.Space.s3) {
+                    Text("\(rank)")
+                        .dsText(.body17).fontWeight(.bold)
+                        .foregroundStyle(DS.textTertiary)
+                        .frame(width: 20, alignment: .leading)
+                    BridgeIcon(name: entry.offer.name, size: 44)
+                        .saturation(soon ? 0 : 1)
+                        .opacity(soon ? 0.5 : 1)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(entry.offer.name)
+                            .dsText(.body17).fontWeight(.semibold)
+                            .foregroundStyle(soon ? DS.textSecondary : DS.textPrimary)
+                            .lineLimit(1)
+                        Text(subline(entry))
+                            .dsText(.subhead13)
+                            .foregroundStyle(entry.tier == 0 ? DS.attention : DS.textTertiary)
+                            .lineLimit(1)
+                    }
+                    Spacer(minLength: 0)
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            capsule(entry)
+        }
+        .padding(.horizontal, DS.Space.s4)
+        .padding(.vertical, DS.Space.s2)
+    }
+
+    /// Sublines are honest states or the tagline — never marketing fluff.
+    private func subline(_ entry: Ranked) -> String {
+        switch entry.tier {
+        case 0:  "Needs reconnecting"
+        case 2:  entry.bridge?.statusLine ?? "Connected"
+        default: entry.offer.tagline
+        }
+    }
+
+    @ViewBuilder
+    private func capsule(_ entry: Ranked) -> some View {
+        switch entry.tier {
+        case 1:
+            if entry.offer.name == "Claude" {
+                VerbCapsule(verb: .pair) { pairing = true }
+            } else {
+                VerbCapsule(verb: .connect) {
+                    BridgeConnect.connect(entry.offer, store: store, context: modelContext)
+                }
+            }
+        default:
+            VerbCapsule(verb: .soon)
+        }
+    }
+
+    private func sectionHeader(_ text: String) -> some View {
+        Text(text)
+            .dsText(.label12).kerning(0.7)
+            .foregroundStyle(DS.textSecondary)
+    }
+
+    #if DEBUG
+    enum AppsProbe: Identifiable, Hashable {
+        case wallet, app(String)
+        var id: String {
+            switch self { case .wallet: "wallet"; case .app(let n): "app:\(n)" }
+        }
+    }
+    #endif
+}

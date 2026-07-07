@@ -1,0 +1,98 @@
+import SwiftUI
+
+/// Liquid glass and surface treatments, expressed as tokens so no component
+/// reaches for a material, blur radius, or highlight directly.
+///
+/// On iOS 26+ the shell wears the system's real Liquid Glass (`glassEffect`,
+/// interactive); earlier systems get the material recipe (translucent fill,
+/// blur, highlight stroke). Same call site either way — the token decides.
+///
+/// Hairline separators died by amendment: rows separate by spacing and press
+/// fills, groups by their card surfaces. Nothing draws a line.
+extension View {
+
+    /// The floating glass treatment for the composer pill and the tab capsule.
+    /// Pass a `glassID` + namespace to join the shell's glass morph: elements
+    /// sharing a container flow between shapes instead of swapping.
+    @ViewBuilder
+    func dsGlass(cornerRadius: CGFloat,
+                 glassID: String? = nil, in namespace: Namespace.ID? = nil) -> some View {
+        let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+        if #available(iOS 26.0, *) {
+            if let glassID, let namespace {
+                self
+                    .glassEffect(.regular.interactive(), in: shape)
+                    .glassEffectID(glassID, in: namespace)
+            } else {
+                self.glassEffect(.regular.interactive(), in: shape)
+            }
+        } else {
+            self
+                .background(.ultraThinMaterial, in: shape)
+                .background(DS.glassBg, in: shape)
+                .overlay(shape.strokeBorder(DS.glassStroke, lineWidth: 1))
+                .clipShape(shape)
+                .shadow(color: .black.opacity(0.4), radius: 12, x: 0, y: 8)
+        }
+    }
+
+    /// Tinted prominent glass — the one primary action sitting on a glass
+    /// surface (the composer's Save). Falls back to a flat tint fill.
+    @ViewBuilder
+    func dsGlassProminent(tint: Color, cornerRadius: CGFloat) -> some View {
+        let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+        if #available(iOS 26.0, *) {
+            self.glassEffect(.regular.tint(tint).interactive(), in: shape)
+        } else {
+            self.background(tint, in: shape)
+        }
+    }
+}
+
+/// Wraps the shell's floating elements so their glass merges and morphs as one
+/// substance (iOS 26). Below 26 it is a plain passthrough.
+struct DSGlassContainer<Content: View>: View {
+    var spacing: CGFloat = DS.Space.s3
+    @ViewBuilder var content: Content
+
+    var body: some View {
+        if #available(iOS 26.0, *) {
+            GlassEffectContainer(spacing: spacing) { content }
+        } else {
+            content
+        }
+    }
+}
+
+extension View {
+    /// The one sheet-surface treatment for cards, tiles, and trays.
+    /// No border (anti-pattern: borders on cards) — the fill carries elevation.
+    /// Content never wears glass — glass is the floating layer only.
+    func dsCard(cornerRadius: CGFloat = DS.Radius.card) -> some View {
+        background(
+            DS.surfaceSheet,
+            in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+        )
+    }
+
+    /// A modal sheet / tray surface with the overlay shadow.
+    func dsSheetSurface() -> some View {
+        let shape = RoundedRectangle(cornerRadius: DS.Radius.sheet, style: .continuous)
+        return self
+            .background(DS.surfaceSheet, in: shape)
+            .clipShape(shape)
+            .shadow(color: .black.opacity(0.55), radius: 16, x: 0, y: 12)
+    }
+}
+
+extension View {
+    /// iOS 26 soft scroll edge — content melts under the status bar edge.
+    @ViewBuilder
+    func dsSoftTopEdge() -> some View {
+        if #available(iOS 26.0, *) {
+            self.scrollEdgeEffectStyle(.soft, for: .top)
+        } else {
+            self
+        }
+    }
+}

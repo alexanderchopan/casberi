@@ -1,0 +1,56 @@
+import Foundation
+import SwiftData
+
+/// The one store, shared between the app and the share extension through the
+/// app group — capture routes here from every surface (S3), and the corpus
+/// stays on device (goal 6). Falls back to the local default store when the
+/// group container is unavailable (e.g. unsigned builds), so the app never
+/// fails to launch over an entitlement.
+enum SharedStore {
+    static let appGroup = "group.com.casberi.app"
+    /// The CloudKit container the synced store mirrors into (M1). Matches the
+    /// iCloud capability added in Xcode; until that capability exists, opening a
+    /// CloudKit-backed container throws and we fall back to a local store.
+    static let cloudContainerID = "iCloud.com.casberi.app"
+
+    /// The person's sync choice (the Data tray toggle). Off by default — the
+    /// corpus stays on device until they opt in AND the capability is present.
+    static var syncEnabled: Bool {
+        UserDefaults.standard.bool(forKey: "icloud.sync")
+    }
+
+    /// The build's CloudKit readiness — the ship gate. CloudKit mirroring sets
+    /// up on a background queue and *traps* (doesn't throw) when the iCloud
+    /// container entitlement is absent, so `try?` can't guard it, and iOS has no
+    /// reliable runtime entitlement read. So this is an explicit switch:
+    ///
+    ///   FLIP TO `true` ONCE the iCloud + CloudKit capability is added in Xcode
+    ///   (target → Signing & Capabilities → + Capability → iCloud → CloudKit,
+    ///   container `iCloud.com.casberi.app`). Until then it stays `false` and
+    ///   the corpus is local no matter what the toggle says — no crash.
+    ///
+    /// Real bytes move only when BOTH this is true AND the person opted in.
+    /// FLIPPED TRUE 2026-07-06 — the iCloud + CloudKit capability is now in the
+    /// build (container `iCloud.com.casberi.app`, verified in Casberi.entitlements).
+    static let cloudKitReady = true
+
+    static func container() throws -> ModelContainer {
+        // Engage CloudKit only when the person opted in AND the build carries
+        // the capability. Missing either, stay local — the toggle is honest
+        // final UI, and this is the ship gate that keeps a live toggle from
+        // crashing (or lying) before the engine exists.
+        if syncEnabled, cloudKitReady {
+            return try make(cloudKit: .private(cloudContainerID))
+        }
+        return try make(cloudKit: .none)
+    }
+
+    private static func make(cloudKit: ModelConfiguration.CloudKitDatabase) throws -> ModelContainer {
+        let groupURL = FileManager.default
+            .containerURL(forSecurityApplicationGroupIdentifier: appGroup)
+        let config = groupURL != nil
+            ? ModelConfiguration(groupContainer: .identifier(appGroup), cloudKitDatabase: cloudKit)
+            : ModelConfiguration(cloudKitDatabase: cloudKit)
+        return try ModelContainer(for: Thing.self, configurations: config)
+    }
+}

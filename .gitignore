@@ -1,0 +1,17 @@
+# macOS
+.DS_Store
+
+# Xcode user state
+xcuserdata/
+*.xcuserstate
+*.xcscmblueprint
+
+# Build products (builds go to ~/Library/Developer/CasberiDD — never in-repo)
+build/
+DerivedData/
+
+# Verify script output
+scripts/output/
+
+# Claude Code personal settings
+.claude/settings.local.json
