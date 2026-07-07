@@ -1,6 +1,6 @@
 # Handoff — Shaped Feeds (Feed screen, per-source compositions + kind-aware All)
 
-For Claude Code. Read alongside `docs/build-brief.md` and `docs/prd-draft-v3.md`.
+For Claude Code. Read alongside `docs/build-brief.md` and `docs/prd.md`.
 Decisions below were made against rendered mockups (A/P/Z/C/G variants reviewed);
 this doc is the source of truth for the Feed screen and the PATTERN for deriving
 sources not specified here (Safari, Notes, You, OpenClaw, Bankr).

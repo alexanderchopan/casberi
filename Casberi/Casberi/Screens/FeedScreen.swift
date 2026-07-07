@@ -27,6 +27,7 @@ struct FeedScreen: View {
     @State private var doorPush: HomeRoute.Push?
     @State private var liftedID: UUID?
     @State private var quickTagThing: Thing?
+    @State private var moreThing: Thing?
     @Namespace private var zoomNS
     @Environment(\.openURL) private var openURL
 
@@ -215,9 +216,29 @@ struct FeedScreen: View {
             ThingSheetView(thing: thing)
                 .navigationTransition(.zoom(sourceID: thing.id, in: zoomNS))
         }
-        // The leading swipe's quick-tag tray — tag without opening the thing.
+        // The swipe's quick-tag tray — tag without opening the thing.
         .sheet(item: $quickTagThing) { thing in
             QuickTagSheet(thing: thing)
+        }
+        // The swipe's More — the read verbs, Mail-style.
+        .confirmationDialog(
+            moreThing?.title ?? "",
+            isPresented: Binding(get: { moreThing != nil },
+                                 set: { if !$0 { moreThing = nil } }),
+            titleVisibility: .visible
+        ) {
+            if let thing = moreThing {
+                ForEach(VerbDerivation.verbs(for: thing)
+                    .filter { verb in
+                        if case .copyText = verb.action { return false }
+                        return !verb.isWrite
+                    }
+                    .prefix(3)) { verb in
+                    Button(verb.label) { run(verb, on: thing) }
+                }
+                Button("Open", systemImage: "arrow.up.right") { sheetThing = thing }
+                Button("Cancel", role: .cancel) { moreThing = nil }
+            }
         }
         .confirmationDialog(
             confirming.map { "\($0.0.label): \($0.1.title)?" } ?? "",
@@ -422,9 +443,9 @@ struct FeedScreen: View {
             .onTapGesture { sheetThing = thing }
             .listRowBackground(DS.surfaceSheet)
             .listRowSeparator(.hidden)
-            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                // Pin rides the swipe (re-ruling 2026-07-06) — the row keeps
-                // no standing button; the Pinned section is the state.
+            // One swipe side, Mail's anatomy (ruling 2026-07-06): Pin at the
+            // edge (full swipe pins), Tag, then More for the read verbs.
+            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                 Button {
                     togglePin(thing)
                 } label: {
@@ -432,24 +453,18 @@ struct FeedScreen: View {
                           systemImage: thing.pinned ? "pin.slash" : "pin")
                 }
                 .tint(DS.tint)
-                ForEach(VerbDerivation.verbs(for: thing)
-                    .filter { verb in
-                        if case .copyText = verb.action { return false }
-                        return !verb.isWrite
-                    }
-                    .prefix(2).reversed()) { verb in
-                    Button(verb.shortLabel) { run(verb, on: thing) }
-                        .tint(verb.isWrite ? DS.confirm : DS.tint)
-                }
-            }
-            // Leading swipe: tag without opening the sheet.
-            .swipeActions(edge: .leading, allowsFullSwipe: true) {
                 Button {
                     quickTagThing = thing
                 } label: {
                     Label("Tag", systemImage: "tag")
                 }
                 .tint(DS.confirm)
+                Button {
+                    moreThing = thing
+                } label: {
+                    Label("More", systemImage: "ellipsis")
+                }
+                .tint(DS.gray600)
             }
     }
 

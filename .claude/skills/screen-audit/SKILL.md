@@ -23,10 +23,15 @@ Recurring sweep that catches regressions between working sessions. Everything ru
 
 3. **Review each screenshot against the law**:
    - `docs/build-brief.md` §8 + CLAUDE.md "Design law" (no hairlines, no glass on content, tray grammar, no dead controls, no fake status)
-   - `docs/prd-draft-v3.md` rulings — flag any screen contradicting a recorded ruling
+   - `docs/prd.md` rulings — flag any screen contradicting a recorded ruling
    - Empty/denied/unavailable states render honestly (no blank panes, no lying copy)
 
-4. **Report**: a short findings list ordered by severity — regressions first, then honesty violations, then polish. Each finding names the screenshot file and the doc/ruling it violates. No findings = say so plainly. Do NOT fix anything during an audit run unless asked; findings go to the user (or the session report) for triage.
+4. **Doc-drift check** — the docs and this skill can fall out of sync with each other and with the app; drift is a finding like any other:
+   - CLAUDE.md "Design law" digest vs `docs/prd.md` rulings: read both, flag any rule the PRD has superseded but the digest still states (or vice versa).
+   - Walk-list coverage: compare `Casberi/Casberi/Screens/` and the hook list in CLAUDE.md against step 2's walk list — flag any screen or hook the audit never visits.
+   - `git log --oneline -5 -- docs/ CLAUDE.md` — if the law changed recently, say so in the report so findings are read against the right version.
+
+5. **Report**: a short findings list ordered by severity — regressions first, then honesty violations, then polish. Each finding names the screenshot file and the doc/ruling it violates. No findings = say so plainly. Do NOT fix anything during an audit run unless asked; findings go to the user (or the session report) for triage.
 
 ## Notes
 

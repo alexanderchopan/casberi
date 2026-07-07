@@ -7,7 +7,7 @@ Native iOS app — a personal corpus of "things" (links, screenshots, events, ch
 - `Casberi/Casberi.xcodeproj` — the Xcode project. Targets: **Casberi** (app), **ShareExtension** (appex), **CasberiWidgets** (widget bundle). Bundle id `com.casberi.app`; app group `group.com.casberi.app`.
 - `Casberi/Casberi/` — app sources (`Design/`, `GenUI/`, `Model/`, `Screens/`, `Shell/`).
 - `Casberi/Shared/` — sources compiled into both app and extension targets.
-- `docs/` — **build-brief.md §8 (design system) is law**; prd-draft-v3.md carries product rulings; name-ledger.md.
+- `docs/` — **build-brief.md §8 (design system) is law**; prd.md carries product rulings; name-ledger.md.
 - `prototype/` — visual spec. `design/app-icon/` — icon SVG sources.
 - The pbxproj is **hand-authored** (objectVersion 77, file-system-synchronized groups). New source files in synced folders are picked up automatically; Info.plist keys and target settings are edited directly in the pbxproj.
 
@@ -68,7 +68,7 @@ Deep links: `casberi://home`, `casberi://feed`, `casberi://feed/type/<Tag>`, `ca
 - Typed text in the composer NEVER saves — things enter only via capture paths (paste chip, mic, share, screenshots, drop, bridges). Saving is an outcome the toast reports, never a verb.
 - Swipe verbs are reads only (writes live in the sheet, with consent). Feed chips only when they differentiate.
 - Honesty rule: no dead controls, no fake status. **Ship gate: the iCloud-sync toggle must not reach real users until CloudKit actually moves bytes (M1).** "End-to-end encrypted" claims require Advanced Data Protection — don't overclaim.
-- Product rulings live in docs/prd-draft-v3.md — check it before re-litigating a design decision; record new rulings there.
+- Product rulings live in docs/prd.md — check it before re-litigating a design decision; record new rulings there.
 
 ## Working mode
 

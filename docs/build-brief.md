@@ -1,6 +1,6 @@
 # Build brief — Casberi (working name)
 
-Handoff target: Claude Code. Source of truth: prd-draft-v3.md. Visual spec: composer-rest-chips-v94.html / .tsx — the prototype is spec, not codebase. This brief tells the builder what to build, in what order, and where the decisions live.
+Handoff target: Claude Code. Source of truth: prd.md. Visual spec: composer-rest-chips-v94.html / .tsx — the prototype is spec, not codebase. This brief tells the builder what to build, in what order, and where the decisions live.
 
 ## 1. Product
 
