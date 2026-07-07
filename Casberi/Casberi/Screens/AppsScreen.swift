@@ -17,6 +17,7 @@ struct AppsScreen: View {
     @State private var pairing = false
     @State private var selectedCategory: String?
     @State private var storyID: String?
+    @State private var setupOffer: String?
     #if DEBUG
     @State private var probe: AppsProbe?
     #endif
@@ -25,11 +26,14 @@ struct AppsScreen: View {
     // never vertical section headers)
 
     private static let categories: [(name: String, exemplar: String, groups: Set<String>)] = [
-        ("Your life",   "Photos",  ["Your photos", "Your schedule", "Your wallet"]),
-        ("Your agents", "Claude",  ["Your agent", "Your machines"]),
-        ("Your mail",   "Gmail",   ["Your mail"]),
-        ("Your work",   "GitHub",  ["Your work"]),
-        ("Your media",  "Spotify", ["Your saves", "Your watching", "Your listening", "Your messages"]),
+        ("Your life",    "Photos",    ["Your photos", "Your schedule"]),
+        ("Your fitness", "Strava",    ["Your fitness"]),
+        ("Your wallet",  "Zerion",    ["Your wallet", "Your network"]),
+        ("Your agents",  "Claude",    ["Your agent", "Your machines"]),
+        ("Your mail",    "Gmail",     ["Your mail"]),
+        ("Your work",    "GitHub",    ["Your work"]),
+        ("Your reading", "Readwise",  ["Your reading", "Your saves"]),
+        ("Your media",   "Spotify",   ["Your watching", "Your listening", "Your messages"]),
     ]
 
     private func category(of offer: BridgeCatalog.Offer) -> String {
@@ -127,6 +131,9 @@ struct AppsScreen: View {
         .navigationTitle("Apps")
         .navigationBarTitleDisplayMode(.large)
         .sheet(isPresented: $pairing) { PairClientSheet() }
+        .navigationDestination(item: $setupOffer) { name in
+            SetupDestination(name: name)
+        }
         #if DEBUG
         .navigationDestination(item: $probe) { p in
             switch p {
@@ -192,10 +199,21 @@ struct AppsScreen: View {
 
     @ViewBuilder
     private func connectedDestination(id: String) -> some View {
-        if id == "zerion" {
-            ZerionScreen()
-        } else {
-            BridgeDetailScreen(bridgeID: id)
+        switch id {
+        case "zerion": ZerionScreen()
+        case "rss":    RSSScreen()
+        case "gpt":    ChatGPTImportScreen()
+        case "bsky":   BlueskyScreen()
+        case "fc":     FarcasterScreen()
+        case "readwise": TokenSetupScreen(bridge: .readwise)
+        case "github":   TokenSetupScreen(bridge: .github)
+        case "todoist":  TokenSetupScreen(bridge: .todoist)
+        case "raindrop": TokenSetupScreen(bridge: .raindrop)
+        case "calcom":   TokenSetupScreen(bridge: .calcom)
+        case "calendly": TokenSetupScreen(bridge: .calendly)
+        case "notion":   TokenSetupScreen(bridge: .notion)
+        case "linear":   TokenSetupScreen(bridge: .linear)
+        default:       BridgeDetailScreen(bridgeID: id)
         }
     }
 
@@ -354,7 +372,7 @@ struct AppsScreen: View {
 
     private var forYouChart: some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
-            sectionHeader((selectedCategory ?? "For you").uppercased())
+            sectionHeader((selectedCategory ?? "Top apps").uppercased())
                 .padding(.horizontal, DS.Space.s4)
             VStack(spacing: DS.Space.s1) {
                 ForEach(Array(chart.enumerated()), id: \.element.id) { index, entry in
@@ -377,7 +395,9 @@ struct AppsScreen: View {
                     Text("\(rank)")
                         .dsText(.body17).fontWeight(.bold)
                         .foregroundStyle(DS.textTertiary)
-                        .frame(width: 20, alignment: .leading)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                        .frame(width: 26, alignment: .leading)
                     BridgeIcon(name: entry.offer.name, size: 44)
                         .saturation(soon ? 0 : 1)
                         .opacity(soon ? 0.5 : 1)
@@ -417,6 +437,10 @@ struct AppsScreen: View {
         case 1:
             if entry.offer.name == "Claude" {
                 VerbCapsule(verb: .pair) { pairing = true }
+            } else if entry.offer.needsSetup {
+                // Setup bridges collect input first — Connect opens their
+                // screen; the connect happens there, with proof.
+                VerbCapsule(verb: .connect) { setupOffer = entry.offer.name }
             } else {
                 VerbCapsule(verb: .connect) {
                     BridgeConnect.connect(entry.offer, store: store, context: modelContext)
@@ -441,4 +465,32 @@ struct AppsScreen: View {
         }
     }
     #endif
+}
+
+
+/// Where a setup bridge's Connect leads — one switch, shared by the chart
+/// and the product page.
+struct SetupDestination: View {
+    let name: String
+    var body: some View {
+        switch name {
+        case "RSS":     RSSScreen()
+        case "ChatGPT": ChatGPTImportScreen()
+        case "Bluesky": BlueskyScreen()
+        case "Farcaster": FarcasterScreen()
+        case "Readwise": TokenSetupScreen(bridge: .readwise)
+        case "GitHub":   TokenSetupScreen(bridge: .github)
+        case "Todoist":  TokenSetupScreen(bridge: .todoist)
+        case "Raindrop": TokenSetupScreen(bridge: .raindrop)
+        case "Cal.com":  TokenSetupScreen(bridge: .calcom)
+        case "Calendly": TokenSetupScreen(bridge: .calendly)
+        case "Notion":   TokenSetupScreen(bridge: .notion)
+        case "Linear":   TokenSetupScreen(bridge: .linear)
+        default:        EmptyView()
+        }
+    }
+}
+
+extension String: @retroactive Identifiable {
+    public var id: String { self }
 }

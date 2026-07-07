@@ -83,16 +83,6 @@ enum HomeComposition {
             rootRefs.append("themes")
         }
 
-        // Signals — deltas and newness, never counters (Feed already counts).
-        // Only when the corpus proves one; no filler.
-        let sig = signals(things: things, projects: projects)
-        if !sig.isEmpty {
-            let ids = sig.indices.map { "sv\($0)" }
-            doc.append("stats = Bento([\(ids.joined(separator: ", "))])")
-            for (i, line) in sig.enumerated() { doc.append("sv\(i) = \(line)") }
-            rootRefs.append("stats")
-        }
-
         doc.insert("root = Stack([\(rootRefs.joined(separator: ", "))])", at: 0)
         return doc
     }
@@ -160,7 +150,7 @@ enum HomeComposition {
             subline = week.count == 1 ? "1 thing landed" : "\(week.count) things landed"
         }
         if !things.isEmpty {
-            doc.append("cover = Cover(\(q("Weekend")), \(q(title)), \(q(subline)), \(image.map { q($0.id.uuidString) } ?? "\"\""), \(q(dateline(things: things))))")
+            doc.append("cover = Cover(\(q("Weekend")), \(q(title)), \(q(subline)), \(image.map { q($0.id.uuidString) } ?? "\"\""), \(q(dateline(things: things))), \(q("quiet")))")
             rootRefs.append("cover")
         }
 
@@ -182,14 +172,6 @@ enum HomeComposition {
             doc.append("themes = Widget(\(q("Worth returning to")), null, [\(ids.joined(separator: ", "))])")
             for (i, t) in links.enumerated() { doc.append(row(id: "t\(i)", t)) }
             rootRefs.append("themes")
-        }
-
-        let sig = signals(things: things, projects: projects)
-        if !sig.isEmpty {
-            let ids = sig.indices.map { "sv\($0)" }
-            doc.append("stats = Bento([\(ids.joined(separator: ", "))])")
-            for (i, line) in sig.enumerated() { doc.append("sv\(i) = \(line)") }
-            rootRefs.append("stats")
         }
 
         doc.insert("root = Stack([\(rootRefs.joined(separator: ", "))])", at: 0)
@@ -222,15 +204,12 @@ enum HomeComposition {
                 buckets[tag, default: []].append(thing)
             }
         }
-        let pins = ProjectPins.all
         return buckets
             .filter { $0.value.count >= 2 }
             .map { Cluster(name: $0.key, things: $0.value) }
             .sorted {
-                // Pinned first (S21), then magnitude, then name — stable.
-                let p0 = pins.contains($0.name), p1 = pins.contains($1.name)
-                if p0 != p1 { return p0 }
-                return $0.things.count != $1.things.count
+                // Magnitude, then name — stable. (Project pins died 2026-07-07.)
+                $0.things.count != $1.things.count
                     ? $0.things.count > $1.things.count
                     : $0.name < $1.name
             }
@@ -291,7 +270,7 @@ enum HomeComposition {
             if let seen = firstSeen[t.source] { firstSeen[t.source] = min(seen, t.capturedAt) }
             else { firstSeen[t.source] = t.capturedAt }
         }
-        if let newcomer = firstSeen.filter({ $0.value > weekAgo && $0.key != "You" })
+        if let newcomer = firstSeen.filter({ $0.value > weekAgo && $0.key != "You" && $0.key != "Voice" })
             .min(by: { $0.value < $1.value }) {
             let n = things.filter { $0.source == newcomer.key }.count
             out.append("StatTile(\(q("1")), \(q(newcomer.key)), \(q("Landed this week")), \(q(n == 1 ? "First thing in" : "\(n) things already")))")
@@ -358,12 +337,14 @@ enum HomeComposition {
         // never lead Home (voice guardrail: agent asks live in Feed; the cover
         // states what landed, never what's waiting on the person).
         if isQuietDay(things) {
-            return "cover = Cover(\(q("Today")), \(q("A quiet day")), \(q("Nothing new yet — your things keep.")), \"\", \(q(date)))"
+            return "cover = Cover(\(q("Today")), \(q("A quiet day")), \(q("Nothing new yet — your things keep.")), \"\", \(q(date)), \(q("quiet")))"
         }
         if let latest = things.first(where: { $0.kind != .approval }) {
-            return "cover = Cover(\(q("Just landed")), \(q(latest.title)), \(q("\(latest.kind.typeTag) · \(latest.source)")), \"\", \(q(date)))"
+            // The 6th arg names the kind so the quiet cover can wear its hue
+            // (the image cover extracts color from the photo instead).
+            return "cover = Cover(\(q("Just landed")), \(q(latest.title)), \(q("\(latest.kind.typeTag) · \(latest.source)")), \"\", \(q(date)), \(q(latest.kind.typeTag)))"
         }
-        return "cover = Cover(\(q("Now")), \(q("Your things go here")), \(q("Paste, speak, or share one in.")), \"\", \(q(date)))"
+        return "cover = Cover(\(q("Now")), \(q("Your things go here")), \(q("Paste, speak, or share one in.")), \"\", \(q(date)), \(q("quiet")))"
     }
 
     // MARK: - Kind pills (replaces the KindBar on Home; the bar stays in the vocabulary)

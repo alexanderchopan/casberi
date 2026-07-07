@@ -37,6 +37,11 @@ final class ShellChrome {
     /// flight knows where to land.
     var feedTabFrame: CGRect = .zero
 
+    /// Bumped when a tab is tapped while already selected — that tab's screen
+    /// pops everything (pushed screens, sheets) back to its root.
+    var popHome = 0
+    var popFeed = 0
+
     func flash(_ text: String, action: ToastAction? = nil, seconds: Double = 2) {
         // Replacing an in-flight toast crossfades (id change), never stacks.
         withAnimation(DS.Motion.standard) {

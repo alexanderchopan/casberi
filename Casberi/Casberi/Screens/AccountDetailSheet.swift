@@ -1,6 +1,7 @@
 import SwiftUI
 import SwiftData
 import UniformTypeIdentifiers
+import CloudKit
 
 /// Account detail sheets — one pattern for all of them: the facts stated
 /// plainly (live numbers where the system can answer), one control cluster
@@ -24,6 +25,7 @@ struct AccountDetailSheet: View {
     @State private var confirmDelete = false
     @State private var importing = false
     @State private var importResult: String?
+    @State private var deleteResult: String?
 
     var body: some View {
         DSTray(title: title, height: sheetHeight) {
@@ -74,6 +76,10 @@ struct AccountDetailSheet: View {
             }
             if let importResult {
                 Text(importResult)
+                    .dsText(.subhead13).foregroundStyle(DS.textSecondary)
+            }
+            if let deleteResult {
+                Text(deleteResult)
                     .dsText(.subhead13).foregroundStyle(DS.textSecondary)
             }
         }
@@ -221,9 +227,9 @@ struct AccountDetailSheet: View {
 
     /// Everything as one JSON file — the person's things are the person's.
     private func buildExport() -> URL? {
-        let things = (try? modelContext.fetch(FetchDescriptor<Thing>(
+        let things = ((try? modelContext.fetch(FetchDescriptor<Thing>(
             sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]
-        ))) ?? []
+        ))) ?? []).filter { !$0.isSample }   // samples are never yours to export
         let iso = ISO8601DateFormatter()
         let payload: [[String: Any]] = things.map { t in
             var prov: [String: Any] = ["app": t.provenance.app]
@@ -246,6 +252,9 @@ struct AccountDetailSheet: View {
             // Only real things carry a source reference (screenshot asset,
             // message id, voice file) — keep it so dedupe survives round-trips.
             if let ref = t.sourceRef { dict["sourceRef"] = ref }
+            // Voice audio lives in the store now — it rides the export too,
+            // or "everything" wouldn't be true.
+            if let audio = t.audio { dict["audio"] = audio.base64EncodedString() }
             return dict
         }
         guard let data = try? JSONSerialization.data(
@@ -300,6 +309,10 @@ struct AccountDetailSheet: View {
                 provenance: provenance,
                 sourceRef: item["sourceRef"] as? String
             )
+            if let b64 = item["audio"] as? String,
+               let audio = Data(base64Encoded: b64) {
+                thing.audio = audio
+            }
             modelContext.insert(thing)
             added.append(thing)
         }
@@ -325,6 +338,24 @@ struct AccountDetailSheet: View {
         for url in voice { try? FileManager.default.removeItem(at: url) }
         ThemeStore.shared.backgroundPhoto = nil
         ProfileStore.shared.avatar = nil
+        // The iCloud copy goes too — mirroring propagates the deletes, but a
+        // zone purge is the definitive clear (it also covers things synced
+        // before the toggle was last turned off). Outcome surfaces honestly.
+        if SharedStore.cloudKitReady {
+            let db = CKContainer(identifier: SharedStore.cloudContainerID).privateCloudDatabase
+            let zone = CKRecordZone.ID(zoneName: "com.apple.coredata.cloudkit.zone")
+            db.delete(withRecordZoneID: zone) { _, error in
+                Task { @MainActor in
+                    if let error, (error as? CKError)?.code != .zoneNotFound {
+                        deleteResult = "Deleted here. The iCloud copy couldn't be cleared — check your connection and try again."
+                    } else {
+                        deleteResult = "Deleted — this iPhone and iCloud."
+                    }
+                }
+            }
+        } else {
+            deleteResult = "Deleted from this iPhone."
+        }
         DSHaptic.success()
     }
 }

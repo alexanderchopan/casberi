@@ -461,6 +461,7 @@
 				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "Casberi reads your events so your day lands as things.";
 				INFOPLIST_KEY_NSCalendarsWriteOnlyAccessUsageDescription = "Casberi adds events to your calendar when you ask.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Casberi records your voice notes when you tap the mic.";
+				INFOPLIST_KEY_NSHealthShareUsageDescription = "Casberi reads your workouts so they land in your feed.";
 				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Casberi reads screenshots you take so they land as things.";
 				INFOPLIST_KEY_NSRemindersFullAccessUsageDescription = "Casberi adds reminders to your list when you ask.";
@@ -499,6 +500,7 @@
 				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "Casberi reads your events so your day lands as things.";
 				INFOPLIST_KEY_NSCalendarsWriteOnlyAccessUsageDescription = "Casberi adds events to your calendar when you ask.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Casberi records your voice notes when you tap the mic.";
+				INFOPLIST_KEY_NSHealthShareUsageDescription = "Casberi reads your workouts so they land in your feed.";
 				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Casberi reads screenshots you take so they land as things.";
 				INFOPLIST_KEY_NSRemindersFullAccessUsageDescription = "Casberi adds reminders to your list when you ask.";

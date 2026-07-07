@@ -23,10 +23,19 @@ enum DemoState {
             && UserDefaults.standard.bool(forKey: "fresh")
     }
 
-    /// Demo data seeds only in debug builds, and never in fresh mode.
+    /// Demo data seeds only in debug builds, never in fresh mode — and
+    /// never on an install that went through onboarding (2026-07-07: the dev
+    /// corpus was leaking into hand-tested onboarding runs, where its fake
+    /// approvals read as real). The decision is made ONCE, at first launch:
+    /// dev flows launch with `-onboarded YES` and keep the corpus; anything
+    /// that starts at the Connect screen stays corpus-free forever.
     static var seedsDemoData: Bool {
         #if DEBUG
-        return !isFresh
+        let defaults = UserDefaults.standard
+        if defaults.object(forKey: "demo.corpusAllowed") == nil {
+            defaults.set(defaults.bool(forKey: "onboarded"), forKey: "demo.corpusAllowed")
+        }
+        return !isFresh && defaults.bool(forKey: "demo.corpusAllowed")
         #else
         return false
         #endif

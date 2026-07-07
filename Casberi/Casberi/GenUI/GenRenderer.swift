@@ -79,8 +79,15 @@ struct GenRender: View {
     var slot: GenSlot = .none
 
     var body: some View {
+        // AnyView is load-bearing (2026-07-06 crash fix): the component
+        // switch nests recursively (Stack → Widget → rows...), and without
+        // erasure the combined generic type got deep enough that
+        // instantiating its metadata overflowed the stack — an intermittent
+        // SIGSEGV ("excessive recursion") on first render of a new branch
+        // combination, seen when pushing a project during onboarding demo.
+        // Erasing at every nesting level keeps the type flat forever.
         if let el = els[id] {
-            component(el)
+            AnyView(component(el))
         } else {
             switch slot {
             case .row:  GenSkeletonRow().mountIn()
@@ -558,22 +565,32 @@ private struct GenTagMap: View {
                 let w = uw * CGFloat(f.2) + gap * CGFloat(f.2 - 1)
                 let h = uh * CGFloat(f.3) + gap * CGFloat(f.3 - 1)
                 let on = !animated || settled
-                Text(item.tag)
-                    .dsText(.body17).foregroundStyle(DS.textPrimary)
-                    .lineLimit(item.tag.contains(" ") ? 2 : 1)
-                    .minimumScaleFactor(0.5)
-                    .padding(DS.Space.s3)
-                    .frame(width: w, height: h, alignment: .topLeading)
-                    .background(
-                        DS.tint(magnitude: Double(item.n) / Double(maxN))
-                            .opacity(isWeekend && animated ? (on ? 1 : 0) : 1),
-                        in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
-                    .scaleEffect(!isWeekend && animated && !on ? 0.92 : 1)
-                    .opacity(!isWeekend && animated && !on ? 0 : 1)
-                    .animation(entrance(order: isWeekend ? f.0 : i), value: settled)
-                    .offset(x: CGFloat(f.0) * (uw + gap), y: CGFloat(f.1) * (uh + gap))
-                    .zoomSource(id: item.tag, in: zoomNS)
-                    .onTapGesture { DSHaptic.selection(); projectTap?(item.tag) }
+                Button {
+                    DSHaptic.selection()
+                    projectTap?(item.tag)
+                } label: {
+                    Text(item.tag)
+                        .dsText(.body17).foregroundStyle(DS.textPrimary)
+                        .lineLimit(item.tag.contains(" ") ? 2 : 1)
+                        .minimumScaleFactor(0.4)
+                        .allowsTightening(true)
+                        .padding(DS.Space.s3)
+                        .frame(width: w, height: h, alignment: .topLeading)
+                        .background(
+                            // V3b: the tile wears ITS project's hue (magnitude
+                            // still rides opacity) — one color per project,
+                            // matching its tag ink in the feed.
+                            ProjectHue.color(for: item.tag)
+                                .opacity((0.30 + 0.45 * Double(item.n) / Double(maxN))
+                                         * (isWeekend && animated && !on ? 0 : 1)),
+                            in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+                }
+                .buttonStyle(PressSpring())
+                .scaleEffect(!isWeekend && animated && !on ? 0.92 : 1)
+                .opacity(!isWeekend && animated && !on ? 0 : 1)
+                .animation(entrance(order: isWeekend ? f.0 : i), value: settled)
+                .offset(x: CGFloat(f.0) * (uw + gap), y: CGFloat(f.1) * (uh + gap))
+                .zoomSource(id: item.tag, in: zoomNS)
             }
         }
     }
@@ -921,6 +938,17 @@ private struct GenCover: View {
     private var hasImage: Bool { !thingID.isEmpty }
     private var photoTheme: Bool { ThemeStore.shared.backgroundPhoto != nil }
 
+    /// The quiet cover's wash color. Nil while the document is still
+    /// streaming (the 6th arg hasn't arrived) — painting the fallback early
+    /// flashed blue before the real color landed. "quiet" = Casberi blue
+    /// (a quiet day or the weekend recap, no lead kind).
+    private var quietWash: Color? {
+        let tag = el.str(5)
+        if tag.isEmpty { return nil }
+        if tag == "quiet" { return DS.tint }
+        return ThingKind.from(typeTag: tag)?.hue ?? DS.tint
+    }
+
     /// The cover's top edge in global space — 0 at rest (the cover leads the
     /// scroll under the status bar). Positive = overscrolled down, negative =
     /// scrolled away.
@@ -973,10 +1001,20 @@ private struct GenCover: View {
                 }
                 scrims
             } else {
-                LinearGradient(
-                    colors: [Color(hex: ThemeStore.shared.background.darkHex), DS.themedPage],
-                    startPoint: .top, endPoint: .bottom
-                )
+                // The quiet cover is a SOLID bright field of the lead thing's
+                // kind color — the Fantastical move (user ruling): the whole
+                // band is the primary color, slightly lighter at the top,
+                // never fading into dark. Same block in both modes. Until the
+                // stream delivers the color, the page shows — no blue flash.
+                if let wash = quietWash {
+                    LinearGradient(
+                        colors: [wash.mix(with: .white, by: 0.12),
+                                 wash.mix(with: .black, by: 0.08)],
+                        startPoint: .top, endPoint: .bottom
+                    )
+                } else {
+                    DS.themedPage
+                }
             }
 
             // The text block: bottom-anchored on the image canvas, centered on
@@ -998,6 +1036,8 @@ private struct GenCover: View {
         }
         .frame(maxWidth: .infinity)
         .clipShape(Rectangle())
+        // The color arrives with the stream — ease it in, don't snap.
+        .animation(DS.Motion.standard, value: el.str(5))
         // The date line rides the top edge, centered between the nav buttons;
         // it fades over the first 60pt of scroll (§4).
         .overlay(alignment: .top) {
@@ -1005,7 +1045,7 @@ private struct GenCover: View {
                 Text(el.str(4).uppercased())
                     .font(.system(size: 13, weight: .semibold))
                     .kerning(1.4)
-                    .foregroundStyle(.white.opacity(0.92))
+                    .foregroundStyle(coverInk.opacity(0.92))
                     .padding(.top, topInset + DS.Space.s2)
                     .opacity(datelineFade)
             }
@@ -1021,27 +1061,37 @@ private struct GenCover: View {
     private var scrims: some View {
         let top: Color = photoTheme ? .black.opacity(0.55)
             : (bleed ?? .black).opacity(0.55)
+        // A base dim under the gradients: busy images (screenshots of UI,
+        // dense photos) read as a photo BEHIND the text, never as layers
+        // bleeding through (2026-07-07).
+        Color.black.opacity(0.35)
         LinearGradient(colors: [top, .clear],
                        startPoint: .top, endPoint: .center)
         LinearGradient(colors: [.clear, photoTheme ? .black.opacity(0.75) : DS.themedPage],
                        startPoint: .center, endPoint: .bottom)
     }
 
+    /// White over a photo (scrims) or a bright color field (Fantastical
+    /// pattern); the page's own ink for the beat before the color streams in.
+    private var coverInk: Color {
+        hasImage || quietWash != nil ? .white : DS.textPrimary
+    }
+
     private var textBlock: some View {
         VStack(alignment: .leading, spacing: DS.Space.s1) {
             Text(el.str(0).uppercased())
                 .dsText(.label12).kerning(1)
-                .foregroundStyle(.white.opacity(0.7))
+                .foregroundStyle(coverInk.opacity(0.7))
             Text(el.str(1))
                 .font(.system(size: 26, weight: .heavy))
-                .foregroundStyle(.white)
+                .foregroundStyle(coverInk)
                 .lineLimit(2)
                 .minimumScaleFactor(0.7)
                 .fixedSize(horizontal: false, vertical: true)
             if !el.str(2).isEmpty {
                 Text(el.str(2))
                     .dsText(.subhead13)
-                    .foregroundStyle(.white.opacity(0.85))
+                    .foregroundStyle(coverInk.opacity(0.85))
             }
         }
         .padding(DS.Space.s4)
@@ -1055,6 +1105,21 @@ private struct GenCover: View {
             predicate: #Predicate { $0.id == uuid }
         ))) ?? []
         guard let ref = all.first?.sourceRef else { return }
+        // Sample things carry the bundled photo (same rule as PhotoWell).
+        if ref.hasPrefix("sample:") {
+            if let ui = UIImage(named: "sample-screenshot") {
+                image = ui
+                if let hit = CoverBleed.cached(thingID) {
+                    bleed = hit
+                } else {
+                    let id = thingID
+                    bleed = await Task.detached(priority: .utility) {
+                        CoverBleed.extract(from: ui, id: id)
+                    }.value
+                }
+            }
+            return
+        }
         let assetID = ref.replacingOccurrences(of: "phasset:", with: "")
         let assets = PHAsset.fetchAssets(withLocalIdentifiers: [assetID], options: nil)
         guard let asset = assets.firstObject else { return }
@@ -1113,21 +1178,25 @@ private struct GenKindPills: View {
                 ForEach(Array(items.enumerated()), id: \.offset) { _, item in
                     let kind = ThingKind.from(typeTag: item.tag)
                     let hue = kind?.hue ?? DS.tint
-                    HStack(spacing: DS.Space.s1) {
-                        Image(systemName: kind?.symbol ?? "circle.dashed")
-                            .font(.system(size: 14, weight: .medium))
-                            .foregroundStyle(hue)
-                        Text("\(item.n)")
-                            .font(.system(size: 13, weight: .semibold))
-                            .foregroundStyle(DS.textPrimary)
-                            .contentTransition(.numericText())
-                            .animation(DS.Motion.standard, value: item.n)
+                    Button {
+                        open(item.tag)
+                    } label: {
+                        HStack(spacing: DS.Space.s1) {
+                            Image(systemName: kind?.symbol ?? "circle.dashed")
+                                .font(.system(size: 14, weight: .medium))
+                                .foregroundStyle(hue)
+                            Text("\(item.n)")
+                                .font(.system(size: 13, weight: .semibold))
+                                .foregroundStyle(DS.textPrimary)
+                                .contentTransition(.numericText())
+                                .animation(DS.Motion.standard, value: item.n)
+                        }
+                        .padding(.horizontal, DS.Space.s3)
+                        .frame(minHeight: 34)
+                        .background(hue.opacity(0.15), in: Capsule(style: .continuous))
+                        .contentShape(Capsule())
                     }
-                    .padding(.horizontal, DS.Space.s3)
-                    .frame(minHeight: 34)
-                    .background(hue.opacity(0.15), in: Capsule(style: .continuous))
-                    .contentShape(Capsule())
-                    .onTapGesture { open(item.tag) }
+                    .buttonStyle(PressSpring())
                     .accessibilityLabel("\(item.n) \(kind?.typeTagPlural ?? item.tag)")
                 }
             }

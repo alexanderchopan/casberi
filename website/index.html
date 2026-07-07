@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Casberi — Your apps, one feed.</title>
+<meta name="description" content="Casberi gathers your notes, links, screenshots, and events into one private feed on your iPhone. One search finds everything. Free, on-device.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 28 28'%3E%3Ccircle cx='14' cy='16' r='10' fill='%233b8cf0'/%3E%3Cpath d='M14 6C14 6 15 2.5 19 2.5C19 6.5 14 6 14 6Z' fill='%2334c77b'/%3E%3C/svg%3E">
+<meta property="og:title" content="Casberi — Your apps, one feed.">
+<meta property="og:description" content="Add any app and its things land in one private feed on your iPhone. Free, on-device.">
+<meta property="og:type" content="website">
+<!-- og:image needs a hosted PNG (1200x630) — add when the domain is live -->
+<link rel="stylesheet" href="styles.css">
+<script src="app.js" defer></script>
+</head>
+<body>
+
+<div class="wrap">
+  <nav>
+    <a class="brand" href="#top">
+      <svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="14" cy="16" r="10" fill="url(#berryGrad)"/>
+        <path d="M14 6C14 6 15 2.5 19 2.5C19 6.5 14 6 14 6Z" fill="#34c77b"/>
+        <defs>
+          <linearGradient id="berryGrad" x1="6" y1="8" x2="22" y2="26">
+            <stop stop-color="#3b8cf0"/>
+            <stop offset="1" stop-color="#e0345c"/>
+          </linearGradient>
+        </defs>
+      </svg>
+      Casberi
+    </a>
+    <div class="nav-links">
+      <a href="#connect">How it works</a>
+      <a href="#catalog">Apps</a>
+      <a href="#faq">FAQ</a>
+    </div>
+  </nav>
+</div>
+
+<div class="wrap" id="top">
+  <header class="hero">
+    <div class="rain">
+      <div class="ai ai-zerion">Z</div>
+      <div class="ai ai-farcaster"><img src="https://cdn.simpleicons.org/farcaster/ffffff" alt="Farcaster"></div>
+      <div class="ai ai-gmail"><img src="https://cdn.simpleicons.org/gmail" alt="Gmail"></div>
+      <div class="ai ai-github"><img src="https://cdn.simpleicons.org/github/ffffff" alt="GitHub"></div>
+      <div class="ai ai-claude"><img src="https://cdn.simpleicons.org/claude/ffffff" alt="Claude"></div>
+      <div class="ai ai-spotify"><img src="https://cdn.simpleicons.org/spotify/ffffff" alt="Spotify"></div>
+      <div class="ai ai-strava"><img src="https://cdn.simpleicons.org/strava/ffffff" alt="Strava"></div>
+      <div class="ai ai-bluesky"><img src="https://cdn.simpleicons.org/bluesky/ffffff" alt="Bluesky"></div>
+      <div class="ai ai-telegram"><img src="https://cdn.simpleicons.org/telegram/ffffff" alt="Telegram"></div>
+      <div class="ai ai-slack">#</div>
+      <div class="ai ai-x"><img src="https://cdn.simpleicons.org/x/ffffff" alt="X"></div>
+      <div class="ai ai-notion"><img src="https://cdn.simpleicons.org/notion" alt="Notion"></div>
+      <div class="ai ai-reddit"><img src="https://cdn.simpleicons.org/reddit/ffffff" alt="Reddit"></div>
+      <div class="ai ai-youtube"><img src="https://cdn.simpleicons.org/youtube/ffffff" alt="YouTube"></div>
+    </div>
+    <div class="rain-target">
+      <div class="ai ai-casberi">
+        <svg viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="14" cy="16" r="10" fill="url(#berryGrad2)"/>
+          <path d="M14 6C14 6 15 2.5 19 2.5C19 6.5 14 6 14 6Z" fill="#34c77b"/>
+          <defs>
+            <linearGradient id="berryGrad2" x1="6" y1="8" x2="22" y2="26">
+              <stop stop-color="#3b8cf0"/>
+              <stop offset="1" stop-color="#e0345c"/>
+            </linearGradient>
+          </defs>
+        </svg>
+      </div>
+    </div>
+    <h1>Your apps, <em>one feed.</em></h1>
+    <p class="sub">Add any app and its things land here — read every feed together or filter to one, act on things through the apps you already use, and projects and tags build themselves. Ask a question and the answer comes from your own stuff.</p>
+    <p class="sub priv-lead">And all of it stays yours:</p>
+    <div class="priv-chips hero-chips">
+      <span>On your iPhone</span>
+      <span>Works offline</span>
+      <span>Answers on-device</span>
+      <span>iCloud sync is your switch</span>
+      <span>Export or delete everything, anytime</span>
+      <span>No account, no tracking</span>
+    </div>
+    <a class="cta" href="#get">Get early access</a>
+    <p class="cta-note">Coming to the App Store. Join the TestFlight list to try it first.</p>
+  </header>
+</div>
+
+<div class="wrap">
+
+  <section id="connect">
+    <div class="step">
+      <div class="step-copy">
+        <p class="eyebrow">Step 1 · Apps</p>
+        <h2>Add your apps.</h2>
+        <p class="lede">Connecting is the setup — there isn't any other. Apple apps connect with a permission tap; the rest with a pasted token or just a handle. Every connect ends in proof: your things land in the feed.</p>
+        <p class="lede"><strong>Sixteen apps connect directly today</strong> — and anything else reaches Casberi through the share sheet. <a href="#catalog">See the catalog below</a>.</p>
+      </div>
+      <div class="step-mock">
+        <div class="phone">
+          <div class="mock-label on">YOUR FEED · FLOWING</div>
+          <div class="slot on">
+            <div class="ai sm ai-photos"><svg class="pw" viewBox="0 0 24 24"><ellipse cx="12" cy="6.8" rx="2.5" ry="4.4" fill="#ff453a" opacity=".85" transform="rotate(0 12 12)"/><ellipse cx="12" cy="6.8" rx="2.5" ry="4.4" fill="#ff9f0a" opacity=".85" transform="rotate(45 12 12)"/><ellipse cx="12" cy="6.8" rx="2.5" ry="4.4" fill="#ffd60a" opacity=".85" transform="rotate(90 12 12)"/><ellipse cx="12" cy="6.8" rx="2.5" ry="4.4" fill="#30d158" opacity=".85" transform="rotate(135 12 12)"/><ellipse cx="12" cy="6.8" rx="2.5" ry="4.4" fill="#63e6e2" opacity=".85" transform="rotate(180 12 12)"/><ellipse cx="12" cy="6.8" rx="2.5" ry="4.4" fill="#0a84ff" opacity=".85" transform="rotate(225 12 12)"/><ellipse cx="12" cy="6.8" rx="2.5" ry="4.4" fill="#bf5af2" opacity=".85" transform="rotate(270 12 12)"/><ellipse cx="12" cy="6.8" rx="2.5" ry="4.4" fill="#ff375f" opacity=".85" transform="rotate(315 12 12)"/></svg></div>
+            <div class="t"><b>Your screenshots, flowing in</b><span>just now</span></div>
+            <div class="check">✓</div>
+          </div>
+          <div class="slot on">
+            <div class="ai sm ai-calendar">7</div>
+            <div class="t"><b>Your events are in</b><span>just now</span></div>
+            <div class="check">✓</div>
+          </div>
+          <div class="slot off">
+            <div class="ai sm ai-reminders">✓</div>
+            <div class="t"><b>Reminders</b><span>Lists stay in reach</span></div>
+            <div class="connect">Connect</div>
+          </div>
+          <div class="slot off">
+            <div class="ai sm ai-health">♥</div>
+            <div class="t"><b>Apple Health</b><span>Workouts land in your feed</span></div>
+            <div class="connect">Connect</div>
+          </div>
+          <div class="mock-cta">Continue</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="feed">
+    <div class="step flip">
+      <div class="step-copy">
+        <p class="eyebrow">Step 2 · Feed</p>
+        <h2>One feed. Read it your way.</h2>
+        <p class="lede">Every new thing lands here the moment it's captured, newest on top. Filter by source with one tap. See your things by type as a colored strip. Pin what matters and it holds the top.</p>
+      </div>
+      <div class="step-mock">
+        <div class="phone">
+          <div class="kindbar">
+            <span class="kb-link"></span><span class="kb-shot"></span><span class="kb-event"></span><span class="kb-note"></span><span class="kb-chat"></span><span class="kb-rem"></span><span class="kb-voice"></span>
+          </div>
+          <div class="chip-row">
+            <span class="fchip on">All</span>
+            <span class="fchip">Photos</span>
+            <span class="fchip">Calendar</span>
+            <span class="fchip">GitHub</span>
+            <span class="fchip">RSS</span>
+          </div>
+          <div class="mock-label">PINNED</div>
+          <div class="frow">
+            <div class="kg kg-link">🔗</div><b>Flight confirmation — LIS</b>
+            <div class="end"><span class="pill">Trip</span><span class="pin on">📌</span></div>
+          </div>
+          <div class="mock-label" style="padding-top:14px">TODAY</div>
+          <div class="frow">
+            <div class="kg kg-shot">📸</div><b>Workout plan — week 3</b>
+            <div class="end"><span class="tm">9:41</span><span class="pin">📌</span></div>
+          </div>
+          <div class="frow">
+            <div class="kg kg-event">📅</div><b>Dinner with Maya</b>
+            <div class="end"><span class="pill">Trip</span><span class="tm">9:12</span></div>
+          </div>
+          <div class="frow">
+            <div class="kg kg-link">🔗</div><b>WWDC notes — Daring Fireball</b>
+            <div class="end"><span class="tm">8:30</span><span class="pin">📌</span></div>
+          </div>
+          <div class="frow">
+            <div class="kg kg-rem">✅</div><b>Renew passport</b>
+            <div class="end"><span class="tm">8:02</span><span class="pin">📌</span></div>
+          </div>
+          <div class="frow">
+            <div class="kg kg-voice">🎤</div><b>Idea for the kitchen</b>
+            <div class="end"><span class="tm">7:48</span><span class="pin">📌</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="act">
+    <div class="step">
+      <div class="step-copy">
+        <p class="eyebrow">Step 3 · Act</p>
+        <h2>Act on anything.</h2>
+        <p class="lede">A thing carries its next action. Swipe a row for its verbs. Open the sheet and finish the job — open it where it came from, add the event, set the reminder, tag it into a project.</p>
+        <p class="lede"><strong>Anything that writes asks first.</strong></p>
+      </div>
+      <div class="step-mock">
+        <div class="phone">
+          <div class="mock-label">SWIPE A ROW</div>
+          <div class="swipe">
+            <div class="under"><span class="done">Done</span><span class="openv">Open</span></div>
+            <div class="row-slide">
+              <div class="frow">
+                <div class="kg kg-rem">✅</div><b>Renew passport</b>
+                <div class="end"><span class="tm">8:02</span></div>
+              </div>
+            </div>
+          </div>
+          <div class="mock-label" style="padding-top:14px">OR OPEN THE SHEET</div>
+          <div class="sheet">
+            <div class="sh-title"><div class="kg kg-event">📅</div>Dinner with Maya</div>
+            <div class="verbs"><span class="primary">Add Event</span><span>Open in Mail</span></div>
+            <div class="tagchips"><span class="lit">Trip</span><span class="lit">dinner</span><span>food</span><span>saturday</span></div>
+            <div class="footnote">Tap a dim tag to add it. Writes ask before they act.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="home">
+    <div class="step flip">
+      <div class="step-copy">
+        <p class="eyebrow">Step 4 · Home</p>
+        <h2>See the whole picture.</h2>
+        <p class="lede">Every time you open the app, Home is composed fresh from your things: one sentence about what's going on, a connection you might have missed, and your projects and tags as maps — grouped and named on their own.</p>
+        <p class="lede"><strong>You never file anything.</strong></p>
+      </div>
+      <div class="step-mock">
+        <div class="phone">
+          <div class="cover">
+            <div class="dateline">MONDAY, JULY 7</div>
+            <div class="hero-line">Three things about the trip landed today, and Saturday is filling up.</div>
+          </div>
+          <div class="hcard">
+            <div class="eb">NOTICED</div>
+            <p>The dinner spot you screenshotted is 10 minutes from the hotel you booked.</p>
+          </div>
+          <div class="hcard">
+            <div class="eb">WHAT'S GOING ON</div>
+            <div class="treemap">
+              <div class="tcell tc-1">Trip to Lisbon</div>
+              <div class="tcell tc-2">Kitchen reno</div>
+              <div class="tcell tc-3">Reading</div>
+              <div class="tcell tc-4">Workouts</div>
+              <div class="tcell tc-5">Job search</div>
+              <div class="tcell tc-6">Ideas</div>
+            </div>
+          </div>
+          <div class="hcard">
+            <div class="eb">TAGS</div>
+            <div class="tagchips"><span class="lit">travel</span><span class="lit">recipes</span><span>fitness</span><span>design</span><span>reading</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="ask">
+    <div class="step">
+      <div class="step-copy">
+        <p class="eyebrow">Step 5 · Ask</p>
+        <h2>Ask anything. Organize everything.</h2>
+        <p class="lede">One field searches, asks, and captures. Ask a question and the answer is written on your iPhone by Apple's on-device model, from your things only — nothing sent anywhere, nothing billed.</p>
+      </div>
+      <div class="step-mock">
+        <div class="phone">
+          <div class="composer">What did I save about the trip?<span class="mic">🎙</span></div>
+          <div class="ccips"><span class="ask">Ask</span><span>Open app</span><span>Open shortcut</span></div>
+          <div class="answer">
+            <p class="al">You saved a flight confirmation, the hotel address, and two places to eat.</p>
+            <div class="frow">
+              <div class="kg kg-link">🔗</div><b>Flight confirmation — LIS</b>
+              <div class="end"><span class="tm">Mail</span></div>
+            </div>
+            <div class="frow">
+              <div class="kg kg-shot">📸</div><b>Hotel address</b>
+              <div class="end"><span class="tm">Screenshot</span></div>
+            </div>
+            <div class="frow">
+              <div class="kg kg-note">📝</div><b>Restaurants near Alfama</b>
+              <div class="end"><span class="tm">Note</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="mid-cta"><a class="cta" href="#get">Get early access</a></div>
+
+  <section id="catalog">
+    <div class="catalog-head">
+      <p class="eyebrow">The catalog</p>
+      <h2>Sixteen connect. Every app can share.</h2>
+      <p class="lede">Anything on your iPhone can share into Casberi today. Apps marked Connect go further — link them once and their things flow in on their own.</p>
+      <div class="legend">
+        <span><span class="getbtn">Connect</span> things flow in on their own</span>
+        <span><span class="getbtn share">Share</span> reaches Casberi through the share sheet</span>
+      </div>
+    </div>
+    <div class="store-sec">
+      <h3>On your iPhone</h3>
+      <div class="store-grid">
+        <div class="store-row"><div class="ai ai-photos"><svg class="pw" viewBox="0 0 24 24"><ellipse cx="12" cy="6.8" rx="2.5" ry="4.4" fill="#ff453a" opacity=".85" transform="rotate(0 12 12)"/><ellipse cx="12" cy="6.8" rx="2.5" ry="4.4" fill="#ff9f0a" opacity=".85" transform="rotate(45 12 12)"/><ellipse cx="12" cy="6.8" rx="2.5" ry="4.4" fill="#ffd60a" opacity=".85" transform="rotate(90 12 12)"/><ellipse cx="12" cy="6.8" rx="2.5" ry="4.4" fill="#30d158" opacity=".85" transform="rotate(135 12 12)"/><ellipse cx="12" cy="6.8" rx="2.5" ry="4.4" fill="#63e6e2" opacity=".85" transform="rotate(180 12 12)"/><ellipse cx="12" cy="6.8" rx="2.5" ry="4.4" fill="#0a84ff" opacity=".85" transform="rotate(225 12 12)"/><ellipse cx="12" cy="6.8" rx="2.5" ry="4.4" fill="#bf5af2" opacity=".85" transform="rotate(270 12 12)"/><ellipse cx="12" cy="6.8" rx="2.5" ry="4.4" fill="#ff375f" opacity=".85" transform="rotate(315 12 12)"/></svg></div><div class="info"><b>Photos</b><small>Screenshots, straight to your feed</small></div><span class="getbtn">Connect</span></div>
+        <div class="store-row"><div class="ai ai-calendar">7</div><div class="info"><b>Calendar</b><small>Events join your things</small></div><span class="getbtn">Connect</span></div>
+        <div class="store-row"><div class="ai ai-reminders">✓</div><div class="info"><b>Reminders</b><small>Lists stay in reach</small></div><span class="getbtn">Connect</span></div>
+        <div class="store-row"><div class="ai ai-health">♥</div><div class="info"><b>Apple Health</b><small>Workouts land in your feed</small></div><span class="getbtn">Connect</span></div>
+      </div>
+    </div>
+    <div class="store-sec">
+      <h3>Work & scheduling</h3>
+      <div class="store-grid">
+        <div class="store-row"><div class="ai ai-github"><img src="https://cdn.simpleicons.org/github/ffffff" alt="GitHub"></div><div class="info"><b>GitHub</b><small>PRs and issues, in your feed</small></div><span class="getbtn">Connect</span></div>
+        <div class="store-row"><div class="ai ai-linear"><img src="https://cdn.simpleicons.org/linear/ffffff" alt="Linear"></div><div class="info"><b>Linear</b><small>Your issues stay in reach</small></div><span class="getbtn">Connect</span></div>
+        <div class="store-row"><div class="ai ai-notion"><img src="https://cdn.simpleicons.org/notion" alt="Notion"></div><div class="info"><b>Notion</b><small>Pages join your things</small></div><span class="getbtn">Connect</span></div>
+        <div class="store-row"><div class="ai ai-todoist"><img src="https://cdn.simpleicons.org/todoist/ffffff" alt="Todoist"></div><div class="info"><b>Todoist</b><small>Tasks beside your lists</small></div><span class="getbtn">Connect</span></div>
+        <div class="store-row"><div class="ai ai-calcom"><img src="https://cdn.simpleicons.org/caldotcom/ffffff" alt="Cal.com"></div><div class="info"><b>Cal.com</b><small>Bookings land in your feed</small></div><span class="getbtn">Connect</span></div>
+        <div class="store-row"><div class="ai ai-calendly"><img src="https://cdn.simpleicons.org/calendly/ffffff" alt="Calendly"></div><div class="info"><b>Calendly</b><small>Meetings join your things</small></div><span class="getbtn">Connect</span></div>
+      </div>
+    </div>
+    <div class="store-sec">
+      <h3>Reading & saves</h3>
+      <div class="store-grid">
+        <div class="store-row"><div class="ai ai-readwise">❝</div><div class="info"><b>Readwise</b><small>Highlights stay with you</small></div><span class="getbtn">Connect</span></div>
+        <div class="store-row"><div class="ai ai-rss"><img src="https://cdn.simpleicons.org/rss/ffffff" alt="RSS"></div><div class="info"><b>RSS</b><small>Any site with a feed</small></div><span class="getbtn">Connect</span></div>
+        <div class="store-row"><div class="ai ai-raindrop"><svg class="dropmark" viewBox="0 0 24 24"><path d="M12 2C12 2 5 10.2 5 15a7 7 0 0 0 14 0C19 10.2 12 2 12 2Z" fill="#fff"/></svg></div><div class="info"><b>Raindrop</b><small>Bookmarks become findable</small></div><span class="getbtn">Connect</span></div>
+        <div class="store-row"><div class="ai ai-x"><img src="https://cdn.simpleicons.org/x/ffffff" alt="X"></div><div class="info"><b>X</b><small>Bookmarks become findable</small></div><span class="getbtn share">Share</span></div>
+        <div class="store-row"><div class="ai ai-reddit"><img src="https://cdn.simpleicons.org/reddit/ffffff" alt="Reddit"></div><div class="info"><b>Reddit</b><small>Saved posts become findable</small></div><span class="getbtn share">Share</span></div>
+      </div>
+    </div>
+    <div class="store-sec">
+      <h3>Social & messages</h3>
+      <div class="store-grid">
+        <div class="store-row"><div class="ai ai-bluesky"><img src="https://cdn.simpleicons.org/bluesky/ffffff" alt="Bluesky"></div><div class="info"><b>Bluesky</b><small>Your posts, in your feed</small></div><span class="getbtn">Connect</span></div>
+        <div class="store-row"><div class="ai ai-farcaster"><img src="https://cdn.simpleicons.org/farcaster/ffffff" alt="Farcaster"></div><div class="info"><b>Farcaster</b><small>Your casts, in your feed</small></div><span class="getbtn">Connect</span></div>
+        <div class="store-row"><div class="ai ai-telegram"><img src="https://cdn.simpleicons.org/telegram/ffffff" alt="Telegram"></div><div class="info"><b>Telegram</b><small>Chats join your things</small></div><span class="getbtn share">Share</span></div>
+        <div class="store-row"><div class="ai ai-slack">#</div><div class="info"><b>Slack</b><small>Messages worth keeping</small></div><span class="getbtn share">Share</span></div>
+      </div>
+    </div>
+    <div class="store-sec">
+      <h3>Agents & machines</h3>
+      <div class="store-grid">
+        <div class="store-row"><div class="ai ai-chatgpt">✳</div><div class="info"><b>ChatGPT</b><small>Import your chats, keep them findable</small></div><span class="getbtn">Connect</span></div>
+        <div class="store-row"><div class="ai ai-claude"><img src="https://cdn.simpleicons.org/claude/ffffff" alt="Claude"></div><div class="info"><b>Claude</b><small>Connect it to your things</small></div><span class="getbtn share">Share</span></div>
+        <div class="store-row"><div class="ai ai-bankr">$</div><div class="info"><b>Bankr</b><small>Its asks wait for your tap</small></div><span class="getbtn share">Share</span></div>
+        <div class="store-row"><div class="ai ai-venice">V</div><div class="info"><b>Venice</b><small>Private AI, nothing retained</small></div><span class="getbtn share">Share</span></div>
+        <div class="store-row"><div class="ai ai-openclaw">OC</div><div class="info"><b>OpenClaw</b><small>Your agents' work lands here</small></div><span class="getbtn share">Share</span></div>
+      </div>
+    </div>
+    <div class="store-sec">
+      <h3>Mail, media & more</h3>
+      <div class="store-grid">
+        <div class="store-row"><div class="ai ai-gmail"><img src="https://cdn.simpleicons.org/gmail" alt="Gmail"></div><div class="info"><b>Gmail</b><small>What matters in your inbox</small></div><span class="getbtn share">Share</span></div>
+        <div class="store-row"><div class="ai ai-icloud"><img src="https://cdn.simpleicons.org/icloud/ffffff" alt="iCloud Mail"></div><div class="info"><b>iCloud Mail</b><small>Your @icloud.com inbox, findable</small></div><span class="getbtn share">Share</span></div>
+        <div class="store-row"><div class="ai ai-youtube"><img src="https://cdn.simpleicons.org/youtube/ffffff" alt="YouTube"></div><div class="info"><b>YouTube</b><small>Your likes and playlists, findable</small></div><span class="getbtn share">Share</span></div>
+        <div class="store-row"><div class="ai ai-music"><img src="https://cdn.simpleicons.org/applemusic/ffffff" alt="Apple Music"></div><div class="info"><b>Apple Music</b><small>What you play stays in reach</small></div><span class="getbtn share">Share</span></div>
+        <div class="store-row"><div class="ai ai-spotify"><img src="https://cdn.simpleicons.org/spotify/ffffff" alt="Spotify"></div><div class="info"><b>Spotify</b><small>Liked songs join your things</small></div><span class="getbtn share">Share</span></div>
+        <div class="store-row"><div class="ai ai-strava"><img src="https://cdn.simpleicons.org/strava/ffffff" alt="Strava"></div><div class="info"><b>Strava</b><small>Every activity, one record</small></div><span class="getbtn share">Share</span></div>
+        <div class="store-row"><div class="ai ai-zerion">Z</div><div class="info"><b>Zerion</b><small>Your onchain life, in your feed</small></div><span class="getbtn share">Share</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="faq">
+    <p class="eyebrow">FAQ</p>
+    <h2>Questions.</h2>
+    <div class="faq">
+      <details>
+        <summary>Is it free?</summary>
+        <p>Yes. There's no subscription and no account. Answers run on your own phone, so there's nothing to bill.</p>
+      </details>
+      <details>
+        <summary>What phones does it work on?</summary>
+        <p>iPhone, on iOS 26. Answers written by AI need Apple Intelligence; on other iPhones, search works the same way without it.</p>
+      </details>
+      <details>
+        <summary>Where is my data stored?</summary>
+        <p>On your iPhone. If you turn on iCloud sync, it also lives in your own iCloud — under your Apple account, not ours.</p>
+      </details>
+      <details>
+        <summary>Can I get my data out?</summary>
+        <p>Yes. Export saves everything to one file. Delete clears everything from your phone and from iCloud, with no undo.</p>
+      </details>
+      <details>
+        <summary>Does typing in the search bar save things?</summary>
+        <p>No. Things are only saved when you capture them — by sharing, speaking, pasting, or connecting an app. Search is just search.</p>
+      </details>
+      <details>
+        <summary>When can I get it?</summary>
+        <p>It's in development, headed to TestFlight and then the App Store. Leave your email and you'll be first to know.</p>
+      </details>
+    </div>
+  </section>
+
+  <section id="get">
+    <div class="final-cta">
+      <h2>Be first to try it.</h2>
+      <p>Casberi is headed to TestFlight. Leave your email and you'll get an invite when it opens.</p>
+      <a class="cta" href="#">Join the list</a>
+    </div>
+  </section>
+</div>
+
+<footer>
+  <div class="wrap">
+    <p class="tagline">Ask anything. Organize everything.</p>
+    <p>© 2026 Casberi</p>
+  </div>
+</footer>
+
+</body>
+</html>

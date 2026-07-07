@@ -90,21 +90,38 @@ struct HomeScreen: View {
             }
         }
         .tint(DS.tint)
+        // Re-tapping the Home tab pops pushed screens and sheets back to root.
+        .onChange(of: chrome.popHome) {
+            route.push = nil
+            openProject = nil
+            coverThing = nil
+        }
+        // The corpus changed under the composition (a capture, the demo
+        // seeds, the dissolve) — repaint instantly, no replayed entrance.
+        .onChange(of: things.count) { streamComposition(instant: true) }
         .onAppear {
             streamComposition()
             #if DEBUG
-            // Debug hook: `-openSettings YES` pushes Settings for screenshots.
+            // Debug hooks: `-openSettings YES` pushes Settings;
+            // `-openProject "Work"` pushes a project — both for screenshots.
             if UserDefaults.standard.bool(forKey: "openSettings") {
                 route.push = .settings
+            }
+            if let name = UserDefaults.standard.string(forKey: "openProject") {
+                openProject = ProjectRoute(name: name)
             }
             #endif
         }
     }
 
-    private func streamComposition() {
+    private func streamComposition(instant: Bool = false) {
         let doc = things.isEmpty
             ? HomeComposition.empty
             : HomeComposition.compose(things: things)
-        stream.stream(doc)
+        if instant {
+            stream.paint(doc)   // an update, not an entrance — no typewriter
+        } else {
+            stream.stream(doc)
+        }
     }
 }

@@ -127,7 +127,7 @@ struct HeroProvider: TimelineProvider {
 
     /// The hero rule, in miniature: the largest moving cluster leads.
     private func compose() -> HeroEntry {
-        guard let container = try? SharedStore.container() else {
+        guard let container = try? SharedStore.extensionContainer() else {
             return HeroEntry(date: .now, eyebrow: "This week",
                              title: "Your things, one place", subline: "Casberi")
         }

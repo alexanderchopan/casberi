@@ -108,7 +108,6 @@ struct Composer: View {
             // open composer is just the field. Paste capture survives without
             // its chip — a paste-sized insertion into the field sets the
             // `pasted` flag below, so pasted content still saves on send.
-
             // AnswerStream — search intent streams a composition (engine law:
             // any prefix renders).
             if answering {
@@ -215,6 +214,9 @@ struct Composer: View {
         didAutoSend = true
         draft = q
         try? await Task.sleep(for: .milliseconds(500))
+        // The one-shot draft set reads as a paste to the heuristic above;
+        // the probe is an utterance — answer, never save.
+        pasted = false
         commit()
         #endif
     }

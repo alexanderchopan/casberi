@@ -50,7 +50,7 @@ enum ScreenshotIngest {
             let date = asset.creationDate ?? .now
             let thing = Thing(
                 kind: .screenshot,
-                title: "Screenshot · \(date.formatted(date: .abbreviated, time: .shortened))",
+                title: "Screenshot",   // when it landed is capturedAt — no timestamp noise in the title
                 source: "Photos",
                 createdAt: date,
                 capturedAt: date,

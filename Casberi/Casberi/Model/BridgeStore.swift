@@ -10,12 +10,30 @@ import Observation
 /// the person is (P8 — awareness lands, it isn't polled).
 @Observable
 final class BridgeStore {
-    var bridges: [BridgeApp]
+    private static let saveKey = "bridges.v1"
 
-    /// Demo bridges seed with the demo corpus; a fresh user starts with
-    /// none — the Apps empty state points to the first action.
+    var bridges: [BridgeApp] {
+        didSet { persist() }
+    }
+
+    /// Saved bridges come back first (real connections survive relaunch);
+    /// the demo set seeds dev installs; a fresh user starts with none.
     init(bridges: [BridgeApp]? = nil) {
-        self.bridges = bridges ?? (DemoState.seedsDemoData ? BridgeApp.demo : [])
+        if let bridges {
+            self.bridges = bridges
+        } else if let data = UserDefaults.standard.data(forKey: Self.saveKey),
+                  let saved = try? JSONDecoder().decode([BridgeApp].self, from: data),
+                  !saved.isEmpty {
+            self.bridges = saved
+        } else {
+            self.bridges = DemoState.seedsDemoData ? BridgeApp.demo : []
+        }
+    }
+
+    private func persist() {
+        if let data = try? JSONEncoder().encode(bridges) {
+            UserDefaults.standard.set(data, forKey: Self.saveKey)
+        }
     }
 
     var attention: [BridgeApp] { bridges.filter { $0.status == .attention } }
@@ -58,8 +76,8 @@ final class BridgeStore {
     }
 }
 
-struct BridgeApp: Identifiable {
-    enum Status: Equatable {
+struct BridgeApp: Identifiable, Codable {
+    enum Status: String, Equatable, Codable {
         case connected, attention, paused
         var rank: Int { switch self { case .attention: 0; case .connected: 1; case .paused: 2 } }
         var color: Color {

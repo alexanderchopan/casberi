@@ -11,6 +11,7 @@ struct AppDetailScreen: View {
     @Environment(\.modelContext) private var modelContext
     @State private var pairing = false
     @State private var openBridge: OpenRoute?
+    @State private var previewStream = GenStream()
     private struct OpenRoute: Identifiable, Hashable { let id: String }
 
     private var bridge: BridgeApp? {
@@ -35,9 +36,26 @@ struct AppDetailScreen: View {
         .dsPageBackground()
         .navigationTitle(offer.name)
         .navigationBarTitleDisplayMode(.inline)
+        .onAppear {
+            // The preview streams in like every generated surface.
+            if !connected, let doc = StorePreview.doc(for: offer.name) {
+                previewStream.stream(doc)
+            }
+        }
         .sheet(isPresented: $pairing) { PairClientSheet() }
         .navigationDestination(item: $openBridge) { route in
-            if route.id == "zerion" { ZerionScreen() } else { BridgeDetailScreen(bridgeID: route.id) }
+            if route.id == "zerion" { ZerionScreen() }
+            else if route.id == "rss" { RSSScreen() }
+            else if route.id == "gpt" { ChatGPTImportScreen() }
+            else if route.id == "bsky" { BlueskyScreen() }
+            else if route.id == "fc" { FarcasterScreen() }
+            else if let tb = TokenBridge.allCases.first(where: { $0.bridgeID == route.id }) {
+                TokenSetupScreen(bridge: tb)
+            }
+            else if route.id.hasPrefix("setup:") {
+                SetupDestination(name: String(route.id.dropFirst(6)))
+            }
+            else { BridgeDetailScreen(bridgeID: route.id) }
         }
     }
 
@@ -72,8 +90,12 @@ struct AppDetailScreen: View {
         } else if offer.name == "Claude" {
             VerbCapsule(verb: .pair) { pairing = true }
         } else if offer.connectable {
-            VerbCapsule(verb: .connect) {
-                BridgeConnect.connect(offer, store: store, context: modelContext)
+            if offer.needsSetup {
+                VerbCapsule(verb: .connect) { openBridge = OpenRoute(id: "setup:\(offer.name)") }
+            } else {
+                VerbCapsule(verb: .connect) {
+                    BridgeConnect.connect(offer, store: store, context: modelContext)
+                }
             }
         } else {
             VerbCapsule(verb: .soon)
@@ -96,20 +118,32 @@ struct AppDetailScreen: View {
         VStack(alignment: .leading, spacing: DS.Space.s3) {
             Text("WHAT LANDS IN YOUR FEED")
                 .dsText(.label12).kerning(0.7).foregroundStyle(DS.textTertiary)
-            HStack(spacing: DS.Space.s3) {
-                RoundedRectangle(cornerRadius: DS.Radius.appIcon(36), style: .continuous)
-                    .fill(brand.opacity(0.16))
-                    .frame(width: 36, height: 36)
-                    .overlay(
-                        Image(systemName: "tray.and.arrow.down.fill")
-                            .font(.system(size: 15, weight: .medium))
-                            .foregroundStyle(brand)
-                    )
-                Text(offer.tagline).dsText(.body17).foregroundStyle(DS.textPrimary)
-                Spacer(minLength: 0)
+            // The preview (option 4): the app's shape, streamed through the
+            // real engine — the App Store screenshot, generated. Inert; the
+            // real thing arrives when the bridge does. Connectable apps skip
+            // it: their feed shows real things instead.
+            if !connected, StorePreview.doc(for: offer.name) != nil {
+                GenRender(id: "root", els: previewStream.els)
+                    .padding(.horizontal, -DS.Space.s4)
+                    .allowsHitTesting(false)
+            } else {
+                HStack(spacing: DS.Space.s3) {
+                    RoundedRectangle(cornerRadius: DS.Radius.appIcon(36), style: .continuous)
+                        .fill(brand.opacity(0.16))
+                        .frame(width: 36, height: 36)
+                        .overlay(
+                            Image(systemName: "tray.and.arrow.down.fill")
+                                .font(.system(size: 15, weight: .medium))
+                                .foregroundStyle(brand)
+                        )
+                    Text(offer.tagline).dsText(.body17).foregroundStyle(DS.textPrimary)
+                    Spacer(minLength: 0)
+                }
             }
-            if !offer.connectable && !connected {
-                Text("This bridge isn't available yet — it arrives with the connected apps update.")
+            if !connected, StorePreview.doc(for: offer.name) != nil {
+                Text(offer.connectable
+                     ? "A preview — your real things replace it when you connect."
+                     : "A preview — this bridge arrives with the connected apps update.")
                     .dsText(.subhead13).foregroundStyle(DS.textTertiary)
                     .padding(.top, DS.Space.s1)
             }

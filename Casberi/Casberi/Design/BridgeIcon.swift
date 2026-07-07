@@ -12,9 +12,12 @@ import SwiftUI
 struct BridgeIcon: View {
     let name: String
     var size: CGFloat = 44
+    @Environment(\.colorScheme) private var scheme
 
     private var assetName: String {
-        "brand-" + name.lowercased().replacingOccurrences(of: " ", with: "-")
+        "brand-" + name.lowercased()
+            .replacingOccurrences(of: " ", with: "-")
+            .replacingOccurrences(of: ".", with: "")
     }
 
     var body: some View {
@@ -27,13 +30,18 @@ struct BridgeIcon: View {
                 .clipShape(RoundedRectangle(cornerRadius: radius, style: .continuous))
         } else {
             let brand = BridgeGlyph.color(for: name)
+            // Light mode pulls bright brand hues (Notes yellow, Reminders
+            // orange) toward black and deepens the fill so the glyph reads
+            // on light chips and cards.
+            let glyph = scheme == .light ? brand.mix(with: .black, by: 0.35) : brand
             RoundedRectangle(cornerRadius: radius, style: .continuous)
-                .fill(brand.opacity(0.18))
+                .fill(brand.opacity(scheme == .light ? 0.24 : 0.18))
                 .frame(width: size, height: size)
                 .overlay(
                     Image(systemName: BridgeGlyph.symbol(for: name))
-                        .font(.system(size: size * 0.45, weight: .medium))
-                        .foregroundStyle(brand)
+                        .font(.system(size: size * 0.45,
+                                      weight: scheme == .light ? .semibold : .medium))
+                        .foregroundStyle(glyph)
                 )
         }
     }

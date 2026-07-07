@@ -1,0 +1,157 @@
+import Foundation
+
+/// Store-page previews (option 4, 2026-07-07): the dream left the feed and
+/// lives HERE — each not-yet-connectable app's product page streams a small
+/// preview of its shape through the real gen-UI engine, the way App Store
+/// screenshots preview an app. The feed itself is 100% real from minute one;
+/// fake content is confined to the one surface where preview framing is
+/// honest and expected.
+enum StorePreview {
+
+    /// The preview document for an offer, or nil when a preview would add
+    /// nothing (connectable apps show real things instead; Venice is a
+    /// brain candidate, not a feed source).
+    static func doc(for name: String) -> [String]? {
+        switch name {
+        case "Zerion": [
+            "root = Stack([map, t1, t2])",
+            "map = TagMap(\"Holdings\", null, [ETH 4210, USDC 1840, SOL 620, BONK 80])",
+            "t1 = TxRow(\"Swapped\", \"0.4 ETH → 1,120 USDC\", \"Base · Uniswap\")",
+            "t2 = TxRow(\"Received\", \"250 USDC\", \"from maya.eth\")",
+        ]
+        case "Gmail": [
+            "root = Stack([w])",
+            "w = Widget(\"Waiting on you\", null, [m1, m2])",
+            "m1 = MailRow(\"Your hotel reservation is confirmed\", \"Check-in Fri, 2 nights.\", \"8:12 AM\")",
+            "m2 = MailRow(\"Re: token layer sign-off\", \"Looks good — ship it.\", \"Yesterday\")",
+        ]
+        case "iCloud Mail": [
+            "root = Stack([w])",
+            "w = Widget(\"Waiting on you\", null, [m1])",
+            "m1 = MailRow(\"Your invoice is ready\", \"View or download anytime.\", \"9:02 AM\")",
+        ]
+        case "OpenClaw": [
+            "root = Stack([a, w])",
+            "a = ApprovalCard(\"CLAUDE-CODE · VIA OPENCLAW\", \"Deploy casberi-api to production?\", \"wants to run: railway up --environment prod\")",
+            "w = Widget(\"From your machines\", null, [r1, r2])",
+            "r1 = Row(\"Nightly backup ran\", \"Run\", \"OpenClaw\", \"4:00 AM\")",
+            "r2 = Row(\"Parse March invoices\", \"Job\", \"OpenClaw\", \"2h\")",
+        ]
+        case "Bankr": [
+            "root = Stack([a])",
+            "a = ApprovalCard(\"BANKR · VIA OPENCLAW\", \"Swap 0.3 ETH → USDC?\", \"wants to run: swap 0.3 ETH to USDC on Base (est. $742)\")",
+        ]
+        case "ChatGPT": [
+            "root = Stack([c])",
+            "c = TakeawayCard(\"LISBON TRIP\", \"Trip plan: Lisbon\", \"Three neighborhoods, two day trips, one food market.\")",
+        ]
+        case "Claude": [
+            "root = Stack([c])",
+            "c = TakeawayCard(\"ON ASK\", \"Claude reaches your things\", \"Reads only when you ask. Saves only what you approve.\")",
+        ]
+        case "GitHub": [
+            "root = Stack([w])",
+            "w = Widget(\"In your feed\", null, [r1, r2])",
+            "r1 = Row(\"PR #142: token layer\", \"Link\", \"GitHub\", \"1h\")",
+            "r2 = Row(\"Issue: dark mode contrast\", \"Link\", \"GitHub\", \"3h\")",
+        ]
+        case "Linear": [
+            "root = Stack([w])",
+            "w = Widget(\"Assigned to you\", null, [r1])",
+            "r1 = Row(\"CAS-88: polish the composer\", \"Link\", \"Linear\", \"2h\")",
+        ]
+        case "Notion": [
+            "root = Stack([w])",
+            "w = Widget(\"Your pages\", null, [r1])",
+            "r1 = Row(\"Q3 planning notes\", \"Note\", \"Notion\", \"1d\")",
+        ]
+        case "X": [
+            "root = Stack([w])",
+            "w = Widget(\"Bookmarked\", null, [r1])",
+            "r1 = Row(\"Thread: on-device models in 2026\", \"Link\", \"X\", \"5h\")",
+        ]
+        case "Reddit": [
+            "root = Stack([w])",
+            "w = Widget(\"Saved\", null, [r1])",
+            "r1 = Row(\"The best coastal drives near Lisbon\", \"Link\", \"Reddit\", \"1d\")",
+        ]
+        case "YouTube": [
+            "root = Stack([w])",
+            "w = Widget(\"Liked and saved\", null, [r1])",
+            "r1 = Row(\"Deadlift form, 8 minutes\", \"Link\", \"YouTube\", \"2d\")",
+        ]
+        case "Apple Music", "Spotify": [
+            "root = Stack([w])",
+            "w = Widget(\"Your listening\", null, [r1])",
+            "r1 = Row(\"Liked: Verano porteño\", \"Link\", \"\(name)\", \"1d\")",
+        ]
+        case "Telegram": [
+            "root = Stack([w])",
+            "w = Widget(\"Worth keeping\", null, [r1])",
+            "r1 = Row(\"Address for Saturday\", \"Chat\", \"Telegram\", \"4h\")",
+        ]
+        case "Apple Health": [
+            "root = Stack([w])",
+            "w = Widget(\"Your training\", null, [r1, r2])",
+            "r1 = Row(\"Evening run · 5.2 km\", \"Event\", \"Apple Health\", \"6:31 PM\")",
+            "r2 = Row(\"Strength · 45 min\", \"Event\", \"Apple Health\", \"Yesterday\")",
+        ]
+        case "Strava": [
+            "root = Stack([w])",
+            "w = Widget(\"Your activities\", null, [r1, r2])",
+            "r1 = Row(\"Morning ride · 24.1 km\", \"Event\", \"Strava\", \"7:02 AM\")",
+            "r2 = Row(\"Long run · 12 km\", \"Event\", \"Strava\", \"Sun\")",
+        ]
+        case "Cal.com": [
+            "root = Stack([w])",
+            "w = Widget(\"Booked with you\", null, [r1, r2])",
+            "r1 = Row(\"Intro call · Sam K\", \"Event\", \"Cal.com\", \"2:00 PM\")",
+            "r2 = Row(\"Portfolio review · 30 min\", \"Event\", \"Cal.com\", \"Thu\")",
+        ]
+        case "Calendly": [
+            "root = Stack([w])",
+            "w = Widget(\"On your schedule\", null, [r1, r2])",
+            "r1 = Row(\"Interview · Riley M\", \"Event\", \"Calendly\", \"11:30 AM\")",
+            "r2 = Row(\"Coffee chat · 15 min\", \"Event\", \"Calendly\", \"Fri\")",
+        ]
+        case "Todoist": [
+            "root = Stack([w])",
+            "w = Widget(\"On your list\", null, [r1, r2])",
+            "r1 = Row(\"Renew passport\", \"Reminder\", \"Todoist\", \"today\")",
+            "r2 = Row(\"Send the invoice\", \"Reminder\", \"Todoist\", \"Fri\")",
+        ]
+        case "Slack": [
+            "root = Stack([c])",
+            "c = TakeawayCard(\"#DESIGN\", \"Decision: ship the new feed rows\", \"Maya: let's go with the color tags — sign-off attached.\")",
+        ]
+        case "Raindrop": [
+            "root = Stack([w])",
+            "w = Widget(\"Saved\", null, [r1, r2])",
+            "r1 = Row(\"The grammar of color systems\", \"Link\", \"Raindrop\", \"2h\")",
+            "r2 = Row(\"Lisbon: 36 hours\", \"Link\", \"Raindrop\", \"1d\")",
+        ]
+        case "Readwise": [
+            "root = Stack([c])",
+            "c = TakeawayCard(\"HIGHLIGHT · THE CREATIVE ACT\", \"Perfection is the enemy of done\", \"The work tells you what it wants to be — your job is to listen.\")",
+        ]
+        case "RSS": [
+            "root = Stack([w])",
+            "w = Widget(\"New posts\", null, [r1, r2])",
+            "r1 = Row(\"Daring Fireball: On the new iPad\", \"Link\", \"RSS\", \"3h\")",
+            "r2 = Row(\"Stratechery: Aggregation, again\", \"Link\", \"RSS\", \"6h\")",
+        ]
+        case "Bluesky": [
+            "root = Stack([w])",
+            "w = Widget(\"Saved posts\", null, [r1])",
+            "r1 = Row(\"jay: the feed you own beats the feed you rent\", \"Chat\", \"Bluesky\", \"2h\")",
+        ]
+        case "Farcaster": [
+            "root = Stack([w])",
+            "w = Widget(\"Casts you saved\", null, [r1])",
+            "r1 = Row(\"dwr: base fees at all-time low\", \"Chat\", \"Farcaster\", \"4h\")",
+        ]
+        default:
+            nil
+        }
+    }
+}

@@ -45,6 +45,18 @@ extension DS {
         case "zerion":              return Color.fixed("#2461ff")
         case "bankr":               return Color.fixed("#a78bfa")   // their logo's own field
         case "venice":              return Color.fixed("#0e2942")   // sampled from their deep-blue mark
+        case "voice":               return Color.fixed("#ff375f")   // the voice kind's own pink
+        case "apple health":        return Color.fixed("#ff2d55")
+        case "strava":              return Color.fixed("#fc4c02")
+        case "todoist":             return Color.fixed("#e44332")
+        case "slack":               return Color.fixed("#4a154b")
+        case "raindrop":            return Color.fixed("#0db4e7")
+        case "readwise":            return Color.fixed("#087bff")
+        case "rss":                 return Color.fixed("#f26522")
+        case "farcaster":           return Color.fixed("#855dcd")
+        case "bluesky":             return Color.fixed("#0285ff")
+        case "cal.com":             return Color.fixed("#292929")
+        case "calendly":            return Color.fixed("#006bff")
         default:                    return DS.gray300
         }
     }

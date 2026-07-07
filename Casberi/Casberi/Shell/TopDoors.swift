@@ -40,20 +40,15 @@ struct AvatarDoor: View {
     }
 }
 
-/// The Apps door — a grid glyph, with an attention dot when a bridge needs
-/// reconnecting (the only place Apps earns a signal outside its own page).
+/// The Apps door — a grid glyph that PULSES when a bridge needs
+/// reconnecting (re-ruling 2026-07-07: the dot died; the button itself
+/// breathes — the only place Apps earns a signal outside its own page).
 struct AppsDoor: View {
     @Environment(BridgeStore.self) private var bridges
 
     var body: some View {
         Image(systemName: "square.grid.2x2")
-            .overlay(alignment: .topTrailing) {
-                if bridges.attentionCount > 0 {
-                    Circle()
-                        .fill(DS.attention)
-                        .frame(width: 8, height: 8)
-                        .offset(x: 4, y: -4)
-                }
-            }
+            .symbolEffect(.pulse, options: .repeating,
+                          isActive: bridges.attentionCount > 0)
     }
 }

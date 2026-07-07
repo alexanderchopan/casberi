@@ -44,7 +44,15 @@ struct GlassTabBar: View {
                 let active = tab == selection
                 Button {
                     DSHaptic.selection()
-                    withAnimation(DS.Motion.standard) { selection = tab }
+                    if selection == tab {
+                        // Re-tap: the tab is a home button — pop to its root.
+                        switch tab {
+                        case .home: chrome.popHome += 1
+                        case .feed: chrome.popFeed += 1
+                        }
+                    } else {
+                        withAnimation(DS.Motion.standard) { selection = tab }
+                    }
                 } label: {
                     VStack(spacing: DS.Space.s1) {
                         tabIcon(for: tab, active: active)

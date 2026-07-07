@@ -33,7 +33,7 @@ enum MCPTools {
     static func searchThings(_ query: String, limit: Int = 10, context: ModelContext) -> [Thing] {
         var descriptor = FetchDescriptor<Thing>(sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
         descriptor.fetchLimit = 500
-        let all = (try? context.fetch(descriptor)) ?? []
+        let all = ((try? context.fetch(descriptor)) ?? []).filter { !$0.isSample }
 
         let stops: Set<String> = ["about", "my", "the", "a", "in", "from", "for", "of"]
         let terms = query.lowercased()

@@ -38,12 +38,13 @@ struct ThingRow: View {
 /// minute instead of going stale with the row (§9 polish).
 struct LiveTimeText: View {
     let date: Date
+    var color: Color = DS.textTertiary
 
     var body: some View {
         TimelineView(.periodic(from: .now, by: 60)) { _ in
             Text(Self.short(date))
                 .dsText(.subhead13)
-                .foregroundStyle(DS.textTertiary)
+                .foregroundStyle(color)
         }
     }
 

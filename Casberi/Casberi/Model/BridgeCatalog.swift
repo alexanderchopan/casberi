@@ -15,6 +15,11 @@ enum BridgeCatalog {
         /// One plain sentence for the App-Store-style detail page — what
         /// connecting is worth, in Bob's words.
         let summary: String
+        /// True when connecting needs the person's input first (feed URLs,
+        /// a pasted token) — Connect opens the bridge's setup screen instead
+        /// of firing a permission ask. Setup bridges skip onboarding's
+        /// mini store: that screen is one-tap connects only.
+        var needsSetup: Bool = false
     }
 
     /// Grouped by what they're worth, verb taglines (S25).
@@ -31,8 +36,9 @@ enum BridgeCatalog {
               summary: "The mail that matters becomes findable things — no inbox to wade through — and Casberi can draft a reply when you ask."),
         Offer(name: "iCloud Mail", tagline: "Your @icloud.com inbox, findable",      group: "Your mail",      connectable: false,
               summary: "Connects with an app-specific password (the sanctioned route) and the mail that matters becomes findable things. This is the ACCOUNT — the Mail app itself has no door for other apps, and Apple Notes has none at all; those reach Casberi through the share sheet."),
-        Offer(name: "ChatGPT",     tagline: "Import your chats, keep them findable", group: "Your agent",     connectable: false,
-              summary: "A one-time import of your chat history, kept searchable alongside your things. (No live read — OpenAI doesn't offer one; this is your export, backfilled.)"),
+        Offer(name: "ChatGPT",     tagline: "Import your chats, keep them findable", group: "Your agent",     connectable: true,
+              summary: "A one-time import of your chat history, kept searchable alongside your things. (No live read — OpenAI doesn't offer one; this is your export, backfilled.)",
+              needsSetup: true),
         Offer(name: "Claude",      tagline: "Connect it to your things",             group: "Your agent",     connectable: false,
               summary: "Claude connects to Casberi — it reads your things when you ask and saves only what you approve. The inverse of a bridge: a client reaching in, not data pulled out."),
         Offer(name: "Bankr",       tagline: "Its asks wait for your tap",            group: "Your agent",     connectable: false,
@@ -41,12 +47,15 @@ enum BridgeCatalog {
               summary: "Venice keeps chats on your own device by design, so there's nothing to read in — its private API is a candidate to power Casberi's answers instead."),
         Offer(name: "OpenClaw",    tagline: "Your agents' work lands here",          group: "Your machines",  connectable: false,
               summary: "What your agents make — jobs, runs, outputs — lands in your feed with full provenance, and their approvals reach you here."),
-        Offer(name: "GitHub",      tagline: "PRs and issues, in your feed",         group: "Your work",      connectable: false,
-              summary: "Your pull requests and issues become things you can find and act on, without living in the repo."),
-        Offer(name: "Linear",      tagline: "Your issues stay in reach",             group: "Your work",      connectable: false,
-              summary: "The issues assigned to you join your things and surface when they matter."),
-        Offer(name: "Notion",      tagline: "Pages join your things",                group: "Your work",      connectable: false,
-              summary: "Your Notion pages become findable things, so what you wrote isn't stranded in one more app."),
+        Offer(name: "GitHub",      tagline: "PRs and issues, in your feed",         group: "Your work",      connectable: true,
+              summary: "The issues and pull requests that involve you become findable things. Connects with a read-only token you make in GitHub settings — it stays in this iPhone's Keychain.",
+              needsSetup: true),
+        Offer(name: "Linear",      tagline: "Your issues stay in reach",             group: "Your work",      connectable: true,
+              summary: "The issues assigned to you join your things and surface when they matter. Connects with a personal API key from Linear settings — it stays in this iPhone's Keychain.",
+              needsSetup: true),
+        Offer(name: "Notion",      tagline: "Pages join your things",                group: "Your work",      connectable: true,
+              summary: "The pages you connect become findable things, so what you wrote isn't stranded in one more app. Pages only. Connects with an integration token from notion.so — it stays in this iPhone's Keychain.",
+              needsSetup: true),
         Offer(name: "X",           tagline: "Bookmarks become findable",             group: "Your saves",     connectable: false,
               summary: "The posts you bookmarked stop disappearing — they land in your feed, findable later."),
         Offer(name: "Reddit",      tagline: "Saved posts become findable",           group: "Your saves",     connectable: false,
@@ -59,6 +68,36 @@ enum BridgeCatalog {
               summary: "Your liked songs become things you can find and revisit alongside everything else."),
         Offer(name: "Telegram",    tagline: "Chats join your things",                group: "Your messages",  connectable: false,
               summary: "The messages worth keeping become findable things — the one messenger with a sanctioned way in."),
+        Offer(name: "Apple Health", tagline: "Workouts land in your feed",           group: "Your fitness",   connectable: true,
+              summary: "Your workouts join your things — a run shows up next to the plan that inspired it. Everything stays on this iPhone: HealthKit never touches a server."),
+        Offer(name: "Strava",      tagline: "Every activity, one record",            group: "Your fitness",   connectable: false,
+              summary: "Rides and runs land in your feed with distance and time, next to your gym screenshots and plans."),
+        Offer(name: "Cal.com",     tagline: "Bookings land in your feed",            group: "Your schedule",  connectable: true,
+              summary: "The meetings people book with you join your things as events, next to your calendar. Connects with an API key from Cal.com settings — it stays in this iPhone's Keychain.",
+              needsSetup: true),
+        Offer(name: "Calendly",    tagline: "Meetings join your things",             group: "Your schedule",  connectable: true,
+              summary: "Your scheduled meetings land as events beside everything else. Connects with a personal access token from Calendly's integrations page — it stays in this iPhone's Keychain.",
+              needsSetup: true),
+        Offer(name: "Todoist",     tagline: "Tasks beside your lists",               group: "Your schedule",  connectable: true,
+              summary: "Your open tasks join your things alongside Reminders. Connects with the API token from Todoist settings — it stays in this iPhone's Keychain.",
+              needsSetup: true),
+        Offer(name: "Slack",       tagline: "Messages worth keeping",                group: "Your messages",  connectable: false,
+              summary: "The messages you save land as findable things — decisions and links stop drowning in channels."),
+        Offer(name: "Raindrop",    tagline: "Bookmarks become findable",             group: "Your saves",     connectable: true,
+              summary: "Your Raindrop bookmarks join your things, searchable next to everything else you saved. Connects with a token from Raindrop settings — it stays in this iPhone's Keychain.",
+              needsSetup: true),
+        Offer(name: "Readwise",    tagline: "Highlights stay with you",              group: "Your reading",   connectable: true,
+              summary: "Your highlights land in your feed — what you read joins what you do. Connects with your Readwise access token — it stays in this iPhone's Keychain.",
+              needsSetup: true),
+        Offer(name: "RSS",         tagline: "Any site with a feed",                  group: "Your reading",   connectable: true,
+              summary: "Follow any site that publishes a feed — new posts land in your feed as links, fetched by this iPhone directly. No account, no algorithm in between.",
+              needsSetup: true),
+        Offer(name: "Farcaster",   tagline: "Your casts, in your feed",              group: "Your network",   connectable: true,
+              summary: "An open social protocol — your casts are public, so this connects with just your username. No password, nothing stored but the name.",
+              needsSetup: true),
+        Offer(name: "Bluesky",     tagline: "Your posts, in your feed",              group: "Your network",   connectable: true,
+              summary: "Built on an open protocol — your posts are public, so this connects with just your handle. No password, nothing stored but the name. Likes arrive with sign-in, later.",
+              needsSetup: true),
     ]
 
     /// Group order for the catalog screen (insertion order of first member).

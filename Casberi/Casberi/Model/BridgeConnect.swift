@@ -7,7 +7,9 @@ import SwiftData
 /// context; everything else isn't wired yet and says so.
 @MainActor
 enum BridgeConnect {
-    static func connect(_ offer: BridgeCatalog.Offer, store: BridgeStore, context: ModelContext) {
+    static func connect(_ offer: BridgeCatalog.Offer, store: BridgeStore,
+                        context: ModelContext,
+                        completion: ((Bool) -> Void)? = nil) {
         Task {
             let result: (n: Int, id: String, noun: String, can: String)?
             switch offer.name {
@@ -20,10 +22,13 @@ enum BridgeConnect {
             case "Reminders":
                 result = await ScheduleIngest.connectReminders(context: context)
                     .map { ($0, "rem", "reminders", "Reads your lists; adds one when you ask.") }
+            case "Apple Health":
+                result = await HealthIngest.connectAndIngest(context: context)
+                    .map { ($0, "hlt", "workouts", "Reads your workouts.") }
             default:
                 result = nil
             }
-            guard let result else { return }
+            guard let result else { completion?(false); return }
             let proof = result.n > 0 ? "\(result.n) \(result.noun) in" : "Synced just now"
             if let existing = store.bridges.first(where: { $0.name == offer.name }) {
                 store.reconnect(existing.id, proof: proof)
@@ -34,6 +39,7 @@ enum BridgeConnect {
                 ))
             }
             DSHaptic.success()
+            completion?(true)
         }
     }
 }

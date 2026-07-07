@@ -49,6 +49,10 @@ All read via UserDefaults in `Shell/RootShell.swift` unless noted:
 - `-openSettings YES` — push the settings screen.
 - `-icloud.sync YES` — AppStorage override for the sync toggle copy.
 - `-onboarded YES` — AppStorage override that skips first-launch onboarding (fresh installs otherwise land on it, hiding the screen you deep-linked to).
+- `-openApp "<Offer name>"` — open a store product page (needs `casberi://account` opened after launch); `-openProject "<Tag>"` — push a project detail (`Screens/AccountScreen.swift` / `HomeScreen.swift`).
+- `-theme.light 0|1` — AppStorage theme override; always pass explicitly for light/dark screenshots (the sim's stored value sticks).
+- `-demoPick "Photos,Calendar"` — onboarding: mark those offers connected and continue (`Screens/OnboardingView.swift`).
+- `-rssFeed <url>` — follow a feed and sync headlessly; `-chatgptImport <path>` — import a conversations.json; `-bskyHandle <handle>` — connect Bluesky; `-tokenBridge "<Name>:<token>"` — connect a token bridge (Readwise/GitHub/Todoist/Raindrop/Cal.com/Calendly/Notion/Linear). Each NSLogs a probe result.
 
 Deep links: `casberi://home`, `casberi://feed`, `casberi://feed/type/<Tag>`, `casberi://account` (→ apps tab), `casberi://thing/<id>`.
 
@@ -67,7 +71,7 @@ Deep links: `casberi://home`, `casberi://feed`, `casberi://feed/type/<Tag>`, `ca
 - No hairlines. Widget/tile radius = `DS.Radius.widget`.
 - Typed text in the composer NEVER saves — things enter only via capture paths (paste chip, mic, share, screenshots, drop, bridges). Saving is an outcome the toast reports, never a verb.
 - Swipe verbs are reads only (writes live in the sheet, with consent). Feed chips only when they differentiate.
-- Honesty rule: no dead controls, no fake status. **Ship gate: the iCloud-sync toggle must not reach real users until CloudKit actually moves bytes (M1).** "End-to-end encrypted" claims require Advanced Data Protection — don't overclaim.
+- Honesty rule: no dead controls, no fake status. The iCloud-sync ship gate is MET (2026-07-07): CloudKit capability is in the build, voice audio rides the store (externalStorage → CKAsset), Delete everything purges the CloudKit zone, and only the app process mirrors (extensions use `SharedStore.extensionContainer()`). "End-to-end encrypted" claims still require Advanced Data Protection — don't overclaim.
 - Product rulings live in docs/prd.md — check it before re-litigating a design decision; record new rulings there.
 
 ## Working mode

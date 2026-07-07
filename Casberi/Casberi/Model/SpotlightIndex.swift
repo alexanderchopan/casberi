@@ -11,6 +11,8 @@ enum SpotlightIndex {
     private static let domain = "things"
 
     static func index(_ things: [Thing]) {
+        // Onboarding samples never reach search (handoff-onboarding).
+        let things = things.filter { !$0.isSample }
         guard !things.isEmpty else { return }
         let items = things.map { thing in
             let attrs = CSSearchableItemAttributeSet(contentType: .text)

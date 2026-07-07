@@ -11,14 +11,20 @@ struct KindGlyph: View {
     /// identity color: the shape says what it is, the hue agrees).
     var tint: Color? = nil
 
+    @Environment(\.colorScheme) private var scheme
+
     var body: some View {
-        let color = tint ?? kind.hue
+        let base = tint ?? kind.hue
+        // Light mode deepens the hue and the fill — cyan/yellow glyphs were
+        // washing out against light cards.
+        let color = scheme == .light ? base.mix(with: .black, by: 0.3) : base
         RoundedRectangle(cornerRadius: DS.Radius.appIcon(size), style: .continuous)
-            .fill(color.opacity(0.16))
+            .fill(base.opacity(scheme == .light ? 0.22 : 0.16))
             .frame(width: size, height: size)
             .overlay(
                 Image(systemName: kind.symbol)
-                    .font(.system(size: size * 0.5, weight: .medium))
+                    .font(.system(size: size * 0.5,
+                                  weight: scheme == .light ? .semibold : .medium))
                     .foregroundStyle(color)
             )
     }
@@ -104,6 +110,18 @@ enum BridgeGlyph {
         case "zerion":    return "wallet.bifold"
         case "bankr":     return "banknote"
         case "venice":    return "wand.and.stars"
+        case "voice":     return "waveform"
+        case "you":       return "person"
+        case "apple health": return "heart"
+        case "strava":    return "figure.run"
+        case "todoist":   return "checklist"
+        case "slack":     return "number"
+        case "raindrop":  return "drop"
+        case "readwise":  return "book"
+        case "rss":       return "dot.radiowaves.up.forward"
+        case "farcaster": return "at"
+        case "bluesky":   return "at"
+        case "cal.com", "calendly": return "calendar"
         default:          return "app"
         }
     }

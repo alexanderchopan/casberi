@@ -55,7 +55,7 @@ final class ShareViewController: UIViewController {
     }
 
     private func insert(_ thing: Thing) -> Bool {
-        guard let container = try? SharedStore.container() else { return false }
+        guard let container = try? SharedStore.extensionContainer() else { return false }
         let context = ModelContext(container)
         context.insert(thing)
         return (try? context.save()) != nil

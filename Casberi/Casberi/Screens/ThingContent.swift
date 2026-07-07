@@ -21,7 +21,8 @@ struct ThingContentView: View {
         case .chat:
             if !thing.content.isEmpty { ChatBubbles(text: thing.content) }
         case .voice:
-            VoiceContent(transcript: thing.content, sourceRef: thing.sourceRef)
+            VoiceContent(transcript: thing.content, sourceRef: thing.sourceRef,
+                         audio: thing.audio)
         case .file, .output:
             FileChip(name: thing.title, note: thing.content)
         case .event:
@@ -182,6 +183,7 @@ private struct ChatBubbles: View {
 private struct VoiceContent: View {
     let transcript: String
     var sourceRef: String? = nil
+    var audio: Data? = nil
 
     @State private var player: AVAudioPlayer?
     @State private var playing = false
@@ -191,10 +193,12 @@ private struct VoiceContent: View {
             .flatMap { FileManager.default.fileExists(atPath: $0.path) ? $0 : nil }
     }
 
+    private var hasAudio: Bool { audio != nil || audioURL != nil }
+
     var body: some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
             HStack(spacing: DS.Space.s2) {
-                if audioURL != nil {
+                if hasAudio {
                     Button {
                         toggle()
                     } label: {
@@ -231,9 +235,13 @@ private struct VoiceContent: View {
             playing = false
             return
         }
-        if player == nil, let url = audioURL {
+        if player == nil {
             try? AVAudioSession.sharedInstance().setCategory(.playback)
-            player = try? AVAudioPlayer(contentsOf: url)
+            if let audio {
+                player = try? AVAudioPlayer(data: audio)
+            } else if let url = audioURL {
+                player = try? AVAudioPlayer(contentsOf: url)
+            }
         }
         player?.play()
         playing = player?.isPlaying ?? false

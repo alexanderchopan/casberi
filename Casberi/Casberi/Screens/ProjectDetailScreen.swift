@@ -13,8 +13,6 @@ struct ProjectDetailScreen: View {
     @State private var renaming = false
     @State private var newName = ""
 
-    private var isPinned: Bool { ProjectPins.contains(projectName) }
-
     private var members: [Thing] {
         things.filter { $0.tags.contains(projectName) }
     }
@@ -39,7 +37,7 @@ struct ProjectDetailScreen: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(DS.Space.s4)
-                .background(DS.tint(magnitude: 0.6),
+                .background(ProjectHue.color(for: projectName).opacity(0.5),
                             in: RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
                 .padding(DS.Space.s4)
                 .mountIn()
@@ -55,16 +53,10 @@ struct ProjectDetailScreen: View {
         .dsPageBackground()
         .navigationBarTitleDisplayMode(.inline)
         .onAppear { stream.stream(compose()) }
-        // S21: the person renames or pins; the person never files.
+        // The person renames; the person never files. (The project PIN died
+        // 2026-07-07 — every project already sits on Home's map, so a pin
+        // that only re-sorted it was a second pin system. Thing pins remain.)
         .toolbar {
-            Button {
-                DSHaptic.tap()
-                ProjectPins.toggle(projectName)
-            } label: {
-                Image(systemName: isPinned ? "pin.fill" : "pin")
-            }
-            .tint(DS.tint)
-            .accessibilityLabel(isPinned ? "Unpin project" : "Pin project")
             Button {
                 newName = projectName
                 renaming = true
@@ -98,10 +90,6 @@ struct ProjectDetailScreen: View {
                 .filter { seen.insert($0.lowercased()).inserted }
         }
         try? modelContext.save()
-        if ProjectPins.contains(projectName) {
-            ProjectPins.toggle(projectName)
-            if !ProjectPins.contains(name) { ProjectPins.toggle(name) }
-        }
         DSHaptic.success()
         dismiss()
     }

@@ -105,6 +105,27 @@ struct RootShell: View {
                 // Warm the model on foreground so the first Ask is fast; the
                 // call is idempotent and returns immediately.
                 if !skipPrewarm { OnDeviceModel.prewarm() }
+                // Feeds are cheap to poll — every foreground refreshes RSS.
+                if !RSSStore.shared.feeds.isEmpty {
+                    Task { @MainActor in
+                        _ = await RSSIngest.refresh(context: modelContext)
+                    }
+                }
+                if !BlueskyStore.shared.handle.isEmpty {
+                    Task { @MainActor in
+                        _ = await BlueskyIngest.refresh(context: modelContext)
+                    }
+                }
+                if !FarcasterStore.shared.username.isEmpty {
+                    Task { @MainActor in
+                        _ = await FarcasterIngest.refresh(context: modelContext)
+                    }
+                }
+                for bridge in TokenBridge.allCases where bridge.connected {
+                    Task { @MainActor in
+                        _ = await TokenIngest.refresh(bridge, context: modelContext)
+                    }
+                }
                 // Control Center's button left a flag — open the composer.
                 let group = UserDefaults(suiteName: SharedStore.appGroup)
                 if group?.bool(forKey: "compose.request") == true {
@@ -140,14 +161,99 @@ struct RootShell: View {
             // screens' own reads and crashes SwiftData. The CoreSpotlight
             // calls it makes are non-blocking, so this is cheap on main.
             Task { @MainActor in
+                // Every launch: Spotlight reconciles and CloudKit-merge
+                // duplicates collapse (covers extension writes + sync merges).
                 SpotlightIndex.reindexAll(context: modelContext)
-                // Collapse any CloudKit-merge duplicates (inert until sync is on).
                 SyncReconcile.dedupeBySourceRef(context: modelContext)
+
+                // One-time migrations run once per install (bump the version
+                // when adding one) — steady-state launches skip the scans.
+                let migrationsKey = "migrations.version"
+                let migrationsCurrent = 1
+                if UserDefaults.standard.integer(forKey: migrationsKey) < migrationsCurrent {
+                    // Demo mode died (option 4, 2026-07-07) — any sample things
+                    // a previous build seeded are removed for good.
+                    let samples = (try? modelContext.fetch(FetchDescriptor<Thing>(
+                        predicate: #Predicate { $0.isSample == true }
+                    ))) ?? []
+                    for thing in samples { modelContext.delete(thing) }
+                    // One-time rename (2026-07-06): voice notes' source is
+                    // "Voice" now; older ones carried "You".
+                    let stale = (try? modelContext.fetch(FetchDescriptor<Thing>(
+                        predicate: #Predicate { $0.source == "You" }
+                    ))) ?? []
+                    for thing in stale where thing.kind == .voice {
+                        thing.source = "Voice"
+                    }
+                    // One-time move (2026-07-07): voice audio used to live as
+                    // loose files keyed by sourceRef; it belongs in the store
+                    // so sync carries it. Load each file in, then remove it.
+                    let voiceThings = (try? modelContext.fetch(FetchDescriptor<Thing>())) ?? []
+                    for thing in voiceThings where thing.kind == .voice && thing.audio == nil {
+                        guard let ref = thing.sourceRef,
+                              let url = VoiceCapture.audioURL(for: ref),
+                              let data = try? Data(contentsOf: url) else { continue }
+                        thing.audio = data
+                        try? FileManager.default.removeItem(at: url)
+                    }
+                    // One-time retitle (2026-07-07): early screenshot ingests
+                    // carried the timestamp in the title — pure noise.
+                    let noisy = (try? modelContext.fetch(FetchDescriptor<Thing>(
+                        predicate: #Predicate { $0.title.starts(with: "Screenshot · ") }
+                    ))) ?? []
+                    for thing in noisy { thing.title = "Screenshot" }
+                    try? modelContext.save()
+                    UserDefaults.standard.set(migrationsCurrent, forKey: migrationsKey)
+                }
             }
             // Warm the model at launch (non-blocking) so the first Ask doesn't
             // pay the one-time model load. Guarded so `-noPrewarm` can measure
             // the cold path.
             if !skipPrewarm { OnDeviceModel.prewarm() }
+            #if DEBUG
+            // `-chatgptImport <path>` imports a conversations.json from disk.
+            if let path = UserDefaults.standard.string(forKey: "chatgptImport"),
+               let data = FileManager.default.contents(atPath: path) {
+                let summary = ChatGPTImport.run(data: data, context: modelContext)
+                NSLog("ChatGPT probe: %d imported, %d skipped, failed=%d",
+                      summary.imported, summary.skipped, summary.failed ? 1 : 0)
+            }
+            // `-tokenBridge "<Name>:<token>"` connects a token bridge headlessly.
+            if let spec = UserDefaults.standard.string(forKey: "tokenBridge"),
+               let colon = spec.firstIndex(of: ":"),
+               let bridge = TokenBridge(rawValue: String(spec[..<colon])) {
+                TokenVault.set(String(spec[spec.index(after: colon)...]), for: bridge.tokenKey)
+                Task { @MainActor in
+                    let n = await TokenIngest.refresh(bridge, context: modelContext)
+                    NSLog("Token probe (%@): %@ new things", bridge.rawValue,
+                          n.map(String.init) ?? "FAILED")
+                }
+            }
+            // `-fcName <username>` connects Farcaster headlessly.
+            if let name = UserDefaults.standard.string(forKey: "fcName") {
+                FarcasterStore.shared.username = FarcasterStore.normalize(name)
+                Task { @MainActor in
+                    let n = await FarcasterIngest.refresh(context: modelContext)
+                    NSLog("Farcaster probe: %@ new things", n.map(String.init) ?? "FAILED")
+                }
+            }
+            // `-bskyHandle <handle>` connects Bluesky headlessly.
+            if let handle = UserDefaults.standard.string(forKey: "bskyHandle") {
+                BlueskyStore.shared.handle = BlueskyStore.normalize(handle)
+                Task { @MainActor in
+                    let n = await BlueskyIngest.refresh(context: modelContext)
+                    NSLog("Bluesky probe: %@ new things", n.map(String.init) ?? "FAILED")
+                }
+            }
+            // `-rssFeed <url>` follows a feed and syncs — headless bridge test.
+            if let feedURL = UserDefaults.standard.string(forKey: "rssFeed") {
+                RSSStore.shared.add(feedURL)
+                Task { @MainActor in
+                    let n = await RSSIngest.refresh(context: modelContext)
+                    NSLog("RSS probe: %@ new things", n.map(String.init) ?? "FAILED")
+                }
+            }
+            #endif
             // Debug hook: `simctl launch ... -deeplink casberi://feed` lands in
             // UserDefaults; routes without the system open-in dialog.
             #if DEBUG
@@ -213,7 +319,15 @@ struct RootShell: View {
         .fullScreenCover(isPresented: Binding(
             get: { !onboarded }, set: { if !$0 { onboarded = true } }
         )) {
-            OnboardingView { onboarded = true }
+            // Onboarding (option 4, 2026-07-07): the mini store connects the
+            // three real bridges for REAL, and that's the whole tour — no
+            // demo mode, no sample things. The dream lives on the store
+            // pages as engine-rendered previews. Landing is FEED: the record
+            // the connects just filled.
+            OnboardingView(store: bridges) { _ in
+                onboarded = true
+                tab = .feed
+            }
         }
     }
 
@@ -235,9 +349,14 @@ struct RootShell: View {
             HomeRoute.shared.push = .apps
         case "thing":
             tab = .feed
-            if url.pathComponents.contains("latest") {
+            let part = url.pathComponents.filter { $0 != "/" }.first
+            if part == "latest" {
                 deepLinkThing = (try? modelContext.fetch(FetchDescriptor<Thing>(
                     sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]
+                )))?.first
+            } else if let part, let uuid = UUID(uuidString: part) {
+                deepLinkThing = (try? modelContext.fetch(FetchDescriptor<Thing>(
+                    predicate: #Predicate { $0.id == uuid }
                 )))?.first
             }
         default: break
@@ -288,7 +407,14 @@ struct RootShell: View {
                 return line.count > 80 ? String(line.prefix(80)) + "…" : line
             }()
         let thing = Thing(kind: .voice, title: title, content: transcript,
-                          source: "You", sourceRef: sourceRef)
+                          source: "Voice", sourceRef: sourceRef)
+        // The recording moves INTO the store — externalStorage carries it,
+        // and sync can too. The loose file goes; the model owns the bytes.
+        if let url = VoiceCapture.audioURL(for: sourceRef),
+           let data = try? Data(contentsOf: url) {
+            thing.audio = data
+            try? FileManager.default.removeItem(at: url)
+        }
         modelContext.insert(thing)
         try? modelContext.save()
         SpotlightIndex.index([thing])

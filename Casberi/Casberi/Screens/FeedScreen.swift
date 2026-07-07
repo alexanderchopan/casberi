@@ -26,8 +26,13 @@ struct FeedScreen: View {
     @State private var blockStream = GenStream()
     @State private var doorPush: HomeRoute.Push?
     @State private var liftedID: UUID?
-    @State private var quickTagThing: Thing?
-    @State private var moreThing: Thing?
+    // First-run teaching (option 4: no demo mode — these live in the real
+    // app and retire on first use, forever).
+    @AppStorage("coach.chip.done") private var chipCoachDone = false
+    @AppStorage("coach.swipe.done") private var swipeCoachDone = false
+    /// Bumped when the source chip changes — rows replay their shape's
+    /// entrance (each shape arrives its own way, ruling 2026-07-07).
+    @State private var shapeWave = 0
     @Namespace private var zoomNS
     @Environment(\.openURL) private var openURL
 
@@ -39,19 +44,31 @@ struct FeedScreen: View {
             case "All":                 self = .all
             case "Photos":              self = .photos
             case "Zerion":              self = .zerion
-            case "Calendar":            self = .calendar
+            case "Calendar", "Cal.com", "Calendly": self = .calendar
             case "Gmail", "iCloud Mail": self = .gmail
-            case "ChatGPT", "Claude":   self = .chat
-            case "Reminders":           self = .reminders
+            case "ChatGPT", "Claude", "Slack", "Farcaster", "Bluesky": self = .chat
+            case "Reminders", "Todoist": self = .reminders
             case "OpenClaw", "Bankr":   self = .agent
             case "Safari":              self = .safari
             case "Notes":               self = .notes
-            case "You":                 self = .you
+            case "You", "Voice":        self = .you
             default:                    self = .plain
             }
         }
     }
     private var shape: Shape { Shape(source: filter.source) }
+
+    /// How this shape's rows arrive: the agenda slides in from the leading
+    /// edge like a day filling, photos scale in like the grid, transactions
+    /// rise like entries posting, everything else lifts gently.
+    private var entranceStyle: RowEntrance.Style {
+        switch shape {
+        case .calendar: .init(dx: -28, dy: 0, scale: 1, step: 0.045)
+        case .zerion:   .init(dx: 0, dy: 16, scale: 1, step: 0.04)
+        case .photos:   .init(dx: 0, dy: 0, scale: 0.92, step: 0.03)
+        default:        .init(dx: 0, dy: 8, scale: 1, step: 0.028)
+        }
+    }
 
     // MARK: - Derivations
 
@@ -81,6 +98,13 @@ struct FeedScreen: View {
     }
 
     private var pinned: [Thing] { visible.filter(\.pinned) }
+
+    /// The one row that teaches the swipe (demo only, once): it nudges left,
+    /// a pin peeks out, it settles back. Motion, not a tooltip.
+    private var hintThingID: UUID? {
+        guard !swipeCoachDone else { return nil }
+        return unpinned.first(where: { $0.kind != .approval })?.id
+    }
     private var unpinned: [Thing] { visible.filter { !$0.pinned } }
 
     /// Day groups, newest day first ("Today", "Yesterday", then dated).
@@ -116,6 +140,11 @@ struct FeedScreen: View {
                 }
         }
         .tint(DS.tint)
+        // Re-tapping the Feed tab pops pushed screens and sheets back to root.
+        .onChange(of: chrome.popFeed) {
+            doorPush = nil
+            sheetThing = nil
+        }
     }
 
     private var feedList: some View {
@@ -132,6 +161,7 @@ struct FeedScreen: View {
                             .dsText(.subhead13).foregroundStyle(DS.textSecondary)
                         Spacer()
                     }
+                    .padding(.horizontal, DS.Space.s4)
                     .padding(.bottom, DS.Space.s2)
                 }
                 // A feed is a feed (re-ruling): one chip row — sources, plus
@@ -148,6 +178,7 @@ struct FeedScreen: View {
                             .foregroundStyle(DS.tint)
                             .padding(.horizontal, DS.Space.s3).frame(height: 28)
                             .background(DS.tintDim, in: Capsule(style: .continuous))
+                            .padding(.leading, DS.Space.s4)
                             .onTapGesture {
                                 DSHaptic.selection()
                                 withAnimation(DS.Motion.standard) { filter.tag = "All" }
@@ -155,10 +186,22 @@ struct FeedScreen: View {
                             .accessibilityLabel("Clear \(label) filter")
                         }
                         if sources.count > 2 {
-                            filterChips(sources, active: filter.source) { filter.source = $0 }
+                            filterChips(sources, active: filter.source) { label in
+                                filter.source = label
+                                chipCoachDone = true   // lesson learned — coach retires
+                            }
                         }
                         Spacer()
                     }
+                }
+                // The one feed coach line — first run only, retires on the
+                // first chip tap. Plain words, no overlays, no arrows.
+                if !chipCoachDone, sources.count > 2 {
+                    Text("Tap a chip — the feed takes that app's shape.")
+                        .dsText(.subhead13)
+                        .foregroundStyle(DS.tint)
+                        .padding(.horizontal, DS.Space.s4)
+                        .padding(.top, DS.Space.s1)
                 }
             }
             .listRowBackground(Color.clear)
@@ -171,11 +214,10 @@ struct FeedScreen: View {
                     .listRowSeparator(.hidden)
                     .listRowInsets(EdgeInsets())
             } else if visible.isEmpty {
-                Text("Nothing matches.")
-                    .dsText(.callout15).foregroundStyle(DS.textTertiary)
-                    .padding(DS.Space.s6)
+                Group { filteredEmptyState }
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
+                    .listRowInsets(EdgeInsets())
             } else {
                 if !pinned.isEmpty, shape != .photos {
                     daySection("Pinned", pinned)
@@ -188,7 +230,7 @@ struct FeedScreen: View {
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
         }
-        .listStyle(.insetGrouped)
+        .listStyle(.plain)
         .animation(DS.Motion.standard, value: things.count)   // new things rise in
         .scrollContentBackground(.hidden)
         .dsPageBackground()
@@ -211,34 +253,13 @@ struct FeedScreen: View {
             }
             #endif
         }
-        .onChange(of: filter.source) { streamBlock() }
+        .onChange(of: filter.source) {
+            shapeWave += 1
+            streamBlock()
+        }
         .sheet(item: $sheetThing) { thing in
             ThingSheetView(thing: thing)
                 .navigationTransition(.zoom(sourceID: thing.id, in: zoomNS))
-        }
-        // The swipe's quick-tag tray — tag without opening the thing.
-        .sheet(item: $quickTagThing) { thing in
-            QuickTagSheet(thing: thing)
-        }
-        // The swipe's More — the read verbs, Mail-style.
-        .confirmationDialog(
-            moreThing?.title ?? "",
-            isPresented: Binding(get: { moreThing != nil },
-                                 set: { if !$0 { moreThing = nil } }),
-            titleVisibility: .visible
-        ) {
-            if let thing = moreThing {
-                ForEach(VerbDerivation.verbs(for: thing)
-                    .filter { verb in
-                        if case .copyText = verb.action { return false }
-                        return !verb.isWrite
-                    }
-                    .prefix(3)) { verb in
-                    Button(verb.label) { run(verb, on: thing) }
-                }
-                Button("Open", systemImage: "arrow.up.right") { sheetThing = thing }
-                Button("Cancel", role: .cancel) { moreThing = nil }
-            }
         }
         .confirmationDialog(
             confirming.map { "\($0.0.label): \($0.1.title)?" } ?? "",
@@ -376,10 +397,10 @@ struct FeedScreen: View {
         if !doing.isEmpty { daySection("Doing", doing) }
         if !fresh.isEmpty || !stale.isEmpty {
             Section {
-                ForEach(fresh) { thing in shapedListRow(thing) }
+                ForEach(Array(fresh.enumerated()), id: \.element.id) { i, thing in shapedListRow(thing, index: i) }
                 if !stale.isEmpty {
                     if staleExpanded {
-                        ForEach(stale) { thing in shapedListRow(thing) }
+                        ForEach(Array(stale.enumerated()), id: \.element.id) { i, thing in shapedListRow(thing, index: i) }
                     } else {
                         HStack {
                             Text("Older").dsText(.body17).foregroundStyle(DS.textSecondary)
@@ -431,9 +452,14 @@ struct FeedScreen: View {
     // MARK: - Row dispatch (the shape decides what a row leads with)
 
     /// The row inside a list section, with the standard list plumbing attached.
-    private func shapedListRow(_ thing: Thing) -> some View {
+    private func shapedListRow(_ thing: Thing, index: Int = 0) -> some View {
         let lifted = liftedID == thing.id
-        return shapedRow(thing)
+        // AnyView: same metadata-depth insurance as GenRender (crash fix).
+        return AnyView(shapedRow(thing))
+            .modifier(RowEntrance(index: index, wave: shapeWave, style: entranceStyle))
+            .modifier(SwipeHintNudge(active: thing.id == hintThingID) {
+                swipeCoachDone = true
+            })
             // The pin lift (§11): a brief raise while the row glides to the
             // Pinned section.
             .scaleEffect(lifted ? 1.02 : 1)
@@ -441,10 +467,26 @@ struct FeedScreen: View {
             .contentShape(Rectangle())
             .matchedTransitionSource(id: thing.id, in: zoomNS)
             .onTapGesture { sheetThing = thing }
-            .listRowBackground(DS.surfaceSheet)
+            // V3b (2026-07-07, supersedes the kind-color wash): rows are
+            // NEUTRAL cards — the translucent kind wash read as murk. Color
+            // moved into the tag text: the project's own stable hue.
+            .listRowBackground(
+                RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous)
+                    .fill(DS.surfaceSheet)
+                    .padding(.horizontal, DS.Space.s4)
+                    .padding(.vertical, DS.Space.s1)
+            )
+            .listRowInsets(.init(top: DS.Space.s2,
+                                 leading: DS.Space.s4 + DS.Space.s3,
+                                 bottom: DS.Space.s2,
+                                 trailing: DS.Space.s4 + DS.Space.s3))
             .listRowSeparator(.hidden)
-            // One swipe side, Mail's anatomy (ruling 2026-07-06): Pin at the
-            // edge (full swipe pins), Tag, then More for the read verbs.
+            // One gesture, one meaning (re-ruling 2026-07-07): TAP opens the
+            // sheet — tags and verbs live there — and SWIPE is Pin plus the
+            // real hand-off: Open IN THE SOURCE APP, only when the thing has
+            // a destination (calshow://, the link, photos-redirect://…).
+            // Tag left the swipe — it was the tap in disguise, and reaching
+            // past it kept misfiring the pin.
             .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                 Button {
                     togglePin(thing)
@@ -453,18 +495,16 @@ struct FeedScreen: View {
                           systemImage: thing.pinned ? "pin.slash" : "pin")
                 }
                 .tint(DS.tint)
-                Button {
-                    quickTagThing = thing
-                } label: {
-                    Label("Tag", systemImage: "tag")
+                if let openVerb = VerbDerivation.verbs(for: thing).first(where: {
+                    if case .openURL = $0.action { return true } else { return false }
+                }) {
+                    Button {
+                        run(openVerb, on: thing)
+                    } label: {
+                        Label("Open", systemImage: "arrow.up.right")
+                    }
+                    .tint(DS.gray600)
                 }
-                .tint(DS.confirm)
-                Button {
-                    moreThing = thing
-                } label: {
-                    Label("More", systemImage: "ellipsis")
-                }
-                .tint(DS.gray600)
             }
     }
 
@@ -476,27 +516,16 @@ struct FeedScreen: View {
                          onApprove: { perform(Verb(label: "Approve", icon: "checkmark.circle", action: .approve), on: thing) },
                          onDeny: { perform(Verb(label: "Deny", icon: "xmark.circle", action: .deny), on: thing) })
         } else {
+            // B2b (ruling 2026-07-06): ONE row anatomy — the band — for every
+            // kind and every shape. The wash carries the kind; per-kind row
+            // shapes retired. Two earned exceptions: the reminders check
+            // circle (the lightest write) and the pinned/doing chat takeaway.
             switch shape {
-            case .zerion:    TxRow(thing: thing)
-            case .calendar:  AgendaRow(thing: thing, emphasized: thing.id == nextEventID)
-            case .gmail:     MailRow(thing: thing)
-            case .chat:
-                if thing.pinned || thing.mark == .doing {
-                    TakeawayCard(thing: thing)
-                } else {
-                    FeedRow(thing: thing)
-                }
+            case .calendar:  BandRow(thing: thing, emphasized: thing.id == nextEventID)
             case .reminders: CheckRow(thing: thing, onToggle: { toggleReminder(thing) })
-            case .agent:     StatusTickRow(thing: thing)
-            case .safari:    LinkRow(thing: thing)
-            case .notes:     NoteRow(thing: thing)
-            case .you:
-                if thing.kind == .voice {
-                    VoiceRow(thing: thing)
-                } else {
-                    KindAwareRow(thing: thing)
-                }
-            default:         KindAwareRow(thing: thing)
+            case .chat where thing.pinned || thing.mark == .doing:
+                TakeawayCard(thing: thing)
+            default:         BandRow(thing: thing)
             }
         }
     }
@@ -517,10 +546,69 @@ struct FeedScreen: View {
     /// Empty Feed — the surface's own choreography with skeletons; the copy
     /// points to the first action (brief §7 empty states).
     private var emptyState: some View {
-        // The berry draws itself on; the composer is already on screen, so
-        // no button (§5). One line, plain words.
-        QuietStateView(line: "Things you capture land here.")
-            .padding(.top, DS.Space.s6)
+        // The berry draws itself on; the composer is already on screen. One
+        // line, one door: an empty feed's next move is connecting an app.
+        VStack(spacing: DS.Space.s3) {
+            QuietStateView(line: "Things you capture land here.")
+            Button {
+                DSHaptic.selection()
+                doorPush = .apps
+            } label: {
+                Text("Browse apps")
+                    .dsText(.label12)
+                    .foregroundStyle(DS.tint)
+                    .padding(.horizontal, DS.Space.s4)
+                    .frame(height: 32)
+                    .background(DS.tintDim, in: Capsule(style: .continuous))
+            }
+            .buttonStyle(.plain)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.top, DS.Space.s6)
+    }
+
+    /// A filter with no matches: the filtered app's own icon, a plain line,
+    /// and one way back. Never a bare "Nothing matches."
+    private var filteredEmptyState: some View {
+        VStack(spacing: DS.Space.s3) {
+            if filter.source != "All" {
+                BridgeIcon(name: filter.source, size: 44)
+            } else if let kind = ThingKind.from(typeTag: filter.tag) {
+                KindGlyph(kind: kind, size: 44)
+            }
+            Text(emptyLine)
+                .dsText(.body17)
+                .foregroundStyle(DS.textSecondary)
+                .multilineTextAlignment(.center)
+            Button {
+                DSHaptic.selection()
+                withAnimation(DS.Motion.standard) {
+                    filter.source = "All"
+                    filter.tag = "All"
+                }
+            } label: {
+                Text("Show everything")
+                    .dsText(.label12)
+                    .foregroundStyle(DS.tint)
+                    .padding(.horizontal, DS.Space.s4)
+                    .frame(height: 32)
+                    .background(DS.tintDim, in: Capsule(style: .continuous))
+            }
+            .buttonStyle(.plain)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, DS.Space.s4)
+        .padding(.vertical, DS.Space.s6)
+    }
+
+    private var emptyLine: String {
+        let tagLabel = ThingKind.from(typeTag: filter.tag)?.typeTagPlural ?? filter.tag
+        switch (filter.source != "All", filter.tag != "All") {
+        case (true, true):   return "Nothing from \(filter.source) under \(tagLabel) yet."
+        case (true, false):  return "Nothing from \(filter.source) yet."
+        case (false, true):  return "No \(tagLabel.lowercased()) yet."
+        default:             return "Nothing here yet."
+        }
     }
 
     private func filterChips(_ labels: [String], active: String,
@@ -558,8 +646,8 @@ struct FeedScreen: View {
         Section {
             // Rows dispatch by shape (shaped feeds); the swipe stays triage —
             // reads only, writes live in the sheet (ruling), Copy sheet-only.
-            ForEach(rows) { thing in
-                shapedListRow(thing)
+            ForEach(Array(rows.enumerated()), id: \.element.id) { i, thing in
+                shapedListRow(thing, index: i)
             }
         } header: {
             HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
@@ -568,6 +656,8 @@ struct FeedScreen: View {
                     .contentTransition(.numericText())
             }
             .textCase(nil)
+            .padding(.leading, DS.Space.s4)
+            .padding(.vertical, DS.Space.s1)
         }
     }
 
@@ -619,14 +709,18 @@ struct FeedScreen: View {
                 DSHaptic.success()
                 chrome.flash("Saved")
             } else {
-                thing.mark = .done
-                try? modelContext.save()
+                withAnimation(DS.Motion.standard) {
+                    thing.mark = .done
+                    try? modelContext.save()
+                }
                 DSHaptic.success()
                 chrome.flash("Approved — sent to your gateway")
             }
         case .deny:
-            thing.mark = .done
-            try? modelContext.save()
+            withAnimation(DS.Motion.standard) {
+                thing.mark = .done
+                try? modelContext.save()
+            }
             chrome.flash("Denied — your gateway was told")
         }
     }
@@ -658,36 +752,75 @@ struct FeedScreen: View {
     }
 }
 
-/// A Feed row: kind glyph, title, tag, pin, time. Marks ride native swipes.
-struct FeedRow: View {
-    let thing: Thing
-
-    var body: some View {
-        HStack(spacing: DS.Space.s3) {
-            KindGlyph(kind: thing.kind, size: 32)
-            Text(thing.title)
-                .dsText(.body17)
-                .foregroundStyle(thing.mark == .done ? DS.textTertiary : DS.textPrimary)
-                .strikethrough(thing.mark == .done, color: DS.textTertiary)
-                .lineLimit(1)
-                .frame(maxWidth: .infinity, alignment: .leading)
-            // The glyph carries the kind; the pill carries the project when
-            // the thing has one (amendment: type pills died as redundant ink).
-            if let project = thing.tags.first(where: { ThingKind.from(typeTag: $0) == nil }) {
-                TagPill(project)
-            }
-            LiveTimeText(date: thing.capturedAt)
-        }
-        .padding(.vertical, DS.Space.s1)
-    }
-
-    static func shortTime(_ date: Date) -> String {
-        let s = Date.now.timeIntervalSince(date)
-        if s < 3600 { return "\(max(1, Int(s / 60)))m" }
-        if s < 86_400 { return "\(Int(s / 3600))h" }
-        return "\(Int(s / 86_400))d"
-    }
-}
 
 /// The compact Feed treemap — 5 cells, areas "a a b c / a a d e", 140pt tall,
 
+
+
+/// Rows arrive the way their shape moves (ruling 2026-07-07): a per-shape
+/// offset/scale revealed with a small stagger, replayed when the chip
+/// changes. One animation per moment — this IS the shape's moment.
+struct RowEntrance: ViewModifier {
+    struct Style {
+        var dx: CGFloat
+        var dy: CGFloat
+        var scale: CGFloat
+        var step: Double
+    }
+
+    let index: Int
+    let wave: Int
+    let style: Style
+    @State private var shown = false
+
+    func body(content: Content) -> some View {
+        content
+            .opacity(shown ? 1 : 0)
+            .offset(x: shown ? 0 : style.dx, y: shown ? 0 : style.dy)
+            .scaleEffect(shown ? 1 : style.scale)
+            .onAppear { reveal() }
+            .onChange(of: wave) {
+                shown = false
+                reveal()
+            }
+    }
+
+    private func reveal() {
+        withAnimation(DS.Motion.standard.delay(Double(min(index, 12)) * style.step)) {
+            shown = true
+        }
+    }
+}
+
+
+/// The demo's swipe lesson: the first row nudges left once, the pin peeks
+/// from the trailing edge, and the row settles back. Plays a single time.
+struct SwipeHintNudge: ViewModifier {
+    let active: Bool
+    var onDone: () -> Void
+    @State private var nudge: CGFloat = 0
+
+    func body(content: Content) -> some View {
+        content
+            .offset(x: nudge)
+            .background(alignment: .trailing) {
+                if active {
+                    Image(systemName: "pin.fill")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(DS.tint)
+                        .opacity(nudge < -8 ? Double(min(1, -nudge / 48)) : 0)
+                }
+            }
+            .onAppear {
+                guard active else { return }
+                Task { @MainActor in
+                    try? await Task.sleep(for: .milliseconds(1400))
+                    withAnimation(.spring(duration: 0.45, bounce: 0.35)) { nudge = -56 }
+                    try? await Task.sleep(for: .milliseconds(800))
+                    withAnimation(.spring(duration: 0.4, bounce: 0.3)) { nudge = 0 }
+                    try? await Task.sleep(for: .milliseconds(400))
+                    onDone()
+                }
+            }
+    }
+}

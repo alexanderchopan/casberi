@@ -126,3 +126,15 @@ enum DS {
         static let bubble = Animation.timingCurve(0.32, 0.72, 0, 1, duration: 0.26)
     }
 }
+
+
+/// The press feel for tappable tiles and pills: a soft spring dip, matching
+/// iOS's own control feedback (polish 2026-07-07).
+struct PressSpring: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.96 : 1)
+            .animation(.spring(duration: 0.25, bounce: 0.5),
+                       value: configuration.isPressed)
+    }
+}

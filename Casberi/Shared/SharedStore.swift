@@ -45,6 +45,14 @@ enum SharedStore {
         return try make(cloudKit: .none)
     }
 
+    /// The widget and share extension open the SAME store file but never
+    /// engage CloudKit mirroring — one process syncs (the app); a second
+    /// mirror on the same store fights the first. Extension writes reach
+    /// iCloud the next time the app opens.
+    static func extensionContainer() throws -> ModelContainer {
+        try make(cloudKit: .none)
+    }
+
     private static func make(cloudKit: ModelConfiguration.CloudKitDatabase) throws -> ModelContainer {
         let groupURL = FileManager.default
             .containerURL(forSecurityApplicationGroupIdentifier: appGroup)

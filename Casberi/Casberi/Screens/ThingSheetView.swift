@@ -7,6 +7,9 @@ import SwiftData
 /// the Related shelf streams last through the engine.
 struct ThingSheetView: View {
     @Bindable var thing: Thing
+    /// True when the Tag swipe opened the sheet — it lands scrolled to the
+    /// Tags field (one sheet for everything; the swipe is just a shortcut).
+    var focusTags: Bool = false
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
@@ -20,12 +23,14 @@ struct ThingSheetView: View {
     @State private var deleteTarget: String?
 
     var body: some View {
+        ScrollViewReader { proxy in
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
                 header
                 contentByKind
                 verbsCard
                 tagsField
+                    .id("tags")
                 relatedShelf
             }
             .padding(.bottom, DS.Space.s6)
@@ -36,7 +41,19 @@ struct ThingSheetView: View {
         .presentationDragIndicator(.visible)
         .presentationCornerRadius(DS.Radius.sheet)
         .dsColorScheme()
-        .onAppear { streamRelated() }
+        .onAppear {
+            streamRelated()
+            if focusTags {
+                // Land on the Tags field — the swipe's whole point.
+                Task { @MainActor in
+                    try? await Task.sleep(for: .milliseconds(80))
+                    withAnimation(DS.Motion.standard) {
+                        proxy.scrollTo("tags", anchor: .top)
+                    }
+                }
+            }
+        }
+        }
         // Ask-before-acting: writes confirm, reads pass.
         .confirmationDialog(
             confirmingVerb.map { "\($0.label): \(thing.title)?" } ?? "",
@@ -272,10 +289,6 @@ struct ThingSheetView: View {
         for t in all where t.tags.contains(old) {
             t.tags = t.tags.map { $0 == old ? new : $0 }
         }
-        if ProjectPins.contains(old) {
-            ProjectPins.toggle(old)
-            if !ProjectPins.contains(new) { ProjectPins.toggle(new) }
-        }
         try? modelContext.save()
         DSHaptic.success()
     }
@@ -286,7 +299,6 @@ struct ThingSheetView: View {
         for t in all where t.tags.contains(tag) {
             t.tags.removeAll { $0 == tag }
         }
-        if ProjectPins.contains(tag) { ProjectPins.toggle(tag) }
         try? modelContext.save()
         DSHaptic.success()
     }
