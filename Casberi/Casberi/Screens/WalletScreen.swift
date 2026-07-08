@@ -36,7 +36,8 @@ struct WalletScreen: View {
 
     var body: some View {
         List {
-            watchingSection
+            addSection
+            if !wallet.addresses.isEmpty { watchingSection }
             if !holdings.els.isEmpty {
                 Section {
                     GenRender(id: "root", els: holdings.els)
@@ -45,7 +46,6 @@ struct WalletScreen: View {
                         .listRowInsets(EdgeInsets())
                 }
             }
-            addSection
             if syncing {
                 Section {
                     HStack(spacing: DS.Space.s2) {
@@ -117,39 +117,31 @@ struct WalletScreen: View {
         } header: {
             Text("WATCHING").dsText(.label12).kerning(0.7)
                 .foregroundStyle(DS.textSecondary)
-        } footer: {
-            if wallet.addresses.isEmpty {
-                Text("Paste an address below — its activity lands in your feed.")
-                    .dsText(.subhead13).foregroundStyle(DS.textSecondary)
-            }
         }
     }
 
     private var addSection: some View {
         Section {
-            HStack(spacing: DS.Space.s2) {
-                TextField("Paste an address (0x… or ENS)", text: $newAddress)
-                    .dsText(.body17)
-                    .focused($addressFieldFocused)
-                    .autocorrectionDisabled()
-                    .textInputAutocapitalization(.never)
-                Button("Watch") {
-                    if wallet.add(newAddress) {
-                        newAddress = ""
-                        addressFieldFocused = false
-                        DSHaptic.success()
-                        sync()
-                    }
-                }
-                .dsText(.label12).foregroundStyle(.white)
-                .padding(.horizontal, DS.Space.s3).frame(height: 30)
-                .background(newAddress.trimmingCharacters(in: .whitespaces).count >= 6 ? DS.tint : DS.gray300,
-                            in: Capsule(style: .continuous))
-                .buttonStyle(.plain)
-                .disabled(newAddress.trimmingCharacters(in: .whitespaces).count < 6)
+            BridgeFieldRow(placeholder: "Address (0x… or ENS)", text: $newAddress,
+                           buttonLabel: "Watch", keyboard: .default,
+                           focus: $addressFieldFocused, action: watch)
+        } header: {
+            Text("WATCH AN ADDRESS").dsText(.label12).kerning(0.7)
+                .foregroundStyle(DS.textSecondary)
+        } footer: {
+            if wallet.addresses.isEmpty {
+                Text("Paste a wallet address or ENS name — its holdings and activity land in your feed.")
+                    .dsText(.subhead13).foregroundStyle(DS.textSecondary)
             }
-            .listRowBackground(DS.surfaceSheet)
         }
+    }
+
+    private func watch() {
+        guard wallet.add(newAddress) else { return }
+        newAddress = ""
+        addressFieldFocused = false
+        DSHaptic.success()
+        sync()
     }
 
     // MARK: - What's landed
