@@ -102,10 +102,12 @@ enum WalletIngest {
     }
 
     /// A treemap of the wallet's token holdings, sized by USD value — the
-    /// same TagMap idiom Home uses. Real, from Alchemy's Portfolio API (one
-    /// call: balances + metadata + prices). Unpriced spam tokens have no price
-    /// and drop out; the top 5 by value are shown. Returns nil when nothing
-    /// priced is held.
+    /// same TagMap idiom Home uses. Real, from Alchemy's Portfolio API
+    /// (balances + metadata + prices in one call). Unpriced spam tokens have no
+    /// price and drop out; the top 5 by value are shown. A normal wallet fits
+    /// in one page; a wallet holding hundreds of tokens (its real holdings
+    /// scattered behind pages of spam) is paged through, bounded, until we have
+    /// the true top of the book. Returns nil when nothing priced is held.
     @MainActor
     static func holdingsChart() async -> [String]? {
         let addresses = WalletStore.shared.addresses.map(\.address)
@@ -115,29 +117,42 @@ enum WalletIngest {
         // the API returns with a null symbol — still names itself.
         let native = Dictionary(uniqueKeysWithValues: chains.map { ($0.network, $0.symbol) })
         let url = "https://api.g.alchemy.com/data/v1/\(alchemyKey)/assets/tokens/by-address"
-        let body: [String: Any] = [
-            "addresses": addresses.map { ["address": $0, "networks": networks] },
-            "withMetadata": true, "withPrices": true,
-        ]
-        guard let root = await IngestSupport.postJSON(url, body: body) as? [String: Any],
-              let data = root["data"] as? [String: Any],
-              let tokens = data["tokens"] as? [[String: Any]] else { return nil }
 
         var bySymbol: [String: Double] = [:]
-        for t in tokens {
-            let md = t["tokenMetadata"] as? [String: Any]
-            let mdSymbol = (md?["symbol"] as? String).flatMap { $0.isEmpty ? nil : $0 }
-            // Native coin has no tokenAddress and no symbol — name it by chain.
-            let isNative = (t["tokenAddress"] as? String) == nil
-            guard let symbol = mdSymbol ?? (isNative ? native[t["network"] as? String ?? ""] : nil),
-                  let balHex = t["tokenBalance"] as? String,
-                  let price = firstPrice(t["tokenPrices"]), price > 0 else { continue }
-            let decimals = (md?["decimals"] as? Int) ?? 18   // native is always 18
-            let amount = hexToDouble(balHex) / pow(10, Double(decimals))
-            let usd = amount * price
-            if usd >= 1 { bySymbol[clean(symbol), default: 0] += usd }
+        var pageKey: String? = nil
+        var reached = false
+        // Up to 8 pages (≈800 tokens) — enough to surface a whale's real
+        // holdings without unbounded paging; a normal wallet stops after one.
+        for _ in 0..<8 {
+            var body: [String: Any] = [
+                "addresses": addresses.map { ["address": $0, "networks": networks] },
+                "withMetadata": true, "withPrices": true,
+            ]
+            if let pageKey { body["pageKey"] = pageKey }
+            guard let root = await IngestSupport.postJSON(url, body: body) as? [String: Any],
+                  let data = root["data"] as? [String: Any],
+                  let tokens = data["tokens"] as? [[String: Any]] else { break }
+            reached = true
+
+            for t in tokens {
+                let md = t["tokenMetadata"] as? [String: Any]
+                let mdSymbol = (md?["symbol"] as? String).flatMap { $0.isEmpty ? nil : $0 }
+                // Native coin has no tokenAddress and no symbol — name it by chain.
+                let isNative = (t["tokenAddress"] as? String) == nil
+                guard let symbol = mdSymbol ?? (isNative ? native[t["network"] as? String ?? ""] : nil),
+                      let balHex = t["tokenBalance"] as? String,
+                      let price = firstPrice(t["tokenPrices"]), price > 0 else { continue }
+                let decimals = (md?["decimals"] as? Int) ?? 18   // native is always 18
+                let amount = hexToDouble(balHex) / pow(10, Double(decimals))
+                let usd = amount * price
+                if usd >= 1 { bySymbol[clean(symbol), default: 0] += usd }
+            }
+
+            guard let next = data["pageKey"] as? String, !next.isEmpty else { break }
+            pageKey = next
         }
-        guard !bySymbol.isEmpty else { return nil }
+        guard reached, !bySymbol.isEmpty else { return nil }
+
         // Top 5 by value; sqrt-scale so a big holding doesn't slice the rest to slivers.
         let cells = bySymbol.sorted { $0.value > $1.value }.prefix(5)
             .map { "\($0.key) \(max(1, Int($0.value.squareRoot() * 10)))" }
