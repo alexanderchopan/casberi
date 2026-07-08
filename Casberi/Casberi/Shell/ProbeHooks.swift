@@ -68,6 +68,21 @@ enum ProbeHooks {
                       added != nil ? "watched" : "already")
             }
         },
+        // `-mailBridge "<icloud|gmail>:<address>:<app-password>"` connects a
+        // mail account headlessly.
+        Hook(key: "mailBridge") { spec, context in
+            let parts = spec.split(separator: ":", maxSplits: 2).map(String.init)
+            guard parts.count == 3,
+                  var provider = MailProvider.allCases.first(where: {
+                      $0.bridgeID == parts[0] || $0.rawValue.lowercased().contains(parts[0].lowercased())
+                  }) else { return }
+            provider.address = parts[1]
+            TokenVault.set(parts[2], for: provider.passwordKey)
+            Task { @MainActor in
+                let n = await MailIngest.refresh(provider, context: context)
+                NSLog("Mail probe (%@): %@ new", provider.rawValue, n.map(String.init) ?? "FAILED")
+            }
+        },
         // `-rssFeed <url>` follows a feed and syncs — headless bridge test.
         Hook(key: "rssFeed") { url, context in
             RSSStore.shared.add(url)
