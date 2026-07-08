@@ -32,6 +32,21 @@ for v in ASC_KEY_ID ASC_ISSUER_ID ASC_KEY_PATH; do
 done
 [ -f "$ASC_KEY_PATH" ] || { echo "✗ key file not found: $ASC_KEY_PATH"; exit 1; }
 
+# --- build number ---------------------------------------------------------
+# Bump the SOURCE pbxproj (all targets share one build number — App Store
+# requires the extensions to match the app). We bump before staging so the
+# local copy carries the new number; commit the bump so runs never collide.
+# Set SKIP_BUMP=1 to reuse the current number (e.g. re-uploading a fix).
+PBXPROJ="$SRC/Casberi.xcodeproj/project.pbxproj"
+if [ "${SKIP_BUMP:-0}" != "1" ]; then
+  CUR=$(grep -oE 'CURRENT_PROJECT_VERSION = [0-9]+' "$PBXPROJ" | grep -oE '[0-9]+' | sort -n | tail -1)
+  NEW=$((CUR + 1))
+  sed -i '' "s/CURRENT_PROJECT_VERSION = [0-9]*;/CURRENT_PROJECT_VERSION = $NEW;/g" "$PBXPROJ"
+  echo "▶ Build number: $CUR → $NEW  (commit the pbxproj change so it sticks)"
+else
+  echo "▶ Reusing current build number (SKIP_BUMP=1)"
+fi
+
 echo "▶ Staging a local copy (iCloud xattrs break codesign)"
 rm -rf "$WORK"; mkdir -p "$WORK"
 rsync -a --exclude '.git' --exclude 'build' "$SRC/" "$WORK/project/" >/dev/null
