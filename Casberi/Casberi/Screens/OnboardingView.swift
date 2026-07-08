@@ -46,14 +46,19 @@ struct OnboardingView: View {
     /// bottom-up until they fill the BOTTOM HALF of the screen — ice filling
     /// a glass — and they STAY there, full size, while the feed card lives
     /// in the top half. Zerion and Farcaster lead the fall.
-    /// Every app with real brand art joins the pile (Apple's own icons are
-    /// legally unbundlable — their bridges stay symbol tiles in the store).
+    /// Every catalog app joins the pile. The first 25 carry real brand art;
+    /// the LAST SIX are Apple's bridges as their symbol tiles (their icons
+    /// are legally unbundlable) — they land last, as the pile's TOP ROW,
+    /// right under the three Connect rows they're kin to.
     private let marqueeApps = ["Zerion", "Farcaster", "Gmail", "GitHub",
                                "Claude", "Spotify", "Strava", "Bluesky",
                                "Telegram", "Slack", "X", "Notion", "Reddit",
                                "YouTube", "Todoist", "RSS", "ChatGPT",
                                "Linear", "Raindrop", "Readwise", "Bankr",
-                               "Venice", "OpenClaw", "Cal.com", "Calendly"]
+                               "Venice", "OpenClaw", "Cal.com", "Calendly",
+                               "iCloud Mail", "Apple Music", "Apple Health",
+                               "Reminders", "Calendar", "Photos"]
+    private static let appleRowStart = 25
     /// False = above the screen · true = settled in the glass.
     @State private var cubesLanded = false
 
@@ -197,14 +202,23 @@ struct OnboardingView: View {
     private static let jitter: [CGFloat] = [-4, 3, -2, 5, -5, 2, -3, 4]
 
     /// Where cube `i` rests: five columns stacking bottom-up, rows and
-    /// columns slightly overlapping like real ice, the pile's top edge at
-    /// mid-screen. Twenty-five cubes = a full 5×5 glass.
+    /// columns overlapping like real ice. The six Apple tiles land last as
+    /// a tighter six-across TOP ROW, touching the card they're kin to.
     private func cubeTarget(_ i: Int, in size: CGSize) -> CGPoint {
+        if i >= Self.appleRowStart {
+            let col = CGFloat(i - Self.appleRowStart)
+            let cell = (size.width - DS.Space.s4 * 2) / 6
+            let x = DS.Space.s4 + cell * col + cell / 2
+                + Self.jitter[i % Self.jitter.count] * 0.8
+            let y = size.height - 138 - 5 * 62
+                + Self.jitter[(i + 5) % Self.jitter.count]
+            return CGPoint(x: x, y: y)
+        }
         let col = CGFloat(i % 5), row = CGFloat(i / 5)
         let cell = (size.width - DS.Space.s4 * 2) / 5
         let x = DS.Space.s4 + cell * col + cell / 2
             + Self.jitter[i % Self.jitter.count] * 0.8
-        let y = size.height - 140 - row * 68
+        let y = size.height - 138 - row * 62
             + Self.jitter[(i + 5) % Self.jitter.count]
         return CGPoint(x: x, y: y)
     }
