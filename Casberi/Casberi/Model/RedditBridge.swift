@@ -9,13 +9,16 @@ import SwiftData
 ///
 /// GATED until a client id exists: create a free app at
 /// reddit.com/prefs/apps (type: "installed app", redirect
-/// `casberi://reddit-auth`), paste the client id below, and flip the catalog
-/// offer to connectable. Until then it stays a Soon card — no dead controls.
+/// `https://casberi.app/reddit-auth` — their form rejects custom schemes;
+/// that page forwards the code to `casberi://reddit-auth`, which the auth
+/// session catches), paste the client id below, and flip the catalog offer
+/// to connectable. Until then it stays a Soon card — no dead controls.
 enum RedditAuth {
 
     /// From reddit.com/prefs/apps — empty means the bridge is off.
     static let clientID = ""
-    static let redirectURI = "casberi://reddit-auth"
+    /// Must match the registered redirect exactly (authorize + token exchange).
+    static let redirectURI = "https://casberi.app/reddit-auth"
     static let scope = "identity history save read"
     static let userAgent = "ios:com.casberi.app:v0.1 (personal use)"
     static var ready: Bool { !clientID.isEmpty }
