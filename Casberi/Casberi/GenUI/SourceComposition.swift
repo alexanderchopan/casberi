@@ -21,7 +21,7 @@ enum SourceComposition {
             guard demo else { return nil }
             return [
                 "root = Stack([hold])",
-                "hold = TagMap(\"Holdings\", null, [ETH 4210, USDC 1840, SOL 620, BONK 80])",
+                "hold = TagMap(\"Holdings\", null, [ETH 4210, USDC 1840, SOL 980, LINK 460])",
             ]
         default:
             return nil

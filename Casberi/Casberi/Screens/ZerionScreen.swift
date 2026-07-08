@@ -52,7 +52,7 @@ struct ZerionScreen: View {
             guard DemoState.seedsDemoData else { return }
             holdings.paint([
                 "root = Stack([hold])",
-                "hold = TagMap(\"Holdings\", \"By value, across your addresses\", [ETH 4210, USDC 1840, SOL 620, BONK 80])",
+                "hold = TagMap(\"Holdings\", \"By value, across your addresses\", [ETH 4210, USDC 1840, SOL 980, LINK 460])",
             ])
         }
     }

@@ -84,7 +84,7 @@ enum DemoCorpus {
                   content: "Base · from 0x9f…21", source: "Zerion",
                   capturedAt: ago(hours: 12), tags: ["Onchain"],
                   provenance: Provenance(app: "Zerion"), sourceRef: "zerion:0xa2"),
-            Thing(kind: .transaction, title: "Bought BONK",
+            Thing(kind: .transaction, title: "Bought SOL",
                   content: "Solana · Jupiter · $80", source: "Zerion",
                   capturedAt: ago(hours: 30), tags: ["Onchain"],
                   provenance: Provenance(app: "Zerion"), sourceRef: "zerion:0xa3"),

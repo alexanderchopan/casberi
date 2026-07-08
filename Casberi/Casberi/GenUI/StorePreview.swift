@@ -15,7 +15,7 @@ enum StorePreview {
         switch name {
         case "Zerion": [
             "root = Stack([map, t1, t2])",
-            "map = TagMap(\"Holdings\", null, [ETH 4210, USDC 1840, SOL 620, BONK 80])",
+            "map = TagMap(\"Holdings\", null, [ETH 4210, USDC 1840, SOL 980, LINK 460])",
             "t1 = TxRow(\"Swapped\", \"0.4 ETH → 1,120 USDC\", \"Base · Uniswap\")",
             "t2 = TxRow(\"Received\", \"250 USDC\", \"from maya.eth\")",
         ]
