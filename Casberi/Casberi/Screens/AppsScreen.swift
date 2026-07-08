@@ -339,25 +339,46 @@ struct AppsScreen: View {
     /// a labeled shelf; connected apps live in the strip above (ranked drops
     /// them), so nothing repeats. Ready-to-connect apps lead each shelf, coming
     /// ("Soon") ones trail — the tier order `ranked` already carries.
+    /// App Store grammar: a big header, three rows showing, swipe sideways for
+    /// the rest — the shelf never grows tall, it grows wide.
     private var categoryShelves: some View {
         VStack(alignment: .leading, spacing: DS.Space.s6) {
             ForEach(Self.categories, id: \.name) { cat in
                 let apps = ranked.filter { category(of: $0.offer) == cat.name }
                 if !apps.isEmpty {
                     VStack(alignment: .leading, spacing: DS.Space.s2) {
-                        sectionHeader(cat.name.uppercased())
+                        Text(cat.name)
+                            .dsText(.heading22).foregroundStyle(DS.textPrimary)
                             .padding(.horizontal, DS.Space.s4)
-                        VStack(spacing: DS.Space.s1) {
-                            ForEach(apps) { entry in appRow(entry) }
-                        }
-                        .padding(.vertical, DS.Space.s1)
-                        .background(DS.surfaceSheet,
-                                    in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
-                        .padding(.horizontal, DS.Space.s4)
+                        shelfPages(apps)
                     }
                 }
             }
         }
+    }
+
+    /// The shelf's rows, three per page. One page renders exactly like the old
+    /// full-width card; more apps page sideways, view-aligned.
+    private func shelfPages(_ apps: [Ranked]) -> some View {
+        let pages: [[Ranked]] = stride(from: 0, to: apps.count, by: 3).map {
+            Array(apps[$0..<min($0 + 3, apps.count)])
+        }
+        return ScrollView(.horizontal, showsIndicators: false) {
+            HStack(alignment: .top, spacing: DS.Space.s3) {
+                ForEach(pages.indices, id: \.self) { i in
+                    VStack(spacing: DS.Space.s1) {
+                        ForEach(pages[i]) { entry in appRow(entry) }
+                    }
+                    .padding(.vertical, DS.Space.s1)
+                    .background(DS.surfaceSheet,
+                                in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+                    .containerRelativeFrame(.horizontal) { length, _ in length - 12 }
+                }
+            }
+            .scrollTargetLayout()
+        }
+        .scrollTargetBehavior(.viewAligned)
+        .contentMargins(.horizontal, DS.Space.s4, for: .scrollContent)
     }
 
     /// One app inside a shelf — icon, name, honest subline, action capsule. The
