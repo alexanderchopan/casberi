@@ -69,7 +69,13 @@ struct AppDetailScreen: View {
     private var actionButton: some View {
         if bridge?.status == .attention {
             VerbCapsule(verb: .fix) {
-                BridgeConnect.connect(offer, store: store, context: modelContext)
+                // A broken setup bridge (mail/wallet/token) is fixed by redoing
+                // its setup, not the one-tap connect path.
+                if offer.needsSetup {
+                    openBridge = BridgeRouter.destination(forOffer: offer.name)
+                } else {
+                    BridgeConnect.connect(offer, store: store, context: modelContext)
+                }
             }
         } else if connected {
             VerbCapsule(verb: .open) {
