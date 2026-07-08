@@ -74,6 +74,10 @@ Deep links: `casberi://home`, `casberi://feed`, `casberi://feed/type/<Tag>`, `ca
 - Honesty rule: no dead controls, no fake status. The iCloud-sync ship gate is MET (2026-07-07): CloudKit capability is in the build, voice audio rides the store (externalStorage → CKAsset), Delete everything purges the CloudKit zone, and only the app process mirrors (extensions use `SharedStore.extensionContainer()`). "End-to-end encrypted" claims still require Advanced Data Protection — don't overclaim.
 - Product rulings live in docs/prd.md — check it before re-litigating a design decision; record new rulings there.
 
+## Website (casberi.app)
+
+- RULE (user, 2026-07-08): every app added to the catalog ALSO lands on the website in the same session — (1) a tile in the hero marquee (`website/index.html`, the `.rain` div; continue the animation-delay sequence and keep `ai-more` last), (2) a cell in the bottom catalog section (the matching `<h3>` group), (3) an `.ai-<name>` brand background in `website/styles.css`. Icons come from `cdn.simpleicons.org/<name>/ffffff` when available. Then deploy: zip `website/` and push via Namecheap cPanel (File Manager → upload to the site root → Extract; see the web-deploy memory). If the deploy can't be run from the session, prepare the zip and hand the user the exact steps — never leave the site trailing the app catalog.
+
 ## Working mode
 
 Goal-by-goal with user review checkpoints. Build + verify on simulator before presenting. The user rules on design; run `/code-review` on the diff before their checkpoint so mechanical findings don't consume it.

@@ -96,6 +96,9 @@ nav { display: flex; align-items: center; justify-content: space-between; paddin
 .ai-bluesky   { background: #0085ff; }
 .ai-farcaster { background: #855dcd; }
 .ai-strava    { background: #fc4c02; font-size: 18px; }
+.ai-steam     { background: #1b2838; }
+.ai-obsidian  { background: #7c3aed; }
+.ai-twitch    { background: #9146ff; }
 .ai-more      { background: var(--surface-2); color: var(--muted); }
 .ai-more span { font-size: 20px; font-weight: 800; letter-spacing: -1px; line-height: 1; }
 
@@ -571,10 +574,10 @@ footer .tagline { font-size: 16px; font-weight: 600; color: var(--ink); margin-b
   text-align: center; font-size: 13.5px; font-weight: 600;
   color: var(--muted); margin-top: 12px;
 }
-#feed .step-copy, #home .step-copy, #ask .step-copy {
+#connect .step-copy, #feed .step-copy, #home .step-copy, #ask .step-copy {
   max-width: 680px; margin: 0 auto; text-align: center;
 }
-#feed .step-copy p.lede, #home .step-copy p.lede, #ask .step-copy p.lede {
+#connect .step-copy p.lede, #feed .step-copy p.lede, #home .step-copy p.lede, #ask .step-copy p.lede {
   margin-left: auto; margin-right: auto;
 }
 .phone-row.two {
