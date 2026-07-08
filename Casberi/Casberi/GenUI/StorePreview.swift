@@ -37,9 +37,11 @@ enum StorePreview {
             "r1 = Row(\"Nightly backup ran\", \"Run\", \"OpenClaw\", \"4:00 AM\")",
             "r2 = Row(\"Parse March invoices\", \"Job\", \"OpenClaw\", \"2h\")",
         ]
-        case "Bankr": [
-            "root = Stack([m])",
-            "m = TagMap(\"Your launches\", \"By fees earned\", [MODDS 340, PAY 210, CHESS 90, LVL 40])",
+        case "Dexscreener": [
+            "root = Stack([w])",
+            "w = Widget(\"Your watchlist\", null, [r1, r2])",
+            "r1 = Row(\"BankrCoin · $BNKR\", \"Link\", \"Dexscreener\", \"now\")",
+            "r2 = Row(\"Degen · $DEGEN\", \"Link\", \"Dexscreener\", \"now\")",
         ]
         case "ChatGPT": [
             "root = Stack([c])",

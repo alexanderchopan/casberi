@@ -66,15 +66,6 @@ enum DemoCorpus {
                   content: "Looks good — ship the scaffold.", source: "Gmail",
                   capturedAt: ago(hours: 9), tags: ["Casberi", "Work"]),
 
-            // An agent's ask riding the approvals grammar — Bankr proposes,
-            // the person disposes. Casberi never trades; the tap is the gate.
-            Thing(kind: .approval, title: "Swap 0.3 ETH → USDC?",
-                  content: "bankr wants to run: swap 0.3 ETH to USDC on Base (est. $742)",
-                  source: "Bankr",
-                  capturedAt: ago(hours: 1.5), tags: ["Onchain"],
-                  provenance: Provenance(app: "OpenClaw", agent: "bankr", machine: "gateway"),
-                  sourceRef: "bankr:ask-01"),
-
             // ── Onchain cluster (Zerion read bridge) ───────────────────────
             Thing(kind: .transaction, title: "Swapped 0.5 ETH → 1,240 USDC",
                   content: "Base · Uniswap · gas 0.4 USDC", source: "Zerion",

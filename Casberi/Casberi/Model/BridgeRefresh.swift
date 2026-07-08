@@ -18,9 +18,6 @@ enum BridgeRefresh {
         if !FarcasterStore.shared.username.isEmpty {
             Task { @MainActor in _ = await FarcasterIngest.refresh(context: context) }
         }
-        if BankrStore.isAddress(BankrStore.shared.address) {
-            Task { @MainActor in _ = await BankrIngest.refresh(context: context) }
-        }
         for bridge in TokenBridge.allCases where bridge.connected {
             Task { @MainActor in _ = await TokenIngest.refresh(bridge, context: context) }
         }

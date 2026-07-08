@@ -26,12 +26,13 @@ struct TokenSetupScreen: View {
 
     var body: some View {
         List {
-            stepsSection
-            tokenSection
+            stepsSection.listRowSeparator(.hidden)
+            tokenSection.listRowSeparator(.hidden)
             if !recent.isEmpty {
                 RecentThingsSection(header: "LANDED", things: recent)
+                    .listRowSeparator(.hidden)
             }
-            if bridge.connected { removeSection }
+            if bridge.connected { removeSection.listRowSeparator(.hidden) }
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)

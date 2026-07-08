@@ -134,9 +134,9 @@ struct BridgeApp: Identifiable, Codable {
         // trade or move funds; a wallet's swaps/sends/receives just land as things.
         .init(id: "zerion", name: "Zerion", status: .connected, statusLine: "0x1a2b…4f · 4 this week",
               can: ["Reads your wallet's activity.", "Read-only — never trades or moves funds."]),
-        // A trading agent, reached through the gateway. Casberi never trades —
-        // Bankr's asks arrive as approvals and wait for the person's tap.
-        .init(id: "bankr", name: "Bankr", status: .connected, statusLine: "Via your gateway · asks wait for you",
-              can: ["Asks before every trade.", "Its asks land here as approvals."]),
+        // Token-watching, powered by public price data (Dexscreener search +
+        // GeckoTerminal candles). Read-only — no wallet, no keys, no trading.
+        .init(id: "dexscreener", name: "Dexscreener", status: .connected, statusLine: "2 tokens watched",
+              can: ["Watches the tokens you add.", "Read-only — public price data only."]),
     ]
 }

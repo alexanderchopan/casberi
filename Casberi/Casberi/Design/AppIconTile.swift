@@ -43,7 +43,7 @@ extension DS {
         case "notes":               return Color.fixed("#ffcc00")
         case "safari":              return Color.fixed("#1d9bf6")
         case "zerion":              return Color.fixed("#2461ff")
-        case "bankr":               return Color.fixed("#a78bfa")   // their logo's own field
+        case "dexscreener":         return Color.fixed("#151a21")   // their dark field
         case "venice":              return Color.fixed("#0e2942")   // sampled from their deep-blue mark
         case "voice":               return Color.fixed("#ff375f")   // the voice kind's own pink
         case "apple health":        return Color.fixed("#ff2d55")

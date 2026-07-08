@@ -75,24 +75,31 @@ struct Composer: View {
     private var openBubble: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(alignment: .top, spacing: DS.Space.s2) {
-                TextField("", text: $draft, axis: .vertical)
-                    .placeholder(when: !hasDraft) {
-                        Text("Ask anything. Organize everything.")
-                            .dsText(.heading22)
-                            .foregroundStyle(DS.textTertiary)
-                    }
-                    .dsText(.heading22)
-                    .foregroundStyle(DS.textPrimary)
-                    .tint(DS.tint)
-                    .focused($fieldFocused)
-                    // A paste-sized insertion marks the draft as a capture
-                    // (the Paste chip died; the flag lives on) — pasted
-                    // content still previews in the parse card and saves.
-                    .onChange(of: draft) { old, new in
-                        if new.count - old.count > 8 { pasted = true }
-                        if new.isEmpty { pasted = false }
-                    }
-                    .lineLimit(1...6)
+                // When a proposal is up, the input phase is over — the field
+                // (and its blinking cursor over the placeholder) hides, so the
+                // proposal's own headline reads as the statement, uncontested.
+                if proposal == nil {
+                    TextField("", text: $draft, axis: .vertical)
+                        .placeholder(when: !hasDraft) {
+                            Text("Ask anything. Organize everything.")
+                                .dsText(.heading22)
+                                .foregroundStyle(DS.textTertiary)
+                        }
+                        .dsText(.heading22)
+                        .foregroundStyle(DS.textPrimary)
+                        .tint(DS.tint)
+                        .focused($fieldFocused)
+                        // A paste-sized insertion marks the draft as a capture
+                        // (the Paste chip died; the flag lives on) — pasted
+                        // content still previews in the parse card and saves.
+                        .onChange(of: draft) { old, new in
+                            if new.count - old.count > 8 { pasted = true }
+                            if new.isEmpty { pasted = false }
+                        }
+                        .lineLimit(1...6)
+                } else {
+                    Spacer(minLength: 0)
+                }
 
                 Button(action: close) {
                     Image(systemName: "chevron.down")
@@ -228,6 +235,30 @@ struct Composer: View {
     /// release builds.
     private func autoSendIfProbed() async {
         #if DEBUG
+        // `-composerDraft "…"` fills the field and stops — for a screenshot of
+        // the typed command, before it's sent (no proposal, no answer).
+        if isOpen, !didAutoSend,
+           let d = UserDefaults.standard.string(forKey: "composerDraft") {
+            didAutoSend = true
+            draft = d
+            pasted = false
+            return
+        }
+        // `-composerType "…"` types the string character by character (for a
+        // screen recording of real typing), then sends after a beat.
+        if isOpen, !didAutoSend,
+           let t = UserDefaults.standard.string(forKey: "composerType") {
+            didAutoSend = true
+            try? await Task.sleep(for: .milliseconds(700))   // let the bubble settle
+            for ch in t {
+                draft.append(ch)
+                try? await Task.sleep(for: .milliseconds(70))
+            }
+            try? await Task.sleep(for: .milliseconds(700))
+            pasted = false
+            commit()
+            return
+        }
         guard isOpen, !didAutoSend,
               let q = UserDefaults.standard.string(forKey: "uiAnswerProbe") else { return }
         didAutoSend = true
@@ -279,16 +310,23 @@ struct Composer: View {
             // An organize command — propose, never execute. The card below
             // shows exactly what would change; Apply is the consent.
             let proposed = Organize.propose(command, context: modelContext)
+            fieldFocused = false   // input phase is over — dismiss the cursor
             withAnimation(DS.Motion.standard) {
                 answering = false
                 proposal = proposed
             }
             draft = ""
             #if DEBUG
+            // `-organizeApply YES` shows the proposal for a beat, then fires
+            // the real Apply — so a screen recording captures the whole flow:
+            // proposal → Apply → toast → the renamed tag on Home.
             if UserDefaults.standard.bool(forKey: "organizeApply") {
-                applyProposal(proposed)
-                NSLog("Organize probe: %@ · applied=%d", proposed.headline,
-                      proposed.canApply ? 1 : 0)
+                Task { @MainActor in
+                    try? await Task.sleep(for: .milliseconds(2200))
+                    applyProposal(proposed)
+                    NSLog("Organize probe: %@ · applied=%d", proposed.headline,
+                          proposed.canApply ? 1 : 0)
+                }
             }
             #endif
         } else {
@@ -442,27 +480,15 @@ private struct OrganizeProposalCard: View {
                     .dsText(.callout15).foregroundStyle(DS.attention)
                     .fixedSize(horizontal: false, vertical: true)
             } else {
+                // The headline states the change and its scope ("… — 8 things");
+                // the itemised list left the card (ruling) — the count is the
+                // consent, and the toast carries Undo if it's wrong.
                 Text(proposal.headline)
                     .dsText(.heading17).foregroundStyle(DS.textPrimary)
+                    .fixedSize(horizontal: false, vertical: true)
                 if proposal.things.isEmpty {
                     Text("Nothing to change.")
                         .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-                } else {
-                    VStack(alignment: .leading, spacing: DS.Space.s2) {
-                        ForEach(proposal.things.prefix(5)) { thing in
-                            HStack(spacing: DS.Space.s2) {
-                                KindGlyph(kind: thing.kind, size: 14)
-                                Text(thing.title)
-                                    .dsText(.subhead13).foregroundStyle(DS.textSecondary)
-                                    .lineLimit(1)
-                                Spacer(minLength: 0)
-                            }
-                        }
-                        if proposal.things.count > 5 {
-                            Text("+ \(proposal.things.count - 5) more")
-                                .dsText(.label12).foregroundStyle(DS.textTertiary)
-                        }
-                    }
                 }
             }
             HStack(spacing: DS.Space.s2) {

@@ -48,7 +48,7 @@ struct FeedScreen: View {
             case "Gmail", "iCloud Mail": self = .gmail
             case "ChatGPT", "Claude", "Slack", "Farcaster", "Bluesky": self = .chat
             case "Reminders", "Todoist": self = .reminders
-            case "OpenClaw", "Bankr":   self = .agent
+            case "OpenClaw":            self = .agent
             case "Safari":              self = .safari
             case "Notes":               self = .notes
             case "You", "Voice":        self = .you
@@ -423,7 +423,7 @@ struct FeedScreen: View {
         if !doneToday.isEmpty { daySection("Done", doneToday) }
     }
 
-    /// OpenClaw/Bankr: pending asks lead as consent cards; the groups below
+    /// OpenClaw: pending asks lead as consent cards; the groups below
     /// carry runs and jobs with their status ticks.
     private var pendingApprovals: [Thing] {
         unpinned.filter { $0.kind == .approval && $0.mark != .done }
@@ -613,29 +613,42 @@ struct FeedScreen: View {
 
     private func filterChips(_ labels: [String], active: String,
                              onTap: @escaping (String) -> Void) -> some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: DS.Space.s2) {
-                ForEach(labels, id: \.self) { label in
-                    let isActive = label == active
-                    // Icons joined the chips (re-ruling 2026-07-06 — real
-                    // brand assets exist now, so the icon IS the identity;
-                    // the old text-only rule predates them). "All" stays
-                    // words-only: it has no app.
-                    HStack(spacing: DS.Space.s1 + 2) {
-                        if label != "All" {
-                            BridgeIcon(name: label, size: 18)
+        // ScrollViewReader keeps the ACTIVE chip visible — a deep link
+        // (casberi://feed/source/Zerion) can select a chip that sits past
+        // the fold, and a filter you can't see reads as no filter at all.
+        ScrollViewReader { proxy in
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: DS.Space.s2) {
+                    ForEach(labels, id: \.self) { label in
+                        let isActive = label == active
+                        // Icons joined the chips (re-ruling 2026-07-06 — real
+                        // brand assets exist now, so the icon IS the identity;
+                        // the old text-only rule predates them). "All" stays
+                        // words-only: it has no app.
+                        HStack(spacing: DS.Space.s1 + 2) {
+                            if label != "All" {
+                                BridgeIcon(name: label, size: 18)
+                            }
+                            Text(label).dsText(.label12)
+                                .foregroundStyle(isActive ? DS.page : DS.textSecondary)
                         }
-                        Text(label).dsText(.label12)
-                            .foregroundStyle(isActive ? DS.page : DS.textSecondary)
+                        .padding(.horizontal, DS.Space.s3)
+                        .frame(height: 32)
+                        .background(isActive ? DS.textPrimary : DS.gray100,
+                                    in: Capsule(style: .continuous))
+                        .id(label)
+                        .onTapGesture { DSHaptic.selection(); withAnimation(DS.Motion.standard) { onTap(label) } }
                     }
-                    .padding(.horizontal, DS.Space.s3)
-                    .frame(height: 32)
-                    .background(isActive ? DS.textPrimary : DS.gray100,
-                                in: Capsule(style: .continuous))
-                    .onTapGesture { DSHaptic.selection(); withAnimation(DS.Motion.standard) { onTap(label) } }
                 }
+                .padding(.horizontal, DS.Space.s4)
             }
-            .padding(.horizontal, DS.Space.s4)
+            .onAppear {
+                if active != "All" { proxy.scrollTo(active, anchor: .center) }
+            }
+            .onChange(of: active) { _, now in
+                guard now != "All" else { return }
+                withAnimation(DS.Motion.standard) { proxy.scrollTo(now, anchor: .center) }
+            }
         }
     }
 

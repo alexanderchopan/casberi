@@ -157,11 +157,12 @@ struct HandleSetupScreen: View {
 
     var body: some View {
         List {
-            nameSection
+            nameSection.listRowSeparator(.hidden)
             if !recent.isEmpty {
                 RecentThingsSection(header: bridge.recentHeader, things: recent)
+                    .listRowSeparator(.hidden)
             }
-            footerSection
+            footerSection.listRowSeparator(.hidden)
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)

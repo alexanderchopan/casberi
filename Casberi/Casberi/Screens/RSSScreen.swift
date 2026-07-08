@@ -30,12 +30,13 @@ struct RSSScreen: View {
 
     var body: some View {
         List {
-            if !rss.feeds.isEmpty { followingSection }
-            addSection
+            if !rss.feeds.isEmpty { followingSection.listRowSeparator(.hidden) }
+            addSection.listRowSeparator(.hidden)
             if !recent.isEmpty {
                 RecentThingsSection(header: "RECENT", things: recent, titleLines: 1)
+                    .listRowSeparator(.hidden)
             }
-            footerSection
+            footerSection.listRowSeparator(.hidden)
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)

@@ -10,6 +10,9 @@ final class HomeRoute {
     static let shared = HomeRoute()
     enum Push: String, Identifiable { case apps, settings; var id: String { rawValue } }
     var push: Push?
+    /// A tag to open as its own view — set by an Ask answer that names a tag,
+    /// so "what did I save about work" opens the Work view the treemap opens.
+    var openTag: String?
     private init() {}
 }
 
@@ -78,6 +81,11 @@ struct HomeScreen: View {
                 ProjectDetailScreen(projectName: route.name)
                     .navigationTransition(.zoom(sourceID: route.name, in: zoomNS))
             }
+            // An Ask answer named a tag — open its view (same push the treemap
+            // makes). Bind through openProject so pop/re-tap clears it too.
+            .onChange(of: route.openTag) { _, name in
+                if let name { openProject = ProjectRoute(name: name); route.openTag = nil }
+            }
             .navigationDestination(item: $route.push) { push in
                 switch push {
                 case .apps:     AppsScreen()
@@ -99,6 +107,9 @@ struct HomeScreen: View {
         // The corpus changed under the composition (a capture, the demo
         // seeds, the dissolve) — repaint instantly, no replayed entrance.
         .onChange(of: things.count) { streamComposition(instant: true) }
+        // A tag rename/retag leaves the count unchanged but changes what Home
+        // composes from — repaint so the renamed tag shows immediately.
+        .onChange(of: CorpusSignal.shared.revision) { streamComposition(instant: true) }
         .onAppear {
             streamComposition()
             #if DEBUG
@@ -108,7 +119,19 @@ struct HomeScreen: View {
                 route.push = .settings
             }
             if let name = UserDefaults.standard.string(forKey: "openProject") {
-                openProject = ProjectRoute(name: name)
+                // `-openProjectDelay <s>` shows Home first, then opens the tag
+                // (with the tile's zoom) — a recording of "tapping the tile".
+                let delay = UserDefaults.standard.double(forKey: "openProjectDelay")
+                if delay > 0 {
+                    Task { @MainActor in
+                        try? await Task.sleep(for: .seconds(delay))
+                        withAnimation(DS.Motion.standard) {
+                            openProject = ProjectRoute(name: name)
+                        }
+                    }
+                } else {
+                    openProject = ProjectRoute(name: name)
+                }
             }
             #endif
         }

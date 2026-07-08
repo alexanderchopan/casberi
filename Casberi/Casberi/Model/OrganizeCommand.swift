@@ -134,6 +134,9 @@ enum Organize {
         }
         try? context.save()
         SpotlightIndex.index(proposal.things)
+        // Home composes from tags — a rename/retag leaves count unchanged, so
+        // signal the composition to repaint (else Home still shows the old tag).
+        CorpusSignal.shared.bump()
 
         let summary: String
         switch proposal.command {
@@ -146,6 +149,7 @@ enum Organize {
             for (thing, tags) in before { thing.tags = tags }
             try? context.save()
             SpotlightIndex.index(before.map(\.0))
+            CorpusSignal.shared.bump()
         }
         return (summary, { Task { @MainActor in undo() } })
     }

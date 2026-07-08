@@ -29,9 +29,9 @@ struct ChatGPTImportScreen: View {
 
     var body: some View {
         List {
-            stepsSection
-            importSection
-            if !recent.isEmpty { recentSection }
+            stepsSection.listRowSeparator(.hidden)
+            importSection.listRowSeparator(.hidden)
+            if !recent.isEmpty { recentSection.listRowSeparator(.hidden) }
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)

@@ -75,6 +75,15 @@ struct RootShell: View {
                              onCommit: saveDraft, onCommitVoice: saveVoice,
                              answer: answerDocument,
                              tagCandidates: projectTags, glassNamespace: glassNS)
+                        // A tag tile in an answer opens that tag's view: close
+                        // the composer, land on Home, push the tag (the same
+                        // destination the Home treemap opens).
+                        .environment(\.genProjectTap) { name in
+                            withAnimation(DS.Motion.standard) { composerOpen = false }
+                            draft = ""
+                            tab = .home
+                            HomeRoute.shared.openTag = name
+                        }
                     if !composerOpen {
                         HStack(spacing: DS.Space.s3) {
                             GlassTabBar(selection: $tab, glassNamespace: glassNS)
@@ -224,7 +233,9 @@ struct RootShell: View {
             }
             // Debug hook: open the composer so `-uiAnswerProbe` (handled in the
             // composer) can drive a real send for an on-screen answer render.
-            if UserDefaults.standard.string(forKey: "uiAnswerProbe") != nil {
+            if UserDefaults.standard.string(forKey: "uiAnswerProbe") != nil
+                || UserDefaults.standard.string(forKey: "composerDraft") != nil
+                || UserDefaults.standard.string(forKey: "composerType") != nil {
                 composerOpen = true
             }
             // Debug hook: `-mcpProbe "<query>"` exercises the MCP tool layer
@@ -280,9 +291,12 @@ struct RootShell: View {
         case "feed":
             tab = .feed
             // casberi://feed/type/Link — Home's kind bar lands here filtered.
+            // casberi://feed/source/Zerion — lands in that source's shape.
             let parts = url.pathComponents.filter { $0 != "/" }
             if parts.count == 2, parts[0] == "type" {
                 FeedFilter.shared.tag = parts[1]
+            } else if parts.count == 2, parts[0] == "source" {
+                FeedFilter.shared.source = parts[1]
             }
         // Apps is no longer a tab — land on Home and push the Apps screen from
         // its toolbar route (back-compat for casberi://apps and //account).
@@ -454,8 +468,12 @@ struct RootShell: View {
     private func answerDocument(_ query: String,
                                 onProseDoc: @escaping ([String]) -> Void) async -> [String] {
         let hits = retrieve(query)
+        // If the query names a tag ("about work"), the answer opens with that
+        // tag's tile — tap it to open the tag's view, the same push the Home
+        // treemap makes (PRD §17: a topic opens its view, not a Feed filter).
+        let tag = matchedTag(query)
         guard OnDeviceModel.isAvailable, !hits.isEmpty else {
-            return retrievalDoc(hits)
+            return retrievalDoc(hits, tag: tag)
         }
         let candidates = hits.map {
             OnDeviceModel.Candidate(title: $0.title, kind: $0.kind.typeTag,
@@ -464,9 +482,9 @@ struct RootShell: View {
         switch answerMode(query) {
         case .lookup:
             guard let answer = await OnDeviceModel.compose(query: query, candidates: candidates) else {
-                return retrievalDoc(hits)   // model declined or errored — fall back
+                return retrievalDoc(hits, tag: tag)   // model declined or errored — fall back
             }
-            return modelDoc(insight: answer.insight, hits: hits, picks: answer.picks)
+            return modelDoc(insight: answer.insight, hits: hits, picks: answer.picks, tag: tag)
         case .synthesis:
             guard let stream = OnDeviceModel.synthesisStream(query: query, candidates: candidates) else {
                 return retrievalDoc(hits)
@@ -543,13 +561,15 @@ struct RootShell: View {
 
     /// Today's doc, verbatim — the record paints from the top 4 hits. The
     /// universal fallback and the empty state.
-    private func retrievalDoc(_ hits: [Thing]) -> [String] {
+    private func retrievalDoc(_ hits: [Thing], tag: String? = nil) -> [String] {
         let shown = Array(hits.prefix(4))
         guard !shown.isEmpty else {
             return ["root = Stack([ins])",
                     "ins = Insight(\"Nothing matches yet. Things you capture land here.\")"]
         }
-        var doc = ["root = Stack([res])"]
+        let tile = tagTile(tag)
+        var doc = ["root = Stack([\(tile == nil ? "res" : "tag, res")])"]
+        if let tile { doc.append(tile) }
         let ids = shown.indices.map { "r\($0)" }
         doc.append("res = Widget(\"Found\", \"\(shown.count)\", [\(ids.joined(separator: ", "))])")
         for (i, t) in shown.enumerated() {
@@ -559,19 +579,56 @@ struct RootShell: View {
         return doc
     }
 
+    /// A tappable tile for the tag an answer is about — opens that tag's view.
+    /// nil when the query names no known tag. The tile's name arg is what the
+    /// tap routes on (GenProjectTile → genProjectTap → HomeRoute.openTag).
+    private func tagTile(_ tag: String?) -> String? {
+        guard let tag else { return nil }
+        let count = (try? modelContext.fetch(FetchDescriptor<Thing>()))?
+            .filter { $0.tags.contains { $0.caseInsensitiveCompare(tag) == .orderedSame } }
+            .count ?? 0
+        guard count > 0 else { return nil }
+        return "tag = ProjectTile(\"2\", \"\(genSafe(tag))\", \"\", \"\(count) thing\(count == 1 ? "" : "s")\", \"\(count) things\", null)"
+    }
+
+    /// The existing tag a query names, if any — a query term (minus stopwords
+    /// and kind words) that matches a tag's name exactly, case-insensitively.
+    private func matchedTag(_ query: String) -> String? {
+        let stops: Set<String> = ["about", "my", "the", "a", "in", "from", "for",
+                                  "of", "what", "did", "i", "save", "saved", "show",
+                                  "find", "me", "all", "any"]
+        let terms = query.lowercased()
+            .components(separatedBy: CharacterSet.alphanumerics.inverted)
+            .filter { !$0.isEmpty && !stops.contains($0) }
+        guard !terms.isEmpty else { return nil }
+        let tags = Set((try? modelContext.fetch(FetchDescriptor<Thing>()))?.flatMap(\.tags) ?? [])
+        // Prefer a whole-query match ("book club"), else any single term.
+        if let whole = tags.first(where: { $0.caseInsensitiveCompare(terms.joined(separator: " ")) == .orderedSame }) {
+            return whole
+        }
+        return terms.lazy.compactMap { term in
+            tags.first { $0.caseInsensitiveCompare(term) == .orderedSame }
+        }.first
+    }
+
     /// The model's answer as a composition: its one plain sentence up top, then
     /// the things it picked — painted from the REAL things (the model chose
     /// indices, never content), so every row is honest. No picks = just the
     /// sentence (the model said nothing fits).
-    private func modelDoc(insight: String, hits: [Thing], picks: [Int]) -> [String] {
+    private func modelDoc(insight: String, hits: [Thing], picks: [Int], tag: String? = nil) -> [String] {
         let clean = genSafe(insight)
         let picked = picks.compactMap { hits.indices.contains($0) ? hits[$0] : nil }.prefix(6)
+        let tile = tagTile(tag)
         guard !picked.isEmpty else {
-            return ["root = Stack([ins])",
-                    "ins = Insight(\"\(clean)\")"]
+            var doc = ["root = Stack([\(tile == nil ? "ins" : "ins, tag")])",
+                       "ins = Insight(\"\(clean)\")"]
+            if let tile { doc.append(tile) }
+            return doc
         }
-        var doc = ["root = Stack([ins, res])",
+        let children = tile == nil ? "ins, res" : "ins, tag, res"
+        var doc = ["root = Stack([\(children)])",
                    "ins = Insight(\"\(clean)\")"]
+        if let tile { doc.append(tile) }
         let ids = picked.indices.map { "r\($0)" }
         doc.append("res = Widget(\"Found\", \"\(picked.count)\", [\(ids.joined(separator: ", "))])")
         for (i, t) in picked.enumerated() {

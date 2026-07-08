@@ -57,12 +57,15 @@ enum ProbeHooks {
                 NSLog("Bluesky probe: %@ new things", n.map(String.init) ?? "FAILED")
             }
         },
-        // `-bankrAddress <0x…>` connects Bankr headlessly.
-        Hook(key: "bankrAddress") { addr, context in
-            BankrStore.shared.address = BankrStore.normalize(addr)
+        // `-watchToken <address|symbol|link>` watches a token headlessly.
+        Hook(key: "watchToken") { query, context in
             Task { @MainActor in
-                let n = await BankrIngest.refresh(context: context)
-                NSLog("Bankr probe: %@ new things", n.map(String.init) ?? "FAILED")
+                guard let token = await TokenWatch.resolve(query) else {
+                    NSLog("Dexscreener probe: FAILED to resolve"); return
+                }
+                let added = TokenWatch.add(token, context: context)
+                NSLog("Dexscreener probe: %@ (%@)", token.name,
+                      added != nil ? "watched" : "already")
             }
         },
         // `-rssFeed <url>` follows a feed and syncs — headless bridge test.
