@@ -49,7 +49,7 @@ All read via UserDefaults in `Shell/RootShell.swift` unless noted:
 - `-openSettings YES` — push the settings screen.
 - `-icloud.sync YES` — AppStorage override for the sync toggle copy.
 - `-onboarded YES` — AppStorage override that skips first-launch onboarding (fresh installs otherwise land on it, hiding the screen you deep-linked to).
-- `-openApp "<Offer name>"` — open a store product page (needs `casberi://account` opened after launch); `-openProject "<Tag>"` — push a project detail (`Screens/AccountScreen.swift` / `HomeScreen.swift`).
+- `-openApp "<Offer name>"` — open a store product page; `-openSetup "<Offer name>"` — push a bridge's setup screen (both need `casberi://account` opened after launch); `-openProject "<Tag>"` — push a project detail (`Screens/AccountScreen.swift` / `HomeScreen.swift`).
 - `-theme.light 0|1` — AppStorage theme override; always pass explicitly for light/dark screenshots (the sim's stored value sticks).
 - `-demoPick "Photos,Calendar"` — onboarding: mark those offers connected and continue (`Screens/OnboardingView.swift`).
 - `-rssFeed <url>` — follow a feed and sync headlessly; `-chatgptImport <path>` — import a conversations.json; `-bskyHandle <handle>` — connect Bluesky; `-tokenBridge "<Name>:<token>"` — connect a token bridge (Readwise/GitHub/Todoist/Raindrop/Cal.com/Calendly/Notion/Linear). Each NSLogs a probe result.

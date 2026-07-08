@@ -31,7 +31,10 @@ final class FarcasterStore {
     /// "@dwr" and "dwr.eth" both normalize to the registered name.
     static func normalize(_ raw: String) -> String {
         var n = raw.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        if n.hasPrefix("@") { n.removeFirst() }
+        for junk in ["https://", "http://", "www.", "farcaster.xyz/", "warpcast.com/", "@"] {
+            if n.hasPrefix(junk) { n.removeFirst(junk.count) }
+        }
+        if let slash = n.firstIndex(of: "/") { n = String(n[..<slash]) }
         return n
     }
 }

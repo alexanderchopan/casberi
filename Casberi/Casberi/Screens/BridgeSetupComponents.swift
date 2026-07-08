@@ -25,14 +25,31 @@ struct BridgeFieldRow: View {
     var secure = false
     var keyboard: UIKeyboardType = .default
     var focus: FocusState<Bool>.Binding? = nil
+    /// Fixed affixes around the field — "farcaster.xyz/" before, or
+    /// ".bsky.social" after — so the person types only their name. The
+    /// suffix steps aside once the input carries its own domain (a dot).
+    var prefix: String? = nil
+    var suffix: String? = nil
     let action: () -> Void
 
     var body: some View {
         HStack(spacing: DS.Space.s2) {
-            if let focus {
-                field.focused(focus)
-            } else {
-                field
+            HStack(spacing: 0) {
+                if let prefix {
+                    Text(prefix)
+                        .dsText(.callout15).foregroundStyle(DS.textTertiary)
+                        .layoutPriority(1)
+                }
+                if let focus {
+                    field.focused(focus)
+                } else {
+                    field
+                }
+                if let suffix, !text.contains(".") {
+                    Text(suffix)
+                        .dsText(.callout15).foregroundStyle(DS.textTertiary)
+                        .layoutPriority(1)
+                }
             }
             Button(buttonLabel, action: action)
                 .dsText(.label12)

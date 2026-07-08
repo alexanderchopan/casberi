@@ -149,6 +149,11 @@ struct AppsScreen: View {
             if UserDefaults.standard.bool(forKey: "openPair") { pairing = true }
             if UserDefaults.standard.bool(forKey: "openWallet") { probe = .wallet }
             if let name = UserDefaults.standard.string(forKey: "openApp") { probe = .app(name) }
+            // `-openSetup "<Offer name>"` pushes a bridge's setup screen
+            // directly — the token/handle field screens have no deep link.
+            if let name = UserDefaults.standard.string(forKey: "openSetup") {
+                setupRoute = BridgeRouter.destination(forOffer: name)
+            }
             #endif
         }
     }

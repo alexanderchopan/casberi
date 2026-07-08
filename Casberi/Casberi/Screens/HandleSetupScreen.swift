@@ -27,8 +27,38 @@ enum HandleBridge: String {
 
     var placeholder: String {
         switch self {
-        case .bluesky:   "you.bsky.social"
+        case .bluesky:   "you"
         case .farcaster: "yourname"
+        }
+    }
+
+    /// The fixed part of the name, shown around the field so the person
+    /// types only what's theirs.
+    var fieldPrefix: String? {
+        switch self {
+        case .bluesky:   nil
+        case .farcaster: "farcaster.xyz/"
+        }
+    }
+
+    var fieldSuffix: String? {
+        switch self {
+        case .bluesky:   ".bsky.social"
+        case .farcaster: nil
+        }
+    }
+
+    /// What the field shows for an existing connection — Bluesky's default
+    /// suffix comes off so the display matches what the person typed.
+    var displayName: String {
+        switch self {
+        case .bluesky:
+            let name = BlueskyStore.shared.handle
+            return name.hasSuffix(".bsky.social")
+                ? String(name.dropLast(".bsky.social".count))
+                : name
+        case .farcaster:
+            return FarcasterStore.shared.username
         }
     }
 
@@ -140,7 +170,7 @@ struct HandleSetupScreen: View {
         .navigationBarTitleDisplayMode(.large)
         .onAppear {
             loadRecent()
-            nameField = bridge.currentName
+            nameField = bridge.displayName
             if !bridge.currentName.isEmpty {
                 Task { await sync() }
             }
@@ -151,6 +181,7 @@ struct HandleSetupScreen: View {
         Section {
             BridgeFieldRow(placeholder: bridge.placeholder, text: $nameField,
                            buttonLabel: bridge.currentName.isEmpty ? "Connect" : "Update",
+                           prefix: bridge.fieldPrefix, suffix: bridge.fieldSuffix,
                            action: connect)
             BridgeSyncStatusRows(syncing: syncing,
                                  syncingLine: "Fetching your \(bridge.noun)…",

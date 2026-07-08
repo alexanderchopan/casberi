@@ -23,7 +23,10 @@ final class BlueskyStore {
     /// "@name.bsky.social" and bare "name" both normalize.
     static func normalize(_ raw: String) -> String {
         var h = raw.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        if h.hasPrefix("@") { h.removeFirst() }
+        for junk in ["https://", "http://", "bsky.app/profile/", "@"] {
+            if h.hasPrefix(junk) { h.removeFirst(junk.count) }
+        }
+        if let slash = h.firstIndex(of: "/") { h = String(h[..<slash]) }
         if !h.isEmpty, !h.contains(".") { h += ".bsky.social" }
         return h
     }
