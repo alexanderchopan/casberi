@@ -15,7 +15,6 @@ struct AppsScreen: View {
     @Environment(BridgeStore.self) private var store
     @Environment(\.modelContext) private var modelContext
     @State private var pairing = false
-    @State private var selectedCategory: String?
     @State private var storyID: String?
     @State private var setupRoute: BridgeRouter.Destination?
     #if DEBUG
@@ -67,11 +66,6 @@ struct AppsScreen: View {
             return Ranked(offer: offer, bridge: bridge, tier: tier)
         }
         .sorted { $0.tier < $1.tier }
-    }
-
-    private var chart: [Ranked] {
-        guard let selectedCategory else { return ranked }
-        return ranked.filter { category(of: $0.offer) == selectedCategory }
     }
 
     private var toConnectCount: Int {
@@ -133,8 +127,7 @@ struct AppsScreen: View {
                     storyCarousel
                     pageDots
                 }
-                browseShelf
-                forYouChart
+                categoryShelves
             }
             .padding(.vertical, DS.Space.s4)
             .padding(.bottom, ShellMetrics.bottomInset)
@@ -340,73 +333,41 @@ struct AppsScreen: View {
         .frame(maxWidth: .infinity)
     }
 
-    // MARK: - Browse shelf (categories live HERE and in the filter, nowhere else)
+    // MARK: - Category shelves (the catalog's spine — one section per category)
 
-    private var browseShelf: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: DS.Space.s2) {
-                ForEach(Self.categories, id: \.name) { cat in
-                    let count = BridgeCatalog.offers.filter { cat.groups.contains($0.group) }.count
-                    let active = selectedCategory == cat.name
-                    HStack(spacing: DS.Space.s2) {
-                        Image(systemName: BridgeGlyph.symbol(for: cat.exemplar))
-                            .font(.system(size: 15, weight: .medium))
-                            .foregroundStyle(active ? DS.page : BridgeGlyph.color(for: cat.exemplar))
-                        Text(cat.name)
-                            .dsText(.callout15).fontWeight(.medium)
-                            .foregroundStyle(active ? DS.page : DS.textPrimary)
-                        Text("\(count)")
-                            .dsText(.subhead13)
-                            .foregroundStyle(active ? DS.page.opacity(0.7) : DS.textTertiary)
-                    }
-                    .padding(.horizontal, DS.Space.s3)
-                    .frame(minHeight: 44)
-                    .background(active ? DS.textPrimary : DS.surfaceSheet,
-                                in: RoundedRectangle(cornerRadius: DS.Radius.control, style: .continuous))
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        DSHaptic.selection()
-                        withAnimation(DS.Motion.standard) {
-                            selectedCategory = active ? nil : cat.name
+    /// Apps grouped by category. Each category with something you can add gets
+    /// a labeled shelf; connected apps live in the strip above (ranked drops
+    /// them), so nothing repeats. Ready-to-connect apps lead each shelf, coming
+    /// ("Soon") ones trail — the tier order `ranked` already carries.
+    private var categoryShelves: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s6) {
+            ForEach(Self.categories, id: \.name) { cat in
+                let apps = ranked.filter { category(of: $0.offer) == cat.name }
+                if !apps.isEmpty {
+                    VStack(alignment: .leading, spacing: DS.Space.s2) {
+                        sectionHeader(cat.name.uppercased())
+                            .padding(.horizontal, DS.Space.s4)
+                        VStack(spacing: DS.Space.s1) {
+                            ForEach(apps) { entry in appRow(entry) }
                         }
+                        .padding(.vertical, DS.Space.s1)
+                        .background(DS.surfaceSheet,
+                                    in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+                        .padding(.horizontal, DS.Space.s4)
                     }
-                    .accessibilityLabel("\(cat.name), \(count) apps")
                 }
             }
         }
-        .contentMargins(.horizontal, DS.Space.s4, for: .scrollContent)
     }
 
-    // MARK: - "For you" chart (one ranked list — the store's spine)
-
-    private var forYouChart: some View {
-        VStack(alignment: .leading, spacing: DS.Space.s2) {
-            sectionHeader((selectedCategory ?? "Top apps").uppercased())
-                .padding(.horizontal, DS.Space.s4)
-            VStack(spacing: DS.Space.s1) {
-                ForEach(Array(chart.enumerated()), id: \.element.id) { index, entry in
-                    chartRow(rank: index + 1, entry: entry)
-                }
-            }
-            .padding(.vertical, DS.Space.s1)
-            .background(DS.surfaceSheet,
-                        in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
-            .padding(.horizontal, DS.Space.s4)
-        }
-    }
-
-    private func chartRow(rank: Int, entry: Ranked) -> some View {
+    /// One app inside a shelf — icon, name, honest subline, action capsule. The
+    /// row tap (outside the capsule) opens the product page. No rank number: a
+    /// shelf is a category, not a leaderboard.
+    private func appRow(_ entry: Ranked) -> some View {
         let soon = entry.tier == 3
         return HStack(spacing: DS.Space.s3) {
-            // Row tap (anywhere but the capsule) → the product page.
             NavigationLink { AppDetailScreen(offer: entry.offer) } label: {
                 HStack(spacing: DS.Space.s3) {
-                    Text("\(rank)")
-                        .dsText(.body17).fontWeight(.bold)
-                        .foregroundStyle(DS.textTertiary)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.7)
-                        .frame(width: 26, alignment: .leading)
                     BridgeIcon(name: entry.offer.name, size: 44)
                         .saturation(soon ? 0 : 1)
                         .opacity(soon ? 0.5 : 1)
