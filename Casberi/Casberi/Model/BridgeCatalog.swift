@@ -41,7 +41,7 @@ enum BridgeCatalog {
               needsSetup: true),
         Offer(name: "Claude",      tagline: "Connect it to your things",             group: "Your agent",     connectable: false,
               summary: "Claude connects to Casberi — it reads your things when you ask and saves only what you approve. The inverse of a bridge: a client reaching in, not data pulled out."),
-        Offer(name: "Dexscreener", tagline: "Watch any token",                      group: "Your agent",     connectable: true,
+        Offer(name: "Dexscreener", tagline: "Watch any token",                      group: "Your wallet",    connectable: true,
               summary: "Watch any token — paste its address or a Dexscreener link and its live price chart lands in your feed, drawn on your iPhone. Public price data only; nothing about you leaves the device. Charts open on Dexscreener.",
               needsSetup: true),
         Offer(name: "Venice",      tagline: "Private AI, nothing retained",          group: "Your agent",     connectable: false,
