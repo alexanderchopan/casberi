@@ -2,6 +2,7 @@ import SwiftUI
 import Photos
 import LinkPresentation
 import AVFoundation
+import Charts
 
 /// Content by kind (S19) — the thing shows AS what it is: a screenshot is the
 /// image, a link is its preview, a chat reads as a conversation, voice leads
@@ -15,7 +16,11 @@ struct ThingContentView: View {
         case .screenshot:
             ScreenshotContent(assetID: thing.sourceRef)
         case .link:
-            if let url = Capture.detectURL(in: thing.content.isEmpty ? thing.title : thing.content) {
+            // A token link leads with its price chart (the token's "media",
+            // like a screenshot leads with its image); everything else previews.
+            if let route = TokenChart.route(from: thing.content) {
+                TokenChartContent(chain: route.chain, address: route.address)
+            } else if let url = Capture.detectURL(in: thing.content.isEmpty ? thing.title : thing.content) {
                 LinkPreviewCard(url: url)
             }
         case .chat:
@@ -335,5 +340,73 @@ private struct ScheduleCard: View {
                     in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
         .padding(.horizontal, DS.Space.s4)
         .padding(.bottom, DS.Space.s3)
+    }
+}
+
+/// A token's price, drawn natively — a price + 24h change header over a Swift
+/// Charts sparkline (GeckoTerminal OHLCV; no web view). Illiquid/dead tokens
+/// have no pool, so it falls back to the plain link, never an empty chart.
+private struct TokenChartContent: View {
+    let chain: String
+    let address: String
+
+    @State private var chart: TokenChart?
+    @State private var loaded = false
+
+    private var up: Bool { (chart?.change24h ?? 0) >= 0 }
+    private var accent: Color { up ? DS.confirm : DS.destructive }
+
+    var body: some View {
+        Group {
+            if let chart {
+                VStack(alignment: .leading, spacing: DS.Space.s3) {
+                    HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+                        Text(priceText(chart.price))
+                            .dsText(.heading22).foregroundStyle(DS.textPrimary)
+                        Text(changeText(chart.change24h))
+                            .dsText(.callout15).foregroundStyle(accent)
+                        Spacer()
+                        Text("24H").dsText(.label12).kerning(0.8)
+                            .foregroundStyle(DS.textTertiary)
+                    }
+                    Chart(Array(chart.closes.enumerated()), id: \.offset) { i, close in
+                        LineMark(x: .value("t", i), y: .value("price", close))
+                            .interpolationMethod(.catmullRom)
+                            .foregroundStyle(accent)
+                        AreaMark(x: .value("t", i), y: .value("price", close))
+                            .interpolationMethod(.catmullRom)
+                            .foregroundStyle(accent.opacity(0.12))
+                    }
+                    .chartXAxis(.hidden)
+                    .chartYAxis(.hidden)
+                    .chartYScale(domain: .automatic(includesZero: false))
+                    .frame(height: 120)
+                }
+            } else if loaded {
+                // No pool (dead/illiquid) — the plain link, honestly.
+                if let url = URL(string: "https://dexscreener.com/\(chain)/\(address)") {
+                    LinkPreviewCard(url: url)
+                }
+            } else {
+                RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous)
+                    .fill(DS.fillFaint).frame(height: 120)
+                    .overlay(ProgressView())
+            }
+        }
+        .padding(.horizontal, DS.Space.s4)
+        .padding(.bottom, DS.Space.s3)
+        .task {
+            chart = await TokenChart.fetch(chain: chain, address: address)
+            loaded = true
+        }
+    }
+
+    private func priceText(_ p: Double) -> String {
+        if p >= 1 { return String(format: "$%.2f", p) }
+        if p >= 0.01 { return String(format: "$%.4f", p) }
+        return String(format: "$%.8f", p)
+    }
+    private func changeText(_ c: Double) -> String {
+        String(format: "%@%.1f%%", c >= 0 ? "+" : "", c * 100)
     }
 }

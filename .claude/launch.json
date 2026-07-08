@@ -3,9 +3,9 @@
   "configurations": [
     {
       "name": "website",
-      "runtimeExecutable": "python3",
-      "runtimeArgs": ["-m", "http.server", "4173", "--directory", "website"],
-      "port": 4173
+      "runtimeExecutable": "sh",
+      "runtimeArgs": ["-c", "cd \"/Users/alexanderchopan/Library/Mobile Documents/com~apple~CloudDocs/myStuff/product/casberi/website\" && exec python3 -m http.server \"${PORT:-4173}\""],
+      "autoPort": true
     }
   ]
 }
