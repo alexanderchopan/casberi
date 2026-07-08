@@ -26,9 +26,8 @@ struct AppsScreen: View {
     // never vertical section headers)
 
     private static let categories: [(name: String, exemplar: String, groups: Set<String>)] = [
-        ("Your life",    "Photos",    ["Your photos", "Your schedule"]),
-        ("Your fitness", "Strava",    ["Your fitness"]),
-        ("Your wallet",  "Zerion",    ["Your wallet", "Your network"]),
+        ("Your life",    "Photos",    ["Your photos", "Your schedule", "Your fitness"]),
+        ("Onchain",      "Zerion",    ["Your wallet", "Your network"]),
         ("Your agents",  "Claude",    ["Your agent", "Your machines"]),
         ("Your mail",    "Gmail",     ["Your mail"]),
         ("Your work",    "GitHub",    ["Your work"]),
