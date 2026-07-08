@@ -8,11 +8,13 @@ enum IngestSupport {
 
     /// Every sourceRef already in the corpus — the set incoming items
     /// dedupe against. Runs on the caller's context, like the fetches it
-    /// replaced.
+    /// replaced. A partial fetch: the predicate skips the many rows with no
+    /// ref (notes, approvals), and propertiesToFetch faults in only the
+    /// sourceRef column, so a refresh no longer hydrates the whole corpus.
     static func existingSourceRefs(_ context: ModelContext) -> Set<String> {
-        Set(((try? context.fetch(FetchDescriptor<Thing>(
-            predicate: #Predicate { $0.sourceRef != nil }
-        ))) ?? []).compactMap(\.sourceRef))
+        var descriptor = FetchDescriptor<Thing>(predicate: #Predicate { $0.sourceRef != nil })
+        descriptor.propertiesToFetch = [\.sourceRef]
+        return Set(((try? context.fetch(descriptor)) ?? []).compactMap(\.sourceRef))
     }
 
     // MARK: - Dates

@@ -1,6 +1,18 @@
 import SwiftUI
 import SwiftData
 
+/// The Zerion things already in the corpus — newest first. A @Query so the
+/// list updates live and the fetch runs once per store change, not twice per
+/// body pass.
+private let zerionRecentDescriptor: FetchDescriptor<Thing> = {
+    var d = FetchDescriptor<Thing>(
+        predicate: #Predicate { $0.source == "Zerion" },
+        sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]
+    )
+    d.fetchLimit = 12
+    return d
+}()
+
 /// Zerion, connected — the wallet's home in Casberi. The person manages WHICH
 /// addresses are watched (paste to add, swipe to remove, drag to reorder — the
 /// first address leads) and sees what's landed (recent onchain things from the
@@ -8,7 +20,6 @@ import SwiftData
 /// move funds. Live sync is honestly gated — it arrives with the server; until
 /// then the shape is real and the demo things show it.
 struct ZerionScreen: View {
-    @Environment(\.modelContext) private var modelContext
     @Bindable private var wallet = WalletStore.shared
     @State private var newAddress = ""
     @FocusState private var addressFieldFocused: Bool
@@ -18,15 +29,7 @@ struct ZerionScreen: View {
     /// here). Demo values until live sync; the composition shape is final.
     @State private var holdings = GenStream()
 
-    /// The Zerion things already in the corpus — newest first.
-    private var recent: [Thing] {
-        var descriptor = FetchDescriptor<Thing>(
-            predicate: #Predicate { $0.source == "Zerion" },
-            sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]
-        )
-        descriptor.fetchLimit = 12
-        return (try? modelContext.fetch(descriptor)) ?? []
-    }
+    @Query(zerionRecentDescriptor) private var recent: [Thing]
 
     var body: some View {
         List {

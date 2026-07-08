@@ -243,50 +243,6 @@ enum HomeComposition {
         }
     }
 
-    /// Home's signals — deltas and newness the corpus proves. Never counters:
-    /// Feed already counts. At most two; none is an honest answer.
-    private static func signals(things: [Thing], projects: [Cluster]) -> [String] {
-        var out: [String] = []
-        let now = Date.now
-        let weekAgo = now.addingTimeInterval(-7 * 86_400)
-        let twoWeeksAgo = now.addingTimeInterval(-14 * 86_400)
-        let thisWeek = things.filter { $0.capturedAt > weekAgo }.count
-        let lastWeek = things.filter { $0.capturedAt > twoWeeksAgo && $0.capturedAt <= weekAgo }.count
-
-        // Pace — only when the delta is notable both ways.
-        if lastWeek >= 3, thisWeek >= 3 {
-            let ratio = Double(thisWeek) / Double(lastWeek)
-            if ratio >= 1.5 {
-                let mult = ratio >= 1.75 ? "\(Int(ratio.rounded()))×" : "1.5×"
-                out.append("StatTile(\(q("1")), \(q(mult)), \(q("Last week's pace")), \(q("\(lastWeek) → \(thisWeek) things")))")
-            } else if ratio <= 0.6 {
-                out.append("StatTile(\(q("1")), \(q("Quieter")), \(q("Than last week")), \(q("\(lastWeek) → \(thisWeek) things")))")
-            }
-        }
-
-        // A source that landed for the first time this week.
-        var firstSeen: [String: Date] = [:]
-        for t in things {
-            if let seen = firstSeen[t.source] { firstSeen[t.source] = min(seen, t.capturedAt) }
-            else { firstSeen[t.source] = t.capturedAt }
-        }
-        if let newcomer = firstSeen.filter({ $0.value > weekAgo && $0.key != "You" && $0.key != "Voice" })
-            .min(by: { $0.value < $1.value }) {
-            let n = things.filter { $0.source == newcomer.key }.count
-            out.append("StatTile(\(q("1")), \(q(newcomer.key)), \(q("Landed this week")), \(q(n == 1 ? "First thing in" : "\(n) things already")))")
-        }
-
-        // A cluster born this week — its oldest member is younger than 7
-        // days. The top cluster is skipped: it's already the hero's line.
-        if let born = projects.dropFirst().first(where: { cluster in
-            (cluster.things.map(\.capturedAt).min() ?? .distantPast) > weekAgo
-        }) {
-            out.append("StatTile(\(q("1")), \(q(born.name)), \(q("New this week")), \(q(born.things.count == 1 ? "1 thing so far" : "\(born.things.count) things already")))")
-        }
-
-        return Array(out.prefix(2))
-    }
-
     /// The corpus's composition — kind counts for the kind bar (the type
     /// chart lives on Home now; Feed is a feed).
     private static func kindItems(_ things: [Thing]) -> String? {

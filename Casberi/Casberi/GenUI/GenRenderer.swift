@@ -114,7 +114,6 @@ struct GenRender: View {
         case "Chip":        GenChip(el: el).mountIn()
         case "Tile":        GenTile(el: el).mountIn()
         case "ProjectTile": GenProjectTile(el: el).mountIn()
-        case "StatTile":    GenStatTile(el: el).mountIn()
         case "PhotoTile":   GenPhotoTile(el: el).mountIn()
         case "VoiceTile":   GenVoiceTile(el: el).mountIn()
         case "TagMap":      GenTagMap(el: el).mountIn()
@@ -404,25 +403,6 @@ private struct GenProjectTile: View {
             let name = el.str(1)
             if !name.isEmpty { projectTap?(name) }
         }
-    }
-}
-
-/// StatTile(span, big, label, subline) — usage as synthesis, facts only.
-private struct GenStatTile: View {
-    let el: GenEl
-    var body: some View {
-        VStack(alignment: .leading, spacing: DS.Space.s1) {
-            Text(el.str(1)).dsText(.heading34).foregroundStyle(DS.textPrimary)
-                .contentTransition(.numericText())
-                .animation(DS.Motion.standard, value: el.str(1))
-            Spacer(minLength: 0)
-            Text(el.str(2)).dsText(.body17).foregroundStyle(DS.textPrimary)
-            Text(el.str(3)).dsText(.subhead13).foregroundStyle(DS.textSecondary).lineLimit(1)
-        }
-        .padding(DS.Space.s4)
-        .frame(maxWidth: .infinity, minHeight: 96, alignment: .topLeading)
-        .background(DS.surfaceSheet,
-                    in: RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
     }
 }
 

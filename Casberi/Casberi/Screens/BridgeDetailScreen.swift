@@ -16,15 +16,18 @@ struct BridgeDetailScreen: View {
     private var bridge: BridgeApp? {
         store.bridges.first { $0.id == bridgeID }
     }
-    private var recent: [Thing] {
-        guard let bridge else { return [] }
-        let name = bridge.name
+    /// This bridge's three most recent things — cached on appearance rather than
+    /// re-fetched twice on every body pass. The predicate is per-bridge, so this
+    /// is the cache path rather than a static @Query.
+    @State private var recent: [Thing] = []
+
+    private func loadRecent(source name: String) {
         var descriptor = FetchDescriptor<Thing>(
             predicate: #Predicate { $0.source == name },
             sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]
         )
         descriptor.fetchLimit = 3
-        return (try? modelContext.fetch(descriptor)) ?? []
+        recent = (try? modelContext.fetch(descriptor)) ?? []
     }
 
     var body: some View {
@@ -137,6 +140,7 @@ struct BridgeDetailScreen: View {
             }
             .scrollIndicators(.hidden)
             .dsPageBackground()
+            .onAppear { loadRecent(source: bridge.name) }
             .navigationTitle(bridge.name)
             .navigationBarTitleDisplayMode(.inline)
             .sheet(item: $sheetThing) { thing in

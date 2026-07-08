@@ -116,8 +116,13 @@ struct HandleSetupScreen: View {
     @State private var result: String?
     @State private var resultIsError = false
 
-    private var recent: [Thing] {
-        recentBridgeThings(source: bridge.rawValue, context: modelContext)
+    /// This bridge's things — cached per appearance and after each sync, rather
+    /// than re-fetched twice on every body pass. The source is per-bridge, so
+    /// this is the cache path rather than a static @Query.
+    @State private var recent: [Thing] = []
+
+    private func loadRecent() {
+        recent = recentBridgeThings(source: bridge.rawValue, context: modelContext)
     }
 
     var body: some View {
@@ -134,6 +139,7 @@ struct HandleSetupScreen: View {
         .navigationTitle(bridge.rawValue)
         .navigationBarTitleDisplayMode(.large)
         .onAppear {
+            loadRecent()
             nameField = bridge.currentName
             if !bridge.currentName.isEmpty {
                 Task { await sync() }
@@ -180,6 +186,7 @@ struct HandleSetupScreen: View {
         syncing = true
         let added = await bridge.refresh(context: modelContext)
         syncing = false
+        loadRecent()
         guard let added else {
             result = "Couldn't find that \(bridge.nameNoun) — check the spelling."
             resultIsError = true

@@ -1,6 +1,18 @@
 import SwiftUI
 import SwiftData
 
+/// The RSS things already in the corpus — newest first. A @Query so the list
+/// updates live as sync lands posts, and the fetch runs once per store change
+/// rather than twice on every body pass.
+private let rssRecentDescriptor: FetchDescriptor<Thing> = {
+    var d = FetchDescriptor<Thing>(
+        predicate: #Predicate { $0.source == "RSS" },
+        sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]
+    )
+    d.fetchLimit = 12
+    return d
+}()
+
 /// RSS, connected — feeds' home in Casberi. The person manages WHICH feeds
 /// are followed (paste a site or feed URL, swipe to remove) and sees what's
 /// landed. New posts arrive as link things on every visit and app foreground
@@ -14,10 +26,7 @@ struct RSSScreen: View {
     @State private var lastResult: String?
     @FocusState private var fieldFocused: Bool
 
-    /// The RSS things already in the corpus — newest first.
-    private var recent: [Thing] {
-        recentBridgeThings(source: "RSS", context: modelContext)
-    }
+    @Query(rssRecentDescriptor) private var recent: [Thing]
 
     var body: some View {
         List {

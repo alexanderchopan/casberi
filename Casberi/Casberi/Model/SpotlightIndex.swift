@@ -9,10 +9,11 @@ import SwiftData
 enum SpotlightIndex {
 
     private static let domain = "things"
+    /// The newest `capturedAt` the launch reconcile has already indexed. The
+    /// reconcile indexes only things past it, then advances it.
+    private static let watermarkKey = "spotlight.watermark"
 
     static func index(_ things: [Thing]) {
-        // Onboarding samples never reach search (handoff-onboarding).
-        let things = things.filter { !$0.isSample }
         guard !things.isEmpty else { return }
         let items = things.map { thing in
             let attrs = CSSearchableItemAttributeSet(contentType: .text)
@@ -39,13 +40,37 @@ enum SpotlightIndex {
     static func removeAll() {
         CSSearchableIndex.default()
             .deleteSearchableItems(withDomainIdentifiers: [domain])
+        // The index is empty now — clearing the watermark makes the next
+        // launch reconcile rebuild it in full (the "explicit reset" path,
+        // reached by Delete everything).
+        UserDefaults.standard.removeObject(forKey: watermarkKey)
     }
 
-    /// Launch reconciliation — cheap at phone scale, and it covers things
-    /// created by the share extension while the app was closed.
+    /// Launch reconciliation — INCREMENTAL. Covers things the share extension
+    /// (or a CloudKit merge) landed while the app was closed by indexing only
+    /// what's newer than the watermark, then advancing it — the old build
+    /// deleted and rewrote the entire index every launch. In-app captures and
+    /// bridge ingests already index inline at save, so they're never missed
+    /// regardless of the watermark. A full rebuild happens only after
+    /// `removeAll()` clears the watermark (Delete everything). Known gap: a
+    /// thing synced from another device but authored before the local
+    /// watermark won't appear in Spotlight until the next reset — acceptable
+    /// against re-indexing the whole corpus on every launch.
     static func reindexAll(context: ModelContext) {
-        let things = (try? context.fetch(FetchDescriptor<Thing>())) ?? []
-        removeAll()
+        let defaults = UserDefaults.standard
+        let watermark = defaults.object(forKey: watermarkKey) as? Date
+        var descriptor = FetchDescriptor<Thing>(
+            sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]
+        )
+        if let watermark {
+            descriptor.predicate = #Predicate { $0.capturedAt > watermark }
+        }
+        let things = (try? context.fetch(descriptor)) ?? []
+        guard !things.isEmpty else { return }
         index(things)
+        // Sorted newest-first, so the first row carries the new high-water mark.
+        if let newest = things.first?.capturedAt {
+            defaults.set(newest, forKey: watermarkKey)
+        }
     }
 }

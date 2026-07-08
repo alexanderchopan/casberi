@@ -153,12 +153,10 @@ struct RootShell: View {
                 let migrationsKey = "migrations.version"
                 let migrationsCurrent = 1
                 if UserDefaults.standard.integer(forKey: migrationsKey) < migrationsCurrent {
-                    // Demo mode died (option 4, 2026-07-07) — any sample things
-                    // a previous build seeded are removed for good.
-                    let samples = (try? modelContext.fetch(FetchDescriptor<Thing>(
-                        predicate: #Predicate { $0.isSample == true }
-                    ))) ?? []
-                    for thing in samples { modelContext.delete(thing) }
+                    // Migration v1 also purged sample things left by the retired
+                    // demo-seed path; `Thing.isSample` is gone now (nothing set it
+                    // true, and every container that reached v1 already purged),
+                    // so lightweight migration simply drops the column.
                     // One-time rename (2026-07-06): voice notes' source is
                     // "Voice" now; older ones carried "You".
                     let stale = (try? modelContext.fetch(FetchDescriptor<Thing>(

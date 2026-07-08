@@ -227,9 +227,9 @@ struct AccountDetailSheet: View {
 
     /// Everything as one JSON file — the person's things are the person's.
     private func buildExport() -> URL? {
-        let things = ((try? modelContext.fetch(FetchDescriptor<Thing>(
+        let things = (try? modelContext.fetch(FetchDescriptor<Thing>(
             sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]
-        ))) ?? []).filter { !$0.isSample }   // samples are never yours to export
+        ))) ?? []
         let iso = ISO8601DateFormatter()
         let payload: [[String: Any]] = things.map { t in
             var prov: [String: Any] = ["app": t.provenance.app]

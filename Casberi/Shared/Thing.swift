@@ -88,10 +88,6 @@ final class Thing {
     /// Stable identifier in the source system (PHAsset id, message id, URL) —
     /// ingestion (and CloudKit merge) dedupes on it.
     var sourceRef: String? = nil
-    /// Onboarding demo seeds (handoff-onboarding): sample things behave like
-    /// real ones on every surface but never index to Spotlight, never export,
-    /// and dissolve as real things land.
-    var isSample: Bool = false
     /// Voice audio, stored by the model itself (externalStorage keeps the
     /// bytes beside the store, and CloudKit mirroring carries them as a
     /// CKAsset — the M1 sync half of voice notes).

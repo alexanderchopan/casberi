@@ -2,6 +2,18 @@ import SwiftUI
 import SwiftData
 import UniformTypeIdentifiers
 
+/// The imported ChatGPT chats already in the corpus — newest first. A @Query
+/// so the list updates live after an import and the fetch runs once per store
+/// change, not twice per body pass.
+private let chatgptRecentDescriptor: FetchDescriptor<Thing> = {
+    var d = FetchDescriptor<Thing>(
+        predicate: #Predicate { $0.source == "ChatGPT" },
+        sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]
+    )
+    d.fetchLimit = 12
+    return d
+}()
+
 /// ChatGPT, connected — by import. The steps to get the export are stated
 /// plainly (they happen on OpenAI's side; there is no live read to offer),
 /// then one button picks `conversations.json` and the history lands as chat
@@ -13,9 +25,7 @@ struct ChatGPTImportScreen: View {
     @State private var result: String?
     @State private var resultIsError = false
 
-    private var recent: [Thing] {
-        recentBridgeThings(source: "ChatGPT", context: modelContext)
-    }
+    @Query(chatgptRecentDescriptor) private var recent: [Thing]
 
     var body: some View {
         List {
