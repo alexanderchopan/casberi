@@ -35,16 +35,16 @@ struct ThingSheetView: View {
                     .padding(.horizontal, DS.Space.s4)
                     .padding(.top, DS.Space.s6)
                 Text(thing.title)
-                    .dsText(.heading22).foregroundStyle(DS.textPrimary)
+                    .dsText(.heading34).foregroundStyle(DS.textPrimary)
                     .padding(.horizontal, DS.Space.s4)
-                    .padding(.top, DS.Space.s2)
+                    .padding(.top, DS.Space.s3)
                 if thing.kind != .event {   // events speak through WHEN below
                     ThingContentView(thing: thing)
                         .padding(.top, DS.Space.s3)
                 }
                 specTable
                     .padding(.horizontal, DS.Space.s4)
-                    .padding(.top, DS.Space.s4)
+                    .padding(.top, DS.Space.s6)
                 if editingTags {
                     tagsField
                         .padding(.top, DS.Space.s3)
@@ -109,7 +109,7 @@ struct ThingSheetView: View {
     // MARK: - Spec table (Gallery's graft — labels change per kind)
 
     private var specTable: some View {
-        VStack(alignment: .leading, spacing: DS.Space.s2) {
+        VStack(alignment: .leading, spacing: DS.Space.s3) {
             if thing.kind == .event, !thing.content.isEmpty {
                 specRow("WHEN", thing.content)
             }
@@ -131,9 +131,9 @@ struct ThingSheetView: View {
             Text(label)
                 .dsText(.label12).kerning(0.6)
                 .foregroundStyle(DS.textTertiary)
-                .frame(width: 72, alignment: .leading)
+                .frame(width: 80, alignment: .leading)
             Text(value)
-                .dsText(.callout15).foregroundStyle(DS.textPrimary)
+                .dsText(.body17).foregroundStyle(DS.textPrimary)
                 .lineLimit(2)
             Spacer(minLength: 0)
         }
@@ -149,10 +149,10 @@ struct ThingSheetView: View {
                 Text("TAGS")
                     .dsText(.label12).kerning(0.6)
                     .foregroundStyle(DS.textTertiary)
-                    .frame(width: 72, alignment: .leading)
+                    .frame(width: 80, alignment: .leading)
                 tagsLine
                 Text(editingTags ? "  −" : "  +")
-                    .dsText(.callout15).foregroundStyle(DS.textTertiary)
+                    .dsText(.body17).foregroundStyle(DS.textTertiary)
                 Spacer(minLength: 0)
             }
             .contentShape(Rectangle())
@@ -168,7 +168,7 @@ struct ThingSheetView: View {
             line = line + Text(tag)
                 .foregroundStyle(isType ? DS.textSecondary : ProjectHue.color(for: tag))
         }
-        return line.font(.system(size: 15))
+        return line.font(.system(size: 17))
     }
 
     // MARK: - Actions (quiet text rows — verbs, then Pin, then Share)
@@ -207,17 +207,17 @@ struct ThingSheetView: View {
     }
 
     private func actionRow(icon: String, label: String) -> some View {
-        HStack(spacing: DS.Space.s3) {
+        HStack(spacing: DS.Space.s4) {
             Image(systemName: icon)
-                .font(.system(size: 15))
-                .foregroundStyle(DS.textTertiary)
-                .frame(width: 22, alignment: .center)
+                .font(.system(size: 18))
+                .foregroundStyle(DS.textSecondary)
+                .frame(width: 26, alignment: .center)
             Text(label)
-                .dsText(.body17).foregroundStyle(DS.textPrimary)
+                .dsText(.heading17).foregroundStyle(DS.textPrimary)
             Spacer()
         }
         .padding(.horizontal, DS.Space.s4)
-        .padding(.vertical, DS.Space.s3)
+        .padding(.vertical, DS.Space.s4)
         .contentShape(Rectangle())
     }
 

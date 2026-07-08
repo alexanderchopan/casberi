@@ -57,11 +57,9 @@ struct ProjectDetailScreen: View {
         // 2026-07-07 — every project already sits on Home's map, so a pin
         // that only re-sorted it was a second pin system. Thing pins remain.)
         .toolbar {
-            Button {
+            Button("Rename") {
                 newName = projectName
                 renaming = true
-            } label: {
-                Image(systemName: "pencil")
             }
             .tint(DS.tint)
             .accessibilityLabel("Rename tag")
