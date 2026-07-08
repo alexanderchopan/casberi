@@ -52,7 +52,10 @@ rm -rf "$WORK"; mkdir -p "$WORK"
 rsync -a --exclude '.git' --exclude 'build' "$SRC/" "$WORK/project/" >/dev/null
 xattr -rc "$WORK/project" 2>/dev/null || true
 
-echo "▶ Archiving (Release, App Store distribution)"
+# Archive UNSIGNED — the dev profile a signed archive wants needs a
+# registered device; App Store signing happens at export instead (no
+# device needed). Needs an ADMIN App Store Connect API key.
+echo "▶ Archiving (Release, unsigned; signed for App Store at export)"
 xcodebuild \
   -project "$WORK/project/Casberi.xcodeproj" \
   -scheme Casberi \
@@ -60,10 +63,7 @@ xcodebuild \
   -destination 'generic/platform=iOS' \
   -archivePath "$ARCHIVE" \
   -derivedDataPath "$DD" \
-  -allowProvisioningUpdates \
-  -authenticationKeyPath "$ASC_KEY_PATH" \
-  -authenticationKeyID "$ASC_KEY_ID" \
-  -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
+  CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO \
   archive
 
 echo "▶ Exporting + uploading to App Store Connect"
