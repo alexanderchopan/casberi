@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Casberi — Privacy</title>
+<meta name="description" content="Casberi keeps your things on your iPhone. No servers, no tracking, no ads.">
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: #000; color: #e8e8ec;
+    font: 400 17px/1.65 -apple-system, "Helvetica Neue", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 720px; margin: 0 auto; padding: 64px 22px 96px; }
+  a { color: #3b8cf0; text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  h1 { font-size: 34px; font-weight: 800; letter-spacing: -0.01em; margin: 0 0 6px; color: #fff; }
+  .eyebrow { font-size: 12px; letter-spacing: 1.4px; color: #6b6b72; text-transform: uppercase; margin: 0 0 28px; }
+  h2 { font-size: 20px; font-weight: 600; color: #fff; margin: 40px 0 10px; }
+  p { margin: 0 0 14px; color: #c9c9cf; }
+  strong { color: #f0f0f2; font-weight: 600; }
+  ul { margin: 0 0 14px; padding-left: 22px; color: #c9c9cf; }
+  li { margin: 0 0 8px; }
+  .lede { font-size: 19px; color: #e8e8ec; }
+  .note { font-size: 14px; color: #8e8e96; border-top: 1px solid #1a1a1e; margin-top: 48px; padding-top: 20px; }
+  .home { display: inline-block; margin-bottom: 40px; font-size: 15px; color: #8e8e96; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="home" href="/">← Casberi</a>
+  <p class="eyebrow">Privacy Policy · Effective July 8, 2026</p>
+  <h1>Your things stay yours.</h1>
+  <p class="lede">Casberi is built so your data lives on your iPhone, not on our servers — because we don't run any. This page explains, plainly, what that means.</p>
+
+  <h2>What Casberi stores, and where</h2>
+  <p>Everything you capture or connect — notes, links, screenshots, events, chats, voice notes, and the things your connected apps bring in — is stored <strong>on your device</strong>, in Casberi's own local database. Casberi has no backend: your corpus is never uploaded to us, because there is no "us" server to upload it to.</p>
+
+  <h2>iCloud sync (optional, off by default)</h2>
+  <p>If you turn on iCloud sync, your things are mirrored through <strong>your own private iCloud account</strong> using Apple's CloudKit, so they can appear on your other devices. This is Apple's infrastructure, tied to your Apple ID — only you can read it, and Casberi never sees it. Sync is off until you choose to enable it, and turning it off (or using Delete everything) removes the iCloud copy.</p>
+
+  <h2>Connecting other apps</h2>
+  <p>When you connect a service — a feed, a social handle, a token, a calendar — Casberi talks to that service <strong>directly from your iPhone</strong> to fetch your data. Nothing routes through a Casberi server.</p>
+  <ul>
+    <li>For services that need a token or key, that credential is stored in your iPhone's <strong>Keychain</strong> and used only to call that service. It never leaves your device except to the service it belongs to.</li>
+    <li>For public data (a Bluesky handle, a Farcaster username, a public feed, a token's price), Casberi reads what's already public — no account of yours is required.</li>
+    <li>Each service you connect has its own privacy policy governing the data on <em>their</em> side; connecting it here doesn't change that.</li>
+  </ul>
+
+  <h2>On-device intelligence</h2>
+  <p>On iPhones that support Apple Intelligence, Casberi's answers are written by <strong>Apple's on-device model</strong>, from your things, on your device. Your data is not sent to Casberi, to Apple's servers, or to any third party to generate them.</p>
+
+  <h2>Price charts</h2>
+  <p>When you watch a token, Casberi fetches its public price data from public market APIs (such as Dexscreener and GeckoTerminal) to draw the chart. These requests carry only the token you're viewing — nothing about you or your identity.</p>
+
+  <h2>What Casberi does <em>not</em> do</h2>
+  <ul>
+    <li>No analytics or usage tracking.</li>
+    <li>No advertising, and no advertising identifiers.</li>
+    <li>No selling, sharing, or renting of your data — there's nothing to sell, since we never receive it.</li>
+    <li>No accounts, no sign-up, no password to give us.</li>
+  </ul>
+
+  <h2>During the TestFlight beta</h2>
+  <p>While Casberi is distributed through Apple's TestFlight, Apple may collect standard beta diagnostics — crash reports and basic usage metrics — under <a href="https://www.apple.com/legal/privacy/">Apple's privacy policy</a>, to help improve the app. This is Apple's collection, not Casberi's, and you can disable sharing in the TestFlight app.</p>
+
+  <h2>Children</h2>
+  <p>Casberi is not directed at children under 13 and does not knowingly collect information from them. (It doesn't knowingly collect information from anyone — see above.)</p>
+
+  <h2>Changes</h2>
+  <p>If this policy changes, the new version will be posted here with an updated effective date.</p>
+
+  <h2>Contact</h2>
+  <p>Questions about privacy? Email <a href="mailto:privacy@casberi.app">privacy@casberi.app</a>.</p>
+
+  <p class="note">Casberi is a personal, on-device app. The short version of everything above: your things are on your phone, and they stay there unless you decide otherwise.</p>
+</div>
+</body>
+</html>
