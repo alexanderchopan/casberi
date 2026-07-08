@@ -1,10 +1,13 @@
 import SwiftUI
 import SwiftData
 
-/// The thing sheet (M4) — the thing, then its verbs. Header paints from the
-/// row; content by kind; verbs card (derived, cap three; writes confirm);
-/// mark control; one Tags field (active lit, candidates dim, tap toggles);
-/// the Related shelf streams last through the engine.
+/// The thing sheet (M4, redesigned 2026-07-07 — "Ink with Gallery grafted
+/// in", user's pick): ink-black ground, no cards. An eyebrow (source-colored
+/// dot · kind · age), the title large, the thing's media, then a quiet spec
+/// table (WHEN/SITE/BY/FROM/TAGS — labels change per kind). Verbs are text
+/// rows (derived, cap three; writes confirm), plus Pin and Share. The tag
+/// editor keeps all its power behind a tap on the TAGS row. Related streams
+/// last. Spacing does the separating — no hairlines.
 struct ThingSheetView: View {
     @Bindable var thing: Thing
     /// True when the Tag swipe opened the sheet — it lands scrolled to the
@@ -21,30 +24,52 @@ struct ThingSheetView: View {
     @State private var renameTarget: String?
     @State private var renameDraft = ""
     @State private var deleteTarget: String?
+    /// The TAGS row opens the full editor (chips, rename, delete) in place.
+    @State private var editingTags = false
 
     var body: some View {
         ScrollViewReader { proxy in
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
-                header
-                contentByKind
-                verbsCard
-                tagsField
-                    .id("tags")
+                eyebrow
+                    .padding(.horizontal, DS.Space.s4)
+                    .padding(.top, DS.Space.s6)
+                Text(thing.title)
+                    .dsText(.heading22).foregroundStyle(DS.textPrimary)
+                    .padding(.horizontal, DS.Space.s4)
+                    .padding(.top, DS.Space.s2)
+                if thing.kind != .event {   // events speak through WHEN below
+                    ThingContentView(thing: thing)
+                        .padding(.top, DS.Space.s3)
+                }
+                specTable
+                    .padding(.horizontal, DS.Space.s4)
+                    .padding(.top, DS.Space.s4)
+                if editingTags {
+                    tagsField
+                        .padding(.top, DS.Space.s3)
+                        .id("tags")
+                }
+                actionRows
+                    .padding(.top, DS.Space.s6)
                 relatedShelf
+                    .padding(.top, DS.Space.s4)
             }
             .padding(.bottom, DS.Space.s6)
         }
         .scrollIndicators(.hidden)
-        .presentationBackground(.thickMaterial)  // frosted tray — content ghosts, never competes
+        // Ink: the sheet is black in both modes, like a photo viewer — its
+        // controls render dark regardless of the app's theme.
+        .presentationBackground(Color.black)
+        .colorScheme(.dark)
         .presentationDetents([.large, .medium])
         .presentationDragIndicator(.visible)
         .presentationCornerRadius(DS.Radius.sheet)
-        .dsColorScheme()
         .onAppear {
             streamRelated()
             if focusTags {
-                // Land on the Tags field — the swipe's whole point.
+                // Land in the tag editor — the swipe's whole point.
+                editingTags = true
                 Task { @MainActor in
                     try? await Task.sleep(for: .milliseconds(80))
                     withAnimation(DS.Motion.standard) {
@@ -68,65 +93,88 @@ struct ThingSheetView: View {
         }
     }
 
-    // MARK: - Header (paints from the row)
+    // MARK: - Eyebrow (source dot · kind · age — the only color up top)
 
-    private var header: some View {
-        HStack(spacing: DS.Space.s3) {
-            KindGlyph(kind: thing.kind, size: 40)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(thing.title)
-                    .dsText(.heading17).foregroundStyle(DS.textPrimary)
-                    .lineLimit(2)
-                Text("\(PlaceWords.line(for: thing)) · \(shortTime(thing.capturedAt))")
-                    .dsText(.subhead13).foregroundStyle(DS.textSecondary)
-                if let agent = thing.provenance.agent {
-                    Text("by \(agent)\(thing.provenance.machine.map { " on \($0)" } ?? "")")
-                        .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-                }
-            }
-            Spacer()
-            // The universal out-door: the system share sheet reaches every app
-            // with a share target — Notes, Messages, Mail — so a thing can land
-            // anywhere without Casberi needing a per-app write API (the only
-            // sanctioned route INTO Apple Notes, for one). A hand-off, not a
-            // write: sheet-level utility like Copy.
-            shareButton
+    private var eyebrow: some View {
+        HStack(spacing: DS.Space.s2) {
+            Circle()
+                .fill(BridgeGlyph.color(for: thing.source))
+                .frame(width: 6, height: 6)
+            Text("\(thing.kind.typeTag.uppercased()) · \(shortTime(thing.capturedAt).uppercased()) AGO")
+                .dsText(.label12).kerning(1.4)
+                .foregroundStyle(DS.textTertiary)
         }
-        .padding(DS.Space.s4)
     }
 
-    /// Links share as URLs (targets preview them); everything else as text.
-    @ViewBuilder
-    private var shareButton: some View {
-        let text = thing.content.isEmpty ? thing.title : thing.content
-        Group {
-            if let url = Capture.detectURL(in: text) {
-                ShareLink(item: url) { shareGlyph }
-            } else {
-                ShareLink(item: text, subject: Text(thing.title)) { shareGlyph }
+    // MARK: - Spec table (Gallery's graft — labels change per kind)
+
+    private var specTable: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+            if thing.kind == .event, !thing.content.isEmpty {
+                specRow("WHEN", thing.content)
             }
+            if thing.kind == .link,
+               let url = Capture.detectURL(in: thing.content.isEmpty ? thing.title : thing.content),
+               let host = url.host() {
+                specRow("SITE", host.replacingOccurrences(of: "www.", with: ""))
+            }
+            if let agent = thing.provenance.agent {
+                specRow("BY", "\(agent)\(thing.provenance.machine.map { " on \($0)" } ?? "")")
+            }
+            specRow("FROM", PlaceWords.line(for: thing))
+            tagsRow
+        }
+    }
+
+    private func specRow(_ label: String, _ value: String) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 0) {
+            Text(label)
+                .dsText(.label12).kerning(0.6)
+                .foregroundStyle(DS.textTertiary)
+                .frame(width: 72, alignment: .leading)
+            Text(value)
+                .dsText(.callout15).foregroundStyle(DS.textPrimary)
+                .lineLimit(2)
+            Spacer(minLength: 0)
+        }
+    }
+
+    /// Tags as a text line — your own tags wear their hue; the "+" opens the
+    /// full editor (chips, rename everywhere, delete everywhere) in place.
+    private var tagsRow: some View {
+        Button {
+            withAnimation(DS.Motion.standard) { editingTags.toggle() }
+        } label: {
+            HStack(alignment: .firstTextBaseline, spacing: 0) {
+                Text("TAGS")
+                    .dsText(.label12).kerning(0.6)
+                    .foregroundStyle(DS.textTertiary)
+                    .frame(width: 72, alignment: .leading)
+                tagsLine
+                Text(editingTags ? "  −" : "  +")
+                    .dsText(.callout15).foregroundStyle(DS.textTertiary)
+                Spacer(minLength: 0)
+            }
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
     }
 
-    private var shareGlyph: some View {
-        Image(systemName: "square.and.arrow.up")
-            .font(.system(size: 17, weight: .medium))
-            .foregroundStyle(DS.textSecondary)
-            .frame(width: 36, height: 36)
-            .background(DS.fillFaint, in: Circle())
+    private var tagsLine: Text {
+        var line = Text("")
+        for (i, tag) in thing.tags.enumerated() {
+            if i > 0 { line = line + Text(" · ").foregroundStyle(DS.textTertiary) }
+            let isType = ThingKind.from(typeTag: tag) != nil
+            line = line + Text(tag)
+                .foregroundStyle(isType ? DS.textSecondary : ProjectHue.color(for: tag))
+        }
+        return line.font(.system(size: 15))
     }
 
-    // MARK: - Content by kind (S19 — the thing shows AS what it is)
+    // MARK: - Actions (quiet text rows — verbs, then Pin, then Share)
 
-    private var contentByKind: some View {
-        ThingContentView(thing: thing)
-    }
-
-    // MARK: - Verbs card (derived, cap three)
-
-    private var verbsCard: some View {
-        VStack(spacing: 0) {
+    private var actionRows: some View {
+        VStack(alignment: .leading, spacing: 0) {
             ForEach(VerbDerivation.verbs(for: thing)) { verb in
                 Button {
                     if verb.isWrite {
@@ -135,37 +183,59 @@ struct ThingSheetView: View {
                         Task { await perform(verb) }   // reads pass
                     }
                 } label: {
-                    HStack(spacing: DS.Space.s3) {
-                        Image(systemName: verb.icon)
-                            .font(.system(size: 15))
-                            .foregroundStyle(DS.tint)
-                            .frame(width: 28, height: 28)
-                            .background(DS.tintDim,
-                                        in: RoundedRectangle(cornerRadius: DS.Radius.appIcon(28), style: .continuous))
-                        Text(verb.label)
-                            .dsText(.body17).foregroundStyle(DS.textPrimary)
-                        Spacer()
-                        Image(systemName: "arrow.up.right")
-                            .font(.system(size: 13))
-                            .foregroundStyle(DS.gray600)
-                    }
-                    .padding(.horizontal, DS.Space.s4)
-                    .padding(.vertical, DS.Space.s3)
-                    .contentShape(Rectangle())
+                    actionRow(icon: verb.icon, label: verb.label)
                 }
                 .buttonStyle(.plain)
             }
+            Button {
+                thing.pinned.toggle()
+                try? modelContext.save()
+                DSHaptic.tap()
+            } label: {
+                actionRow(icon: thing.pinned ? "pin.slash" : "pin",
+                          label: thing.pinned ? "Unpin" : "Pin")
+            }
+            .buttonStyle(.plain)
+            shareRow
             if let verbResult {
                 Text(verbResult)
                     .dsText(.subhead13).foregroundStyle(DS.confirm)
                     .padding(.horizontal, DS.Space.s4)
-                    .padding(.bottom, DS.Space.s3)
+                    .padding(.top, DS.Space.s2)
             }
         }
-        .background(DS.fillFaint,
-                    in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+    }
+
+    private func actionRow(icon: String, label: String) -> some View {
+        HStack(spacing: DS.Space.s3) {
+            Image(systemName: icon)
+                .font(.system(size: 15))
+                .foregroundStyle(DS.textTertiary)
+                .frame(width: 22, alignment: .center)
+            Text(label)
+                .dsText(.body17).foregroundStyle(DS.textPrimary)
+            Spacer()
+        }
         .padding(.horizontal, DS.Space.s4)
-        .padding(.bottom, DS.Space.s3)
+        .padding(.vertical, DS.Space.s3)
+        .contentShape(Rectangle())
+    }
+
+    /// The universal out-door: the system share sheet reaches every app with
+    /// a share target — the only sanctioned route INTO Apple Notes, for one.
+    @ViewBuilder
+    private var shareRow: some View {
+        let text = thing.content.isEmpty ? thing.title : thing.content
+        Group {
+            if let url = Capture.detectURL(in: text) {
+                ShareLink(item: url) { actionRow(icon: "square.and.arrow.up", label: "Share") }
+            } else {
+                ShareLink(item: text, subject: Text(thing.title)) {
+                    actionRow(icon: "square.and.arrow.up", label: "Share")
+                }
+            }
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: - Tags (one field; active lit, candidates dim)

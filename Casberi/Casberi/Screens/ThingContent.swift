@@ -78,6 +78,12 @@ private struct ScreenshotContent: View {
     }
 
     private func load() async {
+        // Demo sample refs load their bundled image (the sheet leads with
+        // media — a placeholder box on a sample thing reads as broken).
+        if let assetID, assetID.hasPrefix("sample:") {
+            image = UIImage.demoSample(for: assetID)
+            return
+        }
         guard let assetID,
               PHPhotoLibrary.authorizationStatus(for: .readWrite) == .authorized
                 || PHPhotoLibrary.authorizationStatus(for: .readWrite) == .limited,
