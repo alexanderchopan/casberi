@@ -33,7 +33,11 @@ enum IMAPClient {
 
         let start = max(1, total - limit + 1)
         let lines = try await conn.fetchEnvelopes(from: start, to: total)
-        return lines.compactMap(EnvelopeParser.parse).reversed()   // newest first
+        let parsed = lines.compactMap(EnvelopeParser.parse)
+        #if DEBUG
+        NSLog("IMAP %@: %d fetched, %d parsed", host, lines.count, parsed.count)
+        #endif
+        return parsed.reversed()   // newest first
     }
 }
 
@@ -51,10 +55,17 @@ private final class Session {
         let c = NWConnection(host: .init(host), port: 993, using: params)
         let session = Session(c)
         try await withCheckedThrowingContinuation { (cont: CheckedContinuation<Void, Error>) in
+            // The handler must resume the continuation exactly once — clear it
+            // on the first terminal state, or the later cancel() in close()
+            // would resume a second time (a fatal error).
             c.stateUpdateHandler = { state in
                 switch state {
-                case .ready: cont.resume()
-                case .failed, .cancelled: cont.resume(throwing: IMAPClient.IMAPError.connect)
+                case .ready:
+                    c.stateUpdateHandler = nil
+                    cont.resume()
+                case .failed, .cancelled:
+                    c.stateUpdateHandler = nil
+                    cont.resume(throwing: IMAPClient.IMAPError.connect)
                 default: break
                 }
             }
@@ -242,38 +253,73 @@ private enum EnvelopeParser {
     }
 
     /// Decodes RFC 2047 encoded-words (=?charset?B/Q?text?=) enough for subjects.
+    /// Words decode to BYTES first and adjacent words merge before the charset
+    /// decode — a multi-byte character (an emoji, a curly quote) may straddle
+    /// the word boundary, and decoding each word alone shatters it.
     private static func decodeWord(_ s: String) -> String {
         guard s.contains("=?") else { return s }
-        var result = s
+        // Whitespace between adjacent encoded-words is not content (RFC 2047 §6.2).
+        let joined = s.replacingOccurrences(
+            of: "\\?=\\s+=\\?", with: "?==?", options: .regularExpression)
         let pattern = "=\\?([^?]+)\\?([BbQq])\\?([^?]*)\\?="
         guard let re = try? NSRegularExpression(pattern: pattern) else { return s }
-        for m in re.matches(in: s, range: NSRange(s.startIndex..., in: s)).reversed() {
-            guard let full = Range(m.range, in: s),
-                  let encR = Range(m.range(at: 2), in: s),
-                  let txtR = Range(m.range(at: 3), in: s) else { continue }
-            let enc = s[encR].uppercased(), txt = String(s[txtR])
-            var decoded = txt
-            if enc == "B", let d = Data(base64Encoded: txt) {
-                decoded = String(decoding: d, as: UTF8.self)
-            } else if enc == "Q" {
-                decoded = qDecode(txt)
-            }
-            result.replaceSubrange(full, with: decoded)
+
+        var result = "", pending = Data(), pendingCharset = ""
+        var last = joined.startIndex
+        func flush() {
+            guard !pending.isEmpty else { return }
+            result += decode(pending, charset: pendingCharset)
+            pending = Data()
         }
+        for m in re.matches(in: joined, range: NSRange(joined.startIndex..., in: joined)) {
+            guard let full = Range(m.range, in: joined),
+                  let chR = Range(m.range(at: 1), in: joined),
+                  let encR = Range(m.range(at: 2), in: joined),
+                  let txtR = Range(m.range(at: 3), in: joined) else { continue }
+            if last < full.lowerBound {
+                flush()
+                result += joined[last..<full.lowerBound]
+            }
+            // Charset may carry an RFC 2231 language tag ("utf-8*en") — drop it.
+            let charset = joined[chR].split(separator: "*").first.map(String.init) ?? ""
+            let enc = joined[encR].uppercased(), txt = String(joined[txtR])
+            if charset.lowercased() != pendingCharset.lowercased() { flush(); pendingCharset = charset }
+            if enc == "B" { pending.append(Data(base64Encoded: txt) ?? Data(txt.utf8)) }
+            else { pending.append(qDecodeBytes(txt)) }
+            last = full.upperBound
+        }
+        flush()
+        result += joined[last...]
         return result
     }
 
-    private static func qDecode(_ s: String) -> String {
-        var out = "", i = s.startIndex
+    private static func decode(_ data: Data, charset: String) -> String {
+        let cs = charset.lowercased()
+        if cs.contains("1252") || cs.contains("windows") {
+            return String(data: data, encoding: .windowsCP1252)
+                ?? String(decoding: data, as: UTF8.self)
+        }
+        if cs.hasPrefix("iso-8859") || cs.contains("latin") {
+            return String(data: data, encoding: .isoLatin1)
+                ?? String(decoding: data, as: UTF8.self)
+        }
+        // utf-8, us-ascii, unknown: UTF-8 first, Latin-1 as the salvage path.
+        return String(data: data, encoding: .utf8)
+            ?? String(data: data, encoding: .isoLatin1)
+            ?? ""
+    }
+
+    private static func qDecodeBytes(_ s: String) -> Data {
+        var out = Data(), i = s.startIndex
         while i < s.endIndex {
             let c = s[i]
-            if c == "_" { out.append(" ") }
+            if c == "_" { out.append(0x20) }
             else if c == "=", let n1 = s.index(i, offsetBy: 1, limitedBy: s.endIndex),
                     let n2 = s.index(i, offsetBy: 2, limitedBy: s.endIndex), n2 < s.endIndex,
                     let byte = UInt8(s[n1...n2], radix: 16) {
-                out.append(Character(UnicodeScalar(byte)))
+                out.append(byte)
                 i = s.index(i, offsetBy: 3); continue
-            } else { out.append(c) }
+            } else { out.append(contentsOf: Array(String(c).utf8)) }
             i = s.index(after: i)
         }
         return out
