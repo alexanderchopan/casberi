@@ -37,9 +37,10 @@ struct OnboardingView: View {
         }
     }
 
-    /// The marquee (T2 ruling 2026-07-07): the catalog RAINS ACROSS THE TOP
-    /// before anything else — the drop acts out the headline. Zerion and
-    /// Farcaster lead; the row runs off both edges to say "more".
+    /// The rain (ruling 2026-07-07, supersedes T2's top marquee): the whole
+    /// catalog falls the full height of the screen and bounces into a shelf
+    /// just above the CTA — the drop acts out the headline, and the pile
+    /// says "all of this, here". Zerion and Farcaster lead.
     private let marqueeApps = ["Zerion", "Farcaster", "Gmail", "GitHub",
                                "Claude", "Spotify", "Strava", "Bluesky",
                                "Telegram", "Slack", "X", "Notion", "Reddit",
@@ -51,9 +52,6 @@ struct OnboardingView: View {
             DS.page.ignoresSafeArea()
 
             VStack(alignment: .leading, spacing: DS.Space.s4) {
-                marquee
-                    .padding(.top, DS.Space.s2)
-
                 VStack(alignment: .leading, spacing: DS.Space.s2) {
                     Text("Your apps, one feed.")
                         .font(.system(size: 34, weight: .heavy))
@@ -68,10 +66,12 @@ struct OnboardingView: View {
                 feedPreviewCard
                     .arrive(arrived, delay: 0.5)
 
-                Spacer(minLength: 84)
+                Spacer(minLength: 168)   // floor above the shelf + CTA stack
             }
+            .padding(.top, DS.Space.s4)
 
             VStack(spacing: DS.Space.s2) {
+                shelf
                 if let toast {
                     Text(toast)
                         .dsText(.subhead13)
@@ -184,24 +184,29 @@ struct OnboardingView: View {
     /// like things that actually fell.
     private static let jitter: [CGFloat] = [-4, 3, -2, 5, -5, 2, -3, 4]
 
-    private var marquee: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: DS.Space.s2) {
-                ForEach(Array(marqueeApps.enumerated()), id: \.element) { i, name in
-                    BridgeIcon(name: name, size: 38)
-                        .opacity(rained ? 1 : 0)
-                        .offset(y: rained
-                                ? Self.jitter[i % Self.jitter.count]
-                                : -140)
-                        .animation(.spring(duration: 0.5, bounce: 0.45)
-                                    .delay(0.05 + Double(i) * 0.045),
-                                   value: rained)
+    private var shelf: some View {
+        VStack(spacing: DS.Space.s2) {
+            ForEach(0..<2, id: \.self) { row in
+                HStack(spacing: DS.Space.s2) {
+                    ForEach(Array(marqueeApps.dropFirst(row * 8).prefix(8).enumerated()),
+                            id: \.element) { i, name in
+                        let n = row * 8 + i
+                        BridgeIcon(name: name, size: 32)
+                            .rotationEffect(.degrees(rained
+                                ? Double(Self.jitter[n % Self.jitter.count]) * 0.6 : 0))
+                            .opacity(rained ? 1 : 0)
+                            .offset(y: rained
+                                    ? Self.jitter[(n + 3) % Self.jitter.count] * 0.5
+                                    : -700)
+                            .animation(.spring(duration: 0.55, bounce: 0.42)
+                                        .delay(0.05 + Double(n) * 0.045),
+                                       value: rained)
+                    }
                 }
             }
-            .padding(.horizontal, DS.Space.s3)
-            .padding(.vertical, 6)   // room for the jitter
         }
-        .scrollClipDisabled()   // the fall crosses the top edge
+        .padding(.bottom, DS.Space.s1)
+        .allowsHitTesting(false)
         .onAppear { rained = true }
     }
 
