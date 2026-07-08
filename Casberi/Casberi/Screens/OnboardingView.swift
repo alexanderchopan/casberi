@@ -41,17 +41,17 @@ struct OnboardingView: View {
         }
     }
 
-    /// The glass (ruling 2026-07-07, supersedes the shelf rain): sixteen
+    /// The glass (ruling 2026-07-07, amended same day: no pour): sixteen
     /// BIG cubes fall the full height one after another, bounce, and stack
-    /// bottom-up until they fill the screen — ice filling a glass. Then the
-    /// glass pours: the cubes shrink into the shelf above the CTA and the
-    /// feed card arrives. Zerion and Farcaster lead the pour.
+    /// bottom-up until they fill the BOTTOM HALF of the screen — ice filling
+    /// a glass — and they STAY there, full size, while the feed card lives
+    /// in the top half. Zerion and Farcaster lead the fall.
     private let marqueeApps = ["Zerion", "Farcaster", "Gmail", "GitHub",
                                "Claude", "Spotify", "Strava", "Bluesky",
                                "Telegram", "Slack", "X", "Notion", "Reddit",
                                "YouTube", "Todoist", "RSS"]
-    /// 0 = above the screen · 1 = the glass fills · 2 = the shelf.
-    @State private var cubePhase = 0
+    /// False = above the screen · true = settled in the glass.
+    @State private var cubesLanded = false
 
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -70,9 +70,9 @@ struct OnboardingView: View {
                 .arrive(arrived, delay: 0.35)
 
                 feedPreviewCard
-                    .arrive(cubePhase >= 2, delay: 0.1)
+                    .arrive(arrived, delay: 0.5)
 
-                Spacer(minLength: 168)   // floor above the shelf + CTA stack
+                Spacer(minLength: 430)   // the bottom half belongs to the pile
             }
             .padding(.top, DS.Space.s4)
 
@@ -96,11 +96,7 @@ struct OnboardingView: View {
         .dsColorScheme()
         .onAppear {
             withAnimation(DS.Motion.standard) { arrived = true }
-            cubePhase = 1
-            // The glass is full once the last cube settles — then it pours.
-            DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
-                cubePhase = 2
-            }
+            cubesLanded = true
         }
         #if DEBUG
         // `-demoPick "Photos,Calendar"` marks and continues (no real
@@ -196,21 +192,14 @@ struct OnboardingView: View {
     /// like things that actually fell.
     private static let jitter: [CGFloat] = [-4, 3, -2, 5, -5, 2, -3, 4]
 
-    /// Where cube `i` rests in each phase — the glass stacks bottom-up in
-    /// four columns of near-touching 84pt cubes; the shelf is two tight rows
-    /// of 32pt above the CTA.
+    /// Where cube `i` rests: four columns stacking bottom-up, rows slightly
+    /// overlapping like real ice, the pile's top edge at mid-screen.
     private func cubeTarget(_ i: Int, in size: CGSize) -> CGPoint {
-        if cubePhase >= 2 {
-            let col = CGFloat(i % 8), row = CGFloat(i / 8)
-            let rowWidth = 8 * 32 + 7 * DS.Space.s2
-            let x = (size.width - rowWidth) / 2 + col * (32 + DS.Space.s2) + 16
-            return CGPoint(x: x, y: size.height - 148 + row * 40)
-        }
         let col = CGFloat(i % 4), row = CGFloat(i / 4)
         let cell = (size.width - DS.Space.s4 * 2) / 4
         let x = DS.Space.s4 + cell * col + cell / 2
             + Self.jitter[i % Self.jitter.count] * 0.8
-        let y = size.height - 190 - row * (cell - 6)
+        let y = size.height - 160 - row * 72
             + Self.jitter[(i + 5) % Self.jitter.count]
         return CGPoint(x: x, y: y)
     }
@@ -220,16 +209,12 @@ struct OnboardingView: View {
             ForEach(Array(marqueeApps.enumerated()), id: \.element) { i, name in
                 let rest = cubeTarget(i, in: geo.size)
                 BridgeIcon(name: name, size: 84)
-                    .rotationEffect(.degrees(cubePhase == 1
+                    .rotationEffect(.degrees(cubesLanded
                         ? Double(Self.jitter[i % Self.jitter.count]) * 0.9 : 0))
-                    .scaleEffect(cubePhase >= 2 ? 32.0 / 84.0 : 1)
-                    .position(x: rest.x, y: cubePhase == 0 ? -120 : rest.y)
-                    .animation(cubePhase <= 1
-                        ? .spring(duration: 0.85, bounce: 0.52)
-                            .delay(0.1 + Double(i) * 0.11)
-                        : .spring(duration: 0.7, bounce: 0.24)
-                            .delay(Double(i) * 0.015),
-                        value: cubePhase)
+                    .position(x: rest.x, y: cubesLanded ? rest.y : -120)
+                    .animation(.spring(duration: 0.85, bounce: 0.52)
+                                .delay(0.1 + Double(i) * 0.11),
+                               value: cubesLanded)
             }
         }
         .ignoresSafeArea()
