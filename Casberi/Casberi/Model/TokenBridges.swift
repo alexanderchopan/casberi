@@ -131,8 +131,7 @@ enum TokenIngest {
 
         guard let incoming = await fetch(bridge, token: token) else { return nil }
 
-        var existing = Set(((try? context.fetch(FetchDescriptor<Thing>())) ?? [])
-            .compactMap(\.sourceRef))
+        var existing = IngestSupport.existingSourceRefs(context)
         var added = 0
         for item in incoming {
             guard let ref = item.sourceRef, !existing.contains(ref) else { continue }
@@ -160,56 +159,9 @@ enum TokenIngest {
         }
     }
 
-    private static func get(_ url: String, auth: String,
-                            headers: [String: String] = [:]) async -> Any? {
-        guard let u = URL(string: url) else { return nil }
-        var request = URLRequest(url: u)
-        request.setValue(auth, forHTTPHeaderField: "Authorization")
-        request.setValue("application/json", forHTTPHeaderField: "Accept")
-        for (field, value) in headers {
-            request.setValue(value, forHTTPHeaderField: field)
-        }
-        guard let (data, response) = try? await URLSession.shared.data(for: request),
-              (response as? HTTPURLResponse)?.statusCode == 200 else { return nil }
-        return try? JSONSerialization.jsonObject(with: data)
-    }
-
-    private static func post(_ url: String, auth: String, body: [String: Any],
-                             headers: [String: String] = [:]) async -> Any? {
-        guard let u = URL(string: url),
-              let payload = try? JSONSerialization.data(withJSONObject: body) else { return nil }
-        var request = URLRequest(url: u)
-        request.httpMethod = "POST"
-        request.httpBody = payload
-        request.setValue(auth, forHTTPHeaderField: "Authorization")
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.setValue("application/json", forHTTPHeaderField: "Accept")
-        for (field, value) in headers {
-            request.setValue(value, forHTTPHeaderField: field)
-        }
-        guard let (data, response) = try? await URLSession.shared.data(for: request),
-              (response as? HTTPURLResponse)?.statusCode == 200 else { return nil }
-        return try? JSONSerialization.jsonObject(with: data)
-    }
-
-    private static let iso: ISO8601DateFormatter = {
-        let f = ISO8601DateFormatter()
-        f.formatOptions = [.withInternetDateTime]
-        return f
-    }()
-
-    private static func date(_ raw: Any?) -> Date? {
-        guard let s = raw as? String else { return nil }
-        if let d = iso.date(from: s) { return d }
-        // Some APIs (Readwise) send fractional seconds.
-        let frac = ISO8601DateFormatter()
-        frac.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        return frac.date(from: s)
-    }
-
     /// Readwise export API — books with nested highlights. Newest 30 land.
     private static func readwise(_ token: String) async -> [Thing]? {
-        guard let root = await get("https://readwise.io/api/v2/export/",
+        guard let root = await IngestSupport.getJSON("https://readwise.io/api/v2/export/",
                                    auth: "Token \(token)") as? [String: Any],
               let books = root["results"] as? [[String: Any]] else { return nil }
         var all: [(Date, Thing)] = []
@@ -219,11 +171,10 @@ enum TokenIngest {
             for h in (book["highlights"] as? [[String: Any]]) ?? [] {
                 guard let id = h["id"], let text = h["text"] as? String, !text.isEmpty
                 else { continue }
-                let when = date(h["highlighted_at"]) ?? .now
-                let title = text.count > 80 ? String(text.prefix(80)) + "…" : text
+                let when = IngestSupport.isoDate(h["highlighted_at"]) ?? .now
                 all.append((when, Thing(
                     kind: .note,
-                    title: title.replacingOccurrences(of: "\n", with: " "),
+                    title: IngestSupport.titleLine(text),
                     content: source,
                     source: "Readwise",
                     capturedAt: when,
@@ -236,10 +187,10 @@ enum TokenIngest {
 
     /// GitHub — issues and PRs that involve you, via the search API.
     private static func github(_ token: String) async -> [Thing]? {
-        guard let user = await get("https://api.github.com/user",
+        guard let user = await IngestSupport.getJSON("https://api.github.com/user",
                                    auth: "Bearer \(token)") as? [String: Any],
               let login = user["login"] as? String else { return nil }
-        guard let root = await get(
+        guard let root = await IngestSupport.getJSON(
             "https://api.github.com/search/issues?q=involves:\(login)&sort=updated&per_page=30",
             auth: "Bearer \(token)") as? [String: Any],
               let items = root["items"] as? [[String: Any]] else { return nil }
@@ -251,7 +202,7 @@ enum TokenIngest {
                 title: title,
                 content: link,
                 source: "GitHub",
-                capturedAt: date(item["updated_at"]) ?? .now,
+                capturedAt: IngestSupport.isoDate(item["updated_at"]) ?? .now,
                 sourceRef: "gh:\(id)"
             )
         }
@@ -259,7 +210,7 @@ enum TokenIngest {
 
     /// Todoist — open tasks, newest 30.
     private static func todoist(_ token: String) async -> [Thing]? {
-        guard let tasks = await get("https://api.todoist.com/rest/v2/tasks",
+        guard let tasks = await IngestSupport.getJSON("https://api.todoist.com/rest/v2/tasks",
                                     auth: "Bearer \(token)") as? [[String: Any]]
         else { return nil }
         let sorted = tasks.sorted {
@@ -274,7 +225,7 @@ enum TokenIngest {
                 title: content,
                 content: (task["url"] as? String) ?? "",
                 source: "Todoist",
-                capturedAt: date(task["created_at"]) ?? .now,
+                capturedAt: IngestSupport.isoDate(task["created_at"]) ?? .now,
                 sourceRef: "todoist:\(id)"
             )
         }
@@ -283,7 +234,7 @@ enum TokenIngest {
     /// Cal.com — your bookings, newest first. The v2 API dates its schema
     /// with a required header.
     private static func calcom(_ token: String) async -> [Thing]? {
-        guard let root = await get("https://api.cal.com/v2/bookings?sortStart=desc&limit=30",
+        guard let root = await IngestSupport.getJSON("https://api.cal.com/v2/bookings?sortStart=desc&limit=30",
                                    auth: "Bearer \(token)",
                                    headers: ["cal-api-version": "2026-05-01"]) as? [String: Any],
               let bookings = root["data"] as? [[String: Any]] else { return nil }
@@ -296,7 +247,7 @@ enum TokenIngest {
                 title: title,
                 content: "https://app.cal.com/booking/\(uid)",
                 source: "Cal.com",
-                capturedAt: date(booking["start"]) ?? .now,
+                capturedAt: IngestSupport.isoDate(booking["start"]) ?? .now,
                 sourceRef: "calcom:\(uid)"
             )
         }
@@ -304,11 +255,11 @@ enum TokenIngest {
 
     /// Calendly — who you are first, then your scheduled meetings.
     private static func calendly(_ token: String) async -> [Thing]? {
-        guard let me = await get("https://api.calendly.com/users/me",
+        guard let me = await IngestSupport.getJSON("https://api.calendly.com/users/me",
                                  auth: "Bearer \(token)") as? [String: Any],
               let userURI = (me["resource"] as? [String: Any])?["uri"] as? String
         else { return nil }
-        guard let root = await get(
+        guard let root = await IngestSupport.getJSON(
             "https://api.calendly.com/scheduled_events?user=\(userURI)&count=30&sort=start_time:desc",
             auth: "Bearer \(token)") as? [String: Any],
               let events = root["collection"] as? [[String: Any]] else { return nil }
@@ -323,7 +274,7 @@ enum TokenIngest {
                 title: name,
                 content: join ?? "",
                 source: "Calendly",
-                capturedAt: date(event["start_time"]) ?? .now,
+                capturedAt: IngestSupport.isoDate(event["start_time"]) ?? .now,
                 sourceRef: "calendly:\(id)"
             )
         }
@@ -332,7 +283,7 @@ enum TokenIngest {
     /// Notion — the pages connected to your integration, newest edits first.
     /// Pages only, by ruling — databases stay behind.
     private static func notion(_ token: String) async -> [Thing]? {
-        guard let root = await post("https://api.notion.com/v1/search",
+        guard let root = await IngestSupport.postJSON("https://api.notion.com/v1/search",
                                     auth: "Bearer \(token)",
                                     body: ["filter": ["value": "page", "property": "object"],
                                            "sort": ["direction": "descending",
@@ -361,7 +312,7 @@ enum TokenIngest {
                 title: title,
                 content: url,
                 source: "Notion",
-                capturedAt: date(page["last_edited_time"]) ?? .now,
+                capturedAt: IngestSupport.isoDate(page["last_edited_time"]) ?? .now,
                 sourceRef: "notion:\(id)"
             )
         }
@@ -374,7 +325,7 @@ enum TokenIngest {
         { viewer { assignedIssues(first: 30, orderBy: updatedAt) \
         { nodes { id identifier title url updatedAt } } } }
         """
-        guard let root = await post("https://api.linear.app/graphql",
+        guard let root = await IngestSupport.postJSON("https://api.linear.app/graphql",
                                     auth: token,
                                     body: ["query": query]) as? [String: Any],
               let data = root["data"] as? [String: Any],
@@ -391,7 +342,7 @@ enum TokenIngest {
                 title: ident.map { "\($0) · \(title)" } ?? title,
                 content: url,
                 source: "Linear",
-                capturedAt: date(node["updatedAt"]) ?? .now,
+                capturedAt: IngestSupport.isoDate(node["updatedAt"]) ?? .now,
                 sourceRef: "linear:\(id)"
             )
         }
@@ -399,7 +350,7 @@ enum TokenIngest {
 
     /// Raindrop — newest 30 bookmarks across all collections.
     private static func raindrop(_ token: String) async -> [Thing]? {
-        guard let root = await get("https://api.raindrop.io/rest/v1/raindrops/0?perpage=30",
+        guard let root = await IngestSupport.getJSON("https://api.raindrop.io/rest/v1/raindrops/0?perpage=30",
                                    auth: "Bearer \(token)") as? [String: Any],
               let items = root["items"] as? [[String: Any]] else { return nil }
         return items.compactMap { item in
@@ -410,7 +361,7 @@ enum TokenIngest {
                 title: title,
                 content: link,
                 source: "Raindrop",
-                capturedAt: date(item["created"]) ?? .now,
+                capturedAt: IngestSupport.isoDate(item["created"]) ?? .now,
                 sourceRef: "raindrop:\(id)"
             )
         }

@@ -50,19 +50,12 @@ enum BlueskyIngest {
             URLQueryItem(name: "filter", value: "posts_no_replies"),
         ]
         guard let url = comps.url,
-              let (data, response) = try? await URLSession.shared.data(from: url),
-              (response as? HTTPURLResponse)?.statusCode == 200,
-              let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let root = await IngestSupport.getJSON(url) as? [String: Any],
               let feed = root["feed"] as? [[String: Any]] else {
             return nil
         }
 
-        let existing = Set(((try? context.fetch(FetchDescriptor<Thing>())) ?? [])
-            .compactMap(\.sourceRef))
-        let iso = ISO8601DateFormatter()
-        iso.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        let isoPlain = ISO8601DateFormatter()
-        isoPlain.formatOptions = [.withInternetDateTime]
+        let existing = IngestSupport.existingSourceRefs(context)
         var added = 0
 
         for entry in feed {
@@ -79,15 +72,11 @@ enum BlueskyIngest {
             // at://did:…/app.bsky.feed.post/<rkey> → the web permalink.
             let rkey = uri.split(separator: "/").last.map(String.init) ?? ""
             let link = "https://bsky.app/profile/\(handle)/post/\(rkey)"
-            let title = text.count > 80
-                ? String(text.prefix(80)) + "…"
-                : text
-            let date = (record["createdAt"] as? String)
-                .flatMap { iso.date(from: $0) ?? isoPlain.date(from: $0) }
+            let date = IngestSupport.isoDate(record["createdAt"])
 
             let thing = Thing(
                 kind: .chat,
-                title: title.replacingOccurrences(of: "\n", with: " "),
+                title: IngestSupport.titleLine(text),
                 content: link,
                 source: "Bluesky",
                 capturedAt: date ?? .now,

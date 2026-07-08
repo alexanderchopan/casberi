@@ -47,8 +47,8 @@ struct AppDetailScreen: View {
             if route.id == "zerion" { ZerionScreen() }
             else if route.id == "rss" { RSSScreen() }
             else if route.id == "gpt" { ChatGPTImportScreen() }
-            else if route.id == "bsky" { BlueskyScreen() }
-            else if route.id == "fc" { FarcasterScreen() }
+            else if route.id == "bsky" { HandleSetupScreen(bridge: .bluesky) }
+            else if route.id == "fc" { HandleSetupScreen(bridge: .farcaster) }
             else if let tb = TokenBridge.allCases.first(where: { $0.bridgeID == route.id }) {
                 TokenSetupScreen(bridge: tb)
             }

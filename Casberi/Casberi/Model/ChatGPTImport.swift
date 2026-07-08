@@ -24,8 +24,7 @@ enum ChatGPTImport {
             return Summary(failed: true)
         }
 
-        let existing = Set(((try? context.fetch(FetchDescriptor<Thing>())) ?? [])
-            .compactMap(\.sourceRef))
+        let existing = IngestSupport.existingSourceRefs(context)
 
         // Newest first, cap 500.
         let sorted = conversations.sorted {

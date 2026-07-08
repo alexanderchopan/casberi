@@ -25,8 +25,7 @@ enum HealthIngest {
         let workouts = await fetchRecent(store: store)
 
         // Dedupe on the workout's UUID — reconnects and refreshes are cheap.
-        let existing = Set(((try? context.fetch(FetchDescriptor<Thing>())) ?? [])
-            .compactMap(\.sourceRef))
+        let existing = IngestSupport.existingSourceRefs(context)
         var added = 0
         for workout in workouts {
             let ref = "hkworkout:\(workout.uuid.uuidString)"

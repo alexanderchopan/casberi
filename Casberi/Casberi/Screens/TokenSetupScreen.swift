@@ -16,20 +16,16 @@ struct TokenSetupScreen: View {
     @State private var resultIsError = false
 
     private var recent: [Thing] {
-        let name = bridge.rawValue
-        var descriptor = FetchDescriptor<Thing>(
-            predicate: #Predicate { $0.source == name },
-            sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]
-        )
-        descriptor.fetchLimit = 12
-        return (try? modelContext.fetch(descriptor)) ?? []
+        recentBridgeThings(source: bridge.rawValue, context: modelContext)
     }
 
     var body: some View {
         List {
             stepsSection
             tokenSection
-            if !recent.isEmpty { recentSection }
+            if !recent.isEmpty {
+                RecentThingsSection(header: "LANDED", things: recent)
+            }
             if bridge.connected { removeSection }
         }
         .listStyle(.insetGrouped)
@@ -66,62 +62,18 @@ struct TokenSetupScreen: View {
 
     private var tokenSection: some View {
         Section {
-            HStack(spacing: DS.Space.s2) {
-                SecureField(bridge.placeholder, text: $tokenField)
-                    .dsText(.callout15)
-                    .foregroundStyle(DS.textPrimary)
-                    .tint(DS.tint)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-                    .onSubmit(connect)
-                Button(bridge.connected ? "Update" : "Connect", action: connect)
-                    .dsText(.label12)
-                    .foregroundStyle(tokenField.isEmpty ? DS.textTertiary : .white)
-                    .padding(.horizontal, DS.Space.s3)
-                    .frame(height: 28)
-                    .background(tokenField.isEmpty ? AnyShapeStyle(DS.gray200) : AnyShapeStyle(DS.tint),
-                                in: Capsule(style: .continuous))
-                    .disabled(tokenField.isEmpty)
-                    .buttonStyle(.plain)
-            }
-            .listRowBackground(DS.surfaceSheet)
-            if syncing {
-                HStack(spacing: DS.Space.s2) {
-                    ProgressView().controlSize(.small)
-                    Text("Fetching your \(bridge.noun)…")
-                        .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-                }
-                .listRowBackground(DS.surfaceSheet)
-            } else if let result {
-                Text(result)
-                    .dsText(.subhead13)
-                    .foregroundStyle(resultIsError ? DS.attention : DS.confirm)
-                    .listRowBackground(DS.surfaceSheet)
-            }
+            BridgeFieldRow(placeholder: bridge.placeholder, text: $tokenField,
+                           buttonLabel: bridge.connected ? "Update" : "Connect",
+                           secure: true, action: connect)
+            BridgeSyncStatusRows(syncing: syncing,
+                                 syncingLine: "Fetching your \(bridge.noun)…",
+                                 result: result, resultIsError: resultIsError)
         } header: {
             Text("YOUR TOKEN").dsText(.label12).kerning(0.7)
                 .foregroundStyle(DS.textTertiary)
         } footer: {
             Text("The token stays in this iPhone's Keychain and goes only to \(bridge.rawValue) itself. Read-only.")
                 .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-        }
-    }
-
-    private var recentSection: some View {
-        Section {
-            ForEach(recent) { thing in
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(thing.title)
-                        .dsText(.body17).foregroundStyle(DS.textPrimary)
-                        .lineLimit(2)
-                    Text(LiveTimeText.short(thing.capturedAt))
-                        .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-                }
-                .listRowBackground(DS.surfaceSheet)
-            }
-        } header: {
-            Text("LANDED").dsText(.label12).kerning(0.7)
-                .foregroundStyle(DS.textTertiary)
         }
     }
 
@@ -168,13 +120,8 @@ struct TokenSetupScreen: View {
         resultIsError = false
         result = added > 0 ? "\(added) \(bridge.noun) in" : "Up to date"
         let proof = added > 0 ? "\(added) \(bridge.noun) in" : "Synced just now"
-        if let existing = store.bridges.first(where: { $0.name == bridge.rawValue }) {
-            store.reconnect(existing.id, proof: proof)
-        } else {
-            store.bridges.append(BridgeApp(
-                id: bridge.bridgeID, name: bridge.rawValue, status: .connected,
-                statusLine: proof, can: [bridge.canLine]
-            ))
+        if store.registerConnected(id: bridge.bridgeID, name: bridge.rawValue,
+                                   proof: proof, can: [bridge.canLine]) {
             DSHaptic.success()
         }
     }
