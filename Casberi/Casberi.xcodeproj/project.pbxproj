@@ -539,6 +539,7 @@
 					"@executable_path/../../Frameworks",
 				);
 				MARKETING_VERSION = 0.1;
+				DEVELOPMENT_TEAM = 35428TQK3S;
 				PRODUCT_BUNDLE_IDENTIFIER = com.casberi.app.ShareExtension;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -564,6 +565,7 @@
 					"@executable_path/../../Frameworks",
 				);
 				MARKETING_VERSION = 0.1;
+				DEVELOPMENT_TEAM = 35428TQK3S;
 				PRODUCT_BUNDLE_IDENTIFIER = com.casberi.app.ShareExtension;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -589,6 +591,7 @@
 					"@executable_path/../../Frameworks",
 				);
 				MARKETING_VERSION = 0.1;
+				DEVELOPMENT_TEAM = 35428TQK3S;
 				PRODUCT_BUNDLE_IDENTIFIER = com.casberi.app.CasberiWidgets;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -614,6 +617,7 @@
 					"@executable_path/../../Frameworks",
 				);
 				MARKETING_VERSION = 0.1;
+				DEVELOPMENT_TEAM = 35428TQK3S;
 				PRODUCT_BUNDLE_IDENTIFIER = com.casberi.app.CasberiWidgets;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
