@@ -14,12 +14,7 @@ struct ChatGPTImportScreen: View {
     @State private var resultIsError = false
 
     private var recent: [Thing] {
-        var descriptor = FetchDescriptor<Thing>(
-            predicate: #Predicate { $0.source == "ChatGPT" },
-            sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]
-        )
-        descriptor.fetchLimit = 12
-        return (try? modelContext.fetch(descriptor)) ?? []
+        recentBridgeThings(source: "ChatGPT", context: modelContext)
     }
 
     var body: some View {
@@ -87,12 +82,7 @@ struct ChatGPTImportScreen: View {
             }
             .buttonStyle(.plain)
             .listRowBackground(DS.surfaceSheet)
-            if let result {
-                Text(result)
-                    .dsText(.subhead13)
-                    .foregroundStyle(resultIsError ? DS.attention : DS.confirm)
-                    .listRowBackground(DS.surfaceSheet)
-            }
+            BridgeSyncStatusRows(result: result, resultIsError: resultIsError)
         } footer: {
             Text("One-time import — your chats become findable things. Re-importing later adds only what's new.")
                 .dsText(.subhead13).foregroundStyle(DS.textTertiary)
@@ -142,13 +132,7 @@ struct ChatGPTImportScreen: View {
             ? "\(summary.imported) chats in\(summary.skipped > 0 ? " · \(summary.skipped) already here" : "")"
             : "Nothing new — all \(summary.skipped) chats were already here."
         let proof = summary.imported > 0 ? "\(summary.imported) chats in" : "Synced just now"
-        if let existing = store.bridges.first(where: { $0.name == "ChatGPT" }) {
-            store.reconnect(existing.id, proof: proof)
-        } else {
-            store.bridges.append(BridgeApp(
-                id: "gpt", name: "ChatGPT", status: .connected,
-                statusLine: proof, can: ["Imports the chats you export."]
-            ))
-        }
+        store.registerConnected(id: "gpt", name: "ChatGPT", proof: proof,
+                                can: ["Imports the chats you export."])
     }
 }

@@ -47,6 +47,22 @@ final class BridgeStore {
         bridges.isEmpty ? "\(BridgeCatalog.offers.count) apps ready to connect" : ""
     }
 
+    /// The one registration path for every bridge: a sync that lands proof
+    /// reconnects the bridge if its name is already here, appends a fresh
+    /// BridgeApp otherwise. Returns true when the bridge is new — callers
+    /// celebrate first connections, not re-syncs.
+    @discardableResult
+    func registerConnected(id: String, name: String, proof: String,
+                           can: [String]) -> Bool {
+        if let existing = bridges.first(where: { $0.name == name }) {
+            reconnect(existing.id, proof: proof)
+            return false
+        }
+        bridges.append(BridgeApp(id: id, name: name, status: .connected,
+                                 statusLine: proof, can: can))
+        return true
+    }
+
     /// Reconnects a bridge. `proof` states what landed ("4 screenshots in") —
     /// connect ends in proof; the default is the sync fact.
     func reconnect(_ id: String, proof: String? = nil) {

@@ -30,14 +30,8 @@ enum BridgeConnect {
             }
             guard let result else { completion?(false); return }
             let proof = result.n > 0 ? "\(result.n) \(result.noun) in" : "Synced just now"
-            if let existing = store.bridges.first(where: { $0.name == offer.name }) {
-                store.reconnect(existing.id, proof: proof)
-            } else {
-                store.bridges.append(BridgeApp(
-                    id: result.id, name: offer.name, status: .connected,
-                    statusLine: proof, can: [result.can]
-                ))
-            }
+            store.registerConnected(id: result.id, name: offer.name,
+                                    proof: proof, can: [result.can])
             DSHaptic.success()
             completion?(true)
         }

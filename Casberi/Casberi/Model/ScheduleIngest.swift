@@ -20,7 +20,7 @@ enum ScheduleIngest {
         let predicate = store.predicateForEvents(withStart: start, end: end, calendars: nil)
         let events = store.events(matching: predicate)
 
-        let existing = existingRefs(context: context)
+        let existing = IngestSupport.existingSourceRefs(context)
         var added = 0
         for event in events {
             let ref = "ekevent:\(event.eventIdentifier ?? UUID().uuidString)"
@@ -65,7 +65,7 @@ enum ScheduleIngest {
             store.fetchReminders(matching: predicate) { cont.resume(returning: $0 ?? []) }
         }
 
-        let existing = existingRefs(context: context)
+        let existing = IngestSupport.existingSourceRefs(context)
         var added = 0
         for reminder in reminders where !reminder.isCompleted {
             let ref = "ekreminder:\(reminder.calendarItemIdentifier)"
@@ -86,13 +86,6 @@ enum ScheduleIngest {
     }
 
     // MARK: - Pieces
-
-    private static func existingRefs(context: ModelContext) -> Set<String> {
-        let refs = ((try? context.fetch(FetchDescriptor<Thing>(
-            predicate: #Predicate { $0.sourceRef != nil }
-        ))) ?? []).compactMap(\.sourceRef)
-        return Set(refs)
-    }
 
     private static func eventLine(_ event: EKEvent) -> String {
         var parts: [String] = []

@@ -38,11 +38,7 @@ enum ScreenshotIngest {
         }
         #endif
 
-        let existing = Set(
-            ((try? context.fetch(FetchDescriptor<Thing>(
-                predicate: #Predicate { $0.sourceRef != nil }
-            ))) ?? []).compactMap(\.sourceRef)
-        )
+        let existing = IngestSupport.existingSourceRefs(context)
 
         var added = 0
         assets.enumerateObjects { asset, _, _ in
