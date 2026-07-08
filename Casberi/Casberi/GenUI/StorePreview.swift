@@ -32,7 +32,7 @@ enum StorePreview {
         ]
         case "OpenClaw": [
             "root = Stack([a, w])",
-            "a = ApprovalCard(\"CLAUDE-CODE · VIA OPENCLAW\", \"Deploy casberi-api to production?\", \"wants to run: railway up --environment prod\")",
+            "a = ApprovalCard(\"CLAUDE-CODE · VIA OPENCLAW\", \"Deploy the staging build?\", \"wants to run: deploy --env staging\")",
             "w = Widget(\"From your machines\", null, [r1, r2])",
             "r1 = Row(\"Nightly backup ran\", \"Run\", \"OpenClaw\", \"4:00 AM\")",
             "r2 = Row(\"Parse March invoices\", \"Job\", \"OpenClaw\", \"2h\")",

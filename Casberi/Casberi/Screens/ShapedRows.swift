@@ -91,8 +91,8 @@ struct ApprovalCard: View {
     var onDeny: () -> Void
 
     /// WHO is asking leads; the route it came through reads as a route
-    /// ("BANKR · VIA OPENCLAW"), and the machine name stays in the sheet —
-    /// three flat brand names explained nothing (ruling 2026-07-06).
+    /// ("CLAUDE-CODE · VIA OPENCLAW"), and the machine name stays in the
+    /// sheet — three flat brand names explained nothing (ruling 2026-07-06).
     private var eyebrow: String {
         let asker = thing.provenance.agent ?? thing.provenance.app
         var parts = [asker]
@@ -214,7 +214,7 @@ struct PhotoWell: View {
         // Sample things carry the bundled photo — the demo shows a real
         // image, never a gray well.
         if ref.hasPrefix("sample:") {
-            image = UIImage(named: "sample-screenshot")
+            image = UIImage.demoSample(for: ref)
             return
         }
         let assetID = ref.replacingOccurrences(of: "phasset:", with: "")
