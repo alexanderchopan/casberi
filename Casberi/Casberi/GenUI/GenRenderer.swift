@@ -117,6 +117,9 @@ struct GenRender: View {
         case "PhotoTile":   GenPhotoTile(el: el).mountIn()
         case "VoiceTile":   GenVoiceTile(el: el).mountIn()
         case "TagMap":      GenTagMap(el: el).mountIn()
+        // The starter shape: same geometry, muted fill, nothing to tap — an
+        // honest preview of the map that composes once things land.
+        case "TagMapPreview": GenTagMap(el: el, preview: true).mountIn()
         case "Quiet":       GenQuiet(el: el).mountIn()
         case "KindBar":     GenKindBar(el: el).mountIn()
 
@@ -456,6 +459,9 @@ private struct GenVoiceTile: View {
 /// tint at opacity scaled by count (the color rule's magnitude clause).
 private struct GenTagMap: View {
     let el: GenEl
+    /// Preview mode (TagMapPreview): the starter shape before tags exist —
+    /// muted fill, no tap targets, no weekend share.
+    var preview = false
     @Environment(\.genProjectTap) private var projectTap
     @Environment(\.genZoomNS) private var zoomNS
     /// The entrance plays once per screen appearance (§3); filter and theme
@@ -532,7 +538,7 @@ private struct GenTagMap: View {
             Task { @MainActor in
                 try? await Task.sleep(for: .milliseconds(30))
                 settled = true
-                if isWeekend {
+                if isWeekend, !preview {
                     try? await Task.sleep(for: .milliseconds(700))
                     renderWeekCard()
                 }
@@ -554,27 +560,35 @@ private struct GenTagMap: View {
                 let w = uw * CGFloat(f.2) + gap * CGFloat(f.2 - 1)
                 let h = uh * CGFloat(f.3) + gap * CGFloat(f.3 - 1)
                 let on = !animated || settled
-                Button {
-                    DSHaptic.selection()
-                    projectTap?(item.tag)
-                } label: {
-                    Text(item.tag)
-                        .dsText(.body17).foregroundStyle(DS.textPrimary)
-                        .lineLimit(item.tag.contains(" ") ? 2 : 1)
-                        .minimumScaleFactor(0.4)
-                        .allowsTightening(true)
-                        .padding(DS.Space.s3)
-                        .frame(width: w, height: h, alignment: .topLeading)
-                        .background(
-                            // V3b: the tile wears ITS project's hue (magnitude
-                            // still rides opacity) — one color per project,
-                            // matching its tag ink in the feed.
-                            ProjectHue.color(for: item.tag)
-                                .opacity((0.30 + 0.45 * Double(item.n) / Double(maxN))
-                                         * (isWeekend && animated && !on ? 0 : 1)),
-                            in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+                let label = Text(item.tag)
+                    .dsText(.body17)
+                    .foregroundStyle(preview ? DS.textTertiary : DS.textPrimary)
+                    .lineLimit(item.tag.contains(" ") ? 2 : 1)
+                    .minimumScaleFactor(0.4)
+                    .allowsTightening(true)
+                    .padding(DS.Space.s3)
+                    .frame(width: w, height: h, alignment: .topLeading)
+                    .background(
+                        // V3b: the tile wears ITS project's hue (magnitude
+                        // still rides opacity) — one color per project,
+                        // matching its tag ink in the feed. Preview mutes the
+                        // fill flat: shape without claiming substance.
+                        ProjectHue.color(for: item.tag)
+                            .opacity((preview ? 0.14
+                                      : 0.30 + 0.45 * Double(item.n) / Double(maxN))
+                                     * (isWeekend && animated && !on ? 0 : 1)),
+                        in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+                Group {
+                    if preview {
+                        label   // nothing behind the cell yet — no tap target
+                    } else {
+                        Button {
+                            DSHaptic.selection()
+                            projectTap?(item.tag)
+                        } label: { label }
+                        .buttonStyle(PressSpring())
+                    }
                 }
-                .buttonStyle(PressSpring())
                 .scaleEffect(!isWeekend && animated && !on ? 0.92 : 1)
                 .opacity(!isWeekend && animated && !on ? 0 : 1)
                 .animation(entrance(order: isWeekend ? f.0 : i), value: settled)

@@ -83,6 +83,9 @@ enum HomeComposition {
             rootRefs.append("themes")
         }
 
+        appendStarterPreviews(things: things, hasMap: !projects.isEmpty,
+                              hasThreads: !links.isEmpty, to: &doc, rootRefs: &rootRefs)
+
         doc.insert("root = Stack([\(rootRefs.joined(separator: ", "))])", at: 0)
         return doc
     }
@@ -121,6 +124,9 @@ enum HomeComposition {
             for (i, t) in links.enumerated() { doc.append(row(id: "t\(i)", t)) }
             rootRefs.append("themes")
         }
+
+        appendStarterPreviews(things: things, hasMap: !projects.isEmpty,
+                              hasThreads: !links.isEmpty, to: &doc, rootRefs: &rootRefs)
 
         doc.insert("root = Stack([\(rootRefs.joined(separator: ", "))])", at: 0)
         return doc
@@ -178,15 +184,44 @@ enum HomeComposition {
         return doc
     }
 
-    /// The empty state streams the same choreography with skeleton tiles.
+    /// The empty state previews the real modules — the muted map and skeleton
+    /// thread rows show the SHAPE of home and say plainly that connecting apps
+    /// fills it. Preview, not fake data: kind names, no counts, nothing to tap.
     static let empty: [String] = [
-        "root = Stack([hero, projects])",
-        "hero = Hero(\"Now\", \"Your things go here\", \"Paste, speak, or share one in - it lands here.\")",
-        "projects = Bento([k1, k2, k3])",
-        "k1 = ProjectTile(\"1\", \"Tags appear here\", \"\", \"Grouped from what you make\", \"\")",
-        "k2 = ProjectTile(\"1\", \"\", \"\", \"\", \"\")",
-        "k3 = ProjectTile(\"1\", \"\", \"\", \"\", \"\")",
+        "root = Stack([hero, map, threads])",
+        "hero = Hero(\"Getting started\", \"Your home builds itself\", \"Connect an app or capture one thing - what lands composes this screen.\")",
+        previewMapLine,
+        previewThreadsLine,
+        "s1 = Skeleton()",
+        "s2 = Skeleton()",
     ]
+
+    /// The preview modules, shared by the empty doc and the sparse-corpus path.
+    private static let previewMapLine =
+        "map = TagMapPreview(\(q("What's going on")), \(q("Your things map here as they land")), [Links, Notes, Events, Mail, Screenshots])"
+    private static let previewThreadsLine =
+        "threads = Widget(\(q("Threads across apps")), \(q("Saved links resurface here")), [s1, s2])"
+
+    /// A corpus this small hasn't earned real modules yet — one connected app
+    /// or a first capture. The previews stay alongside the real rows so the
+    /// screen shows where it's going instead of trailing off.
+    private static func isSparse(_ things: [Thing]) -> Bool { things.count < 8 }
+
+    /// Appends the preview map / threads when the real ones didn't compose.
+    private static func appendStarterPreviews(things: [Thing], hasMap: Bool, hasThreads: Bool,
+                                              to doc: inout [String], rootRefs: inout [String]) {
+        guard isSparse(things) else { return }
+        if !hasMap {
+            doc.append(previewMapLine)
+            rootRefs.append("map")
+        }
+        if !hasThreads {
+            doc.append(previewThreadsLine)
+            doc.append("s1 = Skeleton()")
+            doc.append("s2 = Skeleton()")
+            rootRefs.append("threads")
+        }
+    }
 
     // MARK: - Derivations
 
