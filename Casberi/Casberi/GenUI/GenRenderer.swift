@@ -736,10 +736,56 @@ struct GenSkeletonTile: View {
 // MARK: - Shaped-feed grammar (display forms — docs/handoff-shaped-feeds.md)
 
 /// TxRow(verb, amount, detail) — verb leads; "Received" wears confirm.
+/// A token mark opens the row (ruling 2026-07-07: icons live at row scale,
+/// never in the treemap): the asset that ARRIVES leads — the last ticker in
+/// a swap, the only one otherwise. Bundled marks for the majors; anything
+/// else wears a monogram coin, which is also what long-tail tokens get when
+/// live Zerion data arrives.
 private struct GenTxRow: View {
     let el: GenEl
+
+    private static let known: Set<String> = ["ETH", "SOL", "LINK"]
+    private static let coinColor: [String: Color] = [
+        "USDC": Color.fixed("#2775ca"), "BTC": Color.fixed("#f7931a"),
+        "ETH": Color.fixed("#3c3c44"), "SOL": Color.fixed("#141418"),
+    ]
+
+    /// The arriving asset's ticker, read from the amount text.
+    private var ticker: String? {
+        let words = el.str(1)
+            .components(separatedBy: CharacterSet.alphanumerics.inverted)
+        let tickers = words.filter { word in
+            word.count >= 3 && word.count <= 5
+            && word == word.uppercased() && word.rangeOfCharacter(from: .letters) != nil
+            && Int(word) == nil
+        }
+        return tickers.last
+    }
+
+    @ViewBuilder private var tokenMark: some View {
+        if let ticker {
+            Group {
+                if Self.known.contains(ticker),
+                   let ui = UIImage(named: "token-\(ticker.lowercased())") {
+                    Image(uiImage: ui).resizable().scaledToFill()
+                } else {
+                    let coin = Self.coinColor[ticker] ?? DS.gray200
+                    ZStack {
+                        coin
+                        Text(String(ticker.prefix(1)))
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundStyle(.white)
+                    }
+                }
+            }
+            .frame(width: 22, height: 22)
+            .clipShape(Circle())
+        }
+    }
+
     var body: some View {
         HStack(spacing: DS.Space.s3) {
+            tokenMark
             Text(el.str(0))
                 .dsText(.subhead13)
                 .foregroundStyle(el.str(0) == "Received" ? DS.confirm : DS.textSecondary)
@@ -1087,7 +1133,7 @@ private struct GenCover: View {
         guard let ref = all.first?.sourceRef else { return }
         // Sample things carry the bundled photo (same rule as PhotoWell).
         if ref.hasPrefix("sample:") {
-            if let ui = UIImage(named: "sample-screenshot") {
+            if let ui = UIImage.demoSample(for: ref) {
                 image = ui
                 if let hit = CoverBleed.cached(thingID) {
                     bleed = hit

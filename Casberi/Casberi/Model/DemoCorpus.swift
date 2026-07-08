@@ -52,8 +52,8 @@ enum DemoCorpus {
             Thing(kind: .note, title: "Composer grammar notes",
                   content: "Rest pill → bubble, origin bottom-right, radius 24/24/10/24.",
                   source: "You", capturedAt: ago(hours: 4), tags: ["Mobile app", "Work"]),
-            Thing(kind: .screenshot, title: "Design system tokens",
-                  content: "Token layer reference screenshot.", source: "Photos",
+            Thing(kind: .screenshot, title: "Saturday's match — our view",
+                  content: "Group stage, section 214.", source: "Photos",
                   capturedAt: ago(hours: 7), mark: .saved, tags: ["Mobile app", "Work"],
                   sourceRef: "sample:demo-shot-1"),
             Thing(kind: .link, title: "Human Interface Guidelines — Materials",
@@ -94,8 +94,8 @@ enum DemoCorpus {
                   provenance: Provenance(app: "Zerion"), sourceRef: "zerion:0xa4"),
 
             // ── Fitness cluster ────────────────────────────────────────────
-            Thing(kind: .screenshot, title: "Workout plan — week 2",
-                  content: "Push / pull / legs, 4 days.", source: "Photos",
+            Thing(kind: .screenshot, title: "Sunday five-a-side",
+                  content: "Pitch by the park, 7 AM.", source: "Photos",
                   capturedAt: ago(hours: 30), mark: .saved, tags: ["Fitness"],
                   sourceRef: "sample:demo-shot-2"),
             Thing(kind: .chat, title: "Meal prep for the week",
@@ -113,8 +113,8 @@ enum DemoCorpus {
             Thing(kind: .note, title: "Kitchen paint colors",
                   content: "Off-white vs warm gray. Samples on the wall.",
                   source: "You", capturedAt: ago(hours: 40), tags: ["Home"]),
-            Thing(kind: .screenshot, title: "Standing desk options",
-                  content: "Three under $500.", source: "Photos",
+            Thing(kind: .screenshot, title: "Watch party — Sunday's final",
+                  content: "Where we're sitting.", source: "Photos",
                   capturedAt: ago(hours: 44), mark: .saved, tags: ["Home"],
                   sourceRef: "sample:demo-shot-3"),
             Thing(kind: .link, title: "Mid-century shelf — in stock",
@@ -125,8 +125,8 @@ enum DemoCorpus {
                   tags: ["Home"]),
 
             // ── Book club cluster ──────────────────────────────────────────
-            Thing(kind: .screenshot, title: "Book recommendation",
-                  content: "Cover from a friend's story.", source: "Photos",
+            Thing(kind: .screenshot, title: "Match day — from Dani's story",
+                  content: "Screenshotted before kickoff.", source: "Photos",
                   capturedAt: ago(hours: 22), mark: .saved, tags: ["Book club"],
                   sourceRef: "sample:demo-shot-4"),
             Thing(kind: .event, title: "Book club — this month's pick",
