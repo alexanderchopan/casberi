@@ -272,7 +272,7 @@ struct AppsScreen: View {
         case .pair:
             storyCardBody(
                 eyebrow: "Pair a client",
-                headline: "Let Claude or Raycast reach your things",
+                headline: "Let Claude reach your things",
                 iconName: "Claude",
                 name: "Claude",
                 brand: DS.tint,
