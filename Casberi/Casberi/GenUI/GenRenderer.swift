@@ -465,10 +465,19 @@ private struct GenTagMap: View {
     @State private var weekCard: Image?
 
     private struct Item { let tag: String; let n: Int }
-    // grid areas: "a a b b" / "a a c d" / "e e f d"  (col, row, w, h)
-    private let frames: [(Int, Int, Int, Int)] = [
-        (0, 0, 2, 2), (2, 0, 2, 1), (2, 1, 1, 1), (3, 1, 1, 2), (0, 2, 2, 1), (2, 2, 1, 1),
-    ]
+    /// Grid areas (col, row, w, h) on a 4×3 unit grid, largest-first. One set
+    /// per item count, each tiling the grid COMPLETELY — a holdings map can hold
+    /// 1–6 tokens, and a template sized for 6 leaves holes when fewer arrive.
+    private var frames: [(Int, Int, Int, Int)] {
+        switch items.count {
+        case 0, 1: return [(0, 0, 4, 3)]
+        case 2:    return [(0, 0, 2, 3), (2, 0, 2, 3)]
+        case 3:    return [(0, 0, 2, 2), (2, 0, 2, 2), (0, 2, 4, 1)]
+        case 4:    return [(0, 0, 2, 2), (2, 0, 2, 2), (0, 2, 2, 1), (2, 2, 2, 1)]
+        case 5:    return [(0, 0, 2, 2), (2, 0, 2, 2), (0, 2, 2, 1), (2, 2, 1, 1), (3, 2, 1, 1)]
+        default:   return [(0, 0, 2, 2), (2, 0, 2, 1), (2, 1, 1, 1), (3, 1, 1, 2), (0, 2, 2, 1), (2, 2, 1, 1)]
+        }
+    }
 
     private var items: [Item] {
         el.refs(2).prefix(6).map { raw in
