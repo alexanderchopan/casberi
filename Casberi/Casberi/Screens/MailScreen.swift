@@ -22,10 +22,12 @@ struct MailScreen: View {
 
     var body: some View {
         List {
-            stepsSection
-            fieldsSection
+            BridgeSetupHeader(name: provider.source)
+            stepsSection.listRowSeparator(.hidden)
+            fieldsSection.listRowSeparator(.hidden)
             if !recent.isEmpty {
                 RecentThingsSection(header: "RECENT", things: recent)
+                    .listRowSeparator(.hidden)
             }
         }
         .listStyle(.insetGrouped)
@@ -45,12 +47,13 @@ struct MailScreen: View {
             ForEach(Array(provider.steps.enumerated()), id: \.offset) { i, text in
                 HStack(alignment: .firstTextBaseline, spacing: DS.Space.s3) {
                     Text("\(i + 1)")
-                        .dsText(.subhead13).fontWeight(.bold)
-                        .foregroundStyle(DS.tint).frame(width: 16)
+                        .dsText(.body17).fontWeight(.bold)
+                        .foregroundStyle(DS.tint).frame(width: 20)
                     Text(text)
-                        .dsText(.callout15).foregroundStyle(DS.textPrimary)
+                        .dsText(.body17).foregroundStyle(DS.textPrimary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
+                .padding(.vertical, DS.Space.s1)
                 .listRowBackground(DS.surfaceSheet)
             }
         } header: {
@@ -62,24 +65,26 @@ struct MailScreen: View {
     private var fieldsSection: some View {
         Section {
             TextField(provider.addressPlaceholder, text: $addressField)
-                .dsText(.callout15).foregroundStyle(DS.textPrimary).tint(DS.tint)
+                .dsText(.body17).foregroundStyle(DS.textPrimary).tint(DS.tint)
                 .textInputAutocapitalization(.never).autocorrectionDisabled()
                 .keyboardType(.emailAddress)
+                .padding(.vertical, DS.Space.s1)
                 .listRowBackground(DS.surfaceSheet)
             HStack(spacing: DS.Space.s2) {
                 SecureField(provider.passwordPlaceholder, text: $passwordField)
-                    .dsText(.callout15).foregroundStyle(DS.textPrimary).tint(DS.tint)
+                    .dsText(.body17).foregroundStyle(DS.textPrimary).tint(DS.tint)
                     .textInputAutocapitalization(.never).autocorrectionDisabled()
                     .onSubmit(connect)
                 Button(provider.connected ? "Update" : "Connect", action: connect)
-                    .dsText(.label12)
+                    .dsText(.callout15).fontWeight(.semibold)
                     .foregroundStyle(canConnect ? .white : DS.textTertiary)
-                    .padding(.horizontal, DS.Space.s3).frame(height: 28)
+                    .padding(.horizontal, DS.Space.s4).frame(height: 36)
                     .background(canConnect ? AnyShapeStyle(DS.tint) : AnyShapeStyle(DS.gray200),
                                 in: Capsule(style: .continuous))
                     .disabled(!canConnect)
                     .buttonStyle(.plain)
             }
+            .padding(.vertical, DS.Space.s1)
             .listRowBackground(DS.surfaceSheet)
             BridgeSyncStatusRows(syncing: syncing, syncingLine: "Reading your inbox…",
                                  result: result, resultIsError: resultIsError)
@@ -87,7 +92,7 @@ struct MailScreen: View {
             Text("YOUR ACCOUNT").dsText(.label12).kerning(0.7)
                 .foregroundStyle(DS.textTertiary)
         } footer: {
-            Text(provider.footer).dsText(.subhead13).foregroundStyle(DS.textTertiary)
+            Text(provider.footer).dsText(.callout15).foregroundStyle(DS.textTertiary)
         }
     }
 

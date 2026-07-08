@@ -36,8 +36,8 @@ struct WalletScreen: View {
 
     var body: some View {
         List {
-            addSection
-            if !wallet.addresses.isEmpty { watchingSection }
+            addSection.listRowSeparator(.hidden)
+            if !wallet.addresses.isEmpty { watchingSection.listRowSeparator(.hidden) }
             if !holdings.els.isEmpty {
                 Section {
                     GenRender(id: "root", els: holdings.els)
@@ -56,8 +56,8 @@ struct WalletScreen: View {
                     .listRowBackground(DS.surfaceSheet)
                 }
             }
-            if !recent.isEmpty { recentSection }
-            footerSection
+            if !recent.isEmpty { recentSection.listRowSeparator(.hidden) }
+            footerSection.listRowSeparator(.hidden)
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
@@ -131,7 +131,7 @@ struct WalletScreen: View {
         } footer: {
             if wallet.addresses.isEmpty {
                 Text("Paste a wallet address or ENS name — its holdings and activity land in your feed.")
-                    .dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                    .dsText(.callout15).foregroundStyle(DS.textSecondary)
             }
         }
     }

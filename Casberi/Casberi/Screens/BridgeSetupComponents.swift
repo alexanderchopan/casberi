@@ -16,6 +16,35 @@ func recentBridgeThings(source: String, context: ModelContext) -> [Thing] {
     return (try? context.fetch(descriptor)) ?? []
 }
 
+/// The screen's opening move — the app at full size with what connecting
+/// means, so a setup screen reads like a product page, not a form. The
+/// summary is the catalog's own (one source of words).
+struct BridgeSetupHeader: View {
+    let name: String
+    /// Override when a screen wants different words than the catalog offer.
+    var blurb: String? = nil
+
+    var body: some View {
+        Section {
+            // The screen's large nav title already says the name — the header
+            // adds the face and the promise, not a second name.
+            HStack(alignment: .top, spacing: DS.Space.s3) {
+                BridgeIcon(name: name, size: 60)
+                if let line = blurb ?? BridgeCatalog.offers.first(where: { $0.name == name })?.summary {
+                    Text(line)
+                        .dsText(.body17).foregroundStyle(DS.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Spacer(minLength: 0)
+            }
+            .listRowBackground(Color.clear)
+            .listRowInsets(EdgeInsets(top: 0, leading: DS.Space.s1,
+                                      bottom: DS.Space.s2, trailing: DS.Space.s1))
+        }
+        .listRowSeparator(.hidden)
+    }
+}
+
 /// The field-and-button row: type the way in, tap the capsule. The button
 /// greys out until there's text; submit does the same as the tap.
 struct BridgeFieldRow: View {
@@ -37,7 +66,7 @@ struct BridgeFieldRow: View {
             HStack(spacing: 0) {
                 if let prefix {
                     Text(prefix)
-                        .dsText(.callout15).foregroundStyle(DS.textTertiary)
+                        .dsText(.body17).foregroundStyle(DS.textTertiary)
                         .layoutPriority(1)
                 }
                 if let focus {
@@ -47,20 +76,21 @@ struct BridgeFieldRow: View {
                 }
                 if let suffix, !text.contains(".") {
                     Text(suffix)
-                        .dsText(.callout15).foregroundStyle(DS.textTertiary)
+                        .dsText(.body17).foregroundStyle(DS.textTertiary)
                         .layoutPriority(1)
                 }
             }
             Button(buttonLabel, action: action)
-                .dsText(.label12)
+                .dsText(.callout15).fontWeight(.semibold)
                 .foregroundStyle(text.isEmpty ? DS.textTertiary : .white)
-                .padding(.horizontal, DS.Space.s3)
-                .frame(height: 28)
+                .padding(.horizontal, DS.Space.s4)
+                .frame(height: 36)
                 .background(text.isEmpty ? AnyShapeStyle(DS.gray200) : AnyShapeStyle(DS.tint),
                             in: Capsule(style: .continuous))
                 .disabled(text.isEmpty)
                 .buttonStyle(.plain)
         }
+        .padding(.vertical, DS.Space.s1)
         .listRowBackground(DS.surfaceSheet)
     }
 
@@ -72,7 +102,7 @@ struct BridgeFieldRow: View {
                 TextField(placeholder, text: $text)
             }
         }
-        .dsText(.callout15)
+        .dsText(.body17)
         .foregroundStyle(DS.textPrimary)
         .tint(DS.tint)
         .keyboardType(keyboard)
@@ -95,12 +125,12 @@ struct BridgeSyncStatusRows: View {
             HStack(spacing: DS.Space.s2) {
                 ProgressView().controlSize(.small)
                 Text(syncingLine)
-                    .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                    .dsText(.callout15).foregroundStyle(DS.textTertiary)
             }
             .listRowBackground(DS.surfaceSheet)
         } else if let result {
             Text(result)
-                .dsText(.subhead13)
+                .dsText(.callout15)
                 .foregroundStyle(resultIsError ? DS.attention : DS.confirm)
                 .listRowBackground(DS.surfaceSheet)
         }

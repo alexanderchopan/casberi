@@ -157,6 +157,7 @@ struct HandleSetupScreen: View {
 
     var body: some View {
         List {
+            BridgeSetupHeader(name: bridge.rawValue)
             nameSection.listRowSeparator(.hidden)
             if !recent.isEmpty {
                 RecentThingsSection(header: bridge.recentHeader, things: recent)
@@ -192,7 +193,7 @@ struct HandleSetupScreen: View {
                 .foregroundStyle(DS.textTertiary)
         } footer: {
             Text(bridge.fieldFooter)
-                .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                .dsText(.callout15).foregroundStyle(DS.textTertiary)
         }
     }
 

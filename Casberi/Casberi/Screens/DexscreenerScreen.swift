@@ -20,11 +20,13 @@ struct DexscreenerScreen: View {
 
     var body: some View {
         List {
-            addSection
+            BridgeSetupHeader(name: "Dexscreener")
+            addSection.listRowSeparator(.hidden)
             if !watched.isEmpty {
                 RecentThingsSection(header: "YOUR WATCHLIST", things: watched)
+                    .listRowSeparator(.hidden)
             }
-            footerSection
+            footerSection.listRowSeparator(.hidden)
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
@@ -47,7 +49,7 @@ struct DexscreenerScreen: View {
                 .foregroundStyle(DS.textTertiary)
         } footer: {
             Text("Paste a token address or a Dexscreener link — its live price chart lands in your feed.")
-                .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                .dsText(.callout15).foregroundStyle(DS.textTertiary)
         }
     }
 

@@ -26,6 +26,7 @@ struct TokenSetupScreen: View {
 
     var body: some View {
         List {
+            BridgeSetupHeader(name: bridge.rawValue)
             stepsSection.listRowSeparator(.hidden)
             tokenSection.listRowSeparator(.hidden)
             if !recent.isEmpty {
@@ -52,13 +53,14 @@ struct TokenSetupScreen: View {
             ForEach(Array(bridge.steps.enumerated()), id: \.offset) { i, text in
                 HStack(alignment: .firstTextBaseline, spacing: DS.Space.s3) {
                     Text("\(i + 1)")
-                        .dsText(.subhead13).fontWeight(.bold)
+                        .dsText(.body17).fontWeight(.bold)
                         .foregroundStyle(DS.tint)
-                        .frame(width: 16)
+                        .frame(width: 20)
                     Text(text)
-                        .dsText(.callout15).foregroundStyle(DS.textPrimary)
+                        .dsText(.body17).foregroundStyle(DS.textPrimary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
+                .padding(.vertical, DS.Space.s1)
                 .listRowBackground(DS.surfaceSheet)
             }
         } header: {
@@ -80,7 +82,7 @@ struct TokenSetupScreen: View {
                 .foregroundStyle(DS.textTertiary)
         } footer: {
             Text("The token stays in this iPhone's Keychain and goes only to \(bridge.rawValue) itself. Read-only.")
-                .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                .dsText(.callout15).foregroundStyle(DS.textTertiary)
         }
     }
 

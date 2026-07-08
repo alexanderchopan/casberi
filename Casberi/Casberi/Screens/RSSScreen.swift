@@ -30,6 +30,7 @@ struct RSSScreen: View {
 
     var body: some View {
         List {
+            BridgeSetupHeader(name: "RSS")
             if !rss.feeds.isEmpty { followingSection.listRowSeparator(.hidden) }
             addSection.listRowSeparator(.hidden)
             if !recent.isEmpty {
@@ -94,7 +95,7 @@ struct RSSScreen: View {
                 .foregroundStyle(DS.textTertiary)
         } footer: {
             Text("Paste a site's feed URL — new posts land in your feed as links.")
-                .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                .dsText(.callout15).foregroundStyle(DS.textTertiary)
         }
     }
 
