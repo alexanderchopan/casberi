@@ -1,0 +1,51 @@
+import Foundation
+import SwiftData
+import MusicKit
+
+/// The Apple Music bridge (2026-07-08) — native MusicKit, the same "Apple
+/// provides the framework" pattern as HealthKit and Photos. No key, no server:
+/// the user grants access with the system prompt, and what they've recently
+/// played lands as link things opening in Apple Music. Read-only; nothing is
+/// ever added to their library or queue.
+enum AppleMusicIngest {
+
+    @MainActor private static var running = false
+
+    /// Asks for Apple Music access (in context), then lands recently-played
+    /// songs. Returns the new count, or nil when access is denied/unavailable.
+    @MainActor
+    static func connectAndIngest(context: ModelContext) async -> Int? {
+        guard !running else { return 0 }
+        running = true
+        defer { running = false }
+
+        let status = await MusicAuthorization.request()
+        guard status == .authorized else { return nil }
+
+        var request = MusicRecentlyPlayedRequest<Song>()
+        request.limit = 25
+        guard let response = try? await request.response() else { return nil }
+
+        let existing = IngestSupport.existingSourceRefs(context)
+        var added = 0
+        for song in response.items {
+            let ref = "applemusic:\(song.id.rawValue)"
+            guard !existing.contains(ref) else { continue }
+            let artist = song.artistName
+            let title = artist.isEmpty ? song.title : "\(song.title) — \(artist)"
+            let thing = Thing(
+                kind: .link,
+                title: title,
+                content: song.url?.absoluteString ?? "",
+                source: "Apple Music",
+                capturedAt: song.lastPlayedDate ?? .now,
+                sourceRef: ref
+            )
+            context.insert(thing)
+            SpotlightIndex.index([thing])
+            added += 1
+        }
+        if added > 0 { try? context.save() }
+        return added
+    }
+}
