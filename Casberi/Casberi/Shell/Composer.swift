@@ -1,4 +1,5 @@
 import SwiftUI
+import SwiftData
 
 /// The composer — the hero (principle 4). Full width above the tab bar, glass.
 ///
@@ -25,8 +26,14 @@ struct Composer: View {
     /// so open/close is a morph of the same substance, not a swap.
     var glassNamespace: Namespace.ID? = nil
 
+    @Environment(\.modelContext) private var modelContext
+    @Environment(ShellChrome.self) private var chrome
+
     @FocusState private var fieldFocused: Bool
     @State private var answerStream = GenStream()
+    /// A typed organize command's pending change — rendered as a card, the
+    /// write waits for Apply (typed words never write silently).
+    @State private var proposal: OrganizeProposal?
     @State private var proseStreaming = false
     @State private var answering = false
     @State private var chosenTags: Set<String> = []
@@ -117,6 +124,18 @@ struct Composer: View {
                 }
                 .frame(maxHeight: 240)
                 .padding(.top, DS.Space.s2)
+            }
+
+            if let proposal {
+                OrganizeProposalCard(
+                    proposal: proposal,
+                    onApply: { applyProposal(proposal) },
+                    onCancel: {
+                        withAnimation(DS.Motion.standard) { self.proposal = nil }
+                    }
+                )
+                .padding(.top, DS.Space.s2)
+                .transition(.opacity.combined(with: .move(edge: .bottom)))
             }
 
             // Recording — the red dot, the clock, and the words arriving live.
@@ -232,8 +251,17 @@ struct Composer: View {
         withAnimation(DS.Motion.standard) { isOpen = false }
         draft = ""      // close clears the draft (composer spec)
         answering = false
+        proposal = nil
         chosenTags = []
         pasted = false
+    }
+
+    private func applyProposal(_ proposal: OrganizeProposal) {
+        guard proposal.canApply else { return }
+        let (summary, undo) = Organize.apply(proposal, context: modelContext)
+        DSHaptic.success()
+        chrome.flash(summary, action: .init(label: "Undo", run: undo))
+        close()
     }
 
     private func commit() {
@@ -247,6 +275,22 @@ struct Composer: View {
             // Paste is a capture path — send keeps what came in.
             onCommit(Array(chosenTags))
             close()
+        } else if let command = OrganizeCommand.parse(draft) {
+            // An organize command — propose, never execute. The card below
+            // shows exactly what would change; Apply is the consent.
+            let proposed = Organize.propose(command, context: modelContext)
+            withAnimation(DS.Motion.standard) {
+                answering = false
+                proposal = proposed
+            }
+            draft = ""
+            #if DEBUG
+            if UserDefaults.standard.bool(forKey: "organizeApply") {
+                applyProposal(proposed)
+                NSLog("Organize probe: %@ · applied=%d", proposed.headline,
+                      proposed.canApply ? 1 : 0)
+            }
+            #endif
         } else {
             // Typed words are an utterance — the answer streams. On devices
             // whose model writes the answer there's a beat of composing; show
@@ -380,5 +424,65 @@ private extension View {
             if show { placeholder() }
             self
         }
+    }
+}
+
+/// The organize proposal — what a typed command would change, waiting on
+/// Apply. The matched things list plainly; the write is one tap away and
+/// the toast it earns carries Undo.
+private struct OrganizeProposalCard: View {
+    let proposal: OrganizeProposal
+    let onApply: () -> Void
+    let onCancel: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s3) {
+            if let blocked = proposal.blocked {
+                Text(blocked)
+                    .dsText(.callout15).foregroundStyle(DS.attention)
+                    .fixedSize(horizontal: false, vertical: true)
+            } else {
+                Text(proposal.headline)
+                    .dsText(.heading17).foregroundStyle(DS.textPrimary)
+                if proposal.things.isEmpty {
+                    Text("Nothing to change.")
+                        .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                } else {
+                    VStack(alignment: .leading, spacing: DS.Space.s2) {
+                        ForEach(proposal.things.prefix(5)) { thing in
+                            HStack(spacing: DS.Space.s2) {
+                                KindGlyph(kind: thing.kind, size: 14)
+                                Text(thing.title)
+                                    .dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                                    .lineLimit(1)
+                                Spacer(minLength: 0)
+                            }
+                        }
+                        if proposal.things.count > 5 {
+                            Text("+ \(proposal.things.count - 5) more")
+                                .dsText(.label12).foregroundStyle(DS.textTertiary)
+                        }
+                    }
+                }
+            }
+            HStack(spacing: DS.Space.s2) {
+                Spacer()
+                Button("Cancel", action: onCancel)
+                    .dsText(.label12).foregroundStyle(DS.textSecondary)
+                    .padding(.horizontal, DS.Space.s3).frame(height: 30)
+                    .background(DS.gray100, in: Capsule(style: .continuous))
+                    .buttonStyle(PressSpring())
+                if proposal.canApply {
+                    Button("Apply", action: onApply)
+                        .dsText(.label12).foregroundStyle(.white)
+                        .padding(.horizontal, DS.Space.s4).frame(height: 30)
+                        .background(DS.tint, in: Capsule(style: .continuous))
+                        .buttonStyle(PressSpring())
+                }
+            }
+        }
+        .padding(DS.Space.s3)
+        .background(DS.surfaceSheet,
+                    in: RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 }
