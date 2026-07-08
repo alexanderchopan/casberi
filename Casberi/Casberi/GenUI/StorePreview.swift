@@ -38,10 +38,8 @@ enum StorePreview {
             "r2 = Row(\"Parse March invoices\", \"Job\", \"OpenClaw\", \"2h\")",
         ]
         case "Bankr": [
-            "root = Stack([w])",
-            "w = Widget(\"Your launches\", null, [r1, r2])",
-            "r1 = Row(\"machineODDS · $mODDS\", \"Link\", \"Bankr\", \"3d\")",
-            "r2 = Row(\"PayFlow · $PAY\", \"Link\", \"Bankr\", \"1w\")",
+            "root = Stack([m])",
+            "m = TagMap(\"Your launches\", \"By fees earned\", [MODDS 340, PAY 210, CHESS 90, LVL 40])",
         ]
         case "ChatGPT": [
             "root = Stack([c])",

@@ -86,4 +86,43 @@ enum BankrIngest {
         if added > 0 { try? context.save() }
         return added
     }
+
+    /// A treemap of the creator's launches, each tile a token sized by the
+    /// fees it earned — Bankr's real data as the app's own chart idiom (the
+    /// same TagMap Home and Zerion use). Live, no demo gate: creator-fees is
+    /// public. Returns nil when there's nothing to chart.
+    @MainActor
+    static func launchesChart() async -> [String]? {
+        let address = BankrStore.shared.address
+        guard BankrStore.isAddress(address) else { return nil }
+        guard let root = await IngestSupport.getJSON(
+            "https://api.bankr.bot/public/doppler/creator-fees/\(address)?days=30")
+                as? [String: Any],
+              let tokens = root["tokens"] as? [[String: Any]], !tokens.isEmpty
+        else { return nil }
+
+        var cells: [String] = []
+        for token in tokens.prefix(6) {
+            let symbol = ((token["symbol"] as? String) ?? "TOKEN")
+                .uppercased().filter(\.isLetter)
+            let claimed = feeAmount(token["claimed"])
+            let claimable = feeAmount(token["claimable"])
+            // sqrt compresses the range so a big earner doesn't slice the rest
+            // into unreadable slivers (the Zerion treemap lesson).
+            let value = max(1, Int((claimed + claimable).squareRoot() * 1000))
+            cells.append("\(symbol.isEmpty ? "TOKEN" : symbol) \(value)")
+        }
+        return [
+            "root = Stack([m])",
+            "m = TagMap(\"Your launches\", \"By fees earned\", [\(cells.joined(separator: ", "))])",
+        ]
+    }
+
+    /// The WETH side (token0) of a claimed/claimable object, as a Double.
+    private static func feeAmount(_ raw: Any?) -> Double {
+        guard let obj = raw as? [String: Any] else { return 0 }
+        if let s = obj["token0"] as? String { return Double(s) ?? 0 }
+        if let n = obj["token0"] as? Double { return n }
+        return 0
+    }
 }

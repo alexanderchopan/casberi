@@ -13,6 +13,7 @@ struct BankrScreen: View {
     @State private var result: String?
     @State private var resultIsError = false
     @State private var recent: [Thing] = []
+    @State private var chart = GenStream()
 
     private var bankr: BankrStore { BankrStore.shared }
 
@@ -23,6 +24,14 @@ struct BankrScreen: View {
     var body: some View {
         List {
             addressSection
+            if !chart.els.isEmpty {
+                Section {
+                    GenRender(id: "root", els: chart.els)
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
+                        .listRowInsets(EdgeInsets())
+                }
+            }
             if !recent.isEmpty {
                 RecentThingsSection(header: "YOUR TOKENS", things: recent)
             }
@@ -93,6 +102,7 @@ struct BankrScreen: View {
             return
         }
         resultIsError = false
+        if let doc = await BankrIngest.launchesChart() { chart.paint(doc) }
         result = added > 0 ? "\(added) tokens in" : "Up to date"
         let proof = added > 0 ? "\(added) tokens in" : "Synced just now"
         if let existing = store.bridges.first(where: { $0.name == "Bankr" }) {
