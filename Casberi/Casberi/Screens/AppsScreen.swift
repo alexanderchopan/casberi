@@ -25,8 +25,8 @@ struct AppsScreen: View {
     // never vertical section headers)
 
     private static let categories: [(name: String, exemplar: String, groups: Set<String>)] = [
-        ("Your life",    "Photos",    ["Your photos", "Your schedule", "Your fitness"]),
         ("Onchain",      "Wallet",    ["Your wallet"]),
+        ("Your life",    "Photos",    ["Your photos", "Your schedule", "Your fitness"]),
         ("Social",       "Bluesky",   ["Your network"]),
         ("Your agents",  "Claude",    ["Your agent", "Your machines"]),
         ("Your mail",    "Gmail",     ["Your mail"]),
@@ -66,10 +66,6 @@ struct AppsScreen: View {
             return Ranked(offer: offer, bridge: bridge, tier: tier)
         }
         .sorted { $0.tier < $1.tier }
-    }
-
-    private var toConnectCount: Int {
-        ranked.filter { $0.tier == 1 }.count
     }
 
     // MARK: - Stories (selection rules; never a "Soon" app, never a connected one)
@@ -218,13 +214,8 @@ struct AppsScreen: View {
                 Rectangle().fill(DS.fillLine).frame(height: 1)
                     .padding(.horizontal, DS.Space.s4)
             }
-            HStack(alignment: .firstTextBaseline) {
-                Text("Discover").dsText(.heading22).foregroundStyle(DS.textPrimary)
-                Spacer()
-                Text("\(toConnectCount) to connect")
-                    .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-            }
-            .padding(.horizontal, DS.Space.s4)
+            Text("Discover").dsText(.heading22).foregroundStyle(DS.textPrimary)
+                .padding(.horizontal, DS.Space.s4)
         }
     }
 
