@@ -37,6 +37,9 @@ struct GlassTabBar: View {
     @Environment(ShellChrome.self) private var chrome
     /// One pulse when a capture lands (§1 choreography) — scale up then back.
     @State private var feedPulse = false
+    /// A tap bounces ITS tab's icon (Telegram grammar) — select and re-tap
+    /// both; the other tab never moves.
+    @State private var bounces: [Tab: Int] = [:]
 
     var body: some View {
         HStack(spacing: 0) {
@@ -44,6 +47,7 @@ struct GlassTabBar: View {
                 let active = tab == selection
                 Button {
                     DSHaptic.selection()
+                    bounces[tab, default: 0] += 1
                     if selection == tab {
                         // Re-tap: the tab is a home button — pop to its root.
                         switch tab {
@@ -92,6 +96,7 @@ struct GlassTabBar: View {
     private func tabIcon(for tab: Tab, active: Bool) -> some View {
         Image(systemName: tab.symbol)
             .font(.system(size: 20, weight: active ? .semibold : .regular))
+            .symbolEffect(.bounce, value: bounces[tab, default: 0])
             .scaleEffect(tab == .feed && feedPulse ? 1.15 : 1.0)
             .modifier(FeedTabInstruments(isFeed: tab == .feed, chrome: chrome,
                                          pulse: $feedPulse))

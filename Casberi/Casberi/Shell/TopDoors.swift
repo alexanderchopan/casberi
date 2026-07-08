@@ -9,18 +9,50 @@ import SwiftUI
 struct TopDoors: ToolbarContent {
     var onSettings: () -> Void
     var onApps: () -> Void
+    /// Taps bounce their door (Telegram grammar, same as the tab icons).
+    @State private var appsBounce = 0
+    @State private var avatarBounce = 0
 
     var body: some ToolbarContent {
         // Both doors sit together on the right — they are one cluster of
         // management controls, and the left edge stays clear for titles and
         // the Home cover text.
         ToolbarItemGroup(placement: .topBarTrailing) {
-            Button(action: onApps) { AppsDoor() }
-                .accessibilityLabel("Apps")
-                .tint(DS.tint)
-            Button(action: onSettings) { AvatarDoor() }
-                .accessibilityLabel("Settings")
+            Button {
+                appsBounce += 1
+                onApps()
+            } label: {
+                AppsDoor().symbolEffect(.bounce, value: appsBounce)
+            }
+            .accessibilityLabel("Apps")
+            .tint(DS.tint)
+            Button {
+                avatarBounce += 1
+                onSettings()
+            } label: {
+                AvatarDoor().modifier(DoorBounce(trigger: avatarBounce))
+            }
+            .accessibilityLabel("Settings")
         }
+    }
+}
+
+/// The tap bounce for a door that may be a PHOTO (the set avatar) — a symbol
+/// effect can't move a UIImage, so the spring scale carries the same beat.
+private struct DoorBounce: ViewModifier {
+    let trigger: Int
+    @State private var up = false
+
+    func body(content: Content) -> some View {
+        content
+            .scaleEffect(up ? 1.2 : 1)
+            .onChange(of: trigger) {
+                withAnimation(.spring(response: 0.18, dampingFraction: 0.45)) { up = true }
+                Task { @MainActor in
+                    try? await Task.sleep(for: .milliseconds(140))
+                    withAnimation(.spring(response: 0.25, dampingFraction: 0.6)) { up = false }
+                }
+            }
     }
 }
 

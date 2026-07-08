@@ -412,15 +412,21 @@ struct ComposerFAB: View {
     var glassNamespace: Namespace.ID?
     var action: () -> Void
     @Environment(ShellChrome.self) private var chrome
+    /// The tap bounces the plus (Telegram grammar, same as the tab icons).
+    @State private var bounce = 0
 
     var body: some View {
         let side: CGFloat = chrome.minimized ? 48 : 56
-        Button(action: action) {
+        Button {
+            bounce += 1
+            action()
+        } label: {
             // Plus, not a magnifier: the button's job is the capture habit
             // (Journal's glass + is the system precedent). The bubble teaches
             // ask once open.
             Image(systemName: "plus")
                 .font(.system(size: 22, weight: .medium))
+                .symbolEffect(.bounce, value: bounce)
                 .foregroundStyle(DS.textPrimary)
                 .frame(width: side, height: side)
                 .contentShape(Circle())
