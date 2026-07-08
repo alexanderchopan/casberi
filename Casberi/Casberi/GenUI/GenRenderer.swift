@@ -519,6 +519,9 @@ private struct GenTagMap: View {
                         .accessibilityLabel("Share your week")
                     }
                 }
+                // Air before the cells — with or without a subline (the map
+                // sat flush under the eyebrow when the subline was absent).
+                .padding(.bottom, el.str(1).isEmpty ? DS.Space.s3 : 0)
             }
             if !el.str(1).isEmpty {
                 Text(el.str(1))
