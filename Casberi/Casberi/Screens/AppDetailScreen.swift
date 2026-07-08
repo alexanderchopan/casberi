@@ -10,9 +10,8 @@ struct AppDetailScreen: View {
     @Environment(BridgeStore.self) private var store
     @Environment(\.modelContext) private var modelContext
     @State private var pairing = false
-    @State private var openBridge: OpenRoute?
+    @State private var openBridge: BridgeRouter.Destination?
     @State private var previewStream = GenStream()
-    private struct OpenRoute: Identifiable, Hashable { let id: String }
 
     private var bridge: BridgeApp? {
         store.bridges.first { $0.name == offer.name }
@@ -43,19 +42,8 @@ struct AppDetailScreen: View {
             }
         }
         .sheet(isPresented: $pairing) { PairClientSheet() }
-        .navigationDestination(item: $openBridge) { route in
-            if route.id == "zerion" { ZerionScreen() }
-            else if route.id == "rss" { RSSScreen() }
-            else if route.id == "gpt" { ChatGPTImportScreen() }
-            else if route.id == "bsky" { BlueskyScreen() }
-            else if route.id == "fc" { FarcasterScreen() }
-            else if let tb = TokenBridge.allCases.first(where: { $0.bridgeID == route.id }) {
-                TokenSetupScreen(bridge: tb)
-            }
-            else if route.id.hasPrefix("setup:") {
-                SetupDestination(name: String(route.id.dropFirst(6)))
-            }
-            else { BridgeDetailScreen(bridgeID: route.id) }
+        .navigationDestination(item: $openBridge) { dest in
+            BridgeDestinationView(destination: dest)
         }
     }
 
@@ -85,13 +73,13 @@ struct AppDetailScreen: View {
             }
         } else if connected {
             VerbCapsule(verb: .open) {
-                if let id = bridge?.id { openBridge = OpenRoute(id: id) }
+                if let id = bridge?.id { openBridge = BridgeRouter.destination(forID: id) }
             }
         } else if offer.name == "Claude" {
             VerbCapsule(verb: .pair) { pairing = true }
         } else if offer.connectable {
             if offer.needsSetup {
-                VerbCapsule(verb: .connect) { openBridge = OpenRoute(id: "setup:\(offer.name)") }
+                VerbCapsule(verb: .connect) { openBridge = BridgeRouter.destination(forOffer: offer.name) }
             } else {
                 VerbCapsule(verb: .connect) {
                     BridgeConnect.connect(offer, store: store, context: modelContext)

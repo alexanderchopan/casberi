@@ -105,27 +105,9 @@ struct RootShell: View {
                 // Warm the model on foreground so the first Ask is fast; the
                 // call is idempotent and returns immediately.
                 if !skipPrewarm { OnDeviceModel.prewarm() }
-                // Feeds are cheap to poll — every foreground refreshes RSS.
-                if !RSSStore.shared.feeds.isEmpty {
-                    Task { @MainActor in
-                        _ = await RSSIngest.refresh(context: modelContext)
-                    }
-                }
-                if !BlueskyStore.shared.handle.isEmpty {
-                    Task { @MainActor in
-                        _ = await BlueskyIngest.refresh(context: modelContext)
-                    }
-                }
-                if !FarcasterStore.shared.username.isEmpty {
-                    Task { @MainActor in
-                        _ = await FarcasterIngest.refresh(context: modelContext)
-                    }
-                }
-                for bridge in TokenBridge.allCases where bridge.connected {
-                    Task { @MainActor in
-                        _ = await TokenIngest.refresh(bridge, context: modelContext)
-                    }
-                }
+                // Connected bridges are cheap to poll — every foreground
+                // refreshes them all (one place, reusable from screens).
+                BridgeRefresh.refreshAllConnected(context: modelContext)
                 // Control Center's button left a flag — open the composer.
                 let group = UserDefaults(suiteName: SharedStore.appGroup)
                 if group?.bool(forKey: "compose.request") == true {
@@ -211,48 +193,10 @@ struct RootShell: View {
             // the cold path.
             if !skipPrewarm { OnDeviceModel.prewarm() }
             #if DEBUG
-            // `-chatgptImport <path>` imports a conversations.json from disk.
-            if let path = UserDefaults.standard.string(forKey: "chatgptImport"),
-               let data = FileManager.default.contents(atPath: path) {
-                let summary = ChatGPTImport.run(data: data, context: modelContext)
-                NSLog("ChatGPT probe: %d imported, %d skipped, failed=%d",
-                      summary.imported, summary.skipped, summary.failed ? 1 : 0)
-            }
-            // `-tokenBridge "<Name>:<token>"` connects a token bridge headlessly.
-            if let spec = UserDefaults.standard.string(forKey: "tokenBridge"),
-               let colon = spec.firstIndex(of: ":"),
-               let bridge = TokenBridge(rawValue: String(spec[..<colon])) {
-                TokenVault.set(String(spec[spec.index(after: colon)...]), for: bridge.tokenKey)
-                Task { @MainActor in
-                    let n = await TokenIngest.refresh(bridge, context: modelContext)
-                    NSLog("Token probe (%@): %@ new things", bridge.rawValue,
-                          n.map(String.init) ?? "FAILED")
-                }
-            }
-            // `-fcName <username>` connects Farcaster headlessly.
-            if let name = UserDefaults.standard.string(forKey: "fcName") {
-                FarcasterStore.shared.username = FarcasterStore.normalize(name)
-                Task { @MainActor in
-                    let n = await FarcasterIngest.refresh(context: modelContext)
-                    NSLog("Farcaster probe: %@ new things", n.map(String.init) ?? "FAILED")
-                }
-            }
-            // `-bskyHandle <handle>` connects Bluesky headlessly.
-            if let handle = UserDefaults.standard.string(forKey: "bskyHandle") {
-                BlueskyStore.shared.handle = BlueskyStore.normalize(handle)
-                Task { @MainActor in
-                    let n = await BlueskyIngest.refresh(context: modelContext)
-                    NSLog("Bluesky probe: %@ new things", n.map(String.init) ?? "FAILED")
-                }
-            }
-            // `-rssFeed <url>` follows a feed and syncs — headless bridge test.
-            if let feedURL = UserDefaults.standard.string(forKey: "rssFeed") {
-                RSSStore.shared.add(feedURL)
-                Task { @MainActor in
-                    let n = await RSSIngest.refresh(context: modelContext)
-                    NSLog("RSS probe: %@ new things", n.map(String.init) ?? "FAILED")
-                }
-            }
+            // The launch-arg connect-and-sync probes (-chatgptImport,
+            // -tokenBridge, -fcName, -bskyHandle, -rssFeed) share one shape —
+            // one dispatch table in ProbeHooks.
+            ProbeHooks.runAll(context: modelContext)
             #endif
             // Debug hook: `simctl launch ... -deeplink casberi://feed` lands in
             // UserDefaults; routes without the system open-in dialog.

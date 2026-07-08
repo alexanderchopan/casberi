@@ -17,7 +17,7 @@ struct AppsScreen: View {
     @State private var pairing = false
     @State private var selectedCategory: String?
     @State private var storyID: String?
-    @State private var setupOffer: String?
+    @State private var setupRoute: BridgeRouter.Destination?
     #if DEBUG
     @State private var probe: AppsProbe?
     #endif
@@ -131,8 +131,8 @@ struct AppsScreen: View {
         .navigationTitle("Apps")
         .navigationBarTitleDisplayMode(.large)
         .sheet(isPresented: $pairing) { PairClientSheet() }
-        .navigationDestination(item: $setupOffer) { name in
-            SetupDestination(name: name)
+        .navigationDestination(item: $setupRoute) { dest in
+            BridgeDestinationView(destination: dest)
         }
         #if DEBUG
         .navigationDestination(item: $probe) { p in
@@ -163,7 +163,9 @@ struct AppsScreen: View {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(alignment: .top, spacing: DS.Space.s4) {
                     ForEach(connected) { app in
-                        NavigationLink { connectedDestination(id: app.id) } label: {
+                        NavigationLink {
+                            BridgeDestinationView(destination: BridgeRouter.destination(forID: app.id))
+                        } label: {
                             connectedChip(app)
                         }
                         .buttonStyle(.plain)
@@ -195,26 +197,6 @@ struct AppsScreen: View {
         }
         .frame(width: 64)
         .opacity(paused ? 0.5 : 1)
-    }
-
-    @ViewBuilder
-    private func connectedDestination(id: String) -> some View {
-        switch id {
-        case "zerion": ZerionScreen()
-        case "rss":    RSSScreen()
-        case "gpt":    ChatGPTImportScreen()
-        case "bsky":   BlueskyScreen()
-        case "fc":     FarcasterScreen()
-        case "readwise": TokenSetupScreen(bridge: .readwise)
-        case "github":   TokenSetupScreen(bridge: .github)
-        case "todoist":  TokenSetupScreen(bridge: .todoist)
-        case "raindrop": TokenSetupScreen(bridge: .raindrop)
-        case "calcom":   TokenSetupScreen(bridge: .calcom)
-        case "calendly": TokenSetupScreen(bridge: .calendly)
-        case "notion":   TokenSetupScreen(bridge: .notion)
-        case "linear":   TokenSetupScreen(bridge: .linear)
-        default:       BridgeDetailScreen(bridgeID: id)
-        }
     }
 
     // MARK: - The divide (management above, store below)
@@ -440,7 +422,9 @@ struct AppsScreen: View {
             } else if entry.offer.needsSetup {
                 // Setup bridges collect input first — Connect opens their
                 // screen; the connect happens there, with proof.
-                VerbCapsule(verb: .connect) { setupOffer = entry.offer.name }
+                VerbCapsule(verb: .connect) {
+                    setupRoute = BridgeRouter.destination(forOffer: entry.offer.name)
+                }
             } else {
                 VerbCapsule(verb: .connect) {
                     BridgeConnect.connect(entry.offer, store: store, context: modelContext)
@@ -467,29 +451,6 @@ struct AppsScreen: View {
     #endif
 }
 
-
-/// Where a setup bridge's Connect leads — one switch, shared by the chart
-/// and the product page.
-struct SetupDestination: View {
-    let name: String
-    var body: some View {
-        switch name {
-        case "RSS":     RSSScreen()
-        case "ChatGPT": ChatGPTImportScreen()
-        case "Bluesky": BlueskyScreen()
-        case "Farcaster": FarcasterScreen()
-        case "Readwise": TokenSetupScreen(bridge: .readwise)
-        case "GitHub":   TokenSetupScreen(bridge: .github)
-        case "Todoist":  TokenSetupScreen(bridge: .todoist)
-        case "Raindrop": TokenSetupScreen(bridge: .raindrop)
-        case "Cal.com":  TokenSetupScreen(bridge: .calcom)
-        case "Calendly": TokenSetupScreen(bridge: .calendly)
-        case "Notion":   TokenSetupScreen(bridge: .notion)
-        case "Linear":   TokenSetupScreen(bridge: .linear)
-        default:        EmptyView()
-        }
-    }
-}
 
 extension String: @retroactive Identifiable {
     public var id: String { self }
