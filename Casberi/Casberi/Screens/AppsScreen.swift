@@ -88,18 +88,31 @@ struct AppsScreen: View {
         }
     }
 
+    /// Discover leads with the "track anything" bridges — paste a token, a
+    /// wallet, or a Farcaster handle and its activity lands in the feed. These
+    /// are the standout hooks, so they head the carousel; everything else
+    /// backfills in catalog order.
+    private static let featuredStories = ["Dexscreener", "Wallet", "Farcaster"]
+
     private var stories: [Story] {
+        let active = Set(store.bridges.filter { $0.status != .paused }.map(\.name))
         var out: [Story] = []
-        // (1) + (3): connectable bridges not yet connected, catalog order.
-        for entry in ranked where entry.tier <= 1 && entry.offer.connectable {
-            out.append(Story(kind: .bridge(entry.offer)))
+        // (1) Featured tracking bridges lead, in the order listed — unless
+        // already connected (then they're in the strip, not the store).
+        for name in Self.featuredStories where !active.contains(name) {
+            guard let offer = BridgeCatalog.offers.first(where: { $0.name == name }),
+                  offer.connectable else { continue }
+            out.append(Story(kind: .bridge(offer)))
         }
         // (2) Pair-a-client when no client is paired (replaces pairEntryRow).
         let clientPaired = store.bridges.contains { $0.name == "Claude" && $0.status == .connected }
-        if !clientPaired {
-            out.insert(Story(kind: .pair), at: min(1, out.count))
+        if !clientPaired { out.append(Story(kind: .pair)) }
+        // (3) Backfill with other connectable bridges not yet connected.
+        for entry in ranked where entry.tier <= 1 && entry.offer.connectable
+            && !Self.featuredStories.contains(entry.offer.name) {
+            out.append(Story(kind: .bridge(entry.offer)))
         }
-        return Array(out.prefix(3))
+        return Array(out.prefix(4))
     }
 
     // MARK: - Body
