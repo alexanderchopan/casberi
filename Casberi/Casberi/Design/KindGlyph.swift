@@ -122,6 +122,9 @@ enum BridgeGlyph {
         case "farcaster": return "at"
         case "bluesky":   return "at"
         case "cal.com", "calendly": return "calendar"
+        case "steam":     return "gamecontroller"
+        case "obsidian":  return "text.book.closed"
+        case "twitch":    return "tv"
         default:          return "app"
         }
     }

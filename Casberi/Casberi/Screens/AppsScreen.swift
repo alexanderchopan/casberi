@@ -32,7 +32,7 @@ struct AppsScreen: View {
         ("Your mail",    "Gmail",     ["Your mail"]),
         ("Your work",    "GitHub",    ["Your work"]),
         ("Your reading", "Readwise",  ["Your reading", "Your saves"]),
-        ("Your media",   "Spotify",   ["Your watching", "Your listening", "Your messages"]),
+        ("Your media",   "Spotify",   ["Your watching", "Your listening", "Your messages", "Your games"]),
     ]
 
     private func category(of offer: BridgeCatalog.Offer) -> String {

@@ -102,6 +102,14 @@ enum BridgeCatalog {
         Offer(name: "Bluesky",     tagline: "Your posts, in your feed",              group: "Your network",   connectable: true,
               summary: "Built on an open protocol — your posts are public, so this connects with just your handle. No password, nothing stored but the name. Likes arrive with sign-in, later.",
               needsSetup: true),
+        Offer(name: "Steam",       tagline: "What you play, in your feed",           group: "Your games",     connectable: true,
+              summary: "Recently played games land in your feed, linking to their store pages. Connects with a free Steam Web API key and your public profile name — the key stays in this iPhone's Keychain. Read-only.",
+              needsSetup: true),
+        Offer(name: "Obsidian",    tagline: "Your vault, beside your things",        group: "Your work",      connectable: true,
+              summary: "Point at your vault folder and your notes land as things — findable next to everything else. Fully local: the vault is read in place, never modified, and nothing leaves this iPhone.",
+              needsSetup: true),
+        Offer(name: "Twitch",      tagline: "Live follows land in your feed",        group: "Your watching",  connectable: false,
+              summary: "When a channel you follow goes live, the stream lands in your feed as a link — catch it while it's on."),
     ]
 
     /// Group order for the catalog screen (insertion order of first member).

@@ -57,6 +57,9 @@ extension DS {
         case "bluesky":             return Color.fixed("#0285ff")
         case "cal.com":             return Color.fixed("#292929")
         case "calendly":            return Color.fixed("#006bff")
+        case "steam":               return Color.fixed("#1b2838")   // their dark navy
+        case "obsidian":            return Color.fixed("#7c3aed")   // vault purple
+        case "twitch":              return Color.fixed("#9146ff")
         default:                    return DS.gray300
         }
     }

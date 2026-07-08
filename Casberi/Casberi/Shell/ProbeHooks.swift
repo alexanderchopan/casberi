@@ -77,6 +77,28 @@ enum ProbeHooks {
                 NSLog("Wallet probe: %@ new", n.map(String.init) ?? "FAILED")
             }
         },
+        // `-obsidianVault <path>` points the vault at a folder headlessly
+        // (an in-sandbox path needs no security scope — sim testing only).
+        Hook(key: "obsidianVault") { path, context in
+            guard ObsidianStore.shared.setVault(url: URL(fileURLWithPath: path)) else {
+                NSLog("Obsidian probe: bookmark FAILED"); return
+            }
+            Task { @MainActor in
+                let n = await ObsidianIngest.refresh(context: context)
+                NSLog("Obsidian probe: %@ new", n.map(String.init) ?? "FAILED")
+            }
+        },
+        // `-steamBridge "<key>:<profile>"` connects Steam headlessly.
+        Hook(key: "steamBridge") { spec, context in
+            let parts = spec.split(separator: ":", maxSplits: 1).map(String.init)
+            guard parts.count == 2 else { return }
+            TokenVault.set(parts[0], for: SteamBridge.tokenKey)
+            SteamBridge.profile = parts[1]
+            Task { @MainActor in
+                let n = await SteamIngest.refresh(context: context)
+                NSLog("Steam probe: %@ new", n.map(String.init) ?? "FAILED")
+            }
+        },
         // `-mailBridge "<icloud|gmail>:<address>:<app-password>"` connects a
         // mail account headlessly.
         Hook(key: "mailBridge") { spec, context in

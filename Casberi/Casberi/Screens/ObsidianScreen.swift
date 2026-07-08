@@ -1,0 +1,142 @@
+import SwiftUI
+import SwiftData
+
+/// Obsidian's setup — one move: point at the vault folder. The picker grants
+/// the folder, notes land, and the screen shows which vault is connected and
+/// what arrived. Local files only; nothing leaves the iPhone.
+struct ObsidianScreen: View {
+    @Environment(\.modelContext) private var modelContext
+    @Environment(BridgeStore.self) private var store
+    @Bindable private var obsidian = ObsidianStore.shared
+    @State private var picking = false
+    @State private var syncing = false
+    @State private var result: String?
+    @State private var resultIsError = false
+    @State private var recent: [Thing] = []
+
+    private func loadRecent() {
+        recent = recentBridgeThings(source: "Obsidian", context: modelContext)
+    }
+
+    var body: some View {
+        List {
+            BridgeSetupHeader(name: "Obsidian")
+            vaultSection.listRowSeparator(.hidden)
+            if !recent.isEmpty {
+                RecentThingsSection(header: "YOUR NOTES", things: recent)
+                    .listRowSeparator(.hidden)
+            }
+            if obsidian.connected { removeSection.listRowSeparator(.hidden) }
+        }
+        .listStyle(.insetGrouped)
+        .scrollContentBackground(.hidden)
+        .dsPageBackground()
+        .navigationTitle("Obsidian")
+        .navigationBarTitleDisplayMode(.large)
+        .fileImporter(isPresented: $picking, allowedContentTypes: [.folder]) { outcome in
+            guard case .success(let url) = outcome else { return }
+            let scoped = url.startAccessingSecurityScopedResource()
+            defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+            if obsidian.setVault(url: url) {
+                DSHaptic.tap()
+                Task { await sync(justConnected: true) }
+            } else {
+                result = "Couldn't keep access to that folder — try picking it again."
+                resultIsError = true
+            }
+        }
+        .onAppear {
+            loadRecent()
+            if obsidian.connected { Task { await sync() } }
+        }
+    }
+
+    private var vaultSection: some View {
+        Section {
+            if obsidian.connected {
+                HStack(spacing: DS.Space.s3) {
+                    Image(systemName: "folder")
+                        .font(.system(size: 17, weight: .medium))
+                        .foregroundStyle(DS.tint)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(obsidian.vaultName.isEmpty ? "Your vault" : obsidian.vaultName)
+                            .dsText(.body17).foregroundStyle(DS.textPrimary)
+                        Text("Connected — notes sync when you visit or open the app.")
+                            .dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                    }
+                    Spacer()
+                    Button("Change") { picking = true }
+                        .dsText(.callout15).fontWeight(.semibold)
+                        .foregroundStyle(DS.tint)
+                        .buttonStyle(.plain)
+                }
+                .padding(.vertical, DS.Space.s1)
+                .listRowBackground(DS.surfaceSheet)
+            } else {
+                Button {
+                    picking = true
+                } label: {
+                    HStack(spacing: DS.Space.s3) {
+                        Image(systemName: "folder.badge.plus")
+                            .font(.system(size: 17, weight: .medium))
+                        Text("Choose your vault folder")
+                            .dsText(.body17).fontWeight(.semibold)
+                        Spacer()
+                    }
+                    .foregroundStyle(DS.tint)
+                    .padding(.vertical, DS.Space.s1)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .listRowBackground(DS.surfaceSheet)
+            }
+            BridgeSyncStatusRows(syncing: syncing, syncingLine: "Reading your notes…",
+                                 result: result, resultIsError: resultIsError)
+        } header: {
+            Text("YOUR VAULT").dsText(.label12).kerning(0.7)
+                .foregroundStyle(DS.textTertiary)
+        } footer: {
+            Text("A vault is a folder of Markdown — find it in Files (often iCloud Drive → Obsidian). Read-only: the vault is never changed.")
+                .dsText(.callout15).foregroundStyle(DS.textTertiary)
+        }
+    }
+
+    private var removeSection: some View {
+        Section {
+            Button("Disconnect vault", role: .destructive) {
+                obsidian.disconnect()
+                store.bridges.removeAll { $0.id == "obsidian" }
+                result = "Vault disconnected — your things stay."
+                resultIsError = false
+                DSHaptic.tap()
+            }
+            .dsText(.callout15)
+            .listRowBackground(DS.surfaceSheet)
+        } footer: {
+            Text("Disconnecting stops syncing. What already landed stays yours.")
+                .dsText(.callout15).foregroundStyle(DS.textTertiary)
+        }
+    }
+
+    private func sync(justConnected: Bool = false) async {
+        guard !syncing else { return }
+        syncing = true
+        let added = await ObsidianIngest.refresh(context: modelContext)
+        syncing = false
+        loadRecent()
+        guard let added else {
+            if justConnected { obsidian.disconnect() }
+            result = "Couldn't read that folder — pick your vault again."
+            resultIsError = true
+            return
+        }
+        resultIsError = false
+        result = added > 0 ? "\(added) notes in" : "Up to date"
+        let proof = added > 0 ? "\(added) notes in" : "Synced just now"
+        if store.registerConnected(id: "obsidian", name: "Obsidian", proof: proof,
+                                   can: ["Reads the vault you picked.",
+                                         "Read-only — never edits a note."]) {
+            DSHaptic.success()
+        }
+    }
+}

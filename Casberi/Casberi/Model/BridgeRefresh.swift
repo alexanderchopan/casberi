@@ -27,5 +27,14 @@ enum BridgeRefresh {
         for provider in MailProvider.allCases where provider.connected {
             Task { @MainActor in _ = await MailIngest.refresh(provider, context: context) }
         }
+        if SteamBridge.connected {
+            Task { @MainActor in _ = await SteamIngest.refresh(context: context) }
+        }
+        if ObsidianStore.shared.connected {
+            Task { @MainActor in _ = await ObsidianIngest.refresh(context: context) }
+        }
+        if TwitchAuth.connected {
+            Task { @MainActor in _ = await TwitchIngest.refresh(context: context) }
+        }
     }
 }
