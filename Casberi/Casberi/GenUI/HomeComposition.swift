@@ -183,7 +183,7 @@ enum HomeComposition {
         "root = Stack([hero, projects])",
         "hero = Hero(\"Now\", \"Your things go here\", \"Paste, speak, or share one in - it lands here.\")",
         "projects = Bento([k1, k2, k3])",
-        "k1 = ProjectTile(\"1\", \"Projects appear here\", \"\", \"Grouped from what you make\", \"\")",
+        "k1 = ProjectTile(\"1\", \"Tags appear here\", \"\", \"Grouped from what you make\", \"\")",
         "k2 = ProjectTile(\"1\", \"\", \"\", \"\", \"\")",
         "k3 = ProjectTile(\"1\", \"\", \"\", \"\", \"\")",
     ]
