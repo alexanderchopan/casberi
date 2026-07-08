@@ -107,7 +107,7 @@ enum BridgeGlyph {
         case "youtube":   return "play.rectangle"
         case "apple music": return "music.note"
         case "spotify":   return "music.note.list"
-        case "zerion":    return "wallet.bifold"
+        case "wallet":    return "wallet.bifold"
         case "dexscreener": return "chart.line.uptrend.xyaxis"
         case "venice":    return "wand.and.stars"
         case "voice":     return "waveform"

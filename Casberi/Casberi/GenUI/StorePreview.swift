@@ -13,7 +13,7 @@ enum StorePreview {
     /// brain candidate, not a feed source).
     static func doc(for name: String) -> [String]? {
         switch name {
-        case "Zerion": [
+        case "Wallet": [
             "root = Stack([map, t1, t2])",
             "map = TagMap(\"Holdings\", null, [ETH 4210, USDC 1840, SOL 980, LINK 460])",
             "t1 = TxRow(\"Swapped\", \"0.4 ETH → 1,120 USDC\", \"Base · Uniswap\")",

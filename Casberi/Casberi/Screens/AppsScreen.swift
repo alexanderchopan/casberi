@@ -27,7 +27,7 @@ struct AppsScreen: View {
 
     private static let categories: [(name: String, exemplar: String, groups: Set<String>)] = [
         ("Your life",    "Photos",    ["Your photos", "Your schedule", "Your fitness"]),
-        ("Onchain",      "Zerion",    ["Your wallet"]),
+        ("Onchain",      "Wallet",    ["Your wallet"]),
         ("Social",       "Bluesky",   ["Your network"]),
         ("Your agents",  "Claude",    ["Your agent", "Your machines"]),
         ("Your mail",    "Gmail",     ["Your mail"]),
@@ -137,7 +137,7 @@ struct AppsScreen: View {
         #if DEBUG
         .navigationDestination(item: $probe) { p in
             switch p {
-            case .wallet: ZerionScreen()
+            case .wallet: WalletScreen()
             case .app(let name):
                 if let offer = BridgeCatalog.offers.first(where: { $0.name == name }) {
                     AppDetailScreen(offer: offer)

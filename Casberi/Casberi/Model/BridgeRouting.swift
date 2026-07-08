@@ -13,7 +13,7 @@ enum BridgeRouter {
 
     /// A screen a bridge can navigate to.
     enum Destination: Identifiable, Hashable {
-        case zerion
+        case wallet
         case dexscreener
         case icloudMail
         case gmail
@@ -28,7 +28,7 @@ enum BridgeRouter {
 
         var id: String {
             switch self {
-            case .zerion:         "zerion"
+            case .wallet:         "wallet"
             case .dexscreener:    "dexscreener"
             case .icloudMail:     "icloudmail"
             case .gmail:          "gmail"
@@ -52,7 +52,7 @@ enum BridgeRouter {
     /// The dedicated built-in bridges. Token bridges append from
     /// `TokenBridge.allCases`, so their eight setup screens need no rows here.
     private static let rows: [Row] = [
-        Row(offer: "Zerion",    id: "zerion", destination: .zerion),
+        Row(offer: "Wallet",    id: "wallet", destination: .wallet),
         Row(offer: "Dexscreener", id: "dexscreener", destination: .dexscreener),
         Row(offer: "iCloud Mail", id: "icloudmail",  destination: .icloudMail),
         Row(offer: "Gmail",       id: "gmail",       destination: .gmail),
@@ -85,7 +85,7 @@ struct BridgeDestinationView: View {
 
     var body: some View {
         switch destination {
-        case .zerion:         ZerionScreen()
+        case .wallet:         WalletScreen()
         case .dexscreener:    DexscreenerScreen()
         case .icloudMail:     MailScreen(provider: .icloud)
         case .gmail:          MailScreen(provider: .gmail)

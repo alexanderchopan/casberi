@@ -130,9 +130,9 @@ struct BridgeApp: Identifiable, Codable {
         // Claude reads the person's things and can only save what they approve.
         .init(id: "mcp-claude", name: "Claude", status: .connected, statusLine: "Connected · reads on ask",
               can: ["Reads your things when you ask.", "Saves only what you approve."]),
-        // A read bridge for onchain activity (Zerion). Read-only — it can never
-        // trade or move funds; a wallet's swaps/sends/receives just land as things.
-        .init(id: "zerion", name: "Zerion", status: .connected, statusLine: "0x1a2b…4f · 4 this week",
+        // A read bridge for onchain activity (Wallet, on Alchemy). Read-only — it
+        // can never trade or move funds; a wallet's swaps/sends/receives just land as things.
+        .init(id: "wallet", name: "Wallet", status: .connected, statusLine: "0x1a2b…4f · 4 this week",
               can: ["Reads your wallet's activity.", "Read-only — never trades or moves funds."]),
         // Token-watching, powered by public price data (Dexscreener search +
         // GeckoTerminal candles). Read-only — no wallet, no keys, no trading.

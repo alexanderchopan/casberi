@@ -9,7 +9,7 @@ import Observation
 @Observable
 final class WalletStore {
     static let shared = WalletStore()
-    private static let key = "zerion.addresses"
+    private static let key = "wallet.addresses"
 
     struct WatchedAddress: Codable, Identifiable, Equatable {
         var id = UUID()

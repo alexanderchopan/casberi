@@ -68,6 +68,14 @@ enum ProbeHooks {
                       added != nil ? "watched" : "already")
             }
         },
+        // `-walletAddress <0x…>` watches a wallet headlessly.
+        Hook(key: "walletAddress") { addr, context in
+            WalletStore.shared.add(addr)
+            Task { @MainActor in
+                let n = await WalletIngest.refresh(context: context)
+                NSLog("Wallet probe: %@ new", n.map(String.init) ?? "FAILED")
+            }
+        },
         // `-mailBridge "<icloud|gmail>:<address>:<app-password>"` connects a
         // mail account headlessly.
         Hook(key: "mailBridge") { spec, context in

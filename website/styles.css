@@ -41,9 +41,10 @@ nav { display: flex; align-items: center; justify-content: space-between; paddin
 .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 18px; color: var(--ink); }
 .brand:hover { text-decoration: none; }
 .brand svg { display: block; }
-.nav-links { display: flex; gap: 24px; font-size: 15px; }
+.nav-links { display: flex; gap: 22px; font-size: 15px; }
 .nav-links a { color: var(--muted); }
 .nav-links a:hover { color: var(--ink); text-decoration: none; }
+.nav-links a.on { color: var(--ink); font-weight: 650; }
 @media (max-width: 560px) { .nav-links { display: none; } }
 
 /* ---------- App icons (brand squircles) ---------- */
@@ -68,12 +69,15 @@ nav { display: flex; align-items: center; justify-content: space-between; paddin
 .ai-calcom    { background: #111; font-size: 15px; letter-spacing: -0.5px; }
 .ai-calendly  { background: #006bff; }
 .ai-todoist   { background: #e44332; }
-.ai-zerion    { background: #2962ef; }
+.ai-wallet    { background: #2962ef; }
 .ai-gmail     { background: #fff; color: #ea4335; }
 .ai-icloud    { background: #3693f3; font-size: 18px; }
-.ai-chatgpt   { background: #0fa47e; font-size: 18px; }
+.ai-chatgpt   { background: #fff; }
+.ai-chatgpt img, .ai-slack img { width: 58%; height: 58%; }
+.ai.tilefull { background: none; overflow: hidden; }
+.ai.tilefull img { width: 100%; height: 100%; border-radius: inherit; object-fit: cover; }
 .ai-claude    { background: #d97757; font-size: 18px; }
-.ai-bankr     { background: #0f9d58; }
+.ai-dexscreener { background: #0a0b0d; }
 .ai-venice    { background: #18181b; }
 .ai-openclaw  { background: #475569; font-size: 15px; }
 .ai-github    { background: #24292f; font-size: 16px; }
@@ -85,25 +89,32 @@ nav { display: flex; align-items: center; justify-content: space-between; paddin
 .ai-music     { background: linear-gradient(160deg, #fb5c74, #fa233b); font-size: 22px; }
 .ai-spotify   { background: #1db954; font-size: 22px; }
 .ai-telegram  { background: #229ed9; font-size: 18px; }
-.ai-slack     { background: #611f69; }
+.ai-slack     { background: #fff; }
 .ai-readwise  { background: #1e3a8a; font-size: 24px; }
 .ai-raindrop  { background: #2f80ed; }
 .ai-rss       { background: #f26522; font-size: 24px; }
 .ai-bluesky   { background: #0085ff; }
 .ai-farcaster { background: #855dcd; }
 .ai-strava    { background: #fc4c02; font-size: 18px; }
+.ai-more      { background: var(--surface-2); color: var(--muted); }
+.ai-more span { font-size: 20px; font-weight: 800; letter-spacing: -1px; line-height: 1; }
 
-/* ---------- Hero + icon rain (big, bouncy) ---------- */
-header.hero { text-align: center; padding: 26px 0 76px; }
+/* ---------- Hero + icon rain (ALL the apps, bouncy) ---------- */
+header.hero { text-align: center; padding: 12px 0 64px; }
+.brandmark { width: 30px; height: 30px; border-radius: 8px; display: block; }
 .rain {
-  display: flex; gap: 12px; justify-content: center;
-  padding: 30px 0 42px;
-  -webkit-mask-image: linear-gradient(90deg, transparent, #000 10%, #000 90%, transparent);
-  mask-image: linear-gradient(90deg, transparent, #000 10%, #000 90%, transparent);
+  display: flex; flex-wrap: wrap; gap: 12px; row-gap: 14px;
+  justify-content: center;
+  padding: 22px 0 26px;
+  max-width: 760px; margin: 0 auto;   /* wraps 31 icons into even rows (11/11/9) */
 }
 .rain .ai {
-  width: 66px; height: 66px; border-radius: 18px; font-size: 27px;
+  width: 56px; height: 56px; border-radius: 15px; font-size: 22px;
   animation: fall 1s both;
+}
+@media (max-width: 600px) {
+  .rain .ai { width: 40px; height: 40px; border-radius: 11px; font-size: 16px; }
+  .rain { gap: 6px; row-gap: 9px; }   /* 7 per row on a 375px phone — no orphan */
 }
 .rain .ai:nth-child(8n+1) { --jy: -5px; --rr: -3deg; }
 .rain .ai:nth-child(8n+2) { --jy: 4px;  --rr: 2deg; }
@@ -113,20 +124,6 @@ header.hero { text-align: center; padding: 26px 0 76px; }
 .rain .ai:nth-child(8n+6) { --jy: 3px;  --rr: -3deg; }
 .rain .ai:nth-child(8n+7) { --jy: -4px; --rr: 3deg; }
 .rain .ai:nth-child(8n)   { --jy: 5px;  --rr: -2deg; }
-.rain .ai:nth-child(1)  { animation-delay: .05s; }
-.rain .ai:nth-child(2)  { animation-delay: .13s; }
-.rain .ai:nth-child(3)  { animation-delay: .21s; }
-.rain .ai:nth-child(4)  { animation-delay: .29s; }
-.rain .ai:nth-child(5)  { animation-delay: .37s; }
-.rain .ai:nth-child(6)  { animation-delay: .45s; }
-.rain .ai:nth-child(7)  { animation-delay: .53s; }
-.rain .ai:nth-child(8)  { animation-delay: .61s; }
-.rain .ai:nth-child(9)  { animation-delay: .69s; }
-.rain .ai:nth-child(10) { animation-delay: .77s; }
-.rain .ai:nth-child(11) { animation-delay: .85s; }
-.rain .ai:nth-child(12) { animation-delay: .93s; }
-.rain .ai:nth-child(13) { animation-delay: 1.01s; }
-.rain .ai:nth-child(14) { animation-delay: 1.09s; }
 @keyframes fall {
   0%   { transform: translateY(-200px) rotate(var(--rr, 0deg)); opacity: 0; }
   45%  { transform: translateY(calc(var(--jy, 0px) + 16px)) rotate(var(--rr, 0deg)); opacity: 1; animation-timing-function: ease-out; }
@@ -135,15 +132,13 @@ header.hero { text-align: center; padding: 26px 0 76px; }
   91%  { transform: translateY(calc(var(--jy, 0px) - 3px)) rotate(var(--rr, 0deg)); animation-timing-function: ease-in; }
   100% { transform: translateY(var(--jy, 0px)) rotate(var(--rr, 0deg)); }
 }
-@media (max-width: 900px) { .rain .ai:nth-child(n+11) { display: none; } }
-@media (max-width: 720px) { .rain .ai:nth-child(n+8) { display: none; } }
-@media (max-width: 480px) { .rain .ai:nth-child(n+6) { display: none; } }
 
 .hero h1 {
-  font-size: clamp(38px, 7vw, 64px);
-  line-height: 1.06;
-  font-weight: 800;
-  letter-spacing: -0.02em;
+  font-size: clamp(52px, 11vw, 132px);
+  line-height: 0.92;
+  font-weight: 850;
+  letter-spacing: -0.04em;
+  text-wrap: balance;
 }
 .hero h1 em {
   font-style: normal;
@@ -171,6 +166,22 @@ header.hero { text-align: center; padding: 26px 0 76px; }
 }
 .cta:hover { background: var(--blue-bright); text-decoration: none; transform: translateY(-1px); }
 .cta-note { margin-top: 14px; font-size: 14px; color: var(--muted); }
+.cta-row { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; margin-top: 32px; }
+.cta-row .cta { margin-top: 0; }
+.cta.ghost {
+  background: transparent;
+  color: var(--ink);
+  box-shadow: inset 0 0 0 1.5px #2b3040;
+}
+.cta.ghost:hover { background: var(--surface); box-shadow: inset 0 0 0 1.5px #3a4152; }
+/* not live yet — a calm label, not a bright button that does nothing */
+.cta.soon {
+  background: var(--surface-2);
+  color: var(--muted);
+  cursor: default;
+  box-shadow: inset 0 0 0 1.5px #232838;
+}
+.cta.soon:hover { transform: none; background: var(--surface-2); }
 
 /* ---------- Walkthrough steps ---------- */
 section { padding: 72px 0; }
@@ -192,6 +203,17 @@ section { padding: 72px 0; }
   text-transform: uppercase; color: var(--blue-bright);
   margin-bottom: 10px;
 }
+/* a small colored dot ties each step to the kind palette */
+.step-copy .eyebrow::before {
+  content: ""; display: inline-block;
+  width: 7px; height: 7px; border-radius: 50%;
+  margin-right: 9px; vertical-align: 1px;
+  background: var(--step-dot, var(--blue-bright));
+}
+#connect { --step-dot: var(--k-shot); }
+#feed    { --step-dot: var(--k-link); }
+#home    { --step-dot: var(--k-rem); }
+#ask     { --step-dot: var(--k-chat); }
 h2 {
   font-size: clamp(26px, 4vw, 38px);
   font-weight: 750;
@@ -207,13 +229,23 @@ p.lede strong { color: var(--ink); font-weight: 600; }
 .phone {
   background: #0d0f14;
   border: 1px solid #242a36;
-  border-radius: 40px;
-  padding: 16px;
-  max-width: 370px;
+  border-radius: 36px;
+  padding: 13px;
+  max-width: 250px;          /* smaller phones overall */
   margin: 0 auto;
-  box-shadow: 0 30px 70px rgba(0,0,0,.55);
+  box-shadow: 0 24px 55px rgba(0,0,0,.5);
   overflow: hidden;
+  transition: transform .4s cubic-bezier(.2,.7,.2,1), box-shadow .4s ease;
 }
+/* gentle lift on hover — desktop delight, off on touch */
+@media (hover: hover) and (pointer: fine) {
+  .phone:hover {
+    transform: translateY(-8px) scale(1.015);
+    box-shadow: 0 40px 80px rgba(0,0,0,.6);
+  }
+}
+/* Step 3: both images are full-screen (9:19.5), so the two phones are the
+   same size naturally — no cropping, no distortion. */
 .mock-label {
   font-size: 11px; font-weight: 700; letter-spacing: .1em;
   color: var(--faint);
@@ -402,18 +434,33 @@ p.lede strong { color: var(--ink); font-weight: 600; }
   font-size: 20px; font-weight: 750; letter-spacing: -0.01em;
   margin-bottom: 4px;
 }
-.store-grid { display: grid; grid-template-columns: 1fr 1fr; column-gap: 48px; }
-@media (max-width: 760px) { .store-grid { grid-template-columns: 1fr; } }
+/* icon + name catalog — dense, no buttons */
+.app-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(178px, 1fr));
+  gap: 10px;
+}
+.app-cell {
+  display: flex; align-items: center; gap: 12px;
+  background: var(--surface);
+  border-radius: 14px;
+  padding: 12px 16px;
+}
+.app-cell .ai { width: 40px; height: 40px; border-radius: 11px; font-size: 17px; flex: none; }
+.app-cell span { font-size: 15px; font-weight: 600; white-space: nowrap; }
+
+.store-grid { display: grid; grid-template-columns: repeat(3, 1fr); column-gap: 40px; }
+@media (max-width: 900px) { .store-grid { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 600px) { .store-grid { grid-template-columns: 1fr; } }
 .store-row {
-  display: flex; align-items: center; gap: 14px;
-  padding: 13px 0;
+  display: flex; align-items: center; gap: 13px;
+  padding: 11px 0;
   border-bottom: 1px solid rgba(255,255,255,.07);
 }
-.store-row .ai { width: 56px; height: 56px; border-radius: 13px; font-size: 22px; }
+.store-row .ai { width: 46px; height: 46px; border-radius: 11px; font-size: 19px; }
 .store-row .info { min-width: 0; flex: 1; }
-.store-row .info b { display: block; font-size: 15.5px; font-weight: 600; line-height: 1.3; }
-.store-row .info small {
-  display: block; font-size: 13px; color: var(--muted); line-height: 1.35;
+.store-row .info b {
+  display: block; font-size: 15.5px; font-weight: 600; line-height: 1.3;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .getbtn {
@@ -421,7 +468,6 @@ p.lede strong { color: var(--ink); font-weight: 600; }
   padding: 7px 16px; border-radius: 999px;
   background: var(--surface-2); color: var(--blue-bright);
 }
-.getbtn.share { color: var(--muted); }
 
 /* ---------- Privacy chips (in the hero) ---------- */
 .priv-chips { display: flex; flex-wrap: wrap; gap: 9px; justify-content: center; }
@@ -432,8 +478,15 @@ p.lede strong { color: var(--ink); font-weight: 600; }
   font-size: 13.5px; font-weight: 550;
 }
 .priv-chips span::before { content: "✓  "; color: var(--confirm); font-weight: 800; }
-.hero .priv-lead { margin-top: 26px; font-size: 16px; }
-.hero .hero-chips { margin-top: 14px; max-width: 720px; margin-left: auto; margin-right: auto; }
+.hero .hero-line {
+  font-size: clamp(17px, 2.2vw, 21px);
+  line-height: 1.5;
+  color: var(--muted);
+  max-width: 560px;
+  margin: 24px auto 0;
+  text-wrap: balance;
+}
+.hero .hero-chips { margin-top: 28px; max-width: 720px; margin-left: auto; margin-right: auto; }
 
 /* ---------- FAQ ---------- */
 .faq { max-width: 720px; margin: 28px auto 0; display: grid; gap: 10px; }
@@ -464,16 +517,88 @@ footer .tagline { font-size: 16px; font-weight: 600; color: var(--ink); margin-b
 
 /* ---------- Mid-page CTA + scroll reveal ---------- */
 .mid-cta { text-align: center; padding: 4px 0 20px; }
-.reveal { opacity: 0; transform: translateY(18px); transition: opacity .6s ease, transform .6s ease; }
+/* scroll-settle: content rises and scales in with a soft spring */
+.reveal { opacity: 0; transform: translateY(26px) scale(.975); transition: opacity .7s cubic-bezier(.2,.7,.2,1), transform .7s cubic-bezier(.2,.7,.2,1); }
 .reveal.in { opacity: 1; transform: none; }
+@media (prefers-reduced-motion: reduce) { .reveal { opacity: 1; transform: none; transition: none; } }
 
 /* ---------- Casberi tile: lands last, centered under the rain ---------- */
-.ai-casberi { background: #fff; }
-.rain-target { display: flex; justify-content: center; padding: 0 0 30px; }
+.ai-casberi { background: #000; overflow: hidden; }
+.rain-target { display: flex; justify-content: center; padding: 0 0 14px; }
 .rain-target .ai-casberi {
-  width: 88px; height: 88px; border-radius: 24px;
+  width: 74px; height: 74px; border-radius: 20px;
   animation: fall 1s both;
-  animation-delay: 1.2s;       /* after every app has landed */
+  animation-delay: 1.5s;       /* after every app has landed */
   box-shadow: 0 16px 40px rgba(0,0,0,.45);
 }
-.rain-target .ai-casberi svg { width: 50px; height: 50px; }
+.rain-target .ai-casberi img {
+  width: 100%; height: 100%;
+  border-radius: inherit;
+  object-fit: cover;
+  display: block;
+}
+/* the berry breathes gently once it has landed, and leans in on hover */
+.rain-target .ai-casberi {
+  animation: fall 1s 1.5s both, berryBob 4.5s ease-in-out 2.8s infinite;
+  cursor: pointer;
+}
+@keyframes berryBob {
+  0%, 100% { translate: 0 0; }
+  50% { translate: 0 -6px; }
+}
+@media (hover: hover) and (pointer: fine) {
+  .rain-target .ai-casberi:hover { transform: scale(1.08) rotate(-4deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rain-target .ai-casberi { animation: none; }
+}
+
+/* ---------- Real app screenshots in the phone frames ---------- */
+.phone.shotwrap { padding: 10px; }
+.shot { display: block; width: 100%; border-radius: 31px; }
+
+/* feed gallery — one feed, three shapes */
+.phone-row {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: 22px; margin-top: 40px;
+  align-items: start;
+}
+@media (max-width: 760px) {
+  .phone-row { grid-template-columns: 1fr; max-width: 370px; margin-left: auto; margin-right: auto; }
+}
+.phone-row .phone { max-width: 210px; }
+.phone-cap {
+  text-align: center; font-size: 13.5px; font-weight: 600;
+  color: var(--muted); margin-top: 12px;
+}
+#feed .step-copy, #home .step-copy, #ask .step-copy {
+  max-width: 680px; margin: 0 auto; text-align: center;
+}
+#feed .step-copy p.lede, #home .step-copy p.lede, #ask .step-copy p.lede {
+  margin-left: auto; margin-right: auto;
+}
+.phone-row.two {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  max-width: 720px; margin-left: auto; margin-right: auto;
+  align-items: start;   /* short cards (a cropped sheet) top-align cleanly */
+}
+@media (max-width: 760px) { .phone-row.two { grid-template-columns: 1fr; } }
+.phone-single { margin-top: 40px; }
+.phone-single .phone { max-width: 260px; margin: 0 auto; }
+
+/* 3-still sequence (Work populated → type the command → changed) */
+.phone.shotwrap.seq { position: relative; }
+.phone.shotwrap.seq .shot { display: block; }
+.phone.shotwrap.seq .s2,
+.phone.shotwrap.seq .s3 {
+  position: absolute; top: 10px; left: 10px;
+  width: calc(100% - 20px);
+}
+.phone.shotwrap.seq .s2 { animation: seq2 9s linear infinite; }
+.phone.shotwrap.seq .s3 { animation: seq3 9s linear infinite; }
+/* hold each state ~2.4s; keep the crossfade short so the blend is brief */
+@keyframes seq2 { 0%,28% {opacity:0} 33%,58% {opacity:1} 63%,100% {opacity:0} }
+@keyframes seq3 { 0%,62% {opacity:0} 67%,92% {opacity:1} 97%,100% {opacity:0} }
+@media (prefers-reduced-motion: reduce) {
+  .phone.shotwrap.seq .s2, .phone.shotwrap.seq .s3 { animation: none; opacity: 0; }
+}

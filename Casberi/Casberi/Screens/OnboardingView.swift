@@ -50,7 +50,7 @@ struct OnboardingView: View {
     /// the LAST SIX are Apple's bridges as their symbol tiles (their icons
     /// are legally unbundlable) — they land last, as the pile's TOP ROW,
     /// right under the three Connect rows they're kin to.
-    private let marqueeApps = ["Zerion", "Farcaster", "Gmail", "GitHub",
+    private let marqueeApps = ["Wallet", "Farcaster", "Gmail", "GitHub",
                                "Claude", "Spotify", "Strava", "Bluesky",
                                "Telegram", "Slack", "X", "Notion", "Reddit",
                                "YouTube", "Todoist", "RSS", "ChatGPT",

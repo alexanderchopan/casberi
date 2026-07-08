@@ -21,6 +21,9 @@ enum BridgeRefresh {
         for bridge in TokenBridge.allCases where bridge.connected {
             Task { @MainActor in _ = await TokenIngest.refresh(bridge, context: context) }
         }
+        if !WalletStore.shared.addresses.isEmpty {
+            Task { @MainActor in _ = await WalletIngest.refresh(context: context) }
+        }
         for provider in MailProvider.allCases where provider.connected {
             Task { @MainActor in _ = await MailIngest.refresh(provider, context: context) }
         }

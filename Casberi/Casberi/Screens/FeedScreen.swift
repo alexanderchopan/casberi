@@ -38,12 +38,12 @@ struct FeedScreen: View {
 
     /// The shape a source takes when its chip is in force.
     private enum Shape {
-        case all, photos, zerion, calendar, gmail, chat, reminders, agent, safari, notes, you, plain
+        case all, photos, wallet, calendar, gmail, chat, reminders, agent, safari, notes, you, plain
         init(source: String) {
             switch source {
             case "All":                 self = .all
             case "Photos":              self = .photos
-            case "Zerion":              self = .zerion
+            case "Wallet":              self = .wallet
             case "Calendar", "Cal.com", "Calendly": self = .calendar
             case "Gmail", "iCloud Mail": self = .gmail
             case "ChatGPT", "Claude", "Slack", "Farcaster", "Bluesky": self = .chat
@@ -64,7 +64,7 @@ struct FeedScreen: View {
     private var entranceStyle: RowEntrance.Style {
         switch shape {
         case .calendar: .init(dx: -28, dy: 0, scale: 1, step: 0.045)
-        case .zerion:   .init(dx: 0, dy: 16, scale: 1, step: 0.04)
+        case .wallet:   .init(dx: 0, dy: 16, scale: 1, step: 0.04)
         case .photos:   .init(dx: 0, dy: 0, scale: 0.92, step: 0.03)
         default:        .init(dx: 0, dy: 8, scale: 1, step: 0.028)
         }
@@ -281,7 +281,7 @@ struct FeedScreen: View {
         switch shape {
         case .photos:
             photoGridSection
-        case .zerion:
+        case .wallet:
             holdingsBlockSection
             groupedSections(dayGroups)
         case .calendar:
@@ -311,7 +311,7 @@ struct FeedScreen: View {
     }
 
     /// Zerion leads with holdings — the treemap through the engine (mock Z1),
-    /// demo-gated like ZerionScreen.
+    /// demo-gated like WalletScreen.
     @ViewBuilder
     private var holdingsBlockSection: some View {
         if SourceComposition.block(source: filter.source, demo: DemoState.seedsDemoData) != nil {
