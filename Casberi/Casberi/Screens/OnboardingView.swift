@@ -23,7 +23,11 @@ struct OnboardingView: View {
 
     /// The mini store: exactly the bridges that connect for real today.
     private var offers: [BridgeCatalog.Offer] {
-        BridgeCatalog.offers.filter { $0.connectable && !$0.needsSetup }
+        // Apple Health sits out of minute zero (ruling 2026-07-07: health
+        // reads as sensitive before trust exists) — it waits in the store.
+        BridgeCatalog.offers.filter {
+            $0.connectable && !$0.needsSetup && $0.name != "Apple Health"
+        }
     }
 
     /// What a filled slot says — plain, true, present tense.
@@ -37,15 +41,17 @@ struct OnboardingView: View {
         }
     }
 
-    /// The rain (ruling 2026-07-07, supersedes T2's top marquee): the whole
-    /// catalog falls the full height of the screen and bounces into a shelf
-    /// just above the CTA — the drop acts out the headline, and the pile
-    /// says "all of this, here". Zerion and Farcaster lead.
+    /// The glass (ruling 2026-07-07, supersedes the shelf rain): sixteen
+    /// BIG cubes fall the full height one after another, bounce, and stack
+    /// bottom-up until they fill the screen — ice filling a glass. Then the
+    /// glass pours: the cubes shrink into the shelf above the CTA and the
+    /// feed card arrives. Zerion and Farcaster lead the pour.
     private let marqueeApps = ["Zerion", "Farcaster", "Gmail", "GitHub",
                                "Claude", "Spotify", "Strava", "Bluesky",
                                "Telegram", "Slack", "X", "Notion", "Reddit",
                                "YouTube", "Todoist", "RSS"]
-    @State private var rained = false
+    /// 0 = above the screen · 1 = the glass fills · 2 = the shelf.
+    @State private var cubePhase = 0
 
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -56,7 +62,7 @@ struct OnboardingView: View {
                     Text("Your apps, one feed.")
                         .font(.system(size: 34, weight: .heavy))
                         .foregroundStyle(DS.textPrimary)
-                    Text("All of this lands here. Start with four.")
+                    Text("All of this lands here. Start with three.")
                         .dsText(.body17)
                         .foregroundStyle(DS.textSecondary)
                 }
@@ -64,14 +70,15 @@ struct OnboardingView: View {
                 .arrive(arrived, delay: 0.35)
 
                 feedPreviewCard
-                    .arrive(arrived, delay: 0.5)
+                    .arrive(cubePhase >= 2, delay: 0.1)
 
                 Spacer(minLength: 168)   // floor above the shelf + CTA stack
             }
             .padding(.top, DS.Space.s4)
 
+            cubes
+
             VStack(spacing: DS.Space.s2) {
-                shelf
                 if let toast {
                     Text(toast)
                         .dsText(.subhead13)
@@ -89,6 +96,11 @@ struct OnboardingView: View {
         .dsColorScheme()
         .onAppear {
             withAnimation(DS.Motion.standard) { arrived = true }
+            cubePhase = 1
+            // The glass is full once the last cube settles — then it pours.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
+                cubePhase = 2
+            }
         }
         #if DEBUG
         // `-demoPick "Photos,Calendar"` marks and continues (no real
@@ -184,30 +196,44 @@ struct OnboardingView: View {
     /// like things that actually fell.
     private static let jitter: [CGFloat] = [-4, 3, -2, 5, -5, 2, -3, 4]
 
-    private var shelf: some View {
-        VStack(spacing: DS.Space.s2) {
-            ForEach(0..<2, id: \.self) { row in
-                HStack(spacing: DS.Space.s2) {
-                    ForEach(Array(marqueeApps.dropFirst(row * 8).prefix(8).enumerated()),
-                            id: \.element) { i, name in
-                        let n = row * 8 + i
-                        BridgeIcon(name: name, size: 32)
-                            .rotationEffect(.degrees(rained
-                                ? Double(Self.jitter[n % Self.jitter.count]) * 0.6 : 0))
-                            .opacity(rained ? 1 : 0)
-                            .offset(y: rained
-                                    ? Self.jitter[(n + 3) % Self.jitter.count] * 0.5
-                                    : -700)
-                            .animation(.spring(duration: 0.55, bounce: 0.42)
-                                        .delay(0.05 + Double(n) * 0.045),
-                                       value: rained)
-                    }
-                }
+    /// Where cube `i` rests in each phase — the glass stacks bottom-up in
+    /// four columns of near-touching 84pt cubes; the shelf is two tight rows
+    /// of 32pt above the CTA.
+    private func cubeTarget(_ i: Int, in size: CGSize) -> CGPoint {
+        if cubePhase >= 2 {
+            let col = CGFloat(i % 8), row = CGFloat(i / 8)
+            let rowWidth = 8 * 32 + 7 * DS.Space.s2
+            let x = (size.width - rowWidth) / 2 + col * (32 + DS.Space.s2) + 16
+            return CGPoint(x: x, y: size.height - 148 + row * 40)
+        }
+        let col = CGFloat(i % 4), row = CGFloat(i / 4)
+        let cell = (size.width - DS.Space.s4 * 2) / 4
+        let x = DS.Space.s4 + cell * col + cell / 2
+            + Self.jitter[i % Self.jitter.count] * 0.8
+        let y = size.height - 190 - row * (cell - 6)
+            + Self.jitter[(i + 5) % Self.jitter.count]
+        return CGPoint(x: x, y: y)
+    }
+
+    private var cubes: some View {
+        GeometryReader { geo in
+            ForEach(Array(marqueeApps.enumerated()), id: \.element) { i, name in
+                let rest = cubeTarget(i, in: geo.size)
+                BridgeIcon(name: name, size: 84)
+                    .rotationEffect(.degrees(cubePhase == 1
+                        ? Double(Self.jitter[i % Self.jitter.count]) * 0.9 : 0))
+                    .scaleEffect(cubePhase >= 2 ? 32.0 / 84.0 : 1)
+                    .position(x: rest.x, y: cubePhase == 0 ? -120 : rest.y)
+                    .animation(cubePhase <= 1
+                        ? .spring(duration: 0.85, bounce: 0.52)
+                            .delay(0.1 + Double(i) * 0.11)
+                        : .spring(duration: 0.7, bounce: 0.24)
+                            .delay(Double(i) * 0.015),
+                        value: cubePhase)
             }
         }
-        .padding(.bottom, DS.Space.s1)
+        .ignoresSafeArea()
         .allowsHitTesting(false)
-        .onAppear { rained = true }
     }
 
     /// Connect runs the REAL flow — the iOS permission ask fires right here,
