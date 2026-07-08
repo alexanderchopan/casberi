@@ -14,6 +14,7 @@ enum BridgeRouter {
     /// A screen a bridge can navigate to.
     enum Destination: Identifiable, Hashable {
         case zerion
+        case bankr
         case rss
         case chatgpt
         case bluesky
@@ -26,6 +27,7 @@ enum BridgeRouter {
         var id: String {
             switch self {
             case .zerion:         "zerion"
+            case .bankr:          "bankr"
             case .rss:            "rss"
             case .chatgpt:        "gpt"
             case .bluesky:        "bsky"
@@ -47,6 +49,7 @@ enum BridgeRouter {
     /// `TokenBridge.allCases`, so their eight setup screens need no rows here.
     private static let rows: [Row] = [
         Row(offer: "Zerion",    id: "zerion", destination: .zerion),
+        Row(offer: "Bankr",     id: "bankr",  destination: .bankr),
         Row(offer: "RSS",       id: "rss",    destination: .rss),
         Row(offer: "ChatGPT",   id: "gpt",    destination: .chatgpt),
         Row(offer: "Bluesky",   id: "bsky",   destination: .bluesky),
@@ -77,6 +80,7 @@ struct BridgeDestinationView: View {
     var body: some View {
         switch destination {
         case .zerion:         ZerionScreen()
+        case .bankr:          BankrScreen()
         case .rss:            RSSScreen()
         case .chatgpt:        ChatGPTImportScreen()
         case .bluesky:        HandleSetupScreen(bridge: .bluesky)

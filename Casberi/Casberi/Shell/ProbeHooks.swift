@@ -57,6 +57,14 @@ enum ProbeHooks {
                 NSLog("Bluesky probe: %@ new things", n.map(String.init) ?? "FAILED")
             }
         },
+        // `-bankrAddress <0x…>` connects Bankr headlessly.
+        Hook(key: "bankrAddress") { addr, context in
+            BankrStore.shared.address = BankrStore.normalize(addr)
+            Task { @MainActor in
+                let n = await BankrIngest.refresh(context: context)
+                NSLog("Bankr probe: %@ new things", n.map(String.init) ?? "FAILED")
+            }
+        },
         // `-rssFeed <url>` follows a feed and syncs — headless bridge test.
         Hook(key: "rssFeed") { url, context in
             RSSStore.shared.add(url)
