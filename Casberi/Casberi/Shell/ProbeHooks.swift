@@ -68,9 +68,10 @@ enum ProbeHooks {
                       added != nil ? "watched" : "already")
             }
         },
-        // `-walletAddress <0x…>` watches a wallet headlessly.
-        Hook(key: "walletAddress") { addr, context in
-            WalletStore.shared.add(addr)
+        // `-walletAddress <0x…>` (or `<0x…>|<Label>`) watches a wallet headlessly.
+        Hook(key: "walletAddress") { spec, context in
+            let parts = spec.split(separator: "|", maxSplits: 1).map(String.init)
+            WalletStore.shared.add(parts[0], label: parts.count > 1 ? parts[1] : "")
             Task { @MainActor in
                 let n = await WalletIngest.refresh(context: context)
                 NSLog("Wallet probe: %@ new", n.map(String.init) ?? "FAILED")
