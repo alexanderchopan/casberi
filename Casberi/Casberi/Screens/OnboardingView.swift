@@ -46,10 +46,14 @@ struct OnboardingView: View {
     /// bottom-up until they fill the BOTTOM HALF of the screen — ice filling
     /// a glass — and they STAY there, full size, while the feed card lives
     /// in the top half. Zerion and Farcaster lead the fall.
+    /// Every app with real brand art joins the pile (Apple's own icons are
+    /// legally unbundlable — their bridges stay symbol tiles in the store).
     private let marqueeApps = ["Zerion", "Farcaster", "Gmail", "GitHub",
                                "Claude", "Spotify", "Strava", "Bluesky",
                                "Telegram", "Slack", "X", "Notion", "Reddit",
-                               "YouTube", "Todoist", "RSS"]
+                               "YouTube", "Todoist", "RSS", "ChatGPT",
+                               "Linear", "Raindrop", "Readwise", "Bankr",
+                               "Venice", "OpenClaw", "Cal.com", "Calendly"]
     /// False = above the screen · true = settled in the glass.
     @State private var cubesLanded = false
 
@@ -192,14 +196,15 @@ struct OnboardingView: View {
     /// like things that actually fell.
     private static let jitter: [CGFloat] = [-4, 3, -2, 5, -5, 2, -3, 4]
 
-    /// Where cube `i` rests: four columns stacking bottom-up, rows slightly
-    /// overlapping like real ice, the pile's top edge at mid-screen.
+    /// Where cube `i` rests: five columns stacking bottom-up, rows and
+    /// columns slightly overlapping like real ice, the pile's top edge at
+    /// mid-screen. Twenty-five cubes = a full 5×5 glass.
     private func cubeTarget(_ i: Int, in size: CGSize) -> CGPoint {
-        let col = CGFloat(i % 4), row = CGFloat(i / 4)
-        let cell = (size.width - DS.Space.s4 * 2) / 4
+        let col = CGFloat(i % 5), row = CGFloat(i / 5)
+        let cell = (size.width - DS.Space.s4 * 2) / 5
         let x = DS.Space.s4 + cell * col + cell / 2
             + Self.jitter[i % Self.jitter.count] * 0.8
-        let y = size.height - 160 - row * 72
+        let y = size.height - 140 - row * 68
             + Self.jitter[(i + 5) % Self.jitter.count]
         return CGPoint(x: x, y: y)
     }
@@ -213,7 +218,7 @@ struct OnboardingView: View {
                         ? Double(Self.jitter[i % Self.jitter.count]) * 0.9 : 0))
                     .position(x: rest.x, y: cubesLanded ? rest.y : -120)
                     .animation(.spring(duration: 0.85, bounce: 0.52)
-                                .delay(0.1 + Double(i) * 0.11),
+                                .delay(0.1 + Double(i) * 0.075),
                                value: cubesLanded)
             }
         }
