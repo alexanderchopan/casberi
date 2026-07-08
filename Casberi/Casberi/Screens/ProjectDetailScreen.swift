@@ -64,10 +64,10 @@ struct ProjectDetailScreen: View {
                 Image(systemName: "pencil")
             }
             .tint(DS.tint)
-            .accessibilityLabel("Rename project")
+            .accessibilityLabel("Rename tag")
         }
         .alert("Rename \(projectName)", isPresented: $renaming) {
-            TextField("Project name", text: $newName)
+            TextField("New name", text: $newName)
             Button("Rename") { rename() }
             Button("Cancel", role: .cancel) {}
         } message: {

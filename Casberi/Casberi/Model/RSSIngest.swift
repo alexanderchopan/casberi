@@ -90,8 +90,7 @@ enum RSSIngest {
         defer { running = false }
         var reachedAny = false
 
-        var existing = Set(((try? context.fetch(FetchDescriptor<Thing>())) ?? [])
-            .compactMap(\.sourceRef))
+        var existing = IngestSupport.existingSourceRefs(context)
         var added = 0
 
         for feed in store.feeds {

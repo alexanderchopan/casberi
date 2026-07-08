@@ -159,16 +159,12 @@ enum SpotifyIngest {
         defer { running = false }
 
         guard let token = await SpotifyAuth.accessToken() else { return nil }
-        var request = URLRequest(url: URL(string: "https://api.spotify.com/v1/me/tracks?limit=30")!)
-        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        guard let (data, response) = try? await URLSession.shared.data(for: request),
-              (response as? HTTPURLResponse)?.statusCode == 200,
-              let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+        guard let root = await IngestSupport.getJSON(
+            "https://api.spotify.com/v1/me/tracks?limit=30",
+            auth: "Bearer \(token)") as? [String: Any],
               let items = root["items"] as? [[String: Any]] else { return nil }
 
-        let existing = Set(((try? context.fetch(FetchDescriptor<Thing>())) ?? [])
-            .compactMap(\.sourceRef))
-        let iso = ISO8601DateFormatter()
+        let existing = IngestSupport.existingSourceRefs(context)
         var added = 0
 
         for item in items {
@@ -180,7 +176,7 @@ enum SpotifyIngest {
             let artists = ((track["artists"] as? [[String: Any]]) ?? [])
                 .compactMap { $0["name"] as? String }.joined(separator: ", ")
             let link = ((track["external_urls"] as? [String: Any])?["spotify"] as? String) ?? ""
-            let when = (item["added_at"] as? String).flatMap { iso.date(from: $0) }
+            let when = IngestSupport.isoDate(item["added_at"])
 
             let thing = Thing(
                 kind: .link,

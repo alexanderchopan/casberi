@@ -16,19 +16,16 @@ struct RSSScreen: View {
 
     /// The RSS things already in the corpus — newest first.
     private var recent: [Thing] {
-        var descriptor = FetchDescriptor<Thing>(
-            predicate: #Predicate { $0.source == "RSS" },
-            sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]
-        )
-        descriptor.fetchLimit = 12
-        return (try? modelContext.fetch(descriptor)) ?? []
+        recentBridgeThings(source: "RSS", context: modelContext)
     }
 
     var body: some View {
         List {
             if !rss.feeds.isEmpty { followingSection }
             addSection
-            if !recent.isEmpty { recentSection }
+            if !recent.isEmpty {
+                RecentThingsSection(header: "RECENT", things: recent, titleLines: 1)
+            }
             footerSection
         }
         .listStyle(.insetGrouped)
@@ -79,53 +76,15 @@ struct RSSScreen: View {
 
     private var addSection: some View {
         Section {
-            HStack(spacing: DS.Space.s2) {
-                TextField("Site or feed URL", text: $newFeed)
-                    .dsText(.callout15)
-                    .foregroundStyle(DS.textPrimary)
-                    .tint(DS.tint)
-                    .keyboardType(.URL)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-                    .focused($fieldFocused)
-                    .onSubmit(addFeed)
-                Button("Follow", action: addFeed)
-                    .dsText(.label12)
-                    .foregroundStyle(newFeed.isEmpty ? DS.textTertiary : .white)
-                    .padding(.horizontal, DS.Space.s3)
-                    .frame(height: 28)
-                    .background(newFeed.isEmpty ? AnyShapeStyle(DS.gray200) : AnyShapeStyle(DS.tint),
-                                in: Capsule(style: .continuous))
-                    .disabled(newFeed.isEmpty)
-                    .buttonStyle(.plain)
-            }
-            .listRowBackground(DS.surfaceSheet)
+            BridgeFieldRow(placeholder: "Site or feed URL", text: $newFeed,
+                           buttonLabel: "Follow", keyboard: .URL,
+                           focus: $fieldFocused, action: addFeed)
         } header: {
             Text("ADD A FEED").dsText(.label12).kerning(0.7)
                 .foregroundStyle(DS.textTertiary)
         } footer: {
             Text("Paste a site's feed URL — new posts land in your feed as links.")
                 .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-        }
-    }
-
-    // MARK: - Recent
-
-    private var recentSection: some View {
-        Section {
-            ForEach(recent) { thing in
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(thing.title)
-                        .dsText(.body17).foregroundStyle(DS.textPrimary)
-                        .lineLimit(1)
-                    Text(LiveTimeText.short(thing.capturedAt))
-                        .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-                }
-                .listRowBackground(DS.surfaceSheet)
-            }
-        } header: {
-            Text("RECENT").dsText(.label12).kerning(0.7)
-                .foregroundStyle(DS.textTertiary)
         }
     }
 
@@ -159,13 +118,7 @@ struct RSSScreen: View {
         }
         lastResult = added > 0 ? "\(added) new" : "Up to date"
         let proof = added > 0 ? "\(added) posts in" : "Synced just now"
-        if let existing = store.bridges.first(where: { $0.name == "RSS" }) {
-            store.reconnect(existing.id, proof: proof)
-        } else {
-            store.bridges.append(BridgeApp(
-                id: "rss", name: "RSS", status: .connected,
-                statusLine: proof, can: ["Reads the feeds you follow."]
-            ))
-        }
+        store.registerConnected(id: "rss", name: "RSS", proof: proof,
+                                can: ["Reads the feeds you follow."])
     }
 }

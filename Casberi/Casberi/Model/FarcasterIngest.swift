@@ -57,17 +57,17 @@ enum FarcasterIngest {
         defer { running = false }
 
         if store.fid == 0 {
-            guard let proof = await get("\(node)/v1/userNameProofByName?name=\(store.username)"),
+            guard let proof = await IngestSupport.getJSON(
+                "\(node)/v1/userNameProofByName?name=\(store.username)") as? [String: Any],
                   let fid = proof["fid"] as? Int else { return nil }
             store.fid = fid
         }
 
-        guard let root = await get(
-            "\(node)/v1/castsByFid?fid=\(store.fid)&pageSize=30&reverse=true"),
+        guard let root = await IngestSupport.getJSON(
+            "\(node)/v1/castsByFid?fid=\(store.fid)&pageSize=30&reverse=true") as? [String: Any],
               let messages = root["messages"] as? [[String: Any]] else { return nil }
 
-        let existing = Set(((try? context.fetch(FetchDescriptor<Thing>())) ?? [])
-            .compactMap(\.sourceRef))
+        let existing = IngestSupport.existingSourceRefs(context)
         var added = 0
 
         for message in messages {
@@ -83,11 +83,10 @@ enum FarcasterIngest {
             // farcaster.xyz's canonical short link: the name + hash prefix.
             let short = String(hash.prefix(10))
             let when = (data["timestamp"] as? Double).map { epoch.addingTimeInterval($0) }
-            let title = text.count > 80 ? String(text.prefix(80)) + "…" : text
 
             let thing = Thing(
                 kind: .chat,
-                title: title.replacingOccurrences(of: "\n", with: " "),
+                title: IngestSupport.titleLine(text),
                 content: "https://farcaster.xyz/\(FarcasterStore.shared.username)/\(short)",
                 source: "Farcaster",
                 capturedAt: when ?? .now,
@@ -99,12 +98,5 @@ enum FarcasterIngest {
         }
         if added > 0 { try? context.save() }
         return added
-    }
-
-    private static func get(_ url: String) async -> [String: Any]? {
-        guard let u = URL(string: url),
-              let (data, response) = try? await URLSession.shared.data(from: u),
-              (response as? HTTPURLResponse)?.statusCode == 200 else { return nil }
-        return (try? JSONSerialization.jsonObject(with: data)) as? [String: Any]
     }
 }

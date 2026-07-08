@@ -79,8 +79,8 @@ struct BridgeDestinationView: View {
         case .zerion:         ZerionScreen()
         case .rss:            RSSScreen()
         case .chatgpt:        ChatGPTImportScreen()
-        case .bluesky:        BlueskyScreen()
-        case .farcaster:      FarcasterScreen()
+        case .bluesky:        HandleSetupScreen(bridge: .bluesky)
+        case .farcaster:      HandleSetupScreen(bridge: .farcaster)
         case .token(let b):   TokenSetupScreen(bridge: b)
         case .detail(let id): BridgeDetailScreen(bridgeID: id)
         }
