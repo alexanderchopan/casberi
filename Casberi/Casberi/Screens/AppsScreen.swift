@@ -266,7 +266,16 @@ struct AppsScreen: View {
                 name: offer.name,
                 brand: BridgeGlyph.color(for: offer.name),
                 verb: .connect
-            ) { BridgeConnect.connect(offer, store: store, context: modelContext) }
+            ) {
+                // Setup bridges (paste an address/token/handle) route to their
+                // setup screen; only the system-permission bridges connect in
+                // one tap, same split the chart uses.
+                if offer.needsSetup {
+                    setupRoute = BridgeRouter.destination(forOffer: offer.name)
+                } else {
+                    BridgeConnect.connect(offer, store: store, context: modelContext)
+                }
+            }
         case .pair:
             storyCardBody(
                 eyebrow: "Pair a client",
