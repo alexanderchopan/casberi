@@ -198,6 +198,9 @@ extension View {
 /// composition below stays on the quiet page.
 private struct GenHero: View {
     let el: GenEl
+    /// Home's scroll ignores the top safe area (the cover bleeds); the quiet
+    /// hero must clear it — plus the floating doors pill — itself.
+    @Environment(\.genCoverTopInset) private var topInset
 
     private var field: Color {
         let hour = Calendar.current.component(.hour, from: .now)
@@ -236,7 +239,9 @@ private struct GenHero: View {
                 .foregroundStyle(DS.textSecondary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.init(top: DS.Space.s8, leading: DS.Space.s4,
+        // topInset clears the status bar; s8 + 24 clears the doors pill row
+        // so the headline never runs beneath it.
+        .padding(.init(top: topInset + DS.Space.s8 + 24, leading: DS.Space.s4,
                        bottom: DS.Space.s6, trailing: DS.Space.s4))
     }
 }
