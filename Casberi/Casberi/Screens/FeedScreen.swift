@@ -87,14 +87,24 @@ struct FeedScreen: View {
     }
 
     /// Sources by thing count — the ones that matter sit first; the tail
-    /// scrolls. (Chips, never a dropdown: menus die.)
+    /// scrolls. (Chips, never a dropdown: menus die.) Every connected app earns
+    /// a chip even before anything has landed (a wallet you just followed, a
+    /// bridge mid-first-sync): 9 connected apps read as 9 filters, and an empty
+    /// one lands on its own "nothing yet" state rather than vanishing.
     private var sources: [String] {
         var counts: [String: Int] = [:]
         for thing in things { counts[thing.source, default: 0] += 1 }
-        let ordered = counts.sorted {
+        let byCount = counts.sorted {
             $0.value != $1.value ? $0.value > $1.value : $0.key < $1.key
         }.map(\.key)
-        return ["All"] + ordered
+        // Connected bridges with nothing landed yet trail the ones that have —
+        // present, filterable, alphabetical among themselves.
+        let quiet = bridges.bridges
+            .filter { $0.status == .connected }
+            .map(\.name)
+            .filter { counts[$0] == nil }
+            .sorted()
+        return ["All"] + byCount + quiet
     }
 
     private var pinned: [Thing] { visible.filter(\.pinned) }
@@ -338,7 +348,7 @@ struct FeedScreen: View {
                     PhotoCell(thing: thing, dayPill: firstOfDay ? dayLabel(thing.capturedAt) : nil)
                         .contentShape(Rectangle())
                         .matchedTransitionSource(id: thing.id, in: zoomNS)
-                        .onTapGesture { sheetThing = thing }
+                        .onTapGesture { DSHaptic.selection(); sheetThing = thing }
                 }
             }
             .listRowBackground(Color.clear)
@@ -411,7 +421,7 @@ struct FeedScreen: View {
                                 .foregroundStyle(DS.textTertiary)
                         }
                         .contentShape(Rectangle())
-                        .onTapGesture { withAnimation(DS.Motion.standard) { staleExpanded = true } }
+                        .onTapGesture { DSHaptic.selection(); withAnimation(DS.Motion.standard) { staleExpanded = true } }
                         .listRowBackground(DS.surfaceSheet)
                         .listRowSeparator(.hidden)
                     }
@@ -466,7 +476,7 @@ struct FeedScreen: View {
             .shadow(color: .black.opacity(lifted ? 0.2 : 0), radius: lifted ? 8 : 0)
             .contentShape(Rectangle())
             .matchedTransitionSource(id: thing.id, in: zoomNS)
-            .onTapGesture { sheetThing = thing }
+            .onTapGesture { DSHaptic.selection(); sheetThing = thing }
             // V3b (2026-07-07, supersedes the kind-color wash): rows are
             // NEUTRAL cards — the translucent kind wash read as murk. Color
             // moved into the tag text: the project's own stable hue.

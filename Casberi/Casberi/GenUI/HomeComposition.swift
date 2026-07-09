@@ -387,7 +387,9 @@ enum HomeComposition {
     }
 
     private static func row(id: String, _ t: Thing) -> String {
-        "\(id) = Row(\(q(t.title)), \(q(t.kind.typeTag)), \(q(t.source)), \(q(shortTime(t.capturedAt))))"
+        // The thingId (5th arg) is what makes the row openable on Home — a
+        // pinned link/token now opens its sheet instead of doing nothing.
+        "\(id) = Row(\(q(t.title)), \(q(t.kind.typeTag)), \(q(t.source)), \(q(shortTime(t.capturedAt))), \(q(t.id.uuidString)))"
     }
 
     private static func shortTime(_ date: Date) -> String {

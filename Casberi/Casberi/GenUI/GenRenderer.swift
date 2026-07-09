@@ -31,7 +31,9 @@ extension EnvironmentValues {
         get { self[GenZoomNSKey.self] }
         set { self[GenZoomNSKey.self] = newValue }
     }
-    /// Cover tap → the thing sheet (the surface resolves the id).
+    /// Open-a-thing tap → the thing sheet, keyed by id (the surface resolves
+    /// it). Named for its first caller, the cover; also carries pinned/threads
+    /// row taps on Home.
     var genCoverTap: ((String) -> Void)? {
         get { self[GenCoverTapKey.self] }
         set { self[GenCoverTapKey.self] = newValue }
@@ -312,9 +314,15 @@ private struct GenWidget: View {
     }
 }
 
-/// Row(title, tag, source, time)
+/// Row(title, tag, source, time, thingId?) — the last arg, when present, makes
+/// the row open its thing (Home's pinned + resurfaced rows had no tap, so a
+/// pinned token/link did nothing when clicked).
 private struct GenRow: View {
     let el: GenEl
+    @Environment(\.genCoverTap) private var openThing
+
+    private var thingID: String { el.str(4) }
+
     var body: some View {
         HStack(spacing: DS.Space.s3) {
             TagGlyph(tag: el.str(1), size: 24)
@@ -327,6 +335,12 @@ private struct GenRow: View {
         }
         .padding(.horizontal, DS.Space.s4)
         .padding(.vertical, DS.Space.s3)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            guard !thingID.isEmpty else { return }
+            DSHaptic.selection()
+            openThing?(thingID)
+        }
     }
 }
 
@@ -1116,7 +1130,7 @@ private struct GenCover: View {
             }
         }
         .contentShape(Rectangle())
-        .onTapGesture { if hasImage { coverTap?(thingID) } }
+        .onTapGesture { if hasImage { DSHaptic.selection(); coverTap?(thingID) } }
     }
 
     /// Bleed at the top (dateline zone), the page at the bottom (no seam).

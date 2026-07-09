@@ -391,6 +391,7 @@ struct ParseCard: View {
                             let active = chosen.contains(tag)
                             Chip(text: tag, style: active ? .tint : .neutral)
                                 .onTapGesture {
+                                    DSHaptic.selection()
                                     if active { chosen.remove(tag) } else { chosen.insert(tag) }
                                 }
                         }

@@ -429,23 +429,28 @@ struct ThingSheetView: View {
         confirmingVerb = nil
         switch verb.action {
         case .openURL(let url):
+            DSHaptic.selection()   // a read/hand-off out to the source app
             openURL(url)
         case .addToCalendar:
             do {
                 try await HandOff.addToCalendar(thing)
+                DSHaptic.success()
                 verbResult = "On your calendar"
-            } catch { verbResult = error.localizedDescription }
+            } catch { DSHaptic.error(); verbResult = error.localizedDescription }
         case .addToReminders:
             do {
                 try await HandOff.addToReminders(thing)
+                DSHaptic.success()
                 verbResult = "On your list"
-            } catch { verbResult = error.localizedDescription }
+            } catch { DSHaptic.error(); verbResult = error.localizedDescription }
         case .copyText:
             UIPasteboard.general.string = thing.content.isEmpty ? thing.title : thing.content
+            DSHaptic.success()
             verbResult = "Copied"
         case .markDone:
             thing.mark = .done
             try? modelContext.save()
+            DSHaptic.success()
             verbResult = "Done"
         case .approve:
             // Demo bridge: the decision lands locally; the gateway wire is M5.
@@ -456,6 +461,7 @@ struct ThingSheetView: View {
         case .deny:
             thing.mark = .done
             try? modelContext.save()
+            DSHaptic.success()
             verbResult = "Denied — your gateway was told"
         }
     }
