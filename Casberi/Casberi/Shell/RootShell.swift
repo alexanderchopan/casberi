@@ -74,7 +74,10 @@ struct RootShell: View {
                     Composer(isOpen: $composerOpen, draft: $draft,
                              onCommit: saveDraft, onCommitVoice: saveVoice,
                              answer: answerDocument,
-                             tagCandidates: projectTags, glassNamespace: glassNS)
+                             tagCandidates: projectTags,
+                             knownSources: { bridges.bridges.map(\.name) },
+                             onNavigate: navigate,
+                             glassNamespace: glassNS)
                         // A tag tile in an answer opens that tag's view: close
                         // the composer, land on Home, push the tag (the same
                         // destination the Home treemap opens).
@@ -341,6 +344,26 @@ struct RootShell: View {
 
     // MARK: - Capture (rung 1 write: the composer saves to us)
 
+    /// A typed ask that names a place — the same destinations the UI's own
+    /// taps reach: a tag view, a source's feed, a kind's feed.
+    private func navigate(_ intent: NavigateIntent) {
+        withAnimation(DS.Motion.standard) { composerOpen = false }
+        draft = ""
+        switch intent {
+        case .tag(let name):
+            tab = .home
+            HomeRoute.shared.openTag = name
+        case .source(let source):
+            FeedFilter.shared.source = source
+            FeedFilter.shared.tag = "All"
+            tab = .feed
+        case .kind(let kind):
+            FeedFilter.shared.source = "All"
+            FeedFilter.shared.tag = kind.typeTag
+            tab = .feed
+        }
+    }
+
     private func saveDraft(tags: [String]) {
         guard let thing = Capture.thing(from: draft) else { return }
         thing.tags.append(contentsOf: tags)   // parse-card candidates ride in
@@ -463,7 +486,8 @@ struct RootShell: View {
         if lookupVerbs.contains(where: q.contains) { return .lookup }
         // Otherwise a reflection/summary cue routes to prose.
         let synthesisCues = ["what's my", "whats my", "how was", "how's my", "hows my",
-                             "summar", "recap", "overview", "catch me up", "my week",
+                             "summar", "synthes", "digest", "tl;dr", "tldr",
+                             "recap", "overview", "catch me up", "my week",
                              "my day", "my month", "lately", "what did i do",
                              "what have i", "going on", "highlights"]
         if synthesisCues.contains(where: q.contains) { return .synthesis }

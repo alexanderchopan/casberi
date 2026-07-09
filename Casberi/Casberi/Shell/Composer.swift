@@ -22,6 +22,11 @@ struct Composer: View {
     var answer: (_ query: String, _ onProseDoc: @escaping ([String]) -> Void) async -> [String] = { _, _ in [] }
     /// Candidate project tags for the parse card, from the corpus.
     var tagCandidates: () -> [String] = { [] }
+    /// The connected sources ("Gmail", "Steam") — navigation asks match them.
+    var knownSources: () -> [String] = { [] }
+    /// A typed ask that names a place ("show my work stuff") — the shell
+    /// closes the composer and goes there.
+    var onNavigate: (NavigateIntent) -> Void = { _ in }
     /// The shell's glass namespace — pill and bubble share one glass identity,
     /// so open/close is a morph of the same substance, not a swap.
     var glassNamespace: Namespace.ID? = nil
@@ -388,6 +393,14 @@ struct Composer: View {
         } else if pasted {
             // Paste is a capture path — send keeps what came in.
             onCommit(Array(chosenTags))
+            close()
+        } else if let intent = NavigateCommand.parse(draft, tags: tagCandidates(),
+                                                     sources: knownSources()) {
+            // A place, named — go there. Reads only (a navigation), so no
+            // proposal needed; the composer closes and the shell moves.
+            DSHaptic.selection()
+            draft = ""
+            onNavigate(intent)
             close()
         } else if let command = OrganizeCommand.parse(draft) {
             // An organize command — propose, never execute. The card below

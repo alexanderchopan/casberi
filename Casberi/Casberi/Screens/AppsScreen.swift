@@ -118,18 +118,21 @@ struct AppsScreen: View {
     }
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: DS.Space.s6) {
-                if !connected.isEmpty { connectedStrip }
-                discoverDivide
-                if !stories.isEmpty {
-                    storyCarousel
-                    pageDots
+        ScrollViewReader { proxy in
+            ScrollView {
+                VStack(alignment: .leading, spacing: DS.Space.s6) {
+                    if !connected.isEmpty { connectedStrip }
+                    discoverDivide
+                    if !stories.isEmpty {
+                        storyCarousel
+                        pageDots
+                    }
+                    jumpChips(proxy)
+                    categoryShelves
                 }
-                categoryShelves
+                .padding(.vertical, DS.Space.s4)
+                .padding(.bottom, ShellMetrics.bottomInset)
             }
-            .padding(.vertical, DS.Space.s4)
-            .padding(.bottom, ShellMetrics.bottomInset)
         }
         .scrollIndicators(.hidden)
         .dsPageBackground()
@@ -338,6 +341,47 @@ struct AppsScreen: View {
     /// ("Soon") ones trail — the tier order `ranked` already carries.
     /// App Store grammar: a big header, three rows showing, swipe sideways for
     /// the rest — the shelf never grows tall, it grows wide.
+    /// The category chips, back as NAVIGATION (the filter version died with
+    /// the flat chart): a tap scrolls to that shelf. Only categories with
+    /// something to add appear — a chip always lands somewhere.
+    @ViewBuilder
+    private func jumpChips(_ proxy: ScrollViewProxy) -> some View {
+        let live = Self.categories.filter { cat in
+            ranked.contains { category(of: $0.offer) == cat.name }
+        }
+        if live.count > 1 {
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: DS.Space.s2) {
+                    ForEach(live, id: \.name) { cat in
+                        Button {
+                            DSHaptic.selection()
+                            withAnimation(DS.Motion.standard) {
+                                proxy.scrollTo("shelf-" + cat.name, anchor: .top)
+                            }
+                        } label: {
+                            HStack(spacing: DS.Space.s2) {
+                                Image(systemName: BridgeGlyph.symbol(for: cat.exemplar))
+                                    .font(.system(size: 15, weight: .medium))
+                                    .foregroundStyle(BridgeGlyph.color(for: cat.exemplar))
+                                Text(cat.name)
+                                    .dsText(.callout15).fontWeight(.medium)
+                                    .foregroundStyle(DS.textPrimary)
+                            }
+                            .padding(.horizontal, DS.Space.s3)
+                            .frame(minHeight: 44)
+                            .background(DS.surfaceSheet,
+                                        in: RoundedRectangle(cornerRadius: DS.Radius.control, style: .continuous))
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("Jump to \(cat.name)")
+                    }
+                }
+            }
+            .contentMargins(.horizontal, DS.Space.s4, for: .scrollContent)
+        }
+    }
+
     /// Which page each shelf is on — the header chevron advances it.
     @State private var shelfPage: [String: Int] = [:]
 
@@ -351,6 +395,7 @@ struct AppsScreen: View {
                         shelfHeader(cat.name, pageCount: pageCount)
                         shelfPages(apps, key: cat.name)
                     }
+                    .id("shelf-" + cat.name)
                 }
             }
         }
