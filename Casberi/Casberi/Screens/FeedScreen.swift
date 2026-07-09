@@ -33,6 +33,11 @@ struct FeedScreen: View {
     /// Bumped when the source chip changes — rows replay their shape's
     /// entrance (each shape arrives its own way, ruling 2026-07-07).
     @State private var shapeWave = 0
+    /// The last time the person left this screen — one timestamp, no
+    /// per-thing read state. Frozen into `newSince` on each visit so the
+    /// divider doesn't move while you look at it (ruling 2026-07-09).
+    @AppStorage("feed.lastSeen") private var lastSeenStamp = 0.0
+    @State private var newSince: Date?
     @Namespace private var zoomNS
     @Environment(\.openURL) private var openURL
 
@@ -86,14 +91,25 @@ struct FeedScreen: View {
             .compactMap { $0 }.joined(separator: " · ")
     }
 
-    /// Sources by thing count — the ones that matter sit first; the tail
-    /// scrolls. (Chips, never a dropdown: menus die.)
+    /// Sources ordered by TODAY's count first, then total, then name — the
+    /// apps moving right now lead the row; a quiet bridge's chip drifts back
+    /// instead of squatting up front on lifetime volume (ruling 2026-07-09).
+    /// (Chips, never a dropdown: menus die.)
     private var sources: [String] {
-        var counts: [String: Int] = [:]
-        for thing in things { counts[thing.source, default: 0] += 1 }
-        let ordered = counts.sorted {
-            $0.value != $1.value ? $0.value > $1.value : $0.key < $1.key
-        }.map(\.key)
+        var total: [String: Int] = [:]
+        var today: [String: Int] = [:]
+        for thing in things {
+            total[thing.source, default: 0] += 1
+            if Calendar.current.isDateInToday(thing.capturedAt) {
+                today[thing.source, default: 0] += 1
+            }
+        }
+        let ordered = total.keys.sorted {
+            let ta = today[$0] ?? 0, tb = today[$1] ?? 0
+            if ta != tb { return ta > tb }
+            if total[$0]! != total[$1]! { return total[$0]! > total[$1]! }
+            return $0 < $1
+        }
         return ["All"] + ordered
     }
 
@@ -117,6 +133,74 @@ struct FeedScreen: View {
             groups[label, default: []].append(thing)
         }
         return order.map { ($0, groups[$0] ?? []) }
+    }
+
+    // MARK: - Bundling (ruling 2026-07-09: volume compresses, never reorders)
+
+    /// A feed row in the All shape: a thing, or one row standing in for a
+    /// source's bulk arrivals that day.
+    private enum FeedRow: Identifiable {
+        case single(Thing)
+        case bundle(source: String, word: String, count: Int, newest: Date)
+        var id: String {
+            switch self {
+            case .single(let t): t.id.uuidString
+            case .bundle(let source, _, _, let newest):
+                "bundle-\(source)-\(newest.timeIntervalSince1970)"
+            }
+        }
+        var date: Date {
+            switch self {
+            case .single(let t): t.capturedAt
+            case .bundle(_, _, _, let newest): newest
+            }
+        }
+    }
+
+    /// Machine bulk bundles; human captures never do. A screenshot, a voice
+    /// note, or anything typed/pasted is one deliberate act each — an RSS
+    /// sync or a wallet backfill is one act producing many rows.
+    private func bundleable(_ t: Thing) -> Bool {
+        t.kind != .screenshot && t.kind != .voice && t.kind != .approval
+            && t.source != "You" && t.source != "Voice"
+    }
+
+    /// 4+ bundleable things from one source in one day collapse into a
+    /// BundleRow at the position of their newest member. Order is untouched
+    /// otherwise — compression, not ranking.
+    private var bundledDayGroups: [(String, [FeedRow])] {
+        dayGroups.map { label, dayThings in
+            var counts: [String: Int] = [:]
+            for t in dayThings where bundleable(t) { counts[t.source, default: 0] += 1 }
+            let bundledSources = Set(counts.filter { $0.value >= 4 }.keys)
+            var rows: [FeedRow] = []
+            var seen: Set<String> = []
+            for t in dayThings {
+                if bundleable(t), bundledSources.contains(t.source) {
+                    guard !seen.contains(t.source) else { continue }
+                    seen.insert(t.source)
+                    let members = dayThings.filter { bundleable($0) && $0.source == t.source }
+                    let kinds = Set(members.map(\.kind))
+                    let word = kinds.count == 1
+                        ? kinds.first!.typeTagPlural.lowercased() : "things"
+                    rows.append(.bundle(source: t.source, word: word,
+                                        count: members.count, newest: t.capturedAt))
+                } else {
+                    rows.append(.single(t))
+                }
+            }
+            return (label, rows)
+        }
+    }
+
+    /// The first row at-or-past the last-visit boundary — the "new since"
+    /// divider renders above it. Nil when nothing is new (no divider at the
+    /// very top) or everything is (no divider at the very bottom).
+    private var newBoundaryID: String? {
+        guard let newSince else { return nil }
+        let all = bundledDayGroups.flatMap(\.1)
+        guard let first = all.first, first.date > newSince else { return nil }
+        return all.first(where: { $0.date <= newSince })?.id
     }
 
     // MARK: - Body
@@ -246,6 +330,8 @@ struct FeedScreen: View {
         // engine when its chip lands (skeleton entrance, same as Home).
         .onAppear {
             streamBlock()
+            // Freeze the boundary for this visit; leaving re-stamps it.
+            newSince = lastSeenStamp > 0 ? Date(timeIntervalSince1970: lastSeenStamp) : nil
             #if DEBUG
             // `-feedSource Zerion` lands on that chip for screenshots.
             if let src = UserDefaults.standard.string(forKey: "feedSource") {
@@ -253,6 +339,7 @@ struct FeedScreen: View {
             }
             #endif
         }
+        .onDisappear { lastSeenStamp = Date.now.timeIntervalSince1970 }
         .onChange(of: filter.source) {
             shapeWave += 1
             streamBlock()
@@ -297,10 +384,91 @@ struct FeedScreen: View {
         default:
             if filter.tag != "All" && shape == .all {
                 daySection(filterLabel, unpinned)
+            } else if shape == .all {
+                // All is where volume floods — bundles + the new-since
+                // divider live here. A single source's shape IS that source;
+                // bundling there would collapse the whole screen into one row.
+                bundledSections
             } else {
                 groupedSections(dayGroups)
             }
         }
+    }
+
+    @ViewBuilder
+    private var bundledSections: some View {
+        ForEach(bundledDayGroups, id: \.0) { label, rows in
+            Section {
+                ForEach(Array(rows.enumerated()), id: \.element.id) { i, row in
+                    if row.id == newBoundaryID { newSinceDivider }
+                    switch row {
+                    case .single(let thing):
+                        shapedListRow(thing, index: i)
+                    case .bundle(let source, let word, let count, let newest):
+                        bundleListRow(source: source, word: word, count: count,
+                                      newest: newest, index: i)
+                    }
+                }
+            } header: {
+                HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+                    Text(label).dsText(.heading17).foregroundStyle(DS.textPrimary)
+                    // The count stays the day's true total — a bundle
+                    // compresses rows, never the record.
+                    Text("\(dayGroups.first(where: { $0.0 == label })?.1.count ?? rows.count)")
+                        .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                        .contentTransition(.numericText())
+                }
+                .textCase(nil)
+                .padding(.leading, DS.Space.s4)
+                .padding(.vertical, DS.Space.s1)
+            }
+        }
+    }
+
+    /// The boundary line — words only, no drawn rule (the no-hairlines law).
+    /// Everything above it arrived since you last left this screen.
+    private var newSinceDivider: some View {
+        Text("New since \(sinceLabel)")
+            .dsText(.label12)
+            .foregroundStyle(DS.tint)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, DS.Space.s1)
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
+    }
+
+    private var sinceLabel: String {
+        guard let newSince else { return "" }
+        if Calendar.current.isDateInToday(newSince) {
+            return newSince.formatted(date: .omitted, time: .shortened)
+        }
+        if Calendar.current.isDateInYesterday(newSince) { return "yesterday" }
+        return newSince.formatted(.dateTime.weekday(.wide))
+    }
+
+    /// A bundle in the list: same card treatment as a thing row; the tap
+    /// opens the source's own shape (where volume is designed to live) —
+    /// no swipes, nothing here is a single thing to pin or open.
+    private func bundleListRow(source: String, word: String, count: Int,
+                               newest: Date, index: Int) -> some View {
+        BundleRow(source: source, count: count, word: word, newest: newest)
+            .modifier(RowEntrance(index: index, wave: shapeWave, style: entranceStyle))
+            .contentShape(Rectangle())
+            .onTapGesture {
+                DSHaptic.selection()
+                withAnimation(DS.Motion.standard) { filter.source = source }
+            }
+            .listRowBackground(
+                RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous)
+                    .fill(DS.surfaceSheet)
+                    .padding(.horizontal, DS.Space.s4)
+                    .padding(.vertical, DS.Space.s1)
+            )
+            .listRowInsets(.init(top: DS.Space.s2,
+                                 leading: DS.Space.s4 + DS.Space.s3,
+                                 bottom: DS.Space.s2,
+                                 trailing: DS.Space.s4 + DS.Space.s3))
+            .listRowSeparator(.hidden)
     }
 
     @ViewBuilder
@@ -364,8 +532,18 @@ struct FeedScreen: View {
     }
 
     /// The next upcoming event — its ROW carries the emphasis (no hero).
+    /// Events only: in the All shape other kinds share the list, and only
+    /// an event's capture time means "starts at".
     private var nextEventID: UUID? {
-        unpinned.filter { $0.capturedAt > .now }.min { $0.capturedAt < $1.capturedAt }?.id
+        unpinned.filter { $0.kind == .event && $0.capturedAt > .now }
+            .min { $0.capturedAt < $1.capturedAt }?.id
+    }
+
+    /// Live right now, from the source's own current-live set (Twitch
+    /// refreshes it every foreground) — never inferred from row age.
+    private func isLive(_ thing: Thing) -> Bool {
+        thing.source == "Twitch"
+            && thing.sourceRef.map { TwitchIngest.liveRefs.contains($0) } ?? false
     }
 
     /// Gmail: what's waiting on you, capped at two (mock G1).
@@ -525,7 +703,13 @@ struct FeedScreen: View {
             case .reminders: CheckRow(thing: thing, onToggle: { toggleReminder(thing) })
             case .chat where thing.pinned || thing.mark == .doing:
                 TakeawayCard(thing: thing)
-            default:         BandRow(thing: thing)
+            default:
+                // Perishables show their clock everywhere (ruling 2026-07-09):
+                // the next event's countdown and a stream's Live state ride
+                // the row in All too, not just in their source's shape.
+                BandRow(thing: thing,
+                        emphasized: thing.id == nextEventID,
+                        live: isLive(thing))
             }
         }
     }

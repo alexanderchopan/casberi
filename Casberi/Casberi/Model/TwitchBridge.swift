@@ -133,6 +133,15 @@ enum TwitchIngest {
 
     @MainActor private static var running = false
 
+    /// The streams live as of the LAST sync — the feed's "Live" indicator
+    /// reads this set, so a row only claims live while Twitch itself said so
+    /// (refreshed every foreground via BridgeRefresh). Ended streams simply
+    /// drop out; their things stay as records with their timestamps.
+    private static let liveKey = "twitch.live.refs"
+    static var liveRefs: Set<String> {
+        Set(UserDefaults.standard.stringArray(forKey: liveKey) ?? [])
+    }
+
     /// Followed channels that are LIVE right now — each stream lands once
     /// (the ref is the stream id, which changes per broadcast).
     @MainActor
@@ -153,17 +162,21 @@ enum TwitchIngest {
 
         let existing = IngestSupport.existingSourceRefs(context)
         var added = 0
+        var liveNow: [String] = []
 
         for stream in streams {
             guard let id = stream["id"] as? String,
                   let name = stream["user_name"] as? String,
                   let login = stream["user_login"] as? String else { continue }
             let ref = "twitch:\(id)"
+            liveNow.append(ref)
             guard !existing.contains(ref) else { continue }
             let game = (stream["game_name"] as? String) ?? ""
+            // Sentence case (caps law) — the feed's Live indicator carries
+            // the state; the title just names who and what.
             let thing = Thing(
                 kind: .link,
-                title: game.isEmpty ? "LIVE: \(name)" : "LIVE: \(name) — \(game)",
+                title: game.isEmpty ? "\(name) live" : "\(name) live — \(game)",
                 content: "https://twitch.tv/\(login)",
                 source: "Twitch",
                 capturedAt: IngestSupport.isoDate(stream["started_at"]) ?? .now,
@@ -173,6 +186,7 @@ enum TwitchIngest {
             SpotlightIndex.index([thing])
             added += 1
         }
+        UserDefaults.standard.set(liveNow, forKey: liveKey)
         if added > 0 { try? context.save() }
         return added
     }

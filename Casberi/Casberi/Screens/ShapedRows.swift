@@ -19,6 +19,11 @@ import Photos
 struct BandRow: View {
     let thing: Thing
     var emphasized: Bool = false
+    /// A perishable thing that is live RIGHT NOW (a Twitch stream) — the
+    /// right stack carries a green dot + "Live" instead of a timestamp.
+    /// Honest by construction: the caller derives it from the source's own
+    /// current-live set, never from the row's age.
+    var live: Bool = false
     @Environment(\.colorScheme) private var scheme
 
     private var done: Bool { thing.mark == .done }
@@ -60,7 +65,12 @@ struct BandRow: View {
                 .lineLimit(1)
                 .frame(maxWidth: .infinity, alignment: .leading)
             VStack(alignment: .trailing, spacing: 1) {
-                if let countdown {
+                if live {
+                    HStack(spacing: 4) {
+                        Circle().fill(DS.confirm).frame(width: 6, height: 6)
+                        Text("Live").dsText(.label12).foregroundStyle(DS.confirm)
+                    }
+                } else if let countdown {
                     Text(countdown).dsText(.label12).foregroundStyle(DS.tint)
                 } else {
                     LiveTimeText(date: thing.capturedAt)
@@ -72,6 +82,35 @@ struct BandRow: View {
                         .lineLimit(1)
                 }
             }
+        }
+        .padding(.vertical, DS.Space.s2)
+    }
+}
+
+
+// MARK: - Bundle — machine bulk, compressed (ruling 2026-07-09)
+
+/// One row standing for a source's bulk arrivals in a day — "Wallet · 14
+/// transactions". Same band anatomy, count in the title, newest time on the
+/// right. Compression, never ranking: the rows still exist, one tap away in
+/// the source's own shape (the Reminders "Older" collapse, applied to volume).
+struct BundleRow: View {
+    let source: String
+    let count: Int
+    /// The kind's plural when the bundle is uniform ("transactions"),
+    /// "things" when mixed.
+    let word: String
+    let newest: Date
+
+    var body: some View {
+        HStack(spacing: DS.Space.s3) {
+            BridgeIcon(name: source, size: 26)
+            Text("\(source) · \(count) \(word)")
+                .dsText(.body17)
+                .foregroundStyle(DS.textPrimary)
+                .lineLimit(1)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            LiveTimeText(date: newest)
         }
         .padding(.vertical, DS.Space.s2)
     }

@@ -603,3 +603,12 @@ The protocol is a commodity; every load-bearing choice here is product and hones
 **In-app surface.** A connected MCP client is just another entry in Apps — bridge-shaped, with presence — and its writes are just approvals in Feed. No new surface is invented; MCP reuses the bridge + approval grammar already shipped, which is the whole reason those were built agent-first.
 
 **Sequencing (unchanged, now with the fork closed).** Enrollment → M1 CloudKit sync → Goal-3 server + pairing → MCP server on top. It is deliberately one of the last things built, because everything it stands on is enrollment- and sync-blocked — but the design leads the build by a wide margin, which is correct for the one milestone where the thinking is the hard part.
+
+## 35. Feed volume rulings (2026-07-09)
+
+Four rulings from the first real-corpus flood (one wallet connect landed 100 transactions over the saved articles and photos):
+
+- **Bundling — volume compresses, never reorders.** In the All shape, 4+ bundleable things from one source in one day collapse into one band row ("Wallet · 14 transactions"); tap opens that source's chip, whose shape is where volume is designed to live. Human capture kinds never bundle (screenshot, voice, approval, anything from You) — each is one deliberate act; machine bulk (transactions, synced articles) is one act producing many rows. The day header keeps the true total. No ranking, no algorithmic feed — the Reminders "Older" collapse, applied to arrival volume. Single-source shapes never bundle (the shape IS the source).
+- **New-since divider.** One timestamp (last time the person left Feed), one text row at the boundary — "New since 9:41 PM". No per-thing read state, no drawn line (hairline law). Frozen per visit so it doesn't move while you look.
+- **Perishables show their clock everywhere.** The next event's countdown and a Twitch stream's Live state ride their rows in All, not just in their source's shape. Live is read from the source's own current-live set (refreshed each foreground), never inferred from row age — a row must never claim live longer than the source did.
+- **Chips order by today first.** Source chips sort by today's count, then total, then name — the apps moving now lead; lifetime volume alone doesn't hold the front.
