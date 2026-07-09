@@ -42,6 +42,16 @@ final class ShellChrome {
     var popHome = 0
     var popFeed = 0
 
+    /// True only when Home itself pushed the person into Feed (a map cell,
+    /// a source jump) — never on an ordinary tab tap. Feed's back arrow
+    /// reads this so it appears only when it means something (2026-07-09):
+    /// tabs aren't hierarchical, so "back" has no meaning otherwise. Cleared
+    /// on any manual tab switch, and by the arrow itself.
+    var jumpedFromHome = false
+    /// Bumped to ask RootShell to switch to Home — the arrow's own tab
+    /// can't hold a binding to `tab`, so it asks the way popHome/popFeed do.
+    var goHomeRequest = 0
+
     func flash(_ text: String, action: ToastAction? = nil, seconds: Double = 2) {
         // Replacing an in-flight toast crossfades (id change), never stacks.
         withAnimation(DS.Motion.standard) {

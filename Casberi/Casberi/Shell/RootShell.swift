@@ -136,6 +136,9 @@ struct RootShell: View {
             }
         }
         .animation(DS.Motion.standard, value: composerOpen)
+        // Feed's back arrow asks this way (it can't hold a binding to
+        // `tab`) — same shape as popHome/popFeed.
+        .onChange(of: chrome.goHomeRequest) { withAnimation(DS.Motion.standard) { tab = .home } }
         .dsSensoryFeedback()
         .environment(bridges)
         .environment(chrome)

@@ -55,6 +55,10 @@ struct GlassTabBar: View {
                         case .feed: chrome.popFeed += 1
                         }
                     } else {
+                        // A deliberate tab tap always supersedes a stale jump
+                        // — the back arrow only means something right after
+                        // Home caused the switch, never after this.
+                        chrome.jumpedFromHome = false
                         withAnimation(DS.Motion.standard) { selection = tab }
                     }
                 } label: {

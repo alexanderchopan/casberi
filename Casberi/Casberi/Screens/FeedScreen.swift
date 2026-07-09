@@ -211,6 +211,27 @@ struct FeedScreen: View {
                 .navigationTitle("Feed")
                 .navigationBarTitleDisplayMode(.large)
                 .toolbar {
+                    // Only when Home itself caused this switch (a source
+                    // jump) — never on an ordinary tab visit. Tabs aren't
+                    // hierarchical, so "back" means nothing otherwise
+                    // (report 2026-07-09).
+                    if chrome.jumpedFromHome {
+                        ToolbarItem(placement: .topBarLeading) {
+                            Button {
+                                DSHaptic.selection()
+                                chrome.jumpedFromHome = false
+                                withAnimation(DS.Motion.standard) {
+                                    filter.source = "All"
+                                    filter.tag = "All"
+                                }
+                                chrome.goHomeRequest += 1
+                            } label: {
+                                Image(systemName: "chevron.left")
+                                    .font(.system(size: 17, weight: .semibold))
+                            }
+                            .tint(DS.textPrimary)
+                        }
+                    }
                     // The shell's doors ride every tab root (ruling 2026-07-06)
                     // — Feed had no way to Apps/Settings without visiting Home.
                     TopDoors(onSettings: { doorPush = .settings },

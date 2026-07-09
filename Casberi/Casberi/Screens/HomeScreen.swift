@@ -79,6 +79,9 @@ struct HomeScreen: View {
                 if !isTag, things.contains(where: { $0.source == name }) {
                     FeedFilter.shared.source = name
                     FeedFilter.shared.tag = "All"
+                    // Home caused this switch — Feed's back arrow only
+                    // appears when that's true (2026-07-09).
+                    chrome.jumpedFromHome = true
                     if let url = URL(string: "casberi://feed") { openURL(url) }
                 } else {
                     openProject = ProjectRoute(name: name)

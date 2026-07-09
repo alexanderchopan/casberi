@@ -165,7 +165,7 @@ struct SettingsScreen: View {
             // Dev-facing on purpose: TestFlight reports become a screenshot
             // of on-device facts instead of a description (2026-07-09).
             TileSpec(title: "Diagnostics",
-                     value: "Check what's failing",
+                     value: "Test and report",
                      action: { diagnosticsOpen = true }),
         ].sorted { $0.title < $1.title }
     }
@@ -327,7 +327,7 @@ struct HomeCoverSheet: View {
                         DSHaptic.tap()
                         withAnimation(DS.Motion.standard) { store.clear() }
                     } label: {
-                        Text("Remove — go back to the day's photo")
+                        Text("Reset to default")
                             .dsText(.callout15).foregroundStyle(DS.destructive)
                     }
                     .buttonStyle(.plain)
