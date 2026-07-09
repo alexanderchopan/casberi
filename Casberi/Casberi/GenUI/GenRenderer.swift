@@ -1073,6 +1073,18 @@ private struct GenCover: View {
     /// means "this just happened," a banner means "this is what I chose"
     /// (ruling 2026-07-09). It isn't a thing, so it never opens a sheet.
     private var isBanner: Bool { thingID == "banner" }
+
+    /// A color banner paints SOLID, full voice — the photo scrims exist to
+    /// make text legible over busy images; on a flat color they just washed
+    /// it out (report 2026-07-09). White ink on a vivid primary is the quiet
+    /// cover's own proven treatment.
+    private var bannerColor: Color? {
+        guard isBanner, HomeCoverStore.shared.kind == .color,
+              let name = HomeCoverStore.shared.colorName,
+              let swatch = HomeCoverStore.swatches.first(where: { $0.name == name })
+        else { return nil }
+        return Color(hex: swatch.hex)
+    }
     private var photoTheme: Bool { ThemeStore.shared.backgroundPhoto != nil }
 
     /// The quiet cover's wash color. Nil while the document is still
@@ -1127,7 +1139,11 @@ private struct GenCover: View {
     private var canvas: some View {
         ZStack(alignment: .bottomLeading) {
             // Canvas: the image under its scrims, or the quiet themed gradient.
-            if hasImage {
+            if let bannerColor {
+                // A chosen color: solid, full voice, no scrims (they exist
+                // for busy photos and only wash a flat field out).
+                bannerColor
+            } else if hasImage {
                 DS.fillFaint   // the pre-image skeleton — same height, no jump
                 if let image {
                     GeometryReader { geo in

@@ -11,7 +11,6 @@ struct SettingsScreen: View {
     /// Drives the Data tile's badge: a green lock on device, a blue cloud once
     /// the person turns iCloud sync on.
     @AppStorage("icloud.sync") private var icloudSync = false
-    @State private var themeOpen = false
     @State private var diagnosticsOpen = false
     @State private var detail: AccountDetail?
     @State private var avatarPickerOpen = false
@@ -40,7 +39,6 @@ struct SettingsScreen: View {
             .dsPageBackground()
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.large)
-            .sheet(isPresented: $themeOpen) { ThemeSheet() }
             .sheet(isPresented: $diagnosticsOpen) {
                 NavigationStack { DiagnosticsScreen() }
             }
@@ -88,6 +86,9 @@ struct SettingsScreen: View {
             .onAppear {
                 if UserDefaults.standard.bool(forKey: "openDiagnostics") {
                     diagnosticsOpen = true
+                }
+                if UserDefaults.standard.bool(forKey: "openBanner") {
+                    coverDialogOpen = true
                 }
                 if let raw = UserDefaults.standard.string(forKey: "accountDetail"),
                    let which = AccountDetail(rawValue: raw) {
@@ -142,14 +143,21 @@ struct SettingsScreen: View {
     /// Group two — the app itself: housekeeping, rarely visited. A–Z.
     private var secondaryTiles: [TileSpec] {
         [
+            // A binary choice earns a tap, not a tray with one empty screen's
+            // worth of nothing below two chips (report 2026-07-09) — the tile
+            // itself flips, and the icon states which way.
             TileSpec(title: "Theme",
                      value: ThemeStore.shared.summary,
-                     action: { themeOpen = true }),
+                     badge: (ThemeStore.shared.isLight ? "sun.max.fill" : "moon.fill", DS.textSecondary),
+                     action: {
+                         DSHaptic.tap()
+                         withAnimation(DS.Motion.standard) { ThemeStore.shared.isLight.toggle() }
+                     }),
             // An explicit choice for Home's cover, same shape as Avatar
             // (goal 6: one image, owned locally) — it always wins over the
             // day's newest screenshot, so a fresh capture never leads Home
             // uninvited (2026-07-09).
-            TileSpec(title: "Header",
+            TileSpec(title: "Banner",
                      value: HomeCoverStore.shared.banner == nil ? "A photo or a color" : "",
                      avatar: HomeCoverStore.shared.banner,
                      badge: HomeCoverStore.shared.banner == nil ? ("photo", DS.textTertiary) : nil,
@@ -295,33 +303,6 @@ struct DSTileButtonStyle: ButtonStyle {
 /// Appearance — ONE knob (ruling 2026-07-06: the background/photo picker
 /// complicated things and added too much variation): light or dark. The
 /// fixed Casberi blue stays the only accent (ThemeStore).
-struct ThemeSheet: View {
-    var body: some View {
-        let store = ThemeStore.shared
-        DSTray(title: "Appearance", height: 180) {
-            HStack(spacing: DS.Space.s2) {
-                modeChip("Dark", active: !store.isLight) { store.isLight = false }
-                modeChip("Light", active: store.isLight) { store.isLight = true }
-                Spacer()
-            }
-        }
-    }
-
-    private func modeChip(_ label: String, active: Bool, onTap: @escaping () -> Void) -> some View {
-        Text(label)
-            .dsText(.label12)
-            .foregroundStyle(active ? DS.page : DS.textSecondary)
-            .padding(.horizontal, DS.Space.s4)
-            .frame(height: 32)
-            .background(active ? DS.textPrimary : DS.gray100, in: Capsule(style: .continuous))
-            .onTapGesture {
-                DSHaptic.tap()
-                withAnimation(DS.Motion.standard) { onTap() }
-            }
-            .accessibilityLabel(label)
-    }
-}
-
 /// Home's cover — a photo or a curated color, always winning over the day's
 /// newest screenshot when set (2026-07-09). One tray for choose/change/
 /// remove, the same shape as every other picker in the app.
@@ -330,32 +311,17 @@ struct HomeCoverSheet: View {
     @Bindable private var store = HomeCoverStore.shared
 
     var body: some View {
-        DSTray(title: "Home cover", height: 260) {
+        DSTray(title: "Banner", height: 380) {
             VStack(alignment: .leading, spacing: DS.Space.s4) {
-                Text("A photo or a color, shown smaller than a live capture so the two never look alike.")
+                preview
+                Text("A photo or a color, always shown here — smaller than a live capture, so the two never look alike.")
                     .dsText(.callout15).foregroundStyle(DS.textSecondary)
-                HStack(spacing: DS.Space.s2) {
+                HStack(spacing: DS.Space.s3) {
                     ForEach(HomeCoverStore.swatches, id: \.name) { swatch in
                         swatchButton(swatch)
                     }
+                    photoSwatch
                 }
-                Button {
-                    DSHaptic.tap()
-                    onChoosePhoto()
-                } label: {
-                    HStack(spacing: DS.Space.s2) {
-                        Image(systemName: "photo")
-                            .font(.system(size: 15, weight: .medium))
-                        Text(store.kind == .photo ? "Change photo" : "Choose a photo")
-                            .dsText(.body17)
-                        Spacer()
-                    }
-                    .foregroundStyle(DS.textPrimary)
-                    .padding(.horizontal, DS.Space.s3)
-                    .frame(height: 44)
-                    .background(DS.fillFaint, in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
-                }
-                .buttonStyle(.plain)
                 if store.banner != nil {
                     Button(role: .destructive) {
                         DSHaptic.tap()
@@ -370,11 +336,59 @@ struct HomeCoverSheet: View {
         }
     }
 
+    /// WYSIWYG, not a swatch grid floating in the abstract — this is the
+    /// exact scrim/text treatment GenCover paints on Home, at the real
+    /// aspect the banner renders at.
+    /// A chosen color previews SOLID (the exact hex, no scrim — same rule
+    /// as GenCover); only a photo wears the text-legibility gradient.
+    private var previewColor: Color? {
+        guard store.kind == .color, let name = store.colorName,
+              let swatch = HomeCoverStore.swatches.first(where: { $0.name == name })
+        else { return nil }
+        return Color(hex: swatch.hex)
+    }
+
+    private var preview: some View {
+        ZStack(alignment: .bottomLeading) {
+            if let color = previewColor {
+                color
+            } else if let image = store.banner {
+                GeometryReader { geo in
+                    Image(uiImage: image)
+                        .resizable().scaledToFill()
+                        .frame(width: geo.size.width, height: geo.size.height)
+                        .clipped()
+                }
+                LinearGradient(colors: [.clear, .black.opacity(0.65)],
+                               startPoint: .center, endPoint: .bottom)
+            } else {
+                LinearGradient(colors: [DS.tint.mix(with: .white, by: 0.12),
+                                        DS.tint.mix(with: .black, by: 0.08)],
+                               startPoint: .top, endPoint: .bottom)
+            }
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Just landed").dsText(.label12).foregroundStyle(.white.opacity(0.7))
+                Text("Evening run").font(.system(size: 17, weight: .heavy)).foregroundStyle(.white)
+            }
+            .padding(DS.Space.s3)
+        }
+        .frame(height: 100)
+        .frame(maxWidth: .infinity)
+        .clipShape(RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+        .animation(DS.Motion.standard, value: store.colorName)
+    }
+
     private func swatchButton(_ swatch: (name: String, hex: String)) -> some View {
         let selected = store.kind == .color && store.colorName == swatch.name
         return Circle()
             .fill(Color(hex: swatch.hex))
-            .frame(width: 36, height: 36)
+            .frame(width: 44, height: 44)
+            .overlay(
+                Image(systemName: "checkmark")
+                    .font(.system(size: 15, weight: .bold))
+                    .foregroundStyle(.white)
+                    .opacity(selected ? 1 : 0)
+            )
             .overlay(
                 Circle().strokeBorder(DS.textPrimary, lineWidth: selected ? 2.5 : 0)
                     .padding(-3)
@@ -384,5 +398,26 @@ struct HomeCoverSheet: View {
                 withAnimation(DS.Motion.standard) { store.setColor(swatch) }
             }
             .accessibilityLabel(swatch.name)
+    }
+
+    private var photoSwatch: some View {
+        let selected = store.kind == .photo
+        return Circle()
+            .fill(DS.fillFaint)
+            .frame(width: 44, height: 44)
+            .overlay(
+                Image(systemName: "photo")
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundStyle(DS.textPrimary)
+            )
+            .overlay(
+                Circle().strokeBorder(DS.textPrimary, lineWidth: selected ? 2.5 : 0)
+                    .padding(-3)
+            )
+            .onTapGesture {
+                DSHaptic.tap()
+                onChoosePhoto()
+            }
+            .accessibilityLabel(store.kind == .photo ? "Change photo" : "Choose a photo")
     }
 }

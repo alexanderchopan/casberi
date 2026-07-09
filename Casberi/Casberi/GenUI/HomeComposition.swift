@@ -351,13 +351,12 @@ enum HomeComposition {
             ?? images.first { $0.capturedAt > .now.addingTimeInterval(-7 * 86_400) }
     }
 
-    /// "Monday · 14 things" / "Monday · Quiet so far" — the top edge earns
-    /// its space. Landed counts only; never obligations.
+    /// "Thursday, July 9" — the day, stated plainly (ruling 2026-07-09: the
+    /// landed count was noise for anyone with feeds — always a big number,
+    /// never news; the kind pills below already tell today's story, and the
+    /// quiet cover carries the quiet-day fact).
     private static func dateline(things: [Thing]) -> String {
-        let weekday = Date.now.formatted(.dateTime.weekday(.wide))
-        let today = things.filter { Calendar.current.isDateInToday($0.capturedAt) }.count
-        if today == 0 { return "\(weekday) · Quiet so far" }
-        return "\(weekday) · \(today) thing\(today == 1 ? "" : "s")"
+        Date.now.formatted(.dateTime.weekday(.wide).month(.wide).day())
     }
 
     /// True when the person set their own Home cover — it always wins over
