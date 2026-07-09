@@ -638,6 +638,17 @@ screens) was tried and retired 2026-07-06 for the same reason a
 banner stays Home-only and optional: one image, one screen, one clear
 purpose — not a return to that retired feature.
 
+## 36f. Home: the default cover is black, not a color (2026-07-09)
+
+The no-image cover (no chosen Banner, no lead screenshot) now paints
+black instead of a color. The earlier "Fantastical move" — the quiet
+cover wearing the lead thing's kind hue (a link day blue, a note day
+yellow) — is retired: with a feed-heavy corpus the newest thing is
+almost always a link, so the cover read as permanently Casberi blue.
+Black is the calm dark field the content floats on; a chosen Banner
+(Settings → Banner, a color or photo) is how color comes back, opt-in.
+The Banner tile's unset preview shows black to match.
+
 ## 36c. Home: the "Noticed" insight line is gone (2026-07-09)
 
 `insightLine()` was a plain deterministic rule (co-occurrence counting

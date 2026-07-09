@@ -362,9 +362,9 @@ struct HomeCoverSheet: View {
                 LinearGradient(colors: [.clear, .black.opacity(0.65)],
                                startPoint: .center, endPoint: .bottom)
             } else {
-                LinearGradient(colors: [DS.tint.mix(with: .white, by: 0.12),
-                                        DS.tint.mix(with: .black, by: 0.08)],
-                               startPoint: .top, endPoint: .bottom)
+                // The default cover is black, not blue (ruling 2026-07-09) —
+                // the preview shows what an unset banner actually paints.
+                Color.black
             }
             VStack(alignment: .leading, spacing: 2) {
                 Text("Just landed").dsText(.label12).foregroundStyle(.white.opacity(0.7))

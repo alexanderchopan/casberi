@@ -1087,15 +1087,16 @@ private struct GenCover: View {
     }
     private var photoTheme: Bool { ThemeStore.shared.backgroundPhoto != nil }
 
-    /// The quiet cover's wash color. Nil while the document is still
-    /// streaming (the 6th arg hasn't arrived) — painting the fallback early
-    /// flashed blue before the real color landed. "quiet" = Casberi blue
-    /// (a quiet day or the weekend recap, no lead kind).
+    /// The no-image cover's wash color — always black now (ruling
+    /// 2026-07-09: the default cover is black, not a color). The earlier
+    /// per-kind hue ("the Fantastical move") is retired: with a feed-heavy
+    /// corpus the newest thing is almost always a link, so the cover read as
+    /// permanently blue; black is the calm dark field the content floats on,
+    /// and a chosen Banner (Settings) is how you add color back. Nil only
+    /// while the doc is still streaming (arg 6 not yet arrived) so the
+    /// fallback doesn't flash before the tag lands.
     private var quietWash: Color? {
-        let tag = el.str(5)
-        if tag.isEmpty { return nil }
-        if tag == "quiet" { return DS.tint }
-        return ThingKind.from(typeTag: tag)?.hue ?? DS.tint
+        el.str(5).isEmpty ? nil : .black
     }
 
     /// The cover's top edge in global space — 0 at rest (the cover leads the
