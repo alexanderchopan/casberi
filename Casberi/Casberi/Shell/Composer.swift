@@ -192,17 +192,23 @@ struct Composer: View {
             // Bottom bar: mic + primary action.
             HStack(spacing: DS.Space.s2) {
                 Button {
-                    if isRecording { return }
-                    DSHaptic.tap()
-                    Task { await voice.start() }
+                    if isRecording {
+                        // The live (red) mic is the STOP: finalize and keep the
+                        // note, same as send. Previously this early-returned, so
+                        // a started recording had no way to stop from the mic.
+                        commit()
+                    } else {
+                        DSHaptic.tap()
+                        Task { await voice.start() }
+                    }
                 } label: {
-                    Image(systemName: isRecording ? "mic.fill" : "mic")
+                    Image(systemName: isRecording ? "stop.circle.fill" : "mic")
                         .font(.system(size: 18))
                         .foregroundStyle(isRecording ? DS.destructive : DS.textTertiary)
                         .padding(DS.Space.s1)
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel(isRecording ? "Recording" : "Record a voice note")
+                .accessibilityLabel(isRecording ? "Stop and keep" : "Record a voice note")
 
                 Button(action: commit) {
                     Image(systemName: "arrow.up")

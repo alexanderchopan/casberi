@@ -31,10 +31,16 @@ enum WalletIngest {
     /// reached at all (offline / bad key).
     @MainActor
     static func refresh(context: ModelContext) async -> Int? {
-        let addresses = WalletStore.shared.addresses.map(\.address)
-        guard !addresses.isEmpty, !running else { return addresses.isEmpty ? nil : 0 }
+        let watched = WalletStore.shared.addresses.map(\.address)
+        guard !watched.isEmpty, !running else { return watched.isEmpty ? nil : 0 }
         running = true
         defer { running = false }
+
+        // Watched entries can be ENS names; the Transfers API needs hex —
+        // resolve first, or nothing ever lands (the bug: a watched name
+        // returned empty silently).
+        let addresses = await hexAddresses(watched)
+        guard !addresses.isEmpty else { return nil }
 
         let existing = IngestSupport.existingSourceRefs(context)
         var added = 0
@@ -61,6 +67,17 @@ enum WalletIngest {
         }
         if added > 0 { try? context.save() }
         return reachedAny ? added : nil
+    }
+
+    /// Resolves watched entries to hex, dropping any ENS name that won't
+    /// resolve (a typo'd name simply lands nothing, honestly).
+    private static func hexAddresses(_ raw: [String]) async -> [String] {
+        var out: [String] = []
+        for a in raw {
+            if ENS.isHexAddress(a) { out.append(a) }
+            else if let hex = await ENS.resolve(a) { out.append(hex) }
+        }
+        return out
     }
 
     private static func fetch(address: String, chain: Chain,
@@ -110,7 +127,9 @@ enum WalletIngest {
     /// the true top of the book. Returns nil when nothing priced is held.
     @MainActor
     static func holdingsChart() async -> [String]? {
-        let addresses = WalletStore.shared.addresses.map(\.address)
+        let watched = WalletStore.shared.addresses.map(\.address)
+        guard !watched.isEmpty else { return nil }
+        let addresses = await hexAddresses(watched)
         guard !addresses.isEmpty else { return nil }
         let networks = chains.map(\.network)
         // network → native symbol, so a chain's own coin (ETH/MATIC) — which
