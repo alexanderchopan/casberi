@@ -23,8 +23,7 @@ struct DexscreenerScreen: View {
             BridgeSetupHeader(name: "Dexscreener")
             addSection.listRowSeparator(.hidden)
             if !watched.isEmpty {
-                RecentThingsSection(header: "Your watchlist", things: watched)
-                    .listRowSeparator(.hidden)
+                watchlistSection.listRowSeparator(.hidden)
             }
             footerSection.listRowSeparator(.hidden)
         }
@@ -53,12 +52,49 @@ struct DexscreenerScreen: View {
         }
     }
 
+    /// The watchlist manages itself the way Wallet's addresses do — swipe a
+    /// row to unwatch (native delete on a management screen, the WalletScreen
+    /// precedent; the Feed's reads-only swipe rule governs feed rows).
+    /// Unwatching deletes the thing: the thing IS the watch, not landed
+    /// history — and its sourceRef leaving the store lets a re-add resolve.
+    private var watchlistSection: some View {
+        Section {
+            ForEach(watched) { thing in
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(thing.title)
+                        .dsText(.body17).foregroundStyle(DS.textPrimary)
+                        .lineLimit(2)
+                    Text(LiveTimeText.short(thing.capturedAt))
+                        .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                }
+                .listRowBackground(DS.surfaceSheet)
+            }
+            .onDelete(perform: unwatch)
+        } header: {
+            Text("Your watchlist").dsText(.label12)
+                .foregroundStyle(DS.textTertiary)
+        } footer: {
+            Text("Swipe a token to stop watching it.")
+                .dsText(.callout15).foregroundStyle(DS.textTertiary)
+        }
+    }
+
     private var footerSection: some View {
         Section {
             Text("Public price data only — nothing about you leaves your iPhone. Charts open on Dexscreener.")
                 .dsText(.subhead13).foregroundStyle(DS.textTertiary)
                 .listRowBackground(Color.clear)
         }
+    }
+
+    private func unwatch(at offsets: IndexSet) {
+        let dropped = offsets.map { watched[$0] }
+        SpotlightIndex.remove(ids: dropped.map(\.id))
+        for thing in dropped { modelContext.delete(thing) }
+        try? modelContext.save()
+        DSHaptic.tap()
+        loadWatched()
+        register()
     }
 
     private func watch() {
