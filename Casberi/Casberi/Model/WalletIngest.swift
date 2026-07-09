@@ -110,6 +110,16 @@ enum WalletIngest {
     /// the true top of the book. Returns nil when nothing priced is held.
     @MainActor
     static func holdingsChart() async -> [String]? {
+        guard let cells = await topHoldings() else { return nil }
+        return ["root = Stack([m])",
+                "m = TagMap(\"Holdings\", \"By value\", [\(cells.joined(separator: ", "))])"]
+    }
+
+    /// The top-5-by-value cells themselves ("ETH 34, USDC 12, …"), for a
+    /// caller composing its own document (Home's pinned-wallet module) rather
+    /// than rendering the Wallet screen's standalone one.
+    @MainActor
+    static func topHoldings() async -> [String]? {
         let addresses = WalletStore.shared.addresses.map(\.address)
         guard !addresses.isEmpty else { return nil }
         let networks = chains.map(\.network)
@@ -154,10 +164,8 @@ enum WalletIngest {
         guard reached, !bySymbol.isEmpty else { return nil }
 
         // Top 5 by value; sqrt-scale so a big holding doesn't slice the rest to slivers.
-        let cells = bySymbol.sorted { $0.value > $1.value }.prefix(5)
+        return bySymbol.sorted { $0.value > $1.value }.prefix(5)
             .map { "\($0.key) \(max(1, Int($0.value.squareRoot() * 10)))" }
-        return ["root = Stack([m])",
-                "m = TagMap(\"Holdings\", \"By value\", [\(cells.joined(separator: ", "))])"]
     }
 
     private static func firstPrice(_ raw: Any?) -> Double? {

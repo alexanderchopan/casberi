@@ -31,6 +31,8 @@ struct WalletScreen: View {
     @Environment(BridgeStore.self) private var store
     @State private var syncing = false
     @State private var holdings = GenStream()
+    @State private var result: String?
+    @State private var resultIsError = false
 
     @Query(walletRecentDescriptor) private var recent: [Thing]
 
@@ -44,17 +46,28 @@ struct WalletScreen: View {
                         .listRowBackground(Color.clear)
                         .listRowSeparator(.hidden)
                         .listRowInsets(EdgeInsets())
-                }
-            }
-            if syncing {
-                Section {
-                    HStack(spacing: DS.Space.s2) {
-                        ProgressView().controlSize(.small)
-                        Text("Reading onchain activity…")
-                            .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                    HStack(spacing: DS.Space.s3) {
+                        Text("Pin holdings to Home")
+                            .dsText(.body17).foregroundStyle(DS.textPrimary)
+                        Spacer(minLength: 0)
+                        Toggle("", isOn: Binding(
+                            get: { wallet.pinnedToHome },
+                            set: { wallet.pinnedToHome = $0; DSHaptic.tap() }
+                        )).labelsHidden().tint(DS.tint)
                     }
                     .listRowBackground(DS.surfaceSheet)
+                } footer: {
+                    Text("Shows this treemap on Home, the same way a pinned thing does.")
+                        .dsText(.callout15).foregroundStyle(DS.textSecondary)
                 }
+                .listRowSeparator(.hidden)
+            }
+            if syncing || result != nil {
+                Section {
+                    BridgeSyncStatusRows(syncing: syncing, syncingLine: "Reading onchain activity…",
+                                        result: result, resultIsError: resultIsError)
+                }
+                .listRowSeparator(.hidden)
             }
             if !recent.isEmpty { recentSection.listRowSeparator(.hidden) }
             footerSection.listRowSeparator(.hidden)
@@ -78,12 +91,23 @@ struct WalletScreen: View {
             let added = await WalletIngest.refresh(context: modelContext)
             if let doc = await WalletIngest.holdingsChart() { holdings.paint(doc) }
             syncing = false
-            let n = wallet.addresses.count
-            let proof = n == 1 ? "1 address" : "\(n) addresses"
-            store.registerConnected(id: "wallet", name: "Wallet", proof: proof,
-                                    can: ["Reads your wallet's activity.",
-                                          "Read-only — never trades or moves funds."])
-            _ = added
+            // A bridge only registers "connected" once it actually reached
+            // Alchemy — a bad key or offline device must never claim success
+            // (review 2026-07-08: this fired unconditionally, so a dead key
+            // showed "connected" in Apps with nothing ever landing in Feed).
+            guard let added else {
+                result = "Couldn't reach the chain — check your connection."
+                resultIsError = true
+                return
+            }
+            resultIsError = false
+            result = added > 0 ? "\(added) new" : "Connected — watching for activity."
+            let proof = added > 0 ? "\(added) new" : "Synced just now"
+            if store.registerConnected(id: "wallet", name: "Wallet", proof: proof,
+                                       can: ["Reads your wallet's activity.",
+                                             "Read-only — never trades or moves funds."]) {
+                DSHaptic.success()
+            }
         }
     }
 

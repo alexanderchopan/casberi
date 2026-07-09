@@ -61,6 +61,7 @@ All read via UserDefaults in `Shell/RootShell.swift` unless noted:
 - `-openComposer YES` — open the composer empty (screenshots the ask chips); `-linkTitleProbe <url>` — NSLog the fetched page title.
 - `-rssFeed <url>` — follow a feed and sync headlessly; `-chatgptImport <path>` — import a conversations.json; `-bskyHandle <handle>` — connect Bluesky; `-tokenBridge "<Name>:<token>"` — connect a token bridge (Readwise/GitHub/Todoist/Raindrop/Cal.com/Calendly/Notion/Linear); `-watchToken <address|symbol|link>` — watch a crypto token via Dexscreener; `-walletAddress <0x…>` — watch a wallet. Each NSLogs a probe result.
 - `-pinSource <source>` — pins the newest thing from that source (waits up to 5s for an async ingest hook to land its thing first) — headless test of the Home "Pinned" widget.
+- `-pinWallet YES` — pins the wallet's holdings treemap to Home (pair with `-walletAddress`).
 
 Deep links: `casberi://home`, `casberi://feed`, `casberi://feed/type/<Tag>`, `casberi://account` (→ apps tab), `casberi://thing/<id>`.
 

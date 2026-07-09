@@ -28,7 +28,16 @@ final class WalletStore {
         didSet { persist() }
     }
 
+    private static let pinnedKey = "wallet.pinnedToHome"
+    /// Holdings on Home (ruling 2026-07-08): same idea as a Feed pin — "keep
+    /// this in view" — but the wallet has no single Thing to toggle, so this
+    /// is its own switch. Home renders the holdings treemap while it's on.
+    var pinnedToHome: Bool {
+        didSet { UserDefaults.standard.set(pinnedToHome, forKey: Self.pinnedKey) }
+    }
+
     private init() {
+        pinnedToHome = UserDefaults.standard.bool(forKey: Self.pinnedKey)
         if let data = UserDefaults.standard.data(forKey: Self.key),
            let saved = try? JSONDecoder().decode([WatchedAddress].self, from: data) {
             addresses = saved

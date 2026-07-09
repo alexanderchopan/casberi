@@ -13,16 +13,17 @@ import SwiftData
 enum HomeComposition {
 
     static func compose(things: [Thing],
+                        walletHoldings: [String]? = nil,
                         hour: Int = Calendar.current.component(.hour, from: .now),
                         weekday: Int = Calendar.current.component(.weekday, from: .now)) -> [String] {
         let projects = projectClusters(things: things)
         // Saturday/Sunday reads as a recap — the week, banked.
         if weekday == 1 || weekday == 7 {
-            return weekend(things: things, projects: projects)
+            return weekend(things: things, projects: projects, walletHoldings: walletHoldings)
         }
         return hour < 15
-            ? morning(things: things, projects: projects)
-            : evening(things: things, projects: projects)
+            ? morning(things: things, projects: projects, walletHoldings: walletHoldings)
+            : evening(things: things, projects: projects, walletHoldings: walletHoldings)
     }
 
     /// True when nothing has landed today — the composition acknowledges the
@@ -33,7 +34,7 @@ enum HomeComposition {
 
     // MARK: - Documents
 
-    private static func morning(things: [Thing], projects: [Cluster]) -> [String] {
+    private static func morning(things: [Thing], projects: [Cluster], walletHoldings: [String]? = nil) -> [String] {
         var doc: [String] = []
         var rootRefs: [String] = []
 
@@ -82,6 +83,7 @@ enum HomeComposition {
         // Pinned — things the person chose to keep in view. User-chosen, so
         // it passes the no-obligations rule: Casberi never picked these.
         appendPinned(things, to: &doc, rootRefs: &rootRefs)
+        appendWalletHoldings(walletHoldings, to: &doc, rootRefs: &rootRefs)
 
         // Threads resurface what's slipping away — links older than 3 days
         // (yesterday's links are Feed's top rows; mirroring them is filler).
@@ -103,7 +105,7 @@ enum HomeComposition {
         return doc
     }
 
-    private static func evening(things: [Thing], projects: [Cluster]) -> [String] {
+    private static func evening(things: [Thing], projects: [Cluster], walletHoldings: [String]? = nil) -> [String] {
         var doc: [String] = []
         var rootRefs: [String] = []
 
@@ -136,6 +138,7 @@ enum HomeComposition {
 
         // Pinned rides evening too — same rule as morning.
         appendPinned(things, to: &doc, rootRefs: &rootRefs)
+        appendWalletHoldings(walletHoldings, to: &doc, rootRefs: &rootRefs)
 
         // Threads — resurfacing, not mirroring (see morning).
         let links = resurfaceable(things).prefix(2)
@@ -158,7 +161,7 @@ enum HomeComposition {
     /// Weekend — the week, banked: the recap voice rides the cover's eyebrow
     /// with the week's newest image (H7); then the map and threads. Same
     /// grammar, calmer voice; still no obligations.
-    private static func weekend(things: [Thing], projects: [Cluster]) -> [String] {
+    private static func weekend(things: [Thing], projects: [Cluster], walletHoldings: [String]? = nil) -> [String] {
         var doc: [String] = []
         var rootRefs: [String] = []
 
@@ -194,6 +197,7 @@ enum HomeComposition {
         }
 
         appendPinned(things, to: &doc, rootRefs: &rootRefs)
+        appendWalletHoldings(walletHoldings, to: &doc, rootRefs: &rootRefs)
 
         let links = resurfaceable(things).prefix(2)
         if !links.isEmpty {
@@ -426,6 +430,19 @@ enum HomeComposition {
         doc.append("pinnedW = Widget(\(q("Pinned")), null, [\(ids.joined(separator: ", "))])")
         for (i, t) in pinned.enumerated() { doc.append(row(id: "pn\(i)", t)) }
         rootRefs.append("pinnedW")
+    }
+
+    /// Wallet holdings on Home (ruling 2026-07-08): pinning the wallet shows
+    /// its top-5-by-value treemap, the same TagMap idiom the map itself uses
+    /// — synthesis, not a thing, so it rides alongside Pinned rather than
+    /// inside it. Cells arrive pre-computed (WalletIngest.topHoldings()) since
+    /// composing the doc is synchronous and the fetch is not.
+    private static func appendWalletHoldings(_ cells: [String]?,
+                                             to doc: inout [String],
+                                             rootRefs: inout [String]) {
+        guard let cells, !cells.isEmpty else { return }
+        doc.append("walletMap = TagMap(\(q("Holdings")), \(q("By value")), [\(cells.joined(separator: ", "))])")
+        rootRefs.append("walletMap")
     }
 
     /// A token link leads with its price chart, same rule as the thing sheet

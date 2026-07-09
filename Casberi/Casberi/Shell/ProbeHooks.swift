@@ -77,6 +77,12 @@ enum ProbeHooks {
                 NSLog("Wallet probe: %@ new", n.map(String.init) ?? "FAILED")
             }
         },
+        // `-pinWallet YES` pins the wallet's holdings treemap to Home
+        // headlessly — pairs with `-walletAddress` for testing that module.
+        Hook(key: "pinWallet") { _, _ in
+            WalletStore.shared.pinnedToHome = true
+            NSLog("Pin-wallet probe: pinnedToHome=true")
+        },
         // `-twitchAuth YES` starts the device flow headlessly: NSLogs the
         // code for the person to approve at twitch.tv/activate, polls up to
         // five minutes, then runs the first sync. Sim verification only.

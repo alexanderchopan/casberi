@@ -31,9 +31,11 @@ struct HomeScreen: View {
     @Environment(BridgeStore.self) private var bridges
     @Environment(\.openURL) private var openURL
     @Bindable private var route = HomeRoute.shared
+    @Bindable private var wallet = WalletStore.shared
     @State private var stream = GenStream()
     @State private var openProject: ProjectRoute?
     @State private var coverThing: Thing?
+    @State private var walletHoldings: [String]?
     @Namespace private var zoomNS
 
     struct ProjectRoute: Identifiable, Hashable {
@@ -129,8 +131,13 @@ struct HomeScreen: View {
         // A tag rename/retag leaves the count unchanged but changes what Home
         // composes from — repaint so the renamed tag shows immediately.
         .onChange(of: CorpusSignal.shared.revision) { streamComposition(instant: true) }
+        // Pinning/unpinning the wallet (WalletScreen) re-fetches (or drops)
+        // its holdings treemap — same "pin means keep this in view" rule as
+        // a Thing pin, just without a Thing to observe via things.count.
+        .onChange(of: wallet.pinnedToHome) { loadWalletHoldings() }
         .onAppear {
             streamComposition()
+            loadWalletHoldings()
             #if DEBUG
             // Debug hooks: `-openSettings YES` pushes Settings;
             // `-openProject "Work"` pushes a project — both for screenshots.
@@ -159,11 +166,28 @@ struct HomeScreen: View {
     private func streamComposition(instant: Bool = false) {
         let doc = things.isEmpty
             ? HomeComposition.empty
-            : HomeComposition.compose(things: things)
+            : HomeComposition.compose(things: things, walletHoldings: walletHoldings)
         if instant {
             stream.paint(doc)   // an update, not an entrance — no typewriter
         } else {
             stream.stream(doc)
+        }
+    }
+
+    /// Composing is synchronous; the holdings fetch isn't — load in the
+    /// background and repaint (instant, like any other corpus change) once
+    /// it lands. Unpinning drops the cells and repaints without them.
+    private func loadWalletHoldings() {
+        guard wallet.pinnedToHome, !wallet.addresses.isEmpty else {
+            if walletHoldings != nil {
+                walletHoldings = nil
+                streamComposition(instant: true)
+            }
+            return
+        }
+        Task { @MainActor in
+            walletHoldings = await WalletIngest.topHoldings()
+            streamComposition(instant: true)
         }
     }
 }
