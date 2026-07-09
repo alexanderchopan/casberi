@@ -69,20 +69,15 @@ struct SettingsScreen: View {
             }
             .photosPicker(isPresented: $coverPickerOpen,
                           selection: $coverSelection, matching: .images)
-            .confirmationDialog("Your Home cover", isPresented: $coverDialogOpen) {
-                Button("Change photo") { coverPickerOpen = true }
-                Button("Remove photo", role: .destructive) {
-                    DSHaptic.tap()
-                    withAnimation(DS.Motion.standard) { HomeCoverStore.shared.banner = nil }
-                }
-                Button("Cancel", role: .cancel) {}
+            .sheet(isPresented: $coverDialogOpen) {
+                HomeCoverSheet(onChoosePhoto: { coverPickerOpen = true })
             }
             .onChange(of: coverSelection) { _, item in
                 guard let item else { return }
                 Task {
                     if let data = try? await item.loadTransferable(type: Data.self),
                        let image = UIImage(data: data) {
-                        HomeCoverStore.shared.banner = HomeCoverStore.prepared(image)
+                        HomeCoverStore.shared.setPhoto(image)
                     }
                     coverSelection = nil
                 }
@@ -155,13 +150,10 @@ struct SettingsScreen: View {
             // day's newest screenshot, so a fresh capture never leads Home
             // uninvited (2026-07-09).
             TileSpec(title: "Header",
-                     value: HomeCoverStore.shared.banner == nil ? "Use your own photo" : "",
+                     value: HomeCoverStore.shared.banner == nil ? "A photo or a color" : "",
                      avatar: HomeCoverStore.shared.banner,
                      badge: HomeCoverStore.shared.banner == nil ? ("photo", DS.textTertiary) : nil,
-                     action: {
-                         if HomeCoverStore.shared.banner == nil { coverPickerOpen = true }
-                         else { coverDialogOpen = true }
-                     }),
+                     action: { coverDialogOpen = true }),
             // Dev-facing on purpose: TestFlight reports become a screenshot
             // of on-device facts instead of a description (2026-07-09).
             TileSpec(title: "Diagnostics",
@@ -327,5 +319,70 @@ struct ThemeSheet: View {
                 withAnimation(DS.Motion.standard) { onTap() }
             }
             .accessibilityLabel(label)
+    }
+}
+
+/// Home's cover — a photo or a curated color, always winning over the day's
+/// newest screenshot when set (2026-07-09). One tray for choose/change/
+/// remove, the same shape as every other picker in the app.
+struct HomeCoverSheet: View {
+    let onChoosePhoto: () -> Void
+    @Bindable private var store = HomeCoverStore.shared
+
+    var body: some View {
+        DSTray(title: "Home cover", height: 260) {
+            VStack(alignment: .leading, spacing: DS.Space.s4) {
+                Text("A photo or a color, shown smaller than a live capture so the two never look alike.")
+                    .dsText(.callout15).foregroundStyle(DS.textSecondary)
+                HStack(spacing: DS.Space.s2) {
+                    ForEach(HomeCoverStore.swatches, id: \.name) { swatch in
+                        swatchButton(swatch)
+                    }
+                }
+                Button {
+                    DSHaptic.tap()
+                    onChoosePhoto()
+                } label: {
+                    HStack(spacing: DS.Space.s2) {
+                        Image(systemName: "photo")
+                            .font(.system(size: 15, weight: .medium))
+                        Text(store.kind == .photo ? "Change photo" : "Choose a photo")
+                            .dsText(.body17)
+                        Spacer()
+                    }
+                    .foregroundStyle(DS.textPrimary)
+                    .padding(.horizontal, DS.Space.s3)
+                    .frame(height: 44)
+                    .background(DS.fillFaint, in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+                }
+                .buttonStyle(.plain)
+                if store.banner != nil {
+                    Button(role: .destructive) {
+                        DSHaptic.tap()
+                        withAnimation(DS.Motion.standard) { store.clear() }
+                    } label: {
+                        Text("Remove — go back to the day's photo")
+                            .dsText(.callout15).foregroundStyle(DS.destructive)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+    }
+
+    private func swatchButton(_ swatch: (name: String, hex: String)) -> some View {
+        let selected = store.kind == .color && store.colorName == swatch.name
+        return Circle()
+            .fill(Color(hex: swatch.hex))
+            .frame(width: 36, height: 36)
+            .overlay(
+                Circle().strokeBorder(DS.textPrimary, lineWidth: selected ? 2.5 : 0)
+                    .padding(-3)
+            )
+            .onTapGesture {
+                DSHaptic.tap()
+                withAnimation(DS.Motion.standard) { store.setColor(swatch) }
+            }
+            .accessibilityLabel(swatch.name)
     }
 }

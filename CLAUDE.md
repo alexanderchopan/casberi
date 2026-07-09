@@ -64,7 +64,7 @@ All read via UserDefaults in `Shell/RootShell.swift` unless noted:
 - `-pinWallet YES` — pins the wallet's holdings treemap to Home (pair with `-walletAddress`).
 - `-openDiagnostics YES` — open the Diagnostics sheet (pair with `-openSettings YES`); it runs the cover-photo and token-chart paths on-device and prints each step.
 - `-connectPhotos YES` — runs the real Photos connect+ingest headlessly; `-reingestPhotos YES` — calls the bare re-scan (no permission request) that `BridgeRefresh` now runs each foreground.
-- `-setHomeBanner YES` — sets a synthetic Home cover banner headlessly, for screenshotting the shorter banner-cover treatment.
+- `-setHomeBanner <swatch-name|photo>` — sets the Home cover headlessly (e.g. `Teal`, or `photo` for a synthetic photo), for screenshotting the shorter banner-cover treatment.
 
 Deep links: `casberi://home`, `casberi://feed`, `casberi://feed/type/<Tag>`, `casberi://account` (→ apps tab), `casberi://thing/<id>`.
 

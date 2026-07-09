@@ -617,8 +617,10 @@ Four rulings from the first real-corpus flood (one wallet connect landed 100 tra
 
 The automatic cover (day's newest screenshot, full 250pt bleed) had no
 way out — a screenshot the person didn't want leading Home just showed
-up there. Settings gained a "Header" tile (same shape as Avatar: one
-image, owned locally, change/remove). When set, it always wins over
+up there. Settings gained a "Header" tile (same shape as Avatar): a tray
+offers six curated colors (the retired Theme background palette, bright
+primaries) or a photo — a color is a small flat-fill image under the
+hood, so it needs no separate rendering path. When set, it always wins over
 the day's newest screenshot — an explicit choice outranks an automatic
 guess — and renders at 150pt, not 250pt: the two states read
 differently on purpose. A tall bleed means "this just happened"; a
