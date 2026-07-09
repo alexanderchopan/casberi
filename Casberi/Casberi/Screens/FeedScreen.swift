@@ -821,17 +821,20 @@ struct FeedScreen: View {
                     ForEach(labels, id: \.self) { label in
                         let isActive = label == active
                         // Icons joined the chips (re-ruling 2026-07-06 — real
-                        // brand assets exist now, so the icon IS the identity;
-                        // the old text-only rule predates them). "All" stays
-                        // words-only: it has no app.
+                        // brand assets exist now, so the icon IS the identity).
+                        // Inactive chips are icon-ONLY (ruling 2026-07-09): the
+                        // labels were what made the row scroll; only the active
+                        // chip names itself. "All" keeps its word — it has no app.
                         HStack(spacing: DS.Space.s1 + 2) {
                             if label != "All" {
                                 BridgeIcon(name: label, size: 18)
                             }
-                            Text(label).dsText(.label12)
-                                .foregroundStyle(isActive ? DS.page : DS.textSecondary)
+                            if isActive || label == "All" {
+                                Text(label).dsText(.label12)
+                                    .foregroundStyle(isActive ? DS.page : DS.textSecondary)
+                            }
                         }
-                        .padding(.horizontal, DS.Space.s3)
+                        .padding(.horizontal, isActive || label == "All" ? DS.Space.s3 : DS.Space.s2)
                         .frame(height: 32)
                         .background(isActive ? DS.textPrimary : DS.gray100,
                                     in: Capsule(style: .continuous))
