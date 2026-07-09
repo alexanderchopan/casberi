@@ -366,7 +366,7 @@ private struct TokenChartContent: View {
                         Text(changeText(chart.change24h))
                             .dsText(.callout15).foregroundStyle(accent)
                         Spacer()
-                        Text("24H").dsText(.label12)
+                        Text("24h").dsText(.label12)
                             .foregroundStyle(DS.textTertiary)
                     }
                     Chart(Array(chart.closes.enumerated()), id: \.offset) { i, close in

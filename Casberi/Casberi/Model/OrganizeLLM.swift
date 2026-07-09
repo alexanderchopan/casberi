@@ -25,19 +25,19 @@ struct OrganizeExtraction {
 
 enum OrganizeLLM {
 
-    /// Words that suggest the person is FILING, not asking. The gate keeps
-    /// questions off the extraction path (answers stay instant).
+    /// Words that suggest the person is FILING, not asking. Strict on
+    /// purpose: a LEADING organize verb AND a connector ("as/under/into/to")
+    /// must both appear — "mark twain quotes" and "what did i mark as
+    /// important" stay asks, and answers never pay extraction latency.
     static func looksOrganizeish(_ raw: String) -> Bool {
         let q = raw.lowercased()
         guard !q.hasSuffix("?") else { return false }
         let verbs = ["tag", "label", "rename", "retag", "file", "move", "put",
                      "group", "organize", "organise", "call", "mark"]
-        let first = q.split(separator: " ").first.map(String.init) ?? ""
-        if verbs.contains(first) { return true }
-        // "put everything about X under/into/as Y" shapes.
-        return verbs.contains(where: { q.hasPrefix($0 + " ") })
-            || ((q.contains(" under ") || q.contains(" into ") || q.contains(" as "))
-                && verbs.contains(where: { q.contains($0 + " ") }))
+        guard let first = q.split(separator: " ").first.map(String.init),
+              verbs.contains(first) else { return false }
+        return q.contains(" as ") || q.contains(" under ")
+            || q.contains(" into ") || q.contains(" to ")
     }
 
     /// Extracts an OrganizeCommand from loose wording, or nil when the model

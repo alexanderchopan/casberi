@@ -99,7 +99,7 @@ struct ApprovalCard: View {
         if thing.provenance.app.lowercased() != asker.lowercased() {
             parts.append("via \(thing.provenance.app)")
         }
-        return parts.joined(separator: " · ").uppercased()
+        return parts.joined(separator: " · ")
     }
 
     var body: some View {

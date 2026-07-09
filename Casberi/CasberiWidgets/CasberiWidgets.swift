@@ -214,9 +214,8 @@ struct HeroWidgetView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
             default:
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(entry.eyebrow.uppercased())
+                    Text(entry.eyebrow)
                         .font(.system(size: 11, weight: .medium))
-                        .kerning(0.8)
                         .foregroundStyle(accent)
                     Text(entry.title)
                         .font(.system(size: 17, weight: .bold))

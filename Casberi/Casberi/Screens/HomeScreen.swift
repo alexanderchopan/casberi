@@ -83,6 +83,13 @@ struct HomeScreen: View {
             }
             // An Ask answer named a tag — open its view (same push the treemap
             // makes). Bind through openProject so pop/re-tap clears it too.
+            .onAppear {
+                // A navigation ask can set the tag before Home ever mounts —
+                // onChange never fires for a pre-set value, so consume it here.
+                if let name = route.openTag {
+                    openProject = ProjectRoute(name: name); route.openTag = nil
+                }
+            }
             .onChange(of: route.openTag) { _, name in
                 if let name { openProject = ProjectRoute(name: name); route.openTag = nil }
             }

@@ -126,7 +126,8 @@ struct AccountDetailSheet: View {
                       icloudSync
                         ? (SharedStore.cloudSyncActive ? "Synced to your iCloud"
                                                        : "Syncs from your next launch")
-                        : "Stays on this iPhone",
+                        : (SharedStore.cloudSyncActive ? "Stops syncing from your next launch"
+                                                       : "Stays on this iPhone"),
                       Binding(get: { icloudSync }, set: { icloudSync = $0; DSHaptic.tap() }))
             toggleRow(hidePreviews ? "eye.slash.fill" : "eye",
                       hidePreviews ? DS.confirm : DS.textSecondary,

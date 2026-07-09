@@ -100,7 +100,7 @@ struct ThingSheetView: View {
             Circle()
                 .fill(BridgeGlyph.color(for: thing.source))
                 .frame(width: 6, height: 6)
-            Text("\(thing.kind.typeTag) · \(shortTime(thing.capturedAt)) AGO")
+            Text("\(thing.kind.typeTag) · \(shortTime(thing.capturedAt)) ago")
                 .dsText(.label12)
                 .foregroundStyle(DS.textTertiary)
         }
@@ -111,17 +111,17 @@ struct ThingSheetView: View {
     private var specTable: some View {
         VStack(alignment: .leading, spacing: DS.Space.s3) {
             if thing.kind == .event, !thing.content.isEmpty {
-                specRow("WHEN", thing.content)
+                specRow("When", thing.content)
             }
             if thing.kind == .link,
                let url = Capture.detectURL(in: thing.content.isEmpty ? thing.title : thing.content),
                let host = url.host() {
-                specRow("SITE", host.replacingOccurrences(of: "www.", with: ""))
+                specRow("Site", host.replacingOccurrences(of: "www.", with: ""))
             }
             if let agent = thing.provenance.agent {
-                specRow("BY", "\(agent)\(thing.provenance.machine.map { " on \($0)" } ?? "")")
+                specRow("By", "\(agent)\(thing.provenance.machine.map { " on \($0)" } ?? "")")
             }
-            specRow("FROM", PlaceWords.line(for: thing))
+            specRow("From", PlaceWords.line(for: thing))
             tagsRow
         }
     }

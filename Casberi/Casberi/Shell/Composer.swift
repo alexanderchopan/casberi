@@ -54,6 +54,10 @@ struct Composer: View {
     /// (re-ruling 2026-07-08: the dead GENERIC chips stay dead; these are
     /// asks the corpus can actually answer right now).
     @State private var suggestions: [String] = []
+    /// The tag list, snapshotted once per open — tagCandidates() walks the
+    /// whole store, and computed-per-keystroke it made typing pay a corpus
+    /// fetch per character (review 2026-07-08).
+    @State private var tagPool: [String] = []
 
     private var isRecording: Bool { voice.phase == .recording }
     private var hasDraft: Bool { !draft.trimmingCharacters(in: .whitespaces).isEmpty }
@@ -65,7 +69,7 @@ struct Composer: View {
         guard let last = draft.split(separator: " ").last.map(String.init),
               last.count >= 2 else { return [] }
         let lower = last.lowercased()
-        return tagCandidates()
+        return tagPool
             .filter { $0.lowercased().hasPrefix(lower) && $0.lowercased() != lower }
             .prefix(3).map { $0 }
     }
@@ -80,13 +84,14 @@ struct Composer: View {
     /// Builds the ask chips from what the corpus can answer TODAY. Empty
     /// corpus → no chips (the field is the invitation).
     private func computeSuggestions() {
+        tagPool = tagCandidates()   // one corpus walk per open, not per keystroke
         var out: [String] = []
         let dayStart = Calendar.current.startOfDay(for: .now)
         let today = FetchDescriptor<Thing>(predicate: #Predicate { $0.capturedAt >= dayStart })
         if let n = try? modelContext.fetchCount(today), n > 0 {
             out.append("What landed today?")
         }
-        if let top = tagCandidates().first {
+        if let top = tagPool.first {
             out.append("Show \(top)")
         }
         if (try? modelContext.fetchCount(FetchDescriptor<Thing>())) ?? 0 > 0 {
@@ -268,7 +273,7 @@ struct Composer: View {
             // previews what keeping will write. Typed words get answers, not
             // filing previews.
             if hasDraft && !answering && pasted {
-                ParseCard(draft: draft, candidates: tagCandidates(),
+                ParseCard(draft: draft, candidates: tagPool,
                           chosen: $chosenTags)
                     .padding(.horizontal, DS.Space.s4)
                     .padding(.top, DS.Space.s3)
@@ -394,7 +399,7 @@ struct Composer: View {
             // Paste is a capture path — send keeps what came in.
             onCommit(Array(chosenTags))
             close()
-        } else if let intent = NavigateCommand.parse(draft, tags: tagCandidates(),
+        } else if let intent = NavigateCommand.parse(draft, tags: tagPool,
                                                      sources: knownSources()) {
             // A place, named — go there. Reads only (a navigation), so no
             // proposal needed; the composer closes and the shell moves.
@@ -441,6 +446,7 @@ struct Composer: View {
                 // SAME proposal form; the write still waits for Apply.
                 if OrganizeLLM.looksOrganizeish(q),
                    let command = await OrganizeLLM.extract(q) {
+                    guard isOpen else { return }   // closed mid-extraction
                     let proposed = Organize.propose(command, context: modelContext)
                     fieldFocused = false
                     withAnimation(DS.Motion.standard) {

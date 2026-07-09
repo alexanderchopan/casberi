@@ -458,7 +458,8 @@ struct AppsScreen: View {
         }
         .scrollTargetBehavior(.viewAligned)
         .scrollPosition(id: Binding(
-            get: { shelfPage[key] ?? 0 },
+            // Clamped: a connect can shrink the shelf under a stored index.
+            get: { min(shelfPage[key] ?? 0, max(0, pages.count - 1)) },
             set: { shelfPage[key] = $0 ?? 0 }
         ))
         .contentMargins(.horizontal, DS.Space.s4, for: .scrollContent)

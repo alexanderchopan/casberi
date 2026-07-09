@@ -30,7 +30,7 @@ struct TokenSetupScreen: View {
             stepsSection.listRowSeparator(.hidden)
             tokenSection.listRowSeparator(.hidden)
             if !recent.isEmpty {
-                RecentThingsSection(header: "LANDED", things: recent)
+                RecentThingsSection(header: "Landed", things: recent)
                     .listRowSeparator(.hidden)
             }
             if bridge.connected { removeSection.listRowSeparator(.hidden) }

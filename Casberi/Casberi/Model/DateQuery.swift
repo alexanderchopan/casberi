@@ -29,6 +29,14 @@ enum DateQuery {
             return Match(range: start...thisWeekStart.addingTimeInterval(-1),
                          words: ["last", "week"])
         }
+        if q.contains("weekend") {
+            // The most recent Saturday–Sunday (including one in progress).
+            let today = calendar.component(.weekday, from: now)   // 1=Sun…7=Sat
+            let satBack = today == 7 ? 0 : today % 7   // Sun(1)→1, Mon(2)→2, …, Sat(7)→0
+            let start = calendar.startOfDay(for: calendar.date(byAdding: .day, value: -satBack, to: now)!)
+            let end = calendar.date(byAdding: .day, value: 2, to: start)!.addingTimeInterval(-1)
+            return Match(range: start...end, words: ["weekend", "this", "the", "last"])
+        }
         if q.contains("this week") || q.contains("the week") {
             let week = calendar.dateInterval(of: .weekOfYear, for: now)!
             return Match(range: week.start...week.end.addingTimeInterval(-1),
@@ -47,8 +55,7 @@ enum DateQuery {
             guard q.contains(name) else { continue }
             let target = i + 1   // Calendar weekday units are 1-based
             let today = calendar.component(.weekday, from: now)
-            var back = (today - target + 7) % 7
-            if back == 0, !q.contains("today") { back = 0 }   // today's name = today
+            let back = (today - target + 7) % 7   // 0 = that name IS today
             return Match(range: day(-back), words: [name])
         }
         return nil

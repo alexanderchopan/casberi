@@ -347,8 +347,8 @@ struct RootShell: View {
     /// A typed ask that names a place — the same destinations the UI's own
     /// taps reach: a tag view, a source's feed, a kind's feed.
     private func navigate(_ intent: NavigateIntent) {
-        withAnimation(DS.Motion.standard) { composerOpen = false }
-        draft = ""
+        // The composer closed itself before calling here (its close() owns
+        // the morph + state reset) — this only moves the shell.
         switch intent {
         case .tag(let name):
             tab = .home

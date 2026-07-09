@@ -26,7 +26,7 @@ struct MailScreen: View {
             stepsSection.listRowSeparator(.hidden)
             fieldsSection.listRowSeparator(.hidden)
             if !recent.isEmpty {
-                RecentThingsSection(header: "RECENT", things: recent)
+                RecentThingsSection(header: "Recent", things: recent)
                     .listRowSeparator(.hidden)
             }
         }

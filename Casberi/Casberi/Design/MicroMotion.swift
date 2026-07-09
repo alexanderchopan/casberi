@@ -117,6 +117,9 @@ extension View {
 struct CountUpText: View {
     let text: String
     @State private var shown = 0
+    /// The in-flight roll — a new text cancels it so two rolls never
+    /// interleave writes to `shown` (review 2026-07-08).
+    @State private var roller: Task<Void, Never>?
 
     private var parts: (n: Int, rest: String)? {
         let digits = text.prefix { $0.isNumber }
@@ -135,13 +138,16 @@ struct CountUpText: View {
         }
     }
 
-    /// Rolls 0 → n in a few visible steps inside ~0.5s.
+    /// Rolls 0 → n in a few visible steps inside ~0.5s. A fresh roll cancels
+    /// the previous one; a cancelled roll never writes again.
     private func roll(to n: Int) {
+        roller?.cancel()
         shown = 0
-        Task { @MainActor in
+        roller = Task { @MainActor in
             let steps = min(n, 6)
             for i in 1...steps {
                 try? await Task.sleep(for: .milliseconds(500 / UInt64(steps)))
+                guard !Task.isCancelled else { return }
                 withAnimation(DS.Motion.standard) { shown = n * i / steps }
             }
         }
