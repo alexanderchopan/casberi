@@ -1264,8 +1264,17 @@ private struct GenCover: View {
             PHImageManager.default().requestImage(
                 for: asset, targetSize: CGSize(width: 1200, height: 900),
                 contentMode: .aspectFill, options: opts
-            ) { img, _ in
-                if !reported { reported = true; cont.resume(returning: img) }
+            ) { img, info in
+                // A network-backed asset calls back TWICE: first a degraded
+                // placeholder while it downloads, then the real image — taking
+                // the first unconditionally latched onto the placeholder (often
+                // nil) and threw the real download away (cover stayed black on
+                // real devices even after the network-access fix above).
+                let degraded = (info?[PHImageResultIsDegradedKey] as? Bool) ?? false
+                if degraded { return }
+                guard !reported else { return }
+                reported = true
+                cont.resume(returning: img)
             }
         }
         guard let loaded else { return }

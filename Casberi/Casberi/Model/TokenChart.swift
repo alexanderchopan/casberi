@@ -20,11 +20,24 @@ struct TokenChart {
         return (chain: parts[0], address: parts[1])
     }
 
+    /// GeckoTerminal's network ids don't always match Dexscreener's chain
+    /// slugs (Ethereum mainnet is "ethereum" on Dexscreener, "eth" on
+    /// GeckoTerminal) — translate the chains that drift, since `route(from:)`
+    /// hands callers the Dexscreener slug (it also rebuilds the dexscreener.com
+    /// URL, which needs that spelling).
+    private static let geckoTerminalNetwork: [String: String] = [
+        "ethereum": "eth",
+        "polygon": "polygon_pos",
+        "avalanche": "avax",
+        "fantom": "ftm",
+    ]
+
     /// Fetches ~24h of hourly candles for the token's most-liquid pool.
     /// Returns nil when the token has no pool (dead/illiquid) — the sheet then
     /// shows the plain link, never an empty chart.
     static func fetch(chain: String, address: String) async -> TokenChart? {
-        let base = "https://api.geckoterminal.com/api/v2/networks/\(chain)"
+        let network = geckoTerminalNetwork[chain] ?? chain
+        let base = "https://api.geckoterminal.com/api/v2/networks/\(network)"
         guard let poolsRoot = await IngestSupport.getJSON("\(base)/tokens/\(address)/pools")
                 as? [String: Any],
               let pools = poolsRoot["data"] as? [[String: Any]],

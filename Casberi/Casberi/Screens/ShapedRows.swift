@@ -231,8 +231,15 @@ struct PhotoWell: View {
             PHImageManager.default().requestImage(
                 for: asset, targetSize: CGSize(width: side, height: side),
                 contentMode: .aspectFill, options: opts
-            ) { img, _ in
-                if !reported { reported = true; cont.resume(returning: img) }
+            ) { img, info in
+                // Network-backed assets call back twice: a degraded placeholder
+                // first, the real image second — waiting past the placeholder so
+                // the real download isn't discarded (same fix as GenCover).
+                let degraded = (info?[PHImageResultIsDegradedKey] as? Bool) ?? false
+                if degraded { return }
+                guard !reported else { return }
+                reported = true
+                cont.resume(returning: img)
             }
         }
     }
