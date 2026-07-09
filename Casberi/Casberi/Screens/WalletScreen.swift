@@ -40,30 +40,17 @@ struct WalletScreen: View {
         List {
             addSection.listRowSeparator(.hidden)
             if !wallet.addresses.isEmpty { watchingSection.listRowSeparator(.hidden) }
-            if !wallet.addresses.isEmpty {
+            // Pin leads the holdings — a watched wallet earns the toggle right
+            // away, above the treemap (report 2026-07-09: below the chart it
+            // fell under the fold on a real wallet, so "connect the wallet, pin
+            // it to Home" had no visible switch to reach).
+            if !wallet.addresses.isEmpty { pinSection.listRowSeparator(.hidden) }
+            if !wallet.addresses.isEmpty, !holdings.els.isEmpty {
                 Section {
-                    if !holdings.els.isEmpty {
-                        GenRender(id: "root", els: holdings.els)
-                            .listRowBackground(Color.clear)
-                            .listRowSeparator(.hidden)
-                            .listRowInsets(EdgeInsets())
-                    }
-                    // The toggle shows whenever a wallet is watched — gating
-                    // it on the holdings fetch made it undiscoverable when
-                    // the chart hadn't loaded yet (report 2026-07-09).
-                    HStack(spacing: DS.Space.s3) {
-                        Text("Pin holdings to Home")
-                            .dsText(.body17).foregroundStyle(DS.textPrimary)
-                        Spacer(minLength: 0)
-                        Toggle("", isOn: Binding(
-                            get: { wallet.pinnedToHome },
-                            set: { wallet.pinnedToHome = $0; DSHaptic.tap() }
-                        )).labelsHidden().tint(DS.tint)
-                    }
-                    .listRowBackground(DS.surfaceSheet)
-                } footer: {
-                    Text("Shows this treemap on Home, the same way a pinned thing does.")
-                        .dsText(.callout15).foregroundStyle(DS.textSecondary)
+                    GenRender(id: "root", els: holdings.els)
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
+                        .listRowInsets(EdgeInsets())
                 }
                 .listRowSeparator(.hidden)
             }
@@ -113,6 +100,30 @@ struct WalletScreen: View {
                                              "Read-only — never trades or moves funds."]) {
                 DSHaptic.success()
             }
+        }
+    }
+
+    // MARK: - Pin to Home
+
+    /// The one switch that puts the holdings treemap on Home. Shows the moment
+    /// a wallet is watched (before the chart loads), stated in the same "keep
+    /// this in view" voice a Thing pin uses — the swipe on an address flips the
+    /// same `wallet.pinnedToHome`, so either gesture reaches it.
+    private var pinSection: some View {
+        Section {
+            HStack(spacing: DS.Space.s3) {
+                Text("Pin holdings to Home")
+                    .dsText(.body17).foregroundStyle(DS.textPrimary)
+                Spacer(minLength: 0)
+                Toggle("", isOn: Binding(
+                    get: { wallet.pinnedToHome },
+                    set: { wallet.pinnedToHome = $0; DSHaptic.tap() }
+                )).labelsHidden().tint(DS.tint)
+            }
+            .listRowBackground(DS.surfaceSheet)
+        } footer: {
+            Text("Shows your holdings treemap on Home, the same way a pinned thing does.")
+                .dsText(.callout15).foregroundStyle(DS.textSecondary)
         }
     }
 

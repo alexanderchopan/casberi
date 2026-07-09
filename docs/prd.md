@@ -659,6 +659,31 @@ deliberate choice outranks an automatic clustering, and reaching it
 shouldn't cost a scroll past a treemap the person didn't ask for.
 Applies to morning, evening, and weekend alike.
 
+## 36d. Home recomposes when a banner or the wallet pin changes (2026-07-09)
+
+Home authors its composition imperatively (`streamComposition`) and
+only re-runs it on an explicit signal — it does NOT observe every store
+by reading it in `body`. So a change to a store the cover/lineup is
+composed from has to be wired to a recompose, or it silently no-ops
+until an unrelated change (a new thing, a tab switch) happens to
+recompose. Two were missing and are now wired: (1) the chosen Banner —
+`HomeCoverStore` bumps a `revision` on every set/clear (a UIImage isn't
+`Equatable` for `.onChange`, and its tray lives in Settings, pushed
+inside Home's own NavigationStack, so popping back never refires Home's
+`onAppear`); (2) the wallet pin already had `onChange(of:
+wallet.pinnedToHome)`. Rule: any new store Home composes from needs its
+own recompose trigger — reason about it when adding one.
+
+## 36e. Wallet: the pin-to-Home toggle leads the holdings (2026-07-09)
+
+"Connect the wallet, pin it to Home" needs a switch you can find at
+connect. The toggle sat below the holdings treemap, so on a real wallet
+(a tall chart) it fell under the fold and read as absent. It now leads
+the holdings — its own row right after Watching, above the treemap —
+and still shows the moment an address is watched, before the chart
+loads. The leading-edge swipe on an address flips the same
+`wallet.pinnedToHome`, so either gesture reaches it.
+
 ## 36. Bridge selection ruling: live data only (2026-07-09)
 
 No new import bridges. A bridge whose data arrives via a request-and-wait export (TikTok's 1–4 day JSON, Tinder's 24–48h zip, IMDb's CSV) lands stale and never updates — the person asked for live data or nothing. The ChatGPT import predates this ruling and stays (its framing is explicitly a backfill, and OpenAI offers no live read). Evaluated and declined under this ruling: TikTok, Tinder, IMDb (viable exports, stale), Linktree/Rotten Tomatoes/CardPointers (no surface at all), Duolingo (unofficial API only — ToS-gray breaks the honesty rule), Credit Karma/NerdWallet/Acorns (aggregator-only; needs the post-M2 server), Fileverse (E2EE by design; revisit if they ship a hosted API), Fantastical (already covered — it's a client over the calendars EventKit reads). Pinterest passed: their public per-user RSS feed is live and official-enough (a published feed, not a scraped page).

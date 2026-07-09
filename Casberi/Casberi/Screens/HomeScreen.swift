@@ -32,6 +32,7 @@ struct HomeScreen: View {
     @Environment(\.openURL) private var openURL
     @Bindable private var route = HomeRoute.shared
     @Bindable private var wallet = WalletStore.shared
+    @Bindable private var cover = HomeCoverStore.shared
     @State private var stream = GenStream()
     @State private var openProject: ProjectRoute?
     @State private var coverThing: Thing?
@@ -138,6 +139,10 @@ struct HomeScreen: View {
         // its holdings treemap — same "pin means keep this in view" rule as
         // a Thing pin, just without a Thing to observe via things.count.
         .onChange(of: wallet.pinnedToHome) { loadWalletHoldings() }
+        // A chosen Home banner (Settings → Banner) is composed from too — and
+        // its tray pops back into an already-mounted Home, so onAppear won't
+        // catch it. Recompose so the banner takes the cover immediately.
+        .onChange(of: cover.revision) { streamComposition(instant: true) }
         .onAppear {
             streamComposition()
             loadWalletHoldings()

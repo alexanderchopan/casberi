@@ -34,8 +34,23 @@ final class HomeCoverStore {
                 kind = nil
                 colorName = nil
             }
+            // Home composes its cover from a plain `banner != nil` check, so a
+            // change here has to nudge it to recompose — a UIImage isn't
+            // Equatable for `.onChange`, and Home is often already mounted
+            // (the Banner tray lives in Settings, pushed inside Home's own
+            // NavigationStack, so popping back never refires its onAppear).
+            // Every mutation funnels through `banner`'s didSet (setColor,
+            // setPhoto, clear all end here), so one bump here covers them all.
+            // didSet doesn't fire for the initializer's load, so this stays 0
+            // at launch and Home's first compose already sees the saved banner.
+            revision += 1
         }
     }
+
+    /// Bumps on every cover change (set a color, set a photo, clear) so Home
+    /// can observe one Equatable value and recompose — the same shape as
+    /// `CorpusSignal.revision` for the corpus.
+    private(set) var revision = 0
 
     var kind: Kind? {
         didSet { UserDefaults.standard.set(kind?.rawValue, forKey: "home.cover.kind") }
