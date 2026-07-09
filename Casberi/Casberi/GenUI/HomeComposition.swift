@@ -182,7 +182,8 @@ enum HomeComposition {
             subline = week.count == 1 ? "1 thing landed" : "\(week.count) things landed"
         }
         if !things.isEmpty {
-            doc.append("cover = Cover(\(q("Weekend")), \(q(title)), \(q(subline)), \(image.map { q($0.id.uuidString) } ?? "\"\""), \(q(dateline(things: things))), \(q("quiet")))")
+            let coverRef = hasBanner ? "banner" : (image?.id.uuidString ?? "")
+            doc.append("cover = Cover(\(q("Weekend")), \(q(title)), \(q(subline)), \(q(coverRef)), \(q(dateline(things: things))), \(q("quiet")))")
             rootRefs.append("cover")
         }
 
@@ -359,29 +360,39 @@ enum HomeComposition {
         return "\(weekday) · \(today) thing\(today == 1 ? "" : "s")"
     }
 
+    /// True when the person set their own Home cover — it always wins over
+    /// the day's newest screenshot (an explicit choice outranks an automatic
+    /// guess) and renders shorter (150pt vs 250pt): a tall bleed means
+    /// "this just happened," a banner means "this is what I chose" — the
+    /// two states read differently on purpose (ruling 2026-07-09).
+    private static var hasBanner: Bool { HomeCoverStore.shared.banner != nil }
+
     /// The cover line for morning/evening: the newest image thing when one
     /// exists (title, project · time), else the quiet cover carrying the
-    /// shipped Hero content — same priority rules, no obligations.
+    /// shipped Hero content — same priority rules, no obligations. A set
+    /// banner only changes WHICH image shows; the words never change, so
+    /// the cover never implies the banner is today's activity.
     private static func cover(things: [Thing]) -> String {
         let date = dateline(things: things)
-        if let image = newestImageThing(things) {
+        if !hasBanner, let image = newestImageThing(things) {
             let project = image.tags.first { ThingKind.from(typeTag: $0) == nil }
             let subline = [project, shortTime(image.capturedAt)]
                 .compactMap { $0 }.joined(separator: " · ")
             return "cover = Cover(\(q("Just landed · \(image.source)")), \(q(image.title)), \(q(subline)), \(q(image.id.uuidString)), \(q(date)))"
         }
+        let bannerRef = hasBanner ? "banner" : ""
         // Quiet cover — the shipped Hero lines, verbatim priority. Approvals
         // never lead Home (voice guardrail: agent asks live in Feed; the cover
         // states what landed, never what's waiting on the person).
         if isQuietDay(things) {
-            return "cover = Cover(\(q("Today")), \(q("A quiet day")), \(q("Nothing new yet — your things keep.")), \"\", \(q(date)), \(q("quiet")))"
+            return "cover = Cover(\(q("Today")), \(q("A quiet day")), \(q("Nothing new yet — your things keep.")), \(q(bannerRef)), \(q(date)), \(q("quiet")))"
         }
         if let latest = things.first(where: { $0.kind != .approval }) {
             // The 6th arg names the kind so the quiet cover can wear its hue
             // (the image cover extracts color from the photo instead).
-            return "cover = Cover(\(q("Just landed")), \(q(latest.title)), \(q("\(latest.kind.typeTag) · \(latest.source)")), \"\", \(q(date)), \(q(latest.kind.typeTag)))"
+            return "cover = Cover(\(q("Just landed")), \(q(latest.title)), \(q("\(latest.kind.typeTag) · \(latest.source)")), \(q(bannerRef)), \(q(date)), \(q(latest.kind.typeTag)))"
         }
-        return "cover = Cover(\(q("Now")), \(q("Your things go here")), \(q("Paste, speak, or share one in.")), \"\", \(q(date)), \(q("quiet")))"
+        return "cover = Cover(\(q("Now")), \(q("Your things go here")), \(q("Paste, speak, or share one in.")), \(q(bannerRef)), \(q(date)), \(q("quiet")))"
     }
 
     // MARK: - Kind pills (replaces the KindBar on Home; the bar stays in the vocabulary)

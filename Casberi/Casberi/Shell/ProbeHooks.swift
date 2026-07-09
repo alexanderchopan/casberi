@@ -2,6 +2,7 @@
 import Foundation
 import SwiftData
 import Photos
+import UIKit
 
 /// The launch-arg connect-and-sync probes: `-chatgptImport <path>`,
 /// `-tokenBridge "<Name>:<token>"`, `-fcName <username>`, `-bskyHandle
@@ -107,6 +108,19 @@ enum ProbeHooks {
         Hook(key: "reingestPhotos") { _, context in
             let n = ScreenshotIngest.ingest(context: context)
             NSLog("Photos re-ingest probe: %d new", n)
+        },
+        // `-setHomeBanner YES` sets a synthetic Home cover banner headlessly
+        // — screenshot verification of the shorter banner-cover treatment.
+        Hook(key: "setHomeBanner") { _, _ in
+            let size = CGSize(width: 400, height: 400)
+            let format = UIGraphicsImageRendererFormat.default()
+            format.scale = 1
+            let img = UIGraphicsImageRenderer(size: size, format: format).image { ctx in
+                UIColor.systemPurple.setFill()
+                ctx.fill(CGRect(origin: .zero, size: size))
+            }
+            HomeCoverStore.shared.banner = img
+            NSLog("Home banner probe: set")
         },
         // `-twitchAuth YES` starts the device flow headlessly: NSLogs the
         // code for the person to approve at twitch.tv/activate, polls up to

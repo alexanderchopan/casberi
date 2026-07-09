@@ -17,6 +17,9 @@ struct SettingsScreen: View {
     @State private var avatarPickerOpen = false
     @State private var avatarDialogOpen = false
     @State private var avatarSelection: PhotosPickerItem?
+    @State private var coverPickerOpen = false
+    @State private var coverDialogOpen = false
+    @State private var coverSelection: PhotosPickerItem?
 
     private let columns = [GridItem(.flexible(), spacing: DS.Space.s3),
                            GridItem(.flexible(), spacing: DS.Space.s3)]
@@ -62,6 +65,26 @@ struct SettingsScreen: View {
                         ProfileStore.shared.avatar = ProfileStore.prepared(image)
                     }
                     avatarSelection = nil
+                }
+            }
+            .photosPicker(isPresented: $coverPickerOpen,
+                          selection: $coverSelection, matching: .images)
+            .confirmationDialog("Your Home cover", isPresented: $coverDialogOpen) {
+                Button("Change photo") { coverPickerOpen = true }
+                Button("Remove photo", role: .destructive) {
+                    DSHaptic.tap()
+                    withAnimation(DS.Motion.standard) { HomeCoverStore.shared.banner = nil }
+                }
+                Button("Cancel", role: .cancel) {}
+            }
+            .onChange(of: coverSelection) { _, item in
+                guard let item else { return }
+                Task {
+                    if let data = try? await item.loadTransferable(type: Data.self),
+                       let image = UIImage(data: data) {
+                        HomeCoverStore.shared.banner = HomeCoverStore.prepared(image)
+                    }
+                    coverSelection = nil
                 }
             }
             #if DEBUG
@@ -127,6 +150,18 @@ struct SettingsScreen: View {
             TileSpec(title: "Theme",
                      value: ThemeStore.shared.summary,
                      action: { themeOpen = true }),
+            // An explicit choice for Home's cover, same shape as Avatar
+            // (goal 6: one image, owned locally) — it always wins over the
+            // day's newest screenshot, so a fresh capture never leads Home
+            // uninvited (2026-07-09).
+            TileSpec(title: "Header",
+                     value: HomeCoverStore.shared.banner == nil ? "Use your own photo" : "",
+                     avatar: HomeCoverStore.shared.banner,
+                     badge: HomeCoverStore.shared.banner == nil ? ("photo", DS.textTertiary) : nil,
+                     action: {
+                         if HomeCoverStore.shared.banner == nil { coverPickerOpen = true }
+                         else { coverDialogOpen = true }
+                     }),
             // Dev-facing on purpose: TestFlight reports become a screenshot
             // of on-device facts instead of a description (2026-07-09).
             TileSpec(title: "Diagnostics",

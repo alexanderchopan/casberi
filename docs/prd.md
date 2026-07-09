@@ -613,6 +613,29 @@ Four rulings from the first real-corpus flood (one wallet connect landed 100 tra
 - **Perishables show their clock everywhere.** The next event's countdown and a Twitch stream's Live state ride their rows in All, not just in their source's shape. Live is read from the source's own current-live set (refreshed each foreground), never inferred from row age — a row must never claim live longer than the source did.
 - **Chips order by today first.** Source chips sort by today's count, then total, then name — the apps moving now lead; lifetime volume alone doesn't hold the front. And inactive chips are icon-only (amended 2026-07-09): labels made the row scroll past a handful of connected apps; the brand icon is the identity, and only the active chip names itself. Menus stay dead — everything remains one visible tap.
 
+## 36a. Home cover: an explicit banner outranks the automatic screenshot (2026-07-09)
+
+The automatic cover (day's newest screenshot, full 250pt bleed) had no
+way out — a screenshot the person didn't want leading Home just showed
+up there. Settings gained a "Header" tile (same shape as Avatar: one
+image, owned locally, change/remove). When set, it always wins over
+the day's newest screenshot — an explicit choice outranks an automatic
+guess — and renders at 150pt, not 250pt: the two states read
+differently on purpose. A tall bleed means "this just happened"; a
+banner means "this is what I chose." The overlaid text (dateline,
+title, subline) never changes based on which image is showing — a
+banner only substitutes the picture, never the words, so Home never
+implies a static photo is today's activity.
+
+Considered and set aside: showing the newest THING of any kind instead
+of specifically the newest screenshot — doesn't solve the control
+problem (the newest thing can still be an unwanted screenshot) and
+non-image things have nothing to bleed a full-height photo from. A
+prior, broader "background photo" theme setting (app-wide, all
+screens) was tried and retired 2026-07-06 for the same reason a
+banner stays Home-only and optional: one image, one screen, one clear
+purpose — not a return to that retired feature.
+
 ## 36. Bridge selection ruling: live data only (2026-07-09)
 
 No new import bridges. A bridge whose data arrives via a request-and-wait export (TikTok's 1–4 day JSON, Tinder's 24–48h zip, IMDb's CSV) lands stale and never updates — the person asked for live data or nothing. The ChatGPT import predates this ruling and stays (its framing is explicitly a backfill, and OpenAI offers no live read). Evaluated and declined under this ruling: TikTok, Tinder, IMDb (viable exports, stale), Linktree/Rotten Tomatoes/CardPointers (no surface at all), Duolingo (unofficial API only — ToS-gray breaks the honesty rule), Credit Karma/NerdWallet/Acorns (aggregator-only; needs the post-M2 server), Fileverse (E2EE by design; revisit if they ship a hosted API), Fantastical (already covered — it's a client over the calendars EventKit reads). Pinterest passed: their public per-user RSS feed is live and official-enough (a published feed, not a scraped page).

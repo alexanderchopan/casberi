@@ -1068,6 +1068,11 @@ private struct GenCover: View {
 
     private var thingID: String { el.str(3) }
     private var hasImage: Bool { !thingID.isEmpty }
+    /// A chosen banner, not a live capture — renders shorter (150pt vs
+    /// 250pt) so the two states read differently on purpose: a tall bleed
+    /// means "this just happened," a banner means "this is what I chose"
+    /// (ruling 2026-07-09). It isn't a thing, so it never opens a sheet.
+    private var isBanner: Bool { thingID == "banner" }
     private var photoTheme: Bool { ThemeStore.shared.backgroundPhoto != nil }
 
     /// The quiet cover's wash color. Nil while the document is still
@@ -1103,10 +1108,11 @@ private struct GenCover: View {
                 // The layout slot stays fixed; the canvas rides a bottom-
                 // aligned overlay so a pull extends it upward (stretchy
                 // header) without a feedback loop on the measurement.
+                let base: CGFloat = isBanner ? 150 : 250
                 Color.clear
-                    .frame(height: 250 + topInset)
+                    .frame(height: base + topInset)
                     .overlay(alignment: .bottom) {
-                        canvas.frame(height: 250 + topInset + stretch)
+                        canvas.frame(height: base + topInset + stretch)
                     }
             } else {
                 canvas.frame(minHeight: 150 + topInset)
@@ -1183,7 +1189,7 @@ private struct GenCover: View {
             }
         }
         .contentShape(Rectangle())
-        .onTapGesture { if hasImage { coverTap?(thingID) } }
+        .onTapGesture { if hasImage, !isBanner { coverTap?(thingID) } }
     }
 
     /// Bleed at the top (dateline zone), the page at the bottom (no seam).
@@ -1231,6 +1237,20 @@ private struct GenCover: View {
 
     private func load() async {
         guard hasImage, image == nil else { return }
+        // A set banner isn't a thing — it's the person's own chosen image,
+        // loaded straight from its store, no lookup.
+        if isBanner {
+            guard let ui = HomeCoverStore.shared.banner else { return }
+            image = ui
+            if let hit = CoverBleed.cached(thingID) {
+                bleed = hit
+            } else {
+                bleed = await Task.detached(priority: .utility) {
+                    CoverBleed.extract(from: ui, id: "banner")
+                }.value
+            }
+            return
+        }
         // Resolve the thing locally (the doc only names facts).
         guard let uuid = UUID(uuidString: thingID) else { return }
         let all = (try? modelContext.fetch(FetchDescriptor<Thing>(
