@@ -6,16 +6,13 @@ import SwiftData
 /// no client secret, refresh tokens included — the person enters a short code
 /// at twitch.tv/activate once and the phone holds the session. No server.
 ///
-/// GATED until a client id exists: register a (free) app at
-/// dev.twitch.tv/console/apps (any OAuth redirect; category "Application
-/// Integration"; client type PUBLIC), paste the client id below, and flip the
-/// catalog offer to `connectable: true, needsSetup: true` (the setup screen
-/// arrives with activation). Until then the offer stays a Soon card — no
-/// dead controls.
+/// ACTIVE (2026-07-08): the client id below is the user's registered public
+/// app from dev.twitch.tv/console/apps. A client id is not a secret — it
+/// identifies the app; the device-code flow needs nothing else.
 enum TwitchAuth {
 
-    /// From dev.twitch.tv/console/apps — empty means the bridge is off.
-    static let clientID = ""
+    /// From dev.twitch.tv/console/apps (client type: Public).
+    static let clientID = "49rla6akq1thul05u8utbxk013xv0t"
     static let scope = "user:read:follows"
     static var ready: Bool { !clientID.isEmpty }
 
@@ -37,6 +34,8 @@ enum TwitchAuth {
         let userCode: String      // what the person types at twitch.tv/activate
         let deviceCode: String    // what we poll with
         let interval: Int
+        /// Twitch's activate URL with the code prefilled — one tap approves.
+        let verificationURL: URL?
     }
 
     /// Step 1 — ask Twitch for a code the person enters on their own session.
@@ -47,7 +46,8 @@ enum TwitchAuth {
               let user = root["user_code"] as? String,
               let device = root["device_code"] as? String else { return nil }
         return DeviceCode(userCode: user, deviceCode: device,
-                          interval: (root["interval"] as? Int) ?? 5)
+                          interval: (root["interval"] as? Int) ?? 5,
+                          verificationURL: (root["verification_uri"] as? String).flatMap(URL.init))
     }
 
     /// Step 2 — poll until the person approves (or the code expires).

@@ -77,6 +77,21 @@ enum ProbeHooks {
                 NSLog("Wallet probe: %@ new", n.map(String.init) ?? "FAILED")
             }
         },
+        // `-twitchAuth YES` starts the device flow headlessly: NSLogs the
+        // code for the person to approve at twitch.tv/activate, polls up to
+        // five minutes, then runs the first sync. Sim verification only.
+        Hook(key: "twitchAuth") { _, context in
+            Task { @MainActor in
+                guard let code = await TwitchAuth.startDeviceFlow() else {
+                    NSLog("Twitch probe: device flow FAILED"); return
+                }
+                NSLog("Twitch probe: enter code %@ at twitch.tv/activate", code.userCode)
+                let ok = await TwitchAuth.poll(code, attempts: 60)
+                guard ok else { NSLog("Twitch probe: NOT approved"); return }
+                let n = await TwitchIngest.refresh(context: context)
+                NSLog("Twitch probe: connected, %@ live", n.map(String.init) ?? "FAILED")
+            }
+        },
         // `-obsidianVault <path>` points the vault at a folder headlessly
         // (an in-sandbox path needs no security scope — sim testing only).
         Hook(key: "obsidianVault") { path, context in

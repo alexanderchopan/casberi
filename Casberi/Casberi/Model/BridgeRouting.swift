@@ -23,6 +23,7 @@ enum BridgeRouter {
         case farcaster
         case steam
         case obsidian
+        case twitch
         case token(TokenBridge)
         /// A connected seat with no dedicated screen (the demo seats — Gmail,
         /// Calendar, …) — the generic detail page, never EmptyView.
@@ -40,6 +41,7 @@ enum BridgeRouter {
             case .farcaster:      "fc"
             case .steam:          "steam"
             case .obsidian:       "obsidian"
+            case .twitch:         "twitch"
             case .token(let b):   b.bridgeID
             case .detail(let id): "detail:\(id)"
             }
@@ -66,6 +68,7 @@ enum BridgeRouter {
         Row(offer: "Farcaster", id: "fc",     destination: .farcaster),
         Row(offer: "Steam",     id: "steam",  destination: .steam),
         Row(offer: "Obsidian",  id: "obsidian", destination: .obsidian),
+        Row(offer: "Twitch",    id: "twitch", destination: .twitch),
     ] + TokenBridge.allCases.map {
         Row(offer: $0.rawValue, id: $0.bridgeID, destination: .token($0))
     }
@@ -101,6 +104,7 @@ struct BridgeDestinationView: View {
         case .farcaster:      HandleSetupScreen(bridge: .farcaster)
         case .steam:          SteamScreen()
         case .obsidian:       ObsidianScreen()
+        case .twitch:         TwitchScreen()
         case .token(let b):   TokenSetupScreen(bridge: b)
         case .detail(let id): BridgeDetailScreen(bridgeID: id)
         }

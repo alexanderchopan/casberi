@@ -108,8 +108,9 @@ enum BridgeCatalog {
         Offer(name: "Obsidian",    tagline: "Your vault, beside your things",        group: "Your work",      connectable: true,
               summary: "Point at your vault folder and your notes land as things — findable next to everything else. Fully local: the vault is read in place, never modified, and nothing leaves this iPhone.",
               needsSetup: true),
-        Offer(name: "Twitch",      tagline: "Live follows land in your feed",        group: "Your watching",  connectable: false,
-              summary: "When a channel you follow goes live, the stream lands in your feed as a link — catch it while it's on."),
+        Offer(name: "Twitch",      tagline: "Live follows land in your feed",        group: "Your watching",  connectable: true,
+              summary: "When a channel you follow goes live, the stream lands in your feed as a link — catch it while it's on. Sign-in happens on Twitch's own page with a short code; read-only, no password in the app.",
+              needsSetup: true),
     ]
 
     /// Group order for the catalog screen (insertion order of first member).
