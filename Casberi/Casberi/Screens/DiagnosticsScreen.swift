@@ -98,9 +98,9 @@ struct DiagnosticsScreen: View {
             let route = TokenChart.route(from: t.content)!
             log("Token: \(t.title) → \(route.chain)/\(String(route.address.prefix(10)))…")
             if let chart = await TokenChart.fetch(chain: route.chain, address: route.address) {
-                log("OK chart: \(chart.closes.count) candles, price \(chart.price)")
+                log("OK chart: \(chart.closes.count) points, price \(chart.price)")
             } else {
-                log("FAIL chart fetch — GeckoTerminal returned nothing for that chain/address")
+                log("FAIL chart fetch — neither GeckoTerminal nor Dexscreener had a price")
             }
         }
 
@@ -108,11 +108,7 @@ struct DiagnosticsScreen: View {
         let wallet = WalletStore.shared
         log("Wallet: \(wallet.addresses.count) address(es), pinned to Home: \(wallet.pinnedToHome ? "yes" : "no")")
         if !wallet.addresses.isEmpty {
-            if let cells = await WalletIngest.topHoldings() {
-                log("OK holdings: \(cells.count) cells")
-            } else {
-                log("FAIL holdings fetch")
-            }
+            for line in await WalletIngest.holdingsDiagnostic() { log(line) }
         }
     }
 
