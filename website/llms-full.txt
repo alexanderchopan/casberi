@@ -1,0 +1,161 @@
+# Casberi — Full documentation
+
+> Casberi is a free iOS app that gathers everything you make — notes, links, screenshots, events, chats, voice notes, and the output of your apps and agents — into one private feed on your iPhone. One search finds everything. Your things live on your device, work offline, and leave only by your choice.
+
+Website: https://casberi.app · Docs: https://casberi.app/docs.html · TestFlight: https://testflight.apple.com/join/xBD4tYZh · Privacy: https://casberi.app/privacy.html
+
+Last updated: July 8, 2026
+
+## About — what Casberi is, and why
+
+### The situation
+
+Doing creates things. Things land in apps. Apps multiply with the doing, and every new app adds a boundary — another place to look, another container to remember. The friction grows with the boundaries: the more you produce, the more it costs to use what you produced. The market's answer is agents, and each agent ships as another app — another history, another memory, another settings panel. The remedy repeats the disease.
+
+### Who it's for
+
+**Casual users — built for first.** The iPhone is their computer. Many apps — Notes, Calendar, Reminders, Messages — and one agent app. No tolerance for setup.
+
+**Power users — served on the same app.** They run agents as labor: a coding agent in a terminal, a gateway supervising agents across their machines. The phone is a remote, not the computer. They never get new screens — just more kinds of things and connections, plus approvals.
+
+### What they're trying to do
+
+1. Stay mobile — the phone completes the job.
+2. Capture things — any thought, image, or link, in the moment.
+3. Organize things — order among the things.
+4. Find things — retrieve by what a thing is.
+5. Do things — finish tasks: plan, book, draft, schedule.
+6. Own things — on the device, offline, leaving only by choice.
+
+Configuring, directing, and tracking — "operate" — is not a goal. It's what a person spends to get the goals. Casual users' operate budget is zero; power users' is large, but the spend must accrue. The product minimizes operate at every budget.
+
+### How it works today
+
+A casual user runs two worlds on one phone. The Apple world: capture through screenshots, Notes, Siri, Messages-to-self; organization per app; retrieval per app. The agent world: threads, projects, memory, a settings panel that explains nothing. Neither world writes to the other — the agent can't put anything on the calendar, and no search spans the two.
+
+A power user runs four worlds across three machines. The Apple world, the agent-app world, the terminal world (output stays in the filesystem and never reaches the phone), and the gateway world (approvals arrive as pushes; a missed notification is gone). Each world holds its own record of their labor: one job's prompt sits in the terminal, its output in a repo, its approval in the gateway, its writeup in a chat. Reconstructing one job means visiting four records.
+
+### What actually happens
+
+For casual users:
+
+- A recipe sits untitled in Notes; it's never found and never cooked. An itinerary sits 40 messages deep in one of three chats; at the airport they re-ask and the new answer drops the hotel address.
+- A dentist reminder is snoozed six times because booking takes a call. A dinner plan scatters across Calendar, Messages, and Safari by hand; the guest list never leaves the chat.
+- They open the agent's settings once, connect nothing, and close it. They download a second agent, get a second history and memory, and delete it in a week.
+
+For power users:
+
+- An overnight run finishes at 11pm; they learn at 8am and the follow-up starts a day late. They approve a diff bigger than its notification on trust, and the write breaks a config.
+- They rebuild in June a skill they wrote in March, because the March version lives in a forgotten directory on a retired machine. A new laptop costs two days of keys and scopes.
+- A cron job dies silently; they notice a week later, from the absence.
+
+### The problems
+
+One problem set at two magnitudes — casual users hit each at app scale, power users at machine-and-agent scale.
+
+- Problem 1 — Mobile gets hard. Tasks cross apps by copy → switch → paste; the phone can't reach the machines at all.
+- Problem 2 — Capture betrays them. The moment picks the container — or the machinery does — and the choice is permanent.
+- Problem 3 — They can't organize. Order costs labor per container; nothing spans containers; no unit of "job" exists anywhere.
+- Problem 4 — They can't find. Retrieval starts with "which app" — or "which world, which machine, which session." Failure lands at the moment of use.
+- Problem 5 — They can't finish. Agent output is stranded one copy-paste from done; approvals arrive without their context.
+- Problem 6 — They won't configure — or the spend evaporates. Casual users connect nothing; power users configure constantly and nothing accrues.
+- Problem 7 — They won't add another agent — or pay for five. Agents share nothing; each addition multiplies containers.
+- Problem 8 — They aren't aware. What they keep stays mute; their machines finish, fail, and die without a signal. The state exists and never arrives.
+
+### The solution
+
+One assistant that works across your apps instead of adding another one. Casberi is a native iOS app: one home where everything you make becomes a thing — notes, links, screenshots, events, chats, voice notes, transactions, and, for power users, jobs, runs, and approvals.
+
+- Solution 1 — One home for your things. One container joins the containers. A job is one thing: prompt, output, approval, and writeup under one record.
+- Solution 2 — Find by what it is. One search over the home. Query by content, get the thing — not the thread. Provenance is a set of fields: source, agent, run, machine. "Which agent broke the build" is a query.
+- Solution 3 — Capture in one gesture. Every capture surface routes here with no destination decision, no title, no folder. Connected machines capture for you — output flows in on its own.
+- Solution 4 — Captures become outcomes. The thing carries its next action. Writes exit through bridges; the connected app finishes the job. A follow-up job leaves from the sheet.
+- Solution 5 — Setup accrues. Zero setup to start: useful before it asks for anything, permissions at the moment they unlock something. Power users pay once and keep it: keys, scopes, and skills are saved as things — the secret itself lives only in the Keychain.
+- Solution 6 — Not another agent. Casberi presents as an organizer. No model picker, no memory panel, no persona. Agents are rows in Apps and labor in the feed — the sixth agent adds a row, not a world.
+- Solution 7 — Feels like an Apple product. iOS grammar in type, motion, and touch targets. The polish is how the promises land — felt, not announced.
+- Solution 8 — Apps are bridges. Adding an app builds the bridge: iOS frameworks for Apple apps, OAuth or a pasted token for services, a key or endpoint for agents and machines. Three grades — framework (live, on-device), account (live via token), import (batch via official export) — and every detail page says which one it is.
+- Solution 9 — Approvals carry context. An agent's ask arrives with what judgment needs — the exact command, scope, agent, and target — rendered for the phone. Approve or deny from the sheet.
+- Solution 10 — Status arrives in your feed. Run finished, run failed, cron died — each a feed row. An expected thing that fails to arrive is itself a thing.
+
+### The platform is the ownership answer
+
+Native iOS: your things in a local database on the device, iCloud sync through your own iCloud (opt-in, default off), no Casberi server holding them. Reads and capture work offline. No analytics, no trackers. Answers run on the person's own device by default; a stronger opt-in cloud brain is the planned power layer — and the day it ships, the "nothing leaves the phone" copy goes conditional, because the claim always tracks the truth.
+
+## How to use — every surface, walked through
+
+### First run
+
+Onboarding is one screen that acts out the pitch. App icons rain from the top of the screen and stack into the bottom half — the visual is the headline: all of this lands here. Above them, a mini store offers exactly the three bridges that connect in one tap — Photos, Calendar, Reminders — and Connect runs the real flow; the iOS permission dialog is the in-context ask. Each connect fills its slot in place: the icon springs to color, the line flips to present tense ("Your screenshots, flowing in"), a green check pops. There is no demo data anywhere — the feed is 100% real from the first minute. When you continue, you land on the Feed, watching your own things arrive. The rest of the catalog waits one tap away.
+
+### The shell
+
+Two tabs — Home (synthesis) and Feed (the record) — in a glass capsule, with the composer as a glass button on the same axis. Think, browse, capture. Management lives behind two doors worn by every tab root, top-right: the avatar opens Settings; a grid glyph opens Apps, and it pulses only when a bridge needs attention. Re-tapping a tab pops its stack back to the root. One toast surface above the bar reports every outcome ("Saved", "On your calendar") — no write ends in silence, and a failure states the actual fix.
+
+### Capture
+
+Things enter through deliberate gestures, never through typing:
+
+- Share sheet from any app — the thing arrives with no folder or title step.
+- Screenshots flow in automatically once Photos is connected.
+- Siri and App Intents capture by voice from anywhere on the phone.
+- Paste into the composer — the parse card shows what will be saved, with editable fields and tags, and save happens on send.
+- Mic — speech routes through the same parse; a recording gets a Live Activity on the lock screen while it runs.
+
+A captured thing flies as a small card to the Feed tab, which pulses once. The toast reads "Saved · Undo." Casberi never authors or edits content — it collects and connects; the source app stays the editor.
+
+### Feed
+
+The record. It paints instantly from the local store, newest on top — no spinner, no stream. Every row is one anatomy: a separate rounded card washed in its kind's color, with the source's icon leading (where it came from), the title full-width (what it is), and time plus tag on the right. Pinned rows hold a section above Today.
+
+- Filtering: one row of source chips, each wearing its app's real icon; kind filters arrive from Home's map. A filter with zero hits shows the app's own icon and a "Show everything" pill.
+- One gesture, one meaning: tap opens the thing sheet; swipe offers exactly Pin and — when a real destination exists — Open in the source app.
+- Shapes: a source chip changes the feed's shape, not just its query. Calendar reads as an agenda with the next event emphasized; Reminders groups by state with a check circle that completes the real reminder (tap again to undo); Photos becomes a continuous grid with day pills; a wallet leads with a holdings treemap.
+- Rhythm-breakers: an agent's approval renders as a consent card — provenance in the header, the exact command in monospace, Approve/Deny as the verbs. The card is the consent; no dialog rides it.
+
+### The thing sheet
+
+Tap any row and the sheet opens ink-black in both modes, like a photo viewer. No cards, no lines — spacing separates. From top: an eyebrow (source dot · kind · age), the title large, then the thing's media — a screenshot leads with its image, a watched token leads with a live native price chart. Below, a spec table with per-kind labels (WHEN for events, SITE for links, BY for agent provenance), then tags as a text line — tap it and the full chip editor opens in place: add, remove, rename everywhere, delete everywhere. Verbs are quiet text rows, derived from what the thing is (Open in Calendar, Add Reminder), capped at three; writes confirm before acting. Pin and Share are rows. A Related shelf streams last.
+
+### Tags
+
+The one word for grouping — the app never says "project" or "folder." A tag is a name on things that belong together; a thing carries many. Two flavors: type tags the app assigns (Link, Event — structural, unrenameable) and your own. Each tag owns one stable color everywhere — its text on feed rows, its tile on Home's map, its detail header. The system proposes groupings by clustering; you rename or remove, never file. There is no tag-management screen; a tag with zero things dies. The composer understands organizing as a command — "tag lisbon as Trip", "rename Trip to Travel" — and streams a proposal card showing the matched things and the exact change; the write happens on Apply, with Undo in the toast.
+
+### Home
+
+The synthesis surface, authored fresh each open and streamed in. From top: a full-bleed cover — the newest screenshot's photo with its own color bled into the page, or a bright field of the day's lead kind color — carrying the dateline ("MONDAY · 24 THINGS"); one insight under a "Noticed" eyebrow, a cross-source fact the corpus proves; the tag map ("What's going on") — an interactive treemap of your tags, sized by count; kind pills (what arrived today, tap-through to the filtered feed); the Pinned card; and Threads, links the system found across apps. Home speaks to themes and content, never obligations — nothing reads as "you should." No task lists, no counters, no streaks. A new user with a sparse corpus sees real previews of the same modules — kind names and skeletons, never fake data.
+
+### The composer
+
+One field for ask, search, and capture. Tap the glass button and it morphs into the bubble: "Ask anything. Organize everything."
+
+Asking runs in two layers, both on the phone. A scoring engine always retrieves first — it ranks your corpus by title, tags, content, and freshness, and returns the top hits; on any iPhone, that alone answers. On Apple-Intelligence iPhones the free on-device model then composes over those same hits: a lookup ("find what I saved about work") returns one plain sentence plus the real things, most relevant first; a reflection ("what's my week") streams a short plain summary. Two rails hold the truth: the model can only choose among retrieved things, never invent one, and every displayed row paints from the real thing. Nothing leaves the phone; nothing is billed.
+
+### Apps — the store
+
+Behind the grid door. One scroll, two zones split by the app's only line: management above — the connected strip, where paused bridges dim and broken ones lead with Fix — and the store below. Discover leads with a story carousel of the track-anything bridges (watch any token, any wallet, any Farcaster account), then category shelves like the App Store. Every offer opens a product page: the real icon, what it does, what shows up in your feed, and one verb that means what it says — Connect, Pair, Fix, Open, or Soon. Never "GET," never a dead button; an offer that needs a key it doesn't have yet stays a Soon card.
+
+Every bridge states its grade plainly, and every connect ends in proof — your things arrive. A snapshot of the grades (the in-app catalog is always current):
+
+- Framework (live, on-device): Photos, Calendar, Reminders, Apple Health, Apple Music.
+- Account (live, no server): RSS, Bluesky, Farcaster, token watchlists; iCloud Mail and Gmail over IMAP with an app-specific password; paste-token bridges like Readwise, GitHub, Todoist, Raindrop, Cal.com, Calendly, Notion, and Linear. Tokens go straight to the Keychain and never render.
+- Import (batch, official export): ChatGPT — conversations arrive as chat things, deduped on re-import.
+
+Apps with no readable API (Apple Notes, Messages) are never listed as bridges — they reach Casberi through capture, and the catalog says so.
+
+### Agents and approvals
+
+An agent, gateway, or machine connects like any app — a key or endpoint, a row with a state ring; multiple agents behind one gateway are provenance fields on things, never extra rows. Their labor arrives in the feed: outputs as things carrying provenance (source, agent, run, machine), state changes as rows (run finished, run failed, cron died). When an agent wants to act, the ask arrives as an approval thing — the exact command, who's asking, by what route — and the Approve tap is the consent. Casberi never holds keys to money and never trades; any bridge to a trading platform is read-only.
+
+MCP — Casberi is the server. Outside clients (Claude, Raycast, any MCP client) connect to your corpus, not the other way around. Three tools: search over real things, the week's synthesis, and save — which never writes silently but arrives as an approval in the feed. Reads are gated by the connection being live (unpair revokes); writes are gated by your tap. Pairing is a QR code; the client appears as a bridge-shaped row like everything else.
+
+### Settings and ownership
+
+Behind the avatar: Avatar, Data, Theme — three tiles, each with a real job, and nothing else. No account, no sign-in.
+
+Data is the trust surface. Two big numbers lead — things and storage — then the guarantee in plain rows: answers run on this iPhone; iCloud sync is a real toggle, default off (its badge is the tell: green lock = on this iPhone, blue cloud = your iCloud); Hide previews redacts the app switcher, default on. Three controls, all real: Export (everything to one file, provenance included), Import, and Delete everything — which purges the local store, the voice recordings, and the iCloud copy, and reports what it did. Every fact on the sheet is answered live.
+
+Theme is one knob: light or dark. Identity stays with the system — one fixed Casberi blue marks everything pressable; kind hues say what things are; orange means needs-you; green means done.
+
+### What's deliberately not here
+
+No Actions tab — do lives where its object lives (the composer creates, the feed triages, sheets consent). No automations yet; the product takes no alert away from the app that owns it. No model picker, no persona, no "I", no thinking indicators — agency renders as results. No note editor. No streaks, goals, or guilt mechanics. No trading surface, ever. Each absence has a return trigger; until a trigger fires, the absence is the feature.

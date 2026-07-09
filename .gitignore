@@ -13,5 +13,8 @@ DerivedData/
 # Verify script output
 scripts/output/
 
+# Website deploy artifact (regenerated on each deploy)
+website/*.zip
+
 # Claude Code personal settings
 .claude/settings.local.json

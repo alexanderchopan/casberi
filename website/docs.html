@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Casberi — Docs</title>
+<meta name="description" content="What Casberi is, why it exists, and how to use every surface — capture, feed, search, apps, agents, and ownership.">
+<meta property="og:title" content="Casberi — Docs">
+<meta property="og:description" content="What Casberi is, why it exists, and how to use every surface.">
+<meta property="og:type" content="article">
+<link rel="icon" href="icons/casberi-logo.png">
+<link rel="stylesheet" href="styles.css">
+<style>
+  /* ---------- docs page styles (page-scoped) ---------- */
+  .doc { max-width: 700px; margin: 0 auto; }
+  .doc-hero { padding: 36px 0 10px; }
+  .doc-hero h1 {
+    font-size: clamp(38px, 7vw, 64px);
+    line-height: 1.02; font-weight: 850; letter-spacing: -0.03em;
+    text-wrap: balance;
+  }
+  .doc-hero h1 em {
+    font-style: normal;
+    background: linear-gradient(120deg, var(--blue-bright), var(--berry));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .doc-hero p.sub { font-size: 18px; color: var(--muted); max-width: 620px; margin-top: 18px; }
+  .updated { font-size: 13px; color: var(--faint); margin-top: 18px; }
+
+  .toc { display: flex; gap: 9px; flex-wrap: wrap; margin-top: 24px; }
+  .toc a {
+    font-size: 13.5px; font-weight: 650; color: var(--ink);
+    background: var(--surface); border-radius: 999px; padding: 9px 18px;
+    transition: background .18s ease, transform .18s ease;
+  }
+  .toc a:hover { background: var(--surface-2); text-decoration: none; transform: translateY(-1px); }
+  .toc a span { color: var(--blue-bright); margin-right: 7px; font-weight: 800; }
+
+  /* the kinds of things, as quiet chips */
+  .kindkey { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 26px; }
+  .kindkey span {
+    font-size: 12.5px; font-weight: 600; color: var(--muted);
+    background: var(--surface); border-radius: 999px; padding: 6px 13px;
+  }
+
+  /* small anchor chips inside How to use */
+  .subtoc { display: flex; gap: 7px; flex-wrap: wrap; margin: 14px 0 4px; }
+  .subtoc a {
+    font-size: 12.5px; font-weight: 600; color: var(--muted);
+    background: var(--surface); border-radius: 999px; padding: 6px 13px;
+    transition: background .18s ease, color .18s ease, transform .18s ease;
+  }
+  .subtoc a:hover { background: var(--surface-2); color: var(--ink); text-decoration: none; transform: translateY(-1px); }
+
+  /* sticky rail — appears when the viewport has room beside the column */
+  .docrail { display: none; }
+  @media (min-width: 1180px) {
+    .docrail { display: block; position: fixed; top: 118px; left: calc(50% - 565px); width: 180px; }
+  }
+  .docrail a {
+    display: block; font-size: 13px; color: var(--faint);
+    padding: 4px 0 4px 12px; border-left: 2px solid rgba(255,255,255,.08);
+    transition: color .15s ease, border-color .15s ease;
+  }
+  .docrail a:hover { color: var(--ink); text-decoration: none; }
+  .docrail a.top { font-weight: 700; color: var(--muted); }
+  .docrail a.top + a.top, .docrail a.sub + a.top { margin-top: 12px; }
+  .docrail a.on { color: var(--ink); border-left-color: var(--blue-bright); }
+
+  .doc section { padding: 44px 0 8px; }
+  .doc .part-eyebrow {
+    font-size: 13px; font-weight: 800; letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--blue-bright); margin-bottom: 8px;
+  }
+  .doc h2 { margin-bottom: 12px; }
+  .doc h3 {
+    font-size: 20px; font-weight: 750; letter-spacing: -0.01em;
+    margin: 36px 0 10px;
+    scroll-margin-top: 24px;
+  }
+  .doc p { font-size: 16.5px; color: var(--muted); margin-bottom: 14px; }
+  .doc p strong, .doc li strong { color: var(--ink); font-weight: 600; }
+  .doc p.setpiece { font-size: 19px; line-height: 1.65; color: var(--ink); }
+  .doc ul { margin: 0 0 14px; padding-left: 22px; }
+  .doc li { font-size: 16.5px; color: var(--muted); margin-bottom: 8px; }
+
+  /* persona cards */
+  .persona-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 18px 0 6px; }
+  @media (max-width: 640px) { .persona-grid { grid-template-columns: 1fr; } }
+  .persona {
+    background: var(--surface); border-radius: var(--radius-sm); padding: 20px 22px;
+    transition: background .18s ease;
+  }
+  .persona b { display: block; font-size: 17px; color: var(--ink); margin-bottom: 6px; }
+  .persona p { font-size: 15px; margin: 0; }
+
+  /* goals grid */
+  .goal-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin: 18px 0 6px; }
+  @media (max-width: 720px) { .goal-grid { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 460px) { .goal-grid { grid-template-columns: 1fr; } }
+  .goal {
+    background: var(--surface); border-radius: var(--radius-sm); padding: 16px 18px;
+    transition: background .18s ease;
+  }
+  .goal i {
+    display: block; font-style: normal; font-size: 11px; font-weight: 800;
+    letter-spacing: .1em; margin-bottom: 6px;
+  }
+  .goal b { display: block; font-size: 15.5px; color: var(--ink); margin-bottom: 4px; }
+  .goal span { font-size: 13.5px; color: var(--muted); line-height: 1.45; display: block; }
+  .g1 i { color: var(--k-link); } .g2 i { color: var(--k-shot); } .g3 i { color: var(--k-note); }
+  .g4 i { color: var(--k-chat); } .g5 i { color: var(--k-rem); } .g6 i { color: var(--confirm); }
+
+  /* evidence — vignettes, not facts, so they read as quiet quotes */
+  .evi-label {
+    font-size: 11.5px; font-weight: 800; letter-spacing: .09em; text-transform: uppercase;
+    color: var(--faint); margin: 18px 0 10px;
+  }
+  .evidence { display: grid; gap: 12px; margin: 0 0 6px; padding: 0; }
+  .evidence li {
+    list-style: none; margin: 0; font-size: 15.5px; color: var(--muted); line-height: 1.6;
+    padding: 1px 0 1px 16px; border-left: 2px solid rgba(255,255,255,.14);
+  }
+
+  /* problems */
+  .prob-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 18px 0 6px; }
+  @media (max-width: 640px) { .prob-grid { grid-template-columns: 1fr; } }
+  .prob {
+    background: var(--surface); border-radius: var(--radius-sm); padding: 16px 18px;
+    transition: background .18s ease;
+  }
+  .prob i {
+    display: inline-block; font-style: normal; font-size: 11px; font-weight: 800;
+    letter-spacing: .06em; color: var(--berry);
+    background: rgba(224,52,92,.12); border-radius: 6px; padding: 2px 8px; margin-bottom: 8px;
+  }
+  .prob b { display: block; font-size: 15.5px; color: var(--ink); margin-bottom: 4px; }
+  .prob span { font-size: 13.5px; color: var(--muted); line-height: 1.5; display: block; }
+
+  /* solutions — two columns, same anatomy as the problems */
+  .mech { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 18px 0 6px; }
+  @media (max-width: 640px) { .mech { grid-template-columns: 1fr; } }
+  .mech-row {
+    background: var(--surface); border-radius: var(--radius-sm); padding: 16px 18px;
+    transition: background .18s ease;
+  }
+  .mech-row i {
+    display: inline-block; font-style: normal; font-size: 11px; font-weight: 800;
+    letter-spacing: .06em; color: var(--blue-bright);
+    background: rgba(22,115,230,.14); border-radius: 6px; padding: 2px 8px; margin-bottom: 8px;
+    white-space: nowrap;
+  }
+  .mech-row b { display: block; font-size: 15.5px; color: var(--ink); margin-bottom: 4px; }
+  .mech-row span { font-size: 13.5px; color: var(--muted); line-height: 1.5; display: block; }
+
+  /* card hover — background shift only (transform is the reveal's) */
+  @media (hover: hover) and (pointer: fine) {
+    .goal:hover, .prob:hover, .mech-row:hover, .persona:hover { background: var(--surface-2); }
+  }
+
+  /* walkthrough headers: a counted number in the section's kind color */
+  .walk { counter-reset: walksec; }
+  .walk h3 { margin-top: 48px; counter-increment: walksec; }
+  .walk h3::before {
+    content: counter(walksec, decimal-leading-zero);
+    font-size: 13px; font-weight: 800; letter-spacing: .06em;
+    color: var(--wd, var(--blue-bright));
+    margin-right: 12px; vertical-align: 2px;
+  }
+  #first-run  { --wd: var(--k-shot); }   #shell    { --wd: var(--blue-bright); }
+  #capture    { --wd: var(--k-voice); }  #feed     { --wd: var(--k-link); }
+  #thing-sheet{ --wd: var(--k-event); }  #tags     { --wd: var(--k-note); }
+  #home       { --wd: var(--k-rem); }    #composer { --wd: var(--k-chat); }
+  #apps       { --wd: var(--k-mail); }   #agents   { --wd: var(--k-chat); }
+  #settings   { --wd: var(--confirm); }  #not-here { --wd: var(--faint); }
+
+  .doc .divider { height: 1px; background: rgba(255,255,255,.07); margin: 52px 0 0; }
+
+  .doc-cta { text-align: center; padding: 56px 0 10px; }
+  .doc-cta p { color: var(--muted); }
+
+  /* ---------- skeleton drawings ----------
+     Abstract sketches of each surface — shapes and the color grammar only,
+     no real content, so they never go stale. */
+  .sk {
+    background: var(--surface); border-radius: var(--radius-sm);
+    padding: 16px; margin: 18px 0 10px; max-width: 400px;
+    box-shadow: 0 14px 34px rgba(0,0,0,.28);
+  }
+  .doc .sk-cap { font-size: 12.5px; color: var(--faint); margin: 0 0 18px; }
+  .sk .bar { height: 9px; border-radius: 5px; background: rgba(255,255,255,.10); }
+  .sk .bar.big { height: 13px; }
+  .sk .bar.dim { background: rgba(255,255,255,.06); }
+  .sk .bar.w25 { width: 25%; } .sk .bar.w35 { width: 35%; } .sk .bar.w45 { width: 45%; }
+  .sk .bar.w55 { width: 55%; } .sk .bar.w65 { width: 65%; } .sk .bar.w80 { width: 80%; }
+  .sk .bar + .bar { margin-top: 7px; }
+  .sk-row { display: flex; align-items: center; gap: 10px; }
+  .sk-row + .sk-row, .sk-row + .sk-block, .sk-block + .sk-row, .sk-block + .sk-block { margin-top: 10px; }
+  .sk .grow { flex: 1; min-width: 0; }
+  .sk .sq { width: 30px; height: 30px; border-radius: 8px; flex: none; }
+  .sk .sq.sm { width: 24px; height: 24px; border-radius: 7px; }
+  .sk .dot { width: 7px; height: 7px; border-radius: 50%; flex: none; }
+  .sk .pill {
+    font-size: 11px; font-weight: 700; padding: 5px 13px; border-radius: 999px;
+    flex: none; margin-left: auto; line-height: 1;
+  }
+  .sk .pill.go { background: var(--blue); color: #fff; }
+  .sk .pill.ok { background: rgba(52,199,123,.15); color: var(--confirm); }
+  .sk .pill.deny { background: rgba(255,69,58,.15); color: var(--k-event); }
+  .sk .pill.soon { background: var(--surface-2); color: var(--faint); }
+  .sk .pill.blank { background: var(--surface-2); width: 42px; height: 21px; padding: 0; }
+  .sk .pill.blank.on { background: var(--blue); }
+  /* kind hues */
+  .c-link { background: rgba(10,132,255,.30); }  .c-shot { background: rgba(48,209,88,.30); }
+  .c-event{ background: rgba(255,69,58,.30); }   .c-note { background: rgba(255,214,10,.26); }
+  .c-chat { background: rgba(191,90,242,.30); }  .c-rem  { background: rgba(255,159,10,.30); }
+  .c-voice{ background: rgba(255,55,95,.30); }   .c-mail { background: rgba(100,210,255,.28); }
+  /* washed feed rows */
+  .sk .wash { border-radius: 10px; padding: 9px 10px; }
+  .sk .wash.c-link { background: rgba(10,132,255,.10); }
+  .sk .wash.c-shot { background: rgba(48,209,88,.10); }
+  .sk .wash.c-event{ background: rgba(255,69,58,.10); }
+  /* chip strips */
+  .sk .chips { display: flex; gap: 6px; margin-bottom: 12px; }
+  /* the shell drawing floats free — no card behind chrome */
+  .sk.sk-shell {
+    background: none; box-shadow: none; padding: 14px 0 6px;
+    display: flex; flex-direction: column; align-items: center; gap: 14px;
+  }
+  .sk-shell .toast { display: flex; align-items: center; gap: 7px; background: var(--surface); border-radius: 999px; padding: 7px 14px; box-shadow: 0 10px 24px rgba(0,0,0,.3); }
+  .sk-shell .toast .dot { background: var(--confirm); }
+  .sk-shell .toast .bar { width: 64px; margin: 0; }
+  .sk .barrow { display: flex; align-items: center; gap: 10px; justify-content: center; }
+  .sk .tabcap { display: flex; gap: 18px; padding: 13px 22px; border-radius: 999px; background: var(--surface-2); }
+  .sk .tab { width: 24px; height: 8px; border-radius: 4px; background: rgba(255,255,255,.16); }
+  .sk .tab.on { background: var(--blue); }
+  .sk .fab { width: 38px; height: 38px; border-radius: 50%; background: var(--surface-2); box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.12); }
+  .sk-shell .tabcap { background: var(--surface); box-shadow: 0 10px 24px rgba(0,0,0,.3); }
+  .sk-shell .fab { background: var(--surface); box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.12), 0 10px 24px rgba(0,0,0,.3); }
+  /* phone-framed sketches — the two hero surfaces read as app screens */
+  .sk.phone-sk {
+    background: #0d0f14; border: 1px solid #242a36; border-radius: 30px;
+    padding: 14px; width: 254px;
+    box-shadow: 0 20px 48px rgba(0,0,0,.42);
+  }
+  .sk .minibar { display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 14px; }
+  .sk .minibar .tabcap { padding: 8px 14px; gap: 12px; }
+  .sk .minibar .tab { width: 16px; height: 6px; }
+  .sk .minibar .fab { width: 26px; height: 26px; box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.12); }
+  /* the thing sheet — taller, narrower, a real sheet with a grabber */
+  .sk.ink { background: #0b0d11; width: 254px; padding: 12px 16px 18px; }
+  .sk .grabber { width: 36px; height: 4px; border-radius: 2px; background: rgba(255,255,255,.18); margin: 0 auto 12px; }
+  /* composer capsule */
+  .sk .capsule { display: flex; align-items: center; gap: 10px; background: var(--surface-2); border-radius: 999px; padding: 11px 15px; }
+  .sk.ink .capsule { background: #161a22; }
+  .sk .capsule .bar { flex: 1; margin: 0; }
+  .sk .capsule .dot { background: var(--k-voice); }
+  /* media / cover / chart blocks */
+  .sk .media { height: 64px; border-radius: 10px; }
+  .sk .chart { background: #11151c; border-radius: 10px; height: 58px; padding: 8px 10px; }
+  .sk .chart svg { width: 100%; height: 100%; display: block; }
+  .sk .cover {
+    height: 74px; border-radius: 10px; padding: 12px 12px 0;
+    background: linear-gradient(180deg, #ff6157 0%, #f2372b 100%);
+  }
+  .sk .cover .bar { background: rgba(255,255,255,.4); }
+  .sk .cover .bar.dim { background: rgba(255,255,255,.25); }
+  /* treemap cells */
+  .sk .map { display: grid; grid-template-columns: 2fr 1fr 1fr; grid-auto-rows: 34px; gap: 6px; }
+  .sk .cell { border-radius: 9px; display: flex; align-items: flex-end; padding: 6px 8px; }
+  .sk .cell .bar { width: 45%; height: 6px; margin: 0; background: rgba(255,255,255,.30); }
+  .sk .cell.tall { grid-row: span 2; }
+  /* code block (approval) */
+  .sk .code { background: #0b0d11; border-radius: 9px; padding: 10px 12px; }
+  .sk .code .bar { background: rgba(52,199,123,.35); width: 70%; margin: 0; }
+  /* stat cards + toggles (settings) */
+  .sk .stats { display: flex; gap: 8px; }
+  .sk .stat { flex: 1; background: var(--surface-2); border-radius: 10px; padding: 12px; }
+  .sk .stat .bar.big { width: 55%; }
+  .sk .switch { width: 36px; height: 22px; border-radius: 999px; background: var(--surface-2); position: relative; flex: none; margin-left: auto; transition: background .25s ease; }
+  .sk .switch::after { content: ""; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: #fff; transition: transform .25s ease; }
+  .sk .switch.on { background: var(--blue); }
+  .sk .switch.on::after { transform: translateX(14px); }
+  .sk .fillline { height: 1px; background: rgba(255,255,255,.08); margin: 12px 0; }
+
+  /* ---------- microanimation: one-shot draw-in (JS-gated) ----------
+     The script adds .anim; without JS everything is simply visible. */
+  .sk.anim > * { opacity: 0; transform: translateY(9px); transition: opacity .5s cubic-bezier(.2,.7,.2,1), transform .5s cubic-bezier(.2,.7,.2,1); }
+  .sk.anim > :nth-child(2) { transition-delay: .07s; }
+  .sk.anim > :nth-child(3) { transition-delay: .14s; }
+  .sk.anim > :nth-child(4) { transition-delay: .21s; }
+  .sk.anim > :nth-child(5) { transition-delay: .28s; }
+  .sk.anim > :nth-child(6) { transition-delay: .35s; }
+  .sk.anim > :nth-child(7) { transition-delay: .42s; }
+  .sk.anim > :nth-child(8) { transition-delay: .49s; }
+  .sk.anim.in > * { opacity: 1; transform: none; }
+
+  /* ---------- signature moments — one state change per sketch, once ---------- */
+  /* first run: a Connect flips to its check */
+  .sk .pillswap { position: relative; margin-left: auto; flex: none; }
+  .sk .pillswap .pill { margin-left: 0; }
+  .sk .pillswap .pill.ok {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    opacity: 0; transform: scale(.7);
+    transition: opacity .3s ease, transform .35s cubic-bezier(.2,.9,.3,1.4);
+  }
+  .sk .pillswap .pill.go { transition: opacity .3s ease; }
+  .sk.anim.in.done .pillswap .pill.ok { opacity: 1; transform: scale(1); }
+  .sk.anim.in.done .pillswap .pill.go { opacity: 0; }
+  /* feed: the newest thing lands on top */
+  .sk.anim.in > .landrow { opacity: 0; transform: translateY(-10px); }
+  .sk.anim.in.done > .landrow { opacity: 1; transform: none; }
+  /* settings: a toggle flips on */
+  .sk.anim.in.done .switch.flip { background: var(--blue); }
+  .sk.anim.in.done .switch.flip::after { transform: translateX(14px); }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <nav>
+    <a class="brand" href="/">
+      <img class="brandmark" src="icons/casberi-logo.png" alt="">
+      Casberi
+    </a>
+    <div class="nav-links">
+      <a href="/">Home</a>
+      <a class="on" href="docs.html">Docs</a>
+      <a href="privacy.html">Privacy</a>
+    </div>
+  </nav>
+</div>
+
+<nav class="docrail" aria-label="On this page">
+  <a class="top" href="#about">About</a>
+  <a class="sub" href="#problems">The problems</a>
+  <a class="sub" href="#solution">The solution</a>
+  <a class="top" href="#how-to-use">How to use</a>
+  <a class="sub" href="#first-run">First run</a>
+  <a class="sub" href="#shell">The shell</a>
+  <a class="sub" href="#capture">Capture</a>
+  <a class="sub" href="#feed">Feed</a>
+  <a class="sub" href="#thing-sheet">The thing sheet</a>
+  <a class="sub" href="#tags">Tags</a>
+  <a class="sub" href="#home">Home</a>
+  <a class="sub" href="#composer">The composer</a>
+  <a class="sub" href="#apps">Apps</a>
+  <a class="sub" href="#agents">Agents</a>
+  <a class="sub" href="#settings">Settings</a>
+</nav>
+
+<div class="wrap doc">
+
+  <header class="doc-hero">
+    <p class="part-eyebrow">Docs</p>
+    <h1>Your apps,<br><em>one feed.</em></h1>
+    <p class="sub">What Casberi is, why it exists, and how to use every surface. Written plainly.</p>
+    <div class="toc">
+      <a href="#about"><span>1</span>About</a>
+      <a href="#how-to-use"><span>2</span>How to use</a>
+    </div>
+    <div class="kindkey" aria-label="Kinds of things">
+      <span>Links</span>
+      <span>Screenshots</span>
+      <span>Events</span>
+      <span>Notes</span>
+      <span>Chats</span>
+      <span>Reminders</span>
+      <span>Voice</span>
+      <span>Mail</span>
+    </div>
+    <p class="updated">Last updated July 8, 2026</p>
+  </header>
+
+  <!-- ================= ABOUT ================= -->
+  <section id="about">
+    <p class="part-eyebrow">About</p>
+    <h2>What Casberi is, and why</h2>
+
+    <h3>The situation</h3>
+    <p class="setpiece">Doing creates things. Things land in apps. Apps multiply with the doing, and every new app adds a boundary — another place to look, another container to remember. The friction grows with the boundaries: the more you produce, the more it costs to use what you produced. The market's answer is agents, and each agent ships as another app — another history, another memory, another settings panel. The remedy repeats the disease.</p>
+
+    <h3>Who it's for</h3>
+    <div class="persona-grid stagger">
+      <div class="persona">
+        <b>Casual users — built for first</b>
+        <p>The iPhone is their computer. Many apps — Notes, Calendar, Reminders, Messages — and one agent app. No tolerance for setup.</p>
+      </div>
+      <div class="persona">
+        <b>Power users — served on the same app</b>
+        <p>They run agents as labor: a coding agent in a terminal, a gateway supervising agents across their machines. The phone is a remote, not the computer. They never get new screens — just more kinds of things and connections, plus approvals.</p>
+      </div>
+    </div>
+
+    <h3>What they're trying to do</h3>
+    <div class="goal-grid stagger">
+      <div class="goal g1"><i>GOAL 1</i><b>Stay mobile</b><span>The phone completes the job.</span></div>
+      <div class="goal g2"><i>GOAL 2</i><b>Capture things</b><span>Any thought, image, or link, in the moment.</span></div>
+      <div class="goal g3"><i>GOAL 3</i><b>Organize things</b><span>Order among the things.</span></div>
+      <div class="goal g4"><i>GOAL 4</i><b>Find things</b><span>Retrieve by what a thing is.</span></div>
+      <div class="goal g5"><i>GOAL 5</i><b>Do things</b><span>Finish tasks: plan, book, draft, schedule.</span></div>
+      <div class="goal g6"><i>GOAL 6</i><b>Own things</b><span>On the device, offline, leaving only by choice.</span></div>
+    </div>
+    <p>Configuring, directing, and tracking — "operate" — is not a goal. It's what a person spends to get the goals. Casual users' operate budget is zero; power users' is large, but the spend must accrue. The product minimizes operate at every budget.</p>
+
+    <h3>How it works today</h3>
+    <p><strong>A casual user runs two worlds on one phone.</strong> The Apple world: capture through screenshots, Notes, Siri, Messages-to-self; organization per app; retrieval per app. The agent world: threads, projects, memory, a settings panel that explains nothing. Neither world writes to the other — the agent can't put anything on the calendar, and no search spans the two.</p>
+    <p><strong>A power user runs four worlds across three machines.</strong> The Apple world, the agent-app world, the terminal world (output stays in the filesystem and never reaches the phone), and the gateway world (approvals arrive as pushes; a missed notification is gone). Each world holds its own record of their labor: one job's prompt sits in the terminal, its output in a repo, its approval in the gateway, its writeup in a chat. Reconstructing one job means visiting four records.</p>
+
+    <h3>What actually happens</h3>
+    <p class="evi-label">For casual users</p>
+    <ul class="evidence stagger">
+      <li>A recipe sits untitled in Notes; it's never found and never cooked. An itinerary sits 40 messages deep in one of three chats; at the airport they re-ask and the new answer drops the hotel address.</li>
+      <li>A dentist reminder is snoozed six times because booking takes a call. A dinner plan scatters across Calendar, Messages, and Safari by hand; the guest list never leaves the chat.</li>
+      <li>They open the agent's settings once, connect nothing, and close it. They download a second agent, get a second history and memory, and delete it in a week.</li>
+    </ul>
+    <p class="evi-label">For power users</p>
+    <ul class="evidence stagger">
+      <li>An overnight run finishes at 11pm; they learn at 8am and the follow-up starts a day late. They approve a diff bigger than its notification on trust, and the write breaks a config.</li>
+      <li>They rebuild in June a skill they wrote in March, because the March version lives in a forgotten directory on a retired machine. A new laptop costs two days of keys and scopes.</li>
+      <li>A cron job dies silently; they notice a week later, from the absence.</li>
+    </ul>
+
+    <h3 id="problems">The problems</h3>
+    <p>One problem set at two magnitudes — casual users hit each at app scale, power users at machine-and-agent scale:</p>
+    <div class="prob-grid stagger">
+      <div class="prob"><i>PROBLEM 1</i><b>Mobile gets hard</b><span>Tasks cross apps by copy → switch → paste; the phone can't reach the machines at all.</span></div>
+      <div class="prob"><i>PROBLEM 2</i><b>Capture betrays them</b><span>The moment picks the container — or the machinery does — and the choice is permanent.</span></div>
+      <div class="prob"><i>PROBLEM 3</i><b>They can't organize</b><span>Order costs labor per container; nothing spans containers; no unit of "job" exists anywhere.</span></div>
+      <div class="prob"><i>PROBLEM 4</i><b>They can't find</b><span>Retrieval starts with "which app" — or "which world, which machine, which session." Failure lands at the moment of use.</span></div>
+      <div class="prob"><i>PROBLEM 5</i><b>They can't finish</b><span>Agent output is stranded one copy-paste from done; approvals arrive without their context.</span></div>
+      <div class="prob"><i>PROBLEM 6</i><b>They won't configure — or the spend evaporates</b><span>Casual users connect nothing; power users configure constantly and nothing accrues.</span></div>
+      <div class="prob"><i>PROBLEM 7</i><b>They won't add another agent — or pay for five</b><span>Agents share nothing; each addition multiplies containers.</span></div>
+      <div class="prob"><i>PROBLEM 8</i><b>They aren't aware</b><span>What they keep stays mute; their machines finish, fail, and die without a signal. The state exists and never arrives.</span></div>
+    </div>
+
+    <h3 id="solution">The solution</h3>
+    <p><strong>One assistant that works across your apps instead of adding another one.</strong> Casberi is a native iOS app: one home where everything you make becomes a <strong>thing</strong> — notes, links, screenshots, events, chats, voice notes, transactions, and, for power users, jobs, runs, and approvals. The mechanism, feature by feature:</p>
+
+    <div class="mech stagger">
+      <div class="mech-row"><i>SOLUTION 1</i><b>One home for your things.</b><span>One container joins the containers. A job is one thing: prompt, output, approval, and writeup under one record.</span></div>
+      <div class="mech-row"><i>SOLUTION 2</i><b>Find by what it is.</b><span>One search over the home. Query by content, get the thing — not the thread. Provenance is a set of fields: source, agent, run, machine. "Which agent broke the build" is a query.</span></div>
+      <div class="mech-row"><i>SOLUTION 3</i><b>Capture in one gesture.</b><span>Every capture surface routes here with no destination decision, no title, no folder. Connected machines capture for you — output flows in on its own.</span></div>
+      <div class="mech-row"><i>SOLUTION 4</i><b>Captures become outcomes.</b><span>The thing carries its next action. Writes exit through bridges; the connected app finishes the job. A follow-up job leaves from the sheet.</span></div>
+      <div class="mech-row"><i>SOLUTION 5</i><b>Setup accrues.</b><span>Zero setup to start: useful before it asks for anything, permissions at the moment they unlock something. Power users pay once and keep it: keys, scopes, and skills are saved as things — the secret itself lives only in the Keychain.</span></div>
+      <div class="mech-row"><i>SOLUTION 6</i><b>Not another agent.</b><span>Casberi presents as an organizer. No model picker, no memory panel, no persona. Agents are rows in Apps and labor in the feed — the sixth agent adds a row, not a world.</span></div>
+      <div class="mech-row"><i>SOLUTION 7</i><b>Feels like an Apple product.</b><span>iOS grammar in type, motion, and touch targets. The polish is how the promises land — felt, not announced.</span></div>
+      <div class="mech-row"><i>SOLUTION 8</i><b>Apps are bridges.</b><span>Adding an app builds the bridge: iOS frameworks for Apple apps, OAuth or a pasted token for services, a key or endpoint for agents and machines. Three grades — framework (live, on-device), account (live via token), import (batch via official export) — and every detail page says which one it is.</span></div>
+      <div class="mech-row"><i>SOLUTION 9</i><b>Approvals carry context.</b><span>An agent's ask arrives with what judgment needs — the exact command, scope, agent, and target — rendered for the phone. Approve or deny from the sheet.</span></div>
+      <div class="mech-row"><i>SOLUTION 10</i><b>Status arrives in your feed.</b><span>Run finished, run failed, cron died — each a feed row. An expected thing that fails to arrive is itself a thing.</span></div>
+    </div>
+
+    <h3>The platform is the ownership answer</h3>
+    <p>Native iOS: your things in a local database on the device, iCloud sync through your own iCloud (opt-in, default off), no Casberi server holding them. Reads and capture work offline. No analytics, no trackers. Answers run on the person's own device by default; a stronger opt-in cloud brain is the planned power layer — and the day it ships, the "nothing leaves the phone" copy goes conditional, because the claim always tracks the truth.</p>
+
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- ================= HOW TO USE ================= -->
+  <section id="how-to-use" class="walk">
+    <p class="part-eyebrow">How to use</p>
+    <h2>Every surface, walked through</h2>
+    <div class="subtoc">
+      <a href="#first-run">First run</a>
+      <a href="#shell">The shell</a>
+      <a href="#capture">Capture</a>
+      <a href="#feed">Feed</a>
+      <a href="#thing-sheet">The thing sheet</a>
+      <a href="#tags">Tags</a>
+      <a href="#home">Home</a>
+      <a href="#composer">The composer</a>
+      <a href="#apps">Apps</a>
+      <a href="#agents">Agents</a>
+      <a href="#settings">Settings</a>
+    </div>
+
+    <h3 id="first-run">First run</h3>
+    <div class="sk" aria-hidden="true">
+      <div class="sk-row"><span class="sq c-shot"></span><div class="grow"><div class="bar w55"></div><div class="bar w35 dim"></div></div><span class="pill ok">✓</span></div>
+      <div class="sk-row"><span class="sq c-event"></span><div class="grow"><div class="bar w45"></div><div class="bar w25 dim"></div></div><span class="pillswap"><span class="pill go">Connect</span><span class="pill ok">✓</span></span></div>
+      <div class="sk-row"><span class="sq c-rem"></span><div class="grow"><div class="bar w55"></div><div class="bar w35 dim"></div></div><span class="pill go">Connect</span></div>
+    </div>
+    <p class="sk-cap">Three one-tap connects — the iOS permission ask is the whole setup.</p>
+    <p>Onboarding is one screen that acts out the pitch. App icons rain from the top of the screen and stack into the bottom half — the visual is the headline: <strong>all of this lands here</strong>. Above them, a mini store offers exactly the three bridges that connect in one tap — Photos, Calendar, Reminders — and Connect runs the real flow; the iOS permission dialog is the in-context ask. Each connect fills its slot in place: the icon springs to color, the line flips to present tense ("Your screenshots, flowing in"), a green check pops. There is no demo data anywhere — the feed is 100% real from the first minute. When you continue, you land on the <strong>Feed</strong>, watching your own things arrive. The rest of the catalog waits one tap away.</p>
+
+    <h3 id="shell">The shell</h3>
+    <div class="sk sk-shell" aria-hidden="true">
+      <div class="toast"><span class="dot"></span><div class="bar"></div></div>
+      <div class="barrow">
+        <div class="tabcap"><span class="tab on"></span><span class="tab"></span></div>
+        <div class="fab"></div>
+      </div>
+    </div>
+    <p class="sk-cap">Two tabs and the composer button — think, browse, capture. The toast reports outcomes.</p>
+    <p>Two tabs — <strong>Home</strong> (synthesis) and <strong>Feed</strong> (the record) — in a glass capsule, with the <strong>composer</strong> as a glass button on the same axis. Think, browse, capture. Management lives behind two doors worn by every tab root, top-right: the avatar opens Settings; a grid glyph opens Apps, and it pulses only when a bridge needs attention. Re-tapping a tab pops its stack back to the root. One toast surface above the bar reports every outcome ("Saved", "On your calendar") — no write ends in silence, and a failure states the actual fix.</p>
+
+    <h3 id="capture">Capture</h3>
+    <div class="sk" aria-hidden="true">
+      <div class="capsule"><div class="bar w65"></div><span class="dot"></span></div>
+      <div class="sk-row"><span class="pill blank on"></span><span class="pill blank"></span></div>
+      <div class="sk-block"><div class="bar w80"></div><div class="bar w45 dim"></div></div>
+    </div>
+    <p class="sk-cap">The parse card shows what will save before anything saves.</p>
+    <p>Things enter through deliberate gestures, never through typing:</p>
+    <ul>
+      <li><strong>Share sheet</strong> from any app — the thing arrives with no folder or title step.</li>
+      <li><strong>Screenshots</strong> flow in automatically once Photos is connected.</li>
+      <li><strong>Siri and App Intents</strong> capture by voice from anywhere on the phone.</li>
+      <li><strong>Paste</strong> into the composer — the parse card shows what will be saved, with editable fields and tags, and save happens on send.</li>
+      <li><strong>Mic</strong> — speech routes through the same parse; a recording gets a Live Activity on the lock screen while it runs.</li>
+    </ul>
+    <p>A captured thing flies as a small card to the Feed tab, which pulses once. The toast reads "Saved · Undo." The first thing ever gets its own moment. Casberi never authors or edits content — it collects and connects; the source app stays the editor.</p>
+
+    <h3 id="feed">Feed</h3>
+    <div class="sk phone-sk" aria-hidden="true">
+      <div class="chips"><span class="pill blank on"></span><span class="pill blank"></span><span class="pill blank"></span></div>
+      <div class="sk-row wash c-shot landrow"><span class="sq sm c-shot"></span><div class="grow"><div class="bar w45"></div></div><div class="bar w25 dim" style="width:26px"></div></div>
+      <div class="sk-row wash c-link"><span class="sq sm c-link"></span><div class="grow"><div class="bar w65"></div></div><div class="bar w25 dim" style="width:26px"></div></div>
+      <div class="sk-row wash c-event"><span class="sq sm c-event"></span><div class="grow"><div class="bar w55"></div></div><div class="bar w25 dim" style="width:26px"></div></div>
+      <div class="minibar"><div class="tabcap"><span class="tab"></span><span class="tab on"></span></div><div class="fab"></div></div>
+    </div>
+    <p class="sk-cap">Rows wear their kind's color; the leading icon is the source. The newest lands on top.</p>
+    <p>The record. It paints instantly from the local store, newest on top — no spinner, no stream. Every row is one anatomy: a separate rounded card washed in its kind's color, with the source's icon leading (where it came from), the title full-width (what it is), and time plus tag on the right. Pinned rows hold a section above Today.</p>
+    <ul>
+      <li><strong>Filtering:</strong> one row of source chips, each wearing its app's real icon; kind filters arrive from Home's map. A filter with zero hits shows the app's own icon and a "Show everything" pill.</li>
+      <li><strong>One gesture, one meaning:</strong> tap opens the thing sheet; swipe offers exactly Pin and — when a real destination exists — Open in the source app.</li>
+      <li><strong>Shapes:</strong> a source chip changes the feed's shape, not just its query. Calendar reads as an agenda with the next event emphasized; Reminders groups by state with a check circle that completes the real reminder (tap again to undo); Photos becomes a continuous grid with day pills; a wallet leads with a holdings treemap.</li>
+      <li><strong>Rhythm-breakers:</strong> an agent's approval renders as a consent card — provenance in the header, the exact command in monospace, Approve/Deny as the verbs. The card is the consent; no dialog rides it.</li>
+    </ul>
+
+    <h3 id="thing-sheet">The thing sheet</h3>
+    <div class="sk ink" aria-hidden="true">
+      <div class="grabber"></div>
+      <div class="sk-row"><span class="dot" style="background: var(--k-shot)"></span><div class="bar w35 dim"></div></div>
+      <div class="sk-block"><div class="bar big w65"></div></div>
+      <div class="sk-block chart"><svg viewBox="0 0 200 42" preserveAspectRatio="none"><path d="M0,34 L20,27 L40,31 L60,20 L80,24 L100,13 L120,18 L140,9 L160,14 L180,5 L200,9" fill="none" stroke="#34c77b" stroke-width="2" stroke-linejoin="round"/></svg></div>
+      <div class="sk-row"><div class="bar w25 dim"></div><div class="bar w45"></div></div>
+      <div class="sk-row"><div class="bar w25 dim"></div><div class="bar w35"></div></div>
+      <div class="sk-block"><div class="bar w45"></div><div class="bar w35"></div></div>
+    </div>
+    <p class="sk-cap">Ink in both modes — media first (here, a token's live chart), then facts, then verbs.</p>
+    <p>Tap any row and the sheet opens ink-black in both modes, like a photo viewer. No cards, no lines — spacing separates. From top: an eyebrow (source dot · kind · age), the title large, then the thing's media — a screenshot leads with its image, a watched token leads with a live native price chart. Below, a spec table with per-kind labels (WHEN for events, SITE for links, BY for agent provenance), then tags as a text line — tap it and the full chip editor opens in place: add, remove, rename everywhere, delete everywhere. Verbs are quiet text rows, derived from what the thing is (Open in Calendar, Add Reminder), capped at three; writes confirm before acting. Pin and Share are rows. A Related shelf streams last.</p>
+
+    <h3 id="tags">Tags</h3>
+    <div class="sk" aria-hidden="true">
+      <div class="map">
+        <div class="cell tall c-link"><div class="bar"></div></div>
+        <div class="cell c-chat"><div class="bar"></div></div>
+        <div class="cell c-rem"><div class="bar"></div></div>
+        <div class="cell c-shot" style="grid-column: span 2"><div class="bar"></div></div>
+      </div>
+    </div>
+    <p class="sk-cap">Your tags as a map, sized by count — tap one to filter.</p>
+    <p>The one word for grouping — the app never says "project" or "folder." A tag is a name on things that belong together; a thing carries many. Two flavors: type tags the app assigns (Link, Event — structural, unrenameable) and your own. Each tag owns one stable color everywhere — its text on feed rows, its tile on Home's map, its detail header. The system proposes groupings by clustering; you rename or remove, never file. There is no tag-management screen; a tag with zero things dies. The composer understands organizing as a command — "tag lisbon as Trip", "rename Trip to Travel" — and streams a proposal card showing the matched things and the exact change; the write happens on Apply, with Undo in the toast.</p>
+
+    <h3 id="home">Home</h3>
+    <div class="sk phone-sk" aria-hidden="true">
+      <div class="cover"><div class="bar w25 dim"></div><div class="bar big w65" style="margin-top:9px"></div></div>
+      <div class="sk-block"><div class="bar w25 dim"></div><div class="bar w80" style="margin-top:8px"></div></div>
+      <div class="map" style="grid-auto-rows: 26px">
+        <div class="cell c-link"><div class="bar"></div></div>
+        <div class="cell c-note"><div class="bar"></div></div>
+        <div class="cell c-voice"><div class="bar"></div></div>
+      </div>
+      <div class="minibar"><div class="tabcap"><span class="tab on"></span><span class="tab"></span></div><div class="fab"></div></div>
+    </div>
+    <p class="sk-cap">The cover takes the day's color; the map says what's going on.</p>
+    <p>The synthesis surface, authored fresh each open and streamed in. From top: a full-bleed <strong>cover</strong> — the newest screenshot's photo with its own color bled into the page, or a bright field of the day's lead kind color — carrying the dateline ("MONDAY · 24 THINGS"); one <strong>insight</strong> under a "Noticed" eyebrow, a cross-source fact the corpus proves; the <strong>tag map</strong> ("What's going on") — an interactive treemap of your tags, sized by count; <strong>kind pills</strong> (what arrived today, tap-through to the filtered feed); the <strong>Pinned</strong> card; and <strong>Threads</strong>, links the system found across apps. The voice rule: Home speaks to themes and content, never obligations — nothing reads as "you should." No task lists, no counters, no streaks. A new user with a sparse corpus sees real previews of the same modules — kind names and skeletons, never fake data.</p>
+
+    <h3 id="composer">The composer</h3>
+    <div class="sk" aria-hidden="true">
+      <div class="capsule"><div class="bar w45"></div><span class="dot"></span></div>
+      <div class="sk-block"><div class="bar w80"></div><div class="bar w55 dim"></div></div>
+      <div class="sk-row"><span class="sq sm c-note"></span><div class="grow"><div class="bar w55"></div></div></div>
+      <div class="sk-row"><span class="sq sm c-mail"></span><div class="grow"><div class="bar w45"></div></div></div>
+    </div>
+    <p class="sk-cap">An answer: one plain sentence, then the real things it stands on.</p>
+    <p>One field for ask, search, and capture. Tap the glass button and it morphs into the bubble: "Ask anything. Organize everything."</p>
+    <p>Asking runs in two layers, both on the phone. A scoring engine always retrieves first — it ranks your corpus by title, tags, content, and freshness, and returns the top hits; on any iPhone, that alone answers. On Apple-Intelligence iPhones the free on-device model then composes over those same hits: a lookup ("find what I saved about work") returns one plain sentence plus the real things, most relevant first; a reflection ("what's my week") streams a short plain summary. Two rails hold the truth: the model can only choose among retrieved things, never invent one, and every displayed row paints from the real thing. Nothing leaves the phone; nothing is billed.</p>
+
+    <h3 id="apps">Apps — the store</h3>
+    <div class="sk" aria-hidden="true">
+      <div class="sk-row"><span class="sq sm c-shot"></span><span class="sq sm c-event"></span><span class="sq sm c-rem"></span><span class="sq sm c-link"></span></div>
+      <div class="fillline"></div>
+      <div class="sk-row"><span class="sq c-chat"></span><div class="grow"><div class="bar w45"></div><div class="bar w25 dim"></div></div><span class="pill go">Connect</span></div>
+      <div class="sk-row"><span class="sq c-mail"></span><div class="grow"><div class="bar w55"></div><div class="bar w35 dim"></div></div><span class="pill soon">Soon</span></div>
+    </div>
+    <p class="sk-cap">Management above the line, the store below — one verb per offer.</p>
+    <p>Behind the grid door. One scroll, two zones split by the app's only line: <strong>management above</strong> — the connected strip, where paused bridges dim and broken ones lead with Fix — and <strong>the store below</strong>. Discover leads with a story carousel of the track-anything bridges (watch any token, any wallet, any Farcaster account), then category shelves like the App Store. Every offer opens a product page: the real icon, what it does, what shows up in your feed, and one verb that means what it says — Connect, Pair, Fix, Open, or Soon. Never "GET," never a dead button; an offer that needs a key it doesn't have yet stays a Soon card.</p>
+    <p>Every bridge states its grade plainly, and every connect ends in proof — your things arrive. A snapshot of the grades (the in-app catalog is always current):</p>
+    <ul>
+      <li><strong>Framework (live, on-device):</strong> Photos, Calendar, Reminders, Apple Health, Apple Music.</li>
+      <li><strong>Account (live, no server):</strong> RSS, Bluesky, Farcaster, token watchlists; iCloud Mail and Gmail over IMAP with an app-specific password; paste-token bridges like Readwise, GitHub, Todoist, Raindrop, Cal.com, Calendly, Notion, and Linear. Tokens go straight to the Keychain and never render.</li>
+      <li><strong>Import (batch, official export):</strong> ChatGPT — conversations arrive as chat things, deduped on re-import.</li>
+    </ul>
+    <p>Apps with no readable API (Apple Notes, Messages) are never listed as bridges — they reach Casberi through capture, and the catalog says so.</p>
+
+    <h3 id="agents">Agents and approvals</h3>
+    <div class="sk" aria-hidden="true">
+      <div class="sk-row"><span class="dot" style="background: var(--k-chat)"></span><div class="bar w45 dim"></div></div>
+      <div class="code"><div class="bar"></div></div>
+      <div class="sk-row"><span class="pill ok" style="margin-left:0">Approve</span><span class="pill deny" style="margin-left:0">Deny</span></div>
+    </div>
+    <p class="sk-cap">The exact command, then your tap — the card is the consent.</p>
+    <p>An agent, gateway, or machine connects like any app — a key or endpoint, a row with a state ring; multiple agents behind one gateway are provenance fields on things, never extra rows. Their labor arrives in the feed: outputs as things carrying provenance (source, agent, run, machine), state changes as rows (run finished, run failed, cron died). When an agent wants to act, the ask arrives as an approval thing — the exact command, who's asking, by what route — and the Approve tap is the consent. Casberi never holds keys to money and never trades; any bridge to a trading platform is read-only.</p>
+    <p><strong>MCP — Casberi is the server.</strong> Outside clients (Claude, Raycast, any MCP client) connect to your corpus, not the other way around. Three tools: search over real things, the week's synthesis, and save — which never writes silently but arrives as an approval in the feed. Reads are gated by the connection being live (unpair revokes); writes are gated by your tap. Pairing is a QR code; the client appears as a bridge-shaped row like everything else.</p>
+
+    <h3 id="settings">Settings and ownership</h3>
+    <div class="sk" aria-hidden="true">
+      <div class="stats">
+        <div class="stat"><div class="bar big"></div><div class="bar w45 dim"></div></div>
+        <div class="stat"><div class="bar big"></div><div class="bar w45 dim"></div></div>
+      </div>
+      <div class="sk-row"><span class="sq sm" style="background: rgba(52,199,123,.30)"></span><div class="grow"><div class="bar w45"></div></div><span class="switch on"></span></div>
+      <div class="sk-row"><span class="sq sm c-link"></span><div class="grow"><div class="bar w55"></div></div><span class="switch flip"></span></div>
+    </div>
+    <p class="sk-cap">Two numbers, one guarantee, and controls that are all real.</p>
+    <p>Behind the avatar: Avatar, Data, Theme — three tiles, each with a real job, and nothing else. No account, no sign-in.</p>
+    <p><strong>Data is the trust surface.</strong> Two big numbers lead — things and storage — then the guarantee in plain rows: answers run on this iPhone; iCloud sync is a real toggle, default off (its badge is the tell: green lock = on this iPhone, blue cloud = your iCloud); Hide previews redacts the app switcher, default on. Three controls, all real: Export (everything to one file, provenance included), Import, and Delete everything — which purges the local store, the voice recordings, and the iCloud copy, and reports what it did. Every fact on the sheet is answered live.</p>
+    <p><strong>Theme</strong> is one knob: light or dark. Identity stays with the system — one fixed Casberi blue marks everything pressable; kind hues say what things are; orange means needs-you; green means done.</p>
+
+    <h3 id="not-here">What's deliberately not here</h3>
+    <p>No Actions tab — do lives where its object lives (the composer creates, the feed triages, sheets consent). No automations yet; the product takes no alert away from the app that owns it. No model picker, no persona, no "I", no thinking indicators — agency renders as results. No note editor. No streaks, goals, or guilt mechanics. No trading surface, ever. Each absence has a return trigger; until a trigger fires, the absence is the feature.</p>
+  </section>
+
+  <div class="doc-cta">
+    <h2>See it for yourself.</h2>
+    <p>Casberi is free on TestFlight while it heads to the App Store.</p>
+    <a class="cta" href="https://testflight.apple.com/join/xBD4tYZh">Get it on TestFlight</a>
+  </div>
+
+</div>
+
+<footer>
+  <div class="wrap">
+    <p class="tagline">Your apps, one feed. Ask anything, organize everything. No account required.</p>
+    <p>© 2026 Casberi · <a href="/">Home</a> · <a href="privacy.html">Privacy</a></p>
+  </div>
+</footer>
+
+<script>
+// Docs behavior — scrollspy always; animations gated on JS + motion preference.
+// Every hidden state is added here first, so no-JS and reduced-motion readers
+// see a plain, fully visible page.
+(function () {
+  if (!('IntersectionObserver' in window)) return;
+
+  // Rail scrollspy — highlights the section you're reading.
+  var railLinks = Array.prototype.slice.call(document.querySelectorAll('.docrail a'));
+  if (railLinks.length) {
+    var byId = {};
+    railLinks.forEach(function (a) { byId[a.getAttribute('href').slice(1)] = a; });
+    var spy = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (!e.isIntersecting) return;
+        railLinks.forEach(function (a) { a.classList.remove('on'); });
+        var a = byId[e.target.id];
+        if (a) a.classList.add('on');
+      });
+    }, { rootMargin: '-12% 0px -74% 0px' });
+    Object.keys(byId).forEach(function (id) {
+      var el = document.getElementById(id);
+      if (el) spy.observe(el);
+    });
+  }
+
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+  // Card grids rise in with a small stagger the first time they appear.
+  var containers = document.querySelectorAll('.stagger');
+  var io = new IntersectionObserver(function (entries) {
+    entries.forEach(function (e) {
+      if (!e.isIntersecting) return;
+      Array.prototype.forEach.call(e.target.children, function (el) {
+        el.classList.add('in');
+      });
+      io.unobserve(e.target);
+    });
+  }, { threshold: 0.12 });
+  containers.forEach(function (c) {
+    Array.prototype.forEach.call(c.children, function (el, i) {
+      el.classList.add('reveal');
+      el.style.transitionDelay = Math.min(i * 55, 380) + 'ms';
+    });
+    io.observe(c);
+  });
+
+  // Skeleton drawings sketch themselves in part by part, then play their one
+  // signature moment (a connect flips to its check, the newest row lands, a
+  // toggle flips on). Once each — nothing loops.
+  var sks = document.querySelectorAll('.sk');
+  var skio = new IntersectionObserver(function (entries) {
+    entries.forEach(function (e) {
+      if (!e.isIntersecting) return;
+      e.target.classList.add('in');
+      setTimeout(function () { e.target.classList.add('done'); }, 1300);
+      skio.unobserve(e.target);
+    });
+  }, { threshold: 0.4 });
+  sks.forEach(function (sk) {
+    sk.classList.add('anim');
+    skio.observe(sk);
+  });
+})();
+</script>
+
+</body>
+</html>

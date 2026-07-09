@@ -1,0 +1,22 @@
+# Casberi
+
+> Casberi is a free iOS app that gathers everything you make — notes, links, screenshots, events, chats, voice notes, and the output of your apps and agents — into one private feed on your iPhone. One search finds everything. Your things live on your device, work offline, and leave only by your choice.
+
+Key facts:
+
+- Native iOS app (iPhone), free on TestFlight while it heads to the App Store.
+- Everything becomes a "thing" in one feed; one search spans all of it.
+- Capture in one gesture: share sheet, screenshots, Siri, paste, voice. Typed text never saves silently.
+- Connect apps as bridges: Photos, Calendar, Reminders, Apple Health, Apple Music, RSS, Bluesky, Farcaster, Gmail, iCloud Mail, GitHub, Notion, Linear, Todoist, Readwise, Raindrop, Cal.com, Calendly, ChatGPT import, token watchlists, and more.
+- Agents connect too: their output arrives in the feed with provenance, and any write waits for your tap (approvals). Casberi is also an MCP server — clients like Claude can search your things and propose saves you approve.
+- Answers are generated on-device (Apple Intelligence) from your own things; nothing is invented and nothing is billed.
+- No account, no analytics, no trackers. iCloud sync is opt-in and off by default. Export, import, and delete-everything are real controls.
+
+## Docs
+
+- [Docs](https://casberi.app/docs.html): why Casberi exists, the problems it answers, and a walkthrough of every surface
+- [Privacy](https://casberi.app/privacy.html): what is stored, where, and what Casberi never does
+
+## Optional
+
+- [llms-full.txt](https://casberi.app/llms-full.txt): the full documentation as plain text
