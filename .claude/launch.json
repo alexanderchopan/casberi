@@ -3,8 +3,11 @@
   "configurations": [
     {
       "name": "website",
-      "runtimeExecutable": "sh",
-      "runtimeArgs": ["-c", "cd \"/Users/alexanderchopan/Library/Mobile Documents/com~apple~CloudDocs/myStuff/product/casberi/website\" && exec python3 -m http.server \"${PORT:-4173}\""],
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "-c",
+        "import os, http.server, socketserver; os.chdir('/Users/alexanderchopan/Library/Mobile Documents/com~apple~CloudDocs/myStuff/product/casberi/website'); socketserver.TCPServer(('', int(os.environ.get('PORT') or 4173)), http.server.SimpleHTTPRequestHandler).serve_forever()"
+      ],
       "autoPort": true
     }
   ]

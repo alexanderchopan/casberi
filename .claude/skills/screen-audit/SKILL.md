@@ -15,14 +15,17 @@ Recurring sweep that catches regressions between working sessions. Everything ru
    - Settings: `-openSettings YES`
    - Data tray: `-accountDetail data` (add `-openSettings YES`)
    - Fresh-user onboarding + empty states: `-fresh YES` (then relaunch with `-fresh NO` to restore)
-   - Thing sheet: `-deeplink casberi://thing/<id>` (grab an id from the demo corpus via the answer probe log)
+   - Thing sheet: `-deeplink casberi://thing/latest` (opens the newest thing's sheet — no id needed)
+   - Project detail: `-openProject "Work"` (launch on `casberi://home`)
+   - Product page: `-openApp "GitHub"`, then `xcrun simctl openurl booted casberi://account` after launch (the hook needs the Apps page mounted)
+   - Bridge setup: `-openSetup "Readwise"` (token field), then `xcrun simctl openurl booted casberi://account` — repeat for `"RSS"` (feed URL) and `"Bluesky"` (handle) to cover the three setup-screen shapes
    - Synthesis answer: `-uiAnswerProbe "what's my week"`
-   - Lookup answer: `-uiAnswerProbe "what did I save about work"`
+   - Lookup answer: `-uiAnswerProbe "what did I save about work"` (cold inference can exceed the ~4s wait — the headless probe from step 1 is the source of truth for the result; the screenshot may catch it mid-stream)
    - Light mode: `xcrun simctl ui booted appearance light`, re-sweep home/feed/apps, then restore `dark`
    - Dynamic Type XXL: `xcrun simctl ui booted content_size extra-extra-large`, re-sweep, then restore `medium` (note the underscore in `content_size`)
 
 3. **Review each screenshot against the law**:
-   - `docs/build-brief.md` §8 + CLAUDE.md "Design law" (no hairlines, no glass on content, tray grammar, no dead controls, no fake status)
+   - `docs/build-brief.md` §8 + CLAUDE.md "Design law" (no hairlines — except the sanctioned Apps CONNECTED/Discover `fillLine` divider per prd.md:491; no glass on content, tray grammar, no dead controls, no fake status)
    - `docs/prd.md` rulings — flag any screen contradicting a recorded ruling
    - Empty/denied/unavailable states render honestly (no blank panes, no lying copy)
 
