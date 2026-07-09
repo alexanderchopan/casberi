@@ -1188,14 +1188,25 @@ private struct GenCover: View {
         let assetID = ref.replacingOccurrences(of: "phasset:", with: "")
         let assets = PHAsset.fetchAssets(withLocalIdentifiers: [assetID], options: nil)
         guard let asset = assets.firstObject else { return }
+        // The default (options: nil) is opportunistic + no network: for an
+        // iCloud-optimized photo — the common case once a screenshot ages —
+        // PhotoKit delivers ONLY a degraded thumbnail, and the old code
+        // waited for a non-degraded result that never came, so the cover
+        // stayed a blank dark canvas. Ask for the full image, from iCloud if
+        // needed; highQualityFormat delivers exactly once.
+        let options = PHImageRequestOptions()
+        options.isNetworkAccessAllowed = true
+        options.deliveryMode = .highQualityFormat
+        options.resizeMode = .fast
         let loaded: UIImage? = await withCheckedContinuation { cont in
             var reported = false
             PHImageManager.default().requestImage(
                 for: asset, targetSize: CGSize(width: 1200, height: 900),
-                contentMode: .aspectFill, options: nil
-            ) { img, info in
-                let degraded = (info?[PHImageResultIsDegradedKey] as? Bool) ?? false
-                if !degraded, !reported { reported = true; cont.resume(returning: img) }
+                contentMode: .aspectFill, options: options
+            ) { img, _ in
+                guard !reported else { return }
+                reported = true
+                cont.resume(returning: img)
             }
         }
         guard let loaded else { return }

@@ -49,4 +49,15 @@ extension Color {
 
     /// A token whose value does not change across light/dark (e.g. the tint).
     static func fixed(_ hex: String) -> Color { Color(hex: hex) }
+
+    /// True when the color is light enough that WHITE ink reads poorly on it —
+    /// the signal a brand fill (ChatGPT's white, Notes' yellow) needs DARK ink
+    /// instead. Resolves through UIColor so fixed and adaptive colors alike
+    /// report a real luminance. Rec. 601 luma, thresholded high so only the
+    /// genuinely pale brands flip.
+    var isLight: Bool {
+        var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+        UIColor(self).getRed(&r, green: &g, blue: &b, alpha: &a)
+        return (0.299 * r + 0.587 * g + 0.114 * b) > 0.7
+    }
 }

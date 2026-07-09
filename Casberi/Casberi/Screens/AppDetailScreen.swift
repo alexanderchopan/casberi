@@ -8,6 +8,7 @@ import SwiftData
 struct AppDetailScreen: View {
     let offer: BridgeCatalog.Offer
     @Environment(BridgeStore.self) private var store
+    @Environment(ShellChrome.self) private var chrome
     @Environment(\.modelContext) private var modelContext
     @State private var pairing = false
     @State private var openBridge: BridgeRouter.Destination?
@@ -74,7 +75,7 @@ struct AppDetailScreen: View {
                 if offer.needsSetup {
                     openBridge = BridgeRouter.destination(forOffer: offer.name)
                 } else {
-                    BridgeConnect.connect(offer, store: store, context: modelContext)
+                    BridgeConnect.connect(offer, store: store, context: modelContext, chrome: chrome)
                 }
             }
         } else if connected {
@@ -88,7 +89,7 @@ struct AppDetailScreen: View {
                 VerbCapsule(verb: .connect) { openBridge = BridgeRouter.destination(forOffer: offer.name) }
             } else {
                 VerbCapsule(verb: .connect) {
-                    BridgeConnect.connect(offer, store: store, context: modelContext)
+                    BridgeConnect.connect(offer, store: store, context: modelContext, chrome: chrome)
                 }
             }
         } else {

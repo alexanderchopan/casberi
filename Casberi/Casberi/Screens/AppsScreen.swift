@@ -13,6 +13,7 @@ import SwiftData
 /// needs it). Capsule verbs are honest: Connect / Pair / Fix / Open / Soon.
 struct AppsScreen: View {
     @Environment(BridgeStore.self) private var store
+    @Environment(ShellChrome.self) private var chrome
     @Environment(\.modelContext) private var modelContext
     @State private var pairing = false
     @State private var storyID: String?
@@ -263,7 +264,7 @@ struct AppsScreen: View {
                 if offer.needsSetup {
                     setupRoute = BridgeRouter.destination(forOffer: offer.name)
                 } else {
-                    BridgeConnect.connect(offer, store: store, context: modelContext)
+                    BridgeConnect.connect(offer, store: store, context: modelContext, chrome: chrome)
                 }
             }
         case .pair:
@@ -283,13 +284,17 @@ struct AppsScreen: View {
     private func storyCardBody(eyebrow: String, headline: String, iconName: String,
                                name: String, brand: Color, verb: CapsuleVerb,
                                action: @escaping () -> Void) -> some View {
-        VStack(alignment: .leading, spacing: DS.Space.s3) {
+        // A pale brand (ChatGPT's white, Notes' yellow) turns white ink
+        // invisible — the Connect capsule vanished into it. Ink flips to dark
+        // over light fills so the card, and its one control, stay legible.
+        let ink: Color = brand.isLight ? .black : .white
+        return VStack(alignment: .leading, spacing: DS.Space.s3) {
             Text(eyebrow)
                 .dsText(.label12)
-                .foregroundStyle(.white.opacity(0.7))
+                .foregroundStyle(ink.opacity(0.7))
             Text(headline)
                 .dsText(.heading22).fontWeight(.heavy)
-                .foregroundStyle(.white)
+                .foregroundStyle(ink)
                 .lineLimit(2)
                 .minimumScaleFactor(0.7)
                 .fixedSize(horizontal: false, vertical: true)
@@ -298,14 +303,14 @@ struct AppsScreen: View {
             Spacer(minLength: DS.Space.s8)
             HStack(spacing: DS.Space.s2) {
                 BridgeIcon(name: iconName, size: 32)
-                Text(name).dsText(.callout15).foregroundStyle(.white)
+                Text(name).dsText(.callout15).foregroundStyle(ink)
                 Spacer()
                 Button(action: action) {
                     Text(verb.label)
                         .dsText(.label12).foregroundStyle(brand)
                         .padding(.horizontal, DS.Space.s4)
                         .frame(minHeight: 32)
-                        .background(.white, in: Capsule(style: .continuous))
+                        .background(ink, in: Capsule(style: .continuous))
                 }
                 .buttonStyle(.plain)
             }
@@ -474,7 +479,7 @@ struct AppsScreen: View {
                 }
             } else {
                 VerbCapsule(verb: .connect) {
-                    BridgeConnect.connect(entry.offer, store: store, context: modelContext)
+                    BridgeConnect.connect(entry.offer, store: store, context: modelContext, chrome: chrome)
                 }
             }
         default:

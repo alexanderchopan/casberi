@@ -97,7 +97,10 @@ private struct ScreenshotContent: View {
         else { return }
         let options = PHImageRequestOptions()
         options.deliveryMode = .opportunistic
-        options.isNetworkAccessAllowed = false
+        // Opportunistic paints the local thumbnail first, then the full image
+        // once it downloads — an iCloud-optimized screenshot no longer shows
+        // a blank box in the sheet.
+        options.isNetworkAccessAllowed = true
         PHImageManager.default().requestImage(
             for: asset,
             targetSize: CGSize(width: 800, height: 800),

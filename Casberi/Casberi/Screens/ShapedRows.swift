@@ -221,14 +221,22 @@ struct PhotoWell: View {
         let assets = PHAsset.fetchAssets(withLocalIdentifiers: [assetID], options: nil)
         guard let asset = assets.firstObject else { return }
         let side = (size ?? 300) * 3
+        // iCloud-optimized photos deliver only a degraded thumbnail under the
+        // default options — the old wait-for-non-degraded left the well gray.
+        // Allow the network fetch and take the full image (one delivery).
+        let options = PHImageRequestOptions()
+        options.isNetworkAccessAllowed = true
+        options.deliveryMode = .highQualityFormat
+        options.resizeMode = .fast
         image = await withCheckedContinuation { cont in
             var reported = false
             PHImageManager.default().requestImage(
                 for: asset, targetSize: CGSize(width: side, height: side),
-                contentMode: .aspectFill, options: nil
-            ) { img, info in
-                let degraded = (info?[PHImageResultIsDegradedKey] as? Bool) ?? false
-                if !degraded, !reported { reported = true; cont.resume(returning: img) }
+                contentMode: .aspectFill, options: options
+            ) { img, _ in
+                guard !reported else { return }
+                reported = true
+                cont.resume(returning: img)
             }
         }
     }

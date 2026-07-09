@@ -29,6 +29,7 @@ struct WalletScreen: View {
     /// Both holdings and activity are live from Alchemy — no server.
     @Environment(\.modelContext) private var modelContext
     @Environment(BridgeStore.self) private var store
+    @Environment(ShellChrome.self) private var chrome
     @State private var syncing = false
     @State private var holdings = GenStream()
 
@@ -71,7 +72,11 @@ struct WalletScreen: View {
         .onAppear { if !wallet.addresses.isEmpty { sync() } }
     }
 
-    private func sync() {
+    /// `announce` speaks the outcome as a toast — set when the person just
+    /// added an address, so following a wallet ends in proof (or an honest
+    /// "nothing reached") instead of silence. The passive onAppear sync stays
+    /// quiet.
+    private func sync(announce: Bool = false) {
         guard !syncing else { return }
         syncing = true
         Task {
@@ -83,7 +88,17 @@ struct WalletScreen: View {
             store.registerConnected(id: "wallet", name: "Wallet", proof: proof,
                                     can: ["Reads your wallet's activity.",
                                           "Read-only — never trades or moves funds."])
-            _ = added
+            guard announce else { return }
+            switch added {
+            case .none:
+                // nil = not one chain answered — offline, or the address isn't
+                // a readable 0x address (ENS names aren't resolved yet).
+                chrome.flash("Couldn't reach the chains — check the address is a 0x address.")
+            case .some(0):
+                chrome.flash("Watching — no recent onchain activity to land yet.")
+            case .some(let count):
+                chrome.flash("\(count) onchain \(count == 1 ? "thing" : "things") landed in your feed.")
+            }
         }
     }
 
@@ -141,7 +156,7 @@ struct WalletScreen: View {
         newAddress = ""
         addressFieldFocused = false
         DSHaptic.success()
-        sync()
+        sync(announce: true)
     }
 
     // MARK: - What's landed

@@ -16,6 +16,7 @@ final class HapticBus {
     var selection = 0
     var tap = 0
     var success = 0
+    var error = 0
     private init() {}
 }
 
@@ -28,6 +29,9 @@ enum DSHaptic {
 
     /// A write completed: save, hand-off done.
     static func success() { HapticBus.shared.success += 1 }
+
+    /// A move that couldn't land: a connect that reached nothing, a denied ask.
+    static func error() { HapticBus.shared.error += 1 }
 }
 
 extension View {
@@ -38,5 +42,6 @@ extension View {
             .sensoryFeedback(.selection, trigger: HapticBus.shared.selection)
             .sensoryFeedback(.impact(weight: .light), trigger: HapticBus.shared.tap)
             .sensoryFeedback(.success, trigger: HapticBus.shared.success)
+            .sensoryFeedback(.error, trigger: HapticBus.shared.error)
     }
 }
