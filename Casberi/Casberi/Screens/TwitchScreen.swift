@@ -62,6 +62,7 @@ struct TwitchScreen: View {
                         .font(.system(size: 34, weight: .bold, design: .monospaced))
                         .foregroundStyle(DS.textPrimary)
                         .frame(maxWidth: .infinity)
+                        .settleIn()
                     Button {
                         if let url = code.verificationURL { openURL(url) }
                     } label: {

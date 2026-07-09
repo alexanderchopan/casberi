@@ -474,6 +474,9 @@ private struct GenTagMap: View {
     @State private var settled = false
     /// Weekend recap: the map rendered to a shareable image (§6).
     @State private var weekCard: Image?
+    /// The starter preview breathes slowly — "waiting to fill", the one
+    /// looping motion in the app, and it only exists before things do.
+    @State private var breathe = false
 
     private struct Item { let tag: String; let n: Int }
     /// Grid areas (col, row, w, h) on a 4×3 unit grid, largest-first. One set
@@ -542,6 +545,11 @@ private struct GenTagMap: View {
         .padding(.horizontal, DS.Space.s4)
         .padding(.top, DS.Space.s4)
         .onAppear {
+            if preview {
+                withAnimation(.easeInOut(duration: 2.4).repeatForever(autoreverses: true)) {
+                    breathe = true
+                }
+            }
             guard !settled else { return }
             Task { @MainActor in
                 try? await Task.sleep(for: .milliseconds(30))
@@ -582,7 +590,7 @@ private struct GenTagMap: View {
                         // matching its tag ink in the feed. Preview mutes the
                         // fill flat: shape without claiming substance.
                         ProjectHue.color(for: item.tag)
-                            .opacity((preview ? 0.14
+                            .opacity((preview ? (breathe ? 0.20 : 0.12)
                                       : 0.30 + 0.45 * Double(item.n) / Double(maxN))
                                      * (isWeekend && animated && !on ? 0 : 1)),
                         in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))

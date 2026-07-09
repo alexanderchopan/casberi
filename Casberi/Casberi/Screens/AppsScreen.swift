@@ -194,6 +194,9 @@ struct AppsScreen: View {
                             .fill(app.status.color)
                             .frame(width: 12, height: 12)
                             .overlay(Circle().strokeBorder(DS.themedPage, lineWidth: 2))
+                            // One soft blink when the seat's proof updates —
+                            // "just checked", said without words.
+                            .pulseOnChange(of: app.statusLine)
                             .offset(x: 3, y: -3)
                     }
                 }
@@ -346,6 +349,9 @@ struct AppsScreen: View {
                 }
             }
         }
+        // A connect moves its row to the strip — the shelf closes the gap
+        // smoothly instead of snapping.
+        .animation(DS.Motion.standard, value: store.bridges.count)
     }
 
     /// The shelf's rows, three per page. One page renders exactly like the old

@@ -85,6 +85,8 @@ struct SteamScreen: View {
                     .padding(.horizontal, DS.Space.s4).frame(height: 36)
                     .background(canConnect ? AnyShapeStyle(DS.tint) : AnyShapeStyle(DS.gray200),
                                 in: Capsule(style: .continuous))
+                    .animation(DS.Motion.standard, value: canConnect)
+                    .armedPop(canConnect)
                     .disabled(!canConnect)
                     .buttonStyle(.plain)
             }

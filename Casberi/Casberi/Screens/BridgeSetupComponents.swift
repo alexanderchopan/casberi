@@ -30,10 +30,12 @@ struct BridgeSetupHeader: View {
             // adds the face and the promise, not a second name.
             HStack(alignment: .top, spacing: DS.Space.s3) {
                 BridgeIcon(name: name, size: 60)
+                    .settleIn()
                 if let line = blurb ?? BridgeCatalog.offers.first(where: { $0.name == name })?.summary {
                     Text(line)
                         .dsText(.body17).foregroundStyle(DS.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
+                        .settleIn(delay: 0.06)
                 }
                 Spacer(minLength: 0)
             }
@@ -87,6 +89,8 @@ struct BridgeFieldRow: View {
                 .frame(height: 36)
                 .background(text.isEmpty ? AnyShapeStyle(DS.gray200) : AnyShapeStyle(DS.tint),
                             in: Capsule(style: .continuous))
+                .animation(DS.Motion.standard, value: text.isEmpty)
+                .armedPop(!text.isEmpty)
                 .disabled(text.isEmpty)
                 .buttonStyle(.plain)
         }
@@ -113,12 +117,14 @@ struct BridgeFieldRow: View {
 }
 
 /// The proof rows under the field: a spinner while fetching, then the
-/// result in confirm green (or attention red when it failed).
+/// result in confirm green (or attention red when it failed). Proof counts
+/// up ("3 games in" earns its number); failure knocks sideways once.
 struct BridgeSyncStatusRows: View {
     var syncing = false
     var syncingLine = ""
     let result: String?
     let resultIsError: Bool
+    @State private var shakes = 0
 
     var body: some View {
         if syncing {
@@ -129,10 +135,19 @@ struct BridgeSyncStatusRows: View {
             }
             .listRowBackground(DS.surfaceSheet)
         } else if let result {
-            Text(result)
-                .dsText(.callout15)
-                .foregroundStyle(resultIsError ? DS.attention : DS.confirm)
-                .listRowBackground(DS.surfaceSheet)
+            Group {
+                if resultIsError {
+                    Text(result)
+                        .shake(on: shakes)
+                        .onAppear { shakes += 1 }
+                        .onChange(of: result) { if resultIsError { shakes += 1 } }
+                } else {
+                    CountUpText(text: result)
+                }
+            }
+            .dsText(.callout15)
+            .foregroundStyle(resultIsError ? DS.attention : DS.confirm)
+            .listRowBackground(DS.surfaceSheet)
         }
     }
 }
@@ -145,7 +160,7 @@ struct RecentThingsSection: View {
 
     var body: some View {
         Section {
-            ForEach(things) { thing in
+            ForEach(Array(things.enumerated()), id: \.element.id) { i, thing in
                 VStack(alignment: .leading, spacing: 2) {
                     Text(thing.title)
                         .dsText(.body17).foregroundStyle(DS.textPrimary)
@@ -153,6 +168,9 @@ struct RecentThingsSection: View {
                     Text(LiveTimeText.short(thing.capturedAt))
                         .dsText(.subhead13).foregroundStyle(DS.textTertiary)
                 }
+                // What landed ARRIVES — the feed's stagger, capped so a long
+                // list doesn't drag the tail.
+                .staggerIn(index: min(i, 8))
                 .listRowBackground(DS.surfaceSheet)
             }
         } header: {
