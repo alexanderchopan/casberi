@@ -307,10 +307,12 @@ struct OnboardingView: View {
                 .foregroundStyle(connected.isEmpty ? DS.textTertiary : .white)
                 .frame(maxWidth: .infinity)
                 .frame(height: 48)
-                .background(connected.isEmpty ? AnyShapeStyle(DS.gray200) : AnyShapeStyle(DS.tint),
-                            in: Capsule(style: .continuous))
         }
         .buttonStyle(.plain)
+        // Floating chrome over the icon pile — it wears glass (the law's
+        // floating layer), the falling brands refracting through it.
+        .dsGlassProminent(tint: connected.isEmpty ? DS.gray200 : DS.tint,
+                          cornerRadius: DS.Radius.pill)
         .disabled(connected.isEmpty)
     }
 }

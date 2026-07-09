@@ -663,12 +663,17 @@ struct RootShell: View {
                 .dsText(.body17)
                 .foregroundStyle(DS.textPrimary)
             if let action = chrome.toastAction {
+                // The pane's one action reads as ITS interactive part —
+                // a tinted glass capsule riding the glass pill.
                 Button(action: action.run) {
                     Text(action.label)
-                        .dsText(.label12)
-                        .foregroundStyle(DS.tint)
+                        .dsText(.label12).fontWeight(.semibold)
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, DS.Space.s3)
+                        .frame(height: 28)
                 }
                 .buttonStyle(.plain)
+                .dsGlassProminent(tint: DS.tint, cornerRadius: DS.Radius.pill)
             }
         }
         .padding(.horizontal, DS.Space.s4)
