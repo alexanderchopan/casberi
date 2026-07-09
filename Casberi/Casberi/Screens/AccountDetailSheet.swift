@@ -74,13 +74,16 @@ struct AccountDetailSheet: View {
                 .buttonStyle(.plain)
                 Spacer()
             }
+            // Outcome lines arrive with the settle beat — a result, not a flicker.
             if let importResult {
                 Text(importResult)
                     .dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                    .settleIn()
             }
             if let deleteResult {
                 Text(deleteResult)
                     .dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                    .settleIn()
             }
         }
     }

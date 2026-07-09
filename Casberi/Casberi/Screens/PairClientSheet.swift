@@ -18,12 +18,15 @@ struct PairClientSheet: View {
                     .foregroundStyle(DS.textSecondary)
 
                 // The code, on a light card so a camera can read it (QRs need a
-                // quiet zone and a light field).
+                // quiet zone and a light field). It settles in — the pairing
+                // handshake arriving, not popping.
                 qrCard
+                    .settleIn()
 
                 // The consent guarantee, in the alive language — green is the
                 // confident tell (matches Data's trust rows).
                 guaranteeRow
+                    .settleIn(delay: 0.08)
 
                 Spacer(minLength: 0)
 

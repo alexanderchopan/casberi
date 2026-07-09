@@ -49,14 +49,16 @@ struct BridgeDetailScreen: View {
                         .buttonStyle(.plain)
                     }
 
-                    // Capabilities — sentences, not scopes.
+                    // Capabilities — sentences, not scopes. They arrive one
+                    // after another (the consent rail is worth a beat).
                     section("Can") {
-                        ForEach(bridge.can, id: \.self) { sentence in
+                        ForEach(Array(bridge.can.enumerated()), id: \.element) { i, sentence in
                             Text(sentence)
                                 .dsText(.body17).foregroundStyle(DS.textPrimary)
                                 .padding(.horizontal, DS.Space.s4)
                                 .padding(.vertical, DS.Space.s3)
                                 .frame(maxWidth: .infinity, alignment: .leading)
+                                .staggerIn(index: i)
                         }
                     }
 
