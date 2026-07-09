@@ -210,8 +210,8 @@ struct WalletScreen: View {
         if ENS.looksLikeName(input) {
             Task {
                 guard let hex = await ENS.resolve(input) else {
-                    DSHaptic.error()
-                    chrome.flash("Couldn't resolve \(input) — check the name or paste a 0x address.")
+                    resultIsError = true
+                    result = "Couldn't resolve \(input) — check the name or paste a 0x address."
                     return
                 }
                 addWatched(address: hex, label: input)
@@ -223,11 +223,13 @@ struct WalletScreen: View {
 
     private func addWatched(address: String, label: String) {
         guard wallet.add(address, label: label) else {
-            chrome.flash("Already watching that address.")
+            resultIsError = true
+            result = "Already watching that address."
             return
         }
         newAddress = ""
         addressFieldFocused = false
+        resultIsError = false
         DSHaptic.success()
         sync()
     }
