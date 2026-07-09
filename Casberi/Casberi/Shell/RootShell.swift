@@ -235,8 +235,18 @@ struct RootShell: View {
             // composer) can drive a real send for an on-screen answer render.
             if UserDefaults.standard.string(forKey: "uiAnswerProbe") != nil
                 || UserDefaults.standard.string(forKey: "composerDraft") != nil
-                || UserDefaults.standard.string(forKey: "composerType") != nil {
+                || UserDefaults.standard.string(forKey: "composerType") != nil
+                || UserDefaults.standard.bool(forKey: "openComposer") {
                 composerOpen = true
+            }
+            // Debug hook: `-linkTitleProbe <url>` exercises the title fetch
+            // headlessly — NSLogs what a pasted link would be renamed to.
+            if let raw = UserDefaults.standard.string(forKey: "linkTitleProbe"),
+               let url = URL(string: raw) {
+                Task { @MainActor in
+                    let title = await LinkTitle.fetch(url)
+                    NSLog("LinkTitle probe: %@", title ?? "FAILED")
+                }
             }
             // Debug hook: `-mcpProbe "<query>"` exercises the MCP tool layer
             // (PRD §34) against the real corpus — search + week synthesis run as
@@ -339,6 +349,9 @@ struct RootShell: View {
         SpotlightIndex.index([thing])
         DSHaptic.success()
         land(thing)
+        // A pasted URL saves instantly with its address as its face; the real
+        // page title arrives a beat later (best-effort, never blocks the save).
+        Task { @MainActor in await LinkTitle.enrich(thing, context: modelContext) }
     }
 
     /// Dropped text or a link — same path as the composer, same proof. The
@@ -351,6 +364,7 @@ struct RootShell: View {
         SpotlightIndex.index([thing])
         DSHaptic.success()
         land(thing, undoable: true)
+        Task { @MainActor in await LinkTitle.enrich(thing, context: modelContext) }
     }
 
     /// A finished voice note lands as a voice thing; the transcript is its
@@ -527,8 +541,14 @@ struct RootShell: View {
             }
             return false
         }
-        let stops: Set<String> = ["about", "my", "the", "a", "in", "from", "for", "of"]
+        let stops: Set<String> = ["about", "my", "the", "a", "in", "from", "for", "of",
+                                  "what", "whats", "what's", "landed", "on", "happened"]
         terms.removeAll { stops.contains($0) }
+
+        // A date phrase ("today", "last week", "thursday") is a WHEN filter,
+        // not a text term — things outside the range drop out entirely.
+        let dateMatch = DateQuery.match(in: query)
+        if let dateMatch { terms.removeAll { dateMatch.words.contains($0) } }
 
         var descriptor = FetchDescriptor<Thing>(
             sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]
@@ -538,6 +558,7 @@ struct RootShell: View {
 
         return all.compactMap { thing -> (Thing, Double)? in
             if let kindFilter, thing.kind != kindFilter { return nil }
+            if let dateMatch, !dateMatch.range.contains(thing.capturedAt) { return nil }
             let title = thing.title.lowercased()
             let tags = thing.tags.joined(separator: " ").lowercased()
             let content = thing.content.lowercased()
@@ -547,8 +568,9 @@ struct RootShell: View {
                 if tags.contains(term) { score += 2 }
                 if content.contains(term) { score += 1 }
             }
-            // A bare kind query ("screenshots?") lists that kind.
-            if terms.isEmpty && kindFilter != nil { score = 1 }
+            // A bare kind query ("screenshots?") lists that kind; a bare date
+            // query ("what landed today?") lists the day.
+            if terms.isEmpty && (kindFilter != nil || dateMatch != nil) { score = 1 }
             guard score > 0 else { return nil }
             let age = Date.now.timeIntervalSince(thing.capturedAt)
             score += max(0, 1 - age / (7 * 86_400))   // fresh floats, capped +1

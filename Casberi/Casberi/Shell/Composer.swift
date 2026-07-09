@@ -45,8 +45,50 @@ struct Composer: View {
     /// answer render without a physical keyboard.
     @State private var didAutoSend = false
 
+    /// Empty-field ask suggestions — derived from the live corpus on open
+    /// (re-ruling 2026-07-08: the dead GENERIC chips stay dead; these are
+    /// asks the corpus can actually answer right now).
+    @State private var suggestions: [String] = []
+
     private var isRecording: Bool { voice.phase == .recording }
     private var hasDraft: Bool { !draft.trimmingCharacters(in: .whitespaces).isEmpty }
+
+    /// Tag completions for the word being typed — your real tags, prefix-
+    /// matched on the draft's last token (2+ chars, typed path only).
+    private var tagMatches: [String] {
+        guard hasDraft, !pasted, !answering, proposal == nil else { return [] }
+        guard let last = draft.split(separator: " ").last.map(String.init),
+              last.count >= 2 else { return [] }
+        let lower = last.lowercased()
+        return tagCandidates()
+            .filter { $0.lowercased().hasPrefix(lower) && $0.lowercased() != lower }
+            .prefix(3).map { $0 }
+    }
+
+    private func completeTag(_ tag: String) {
+        DSHaptic.selection()
+        var words = draft.split(separator: " ").map(String.init)
+        if words.isEmpty { words = [tag] } else { words[words.count - 1] = tag }
+        draft = words.joined(separator: " ") + " "
+    }
+
+    /// Builds the ask chips from what the corpus can answer TODAY. Empty
+    /// corpus → no chips (the field is the invitation).
+    private func computeSuggestions() {
+        var out: [String] = []
+        let dayStart = Calendar.current.startOfDay(for: .now)
+        let today = FetchDescriptor<Thing>(predicate: #Predicate { $0.capturedAt >= dayStart })
+        if let n = try? modelContext.fetchCount(today), n > 0 {
+            out.append("What landed today?")
+        }
+        if let top = tagCandidates().first {
+            out.append("Show \(top)")
+        }
+        if (try? modelContext.fetchCount(FetchDescriptor<Thing>())) ?? 0 > 0 {
+            out.append("What's this week?")
+        }
+        suggestions = Array(out.prefix(3))
+    }
 
     // The bubble's asymmetric corners: 24 / 24 / 10 / 24 (TL/TR/BR/BL).
     private var bubbleShape: UnevenRoundedRectangle {
@@ -124,6 +166,44 @@ struct Composer: View {
             // `pasted` flag below, so pasted content still saves on send.
             // AnswerStream — search intent streams a composition (engine law:
             // any prefix renders).
+            // Ask chips — asks the corpus can answer RIGHT NOW, shown while
+            // the field is empty (re-ruling 2026-07-08; the dead generic
+            // chips stay dead — these are derived, and tap = send).
+            if isOpen && !hasDraft && !answering && !isRecording,
+               proposal == nil, !suggestions.isEmpty {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: DS.Space.s2) {
+                        ForEach(suggestions, id: \.self) { ask in
+                            Button {
+                                DSHaptic.selection()
+                                draft = ask
+                                commit()
+                            } label: {
+                                Chip(text: ask, style: .neutral, glyph: "sparkle")
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                    .padding(.horizontal, DS.Space.s4)
+                }
+                .padding(.top, DS.Space.s2)
+            }
+
+            // Tag completions — your real tags finish the word being typed.
+            if !tagMatches.isEmpty {
+                HStack(spacing: DS.Space.s2) {
+                    ForEach(tagMatches, id: \.self) { tag in
+                        Button { completeTag(tag) } label: {
+                            Chip(text: tag, style: .tint, glyph: "tag")
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    Spacer()
+                }
+                .padding(.horizontal, DS.Space.s4)
+                .padding(.top, DS.Space.s2)
+            }
+
             if answering {
                 ScrollView {
                     GenRender(id: "root", els: answerStream.els)
@@ -226,7 +306,10 @@ struct Composer: View {
         .dsGlass(cornerRadius: 24, glassID: "composer", in: glassNamespace)
         .clipShape(bubbleShape)
         .scaleEffect(isOpen ? 1 : 0.3, anchor: .bottomTrailing)
-        .task(id: isOpen) { await autoSendIfProbed() }
+        .task(id: isOpen) {
+            if isOpen { computeSuggestions() }
+            await autoSendIfProbed()
+        }
     }
 
     /// DEBUG hook: `simctl launch ... -uiAnswerProbe "what's my week"` opens
@@ -340,6 +423,20 @@ struct Composer: View {
             }
             let q = draft
             Task { @MainActor in
+                // Organize-ish wording the strict parser missed ("put
+                // everything about lisbon under Trip") — the model fills the
+                // SAME proposal form; the write still waits for Apply.
+                if OrganizeLLM.looksOrganizeish(q),
+                   let command = await OrganizeLLM.extract(q) {
+                    let proposed = Organize.propose(command, context: modelContext)
+                    fieldFocused = false
+                    withAnimation(DS.Motion.standard) {
+                        answering = false
+                        proposal = proposed
+                    }
+                    draft = ""
+                    return
+                }
                 var streamed = false
                 let finalDoc = await answer(q) { partialDoc in
                     // Prose arriving live — paint each growing snapshot; the
