@@ -60,7 +60,15 @@ struct BandRow: View {
         // that line, not floated to the row's vertical center (ruling
         // 2026-07-09: two lines, never one, never unbounded).
         HStack(alignment: .top, spacing: DS.Space.s3) {
-            BridgeIcon(name: thing.source, size: 26)
+            // A pin (or any thing that captured a lead image) leads with its
+            // thumbnail instead of the source glyph — the image IS the point of
+            // a Pinterest feed. Same 26pt leading slot, so the row keeps its
+            // height and rhythm (shaped-feeds rule 2).
+            if let image = thing.previewImageURL, !image.isEmpty {
+                RemoteThumb(urlString: image, size: 26)
+            } else {
+                BridgeIcon(name: thing.source, size: 26)
+            }
             Text(titleText)
                 .dsText(.body17)
                 .fontWeight(emphasized ? .semibold : .regular)
@@ -88,6 +96,65 @@ struct BandRow: View {
             }
         }
         .padding(.vertical, DS.Space.s2)
+    }
+}
+
+
+/// A cached remote thumbnail for a feed row — a Pinterest pin's image, loaded
+/// from the URL captured at ingest. URLSession's shared cache holds the bytes;
+/// a small decoded-image cache keeps a scroll from re-decoding, and each image
+/// is downsampled to the thumbnail size so a wall of full-res pins can't bloat
+/// memory. A dead URL falls back to the photo well, never an empty hole.
+struct RemoteThumb: View {
+    let urlString: String
+    var size: CGFloat = 26
+    @State private var image: UIImage?
+
+    private static let cache: NSCache<NSString, UIImage> = {
+        let c = NSCache<NSString, UIImage>()
+        c.countLimit = 120
+        return c
+    }()
+
+    var body: some View {
+        Group {
+            if let image {
+                Image(uiImage: image).resizable().scaledToFill()
+            } else {
+                ZStack {
+                    DS.fillFaint
+                    Image(systemName: "photo")
+                        .font(.system(size: size * 0.4, weight: .medium))
+                        .foregroundStyle(DS.textTertiary)
+                }
+            }
+        }
+        .frame(width: size, height: size)
+        .clipShape(RoundedRectangle(cornerRadius: DS.Radius.appIcon(size), style: .continuous))
+        .task(id: urlString) { await load() }
+    }
+
+    private func load() async {
+        // Cache hit is instant and also covers a recycled row landing on a new
+        // URL (its own key, so a stale pin never shows through).
+        if let hit = Self.cache.object(forKey: urlString as NSString) {
+            image = hit; return
+        }
+        // A recycled row: drop the previous pin before the new one arrives.
+        image = nil
+        guard let url = URL(string: urlString),
+              let (data, _) = try? await URLSession.shared.data(from: url),
+              !Task.isCancelled,
+              let full = UIImage(data: data) else { return }
+        // Downsample off the main thread — a wall of full-res pins would
+        // otherwise decode at display size on every scroll pass.
+        let side = size * 3
+        let thumb: UIImage = await withCheckedContinuation { cont in
+            full.prepareThumbnail(of: CGSize(width: side, height: side)) { cont.resume(returning: $0 ?? full) }
+        }
+        guard !Task.isCancelled else { return }
+        Self.cache.setObject(thumb, forKey: urlString as NSString)
+        image = thumb
     }
 }
 

@@ -70,6 +70,9 @@ enum PinterestIngest {
                 capturedAt: item.date ?? .now,
                 sourceRef: ref
             )
+            // The pin's image, so the feed row leads with a thumbnail (the
+            // whole point of a Pinterest feed) instead of the generic glyph.
+            if !item.imageURL.isEmpty { thing.previewImageURL = item.imageURL }
             context.insert(thing)
             SpotlightIndex.index([thing])
             added += 1

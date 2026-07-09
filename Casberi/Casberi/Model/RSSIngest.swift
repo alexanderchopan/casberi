@@ -133,6 +133,10 @@ enum FeedParser {
         var link = ""
         var guid = ""
         var date: Date?
+        /// A lead image when the feed carries one (Media RSS, an enclosure, or
+        /// the first <img> in the description) — used for the Pinterest row
+        /// thumbnail. Empty when the feed has no image.
+        var imageURL = ""
     }
 
     struct Parsed {
@@ -177,6 +181,20 @@ enum FeedParser {
                    attributes["rel"] == nil || attributes["rel"] == "alternate" {
                     current?.link = href
                 }
+            // Image in an attribute: a Media RSS content/thumbnail or an
+            // enclosure. media:thumbnail is always an image; the others only
+            // when they say so (or say nothing, as Pinterest's media does).
+            case "media:thumbnail", "media:content", "enclosure":
+                // Only lands on an item (the inner guard) — a channel-level
+                // image never becomes a row's thumbnail.
+                if current?.imageURL.isEmpty == true, let u = attributes["url"] {
+                    let type = attributes["type"] ?? ""
+                    let medium = attributes["medium"] ?? ""
+                    let isImage = name == "media:thumbnail"
+                        || type.hasPrefix("image") || medium == "image"
+                        || (name == "media:content" && type.isEmpty && medium.isEmpty)
+                    if isImage { current?.imageURL = Self.normalizeImage(u) }
+                }
             default:
                 break
             }
@@ -184,6 +202,13 @@ enum FeedParser {
 
         func parser(_ parser: XMLParser, foundCharacters string: String) {
             text += string
+        }
+
+        // Pinterest (and many feeds) wrap the description HTML in CDATA, which
+        // arrives here, not through foundCharacters — accumulate it so the
+        // <img> extraction below can see it.
+        func parser(_ parser: XMLParser, foundCDATA CDATABlock: Data) {
+            text += String(data: CDATABlock, encoding: .utf8) ?? ""
         }
 
         func parser(_ parser: XMLParser, didEndElement name: String,
@@ -210,12 +235,37 @@ enum FeedParser {
                 if current?.date == nil {
                     current?.date = Self.rfc822.date(from: value) ?? Self.iso.date(from: value)
                 }
+            case "description", "content:encoded", "summary", "content":
+                // No attribute image yet — pull the first <img> out of the
+                // (usually CDATA) description HTML. This is Pinterest's path.
+                if current?.imageURL.isEmpty == true,
+                   let src = Self.firstImageSrc(in: value) {
+                    current?.imageURL = Self.normalizeImage(src)
+                }
             case "item", "entry":
                 if let item = current { result.items.append(item) }
                 current = nil
             default:
                 break
             }
+        }
+
+        /// First `<img src>` in a blob of feed HTML, or nil. Compiled once.
+        private static let imgRegex = try? NSRegularExpression(
+            pattern: #"<img[^>]+src=[\"']([^\"']+)[\"']"#, options: [.caseInsensitive])
+
+        private static func firstImageSrc(in html: String) -> String? {
+            guard let imgRegex else { return nil }
+            let range = NSRange(html.startIndex..., in: html)
+            guard let m = imgRegex.firstMatch(in: html, range: range),
+                  m.numberOfRanges > 1,
+                  let r = Range(m.range(at: 1), in: html) else { return nil }
+            return String(html[r])
+        }
+
+        /// Protocol-relative URLs (`//host/…`) become https so AsyncImage loads.
+        private static func normalizeImage(_ url: String) -> String {
+            url.hasPrefix("//") ? "https:" + url : url
         }
     }
 }
