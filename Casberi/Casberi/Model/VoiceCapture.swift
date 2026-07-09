@@ -8,7 +8,15 @@ import ActivityKit
 /// recognition writes the transcript live, and Save lands a voice thing whose
 /// sourceRef names the audio file. The permission asks arrive on first use,
 /// in context (the same law as Photos).
+///
+/// @MainActor is load-bearing: `start()` is async, and without isolation its
+/// body resumed on a background executor after the permission awaits — so the
+/// `Timer.scheduledTimer` below was added to a thread with no running run loop
+/// and never fired (the clock froze at 0:00), and the recorder/engine were
+/// spun up off-main. Pinning the whole capture to the main actor keeps the
+/// timer live and the state transitions ordered.
 @Observable
+@MainActor
 final class VoiceCapture: NSObject {
 
     enum Phase: Equatable {
@@ -31,7 +39,10 @@ final class VoiceCapture: NSObject {
     private var activity: Activity<VoiceRecordingAttributes>?
 
     /// Where voice audio lives — one file per thing, named by its id.
-    static var folder: URL {
+    /// `nonisolated`: a pure filesystem path, read from main and background
+    /// alike (the store mirror, the account sheet's cleanup), so it must not
+    /// inherit the class's main-actor isolation.
+    nonisolated static var folder: URL {
         let url = FileManager.default
             .urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("voice", isDirectory: true)
@@ -39,7 +50,7 @@ final class VoiceCapture: NSObject {
         return url
     }
 
-    static func audioURL(for ref: String) -> URL? {
+    nonisolated static func audioURL(for ref: String) -> URL? {
         guard ref.hasPrefix("voice:") else { return nil }
         return folder.appendingPathComponent(String(ref.dropFirst(6)))
     }
@@ -90,11 +101,10 @@ final class VoiceCapture: NSObject {
         audioEngine = engine
         recognitionRequest = request
         recognitionTask = recognizer?.recognitionTask(with: request) { [weak self] result, _ in
-            if let result {
-                Task { @MainActor [weak self] in
-                    self?.transcript = result.bestTranscription.formattedString
-                }
-            }
+            // Pull the plain String out here so nothing non-Sendable crosses
+            // the hop back to the main actor.
+            guard let text = result?.bestTranscription.formattedString else { return }
+            Task { @MainActor in self?.transcript = text }
         }
 
         phase = .recording
