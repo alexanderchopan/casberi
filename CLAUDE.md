@@ -68,6 +68,7 @@ Deep links: `casberi://home`, `casberi://feed`, `casberi://feed/type/<Tag>`, `ca
 
 - Trays are NEVER hand-rolled — use `DSTray(title:height:)` (`Design/DSTray.swift`).
 - Liquid Glass on the floating layer only (composer/tab bar/toasts) — never on content.
+- No letter-spacing, no ALL-CAPS eyebrows — headers are words in sentence case ("Getting started", never "G E T T I N G  S T A R T E D" or "GETTING STARTED"). `.kerning()` is banned; the type ramp carries hierarchy by size/weight alone (ruling 2026-07-08).
 - No hairlines — one exception: the Apps page draws a single `fillLine` divider between the CONNECTED strip (management) and Discover (store), per docs/prd.md:491. Nothing else draws a line. Widget/tile radius = `DS.Radius.widget`.
 - Typed text in the composer NEVER saves — things enter only via capture paths (paste chip, mic, share, screenshots, drop, bridges). Saving is an outcome the toast reports, never a verb.
 - Swipe verbs are reads only (writes live in the sheet, with consent). Feed chips only when they differentiate.
