@@ -13,7 +13,7 @@ import SwiftData
 enum HomeComposition {
 
     static func compose(things: [Thing],
-                        walletHoldings: [String]? = nil,
+                        walletHoldings: [WalletIngest.HoldingsGroup] = [],
                         hour: Int = Calendar.current.component(.hour, from: .now),
                         weekday: Int = Calendar.current.component(.weekday, from: .now)) -> [String] {
         let projects = projectClusters(things: things)
@@ -34,7 +34,7 @@ enum HomeComposition {
 
     // MARK: - Documents
 
-    private static func morning(things: [Thing], projects: [Cluster], walletHoldings: [String]? = nil) -> [String] {
+    private static func morning(things: [Thing], projects: [Cluster], walletHoldings: [WalletIngest.HoldingsGroup] = []) -> [String] {
         var doc: [String] = []
         var rootRefs: [String] = []
 
@@ -75,11 +75,6 @@ enum HomeComposition {
                 rootRefs.append("map")
             }
         }
-        if let pills = kindPillItems(things) {
-            doc.append("kindPills = KindPills(\(q(kindPillEyebrow(things))), \(pills))")
-            rootRefs.append("kindPills")
-        }
-
         // Threads resurface what's slipping away — links older than 3 days
         // (yesterday's links are Feed's top rows; mirroring them is filler).
         // Widget child-drop rule (gap §9.2): no rows → no widget line at all.
@@ -100,7 +95,7 @@ enum HomeComposition {
         return doc
     }
 
-    private static func evening(things: [Thing], projects: [Cluster], walletHoldings: [String]? = nil) -> [String] {
+    private static func evening(things: [Thing], projects: [Cluster], walletHoldings: [WalletIngest.HoldingsGroup] = []) -> [String] {
         var doc: [String] = []
         var rootRefs: [String] = []
 
@@ -130,11 +125,6 @@ enum HomeComposition {
                 rootRefs.append("map")
             }
         }
-        if let pills = kindPillItems(things) {
-            doc.append("kindPills = KindPills(\(q(kindPillEyebrow(things))), \(pills))")
-            rootRefs.append("kindPills")
-        }
-
         // Threads — resurfacing, not mirroring (see morning).
         let links = resurfaceable(things).prefix(2)
         if !links.isEmpty {
@@ -156,7 +146,7 @@ enum HomeComposition {
     /// Weekend — the week, banked: the recap voice rides the cover's eyebrow
     /// with the week's newest image (H7); then the map and threads. Same
     /// grammar, calmer voice; still no obligations.
-    private static func weekend(things: [Thing], projects: [Cluster], walletHoldings: [String]? = nil) -> [String] {
+    private static func weekend(things: [Thing], projects: [Cluster], walletHoldings: [WalletIngest.HoldingsGroup] = []) -> [String] {
         var doc: [String] = []
         var rootRefs: [String] = []
 
@@ -178,7 +168,8 @@ enum HomeComposition {
         }
         if !things.isEmpty {
             let coverRef = hasBanner ? "banner" : (image?.id.uuidString ?? "")
-            doc.append("cover = Cover(\(q("Weekend")), \(q(title)), \(q(subline)), \(q(coverRef)), \(q(dateline(things: things))), \(q("quiet")))")
+            let chipsArg = coverChips(things).map { ", \($0)" } ?? ""
+            doc.append("cover = Cover(\(q("Weekend")), \(q(title)), \(q(subline)), \(q(coverRef)), \(q(dateline(things: things))), \(q("quiet"))\(chipsArg))")
             rootRefs.append("cover")
         }
 
@@ -190,11 +181,6 @@ enum HomeComposition {
             doc.append("map = TagMap(\(q("The week")), \(q("What it was about")), [\(items.joined(separator: ", "))])")
             rootRefs.append("map")
         }
-        if let pills = kindPillItems(things) {
-            doc.append("kindPills = KindPills(\(q("What it held")), \(pills))")
-            rootRefs.append("kindPills")
-        }
-
         let links = resurfaceable(things).prefix(2)
         if !links.isEmpty {
             let ids = links.indices.map { "t\($0)" }
@@ -346,17 +332,22 @@ enum HomeComposition {
     private static var hasBanner: Bool { HomeCoverStore.shared.banner != nil }
 
     /// The cover line for morning/evening: the newest image thing when one
-    /// exists (title, project · time), else the quiet cover carrying the
-    /// shipped Hero content — same priority rules, no obligations. A set
-    /// banner only changes WHICH image shows; the words never change, so
-    /// the cover never implies the banner is today's activity.
+    /// exists, else the quiet cover carrying the shipped Hero content — same
+    /// priority rules, no obligations. A set banner only changes WHICH image
+    /// shows; the words never change, so the cover never implies the banner
+    /// is today's activity. Today's kind counts ride every cover as chips
+    /// (ruling 2026-07-09): the counts ARE the subline, so the old bottom
+    /// "What landed today" section is gone and the cover's middle earns its
+    /// height. The word subline returns only when nothing landed today.
     private static func cover(things: [Thing]) -> String {
         let date = dateline(things: things)
+        let chips = coverChips(things)
+        let chipsArg = chips.map { ", \($0)" } ?? ""
         if !hasBanner, let image = newestImageThing(things) {
             let project = image.tags.first { ThingKind.from(typeTag: $0) == nil }
-            let subline = [project, shortTime(image.capturedAt)]
-                .compactMap { $0 }.joined(separator: " · ")
-            return "cover = Cover(\(q("Just landed · \(image.source)")), \(q(image.title)), \(q(subline)), \(q(image.id.uuidString)), \(q(date)))"
+            let subline = chips != nil ? ""
+                : [project, shortTime(image.capturedAt)].compactMap { $0 }.joined(separator: " · ")
+            return "cover = Cover(\(q("Just landed · \(image.source)")), \(q(image.title)), \(q(subline)), \(q(image.id.uuidString)), \(q(date)), \(q(""))\(chipsArg))"
         }
         let bannerRef = hasBanner ? "banner" : ""
         // Quiet cover — the shipped Hero lines, verbatim priority. Approvals
@@ -366,27 +357,24 @@ enum HomeComposition {
             return "cover = Cover(\(q("Today")), \(q("A quiet day")), \(q("Nothing new yet — your things keep.")), \(q(bannerRef)), \(q(date)), \(q("quiet")))"
         }
         if let latest = things.first(where: { $0.kind != .approval }) {
-            // The 6th arg names the kind so the quiet cover can wear its hue
-            // (the image cover extracts color from the photo instead).
-            return "cover = Cover(\(q("Just landed")), \(q(latest.title)), \(q("\(latest.kind.typeTag) · \(latest.source)")), \(q(bannerRef)), \(q(date)), \(q(latest.kind.typeTag)))"
+            // The 6th arg marks the stream complete so the renderer's black
+            // field doesn't flash in before the doc settles.
+            let subline = chips != nil ? "" : "\(latest.kind.typeTag) · \(latest.source)"
+            return "cover = Cover(\(q("Just landed · \(latest.source)")), \(q(latest.title)), \(q(subline)), \(q(bannerRef)), \(q(date)), \(q(latest.kind.typeTag))\(chipsArg))"
         }
         return "cover = Cover(\(q("Now")), \(q("Your things go here")), \(q("Paste, speak, or share one in.")), \(q(bannerRef)), \(q(date)), \(q("quiet")))"
     }
 
-    // MARK: - Kind pills (replaces the KindBar on Home; the bar stays in the vocabulary)
+    // MARK: - Cover chips (what landed today, on the cover — ruling 2026-07-09)
 
-    /// "What landed today" over today's things; the whole corpus (and the
-    /// KindBar's old eyebrow) when today is empty.
-    private static func kindPillEyebrow(_ things: [Thing]) -> String {
-        things.contains { Calendar.current.isDateInToday($0.capturedAt) }
-            ? "What landed today" : "What they are"
-    }
-
-    private static func kindPillItems(_ things: [Thing]) -> String? {
+    /// Today's kind counts, "[Tag N, ...]", count-ordered, max 5 — the
+    /// cover's chip row (the KindPills section moved up into the banner).
+    /// Nil when nothing landed today: the quiet cover states that in words,
+    /// and yesterday's counts aren't news.
+    private static func coverChips(_ things: [Thing]) -> String? {
         let today = things.filter { Calendar.current.isDateInToday($0.capturedAt) }
-        let pool = today.isEmpty ? things : today
         var counts: [ThingKind: Int] = [:]
-        for t in pool { counts[t.kind, default: 0] += 1 }
+        for t in today { counts[t.kind, default: 0] += 1 }
         guard !counts.isEmpty else { return nil }
         let items = counts.sorted {
             $0.value != $1.value ? $0.value > $1.value : $0.key.typeTag < $1.key.typeTag
@@ -422,16 +410,21 @@ enum HomeComposition {
     }
 
     /// Wallet holdings on Home (ruling 2026-07-08): pinning the wallet shows
-    /// its top-5-by-value treemap, the same TagMap idiom the map itself uses
-    /// — synthesis, not a thing, so it rides alongside Pinned rather than
-    /// inside it. Cells arrive pre-computed (WalletIngest.topHoldings()) since
+    /// each watched wallet's own top-5-by-value treemap, the same TagMap
+    /// idiom the map itself uses — synthesis, not a thing, so it rides
+    /// alongside Pinned rather than inside it. One map per wallet, not
+    /// combined (ruling 2026-07-09): two watched addresses are usually two
+    /// different purposes, and summing them hid which wallet held what.
+    /// Groups arrive pre-computed (WalletIngest.topHoldingsByWallet()) since
     /// composing the doc is synchronous and the fetch is not.
-    private static func appendWalletHoldings(_ cells: [String]?,
+    private static func appendWalletHoldings(_ groups: [WalletIngest.HoldingsGroup],
                                              to doc: inout [String],
                                              rootRefs: inout [String]) {
-        guard let cells, !cells.isEmpty else { return }
-        doc.append("walletMap = TagMap(\(q("Holdings")), \(q("By value")), [\(cells.joined(separator: ", "))])")
-        rootRefs.append("walletMap")
+        for (i, g) in groups.enumerated() {
+            let id = "walletMap\(i)"
+            doc.append("\(id) = TagMap(\(q(g.label)), \(q("Holdings by value")), [\(g.cells.joined(separator: ", "))])")
+            rootRefs.append(id)
+        }
     }
 
     /// A token link leads with its price chart, same rule as the thing sheet

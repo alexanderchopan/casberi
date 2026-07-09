@@ -16,6 +16,31 @@ final class WalletStore {
         /// A name the person gave it ("Main", "Cold") — optional, address shows if empty.
         var label: String
         var address: String
+        /// Holdings on Home and Feed (ruling 2026-07-09): per WALLET, not one
+        /// switch for everything watched — two watched addresses are usually
+        /// two different purposes, and a person may only want one of them
+        /// showing. Same idea as a Feed pin ("keep this in view"), scoped to
+        /// the address it's swiped on.
+        var pinnedToHome: Bool = false
+
+        enum CodingKeys: String, CodingKey { case id, label, address, pinnedToHome }
+
+        init(id: UUID = UUID(), label: String, address: String, pinnedToHome: Bool = false) {
+            self.id = id
+            self.label = label
+            self.address = address
+            self.pinnedToHome = pinnedToHome
+        }
+
+        /// Custom decode: older persisted data has no `pinnedToHome` key —
+        /// defaults to false rather than failing to decode at all.
+        init(from decoder: Decoder) throws {
+            let c = try decoder.container(keyedBy: CodingKeys.self)
+            id = try c.decode(UUID.self, forKey: .id)
+            label = try c.decode(String.self, forKey: .label)
+            address = try c.decode(String.self, forKey: .address)
+            pinnedToHome = try c.decodeIfPresent(Bool.self, forKey: .pinnedToHome) ?? false
+        }
 
         /// "0x1a2B…4f4f" — the row form.
         var short: String {
@@ -28,16 +53,18 @@ final class WalletStore {
         didSet { persist() }
     }
 
-    private static let pinnedKey = "wallet.pinnedToHome"
-    /// Holdings on Home (ruling 2026-07-08): same idea as a Feed pin — "keep
-    /// this in view" — but the wallet has no single Thing to toggle, so this
-    /// is its own switch. Home renders the holdings treemap while it's on.
-    var pinnedToHome: Bool {
-        didSet { UserDefaults.standard.set(pinnedToHome, forKey: Self.pinnedKey) }
+    /// The name a Wallet transaction's row shows when more than one address
+    /// is watched — matched by exact address string (an ENS-named watch
+    /// won't match its resolved hex form; the row simply carries no label
+    /// then, never a wrong one).
+    func label(forAddress address: String?) -> String? {
+        guard let address, addresses.count > 1,
+              let match = addresses.first(where: { $0.address.lowercased() == address.lowercased() })
+        else { return nil }
+        return match.label.isEmpty ? match.short : match.label
     }
 
     private init() {
-        pinnedToHome = UserDefaults.standard.bool(forKey: Self.pinnedKey)
         if let data = UserDefaults.standard.data(forKey: Self.key),
            let saved = try? JSONDecoder().decode([WatchedAddress].self, from: data) {
             addresses = saved
@@ -67,6 +94,12 @@ final class WalletStore {
 
     func move(from source: IndexSet, to destination: Int) {
         addresses.move(fromOffsets: source, toOffset: destination)
+    }
+
+    /// Flips one address's pin — scoped to that wallet, never the whole list.
+    func togglePin(_ id: WatchedAddress.ID) {
+        guard let i = addresses.firstIndex(where: { $0.id == id }) else { return }
+        addresses[i].pinnedToHome.toggle()
     }
 
     private func persist() {

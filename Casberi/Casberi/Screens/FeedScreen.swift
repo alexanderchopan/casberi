@@ -35,6 +35,8 @@ struct FeedScreen: View {
     @State private var staleExpanded = false
     @State private var blockStream = GenStream()
     @Bindable private var feedRoute = FeedRoute.shared
+    @Bindable private var wallet = WalletStore.shared
+    @State private var pushedBridge: BridgeRouter.Destination?
     @State private var liftedID: UUID?
     // First-run teaching (option 4: no demo mode — these live in the real
     // app and retire on first use, forever).
@@ -253,12 +255,14 @@ struct FeedScreen: View {
                     case .settings: SettingsScreen()
                     }
                 }
+                .navigationDestination(item: $pushedBridge) { BridgeDestinationView(destination: $0) }
         }
         .tint(DS.tint)
         // Re-tapping the Feed tab pops pushed screens and sheets back to root.
         .onChange(of: chrome.popFeed) {
             feedRoute.push = nil
             sheetThing = nil
+            pushedBridge = nil
         }
     }
 
@@ -337,6 +341,13 @@ struct FeedScreen: View {
                 if !pinned.isEmpty, shape != .photos {
                     daySection("Pinned", pinned)
                 }
+                // A wallet pinned to Home leads Feed too (ruling 2026-07-09) —
+                // same "keep this in view" rule, same module, so the two
+                // surfaces agree. The Wallet chip's own shape already leads
+                // with it, so this only rides the other shapes.
+                if wallet.addresses.contains(where: \.pinnedToHome), shape != .photos, shape != .wallet {
+                    holdingsBlockSection
+                }
                 shapedSections
             }
 
@@ -375,6 +386,9 @@ struct FeedScreen: View {
             shapeWave += 1
             streamBlock()
         }
+        // Pinning/unpinning a wallet (WalletScreen) re-fetches or drops its
+        // holdings block here too — same rule as Home.
+        .onChange(of: wallet.addresses) { streamBlock() }
         .sheet(item: $sheetThing) { thing in
             ThingSheetView(thing: thing)
                 .navigationTransition(.zoom(sourceID: thing.id, in: zoomNS))
@@ -509,11 +523,13 @@ struct FeedScreen: View {
         }
     }
 
-    /// Zerion leads with holdings — the treemap through the engine (mock Z1),
-    /// demo-gated like WalletScreen.
+    /// The wallet leads with holdings — real, from Alchemy (WalletIngest),
+    /// one treemap per watched address, same doc Home and the Wallet screen
+    /// render (ruling 2026-07-09: the old mock demo-only block never showed a
+    /// real user anything real).
     @ViewBuilder
     private var holdingsBlockSection: some View {
-        if SourceComposition.block(source: filter.source, demo: DemoState.seedsDemoData) != nil {
+        if !blockStream.els.isEmpty {
             Section {
                 GenRender(id: "root", els: blockStream.els)
                     .listRowBackground(Color.clear)
@@ -675,7 +691,7 @@ struct FeedScreen: View {
             .shadow(color: .black.opacity(lifted ? 0.2 : 0), radius: lifted ? 8 : 0)
             .contentShape(Rectangle())
             .matchedTransitionSource(id: thing.id, in: zoomNS)
-            .onTapGesture { sheetThing = thing }
+            .onTapGesture { openThing(thing) }
             // V3b (2026-07-07, supersedes the kind-color wash): rows are
             // NEUTRAL cards — the translucent kind wash read as murk. Color
             // moved into the tag text: the project's own stable hue.
@@ -887,6 +903,17 @@ struct FeedScreen: View {
         }
     }
 
+    /// A wallet-sourced row (an onchain transaction) opens the Wallet screen
+    /// — holdings and activity together — instead of the generic sheet,
+    /// which had nothing more than an explorer link to show (ruling 2026-07-09).
+    private func openThing(_ thing: Thing) {
+        if thing.source == "Wallet" {
+            pushedBridge = .wallet
+        } else {
+            sheetThing = thing
+        }
+    }
+
     /// A day group as a native section: rounded sheet card, native swipes
     /// (To do / Doing), native scroll — no gesture fights.
     @ViewBuilder
@@ -986,10 +1013,24 @@ struct FeedScreen: View {
         }
     }
 
+    /// Loads the real per-wallet holdings whenever a wallet is pinned to Home,
+    /// or the Wallet chip itself is in force — both surfaces read the same
+    /// fetch, but the Wallet chip shows everything watched (its native shape)
+    /// while the leading module elsewhere shows only what's pinned (ruling
+    /// 2026-07-09). Composing is synchronous elsewhere in this screen; the
+    /// wallet fetch isn't, so it lands in the background and repaints.
     private func streamBlock() {
-        if let doc = SourceComposition.block(source: filter.source,
-                                             demo: DemoState.seedsDemoData) {
-            blockStream.stream(doc)
+        let onWalletChip = filter.source == "Wallet"
+        guard onWalletChip || wallet.addresses.contains(where: \.pinnedToHome) else {
+            if !blockStream.els.isEmpty { blockStream.paint([]) }
+            return
+        }
+        Task { @MainActor in
+            if let doc = await WalletIngest.holdingsChart(pinnedOnly: !onWalletChip) {
+                blockStream.paint(doc)
+            } else if !blockStream.els.isEmpty {
+                blockStream.paint([])
+            }
         }
     }
 

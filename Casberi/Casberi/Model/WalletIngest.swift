@@ -56,7 +56,8 @@ enum WalletIngest {
                         guard let uid = t["uniqueId"] as? String else { continue }
                         let ref = "wallet:\(uid)"
                         guard !existing.contains(ref) else { continue }
-                        guard let thing = thing(from: t, chain: chain, received: received, ref: ref)
+                        guard let thing = thing(from: t, chain: chain, received: received,
+                                                ref: ref, address: address)
                         else { continue }
                         context.insert(thing)
                         SpotlightIndex.index([thing])
@@ -107,14 +108,14 @@ enum WalletIngest {
     }
 
     private static func thing(from t: [String: Any], chain: Chain,
-                              received: Bool, ref: String) -> Thing? {
+                              received: Bool, ref: String, address: String) -> Thing? {
         guard let hash = t["hash"] as? String else { return nil }
         let asset = (t["asset"] as? String) ?? chain.symbol
         let amount = (t["value"] as? Double).map(format) ?? ""
         let verb = received ? "Received" : "Sent"
         let title = amount.isEmpty ? "\(verb) \(asset)" : "\(verb) \(amount) \(asset)"
         let when = IngestSupport.isoDate((t["metadata"] as? [String: Any])?["blockTimestamp"])
-        return Thing(
+        let thing = Thing(
             kind: .transaction,
             title: title,
             content: chain.explorer + hash,
@@ -122,31 +123,79 @@ enum WalletIngest {
             capturedAt: when ?? .now,
             sourceRef: ref
         )
+        thing.walletAddress = address
+        return thing
     }
 
-    /// A treemap of the wallet's token holdings, sized by USD value — the
-    /// same TagMap idiom Home uses. Real, from Alchemy's Portfolio API
-    /// (balances + metadata + prices in one call). Unpriced spam tokens have no
-    /// price and drop out; the top 5 by value are shown. A normal wallet fits
-    /// in one page; a wallet holding hundreds of tokens (its real holdings
-    /// scattered behind pages of spam) is paged through, bounded, until we have
-    /// the true top of the book. Returns nil when nothing priced is held.
-    @MainActor
-    static func holdingsChart() async -> [String]? {
-        guard let cells = await topHoldings() else { return nil }
-        return ["root = Stack([m])",
-                "m = TagMap(\"Holdings\", \"By value\", [\(cells.joined(separator: ", "))])"]
+    /// One watched wallet's holdings — a label (name or short address) paired
+    /// with its top-5-by-value cells ("ETH 34, USDC 12, …").
+    struct HoldingsGroup {
+        let label: String
+        let cells: [String]
     }
 
-    /// The top-5-by-value cells themselves ("ETH 34, USDC 12, …"), for a
-    /// caller composing its own document (Home's pinned-wallet module) rather
-    /// than rendering the Wallet screen's standalone one.
+    /// A treemap PER watched wallet, sized by USD value — the same TagMap
+    /// idiom Home uses. Real, from Alchemy's Portfolio API (balances +
+    /// metadata + prices in one call). Unpriced spam tokens have no price and
+    /// drop out; the top 5 per wallet are shown. Separate, not combined
+    /// (ruling 2026-07-09): two watched addresses are usually two different
+    /// purposes (main vs. cold, personal vs. a DAO) and summing them into one
+    /// total hid which wallet actually held what.
     @MainActor
-    static func topHoldings() async -> [String]? {
-        // Watched entries can be ENS names; the Portfolio API needs hex too.
-        let watched = WalletStore.shared.addresses.map(\.address)
-        guard !watched.isEmpty else { return nil }
-        let addresses = await hexAddresses(watched)
+    static func holdingsChart(pinnedOnly: Bool = false) async -> [String]? {
+        let groups = await topHoldingsByWallet(pinnedOnly: pinnedOnly)
+        guard !groups.isEmpty else { return nil }
+        let ids = groups.indices.map { "w\($0)" }
+        var doc = ["root = Stack([\(ids.joined(separator: ", "))])"]
+        for (i, g) in groups.enumerated() {
+            doc.append("w\(i) = TagMap(\(q(g.label)), \(q("Holdings by value")), [\(g.cells.joined(separator: ", "))])")
+        }
+        return doc
+    }
+
+    private static func q(_ s: String) -> String {
+        "\"\(s.replacingOccurrences(of: "\"", with: "'"))\""
+    }
+
+    /// Every watched wallet's holdings, one group per address — for a caller
+    /// composing its own document (Home's and Feed's pinned-wallet module)
+    /// rather than rendering the Wallet screen's standalone one. A wallet
+    /// with nothing priced simply doesn't contribute a group (correct-but-
+    /// empty, not a failure) — order follows watch order, the first address leads.
+    /// `pinnedOnly` restricts to addresses with their own pin on (Home and
+    /// Feed's leading module); the Wallet screen and its own Feed chip show
+    /// everything watched regardless of pin (ruling 2026-07-09).
+    @MainActor
+    static func topHoldingsByWallet(pinnedOnly: Bool = false) async -> [HoldingsGroup] {
+        let watched = pinnedOnly
+            ? WalletStore.shared.addresses.filter(\.pinnedToHome)
+            : WalletStore.shared.addresses
+        guard !watched.isEmpty else { return [] }
+        // Concurrent, not sequential — three watched wallets waiting on three
+        // requests in a row is the difference between a couple seconds and
+        // most of an app launch (2026-07-09: separating wallets must not
+        // make the pinned module noticeably slower to appear than the old
+        // single combined request was).
+        let results = await withTaskGroup(of: (Int, HoldingsGroup?).self) { group in
+            for (i, entry) in watched.enumerated() {
+                group.addTask {
+                    guard let hex = await hexAddresses([entry.address]).first,
+                          let cells = await holdings(addresses: [hex]) else { return (i, nil) }
+                    return (i, HoldingsGroup(label: entry.label.isEmpty ? entry.short : entry.label,
+                                             cells: cells))
+                }
+            }
+            var collected: [(Int, HoldingsGroup?)] = []
+            for await result in group { collected.append(result) }
+            return collected
+        }
+        return results.sorted { $0.0 < $1.0 }.compactMap(\.1)
+    }
+
+    /// The top-5-by-value cells for one or more hex addresses, combined —
+    /// the shared fetch/page/aggregate loop both the per-wallet path and
+    /// diagnostics call into.
+    private static func holdings(addresses: [String]) async -> [String]? {
         guard !addresses.isEmpty else { return nil }
         let networks = chains.map(\.network)
         // network → native symbol, so a chain's own coin (ETH/MATIC) — which
@@ -228,9 +277,11 @@ enum WalletIngest {
         }
         let priced = tokens.filter { (firstPrice($0["tokenPrices"]) ?? 0) > 0 }.count
         out.append("Tokens returned: \(tokens.count), of which priced: \(priced)")
-        let cells = await topHoldings()
-        if let cells {
-            out.append("OK holdings: \(cells.count) cells — \(cells.joined(separator: ", "))")
+        let groups = await topHoldingsByWallet()
+        if !groups.isEmpty {
+            for g in groups {
+                out.append("OK \(g.label): \(g.cells.count) cells — \(g.cells.joined(separator: ", "))")
+            }
         } else if priced == 0 {
             out.append("Empty (correct): nothing priced held — only unpriced/airdrop tokens")
         } else {

@@ -98,6 +98,11 @@ final class Thing {
     /// keeps CloudKit mirroring happy; it's set after init, so the initializer
     /// and its callers are untouched.
     var previewImageURL: String? = nil
+    /// The onchain address a Wallet transaction came from — lets a row say
+    /// which watched wallet it belongs to when more than one is watched
+    /// (2026-07-09). Optional + default nil keeps CloudKit mirroring happy;
+    /// nil for every non-Wallet thing.
+    var walletAddress: String? = nil
 
     init(
         id: UUID = UUID(),

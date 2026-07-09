@@ -87,11 +87,14 @@ enum ProbeHooks {
                 NSLog("Wallet probe: %@ new", n.map(String.init) ?? "FAILED")
             }
         },
-        // `-pinWallet YES` pins the wallet's holdings treemap to Home
-        // headlessly — pairs with `-walletAddress` for testing that module.
+        // `-pinWallet YES` pins every currently-watched wallet's holdings
+        // treemap to Home headlessly — pairs with `-walletAddress` for
+        // testing that module. Pin is per-address now (2026-07-09).
         Hook(key: "pinWallet") { _, _ in
-            WalletStore.shared.pinnedToHome = true
-            NSLog("Pin-wallet probe: pinnedToHome=true")
+            for i in WalletStore.shared.addresses.indices {
+                WalletStore.shared.addresses[i].pinnedToHome = true
+            }
+            NSLog("Pin-wallet probe: pinned %d address(es)", WalletStore.shared.addresses.count)
         },
         // `-connectPhotos YES` runs the real Photos connect+ingest.
         Hook(key: "connectPhotos") { _, context in

@@ -39,12 +39,11 @@ struct WalletScreen: View {
     var body: some View {
         List {
             addSection.listRowSeparator(.hidden)
+            // The pin lives on each address row now (2026-07-09) — one
+            // switch per wallet, right where you'd reach for it, instead of
+            // a single toggle below that couldn't say WHICH wallet it meant
+            // once more than one was watched.
             if !wallet.addresses.isEmpty { watchingSection.listRowSeparator(.hidden) }
-            // Pin leads the holdings — a watched wallet earns the toggle right
-            // away, above the treemap (report 2026-07-09: below the chart it
-            // fell under the fold on a real wallet, so "connect the wallet, pin
-            // it to Home" had no visible switch to reach).
-            if !wallet.addresses.isEmpty { pinSection.listRowSeparator(.hidden) }
             if !wallet.addresses.isEmpty, !holdings.els.isEmpty {
                 Section {
                     GenRender(id: "root", els: holdings.els)
@@ -65,10 +64,7 @@ struct WalletScreen: View {
             if !wallet.addresses.isEmpty {
                 BridgeDisconnectSection(
                     bridgeID: "wallet", name: "Wallet",
-                    teardown: {
-                        WalletStore.shared.addresses = []
-                        WalletStore.shared.pinnedToHome = false
-                    }
+                    teardown: { WalletStore.shared.addresses = [] }
                 ).listRowSeparator(.hidden)
             }
             footerSection.listRowSeparator(.hidden)
@@ -112,32 +108,13 @@ struct WalletScreen: View {
         }
     }
 
-    // MARK: - Pin to Home
+    // MARK: - Watching (add / remove / sort / pin)
 
-    /// The one switch that puts the holdings treemap on Home. Shows the moment
-    /// a wallet is watched (before the chart loads), stated in the same "keep
-    /// this in view" voice a Thing pin uses — the swipe on an address flips the
-    /// same `wallet.pinnedToHome`, so either gesture reaches it.
-    private var pinSection: some View {
-        Section {
-            HStack(spacing: DS.Space.s3) {
-                Text("Pin holdings to Home")
-                    .dsText(.body17).foregroundStyle(DS.textPrimary)
-                Spacer(minLength: 0)
-                Toggle("", isOn: Binding(
-                    get: { wallet.pinnedToHome },
-                    set: { wallet.pinnedToHome = $0; DSHaptic.tap() }
-                )).labelsHidden().tint(DS.tint)
-            }
-            .listRowBackground(DS.surfaceSheet)
-        } footer: {
-            Text("Shows your holdings treemap on Home, the same way a pinned thing does.")
-                .dsText(.callout15).foregroundStyle(DS.textSecondary)
-        }
-    }
-
-    // MARK: - Watching (add / remove / sort)
-
+    /// Each watched address carries its own pin now (ruling 2026-07-09): a
+    /// wallet's holdings show on Home and Feed only when THAT wallet is
+    /// pinned — watching more than one is usually two different purposes
+    /// (main vs. cold), and a shared switch couldn't say which one it meant.
+    /// Swipe and the inline toggle both flip the same per-address flag.
     private var watchingSection: some View {
         Section {
             ForEach(wallet.addresses) { addr in
@@ -158,19 +135,22 @@ struct WalletScreen: View {
                         }
                     }
                     Spacer()
+                    Toggle("", isOn: Binding(
+                        get: { addr.pinnedToHome },
+                        set: { _ in wallet.togglePin(addr.id); DSHaptic.tap() }
+                    )).labelsHidden().tint(DS.tint)
                 }
                 .listRowBackground(DS.surfaceSheet)
-                // Swipe to pin reads the same everywhere in the app (Feed's
-                // rows); the standing toggle below stayed easy to miss
-                // (report 2026-07-09), so the expected gesture now works
-                // here too — either one flips the same wallet.pinnedToHome.
+                // Swipe reads the same everywhere else in the app (Feed's
+                // rows) — either gesture flips this one wallet's pin, never
+                // another wallet's.
                 .swipeActions(edge: .leading, allowsFullSwipe: true) {
                     Button {
                         DSHaptic.tap()
-                        wallet.pinnedToHome.toggle()
+                        wallet.togglePin(addr.id)
                     } label: {
-                        Label(wallet.pinnedToHome ? "Unpin" : "Pin",
-                              systemImage: wallet.pinnedToHome ? "pin.slash" : "pin")
+                        Label(addr.pinnedToHome ? "Unpin" : "Pin",
+                              systemImage: addr.pinnedToHome ? "pin.slash" : "pin")
                     }
                     .tint(DS.tint)
                 }
@@ -181,7 +161,7 @@ struct WalletScreen: View {
             Text("Watching").dsText(.label12)
                 .foregroundStyle(DS.textSecondary)
         } footer: {
-            Text("Swipe an address to pin your holdings to Home.")
+            Text("Pin a wallet to show its holdings on Home and Feed.")
                 .dsText(.callout15).foregroundStyle(DS.textSecondary)
         }
     }
@@ -244,7 +224,8 @@ struct WalletScreen: View {
                     VStack(alignment: .leading, spacing: 2) {
                         Text(thing.title).dsText(.body17).foregroundStyle(DS.textPrimary)
                             .lineLimit(1)
-                        Text(thing.content).dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                        Text(walletLabel(thing) ?? thing.content)
+                            .dsText(.subhead13).foregroundStyle(DS.textSecondary)
                             .lineLimit(1)
                     }
                     Spacer()
@@ -265,6 +246,13 @@ struct WalletScreen: View {
             Text("Read-only — watching can never trade or move funds. Activity is public, read across chains directly on this iPhone.")
                 .dsText(.subhead13).foregroundStyle(DS.textSecondary)
         }
+    }
+
+    /// Which watched wallet a landed transaction came from, when more than
+    /// one is watched — falls back to nil (the explorer link shows instead)
+    /// rather than guessing.
+    private func walletLabel(_ thing: Thing) -> String? {
+        wallet.label(forAddress: thing.walletAddress)
     }
 
     private func shortTime(_ date: Date) -> String {

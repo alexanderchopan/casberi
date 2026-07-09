@@ -739,3 +739,48 @@ screen).
 ## 36. Bridge selection ruling: live data only (2026-07-09)
 
 No new import bridges. A bridge whose data arrives via a request-and-wait export (TikTok's 1–4 day JSON, Tinder's 24–48h zip, IMDb's CSV) lands stale and never updates — the person asked for live data or nothing. The ChatGPT import predates this ruling and stays (its framing is explicitly a backfill, and OpenAI offers no live read). Evaluated and declined under this ruling: TikTok, Tinder, IMDb (viable exports, stale), Linktree/Rotten Tomatoes/CardPointers (no surface at all), Duolingo (unofficial API only — ToS-gray breaks the honesty rule), Credit Karma/NerdWallet/Acorns (aggregator-only; needs the post-M2 server), Fileverse (E2EE by design; revisit if they ship a hosted API), Fantastical (already covered — it's a client over the calendars EventKit reads). Pinterest passed: their public per-user RSS feed is live and official-enough (a published feed, not a scraped page).
+
+## 36h. Wallet holdings: one treemap per wallet, leads Feed too, tap-through to Wallet (2026-07-09)
+
+Watching more than one wallet is usually two different purposes (main vs.
+cold, personal vs. a DAO) — combining their balances into one total hid
+which wallet actually held what. `WalletIngest.topHoldingsByWallet()`
+replaces the old combined `topHoldings()`: one TagMap per watched address,
+titled with its label (or short address), fetched concurrently (not
+sequentially — three watched wallets waiting on three requests in a row
+made the pinned module noticeably slower to appear than the old single
+request was).
+
+The same module now leads Feed, not just Home: a pinned wallet's holdings
+also lead the top of Feed's default view, right after Pinned things, on
+every shape except Photos and Wallet itself (Wallet's own chip already
+leads with it, showing every watched wallet regardless of pin — that's
+its native shape). This replaced a dead demo-only mock
+(`SourceComposition.block`, deleted) that showed a real user nothing at
+all when they tapped the Wallet chip — a real gap, not by design.
+
+Tapping a wallet-sourced row (an onchain transaction) in Feed now opens
+the Wallet screen — holdings and activity together — instead of the
+generic thing sheet, which had nothing more to show than an explorer
+link.
+
+Also fixed in the same pass: the per-wallet fetch is concurrent
+(`withTaskGroup`), not sequential, so separating wallets doesn't cost
+load time versus the old combined call.
+
+**Amendment, same day: the pin moved onto each wallet.** `WalletStore
+.pinnedToHome` (one switch for the whole watch list) is gone — pin lives
+on `WatchedAddress` itself now. Two watched wallets are usually two
+different purposes, and a person may only want one of them showing; a
+shared switch also had a real bug, where swiping "pin" on a second wallet
+silently un-pinned the first (both rows read the same flag). The swipe
+gesture and a new inline toggle on each row in WalletScreen both flip
+that ONE wallet's pin. Home and Feed's holdings module now composes only
+from wallets with `pinnedToHome == true`; the Wallet screen's own view
+and its Feed chip still show every watched wallet regardless of pin.
+`Thing.walletAddress` (new field) records which watched address a landed
+transaction came from, so a row can say which wallet it belongs to
+(`BandRow`'s trailing label falls back to it when there's no project
+tag) — shown only when more than one wallet is watched, and only for a
+raw address match (an ENS-named watch won't retroactively match its
+resolved hex, so it simply carries no label rather than a wrong one).

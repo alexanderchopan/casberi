@@ -28,8 +28,14 @@ struct BandRow: View {
 
     private var done: Bool { thing.mark == .done }
 
+    /// The trailing label — a project tag normally, or which wallet a
+    /// transaction came from when more than one is watched (2026-07-09):
+    /// same slot, same voice, so two watched wallets don't read as one
+    /// indistinguishable stream.
     private var project: String? {
-        thing.tags.first { ThingKind.from(typeTag: $0) == nil }
+        if let tag = thing.tags.first(where: { ThingKind.from(typeTag: $0) == nil }) { return tag }
+        if thing.source == "Wallet" { return WalletStore.shared.label(forAddress: thing.walletAddress) }
+        return nil
     }
 
     /// Events carry their clock time inline — the left time column died.

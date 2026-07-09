@@ -106,7 +106,8 @@ struct DiagnosticsScreen: View {
 
         // — Wallet state —
         let wallet = WalletStore.shared
-        log("Wallet: \(wallet.addresses.count) address(es), pinned to Home: \(wallet.pinnedToHome ? "yes" : "no")")
+        let pinnedCount = wallet.addresses.filter(\.pinnedToHome).count
+        log("Wallet: \(wallet.addresses.count) address(es), \(pinnedCount) pinned to Home")
         if !wallet.addresses.isEmpty {
             for line in await WalletIngest.holdingsDiagnostic() { log(line) }
         }

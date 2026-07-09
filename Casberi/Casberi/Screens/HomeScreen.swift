@@ -36,7 +36,7 @@ struct HomeScreen: View {
     @State private var stream = GenStream()
     @State private var openProject: ProjectRoute?
     @State private var coverThing: Thing?
-    @State private var walletHoldings: [String]?
+    @State private var walletHoldings: [WalletIngest.HoldingsGroup] = []
     @Namespace private var zoomNS
 
     struct ProjectRoute: Identifiable, Hashable {
@@ -135,10 +135,11 @@ struct HomeScreen: View {
         // A tag rename/retag leaves the count unchanged but changes what Home
         // composes from — repaint so the renamed tag shows immediately.
         .onChange(of: CorpusSignal.shared.revision) { streamComposition(instant: true) }
-        // Pinning/unpinning the wallet (WalletScreen) re-fetches (or drops)
-        // its holdings treemap — same "pin means keep this in view" rule as
-        // a Thing pin, just without a Thing to observe via things.count.
-        .onChange(of: wallet.pinnedToHome) { loadWalletHoldings() }
+        // Pinning/unpinning a wallet (WalletScreen) re-fetches (or drops) its
+        // holdings treemap — same "pin means keep this in view" rule as a
+        // Thing pin, just without a Thing to observe via things.count. Pin is
+        // per-address now, so the whole list is the thing to watch.
+        .onChange(of: wallet.addresses) { loadWalletHoldings() }
         // A chosen Home banner (Settings → Banner) is composed from too — and
         // its tray pops back into an already-mounted Home, so onAppear won't
         // catch it. Recompose so the banner takes the cover immediately.
@@ -186,15 +187,15 @@ struct HomeScreen: View {
     /// background and repaint (instant, like any other corpus change) once
     /// it lands. Unpinning drops the cells and repaints without them.
     private func loadWalletHoldings() {
-        guard wallet.pinnedToHome, !wallet.addresses.isEmpty else {
-            if walletHoldings != nil {
-                walletHoldings = nil
+        guard wallet.addresses.contains(where: \.pinnedToHome) else {
+            if !walletHoldings.isEmpty {
+                walletHoldings = []
                 streamComposition(instant: true)
             }
             return
         }
         Task { @MainActor in
-            walletHoldings = await WalletIngest.topHoldings()
+            walletHoldings = await WalletIngest.topHoldingsByWallet(pinnedOnly: true)
             streamComposition(instant: true)
         }
     }
