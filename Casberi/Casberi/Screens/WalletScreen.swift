@@ -62,6 +62,15 @@ struct WalletScreen: View {
                 .listRowSeparator(.hidden)
             }
             if !recent.isEmpty { recentSection.listRowSeparator(.hidden) }
+            if !wallet.addresses.isEmpty {
+                BridgeDisconnectSection(
+                    bridgeID: "wallet", name: "Wallet",
+                    teardown: {
+                        WalletStore.shared.addresses = []
+                        WalletStore.shared.pinnedToHome = false
+                    }
+                ).listRowSeparator(.hidden)
+            }
             footerSection.listRowSeparator(.hidden)
         }
         .listStyle(.insetGrouped)

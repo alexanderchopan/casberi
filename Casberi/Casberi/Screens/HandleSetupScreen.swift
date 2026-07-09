@@ -179,6 +179,12 @@ struct HandleSetupScreen: View {
                 RecentThingsSection(header: bridge.recentHeader, things: recent)
                     .listRowSeparator(.hidden)
             }
+            if !bridge.currentName.isEmpty {
+                BridgeDisconnectSection(
+                    bridgeID: bridge.bridgeID, name: bridge.rawValue,
+                    teardown: { bridge.setName("") }
+                ).listRowSeparator(.hidden)
+            }
             footerSection.listRowSeparator(.hidden)
         }
         .listStyle(.insetGrouped)

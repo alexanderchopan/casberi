@@ -37,6 +37,12 @@ struct RSSScreen: View {
                 RecentThingsSection(header: "Recent", things: recent, titleLines: 1)
                     .listRowSeparator(.hidden)
             }
+            if !rss.feeds.isEmpty {
+                BridgeDisconnectSection(
+                    bridgeID: "rss", name: "RSS",
+                    teardown: { RSSStore.shared.feeds = [] }
+                ).listRowSeparator(.hidden)
+            }
             footerSection.listRowSeparator(.hidden)
         }
         .listStyle(.insetGrouped)

@@ -29,6 +29,12 @@ struct MailScreen: View {
                 RecentThingsSection(header: "Recent", things: recent)
                     .listRowSeparator(.hidden)
             }
+            if provider.connected {
+                BridgeDisconnectSection(
+                    bridgeID: provider.bridgeID, name: provider.source,
+                    teardown: { TokenVault.delete(provider.passwordKey) }
+                ).listRowSeparator(.hidden)
+            }
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)

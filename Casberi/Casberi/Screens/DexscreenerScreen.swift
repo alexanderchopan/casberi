@@ -25,6 +25,13 @@ struct DexscreenerScreen: View {
             if !watched.isEmpty {
                 watchlistSection.listRowSeparator(.hidden)
             }
+            if !watched.isEmpty {
+                // A watched token IS its thing, so there's no separate store to
+                // clear — "Remove its things too" is what drops the watchlist.
+                BridgeDisconnectSection(bridgeID: "dexscreener", name: "Dexscreener",
+                                        teardown: {})
+                    .listRowSeparator(.hidden)
+            }
             footerSection.listRowSeparator(.hidden)
         }
         .listStyle(.insetGrouped)
