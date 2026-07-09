@@ -119,7 +119,7 @@ struct RootShell: View {
                 if !skipPrewarm { OnDeviceModel.prewarm() }
                 // Connected bridges are cheap to poll — every foreground
                 // refreshes them all (one place, reusable from screens).
-                BridgeRefresh.refreshAllConnected(context: modelContext)
+                BridgeRefresh.refreshAllConnected(context: modelContext, store: bridges)
                 // Control Center's button left a flag — open the composer.
                 let group = UserDefaults(suiteName: SharedStore.appGroup)
                 if group?.bool(forKey: "compose.request") == true {

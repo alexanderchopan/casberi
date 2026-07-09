@@ -63,6 +63,7 @@ All read via UserDefaults in `Shell/RootShell.swift` unless noted:
 - `-pinSource <source>` — pins the newest thing from that source (waits up to 5s for an async ingest hook to land its thing first) — headless test of the Home "Pinned" widget.
 - `-pinWallet YES` — pins the wallet's holdings treemap to Home (pair with `-walletAddress`).
 - `-openDiagnostics YES` — open the Diagnostics sheet (pair with `-openSettings YES`); it runs the cover-photo and token-chart paths on-device and prints each step.
+- `-connectPhotos YES` — runs the real Photos connect+ingest headlessly; `-reingestPhotos YES` — calls the bare re-scan (no permission request) that `BridgeRefresh` now runs each foreground.
 
 Deep links: `casberi://home`, `casberi://feed`, `casberi://feed/type/<Tag>`, `casberi://account` (→ apps tab), `casberi://thing/<id>`.
 

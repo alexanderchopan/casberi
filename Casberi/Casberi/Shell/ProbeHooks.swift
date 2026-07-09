@@ -1,6 +1,7 @@
 #if DEBUG
 import Foundation
 import SwiftData
+import Photos
 
 /// The launch-arg connect-and-sync probes: `-chatgptImport <path>`,
 /// `-tokenBridge "<Name>:<token>"`, `-fcName <username>`, `-bskyHandle
@@ -90,6 +91,22 @@ enum ProbeHooks {
         Hook(key: "pinWallet") { _, _ in
             WalletStore.shared.pinnedToHome = true
             NSLog("Pin-wallet probe: pinnedToHome=true")
+        },
+        // `-connectPhotos YES` runs the real Photos connect+ingest.
+        Hook(key: "connectPhotos") { _, context in
+            Task { @MainActor in
+                guard let n = await ScreenshotIngest.connectAndIngest(context: context) else {
+                    NSLog("Photos probe: FAILED (access denied)"); return
+                }
+                NSLog("Photos probe: connected, %d in", n)
+            }
+        },
+        // `-reingestPhotos YES` calls the bare re-scan BridgeRefresh now
+        // uses (no permission request) — headless test that a photo added
+        // AFTER connect is picked up on the next pass (report 2026-07-09).
+        Hook(key: "reingestPhotos") { _, context in
+            let n = ScreenshotIngest.ingest(context: context)
+            NSLog("Photos re-ingest probe: %d new", n)
         },
         // `-twitchAuth YES` starts the device flow headlessly: NSLogs the
         // code for the person to approve at twitch.tv/activate, polls up to

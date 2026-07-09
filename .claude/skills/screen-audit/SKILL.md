@@ -16,7 +16,7 @@ Recurring sweep that catches regressions between working sessions. Everything ru
    - Data tray: `-accountDetail data` (add `-openSettings YES`)
    - Fresh-user onboarding + empty states: `-fresh YES` (then relaunch with `-fresh NO` to restore)
    - Thing sheet: `-deeplink casberi://thing/latest` (opens the newest thing's sheet — no id needed)
-   - Project detail: `-openProject "Work"` (launch on `casberi://home`)
+   - Project detail: `-openProject "Work" -openProjectDelay 10` (launch on `casberi://home`), then wait ~20s before the shot. The delay pushes the screen after Home has settled — the real "tap into a project" path; pushing at t=0 (no delay) races Home's launch stream + the zoom transition and can catch the composition mid-entrance, which reads as a false regression.
    - Product page: `-openApp "GitHub"`, then `xcrun simctl openurl booted casberi://account` after launch (the hook needs the Apps page mounted)
    - Bridge setup: `-openSetup "Readwise"` (token field), then `xcrun simctl openurl booted casberi://account` — repeat for `"RSS"` (feed URL) and `"Bluesky"` (handle) to cover the three setup-screen shapes
    - App-shaped screens (visit when the corpus/connection makes them reachable; name any you couldn't reach so the gap is explicit): Wallet (`WalletScreen`), Dexscreener (`DexscreenerScreen`), Steam (`SteamScreen`), Twitch (`TwitchScreen`), Mail (`MailScreen`), Obsidian (`ObsidianScreen`) — reached by tapping their feed/source rows; plus the ChatGPT import (`-chatgptImport <path>`) and pair-client (`PairClientSheet`) flows.

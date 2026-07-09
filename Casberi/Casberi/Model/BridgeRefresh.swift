@@ -8,7 +8,35 @@ import SwiftData
 /// independently, fire-and-forget, on the main actor.
 @MainActor
 enum BridgeRefresh {
-    static func refreshAllConnected(context: ModelContext) {
+    static func refreshAllConnected(context: ModelContext, store: BridgeStore) {
+        // The native-framework bridges (Photos/Calendar/Reminders/Health/
+        // Music) only ever ingested at the moment of connect — nothing
+        // re-scanned them, so a screenshot taken an hour later never
+        // landed (report 2026-07-09). Their ingest calls already dedupe on
+        // sourceRef exactly like every polling bridge ("reconnects and
+        // refreshes are cheap" — HealthIngest's own doc comment); they were
+        // just never wired into the foreground refresh. Re-requesting an
+        // already-decided system permission resolves instantly, no repeat
+        // prompt — gated on BridgeStore so a never-connected bridge is
+        // never silently asked.
+        func connected(_ id: String) -> Bool {
+            store.bridges.contains { $0.id == id && $0.status == .connected }
+        }
+        if connected("pho") {
+            _ = ScreenshotIngest.ingest(context: context)
+        }
+        if connected("cal") {
+            Task { @MainActor in _ = await ScheduleIngest.connectCalendar(context: context) }
+        }
+        if connected("rem") {
+            Task { @MainActor in _ = await ScheduleIngest.connectReminders(context: context) }
+        }
+        if connected("hlt") {
+            Task { @MainActor in _ = await HealthIngest.connectAndIngest(context: context) }
+        }
+        if connected("music") {
+            Task { @MainActor in _ = await AppleMusicIngest.connectAndIngest(context: context) }
+        }
         if !RSSStore.shared.feeds.isEmpty {
             Task { @MainActor in _ = await RSSIngest.refresh(context: context) }
         }
