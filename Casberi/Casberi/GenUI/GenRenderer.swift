@@ -2,6 +2,7 @@ import SwiftUI
 import SwiftData
 import Photos
 import CoreImage
+import Charts
 
 /// The gen UI renderer — recursive over the element map, faithful to the v94
 /// prototype's RenderEl. A missing reference renders a skeleton in a row/tile
@@ -109,6 +110,7 @@ struct GenRender: View {
         case "Insight":     GenInsight(el: el).mountIn()
         case "Widget":      GenWidget(el: el, els: els).mountIn()
         case "Row":         GenRow(el: el).mountIn()
+        case "TokenRow":    GenTokenRow(el: el).mountIn()
         case "Suggest":     GenSuggest().mountIn()
         case "Skeleton":    GenSkeletonRow().mountIn()
         case "Chip":        GenChip(el: el).mountIn()
@@ -327,6 +329,70 @@ private struct GenRow: View {
         }
         .padding(.horizontal, DS.Space.s4)
         .padding(.vertical, DS.Space.s3)
+    }
+}
+
+/// TokenRow(title, chain, address, time) — a pinned/resurfaced crypto token
+/// leads with its price chart, same rule as the thing sheet (ThingContent's
+/// TokenChartContent): the chart IS the token's content, not a link. Falls
+/// back to the plain row's time label until the fetch resolves.
+private struct GenTokenRow: View {
+    let el: GenEl
+    @State private var chart: TokenChart?
+
+    private var up: Bool { (chart?.change24h ?? 0) >= 0 }
+    private var accent: Color { up ? DS.confirm : DS.destructive }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+            HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+                Text(el.str(0))
+                    .dsText(.body17).foregroundStyle(DS.textPrimary)
+                    .lineLimit(1)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                if let chart {
+                    Text(priceText(chart.price))
+                        .dsText(.callout15).foregroundStyle(DS.textPrimary)
+                    Text(changeText(chart.change24h))
+                        .dsText(.subhead13).foregroundStyle(accent)
+                } else {
+                    Text(el.str(3)).dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                }
+            }
+            if let chart {
+                Chart(Array(chart.closes.enumerated()), id: \.offset) { i, close in
+                    LineMark(x: .value("t", i), y: .value("price", close))
+                        .interpolationMethod(.catmullRom)
+                        .foregroundStyle(accent)
+                    AreaMark(x: .value("t", i), y: .value("price", close))
+                        .interpolationMethod(.catmullRom)
+                        .foregroundStyle(accent.opacity(0.12))
+                }
+                .chartXAxis(.hidden)
+                .chartYAxis(.hidden)
+                .chartYScale(domain: .automatic(includesZero: false))
+                .frame(height: 48)
+            }
+        }
+        .padding(.horizontal, DS.Space.s4)
+        .padding(.vertical, DS.Space.s3)
+        // Keyed by chain/address, not plain .task: Home's first render
+        // streams the doc token-by-token (H7 typewriter), so this view can
+        // mount before those args arrive — a bare .task would fetch once
+        // with empty strings and never retry (fixed 2026-07-08).
+        .task(id: "\(el.str(1))/\(el.str(2))") {
+            guard !el.str(1).isEmpty, !el.str(2).isEmpty else { return }
+            chart = await TokenChart.fetch(chain: el.str(1), address: el.str(2))
+        }
+    }
+
+    private func priceText(_ p: Double) -> String {
+        if p >= 1 { return String(format: "$%.2f", p) }
+        if p >= 0.01 { return String(format: "$%.4f", p) }
+        return String(format: "$%.8f", p)
+    }
+    private func changeText(_ c: Double) -> String {
+        String(format: "%@%.1f%%", c >= 0 ? "+" : "", c * 100)
     }
 }
 

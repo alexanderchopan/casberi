@@ -70,6 +70,10 @@ enum HomeComposition {
                 rootRefs.append("map")
             }
         }
+        // Where the map belongs even when it didn't compose yet — the starter
+        // preview slots in here, not at the tail (review 2026-07-08: a
+        // sparse corpus's pinned card was landing ABOVE the map preview).
+        let mapSlot = rootRefs.count
         if let pills = kindPillItems(things) {
             doc.append("kindPills = KindPills(\(q(kindPillEyebrow(things))), \(pills))")
             rootRefs.append("kindPills")
@@ -92,6 +96,7 @@ enum HomeComposition {
 
         appendStarterPreviews(things: things,
                               hasMap: rootRefs.contains("map"),
+                              mapSlot: mapSlot,
                               hasThreads: !links.isEmpty, to: &doc, rootRefs: &rootRefs)
 
         doc.insert("root = Stack([\(rootRefs.joined(separator: ", "))])", at: 0)
@@ -123,6 +128,7 @@ enum HomeComposition {
                 rootRefs.append("map")
             }
         }
+        let mapSlot = rootRefs.count
         if let pills = kindPillItems(things) {
             doc.append("kindPills = KindPills(\(q(kindPillEyebrow(things))), \(pills))")
             rootRefs.append("kindPills")
@@ -142,6 +148,7 @@ enum HomeComposition {
 
         appendStarterPreviews(things: things,
                               hasMap: rootRefs.contains("map"),
+                              mapSlot: mapSlot,
                               hasThreads: !links.isEmpty, to: &doc, rootRefs: &rootRefs)
 
         doc.insert("root = Stack([\(rootRefs.joined(separator: ", "))])", at: 0)
@@ -224,12 +231,15 @@ enum HomeComposition {
     private static func isSparse(_ things: [Thing]) -> Bool { things.count < 8 }
 
     /// Appends the preview map / threads when the real ones didn't compose.
-    private static func appendStarterPreviews(things: [Thing], hasMap: Bool, hasThreads: Bool,
+    /// `mapSlot` is where a real map would have landed in `rootRefs` (right
+    /// after cover/quiet/insight) — the preview takes that slot too, instead
+    /// of trailing behind pinned/threads content composed after it.
+    private static func appendStarterPreviews(things: [Thing], hasMap: Bool, mapSlot: Int, hasThreads: Bool,
                                               to doc: inout [String], rootRefs: inout [String]) {
         guard isSparse(things) else { return }
         if !hasMap {
             doc.append(previewMapLine)
-            rootRefs.append("map")
+            rootRefs.insert("map", at: mapSlot)
         }
         if !hasThreads {
             doc.append(previewThreadsLine)
@@ -418,8 +428,13 @@ enum HomeComposition {
         rootRefs.append("pinnedW")
     }
 
+    /// A token link leads with its price chart, same rule as the thing sheet
+    /// (ThingContent.swift) — the token's "media" is the chart, not a link row.
     private static func row(id: String, _ t: Thing) -> String {
-        "\(id) = Row(\(q(t.title)), \(q(t.kind.typeTag)), \(q(t.source)), \(q(shortTime(t.capturedAt))))"
+        if t.kind == .link, let route = TokenChart.route(from: t.content) {
+            return "\(id) = TokenRow(\(q(t.title)), \(q(route.chain)), \(q(route.address)), \(q(shortTime(t.capturedAt))))"
+        }
+        return "\(id) = Row(\(q(t.title)), \(q(t.kind.typeTag)), \(q(t.source)), \(q(shortTime(t.capturedAt))))"
     }
 
     private static func shortTime(_ date: Date) -> String {

@@ -137,6 +137,28 @@ enum ProbeHooks {
                 NSLog("RSS probe: %@ new things", n.map(String.init) ?? "FAILED")
             }
         },
+        // `-pinSource <source>` pins the newest thing from that source —
+        // headless test of the Home "Pinned" widget (waits for an async
+        // ingest hook like -watchToken to land its thing first, up to 5s).
+        Hook(key: "pinSource") { source, context in
+            Task { @MainActor in
+                for _ in 0..<25 {
+                    var descriptor = FetchDescriptor<Thing>(
+                        predicate: #Predicate<Thing> { $0.source == source },
+                        sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]
+                    )
+                    descriptor.fetchLimit = 1
+                    if let thing = (try? context.fetch(descriptor))?.first {
+                        thing.pinned = true
+                        try? context.save()
+                        NSLog("Pin probe: pinned '%@'", thing.title)
+                        return
+                    }
+                    try? await Task.sleep(for: .milliseconds(200))
+                }
+                NSLog("Pin probe: FAILED to find a thing from %@", source)
+            }
+        },
     ]
 }
 #endif
