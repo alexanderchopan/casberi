@@ -11,7 +11,7 @@ enum WalletIngest {
 
     /// Alchemy read-only key, restricted to reads. If it ever leaks, the worst
     /// case is quota use on public data — rotate at dashboard.alchemy.com.
-    private static let alchemyKey = "1BymL53WZVbPw9fTm42D8"
+    private static let alchemyKey = "8ilcJd0_tmnF-IPrI3CRl"
 
     /// The chains we read, and where a tx opens. One `getAssetTransfers` per
     /// direction per chain.
