@@ -69,7 +69,13 @@ enum WalletIngest {
         let params: [String: Any] = [
             "fromBlock": "0x0", "toBlock": "latest",
             received ? "toAddress" : "fromAddress": address,
-            "category": ["external", "erc20", "erc721", "erc1155"],
+            // "internal" added (2026-07-09): ETH that moves through a
+            // contract call — swap proceeds, unwrapped WETH, a DeFi
+            // withdrawal — rides an internal transfer, not "external". A
+            // wallet whose recent activity is mostly onchain interactions
+            // rather than direct sends was showing "connected, nothing
+            // landed" because that whole category was unfetched.
+            "category": ["external", "internal", "erc20", "erc721", "erc1155"],
             "withMetadata": true, "excludeZeroValue": true,
             "maxCount": "0xa", "order": "desc",
         ]

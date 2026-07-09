@@ -48,7 +48,10 @@ final class GenStream {
 
         let total = doc.count
         task = Task { @MainActor [weak self] in
-            try? await Task.sleep(for: .milliseconds(400))
+            // Was 400ms — read as a beat too long before anything appears
+            // (report 2026-07-09). 150ms still separates the entrance from
+            // the tab switch/launch that triggered it, just tighter.
+            try? await Task.sleep(for: .milliseconds(150))
             while let self, !Task.isCancelled, self.cursor < total {
                 self.cursor = min(self.cursor + Int.random(in: 2...6), total)
                 self.publish()

@@ -140,12 +140,29 @@ struct WalletScreen: View {
                     Spacer()
                 }
                 .listRowBackground(DS.surfaceSheet)
+                // Swipe to pin reads the same everywhere in the app (Feed's
+                // rows); the standing toggle below stayed easy to miss
+                // (report 2026-07-09), so the expected gesture now works
+                // here too — either one flips the same wallet.pinnedToHome.
+                .swipeActions(edge: .leading, allowsFullSwipe: true) {
+                    Button {
+                        DSHaptic.tap()
+                        wallet.pinnedToHome.toggle()
+                    } label: {
+                        Label(wallet.pinnedToHome ? "Unpin" : "Pin",
+                              systemImage: wallet.pinnedToHome ? "pin.slash" : "pin")
+                    }
+                    .tint(DS.tint)
+                }
             }
             .onDelete { wallet.remove(at: $0) }
             .onMove { wallet.move(from: $0, to: $1) }
         } header: {
             Text("Watching").dsText(.label12)
                 .foregroundStyle(DS.textSecondary)
+        } footer: {
+            Text("Swipe an address to pin your holdings to Home.")
+                .dsText(.callout15).foregroundStyle(DS.textSecondary)
         }
     }
 
