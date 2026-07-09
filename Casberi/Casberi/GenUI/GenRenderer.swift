@@ -466,7 +466,8 @@ private struct GenProjectTile: View {
             }
             Spacer(minLength: 0)
             Text(el.str(1)).dsText(.heading17).foregroundStyle(DS.textPrimary)
-                .lineLimit(2).fixedSize(horizontal: false, vertical: true)
+                .lineLimit(2).minimumScaleFactor(0.6)
+                .fixedSize(horizontal: false, vertical: true)
         }
         .padding(DS.Space.s4)
         .frame(maxWidth: .infinity, minHeight: el.str(0) == "2" ? 132 : 120, alignment: .topLeading)

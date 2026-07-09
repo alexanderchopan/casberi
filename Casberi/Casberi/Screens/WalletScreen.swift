@@ -40,12 +40,17 @@ struct WalletScreen: View {
         List {
             addSection.listRowSeparator(.hidden)
             if !wallet.addresses.isEmpty { watchingSection.listRowSeparator(.hidden) }
-            if !holdings.els.isEmpty {
+            if !wallet.addresses.isEmpty {
                 Section {
-                    GenRender(id: "root", els: holdings.els)
-                        .listRowBackground(Color.clear)
-                        .listRowSeparator(.hidden)
-                        .listRowInsets(EdgeInsets())
+                    if !holdings.els.isEmpty {
+                        GenRender(id: "root", els: holdings.els)
+                            .listRowBackground(Color.clear)
+                            .listRowSeparator(.hidden)
+                            .listRowInsets(EdgeInsets())
+                    }
+                    // The toggle shows whenever a wallet is watched — gating
+                    // it on the holdings fetch made it undiscoverable when
+                    // the chart hadn't loaded yet (report 2026-07-09).
                     HStack(spacing: DS.Space.s3) {
                         Text("Pin holdings to Home")
                             .dsText(.body17).foregroundStyle(DS.textPrimary)

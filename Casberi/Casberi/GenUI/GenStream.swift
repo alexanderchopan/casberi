@@ -11,6 +11,15 @@ import Observation
 final class GenStream {
     private(set) var els: GenEls = [:]
     private(set) var streaming = false
+    /// True once the document has fully rendered — either the typewriter reached
+    /// the end or `paint` set it whole. Stays false when a stream is cancelled
+    /// mid-flight (a view remount, e.g. under a zoom transition), so a caller can
+    /// tell an interrupted entrance from a finished one and reconcile.
+    private(set) var completed = false
+    /// Characters rendered so far — a caller watches this to tell a stream that
+    /// is still advancing from one that has stalled (main-actor contention under
+    /// a zoom transition can suspend the tick without cancelling it).
+    private(set) var progress = 0
 
     private var doc = ""
     private var boundaries: Set<Int> = []
@@ -23,7 +32,9 @@ final class GenStream {
         doc = lines.joined(separator: "\n")
         els = [:]
         cursor = 0
+        progress = 0
         streaming = true
+        completed = false
 
         // Section boundaries: offset after each `root`/Widget/Shelf line.
         boundaries = []
@@ -48,7 +59,11 @@ final class GenStream {
                 let delay = nearBoundary ? Double.random(in: 150...400) : 30
                 try? await Task.sleep(for: .milliseconds(Int(delay)))
             }
-            self?.streaming = false
+            if let self {
+                self.streaming = false
+                // Reached the end on our own (not cancelled by a restart/remount).
+                if !Task.isCancelled { self.completed = true }
+            }
         }
     }
 
@@ -59,11 +74,13 @@ final class GenStream {
         doc = lines.joined(separator: "\n")
         cursor = doc.count
         streaming = false
+        completed = true
         publish()
     }
 
     private func publish() {
         let prefix = doc.prefix(cursor)
+        progress = cursor
         els = GenParser.parse(prefix: prefix, isComplete: cursor >= doc.count)
     }
 

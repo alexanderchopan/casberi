@@ -19,9 +19,10 @@ Recurring sweep that catches regressions between working sessions. Everything ru
    - Project detail: `-openProject "Work"` (launch on `casberi://home`)
    - Product page: `-openApp "GitHub"`, then `xcrun simctl openurl booted casberi://account` after launch (the hook needs the Apps page mounted)
    - Bridge setup: `-openSetup "Readwise"` (token field), then `xcrun simctl openurl booted casberi://account` — repeat for `"RSS"` (feed URL) and `"Bluesky"` (handle) to cover the three setup-screen shapes
+   - App-shaped screens (visit when the corpus/connection makes them reachable; name any you couldn't reach so the gap is explicit): Wallet (`WalletScreen`), Dexscreener (`DexscreenerScreen`), Steam (`SteamScreen`), Twitch (`TwitchScreen`), Mail (`MailScreen`), Obsidian (`ObsidianScreen`) — reached by tapping their feed/source rows; plus the ChatGPT import (`-chatgptImport <path>`) and pair-client (`PairClientSheet`) flows.
    - Synthesis answer: `-uiAnswerProbe "what's my week"`
    - Lookup answer: `-uiAnswerProbe "what did I save about work"` (cold inference can exceed the ~4s wait — the headless probe from step 1 is the source of truth for the result; the screenshot may catch it mid-stream)
-   - Light mode: `xcrun simctl ui booted appearance light`, re-sweep home/feed/apps, then restore `dark`
+   - Light mode: relaunch each of home/feed/apps with `-theme.light 1` (the app themes from its own AppStorage, NOT the system — `simctl ui booted appearance light` does NOT flip it and yields dark shots mislabelled "light"). Restore by relaunching without the flag (or `-theme.light 0`).
    - Dynamic Type XXL: `xcrun simctl ui booted content_size extra-extra-large`, re-sweep, then restore `medium` (note the underscore in `content_size`)
 
 3. **Review each screenshot against the law**:

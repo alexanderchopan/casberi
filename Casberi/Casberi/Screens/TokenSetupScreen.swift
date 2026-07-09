@@ -119,11 +119,18 @@ struct TokenSetupScreen: View {
         syncing = false
         loadRecent()
         guard let added else {
-            // A fresh paste that fails doesn't stay: keeping it would show
-            // "Update"/"Remove token" for a connection that never worked and
-            // retry a dead token on every foreground.
-            if justConnected { TokenVault.delete(bridge.tokenKey) }
-            result = "That token didn't work — check it (and your connection) and paste again."
+            if justConnected {
+                // A fresh paste that fails doesn't stay: keeping it would show
+                // "Update"/"Remove token" for a connection that never worked and
+                // retry a dead token on every foreground.
+                TokenVault.delete(bridge.tokenKey)
+                result = "That token didn't work — check it (and your connection) and paste again."
+            } else {
+                // A background re-sync of an already-connected bridge failed. The
+                // user didn't just paste anything, so don't accuse the empty field
+                // — say what actually happened: the saved token or the network.
+                result = "Couldn't refresh \(bridge.rawValue) just now — your saved token may need renewing."
+            }
             resultIsError = true
             return
         }

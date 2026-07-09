@@ -52,7 +52,29 @@ struct ProjectDetailScreen: View {
         .scrollIndicators(.hidden)
         .dsPageBackground()
         .navigationBarTitleDisplayMode(.inline)
-        .onAppear { stream.stream(compose()) }
+        .task {
+            let doc = compose()
+            stream.stream(doc)
+            // The entrance can freeze mid-parse — main-actor contention under the
+            // zoom transition suspends the tick (leaving a half-streamed widget,
+            // e.g. `Widget("In motion", nu`, no rows) without cancelling it, so
+            // waiting on `streaming` never wakes. Instead watch progress: a live
+            // stream advances at least every ~400ms (boundary pause), so ~800ms
+            // without a character means it stalled — reconcile to the whole doc.
+            // `.task` is bound to this instance, so a remount's survivor re-runs.
+            var last = -1, still = 0, waited = 0
+            while !stream.completed, waited < 60 {
+                try? await Task.sleep(for: .milliseconds(100)); waited += 1
+                if Task.isCancelled { return }
+                if stream.progress == last { still += 1 } else { still = 0; last = stream.progress }
+                if still >= 8 { break }
+            }
+            if !Task.isCancelled, !stream.completed { stream.paint(doc) }
+        }
+        // The corpus changed under the composition — repaint whole, no replayed
+        // entrance (matches Home's recovery). Also a belt to the .task's braces:
+        // any settle that lands after the reconcile still paints the full doc.
+        .onChange(of: things.count) { stream.paint(compose()) }
         // The person renames; the person never files. (The project PIN died
         // 2026-07-07 — every project already sits on Home's map, so a pin
         // that only re-sorted it was a second pin system. Thing pins remain.)

@@ -12,6 +12,7 @@ struct SettingsScreen: View {
     /// the person turns iCloud sync on.
     @AppStorage("icloud.sync") private var icloudSync = false
     @State private var themeOpen = false
+    @State private var diagnosticsOpen = false
     @State private var detail: AccountDetail?
     @State private var avatarPickerOpen = false
     @State private var avatarDialogOpen = false
@@ -37,6 +38,9 @@ struct SettingsScreen: View {
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.large)
             .sheet(isPresented: $themeOpen) { ThemeSheet() }
+            .sheet(isPresented: $diagnosticsOpen) {
+                NavigationStack { DiagnosticsScreen() }
+            }
             .sheet(item: $detail) { AccountDetailSheet(detail: $0) }
             .photosPicker(isPresented: $avatarPickerOpen,
                           selection: $avatarSelection, matching: .images)
@@ -64,6 +68,9 @@ struct SettingsScreen: View {
             // Debug hook: `simctl launch ... -deeplink casberi://account
             // -accountDetail data` opens that detail sheet for screenshots.
             .onAppear {
+                if UserDefaults.standard.bool(forKey: "openDiagnostics") {
+                    diagnosticsOpen = true
+                }
                 if let raw = UserDefaults.standard.string(forKey: "accountDetail"),
                    let which = AccountDetail(rawValue: raw) {
                     detail = which
@@ -120,6 +127,11 @@ struct SettingsScreen: View {
             TileSpec(title: "Theme",
                      value: ThemeStore.shared.summary,
                      action: { themeOpen = true }),
+            // Dev-facing on purpose: TestFlight reports become a screenshot
+            // of on-device facts instead of a description (2026-07-09).
+            TileSpec(title: "Diagnostics",
+                     value: "Check what's failing",
+                     action: { diagnosticsOpen = true }),
         ].sorted { $0.title < $1.title }
     }
 
