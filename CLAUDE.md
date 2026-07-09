@@ -2,6 +2,11 @@
 
 Native iOS app — a personal corpus of "things" (links, screenshots, events, chats, voice notes, agent outputs) with on-device generative UI synthesis. Solo project, pre-App Store (Developer Program enrollment pending).
 
+## Repository & working directory (RULE)
+
+- **The canonical working copy is `~/Developer/casberi` — NOT iCloud Drive.** Always work here. The old iCloud copy (`.../myStuff/product/casberi`) is deprecated; do not edit it.
+- Backed by a private GitHub remote `origin` → https://github.com/alexanderchopan/casberi. A `post-commit` hook auto-pushes to `origin` in the background on every commit (off-site backup) — so `git commit` alone keeps the backup current; a manual `git push` is only needed if a push failed while offline (see `.git/last-autopush.log`). Commit workflow is unchanged otherwise: solo, straight to `main`, no branches/PRs required. Note: committing/pushing to `main` is NOT a release — releasing is the separate archive+upload step (`scripts/testflight.sh`).
+
 ## Layout
 
 - `Casberi/Casberi.xcodeproj` — the Xcode project. Targets: **Casberi** (app), **ShareExtension** (appex), **CasberiWidgets** (widget bundle). Bundle id `com.casberi.app`; app group `group.com.casberi.app`.
@@ -13,15 +18,16 @@ Native iOS app — a personal corpus of "things" (links, screenshots, events, ch
 
 ## Building (critical)
 
-The repo lives in iCloud Drive — building inside it **fails codesign** ("resource fork, Finder information, or similar detritus not allowed"; `com.apple.provenance` xattrs are SIP-protected). Always:
+From the canonical `~/Developer/casberi` copy, a plain build codesigns cleanly — no workaround needed:
 
 ```sh
 xcodebuild -project Casberi/Casberi.xcodeproj -scheme Casberi \
-  -destination 'platform=iOS Simulator,name=iPhone 17 Pro' \
-  -derivedDataPath "$HOME/Library/Developer/CasberiDD" build
+  -destination 'platform=iOS Simulator,name=iPhone 17 Pro' build
 ```
 
 Or just run `scripts/verify.sh` (build + install + screen sweep + answer probe).
+
+- **iCloud copy only (deprecated):** building inside the iCloud folder **fails codesign** ("resource fork, Finder information, or similar detritus not allowed"; `com.apple.provenance` xattrs are SIP-protected). There, add `-derivedDataPath "$HOME/Library/Developer/CasberiDD"`. Not needed from `~/Developer/casberi`.
 
 - Test device: **iPhone 17 Pro** simulator, iOS 26 runtime.
 - FoundationModels (on-device LLM) is iOS 26-only at **runtime** — `#if canImport` is not enough, use `if #available(iOS 26.0, *)`. `@Generable` schema types MUST be file-scope (nesting one in a private enum emits broken keypaths → heap corruption crashing on unrelated threads).
