@@ -48,9 +48,10 @@ struct AppsScreen: View {
         var id: String { offer.name }
     }
 
-    /// Claude is pair-able (MCP), so it acts even though no bridge is wired.
+    /// Claude pairs over MCP, so it acts without a wired bridge — but only
+    /// once the transport is real; until then it's a Soon row.
     private func actionable(_ offer: BridgeCatalog.Offer) -> Bool {
-        offer.connectable || offer.name == "Claude"
+        offer.connectable || (offer.name == "Claude" && MCPPairing.transportReady)
     }
 
     /// The chart is SMART (ruling 2026-07-06): it never repeats what the
@@ -95,8 +96,10 @@ struct AppsScreen: View {
             out.append(Story(kind: .bridge(offer)))
         }
         // (2) Pair-a-client when no client is paired (replaces pairEntryRow).
-        let clientPaired = store.bridges.contains { $0.name == "Claude" && $0.status == .connected }
-        if !clientPaired { out.append(Story(kind: .pair)) }
+        if MCPPairing.transportReady {
+            let clientPaired = store.bridges.contains { $0.name == "Claude" && $0.status == .connected }
+            if !clientPaired { out.append(Story(kind: .pair)) }
+        }
         // (3) Backfill with other connectable bridges not yet connected.
         for entry in ranked where entry.tier <= 1 && entry.offer.connectable
             && !Self.featuredStories.contains(entry.offer.name) {
@@ -335,16 +338,18 @@ struct AppsScreen: View {
     /// ("Soon") ones trail — the tier order `ranked` already carries.
     /// App Store grammar: a big header, three rows showing, swipe sideways for
     /// the rest — the shelf never grows tall, it grows wide.
+    /// Which page each shelf is on — the header chevron advances it.
+    @State private var shelfPage: [String: Int] = [:]
+
     private var categoryShelves: some View {
         VStack(alignment: .leading, spacing: DS.Space.s6) {
             ForEach(Self.categories, id: \.name) { cat in
                 let apps = ranked.filter { category(of: $0.offer) == cat.name }
                 if !apps.isEmpty {
+                    let pageCount = (apps.count + 2) / 3
                     VStack(alignment: .leading, spacing: DS.Space.s2) {
-                        Text(cat.name)
-                            .dsText(.heading22).foregroundStyle(DS.textPrimary)
-                            .padding(.horizontal, DS.Space.s4)
-                        shelfPages(apps)
+                        shelfHeader(cat.name, pageCount: pageCount)
+                        shelfPages(apps, key: cat.name)
                     }
                 }
             }
@@ -354,9 +359,40 @@ struct AppsScreen: View {
         .animation(DS.Motion.standard, value: store.bridges.count)
     }
 
+    /// The App Store header grammar: name + chevron when there's more to see.
+    /// Honest control: the chevron appears only with a second page, and the
+    /// tap advances the shelf (wrapping) — it does what it points at.
+    @ViewBuilder
+    private func shelfHeader(_ name: String, pageCount: Int) -> some View {
+        if pageCount > 1 {
+            Button {
+                DSHaptic.selection()
+                withAnimation(DS.Motion.standard) {
+                    shelfPage[name] = ((shelfPage[name] ?? 0) + 1) % pageCount
+                }
+            } label: {
+                HStack(spacing: DS.Space.s2) {
+                    Text(name)
+                        .dsText(.heading22).foregroundStyle(DS.textPrimary)
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundStyle(DS.textTertiary)
+                    Spacer()
+                }
+                .padding(.horizontal, DS.Space.s4)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+        } else {
+            Text(name)
+                .dsText(.heading22).foregroundStyle(DS.textPrimary)
+                .padding(.horizontal, DS.Space.s4)
+        }
+    }
+
     /// The shelf's rows, three per page. One page renders exactly like the old
     /// full-width card; more apps page sideways, view-aligned.
-    private func shelfPages(_ apps: [Ranked]) -> some View {
+    private func shelfPages(_ apps: [Ranked], key: String) -> some View {
         let pages: [[Ranked]] = stride(from: 0, to: apps.count, by: 3).map {
             Array(apps[$0..<min($0 + 3, apps.count)])
         }
@@ -370,11 +406,16 @@ struct AppsScreen: View {
                     .background(DS.surfaceSheet,
                                 in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
                     .containerRelativeFrame(.horizontal) { length, _ in length - 12 }
+                    .id(i)
                 }
             }
             .scrollTargetLayout()
         }
         .scrollTargetBehavior(.viewAligned)
+        .scrollPosition(id: Binding(
+            get: { shelfPage[key] ?? 0 },
+            set: { shelfPage[key] = $0 ?? 0 }
+        ))
         .contentMargins(.horizontal, DS.Space.s4, for: .scrollContent)
     }
 
