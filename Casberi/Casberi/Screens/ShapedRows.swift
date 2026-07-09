@@ -224,13 +224,15 @@ struct PhotoWell: View {
         guard let asset = assets.firstObject else { return }
         let side = (size ?? 300) * 3
         image = await withCheckedContinuation { cont in
+            let opts = PHImageRequestOptions()
+            opts.isNetworkAccessAllowed = true   // iCloud-optimized originals
+            opts.deliveryMode = .highQualityFormat
             var reported = false
             PHImageManager.default().requestImage(
                 for: asset, targetSize: CGSize(width: side, height: side),
-                contentMode: .aspectFill, options: nil
-            ) { img, info in
-                let degraded = (info?[PHImageResultIsDegradedKey] as? Bool) ?? false
-                if !degraded, !reported { reported = true; cont.resume(returning: img) }
+                contentMode: .aspectFill, options: opts
+            ) { img, _ in
+                if !reported { reported = true; cont.resume(returning: img) }
             }
         }
     }

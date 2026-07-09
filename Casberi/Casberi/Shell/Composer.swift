@@ -22,6 +22,11 @@ struct Composer: View {
     var answer: (_ query: String, _ onProseDoc: @escaping ([String]) -> Void) async -> [String] = { _, _ in [] }
     /// Candidate project tags for the parse card, from the corpus.
     var tagCandidates: () -> [String] = { [] }
+    /// The connected sources ("Gmail", "Steam") — navigation asks match them.
+    var knownSources: () -> [String] = { [] }
+    /// A typed ask that names a place ("show my work stuff") — the shell
+    /// closes the composer and goes there.
+    var onNavigate: (NavigateIntent) -> Void = { _ in }
     /// The shell's glass namespace — pill and bubble share one glass identity,
     /// so open/close is a morph of the same substance, not a swap.
     var glassNamespace: Namespace.ID? = nil
@@ -45,8 +50,55 @@ struct Composer: View {
     /// answer render without a physical keyboard.
     @State private var didAutoSend = false
 
+    /// Empty-field ask suggestions — derived from the live corpus on open
+    /// (re-ruling 2026-07-08: the dead GENERIC chips stay dead; these are
+    /// asks the corpus can actually answer right now).
+    @State private var suggestions: [String] = []
+    /// The tag list, snapshotted once per open — tagCandidates() walks the
+    /// whole store, and computed-per-keystroke it made typing pay a corpus
+    /// fetch per character (review 2026-07-08).
+    @State private var tagPool: [String] = []
+
     private var isRecording: Bool { voice.phase == .recording }
     private var hasDraft: Bool { !draft.trimmingCharacters(in: .whitespaces).isEmpty }
+
+    /// Tag completions for the word being typed — your real tags, prefix-
+    /// matched on the draft's last token (2+ chars, typed path only).
+    private var tagMatches: [String] {
+        guard hasDraft, !pasted, !answering, proposal == nil else { return [] }
+        guard let last = draft.split(separator: " ").last.map(String.init),
+              last.count >= 2 else { return [] }
+        let lower = last.lowercased()
+        return tagPool
+            .filter { $0.lowercased().hasPrefix(lower) && $0.lowercased() != lower }
+            .prefix(3).map { $0 }
+    }
+
+    private func completeTag(_ tag: String) {
+        DSHaptic.selection()
+        var words = draft.split(separator: " ").map(String.init)
+        if words.isEmpty { words = [tag] } else { words[words.count - 1] = tag }
+        draft = words.joined(separator: " ") + " "
+    }
+
+    /// Builds the ask chips from what the corpus can answer TODAY. Empty
+    /// corpus → no chips (the field is the invitation).
+    private func computeSuggestions() {
+        tagPool = tagCandidates()   // one corpus walk per open, not per keystroke
+        var out: [String] = []
+        let dayStart = Calendar.current.startOfDay(for: .now)
+        let today = FetchDescriptor<Thing>(predicate: #Predicate { $0.capturedAt >= dayStart })
+        if let n = try? modelContext.fetchCount(today), n > 0 {
+            out.append("What landed today?")
+        }
+        if let top = tagPool.first {
+            out.append("Show \(top)")
+        }
+        if (try? modelContext.fetchCount(FetchDescriptor<Thing>())) ?? 0 > 0 {
+            out.append("What's this week?")
+        }
+        suggestions = Array(out.prefix(3))
+    }
 
     // The bubble's asymmetric corners: 24 / 24 / 10 / 24 (TL/TR/BR/BL).
     private var bubbleShape: UnevenRoundedRectangle {
@@ -124,6 +176,44 @@ struct Composer: View {
             // `pasted` flag below, so pasted content still saves on send.
             // AnswerStream — search intent streams a composition (engine law:
             // any prefix renders).
+            // Ask chips — asks the corpus can answer RIGHT NOW, shown while
+            // the field is empty (re-ruling 2026-07-08; the dead generic
+            // chips stay dead — these are derived, and tap = send).
+            if isOpen && !hasDraft && !answering && !isRecording,
+               proposal == nil, !suggestions.isEmpty {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: DS.Space.s2) {
+                        ForEach(suggestions, id: \.self) { ask in
+                            Button {
+                                DSHaptic.selection()
+                                draft = ask
+                                commit()
+                            } label: {
+                                Chip(text: ask, style: .neutral, glyph: "sparkle")
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                    .padding(.horizontal, DS.Space.s4)
+                }
+                .padding(.top, DS.Space.s2)
+            }
+
+            // Tag completions — your real tags finish the word being typed.
+            if !tagMatches.isEmpty {
+                HStack(spacing: DS.Space.s2) {
+                    ForEach(tagMatches, id: \.self) { tag in
+                        Button { completeTag(tag) } label: {
+                            Chip(text: tag, style: .tint, glyph: "tag")
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    Spacer()
+                }
+                .padding(.horizontal, DS.Space.s4)
+                .padding(.top, DS.Space.s2)
+            }
+
             if answering {
                 ScrollView {
                     GenRender(id: "root", els: answerStream.els)
@@ -183,7 +273,7 @@ struct Composer: View {
             // previews what keeping will write. Typed words get answers, not
             // filing previews.
             if hasDraft && !answering && pasted {
-                ParseCard(draft: draft, candidates: tagCandidates(),
+                ParseCard(draft: draft, candidates: tagPool,
                           chosen: $chosenTags)
                     .padding(.horizontal, DS.Space.s4)
                     .padding(.top, DS.Space.s3)
@@ -226,7 +316,10 @@ struct Composer: View {
         .dsGlass(cornerRadius: 24, glassID: "composer", in: glassNamespace)
         .clipShape(bubbleShape)
         .scaleEffect(isOpen ? 1 : 0.3, anchor: .bottomTrailing)
-        .task(id: isOpen) { await autoSendIfProbed() }
+        .task(id: isOpen) {
+            if isOpen { computeSuggestions() }
+            await autoSendIfProbed()
+        }
     }
 
     /// DEBUG hook: `simctl launch ... -uiAnswerProbe "what's my week"` opens
@@ -306,6 +399,14 @@ struct Composer: View {
             // Paste is a capture path — send keeps what came in.
             onCommit(Array(chosenTags))
             close()
+        } else if let intent = NavigateCommand.parse(draft, tags: tagPool,
+                                                     sources: knownSources()) {
+            // A place, named — go there. Reads only (a navigation), so no
+            // proposal needed; the composer closes and the shell moves.
+            DSHaptic.selection()
+            draft = ""
+            onNavigate(intent)
+            close()
         } else if let command = OrganizeCommand.parse(draft) {
             // An organize command — propose, never execute. The card below
             // shows exactly what would change; Apply is the consent.
@@ -340,6 +441,21 @@ struct Composer: View {
             }
             let q = draft
             Task { @MainActor in
+                // Organize-ish wording the strict parser missed ("put
+                // everything about lisbon under Trip") — the model fills the
+                // SAME proposal form; the write still waits for Apply.
+                if OrganizeLLM.looksOrganizeish(q),
+                   let command = await OrganizeLLM.extract(q) {
+                    guard isOpen else { return }   // closed mid-extraction
+                    let proposed = Organize.propose(command, context: modelContext)
+                    fieldFocused = false
+                    withAnimation(DS.Motion.standard) {
+                        answering = false
+                        proposal = proposed
+                    }
+                    draft = ""
+                    return
+                }
                 var streamed = false
                 let finalDoc = await answer(q) { partialDoc in
                     // Prose arriving live — paint each growing snapshot; the

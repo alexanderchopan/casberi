@@ -1189,13 +1189,17 @@ private struct GenCover: View {
         let assets = PHAsset.fetchAssets(withLocalIdentifiers: [assetID], options: nil)
         guard let asset = assets.firstObject else { return }
         let loaded: UIImage? = await withCheckedContinuation { cont in
+            // iCloud-optimized photos need the network; without it the final
+            // image never arrives and the cover stayed black on real devices.
+            let opts = PHImageRequestOptions()
+            opts.isNetworkAccessAllowed = true
+            opts.deliveryMode = .highQualityFormat
             var reported = false
             PHImageManager.default().requestImage(
                 for: asset, targetSize: CGSize(width: 1200, height: 900),
-                contentMode: .aspectFill, options: nil
-            ) { img, info in
-                let degraded = (info?[PHImageResultIsDegradedKey] as? Bool) ?? false
-                if !degraded, !reported { reported = true; cont.resume(returning: img) }
+                contentMode: .aspectFill, options: opts
+            ) { img, _ in
+                if !reported { reported = true; cont.resume(returning: img) }
             }
         }
         guard let loaded else { return }

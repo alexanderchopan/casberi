@@ -55,6 +55,7 @@ enum TwitchAuth {
     static func poll(_ code: DeviceCode, attempts: Int = 36) async -> Bool {
         for _ in 0..<attempts {
             try? await Task.sleep(for: .seconds(code.interval))
+            if Task.isCancelled { return false }
             guard let root = await postForm("https://id.twitch.tv/oauth2/token", form: [
                 "client_id": clientID,
                 "device_code": code.deviceCode,

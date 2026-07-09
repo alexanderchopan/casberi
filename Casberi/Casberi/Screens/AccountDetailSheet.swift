@@ -49,46 +49,60 @@ struct AccountDetailSheet: View {
 
     private var title: String { "Data" }
 
-    /// The actions row — Export / Import / Delete. The settings (sync, hide
-    /// previews) live in the card as toggle rows; only actions live here.
+    /// The actions — Export / Import as real buttons on one row, Delete on
+    /// its own full-width row (destructive stands alone). The settings (sync,
+    /// hide previews) live in the card as toggle rows; only actions live here.
     private var controls: some View {
         VStack(alignment: .leading, spacing: DS.Space.s3) {
-            HStack(spacing: DS.Space.s2) {
+            HStack(spacing: DS.Space.s3) {
                 if let exportURL {
                     ShareLink(item: exportURL) {
-                        pill("Export", icon: "square.and.arrow.up", tint: true)
+                        actionLabel("Export", icon: "square.and.arrow.up",
+                                    fg: .white, bg: DS.tint)
                     }
                     .buttonStyle(.plain)
                     .simultaneousGesture(TapGesture().onEnded { DSHaptic.tap() })
                 }
                 Button { importing = true } label: {
-                    pill("Import", icon: "square.and.arrow.down", tint: false)
+                    actionLabel("Import", icon: "square.and.arrow.down",
+                                fg: DS.textPrimary, bg: DS.gray100)
                 }
                 .buttonStyle(.plain)
-                Button { confirmDelete = true } label: {
-                    Text("Delete everything")
-                        .dsText(.label12).foregroundStyle(DS.destructive)
-                        .padding(.horizontal, DS.Space.s3).frame(height: 28)
-                        .background(DS.gray100, in: Capsule(style: .continuous))
-                }
-                .buttonStyle(.plain)
-                Spacer()
             }
+            Button { confirmDelete = true } label: {
+                actionLabel("Delete everything", icon: "trash",
+                            fg: DS.destructive, bg: DS.gray100)
+            }
+            .buttonStyle(.plain)
             // Outcome lines arrive with the settle beat — a result, not a flicker.
             if let importResult {
                 Text(importResult)
-                    .dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                    .dsText(.callout15).foregroundStyle(DS.textSecondary)
                     .settleIn()
             }
             if let deleteResult {
                 Text(deleteResult)
-                    .dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                    .dsText(.callout15).foregroundStyle(DS.textSecondary)
                     .settleIn()
             }
         }
     }
 
-    private var sheetHeight: CGFloat { 430 }
+    /// One action button face — full-height capsule, icon + word.
+    private func actionLabel(_ title: String, icon: String,
+                             fg: Color, bg: Color) -> some View {
+        HStack(spacing: DS.Space.s2) {
+            Image(systemName: icon).font(.system(size: 15, weight: .semibold))
+            Text(title).dsText(.callout15).fontWeight(.semibold)
+        }
+        .foregroundStyle(fg)
+        .frame(maxWidth: .infinity)
+        .frame(height: 44)
+        .background(bg, in: Capsule(style: .continuous))
+        .contentShape(Capsule(style: .continuous))
+    }
+
+    private var sheetHeight: CGFloat { 470 }
 
     // MARK: - Pieces
 
@@ -96,19 +110,24 @@ struct AccountDetailSheet: View {
     /// data), then each privacy guarantee in its own solid green. Plain "Data"
     /// title like every tray; the confidence lives in the body, not a banner.
     private var dataCard: some View {
-        VStack(alignment: .leading, spacing: DS.Space.s3) {
-            HStack(spacing: DS.Space.s2) {
+        VStack(alignment: .leading, spacing: DS.Space.s4) {
+            HStack(spacing: DS.Space.s3) {
                 dataStat("\(thingCount)", "things")
                 dataStat(storeSize, "storage")
             }
             // One plain line for the whole on-device story.
             aliveRow("sparkles", DS.confirm, "Private", "Answers run on this iPhone")
             // iCloud sync: the badge shows where things live — green lock here,
-            // blue cloud when synced.
+            // blue cloud when synced. The container binds at launch, so a
+            // fresh flip says WHEN it goes live instead of pretending it is.
             toggleRow(icloudSync ? "icloud.fill" : "lock.iphone",
                       icloudSync ? DS.tint : DS.confirm,
                       "iCloud sync",
-                      icloudSync ? "Synced to your iCloud" : "Stays on this iPhone",
+                      icloudSync
+                        ? (SharedStore.cloudSyncActive ? "Synced to your iCloud"
+                                                       : "Syncs from your next launch")
+                        : (SharedStore.cloudSyncActive ? "Stops syncing from your next launch"
+                                                       : "Stays on this iPhone"),
                       Binding(get: { icloudSync }, set: { icloudSync = $0; DSHaptic.tap() }))
             toggleRow(hidePreviews ? "eye.slash.fill" : "eye",
                       hidePreviews ? DS.confirm : DS.textSecondary,
@@ -121,13 +140,14 @@ struct AccountDetailSheet: View {
     /// digits so counts don't jitter as they change.
     private func dataStat(_ value: String, _ label: String) -> some View {
         VStack(alignment: .leading, spacing: 2) {
-            Text(value).dsText(.heading22).foregroundStyle(DS.textPrimary)
+            Text(value).dsText(.heading34).foregroundStyle(DS.textPrimary)
                 .monospacedDigit()
-            Text(label).dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                .lineLimit(1).minimumScaleFactor(0.6)
+            Text(label).dsText(.callout15).foregroundStyle(DS.textTertiary)
                 .fixedSize(horizontal: false, vertical: true)
         }
-        .frame(maxWidth: .infinity, minHeight: 60, alignment: .topLeading)
-        .padding(DS.Space.s3)
+        .frame(maxWidth: .infinity, minHeight: 76, alignment: .topLeading)
+        .padding(DS.Space.s4)
         .background(DS.fillFaint,
                     in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
     }
@@ -175,15 +195,6 @@ struct AccountDetailSheet: View {
         }
     }
 
-    private func pill(_ label: String, icon: String, tint: Bool) -> some View {
-        HStack(spacing: DS.Space.s1) {
-            Image(systemName: icon).font(.system(size: 12, weight: .medium))
-            Text(label).dsText(.label12)
-        }
-        .foregroundStyle(tint ? DS.tint : DS.textSecondary)
-        .padding(.horizontal, DS.Space.s3).frame(height: 28)
-        .background(tint ? DS.tintDim : DS.gray100, in: Capsule(style: .continuous))
-    }
 
     // MARK: - Live facts
 

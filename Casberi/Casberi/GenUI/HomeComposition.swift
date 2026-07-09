@@ -62,6 +62,13 @@ enum HomeComposition {
             let items = projects.prefix(6).map { "\($0.name) \($0.things.count)" }
             doc.append("map = TagMap(\(q("What's going on")), null, [\(items.joined(separator: ", "))])")
             rootRefs.append("map")
+        } else {
+            let sources = sourceClusters(things: things)
+            if !sources.isEmpty {
+                let items = sources.prefix(6).map { "\($0.name) \($0.things.count)" }
+                doc.append("map = TagMap(\(q("What's going on")), \(q("By app — tags take over as they form")), [\(items.joined(separator: ", "))])")
+                rootRefs.append("map")
+            }
         }
         if let pills = kindPillItems(things) {
             doc.append("kindPills = KindPills(\(q(kindPillEyebrow(things))), \(pills))")
@@ -83,7 +90,8 @@ enum HomeComposition {
             rootRefs.append("themes")
         }
 
-        appendStarterPreviews(things: things, hasMap: !projects.isEmpty,
+        appendStarterPreviews(things: things,
+                              hasMap: rootRefs.contains("map"),
                               hasThreads: !links.isEmpty, to: &doc, rootRefs: &rootRefs)
 
         doc.insert("root = Stack([\(rootRefs.joined(separator: ", "))])", at: 0)
@@ -107,6 +115,13 @@ enum HomeComposition {
             let items = projects.prefix(6).map { "\($0.name) \($0.things.count)" }
             doc.append("map = TagMap(\(q("What's going on")), null, [\(items.joined(separator: ", "))])")
             rootRefs.append("map")
+        } else {
+            let sources = sourceClusters(things: things)
+            if !sources.isEmpty {
+                let items = sources.prefix(6).map { "\($0.name) \($0.things.count)" }
+                doc.append("map = TagMap(\(q("What's going on")), \(q("By app — tags take over as they form")), [\(items.joined(separator: ", "))])")
+                rootRefs.append("map")
+            }
         }
         if let pills = kindPillItems(things) {
             doc.append("kindPills = KindPills(\(q(kindPillEyebrow(things))), \(pills))")
@@ -125,7 +140,8 @@ enum HomeComposition {
             rootRefs.append("themes")
         }
 
-        appendStarterPreviews(things: things, hasMap: !projects.isEmpty,
+        appendStarterPreviews(things: things,
+                              hasMap: rootRefs.contains("map"),
                               hasThreads: !links.isEmpty, to: &doc, rootRefs: &rootRefs)
 
         doc.insert("root = Stack([\(rootRefs.joined(separator: ", "))])", at: 0)
@@ -228,6 +244,22 @@ enum HomeComposition {
     struct Cluster {
         let name: String
         let things: [Thing]
+    }
+
+    /// Until tags form, the map speaks in APPS: real things clustered by
+    /// source (min 2, "You" included). Honest for a fresh corpus — bridge
+    /// things arrive untagged, and a real user's Home earned no map at all.
+    static func sourceClusters(things: [Thing]) -> [Cluster] {
+        var buckets: [String: [Thing]] = [:]
+        for thing in things { buckets[thing.source, default: []].append(thing) }
+        return buckets
+            .filter { $0.value.count >= 2 }
+            .map { Cluster(name: $0.key, things: $0.value) }
+            .sorted {
+                $0.things.count != $1.things.count
+                    ? $0.things.count > $1.things.count
+                    : $0.name < $1.name
+            }
     }
 
     /// A project is a computed cluster; membership rides a tag (brief §3).

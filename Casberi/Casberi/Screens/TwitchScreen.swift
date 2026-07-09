@@ -15,6 +15,9 @@ struct TwitchScreen: View {
     @State private var result: String?
     @State private var resultIsError = false
     @State private var recent: [Thing] = []
+    /// The in-flight device flow — one at a time, cancelled when the screen
+    /// goes away (review 2026-07-08: double-taps raced two flows).
+    @State private var flow: Task<Void, Never>?
 
     private func loadRecent() {
         recent = recentBridgeThings(source: "Twitch", context: modelContext)
@@ -39,6 +42,7 @@ struct TwitchScreen: View {
             loadRecent()
             if TwitchAuth.connected { Task { await sync() } }
         }
+        .onDisappear { flow?.cancel() }
     }
 
     @ViewBuilder
@@ -55,7 +59,7 @@ struct TwitchScreen: View {
                 }
                 .padding(.vertical, DS.Space.s1)
                 .listRowBackground(DS.surfaceSheet)
-            } else if let code, waiting {
+            } else if waiting, let code {
                 // The code, big — the person approves it on Twitch's side.
                 VStack(alignment: .leading, spacing: DS.Space.s3) {
                     Text(code.userCode)
@@ -81,6 +85,14 @@ struct TwitchScreen: View {
                     }
                 }
                 .padding(.vertical, DS.Space.s2)
+                .listRowBackground(DS.surfaceSheet)
+            } else if waiting {
+                HStack(spacing: DS.Space.s2) {
+                    ProgressView().controlSize(.small)
+                    Text("Getting your code…")
+                        .dsText(.callout15).foregroundStyle(DS.textTertiary)
+                }
+                .padding(.vertical, DS.Space.s1)
                 .listRowBackground(DS.surfaceSheet)
             } else {
                 Button(action: connect) {
@@ -127,22 +139,27 @@ struct TwitchScreen: View {
     }
 
     private func connect() {
+        guard flow == nil else { return }   // one flow at a time
         DSHaptic.tap()
         result = nil
-        Task {
+        waiting = true
+        flow = Task {
+            defer { flow = nil }
             guard let fresh = await TwitchAuth.startDeviceFlow() else {
+                waiting = false
                 result = "Couldn't reach Twitch — check your connection."
                 resultIsError = true
                 return
             }
+            guard !Task.isCancelled else { waiting = false; return }
             code = fresh
-            waiting = true
             let ok = await TwitchAuth.poll(fresh, attempts: 60)
+            guard !Task.isCancelled else { waiting = false; code = nil; return }
             waiting = false
             code = nil
             if ok {
                 DSHaptic.success()
-                await sync(justConnected: true)
+                await sync()
             } else {
                 result = "That code wasn't approved in time — tap Connect for a fresh one."
                 resultIsError = true
@@ -150,7 +167,7 @@ struct TwitchScreen: View {
         }
     }
 
-    private func sync(justConnected: Bool = false) async {
+    private func sync() async {
         guard !syncing else { return }
         syncing = true
         let added = await TwitchIngest.refresh(context: modelContext)
@@ -169,6 +186,5 @@ struct TwitchScreen: View {
                                          "Read-only — never chats or follows."]) {
             DSHaptic.success()
         }
-        _ = justConnected
     }
 }

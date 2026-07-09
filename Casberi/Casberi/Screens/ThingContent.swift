@@ -97,7 +97,7 @@ private struct ScreenshotContent: View {
         else { return }
         let options = PHImageRequestOptions()
         options.deliveryMode = .opportunistic
-        options.isNetworkAccessAllowed = false
+        options.isNetworkAccessAllowed = true   // iCloud-optimized originals
         PHImageManager.default().requestImage(
             for: asset,
             targetSize: CGSize(width: 800, height: 800),
@@ -366,7 +366,7 @@ private struct TokenChartContent: View {
                         Text(changeText(chart.change24h))
                             .dsText(.callout15).foregroundStyle(accent)
                         Spacer()
-                        Text("24H").dsText(.label12)
+                        Text("24h").dsText(.label12)
                             .foregroundStyle(DS.textTertiary)
                     }
                     Chart(Array(chart.closes.enumerated()), id: \.offset) { i, close in

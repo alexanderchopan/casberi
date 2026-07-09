@@ -555,13 +555,28 @@ struct FeedScreen: View {
                 doorPush = .apps
             } label: {
                 Text("Browse apps")
-                    .dsText(.label12)
+                    .dsText(.callout15).fontWeight(.semibold)
                     .foregroundStyle(DS.tint)
                     .padding(.horizontal, DS.Space.s4)
-                    .frame(height: 32)
+                    .frame(height: 36)
                     .background(DS.tintDim, in: Capsule(style: .continuous))
             }
             .buttonStyle(.plain)
+
+            // The shape of what's coming — a day header and skeleton rows
+            // that stagger in the way the real feed will.
+            VStack(alignment: .leading, spacing: DS.Space.s2) {
+                Text("Today")
+                    .dsText(.heading17).foregroundStyle(DS.textTertiary)
+                    .settleIn(delay: 0.15)
+                ForEach(0..<3, id: \.self) { i in
+                    GenSkeletonRow()
+                        .staggerIn(index: i + 4)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, DS.Space.s4)
+            .padding(.top, DS.Space.s6)
         }
         .frame(maxWidth: .infinity)
         .padding(.top, DS.Space.s6)

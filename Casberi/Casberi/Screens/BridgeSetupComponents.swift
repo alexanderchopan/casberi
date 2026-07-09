@@ -157,6 +157,9 @@ struct RecentThingsSection: View {
     let header: String
     let things: [Thing]
     var titleLines = 2
+    /// The entrance plays once per screen — after it, recycled rows render
+    /// plainly instead of re-fading on every scroll-back (review 2026-07-08).
+    @State private var entered = false
 
     var body: some View {
         Section {
@@ -169,9 +172,15 @@ struct RecentThingsSection: View {
                         .dsText(.subhead13).foregroundStyle(DS.textTertiary)
                 }
                 // What landed ARRIVES — the feed's stagger, capped so a long
-                // list doesn't drag the tail.
-                .staggerIn(index: min(i, 8))
+                // list doesn't drag the tail, and only on first entrance.
+                .staggerIn(index: entered ? 0 : min(i, 8))
                 .listRowBackground(DS.surfaceSheet)
+            }
+            .onAppear {
+                Task { @MainActor in
+                    try? await Task.sleep(for: .milliseconds(800))
+                    entered = true
+                }
             }
         } header: {
             Text(header).dsText(.label12)

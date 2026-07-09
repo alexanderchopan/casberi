@@ -189,7 +189,7 @@ struct HandleSetupScreen: View {
                                  syncingLine: "Fetching your \(bridge.noun)…",
                                  result: result, resultIsError: resultIsError)
         } header: {
-            Text("YOUR \(bridge.nameNoun)").dsText(.label12)
+            Text("Your \(bridge.nameNoun)").dsText(.label12)
                 .foregroundStyle(DS.textTertiary)
         } footer: {
             Text(bridge.fieldFooter)

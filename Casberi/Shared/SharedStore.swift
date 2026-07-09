@@ -34,13 +34,21 @@ enum SharedStore {
     /// build (container `iCloud.com.casberi.app`, verified in Casberi.entitlements).
     static let cloudKitReady = true
 
+    /// Whether THIS process is actually mirroring to CloudKit — set when the
+    /// container engages it. The container binds once at launch, so a toggle
+    /// flipped mid-session isn't live until the next launch; the Data sheet
+    /// reads this to say so honestly.
+    private(set) static var cloudSyncActive = false
+
     static func container() throws -> ModelContainer {
         // Engage CloudKit only when the person opted in AND the build carries
         // the capability. Missing either, stay local — the toggle is honest
         // final UI, and this is the ship gate that keeps a live toggle from
         // crashing (or lying) before the engine exists.
         if syncEnabled, cloudKitReady {
-            return try make(cloudKit: .private(cloudContainerID))
+            let made = try make(cloudKit: .private(cloudContainerID))
+            cloudSyncActive = true
+            return made
         }
         return try make(cloudKit: .none)
     }

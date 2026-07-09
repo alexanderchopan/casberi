@@ -34,7 +34,7 @@ struct RSSScreen: View {
             if !rss.feeds.isEmpty { followingSection.listRowSeparator(.hidden) }
             addSection.listRowSeparator(.hidden)
             if !recent.isEmpty {
-                RecentThingsSection(header: "RECENT", things: recent, titleLines: 1)
+                RecentThingsSection(header: "Recent", things: recent, titleLines: 1)
                     .listRowSeparator(.hidden)
             }
             footerSection.listRowSeparator(.hidden)

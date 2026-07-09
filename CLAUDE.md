@@ -58,6 +58,7 @@ All read via UserDefaults in `Shell/RootShell.swift` unless noted:
 - `-openApp "<Offer name>"` — open a store product page; `-openSetup "<Offer name>"` — push a bridge's setup screen (both need `casberi://account` opened after launch); `-openProject "<Tag>"` — push a project detail (`Screens/AccountScreen.swift` / `HomeScreen.swift`).
 - `-theme.light 0|1` — AppStorage theme override; always pass explicitly for light/dark screenshots (the sim's stored value sticks).
 - `-demoPick "Photos,Calendar"` — onboarding: mark those offers connected and continue (`Screens/OnboardingView.swift`).
+- `-openComposer YES` — open the composer empty (screenshots the ask chips); `-linkTitleProbe <url>` — NSLog the fetched page title.
 - `-rssFeed <url>` — follow a feed and sync headlessly; `-chatgptImport <path>` — import a conversations.json; `-bskyHandle <handle>` — connect Bluesky; `-tokenBridge "<Name>:<token>"` — connect a token bridge (Readwise/GitHub/Todoist/Raindrop/Cal.com/Calendly/Notion/Linear). Each NSLogs a probe result.
 
 Deep links: `casberi://home`, `casberi://feed`, `casberi://feed/type/<Tag>`, `casberi://account` (→ apps tab), `casberi://thing/<id>`.
@@ -74,6 +75,7 @@ Deep links: `casberi://home`, `casberi://feed`, `casberi://feed/type/<Tag>`, `ca
 
 - Trays are NEVER hand-rolled — use `DSTray(title:height:)` (`Design/DSTray.swift`).
 - Liquid Glass on the floating layer only (composer/tab bar/toasts) — never on content.
+- No letter-spacing, no ALL-CAPS eyebrows — headers are words in sentence case ("Getting started", never "G E T T I N G  S T A R T E D" or "GETTING STARTED"). `.kerning()` is banned; the type ramp carries hierarchy by size/weight alone (ruling 2026-07-08).
 - No hairlines — one exception: the Apps page draws a single `fillLine` divider between the CONNECTED strip (management) and Discover (store), per docs/prd.md:491. Nothing else draws a line. Widget/tile radius = `DS.Radius.widget`.
 - Typed text in the composer NEVER saves — things enter only via capture paths (paste chip, mic, share, screenshots, drop, bridges). Saving is an outcome the toast reports, never a verb.
 - Swipe verbs are reads only (writes live in the sheet, with consent). Feed chips only when they differentiate.
@@ -82,7 +84,8 @@ Deep links: `casberi://home`, `casberi://feed`, `casberi://feed/type/<Tag>`, `ca
 
 ## Website (casberi.app)
 
-- RULE (user, 2026-07-08): every app added to the catalog ALSO lands on the website in the same session — (1) a tile in the hero marquee (`website/index.html`, the `.rain` div; continue the animation-delay sequence and keep `ai-more` last), (2) a cell in the bottom catalog section (the matching `<h3>` group), (3) an `.ai-<name>` brand background in `website/styles.css`. Icons come from `cdn.simpleicons.org/<name>/ffffff` when available. Then deploy: zip `website/` and push via Namecheap cPanel (File Manager → upload to the site root → Extract; see the web-deploy memory). If the deploy can't be run from the session, prepare the zip and hand the user the exact steps — never leave the site trailing the app catalog.
+- RULE (user, 2026-07-08): every app added to the catalog ALSO lands on the website in the same session — (1) a tile in the hero marquee (`website/index.html`, the `.rain` div; continue the animation-delay sequence and keep `ai-more` last), (2) a cell in the bottom catalog section (the matching `<h3>` group), (3) an `.ai-<name>` brand background in `website/styles.css`. Then deploy: zip `website/` and push via Namecheap cPanel (File Manager → upload to the site root → Extract; see the web-deploy memory). If the deploy can't be run from the session, prepare the zip and hand the user the exact steps — never leave the site trailing the app catalog.
+- RULE (user, 2026-07-08): website icons are ALWAYS inlined as base64 data URIs in `website/index.html` — NEVER hot-link an external `<img src="https://cdn.simpleicons.org/…">` (or any remote image host). External icon hotlinks intermittently render as blank slots when the CDN hiccups / is rate-limited / is ad-blocked. To add an icon: fetch it from `cdn.simpleicons.org/<name>/ffffff` (or wherever), then inline the bytes as `data:image/svg+xml;base64,…` (or PNG base64). Every `<img>` on the site must be self-contained; there should be zero remote image requests.
 
 ## Working mode
 
