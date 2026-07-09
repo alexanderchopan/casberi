@@ -57,30 +57,38 @@ private struct DoorBounce: ViewModifier {
 }
 
 /// The avatar (or a person glyph before one's set) — the Settings entry.
+/// Sized up alongside the Apps door (2026-07-09): the two doors are the only
+/// way to Settings/Apps, so they earn presence in the bar, not a whisper.
 struct AvatarDoor: View {
     var body: some View {
         if let avatar = ProfileStore.shared.avatar {
             Image(uiImage: avatar)
                 .resizable().scaledToFill()
-                .frame(width: 28, height: 28)
+                .frame(width: 32, height: 32)
                 .clipShape(Circle())
         } else {
             Image(systemName: "person.crop.circle")
-                .font(.system(size: 22))
+                .font(.system(size: 26))
                 .foregroundStyle(DS.textSecondary)
         }
     }
 }
 
-/// The Apps door — a grid glyph that PULSES when a bridge needs
-/// reconnecting (re-ruling 2026-07-07: the dot died; the button itself
-/// breathes — the only place Apps earns a signal outside its own page).
+/// The Apps door — a grid glyph, bigger now so the store is findable
+/// (report 2026-07-09: the thin glyph was easy to miss). When a bridge needs
+/// reconnecting it goes UNMISTAKABLE: the glyph fills, turns the attention
+/// color, and pulses — a real breakage signal, never a standing one (the
+/// re-ruling 2026-07-07 that killed the tab badge still holds: this is a nav
+/// button, not a tab, and it only lights on actual breakage).
 struct AppsDoor: View {
     @Environment(BridgeStore.self) private var bridges
 
+    private var needsAttention: Bool { bridges.attentionCount > 0 }
+
     var body: some View {
-        Image(systemName: "square.grid.2x2")
-            .symbolEffect(.pulse, options: .repeating,
-                          isActive: bridges.attentionCount > 0)
+        Image(systemName: needsAttention ? "square.grid.2x2.fill" : "square.grid.2x2")
+            .font(.system(size: 21, weight: .semibold))
+            .foregroundStyle(needsAttention ? DS.attention : DS.tint)
+            .symbolEffect(.pulse, options: .repeating, isActive: needsAttention)
     }
 }

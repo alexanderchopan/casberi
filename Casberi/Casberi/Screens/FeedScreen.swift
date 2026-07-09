@@ -1,6 +1,16 @@
 import SwiftUI
 import SwiftData
 
+/// Feed's door pushes, shared so the shell can tell when a management screen
+/// (Apps/Settings, and whatever they push) is covering this tab — the floating
+/// tab bar hides then, so it never falsely reads "Feed" over a store you're
+/// only visiting. Mirrors `HomeRoute` for the Home tab.
+@Observable final class FeedRoute {
+    static let shared = FeedRoute()
+    var push: HomeRoute.Push?
+    private init() {}
+}
+
 /// Feed — the record paints (M3), and it is ENTIRELY a feed (re-ruling
 /// 2026-07-04): source chips, machine presence, then rows. The type chart
 /// moved to Home as the kind bar — its segments land here filtered via
@@ -24,7 +34,7 @@ struct FeedScreen: View {
     @State private var confirming: (Verb, Thing)?
     @State private var staleExpanded = false
     @State private var blockStream = GenStream()
-    @State private var doorPush: HomeRoute.Push?
+    @Bindable private var feedRoute = FeedRoute.shared
     @State private var liftedID: UUID?
     // First-run teaching (option 4: no demo mode — these live in the real
     // app and retire on first use, forever).
@@ -234,10 +244,10 @@ struct FeedScreen: View {
                     }
                     // The shell's doors ride every tab root (ruling 2026-07-06)
                     // — Feed had no way to Apps/Settings without visiting Home.
-                    TopDoors(onSettings: { doorPush = .settings },
-                             onApps: { doorPush = .apps })
+                    TopDoors(onSettings: { feedRoute.push = .settings },
+                             onApps: { feedRoute.push = .apps })
                 }
-                .navigationDestination(item: $doorPush) { push in
+                .navigationDestination(item: $feedRoute.push) { push in
                     switch push {
                     case .apps:     AppsScreen()
                     case .settings: SettingsScreen()
@@ -247,7 +257,7 @@ struct FeedScreen: View {
         .tint(DS.tint)
         // Re-tapping the Feed tab pops pushed screens and sheets back to root.
         .onChange(of: chrome.popFeed) {
-            doorPush = nil
+            feedRoute.push = nil
             sheetThing = nil
         }
     }
@@ -757,7 +767,7 @@ struct FeedScreen: View {
             QuietStateView(line: "Things you capture land here.")
             Button {
                 DSHaptic.selection()
-                doorPush = .apps
+                feedRoute.push = .apps
             } label: {
                 Text("Browse apps")
                     .dsText(.callout15).fontWeight(.semibold)

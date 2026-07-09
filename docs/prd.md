@@ -684,6 +684,27 @@ and still shows the moment an address is watched, before the chart
 loads. The leading-edge swipe on an address flips the same
 `wallet.pinnedToHome`, so either gesture reaches it.
 
+## 36f. Nav doors: bigger, a sharper breakage signal, and no false tab (2026-07-09)
+
+Follows the two-tab convergence (§§ under 2026-07-06), fixing its rough
+edges rather than reopening it — Apps stays a door, not a tab.
+- **Bigger doors.** The Apps grid (21pt semibold, was the thin default)
+  and the avatar (32/26pt, was 28/22) earn presence — they're the only
+  way to Apps/Settings, and the store was easy to miss.
+- **A distinct breakage signal.** When a bridge needs reconnecting the
+  Apps door goes unmistakable: the glyph fills, turns the attention
+  color, and pulses. Still honest — it lights ONLY on real breakage
+  (`bridges.attentionCount > 0`), a nav button not a tab, so the killed
+  tab-badge ruling holds.
+- **The bar stops lying.** The floating tab bar + composer hide while a
+  management screen (Apps/Settings, and anything they push — Wallet, a
+  bridge setup) covers the tab, so the bar never reads "Home"/"Feed" over
+  a place you're only visiting. It slides back when you pop out (the back
+  button is the exit; the bar being gone is also why a tab can't be
+  switched mid-visit, so the per-tab push state can't go stale). Feed's
+  door push moved to a shared `FeedRoute` (mirroring `HomeRoute`) so the
+  shell can see it. The Home starter/skeleton preview is untouched.
+
 ## 36. Bridge selection ruling: live data only (2026-07-09)
 
 No new import bridges. A bridge whose data arrives via a request-and-wait export (TikTok's 1–4 day JSON, Tinder's 24–48h zip, IMDb's CSV) lands stale and never updates — the person asked for live data or nothing. The ChatGPT import predates this ruling and stays (its framing is explicitly a backfill, and OpenAI offers no live read). Evaluated and declined under this ruling: TikTok, Tinder, IMDb (viable exports, stale), Linktree/Rotten Tomatoes/CardPointers (no surface at all), Duolingo (unofficial API only — ToS-gray breaks the honesty rule), Credit Karma/NerdWallet/Acorns (aggregator-only; needs the post-M2 server), Fileverse (E2EE by design; revisit if they ship a hosted API), Fantastical (already covered — it's a client over the calendars EventKit reads). Pinterest passed: their public per-user RSS feed is live and official-enough (a published feed, not a scraped page).

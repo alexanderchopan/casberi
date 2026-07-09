@@ -69,6 +69,10 @@ struct RootShell: View {
 
             // Floating bottom bar: tab capsule + composer FAB on one axis —
             // one glass substance; the FAB morphs into the bubble (iOS 26).
+            // Hidden while a management screen (Apps/Settings) covers the tab,
+            // so it never reads the wrong tab over a place you're only
+            // visiting (2026-07-09) — it slides back when you pop out.
+            if !managementOpen {
             DSGlassContainer(spacing: DS.Space.s3) {
                 VStack(spacing: DS.Space.s3) {
                     Composer(isOpen: $composerOpen, draft: $draft,
@@ -101,6 +105,8 @@ struct RootShell: View {
             }
             .padding(.horizontal, DS.Space.s4)
             .padding(.bottom, DS.Space.s2)
+            .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
         }
         // Privacy as the default (goal 6): leaving the app redacts the
         // corpus — the app-switcher snapshot shows choreography, not content.
@@ -136,6 +142,8 @@ struct RootShell: View {
             }
         }
         .animation(DS.Motion.standard, value: composerOpen)
+        // The floating bar slides away/back as a management screen opens/closes.
+        .animation(DS.Motion.standard, value: managementOpen)
         // Feed's back arrow asks this way (it can't hold a binding to
         // `tab`) — same shape as popHome/popFeed.
         .onChange(of: chrome.goHomeRequest) { withAnimation(DS.Motion.standard) { tab = .home } }
@@ -342,6 +350,20 @@ struct RootShell: View {
         switch tab {
         case .home: HomeScreen()
         case .feed: FeedScreen()
+        }
+    }
+
+    /// A management screen (Apps/Settings, and whatever they push) is covering
+    /// the current tab. The floating tab bar + composer hide while it is, so
+    /// the bar never falsely reads the current tab over a store you're only
+    /// visiting — a tab is where you live, not a drawer you visit (2026-07-09).
+    /// Reached only via the nav-bar doors; the back button pops it and the bar
+    /// slides back. (The bar being gone is also why a tab can't be switched
+    /// mid-visit, so the per-tab push state can't go stale underneath it.)
+    private var managementOpen: Bool {
+        switch tab {
+        case .home: HomeRoute.shared.push != nil
+        case .feed: FeedRoute.shared.push != nil
         }
     }
 
