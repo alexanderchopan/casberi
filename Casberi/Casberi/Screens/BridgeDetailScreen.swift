@@ -186,8 +186,8 @@ struct BridgeDetailScreen: View {
 
     private func section(_ label: String, @ViewBuilder content: () -> some View) -> some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
-            Text(label.uppercased())
-                .dsText(.label12).kerning(0.7)
+            Text(label)
+                .dsText(.label12)
                 .foregroundStyle(DS.textTertiary)
             VStack(spacing: 0) { content() }
                 .background(DS.fillFaint,

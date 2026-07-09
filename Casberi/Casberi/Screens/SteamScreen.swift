@@ -24,7 +24,7 @@ struct SteamScreen: View {
             stepsSection.listRowSeparator(.hidden)
             fieldsSection.listRowSeparator(.hidden)
             if !recent.isEmpty {
-                RecentThingsSection(header: "YOUR GAMES", things: recent)
+                RecentThingsSection(header: "Your games", things: recent)
                     .listRowSeparator(.hidden)
             }
             if SteamBridge.connected { removeSection.listRowSeparator(.hidden) }
@@ -62,7 +62,7 @@ struct SteamScreen: View {
                 .listRowBackground(DS.surfaceSheet)
             }
         } header: {
-            Text("GET A FREE KEY").dsText(.label12).kerning(0.7)
+            Text("Get a free key").dsText(.label12)
                 .foregroundStyle(DS.textTertiary)
         }
     }
@@ -95,7 +95,7 @@ struct SteamScreen: View {
             BridgeSyncStatusRows(syncing: syncing, syncingLine: "Reading your games…",
                                  result: result, resultIsError: resultIsError)
         } header: {
-            Text("YOUR ACCOUNT").dsText(.label12).kerning(0.7)
+            Text("Your account").dsText(.label12)
                 .foregroundStyle(DS.textTertiary)
         } footer: {
             Text("The key stays in this iPhone's Keychain and goes only to Steam itself. Read-only — public profile data.")

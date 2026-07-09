@@ -23,7 +23,7 @@ struct DexscreenerScreen: View {
             BridgeSetupHeader(name: "Dexscreener")
             addSection.listRowSeparator(.hidden)
             if !watched.isEmpty {
-                RecentThingsSection(header: "YOUR WATCHLIST", things: watched)
+                RecentThingsSection(header: "Your watchlist", things: watched)
                     .listRowSeparator(.hidden)
             }
             footerSection.listRowSeparator(.hidden)
@@ -45,7 +45,7 @@ struct DexscreenerScreen: View {
                                  syncingLine: "Finding the token…",
                                  result: result, resultIsError: resultIsError)
         } header: {
-            Text("WATCH A TOKEN").dsText(.label12).kerning(0.7)
+            Text("Watch a token").dsText(.label12)
                 .foregroundStyle(DS.textTertiary)
         } footer: {
             Text("Paste a token address or a Dexscreener link — its live price chart lands in your feed.")

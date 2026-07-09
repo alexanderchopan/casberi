@@ -174,7 +174,7 @@ struct RecentThingsSection: View {
                 .listRowBackground(DS.surfaceSheet)
             }
         } header: {
-            Text(header).dsText(.label12).kerning(0.7)
+            Text(header).dsText(.label12)
                 .foregroundStyle(DS.textTertiary)
         }
     }

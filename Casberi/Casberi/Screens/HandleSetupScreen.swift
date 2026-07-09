@@ -81,8 +81,8 @@ enum HandleBridge: String {
 
     var recentHeader: String {
         switch self {
-        case .bluesky:   "YOUR POSTS"
-        case .farcaster: "YOUR CASTS"
+        case .bluesky:   "Your posts"
+        case .farcaster: "Your casts"
         }
     }
 
@@ -189,7 +189,7 @@ struct HandleSetupScreen: View {
                                  syncingLine: "Fetching your \(bridge.noun)…",
                                  result: result, resultIsError: resultIsError)
         } header: {
-            Text("YOUR \(bridge.nameNoun.uppercased())").dsText(.label12).kerning(0.7)
+            Text("YOUR \(bridge.nameNoun)").dsText(.label12)
                 .foregroundStyle(DS.textTertiary)
         } footer: {
             Text(bridge.fieldFooter)

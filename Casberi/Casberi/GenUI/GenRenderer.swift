@@ -225,8 +225,8 @@ private struct GenHero: View {
 
     private var heroBody: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text(el.str(0).uppercased())
-                .dsText(.label12).kerning(1)
+            Text(el.str(0))
+                .dsText(.label12)
                 .foregroundStyle(DS.textSecondary)
             Text(el.str(1))
                 .dsText(.heading34)
@@ -253,8 +253,8 @@ private struct GenInsight: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: DS.Space.s1) {
-            Text("NOTICED")
-                .dsText(.label12).kerning(1)
+            Text("Noticed")
+                .dsText(.label12)
                 .foregroundStyle(DS.textSecondary)
             if streaming {
                 // The model is still writing — one small dot breathes after
@@ -512,8 +512,8 @@ private struct GenTagMap: View {
         VStack(alignment: .leading, spacing: 0) {
             if !el.str(0).isEmpty {
                 HStack {
-                    Text(el.str(0).uppercased())
-                        .dsText(.label12).kerning(1)
+                    Text(el.str(0))
+                        .dsText(.label12)
                         .foregroundStyle(DS.textSecondary)
                     Spacer()
                     // The banked week is shareable (§6) — weekend only.
@@ -627,8 +627,8 @@ private struct GenTagMap: View {
     @MainActor
     private func renderWeekCard() {
         let card = VStack(alignment: .leading, spacing: DS.Space.s3) {
-            Text(el.str(0).uppercased())
-                .dsText(.label12).kerning(1)
+            Text(el.str(0))
+                .dsText(.label12)
                 .foregroundStyle(DS.textSecondary)
             cells(width: 328, animated: false)
                 .frame(width: 328, height: 220)
@@ -670,8 +670,8 @@ private struct GenKindBar: View {
         let total = max(1, items.map(\.n).reduce(0, +))
         VStack(alignment: .leading, spacing: DS.Space.s3) {
             if !el.str(0).isEmpty {
-                Text(el.str(0).uppercased())
-                    .dsText(.label12).kerning(1)
+                Text(el.str(0))
+                    .dsText(.label12)
                     .foregroundStyle(DS.textSecondary)
             }
             GeometryReader { geo in
@@ -896,8 +896,8 @@ private struct GenTakeawayCard: View {
     let el: GenEl
     var body: some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
-            Text(el.str(0).uppercased())
-                .dsText(.label12).kerning(1).foregroundStyle(DS.textSecondary)
+            Text(el.str(0))
+                .dsText(.label12).foregroundStyle(DS.textSecondary)
             Text(el.str(1))
                 .dsText(.heading17).foregroundStyle(DS.textPrimary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -922,8 +922,8 @@ private struct GenApprovalCard: View {
     let el: GenEl
     var body: some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
-            Text(el.str(0).uppercased())
-                .dsText(.label12).kerning(1).foregroundStyle(DS.textSecondary)
+            Text(el.str(0))
+                .dsText(.label12).foregroundStyle(DS.textSecondary)
             Text(el.str(1))
                 .dsText(.heading17).foregroundStyle(DS.textPrimary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -1107,9 +1107,9 @@ private struct GenCover: View {
         // it fades over the first 60pt of scroll (§4).
         .overlay(alignment: .top) {
             if !el.str(4).isEmpty {
-                Text(el.str(4).uppercased())
+                Text(el.str(4))
                     .font(.system(size: 13, weight: .semibold))
-                    .kerning(1.4)
+                    
                     .foregroundStyle(coverInk.opacity(0.92))
                     .padding(.top, topInset + DS.Space.s2)
                     .opacity(datelineFade)
@@ -1144,8 +1144,8 @@ private struct GenCover: View {
 
     private var textBlock: some View {
         VStack(alignment: .leading, spacing: DS.Space.s1) {
-            Text(el.str(0).uppercased())
-                .dsText(.label12).kerning(1)
+            Text(el.str(0))
+                .dsText(.label12)
                 .foregroundStyle(coverInk.opacity(0.7))
             Text(el.str(1))
                 .font(.system(size: 26, weight: .heavy))
@@ -1235,8 +1235,8 @@ private struct GenKindPills: View {
     var body: some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
             if !el.str(0).isEmpty {
-                Text(el.str(0).uppercased())
-                    .dsText(.label12).kerning(1)
+                Text(el.str(0))
+                    .dsText(.label12)
                     .foregroundStyle(DS.textSecondary)
             }
             HStack(spacing: DS.Space.s2) {

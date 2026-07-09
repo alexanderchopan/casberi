@@ -133,8 +133,8 @@ struct OnboardingView: View {
 
     private var feedPreviewCard: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text(allConnected ? "YOUR FEED · FLOWING" : "YOUR FEED")
-                .dsText(.label12).kerning(1)
+            Text(allConnected ? "Your feed · flowing" : "Your feed")
+                .dsText(.label12)
                 .foregroundStyle(allConnected ? DS.confirm : DS.textSecondary)
                 .padding(.horizontal, DS.Space.s4)
                 .padding(.top, DS.Space.s3)

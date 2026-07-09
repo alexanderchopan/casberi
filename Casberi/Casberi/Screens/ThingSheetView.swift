@@ -100,8 +100,8 @@ struct ThingSheetView: View {
             Circle()
                 .fill(BridgeGlyph.color(for: thing.source))
                 .frame(width: 6, height: 6)
-            Text("\(thing.kind.typeTag.uppercased()) · \(shortTime(thing.capturedAt).uppercased()) AGO")
-                .dsText(.label12).kerning(1.4)
+            Text("\(thing.kind.typeTag) · \(shortTime(thing.capturedAt)) AGO")
+                .dsText(.label12)
                 .foregroundStyle(DS.textTertiary)
         }
     }
@@ -129,7 +129,7 @@ struct ThingSheetView: View {
     private func specRow(_ label: String, _ value: String) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: 0) {
             Text(label)
-                .dsText(.label12).kerning(0.6)
+                .dsText(.label12)
                 .foregroundStyle(DS.textTertiary)
                 .frame(width: 80, alignment: .leading)
             Text(value)
@@ -146,8 +146,8 @@ struct ThingSheetView: View {
             withAnimation(DS.Motion.standard) { editingTags.toggle() }
         } label: {
             HStack(alignment: .firstTextBaseline, spacing: 0) {
-                Text("TAGS")
-                    .dsText(.label12).kerning(0.6)
+                Text("Tags")
+                    .dsText(.label12)
                     .foregroundStyle(DS.textTertiary)
                     .frame(width: 80, alignment: .leading)
                 tagsLine
@@ -249,8 +249,8 @@ struct ThingSheetView: View {
 
     private var tagsField: some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
-            Text("TAGS")
-                .dsText(.label12).kerning(0.7)
+            Text("Tags")
+                .dsText(.label12)
                 .foregroundStyle(DS.textTertiary)
 
             FlowLayout(spacing: DS.Space.s2) {
@@ -392,8 +392,8 @@ struct ThingSheetView: View {
     private var relatedShelf: some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
             if !relatedStream.els.isEmpty {
-                Text("RELATED")
-                    .dsText(.label12).kerning(0.7)
+                Text("Related")
+                    .dsText(.label12)
                     .foregroundStyle(DS.textTertiary)
                     .padding(.horizontal, DS.Space.s4)
             }

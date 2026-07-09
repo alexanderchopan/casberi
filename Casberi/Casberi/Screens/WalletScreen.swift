@@ -115,7 +115,7 @@ struct WalletScreen: View {
             .onDelete { wallet.remove(at: $0) }
             .onMove { wallet.move(from: $0, to: $1) }
         } header: {
-            Text("WATCHING").dsText(.label12).kerning(0.7)
+            Text("Watching").dsText(.label12)
                 .foregroundStyle(DS.textSecondary)
         }
     }
@@ -126,7 +126,7 @@ struct WalletScreen: View {
                            buttonLabel: "Watch", keyboard: .default,
                            focus: $addressFieldFocused, action: watch)
         } header: {
-            Text("WATCH AN ADDRESS").dsText(.label12).kerning(0.7)
+            Text("Watch an address").dsText(.label12)
                 .foregroundStyle(DS.textSecondary)
         } footer: {
             if wallet.addresses.isEmpty {
@@ -164,7 +164,7 @@ struct WalletScreen: View {
                 .listRowBackground(DS.surfaceSheet)
             }
         } header: {
-            Text("RECENT").dsText(.label12).kerning(0.7)
+            Text("Recent").dsText(.label12)
                 .foregroundStyle(DS.textSecondary)
         }
     }

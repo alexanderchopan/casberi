@@ -64,7 +64,7 @@ struct TokenSetupScreen: View {
                 .listRowBackground(DS.surfaceSheet)
             }
         } header: {
-            Text("GET YOUR TOKEN").dsText(.label12).kerning(0.7)
+            Text("Get your token").dsText(.label12)
                 .foregroundStyle(DS.textTertiary)
         }
     }
@@ -78,7 +78,7 @@ struct TokenSetupScreen: View {
                                  syncingLine: "Fetching your \(bridge.noun)…",
                                  result: result, resultIsError: resultIsError)
         } header: {
-            Text("YOUR TOKEN").dsText(.label12).kerning(0.7)
+            Text("Your token").dsText(.label12)
                 .foregroundStyle(DS.textTertiary)
         } footer: {
             Text("The token stays in this iPhone's Keychain and goes only to \(bridge.rawValue) itself. Read-only.")

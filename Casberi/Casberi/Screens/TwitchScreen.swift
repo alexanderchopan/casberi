@@ -25,7 +25,7 @@ struct TwitchScreen: View {
             BridgeSetupHeader(name: "Twitch")
             connectSection.listRowSeparator(.hidden)
             if !recent.isEmpty {
-                RecentThingsSection(header: "LIVE LATELY", things: recent)
+                RecentThingsSection(header: "Live lately", things: recent)
                     .listRowSeparator(.hidden)
             }
             if TwitchAuth.connected { removeSection.listRowSeparator(.hidden) }
@@ -101,7 +101,7 @@ struct TwitchScreen: View {
             BridgeSyncStatusRows(syncing: syncing, syncingLine: "Checking who's live…",
                                  result: result, resultIsError: resultIsError)
         } header: {
-            Text("YOUR FOLLOWS").dsText(.label12).kerning(0.7)
+            Text("Your follows").dsText(.label12)
                 .foregroundStyle(DS.textTertiary)
         } footer: {
             Text("Sign-in happens on Twitch's own page — a short code, no password in the app. Read-only: it can never chat, follow, or subscribe.")

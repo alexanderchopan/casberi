@@ -53,7 +53,7 @@ struct ChatGPTImportScreen: View {
             step(2, "OpenAI emails a download link. Save the zip to Files and tap it once to unzip.")
             step(3, "Pick conversations.json below.")
         } header: {
-            Text("GET YOUR EXPORT").dsText(.label12).kerning(0.7)
+            Text("Get your export").dsText(.label12)
                 .foregroundStyle(DS.textTertiary)
         }
     }
@@ -115,7 +115,7 @@ struct ChatGPTImportScreen: View {
                 .listRowBackground(DS.surfaceSheet)
             }
         } header: {
-            Text("IMPORTED").dsText(.label12).kerning(0.7)
+            Text("Imported").dsText(.label12)
                 .foregroundStyle(DS.textTertiary)
         }
     }

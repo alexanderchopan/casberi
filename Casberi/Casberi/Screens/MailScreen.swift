@@ -57,7 +57,7 @@ struct MailScreen: View {
                 .listRowBackground(DS.surfaceSheet)
             }
         } header: {
-            Text("GET AN APP PASSWORD").dsText(.label12).kerning(0.7)
+            Text("Get an app password").dsText(.label12)
                 .foregroundStyle(DS.textTertiary)
         }
     }
@@ -91,7 +91,7 @@ struct MailScreen: View {
             BridgeSyncStatusRows(syncing: syncing, syncingLine: "Reading your inbox…",
                                  result: result, resultIsError: resultIsError)
         } header: {
-            Text("YOUR ACCOUNT").dsText(.label12).kerning(0.7)
+            Text("Your account").dsText(.label12)
                 .foregroundStyle(DS.textTertiary)
         } footer: {
             Text(provider.footer).dsText(.callout15).foregroundStyle(DS.textTertiary)

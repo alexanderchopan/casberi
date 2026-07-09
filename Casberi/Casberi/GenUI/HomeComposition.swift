@@ -304,10 +304,10 @@ enum HomeComposition {
             ?? images.first { $0.capturedAt > .now.addingTimeInterval(-7 * 86_400) }
     }
 
-    /// "MONDAY · 14 THINGS" / "MONDAY · QUIET SO FAR" — the top edge earns
+    /// "Monday · 14 things" / "Monday · Quiet so far" — the top edge earns
     /// its space. Landed counts only; never obligations.
     private static func dateline(things: [Thing]) -> String {
-        let weekday = Date.now.formatted(.dateTime.weekday(.wide)).uppercased()
+        let weekday = Date.now.formatted(.dateTime.weekday(.wide))
         let today = things.filter { Calendar.current.isDateInToday($0.capturedAt) }.count
         if today == 0 { return "\(weekday) · Quiet so far" }
         return "\(weekday) · \(today) thing\(today == 1 ? "" : "s")"

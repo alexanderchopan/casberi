@@ -168,7 +168,7 @@ struct AppsScreen: View {
 
     private var connectedStrip: some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
-            sectionHeader("CONNECTED")
+            sectionHeader("Connected")
                 .padding(.horizontal, DS.Space.s4)
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(alignment: .top, spacing: DS.Space.s4) {
@@ -284,11 +284,11 @@ struct AppsScreen: View {
                                name: String, brand: Color, verb: CapsuleVerb,
                                action: @escaping () -> Void) -> some View {
         VStack(alignment: .leading, spacing: DS.Space.s3) {
-            Text(eyebrow.uppercased())
-                .dsText(.label12).kerning(1)
+            Text(eyebrow)
+                .dsText(.label12)
                 .foregroundStyle(.white.opacity(0.7))
             Text(headline)
-                .font(.system(size: 24, weight: .heavy))
+                .dsText(.heading22).fontWeight(.heavy)
                 .foregroundStyle(.white)
                 .lineLimit(2)
                 .minimumScaleFactor(0.7)
@@ -484,7 +484,7 @@ struct AppsScreen: View {
 
     private func sectionHeader(_ text: String) -> some View {
         Text(text)
-            .dsText(.label12).kerning(0.7)
+            .dsText(.label12)
             .foregroundStyle(DS.textSecondary)
     }
 

@@ -53,8 +53,8 @@ struct AppDetailScreen: View {
         HStack(alignment: .top, spacing: DS.Space.s4) {
             BridgeIcon(name: offer.name, size: 72)
             VStack(alignment: .leading, spacing: DS.Space.s1) {
-                Text(offer.group.uppercased())
-                    .dsText(.label12).kerning(0.7).foregroundStyle(DS.textTertiary)
+                Text(offer.group)
+                    .dsText(.label12).foregroundStyle(DS.textTertiary)
                 Text(offer.name).dsText(.heading22).foregroundStyle(DS.textPrimary)
                 Text(offer.tagline).dsText(.subhead13).foregroundStyle(DS.textSecondary)
                 actionButton.padding(.top, DS.Space.s2)
@@ -100,8 +100,8 @@ struct AppDetailScreen: View {
 
     private var whatItDoes: some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
-            Text("WHAT IT DOES")
-                .dsText(.label12).kerning(0.7).foregroundStyle(DS.textTertiary)
+            Text("What it does")
+                .dsText(.label12).foregroundStyle(DS.textTertiary)
             Text(offer.summary)
                 .dsText(.body17).foregroundStyle(DS.textPrimary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -110,8 +110,8 @@ struct AppDetailScreen: View {
 
     private var whatLands: some View {
         VStack(alignment: .leading, spacing: DS.Space.s3) {
-            Text("WHAT LANDS IN YOUR FEED")
-                .dsText(.label12).kerning(0.7).foregroundStyle(DS.textTertiary)
+            Text("What lands in your feed")
+                .dsText(.label12).foregroundStyle(DS.textTertiary)
             // The preview (option 4): the app's shape, streamed through the
             // real engine — the App Store screenshot, generated. Inert; the
             // real thing arrives when the bridge does. Connectable apps skip

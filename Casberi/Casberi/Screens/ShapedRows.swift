@@ -105,7 +105,7 @@ struct ApprovalCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
             Text(eyebrow)
-                .dsText(.label12).kerning(1)
+                .dsText(.label12)
                 .foregroundStyle(DS.textSecondary)
             Text(thing.title)
                 .dsText(.heading17).foregroundStyle(DS.textPrimary)
@@ -248,8 +248,8 @@ struct TakeawayCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
             HStack(spacing: DS.Space.s2) {
-                Text((project ?? thing.source).uppercased())
-                    .dsText(.label12).kerning(1)
+                Text((project ?? thing.source))
+                    .dsText(.label12)
                     .foregroundStyle(DS.textSecondary)
                 Spacer()
                 LiveTimeText(date: thing.capturedAt)

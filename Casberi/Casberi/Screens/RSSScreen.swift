@@ -71,7 +71,7 @@ struct RSSScreen: View {
             .onDelete { rss.remove(at: $0) }
         } header: {
             HStack {
-                Text("FOLLOWING").dsText(.label12).kerning(0.7)
+                Text("Following").dsText(.label12)
                     .foregroundStyle(DS.textTertiary)
                 Spacer()
                 if syncing {
@@ -91,7 +91,7 @@ struct RSSScreen: View {
                            buttonLabel: "Follow", keyboard: .URL,
                            focus: $fieldFocused, action: addFeed)
         } header: {
-            Text("ADD A FEED").dsText(.label12).kerning(0.7)
+            Text("Add a feed").dsText(.label12)
                 .foregroundStyle(DS.textTertiary)
         } footer: {
             Text("Paste a site's feed URL — new posts land in your feed as links.")
