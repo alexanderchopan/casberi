@@ -65,18 +65,18 @@ struct GlassTabBar: View {
                                 .transition(.opacity.combined(with: .scale(scale: 0.8)))
                         }
                     }
-                    // White (not accent blue) when active: the lozenge already
-                    // marks the selection, and blue-on-a-colored-background was
-                    // hard to read (ruling 2026-07-06).
-                    .foregroundStyle(active ? DS.textPrimary : DS.textTertiary)
+                    // White mark on the blue field — the active tab echoes the
+                    // app icon itself (re-ruling 2026-07-08; the earlier
+                    // blue-ICON idea stays dead — this is the inverse).
+                    .foregroundStyle(active ? .white : DS.textTertiary)
                     .frame(maxWidth: .infinity)
                     .frame(minHeight: chrome.minimized ? 40 : 48)
                     .background {
                         if active {
-                            // The liquid selection: one bright capsule that
-                            // slides between tabs rather than blinking.
+                            // The liquid selection: one Casberi-blue capsule
+                            // that slides between tabs rather than blinking.
                             Capsule(style: .continuous)
-                                .fill(DS.fillStrong)
+                                .fill(DS.tint)
                                 .padding(.vertical, 2)
                                 .matchedGeometryEffect(id: "lozenge", in: lozengeNS)
                         }
