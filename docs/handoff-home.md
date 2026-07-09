@@ -72,20 +72,26 @@ cover; the theme owns everything below. Precedence: image color > theme color
 - Cover text always uses the vivid-background ramp DS already has.
 - Cache the extracted color per thing id; extraction runs off-main.
 
-## 2. Kind pills (replaces KindBar on Home)
+## 2. Kind chips — on the cover (ruling 2026-07-09; supersedes the bottom pills section)
 
-Eyebrow "WHAT LANDED TODAY" (falls back to "WHAT THEY ARE" over the whole
-corpus when today is empty — same data rule as today's KindBar).
+Today's kind counts ride the COVER as a chip row (Cover arg 7, "[Tag N, ...]"),
+replacing the cover subline — the counts ARE the subline. The standalone
+"What landed today" section at the bottom of Home is gone; its story moved up.
 
-- One pill per kind, count-ordered, max 5: 34pt tall capsule, kind color at
-  ~0.15 opacity fill, the kind's SF Symbol (KindGlyph symbol + color) at 14pt,
-  count in 13pt semibold white. Gap 8, wraps to one row only (drop overflow).
-- Kind colors come from KindGlyph — this is identity color, legal under the
-  color rule. No new hues.
-- Tap a pill → Feed filtered to that kind (existing FeedFilter.tag route,
-  same as KindBar segments today).
-- KindBar itself remains in the Gen vocabulary (Zerion strip etc.); Home just
-  stops using it.
+- Composed by `coverChips` (HomeComposition): today-only, count-ordered, max 5.
+  Approvals never count (same guardrail as the cover lead). Nil when nothing
+  landed today — the quiet cover states that in words, and the word subline
+  returns ("project · time" on the image cover, "Kind · Source" otherwise).
+- The weekend cover carries NO chips: it is a week recap and its subline
+  already tells that story; today-only counts would misread as the week.
+- Rendered by `KindCountRow` (GenRenderer): 34pt capsule, kind hue at ~0.15
+  fill, the kind's SF Symbol at 14pt, count in 13pt semibold cover ink.
+  Kind colors come from KindGlyph — identity color, legal under the color rule.
+- Tap a chip → Feed filtered to that kind (FeedFilter.tag + casberi://feed).
+- `KindPills` stays in the Gen vocabulary (rendered by KindCountRow); no Home
+  composition emits it anymore.
+- The banner cover reserves 178pt (vs 250pt live capture) regardless of chips —
+  height must never depend on the chips arg, which streams in last.
 
 ## 3. Composition order (HomeComposition.compose)
 

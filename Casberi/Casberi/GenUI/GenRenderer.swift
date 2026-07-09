@@ -545,7 +545,6 @@ private struct GenTagMap: View {
     /// looping motion in the app, and it only exists before things do.
     @State private var breathe = false
 
-    private struct Item { let tag: String; let n: Int }
     /// Grid areas (col, row, w, h) on a 4×3 unit grid, largest-first. One set
     /// per item count, each tiling the grid COMPLETELY — a holdings map can hold
     /// 1–6 tokens, and a template sized for 6 leaves holes when fewer arrive.
@@ -560,15 +559,7 @@ private struct GenTagMap: View {
         }
     }
 
-    private var items: [Item] {
-        el.refs(2).prefix(6).map { raw in
-            let parts = raw.split(separator: " ")
-            if let last = parts.last, let n = Int(last) {
-                return Item(tag: parts.dropLast().joined(separator: " "), n: n)
-            }
-            return Item(tag: raw, n: 1)
-        }
-    }
+    private var items: [KindCountRow.Item] { KindCountRow.parse(el.refs(2), cap: 6) }
 
     private var isWeekend: Bool {
         let wd = Calendar.current.component(.weekday, from: .now)
@@ -721,17 +712,8 @@ private struct GenKindBar: View {
     let el: GenEl
     @Environment(\.openURL) private var openURL
 
-    private struct Item { let tag: String; let n: Int }
 
-    private var items: [Item] {
-        el.refs(1).prefix(5).map { raw in
-            let parts = raw.split(separator: " ")
-            if let last = parts.last, let n = Int(last) {
-                return Item(tag: parts.dropLast().joined(separator: " "), n: n)
-            }
-            return Item(tag: raw, n: 1)
-        }
-    }
+    private var items: [KindCountRow.Item] { KindCountRow.parse(el.refs(1)) }
 
     var body: some View {
         let total = max(1, items.map(\.n).reduce(0, +))
@@ -1053,11 +1035,13 @@ enum CoverBleed {
     }
 }
 
-/// Cover(eyebrow, title, subline, thingId, dateline) — the composition stays
-/// dumb (it only names facts); everything smart lives here: image lookup by
-/// thingId, bleed extraction, theme fallbacks. Height is decided before first
-/// paint from the args alone — a thingId means the 250pt image canvas, none
-/// means the 140pt quiet cover — so the streamed skeleton never jumps.
+/// Cover(eyebrow, title, subline, thingId, dateline, tag, [Tag N, ...]) —
+/// the composition stays dumb (it only names facts); everything smart lives
+/// here: image lookup by thingId, bleed extraction, theme fallbacks. Height
+/// is decided before first paint from the args alone — a thingId means the
+/// 250pt image canvas, none means the 150pt quiet cover — so the streamed
+/// skeleton never jumps. Arg 7 is today's kind counts: the chip row that
+/// replaced both the subline and the old bottom KindPills section.
 private struct GenCover: View {
     let el: GenEl
     @Environment(\.modelContext) private var modelContext
@@ -1086,6 +1070,14 @@ private struct GenCover: View {
         return Color(hex: swatch.hex)
     }
     private var photoTheme: Bool { ThemeStore.shared.backgroundPhoto != nil }
+
+    /// Today's kind counts (arg 7) — the chip row that replaced the subline
+    /// (ruling 2026-07-09). Empty on the quiet-day cover and while the doc
+    /// is still streaming; requireCount keeps a half-streamed tag from
+    /// flashing a fallback chip.
+    private var chips: [KindCountRow.Item] {
+        KindCountRow.parse(el.refs(6), requireCount: true)
+    }
 
     /// The no-image cover's wash color — always black now (ruling
     /// 2026-07-09: the default cover is black, not a color). The earlier
@@ -1121,7 +1113,11 @@ private struct GenCover: View {
                 // The layout slot stays fixed; the canvas rides a bottom-
                 // aligned overlay so a pull extends it upward (stretchy
                 // header) without a feedback loop on the measurement.
-                let base: CGFloat = isBanner ? 150 : 250
+                // The banner reads shorter than a live capture on purpose;
+                // 178 leaves room for the chip row. Constant per cover kind —
+                // height must never depend on the chips arg, which streams in
+                // LAST: keying on it made the banner jump 150→178 mid-stream.
+                let base: CGFloat = isBanner ? 178 : 250
                 Color.clear
                     .frame(height: base + topInset)
                     .overlay(alignment: .bottom) {
@@ -1250,6 +1246,10 @@ private struct GenCover: View {
                     .dsText(.subhead13)
                     .foregroundStyle(coverInk.opacity(0.85))
             }
+            if !chips.isEmpty {
+                KindCountRow(items: chips, ink: coverInk)
+                    .padding(.top, DS.Space.s1)
+            }
         }
         .padding(DS.Space.s4)
     }
@@ -1334,22 +1334,67 @@ private struct GenCover: View {
 
 // MARK: - Kind pills (replaces KindBar on Home — identity color, one row)
 
-/// KindPills(eyebrow, [Tag N, ...]) — one pill per kind, count-ordered, max 5.
-private struct GenKindPills: View {
-    let el: GenEl
+/// One row of kind-count chips — hue capsule, glyph in the kind's color,
+/// count in `ink`. A tap opens the Feed filtered to that kind — the chips
+/// are navigation, not decoration. Shared by the cover (white ink over a
+/// photo or the black field) and KindPills (page ink).
+private struct KindCountRow: View {
+    struct Item { let tag: String; let n: Int }
+    let items: [Item]
+    var ink: Color = DS.textPrimary
     @Environment(\.openURL) private var openURL
 
-    private struct Item { let tag: String; let n: Int }
-
-    private var items: [Item] {
-        el.refs(1).prefix(5).map { raw in
-            let parts = raw.split(separator: " ")
+    /// "[Tag N, ...]" refs → items, count-ordered upstream. The one parser
+    /// for the idiom — TagMap and KindBar read it too. `requireCount` drops
+    /// refs with no trailing count: the cover uses it so a tag truncated by
+    /// the stream never flashes a fallback chip (composed chips always carry
+    /// counts, so nothing real is lost); bare tags elsewhere still count 1.
+    static func parse(_ raw: [String], cap: Int = 5, requireCount: Bool = false) -> [Item] {
+        raw.prefix(cap).compactMap { r in
+            let parts = r.split(separator: " ")
             if let last = parts.last, let n = Int(last) {
                 return Item(tag: parts.dropLast().joined(separator: " "), n: n)
             }
-            return Item(tag: raw, n: 1)
+            return requireCount ? nil : Item(tag: r, n: 1)
         }
     }
+
+    var body: some View {
+        HStack(spacing: DS.Space.s2) {
+            ForEach(Array(items.enumerated()), id: \.offset) { _, item in
+                let kind = ThingKind.from(typeTag: item.tag)
+                let hue = kind?.hue ?? DS.tint
+                Button {
+                    DSHaptic.selection()
+                    FeedFilter.shared.tag = item.tag
+                    if let url = URL(string: "casberi://feed") { openURL(url) }
+                } label: {
+                    HStack(spacing: DS.Space.s1) {
+                        Image(systemName: kind?.symbol ?? "circle.dashed")
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundStyle(hue)
+                        Text("\(item.n)")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(ink)
+                            .contentTransition(.numericText())
+                            .animation(DS.Motion.standard, value: item.n)
+                    }
+                    .padding(.horizontal, DS.Space.s3)
+                    .frame(minHeight: 34)
+                    .background(hue.opacity(0.15), in: Capsule(style: .continuous))
+                    .contentShape(Capsule())
+                }
+                .buttonStyle(PressSpring())
+                .accessibilityLabel("\(item.n) \(kind?.typeTagPlural ?? item.tag)")
+            }
+        }
+    }
+}
+
+/// KindPills(eyebrow, [Tag N, ...]) — one pill per kind, count-ordered, max 5.
+/// Stays in the vocabulary; Home's counts now ride the Cover's chip row.
+private struct GenKindPills: View {
+    let el: GenEl
 
     var body: some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
@@ -1358,40 +1403,9 @@ private struct GenKindPills: View {
                     .dsText(.label12)
                     .foregroundStyle(DS.textSecondary)
             }
-            HStack(spacing: DS.Space.s2) {
-                ForEach(Array(items.enumerated()), id: \.offset) { _, item in
-                    let kind = ThingKind.from(typeTag: item.tag)
-                    let hue = kind?.hue ?? DS.tint
-                    Button {
-                        open(item.tag)
-                    } label: {
-                        HStack(spacing: DS.Space.s1) {
-                            Image(systemName: kind?.symbol ?? "circle.dashed")
-                                .font(.system(size: 14, weight: .medium))
-                                .foregroundStyle(hue)
-                            Text("\(item.n)")
-                                .font(.system(size: 13, weight: .semibold))
-                                .foregroundStyle(DS.textPrimary)
-                                .contentTransition(.numericText())
-                                .animation(DS.Motion.standard, value: item.n)
-                        }
-                        .padding(.horizontal, DS.Space.s3)
-                        .frame(minHeight: 34)
-                        .background(hue.opacity(0.15), in: Capsule(style: .continuous))
-                        .contentShape(Capsule())
-                    }
-                    .buttonStyle(PressSpring())
-                    .accessibilityLabel("\(item.n) \(kind?.typeTagPlural ?? item.tag)")
-                }
-            }
+            KindCountRow(items: KindCountRow.parse(el.refs(1)))
         }
         .padding(.horizontal, DS.Space.s4)
         .padding(.top, DS.Space.s4)
-    }
-
-    private func open(_ tag: String) {
-        DSHaptic.selection()
-        FeedFilter.shared.tag = tag
-        if let url = URL(string: "casberi://feed") { openURL(url) }
     }
 }

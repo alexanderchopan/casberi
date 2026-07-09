@@ -167,9 +167,12 @@ enum HomeComposition {
             subline = week.count == 1 ? "1 thing landed" : "\(week.count) things landed"
         }
         if !things.isEmpty {
+            // No chips here: the weekend cover is a WEEK recap and its
+            // subline already carries that story; today-only counts under
+            // "your week, banked" would misread as the week's composition
+            // (and stacking both broke the counts-are-the-subline rule).
             let coverRef = hasBanner ? "banner" : (image?.id.uuidString ?? "")
-            let chipsArg = coverChips(things).map { ", \($0)" } ?? ""
-            doc.append("cover = Cover(\(q("Weekend")), \(q(title)), \(q(subline)), \(q(coverRef)), \(q(dateline(things: things))), \(q("quiet"))\(chipsArg))")
+            doc.append("cover = Cover(\(q("Weekend")), \(q(title)), \(q(subline)), \(q(coverRef)), \(q(dateline(things: things))), \(q("quiet")))")
             rootRefs.append("cover")
         }
 
@@ -290,18 +293,6 @@ enum HomeComposition {
         }
     }
 
-    /// The corpus's composition — kind counts for the kind bar (the type
-    /// chart lives on Home now; Feed is a feed).
-    private static func kindItems(_ things: [Thing]) -> String? {
-        var counts: [ThingKind: Int] = [:]
-        for t in things { counts[t.kind, default: 0] += 1 }
-        guard counts.count >= 3 else { return nil }
-        let items = counts.sorted {
-            $0.value != $1.value ? $0.value > $1.value : $0.key.typeTag < $1.key.typeTag
-        }.prefix(5).map { "\($0.key.typeTag) \($0.value)" }
-        return "[\(items.joined(separator: ", "))]"
-    }
-
     // MARK: - Cover (H7 — the doc names facts; the renderer owns the rest)
 
     /// The day's newest image thing, falling back to this week's (the cover's
@@ -341,7 +332,10 @@ enum HomeComposition {
     /// height. The word subline returns only when nothing landed today.
     private static func cover(things: [Thing]) -> String {
         let date = dateline(things: things)
-        let chips = coverChips(things)
+        // One today-sweep, shared by the chips (compose already scans the
+        // corpus enough times per render).
+        let today = things.filter { Calendar.current.isDateInToday($0.capturedAt) }
+        let chips = coverChips(today)
         let chipsArg = chips.map { ", \($0)" } ?? ""
         if !hasBanner, let image = newestImageThing(things) {
             let project = image.tags.first { ThingKind.from(typeTag: $0) == nil }
@@ -369,12 +363,13 @@ enum HomeComposition {
 
     /// Today's kind counts, "[Tag N, ...]", count-ordered, max 5 — the
     /// cover's chip row (the KindPills section moved up into the banner).
-    /// Nil when nothing landed today: the quiet cover states that in words,
-    /// and yesterday's counts aren't news.
-    private static func coverChips(_ things: [Thing]) -> String? {
-        let today = things.filter { Calendar.current.isDateInToday($0.capturedAt) }
+    /// Takes the pre-filtered today pool. Nil when nothing landed today: the
+    /// quiet cover states that in words, and yesterday's counts aren't news.
+    /// Approvals never count — same guardrail as the cover lead: the cover
+    /// states what landed, never what's waiting on the person.
+    private static func coverChips(_ today: [Thing]) -> String? {
         var counts: [ThingKind: Int] = [:]
-        for t in today { counts[t.kind, default: 0] += 1 }
+        for t in today where t.kind != .approval { counts[t.kind, default: 0] += 1 }
         guard !counts.isEmpty else { return nil }
         let items = counts.sorted {
             $0.value != $1.value ? $0.value > $1.value : $0.key.typeTag < $1.key.typeTag
