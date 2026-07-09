@@ -1237,7 +1237,9 @@ private struct GenCover: View {
                 .dsText(.label12)
                 .foregroundStyle(coverInk.opacity(0.7))
             Text(el.str(1))
-                .font(.system(size: 26, weight: .heavy))
+                // SF Rounded — the cover title is Home's signature display
+                // moment (2026-07-09); functional text stays SF Pro.
+                .font(.system(size: 26, weight: .heavy, design: .rounded))
                 .foregroundStyle(coverInk)
                 .lineLimit(2)
                 .minimumScaleFactor(0.7)

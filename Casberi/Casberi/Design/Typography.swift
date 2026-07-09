@@ -14,6 +14,11 @@ struct DSTextStyle {
     /// Anchor for Dynamic Type scaling.
     var relative: UIFont.TextStyle = .body
     var monospaced = false
+    /// SF Rounded, for the DISPLAY tier only (2026-07-09) — the big headings
+    /// read warmer and more personal, which suits a cover that says "this is
+    /// YOUR week." Functional text (body, rows, labels) stays SF Pro Text,
+    /// which scans crisper at UI sizes and keeps the app feeling native.
+    var rounded = false
 
     /// SwiftUI `lineSpacing` is additive over the font's intrinsic leading; this
     /// approximates the CSS line-height without measuring UIFont metrics.
@@ -22,8 +27,8 @@ struct DSTextStyle {
 
 extension DSTextStyle {
     // Prototype class → style. Names read as intent, not pixel counts.
-    static let heading34 = DSTextStyle(size: 34, weight: .bold,     tracking: 0.34, lineHeight: 41, relative: .largeTitle)
-    static let heading22 = DSTextStyle(size: 22, weight: .bold,     tracking: 0.22, lineHeight: 28, relative: .title2)
+    static let heading34 = DSTextStyle(size: 34, weight: .bold,     tracking: 0.34, lineHeight: 41, relative: .largeTitle, rounded: true)
+    static let heading22 = DSTextStyle(size: 22, weight: .bold,     tracking: 0.22, lineHeight: 28, relative: .title2, rounded: true)
     static let heading17 = DSTextStyle(size: 17, weight: .semibold, tracking: 0,    lineHeight: 22, relative: .headline)
     static let body17    = DSTextStyle(size: 17, weight: .regular,  tracking: 0,    lineHeight: 22, relative: .body)
     static let callout15 = DSTextStyle(size: 15, weight: .regular,  tracking: 0,    lineHeight: 20, relative: .subheadline)
@@ -43,7 +48,8 @@ private struct DSTextModifier: ViewModifier {
             .scaledValue(for: style.size)
         content
             .font(Font.system(size: scaled, weight: style.weight,
-                              design: style.monospaced ? .monospaced : .default))
+                              design: style.monospaced ? .monospaced
+                                    : style.rounded ? .rounded : .default))
             .tracking(style.tracking)
             .lineSpacing(style.lineSpacing)
     }

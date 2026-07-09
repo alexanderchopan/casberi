@@ -69,7 +69,9 @@ struct OnboardingView: View {
             VStack(alignment: .leading, spacing: DS.Space.s4) {
                 VStack(alignment: .leading, spacing: DS.Space.s2) {
                     Text("Your apps, one feed.")
-                        .font(.system(size: 34, weight: .heavy))
+                        // SF Rounded — the display tier (2026-07-09), matching
+                        // the Home cover title and the heading ramp.
+                        .font(.system(size: 34, weight: .heavy, design: .rounded))
                         .foregroundStyle(DS.textPrimary)
                     Text("All of this lands here. Start with three.")
                         .dsText(.body17)

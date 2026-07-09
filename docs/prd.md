@@ -705,6 +705,26 @@ edges rather than reopening it — Apps stays a door, not a tab.
   door push moved to a shared `FeedRoute` (mirroring `HomeRoute`) so the
   shell can see it. The Home starter/skeleton preview is untouched.
 
+## 36g. Type: SF Rounded on the display tier only (2026-07-09, user)
+
+The app is all SF Pro (no custom font — the right call for a native,
+familiar, scannable personal app). One refinement: the DISPLAY tier now
+uses SF Rounded — the Home cover title, the `heading34`/`heading22` ramp
+styles (so tray titles, big headings, the empty-state Hero, and the
+onboarding headline all follow), and nothing smaller. Functional text —
+`heading17` section headers and everything below (body, rows, labels,
+sublines, eyebrows) — stays SF Pro Text, which scans crisper at UI sizes
+and keeps the native feel. Rounded reads warmer and more personal at
+large sizes, which suits a cover that says "this is YOUR week"; the split
+keeps that warmth from costing legibility where it matters. Implemented
+as a `rounded` flag on `DSTextStyle` (so `dsText` handles it ramp-wide)
+plus `design: .rounded` on the two display headings rendered directly
+(the cover title, the onboarding hero). Both faces are Apple system
+fonts — no bundle, full Dynamic Type — so it's reversible in a line.
+Large nav-bar titles stay SF Pro (can't round just the title without a
+custom nav title view, and cascading `.rounded` would round the whole
+screen).
+
 ## 36. Bridge selection ruling: live data only (2026-07-09)
 
 No new import bridges. A bridge whose data arrives via a request-and-wait export (TikTok's 1–4 day JSON, Tinder's 24–48h zip, IMDb's CSV) lands stale and never updates — the person asked for live data or nothing. The ChatGPT import predates this ruling and stays (its framing is explicitly a backfill, and OpenAI offers no live read). Evaluated and declined under this ruling: TikTok, Tinder, IMDb (viable exports, stale), Linktree/Rotten Tomatoes/CardPointers (no surface at all), Duolingo (unofficial API only — ToS-gray breaks the honesty rule), Credit Karma/NerdWallet/Acorns (aggregator-only; needs the post-M2 server), Fileverse (E2EE by design; revisit if they ship a hosted API), Fantastical (already covered — it's a client over the calendars EventKit reads). Pinterest passed: their public per-user RSS feed is live and official-enough (a published feed, not a scraped page).
