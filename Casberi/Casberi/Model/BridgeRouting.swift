@@ -21,6 +21,7 @@ enum BridgeRouter {
         case chatgpt
         case bluesky
         case farcaster
+        case pinterest
         case steam
         case obsidian
         case twitch
@@ -39,6 +40,7 @@ enum BridgeRouter {
             case .chatgpt:        "gpt"
             case .bluesky:        "bsky"
             case .farcaster:      "fc"
+            case .pinterest:      "pinterest"
             case .steam:          "steam"
             case .obsidian:       "obsidian"
             case .twitch:         "twitch"
@@ -66,6 +68,7 @@ enum BridgeRouter {
         Row(offer: "ChatGPT",   id: "gpt",    destination: .chatgpt),
         Row(offer: "Bluesky",   id: "bsky",   destination: .bluesky),
         Row(offer: "Farcaster", id: "fc",     destination: .farcaster),
+        Row(offer: "Pinterest", id: "pinterest", destination: .pinterest),
         Row(offer: "Steam",     id: "steam",  destination: .steam),
         Row(offer: "Obsidian",  id: "obsidian", destination: .obsidian),
         Row(offer: "Twitch",    id: "twitch", destination: .twitch),
@@ -102,6 +105,7 @@ struct BridgeDestinationView: View {
         case .chatgpt:        ChatGPTImportScreen()
         case .bluesky:        HandleSetupScreen(bridge: .bluesky)
         case .farcaster:      HandleSetupScreen(bridge: .farcaster)
+        case .pinterest:      HandleSetupScreen(bridge: .pinterest)
         case .steam:          SteamScreen()
         case .obsidian:       ObsidianScreen()
         case .twitch:         TwitchScreen()

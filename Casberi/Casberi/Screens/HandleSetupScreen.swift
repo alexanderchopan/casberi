@@ -8,12 +8,14 @@ import SwiftData
 enum HandleBridge: String {
     case bluesky   = "Bluesky"
     case farcaster = "Farcaster"
+    case pinterest = "Pinterest"
 
     /// BridgeStore id, and the connected-strip route.
     var bridgeID: String {
         switch self {
         case .bluesky:   "bsky"
         case .farcaster: "fc"
+        case .pinterest: "pinterest"
         }
     }
 
@@ -21,14 +23,14 @@ enum HandleBridge: String {
     var nameNoun: String {
         switch self {
         case .bluesky:   "handle"
-        case .farcaster: "username"
+        case .farcaster, .pinterest: "username"
         }
     }
 
     var placeholder: String {
         switch self {
         case .bluesky:   "you"
-        case .farcaster: "yourname"
+        case .farcaster, .pinterest: "yourname"
         }
     }
 
@@ -38,13 +40,14 @@ enum HandleBridge: String {
         switch self {
         case .bluesky:   nil
         case .farcaster: "farcaster.xyz/"
+        case .pinterest: "pinterest.com/"
         }
     }
 
     var fieldSuffix: String? {
         switch self {
         case .bluesky:   ".bsky.social"
-        case .farcaster: nil
+        case .farcaster, .pinterest: nil
         }
     }
 
@@ -59,6 +62,8 @@ enum HandleBridge: String {
                 : name
         case .farcaster:
             return FarcasterStore.shared.username
+        case .pinterest:
+            return PinterestStore.shared.username
         }
     }
 
@@ -67,6 +72,7 @@ enum HandleBridge: String {
         switch self {
         case .bluesky:   "posts"
         case .farcaster: "casts"
+        case .pinterest: "pins"
         }
     }
 
@@ -76,6 +82,8 @@ enum HandleBridge: String {
             "Just the handle — your posts are public, so there's no password to give."
         case .farcaster:
             "Just the username — casts are public on the open protocol, so there's no password to give."
+        case .pinterest:
+            "Just the username — your public pins arrive through Pinterest's own feed, so there's no password to give."
         }
     }
 
@@ -83,6 +91,7 @@ enum HandleBridge: String {
         switch self {
         case .bluesky:   "Your posts"
         case .farcaster: "Your casts"
+        case .pinterest: "Your pins"
         }
     }
 
@@ -92,6 +101,8 @@ enum HandleBridge: String {
             "Read-only, public data only. Likes arrive with sign-in, later."
         case .farcaster:
             "Read-only, public data only — served by the Farcaster team's own public node."
+        case .pinterest:
+            "Read-only, public boards only — secret boards never appear in the public feed."
         }
     }
 
@@ -99,6 +110,7 @@ enum HandleBridge: String {
         switch self {
         case .bluesky:   "Reads your public posts."
         case .farcaster: "Reads your public casts."
+        case .pinterest: "Reads your public pins."
         }
     }
 
@@ -108,6 +120,7 @@ enum HandleBridge: String {
         switch self {
         case .bluesky:   BlueskyStore.shared.handle
         case .farcaster: FarcasterStore.shared.username
+        case .pinterest: PinterestStore.shared.username
         }
     }
 
@@ -115,6 +128,7 @@ enum HandleBridge: String {
         switch self {
         case .bluesky:   BlueskyStore.shared.handle = name
         case .farcaster: FarcasterStore.shared.username = name
+        case .pinterest: PinterestStore.shared.username = name
         }
     }
 
@@ -122,6 +136,7 @@ enum HandleBridge: String {
         switch self {
         case .bluesky:   BlueskyStore.normalize(raw)
         case .farcaster: FarcasterStore.normalize(raw)
+        case .pinterest: PinterestStore.normalize(raw)
         }
     }
 
@@ -130,6 +145,7 @@ enum HandleBridge: String {
         switch self {
         case .bluesky:   await BlueskyIngest.refresh(context: context)
         case .farcaster: await FarcasterIngest.refresh(context: context)
+        case .pinterest: await PinterestIngest.refresh(context: context)
         }
     }
 }

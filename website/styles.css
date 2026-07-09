@@ -99,6 +99,7 @@ nav { display: flex; align-items: center; justify-content: space-between; paddin
 .ai-steam     { background: #1b2838; }
 .ai-obsidian  { background: #7c3aed; }
 .ai-twitch    { background: #9146ff; }
+.ai-pinterest { background: #e60023; }
 .ai-more      { background: var(--surface-2); color: var(--muted); }
 .ai-more span { font-size: 20px; font-weight: 800; letter-spacing: -1px; line-height: 1; }
 

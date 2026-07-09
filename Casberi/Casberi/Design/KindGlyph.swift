@@ -120,6 +120,7 @@ enum BridgeGlyph {
         case "readwise":  return "book"
         case "rss":       return "dot.radiowaves.up.forward"
         case "farcaster": return "at"
+        case "pinterest": return "pin"
         case "bluesky":   return "at"
         case "cal.com", "calendly": return "calendar"
         case "steam":     return "gamecontroller"

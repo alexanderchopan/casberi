@@ -49,6 +49,14 @@ enum ProbeHooks {
                 NSLog("Farcaster probe: %@ new things", n.map(String.init) ?? "FAILED")
             }
         },
+        // `-pinterestUser <username>` connects Pinterest headlessly.
+        Hook(key: "pinterestUser") { name, context in
+            PinterestStore.shared.username = PinterestStore.normalize(name)
+            Task { @MainActor in
+                let n = await PinterestIngest.refresh(context: context)
+                NSLog("Pinterest probe: %@ new things", n.map(String.init) ?? "FAILED")
+            }
+        },
         // `-bskyHandle <handle>` connects Bluesky headlessly.
         Hook(key: "bskyHandle") { handle, context in
             BlueskyStore.shared.handle = BlueskyStore.normalize(handle)

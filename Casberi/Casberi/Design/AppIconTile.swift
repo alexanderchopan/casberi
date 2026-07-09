@@ -54,6 +54,7 @@ extension DS {
         case "readwise":            return Color.fixed("#087bff")
         case "rss":                 return Color.fixed("#f26522")
         case "farcaster":           return Color.fixed("#855dcd")
+        case "pinterest":           return Color.fixed("#e60023")
         case "bluesky":             return Color.fixed("#0285ff")
         case "cal.com":             return Color.fixed("#292929")
         case "calendly":            return Color.fixed("#006bff")

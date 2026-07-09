@@ -18,6 +18,9 @@ enum BridgeRefresh {
         if !FarcasterStore.shared.username.isEmpty {
             Task { @MainActor in _ = await FarcasterIngest.refresh(context: context) }
         }
+        if !PinterestStore.shared.username.isEmpty {
+            Task { @MainActor in _ = await PinterestIngest.refresh(context: context) }
+        }
         for bridge in TokenBridge.allCases where bridge.connected {
             Task { @MainActor in _ = await TokenIngest.refresh(bridge, context: context) }
         }
