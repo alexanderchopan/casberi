@@ -60,12 +60,15 @@ struct BandRow: View {
         // that line, not floated to the row's vertical center (ruling
         // 2026-07-09: two lines, never one, never unbounded).
         HStack(alignment: .top, spacing: DS.Space.s3) {
-            // A pin (or any thing that captured a lead image) leads with its
-            // thumbnail instead of the source glyph — the image IS the point of
-            // a Pinterest feed. Same 26pt leading slot, so the row keeps its
-            // height and rhythm (shaped-feeds rule 2).
+            // A thing with its own image leads with the image, not a glyph —
+            // it IS the point of the row (a pin's photo, a screenshot's
+            // capture). Same 26pt leading slot, so the row keeps its height
+            // and rhythm (shaped-feeds rule 2). Remote pins load from a URL;
+            // screenshots from their local PHAsset via PhotoWell.
             if let image = thing.previewImageURL, !image.isEmpty {
                 RemoteThumb(urlString: image, size: 26)
+            } else if thing.kind == .screenshot, thing.sourceRef != nil {
+                PhotoWell(thing: thing, size: 26)
             } else {
                 BridgeIcon(name: thing.source, size: 26)
             }
