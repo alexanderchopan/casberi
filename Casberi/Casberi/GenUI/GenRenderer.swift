@@ -2,6 +2,7 @@ import SwiftUI
 import SwiftData
 import Photos
 import CoreImage
+import Charts
 
 /// The gen UI renderer — recursive over the element map, faithful to the v94
 /// prototype's RenderEl. A missing reference renders a skeleton in a row/tile
@@ -111,6 +112,11 @@ struct GenRender: View {
         case "Insight":     GenInsight(el: el).mountIn()
         case "Widget":      GenWidget(el: el, els: els).mountIn()
         case "Row":         GenRow(el: el).mountIn()
+        // Pinned financial things earn their live shape on Home (ruling
+        // 2026-07-09): a watched token draws its chart, a watched wallet its
+        // holdings treemap — not a plain row.
+        case "TokenCard":    GenTokenCard(el: el).mountIn()
+        case "WalletHoldings": GenWalletHoldings().mountIn()
         case "Suggest":     GenSuggest().mountIn()
         case "Skeleton":    GenSkeletonRow().mountIn()
         case "Chip":        GenChip(el: el).mountIn()
@@ -340,6 +346,115 @@ private struct GenRow: View {
             guard !thingID.isEmpty else { return }
             DSHaptic.selection()
             openThing?(thingID)
+        }
+    }
+}
+
+/// TokenCard(title, chain, address, thingId) — a pinned Dexscreener token's
+/// live chart on Home: price + 24h change over the same Swift-Charts sparkline
+/// the sheet draws (GeckoTerminal OHLCV, no web view). Tap opens the full
+/// sheet. A dead/illiquid token (no pool) falls back to a tappable title card.
+private struct GenTokenCard: View {
+    let el: GenEl
+    @Environment(\.genCoverTap) private var openThing
+    @State private var chart: TokenChart?
+    @State private var loaded = false
+
+    private var chain: String { el.str(1) }
+    private var address: String { el.str(2) }
+    private var thingID: String { el.str(3) }
+    private var up: Bool { (chart?.change24h ?? 0) >= 0 }
+    private var accent: Color { up ? DS.confirm : DS.destructive }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+            HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+                Text(el.str(0)).dsText(.heading17).foregroundStyle(DS.textPrimary).lineLimit(1)
+                Spacer(minLength: DS.Space.s2)
+                if let chart {
+                    Text(changeText(chart.change24h)).dsText(.callout15).foregroundStyle(accent)
+                }
+            }
+            if let chart {
+                HStack(alignment: .firstTextBaseline) {
+                    Text(priceText(chart.price)).dsText(.heading22).foregroundStyle(DS.textPrimary)
+                    Spacer()
+                    Text("24H").dsText(.label12).foregroundStyle(DS.textTertiary)
+                }
+                Chart(Array(chart.closes.enumerated()), id: \.offset) { i, close in
+                    LineMark(x: .value("t", i), y: .value("price", close))
+                        .interpolationMethod(.catmullRom)
+                        .foregroundStyle(accent)
+                    AreaMark(x: .value("t", i), y: .value("price", close))
+                        .interpolationMethod(.catmullRom)
+                        .foregroundStyle(accent.opacity(0.12))
+                }
+                .chartXAxis(.hidden)
+                .chartYAxis(.hidden)
+                .chartYScale(domain: .automatic(includesZero: false))
+                .frame(height: 88)
+            } else if loaded {
+                Text("Chart unavailable — tap to open")
+                    .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+            } else {
+                RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous)
+                    .fill(DS.fillFaint).frame(height: 88)
+                    .overlay(ProgressView())
+            }
+        }
+        .padding(DS.Space.s4)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(DS.surfaceSheet,
+                    in: RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
+        .padding(.horizontal, DS.Space.s4)
+        .padding(.top, DS.Space.s4)
+        .contentShape(RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
+        .onTapGesture {
+            guard !thingID.isEmpty else { return }
+            DSHaptic.selection()
+            openThing?(thingID)
+        }
+        .task(id: address) {
+            guard !address.isEmpty else { loaded = true; return }
+            chart = await TokenChart.fetch(chain: chain, address: address)
+            loaded = true
+        }
+    }
+
+    private func priceText(_ p: Double) -> String {
+        if p >= 1 { return String(format: "$%.2f", p) }
+        if p >= 0.01 { return String(format: "$%.4f", p) }
+        return String(format: "$%.8f", p)
+    }
+    private func changeText(_ c: Double) -> String {
+        String(format: "%@%.1f%%", c >= 0 ? "+" : "", c * 100)
+    }
+}
+
+/// WalletHoldings() — the holdings treemap pinned to Home. It fetches its own
+/// live top-5-by-value (the same Alchemy Portfolio call WalletScreen uses) and
+/// paints it through the engine, so Home stays a document that names a fact
+/// while the smart async work lives here. Empty holdings render nothing.
+private struct GenWalletHoldings: View {
+    @State private var stream = GenStream()
+    @State private var loaded = false
+
+    var body: some View {
+        Group {
+            if !stream.els.isEmpty {
+                GenRender(id: "root", els: stream.els)
+            } else if !loaded {
+                RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous)
+                    .fill(DS.fillFaint).frame(height: 150)
+                    .overlay(ProgressView())
+                    .padding(.horizontal, DS.Space.s4)
+                    .padding(.top, DS.Space.s4)
+            }
+            // loaded + empty → nothing (no priced holdings to show, honestly).
+        }
+        .task {
+            if let doc = await WalletIngest.holdingsChart() { stream.paint(doc) }
+            loaded = true
         }
     }
 }

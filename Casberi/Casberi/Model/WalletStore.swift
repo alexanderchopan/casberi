@@ -28,7 +28,16 @@ final class WalletStore {
         didSet { persist() }
     }
 
+    /// Whether the person pinned their holdings treemap to Home (ruling
+    /// 2026-07-09: a wallet isn't a thing, so pinning it is an explicit choice
+    /// made on the Wallet screen, not a per-thing pin).
+    var pinnedToHome: Bool {
+        didSet { UserDefaults.standard.set(pinnedToHome, forKey: Self.pinKey) }
+    }
+    private static let pinKey = "wallet.pinnedToHome"
+
     private init() {
+        pinnedToHome = UserDefaults.standard.bool(forKey: Self.pinKey)
         if let data = UserDefaults.standard.data(forKey: Self.key),
            let saved = try? JSONDecoder().decode([WatchedAddress].self, from: data) {
             addresses = saved

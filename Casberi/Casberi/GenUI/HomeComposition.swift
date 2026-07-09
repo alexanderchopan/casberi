@@ -375,14 +375,36 @@ enum HomeComposition {
 
     /// Feed pins surface on Home too (ruling 2026-07-06): a pin means "keep
     /// this in view", and Home is the view. Newest first, capped at 3.
+    ///
+    /// Financial pins earn their live shape (ruling 2026-07-09): a wallet
+    /// pinned from the Wallet screen leads with its holdings treemap, and a
+    /// pinned Dexscreener token draws its live chart card — the rest stay rows
+    /// in the one "Pinned" card.
     private static func appendPinned(_ things: [Thing],
                                      to doc: inout [String],
                                      rootRefs: inout [String]) {
+        // Wallet holdings, when pinned, lead the pinned area — a portfolio glance.
+        if WalletStore.shared.pinnedToHome, !WalletStore.shared.addresses.isEmpty {
+            doc.append("walletHoldings = WalletHoldings()")
+            rootRefs.append("walletHoldings")
+        }
+
         let pinned = things.filter(\.pinned).prefix(3)
         guard !pinned.isEmpty else { return }
-        let ids = pinned.indices.map { "pn\($0)" }
+
+        var rowThings: [Thing] = []
+        for (i, t) in pinned.enumerated() {
+            if t.source == "Dexscreener", let route = TokenChart.route(from: t.content) {
+                doc.append("tok\(i) = TokenCard(\(q(t.title)), \(q(route.chain)), \(q(route.address)), \(q(t.id.uuidString)))")
+                rootRefs.append("tok\(i)")
+            } else {
+                rowThings.append(t)
+            }
+        }
+        guard !rowThings.isEmpty else { return }
+        let ids = rowThings.indices.map { "pn\($0)" }
         doc.append("pinnedW = Widget(\(q("Pinned")), null, [\(ids.joined(separator: ", "))])")
-        for (i, t) in pinned.enumerated() { doc.append(row(id: "pn\(i)", t)) }
+        for (i, t) in rowThings.enumerated() { doc.append(row(id: "pn\(i)", t)) }
         rootRefs.append("pinnedW")
     }
 

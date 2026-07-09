@@ -57,6 +57,7 @@ struct WalletScreen: View {
                     .listRowBackground(DS.surfaceSheet)
                 }
             }
+            if !wallet.addresses.isEmpty { pinSection.listRowSeparator(.hidden) }
             if !recent.isEmpty { recentSection.listRowSeparator(.hidden) }
             footerSection.listRowSeparator(.hidden)
         }
@@ -203,6 +204,30 @@ struct WalletScreen: View {
         } header: {
             Text("Recent").dsText(.label12)
                 .foregroundStyle(DS.textSecondary)
+        }
+    }
+
+    /// Pin the holdings treemap to Home — a wallet isn't a thing you can pin
+    /// from a row, so the choice lives here (ruling 2026-07-09).
+    private var pinSection: some View {
+        Section {
+            Toggle(isOn: Binding(
+                get: { wallet.pinnedToHome },
+                set: { on in
+                    wallet.pinnedToHome = on
+                    DSHaptic.tap()
+                    CorpusSignal.shared.bump()   // Home recomposes with/without it
+                    chrome.flash(on ? "Holdings pinned to Home" : "Holdings unpinned")
+                }
+            )) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Pin holdings to Home").dsText(.body17).foregroundStyle(DS.textPrimary)
+                    Text("Your holdings treemap shows on Home.")
+                        .dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                }
+            }
+            .tint(DS.tint)
+            .listRowBackground(DS.surfaceSheet)
         }
     }
 
