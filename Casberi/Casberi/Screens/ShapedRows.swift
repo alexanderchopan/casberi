@@ -91,15 +91,17 @@ struct ApprovalCard: View {
     var onDeny: () -> Void
 
     /// WHO is asking leads; the route it came through reads as a route
-    /// ("CLAUDE-CODE · VIA OPENCLAW"), and the machine name stays in the
+    /// ("Claude-code · via OpenClaw"), and the machine name stays in the
     /// sheet — three flat brand names explained nothing (ruling 2026-07-06).
+    /// Sentence case only — no ALL-CAPS eyebrows (design law, 2026-07-08).
     private var eyebrow: String {
         let asker = thing.provenance.agent ?? thing.provenance.app
         var parts = [asker]
         if thing.provenance.app.lowercased() != asker.lowercased() {
             parts.append("via \(thing.provenance.app)")
         }
-        return parts.joined(separator: " · ").uppercased()
+        let joined = parts.joined(separator: " · ")
+        return joined.isEmpty ? joined : joined.prefix(1).uppercased() + joined.dropFirst()
     }
 
     var body: some View {
