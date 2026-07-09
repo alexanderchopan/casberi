@@ -194,6 +194,51 @@ enum WalletIngest {
             .map { "\($0.key) \(max(1, Int($0.value.squareRoot() * 10)))" }
     }
 
+    /// A step-by-step trace of the holdings path for DiagnosticsScreen — the
+    /// same call `topHoldings` makes, reporting each step's real result so a
+    /// screenshot says WHY the treemap is (or isn't) on Home. Distinguishes an
+    /// unreachable API from a wallet that simply holds nothing priced (all
+    /// airdrop spam) — the latter is correct-but-empty, not a failure.
+    @MainActor
+    static func holdingsDiagnostic() async -> [String] {
+        var out: [String] = []
+        let watched = WalletStore.shared.addresses.map(\.address)
+        guard !watched.isEmpty else { return ["No watched address"] }
+        let addresses = await hexAddresses(watched)
+        out.append("Resolved \(addresses.count)/\(watched.count) address(es) to hex")
+        guard !addresses.isEmpty else {
+            out.append("FAIL address/ENS resolution — nothing to query")
+            return out
+        }
+
+        let networks = chains.map(\.network)
+        let url = "https://api.g.alchemy.com/data/v1/\(alchemyKey)/assets/tokens/by-address"
+        let body: [String: Any] = [
+            "addresses": addresses.map { ["address": $0, "networks": networks] },
+            "withMetadata": true, "withPrices": true,
+        ]
+        guard let root = await IngestSupport.postJSON(url, body: body) as? [String: Any] else {
+            out.append("FAIL Portfolio API unreachable (no 200 JSON) — key or network")
+            return out
+        }
+        guard let data = root["data"] as? [String: Any],
+              let tokens = data["tokens"] as? [[String: Any]] else {
+            out.append("FAIL Portfolio API returned no data.tokens (unexpected shape)")
+            return out
+        }
+        let priced = tokens.filter { (firstPrice($0["tokenPrices"]) ?? 0) > 0 }.count
+        out.append("Tokens returned: \(tokens.count), of which priced: \(priced)")
+        let cells = await topHoldings()
+        if let cells {
+            out.append("OK holdings: \(cells.count) cells — \(cells.joined(separator: ", "))")
+        } else if priced == 0 {
+            out.append("Empty (correct): nothing priced held — only unpriced/airdrop tokens")
+        } else {
+            out.append("FAIL: \(priced) priced token(s) but all under the $1 floor")
+        }
+        return out
+    }
+
     private static func firstPrice(_ raw: Any?) -> Double? {
         guard let arr = raw as? [[String: Any]], let first = arr.first else { return nil }
         if let s = first["value"] as? String { return Double(s) }
