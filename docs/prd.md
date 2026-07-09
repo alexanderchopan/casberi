@@ -638,6 +638,19 @@ screens) was tried and retired 2026-07-06 for the same reason a
 banner stays Home-only and optional: one image, one screen, one clear
 purpose — not a return to that retired feature.
 
+## 36c. Home: the "Noticed" insight line is gone (2026-07-09)
+
+`insightLine()` was a plain deterministic rule (co-occurrence counting
+— "a screenshot matches this session's chat", "this project spans 3
+apps"), not model-driven synthesis, and it cost real screen space
+above things the person already knows they want to see (Pinned).
+Removed from Home entirely, function deleted (dead once its one call
+site was gone). The `Insight` component itself stays — Ask answers,
+project-detail empty states, and the composer's "Thinking…" line all
+still use it; only Home's automatic use of it is gone. If a genuinely
+synthesized version (the on-device model writing this line, not a
+fixed rule) is wanted later, it's a fresh build, not a revival of this.
+
 ## 36b. Home order: Pinned leads the map (2026-07-09)
 
 Pinned (and the wallet holdings treemap, when pinned) now compose

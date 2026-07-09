@@ -51,12 +51,6 @@ enum HomeComposition {
             rootRefs.append("quiet")
         }
 
-        // Insight — one cross-source connection, only when the corpus proves one.
-        if let line = insightLine(projects: projects) {
-            doc.append("insight = Insight(\(q(line)))")
-            rootRefs.append("insight")
-        }
-
         // Pinned — things the person chose to keep in view, ahead of the map
         // (ruling 2026-07-09): a deliberate choice outranks an automatic
         // clustering, and it shouldn't cost a scroll to reach. User-chosen,
@@ -300,22 +294,6 @@ enum HomeComposition {
 
     private static func tagCounts(things: [Thing]) -> [(String, Int)] {
         projectClusters(things: things).map { ($0.name, $0.things.count) }
-    }
-
-    /// One cross-source connection the corpus proves, or nothing.
-    private static func insightLine(projects: [Cluster]) -> String? {
-        for c in projects {
-            let kinds = Set(c.things.map(\.kind))
-            let sources = Set(c.things.map(\.source))
-            if kinds.contains(.screenshot) && kinds.contains(.chat) && sources.count >= 2 {
-                let shots = c.things.filter { $0.kind == .screenshot }.count
-                return "\(shots == 1 ? "A screenshot matches" : "\(shots) screenshots match") the \(c.name) session."
-            }
-        }
-        if let c = projects.first(where: { Set($0.things.map(\.source)).count >= 3 }) {
-            return "\(c.name) now spans \(Set(c.things.map(\.source)).count) apps."
-        }
-        return nil
     }
 
     /// Links old enough to be slipping away (3+ days), oldest last so the
