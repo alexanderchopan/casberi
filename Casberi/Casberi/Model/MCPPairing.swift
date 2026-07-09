@@ -6,6 +6,13 @@ import Security
 /// The scanned payload also names the server endpoint, which is a placeholder
 /// until the Goal-3 server exists: the token is real, the wire is not yet.
 enum MCPPairing {
+    /// Ship gate, same pattern as `SharedStore.cloudKitReady`: every pairing
+    /// surface (chart Pair capsule, carousel story, product-page button) hides
+    /// until a real server answers the payload's endpoint — a scannable code
+    /// with no wire is a dead control. Ungated, Claude is a Soon row like any
+    /// unwired offer. DEBUG `-openPair` still opens the sheet for design work.
+    static let transportReady = false
+
     private static let service = "com.casberi.mcp.pairing"
     private static let account = "pairing-token"
 

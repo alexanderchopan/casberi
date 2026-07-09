@@ -81,7 +81,7 @@ struct AppDetailScreen: View {
             VerbCapsule(verb: .open) {
                 if let id = bridge?.id { openBridge = BridgeRouter.destination(forID: id) }
             }
-        } else if offer.name == "Claude" {
+        } else if offer.name == "Claude" && MCPPairing.transportReady {
             VerbCapsule(verb: .pair) { pairing = true }
         } else if offer.connectable {
             if offer.needsSetup {
