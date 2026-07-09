@@ -29,6 +29,7 @@ struct HomeScreen: View {
     @Query(sort: \Thing.capturedAt, order: .reverse) private var things: [Thing]
     @Environment(ShellChrome.self) private var chrome
     @Environment(BridgeStore.self) private var bridges
+    @Environment(\.openURL) private var openURL
     @Bindable private var route = HomeRoute.shared
     @State private var stream = GenStream()
     @State private var openProject: ProjectRoute?
@@ -69,7 +70,18 @@ struct HomeScreen: View {
                          onApps: { route.push = .apps })
             }
             // Topic blocks open project detail, not a Feed filter (gap §9.1).
-            .environment(\.genProjectTap) { openProject = ProjectRoute(name: $0) }
+            // The source-fallback map's cells name APPS, not tags — those open
+            // the source's feed (a tag view for a nonexistent tag is a dead end).
+            .environment(\.genProjectTap) { name in
+                let isTag = things.contains { $0.tags.contains(name) }
+                if !isTag, things.contains(where: { $0.source == name }) {
+                    FeedFilter.shared.source = name
+                    FeedFilter.shared.tag = "All"
+                    if let url = URL(string: "casberi://feed") { openURL(url) }
+                } else {
+                    openProject = ProjectRoute(name: name)
+                }
+            }
             // The cover opens the thing it shows.
             .environment(\.genCoverTap) { id in
                 if let thing = things.first(where: { $0.id.uuidString == id }) {

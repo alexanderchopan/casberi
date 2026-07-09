@@ -97,7 +97,7 @@ private struct ScreenshotContent: View {
         else { return }
         let options = PHImageRequestOptions()
         options.deliveryMode = .opportunistic
-        options.isNetworkAccessAllowed = false
+        options.isNetworkAccessAllowed = true   // iCloud-optimized originals
         PHImageManager.default().requestImage(
             for: asset,
             targetSize: CGSize(width: 800, height: 800),
