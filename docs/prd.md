@@ -649,6 +649,22 @@ Black is the calm dark field the content floats on; a chosen Banner
 (Settings → Banner, a color or photo) is how color comes back, opt-in.
 The Banner tile's unset preview shows black to match.
 
+## 36g. Home: what landed today rides the cover as chips (2026-07-09)
+
+The day's kind counts moved INTO the cover — one tappable chip row under
+the title (kind hue capsule, glyph, count; tap → Feed filtered to that
+kind) — and the standalone "What landed today" pills section at the
+bottom of Home is gone, so Pinned and the maps start right under the
+banner. The counts ARE the subline: the word subline ("project · time" /
+"Kind · Source") returns only when nothing landed today. Chips count
+today only, never approvals (the cover states what landed, never what's
+waiting on the person — same guardrail as the cover lead). The weekend
+cover carries no chips: it is a week recap and its subline already tells
+that story; today-only counts under "your week, banked" would misread as
+the week. A set banner reserves a constant 178pt band whether or not
+chips arrive — the cover's height never depends on the chips arg, which
+streams in last (keying on it made the banner jump mid-stream).
+
 ## 36c. Home: the "Noticed" insight line is gone (2026-07-09)
 
 `insightLine()` was a plain deterministic rule (co-occurrence counting
