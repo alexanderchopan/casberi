@@ -638,6 +638,14 @@ screens) was tried and retired 2026-07-06 for the same reason a
 banner stays Home-only and optional: one image, one screen, one clear
 purpose — not a return to that retired feature.
 
+## 36b. Home order: Pinned leads the map (2026-07-09)
+
+Pinned (and the wallet holdings treemap, when pinned) now compose
+right after cover/quiet/insight, ahead of "What's going on" — a
+deliberate choice outranks an automatic clustering, and reaching it
+shouldn't cost a scroll past a treemap the person didn't ask for.
+Applies to morning, evening, and weekend alike.
+
 ## 36. Bridge selection ruling: live data only (2026-07-09)
 
 No new import bridges. A bridge whose data arrives via a request-and-wait export (TikTok's 1–4 day JSON, Tinder's 24–48h zip, IMDb's CSV) lands stale and never updates — the person asked for live data or nothing. The ChatGPT import predates this ruling and stays (its framing is explicitly a backfill, and OpenAI offers no live read). Evaluated and declined under this ruling: TikTok, Tinder, IMDb (viable exports, stale), Linktree/Rotten Tomatoes/CardPointers (no surface at all), Duolingo (unofficial API only — ToS-gray breaks the honesty rule), Credit Karma/NerdWallet/Acorns (aggregator-only; needs the post-M2 server), Fileverse (E2EE by design; revisit if they ship a hosted API), Fantastical (already covered — it's a client over the calendars EventKit reads). Pinterest passed: their public per-user RSS feed is live and official-enough (a published feed, not a scraped page).

@@ -57,6 +57,16 @@ enum HomeComposition {
             rootRefs.append("insight")
         }
 
+        // Pinned — things the person chose to keep in view, ahead of the map
+        // (ruling 2026-07-09): a deliberate choice outranks an automatic
+        // clustering, and it shouldn't cost a scroll to reach. User-chosen,
+        // so it passes the no-obligations rule: Casberi never picked these.
+        appendPinned(things, to: &doc, rootRefs: &rootRefs)
+        appendWalletHoldings(walletHoldings, to: &doc, rootRefs: &rootRefs)
+
+        // Where the map belongs even when it didn't compose yet — the starter
+        // preview slots in here, not at the tail.
+        let mapSlot = rootRefs.count
         // Projects — an interactive treemap: magnitude fill, tap opens the
         // project (amendment: the tile bento died; the map is the projects).
         if !projects.isEmpty {
@@ -71,19 +81,10 @@ enum HomeComposition {
                 rootRefs.append("map")
             }
         }
-        // Where the map belongs even when it didn't compose yet — the starter
-        // preview slots in here, not at the tail (review 2026-07-08: a
-        // sparse corpus's pinned card was landing ABOVE the map preview).
-        let mapSlot = rootRefs.count
         if let pills = kindPillItems(things) {
             doc.append("kindPills = KindPills(\(q(kindPillEyebrow(things))), \(pills))")
             rootRefs.append("kindPills")
         }
-
-        // Pinned — things the person chose to keep in view. User-chosen, so
-        // it passes the no-obligations rule: Casberi never picked these.
-        appendPinned(things, to: &doc, rootRefs: &rootRefs)
-        appendWalletHoldings(walletHoldings, to: &doc, rootRefs: &rootRefs)
 
         // Threads resurface what's slipping away — links older than 3 days
         // (yesterday's links are Feed's top rows; mirroring them is filler).
@@ -118,6 +119,11 @@ enum HomeComposition {
             rootRefs.append("quiet")
         }
 
+        // Pinned rides evening too — same rule as morning, ahead of the map.
+        appendPinned(things, to: &doc, rootRefs: &rootRefs)
+        appendWalletHoldings(walletHoldings, to: &doc, rootRefs: &rootRefs)
+
+        let mapSlot = rootRefs.count
         if !projects.isEmpty {
             let items = projects.prefix(6).map { "\($0.name) \($0.things.count)" }
             doc.append("map = TagMap(\(q("What's going on")), null, [\(items.joined(separator: ", "))])")
@@ -130,15 +136,10 @@ enum HomeComposition {
                 rootRefs.append("map")
             }
         }
-        let mapSlot = rootRefs.count
         if let pills = kindPillItems(things) {
             doc.append("kindPills = KindPills(\(q(kindPillEyebrow(things))), \(pills))")
             rootRefs.append("kindPills")
         }
-
-        // Pinned rides evening too — same rule as morning.
-        appendPinned(things, to: &doc, rootRefs: &rootRefs)
-        appendWalletHoldings(walletHoldings, to: &doc, rootRefs: &rootRefs)
 
         // Threads — resurfacing, not mirroring (see morning).
         let links = resurfaceable(things).prefix(2)
@@ -187,6 +188,9 @@ enum HomeComposition {
             rootRefs.append("cover")
         }
 
+        appendPinned(things, to: &doc, rootRefs: &rootRefs)
+        appendWalletHoldings(walletHoldings, to: &doc, rootRefs: &rootRefs)
+
         if !projects.isEmpty {
             let items = projects.prefix(6).map { "\($0.name) \($0.things.count)" }
             doc.append("map = TagMap(\(q("The week")), \(q("What it was about")), [\(items.joined(separator: ", "))])")
@@ -196,9 +200,6 @@ enum HomeComposition {
             doc.append("kindPills = KindPills(\(q("What it held")), \(pills))")
             rootRefs.append("kindPills")
         }
-
-        appendPinned(things, to: &doc, rootRefs: &rootRefs)
-        appendWalletHoldings(walletHoldings, to: &doc, rootRefs: &rootRefs)
 
         let links = resurfaceable(things).prefix(2)
         if !links.isEmpty {
