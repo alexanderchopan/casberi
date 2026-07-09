@@ -55,14 +55,18 @@ struct BandRow: View {
     }
 
     var body: some View {
-        HStack(spacing: DS.Space.s3) {
+        // Top-aligned so a wrapping title grows DOWNWARD from the first
+        // line — the icon and the time/project stack stay pinned beside
+        // that line, not floated to the row's vertical center (ruling
+        // 2026-07-09: two lines, never one, never unbounded).
+        HStack(alignment: .top, spacing: DS.Space.s3) {
             BridgeIcon(name: thing.source, size: 26)
             Text(titleText)
                 .dsText(.body17)
                 .fontWeight(emphasized ? .semibold : .regular)
                 .foregroundStyle(done ? DS.textTertiary : DS.textPrimary)
                 .strikethrough(done, color: DS.textTertiary)
-                .lineLimit(1)
+                .lineLimit(2)
                 .frame(maxWidth: .infinity, alignment: .leading)
             VStack(alignment: .trailing, spacing: 1) {
                 if live {
@@ -343,7 +347,7 @@ struct CheckRow: View {
     }
 
     var body: some View {
-        HStack(spacing: DS.Space.s3) {
+        HStack(alignment: .top, spacing: DS.Space.s3) {
             Button(action: onToggle) {
                 ZStack {
                     Circle()
@@ -365,7 +369,7 @@ struct CheckRow: View {
                 .dsText(.body17)
                 .foregroundStyle(done ? DS.textTertiary : DS.textPrimary)
                 .strikethrough(done, color: DS.textTertiary)
-                .lineLimit(1)
+                .lineLimit(2)
                 .frame(maxWidth: .infinity, alignment: .leading)
             VStack(alignment: .trailing, spacing: 1) {
                 LiveTimeText(date: thing.capturedAt)

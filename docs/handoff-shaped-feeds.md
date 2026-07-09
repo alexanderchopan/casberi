@@ -37,7 +37,12 @@ a text list of photo titles. The chips change the query, not the shape.
 
 ## DECISION — Feed "All" (mock A2: kind-aware rows)
 
-- Rows stay fixed-height, one line + optional 13pt subline. Per kind:
+- Rows keep their rhythm within a TIGHT height set — titles wrap to at most
+  two lines, never one, never unbounded (amended 2026-07-09: a one-line
+  headline/caption hid the very content the row exists to show; unbounded
+  wrapping let a pasted paragraph eat the screen). Two lines completes almost
+  every real title; the rest lives a tap away in the sheet. Optional 13pt
+  subline unchanged. Per kind:
   - event → right-aligned tabular time (58pt) + 3pt rail bar (past gray300 +
     strikethrough/tertiary, next `tint` + bold + "in N min" trailing, later gray200)
   - transaction → verb leads in a fixed column ("Swapped"/"Received"/…);
