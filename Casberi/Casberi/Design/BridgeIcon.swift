@@ -38,8 +38,11 @@ struct BridgeIcon: View {
                 .fill(brand.opacity(scheme == .light ? 0.24 : 0.18))
                 .frame(width: size, height: size)
                 .overlay(
+                    // 0.45 read as undersized for glyphs with more internal
+                    // whitespace ("checklist", "photo") — several symbols
+                    // looked lost in their badge (report 2026-07-09).
                     Image(systemName: BridgeGlyph.symbol(for: name))
-                        .font(.system(size: size * 0.45,
+                        .font(.system(size: size * 0.54,
                                       weight: scheme == .light ? .semibold : .medium))
                         .foregroundStyle(glyph)
                 )
