@@ -730,14 +730,31 @@ private struct GenTagMap: View {
         return wd == 1 || wd == 7
     }
 
+    /// "@pin " leading the eyebrow marks a pin-born map — a pinned wallet's
+    /// holdings on Home (ruling 2026-07-10): the Pinned card's tilted pin,
+    /// small and in the eyebrow's own ink, says "here because you pinned
+    /// it" in the vocabulary the screen already taught. GenWidget's "@pin"
+    /// convention, carried into the TagMap idiom. The marker is
+    /// presentation only — every text site reads the stripped title.
+    private var pinBorn: Bool { el.str(0).hasPrefix("@pin ") }
+    private var eyebrow: String {
+        pinBorn ? String(el.str(0).dropFirst("@pin ".count)) : el.str(0)
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             if !el.str(0).isEmpty {
-                HStack {
-                    Text(el.str(0))
+                HStack(spacing: 7) {
+                    if pinBorn {
+                        Image(systemName: "pin.fill")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(DS.textSecondary)
+                            .rotationEffect(.degrees(-35), anchor: .bottomLeading)
+                            .accessibilityLabel("Pinned")
+                    }
+                    Text(eyebrow)
                         .dsText(.label12)
                         .foregroundStyle(DS.textSecondary)
-                        .padding(.leading, DS.Space.s4)
                     Spacer()
                     // The banked week is shareable (§6) — weekend only.
                     if let weekCard {
@@ -750,6 +767,7 @@ private struct GenTagMap: View {
                         .accessibilityLabel("Share your week")
                     }
                 }
+                .padding(.leading, DS.Space.s4)
                 // Air before the cells — with or without a subline (the map
                 // sat flush under the eyebrow when the subline was absent).
                 .padding(.bottom, el.str(1).isEmpty ? DS.Space.s3 : 0)
@@ -878,7 +896,7 @@ private struct GenTagMap: View {
         let range = "\(start.formatted(.dateTime.month(.abbreviated).day())) – \(end.formatted(.dateTime.month(.abbreviated).day()))"
         let card = VStack(alignment: .leading, spacing: DS.Space.s3) {
             VStack(alignment: .leading, spacing: 2) {
-                Text(el.str(0))
+                Text(eyebrow)   // stripped title — the "@pin" marker never leaves the app
                     .dsText(.label12)
                     .foregroundStyle(DS.textSecondary)
                 // The shared image says WHICH week — it leaves the app,
