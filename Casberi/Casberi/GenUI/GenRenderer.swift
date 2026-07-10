@@ -777,9 +777,15 @@ private struct GenTagMap: View {
                     } else {
                         Button {
                             DSHaptic.selection()
-                            projectTap?(item.tag)
+                            // A holdings cell has no project to open — the
+                            // whole map routes to the Wallet screen instead
+                            // of a dead-end empty tag view (2026-07-10).
+                            projectTap?(iconMode == "token" ? "@wallet" : item.tag)
                         } label: { label }
-                        .buttonStyle(PressSpring())
+                        // The Settings tiles' own press (settle + dim) — the
+                        // cells ARE tiles now, so they press like tiles
+                        // (2026-07-10, user).
+                        .buttonStyle(DSTileButtonStyle())
                     }
                 }
                 .scaleEffect(!isWeekend && animated && !on ? 0.92 : 1)
@@ -1169,7 +1175,7 @@ private struct GenCover: View {
         .overlay(alignment: .topLeading) {
             if !el.str(4).isEmpty {
                 Text(el.str(4))
-                    .font(.system(size: 13, weight: .semibold))
+                    .dsText(.label12)
                     .foregroundStyle(coverInk.opacity(0.92))
                     .padding(.top, topInset + DS.Space.s2)
                     .padding(.leading, DS.Space.s4)
@@ -1192,9 +1198,9 @@ private struct GenCover: View {
                     .dsText(.label12)
                     .foregroundStyle(DS.textSecondary)
                 Text(el.str(1))
-                    // SF Rounded stays — still the display tier (36g), just
-                    // no longer shouting: 19pt in a card, not 26pt full-bleed.
-                    .font(.system(size: 19, weight: .semibold, design: .rounded))
+                    // The display-tier ramp token (36g: SF Rounded lives
+                    // there) — no off-ramp sizes (2026-07-10, user).
+                    .dsText(.heading22)
                     .foregroundStyle(DS.textPrimary)
                     .lineLimit(2)
                     .minimumScaleFactor(0.7)
@@ -1258,7 +1264,7 @@ private struct KindCountRow: View {
                             .font(.system(size: 14, weight: .medium))
                             .foregroundStyle(hue)
                         Text("\(item.n)")
-                            .font(.system(size: 13, weight: .semibold))
+                            .dsText(.label12)
                             .foregroundStyle(ink)
                             .contentTransition(.numericText())
                             .animation(DS.Motion.standard, value: item.n)

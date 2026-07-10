@@ -36,6 +36,7 @@ struct HomeScreen: View {
     @State private var stream = GenStream()
     @State private var openProject: ProjectRoute?
     @State private var pinnedThing: Thing?
+    @State private var walletOpen = false
     @State private var walletHoldings: [WalletIngest.HoldingsGroup] = []
     @Namespace private var zoomNS
 
@@ -76,6 +77,9 @@ struct HomeScreen: View {
             // The source-fallback map's cells name APPS, not tags — those open
             // the source's feed (a tag view for a nonexistent tag is a dead end).
             .environment(\.genProjectTap) { name in
+                // A holdings cell routes to the Wallet screen — there's no
+                // per-token view to open (2026-07-10).
+                if name == "@wallet" { walletOpen = true; return }
                 let isTag = things.contains { $0.tags.contains(name) }
                 if !isTag, things.contains(where: { $0.source == name }) {
                     FeedFilter.shared.source = name
@@ -131,6 +135,9 @@ struct HomeScreen: View {
                 case .settings: SettingsScreen()
                 }
             }
+            .navigationDestination(isPresented: $walletOpen) {
+                BridgeDestinationView(destination: .wallet)
+            }
             }
         }
         .tint(DS.tint)
@@ -139,6 +146,7 @@ struct HomeScreen: View {
             route.push = nil
             openProject = nil
             pinnedThing = nil
+            walletOpen = false
         }
         // The corpus changed under the composition (a capture, the demo
         // seeds, the dissolve) — repaint instantly, no replayed entrance.

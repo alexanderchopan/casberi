@@ -980,3 +980,15 @@ something, never loops:
   paid for (2026-07-04). Long-press is the native equivalent here.
   Rows carry their thing id as a trailing doc arg; rows without one
   stay inert.
+
+**Amendment (same day, user): no off-ramp type, tile-grade cells, no
+dead-end taps.** Three hand-rolled text fonts died: the dateline is
+`label12` (the date is a label), the cover title is `heading22` (the
+display-tier token — the ad-hoc 19pt rounded is gone), the cover chips'
+counts are `label12`, and the Background tray's preview headline is
+`heading17`. Icon/glyph point sizes aren't typography and stay. Treemap
+cells press like the Settings tiles (`DSTileButtonStyle` — settle +
+dim) since they ARE tiles now. A holdings cell routes to the Wallet
+screen — tapping "ETH" used to open an empty project view for a tag
+that doesn't exist. A "What's going on" header count was considered
+and skipped (naggy).

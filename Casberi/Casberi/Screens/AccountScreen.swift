@@ -354,7 +354,7 @@ struct HomeCoverSheet: View {
             }
             VStack(alignment: .leading, spacing: 2) {
                 Text("Just landed").dsText(.label12).foregroundStyle(.white.opacity(0.7))
-                Text("Evening run").font(.system(size: 17, weight: .heavy)).foregroundStyle(.white)
+                Text("Evening run").dsText(.heading17).foregroundStyle(.white)
             }
             .padding(DS.Space.s3)
             .frame(maxWidth: .infinity, alignment: .leading)
