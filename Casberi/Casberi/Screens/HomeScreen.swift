@@ -81,7 +81,8 @@ struct HomeScreen: View {
                 // The shell's doors — shared with Feed (every tab root wears
                 // them): avatar → Settings, grid (+ attention dot) → Apps.
                 TopDoors(onSettings: { route.push = .settings },
-                         onApps: { route.push = .apps })
+                         onApps: { route.push = .apps },
+                         refreshSpin: refreshTick)
             }
             // Topic blocks open project detail, not a Feed filter (gap §9.1).
             // The source-fallback map's cells name APPS, not tags — those open

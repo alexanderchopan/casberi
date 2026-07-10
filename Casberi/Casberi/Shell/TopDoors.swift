@@ -9,6 +9,10 @@ import SwiftUI
 struct TopDoors: ToolbarContent {
     var onSettings: () -> Void
     var onApps: () -> Void
+    /// Bumped by Home's pull-to-refresh — the avatar does one full spin
+    /// while the refresh runs (2026-07-10): it's the person's own face
+    /// doing the work. 0 everywhere else (Feed never spins).
+    var refreshSpin: Int = 0
     /// Taps bounce their door (Telegram grammar, same as the tab icons).
     @State private var appsBounce = 0
     @State private var avatarBounce = 0
@@ -30,10 +34,29 @@ struct TopDoors: ToolbarContent {
                 avatarBounce += 1
                 onSettings()
             } label: {
-                AvatarDoor().modifier(DoorBounce(trigger: avatarBounce))
+                AvatarDoor()
+                    .modifier(DoorBounce(trigger: avatarBounce))
+                    .modifier(DoorSpin(trigger: refreshSpin))
             }
             .accessibilityLabel("Settings")
         }
+    }
+}
+
+/// One full turn per refresh — additive, so back-to-back pulls keep
+/// spinning forward instead of unwinding.
+private struct DoorSpin: ViewModifier {
+    let trigger: Int
+    @State private var angle: Double = 0
+
+    func body(content: Content) -> some View {
+        content
+            .rotationEffect(.degrees(angle))
+            .onChange(of: trigger) {
+                withAnimation(.spring(response: 0.8, dampingFraction: 0.8)) {
+                    angle += 360
+                }
+            }
     }
 }
 

@@ -1277,9 +1277,14 @@ private struct KindCountRow: View {
         }
     }
 
+    /// The entrance plays once per appearance (§3's rule): each chip pops
+    /// in with a small spring, 50ms after the last — the day's counts
+    /// arriving one by one (2026-07-10).
+    @State private var settled = false
+
     var body: some View {
         HStack(spacing: DS.Space.s2) {
-            ForEach(Array(items.enumerated()), id: \.offset) { _, item in
+            ForEach(Array(items.enumerated()), id: \.offset) { i, item in
                 let kind = ThingKind.from(typeTag: item.tag)
                 let hue = kind?.hue ?? DS.tint
                 Button {
@@ -1303,9 +1308,14 @@ private struct KindCountRow: View {
                     .contentShape(Capsule())
                 }
                 .buttonStyle(PressSpring())
+                .scaleEffect(settled ? 1 : 0.6)
+                .opacity(settled ? 1 : 0)
+                .animation(.spring(response: 0.35, dampingFraction: 0.6)
+                    .delay(Double(i) * 0.05), value: settled)
                 .accessibilityLabel("\(item.n) \(kind?.typeTagPlural ?? item.tag)")
             }
         }
+        .onAppear { settled = true }
     }
 }
 
