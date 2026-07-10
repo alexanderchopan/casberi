@@ -105,6 +105,14 @@ enum ProbeHooks {
             UserDefaults.standard.removeObject(forKey: "coach.pin.done")
             NSLog("Unpin probe: cleared, coach re-armed")
         },
+        // `-appleMusic YES` runs the real Apple Music connect+ingest and
+        // logs the outcome (or the underlying MusicKit error).
+        Hook(key: "appleMusic") { _, context in
+            Task { @MainActor in
+                let n = await AppleMusicIngest.connectAndIngest(context: context)
+                NSLog("Apple Music probe: %@", n.map { "\($0) in" } ?? "FAILED (see error above)")
+            }
+        },
         // `-connectPhotos YES` runs the real Photos connect+ingest.
         Hook(key: "connectPhotos") { _, context in
             Task { @MainActor in

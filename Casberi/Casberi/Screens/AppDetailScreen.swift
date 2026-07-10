@@ -6,6 +6,7 @@ import SwiftData
 /// commit. Identity rides the brand COLOR (legal everywhere); the honest
 /// availability state is stated plainly, never faked.
 struct AppDetailScreen: View {
+    @Environment(ShellChrome.self) private var chrome
     let offer: BridgeCatalog.Offer
     @Environment(BridgeStore.self) private var store
     @Environment(\.modelContext) private var modelContext
@@ -74,7 +75,9 @@ struct AppDetailScreen: View {
                 if offer.needsSetup {
                     openBridge = BridgeRouter.destination(forOffer: offer.name)
                 } else {
-                    BridgeConnect.connect(offer, store: store, context: modelContext)
+                    BridgeConnect.connect(offer, store: store, context: modelContext) { ok in
+                        if !ok { chrome.flash("Couldn't connect \(offer.name).") }
+                    }
                 }
             }
         } else if connected {
@@ -88,7 +91,9 @@ struct AppDetailScreen: View {
                 VerbCapsule(verb: .connect) { openBridge = BridgeRouter.destination(forOffer: offer.name) }
             } else {
                 VerbCapsule(verb: .connect) {
-                    BridgeConnect.connect(offer, store: store, context: modelContext)
+                    BridgeConnect.connect(offer, store: store, context: modelContext) { ok in
+                        if !ok { chrome.flash("Couldn't connect \(offer.name).") }
+                    }
                 }
             }
         } else {

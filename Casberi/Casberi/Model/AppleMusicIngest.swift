@@ -20,11 +20,25 @@ enum AppleMusicIngest {
         defer { running = false }
 
         let status = await MusicAuthorization.request()
-        guard status == .authorized else { return nil }
+        guard status == .authorized else {
+            NSLog("[Casberi] Apple Music: authorization %@", String(describing: status))
+            return nil
+        }
 
         var request = MusicRecentlyPlayedRequest<Song>()
         request.limit = 25
-        guard let response = try? await request.response() else { return nil }
+        let response: MusicRecentlyPlayedResponse<Song>
+        do {
+            response = try await request.response()
+        } catch {
+            // The one MusicKit failure the other Apple bridges can't have:
+            // recently-played needs the App ID registered for the MusicKit
+            // service (developer portal) AND an Apple Music subscription —
+            // authorization succeeding doesn't prove either. Log the real
+            // reason so Console/diagnostics can say which (2026-07-10).
+            NSLog("[Casberi] Apple Music request failed: %@", String(describing: error))
+            return nil
+        }
 
         let existing = IngestSupport.existingSourceRefs(context)
         var added = 0

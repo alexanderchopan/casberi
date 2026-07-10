@@ -12,6 +12,7 @@ import SwiftData
 /// row sizes to its content plus token padding (minHeight only where a target
 /// needs it). Capsule verbs are honest: Connect / Pair / Fix / Open / Soon.
 struct AppsScreen: View {
+    @Environment(ShellChrome.self) private var chrome
     @Environment(BridgeStore.self) private var store
     @Environment(\.modelContext) private var modelContext
     @State private var pairing = false
@@ -266,7 +267,9 @@ struct AppsScreen: View {
                 if offer.needsSetup {
                     setupRoute = BridgeRouter.destination(forOffer: offer.name)
                 } else {
-                    BridgeConnect.connect(offer, store: store, context: modelContext)
+                    BridgeConnect.connect(offer, store: store, context: modelContext) { ok in
+                        if !ok { chrome.flash("Couldn't connect \(offer.name).") }
+                    }
                 }
             }
         case .pair:
@@ -520,7 +523,9 @@ struct AppsScreen: View {
                 }
             } else {
                 VerbCapsule(verb: .connect) {
-                    BridgeConnect.connect(entry.offer, store: store, context: modelContext)
+                    BridgeConnect.connect(entry.offer, store: store, context: modelContext) { ok in
+                        if !ok { chrome.flash("Couldn't connect \(entry.offer.name).") }
+                    }
                 }
             }
         default:
