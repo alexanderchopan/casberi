@@ -92,8 +92,9 @@ final class Thing {
     /// bytes beside the store, and CloudKit mirroring carries them as a
     /// CKAsset — the M1 sync half of voice notes).
     @Attribute(.externalStorage) var audio: Data? = nil
-    /// A remote thumbnail for the feed row — a Pinterest pin's image, captured
-    /// at ingest so the row shows it without a per-row LinkPresentation fetch
+    /// A remote thumbnail for the feed row — a Pinterest pin's image, an Apple
+    /// Music album cover — captured at ingest so the row shows it without a
+    /// per-row LinkPresentation fetch
     /// (the detail sheet still does the full preview). Optional + default nil
     /// keeps CloudKit mirroring happy; it's set after init, so the initializer
     /// and its callers are untouched.
