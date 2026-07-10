@@ -1162,7 +1162,16 @@ private struct GenCover: View {
         .onGeometryChange(for: CGFloat.self) { proxy in
             proxy.frame(in: .global).minY
         } action: { slotMinY = $0 }
-        .task(id: thingID) { await load() }
+        .task(id: loadID) { await load() }
+    }
+
+    /// What a reload keys on. A banner's ref is the constant string
+    /// "banner", so changing the banner (color → photo) never changed the
+    /// key — the cover kept the old image until the next cold launch
+    /// (report 2026-07-10). The store's revision rides the key so every
+    /// banner change reloads.
+    private var loadID: String {
+        isBanner ? "banner:\(HomeCoverStore.shared.revision)" : thingID
     }
 
     private var canvas: some View {
@@ -1298,21 +1307,27 @@ private struct GenCover: View {
     }
 
     private func load() async {
-        guard hasImage, image == nil else { return }
+        guard hasImage else { return }
         // A set banner isn't a thing — it's the person's own chosen image,
-        // loaded straight from its store, no lookup.
+        // loaded straight from its store, no lookup. Always reloads (no
+        // image == nil guard): the task re-fires per revision, and the old
+        // banner is exactly what's being replaced. The bleed cache keys on
+        // the revision too — "banner" alone served the previous banner's
+        // tint forever.
         if isBanner {
             guard let ui = HomeCoverStore.shared.banner else { return }
             image = ui
-            if let hit = CoverBleed.cached(thingID) {
+            let key = loadID
+            if let hit = CoverBleed.cached(key) {
                 bleed = hit
             } else {
                 bleed = await Task.detached(priority: .utility) {
-                    CoverBleed.extract(from: ui, id: "banner")
+                    CoverBleed.extract(from: ui, id: key)
                 }.value
             }
             return
         }
+        guard image == nil else { return }
         // Resolve the thing locally (the doc only names facts).
         guard let uuid = UUID(uuidString: thingID) else { return }
         let all = (try? modelContext.fetch(FetchDescriptor<Thing>(
