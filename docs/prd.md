@@ -876,3 +876,15 @@ family per wallet (teal/purple/orange/pink by watch order —
 TagMap's new 5th arg), shade by value, so each wallet reads as a
 coherent block and money-treemaps stay visually apart from the
 multicolored project map. The Pinned token price chart is untouched.
+
+## 36l. Treemap tiles are cards now — color moved into the ink (2026-07-10, user)
+
+The saturated tile fills were the loudest thing on Home while carrying
+the least information (size already says magnitude; the icon and name
+say identity). Tiles now sit on the same sheet surface as every other
+card (Pinned, "Just landed"), with only a wash of their hue — magnitude
+rides the wash strength (0.08–0.22) plus size, the treemap's real
+voice — and the color moved into the label ink, the same V3b rule the
+feed rows already follow ("color lives in the tag text, not the row").
+Preview keeps its muted flat wash. Weekend's left-to-right fill sweep
+and the share card render unchanged.

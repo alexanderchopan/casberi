@@ -540,6 +540,7 @@ private struct GenTagMap: View {
     var preview = false
     @Environment(\.genProjectTap) private var projectTap
     @Environment(\.genZoomNS) private var zoomNS
+    @Environment(\.colorScheme) private var scheme
     /// The entrance plays once per screen appearance (§3); filter and theme
     /// re-renders never replay it.
     @State private var settled = false
@@ -670,6 +671,7 @@ private struct GenTagMap: View {
                 // logo URL that arrived with the cell, or none at all rather
                 // than a wrong one). A project cell carries neither — see
                 // GenTagMap's iconMode doc.
+                let hue = cellColor(for: item.tag)
                 let label = VStack(alignment: .leading, spacing: DS.Space.s1) {
                     if iconMode == "source" {
                         BridgeIcon(name: item.tag, size: 20)
@@ -678,25 +680,34 @@ private struct GenTagMap: View {
                     }
                     Text(item.tag)
                         .dsText(.body17)
-                        .foregroundStyle(preview ? DS.textTertiary : DS.textPrimary)
+                        // The color lives in the INK now (V3b's own rule,
+                        // finally applied to the map itself, 2026-07-10):
+                        // tiles went calm — the saturated fills shouted
+                        // loudest while saying least.
+                        .foregroundStyle(preview ? DS.textTertiary
+                                         : (scheme == .light ? hue.mix(with: .black, by: 0.35) : hue))
                         .lineLimit(item.tag.contains(" ") ? 2 : 1)
                         .minimumScaleFactor(0.4)
                         .allowsTightening(true)
                 }
                     .padding(DS.Space.s3)
                     .frame(width: w, height: h, alignment: .topLeading)
-                    .background(
-                        // V3b: the tile wears ITS project's hue (magnitude
-                        // still rides opacity) — one color per project,
-                        // matching its tag ink in the feed; a holdings map
-                        // wears ONE wallet hue instead, shade by value.
-                        // Preview mutes the fill flat: shape without
+                    .background {
+                        // Tiles are CARDS now (2026-07-10): the same sheet
+                        // surface Pinned and "Just landed" sit on, with only
+                        // a wash of the hue — magnitude still rides the wash
+                        // (and size, the treemap's real voice); identity
+                        // moved into the label ink and the token/bridge
+                        // icons. Preview mutes the wash flat: shape without
                         // claiming substance.
-                        cellColor(for: item.tag)
-                            .opacity((preview ? (breathe ? 0.20 : 0.12)
-                                      : 0.30 + 0.45 * Double(item.n) / Double(maxN))
-                                     * (isWeekend && animated && !on ? 0 : 1)),
-                        in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+                        ZStack {
+                            DS.surfaceSheet
+                            hue.opacity(preview ? (breathe ? 0.10 : 0.05)
+                                        : 0.08 + 0.14 * Double(item.n) / Double(maxN))
+                        }
+                        .opacity(isWeekend && animated && !on ? 0 : 1)
+                        .clipShape(RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+                    }
                 Group {
                     if preview {
                         label   // nothing behind the cell yet — no tap target
