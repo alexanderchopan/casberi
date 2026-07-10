@@ -156,12 +156,21 @@ enum RedditIngest {
         else { return nil }
 
         let existing = IngestSupport.existingSourceRefs(context)
+        let artless = IngestSupport.artlessThings(context, source: "Reddit")
         var added = 0
+        var backfilled = 0
         for child in listing {
             guard let d = child["data"] as? [String: Any],
                   let id = d["name"] as? String else { continue }   // e.g. "t3_abc"
             let ref = "reddit:\(id)"
-            guard !existing.contains(ref) else { continue }
+            let image = postImage(d)
+            if existing.contains(ref) {
+                if let image, let thing = artless[ref] {
+                    thing.previewImageURL = image
+                    backfilled += 1
+                }
+                continue
+            }
             // A saved post (t3) has a title; a saved comment (t1) has link_title.
             let title = (d["title"] as? String) ?? (d["link_title"] as? String) ?? "Saved on Reddit"
             let permalink = (d["permalink"] as? String).map { "https://reddit.com\($0)" } ?? ""
@@ -174,11 +183,28 @@ enum RedditIngest {
                 capturedAt: created ?? .now,
                 sourceRef: ref
             )
+            if let image { thing.previewImageURL = image }
             context.insert(thing)
             SpotlightIndex.index([thing])
             added += 1
         }
-        if added > 0 { try? context.save() }
+        if added > 0 || backfilled > 0 { try? context.save() }
         return added
+    }
+
+    /// A saved post's image: the preview source (Reddit HTML-escapes the
+    /// URL's ampersands), falling back to the listing thumbnail — which is
+    /// a keyword ("self", "default", "nsfw"…) for posts with no image, so
+    /// only a real URL counts. Text posts stay on the snoo glyph.
+    private static func postImage(_ d: [String: Any]) -> String? {
+        if let source = ((((d["preview"] as? [String: Any])?["images"]
+                            as? [[String: Any]])?.first?["source"]
+                            as? [String: Any])?["url"] as? String) {
+            return source.replacingOccurrences(of: "&amp;", with: "&")
+        }
+        if let thumb = d["thumbnail"] as? String, thumb.hasPrefix("http") {
+            return thumb
+        }
+        return nil
     }
 }

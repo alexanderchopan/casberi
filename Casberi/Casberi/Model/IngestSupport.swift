@@ -17,6 +17,22 @@ enum IngestSupport {
         return Set(((try? context.fetch(descriptor)) ?? []).compactMap(\.sourceRef))
     }
 
+    /// One source's things still missing a row thumbnail, keyed by sourceRef —
+    /// the dict an ingest patches when an item it already landed (skipped by
+    /// the ref dedupe) now carries an image. Without this, rows that landed
+    /// before their bridge learned artwork would stay glyph-only forever
+    /// (the Apple Music pattern, 2026-07-10).
+    static func artlessThings(_ context: ModelContext, source: String) -> [String: Thing] {
+        let descriptor = FetchDescriptor<Thing>(predicate: #Predicate {
+            $0.source == source && $0.previewImageURL == nil
+        })
+        var artless: [String: Thing] = [:]
+        for thing in (try? context.fetch(descriptor)) ?? [] {
+            if let ref = thing.sourceRef { artless[ref] = thing }
+        }
+        return artless
+    }
+
     // MARK: - Dates
 
     private static let iso: ISO8601DateFormatter = {

@@ -71,7 +71,9 @@ enum FarcasterIngest {
               let messages = root["messages"] as? [[String: Any]] else { return nil }
 
         let existing = IngestSupport.existingSourceRefs(context)
+        let artless = IngestSupport.artlessThings(context, source: "Farcaster")
         var added = 0
+        var backfilled = 0
 
         for message in messages {
             guard let hash = message["hash"] as? String,
@@ -81,7 +83,14 @@ enum FarcasterIngest {
                   body["parentCastId"] is NSNull || body["parentCastId"] == nil  // casts, not replies
             else { continue }
             let ref = "fc:\(hash)"
-            guard !existing.contains(ref) else { continue }
+            let image = imageEmbed(body)
+            if existing.contains(ref) {
+                if let image, let thing = artless[ref] {
+                    thing.previewImageURL = image
+                    backfilled += 1
+                }
+                continue
+            }
 
             // farcaster.xyz's canonical short link: the name + hash prefix.
             let short = String(hash.prefix(10))
@@ -95,11 +104,28 @@ enum FarcasterIngest {
                 capturedAt: when ?? .now,
                 sourceRef: ref
             )
+            if let image { thing.previewImageURL = image }
             context.insert(thing)
             SpotlightIndex.index([thing])
             added += 1
         }
-        if added > 0 { try? context.save() }
+        if added > 0 || backfilled > 0 { try? context.save() }
         return added
+    }
+
+    /// A cast's first image embed. Snapchain serves raw protocol data — no
+    /// hydrated thumbs — so only URLs that are plainly images qualify:
+    /// Farcaster's own image CDN, or a file extension that says so. A cast
+    /// embedding an article link keeps the chat glyph.
+    private static func imageEmbed(_ body: [String: Any]) -> String? {
+        for embed in (body["embeds"] as? [[String: Any]]) ?? [] {
+            guard let url = embed["url"] as? String else { continue }
+            let lower = url.lowercased()
+            if lower.contains("imagedelivery.net")
+                || [".jpg", ".jpeg", ".png", ".gif", ".webp"].contains(where: lower.hasSuffix) {
+                return url
+            }
+        }
+        return nil
     }
 }

@@ -55,12 +55,20 @@ enum PinterestIngest {
         guard !parsed.items.isEmpty || !parsed.title.isEmpty else { return nil }
 
         let existing = IngestSupport.existingSourceRefs(context)
+        let artless = IngestSupport.artlessThings(context, source: "Pinterest")
         var added = 0
+        var backfilled = 0
 
         for item in parsed.items.prefix(25) {
             guard !item.link.isEmpty else { continue }
             let ref = "pinterest:\(item.guid.isEmpty ? item.link : item.guid)"
-            guard !existing.contains(ref) else { continue }
+            if existing.contains(ref) {
+                if !item.imageURL.isEmpty, let thing = artless[ref] {
+                    thing.previewImageURL = item.imageURL
+                    backfilled += 1
+                }
+                continue
+            }
             let thing = Thing(
                 kind: .link,
                 // Pins are often untitled — an empty row title reads broken.
@@ -77,7 +85,7 @@ enum PinterestIngest {
             SpotlightIndex.index([thing])
             added += 1
         }
-        if added > 0 { try? context.save() }
+        if added > 0 || backfilled > 0 { try? context.save() }
         return added
     }
 }

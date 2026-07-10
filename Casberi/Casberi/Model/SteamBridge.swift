@@ -82,13 +82,26 @@ enum SteamIngest {
         let games = (response["games"] as? [[String: Any]]) ?? []   // none is a real answer
 
         let existing = IngestSupport.existingSourceRefs(context)
+        let artless = IngestSupport.artlessThings(context, source: "Steam")
         var added = 0
+        var backfilled = 0
 
         for game in games {
             guard let appID = game["appid"] as? Int,
                   let name = game["name"] as? String else { continue }
             let ref = "steam:\(appID)"
-            guard !existing.contains(ref) else { continue }
+            // The store header art — a pure function of the appid, and the
+            // most reliably present of Steam's art assets (capsule/library
+            // art is spotty for older games). RemoteThumb center-crops the
+            // wide frame into the row's square.
+            let art = "https://cdn.cloudflare.steamstatic.com/steam/apps/\(appID)/header.jpg"
+            if existing.contains(ref) {
+                if let thing = artless[ref] {
+                    thing.previewImageURL = art
+                    backfilled += 1
+                }
+                continue
+            }
             let mins = (game["playtime_2weeks"] as? Int) ?? 0
             let hours = String(format: "%.1f", Double(mins) / 60)
             let thing = Thing(
@@ -99,11 +112,12 @@ enum SteamIngest {
                 capturedAt: .now,
                 sourceRef: ref
             )
+            thing.previewImageURL = art
             context.insert(thing)
             SpotlightIndex.index([thing])
             added += 1
         }
-        if added > 0 { try? context.save() }
+        if added > 0 || backfilled > 0 { try? context.save() }
         return added
     }
 }

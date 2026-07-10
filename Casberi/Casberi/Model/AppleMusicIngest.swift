@@ -50,17 +50,7 @@ enum AppleMusicIngest {
 
         let existing = IngestSupport.existingSourceRefs(context)
 
-        // Songs that landed before artwork shipped (2026-07-10) would stay
-        // glyph-only forever under the sourceRef dedupe — collect the artless
-        // ones so a re-scan can backfill their thumbnails in place.
-        var artless: [String: Thing] = [:]
-        let descriptor = FetchDescriptor<Thing>(predicate: #Predicate {
-            $0.source == "Apple Music" && $0.previewImageURL == nil
-        })
-        for thing in (try? context.fetch(descriptor)) ?? [] {
-            if let ref = thing.sourceRef { artless[ref] = thing }
-        }
-
+        let artless = IngestSupport.artlessThings(context, source: "Apple Music")
         var added = 0
         var backfilled = 0
         for song in response.items {

@@ -161,7 +161,9 @@ enum TwitchIngest {
               let streams = root["data"] as? [[String: Any]] else { return nil }
 
         let existing = IngestSupport.existingSourceRefs(context)
+        let artless = IngestSupport.artlessThings(context, source: "Twitch")
         var added = 0
+        var changed = false
         var liveNow: [String] = []
 
         for stream in streams {
@@ -170,7 +172,20 @@ enum TwitchIngest {
                   let login = stream["user_login"] as? String else { continue }
             let ref = "twitch:\(id)"
             liveNow.append(ref)
-            guard !existing.contains(ref) else { continue }
+            // A frame of the stream RIGHT NOW — Helix hands a
+            // {width}x{height} template; the CDN refreshes the capture every
+            // few minutes. Honest only while live: the pass below strips it
+            // the refresh after the stream ends.
+            let frame = (stream["thumbnail_url"] as? String)?
+                .replacingOccurrences(of: "{width}", with: "320")
+                .replacingOccurrences(of: "{height}", with: "180")
+            if existing.contains(ref) {
+                if let frame, let thing = artless[ref] {
+                    thing.previewImageURL = frame
+                    changed = true
+                }
+                continue
+            }
             let game = (stream["game_name"] as? String) ?? ""
             // Sentence case (caps law) — the feed's Live indicator carries
             // the state; the title just names who and what.
@@ -182,12 +197,26 @@ enum TwitchIngest {
                 capturedAt: IngestSupport.isoDate(stream["started_at"]) ?? .now,
                 sourceRef: ref
             )
+            thing.previewImageURL = frame
             context.insert(thing)
             SpotlightIndex.index([thing])
             added += 1
         }
         UserDefaults.standard.set(liveNow, forKey: liveKey)
-        if added > 0 { try? context.save() }
+
+        // Honesty rule: a "live frame" on a stream that ended is fake status
+        // (the CDN swaps in a stale capture or a 404 card). Rows that left
+        // the live set drop back to the Twitch glyph.
+        let withFrames = FetchDescriptor<Thing>(predicate: #Predicate {
+            $0.source == "Twitch" && $0.previewImageURL != nil
+        })
+        for thing in (try? context.fetch(withFrames)) ?? []
+        where !liveNow.contains(thing.sourceRef ?? "") {
+            thing.previewImageURL = nil
+            changed = true
+        }
+
+        if added > 0 || changed { try? context.save() }
         return added
     }
 }

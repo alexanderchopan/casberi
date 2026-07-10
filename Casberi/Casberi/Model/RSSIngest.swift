@@ -91,7 +91,9 @@ enum RSSIngest {
         var reachedAny = false
 
         var existing = IngestSupport.existingSourceRefs(context)
+        let artless = IngestSupport.artlessThings(context, source: "RSS")
         var added = 0
+        var backfilled = 0
 
         for feed in store.feeds {
             guard let url = URL(string: feed.url) else { continue }
@@ -104,7 +106,16 @@ enum RSSIngest {
             // Newest 15 per feed — the feed is a firehose; the corpus isn't.
             for item in parsed.items.prefix(15) {
                 let ref = "rss:\(item.guid.isEmpty ? item.link : item.guid)"
-                guard !existing.contains(ref), !item.title.isEmpty else { continue }
+                if existing.contains(ref) {
+                    // An already-landed item still in the feed's window can
+                    // hand its lead image to the artless row it became.
+                    if !item.imageURL.isEmpty, let thing = artless[ref] {
+                        thing.previewImageURL = item.imageURL
+                        backfilled += 1
+                    }
+                    continue
+                }
+                guard !item.title.isEmpty else { continue }
                 let thing = Thing(
                     kind: .link,
                     title: item.title,
@@ -113,13 +124,17 @@ enum RSSIngest {
                     capturedAt: item.date ?? .now,
                     sourceRef: ref
                 )
+                // The item's lead image — the parser already pulls Media RSS
+                // thumbnails, enclosures, and the first inline <img>; only
+                // PinterestIngest was using it (fixed 2026-07-10).
+                if !item.imageURL.isEmpty { thing.previewImageURL = item.imageURL }
                 context.insert(thing)
                 existing.insert(ref)
                 SpotlightIndex.index([thing])
                 added += 1
             }
         }
-        if added > 0 { try? context.save() }
+        if added > 0 || backfilled > 0 { try? context.save() }
         // Every feed unreachable is a failed sync, not "up to date".
         return reachedAny ? added : nil
     }
