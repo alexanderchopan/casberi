@@ -28,6 +28,10 @@ struct ThingSheetView: View {
     @State private var deleteTarget: String?
     /// The TAGS row opens the full editor (chips, rename, delete) in place.
     @State private var editingTags = false
+    /// Open FULL-height so the actions are never below the fold — a tall thing
+    /// (a long title + media + related) overflowed `.medium` and clipped its
+    /// verbs. `.medium` stays reachable by dragging down for a quick peek.
+    @State private var detent: PresentationDetent = .large
 
     var body: some View {
         ScrollViewReader { proxy in
@@ -74,14 +78,17 @@ struct ThingSheetView: View {
                                startPoint: .top, endPoint: .bottom)
                     .frame(height: 260)
                     .frame(maxHeight: .infinity, alignment: .top)
-                    .ignoresSafeArea()
+                    // TOP only: the wash bleeds under the notch, but ignoring
+                    // the BOTTOM edge too let the scroll content run under the
+                    // home indicator, clipping the last actions on hue'd sheets.
+                    .ignoresSafeArea(edges: .top)
             }
         }
         // Ink: the sheet is black in both modes, like a photo viewer — its
         // controls render dark regardless of the app's theme.
         .presentationBackground(Color.black)
         .colorScheme(.dark)
-        .presentationDetents([.large, .medium])
+        .presentationDetents([.medium, .large], selection: $detent)
         .presentationDragIndicator(.visible)
         .presentationCornerRadius(DS.Radius.sheet)
         .onAppear {
