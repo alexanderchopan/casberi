@@ -958,3 +958,25 @@ Home's Pinned card header is an oversized (28pt), tilted (-35°)
 few universally readable icons, and the card earns a little
 personality. Accessibility still reads "Pinned". Wired as a Widget
 title sentinel ("@pin") so the doc grammar is unchanged.
+
+## 36q. Home juice pass: settle, draw-in, interactive pins (2026-07-10)
+
+Three touches in the pin's spirit — motion that plays ONCE and means
+something, never loops:
+
+- **The pin settles.** The Pinned card's oversized pin springs from
+  near-upright to its -35° rest on appearance, like being pressed into
+  the card.
+- **The price chart draws itself.** The sparkline reveals left-to-right
+  (0.7s) when its data lands, and the price animates numerically on
+  change. A continuously pulsing line was considered and SKIPPED: the
+  chart is fetched per visit, not streamed — a pulse would claim a
+  liveness the data doesn't have (honesty rule).
+- **Pinned rows are interactive.** Tap opens the thing's sheet;
+  long-press offers Open / Unpin (unpinning recomposes immediately and
+  toasts). Feed-style SWIPE was requested and deliberately not built:
+  Home is a ScrollView, native swipeActions only exist in List, and a
+  custom DragGesture eats vertical scroll on device — a lesson already
+  paid for (2026-07-04). Long-press is the native equivalent here.
+  Rows carry their thing id as a trailing doc arg; rows without one
+  stay inert.

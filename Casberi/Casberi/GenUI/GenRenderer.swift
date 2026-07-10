@@ -32,6 +32,18 @@ extension EnvironmentValues {
         get { self[GenZoomNSKey.self] }
         set { self[GenZoomNSKey.self] = newValue }
     }
+    /// A pinned row's tap → open the thing (the surface resolves the id
+    /// and presents the sheet). nil outside Home.
+    var genThingOpen: ((String) -> Void)? {
+        get { self[GenThingOpenKey.self] }
+        set { self[GenThingOpenKey.self] = newValue }
+    }
+    /// A pinned row's Unpin (context menu) — the surface flips the pin and
+    /// recomposes. nil outside Home.
+    var genThingUnpin: ((String) -> Void)? {
+        get { self[GenThingUnpinKey.self] }
+        set { self[GenThingUnpinKey.self] = newValue }
+    }
     /// The screen's top safe-area inset — the cover is full-bleed, so its
     /// date eyebrow needs the clearance the surface measured.
     var genCoverTopInset: CGFloat {
@@ -52,6 +64,12 @@ private struct GenProseStreamingKey: EnvironmentKey {
 
 private struct GenCoverTopInsetKey: EnvironmentKey {
     static let defaultValue: CGFloat = 0
+}
+private struct GenThingOpenKey: EnvironmentKey {
+    static let defaultValue: ((String) -> Void)? = nil
+}
+private struct GenThingUnpinKey: EnvironmentKey {
+    static let defaultValue: ((String) -> Void)? = nil
 }
 
 private struct GenZoomNSKey: EnvironmentKey {
@@ -290,12 +308,7 @@ private struct GenWidget: View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
                 if el.str(0) == "@pin" {
-                    Image(systemName: "pin.fill")
-                        .font(.system(size: 28, weight: .semibold))
-                        .foregroundStyle(DS.textPrimary)
-                        .rotationEffect(.degrees(-35))
-                        .padding(.top, DS.Space.s1)
-                        .accessibilityLabel("Pinned")
+                    PinMark()
                 } else {
                     Text(el.str(0)).dsText(.heading22).foregroundStyle(DS.textPrimary)
                 }
@@ -318,11 +331,36 @@ private struct GenWidget: View {
     }
 }
 
-/// Row(title, tag, source, time)
+/// The Pinned card's oversized pin — it SETTLES on appearance, a small
+/// spring from upright toward its resting tilt, like being pressed into
+/// the card (2026-07-10; same entrance-plays-once rule as everything else).
+private struct PinMark: View {
+    @State private var settled = false
+    var body: some View {
+        Image(systemName: "pin.fill")
+            .font(.system(size: 28, weight: .semibold))
+            .foregroundStyle(DS.textPrimary)
+            .rotationEffect(.degrees(settled ? -35 : -8), anchor: .bottomLeading)
+            .padding(.top, DS.Space.s1)
+            .accessibilityLabel("Pinned")
+            .onAppear {
+                withAnimation(.spring(response: 0.5, dampingFraction: 0.55).delay(0.15)) {
+                    settled = true
+                }
+            }
+    }
+}
+
+/// Row(title, tag, source, time, thingId?) — arg 5 only on Home's pinned
+/// rows: tap opens the thing, long-press offers Open / Unpin (2026-07-10;
+/// swipe can't ride here — these rows live in a ScrollView, and a custom
+/// DragGesture eats vertical scroll on device, a lesson already paid for).
 private struct GenRow: View {
     let el: GenEl
+    @Environment(\.genThingOpen) private var thingOpen
+    @Environment(\.genThingUnpin) private var thingUnpin
     var body: some View {
-        HStack(spacing: DS.Space.s3) {
+        let row = HStack(spacing: DS.Space.s3) {
             TagGlyph(tag: el.str(1), size: 24)
             Text(el.str(0))
                 .dsText(.body17)
@@ -333,6 +371,35 @@ private struct GenRow: View {
         }
         .padding(.horizontal, DS.Space.s4)
         .padding(.vertical, DS.Space.s3)
+        row.pinnedRowActions(id: el.str(4), open: thingOpen, unpin: thingUnpin)
+    }
+}
+
+extension View {
+    /// Tap-to-open + long-press Open/Unpin, attached only when the doc gave
+    /// the row a thing id (Home's pinned rows). Plain rows stay inert.
+    @ViewBuilder
+    func pinnedRowActions(id: String,
+                          open: ((String) -> Void)?,
+                          unpin: ((String) -> Void)?) -> some View {
+        if id.isEmpty {
+            self
+        } else {
+            contentShape(Rectangle())
+                .onTapGesture { open?(id) }
+                .contextMenu {
+                    Button {
+                        open?(id)
+                    } label: {
+                        Label("Open", systemImage: "arrow.up.right")
+                    }
+                    Button {
+                        unpin?(id)
+                    } label: {
+                        Label("Unpin", systemImage: "pin.slash")
+                    }
+                }
+        }
     }
 }
 
@@ -343,12 +410,19 @@ private struct GenRow: View {
 private struct GenTokenRow: View {
     let el: GenEl
     @State private var chart: TokenChart?
+    /// The line DRAWS itself once when the data lands (left → right reveal,
+    /// 2026-07-10) — the same entrance-plays-once juice as the pin's settle.
+    /// A continuous pulse was considered and skipped: the chart is fetched
+    /// per visit, not streamed, and a pulsing "live" line would overclaim.
+    @State private var revealed = false
+    @Environment(\.genThingOpen) private var thingOpen
+    @Environment(\.genThingUnpin) private var thingUnpin
 
     private var up: Bool { (chart?.change24h ?? 0) >= 0 }
     private var accent: Color { up ? DS.confirm : DS.destructive }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: DS.Space.s2) {
+        let row = VStack(alignment: .leading, spacing: DS.Space.s2) {
             HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
                 Text(el.str(0))
                     .dsText(.body17).foregroundStyle(DS.textPrimary)
@@ -357,6 +431,8 @@ private struct GenTokenRow: View {
                 if let chart {
                     Text(priceText(chart.price))
                         .dsText(.callout15).foregroundStyle(DS.textPrimary)
+                        .contentTransition(.numericText())
+                        .animation(DS.Motion.standard, value: chart.price)
                     Text(changeText(chart.change24h))
                         .dsText(.subhead13).foregroundStyle(accent)
                 } else {
@@ -376,6 +452,14 @@ private struct GenTokenRow: View {
                 .chartYAxis(.hidden)
                 .chartYScale(domain: .automatic(includesZero: false))
                 .frame(height: 48)
+                .mask(alignment: .leading) {
+                    GeometryReader { geo in
+                        Rectangle().frame(width: revealed ? geo.size.width : 0)
+                    }
+                }
+                .onAppear {
+                    withAnimation(.easeOut(duration: 0.7)) { revealed = true }
+                }
             }
         }
         .padding(.horizontal, DS.Space.s4)
@@ -388,6 +472,7 @@ private struct GenTokenRow: View {
             guard !el.str(1).isEmpty, !el.str(2).isEmpty else { return }
             chart = await TokenChart.fetch(chain: el.str(1), address: el.str(2))
         }
+        row.pinnedRowActions(id: el.str(4), open: thingOpen, unpin: thingUnpin)
     }
 
     private func priceText(_ p: Double) -> String {

@@ -346,12 +346,14 @@ enum HomeComposition {
     }
 
     /// A token link leads with its price chart, same rule as the thing sheet
-    /// (ThingContent.swift) — the token's "media" is the chart, not a link row.
+    /// (ThingContent.swift) — the token's "media" is the chart, not a link
+    /// row. The trailing thing id makes the row interactive on Home (tap
+    /// opens, long-press offers Open/Unpin — 2026-07-10).
     private static func row(id: String, _ t: Thing) -> String {
         if t.kind == .link, let route = TokenChart.route(from: t.content) {
-            return "\(id) = TokenRow(\(q(t.title)), \(q(route.chain)), \(q(route.address)), \(q(shortTime(t.capturedAt))))"
+            return "\(id) = TokenRow(\(q(t.title)), \(q(route.chain)), \(q(route.address)), \(q(shortTime(t.capturedAt))), \(q(t.id.uuidString)))"
         }
-        return "\(id) = Row(\(q(t.title)), \(q(t.kind.typeTag)), \(q(t.source)), \(q(shortTime(t.capturedAt))))"
+        return "\(id) = Row(\(q(t.title)), \(q(t.kind.typeTag)), \(q(t.source)), \(q(shortTime(t.capturedAt))), \(q(t.id.uuidString)))"
     }
 
     private static func shortTime(_ date: Date) -> String {

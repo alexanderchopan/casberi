@@ -30,10 +30,12 @@ struct HomeScreen: View {
     @Environment(ShellChrome.self) private var chrome
     @Environment(BridgeStore.self) private var bridges
     @Environment(\.openURL) private var openURL
+    @Environment(\.modelContext) private var modelContext
     @Bindable private var route = HomeRoute.shared
     @Bindable private var wallet = WalletStore.shared
     @State private var stream = GenStream()
     @State private var openProject: ProjectRoute?
+    @State private var pinnedThing: Thing?
     @State private var walletHoldings: [WalletIngest.HoldingsGroup] = []
     @Namespace private var zoomNS
 
@@ -86,6 +88,26 @@ struct HomeScreen: View {
                     openProject = ProjectRoute(name: name)
                 }
             }
+            // Pinned rows are interactive (2026-07-10): tap opens the
+            // thing; long-press offers Open/Unpin. Unpinning recomposes
+            // immediately — the pin flip changes no count, so nothing else
+            // would repaint.
+            .environment(\.genThingOpen) { id in
+                if let thing = things.first(where: { $0.id.uuidString == id }) {
+                    pinnedThing = thing
+                }
+            }
+            .environment(\.genThingUnpin) { id in
+                guard let thing = things.first(where: { $0.id.uuidString == id }) else { return }
+                DSHaptic.tap()
+                thing.pinned = false
+                try? modelContext.save()
+                streamComposition(instant: true)
+                chrome.flash("Unpinned from Home")
+            }
+            .sheet(item: $pinnedThing) { thing in
+                ThingSheetView(thing: thing)
+            }
             .environment(\.genZoomNS, zoomNS)
             .navigationDestination(item: $openProject) { route in
                 ProjectDetailScreen(projectName: route.name)
@@ -116,6 +138,7 @@ struct HomeScreen: View {
         .onChange(of: chrome.popHome) {
             route.push = nil
             openProject = nil
+            pinnedThing = nil
         }
         // The corpus changed under the composition (a capture, the demo
         // seeds, the dissolve) — repaint instantly, no replayed entrance.
