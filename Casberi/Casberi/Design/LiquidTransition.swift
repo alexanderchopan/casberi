@@ -113,11 +113,11 @@ struct LiquidDissolveOverlay: View {
 /// through the dissolve: hold state here, wire `.liquidPushOverlay(_:)` on
 /// the screen's NavigationStack, and call `open { route.push = … }` from
 /// the door. Duration lives here so every door breathes at the same pace
-/// (1.3s — "too fast" at 0.95, ruled 2026-07-10).
+/// (0.95 "too fast" → 1.3 "a tiny bit slower" → 1.5, ruled 2026-07-10).
 @MainActor
 @Observable
 final class LiquidPusher {
-    static let duration: Double = 1.3
+    static let duration: Double = 1.5
 
     var outgoing: UIImage?
     var incoming: UIImage?
