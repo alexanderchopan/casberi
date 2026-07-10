@@ -42,6 +42,8 @@ struct HomeScreen: View {
     /// One retiring lesson (Feed's coach grammar): with no pins yet, the
     /// Pinned slot teaches the swipe; the first real pin retires it forever.
     @AppStorage("coach.pin.done") private var pinCoachDone = false
+    /// The last celebrated corpus milestone — each fires exactly once, ever.
+    @AppStorage("milestone.reached") private var milestoneReached = 0
     @State private var walletHoldings: [WalletIngest.HoldingsGroup] = []
     @Namespace private var zoomNS
 
@@ -174,7 +176,10 @@ struct HomeScreen: View {
         }
         // The corpus changed under the composition (a capture, the demo
         // seeds, the dissolve) — repaint instantly, no replayed entrance.
-        .onChange(of: things.count) { streamComposition(instant: true) }
+        .onChange(of: things.count) {
+            streamComposition(instant: true)
+            celebrateMilestone()
+        }
         // A tag rename/retag leaves the count unchanged but changes what Home
         // composes from — repaint so the renamed tag shows immediately.
         .onChange(of: CorpusSignal.shared.revision) { streamComposition(instant: true) }
@@ -243,6 +248,18 @@ struct HomeScreen: View {
         }
     }
 
+    /// A real count crossing a round threshold earns ONE toast, ever —
+    /// "500 things banked." Rare by construction (2026-07-10): thresholds
+    /// only, each fires once, nothing recurring, no streaks.
+    private func celebrateMilestone() {
+        let thresholds = [100, 500, 1_000, 5_000, 10_000]
+        guard let crossed = thresholds.last(where: { things.count >= $0 }),
+              crossed > milestoneReached else { return }
+        milestoneReached = crossed
+        DSHaptic.success()
+        chrome.flash("\(crossed.formatted()) things banked.")
+    }
+
     /// Pull-to-refresh: awaited (the spinner shows real work), then one
     /// repaint. The tick bump re-fetches every token chart.
     private func refreshLive() async {
@@ -251,5 +268,8 @@ struct HomeScreen: View {
             walletHoldings = await WalletIngest.topHoldingsByWallet(pinnedOnly: true)
         }
         streamComposition(instant: true)
+        // The refresh LANDS — a soft thud when the fresh data is on screen
+        // (2026-07-10 haptics pass: motion that completes gets felt).
+        DSHaptic.success()
     }
 }

@@ -1062,3 +1062,31 @@ Found while verifying: pin flips changed no thing-count, so Home's
 Pinned card stayed STALE after every swipe-pin until an unrelated
 recompose. Every pin writer (Feed swipe, composer verb, Dexscreener
 swipe) now bumps CorpusSignal.
+
+## 36v. The fun pass — six small delights, no widgets (2026-07-10)
+
+Approved batch ("do all of these except 5" — Home Screen widgets
+rejected as complexity we don't need now):
+
+- **Chips teach the new powers.** The composer's suggestion chips now
+  include "How many links this week?" (when the week has links) and
+  "Pin the last link" (when an unpinned link exists) — counting and
+  pinning were secret powers until the chips showed them. Chips only
+  offer asks the corpus can honestly answer right now.
+- **Holdings total in the subline.** The wallet treemap's subline is
+  the real number — "$18K across 12 tokens" — never the generic
+  "Holdings by value".
+- **Milestone toasts.** Crossing 100 / 500 / 1,000 / 5,000 / 10,000
+  things flashes "N things banked." once per threshold (persisted in
+  milestone.reached). A quiet count-up, not a celebration screen.
+- **Haptics finish the motion.** The treemap chart draw-in ends with a
+  selection tick; pull-to-refresh ends with a success thud.
+- **Share card carries its dates.** The weekend share card shows the
+  week's real date range ("Jul 3 – Jul 9") under the eyebrow.
+- **Photo grid presses like a tile.** Feed photo cells use the same
+  DSTileButtonStyle squish as every other pressable surface.
+
+Found while building: a SwiftData #Predicate cannot compare the
+Codable ThingKind enum — it throws at runtime, and `try?` made the
+miss silent (the new chips never appeared). Rule: kind filters happen
+in memory after a plain fetch; enums never enter a #Predicate.

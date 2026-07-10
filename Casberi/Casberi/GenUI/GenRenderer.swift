@@ -512,7 +512,14 @@ private struct GenTokenRow: View {
                     }
                 }
                 .onAppear {
+                    guard !revealed else { return }
                     withAnimation(.easeOut(duration: 0.7)) { revealed = true }
+                    // The line finishing its draw gets a tick (2026-07-10
+                    // haptics pass) — once, when the reveal lands.
+                    Task { @MainActor in
+                        try? await Task.sleep(for: .milliseconds(700))
+                        DSHaptic.selection()
+                    }
                 }
             }
         }
@@ -866,10 +873,20 @@ private struct GenTagMap: View {
     /// the share sheet. No social copy, no other watermark.
     @MainActor
     private func renderWeekCard() {
+        let end = Date.now
+        let start = Calendar.current.date(byAdding: .day, value: -6, to: end) ?? end
+        let range = "\(start.formatted(.dateTime.month(.abbreviated).day())) – \(end.formatted(.dateTime.month(.abbreviated).day()))"
         let card = VStack(alignment: .leading, spacing: DS.Space.s3) {
-            Text(el.str(0))
-                .dsText(.label12)
-                .foregroundStyle(DS.textSecondary)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(el.str(0))
+                    .dsText(.label12)
+                    .foregroundStyle(DS.textSecondary)
+                // The shared image says WHICH week — it leaves the app,
+                // where "The week" alone means nothing (2026-07-10).
+                Text(range)
+                    .dsText(.heading17)
+                    .foregroundStyle(DS.textPrimary)
+            }
             cells(width: 328, animated: false)
                 .frame(width: 328, height: 220)
             HStack {

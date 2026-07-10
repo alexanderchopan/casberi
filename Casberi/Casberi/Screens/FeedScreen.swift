@@ -543,10 +543,15 @@ struct FeedScreen: View {
                 ForEach(Array(items.enumerated()), id: \.element.id) { i, thing in
                     let firstOfDay = i == 0
                         || dayLabel(items[i - 1].capturedAt) != dayLabel(thing.capturedAt)
-                    PhotoCell(thing: thing, dayPill: firstOfDay ? dayLabel(thing.capturedAt) : nil)
-                        .contentShape(Rectangle())
-                        .matchedTransitionSource(id: thing.id, in: zoomNS)
-                        .onTapGesture { sheetThing = thing }
+                    Button {
+                        sheetThing = thing
+                    } label: {
+                        PhotoCell(thing: thing, dayPill: firstOfDay ? dayLabel(thing.capturedAt) : nil)
+                    }
+                    // The tiles press like tiles (2026-07-10) — the same
+                    // settle the Settings tiles and treemap cells wear.
+                    .buttonStyle(DSTileButtonStyle())
+                    .matchedTransitionSource(id: thing.id, in: zoomNS)
                 }
             }
             .listRowBackground(Color.clear)

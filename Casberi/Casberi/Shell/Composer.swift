@@ -86,15 +86,28 @@ struct Composer: View {
     private func computeSuggestions() {
         tagPool = tagCandidates()   // one corpus walk per open, not per keystroke
         var out: [String] = []
+        // One plain fetch, filtered in memory — a #Predicate can't compare
+        // the Codable ThingKind enum (it throws at runtime, and try? made
+        // the miss silent).
+        let all = (try? modelContext.fetch(FetchDescriptor<Thing>())) ?? []
         let dayStart = Calendar.current.startOfDay(for: .now)
-        let today = FetchDescriptor<Thing>(predicate: #Predicate { $0.capturedAt >= dayStart })
-        if let n = try? modelContext.fetchCount(today), n > 0 {
+        if all.contains(where: { $0.capturedAt >= dayStart }) {
             out.append("What landed today?")
+        }
+        // The chips teach what the composer can DO (2026-07-10) — counting
+        // and pinning stayed secret powers until the chips showed them.
+        // Only asks the corpus can honestly answer right now.
+        let weekStart = Calendar.current.dateInterval(of: .weekOfYear, for: .now)?.start ?? dayStart
+        if all.contains(where: { $0.kind == .link && $0.capturedAt >= weekStart }) {
+            out.append("How many links this week?")
+        }
+        if all.contains(where: { $0.kind == .link && !$0.pinned }) {
+            out.append("Pin the last link")
         }
         if let top = tagPool.first {
             out.append("Show \(top)")
         }
-        if (try? modelContext.fetchCount(FetchDescriptor<Thing>())) ?? 0 > 0 {
+        if !all.isEmpty {
             out.append("What's this week?")
         }
         suggestions = Array(out.prefix(3))

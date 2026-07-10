@@ -132,6 +132,20 @@ enum WalletIngest {
     struct HoldingsGroup {
         let label: String
         let cells: [String]
+        /// Total USD across every counted holding (the >= $1 set, not just
+        /// the top-5 cells) and how many that is — the subline's fact.
+        let totalUSD: Double
+        let tokenCount: Int
+
+        /// "$12.4K across 5 tokens" — compact, no cents theater.
+        var subline: String {
+            let amount: String
+            if totalUSD >= 1_000_000 { amount = String(format: "$%.1fM", totalUSD / 1_000_000) }
+            else if totalUSD >= 10_000 { amount = String(format: "$%.0fK", totalUSD / 1_000) }
+            else if totalUSD >= 1_000 { amount = String(format: "$%.1fK", totalUSD / 1_000) }
+            else { amount = String(format: "$%.0f", totalUSD) }
+            return "\(amount) across \(tokenCount) token\(tokenCount == 1 ? "" : "s")"
+        }
     }
 
     /// A treemap PER watched wallet, sized by USD value — the same TagMap
@@ -148,7 +162,7 @@ enum WalletIngest {
         let ids = groups.indices.map { "w\($0)" }
         var doc = ["root = Stack([\(ids.joined(separator: ", "))])"]
         for (i, g) in groups.enumerated() {
-            doc.append("w\(i) = TagMap(\(q(g.label)), \(q("Holdings by value")), [\(g.cells.joined(separator: ", "))], \(q("token")))")
+            doc.append("w\(i) = TagMap(\(q(g.label)), \(q(g.subline)), [\(g.cells.joined(separator: ", "))], \(q("token")))")
         }
         return doc
     }
@@ -180,9 +194,10 @@ enum WalletIngest {
             for (i, entry) in watched.enumerated() {
                 group.addTask {
                     guard let hex = await hexAddresses([entry.address]).first,
-                          let cells = await holdings(addresses: [hex]) else { return (i, nil) }
+                          let h = await holdings(addresses: [hex]) else { return (i, nil) }
                     return (i, HoldingsGroup(label: entry.label.isEmpty ? entry.short : entry.label,
-                                             cells: cells))
+                                             cells: h.cells, totalUSD: h.total,
+                                             tokenCount: h.count))
                 }
             }
             var collected: [(Int, HoldingsGroup?)] = []
@@ -195,7 +210,7 @@ enum WalletIngest {
     /// The top-5-by-value cells for one or more hex addresses, combined —
     /// the shared fetch/page/aggregate loop both the per-wallet path and
     /// diagnostics call into.
-    private static func holdings(addresses: [String]) async -> [String]? {
+    private static func holdings(addresses: [String]) async -> (cells: [String], total: Double, count: Int)? {
         guard !addresses.isEmpty else { return nil }
         let networks = chains.map(\.network)
         // network → native symbol, so a chain's own coin (ETH/MATIC) — which
@@ -243,8 +258,9 @@ enum WalletIngest {
         // by symbol (TokenIcon) — Alchemy's own logo field turned out null
         // for nearly everything, including WETH and USDC (2026-07-09), so
         // this cell string carries no icon data at all.
-        return bySymbol.sorted { $0.value > $1.value }.prefix(5)
+        let cells = bySymbol.sorted { $0.value > $1.value }.prefix(5)
             .map { "\($0.key) \(max(1, Int($0.value.squareRoot() * 10)))" }
+        return (cells, bySymbol.values.reduce(0, +), bySymbol.count)
     }
 
     /// A step-by-step trace of the holdings path for DiagnosticsScreen — the
