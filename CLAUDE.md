@@ -75,6 +75,7 @@ Deep links: `casberi://home`, `casberi://feed`, `casberi://feed/type/<Tag>`, `ca
 - A bare `Image().resizable().scaledToFill()` in a ZStack expands the ZStack to image size — pin in GeometryReader + `.clipped()`.
 - A child `.gesture(DragGesture)` beats ScrollView vertical scroll entirely on device — use native `swipeActions`, never custom swipe DragGestures in scroll content.
 - Silent `try?` on EventKit (and similar) writes swallows denials — surface outcomes via `ShellChrome.flash()`.
+- The first frame walks a deep SwiftUI tree (~200 stacked ForEach/preference/modifier internals); on the default 1MB main-thread stack it intermittently overflowed AT LAUNCH — EXC_BAD_ACCESS, "excessive recursion" in `swift_getGenericMetadata`, worst on the first launch after `simctl install`. It LOOKS like infinite recursion; it isn't (the trace bottoms out at `CasberiApp.$main` with no repeating cycle). Fixed 2026-07-10: app target carries `OTHER_LDFLAGS -Wl,-stack_size,0x400000` (4MB main stack) + `ENABLE_DEBUG_DYLIB = NO` (the flag only applies to main executables; Xcode's debug-dylib stub isn't one). Don't remove either without re-running ~10 install+cold-launch cycles.
 
 ## Design law (read docs/build-brief.md §8 before UI work)
 
