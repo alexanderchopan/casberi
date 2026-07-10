@@ -950,3 +950,11 @@ image, one screen, one clear purpose.
   so a banner chosen before the pivot survives as the background).
 - HomeScreen wears `.homePageBackground()` — the one screen with its
   own wallpaper; everything else keeps `.dsPageBackground()`.
+
+## 36p. The Pinned card leads with a pin, not the word (2026-07-10, user)
+
+Home's Pinned card header is an oversized (28pt), tilted (-35°)
+`pin.fill` instead of the word "Pinned" — the pin glyph is one of the
+few universally readable icons, and the card earns a little
+personality. Accessibility still reads "Pinned". Wired as a Widget
+title sentinel ("@pin") so the doc grammar is unchanged.

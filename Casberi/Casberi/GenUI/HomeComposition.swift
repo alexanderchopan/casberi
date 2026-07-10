@@ -321,7 +321,8 @@ enum HomeComposition {
         let pinned = things.filter(\.pinned).prefix(3)
         guard !pinned.isEmpty else { return }
         let ids = pinned.indices.map { "pn\($0)" }
-        doc.append("pinnedW = Widget(\(q("Pinned")), null, [\(ids.joined(separator: ", "))])")
+        // "@pin" → GenWidget's oversized tilted pin, not the word (2026-07-10).
+        doc.append("pinnedW = Widget(\(q("@pin")), null, [\(ids.joined(separator: ", "))])")
         for (i, t) in pinned.enumerated() { doc.append(row(id: "pn\(i)", t)) }
         rootRefs.append("pinnedW")
     }

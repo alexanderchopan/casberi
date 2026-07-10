@@ -279,14 +279,26 @@ private struct GenInsight: View {
     }
 }
 
-/// Widget(title, count?, children) — a sheet card of rows.
+/// Widget(title, count?, children) — a sheet card of rows. The literal
+/// title "@pin" renders as an oversized, tilted pin instead of a word
+/// (2026-07-10, user): the pin glyph is universally readable, and the
+/// Pinned card earns a little personality.
 private struct GenWidget: View {
     let el: GenEl
     let els: GenEls
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-                Text(el.str(0)).dsText(.heading22).foregroundStyle(DS.textPrimary)
+                if el.str(0) == "@pin" {
+                    Image(systemName: "pin.fill")
+                        .font(.system(size: 28, weight: .semibold))
+                        .foregroundStyle(DS.textPrimary)
+                        .rotationEffect(.degrees(-35))
+                        .padding(.top, DS.Space.s1)
+                        .accessibilityLabel("Pinned")
+                } else {
+                    Text(el.str(0)).dsText(.heading22).foregroundStyle(DS.textPrimary)
+                }
                 if !el.str(1).isEmpty {
                     Text(el.str(1)).dsText(.callout15).foregroundStyle(DS.textTertiary)
                         .contentTransition(.numericText())
