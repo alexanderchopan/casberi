@@ -817,16 +817,16 @@ earns an icon, per surface, not per item:
   cell is always exactly one bridge (Gmail and iCloud Mail stay
   separate cells on purpose — merging them into one "Mail" category
   would need either two icons or a generic one, and neither is honest).
-- **"token" mode** (wallet holdings) reads a real logo URL that rides
-  along with the cell (`"SYMBOL N|https://logo.url"`), captured from
-  Alchemy's `tokenMetadata.logo` when present. Missing for most tokens
-  (spam and many altcoins have none cataloged) — those cells stay
-  text-only rather than showing a wrong or generic mark.
-
-`Thing.walletAddress`/tag-cluster tags never carry a `|url` suffix, so
-existing docs parse unchanged; `GenTagMap` gets its own item parser
-(`TagMapItem`, separate from `KindCountRow.Item`) since only TagMap
-cells carry an optional icon.
+- **"token" mode** (wallet holdings) reads `TokenIcon(symbol:)` — a small
+  bundled set (`brand-eth`, `brand-usdc`, `brand-usdt`, `brand-dai`,
+  `brand-wbtc`, `brand-weth`, `brand-matic`, `brand-link`, `brand-uni`,
+  `brand-aave`), downloaded once from Trust Wallet's public asset repo
+  and shipped as static assets — not fetched live. Originally tried
+  reading Alchemy's `tokenMetadata.logo` per holding; that came back
+  `null` for nearly everything Alchemy returned, including WETH and
+  USDC, so it wasn't worth building on (2026-07-09). A symbol outside
+  the bundled set renders no icon at all — text-only stays honest,
+  never a wrong or generic mark.
 
 Same session: a watched **token** (Dexscreener watchlist) could already
 be pinned from Feed — it's a normal Thing there — but not from the

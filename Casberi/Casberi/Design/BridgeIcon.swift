@@ -49,3 +49,24 @@ struct BridgeIcon: View {
         }
     }
 }
+
+/// A token's mark for the wallet holdings treemap — a small bundled set
+/// (`brand-eth`, `brand-usdc`, …) downloaded once from Trust Wallet's public
+/// asset repo, not fetched live (2026-07-09: Alchemy's own logo field came
+/// back null for nearly everything, including WETH and USDC — too sparse to
+/// build on). Renders nothing at all for a symbol outside the bundled set —
+/// text-only stays the honest fallback, never a wrong or generic mark.
+struct TokenIcon: View {
+    let symbol: String
+    var size: CGFloat = 20
+
+    var body: some View {
+        if let ui = UIImage(named: "brand-" + symbol.lowercased()) {
+            Image(uiImage: ui)
+                .resizable()
+                .scaledToFit()
+                .frame(width: size, height: size)
+                .clipShape(Circle())
+        }
+    }
+}
