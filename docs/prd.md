@@ -1446,3 +1446,33 @@ with it. Found while re-recording: the overlay's clock was a plain
 chip staggers) recreated the struct and RESTARTED the liquid — the
 snap-back jank that had been polluting every draft's smoothness.
 @State now; the ride is monotonic.
+
+## 43h. The liquid system completes (2026-07-10)
+
+Five upgrades, ruled together ("do all of these including scrubbing"):
+
+- **Reduce Motion is law.** A person who asked the system for reduced
+  motion gets plain, instant navigation — no snapshots, no shader, no
+  ride, in ALL paths (open, pop, scrub; the scrub strip doesn't even
+  mount). Code-verified; simctl can't toggle RM headlessly, so the
+  on-device check is Settings → Accessibility → Motion.
+- **The way back is liquid too.** Settings and the store pop through
+  the same dissolve (1.1s — leaving is lighter than arriving), via a
+  custom back chevron. The pusher remembers the way back from the
+  open; a screen reached WITHOUT the liquid (deep link, probe) keeps
+  the system back untouched.
+- **Scrubbing.** The leading edge of a liquid-opened screen hands the
+  pop to the finger: drag drives the dissolve's progress directly;
+  release past 30% (or a flick) completes, otherwise it unwinds and
+  re-pushes beneath the veil — no seam either way. Hiding the system
+  back button already disabled the native edge swipe, so the edge
+  belongs to the scrub alone. Gesture FEEL needs a finger — sim can't
+  drag headlessly; the machinery is the same verified pop path.
+- **The ripple ends in a touch.** A soft settle haptic exactly when
+  the liquid stills (the motion-ends-in-a-touch grammar).
+- **Scarcity doctrine.** The dissolve marks exactly one thing:
+  crossing from your CONTENT into your ROOMS (Settings, the store).
+  Reads — thing sheets, project details, bridge screens — stay
+  instant. Do not spread it.
+
+The vestigial zoom transition (43's first draft) is deleted.

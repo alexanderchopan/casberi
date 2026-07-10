@@ -24,8 +24,6 @@ import SwiftData
 /// (the consent card). Day groups, pins, swipes, the sheet, and write-confirm
 /// all survive inside shapes.
 struct FeedScreen: View {
-    /// Anchors the Settings zoom transition to the avatar door.
-    @Namespace private var doorNS
     /// Both doors open through the liquid dissolve, same as Home.
     @State private var liquid = LiquidPusher()
     @Query(sort: \Thing.capturedAt, order: .reverse) private var things: [Thing]
@@ -256,21 +254,24 @@ struct FeedScreen: View {
                     }
                     // The shell's doors ride every tab root (ruling 2026-07-06)
                     // — Feed had no way to Apps/Settings without visiting Home.
-                    TopDoors(onSettings: { liquid.open { feedRoute.push = .settings } },
-                             onApps: { liquid.open { feedRoute.push = .apps } },
-                             zoomNS: doorNS)
+                    TopDoors(onSettings: { liquid.open(push: { feedRoute.push = .settings },
+                                                        pop: { feedRoute.push = nil }) },
+                             onApps: { liquid.open(push: { feedRoute.push = .apps },
+                                                   pop: { feedRoute.push = nil }) })
                 }
                 .navigationDestination(item: $feedRoute.push) { push in
                     switch push {
                     case .apps:     AppsScreen()
-                    case .settings:
-                        SettingsScreen()
-                            .navigationTransition(.zoom(sourceID: "settingsDoor", in: doorNS))
+                    case .settings: SettingsScreen()
                     }
                 }
                 .navigationDestination(item: $pushedBridge) { BridgeDestinationView(destination: $0) }
         }
         .liquidPushOverlay(liquid)
+        .environment(liquid)
+        .onChange(of: feedRoute.push) { _, now in
+            if now == nil, !liquid.active { liquid.clearPop() }
+        }
         .tint(DS.tint)
         // Re-tapping the Feed tab pops pushed screens and sheets back to root.
         .onChange(of: chrome.popFeed) {

@@ -70,6 +70,7 @@ struct SettingsScreen: View {
             .dsPageBackground()
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.large)
+            .liquidPoppable()
             .sheet(isPresented: $diagnosticsOpen) {
                 NavigationStack { DiagnosticsScreen() }
             }

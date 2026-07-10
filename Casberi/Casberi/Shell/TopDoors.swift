@@ -13,11 +13,6 @@ struct TopDoors: ToolbarContent {
     /// while the refresh runs (2026-07-10): it's the person's own face
     /// doing the work. 0 everywhere else (Feed never spins).
     var refreshSpin: Int = 0
-    /// The zoom transition's anchor (2026-07-10): Settings inflates out of
-    /// the avatar like a bubble — the destination's navigationTransition
-    /// points back at this source. Optional so a caller without the
-    /// transition still renders plain doors.
-    var zoomNS: Namespace.ID? = nil
     /// Taps bounce their door (Telegram grammar, same as the tab icons).
     @State private var appsBounce = 0
     @State private var avatarBounce = 0
@@ -39,16 +34,9 @@ struct TopDoors: ToolbarContent {
                 avatarBounce += 1
                 onSettings()
             } label: {
-                if let zoomNS {
-                    AvatarDoor()
-                        .modifier(DoorBounce(trigger: avatarBounce))
-                        .modifier(DoorSpin(trigger: refreshSpin))
-                        .matchedTransitionSource(id: "settingsDoor", in: zoomNS)
-                } else {
-                    AvatarDoor()
-                        .modifier(DoorBounce(trigger: avatarBounce))
-                        .modifier(DoorSpin(trigger: refreshSpin))
-                }
+                AvatarDoor()
+                    .modifier(DoorBounce(trigger: avatarBounce))
+                    .modifier(DoorSpin(trigger: refreshSpin))
             }
             .accessibilityLabel("Settings")
         }

@@ -26,8 +26,6 @@ final class HomeRoute {
 /// (top-right) pushes Apps. The grid wears an attention dot only when a bridge
 /// needs reconnecting — surfaced where it's earned, never a standing banner.
 struct HomeScreen: View {
-    /// Anchors the Settings zoom transition to the avatar door.
-    @Namespace private var doorNS
     /// The liquid dissolve (2026-07-10): both doors — Settings AND the
     /// store — open through it. One pusher per screen.
     @State private var liquid = LiquidPusher()
@@ -87,10 +85,11 @@ struct HomeScreen: View {
             .toolbar {
                 // The shell's doors — shared with Feed (every tab root wears
                 // them): avatar → Settings, grid (+ attention dot) → Apps.
-                TopDoors(onSettings: { liquid.open { route.push = .settings } },
-                         onApps: { liquid.open { route.push = .apps } },
-                         refreshSpin: refreshTick,
-                         zoomNS: doorNS)
+                TopDoors(onSettings: { liquid.open(push: { route.push = .settings },
+                                                    pop: { route.push = nil }) },
+                         onApps: { liquid.open(push: { route.push = .apps },
+                                               pop: { route.push = nil }) },
+                         refreshSpin: refreshTick)
             }
             // Topic blocks open project detail, not a Feed filter (gap §9.1).
             // The source-fallback map's cells name APPS, not tags — those open
@@ -164,11 +163,7 @@ struct HomeScreen: View {
             .navigationDestination(item: $route.push) { push in
                 switch push {
                 case .apps:     AppsScreen()
-                case .settings:
-                    // Settings inflates out of the avatar — a bubble, the
-                    // system's own glass grammar (B-ask ruling 2026-07-10).
-                    SettingsScreen()
-                        .navigationTransition(.zoom(sourceID: "settingsDoor", in: doorNS))
+                case .settings: SettingsScreen()
                 }
             }
             .navigationDestination(isPresented: $walletOpen) {
@@ -213,7 +208,8 @@ struct HomeScreen: View {
             if dropletDelay > 0 {
                 Task { @MainActor in
                     try? await Task.sleep(for: .seconds(dropletDelay))
-                    liquid.open { route.push = .settings }
+                    liquid.open(push: { route.push = .settings },
+                                pop: { route.push = nil })
                 }
             }
             // `-openAppsLiquid <s>` — same, for the store door.
@@ -221,7 +217,17 @@ struct HomeScreen: View {
             if appsDelay > 0 {
                 Task { @MainActor in
                     try? await Task.sleep(for: .seconds(appsDelay))
-                    liquid.open { route.push = .apps }
+                    liquid.open(push: { route.push = .apps },
+                                pop: { route.push = nil })
+                }
+            }
+            // `-liquidPopDemo <s>` — after the delay, pops back through the
+            // liquid (records the way back).
+            let popDelay = UserDefaults.standard.double(forKey: "liquidPopDemo")
+            if popDelay > 0 {
+                Task { @MainActor in
+                    try? await Task.sleep(for: .seconds(popDelay))
+                    liquid.liquidPop()
                 }
             }
             if let name = UserDefaults.standard.string(forKey: "openProject") {
@@ -242,6 +248,12 @@ struct HomeScreen: View {
             #endif
         }
         .liquidPushOverlay(liquid)
+        .environment(liquid)
+        // The route emptied by another hand (tab re-tap, deep link) — the
+        // pusher's remembered way back would be stale.
+        .onChange(of: route.push) { _, now in
+            if now == nil, !liquid.active { liquid.clearPop() }
+        }
     }
 
     private func streamComposition(instant: Bool = false) {
