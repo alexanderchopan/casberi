@@ -161,6 +161,7 @@ enum TwitchIngest {
               let streams = root["data"] as? [[String: Any]] else { return nil }
 
         let existing = IngestSupport.existingSourceRefs(context)
+        let backfill = ArtlessBackfill(context, source: "Twitch")
         var added = 0
         var liveNow: [String] = []
 
@@ -170,7 +171,19 @@ enum TwitchIngest {
                   let login = stream["user_login"] as? String else { continue }
             let ref = "twitch:\(id)"
             liveNow.append(ref)
-            guard !existing.contains(ref) else { continue }
+            // A frame of the stream RIGHT NOW — Helix hands a
+            // {width}x{height} template; the CDN refreshes the capture every
+            // few minutes. Honesty lives at RENDER: the row shows the frame
+            // only while liveRefs says the stream is on (BandRow), so a
+            // failed sync, a disconnect, or another device can't show a
+            // stale "now" — no model-write sweep needed.
+            let frame = (stream["thumbnail_url"] as? String)?
+                .replacingOccurrences(of: "{width}", with: "320")
+                .replacingOccurrences(of: "{height}", with: "180")
+            if existing.contains(ref) {
+                backfill.patch(ref, image: frame)
+                continue
+            }
             let game = (stream["game_name"] as? String) ?? ""
             // Sentence case (caps law) — the feed's Live indicator carries
             // the state; the title just names who and what.
@@ -182,12 +195,13 @@ enum TwitchIngest {
                 capturedAt: IngestSupport.isoDate(stream["started_at"]) ?? .now,
                 sourceRef: ref
             )
+            thing.previewImageURL = IngestSupport.imageURL(frame)
             context.insert(thing)
             SpotlightIndex.index([thing])
             added += 1
         }
         UserDefaults.standard.set(liveNow, forKey: liveKey)
-        if added > 0 { try? context.save() }
+        if added > 0 || backfill.any { try? context.save() }
         return added
     }
 }

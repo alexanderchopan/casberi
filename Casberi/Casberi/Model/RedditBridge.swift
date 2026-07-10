@@ -156,12 +156,17 @@ enum RedditIngest {
         else { return nil }
 
         let existing = IngestSupport.existingSourceRefs(context)
+        let backfill = ArtlessBackfill(context, source: "Reddit")
         var added = 0
         for child in listing {
             guard let d = child["data"] as? [String: Any],
                   let id = d["name"] as? String else { continue }   // e.g. "t3_abc"
             let ref = "reddit:\(id)"
-            guard !existing.contains(ref) else { continue }
+            let image = postImage(d)
+            if existing.contains(ref) {
+                backfill.patch(ref, image: image)
+                continue
+            }
             // A saved post (t3) has a title; a saved comment (t1) has link_title.
             let title = (d["title"] as? String) ?? (d["link_title"] as? String) ?? "Saved on Reddit"
             let permalink = (d["permalink"] as? String).map { "https://reddit.com\($0)" } ?? ""
@@ -174,11 +179,41 @@ enum RedditIngest {
                 capturedAt: created ?? .now,
                 sourceRef: ref
             )
+            thing.previewImageURL = IngestSupport.imageURL(image)
             context.insert(thing)
             SpotlightIndex.index([thing])
             added += 1
         }
-        if added > 0 { try? context.save() }
+        if added > 0 || backfill.any { try? context.save() }
         return added
+    }
+
+    /// A saved post's image, sized for a row thumb: a small preview variant
+    /// (`source` is the full-resolution original — megabytes for a 26pt
+    /// square), with Reddit's HTML-escaped ampersands undone. Falls back to
+    /// the listing thumbnail — a keyword ("self", "default", "nsfw"…) for
+    /// posts with no image, so only a real URL counts. Text posts stay on
+    /// the snoo glyph.
+    private static func postImage(_ d: [String: Any]) -> String? {
+        if let first = ((d["preview"] as? [String: Any])?["images"]
+                         as? [[String: Any]])?.first {
+            // Variants come smallest-first; ~216px covers the thumb at 3×.
+            let variants = (first["resolutions"] as? [[String: Any]]) ?? []
+            let pick = variants.first(where: { width($0) >= 216 })
+                ?? variants.last
+                ?? first["source"] as? [String: Any]
+            if let url = pick?["url"] as? String {
+                return url.replacingOccurrences(of: "&amp;", with: "&")
+            }
+        }
+        if let thumb = d["thumbnail"] as? String, thumb.hasPrefix("http") {
+            return thumb
+        }
+        return nil
+    }
+
+    /// A JSON width that may arrive as Int or Double.
+    private static func width(_ variant: [String: Any]) -> Int {
+        (variant["width"] as? Int) ?? Int((variant["width"] as? Double) ?? 0)
     }
 }

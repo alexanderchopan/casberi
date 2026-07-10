@@ -17,6 +17,37 @@ enum IngestSupport {
         return Set(((try? context.fetch(descriptor)) ?? []).compactMap(\.sourceRef))
     }
 
+    /// One source's things still missing a row thumbnail, keyed by sourceRef —
+    /// the dict an ingest patches when an item it already landed (skipped by
+    /// the ref dedupe) now carries an image. Without this, rows that landed
+    /// before their bridge learned artwork would stay glyph-only forever
+    /// (the Apple Music pattern, 2026-07-10).
+    static func artlessThings(_ context: ModelContext, source: String) -> [String: Thing] {
+        let descriptor = FetchDescriptor<Thing>(predicate: #Predicate {
+            $0.source == source && $0.previewImageURL == nil
+        })
+        var artless: [String: Thing] = [:]
+        for thing in (try? context.fetch(descriptor)) ?? [] {
+            if let ref = thing.sourceRef { artless[ref] = thing }
+        }
+        return artless
+    }
+
+    /// Normalizes a candidate row-thumbnail URL into something RemoteThumb
+    /// can actually fetch — https only (ATS blocks cleartext, and every
+    /// image CDN speaks TLS), protocol-relative "//host" upgraded, relative
+    /// paths and empty strings rejected. A bad URL stored is worse than
+    /// none: a non-nil previewImageURL takes the row out of the artless set
+    /// for good.
+    static func imageURL(_ raw: String?) -> String? {
+        guard var s = raw?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !s.isEmpty else { return nil }
+        if s.hasPrefix("//") { s = "https:" + s }
+        if s.hasPrefix("http://") { s = "https://" + s.dropFirst("http://".count) }
+        guard s.hasPrefix("https://"), URL(string: s) != nil else { return nil }
+        return s
+    }
+
     // MARK: - Dates
 
     private static let iso: ISO8601DateFormatter = {
@@ -85,5 +116,35 @@ enum IngestSupport {
         guard let (data, response) = try? await URLSession.shared.data(for: request),
               (response as? HTTPURLResponse)?.statusCode == 200 else { return nil }
         return try? JSONSerialization.jsonObject(with: data)
+    }
+}
+
+
+/// The backfill half of an ingest's dedupe loop (2026-07-10): when an
+/// incoming item's ref already landed but the stored row is still wearing
+/// the bridge glyph, the item's image patches it in place. The artless
+/// fetch is LAZY — in the steady state (every row already has its art, or
+/// the duplicates carry no image) a refresh never pays for it.
+@MainActor
+final class ArtlessBackfill {
+    private let context: ModelContext
+    private let source: String
+    private var artless: [String: Thing]?
+    /// True once anything was patched — joins the caller's save condition.
+    private(set) var any = false
+
+    init(_ context: ModelContext, source: String) {
+        self.context = context
+        self.source = source
+    }
+
+    /// Patches the stored row for an already-landed ref, when the incoming
+    /// item carries a usable image and the row has none.
+    func patch(_ ref: String, image: String?) {
+        guard let image = IngestSupport.imageURL(image) else { return }
+        if artless == nil { artless = IngestSupport.artlessThings(context, source: source) }
+        guard let thing = artless?[ref], thing.previewImageURL == nil else { return }
+        thing.previewImageURL = image
+        any = true
     }
 }

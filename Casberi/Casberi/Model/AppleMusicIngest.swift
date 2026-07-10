@@ -50,19 +50,8 @@ enum AppleMusicIngest {
 
         let existing = IngestSupport.existingSourceRefs(context)
 
-        // Songs that landed before artwork shipped (2026-07-10) would stay
-        // glyph-only forever under the sourceRef dedupe — collect the artless
-        // ones so a re-scan can backfill their thumbnails in place.
-        var artless: [String: Thing] = [:]
-        let descriptor = FetchDescriptor<Thing>(predicate: #Predicate {
-            $0.source == "Apple Music" && $0.previewImageURL == nil
-        })
-        for thing in (try? context.fetch(descriptor)) ?? [] {
-            if let ref = thing.sourceRef { artless[ref] = thing }
-        }
-
+        let backfill = ArtlessBackfill(context, source: "Apple Music")
         var added = 0
-        var backfilled = 0
         for song in response.items {
             let ref = "applemusic:\(song.id.rawValue)"
             // The album art, as a plain https URL (mzstatic CDN, no auth) —
@@ -72,10 +61,7 @@ enum AppleMusicIngest {
             // RemoteThumb's downsample stays cheap.
             let artworkURL = song.artwork?.url(width: 300, height: 300)?.absoluteString
             if existing.contains(ref) {
-                if let artworkURL, let thing = artless[ref] {
-                    thing.previewImageURL = artworkURL
-                    backfilled += 1
-                }
+                backfill.patch(ref, image: artworkURL)
                 continue
             }
             let artist = song.artistName
@@ -88,12 +74,12 @@ enum AppleMusicIngest {
                 capturedAt: song.lastPlayedDate ?? .now,
                 sourceRef: ref
             )
-            if let artworkURL { thing.previewImageURL = artworkURL }
+            thing.previewImageURL = IngestSupport.imageURL(artworkURL)
             context.insert(thing)
             SpotlightIndex.index([thing])
             added += 1
         }
-        if added > 0 || backfilled > 0 { try? context.save() }
+        if added > 0 || backfill.any { try? context.save() }
         return added
     }
 }

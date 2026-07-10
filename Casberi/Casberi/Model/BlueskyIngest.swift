@@ -59,6 +59,7 @@ enum BlueskyIngest {
         }
 
         let existing = IngestSupport.existingSourceRefs(context)
+        let backfill = ArtlessBackfill(context, source: "Bluesky")
         var added = 0
 
         for entry in feed {
@@ -70,7 +71,11 @@ enum BlueskyIngest {
                   author["handle"] as? String == handle   // posts, not reposts of others
             else { continue }
             let ref = "bsky:\(uri)"
-            guard !existing.contains(ref) else { continue }
+            let image = embedThumb(post)
+            if existing.contains(ref) {
+                backfill.patch(ref, image: image)
+                continue
+            }
 
             // at://did:…/app.bsky.feed.post/<rkey> → the web permalink.
             let rkey = uri.split(separator: "/").last.map(String.init) ?? ""
@@ -85,11 +90,27 @@ enum BlueskyIngest {
                 capturedAt: date ?? .now,
                 sourceRef: ref
             )
+            thing.previewImageURL = IngestSupport.imageURL(image)
             context.insert(thing)
             SpotlightIndex.index([thing])
             added += 1
         }
-        if added > 0 { try? context.save() }
+        if added > 0 || backfill.any { try? context.save() }
         return added
+    }
+
+    /// A post's attached image, or an external card's thumb — the AppView
+    /// hydrates ready-to-fetch CDN URLs on the post-level embed view. A
+    /// text-only post returns nil and keeps the butterfly glyph: the image
+    /// leads only when the post actually has one.
+    private static func embedThumb(_ post: [String: Any]) -> String? {
+        guard let embed = post["embed"] as? [String: Any] else { return nil }
+        // Images attached directly, or nested under record-with-media.
+        let media = (embed["media"] as? [String: Any]) ?? embed
+        if let images = media["images"] as? [[String: Any]],
+           let thumb = images.first?["thumb"] as? String { return thumb }
+        if let external = media["external"] as? [String: Any],
+           let thumb = external["thumb"] as? String { return thumb }
+        return nil
     }
 }

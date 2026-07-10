@@ -766,10 +766,12 @@ struct FeedScreen: View {
             default:
                 // Perishables show their clock everywhere (ruling 2026-07-09):
                 // the next event's countdown and a stream's Live state ride
-                // the row in All too, not just in their source's shape.
+                // the row in All too, not just in their source's shape —
+                // and a watched token its 24h pulse (Option A, 2026-07-10).
                 BandRow(thing: thing,
                         emphasized: thing.id == nextEventID,
-                        live: isLive(thing))
+                        live: isLive(thing),
+                        pulse: TokenPulse.shared.pulse(for: thing))
             }
         }
     }
