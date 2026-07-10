@@ -1324,3 +1324,15 @@ themselves draw for unknown senders). No network, nothing stored
 beyond the sender. New mail carries the sender in authorHandle;
 older rows parse it from their "From …" content at render — no
 migration. A row with no sender keeps the brand glyph.
+
+## 42. A shaped feed wears its source's hue (Option B, 2026-07-10)
+
+Same request shape as the thing sheet's wash, ruled from three on-sim
+mocks: (A) the sheet's exact 260pt recipe — too quiet at page scale,
+read as a smudge; (B) a deeper header — the brand color mixed toward
+black owning title/status/chips, fading out where the day groups
+begin; (C) a whole-page tint — killed the ink ground and fought the
+Home background feature. B won: you're clearly inside that app's
+room, reading still happens on black. One recipe, no per-hue tuning;
+a source without a brand hue (and the All feed) stays black. The hue
+crossfades between shapes (id-keyed transition), never smears.

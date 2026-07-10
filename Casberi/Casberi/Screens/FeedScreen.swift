@@ -272,6 +272,24 @@ struct FeedScreen: View {
         }
     }
 
+    /// A shaped feed wears its source's hue (B ruling 2026-07-10, picked
+    /// from three on-sim mocks): the header region — title, status, chips —
+    /// sits on the brand color mixed toward black, fading out right where
+    /// the day groups begin, so you're clearly inside that app's room but
+    /// reading still happens on ink. Same discipline as the thing sheet's
+    /// wash: ONE recipe, no per-hue tuning — a source without a brand hue
+    /// (or the All feed) stays black, honestly.
+    @ViewBuilder private var shapeWash: some View {
+        if filter.source != "All", let hue = DS.brandHue(for: filter.source) {
+            LinearGradient(colors: [hue.mix(with: .black, by: 0.35).opacity(0.9), .clear],
+                           startPoint: .top, endPoint: .bottom)
+                .frame(height: 430)
+                .ignoresSafeArea(edges: .top)
+                .transition(.opacity)
+                .id(filter.source)   // crossfade between hues, not a smear
+        }
+    }
+
     /// A slim, tappable strip above a single source's shaped feed: the app, its
     /// live status, a chevron. Tapping opens the app's control panel (the detail
     /// page): manage the connection, and Reconnect when the seat is broken. It
@@ -410,6 +428,7 @@ struct FeedScreen: View {
         .listStyle(.plain)
         .animation(DS.Motion.standard, value: things.count)   // new things rise in
         .scrollContentBackground(.hidden)
+        .background(alignment: .top) { shapeWash }
         .dsPageBackground()
         .environment(\.defaultMinListHeaderHeight, 0)
         .scrollIndicators(.hidden)
