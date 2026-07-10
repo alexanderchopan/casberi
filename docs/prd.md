@@ -901,3 +901,13 @@ where it was — the row lifts briefly and a toast says "Pinned to Home",
 since nothing on the Feed screen moves anymore. The wallet holdings
 module still leads Feed (36h): it's the one pinned element with no row
 of its own in the record, so it has nowhere else to live.
+
+## 36n. Holdings never lead the All feed (2026-07-10, user — amends 36h/36m)
+
+The wallet holdings module is a HOME module. Leading Feed's All view
+with it doubled what Home already shows — same information twice, one
+tab apart. In Feed, holdings render in exactly one place: the Wallet
+chip's own shape, where they're that source's native view (everything
+watched, regardless of pin). `holdingsChart()` lost its unused
+`pinnedOnly` parameter with this; Home's `topHoldingsByWallet(
+pinnedOnly: true)` is untouched.

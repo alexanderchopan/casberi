@@ -338,12 +338,9 @@ struct FeedScreen: View {
                 // A pin is a HOME pin only (ruling 2026-07-10): the Feed's
                 // own Pinned section doubled what Home already shows and
                 // cluttered the record — pinned things now ride the feed in
-                // their natural chronological place. The wallet module is
-                // the one pinned element that leads Feed, since it has no
-                // row of its own in the record.
-                if wallet.addresses.contains(where: \.pinnedToHome), shape != .photos, shape != .wallet {
-                    holdingsBlockSection
-                }
+                // their natural chronological place. The holdings module
+                // lives on Home too (same-day amendment) — in Feed it shows
+                // only in the Wallet chip's own shape, never leading All.
                 shapedSections
             }
 
@@ -382,8 +379,8 @@ struct FeedScreen: View {
             shapeWave += 1
             streamBlock()
         }
-        // Pinning/unpinning a wallet (WalletScreen) re-fetches or drops its
-        // holdings block here too — same rule as Home.
+        // Adding/removing a watched wallet re-fetches the Wallet chip's
+        // holdings block while it's in force.
         .onChange(of: wallet.addresses) { streamBlock() }
         .sheet(item: $sheetThing) { thing in
             ThingSheetView(thing: thing)
@@ -1012,20 +1009,20 @@ struct FeedScreen: View {
         }
     }
 
-    /// Loads the real per-wallet holdings whenever a wallet is pinned to Home,
-    /// or the Wallet chip itself is in force — both surfaces read the same
-    /// fetch, but the Wallet chip shows everything watched (its native shape)
-    /// while the leading module elsewhere shows only what's pinned (ruling
-    /// 2026-07-09). Composing is synchronous elsewhere in this screen; the
-    /// wallet fetch isn't, so it lands in the background and repaints.
+    /// Loads the real per-wallet holdings for the Wallet chip's own shape —
+    /// the ONLY place holdings show in Feed (amendment 2026-07-10: the
+    /// module already lives on Home; leading All with it doubled that).
+    /// Everything watched shows here regardless of pin — this is the
+    /// wallet's native view. Composing is synchronous elsewhere in this
+    /// screen; the wallet fetch isn't, so it lands in the background and
+    /// repaints.
     private func streamBlock() {
-        let onWalletChip = filter.source == "Wallet"
-        guard onWalletChip || wallet.addresses.contains(where: \.pinnedToHome) else {
+        guard filter.source == "Wallet" else {
             if !blockStream.els.isEmpty { blockStream.paint([]) }
             return
         }
         Task { @MainActor in
-            if let doc = await WalletIngest.holdingsChart(pinnedOnly: !onWalletChip) {
+            if let doc = await WalletIngest.holdingsChart() {
                 blockStream.paint(doc)
             } else if !blockStream.els.isEmpty {
                 blockStream.paint([])

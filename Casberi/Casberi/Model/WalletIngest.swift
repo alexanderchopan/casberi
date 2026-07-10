@@ -142,8 +142,8 @@ enum WalletIngest {
     /// purposes (main vs. cold, personal vs. a DAO) and summing them into one
     /// total hid which wallet actually held what.
     @MainActor
-    static func holdingsChart(pinnedOnly: Bool = false) async -> [String]? {
-        let groups = await topHoldingsByWallet(pinnedOnly: pinnedOnly)
+    static func holdingsChart() async -> [String]? {
+        let groups = await topHoldingsByWallet()
         guard !groups.isEmpty else { return nil }
         let ids = groups.indices.map { "w\($0)" }
         var doc = ["root = Stack([\(ids.joined(separator: ", "))])"]
