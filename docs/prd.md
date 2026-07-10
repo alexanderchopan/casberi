@@ -1361,3 +1361,21 @@ blurred + dimmed), the same wash grammar sources get, but in the
 person's own hue. No background chosen = no wash: the room stays
 black until painted, which quietly teaches what the Background tile
 does.
+
+## 43b. The droplet, and the hero dies (amendment, 2026-07-10)
+
+The avatar hero was rejected within the hour: "this is an app for
+personalization but it's not trying to lock you into some profile."
+The distinction is now doctrine: personalization paints your SPACE
+(background, theme, color); the app never builds a shrine to your
+identity. The hero is gone; the your-color wash on Settings stays
+(it's space, not profile).
+
+And the fun the user actually asked for lives in the TRANSITION,
+because it must work for a default-black user with nothing set:
+tapping the avatar swells a REAL Liquid Glass droplet (iOS 26
+glassEffect — it refracts the Home content it crosses, so black
+pages still show the blob's rim and lens) from the door until it
+swallows the screen; Settings pushes beneath at full cover and the
+glass clarifies away. ~280ms to push. Home only for now; Feed keeps
+the plain zoom until this earns its keep on device.

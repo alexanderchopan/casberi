@@ -28,6 +28,13 @@ final class HomeRoute {
 struct HomeScreen: View {
     /// Anchors the Settings zoom transition to the avatar door.
     @Namespace private var doorNS
+    /// The glass droplet (2026-07-10): tapping the avatar swells a REAL
+    /// Liquid Glass blob from the door until it swallows the screen, then
+    /// it clarifies into Settings. Fun that needs no wallpaper — the glass
+    /// refracts whatever Home shows, even on default black.
+    @State private var dropletOn = false
+    @State private var dropletScale: CGFloat = 1
+    @State private var dropletOpacity: Double = 1
     @Query(sort: \Thing.capturedAt, order: .reverse) private var things: [Thing]
     @Environment(ShellChrome.self) private var chrome
     @Environment(BridgeStore.self) private var bridges
@@ -84,7 +91,7 @@ struct HomeScreen: View {
             .toolbar {
                 // The shell's doors — shared with Feed (every tab root wears
                 // them): avatar → Settings, grid (+ attention dot) → Apps.
-                TopDoors(onSettings: { route.push = .settings },
+                TopDoors(onSettings: { openSettingsThroughDroplet() },
                          onApps: { route.push = .apps },
                          refreshSpin: refreshTick,
                          zoomNS: doorNS)
@@ -204,6 +211,15 @@ struct HomeScreen: View {
             if UserDefaults.standard.bool(forKey: "openSettings") {
                 route.push = .settings
             }
+            // `-openSettingsDroplet <s>` waits, then opens Settings THROUGH
+            // the droplet — a recording of "tapping the avatar".
+            let dropletDelay = UserDefaults.standard.double(forKey: "openSettingsDroplet")
+            if dropletDelay > 0 {
+                Task { @MainActor in
+                    try? await Task.sleep(for: .seconds(dropletDelay))
+                    openSettingsThroughDroplet()
+                }
+            }
             if let name = UserDefaults.standard.string(forKey: "openProject") {
                 // `-openProjectDelay <s>` shows Home first, then opens the tag
                 // (with the tile's zoom) — a recording of "tapping the tile".
@@ -220,6 +236,52 @@ struct HomeScreen: View {
                 }
             }
             #endif
+        }
+        .overlay { settingsDroplet }
+    }
+
+    /// The droplet ride: swell (bouncy — liquid overshoots), push Settings
+    /// beneath the glass at full cover, then the glass clarifies away.
+    private func openSettingsThroughDroplet() {
+        guard !dropletOn else { route.push = .settings; return }
+        dropletOn = true
+        dropletScale = 1
+        dropletOpacity = 1
+        DSHaptic.tap()
+        withAnimation(.spring(response: 0.55, dampingFraction: 0.62)) {
+            dropletScale = 62
+        }
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(280))
+            route.push = .settings
+            try? await Task.sleep(for: .milliseconds(340))
+            withAnimation(.easeOut(duration: 0.28)) { dropletOpacity = 0 }
+            try? await Task.sleep(for: .milliseconds(300))
+            dropletOn = false
+        }
+    }
+
+    @ViewBuilder private var settingsDroplet: some View {
+        if dropletOn {
+            GeometryReader { geo in
+                dropletGlass
+                    .frame(width: 36, height: 36)
+                    .scaleEffect(dropletScale)
+                    .position(x: geo.size.width - 44, y: 84)
+                    .opacity(dropletOpacity)
+            }
+            .ignoresSafeArea()
+            .allowsHitTesting(false)
+        }
+    }
+
+    /// Real Liquid Glass on iOS 26 — the blob refracts the content it
+    /// crosses. The material fallback keeps older sims honest.
+    @ViewBuilder private var dropletGlass: some View {
+        if #available(iOS 26.0, *) {
+            Circle().fill(.clear).glassEffect(.regular, in: Circle())
+        } else {
+            Circle().fill(.ultraThinMaterial)
         }
     }
 

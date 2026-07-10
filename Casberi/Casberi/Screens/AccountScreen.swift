@@ -23,40 +23,6 @@ struct SettingsScreen: View {
     private let columns = [GridItem(.flexible(), spacing: DS.Space.s3),
                            GridItem(.flexible(), spacing: DS.Space.s3)]
 
-    /// Settings opens as YOUR room, not a utility closet (2026-07-10): the
-    /// avatar large — the toolbar door's face, grown — tappable to change,
-    /// like the tile. Personalization is the air here, not just a control.
-    private var heroHeader: some View {
-        Button {
-            DSHaptic.tap()
-            if ProfileStore.shared.avatar == nil { avatarPickerOpen = true }
-            else { avatarDialogOpen = true }
-        } label: {
-            Group {
-                if let avatar = ProfileStore.shared.avatar {
-                    Image(uiImage: avatar)
-                        .resizable().scaledToFill()
-                        .frame(width: 88, height: 88)
-                        .clipShape(Circle())
-                } else {
-                    ZStack {
-                        Circle().fill(DS.fillFaint)
-                        Image(systemName: "person.crop.circle")
-                            .font(.system(size: 42))
-                            .foregroundStyle(DS.textSecondary)
-                    }
-                    .frame(width: 88, height: 88)
-                }
-            }
-            .shadow(color: .black.opacity(0.35), radius: 12, y: 4)
-        }
-        .buttonStyle(DSTileButtonStyle())
-        .frame(maxWidth: .infinity)
-        .padding(.top, DS.Space.s2)
-        .padding(.bottom, DS.Space.s6)
-        .accessibilityLabel("Your photo")
-    }
-
     /// The room wears YOUR color — the Home background you chose, washing
     /// down from the top the way a source's brand hue washes its shape.
     /// A photo background arrives blurred and dimmed; no background set =
@@ -87,11 +53,11 @@ struct SettingsScreen: View {
     var body: some View {
         ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
-                    // Your room greets you (ruling 2026-07-10): the bubble
-                    // grows from the little avatar and lands on the big one.
-                    heroHeader
                     // One grid, no group headers — every tile in one A–Z field,
                     // uniform, rows left to right, odd counts fine.
+                    // (A big avatar hero lived here for an hour on 2026-07-10
+                    // and was rejected: personalization paints your SPACE —
+                    // it never builds a profile of you.)
                     tileGrid(allTiles)
                 }
                 .padding(.top, ShellMetrics.topInset)
