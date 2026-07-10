@@ -1256,3 +1256,20 @@ status"). Removed the Writes section from BridgeDetailScreen. It returns
 — gated to a genuinely write-capable bridge AND wired to a real write —
 when agent writes ship (the Alice job/run/output kinds). The dormant
 `askBeforeActing` / `setAsk` scaffolding stays in the model for that.
+
+## 38. Social posts always wear the author's avatar (2026-07-10)
+
+User: "I thought we made it so Farcaster and Bluesky showed the avatar
+of the person you follow" — but a single-account feed showed the source
+glyph. Two causes, both corrected:
+
+- The avatar was gated to >1 account (mirroring the Wallet-label rule).
+  Wrong analogy: a @handle LABEL is redundant with one account, but a
+  FACE never is — it's who posted. Dropped the gate; the avatar leads
+  every Bluesky/Farcaster row when we have one. The @handle label keeps
+  its >1 gate.
+- Existing posts never got an avatar — ArtlessBackfill only fills the
+  attached image. Each sync now resolves the account's avatar once and
+  backfills it onto EVERY existing post of theirs (matched by the handle
+  in the permalink), so the whole feed wears faces, not just posts
+  landed since the field shipped.

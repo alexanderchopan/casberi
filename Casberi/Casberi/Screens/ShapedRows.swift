@@ -48,17 +48,14 @@ struct BandRow: View {
         }
     }
 
-    /// A followed account's avatar leads the row when MORE THAN ONE account
-    /// of its source is watched — whose post this is becomes the identity,
-    /// the way a Wallet row names its address (2026-07-10). One account: nil,
-    /// so the post keeps its own attached image or the source glyph.
+    /// A social post leads with its author's avatar — a face is always the
+    /// identity, whether you follow one person or ten (2026-07-10, user: "I
+    /// thought Farcaster/Bluesky showed the avatar of the person you follow").
+    /// Unlike the @handle LABEL (redundant with one account, so it stays gated
+    /// to >1), the avatar is never redundant — it's who posted.
     private var identityAvatarURL: String? {
         guard let avatar = thing.authorAvatarURL, !avatar.isEmpty else { return nil }
-        switch thing.source {
-        case "Bluesky":   return BlueskyStore.shared.accounts.count > 1 ? avatar : nil
-        case "Farcaster": return FarcasterStore.shared.accounts.count > 1 ? avatar : nil
-        default:          return nil
-        }
+        return (thing.source == "Bluesky" || thing.source == "Farcaster") ? avatar : nil
     }
 
     /// The address a Wallet row draws an identicon for — the visual twin of

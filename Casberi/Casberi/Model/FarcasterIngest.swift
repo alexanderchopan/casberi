@@ -105,8 +105,10 @@ enum FarcasterIngest {
         defer { running = false }
 
         let existing = IngestSupport.existingSourceRefs(context)
+        let landed = IngestSupport.thingsByRef(context, source: "Farcaster")
         let backfill = ArtlessBackfill(context, source: "Farcaster")
         var added = 0
+        var touched = false
         var anyResolved = false
 
         for account in store.accounts {
@@ -126,6 +128,17 @@ enum FarcasterIngest {
 
             // The avatar is a per-account lookup, not per-cast — fetch it once.
             let avatar = await avatarURL(fid: fid)
+            // Backfill it onto EVERY existing cast of theirs that predates the
+            // field, so the whole feed wears faces, not just casts landed since
+            // (2026-07-10, user: they expected the author's avatar).
+            if let avatar {
+                for t in landed.values where t.authorAvatarURL == nil
+                    && t.content.contains("/\(account.username)/") {
+                    t.authorHandle = account.username
+                    t.authorAvatarURL = avatar
+                    touched = true
+                }
+            }
 
             for message in messages {
                 guard let hash = message["hash"] as? String,
@@ -162,7 +175,7 @@ enum FarcasterIngest {
             }
         }
         guard anyResolved else { return nil }
-        if added > 0 || backfill.any { try? context.save() }
+        if added > 0 || backfill.any || touched { try? context.save() }
         return added
     }
 

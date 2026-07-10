@@ -22,6 +22,17 @@ enum IngestSupport {
     /// the ref dedupe) now carries an image. Without this, rows that landed
     /// before their bridge learned artwork would stay glyph-only forever
     /// (the Apple Music pattern, 2026-07-10).
+    /// Every landed thing for a source, keyed by ref — for backfilling fields
+    /// onto rows that already exist (an avatar the first sync didn't carry).
+    static func thingsByRef(_ context: ModelContext, source: String) -> [String: Thing] {
+        let descriptor = FetchDescriptor<Thing>(predicate: #Predicate { $0.source == source })
+        var map: [String: Thing] = [:]
+        for thing in (try? context.fetch(descriptor)) ?? [] {
+            if let ref = thing.sourceRef { map[ref] = thing }
+        }
+        return map
+    }
+
     static func artlessThings(_ context: ModelContext, source: String) -> [String: Thing] {
         let descriptor = FetchDescriptor<Thing>(predicate: #Predicate {
             $0.source == source && $0.previewImageURL == nil

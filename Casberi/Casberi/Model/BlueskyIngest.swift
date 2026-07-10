@@ -97,8 +97,10 @@ enum BlueskyIngest {
         defer { running = false }
 
         let existing = IngestSupport.existingSourceRefs(context)
+        let landed = IngestSupport.thingsByRef(context, source: "Bluesky")
         let backfill = ArtlessBackfill(context, source: "Bluesky")
         var added = 0
+        var touched = false
         var anyResolved = false
 
         for handle in handles {
@@ -114,6 +116,21 @@ enum BlueskyIngest {
                 continue   // one bad handle doesn't sink the others
             }
             anyResolved = true
+
+            // The account's avatar (same for every one of its posts) — backfill
+            // it onto EVERY existing post of theirs that predates the field, so
+            // the whole feed wears faces, not just posts landed since (2026-07-10).
+            let accountAvatar = IngestSupport.imageURL(
+                (feed.first?["post"] as? [String: Any])
+                    .flatMap { $0["author"] as? [String: Any] }?["avatar"] as? String)
+            if let accountAvatar {
+                for t in landed.values where t.authorAvatarURL == nil
+                    && t.content.contains("/profile/\(handle)/") {
+                    t.authorHandle = handle
+                    t.authorAvatarURL = accountAvatar
+                    touched = true
+                }
+            }
 
             for entry in feed {
                 guard let post = entry["post"] as? [String: Any],
@@ -154,7 +171,7 @@ enum BlueskyIngest {
         // Every handle failing to resolve is the "couldn't find that" signal;
         // one landing means the connection is good.
         guard anyResolved else { return nil }
-        if added > 0 || backfill.any { try? context.save() }
+        if added > 0 || backfill.any || touched { try? context.save() }
         return added
     }
 
