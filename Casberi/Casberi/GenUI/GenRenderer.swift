@@ -56,6 +56,13 @@ extension EnvironmentValues {
         get { self[GenProseStreamingKey.self] }
         set { self[GenProseStreamingKey.self] = newValue }
     }
+    /// Bumped by Home's pull-to-refresh — live modules (token charts) key
+    /// their fetch on it so a pull re-fetches what a recompose alone
+    /// wouldn't (same doc line → same task id → no refetch).
+    var genRefreshTick: Int {
+        get { self[GenRefreshTickKey.self] }
+        set { self[GenRefreshTickKey.self] = newValue }
+    }
 }
 
 private struct GenProseStreamingKey: EnvironmentKey {
@@ -70,6 +77,9 @@ private struct GenThingOpenKey: EnvironmentKey {
 }
 private struct GenThingUnpinKey: EnvironmentKey {
     static let defaultValue: ((String) -> Void)? = nil
+}
+private struct GenRefreshTickKey: EnvironmentKey {
+    static let defaultValue = 0
 }
 
 private struct GenZoomNSKey: EnvironmentKey {
@@ -133,6 +143,9 @@ struct GenRender: View {
         // honest preview of the map that composes once things land.
         case "TagMapPreview": GenTagMap(el: el, preview: true).mountIn()
         case "Quiet":       GenQuiet(el: el).mountIn()
+        // One retiring teaching line (Feed's coach grammar) — plain tinted
+        // words, no overlays, no arrows.
+        case "Coach":       GenCoach(el: el).mountIn()
         case "KindBar":     GenKindBar(el: el).mountIn()
 
         // Shaped-feed grammar (docs/handoff-shaped-feeds.md) — display forms
@@ -351,6 +364,20 @@ private struct PinMark: View {
     }
 }
 
+/// Coach(text) — the one-time teaching line, Feed's coach style verbatim:
+/// tinted words on the page, retired forever by the surface once the
+/// lesson is learned (the flag lives with the surface, not here).
+private struct GenCoach: View {
+    let el: GenEl
+    var body: some View {
+        Text(el.str(0))
+            .dsText(.subhead13)
+            .foregroundStyle(DS.tint)
+            .padding(.horizontal, DS.Space.s4)
+            .padding(.top, DS.Space.s4)
+    }
+}
+
 /// Row(title, tag, source, time, thingId?) — arg 5 only on Home's pinned
 /// rows: tap opens the thing, long-press offers Open / Unpin (2026-07-10;
 /// swipe can't ride here — these rows live in a ScrollView, and a custom
@@ -417,6 +444,7 @@ private struct GenTokenRow: View {
     @State private var revealed = false
     @Environment(\.genThingOpen) private var thingOpen
     @Environment(\.genThingUnpin) private var thingUnpin
+    @Environment(\.genRefreshTick) private var refreshTick
 
     private var up: Bool { (chart?.change24h ?? 0) >= 0 }
     private var accent: Color { up ? DS.confirm : DS.destructive }
@@ -468,7 +496,7 @@ private struct GenTokenRow: View {
         // streams the doc token-by-token (H7 typewriter), so this view can
         // mount before those args arrive — a bare .task would fetch once
         // with empty strings and never retry (fixed 2026-07-08).
-        .task(id: "\(el.str(1))/\(el.str(2))") {
+        .task(id: "\(refreshTick):\(el.str(1))/\(el.str(2))") {
             guard !el.str(1).isEmpty, !el.str(2).isEmpty else { return }
             chart = await TokenChart.fetch(chain: el.str(1), address: el.str(2))
         }

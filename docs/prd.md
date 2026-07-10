@@ -992,3 +992,17 @@ dim) since they ARE tiles now. A holdings cell routes to the Wallet
 screen — tapping "ETH" used to open an empty project view for a tag
 that doesn't exist. A "What's going on" header count was considered
 and skipped (naggy).
+
+## 36r. Home: pull-to-refresh + the pin coach (2026-07-10)
+
+- **Pull-to-refresh.** Home carries live modules now (price charts,
+  holdings), so a pull re-fetches them — awaited, so the spinner shows
+  real work. A recompose alone wasn't enough for the charts (same doc
+  line → same fetch task id), so the pull bumps a refresh tick the
+  chart fetches key on.
+- **The pin coach.** With things in the corpus but zero pins, the
+  Pinned slot shows one retiring lesson in Feed's coach grammar
+  ("Swipe a thing in Feed to pin it here." — tinted words, no overlay).
+  The first real pin retires it forever, even if every pin is later
+  removed. New `-unpinAll YES` debug hook clears pins and re-arms it
+  for screenshots.

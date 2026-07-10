@@ -96,6 +96,15 @@ enum ProbeHooks {
             }
             NSLog("Pin-wallet probe: pinned %d address(es)", WalletStore.shared.addresses.count)
         },
+        // `-unpinAll YES` clears every thing pin and re-arms the pin coach —
+        // screenshot verification of the no-pins teaching state.
+        Hook(key: "unpinAll") { _, context in
+            let all = (try? context.fetch(FetchDescriptor<Thing>())) ?? []
+            for t in all where t.pinned { t.pinned = false }
+            try? context.save()
+            UserDefaults.standard.removeObject(forKey: "coach.pin.done")
+            NSLog("Unpin probe: cleared, coach re-armed")
+        },
         // `-connectPhotos YES` runs the real Photos connect+ingest.
         Hook(key: "connectPhotos") { _, context in
             Task { @MainActor in

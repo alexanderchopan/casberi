@@ -14,16 +14,17 @@ enum HomeComposition {
 
     static func compose(things: [Thing],
                         walletHoldings: [WalletIngest.HoldingsGroup] = [],
+                        pinCoach: Bool = false,
                         hour: Int = Calendar.current.component(.hour, from: .now),
                         weekday: Int = Calendar.current.component(.weekday, from: .now)) -> [String] {
         let projects = projectClusters(things: things)
         // Saturday/Sunday reads as a recap — the week, banked.
         if weekday == 1 || weekday == 7 {
-            return weekend(things: things, projects: projects, walletHoldings: walletHoldings)
+            return weekend(things: things, projects: projects, walletHoldings: walletHoldings, pinCoach: pinCoach)
         }
         return hour < 15
-            ? morning(things: things, projects: projects, walletHoldings: walletHoldings)
-            : evening(things: things, projects: projects, walletHoldings: walletHoldings)
+            ? morning(things: things, projects: projects, walletHoldings: walletHoldings, pinCoach: pinCoach)
+            : evening(things: things, projects: projects, walletHoldings: walletHoldings, pinCoach: pinCoach)
     }
 
     /// True when nothing has landed today — the composition acknowledges the
@@ -34,7 +35,7 @@ enum HomeComposition {
 
     // MARK: - Documents
 
-    private static func morning(things: [Thing], projects: [Cluster], walletHoldings: [WalletIngest.HoldingsGroup] = []) -> [String] {
+    private static func morning(things: [Thing], projects: [Cluster], walletHoldings: [WalletIngest.HoldingsGroup] = [], pinCoach: Bool = false) -> [String] {
         var doc: [String] = []
         var rootRefs: [String] = []
 
@@ -55,7 +56,7 @@ enum HomeComposition {
         // (ruling 2026-07-09): a deliberate choice outranks an automatic
         // clustering, and it shouldn't cost a scroll to reach. User-chosen,
         // so it passes the no-obligations rule: Casberi never picked these.
-        appendPinned(things, to: &doc, rootRefs: &rootRefs)
+        appendPinned(things, coach: pinCoach, to: &doc, rootRefs: &rootRefs)
         appendWalletHoldings(walletHoldings, to: &doc, rootRefs: &rootRefs)
 
         // Where the map belongs even when it didn't compose yet — the starter
@@ -85,7 +86,7 @@ enum HomeComposition {
         return doc
     }
 
-    private static func evening(things: [Thing], projects: [Cluster], walletHoldings: [WalletIngest.HoldingsGroup] = []) -> [String] {
+    private static func evening(things: [Thing], projects: [Cluster], walletHoldings: [WalletIngest.HoldingsGroup] = [], pinCoach: Bool = false) -> [String] {
         var doc: [String] = []
         var rootRefs: [String] = []
 
@@ -99,7 +100,7 @@ enum HomeComposition {
         }
 
         // Pinned rides evening too — same rule as morning, ahead of the map.
-        appendPinned(things, to: &doc, rootRefs: &rootRefs)
+        appendPinned(things, coach: pinCoach, to: &doc, rootRefs: &rootRefs)
         appendWalletHoldings(walletHoldings, to: &doc, rootRefs: &rootRefs)
 
         let mapSlot = rootRefs.count
@@ -126,7 +127,7 @@ enum HomeComposition {
     /// Weekend — the week, banked: the recap voice rides the cover's eyebrow
     /// with the week's newest image (H7); then the map and threads. Same
     /// grammar, calmer voice; still no obligations.
-    private static func weekend(things: [Thing], projects: [Cluster], walletHoldings: [WalletIngest.HoldingsGroup] = []) -> [String] {
+    private static func weekend(things: [Thing], projects: [Cluster], walletHoldings: [WalletIngest.HoldingsGroup] = [], pinCoach: Bool = false) -> [String] {
         var doc: [String] = []
         var rootRefs: [String] = []
 
@@ -155,7 +156,7 @@ enum HomeComposition {
             rootRefs.append("cover")
         }
 
-        appendPinned(things, to: &doc, rootRefs: &rootRefs)
+        appendPinned(things, coach: pinCoach, to: &doc, rootRefs: &rootRefs)
         appendWalletHoldings(walletHoldings, to: &doc, rootRefs: &rootRefs)
 
         if !projects.isEmpty {
@@ -314,12 +315,21 @@ enum HomeComposition {
     }
 
     /// Feed pins surface on Home too (ruling 2026-07-06): a pin means "keep
-    /// this in view", and Home is the view. Newest first, capped at 3.
-    private static func appendPinned(_ things: [Thing],
+    /// this in view", and Home is the view. Newest first, capped at 3. With
+    /// no pins yet, one retiring coach line takes the slot (2026-07-10) —
+    /// the empty Pinned state taught nothing, so a new user never learned
+    /// the swipe. The surface owns the retire flag.
+    private static func appendPinned(_ things: [Thing], coach: Bool,
                                      to doc: inout [String],
                                      rootRefs: inout [String]) {
         let pinned = things.filter(\.pinned).prefix(3)
-        guard !pinned.isEmpty else { return }
+        guard !pinned.isEmpty else {
+            if coach {
+                doc.append("pinCoach = Coach(\(q("Swipe a thing in Feed to pin it here.")))")
+                rootRefs.append("pinCoach")
+            }
+            return
+        }
         let ids = pinned.indices.map { "pn\($0)" }
         // "@pin" → GenWidget's oversized tilted pin, not the word (2026-07-10).
         doc.append("pinnedW = Widget(\(q("@pin")), null, [\(ids.joined(separator: ", "))])")

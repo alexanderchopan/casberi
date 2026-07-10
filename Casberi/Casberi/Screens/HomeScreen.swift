@@ -37,6 +37,11 @@ struct HomeScreen: View {
     @State private var openProject: ProjectRoute?
     @State private var pinnedThing: Thing?
     @State private var walletOpen = false
+    /// Bumped by pull-to-refresh — token charts key their fetch on it.
+    @State private var refreshTick = 0
+    /// One retiring lesson (Feed's coach grammar): with no pins yet, the
+    /// Pinned slot teaches the swipe; the first real pin retires it forever.
+    @AppStorage("coach.pin.done") private var pinCoachDone = false
     @State private var walletHoldings: [WalletIngest.HoldingsGroup] = []
     @Namespace private var zoomNS
 
@@ -61,7 +66,12 @@ struct HomeScreen: View {
             }
             .scrollIndicators(.hidden)
             .ignoresSafeArea(edges: .top)
+            // Live modules re-fetch on pull (2026-07-10): holdings straight
+            // from Alchemy, and the tick bump re-keys every token chart's
+            // fetch (a recompose alone reuses the old task id).
+            .refreshable { await refreshLive() }
             .environment(\.genCoverTopInset, geo.safeAreaInsets.top)
+            .environment(\.genRefreshTick, refreshTick)
         .minimizesChrome(chrome)
             .homePageBackground()
             .navigationTitle("")
@@ -188,9 +198,13 @@ struct HomeScreen: View {
     }
 
     private func streamComposition(instant: Bool = false) {
+        // The first real pin is the lesson learned — the coach retires
+        // forever, even if every pin is later removed.
+        if !pinCoachDone, things.contains(where: \.pinned) { pinCoachDone = true }
         let doc = things.isEmpty
             ? HomeComposition.empty
-            : HomeComposition.compose(things: things, walletHoldings: walletHoldings)
+            : HomeComposition.compose(things: things, walletHoldings: walletHoldings,
+                                      pinCoach: !pinCoachDone)
         if instant {
             stream.paint(doc)   // an update, not an entrance — no typewriter
         } else {
@@ -213,5 +227,15 @@ struct HomeScreen: View {
             walletHoldings = await WalletIngest.topHoldingsByWallet(pinnedOnly: true)
             streamComposition(instant: true)
         }
+    }
+
+    /// Pull-to-refresh: awaited (the spinner shows real work), then one
+    /// repaint. The tick bump re-fetches every token chart.
+    private func refreshLive() async {
+        refreshTick += 1
+        if wallet.addresses.contains(where: \.pinnedToHome) {
+            walletHoldings = await WalletIngest.topHoldingsByWallet(pinnedOnly: true)
+        }
+        streamComposition(instant: true)
     }
 }
