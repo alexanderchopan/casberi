@@ -61,7 +61,11 @@ struct DexscreenerScreen: View {
 
     /// The watchlist manages itself the way Wallet's addresses do — swipe a
     /// row to unwatch (native delete on a management screen, the WalletScreen
-    /// precedent; the Feed's reads-only swipe rule governs feed rows).
+    /// precedent; the Feed's reads-only swipe rule governs feed rows). A
+    /// watched token could already be pinned from Feed (it's a normal thing,
+    /// same swipe everywhere) but not from here, where you're most likely to
+    /// reach for it right after watching one — a leading-edge pin swipe
+    /// closes that gap (2026-07-09), same verb, same icon, as Feed's own.
     /// Unwatching deletes the thing: the thing IS the watch, not landed
     /// history — and its sourceRef leaving the store lets a re-add resolve.
     private var watchlistSection: some View {
@@ -75,13 +79,24 @@ struct DexscreenerScreen: View {
                         .dsText(.subhead13).foregroundStyle(DS.textTertiary)
                 }
                 .listRowBackground(DS.surfaceSheet)
+                .swipeActions(edge: .leading, allowsFullSwipe: true) {
+                    Button {
+                        DSHaptic.tap()
+                        thing.pinned.toggle()
+                        try? modelContext.save()
+                    } label: {
+                        Label(thing.pinned ? "Unpin" : "Pin",
+                              systemImage: thing.pinned ? "pin.slash" : "pin")
+                    }
+                    .tint(DS.tint)
+                }
             }
             .onDelete(perform: unwatch)
         } header: {
             Text("Your watchlist").dsText(.label12)
                 .foregroundStyle(DS.textTertiary)
         } footer: {
-            Text("Swipe a token to stop watching it.")
+            Text("Swipe a token to pin it to Home and Feed, or to stop watching it.")
                 .dsText(.callout15).foregroundStyle(DS.textTertiary)
         }
     }

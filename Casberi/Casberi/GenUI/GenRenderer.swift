@@ -527,8 +527,16 @@ private struct GenVoiceTile: View {
     }
 }
 
-/// TagMap(eyebrow, subline, ["Label N", ...]) — treemap, magnitude fill:
-/// tint at opacity scaled by count (the color rule's magnitude clause).
+/// One TagMap cell: a name, its magnitude, and — only in "source" or "token"
+/// icon mode — where its icon comes from.
+private struct TagMapItem {
+    let tag: String
+    let n: Int
+    let iconURL: String?
+}
+
+/// TagMap(eyebrow, subline, ["Label N", ...], iconMode) — treemap, magnitude
+/// fill: tint at opacity scaled by count (the color rule's magnitude clause).
 private struct GenTagMap: View {
     let el: GenEl
     /// Preview mode (TagMapPreview): the starter shape before tags exist —
@@ -559,7 +567,29 @@ private struct GenTagMap: View {
         }
     }
 
-    private var items: [KindCountRow.Item] { KindCountRow.parse(el.refs(2), cap: 6) }
+    private var items: [TagMapItem] { Self.parseItems(el.refs(2), cap: 6) }
+
+    /// Arg 3 — how each cell earns its icon (2026-07-09): "source" reads an
+    /// exact bridge name (Gmail, Wallet, …) through BridgeIcon, no fetch,
+    /// never wrong because a source-mode cell is always exactly one bridge.
+    /// "token" reads a per-item logo URL when one rode along. A project
+    /// (a tag someone chose, or a tag cluster) spans sources by nature, so it
+    /// carries neither — name only, never a guessed icon.
+    private var iconMode: String { el.str(3) }
+
+    /// "Tag N" or "Tag N|iconURL" → items. A separate parser from
+    /// `KindCountRow.parse` (used by cover/KindPills chips) because only
+    /// TagMap cells carry an optional icon.
+    private static func parseItems(_ raw: [String], cap: Int) -> [TagMapItem] {
+        raw.prefix(cap).compactMap { r in
+            let halves = r.split(separator: "|", maxSplits: 1, omittingEmptySubsequences: false)
+            let body = String(halves[0])
+            let iconURL = halves.count > 1 ? String(halves[1]) : nil
+            let parts = body.split(separator: " ")
+            guard let last = parts.last, let n = Int(last) else { return nil }
+            return TagMapItem(tag: parts.dropLast().joined(separator: " "), n: n, iconURL: iconURL)
+        }
+    }
 
     private var isWeekend: Bool {
         let wd = Calendar.current.component(.weekday, from: .now)
@@ -634,12 +664,24 @@ private struct GenTagMap: View {
                 let w = uw * CGFloat(f.2) + gap * CGFloat(f.2 - 1)
                 let h = uh * CGFloat(f.3) + gap * CGFloat(f.3 - 1)
                 let on = !animated || settled
-                let label = Text(item.tag)
-                    .dsText(.body17)
-                    .foregroundStyle(preview ? DS.textTertiary : DS.textPrimary)
-                    .lineLimit(item.tag.contains(" ") ? 2 : 1)
-                    .minimumScaleFactor(0.4)
-                    .allowsTightening(true)
+                // An icon rides above the name in "source" (an exact bridge,
+                // via BridgeIcon — no fetch, never wrong) or "token" mode (a
+                // logo URL that arrived with the cell, or none at all rather
+                // than a wrong one). A project cell carries neither — see
+                // GenTagMap's iconMode doc.
+                let label = VStack(alignment: .leading, spacing: DS.Space.s1) {
+                    if iconMode == "source" {
+                        BridgeIcon(name: item.tag, size: 20)
+                    } else if iconMode == "token", let iconURL = item.iconURL, !iconURL.isEmpty {
+                        RemoteThumb(urlString: iconURL, size: 20)
+                    }
+                    Text(item.tag)
+                        .dsText(.body17)
+                        .foregroundStyle(preview ? DS.textTertiary : DS.textPrimary)
+                        .lineLimit(item.tag.contains(" ") ? 2 : 1)
+                        .minimumScaleFactor(0.4)
+                        .allowsTightening(true)
+                }
                     .padding(DS.Space.s3)
                     .frame(width: w, height: h, alignment: .topLeading)
                     .background(

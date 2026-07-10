@@ -148,7 +148,7 @@ enum WalletIngest {
         let ids = groups.indices.map { "w\($0)" }
         var doc = ["root = Stack([\(ids.joined(separator: ", "))])"]
         for (i, g) in groups.enumerated() {
-            doc.append("w\(i) = TagMap(\(q(g.label)), \(q("Holdings by value")), [\(g.cells.joined(separator: ", "))])")
+            doc.append("w\(i) = TagMap(\(q(g.label)), \(q("Holdings by value")), [\(g.cells.joined(separator: ", "))], \(q("token")))")
         }
         return doc
     }
@@ -204,6 +204,10 @@ enum WalletIngest {
         let url = "https://api.g.alchemy.com/data/v1/\(alchemyKey)/assets/tokens/by-address"
 
         var bySymbol: [String: Double] = [:]
+        // The first logo URL seen per symbol — Alchemy's tokenMetadata carries
+        // one for well-known tokens; a native coin (no tokenAddress) usually
+        // has none, so it simply renders text-only, never a wrong icon.
+        var logoBySymbol: [String: String] = [:]
         var pageKey: String? = nil
         var reached = false
         // Up to 8 pages (≈800 tokens) — enough to surface a whale's real
@@ -230,7 +234,13 @@ enum WalletIngest {
                 let decimals = (md?["decimals"] as? Int) ?? 18   // native is always 18
                 let amount = hexToDouble(balHex) / pow(10, Double(decimals))
                 let usd = amount * price
-                if usd >= 1 { bySymbol[clean(symbol), default: 0] += usd }
+                if usd >= 1 {
+                    let key = clean(symbol)
+                    bySymbol[key, default: 0] += usd
+                    if logoBySymbol[key] == nil, let logo = md?["logo"] as? String, !logo.isEmpty {
+                        logoBySymbol[key] = logo
+                    }
+                }
             }
 
             guard let next = data["pageKey"] as? String, !next.isEmpty else { break }
@@ -238,9 +248,15 @@ enum WalletIngest {
         }
         guard reached, !bySymbol.isEmpty else { return nil }
 
-        // Top 5 by value; sqrt-scale so a big holding doesn't slice the rest to slivers.
+        // Top 5 by value; sqrt-scale so a big holding doesn't slice the rest to
+        // slivers. A trailing "|logoURL" rides along when Alchemy had one —
+        // GenTagMap splits it back off; no logo means no suffix at all.
         return bySymbol.sorted { $0.value > $1.value }.prefix(5)
-            .map { "\($0.key) \(max(1, Int($0.value.squareRoot() * 10)))" }
+            .map { key, value in
+                let cell = "\(key) \(max(1, Int(value.squareRoot() * 10)))"
+                guard let logo = logoBySymbol[key] else { return cell }
+                return "\(cell)|\(logo)"
+            }
     }
 
     /// A step-by-step trace of the holdings path for DiagnosticsScreen — the

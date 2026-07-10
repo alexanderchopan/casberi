@@ -800,3 +800,36 @@ transaction came from, so a row can say which wallet it belongs to
 tag) — shown only when more than one wallet is watched, and only for a
 raw address match (an ENS-named watch won't retroactively match its
 resolved hex, so it simply carries no label rather than a wrong one).
+
+## 36i. TagMap cells: icons where they're always accurate, never a guess (2026-07-09)
+
+Three treemaps share one renderer (`GenTagMap`): Home's "What's going on"
+(projects, or a by-app fallback before real projects form), Feed's
+holdings-by-wallet module, and the Wallet/Dexscreener screens. A new arg
+— `TagMap(eyebrow, subline, [items], iconMode)` — decides whether a cell
+earns an icon, per surface, not per item:
+
+- **Project cells** (real tag clusters like "Work," "Onchain") carry no
+  icon at all — a project spans sources by nature, so nothing is
+  accurate. Name only.
+- **"source" mode** (the by-app fallback, before projects form) reads
+  `BridgeIcon(name:)` — no fetch, and never wrong, because a source-mode
+  cell is always exactly one bridge (Gmail and iCloud Mail stay
+  separate cells on purpose — merging them into one "Mail" category
+  would need either two icons or a generic one, and neither is honest).
+- **"token" mode** (wallet holdings) reads a real logo URL that rides
+  along with the cell (`"SYMBOL N|https://logo.url"`), captured from
+  Alchemy's `tokenMetadata.logo` when present. Missing for most tokens
+  (spam and many altcoins have none cataloged) — those cells stay
+  text-only rather than showing a wrong or generic mark.
+
+`Thing.walletAddress`/tag-cluster tags never carry a `|url` suffix, so
+existing docs parse unchanged; `GenTagMap` gets its own item parser
+(`TagMapItem`, separate from `KindCountRow.Item`) since only TagMap
+cells carry an optional icon.
+
+Same session: a watched **token** (Dexscreener watchlist) could already
+be pinned from Feed — it's a normal Thing there — but not from the
+token-watch screen itself, where you're most likely to reach for it
+right after adding one. Added the same leading-edge pin swipe
+`WalletScreen` already had, verb-for-verb.

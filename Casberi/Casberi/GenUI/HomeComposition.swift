@@ -71,7 +71,7 @@ enum HomeComposition {
             let sources = sourceClusters(things: things)
             if !sources.isEmpty {
                 let items = sources.prefix(6).map { "\($0.name) \($0.things.count)" }
-                doc.append("map = TagMap(\(q("What's going on")), \(q("By app — tags take over as they form")), [\(items.joined(separator: ", "))])")
+                doc.append("map = TagMap(\(q("What's going on")), \(q("By app — tags take over as they form")), [\(items.joined(separator: ", "))], \(q("source")))")
                 rootRefs.append("map")
             }
         }
@@ -121,7 +121,7 @@ enum HomeComposition {
             let sources = sourceClusters(things: things)
             if !sources.isEmpty {
                 let items = sources.prefix(6).map { "\($0.name) \($0.things.count)" }
-                doc.append("map = TagMap(\(q("What's going on")), \(q("By app — tags take over as they form")), [\(items.joined(separator: ", "))])")
+                doc.append("map = TagMap(\(q("What's going on")), \(q("By app — tags take over as they form")), [\(items.joined(separator: ", "))], \(q("source")))")
                 rootRefs.append("map")
             }
         }
@@ -417,7 +417,7 @@ enum HomeComposition {
                                              rootRefs: inout [String]) {
         for (i, g) in groups.enumerated() {
             let id = "walletMap\(i)"
-            doc.append("\(id) = TagMap(\(q(g.label)), \(q("Holdings by value")), [\(g.cells.joined(separator: ", "))])")
+            doc.append("\(id) = TagMap(\(q(g.label)), \(q("Holdings by value")), [\(g.cells.joined(separator: ", "))], \(q("token")))")
             rootRefs.append(id)
         }
     }
