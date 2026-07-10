@@ -1016,6 +1016,9 @@ struct FeedScreen: View {
             thing.pinned.toggle()
             try? modelContext.save()
         }
+        // A pin flip changes no count — Home's Pinned card recomposes on
+        // this signal (it was stale until the next unrelated change).
+        CorpusSignal.shared.bump()
         // The row stays put now (a pin is a Home pin, ruling 2026-07-10) —
         // the toast says where it went, since nothing on this screen moves.
         chrome.flash(thing.pinned ? "Pinned to Home" : "Unpinned from Home")

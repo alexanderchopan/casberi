@@ -1036,3 +1036,29 @@ and skipped (naggy).
   (composition marks openable things, arg 6). Feed rows gain a LEADING
   full-swipe Open too — swipe right to hand off, swipe left keeps
   Pin + Open. Same verb on both edges by design: reach, not redundancy.
+
+## 36u. The composer got smarter — five upgrades (2026-07-10)
+
+- **Counts and aggregates, computed.** "How many links this week",
+  "which app sent the most today" — arithmetic over the corpus
+  (AggregateAsk), no model, no retrieval, ~1ms, always correct.
+- **Out-of-scope redirect.** A no-match ask now says what WOULD work
+  ("Casberi answers from what you've captured — try your links,
+  events, or screenshots…"), and an empty corpus says to connect an
+  app first. No hallucinated answers for out-of-corpus questions.
+- **Semantic widening.** Apple's on-device word embedding expands query
+  terms to near-synonyms (SemanticExpand, neighbors < 1.0 distance),
+  scored below exact matches — "car stuff" can reach "vehicle" titles.
+  Fully on-device, deterministic.
+- **Pin verbs.** "Pin the last link" / "unpin ethereum" execute
+  directly with an Undo toast (PinAsk) — a pin is the app's lightest
+  write; the Feed swipe fires it without a confirm, so the composer
+  carries the same consent weight. A miss answers honestly ("Nothing
+  called 'x' to pin.") instead of closing silently.
+- **Follow-ups.** Pronoun-shaped asks ("which ones were from Sam?")
+  search the LAST answer's grounding instead of the whole corpus.
+
+Found while verifying: pin flips changed no thing-count, so Home's
+Pinned card stayed STALE after every swipe-pin until an unrelated
+recompose. Every pin writer (Feed swipe, composer verb, Dexscreener
+swipe) now bumps CorpusSignal.

@@ -87,6 +87,7 @@ struct DexscreenerScreen: View {
                         DSHaptic.tap()
                         thing.pinned.toggle()
                         try? modelContext.save()
+                        CorpusSignal.shared.bump()
                     } label: {
                         Label(thing.pinned ? "Unpin" : "Pin",
                               systemImage: thing.pinned ? "pin.slash" : "pin")

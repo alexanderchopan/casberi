@@ -19,6 +19,9 @@ struct RootShell: View {
     @AppStorage("firstThingSaved") private var firstThingSaved = false
     @Environment(\.scenePhase) private var scenePhase
     @State private var hasBeenActive = false
+    /// The last answer's grounding — a follow-up ("which ones were from
+    /// Sam?") searches inside it instead of the whole corpus (2026-07-10).
+    @State private var lastAnswerHits: [Thing] = []
     @State private var redactNow = false
     @Namespace private var glassNS
 
@@ -530,7 +533,21 @@ struct RootShell: View {
     /// fallback never call it and return one doc to reveal at once.
     private func answerDocument(_ query: String,
                                 onProseDoc: @escaping ([String]) -> Void) async -> [String] {
-        let hits = retrieve(query)
+        // A count/superlative ask is ARITHMETIC, not retrieval — computed
+        // over the corpus directly, no model, always correct (2026-07-10).
+        let allThings = (try? modelContext.fetch(FetchDescriptor<Thing>(
+            sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]
+        ))) ?? []
+        let knownSources = Array(Set(allThings.map(\.source)))
+        if let agg = AggregateAsk.parse(query, sources: knownSources) {
+            let line = AggregateAsk.answer(agg, things: allThings)
+            return ["root = Stack([ins])", "ins = Insight(\"\(genSafe(line))\")"]
+        }
+        // A follow-up ("which ones were from sam") searches the LAST
+        // answer's grounding, not the whole corpus (2026-07-10).
+        let pool = isFollowUp(query) && !lastAnswerHits.isEmpty ? lastAnswerHits : nil
+        let hits = retrieve(query, in: pool)
+        lastAnswerHits = hits
         // If the query names a tag ("about work"), the answer opens with that
         // tag's tile — tap it to open the tag's view, the same push the Home
         // treemap makes (PRD §17: a topic opens its view, not a Feed filter).
@@ -574,7 +591,15 @@ struct RootShell: View {
     /// and kind words in the person's own words filter ("screenshots about
     /// work" searches screenshots for work). Returns the ranked grounding set
     /// (top 10 — a wider net for the model than the 4 the fallback paints).
-    private func retrieve(_ query: String) -> [Thing] {
+    /// Pronoun-shaped questions lean on what was just answered.
+    private func isFollowUp(_ query: String) -> Bool {
+        let q = " \(query.lowercased()) "
+        return ["them", "those", "these", "ones", "one of", "of that"].contains {
+            q.contains(" \($0) ") || q.contains(" \($0)?")
+        }
+    }
+
+    private func retrieve(_ query: String, in pool: [Thing]? = nil) -> [Thing] {
         var terms = query.lowercased()
             .trimmingCharacters(in: CharacterSet(charactersIn: "? "))
             .split(separator: " ").map(String.init)
@@ -602,11 +627,19 @@ struct RootShell: View {
         let dateMatch = DateQuery.match(in: query)
         if let dateMatch { terms.removeAll { dateMatch.words.contains($0) } }
 
-        var descriptor = FetchDescriptor<Thing>(
-            sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]
-        )
-        descriptor.fetchLimit = 500
-        let all = (try? modelContext.fetch(descriptor)) ?? []
+        let all: [Thing]
+        if let pool {
+            all = pool
+        } else {
+            var descriptor = FetchDescriptor<Thing>(
+                sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]
+            )
+            descriptor.fetchLimit = 500
+            all = (try? modelContext.fetch(descriptor)) ?? []
+        }
+        // Semantic widening: near-synonyms of the query's words, scored
+        // BELOW exact matches — "car stuff" reaches "vehicle" titles.
+        let expanded = SemanticExpand.expand(terms)
 
         // Whole words, not substrings (2026-07-10): "what is my name" used
         // to match the "is" inside "Lisbon" and answer with nonsense — a
@@ -627,6 +660,11 @@ struct RootShell: View {
                 if tags.contains(term) { score += 2 }
                 if content.contains(term) { score += 1 }
             }
+            for term in expanded {
+                if title.contains(term) { score += 1.5 }
+                if tags.contains(term) { score += 1 }
+                if content.contains(term) { score += 0.5 }
+            }
             // A bare kind query ("screenshots?") lists that kind; a bare date
             // query ("what landed today?") lists the day.
             if terms.isEmpty && (kindFilter != nil || dateMatch != nil) { score = 1 }
@@ -645,8 +683,14 @@ struct RootShell: View {
     private func retrievalDoc(_ hits: [Thing], tag: String? = nil) -> [String] {
         let shown = Array(hits.prefix(4))
         guard !shown.isEmpty else {
+            // Say what WOULD work, not just that nothing did (2026-07-10) —
+            // and don't suggest asking about things when there are none.
+            let total = (try? modelContext.fetchCount(FetchDescriptor<Thing>())) ?? 0
+            let line = total == 0
+                ? "Nothing here yet — connect an app or capture one thing, then ask about it."
+                : "Nothing in your things matches that. Casberi answers from what you've captured — try your links, events, or screenshots, or ask what landed today."
             return ["root = Stack([ins])",
-                    "ins = Insight(\"Nothing matches yet. Things you capture land here.\")"]
+                    "ins = Insight(\"\(genSafe(line))\")"]
         }
         let tile = tagTile(tag)
         var doc = ["root = Stack([\(tile == nil ? "res" : "tag, res")])"]

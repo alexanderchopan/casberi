@@ -386,6 +386,41 @@ struct Composer: View {
         pasted = false
     }
 
+    private func runPin(_ intent: PinAsk.Intent) {
+        let all = (try? modelContext.fetch(FetchDescriptor<Thing>(
+            sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]
+        ))) ?? []
+        guard let thing = PinAsk.target(intent, in: all) else {
+            // Named nothing that exists (or nothing pinned to unpin) — say
+            // so in the answer surface instead of silently closing.
+            fieldFocused = false
+            withAnimation(DS.Motion.standard) { answering = true }
+            let what = intent.words.isEmpty
+                ? (intent.kind.map { $0.typeTag.lowercased() } ?? "that")
+                : intent.words.joined(separator: " ")
+            let line = intent.pin
+                ? "Nothing called '\(what)' to pin."
+                : "Nothing pinned called '\(what)'."
+            answerStream.paint(["root = Stack([ins])",
+                                "ins = Insight(\"\(line.replacingOccurrences(of: "\"", with: "'"))\")"])
+            draft = ""
+            return
+        }
+        thing.pinned = intent.pin
+        try? modelContext.save()
+        // A pin flip changes no count — Home recomposes on this signal.
+        CorpusSignal.shared.bump()
+        DSHaptic.success()
+        let title = thing.title.count > 28 ? String(thing.title.prefix(28)) + "…" : thing.title
+        chrome.flash(intent.pin ? "Pinned to Home — \(title)" : "Unpinned — \(title)",
+                     action: .init(label: "Undo") {
+                         thing.pinned = !intent.pin
+                         try? modelContext.save()
+                         CorpusSignal.shared.bump()
+                     })
+        close()
+    }
+
     private func applyProposal(_ proposal: OrganizeProposal) {
         guard proposal.canApply else { return }
         let (summary, undo) = Organize.apply(proposal, context: modelContext)
@@ -405,6 +440,12 @@ struct Composer: View {
             // Paste is a capture path — send keeps what came in.
             onCommit(Array(chosenTags))
             close()
+        } else if let pinIntent = PinAsk.parse(draft) {
+            // "pin the last link" / "unpin ethereum" — the app's lightest,
+            // undoable write; the Feed swipe fires it without a confirm, so
+            // the composer does too, and the toast carries Undo
+            // (2026-07-10).
+            runPin(pinIntent)
         } else if let intent = NavigateCommand.parse(draft, tags: tagPool,
                                                      sources: knownSources()) {
             // A place, named — go there. Reads only (a navigation), so no
