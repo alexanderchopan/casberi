@@ -125,6 +125,15 @@ struct FeedScreen: View {
         return ["All"] + ordered
     }
 
+    /// The connected bridge the feed is currently filtered to, if any. A source
+    /// header appears only for a real, live seat — a plain source (Photos,
+    /// Voice, Safari) owns no control panel, so it gets no door. Paused seats
+    /// aren't "connected", so they don't either.
+    private var activeSourceBridge: BridgeApp? {
+        guard filter.source != "All" else { return nil }
+        return bridges.bridges.first { $0.name == filter.source && $0.status != .paused }
+    }
+
     /// The one row that teaches the swipe (demo only, once): it nudges left,
     /// a pin peeks out, it settles back. Motion, not a tooltip.
     private var hintThingID: UUID? {
@@ -263,6 +272,43 @@ struct FeedScreen: View {
         }
     }
 
+    /// A slim, tappable strip above a single source's shaped feed: the app, its
+    /// live status, a chevron. Tapping opens the app's control panel (the detail
+    /// page): manage the connection, and Reconnect when the seat is broken. It
+    /// rides `pushedBridge` — the same channel a Wallet row already uses.
+    private func sourceHeader(_ bridge: BridgeApp) -> some View {
+        Button {
+            DSHaptic.selection()
+            pushedBridge = .detail(id: bridge.id)
+        } label: {
+            HStack(spacing: DS.Space.s3) {
+                BridgeIcon(name: bridge.name, size: 40)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(bridge.name)
+                        .dsText(.body17).fontWeight(.semibold)
+                        .foregroundStyle(DS.textPrimary)
+                        .lineLimit(1)
+                    Text(bridge.statusLine)
+                        .dsText(.subhead13)
+                        .foregroundStyle(bridge.status == .connected ? DS.textSecondary : bridge.status.color)
+                        .lineLimit(1)
+                }
+                Spacer(minLength: 0)
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(DS.textTertiary)
+            }
+            .padding(.horizontal, DS.Space.s4)
+            .padding(.vertical, DS.Space.s3)
+            .background(DS.surfaceSheet,
+                        in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .padding(.horizontal, DS.Space.s4)
+        .padding(.bottom, DS.Space.s2)
+    }
+
     private var feedList: some View {
         List {
             Group {
@@ -322,6 +368,14 @@ struct FeedScreen: View {
                         .foregroundStyle(DS.tint)
                         .padding(.horizontal, DS.Space.s4)
                         .padding(.top, DS.Space.s1)
+                }
+                // The door back to the app: when the feed wears one connected
+                // source's shape, its header opens that app's control panel
+                // (Pause/Remove/ask/Reconnect) — the reverse of the detail's
+                // "All in Feed". It lives inside this always-present group so it
+                // inserts reliably on mount (a standalone conditional row won't).
+                if let bridge = activeSourceBridge {
+                    sourceHeader(bridge)
                 }
             }
             .listRowBackground(Color.clear)

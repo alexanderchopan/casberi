@@ -41,25 +41,43 @@ struct GlassTabBar: View {
     /// both; the other tab never moves.
     @State private var bounces: [Tab: Int] = [:]
 
+    /// A management screen (Apps/Settings) is covering the current tab — read
+    /// from the two route singletons. While one is up NO tab lights: the bar
+    /// reads "you're off Home and Feed", and a tab tap jumps straight there
+    /// (2026-07-10, replacing the earlier hide-the-whole-bar treatment).
+    private var managementOpen: Bool {
+        HomeRoute.shared.push != nil || FeedRoute.shared.push != nil
+    }
+
     var body: some View {
         HStack(spacing: 0) {
             ForEach(Tab.allCases) { tab in
-                let active = tab == selection
+                // In a management screen NO tab is active — the bar stops
+                // pretending you're on the tab you entered it from.
+                let active = !managementOpen && tab == selection
                 Button {
                     DSHaptic.selection()
                     bounces[tab, default: 0] += 1
                     if selection == tab {
-                        // Re-tap: the tab is a home button — pop to its root.
+                        // Tapping the current tab pops to its root. When a
+                        // management screen is up, that pop (popHome/popFeed
+                        // clears the tab's route push) is what leaves it.
                         switch tab {
                         case .home: chrome.popHome += 1
                         case .feed: chrome.popFeed += 1
                         }
                     } else {
-                        // A deliberate tab tap always supersedes a stale jump
-                        // — the back arrow only means something right after
-                        // Home caused the switch, never after this.
-                        chrome.jumpedFromHome = false
-                        withAnimation(DS.Motion.standard) { selection = tab }
+                        // A deliberate tab tap supersedes a stale jump AND
+                        // leaves any management screen — clear both route pushes
+                        // so the origin tab returns to root and this tab lights
+                        // cleanly. All in one animation, so the lozenge lands on
+                        // the destination instead of flashing the origin first.
+                        withAnimation(DS.Motion.standard) {
+                            HomeRoute.shared.push = nil
+                            FeedRoute.shared.push = nil
+                            chrome.jumpedFromHome = false
+                            selection = tab
+                        }
                     }
                 } label: {
                     VStack(spacing: DS.Space.s1) {

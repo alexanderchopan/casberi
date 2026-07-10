@@ -72,10 +72,10 @@ struct RootShell: View {
 
             // Floating bottom bar: tab capsule + composer FAB on one axis —
             // one glass substance; the FAB morphs into the bubble (iOS 26).
-            // Hidden while a management screen (Apps/Settings) covers the tab,
-            // so it never reads the wrong tab over a place you're only
-            // visiting (2026-07-09) — it slides back when you pop out.
-            if !managementOpen {
+            // It STAYS over a management screen (Apps/Settings) now, but lights
+            // no tab there (GlassTabBar.managementOpen) — so you can jump to
+            // Home or Feed in one tap instead of backing out first (2026-07-10,
+            // replacing the earlier hide-the-bar treatment).
             DSGlassContainer(spacing: DS.Space.s3) {
                 VStack(spacing: DS.Space.s3) {
                     Composer(isOpen: $composerOpen, draft: $draft,
@@ -91,6 +91,10 @@ struct RootShell: View {
                         .environment(\.genProjectTap) { name in
                             withAnimation(DS.Motion.standard) { composerOpen = false }
                             draft = ""
+                            // Drop a stale Apps/Settings push so the tag view
+                            // opens cleanly instead of the store re-presenting.
+                            HomeRoute.shared.push = nil
+                            FeedRoute.shared.push = nil
                             tab = .home
                             HomeRoute.shared.openTag = name
                         }
@@ -108,8 +112,6 @@ struct RootShell: View {
             }
             .padding(.horizontal, DS.Space.s4)
             .padding(.bottom, DS.Space.s2)
-            .transition(.move(edge: .bottom).combined(with: .opacity))
-            }
         }
         // Privacy as the default (goal 6): leaving the app redacts the
         // corpus — the app-switcher snapshot shows choreography, not content.
@@ -145,8 +147,6 @@ struct RootShell: View {
             }
         }
         .animation(DS.Motion.standard, value: composerOpen)
-        // The floating bar slides away/back as a management screen opens/closes.
-        .animation(DS.Motion.standard, value: managementOpen)
         // Feed's back arrow asks this way (it can't hold a binding to
         // `tab`) — same shape as popHome/popFeed.
         .onChange(of: chrome.goHomeRequest) { withAnimation(DS.Motion.standard) { tab = .home } }
@@ -289,6 +289,8 @@ struct RootShell: View {
                 predicate: #Predicate { $0.id == id }
             ))) ?? []
             if let thing = all.first {
+                HomeRoute.shared.push = nil   // land on Feed, not a stale store push
+                FeedRoute.shared.push = nil
                 tab = .feed
                 deepLinkThing = thing
             }
@@ -313,6 +315,13 @@ struct RootShell: View {
 
     /// casberi:// routing — one place, used by onOpenURL and the debug hook.
     private func route(_ url: URL) {
+        // A deep link lands you AT a destination, not back in a store the route
+        // singletons still hold from an earlier visit — clear both first (only
+        // tab taps clear them otherwise). account/apps re-sets one below. Without
+        // this, a stale push makes the tab bar read "management open" (no tab
+        // lit) over an ordinary Home/Feed view.
+        HomeRoute.shared.push = nil
+        FeedRoute.shared.push = nil
         switch url.host() {
         case "home":    tab = .home
         case "feed":
@@ -356,20 +365,6 @@ struct RootShell: View {
         }
     }
 
-    /// A management screen (Apps/Settings, and whatever they push) is covering
-    /// the current tab. The floating tab bar + composer hide while it is, so
-    /// the bar never falsely reads the current tab over a store you're only
-    /// visiting — a tab is where you live, not a drawer you visit (2026-07-09).
-    /// Reached only via the nav-bar doors; the back button pops it and the bar
-    /// slides back. (The bar being gone is also why a tab can't be switched
-    /// mid-visit, so the per-tab push state can't go stale underneath it.)
-    private var managementOpen: Bool {
-        switch tab {
-        case .home: HomeRoute.shared.push != nil
-        case .feed: FeedRoute.shared.push != nil
-        }
-    }
-
     // MARK: - Capture (rung 1 write: the composer saves to us)
 
     /// A typed ask that names a place — the same destinations the UI's own
@@ -377,6 +372,11 @@ struct RootShell: View {
     private func navigate(_ intent: NavigateIntent) {
         // The composer closed itself before calling here (its close() owns
         // the morph + state reset) — this only moves the shell.
+        // Every destination here is content, not a door — drop any Apps/Settings
+        // the singletons still hold, else asking to open a tag while in the store
+        // re-presents the store (and leaves the tab bar reading "management").
+        HomeRoute.shared.push = nil
+        FeedRoute.shared.push = nil
         switch intent {
         case .tag(let name):
             tab = .home
