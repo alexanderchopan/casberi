@@ -553,9 +553,23 @@ struct ComposerFAB: View {
                 .frame(width: side, height: side)
                 .contentShape(Circle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(FABPress())
         .dsGlass(cornerRadius: DS.Radius.pill, glassID: "composer", in: glassNamespace)
         .accessibilityLabel("Ask or save")
+    }
+}
+
+/// The FAB's press (2026-07-10): `.plain` had NO down-state — the button was
+/// dead under the finger until release. Now it squishes and the plus tilts
+/// 45° toward the × it's about to become as the glass morphs into the
+/// composer; dragging off springs it back untouched.
+private struct FABPress: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.86 : 1)
+            .rotationEffect(.degrees(configuration.isPressed ? 45 : 0))
+            .animation(.spring(duration: 0.3, bounce: 0.55),
+                       value: configuration.isPressed)
     }
 }
 
