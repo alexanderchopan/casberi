@@ -132,21 +132,18 @@ enum TokenIngest {
         guard let incoming = await fetch(bridge, token: token) else { return nil }
 
         var existing = IngestSupport.existingSourceRefs(context)
-        // Keyed on the incoming things' own source name (Readwise things say
-        // "Readwise", etc.) so any bridge that starts carrying images patches
-        // the rows it landed before it did.
-        let artless = incoming.first.map {
-            IngestSupport.artlessThings(context, source: $0.source)
-        } ?? [:]
+        // One backfill per source string the items actually carry — no
+        // assumption that a fetch is single-source, and the lazy artless
+        // fetch never runs for the bridges that don't set images.
+        var backfills: [String: ArtlessBackfill] = [:]
         var added = 0
-        var backfilled = 0
         for item in incoming {
             guard let ref = item.sourceRef else { continue }
             if existing.contains(ref) {
-                if let image = item.previewImageURL, let thing = artless[ref] {
-                    thing.previewImageURL = image
-                    backfilled += 1
-                }
+                let backfill = backfills[item.source]
+                    ?? ArtlessBackfill(context, source: item.source)
+                backfills[item.source] = backfill
+                backfill.patch(ref, image: item.previewImageURL)
                 continue
             }
             context.insert(item)
@@ -154,7 +151,7 @@ enum TokenIngest {
             SpotlightIndex.index([item])
             added += 1
         }
-        if added > 0 || backfilled > 0 { try? context.save() }
+        if added > 0 || backfills.values.contains(where: \.any) { try? context.save() }
         return added
     }
 
@@ -184,7 +181,7 @@ enum TokenIngest {
                 .compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: " — ")
             // The book's cover leads every one of its highlights — scrolling
             // groups them visually by what you were reading.
-            let cover = (book["cover_image_url"] as? String).flatMap { $0.isEmpty ? nil : $0 }
+            let cover = IngestSupport.imageURL(book["cover_image_url"] as? String)
             for h in (book["highlights"] as? [[String: Any]]) ?? [] {
                 guard let id = h["id"], let text = h["text"] as? String, !text.isEmpty
                 else { continue }
@@ -384,8 +381,7 @@ enum TokenIngest {
                 sourceRef: "raindrop:\(id)"
             )
             // Raindrop's cover is the bookmark's og:image — the pin pattern.
-            thing.previewImageURL = (item["cover"] as? String)
-                .flatMap { $0.hasPrefix("http") ? $0 : nil }
+            thing.previewImageURL = IngestSupport.imageURL(item["cover"] as? String)
             return thing
         }
     }

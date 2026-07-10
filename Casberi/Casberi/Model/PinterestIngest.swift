@@ -55,18 +55,14 @@ enum PinterestIngest {
         guard !parsed.items.isEmpty || !parsed.title.isEmpty else { return nil }
 
         let existing = IngestSupport.existingSourceRefs(context)
-        let artless = IngestSupport.artlessThings(context, source: "Pinterest")
+        let backfill = ArtlessBackfill(context, source: "Pinterest")
         var added = 0
-        var backfilled = 0
 
         for item in parsed.items.prefix(25) {
             guard !item.link.isEmpty else { continue }
             let ref = "pinterest:\(item.guid.isEmpty ? item.link : item.guid)"
             if existing.contains(ref) {
-                if !item.imageURL.isEmpty, let thing = artless[ref] {
-                    thing.previewImageURL = item.imageURL
-                    backfilled += 1
-                }
+                backfill.patch(ref, image: item.imageURL)
                 continue
             }
             let thing = Thing(
@@ -80,12 +76,12 @@ enum PinterestIngest {
             )
             // The pin's image, so the feed row leads with a thumbnail (the
             // whole point of a Pinterest feed) instead of the generic glyph.
-            if !item.imageURL.isEmpty { thing.previewImageURL = item.imageURL }
+            thing.previewImageURL = IngestSupport.imageURL(item.imageURL)
             context.insert(thing)
             SpotlightIndex.index([thing])
             added += 1
         }
-        if added > 0 || backfilled > 0 { try? context.save() }
+        if added > 0 || backfill.any { try? context.save() }
         return added
     }
 }

@@ -82,26 +82,25 @@ enum SteamIngest {
         let games = (response["games"] as? [[String: Any]]) ?? []   // none is a real answer
 
         let existing = IngestSupport.existingSourceRefs(context)
-        let artless = IngestSupport.artlessThings(context, source: "Steam")
         var added = 0
-        var backfilled = 0
+        var backfilled = false
+
+        // Header art is a pure function of the appid already stored in the
+        // ref, so EVERY artless row gets patched — not just games inside the
+        // two-week recently-played window. Steady state: the fetch matches
+        // nothing and this is a no-op. (A delisted game's header can 404 —
+        // RemoteThumb falls back to the Steam glyph, never a gray hole.)
+        for (ref, thing) in IngestSupport.artlessThings(context, source: "Steam") {
+            guard let appID = Int(ref.dropFirst("steam:".count)) else { continue }
+            thing.previewImageURL = headerArt(appID)
+            backfilled = true
+        }
 
         for game in games {
             guard let appID = game["appid"] as? Int,
                   let name = game["name"] as? String else { continue }
             let ref = "steam:\(appID)"
-            // The store header art — a pure function of the appid, and the
-            // most reliably present of Steam's art assets (capsule/library
-            // art is spotty for older games). RemoteThumb center-crops the
-            // wide frame into the row's square.
-            let art = "https://cdn.cloudflare.steamstatic.com/steam/apps/\(appID)/header.jpg"
-            if existing.contains(ref) {
-                if let thing = artless[ref] {
-                    thing.previewImageURL = art
-                    backfilled += 1
-                }
-                continue
-            }
+            guard !existing.contains(ref) else { continue }
             let mins = (game["playtime_2weeks"] as? Int) ?? 0
             let hours = String(format: "%.1f", Double(mins) / 60)
             let thing = Thing(
@@ -112,12 +111,19 @@ enum SteamIngest {
                 capturedAt: .now,
                 sourceRef: ref
             )
-            thing.previewImageURL = art
+            thing.previewImageURL = headerArt(appID)
             context.insert(thing)
             SpotlightIndex.index([thing])
             added += 1
         }
-        if added > 0 || backfilled > 0 { try? context.save() }
+        if added > 0 || backfilled { try? context.save() }
         return added
+    }
+
+    /// The store header — the most reliably present of Steam's art assets
+    /// (capsule/library art is spotty for older games). RemoteThumb
+    /// center-crops the wide frame into the row's square.
+    private static func headerArt(_ appID: Int) -> String {
+        "https://cdn.cloudflare.steamstatic.com/steam/apps/\(appID)/header.jpg"
     }
 }

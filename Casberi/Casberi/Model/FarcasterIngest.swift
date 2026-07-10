@@ -71,9 +71,8 @@ enum FarcasterIngest {
               let messages = root["messages"] as? [[String: Any]] else { return nil }
 
         let existing = IngestSupport.existingSourceRefs(context)
-        let artless = IngestSupport.artlessThings(context, source: "Farcaster")
+        let backfill = ArtlessBackfill(context, source: "Farcaster")
         var added = 0
-        var backfilled = 0
 
         for message in messages {
             guard let hash = message["hash"] as? String,
@@ -85,10 +84,7 @@ enum FarcasterIngest {
             let ref = "fc:\(hash)"
             let image = imageEmbed(body)
             if existing.contains(ref) {
-                if let image, let thing = artless[ref] {
-                    thing.previewImageURL = image
-                    backfilled += 1
-                }
+                backfill.patch(ref, image: image)
                 continue
             }
 
@@ -104,12 +100,12 @@ enum FarcasterIngest {
                 capturedAt: when ?? .now,
                 sourceRef: ref
             )
-            if let image { thing.previewImageURL = image }
+            thing.previewImageURL = IngestSupport.imageURL(image)
             context.insert(thing)
             SpotlightIndex.index([thing])
             added += 1
         }
-        if added > 0 || backfilled > 0 { try? context.save() }
+        if added > 0 || backfill.any { try? context.save() }
         return added
     }
 

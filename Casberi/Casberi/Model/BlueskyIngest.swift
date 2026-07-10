@@ -59,9 +59,8 @@ enum BlueskyIngest {
         }
 
         let existing = IngestSupport.existingSourceRefs(context)
-        let artless = IngestSupport.artlessThings(context, source: "Bluesky")
+        let backfill = ArtlessBackfill(context, source: "Bluesky")
         var added = 0
-        var backfilled = 0
 
         for entry in feed {
             guard let post = entry["post"] as? [String: Any],
@@ -74,10 +73,7 @@ enum BlueskyIngest {
             let ref = "bsky:\(uri)"
             let image = embedThumb(post)
             if existing.contains(ref) {
-                if let image, let thing = artless[ref] {
-                    thing.previewImageURL = image
-                    backfilled += 1
-                }
+                backfill.patch(ref, image: image)
                 continue
             }
 
@@ -94,12 +90,12 @@ enum BlueskyIngest {
                 capturedAt: date ?? .now,
                 sourceRef: ref
             )
-            if let image { thing.previewImageURL = image }
+            thing.previewImageURL = IngestSupport.imageURL(image)
             context.insert(thing)
             SpotlightIndex.index([thing])
             added += 1
         }
-        if added > 0 || backfilled > 0 { try? context.save() }
+        if added > 0 || backfill.any { try? context.save() }
         return added
     }
 

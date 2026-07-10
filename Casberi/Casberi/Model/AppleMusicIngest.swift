@@ -50,9 +50,8 @@ enum AppleMusicIngest {
 
         let existing = IngestSupport.existingSourceRefs(context)
 
-        let artless = IngestSupport.artlessThings(context, source: "Apple Music")
+        let backfill = ArtlessBackfill(context, source: "Apple Music")
         var added = 0
-        var backfilled = 0
         for song in response.items {
             let ref = "applemusic:\(song.id.rawValue)"
             // The album art, as a plain https URL (mzstatic CDN, no auth) —
@@ -62,10 +61,7 @@ enum AppleMusicIngest {
             // RemoteThumb's downsample stays cheap.
             let artworkURL = song.artwork?.url(width: 300, height: 300)?.absoluteString
             if existing.contains(ref) {
-                if let artworkURL, let thing = artless[ref] {
-                    thing.previewImageURL = artworkURL
-                    backfilled += 1
-                }
+                backfill.patch(ref, image: artworkURL)
                 continue
             }
             let artist = song.artistName
@@ -78,12 +74,12 @@ enum AppleMusicIngest {
                 capturedAt: song.lastPlayedDate ?? .now,
                 sourceRef: ref
             )
-            if let artworkURL { thing.previewImageURL = artworkURL }
+            thing.previewImageURL = IngestSupport.imageURL(artworkURL)
             context.insert(thing)
             SpotlightIndex.index([thing])
             added += 1
         }
-        if added > 0 || backfilled > 0 { try? context.save() }
+        if added > 0 || backfill.any { try? context.save() }
         return added
     }
 }

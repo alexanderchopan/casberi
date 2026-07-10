@@ -91,9 +91,8 @@ enum RSSIngest {
         var reachedAny = false
 
         var existing = IngestSupport.existingSourceRefs(context)
-        let artless = IngestSupport.artlessThings(context, source: "RSS")
+        let backfill = ArtlessBackfill(context, source: "RSS")
         var added = 0
-        var backfilled = 0
 
         for feed in store.feeds {
             guard let url = URL(string: feed.url) else { continue }
@@ -109,10 +108,7 @@ enum RSSIngest {
                 if existing.contains(ref) {
                     // An already-landed item still in the feed's window can
                     // hand its lead image to the artless row it became.
-                    if !item.imageURL.isEmpty, let thing = artless[ref] {
-                        thing.previewImageURL = item.imageURL
-                        backfilled += 1
-                    }
+                    backfill.patch(ref, image: item.imageURL)
                     continue
                 }
                 guard !item.title.isEmpty else { continue }
@@ -127,14 +123,14 @@ enum RSSIngest {
                 // The item's lead image — the parser already pulls Media RSS
                 // thumbnails, enclosures, and the first inline <img>; only
                 // PinterestIngest was using it (fixed 2026-07-10).
-                if !item.imageURL.isEmpty { thing.previewImageURL = item.imageURL }
+                thing.previewImageURL = IngestSupport.imageURL(item.imageURL)
                 context.insert(thing)
                 existing.insert(ref)
                 SpotlightIndex.index([thing])
                 added += 1
             }
         }
-        if added > 0 || backfilled > 0 { try? context.save() }
+        if added > 0 || backfill.any { try? context.save() }
         // Every feed unreachable is a failed sync, not "up to date".
         return reachedAny ? added : nil
     }
@@ -254,7 +250,8 @@ enum FeedParser {
                 // No attribute image yet — pull the first <img> out of the
                 // (usually CDATA) description HTML. This is Pinterest's path.
                 if current?.imageURL.isEmpty == true,
-                   let src = Self.firstImageSrc(in: value) {
+                   let src = Self.firstImageSrc(in: value),
+                   !Self.looksLikeTracker(src) {
                     current?.imageURL = Self.normalizeImage(src)
                 }
             case "item", "entry":
@@ -281,6 +278,15 @@ enum FeedParser {
         /// Protocol-relative URLs (`//host/…`) become https so AsyncImage loads.
         private static func normalizeImage(_ url: String) -> String {
             url.hasPrefix("//") ? "https:" + url : url
+        }
+
+        /// The first <img> of general feed HTML is sometimes a 1×1 beacon or
+        /// badge, not the article's lead image — the obvious ones never
+        /// become a row's thumbnail (added when the imageURL went from
+        /// Pinterest-only to every feed, 2026-07-10).
+        private static func looksLikeTracker(_ src: String) -> Bool {
+            let s = src.lowercased()
+            return ["pixel", "1x1", "spacer", "beacon", "/track"].contains { s.contains($0) }
         }
     }
 }

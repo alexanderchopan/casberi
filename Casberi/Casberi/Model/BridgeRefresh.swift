@@ -57,6 +57,9 @@ enum BridgeRefresh {
         if !WalletStore.shared.addresses.isEmpty {
             Task { @MainActor in _ = await WalletIngest.refresh(context: context) }
         }
+        // Not an ingest — the watchlist's 24h pulse for the feed-row
+        // sparkline. Exits instantly when no tokens are watched.
+        Task { @MainActor in await TokenPulse.shared.refresh(context: context) }
         for provider in MailProvider.allCases where provider.connected {
             Task { @MainActor in _ = await MailIngest.refresh(provider, context: context) }
         }

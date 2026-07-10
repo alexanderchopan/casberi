@@ -24,6 +24,12 @@ struct BandRow: View {
     /// Honest by construction: the caller derives it from the source's own
     /// current-live set, never from the row's age.
     var live: Bool = false
+    /// A watched token's last 24h (Option A ruling 2026-07-10) — the right
+    /// stack carries a sparkline over the signed change instead of
+    /// time-over-tag (a watchlist row's timestamp says only "watched N days
+    /// ago"; its 24h is what you actually glance for). The caller derives
+    /// it from TokenPulse, so only Dexscreener rows ever carry one.
+    var pulse: TokenPulse.Pulse? = nil
     @Environment(\.colorScheme) private var scheme
 
     private var done: Bool { thing.mark == .done }
@@ -70,9 +76,14 @@ struct BandRow: View {
             // it IS the point of the row (a pin's photo, a screenshot's
             // capture). Same 26pt leading slot, so the row keeps its height
             // and rhythm (shaped-feeds rule 2). Remote pins load from a URL;
-            // screenshots from their local PHAsset via PhotoWell.
-            if let image = thing.previewImageURL, !image.isEmpty {
-                RemoteThumb(urlString: image, size: 26)
+            // screenshots from their local PHAsset via PhotoWell. Twitch
+            // frames are perishable — they render only while the source's
+            // live set says the stream is on (honesty at render: the model
+            // may still hold a frame a failed or disconnected sync never
+            // saw end).
+            if let image = thing.previewImageURL, !image.isEmpty,
+               thing.source != "Twitch" || live {
+                RemoteThumb(urlString: image, size: 26, fallback: thing.source)
             } else if thing.kind == .screenshot, thing.sourceRef != nil {
                 PhotoWell(thing: thing, size: 26)
             } else {
@@ -86,7 +97,13 @@ struct BandRow: View {
                 .lineLimit(2)
                 .frame(maxWidth: .infinity, alignment: .leading)
             VStack(alignment: .trailing, spacing: 1) {
-                if live {
+                if let pulse {
+                    Sparkline(closes: pulse.closes, up: pulse.change24h >= 0)
+                    Text(Self.deltaText(pulse.change24h))
+                        .font(.system(size: 11, weight: .semibold))
+                        .monospacedDigit()
+                        .foregroundStyle(pulse.change24h >= 0 ? DS.confirm : DS.destructive)
+                } else if live {
                     HStack(spacing: 4) {
                         Circle().fill(DS.confirm).frame(width: 6, height: 6)
                         Text("Live").dsText(.label12).foregroundStyle(DS.confirm)
@@ -96,7 +113,8 @@ struct BandRow: View {
                 } else {
                     LiveTimeText(date: thing.capturedAt)
                 }
-                if let project {
+                // The signed change occupies the tag line on a pulsed row.
+                if pulse == nil, let project {
                     Text(project)
                         .font(.system(size: 11, weight: .medium))
                         .foregroundStyle(projectInk)
@@ -106,6 +124,42 @@ struct BandRow: View {
         }
         .padding(.vertical, DS.Space.s2)
     }
+
+    /// "+4.2%" / "-7.8%" — one decimal; sign is the point.
+    private static func deltaText(_ change: Double) -> String {
+        String(format: "%+.1f%%", change * 100)
+    }
+}
+
+
+/// The 24h price line a token row wears (Option A, 2026-07-10): 2pt round
+/// stroke, no axes, no dots — the signed percent beneath carries the number,
+/// the line carries the shape. Green up / red down is state (the color law's
+/// third permitted job), matching the confirm/destructive family.
+struct Sparkline: View {
+    let closes: [Double]
+    let up: Bool
+
+    var body: some View {
+        Canvas { ctx, canvasSize in
+            guard closes.count >= 2,
+                  let lo = closes.min(), let hi = closes.max() else { return }
+            let span = hi - lo
+            let inset: CGFloat = 1   // half the stroke, so peaks aren't clipped
+            let stepX = (canvasSize.width - inset * 2) / CGFloat(closes.count - 1)
+            var path = Path()
+            for (i, close) in closes.enumerated() {
+                let t = span > 0 ? (close - lo) / span : 0.5
+                let point = CGPoint(
+                    x: inset + CGFloat(i) * stepX,
+                    y: inset + CGFloat(1 - t) * (canvasSize.height - inset * 2))
+                if i == 0 { path.move(to: point) } else { path.addLine(to: point) }
+            }
+            ctx.stroke(path, with: .color(up ? DS.confirm : DS.destructive),
+                       style: StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round))
+        }
+        .frame(width: 46, height: 14)
+    }
 }
 
 
@@ -113,11 +167,16 @@ struct BandRow: View {
 /// from the URL captured at ingest. URLSession's shared cache holds the bytes;
 /// a small decoded-image cache keeps a scroll from re-decoding, and each image
 /// is downsampled to the thumbnail size so a wall of full-res pins can't bloat
-/// memory. A dead URL falls back to the photo well, never an empty hole.
+/// memory. A dead URL falls back to the bridge glyph — what "no image" looks
+/// like everywhere else — never a gray hole (2026-07-10: a 404'd Steam header
+/// or expired frame must not read worse than having no art at all).
 struct RemoteThumb: View {
     let urlString: String
     var size: CGFloat = 26
+    /// The bridge whose glyph stands in when the URL turns out dead.
+    var fallback: String? = nil
     @State private var image: UIImage?
+    @State private var failed = false
 
     private static let cache: NSCache<NSString, UIImage> = {
         let c = NSCache<NSString, UIImage>()
@@ -129,6 +188,8 @@ struct RemoteThumb: View {
         Group {
             if let image {
                 Image(uiImage: image).resizable().scaledToFill()
+            } else if failed, let fallback {
+                BridgeIcon(name: fallback, size: size)
             } else {
                 ZStack {
                     DS.fillFaint
@@ -151,10 +212,15 @@ struct RemoteThumb: View {
         }
         // A recycled row: drop the previous pin before the new one arrives.
         image = nil
+        failed = false
         guard let url = URL(string: urlString),
-              let (data, _) = try? await URLSession.shared.data(from: url),
-              !Task.isCancelled,
-              let full = UIImage(data: data) else { return }
+              let (data, _) = try? await URLSession.shared.data(from: url) else {
+            // A dead URL is an answer; a cancelled task is not.
+            failed = !Task.isCancelled
+            return
+        }
+        guard !Task.isCancelled else { return }
+        guard let full = UIImage(data: data) else { failed = true; return }
         // Downsample off the main thread — a wall of full-res pins would
         // otherwise decode at display size on every scroll pass.
         let side = size * 3
