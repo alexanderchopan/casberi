@@ -285,8 +285,17 @@ enum FeedParser {
         /// become a row's thumbnail (added when the imageURL went from
         /// Pinterest-only to every feed, 2026-07-10).
         private static func looksLikeTracker(_ src: String) -> Bool {
-            let s = src.lowercased()
-            return ["pixel", "1x1", "spacer", "beacon", "/track"].contains { s.contains($0) }
+            // Whole path SEGMENTS only — a substring match ate real images
+            // ("google-pixel-10-hero.jpg" contains "pixel"; review 2026-07-10).
+            let path = (URL(string: src)?.path ?? src).lowercased()
+            let segments = path.split(separator: "/").map(String.init)
+            let markers: Set<String> = ["pixel", "pixels", "1x1", "spacer",
+                                        "beacon", "track", "tracking", "tracker"]
+            if segments.contains(where: markers.contains) { return true }
+            // Tracker FILENAMES: "pixel.gif", "1x1.png", "spacer.gif".
+            if let file = segments.last?.split(separator: ".").first,
+               markers.contains(String(file)) { return true }
+            return false
         }
     }
 }

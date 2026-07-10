@@ -26,6 +26,9 @@ enum TwitchAuth {
         TokenVault.delete(tokenKey)
         TokenVault.delete(refreshKey)
         UserDefaults.standard.removeObject(forKey: userKey)
+        // Live state dies with the connection — a lingering ref would keep
+        // rendering Live + a "current" frame forever (honesty rule).
+        UserDefaults.standard.removeObject(forKey: TwitchIngest.liveKey)
     }
 
     // MARK: - Device-code flow
@@ -137,7 +140,7 @@ enum TwitchIngest {
     /// reads this set, so a row only claims live while Twitch itself said so
     /// (refreshed every foreground via BridgeRefresh). Ended streams simply
     /// drop out; their things stay as records with their timestamps.
-    private static let liveKey = "twitch.live.refs"
+    static let liveKey = "twitch.live.refs"
     static var liveRefs: Set<String> {
         Set(UserDefaults.standard.stringArray(forKey: liveKey) ?? [])
     }
@@ -158,7 +161,13 @@ enum TwitchIngest {
                 "https://api.twitch.tv/helix/streams/followed?user_id=\(userID)",
                 auth: "Bearer \(token)", headers: ["Client-Id": TwitchAuth.clientID]
               ) as? [String: Any],
-              let streams = root["data"] as? [[String: Any]] else { return nil }
+              let streams = root["data"] as? [[String: Any]] else {
+            // Can't verify who's live → claim nobody is. A failed sync
+            // must not freeze yesterday's Live state on screen (honesty
+            // rule; review 2026-07-10).
+            UserDefaults.standard.set([String](), forKey: liveKey)
+            return nil
+        }
 
         let existing = IngestSupport.existingSourceRefs(context)
         let backfill = ArtlessBackfill(context, source: "Twitch")

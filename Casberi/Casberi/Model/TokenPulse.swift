@@ -22,6 +22,9 @@ final class TokenPulse {
     /// Keyed by the watchlist thing's sourceRef.
     private(set) var pulses: [String: Pulse] = [:]
     private var refreshing = false
+    /// Failed fetches ride the same 15-minute gate — a token neither
+    /// provider can chart must not cost 3 GETs on every foreground forever.
+    private var lastTried: [String: Date] = [:]
 
     private init() {}
 
@@ -43,14 +46,36 @@ final class TokenPulse {
         let descriptor = FetchDescriptor<Thing>(predicate: #Predicate {
             $0.source == "Dexscreener"
         })
+        var stale: [(ref: String, chain: String, address: String)] = []
         for thing in (try? context.fetch(descriptor)) ?? [] {
             guard let ref = thing.sourceRef,
                   let route = TokenChart.route(from: thing.content) else { continue }
             if let fresh = pulses[ref], fresh.fetchedAt.timeIntervalSinceNow > -900 { continue }
-            guard let chart = await TokenChart.fetch(chain: route.chain,
-                                                     address: route.address) else { continue }
-            pulses[ref] = Pulse(closes: chart.closes, change24h: chart.change24h,
-                                fetchedAt: .now)
+            if let tried = lastTried[ref], tried.timeIntervalSinceNow > -900 { continue }
+            stale.append((ref, route.chain, route.address))
         }
+        guard !stale.isEmpty else { return }
+        let stamp = Date.now
+        for item in stale { lastTried[item.ref] = stamp }
+
+        // Tokens are independent and TokenChart.fetch is 2-3 GETs strung
+        // together — serially, N tokens cost up to 3N round trips end to
+        // end. Fan out, then land every pulse in ONE dictionary write so
+        // the feed repaints once, not once per token.
+        let fetched = await withTaskGroup(of: (String, TokenChart?).self) { group in
+            for item in stale {
+                group.addTask {
+                    (item.ref, await TokenChart.fetch(chain: item.chain, address: item.address))
+                }
+            }
+            var out: [String: TokenChart] = [:]
+            for await (ref, chart) in group {
+                if let chart { out[ref] = chart }
+            }
+            return out
+        }
+        pulses.merge(fetched.mapValues {
+            Pulse(closes: $0.closes, change24h: $0.change24h, fetchedAt: stamp)
+        }) { _, new in new }
     }
 }

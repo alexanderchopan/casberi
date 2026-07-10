@@ -117,8 +117,11 @@ enum FarcasterIngest {
         for embed in (body["embeds"] as? [[String: Any]]) ?? [] {
             guard let url = embed["url"] as? String else { continue }
             let lower = url.lowercased()
+            // Extension check runs on the PATH — a query string
+            // ("photo.jpg?maxwidth=640") defeated hasSuffix on the raw URL.
+            let path = URL(string: lower)?.path ?? lower
             if lower.contains("imagedelivery.net")
-                || [".jpg", ".jpeg", ".png", ".gif", ".webp"].contains(where: lower.hasSuffix) {
+                || [".jpg", ".jpeg", ".png", ".gif", ".webp"].contains(where: path.hasSuffix) {
                 return url
             }
         }

@@ -872,38 +872,49 @@ struct FeedScreen: View {
         }
     }
 
+    /// Source chips, Stories-sized (ruling 2026-07-10, Option A): 56pt
+    /// icon-only circles — the brand logo IS the chip. A DS.confirm ring
+    /// marks a source with things NEWER than the last visit (same state as
+    /// the "New since" divider; it quiets when the visit stamp advances).
+    /// The active chip wears the ink ring. No labels — labels were what
+    /// made the row scroll (ruling 2026-07-09); "All" keeps its word, it
+    /// has no app.
     private func filterChips(_ labels: [String], active: String,
                              onTap: @escaping (String) -> Void) -> some View {
+        let fresh: Set<String> = {
+            guard let newSince else { return [] }
+            return Set(things.filter { $0.capturedAt > newSince }.map(\.source))
+        }()
         // ScrollViewReader keeps the ACTIVE chip visible — a deep link
         // (casberi://feed/source/Zerion) can select a chip that sits past
         // the fold, and a filter you can't see reads as no filter at all.
-        ScrollViewReader { proxy in
+        return ScrollViewReader { proxy in
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: DS.Space.s2) {
+                HStack(spacing: DS.Space.s3) {
                     ForEach(labels, id: \.self) { label in
                         let isActive = label == active
-                        // Icons joined the chips (re-ruling 2026-07-06 — real
-                        // brand assets exist now, so the icon IS the identity).
-                        // Inactive chips are icon-ONLY (ruling 2026-07-09): the
-                        // labels were what made the row scroll; only the active
-                        // chip names itself. "All" keeps its word — it has no app.
-                        HStack(spacing: DS.Space.s1 + 2) {
-                            if label != "All" {
-                                // Circular, and sized to the chip when it's
-                                // icon-only: the logo IS the chip, not a
-                                // square floating in a circle (2026-07-10).
-                                BridgeIcon(name: label, size: isActive ? 24 : 32, circular: true)
-                            }
-                            if isActive || label == "All" {
-                                Text(label).dsText(.label12)
-                                    .foregroundStyle(isActive ? DS.page : DS.textSecondary)
+                        let hasNew = fresh.contains(label)
+                        ZStack {
+                            if label == "All" {
+                                Circle().fill(DS.gray100)
+                                Text("All").dsText(.label12)
+                                    .foregroundStyle(DS.textPrimary)
+                            } else {
+                                BridgeIcon(name: label, size: 46, circular: true)
                             }
                         }
-                        .padding(.horizontal, isActive || label == "All" ? DS.Space.s3 : 0)
-                        .frame(height: 32)
-                        .background(isActive ? DS.textPrimary : DS.gray100,
-                                    in: Capsule(style: .continuous))
+                        .frame(width: 46, height: 46)
+                        .padding(2.5)
+                        .overlay(
+                            Circle().strokeBorder(
+                                isActive ? DS.textPrimary
+                                    : (hasNew ? DS.confirm : .clear),
+                                lineWidth: 2.5)
+                        )
+                        .frame(width: 56, height: 56)
                         .id(label)
+                        .accessibilityLabel(label + (hasNew ? ", new things" : ""))
+                        .accessibilityAddTraits(isActive ? .isSelected : [])
                         .onTapGesture { DSHaptic.selection(); withAnimation(DS.Motion.standard) { onTap(label) } }
                     }
                 }

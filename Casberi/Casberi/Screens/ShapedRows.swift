@@ -83,7 +83,8 @@ struct BandRow: View {
             // saw end).
             if let image = thing.previewImageURL, !image.isEmpty,
                thing.source != "Twitch" || live {
-                RemoteThumb(urlString: image, size: 26, fallback: thing.source)
+                RemoteThumb(urlString: image, size: 26, fallback: thing.source,
+                            perishable: thing.source == "Twitch")
             } else if thing.kind == .screenshot, thing.sourceRef != nil {
                 PhotoWell(thing: thing, size: 26)
             } else {
@@ -175,6 +176,10 @@ struct RemoteThumb: View {
     var size: CGFloat = 26
     /// The bridge whose glyph stands in when the URL turns out dead.
     var fallback: String? = nil
+    /// A perishable image (a live-stream frame) changes behind its URL —
+    /// skip the decoded cache so a second broadcast can't wear the first
+    /// broadcast's frame, and never blacklist its URL.
+    var perishable = false
     @State private var image: UIImage?
     @State private var failed = false
 
@@ -183,12 +188,17 @@ struct RemoteThumb: View {
         c.countLimit = 120
         return c
     }()
+    /// URLs that served non-image bytes (a delisted Steam header's 404
+    /// page). Without this, every scroll pass over a dead-URL row re-issues
+    /// the request — the CDN's 404 carries no cache headers, so URLCache
+    /// stores nothing. Session-scoped on purpose: a redeploy can revive art.
+    @MainActor private static var dead: Set<String> = []
 
     var body: some View {
         Group {
             if let image {
                 Image(uiImage: image).resizable().scaledToFill()
-            } else if failed, let fallback {
+            } else if failed || Self.dead.contains(urlString), let fallback {
                 BridgeIcon(name: fallback, size: size)
             } else {
                 ZStack {
@@ -205,9 +215,10 @@ struct RemoteThumb: View {
     }
 
     private func load() async {
+        if Self.dead.contains(urlString) { failed = true; return }
         // Cache hit is instant and also covers a recycled row landing on a new
         // URL (its own key, so a stale pin never shows through).
-        if let hit = Self.cache.object(forKey: urlString as NSString) {
+        if !perishable, let hit = Self.cache.object(forKey: urlString as NSString) {
             image = hit; return
         }
         // A recycled row: drop the previous pin before the new one arrives.
@@ -215,12 +226,19 @@ struct RemoteThumb: View {
         failed = false
         guard let url = URL(string: urlString),
               let (data, _) = try? await URLSession.shared.data(from: url) else {
-            // A dead URL is an answer; a cancelled task is not.
+            // A transient network failure is an answer for THIS appearance
+            // only (glyph now, retry on recycle) — never blacklisted.
             failed = !Task.isCancelled
             return
         }
         guard !Task.isCancelled else { return }
-        guard let full = UIImage(data: data) else { failed = true; return }
+        guard let full = UIImage(data: data) else {
+            // The server answered with non-image bytes — the URL itself is
+            // dead (a 404 page). Remember, so scrolling stops re-fetching it.
+            failed = true
+            if !perishable { Self.dead.insert(urlString) }
+            return
+        }
         // Downsample off the main thread — a wall of full-res pins would
         // otherwise decode at display size on every scroll pass.
         let side = size * 3
@@ -228,7 +246,7 @@ struct RemoteThumb: View {
             full.prepareThumbnail(of: CGSize(width: side, height: side)) { cont.resume(returning: $0 ?? full) }
         }
         guard !Task.isCancelled else { return }
-        Self.cache.setObject(thumb, forKey: urlString as NSString)
+        if !perishable { Self.cache.setObject(thumb, forKey: urlString as NSString) }
         image = thumb
     }
 }

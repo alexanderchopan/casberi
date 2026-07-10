@@ -1090,3 +1090,48 @@ Found while building: a SwiftData #Predicate cannot compare the
 Codable ThingKind enum — it throws at runtime, and `try?` made the
 miss silent (the new chips never appeared). Rule: kind filters happen
 in memory after a plain fetch; enums never enter a #Predicate.
+
+## 36w. Watchlist rows wear a 24h sparkline (Option A ruling, 2026-07-10)
+
+Recording the ruling the sparkline commit cited but never wrote down:
+a watched token's feed row replaces time-over-tag with a 46pt 24h
+sparkline plus signed change — the row's "what is it doing right now",
+the way a Twitch row wears Live. TokenPulse holds the curves in memory
+only (prices are perishable; nothing persists), refreshed per
+foreground alongside the bridges.
+
+## 36x. Feed source chips go Stories-sized (Option A, 2026-07-10)
+
+The chip row is 56pt icon-only circles — the brand logo IS the chip.
+A DS.confirm ring marks a source with things newer than the last
+visit (the same state as the "New since" divider; it quiets when the
+visit stamp advances). The active chip wears the ink ring. No labels
+(64pt Stories-with-labels was mocked and rejected: ~90pt of height
+for words the icons already say); "All" keeps its word — it has no
+app. Ruled from three on-sim mockups.
+
+## 36y. Build-19 review fixes (2026-07-10)
+
+Review of the image-rows diff confirmed and fixed:
+- Tracker-image filter matched substrings ("google-pixel-10-hero.jpg"
+  lost its image forever) — now whole path segments + tracker filenames.
+- Twitch live state could outlive the truth: liveRefs now clears on
+  disconnect AND on a failed sync (can't verify who's live → claim
+  nobody is).
+- A live-stream frame is perishable: RemoteThumb skips its decoded
+  cache for perishable URLs, so a second broadcast can't wear the
+  first one's frame.
+- Dead image URLs (delisted Steam headers' 404 pages carry no cache
+  headers) are remembered per session — scrolling no longer re-fetches
+  them per appearance.
+- TokenPulse fans out token fetches (was 3N serial round trips), lands
+  them in one repaint, and rate-limits FAILED tokens by the same
+  15-minute gate (a dead token cost 3 GETs every foreground, forever).
+- Farcaster image detection now checks the URL path, not the raw URL
+  (query strings defeated the extension check).
+
+Deferred to a cleanup pass, on record: the save-epilogue belongs on
+ArtlessBackfill (copy-pasted across 9 bridges; Steam hand-rolls it);
+deltaText/sparkline are third copies of existing formatters/renderers;
+GenTokenRow + TokenChartContent should read TokenPulse instead of
+fetching their own charts.
