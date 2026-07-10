@@ -60,6 +60,9 @@ enum AppleMusicIngest {
             // crisp at the row's 26pt thumb on 3× screens, small enough that
             // RemoteThumb's downsample stays cheap.
             let artworkURL = song.artwork?.url(width: 300, height: 300)?.absoluteString
+            if artworkURL == nil {
+                NSLog("[Casberi] Apple Music: no artwork for %@", song.title)
+            }
             if existing.contains(ref) {
                 backfill.patch(ref, image: artworkURL)
                 continue

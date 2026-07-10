@@ -21,7 +21,7 @@ struct ThingContentView: View {
             if let route = TokenChart.route(from: thing.content) {
                 TokenChartContent(chain: route.chain, address: route.address)
             } else if let url = Capture.detectURL(in: thing.content.isEmpty ? thing.title : thing.content) {
-                LinkPreviewCard(url: url)
+                LinkPreviewCard(url: url, storedImageURL: thing.previewImageURL)
             }
         case .chat:
             if !thing.content.isEmpty { ChatBubbles(text: thing.content) }
@@ -111,8 +111,11 @@ private struct ScreenshotContent: View {
 
 /// A link's preview — title and image fetched through the system's own
 /// LinkPresentation metadata. Falls back to the bare host line offline.
+/// When the record already holds art (an Apple Music cover, a pin's photo),
+/// that leads — instantly, no live fetch to gamble on; LP fills in the title.
 private struct LinkPreviewCard: View {
     let url: URL
+    var storedImageURL: String? = nil
     @Environment(\.openURL) private var openURL
     @State private var title: String?
     @State private var image: UIImage?
@@ -123,11 +126,13 @@ private struct LinkPreviewCard: View {
         } label: {
             VStack(alignment: .leading, spacing: 0) {
                 if let image {
-                    Image(uiImage: image)
-                        .resizable()
-                        .scaledToFill()
-                        .frame(maxWidth: .infinity)
+                    // The image fills a fixed banner and never dictates the
+                    // card's width — a bare scaledToFill's ideal size would
+                    // stretch the whole card past the screen on a wide
+                    // banner (the ZStack-expansion gotcha, same fix).
+                    Color.clear
                         .frame(height: 140)
+                        .overlay(Image(uiImage: image).resizable().scaledToFill())
                         .clipped()
                 }
                 VStack(alignment: .leading, spacing: 2) {
@@ -154,10 +159,18 @@ private struct LinkPreviewCard: View {
     }
 
     private func fetch() async {
+        // Stored art first: it's the record's own media and one cached CDN
+        // request away, where LPMetadataProvider re-scrapes the whole page
+        // and often comes back with nothing (music.apple.com especially).
+        if let stored = storedImageURL, let storedURL = URL(string: stored),
+           let (data, _) = try? await URLSession.shared.data(from: storedURL),
+           let art = UIImage(data: data) {
+            image = art
+        }
         let provider = LPMetadataProvider()
         guard let metadata = try? await provider.startFetchingMetadata(for: url) else { return }
         title = metadata.title
-        guard let imageProvider = metadata.imageProvider else { return }
+        guard image == nil, let imageProvider = metadata.imageProvider else { return }
         image = await withCheckedContinuation { continuation in
             _ = imageProvider.loadObject(ofClass: UIImage.self) { object, _ in
                 continuation.resume(returning: object as? UIImage)
