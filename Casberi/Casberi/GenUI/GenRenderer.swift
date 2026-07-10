@@ -1134,12 +1134,14 @@ private struct GenCover: View {
             if hasImage {
                 // The layout slot stays fixed; the canvas rides a bottom-
                 // aligned overlay so a pull extends it upward (stretchy
-                // header) without a feedback loop on the measurement.
-                // The banner reads shorter than a live capture on purpose;
-                // 178 leaves room for the chip row. Constant per cover kind —
-                // height must never depend on the chips arg, which streams in
-                // LAST: keying on it made the banner jump 150→178 mid-stream.
-                let base: CGFloat = isBanner ? 178 : 250
+                // header) without a feedback loop on the measurement. A
+                // screenshot never auto-leads Home (2-tier cover, ruling
+                // 2026-07-10) — hasImage is only ever true for a set banner
+                // now, so this is always the shorter, 178-for-the-chip-row
+                // height, never the old 250pt live-capture bleed. Constant,
+                // not keyed on the chips arg (which streams in LAST) — keying
+                // on it made the banner jump 150→178 mid-stream.
+                let base: CGFloat = 178
                 Color.clear
                     .frame(height: base + topInset)
                     .overlay(alignment: .bottom) {

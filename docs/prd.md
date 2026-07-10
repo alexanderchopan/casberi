@@ -833,3 +833,22 @@ be pinned from Feed — it's a normal Thing there — but not from the
 token-watch screen itself, where you're most likely to reach for it
 right after adding one. Added the same leading-edge pin swipe
 `WalletScreen` already had, verb-for-verb.
+
+## 36j. Home cover is 2-tier now: a set banner, or black (2026-07-10, amends 36a)
+
+36a's "explicit banner outranks the automatic screenshot" ruling still
+had a 3rd tier underneath: no banner AND no screenshot fell to black,
+but a banner-less day WITH a recent screenshot still auto-led Home
+full-bleed with zero action from the person — a real privacy gap
+(a capture you didn't mean to see blown up on Home). Collapsed to 2
+tiers: a set Banner shows, or the cover is black — a screenshot never
+auto-leads Home under any circumstance now. `newestImageThing()` (the
+composition-side "pick the day's newest screenshot" function) is
+deleted; `HomeComposition.cover()`/`weekend()` only ever pass `"banner"`
+or `""` as the cover's image ref. On the renderer side, `GenCover`'s
+`hasImage` is now exactly `isBanner` (no third state), so the old
+`isBanner ? 178 : 250` height ternary — height for "a live capture
+bled full-height" — is now dead in practice; simplified to a constant
+178. The word content (eyebrow/title/subline) is unchanged either way,
+same as before: a banner only ever substitutes the picture, never the
+words.

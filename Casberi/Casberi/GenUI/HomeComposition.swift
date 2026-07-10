@@ -152,8 +152,8 @@ enum HomeComposition {
 
         let week = things.filter { $0.capturedAt > .now.addingTimeInterval(-7 * 86_400) }
 
-        // The weekend cover: recap words, the week's newest image behind them.
-        let image = newestImageThing(things)
+        // The weekend cover: recap words, a set banner behind them or black
+        // (2-tier, ruling 2026-07-10) — same as every other day.
         let title: String
         let subline: String
         if week.isEmpty && !things.isEmpty {
@@ -171,7 +171,7 @@ enum HomeComposition {
             // subline already carries that story; today-only counts under
             // "your week, banked" would misread as the week's composition
             // (and stacking both broke the counts-are-the-subline rule).
-            let coverRef = hasBanner ? "banner" : (image?.id.uuidString ?? "")
+            let coverRef = hasBanner ? "banner" : ""
             doc.append("cover = Cover(\(q("Weekend")), \(q(title)), \(q(subline)), \(q(coverRef)), \(q(dateline(things: things))), \(q("quiet")))")
             rootRefs.append("cover")
         }
@@ -295,18 +295,6 @@ enum HomeComposition {
 
     // MARK: - Cover (H7 — the doc names facts; the renderer owns the rest)
 
-    /// The day's newest image thing, falling back to this week's (the cover's
-    /// image rule). Screenshots are the image kind the corpus knows today —
-    /// and only ones whose asset can resolve (a sourceRef): the author only
-    /// names a thingId when the renderer's canvas will actually fill, so the
-    /// 250pt cover never paints an empty skeleton (demo screenshots carry no
-    /// asset and honestly fall to the quiet cover).
-    private static func newestImageThing(_ things: [Thing]) -> Thing? {
-        let images = things.filter { $0.kind == .screenshot && $0.sourceRef != nil }
-        return images.first { Calendar.current.isDateInToday($0.capturedAt) }
-            ?? images.first { $0.capturedAt > .now.addingTimeInterval(-7 * 86_400) }
-    }
-
     /// "Thursday, July 9" — the day, stated plainly (ruling 2026-07-09: the
     /// landed count was noise for anyone with feeds — always a big number,
     /// never news; the kind pills below already tell today's story, and the
@@ -315,20 +303,24 @@ enum HomeComposition {
         Date.now.formatted(.dateTime.weekday(.wide).month(.wide).day())
     }
 
-    /// True when the person set their own Home cover — it always wins over
-    /// the day's newest screenshot (an explicit choice outranks an automatic
-    /// guess) and renders shorter (150pt vs 250pt): a tall bleed means
-    /// "this just happened," a banner means "this is what I chose" — the
-    /// two states read differently on purpose (ruling 2026-07-09).
+    /// True when the person set their own Home cover. Home's cover is
+    /// 2-tier now (ruling 2026-07-10, amending 36a): a set banner, or black
+    /// — a screenshot never auto-leads Home, full stop. The earlier
+    /// "automatic newest screenshot" tier was a real privacy gap (a capture
+    /// you didn't intend to see full-bleed could still show up there with
+    /// zero action from you); an explicit Banner is the only way a photo
+    /// reaches the cover. Renders shorter than the old live-capture height
+    /// (150pt vs 250pt) so a banner still reads as "this is what I chose,"
+    /// not "this just happened."
     private static var hasBanner: Bool { HomeCoverStore.shared.banner != nil }
 
-    /// The cover line for morning/evening: the newest image thing when one
-    /// exists, else the quiet cover carrying the shipped Hero content — same
-    /// priority rules, no obligations. A set banner only changes WHICH image
-    /// shows; the words never change, so the cover never implies the banner
-    /// is today's activity. Today's kind counts ride every cover as chips
-    /// (ruling 2026-07-09): the counts ARE the subline, so the old bottom
-    /// "What landed today" section is gone and the cover's middle earns its
+    /// The cover line for morning/evening: a set banner, or the quiet cover
+    /// carrying the shipped Hero content — same priority rules, no
+    /// obligations. The words never change based on which image shows (or
+    /// doesn't), so the cover never implies a static banner is today's
+    /// activity. Today's kind counts ride every cover as chips (ruling
+    /// 2026-07-09): the counts ARE the subline, so the old bottom "What
+    /// landed today" section is gone and the cover's middle earns its
     /// height. The word subline returns only when nothing landed today.
     private static func cover(things: [Thing]) -> String {
         let date = dateline(things: things)
@@ -337,12 +329,6 @@ enum HomeComposition {
         let today = things.filter { Calendar.current.isDateInToday($0.capturedAt) }
         let chips = coverChips(today)
         let chipsArg = chips.map { ", \($0)" } ?? ""
-        if !hasBanner, let image = newestImageThing(things) {
-            let project = image.tags.first { ThingKind.from(typeTag: $0) == nil }
-            let subline = chips != nil ? ""
-                : [project, shortTime(image.capturedAt)].compactMap { $0 }.joined(separator: " · ")
-            return "cover = Cover(\(q("Just landed · \(image.source)")), \(q(image.title)), \(q(subline)), \(q(image.id.uuidString)), \(q(date)), \(q(""))\(chipsArg))"
-        }
         let bannerRef = hasBanner ? "banner" : ""
         // Quiet cover — the shipped Hero lines, verbatim priority. Approvals
         // never lead Home (voice guardrail: agent asks live in Feed; the cover
