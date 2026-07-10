@@ -32,6 +32,9 @@ struct HomeScreen: View {
     /// blob was "too fast, not smooth, weird"): the WHOLE screen melts into
     /// Settings. Holds the outgoing snapshot while the shader liquefies it.
     @State private var liquidFrame: UIImage?
+    /// The incoming page's frozen frame — captured one beat after the push,
+    /// so the wave can make the DESTINATION arrive liquid too.
+    @State private var liquidIncoming: UIImage?
     @Query(sort: \Thing.capturedAt, order: .reverse) private var things: [Thing]
     @Environment(ShellChrome.self) private var chrome
     @Environment(BridgeStore.self) private var bridges
@@ -235,9 +238,10 @@ struct HomeScreen: View {
             #endif
         }
         .overlay {
-            if let frame = liquidFrame {
-                LiquidDissolveOverlay(image: frame, duration: 0.9) {
+            if let out = liquidFrame, let inc = liquidIncoming {
+                LiquidDissolveOverlay(outgoing: out, incoming: inc, duration: 0.95) {
                     liquidFrame = nil
+                    liquidIncoming = nil
                 }
             }
         }
@@ -249,12 +253,16 @@ struct HomeScreen: View {
     private func openSettingsLiquid() {
         guard liquidFrame == nil else { return }
         DSHaptic.tap()
-        liquidFrame = LiquidTransition.snapshot()
-        // The push happens under the melting frame — disable the push's own
-        // animation so two motions never fight.
-        var t = Transaction()
-        t.disablesAnimations = true
-        withTransaction(t) { route.push = .settings }
+        // Freeze both sides around an animation-less push, then the wave
+        // plays across the two frames as one substance.
+        let pair = LiquidTransition.capturePair {
+            var t = Transaction()
+            t.disablesAnimations = true
+            withTransaction(t) { route.push = .settings }
+        }
+        guard let pair else { route.push = .settings; return }
+        liquidFrame = pair.outgoing
+        liquidIncoming = pair.incoming
     }
 
     private func streamComposition(instant: Bool = false) {

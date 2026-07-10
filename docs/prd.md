@@ -1407,3 +1407,18 @@ shine (visible on pure black); behind the front, transparent — the
 new page is washed in spatially, never crossfaded. 0.85s ease-out.
 Doctrine for future liquid work: on this app's ink ground, any glass
 effect must EMIT, not just distort.
+
+## 43e. Both pages ride the wave (fifth draft, 2026-07-10)
+
+User: "the whole thing should transition — not dissolve and then a
+sheet pops up. It looks good paused partially." Diagnosis confirmed:
+the destination sat statically under the melting page (and a capture
+bug made the wave play Home-into-Home — the "incoming" snapshot had
+photographed the holding frame itself). Fix: freeze BOTH sides around
+an animation-less push (UIKit hold covers the window; the incoming
+frame is captured from the ROOT VIEW beneath it, afterScreenUpdates),
+and give the incoming page its own shader half (liquidSettle): right
+behind the front it arrives still gathered toward the origin and
+faintly aglow, relaxing to crisp as the front moves on. Ahead: the
+old page, untouched. At the front: the lit crest. Behind: the new
+page, settling. One substance end to end.

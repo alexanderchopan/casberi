@@ -9,17 +9,43 @@ import UIKit
 /// feeling fast and weird; this is the "entire screen becomes glass" ask.
 enum LiquidTransition {
 
-    /// A full-resolution snapshot of the key window — the outgoing frame
-    /// the shader melts. Native scale on purpose: this is the crisp "before".
+    /// Freezes BOTH sides of the transition in one pass: snapshot the
+    /// outgoing page, cover the window with a UIKit hold (immediate — no
+    /// SwiftUI commit latency), run the push, then snapshot the ROOT VIEW
+    /// beneath the hold with afterScreenUpdates so the destination is laid
+    /// out and drawn. The hold is window-level, the capture is root-level,
+    /// so the hold can never photobomb the incoming frame (the fifth-draft
+    /// bug: the "incoming" snapshot was a picture of the hold itself, and
+    /// the wave played Home-into-Home — invisible, then a pop).
     @MainActor
-    static func snapshot() -> UIImage? {
+    static func capturePair(push: () -> Void) -> (outgoing: UIImage, incoming: UIImage)? {
         guard let scene = UIApplication.shared.connectedScenes
                 .compactMap({ $0 as? UIWindowScene }).first,
               let window = scene.keyWindow else { return nil }
-        let renderer = UIGraphicsImageRenderer(bounds: window.bounds)
-        return renderer.image { _ in
-            window.drawHierarchy(in: window.bounds, afterScreenUpdates: false)
+        let bounds = window.bounds
+        let renderer = UIGraphicsImageRenderer(bounds: bounds)
+        let outgoing = renderer.image { _ in
+            window.drawHierarchy(in: bounds, afterScreenUpdates: false)
         }
+
+        let hold = UIImageView(image: outgoing)
+        hold.frame = bounds
+        window.addSubview(hold)
+
+        push()
+
+        let root = window.rootViewController?.view ?? window
+        let incoming = renderer.image { _ in
+            root.drawHierarchy(in: bounds, afterScreenUpdates: true)
+        }
+        // The SwiftUI overlay (progress 0 = the same outgoing pixels) takes
+        // over on the next commit; the hold leaves a beat later so no naked
+        // frame of the destination ever presents.
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(80))
+            hold.removeFromSuperview()
+        }
+        return (outgoing, incoming)
     }
 }
 
@@ -29,7 +55,12 @@ enum LiquidTransition {
 /// the reveal: everything behind the front is transparent, so the page
 /// beneath arrives spatially — no whole-frame fade anywhere.
 struct LiquidDissolveOverlay: View {
-    let image: UIImage
+    /// The frozen outgoing page — melts away at the front.
+    let outgoing: UIImage
+    /// The frozen INCOMING page — rides the same wave: liquid right behind
+    /// the front, settling to crisp. Without it the destination read as "a
+    /// sheet that was already there" (fifth-draft correction).
+    let incoming: UIImage
     let duration: Double
     let onFinished: () -> Void
 
@@ -40,19 +71,32 @@ struct LiquidDissolveOverlay: View {
             let raw = min(1, context.date.timeIntervalSince(start) / duration)
             let progress = 1 - pow(1 - raw, 2)   // ease-out: fast rise, soft landing
             GeometryReader { geo in
-                Image(uiImage: image)
-                    .resizable()
-                    .frame(width: geo.size.width, height: geo.size.height)
-                    .layerEffect(
-                        ShaderLibrary.liquidWave(
-                            .float2(Float(geo.size.width), Float(geo.size.height)),
-                            // The wave is born where the finger was — the
-                            // avatar door, top-right of the nav bar.
-                            .float2(Float(geo.size.width - 44), 84),
-                            .float(Float(progress))
-                        ),
-                        maxSampleOffset: CGSize(width: 80, height: 80)
-                    )
+                let size = geo.size
+                let origin = SIMD2<Float>(Float(size.width - 44), 84)
+                ZStack {
+                    Image(uiImage: incoming)
+                        .resizable()
+                        .frame(width: size.width, height: size.height)
+                        .layerEffect(
+                            ShaderLibrary.liquidSettle(
+                                .float2(Float(size.width), Float(size.height)),
+                                .float2(origin.x, origin.y),
+                                .float(Float(progress))
+                            ),
+                            maxSampleOffset: CGSize(width: 60, height: 60)
+                        )
+                    Image(uiImage: outgoing)
+                        .resizable()
+                        .frame(width: size.width, height: size.height)
+                        .layerEffect(
+                            ShaderLibrary.liquidWave(
+                                .float2(Float(size.width), Float(size.height)),
+                                .float2(origin.x, origin.y),
+                                .float(Float(progress))
+                            ),
+                            maxSampleOffset: CGSize(width: 80, height: 80)
+                        )
+                }
             }
             .ignoresSafeArea()
             .onChange(of: raw >= 1) { _, done in

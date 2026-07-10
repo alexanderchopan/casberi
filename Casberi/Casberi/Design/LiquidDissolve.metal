@@ -39,3 +39,25 @@ using namespace metal;
     c.a   *= half(alpha);
     return c;
 }
+
+/// The incoming page's half of the wave (fifth draft, 2026-07-10) — the
+/// destination doesn't wait statically under the old page (that read as "a
+/// sheet popped up"); it ARRIVES liquid. Right behind the front it's still
+/// gathered toward the origin and faintly aglow; it relaxes to crisp as the
+/// front moves on. One substance, transforming.
+[[ stitchable ]] half4 liquidSettle(float2 position, SwiftUI::Layer layer,
+                                    float2 size, float2 origin, float progress) {
+    float maxDist = length(size);
+    float radius = progress * maxDist * 1.12;
+    float dist = distance(position, origin);
+    float d = dist - radius;                  // >0 ahead (still covered), <0 behind
+
+    if (d > 0.0) { return layer.sample(position); }   // the old page covers this
+
+    float behind = -d;                        // how far past the front
+    float settle = exp(-behind / 240.0);      // 1 at the front → 0 once settled
+    float2 dir = dist > 1.0 ? (position - origin) / dist : float2(0.0, 1.0);
+    half4 c = layer.sample(position + dir * settle * 30.0);
+    c.rgb += half3(settle * 0.12);            // a fading afterglow as it stills
+    return c;
+}
