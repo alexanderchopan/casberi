@@ -2,62 +2,54 @@
 #include <SwiftUI/SwiftUI_Metal.h>
 using namespace metal;
 
-/// The liquid wave (fourth draft, 2026-07-10) — a single circular wavefront
-/// sweeps from the avatar across the page. Ahead of the wave: the outgoing
-/// page, untouched. At the ring: pixels stretch radially and the front
-/// carries its own LIGHT (a soft glass shine — displacement alone is
-/// invisible on an ink-black app). Behind the wave: transparent, so the
-/// destination page is revealed spatially, washed in by the front — never
-/// a crossfade.
-[[ stitchable ]] half4 liquidWave(float2 position, SwiftUI::Layer layer,
-                                  float2 size, float2 origin, float progress) {
-    float maxDist = length(size);
-    float radius = progress * maxDist * 1.12;
-    float band = 130.0;                       // the wave's thickness, points
-    float dist = distance(position, origin);
-    float d = dist - radius;                  // >0 ahead, <0 behind
+/// The liquid dissolve, sixth draft (2026-07-10) — the WHOLE screen at once.
+/// No origin, no wavefront, no burst: an organic ripple field covers the
+/// page uniformly; the outgoing page liquefies and thins while the incoming
+/// page ripples beneath it and settles. A soft shimmer rides the ripples
+/// (light proportional to the local wave) so the motion reads on ink-black
+/// without becoming an effect of its own.
 
-    if (d > band)  { return layer.sample(position); }   // not reached yet
-    if (d < -band) { return half4(0.0); }               // fully revealed
+static float2 rippleField(float2 uv, float t, float phase) {
+    // Two crossed, incommensurate sine pairs — organic, no visible grid.
+    float x = sin(uv.y * 11.0 + t * 5.0 + phase)
+            + sin((uv.x + uv.y) * 7.0 - t * 3.5 + phase) * 0.7;
+    float y = sin(uv.x * 9.0  - t * 4.0 + phase)
+            + sin((uv.x - uv.y) * 6.0 + t * 3.0 + phase) * 0.7;
+    return float2(x, y);
+}
 
-    float t = d / band;                       // -1 … 1 across the wave
-    float bump = 1.0 - t * t;                 // 0 at edges, 1 at the crest
+/// Outgoing page: ripples build, the page thins away through the middle of
+/// the ride, ripples relax — a dissolve that is liquid the whole way.
+[[ stitchable ]] half4 liquidOut(float2 position, SwiftUI::Layer layer,
+                                 float2 size, float progress) {
+    float2 uv = position / size;
+    float env = progress * (1.0 - progress) * 4.0;     // 0 → 1 → 0
+    float2 wave = rippleField(uv, progress, 0.0);
+    half4 c = layer.sample(position + wave * env * 26.0);
 
-    // Pixels get dragged toward the origin as the crest passes — the page
-    // visibly stretches into the wave.
-    float2 dir = dist > 1.0 ? (position - origin) / dist : float2(0.0, 1.0);
-    half4 c = layer.sample(position - dir * bump * 56.0);
+    // Shimmer: the ripples catch light where they crest — subtle, additive.
+    float shimmer = env * max(0.0, wave.x * wave.y) * 0.10;
+    c.rgb += half3(shimmer);
 
-    // The crest carries light: a soft additive shine, strongest at the
-    // center of the band — this is what makes water readable on black.
-    float shine = bump * bump * 0.38;
-    c.rgb += half3(shine);
-
-    // The trailing half of the band dissolves to reveal the new page.
-    float alpha = smoothstep(-1.0, -0.2, t);
-    c.rgb *= half(alpha);                     // premultiplied
-    c.a   *= half(alpha);
+    // The dissolve itself: full through 25%, gone by 85% — wide overlap so
+    // both pages are co-present through the middle.
+    float a = 1.0 - smoothstep(0.25, 0.85, progress);
+    c.rgb *= half(a);                                   // premultiplied
+    c.a   *= half(a);
     return c;
 }
 
-/// The incoming page's half of the wave (fifth draft, 2026-07-10) — the
-/// destination doesn't wait statically under the old page (that read as "a
-/// sheet popped up"); it ARRIVES liquid. Right behind the front it's still
-/// gathered toward the origin and faintly aglow; it relaxes to crisp as the
-/// front moves on. One substance, transforming.
-[[ stitchable ]] half4 liquidSettle(float2 position, SwiftUI::Layer layer,
-                                    float2 size, float2 origin, float progress) {
-    float maxDist = length(size);
-    float radius = progress * maxDist * 1.12;
-    float dist = distance(position, origin);
-    float d = dist - radius;                  // >0 ahead (still covered), <0 behind
-
-    if (d > 0.0) { return layer.sample(position); }   // the old page covers this
-
-    float behind = -d;                        // how far past the front
-    float settle = exp(-behind / 240.0);      // 1 at the front → 0 once settled
-    float2 dir = dist > 1.0 ? (position - origin) / dist : float2(0.0, 1.0);
-    half4 c = layer.sample(position + dir * settle * 30.0);
-    c.rgb += half3(settle * 0.12);            // a fading afterglow as it stills
+/// Incoming page: born rippling with the same field (phase-shifted so the
+/// two pages read as one disturbed surface, not two copies), settling to
+/// crisp as the ride ends.
+[[ stitchable ]] half4 liquidIn(float2 position, SwiftUI::Layer layer,
+                                float2 size, float progress) {
+    float2 uv = position / size;
+    float settle = (1.0 - progress) * (1.0 - progress); // 1 → 0, soft landing
+    float env = min(1.0, progress * 3.0) * settle;      // ramps in, settles out
+    float2 wave = rippleField(uv, progress, 1.7);
+    half4 c = layer.sample(position + wave * env * 22.0);
+    float shimmer = env * max(0.0, wave.x * wave.y) * 0.06;
+    c.rgb += half3(shimmer);
     return c;
 }

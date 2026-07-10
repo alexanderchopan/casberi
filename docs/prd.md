@@ -1422,3 +1422,15 @@ behind the front it arrives still gathered toward the origin and
 faintly aglow, relaxing to crisp as the front moves on. Ahead: the
 old page, untouched. At the front: the lit crest. Behind: the new
 page, settling. One substance end to end.
+
+## 43f. The uniform liquid dissolve (sixth draft, 2026-07-10)
+
+The radial wave read as a BURST ("wtf") — an origin point makes an
+explosion, not a dissolve. Final shape: no origin anywhere. An organic
+ripple field covers the whole page; the outgoing page liquefies and
+thins through the middle of the ride while the incoming page ripples
+beneath it (same field, phase-shifted — one disturbed surface, not two
+copies) and settles to crisp. A faint shimmer rides the ripple crests
+(0.10/0.06) so the liquid reads on ink-black without becoming an
+effect of its own. 0.95s, ease-in-out, both frames frozen around an
+instant push as before.

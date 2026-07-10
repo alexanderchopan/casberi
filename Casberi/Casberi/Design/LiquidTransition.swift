@@ -69,18 +69,16 @@ struct LiquidDissolveOverlay: View {
     var body: some View {
         TimelineView(.animation) { context in
             let raw = min(1, context.date.timeIntervalSince(start) / duration)
-            let progress = 1 - pow(1 - raw, 2)   // ease-out: fast rise, soft landing
+            let progress = raw * raw * (3 - 2 * raw)   // ease-in-out: it breathes
             GeometryReader { geo in
                 let size = geo.size
-                let origin = SIMD2<Float>(Float(size.width - 44), 84)
                 ZStack {
                     Image(uiImage: incoming)
                         .resizable()
                         .frame(width: size.width, height: size.height)
                         .layerEffect(
-                            ShaderLibrary.liquidSettle(
+                            ShaderLibrary.liquidIn(
                                 .float2(Float(size.width), Float(size.height)),
-                                .float2(origin.x, origin.y),
                                 .float(Float(progress))
                             ),
                             maxSampleOffset: CGSize(width: 60, height: 60)
@@ -89,12 +87,11 @@ struct LiquidDissolveOverlay: View {
                         .resizable()
                         .frame(width: size.width, height: size.height)
                         .layerEffect(
-                            ShaderLibrary.liquidWave(
+                            ShaderLibrary.liquidOut(
                                 .float2(Float(size.width), Float(size.height)),
-                                .float2(origin.x, origin.y),
                                 .float(Float(progress))
                             ),
-                            maxSampleOffset: CGSize(width: 80, height: 80)
+                            maxSampleOffset: CGSize(width: 60, height: 60)
                         )
                 }
             }
