@@ -1434,3 +1434,15 @@ copies) and settles to crisp. A faint shimmer rides the ripple crests
 (0.10/0.06) so the liquid reads on ink-black without becoming an
 effect of its own. 0.95s, ease-in-out, both frames frozen around an
 instant push as before.
+
+## 43g. The dissolve slows down and opens the store too (2026-07-10)
+
+Ruled on the sixth draft: "close but too fast, and I love how liquid
+it gets." Duration 0.95s → 1.3s (one constant, LiquidPusher.duration).
+The same dissolve now opens the STORE — both doors, on both tab roots
+(Home and Feed), ride one reusable LiquidPusher; the plain zoom died
+with it. Found while re-recording: the overlay's clock was a plain
+`let start = Date()`, so any parent re-render mid-ride (live times,
+chip staggers) recreated the struct and RESTARTED the liquid — the
+snap-back jank that had been polluting every draft's smoothness.
+@State now; the ride is monotonic.

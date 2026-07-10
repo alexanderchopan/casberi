@@ -28,13 +28,9 @@ final class HomeRoute {
 struct HomeScreen: View {
     /// Anchors the Settings zoom transition to the avatar door.
     @Namespace private var doorNS
-    /// The liquid page transition (2026-07-10, second draft — the droplet
-    /// blob was "too fast, not smooth, weird"): the WHOLE screen melts into
-    /// Settings. Holds the outgoing snapshot while the shader liquefies it.
-    @State private var liquidFrame: UIImage?
-    /// The incoming page's frozen frame — captured one beat after the push,
-    /// so the wave can make the DESTINATION arrive liquid too.
-    @State private var liquidIncoming: UIImage?
+    /// The liquid dissolve (2026-07-10): both doors — Settings AND the
+    /// store — open through it. One pusher per screen.
+    @State private var liquid = LiquidPusher()
     @Query(sort: \Thing.capturedAt, order: .reverse) private var things: [Thing]
     @Environment(ShellChrome.self) private var chrome
     @Environment(BridgeStore.self) private var bridges
@@ -91,8 +87,8 @@ struct HomeScreen: View {
             .toolbar {
                 // The shell's doors — shared with Feed (every tab root wears
                 // them): avatar → Settings, grid (+ attention dot) → Apps.
-                TopDoors(onSettings: { openSettingsLiquid() },
-                         onApps: { route.push = .apps },
+                TopDoors(onSettings: { liquid.open { route.push = .settings } },
+                         onApps: { liquid.open { route.push = .apps } },
                          refreshSpin: refreshTick,
                          zoomNS: doorNS)
             }
@@ -217,7 +213,15 @@ struct HomeScreen: View {
             if dropletDelay > 0 {
                 Task { @MainActor in
                     try? await Task.sleep(for: .seconds(dropletDelay))
-                    openSettingsLiquid()
+                    liquid.open { route.push = .settings }
+                }
+            }
+            // `-openAppsLiquid <s>` — same, for the store door.
+            let appsDelay = UserDefaults.standard.double(forKey: "openAppsLiquid")
+            if appsDelay > 0 {
+                Task { @MainActor in
+                    try? await Task.sleep(for: .seconds(appsDelay))
+                    liquid.open { route.push = .apps }
                 }
             }
             if let name = UserDefaults.standard.string(forKey: "openProject") {
@@ -237,32 +241,7 @@ struct HomeScreen: View {
             }
             #endif
         }
-        .overlay {
-            if let out = liquidFrame, let inc = liquidIncoming {
-                LiquidDissolveOverlay(outgoing: out, incoming: inc, duration: 0.95) {
-                    liquidFrame = nil
-                    liquidIncoming = nil
-                }
-            }
-        }
-    }
-
-    /// The liquid ride: freeze the outgoing frame, push Settings INSTANTLY
-    /// beneath it (no waiting), then melt the frozen frame away — the page
-    /// itself turns to liquid and settles into the new one.
-    private func openSettingsLiquid() {
-        guard liquidFrame == nil else { return }
-        DSHaptic.tap()
-        // Freeze both sides around an animation-less push, then the wave
-        // plays across the two frames as one substance.
-        let pair = LiquidTransition.capturePair {
-            var t = Transaction()
-            t.disablesAnimations = true
-            withTransaction(t) { route.push = .settings }
-        }
-        guard let pair else { route.push = .settings; return }
-        liquidFrame = pair.outgoing
-        liquidIncoming = pair.incoming
+        .liquidPushOverlay(liquid)
     }
 
     private func streamComposition(instant: Bool = false) {

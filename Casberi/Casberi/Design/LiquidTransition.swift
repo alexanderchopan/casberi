@@ -64,7 +64,11 @@ struct LiquidDissolveOverlay: View {
     let duration: Double
     let onFinished: () -> Void
 
-    private let start = Date()
+    /// @State, NOT let: the parent re-renders mid-ride (live times, chip
+    /// staggers) and recreates this struct — a plain let would reset the
+    /// clock and visibly RESTART the liquid (the jank in every draft
+    /// before the sixth was partly this).
+    @State private var start = Date()
 
     var body: some View {
         TimelineView(.animation) { context in
@@ -101,5 +105,56 @@ struct LiquidDissolveOverlay: View {
             }
         }
         .allowsHitTesting(false)
+    }
+}
+
+
+/// One reusable liquid door (2026-07-10) — any screen can open any push
+/// through the dissolve: hold state here, wire `.liquidPushOverlay(_:)` on
+/// the screen's NavigationStack, and call `open { route.push = … }` from
+/// the door. Duration lives here so every door breathes at the same pace
+/// (1.3s — "too fast" at 0.95, ruled 2026-07-10).
+@MainActor
+@Observable
+final class LiquidPusher {
+    static let duration: Double = 1.3
+
+    var outgoing: UIImage?
+    var incoming: UIImage?
+
+    /// Freezes both sides around the animation-less push. Falls back to the
+    /// plain push if snapshotting fails (never block navigation on a shader).
+    func open(push: @escaping () -> Void) {
+        guard outgoing == nil else { push(); return }
+        DSHaptic.tap()
+        let pair = LiquidTransition.capturePair {
+            var t = Transaction()
+            t.disablesAnimations = true
+            withTransaction(t) { push() }
+        }
+        guard let pair else { push(); return }
+        outgoing = pair.outgoing
+        incoming = pair.incoming
+    }
+
+    func finish() {
+        outgoing = nil
+        incoming = nil
+    }
+}
+
+extension View {
+    /// Hangs the dissolve overlay for a screen's LiquidPusher — put it on
+    /// the NavigationStack so the veil covers nav chrome and pushed content.
+    @ViewBuilder
+    func liquidPushOverlay(_ pusher: LiquidPusher) -> some View {
+        overlay {
+            if let out = pusher.outgoing, let inc = pusher.incoming {
+                LiquidDissolveOverlay(outgoing: out, incoming: inc,
+                                      duration: LiquidPusher.duration) {
+                    pusher.finish()
+                }
+            }
+        }
     }
 }
