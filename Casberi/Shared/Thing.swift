@@ -104,6 +104,16 @@ final class Thing {
     /// (2026-07-09). Optional + default nil keeps CloudKit mirroring happy;
     /// nil for every non-Wallet thing.
     var walletAddress: String? = nil
+    /// The account a social post came from — the Bluesky/Farcaster handle
+    /// that authored it. When more than one account of a source is watched,
+    /// the row leads with that author's avatar and names them, the way a
+    /// Wallet row names which address it came from (2026-07-10). Optional +
+    /// default nil keeps CloudKit mirroring happy; nil for everything else.
+    var authorHandle: String? = nil
+    /// That author's avatar URL — loaded into the row's leading slot (as a
+    /// circle) only when more than one account is watched. nil keeps the
+    /// source glyph.
+    var authorAvatarURL: String? = nil
 
     init(
         id: UUID = UUID(),

@@ -51,19 +51,50 @@ enum HandleBridge: String {
         }
     }
 
-    /// What the field shows for an existing connection — Bluesky's default
-    /// suffix comes off so the display matches what the person typed.
+    /// Bluesky and Farcaster watch a LIST of accounts (2026-07-10) — a small
+    /// following feed, not just your own mirror. Pinterest stays single.
+    var supportsMultiple: Bool { self == .bluesky || self == .farcaster }
+
+    /// The connected accounts, for the list the multi-account screen shows.
+    var names: [String] {
+        switch self {
+        case .bluesky:   return BlueskyStore.shared.handles
+        case .farcaster: return FarcasterStore.shared.usernames
+        case .pinterest:
+            let u = PinterestStore.shared.username
+            return u.isEmpty ? [] : [u]
+        }
+    }
+
+    /// The list row's short form — Bluesky's ".bsky.social" comes off.
+    func shortName(_ name: String) -> String {
+        self == .bluesky && name.hasSuffix(".bsky.social")
+            ? String(name.dropLast(".bsky.social".count)) : name
+    }
+
+    func addName(_ raw: String) {
+        switch self {
+        case .bluesky:   BlueskyStore.shared.add(raw)
+        case .farcaster: FarcasterStore.shared.add(raw)
+        case .pinterest: PinterestStore.shared.username = PinterestStore.normalize(raw)
+        }
+    }
+
+    func removeName(_ name: String) {
+        switch self {
+        case .bluesky:   BlueskyStore.shared.remove(name)
+        case .farcaster: FarcasterStore.shared.remove(name)
+        case .pinterest: PinterestStore.shared.username = ""
+        }
+    }
+
+    /// What the field shows for an existing connection — for the single
+    /// bridge (Pinterest), the connected name; for the multi bridges the
+    /// field is a fresh "add another", so it starts empty.
     var displayName: String {
         switch self {
-        case .bluesky:
-            let name = BlueskyStore.shared.handle
-            return name.hasSuffix(".bsky.social")
-                ? String(name.dropLast(".bsky.social".count))
-                : name
-        case .farcaster:
-            return FarcasterStore.shared.username
-        case .pinterest:
-            return PinterestStore.shared.username
+        case .bluesky, .farcaster: return ""
+        case .pinterest:           return PinterestStore.shared.username
         }
     }
 
@@ -114,21 +145,20 @@ enum HandleBridge: String {
         }
     }
 
-    /// The stored name, read straight from the bridge's own store so the
-    /// screen tracks it like the originals did.
-    var currentName: String {
-        switch self {
-        case .bluesky:   BlueskyStore.shared.handle
-        case .farcaster: FarcasterStore.shared.username
-        case .pinterest: PinterestStore.shared.username
-        }
-    }
+    /// Whether anything is connected — drives the "connected" chrome. For the
+    /// multi bridges, the first watched account stands in.
+    var currentName: String { names.first ?? "" }
 
+    /// Teardown only (the single Pinterest path + Disconnect): an empty name
+    /// clears the connection. Multi-account adds go through `addName`.
     func setName(_ name: String) {
         switch self {
-        case .bluesky:   BlueskyStore.shared.handle = name
-        case .farcaster: FarcasterStore.shared.username = name
-        case .pinterest: PinterestStore.shared.username = name
+        case .bluesky:
+            if name.isEmpty { BlueskyStore.shared.removeAll() } else { BlueskyStore.shared.add(name) }
+        case .farcaster:
+            if name.isEmpty { FarcasterStore.shared.removeAll() } else { FarcasterStore.shared.add(name) }
+        case .pinterest:
+            PinterestStore.shared.username = name
         }
     }
 
@@ -167,6 +197,10 @@ struct HandleSetupScreen: View {
     /// this is the cache path rather than a static @Query.
     @State private var recent: [Thing] = []
 
+    /// The watched accounts (multi bridges) — a local snapshot refreshed on
+    /// each add/remove, since the screen doesn't observe the store directly.
+    @State private var accountNames: [String] = []
+
     private func loadRecent() {
         recent = recentBridgeThings(source: bridge.rawValue, context: modelContext)
     }
@@ -175,6 +209,9 @@ struct HandleSetupScreen: View {
         List {
             BridgeSetupHeader(name: bridge.rawValue)
             nameSection.listRowSeparator(.hidden)
+            if bridge.supportsMultiple, !accountNames.isEmpty {
+                accountsSection.listRowSeparator(.hidden)
+            }
             if !recent.isEmpty {
                 RecentThingsSection(header: bridge.recentHeader, things: recent)
                     .listRowSeparator(.hidden)
@@ -182,7 +219,7 @@ struct HandleSetupScreen: View {
             if !bridge.currentName.isEmpty {
                 BridgeDisconnectSection(
                     bridgeID: bridge.bridgeID, name: bridge.rawValue,
-                    teardown: { bridge.setName("") }
+                    teardown: { bridge.setName(""); accountNames = [] }
                 ).listRowSeparator(.hidden)
             }
             footerSection.listRowSeparator(.hidden)
@@ -194,6 +231,7 @@ struct HandleSetupScreen: View {
         .navigationBarTitleDisplayMode(.large)
         .onAppear {
             loadRecent()
+            accountNames = bridge.names
             nameField = bridge.displayName
             if !bridge.currentName.isEmpty {
                 Task { await sync() }
@@ -201,22 +239,57 @@ struct HandleSetupScreen: View {
         }
     }
 
+    /// The watched-accounts list (Bluesky/Farcaster) — each removable, the
+    /// way the wallet manager lists watched addresses.
+    private var accountsSection: some View {
+        Section {
+            ForEach(accountNames, id: \.self) { name in
+                HStack(spacing: DS.Space.s3) {
+                    BridgeIcon(name: bridge.rawValue, size: 28, circular: true)
+                    Text(bridge.shortName(name)).dsText(.body17)
+                        .foregroundStyle(DS.textPrimary)
+                    Spacer()
+                }
+                .swipeActions(edge: .trailing) {
+                    Button(role: .destructive) {
+                        bridge.removeName(name)
+                        accountNames = bridge.names
+                        DSHaptic.tap()
+                    } label: { Label("Remove", systemImage: "minus.circle") }
+                }
+            }
+        } header: {
+            Text(accountNames.count == 1 ? "Watching" : "Watching \(accountNames.count)")
+                .dsText(.label12).foregroundStyle(DS.textTertiary)
+        }
+    }
+
     private var nameSection: some View {
         Section {
             BridgeFieldRow(placeholder: bridge.placeholder, text: $nameField,
-                           buttonLabel: bridge.currentName.isEmpty ? "Connect" : "Update",
+                           buttonLabel: buttonLabel,
                            prefix: bridge.fieldPrefix, suffix: bridge.fieldSuffix,
                            action: connect)
             BridgeSyncStatusRows(syncing: syncing,
-                                 syncingLine: "Fetching your \(bridge.noun)…",
+                                 syncingLine: "Fetching \(bridge.noun)…",
                                  result: result, resultIsError: resultIsError)
         } header: {
-            Text("Your \(bridge.nameNoun)").dsText(.label12)
-                .foregroundStyle(DS.textTertiary)
+            Text(bridge.supportsMultiple ? "Add \(anArticle) \(bridge.nameNoun)"
+                                         : "Your \(bridge.nameNoun)")
+                .dsText(.label12).foregroundStyle(DS.textTertiary)
         } footer: {
             Text(bridge.fieldFooter)
                 .dsText(.callout15).foregroundStyle(DS.textTertiary)
         }
+    }
+
+    private var buttonLabel: String {
+        if bridge.supportsMultiple { return "Add" }
+        return bridge.currentName.isEmpty ? "Connect" : "Update"
+    }
+
+    private var anArticle: String {
+        bridge.nameNoun.first.map { "aeiou".contains($0) ? "an" : "a" } ?? "a"
     }
 
     private var footerSection: some View {
@@ -230,8 +303,14 @@ struct HandleSetupScreen: View {
     private func connect() {
         let name = bridge.normalize(nameField)
         guard !name.isEmpty else { return }
-        bridge.setName(name)
-        nameField = name
+        if bridge.supportsMultiple {
+            bridge.addName(name)
+            accountNames = bridge.names
+            nameField = ""          // the field is ready for the next one
+        } else {
+            bridge.setName(name)
+            nameField = name
+        }
         DSHaptic.tap()
         Task { await sync() }
     }

@@ -40,8 +40,33 @@ struct BandRow: View {
     /// indistinguishable stream.
     private var project: String? {
         if let tag = thing.tags.first(where: { ThingKind.from(typeTag: $0) == nil }) { return tag }
-        if thing.source == "Wallet" { return WalletStore.shared.label(forAddress: thing.walletAddress) }
-        return nil
+        switch thing.source {
+        case "Wallet":    return WalletStore.shared.label(forAddress: thing.walletAddress)
+        case "Bluesky":   return BlueskyStore.shared.rowLabel(for: thing.authorHandle)
+        case "Farcaster": return FarcasterStore.shared.rowLabel(for: thing.authorHandle)
+        default:          return nil
+        }
+    }
+
+    /// A followed account's avatar leads the row when MORE THAN ONE account
+    /// of its source is watched — whose post this is becomes the identity,
+    /// the way a Wallet row names its address (2026-07-10). One account: nil,
+    /// so the post keeps its own attached image or the source glyph.
+    private var identityAvatarURL: String? {
+        guard let avatar = thing.authorAvatarURL, !avatar.isEmpty else { return nil }
+        switch thing.source {
+        case "Bluesky":   return BlueskyStore.shared.accounts.count > 1 ? avatar : nil
+        case "Farcaster": return FarcasterStore.shared.accounts.count > 1 ? avatar : nil
+        default:          return nil
+        }
+    }
+
+    /// The address a Wallet row draws an identicon for — the visual twin of
+    /// the address label, shown only when more than one wallet is watched.
+    private var identiconAddress: String? {
+        guard thing.source == "Wallet", WalletStore.shared.addresses.count > 1,
+              let addr = thing.walletAddress, !addr.isEmpty else { return nil }
+        return addr
     }
 
     /// Events carry their clock time inline — the left time column died.
@@ -81,8 +106,14 @@ struct BandRow: View {
             // live set says the stream is on (honesty at render: the model
             // may still hold a frame a failed or disconnected sync never
             // saw end).
-            if let image = thing.previewImageURL, !image.isEmpty,
-               thing.source != "Twitch" || live {
+            if let avatar = identityAvatarURL {
+                // Whose post this is, when several accounts are followed.
+                RemoteThumb(urlString: avatar, size: 26, fallback: thing.source,
+                            circular: true)
+            } else if let addr = identiconAddress {
+                WalletBlockie(address: addr, size: 26)
+            } else if let image = thing.previewImageURL, !image.isEmpty,
+                      thing.source != "Twitch" || live {
                 RemoteThumb(urlString: image, size: 26, fallback: thing.source,
                             perishable: thing.source == "Twitch")
             } else if thing.kind == .screenshot, thing.sourceRef != nil {
@@ -180,6 +211,8 @@ struct RemoteThumb: View {
     /// skip the decoded cache so a second broadcast can't wear the first
     /// broadcast's frame, and never blacklist its URL.
     var perishable = false
+    /// A circle clip instead of the app-icon squircle — for author avatars.
+    var circular = false
     @State private var image: UIImage?
     @State private var failed = false
 
@@ -210,7 +243,9 @@ struct RemoteThumb: View {
             }
         }
         .frame(width: size, height: size)
-        .clipShape(RoundedRectangle(cornerRadius: DS.Radius.appIcon(size), style: .continuous))
+        .clipShape(circular
+            ? AnyShape(Circle())
+            : AnyShape(RoundedRectangle(cornerRadius: DS.Radius.appIcon(size), style: .continuous)))
         .task(id: urlString) { await load() }
     }
 
@@ -248,6 +283,50 @@ struct RemoteThumb: View {
         guard !Task.isCancelled else { return }
         if !perishable { Self.cache.setObject(thumb, forKey: urlString as NSString) }
         image = thumb
+    }
+}
+
+
+/// A deterministic identicon for a watched wallet address (2026-07-10) — the
+/// visual twin of the address label, so two watched wallets read apart at a
+/// glance when neither has an avatar to show. A pure function of the address:
+/// no network, no asset. A 5-cell grid mirrored down the middle, one hue on a
+/// dark tint of itself, clipped to a circle to match the social avatars.
+struct WalletBlockie: View {
+    let address: String
+    var size: CGFloat = 26
+
+    var body: some View {
+        let seed = Self.hash(address)
+        let hue = Double(seed % 360) / 360.0
+        let fg = Color(hue: hue, saturation: 0.60, brightness: 0.85)
+        let bg = Color(hue: hue, saturation: 0.32, brightness: 0.22)
+        Canvas { ctx, canvasSize in
+            let cells = 5
+            let cell = canvasSize.width / CGFloat(cells)
+            var r = seed | 1   // never a zero state
+            func nextOn() -> Bool { r = r &* 6_364_136_223_846_793_005 &+ 1; return (r >> 33) & 1 == 0 }
+            ctx.fill(Path(CGRect(origin: .zero, size: canvasSize)), with: .color(bg))
+            for y in 0..<cells {
+                for x in 0...(cells / 2) where nextOn() {
+                    for col in [x, cells - 1 - x] {
+                        let rect = CGRect(x: CGFloat(col) * cell, y: CGFloat(y) * cell,
+                                          width: cell + 0.5, height: cell + 0.5)
+                        ctx.fill(Path(rect), with: .color(fg))
+                    }
+                }
+            }
+        }
+        .frame(width: size, height: size)
+        .clipShape(Circle())
+    }
+
+    /// djb2 over the lowercased address — stable per address, spread enough
+    /// that neighbours look different.
+    private static func hash(_ s: String) -> UInt64 {
+        var h: UInt64 = 5381
+        for b in s.lowercased().utf8 { h = (h &* 33) &+ UInt64(b) }
+        return h
     }
 }
 

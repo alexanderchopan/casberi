@@ -336,6 +336,22 @@ Verbs card: Open in {source} / Open shortcut / type verb — rung 2 lives here. 
 
 Three sources. Type tags: assigned at ingestion. Project tags: assigned through clustering; the person renames. User tags: created in the thing detail and the composer parse card. Tags act as Feed filters and search terms. Project membership rides a tag. No tag management screen; a tag with zero things dies.
 
+RULING — WHAT TAGS ARE FOR (2026-07-10, user): tags are a RETRIEVAL
+VOCABULARY, not a management surface. The app assigns (type tags at
+ingestion, cluster tags); the person NAMES, and only at the moment they
+care. Writes are deliberate and rare — one door per scope: the thing
+sheet for one thing, the composer command for many. Reads are where tags
+pay off: the Home treemap, tag views, search ranking (tags score 2×),
+"show \<tag\>". Tags never grow affordances in feeds — no tag chips in
+All (type tags don't differentiate there), no tag controls on a
+source-filtered feed (that's QuickTagSheet again, twice killed; bulk
+tag-by-source is the composer's job, and "tag farcaster as Crypto"
+already matches on source). Low visibility of the WRITE affordance is
+correct under this model, not a bug — the real discoverability question
+is "how does the person learn the composer organizes," answered by the
+derived organize chip (36q), never by new tag surfaces. Every future
+"should tags appear here?" resolves against this paragraph.
+
 ## 21. Projects
 
 A project is a computed cluster. The system groups things by theme across sources and names the group. The person renames or pins; the person never files. A project carries: name, sources, synthesis line, thing count, tint fill at opacity scaled by count, stable across sessions. Project detail: header paints from the tile, doc streams under.
@@ -1135,3 +1151,56 @@ ArtlessBackfill (copy-pasted across 9 bridges; Steam hand-rolls it);
 deltaText/sparkline are third copies of existing formatters/renderers;
 GenTokenRow + TokenChartContent should read TokenPulse instead of
 fetching their own charts.
+
+## 36q. The composer invites the first bulk tag (2026-07-10, user)
+
+Companion to the §20 ruling (tags are a retrieval vocabulary; the write
+doors stay two). The person's path to learning that the composer
+organizes was invisible — the tag command existed but nothing taught it.
+Now the empty-composer chip row can carry ONE organize invite, derived
+like the ask chips are: the largest pile of things from a single source
+still wearing only their type tag (≥3, "You" excluded — as a query word
+it matches far beyond its own things) earns "Tag your 6 Farcaster
+things", tag-glyphed and tinted to read as organizing, not asking. The
+invite LEADS the row (the row scrolls; the last seat hid the one chip
+that teaches — verified on the sim before the swap).
+
+Tap PREFILLS, never sends: the field takes "tag farcaster as " and the
+person types the name — the name is theirs to choose, tag autocomplete
+helps, and the write still waits behind the proposal card's Apply.
+Typed-text-never-saves holds (a guard keeps the programmatic prefill
+from tripping the paste-capture heuristic). When the invite shows, ask
+chips cap at two so the row stays three. The label counts the untagged
+pile; the proposal card remains the truth surface for what the command
+actually matches.
+
+## 36z. Follow more than one Bluesky / Farcaster account (2026-07-10)
+
+The handle bridges watch a LIST now, the way Wallet watches a list of
+addresses — a small following feed of people you care about, not just
+your own mirror. Because the AppView/Snapchain APIs were always
+fetching a public handle's posts (ownership was never verified),
+"multiple" is the honest shape of what the code already did.
+
+Behavior, mirroring the Wallet-label rule (identity surfaces only when
+there's ambiguity):
+- **One account** watched: unchanged. The post keeps its own attached
+  image or the source glyph; no author identity shown (every row is
+  obviously them).
+- **More than one**: the row LEADS with the author's avatar (a circle,
+  falling back to the source glyph) and names them in the trailing slot
+  (@handle), so two watched people never read as one stream. Posts
+  intermingle chronologically under one source chip — no per-account
+  chips (a timeline has no per-account aggregate to separate, unlike
+  Wallet holdings).
+
+Wallets get the same identity treatment: when more than one is watched,
+a transaction row wears a deterministic identicon (a pure function of
+the address — no network) beside its existing address label.
+
+Two new Thing fields carry it: authorHandle + authorAvatarURL (both
+optional, CloudKit-safe). Farcaster resolves the pfp once per account
+via userDataByFid (the endpoint ignores the type filter and returns
+every profile field in a `messages` array — scan for USER_DATA_TYPE_PFP).
+The connect screen lists watched accounts with swipe-to-remove; the
+field becomes "Add". Pinterest stays single (RSS-backed, one board).

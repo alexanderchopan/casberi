@@ -42,10 +42,10 @@ enum BridgeRefresh {
         if !RSSStore.shared.feeds.isEmpty {
             Task { @MainActor in _ = await RSSIngest.refresh(context: context) }
         }
-        if !BlueskyStore.shared.handle.isEmpty {
+        if BlueskyStore.shared.connected {
             Task { @MainActor in _ = await BlueskyIngest.refresh(context: context) }
         }
-        if !FarcasterStore.shared.username.isEmpty {
+        if FarcasterStore.shared.connected {
             Task { @MainActor in _ = await FarcasterIngest.refresh(context: context) }
         }
         if !PinterestStore.shared.username.isEmpty {

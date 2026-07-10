@@ -9,23 +9,68 @@ import SwiftData
 @Observable
 final class FarcasterStore {
     static let shared = FarcasterStore()
-    private static let nameKey = "farcaster.username"
-    private static let fidKey = "farcaster.fid"
+    private static let key = "farcaster.accounts"
+    private static let legacyNameKey = "farcaster.username"
+    private static let legacyFidKey = "farcaster.fid"
 
-    var username: String {
-        didSet {
-            UserDefaults.standard.set(username, forKey: Self.nameKey)
-            if username != oldValue { fid = 0 }   // re-resolve on change
-        }
+    struct Account: Codable, Identifiable, Equatable {
+        var id = UUID()
+        var username: String
+        /// Resolved once per username, then cached (name→fid costs a request).
+        var fid: Int = 0
     }
-    /// Resolved once per username, then cached.
-    var fid: Int {
-        didSet { UserDefaults.standard.set(fid, forKey: Self.fidKey) }
+
+    /// The usernames whose public casts land — more than one is a small
+    /// following feed, not just your own mirror (2026-07-10).
+    var accounts: [Account] {
+        didSet { persist() }
     }
+
+    var connected: Bool { !accounts.isEmpty }
+    var usernames: [String] { accounts.map(\.username) }
 
     private init() {
-        username = UserDefaults.standard.string(forKey: Self.nameKey) ?? ""
-        fid = UserDefaults.standard.integer(forKey: Self.fidKey)
+        if let data = UserDefaults.standard.data(forKey: Self.key),
+           let saved = try? JSONDecoder().decode([Account].self, from: data) {
+            accounts = saved
+        } else if let legacy = UserDefaults.standard.string(forKey: Self.legacyNameKey),
+                  !legacy.isEmpty {
+            let fid = UserDefaults.standard.integer(forKey: Self.legacyFidKey)
+            accounts = [Account(username: legacy, fid: fid)]   // migrate the single name
+        } else {
+            accounts = []
+        }
+    }
+
+    @discardableResult
+    func add(_ raw: String) -> Bool {
+        let n = Self.normalize(raw)
+        guard !n.isEmpty, !accounts.contains(where: { $0.username == n }) else { return false }
+        accounts.append(Account(username: n))
+        return true
+    }
+
+    func remove(_ username: String) { accounts.removeAll { $0.username == username } }
+    func removeAll() { accounts = [] }
+
+    /// Caches an fid once resolved, so the name→fid lookup runs once per name.
+    func setFid(_ fid: Int, for username: String) {
+        guard let i = accounts.firstIndex(where: { $0.username == username }) else { return }
+        accounts[i].fid = fid
+    }
+
+    /// The name a cast's row shows when MORE THAN ONE account is watched
+    /// (same rule as Bluesky/Wallet). One account: nil.
+    func rowLabel(for username: String?) -> String? {
+        guard let username, accounts.count > 1,
+              accounts.contains(where: { $0.username == username }) else { return nil }
+        return "@\(username)"
+    }
+
+    private func persist() {
+        if let data = try? JSONEncoder().encode(accounts) {
+            UserDefaults.standard.set(data, forKey: Self.key)
+        }
     }
 
     /// "@dwr" and "dwr.eth" both normalize to the registered name.
@@ -53,60 +98,90 @@ enum FarcasterIngest {
     @MainActor
     static func refresh(context: ModelContext) async -> Int? {
         let store = FarcasterStore.shared
-        guard !store.username.isEmpty, !running else {
-            return store.username.isEmpty ? nil : 0
+        guard store.connected, !running else {
+            return store.connected ? 0 : nil
         }
         running = true
         defer { running = false }
 
-        if store.fid == 0 {
-            guard let proof = await IngestSupport.getJSON(
-                "\(node)/v1/userNameProofByName?name=\(store.username)") as? [String: Any],
-                  let fid = proof["fid"] as? Int else { return nil }
-            store.fid = fid
-        }
-
-        guard let root = await IngestSupport.getJSON(
-            "\(node)/v1/castsByFid?fid=\(store.fid)&pageSize=30&reverse=true") as? [String: Any],
-              let messages = root["messages"] as? [[String: Any]] else { return nil }
-
         let existing = IngestSupport.existingSourceRefs(context)
         let backfill = ArtlessBackfill(context, source: "Farcaster")
         var added = 0
+        var anyResolved = false
 
-        for message in messages {
-            guard let hash = message["hash"] as? String,
-                  let data = message["data"] as? [String: Any],
-                  let body = data["castAddBody"] as? [String: Any],
-                  let text = body["text"] as? String, !text.isEmpty,
-                  body["parentCastId"] is NSNull || body["parentCastId"] == nil  // casts, not replies
-            else { continue }
-            let ref = "fc:\(hash)"
-            let image = imageEmbed(body)
-            if existing.contains(ref) {
-                backfill.patch(ref, image: image)
-                continue
+        for account in store.accounts {
+            var fid = account.fid
+            if fid == 0 {
+                guard let proof = await IngestSupport.getJSON(
+                    "\(node)/v1/userNameProofByName?name=\(account.username)") as? [String: Any],
+                      let resolved = proof["fid"] as? Int else { continue }
+                fid = resolved
+                store.setFid(fid, for: account.username)
             }
 
-            // farcaster.xyz's canonical short link: the name + hash prefix.
-            let short = String(hash.prefix(10))
-            let when = (data["timestamp"] as? Double).map { epoch.addingTimeInterval($0) }
+            guard let root = await IngestSupport.getJSON(
+                "\(node)/v1/castsByFid?fid=\(fid)&pageSize=30&reverse=true") as? [String: Any],
+                  let messages = root["messages"] as? [[String: Any]] else { continue }
+            anyResolved = true
 
-            let thing = Thing(
-                kind: .chat,
-                title: IngestSupport.titleLine(text),
-                content: "https://farcaster.xyz/\(FarcasterStore.shared.username)/\(short)",
-                source: "Farcaster",
-                capturedAt: when ?? .now,
-                sourceRef: ref
-            )
-            thing.previewImageURL = IngestSupport.imageURL(image)
-            context.insert(thing)
-            SpotlightIndex.index([thing])
-            added += 1
+            // The avatar is a per-account lookup, not per-cast — fetch it once.
+            let avatar = await avatarURL(fid: fid)
+
+            for message in messages {
+                guard let hash = message["hash"] as? String,
+                      let data = message["data"] as? [String: Any],
+                      let body = data["castAddBody"] as? [String: Any],
+                      let text = body["text"] as? String, !text.isEmpty,
+                      body["parentCastId"] is NSNull || body["parentCastId"] == nil  // casts, not replies
+                else { continue }
+                let ref = "fc:\(hash)"
+                let image = imageEmbed(body)
+                if existing.contains(ref) {
+                    backfill.patch(ref, image: image)
+                    continue
+                }
+
+                // farcaster.xyz's canonical short link: the name + hash prefix.
+                let short = String(hash.prefix(10))
+                let when = (data["timestamp"] as? Double).map { epoch.addingTimeInterval($0) }
+
+                let thing = Thing(
+                    kind: .chat,
+                    title: IngestSupport.titleLine(text),
+                    content: "https://farcaster.xyz/\(account.username)/\(short)",
+                    source: "Farcaster",
+                    capturedAt: when ?? .now,
+                    sourceRef: ref
+                )
+                thing.previewImageURL = IngestSupport.imageURL(image)
+                thing.authorHandle = account.username
+                thing.authorAvatarURL = avatar
+                context.insert(thing)
+                SpotlightIndex.index([thing])
+                added += 1
+            }
         }
+        guard anyResolved else { return nil }
         if added > 0 || backfill.any { try? context.save() }
         return added
+    }
+
+    /// A user's profile picture URL from the hub — one request per account,
+    /// cached onto each cast's row for the >1 case. The endpoint ignores the
+    /// user_data_type filter and returns EVERY profile field in a `messages`
+    /// array, so we scan it for the PFP entry (verified 2026-07-10).
+    private static func avatarURL(fid: Int) async -> String? {
+        guard let root = await IngestSupport.getJSON(
+            "\(node)/v1/userDataByFid?fid=\(fid)") as? [String: Any],
+              let messages = root["messages"] as? [[String: Any]] else { return nil }
+        for message in messages {
+            guard let data = message["data"] as? [String: Any],
+                  let body = data["userDataBody"] as? [String: Any],
+                  body["type"] as? String == "USER_DATA_TYPE_PFP",
+                  let value = body["value"] as? String else { continue }
+            return IngestSupport.imageURL(value)
+        }
+        return nil
     }
 
     /// A cast's first image embed. Snapchain serves raw protocol data — no

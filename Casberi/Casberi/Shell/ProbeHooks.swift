@@ -43,9 +43,10 @@ enum ProbeHooks {
                       n.map(String.init) ?? "FAILED")
             }
         },
-        // `-fcName <username>` connects Farcaster headlessly.
+        // `-fcName <username>` connects Farcaster headlessly (appends, so a
+        // comma-separated list watches several — dedupes, safe to re-fire).
         Hook(key: "fcName") { name, context in
-            FarcasterStore.shared.username = FarcasterStore.normalize(name)
+            for n in name.split(separator: ",") { FarcasterStore.shared.add(String(n)) }
             Task { @MainActor in
                 let n = await FarcasterIngest.refresh(context: context)
                 NSLog("Farcaster probe: %@ new things", n.map(String.init) ?? "FAILED")
@@ -59,9 +60,10 @@ enum ProbeHooks {
                 NSLog("Pinterest probe: %@ new things", n.map(String.init) ?? "FAILED")
             }
         },
-        // `-bskyHandle <handle>` connects Bluesky headlessly.
+        // `-bskyHandle <handle>` connects Bluesky headlessly (appends, so a
+        // comma-separated list watches several — dedupes, safe to re-fire).
         Hook(key: "bskyHandle") { handle, context in
-            BlueskyStore.shared.handle = BlueskyStore.normalize(handle)
+            for h in handle.split(separator: ",") { BlueskyStore.shared.add(String(h)) }
             Task { @MainActor in
                 let n = await BlueskyIngest.refresh(context: context)
                 NSLog("Bluesky probe: %@ new things", n.map(String.init) ?? "FAILED")
