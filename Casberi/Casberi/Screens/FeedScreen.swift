@@ -724,6 +724,21 @@ struct FeedScreen: View {
                     .tint(DS.gray600)
                 }
             }
+            // The hand-off earns its own edge too (2026-07-10, user):
+            // full-swipe RIGHT opens in the source app — the second button
+            // on the left-swipe stays for one-handed reach either way.
+            .swipeActions(edge: .leading, allowsFullSwipe: true) {
+                if let openVerb = VerbDerivation.verbs(for: thing).first(where: {
+                    if case .openURL = $0.action { return true } else { return false }
+                }) {
+                    Button {
+                        run(openVerb, on: thing)
+                    } label: {
+                        Label("Open", systemImage: "arrow.up.right")
+                    }
+                    .tint(DS.confirm)
+                }
+            }
     }
 
     @ViewBuilder

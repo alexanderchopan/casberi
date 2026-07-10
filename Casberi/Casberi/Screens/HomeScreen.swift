@@ -122,6 +122,17 @@ struct HomeScreen: View {
                 streamComposition(instant: true)
                 chrome.flash("Unpinned from Home")
             }
+            // The real hand-off — the same "Open in app" the Feed swipe
+            // carries (2026-07-10: moving pins to Home must not cost it).
+            .environment(\.genThingHandoff) { id in
+                guard let thing = things.first(where: { $0.id.uuidString == id }),
+                      let verb = VerbDerivation.verbs(for: thing).first(where: {
+                          if case .openURL = $0.action { return true } else { return false }
+                      }),
+                      case .openURL(let url) = verb.action else { return }
+                DSHaptic.selection()
+                openURL(url)
+            }
             .sheet(item: $pinnedThing) { thing in
                 ThingSheetView(thing: thing)
             }

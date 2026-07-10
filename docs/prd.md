@@ -1021,3 +1021,18 @@ and skipped (naggy).
   to trailing (Feed's edge, full-swipe = pin) everywhere. Since an
   explicit trailing group replaces the system swipe-delete, Remove/
   Unwatch ride the same group as the second button — nothing lost.
+
+## 36t. One content line, the cover shows its source, the hand-off is everywhere (2026-07-10, user)
+
+- **Alignment:** every card's inner content starts on ONE line now — the
+  cover card's inner padding matches GenWidget's rows (s4), and the
+  TagMap eyebrow/subline indent to that same line, so "Just landed",
+  the pin, row icons, and "What's going on" all share an x.
+- **The cover card leads with its source icon** (BridgeIcon, 28pt) —
+  the old banner-ref arg (4) carries the source name now.
+- **"Open in app" is never out of reach** (report: moving pins to Home
+  cost the hand-off for pinned things). Home's pinned rows offer it in
+  the long-press menu — only when the thing has a real destination
+  (composition marks openable things, arg 6). Feed rows gain a LEADING
+  full-swipe Open too — swipe right to hand off, swipe left keeps
+  Pin + Open. Same verb on both edges by design: reach, not redundancy.

@@ -44,6 +44,12 @@ extension EnvironmentValues {
         get { self[GenThingUnpinKey.self] }
         set { self[GenThingUnpinKey.self] = newValue }
     }
+    /// A pinned row's "Open in app" — the real hand-off to the thing's
+    /// source (calshow://, the link, …). nil outside Home.
+    var genThingHandoff: ((String) -> Void)? {
+        get { self[GenThingHandoffKey.self] }
+        set { self[GenThingHandoffKey.self] = newValue }
+    }
     /// The screen's top safe-area inset — the cover is full-bleed, so its
     /// date eyebrow needs the clearance the surface measured.
     var genCoverTopInset: CGFloat {
@@ -76,6 +82,9 @@ private struct GenThingOpenKey: EnvironmentKey {
     static let defaultValue: ((String) -> Void)? = nil
 }
 private struct GenThingUnpinKey: EnvironmentKey {
+    static let defaultValue: ((String) -> Void)? = nil
+}
+private struct GenThingHandoffKey: EnvironmentKey {
     static let defaultValue: ((String) -> Void)? = nil
 }
 private struct GenRefreshTickKey: EnvironmentKey {
@@ -389,6 +398,7 @@ private struct GenRow: View {
     let el: GenEl
     @Environment(\.genThingOpen) private var thingOpen
     @Environment(\.genThingUnpin) private var thingUnpin
+    @Environment(\.genThingHandoff) private var thingHandoff
     var body: some View {
         let row = HStack(spacing: DS.Space.s3) {
             TagGlyph(tag: el.str(1), size: 24)
@@ -401,17 +411,22 @@ private struct GenRow: View {
         }
         .padding(.horizontal, DS.Space.s4)
         .padding(.vertical, DS.Space.s3)
-        row.pinnedRowActions(id: el.str(4), open: thingOpen, unpin: thingUnpin)
+        row.pinnedRowActions(id: el.str(4), openable: el.str(5) == "app",
+                             open: thingOpen, unpin: thingUnpin, handoff: thingHandoff)
     }
 }
 
 extension View {
-    /// Tap-to-open + long-press Open/Unpin, attached only when the doc gave
-    /// the row a thing id (Home's pinned rows). Plain rows stay inert.
+    /// Tap-to-open + long-press Open / Open in app / Unpin, attached only
+    /// when the doc gave the row a thing id (Home's pinned rows). "Open in
+    /// app" appears only when the thing has a real destination (arg 6) —
+    /// the hand-off the Feed swipe carries lives here too (2026-07-10,
+    /// user: moving pins to Home must not cost the hand-off).
     @ViewBuilder
-    func pinnedRowActions(id: String,
+    func pinnedRowActions(id: String, openable: Bool,
                           open: ((String) -> Void)?,
-                          unpin: ((String) -> Void)?) -> some View {
+                          unpin: ((String) -> Void)?,
+                          handoff: ((String) -> Void)?) -> some View {
         if id.isEmpty {
             self
         } else {
@@ -421,7 +436,14 @@ extension View {
                     Button {
                         open?(id)
                     } label: {
-                        Label("Open", systemImage: "arrow.up.right")
+                        Label("Open", systemImage: "rectangle.portrait.and.arrow.right")
+                    }
+                    if openable {
+                        Button {
+                            handoff?(id)
+                        } label: {
+                            Label("Open in app", systemImage: "arrow.up.right")
+                        }
                     }
                     Button {
                         unpin?(id)
@@ -447,6 +469,7 @@ private struct GenTokenRow: View {
     @State private var revealed = false
     @Environment(\.genThingOpen) private var thingOpen
     @Environment(\.genThingUnpin) private var thingUnpin
+    @Environment(\.genThingHandoff) private var thingHandoff
     @Environment(\.genRefreshTick) private var refreshTick
 
     private var up: Bool { (chart?.change24h ?? 0) >= 0 }
@@ -503,7 +526,8 @@ private struct GenTokenRow: View {
             guard !el.str(1).isEmpty, !el.str(2).isEmpty else { return }
             chart = await TokenChart.fetch(chain: el.str(1), address: el.str(2))
         }
-        row.pinnedRowActions(id: el.str(4), open: thingOpen, unpin: thingUnpin)
+        row.pinnedRowActions(id: el.str(4), openable: el.str(5) == "app",
+                             open: thingOpen, unpin: thingUnpin, handoff: thingHandoff)
     }
 
     private func priceText(_ p: Double) -> String {
@@ -706,6 +730,7 @@ private struct GenTagMap: View {
                     Text(el.str(0))
                         .dsText(.label12)
                         .foregroundStyle(DS.textSecondary)
+                        .padding(.leading, DS.Space.s4)
                     Spacer()
                     // The banked week is shareable (§6) — weekend only.
                     if let weekCard {
@@ -725,6 +750,7 @@ private struct GenTagMap: View {
             if !el.str(1).isEmpty {
                 Text(el.str(1))
                     .dsText(.callout15).foregroundStyle(DS.textSecondary)
+                    .padding(.leading, DS.Space.s4)
                     .padding(.top, DS.Space.s1)
                     .padding(.bottom, DS.Space.s3)
             }
@@ -1258,25 +1284,36 @@ private struct GenCover: View {
             if !chips.isEmpty {
                 KindCountRow(items: chips, ink: coverInk)
             }
-            VStack(alignment: .leading, spacing: DS.Space.s1) {
-                Text(el.str(0))
-                    .dsText(.label12)
-                    .foregroundStyle(DS.textSecondary)
-                Text(el.str(1))
-                    // The display-tier ramp token (36g: SF Rounded lives
-                    // there) — no off-ramp sizes (2026-07-10, user).
-                    .dsText(.heading22)
-                    .foregroundStyle(DS.textPrimary)
-                    .lineLimit(2)
-                    .minimumScaleFactor(0.7)
-                    .fixedSize(horizontal: false, vertical: true)
-                if !el.str(2).isEmpty {
-                    Text(el.str(2))
-                        .dsText(.subhead13)
+            HStack(alignment: .top, spacing: DS.Space.s3) {
+                // The source's icon leads the card (2026-07-10, user) — the
+                // old banner ref slot (arg 4) carries the source name.
+                if !el.str(3).isEmpty {
+                    BridgeIcon(name: el.str(3), size: 28)
+                }
+                VStack(alignment: .leading, spacing: DS.Space.s1) {
+                    Text(el.str(0))
+                        .dsText(.label12)
                         .foregroundStyle(DS.textSecondary)
+                    Text(el.str(1))
+                        // The display-tier ramp token (36g: SF Rounded lives
+                        // there) — no off-ramp sizes (2026-07-10, user).
+                        .dsText(.heading22)
+                        .foregroundStyle(DS.textPrimary)
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.7)
+                        .fixedSize(horizontal: false, vertical: true)
+                    if !el.str(2).isEmpty {
+                        Text(el.str(2))
+                            .dsText(.subhead13)
+                            .foregroundStyle(DS.textSecondary)
+                    }
                 }
             }
-            .padding(DS.Space.s3)
+            // Inner horizontal padding matches GenWidget's rows (s4), so
+            // every card's content starts on ONE line (2026-07-10, user:
+            // "Just landed" and the section labels didn't align).
+            .padding(.horizontal, DS.Space.s4)
+            .padding(.vertical, DS.Space.s3)
             .frame(maxWidth: .infinity, alignment: .leading)
             // The same sheet surface every other card wears — opaque, so
             // its own inks hold on any wallpaper behind it.

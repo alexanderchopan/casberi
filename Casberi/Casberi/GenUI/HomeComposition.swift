@@ -278,9 +278,11 @@ enum HomeComposition {
         }
         if let latest = things.first(where: { $0.kind != .approval }) {
             // The 6th arg marks the stream complete so the renderer's black
-            // field doesn't flash in before the doc settles.
+            // field doesn't flash in before the doc settles. Arg 4 (the old
+            // banner slot) carries the SOURCE now — the card leads with its
+            // app icon (2026-07-10, user).
             let subline = chips != nil ? "" : "\(latest.kind.typeTag) · \(latest.source)"
-            return "cover = Cover(\(q("Just landed · \(latest.source)")), \(q(latest.title)), \(q(subline)), \(q("")), \(q(date)), \(q(latest.kind.typeTag))\(chipsArg))"
+            return "cover = Cover(\(q("Just landed · \(latest.source)")), \(q(latest.title)), \(q(subline)), \(q(latest.source)), \(q(date)), \(q(latest.kind.typeTag))\(chipsArg))"
         }
         return "cover = Cover(\(q("Now")), \(q("Your things go here")), \(q("Paste, speak, or share one in.")), \(q("")), \(q(date)), \(q("quiet")))"
     }
@@ -363,10 +365,16 @@ enum HomeComposition {
     /// row. The trailing thing id makes the row interactive on Home (tap
     /// opens, long-press offers Open/Unpin — 2026-07-10).
     private static func row(id: String, _ t: Thing) -> String {
+        // Arg 6 marks a thing with a real hand-off destination — the row's
+        // long-press offers "Open in app" only when it would actually go
+        // somewhere (2026-07-10).
+        let openable = VerbDerivation.verbs(for: t).contains {
+            if case .openURL = $0.action { return true } else { return false }
+        } ? "app" : ""
         if t.kind == .link, let route = TokenChart.route(from: t.content) {
-            return "\(id) = TokenRow(\(q(t.title)), \(q(route.chain)), \(q(route.address)), \(q(shortTime(t.capturedAt))), \(q(t.id.uuidString)))"
+            return "\(id) = TokenRow(\(q(t.title)), \(q(route.chain)), \(q(route.address)), \(q(shortTime(t.capturedAt))), \(q(t.id.uuidString)), \(q(openable)))"
         }
-        return "\(id) = Row(\(q(t.title)), \(q(t.kind.typeTag)), \(q(t.source)), \(q(shortTime(t.capturedAt))), \(q(t.id.uuidString)))"
+        return "\(id) = Row(\(q(t.title)), \(q(t.kind.typeTag)), \(q(t.source)), \(q(shortTime(t.capturedAt))), \(q(t.id.uuidString)), \(q(openable)))"
     }
 
     private static func shortTime(_ date: Date) -> String {
