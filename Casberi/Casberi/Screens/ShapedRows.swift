@@ -66,6 +66,22 @@ struct BandRow: View {
         return addr
     }
 
+    /// A mail row's sender — email carries no avatar, so the row leads with
+    /// an initial circle instead (2026-07-10; what Mail apps themselves do).
+    /// New rows carry the sender in authorHandle; older rows stored it only
+    /// as "From …" content, parsed here so they get their circle without a
+    /// migration.
+    private var mailSender: String? {
+        guard thing.kind == .mail else { return nil }
+        if let from = thing.authorHandle, !from.isEmpty { return from }
+        if thing.content.hasPrefix("From ") {
+            let from = String(thing.content.dropFirst("From ".count))
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            return from.isEmpty ? nil : from
+        }
+        return nil
+    }
+
     /// Events carry their clock time inline — the left time column died.
     private var titleText: String {
         thing.kind == .event
@@ -109,6 +125,8 @@ struct BandRow: View {
                             circular: true)
             } else if let addr = identiconAddress {
                 WalletBlockie(address: addr, size: 26)
+            } else if let sender = mailSender, SenderInitial.letter(of: sender) != nil {
+                SenderInitial(sender: sender, size: 26)
             } else if let image = thing.previewImageURL, !image.isEmpty,
                       thing.source != "Twitch" || live {
                 RemoteThumb(urlString: image, size: 26, fallback: thing.source,
@@ -320,6 +338,57 @@ struct WalletBlockie: View {
 
     /// djb2 over the lowercased address — stable per address, spread enough
     /// that neighbours look different.
+    private static func hash(_ s: String) -> UInt64 {
+        var h: UInt64 = 5381
+        for b in s.lowercased().utf8 { h = (h &* 33) &+ UInt64(b) }
+        return h
+    }
+}
+
+
+/// A mail sender's initial in a colored circle (2026-07-10) — email carries
+/// no avatar, so the letter is the identity, the way Mail apps themselves
+/// draw unknown senders. Hue is a pure function of the sender string (same
+/// trick as WalletBlockie): two senders read apart at a glance, the same
+/// sender is always the same color. No network, nothing stored.
+struct SenderInitial: View {
+    let sender: String
+    var size: CGFloat = 26
+
+    var body: some View {
+        let letter = Self.letter(of: sender) ?? "?"
+        let hue = Double(Self.hash(sender) % 360) / 360.0
+        Circle()
+            .fill(Color(hue: hue, saturation: 0.48, brightness: 0.52))
+            .frame(width: size, height: size)
+            .overlay(
+                Text(letter)
+                    .font(.system(size: size * 0.5, weight: .semibold, design: .rounded))
+                    .foregroundStyle(.white)
+            )
+            .accessibilityLabel("From \(Self.displayName(of: sender))")
+    }
+
+    /// "Ana Torres <ana@x.com>" → "A"; "ana@x.com" → "A". nil when the
+    /// sender has no letter to give (the row keeps the brand glyph then).
+    static func letter(of sender: String) -> String? {
+        displayName(of: sender).first { $0.isLetter || $0.isNumber }
+            .map { String($0).uppercased() }
+    }
+
+    /// The human part of an address: the display name when present,
+    /// otherwise the address itself (quotes and brackets stripped).
+    static func displayName(of sender: String) -> String {
+        var s = sender.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let bracket = s.firstIndex(of: "<") {
+            let name = s[..<bracket].trimmingCharacters(in: .whitespacesAndNewlines)
+            if !name.isEmpty { s = name } else { s = String(s[s.index(after: bracket)...].dropLast()) }
+        }
+        return s.trimmingCharacters(in: CharacterSet(charactersIn: "\"' "))
+    }
+
+    /// djb2, matching WalletBlockie — stable per sender. Case-insensitive:
+    /// "Ana <a@x>" and "ana <a@x>" are the same person, same hue.
     private static func hash(_ s: String) -> UInt64 {
         var h: UInt64 = 5381
         for b in s.lowercased().utf8 { h = (h &* 33) &+ UInt64(b) }

@@ -83,6 +83,11 @@ enum MailIngest {
                 capturedAt: m.date ?? .now,
                 sourceRef: ref
             )
+            // The sender is the row's identity — the feed draws an initial
+            // circle from it (an email carries no avatar; a letter is what
+            // we honestly have, 2026-07-10). Older rows parse it from the
+            // "From …" content at render, so no migration.
+            thing.authorHandle = m.from
             context.insert(thing)
             SpotlightIndex.index([thing])
             added += 1

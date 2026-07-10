@@ -1307,3 +1307,20 @@ when NOTHING is sent (no agent transport exists). Fake status,
 removed: the toasts now say just "Approved" / "Denied" — the answer
 is recorded on the thing, which is all that happens. Real outbound
 consent returns with the agent transport.
+
+## 41. Mail rows lead with a sender-initial circle (2026-07-10)
+
+User asked if Gmail/iCloud mail could show sender avatars like the
+social bridges. Email carries none (IMAP hands us headers + body;
+Gmail-the-app looks photos up in Google's directory, which we don't
+have), and the Gravatar workaround was ruled OUT on values: it would
+send a fingerprint of everyone who emails you to a third party —
+off-brand for "your data stays on your device."
+
+What we honestly have is the sender string, so mail rows lead with an
+initial circle — the sender's letter on a hue that's a pure function
+of the sender (same trick as the wallet identicons; what Mail apps
+themselves draw for unknown senders). No network, nothing stored
+beyond the sender. New mail carries the sender in authorHandle;
+older rows parse it from their "From …" content at render — no
+migration. A row with no sender keeps the brand glyph.
