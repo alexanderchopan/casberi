@@ -32,10 +32,8 @@ struct HomeScreen: View {
     @Environment(\.openURL) private var openURL
     @Bindable private var route = HomeRoute.shared
     @Bindable private var wallet = WalletStore.shared
-    @Bindable private var cover = HomeCoverStore.shared
     @State private var stream = GenStream()
     @State private var openProject: ProjectRoute?
-    @State private var coverThing: Thing?
     @State private var walletHoldings: [WalletIngest.HoldingsGroup] = []
     @Namespace private var zoomNS
 
@@ -62,7 +60,7 @@ struct HomeScreen: View {
             .ignoresSafeArea(edges: .top)
             .environment(\.genCoverTopInset, geo.safeAreaInsets.top)
         .minimizesChrome(chrome)
-            .dsPageBackground()
+            .homePageBackground()
             .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackgroundVisibility(.hidden, for: .navigationBar)
@@ -88,12 +86,6 @@ struct HomeScreen: View {
                     openProject = ProjectRoute(name: name)
                 }
             }
-            // The cover opens the thing it shows.
-            .environment(\.genCoverTap) { id in
-                if let thing = things.first(where: { $0.id.uuidString == id }) {
-                    coverThing = thing
-                }
-            }
             .environment(\.genZoomNS, zoomNS)
             .navigationDestination(item: $openProject) { route in
                 ProjectDetailScreen(projectName: route.name)
@@ -117,9 +109,6 @@ struct HomeScreen: View {
                 case .settings: SettingsScreen()
                 }
             }
-            .sheet(item: $coverThing) { thing in
-                ThingSheetView(thing: thing)
-            }
             }
         }
         .tint(DS.tint)
@@ -127,7 +116,6 @@ struct HomeScreen: View {
         .onChange(of: chrome.popHome) {
             route.push = nil
             openProject = nil
-            coverThing = nil
         }
         // The corpus changed under the composition (a capture, the demo
         // seeds, the dissolve) — repaint instantly, no replayed entrance.
@@ -140,10 +128,6 @@ struct HomeScreen: View {
         // Thing pin, just without a Thing to observe via things.count. Pin is
         // per-address now, so the whole list is the thing to watch.
         .onChange(of: wallet.addresses) { loadWalletHoldings() }
-        // A chosen Home banner (Settings → Banner) is composed from too — and
-        // its tray pops back into an already-mounted Home, so onAppear won't
-        // catch it. Recompose so the banner takes the cover immediately.
-        .onChange(of: cover.revision) { streamComposition(instant: true) }
         .onAppear {
             streamComposition()
             loadWalletHoldings()

@@ -926,3 +926,27 @@ plain `DS.textPrimary`, exactly like a Settings tile's title. The whole
 wallet-hue pipeline (TagMap arg 5, `hueName(forWalletIndex:)`,
 walletHues) is deleted; a treemap tile is now surface + white label +
 icon, nothing else. Identity rides the name and the icon alone.
+
+## 36o. The Banner is a BACKGROUND now (2026-07-10, user — supersedes 36a/36j)
+
+The banner never settled: as a full-bleed band it flooded the top third
+(status bar, date, chips, and the Just-landed card all sat ON it); as a
+card it was fine for a photo but odd for a plain color. The resolution:
+it isn't an element at all — it's Home's WALLPAPER. Settings → Background
+(was Banner) picks a color or a photo for Home's page canvas, Home only,
+and the dark cards float on it (the chat-app wallpaper mental model).
+This is the retired app-wide theme's post-mortem honored properly: one
+image, one screen, one clear purpose.
+
+- A chosen color paints deepened (~45% toward black) so gray section
+  labels and white ink always read; the swatch circle still shows the
+  bright identity. A photo wears the standard 0.5→0.72 scrim.
+- Default = no choice = the standard page, pixel-identical to before.
+- The cover element carries no image at all anymore — GenCover is just
+  date + chips + the Just-landed card (now on DS.surfaceSheet, opaque,
+  same as every other card). CoverBleed, the scrims, the stretch, the
+  banner heights, genCoverTap, and the composition's banner ref are all
+  deleted. HomeCoverStore → HomeBackgroundStore (same UserDefaults keys,
+  so a banner chosen before the pivot survives as the background).
+- HomeScreen wears `.homePageBackground()` — the one screen with its
+  own wallpaper; everything else keeps `.dsPageBackground()`.

@@ -75,7 +75,7 @@ struct SettingsScreen: View {
                 Task {
                     if let data = try? await item.loadTransferable(type: Data.self),
                        let image = UIImage(data: data) {
-                        HomeCoverStore.shared.setPhoto(image)
+                        HomeBackgroundStore.shared.setPhoto(image)
                     }
                     coverSelection = nil
                 }
@@ -153,14 +153,13 @@ struct SettingsScreen: View {
                          DSHaptic.tap()
                          withAnimation(DS.Motion.standard) { ThemeStore.shared.isLight.toggle() }
                      }),
-            // An explicit choice for Home's cover, same shape as Avatar
-            // (goal 6: one image, owned locally) — it always wins over the
-            // day's newest screenshot, so a fresh capture never leads Home
-            // uninvited (2026-07-09).
-            TileSpec(title: "Banner",
-                     value: HomeCoverStore.shared.banner == nil ? "A photo or a color" : "",
-                     avatar: HomeCoverStore.shared.banner,
-                     badge: HomeCoverStore.shared.banner == nil ? ("photo", DS.textTertiary) : nil,
+            // Home's wallpaper (2026-07-10, was Banner) — a deepened color
+            // or a dimmed photo behind Home's cards, Home only. Same shape
+            // as Avatar: one image, owned locally.
+            TileSpec(title: "Background",
+                     value: HomeBackgroundStore.shared.image == nil ? "A color or a photo" : "",
+                     avatar: HomeBackgroundStore.shared.image,
+                     badge: HomeBackgroundStore.shared.image == nil ? ("photo", DS.textTertiary) : nil,
                      action: { coverDialogOpen = true }),
             // Dev-facing on purpose: TestFlight reports become a screenshot
             // of on-device facts instead of a description (2026-07-09).
@@ -300,29 +299,26 @@ struct DSTileButtonStyle: ButtonStyle {
     }
 }
 
-/// Appearance — ONE knob (ruling 2026-07-06: the background/photo picker
-/// complicated things and added too much variation): light or dark. The
-/// fixed Casberi blue stays the only accent (ThemeStore).
-/// Home's cover — a photo or a curated color, always winning over the day's
-/// newest screenshot when set (2026-07-09). One tray for choose/change/
-/// remove, the same shape as every other picker in the app.
+/// Home's background — a curated color or the person's photo, Home only
+/// (2026-07-10, was the Banner tray). One tray for choose/change/reset,
+/// the same shape as every other picker in the app.
 struct HomeCoverSheet: View {
     let onChoosePhoto: () -> Void
-    @Bindable private var store = HomeCoverStore.shared
+    @Bindable private var store = HomeBackgroundStore.shared
 
     var body: some View {
-        DSTray(title: "Banner", height: 380) {
+        DSTray(title: "Background", height: 380) {
             VStack(alignment: .leading, spacing: DS.Space.s4) {
                 preview
-                Text("A photo or a color, always shown here — smaller than a live capture, so the two never look alike.")
+                Text("A color or a photo behind your Home screen — and only there.")
                     .dsText(.callout15).foregroundStyle(DS.textSecondary)
                 HStack(spacing: DS.Space.s3) {
-                    ForEach(HomeCoverStore.swatches, id: \.name) { swatch in
+                    ForEach(HomeBackgroundStore.swatches, id: \.name) { swatch in
                         swatchButton(swatch)
                     }
                     photoSwatch
                 }
-                if store.banner != nil {
+                if store.image != nil {
                     Button(role: .destructive) {
                         DSHaptic.tap()
                         withAnimation(DS.Motion.standard) { store.clear() }
@@ -336,40 +332,34 @@ struct HomeCoverSheet: View {
         }
     }
 
-    /// WYSIWYG, not a swatch grid floating in the abstract — this is the
-    /// exact scrim/text treatment GenCover paints on Home, at the real
-    /// aspect the banner renders at.
-    /// A chosen color previews SOLID (the exact hex, no scrim — same rule
-    /// as GenCover); only a photo wears the text-legibility gradient.
-    private var previewColor: Color? {
-        guard store.kind == .color, let name = store.colorName,
-              let swatch = HomeCoverStore.swatches.first(where: { $0.name == name })
-        else { return nil }
-        return Color(hex: swatch.hex)
-    }
-
+    /// WYSIWYG — the exact wallpaper treatment Home paints (deepened color
+    /// / dimmed photo), with a mini card floating on it the way Home's
+    /// cards do.
     private var preview: some View {
         ZStack(alignment: .bottomLeading) {
-            if let color = previewColor {
+            if let color = store.wallpaperColor {
                 color
-            } else if let image = store.banner {
+            } else if store.kind == .photo, let image = store.image {
                 GeometryReader { geo in
                     Image(uiImage: image)
                         .resizable().scaledToFill()
                         .frame(width: geo.size.width, height: geo.size.height)
                         .clipped()
                 }
-                LinearGradient(colors: [.clear, .black.opacity(0.65)],
-                               startPoint: .center, endPoint: .bottom)
+                LinearGradient(colors: [.black.opacity(0.5), .black.opacity(0.72)],
+                               startPoint: .top, endPoint: .bottom)
             } else {
-                // The default cover is black, not blue (ruling 2026-07-09) —
-                // the preview shows what an unset banner actually paints.
+                // The default page — the preview shows what "no choice" is.
                 Color.black
             }
             VStack(alignment: .leading, spacing: 2) {
                 Text("Just landed").dsText(.label12).foregroundStyle(.white.opacity(0.7))
                 Text("Evening run").font(.system(size: 17, weight: .heavy)).foregroundStyle(.white)
             }
+            .padding(DS.Space.s3)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color(hex: "#161616"),
+                        in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
             .padding(DS.Space.s3)
         }
         .frame(height: 100)

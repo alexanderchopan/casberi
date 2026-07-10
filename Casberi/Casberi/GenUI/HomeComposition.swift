@@ -151,8 +151,7 @@ enum HomeComposition {
             // subline already carries that story; today-only counts under
             // "your week, banked" would misread as the week's composition
             // (and stacking both broke the counts-are-the-subline rule).
-            let coverRef = hasBanner ? "banner" : ""
-            doc.append("cover = Cover(\(q("Weekend")), \(q(title)), \(q(subline)), \(q(coverRef)), \(q(dateline(things: things))), \(q("quiet")))")
+            doc.append("cover = Cover(\(q("Weekend")), \(q(title)), \(q(subline)), \(q("")), \(q(dateline(things: things))), \(q("quiet")))")
             rootRefs.append("cover")
         }
 
@@ -254,25 +253,12 @@ enum HomeComposition {
         Date.now.formatted(.dateTime.weekday(.wide).month(.wide).day())
     }
 
-    /// True when the person set their own Home cover. Home's cover is
-    /// 2-tier now (ruling 2026-07-10, amending 36a): a set banner, or black
-    /// — a screenshot never auto-leads Home, full stop. The earlier
-    /// "automatic newest screenshot" tier was a real privacy gap (a capture
-    /// you didn't intend to see full-bleed could still show up there with
-    /// zero action from you); an explicit Banner is the only way a photo
-    /// reaches the cover. Renders shorter than the old live-capture height
-    /// (150pt vs 250pt) so a banner still reads as "this is what I chose,"
-    /// not "this just happened."
-    private static var hasBanner: Bool { HomeCoverStore.shared.banner != nil }
-
-    /// The cover line for morning/evening: a set banner, or the quiet cover
-    /// carrying the shipped Hero content — same priority rules, no
-    /// obligations. The words never change based on which image shows (or
-    /// doesn't), so the cover never implies a static banner is today's
-    /// activity. Today's kind counts ride every cover as chips (ruling
-    /// 2026-07-09): the counts ARE the subline, so the old bottom "What
-    /// landed today" section is gone and the cover's middle earns its
-    /// height. The word subline returns only when nothing landed today.
+    /// The cover line for morning/evening — pure content now (2026-07-10):
+    /// the Banner became the Background setting, so the cover carries no
+    /// image ref at all (arg 4 stays for arity, always empty). Today's kind
+    /// counts ride every cover as chips (ruling 2026-07-09): the counts ARE
+    /// the subline, so the old bottom "What landed today" section is gone.
+    /// The word subline returns only when nothing landed today.
     private static func cover(things: [Thing]) -> String {
         let date = dateline(things: things)
         // One today-sweep, shared by the chips (compose already scans the
@@ -280,20 +266,19 @@ enum HomeComposition {
         let today = things.filter { Calendar.current.isDateInToday($0.capturedAt) }
         let chips = coverChips(today)
         let chipsArg = chips.map { ", \($0)" } ?? ""
-        let bannerRef = hasBanner ? "banner" : ""
         // Quiet cover — the shipped Hero lines, verbatim priority. Approvals
         // never lead Home (voice guardrail: agent asks live in Feed; the cover
         // states what landed, never what's waiting on the person).
         if isQuietDay(things) {
-            return "cover = Cover(\(q("Today")), \(q("A quiet day")), \(q("Nothing new yet — your things keep.")), \(q(bannerRef)), \(q(date)), \(q("quiet")))"
+            return "cover = Cover(\(q("Today")), \(q("A quiet day")), \(q("Nothing new yet — your things keep.")), \(q("")), \(q(date)), \(q("quiet")))"
         }
         if let latest = things.first(where: { $0.kind != .approval }) {
             // The 6th arg marks the stream complete so the renderer's black
             // field doesn't flash in before the doc settles.
             let subline = chips != nil ? "" : "\(latest.kind.typeTag) · \(latest.source)"
-            return "cover = Cover(\(q("Just landed · \(latest.source)")), \(q(latest.title)), \(q(subline)), \(q(bannerRef)), \(q(date)), \(q(latest.kind.typeTag))\(chipsArg))"
+            return "cover = Cover(\(q("Just landed · \(latest.source)")), \(q(latest.title)), \(q(subline)), \(q("")), \(q(date)), \(q(latest.kind.typeTag))\(chipsArg))"
         }
-        return "cover = Cover(\(q("Now")), \(q("Your things go here")), \(q("Paste, speak, or share one in.")), \(q(bannerRef)), \(q(date)), \(q("quiet")))"
+        return "cover = Cover(\(q("Now")), \(q("Your things go here")), \(q("Paste, speak, or share one in.")), \(q("")), \(q(date)), \(q("quiet")))"
     }
 
     // MARK: - Cover chips (what landed today, on the cover — ruling 2026-07-09)

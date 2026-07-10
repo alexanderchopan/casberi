@@ -115,9 +115,12 @@ enum ProbeHooks {
         // `-setHomeBanner <color-name|photo>` sets the Home cover
         // headlessly — screenshot verification of the picker's two kinds.
         Hook(key: "setHomeBanner") { spec, _ in
-            if let swatch = HomeCoverStore.swatches.first(where: { $0.name == spec }) {
-                HomeCoverStore.shared.setColor(swatch)
-                NSLog("Home banner probe: color %@", spec)
+            if spec == "clear" {
+                HomeBackgroundStore.shared.clear()
+                NSLog("Home background probe: cleared")
+            } else if let swatch = HomeBackgroundStore.swatches.first(where: { $0.name == spec }) {
+                HomeBackgroundStore.shared.setColor(swatch)
+                NSLog("Home background probe: color %@", spec)
             } else {
                 let size = CGSize(width: 400, height: 400)
                 let format = UIGraphicsImageRendererFormat.default()
@@ -126,8 +129,8 @@ enum ProbeHooks {
                     UIColor.systemBlue.setFill()
                     ctx.fill(CGRect(origin: .zero, size: size))
                 }
-                HomeCoverStore.shared.setPhoto(img)
-                NSLog("Home banner probe: photo")
+                HomeBackgroundStore.shared.setPhoto(img)
+                NSLog("Home background probe: photo")
             }
         },
         // `-twitchAuth YES` starts the device flow headlessly: NSLogs the

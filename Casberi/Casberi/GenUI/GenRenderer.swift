@@ -32,11 +32,6 @@ extension EnvironmentValues {
         get { self[GenZoomNSKey.self] }
         set { self[GenZoomNSKey.self] = newValue }
     }
-    /// Cover tap → the thing sheet (the surface resolves the id).
-    var genCoverTap: ((String) -> Void)? {
-        get { self[GenCoverTapKey.self] }
-        set { self[GenCoverTapKey.self] = newValue }
-    }
     /// The screen's top safe-area inset — the cover is full-bleed, so its
     /// date eyebrow needs the clearance the surface measured.
     var genCoverTopInset: CGFloat {
@@ -55,9 +50,6 @@ private struct GenProseStreamingKey: EnvironmentKey {
     static let defaultValue = false
 }
 
-private struct GenCoverTapKey: EnvironmentKey {
-    static let defaultValue: ((String) -> Void)? = nil
-}
 private struct GenCoverTopInsetKey: EnvironmentKey {
     static let defaultValue: CGFloat = 0
 }
@@ -1027,211 +1019,53 @@ private struct GenApprovalCard: View {
     }
 }
 
-// MARK: - Cover (docs/handoff-home.md — the full-bleed header; H7)
+// MARK: - Cover (the slim data-first hero)
 
-/// Extracted cover bleed — dominant color per thing id, cached. Desaturated
-/// ~20% and brightness-capped so the vivid text ramp always passes.
-enum CoverBleed {
-    private static var cache: [String: Color] = [:]
-
-    static func cached(_ id: String) -> Color? { cache[id] }
-
-    static func extract(from image: UIImage, id: String) -> Color {
-        if let hit = cache[id] { return hit }
-        guard let ci = CIImage(image: image) else { return .black }
-        let extent = ci.extent
-        let filter = CIFilter(name: "CIAreaAverage", parameters: [
-            kCIInputImageKey: ci,
-            kCIInputExtentKey: CIVector(cgRect: extent),
-        ])
-        guard let out = filter?.outputImage else { return .black }
-        var pixel = [UInt8](repeating: 0, count: 4)
-        CIContext(options: [.workingColorSpace: kCFNull as Any]).render(
-            out, toBitmap: &pixel, rowBytes: 4,
-            bounds: CGRect(x: 0, y: 0, width: 1, height: 1),
-            format: .RGBA8, colorSpace: nil)
-        var r = CGFloat(pixel[0]) / 255, g = CGFloat(pixel[1]) / 255, b = CGFloat(pixel[2]) / 255
-        // Desaturate ~20% toward the mean, then cap brightness for the ramp.
-        let mean = (r + g + b) / 3
-        r = r + (mean - r) * 0.2; g = g + (mean - g) * 0.2; b = b + (mean - b) * 0.2
-        let brightness = max(r, g, b)
-        if brightness > 0.55 {
-            let k = 0.55 / brightness
-            r *= k; g *= k; b *= k
-        }
-        let color = Color(red: r, green: g, blue: b)
-        cache[id] = color
-        return color
-    }
-}
-
-/// Cover(eyebrow, title, subline, thingId, dateline, tag, [Tag N, ...]) —
-/// the composition stays dumb (it only names facts); everything smart lives
-/// here: image lookup by thingId, bleed extraction, theme fallbacks. Height
-/// is decided before first paint from the args alone — a thingId means the
-/// 250pt image canvas, none means the 150pt quiet cover — so the streamed
-/// skeleton never jumps. Arg 7 is today's kind counts: the chip row that
-/// replaced both the subline and the old bottom KindPills section.
+/// Cover(eyebrow, title, subline, _, dateline, tag, [Tag N, ...]) — the
+/// slim data-first hero, painted straight on the page (2026-07-10): date,
+/// today's kind chips, and the "Just landed" card. The cover stopped being
+/// an image element when the Banner became the Background setting — the
+/// wallpaper is HomeScreen's page background now, and this block is just
+/// content on it. Arg 4 (the old thingId/banner ref) is vestigial and
+/// always empty; arg 6's tag still marks the stream complete.
 private struct GenCover: View {
     let el: GenEl
-    @Environment(\.modelContext) private var modelContext
-    @Environment(\.genCoverTap) private var coverTap
     @Environment(\.genCoverTopInset) private var topInset
-    @State private var image: UIImage?
-    @State private var bleed: Color?
-
-    private var thingID: String { el.str(3) }
-    private var hasImage: Bool { !thingID.isEmpty }
-    /// A chosen banner, not a live capture — renders shorter (150pt vs
-    /// 250pt) so the two states read differently on purpose: a tall bleed
-    /// means "this just happened," a banner means "this is what I chose"
-    /// (ruling 2026-07-09). It isn't a thing, so it never opens a sheet.
-    private var isBanner: Bool { thingID == "banner" }
-
-    /// A color banner paints SOLID, full voice — the photo scrims exist to
-    /// make text legible over busy images; on a flat color they just washed
-    /// it out (report 2026-07-09). White ink on a vivid primary is the quiet
-    /// cover's own proven treatment.
-    private var bannerColor: Color? {
-        guard isBanner, HomeCoverStore.shared.kind == .color,
-              let name = HomeCoverStore.shared.colorName,
-              let swatch = HomeCoverStore.swatches.first(where: { $0.name == name })
-        else { return nil }
-        return Color(hex: swatch.hex)
-    }
-    private var photoTheme: Bool { ThemeStore.shared.backgroundPhoto != nil }
 
     /// Today's kind counts (arg 7) — the chip row that replaced the subline
-    /// (ruling 2026-07-09). Empty on the quiet-day cover and while the doc
-    /// is still streaming; requireCount keeps a half-streamed tag from
+    /// (ruling 2026-07-09); requireCount keeps a half-streamed tag from
     /// flashing a fallback chip.
     private var chips: [KindCountRow.Item] {
         KindCountRow.parse(el.refs(6), requireCount: true)
     }
 
-    /// The no-image cover's wash color — always black now (ruling
-    /// 2026-07-09: the default cover is black, not a color). The earlier
-    /// per-kind hue ("the Fantastical move") is retired: with a feed-heavy
-    /// corpus the newest thing is almost always a link, so the cover read as
-    /// permanently blue; black is the calm dark field the content floats on,
-    /// and a chosen Banner (Settings) is how you add color back. Nil only
-    /// while the doc is still streaming (arg 6 not yet arrived) so the
-    /// fallback doesn't flash before the tag lands.
-    private var quietWash: Color? {
-        el.str(5).isEmpty ? nil : .black
+    /// White over a set wallpaper (a deepened color or a dimmed photo —
+    /// both dark fields); the page's own adaptive ink on the default page.
+    private var coverInk: Color {
+        HomeBackgroundStore.shared.image != nil ? .white : DS.textPrimary
     }
 
-    /// The cover's top edge in global space — 0 at rest (the cover leads the
-    /// scroll under the status bar). Positive = overscrolled down, negative =
-    /// scrolled away.
+    /// The cover's top edge in global space — the dateline fades over the
+    /// first 60pt of scroll so it never collides with the nav doors (§4).
     @State private var slotMinY: CGFloat = 0
-
-    /// Overscroll stretch (§4): the image canvas grows to fill the pull.
-    /// Normal scroll gets nothing — no parallax.
-    private var stretch: CGFloat { hasImage ? max(0, slotMinY) : 0 }
-
-    /// The date line fades over the first 60pt of scroll so it never collides
-    /// with the nav doors (§4).
     private var datelineFade: Double {
         let gone = Double(max(0, -slotMinY)) / 60.0
         return 1.0 - min(1.0, gone)
     }
 
     var body: some View {
-        Group {
-            if hasImage {
-                // The layout slot stays fixed; the canvas rides a bottom-
-                // aligned overlay so a pull extends it upward (stretchy
-                // header) without a feedback loop on the measurement. A
-                // screenshot never auto-leads Home (2-tier cover, ruling
-                // 2026-07-10) — hasImage is only ever true for a set banner
-                // now, so this is always the shorter, 178-for-the-chip-row
-                // height, never the old 250pt live-capture bleed. Constant,
-                // not keyed on the chips arg (which streams in LAST) — keying
-                // on it made the banner jump 150→178 mid-stream.
-                let base: CGFloat = 178
-                Color.clear
-                    .frame(height: base + topInset)
-                    .overlay(alignment: .bottom) {
-                        canvas.frame(height: base + topInset + stretch)
-                    }
-            } else {
-                canvas.frame(minHeight: 150 + topInset)
+        VStack(spacing: 0) {
+            Color.clear.frame(height: topInset)
+            // Reserve the dateline's band so the content can't crowd it.
+            if !el.str(4).isEmpty {
+                Color.clear.frame(height: 36)
             }
+            textBlock
+                .frame(maxWidth: .infinity, alignment: .leading)
         }
         .onGeometryChange(for: CGFloat.self) { proxy in
             proxy.frame(in: .global).minY
         } action: { slotMinY = $0 }
-        .task(id: loadID) { await load() }
-    }
-
-    /// What a reload keys on. A banner's ref is the constant string
-    /// "banner", so changing the banner (color → photo) never changed the
-    /// key — the cover kept the old image until the next cold launch
-    /// (report 2026-07-10). The store's revision rides the key so every
-    /// banner change reloads.
-    private var loadID: String {
-        isBanner ? "banner:\(HomeCoverStore.shared.revision)" : thingID
-    }
-
-    private var canvas: some View {
-        ZStack(alignment: .bottomLeading) {
-            // Canvas: the image under its scrims, or the quiet themed gradient.
-            if let bannerColor {
-                // A chosen color: solid, full voice, no scrims (they exist
-                // for busy photos and only wash a flat field out).
-                bannerColor
-            } else if hasImage {
-                DS.fillFaint   // the pre-image skeleton — same height, no jump
-                if let image {
-                    GeometryReader { geo in
-                        Image(uiImage: image)
-                            .resizable().scaledToFill()
-                            .frame(width: geo.size.width, height: geo.size.height)
-                            .clipped()   // canvas clip only — text lives in padding
-                    }
-                }
-                scrims
-            } else {
-                // The quiet cover is a SOLID bright field of the lead thing's
-                // kind color — the Fantastical move (user ruling): the whole
-                // band is the primary color, slightly lighter at the top,
-                // never fading into dark. Same block in both modes. Until the
-                // stream delivers the color, the page shows — no blue flash.
-                if let wash = quietWash {
-                    LinearGradient(
-                        colors: [wash.mix(with: .white, by: 0.12),
-                                 wash.mix(with: .black, by: 0.08)],
-                        startPoint: .top, endPoint: .bottom
-                    )
-                } else {
-                    DS.themedPage
-                }
-            }
-
-            // The text block: bottom-anchored on the image canvas, centered on
-            // the quiet cover (that tall flat top edge read as waste). The
-            // measured top inset is reserved INSIDE the canvas so nothing
-            // renders under the status bar or nav buttons.
-            VStack(spacing: 0) {
-                Color.clear.frame(height: topInset)
-                // Reserve the dateline's band so the cover text can't crowd it
-                // (the quiet cover centers its text — without this the eyebrow
-                // landed a few points under the date).
-                if !el.str(4).isEmpty {
-                    Color.clear.frame(height: 36)
-                }
-                textBlock
-                    .frame(maxWidth: .infinity, maxHeight: .infinity,
-                           alignment: hasImage ? .bottomLeading : .leading)
-            }
-        }
-        .frame(maxWidth: .infinity)
-        .clipShape(Rectangle())
-        // The color arrives with the stream — ease it in, don't snap.
-        .animation(DS.Motion.standard, value: el.str(5))
-        // The date line rides the top edge, centered between the nav buttons;
-        // it fades over the first 60pt of scroll (§4).
         // Left-aligned with the content below it (2026-07-10, user) —
         // centered read as a title; the date is a label, and every other
         // label on the page starts at the leading edge.
@@ -1245,37 +1079,12 @@ private struct GenCover: View {
                     .opacity(datelineFade)
             }
         }
-        .contentShape(Rectangle())
-        .onTapGesture { if hasImage, !isBanner { coverTap?(thingID) } }
-    }
-
-    /// Bleed at the top (dateline zone), the page at the bottom (no seam).
-    /// Photo wallpaper in force: skip the bleed, strengthen the scrim — the
-    /// cover's content photo wins; the wallpaper stays behind the page below.
-    @ViewBuilder
-    private var scrims: some View {
-        let top: Color = photoTheme ? .black.opacity(0.55)
-            : (bleed ?? .black).opacity(0.55)
-        // A base dim under the gradients: busy images (screenshots of UI,
-        // dense photos) read as a photo BEHIND the text, never as layers
-        // bleeding through (2026-07-07).
-        Color.black.opacity(0.35)
-        LinearGradient(colors: [top, .clear],
-                       startPoint: .top, endPoint: .center)
-        LinearGradient(colors: [.clear, photoTheme ? .black.opacity(0.75) : DS.themedPage],
-                       startPoint: .center, endPoint: .bottom)
-    }
-
-    /// White over a photo (scrims) or a bright color field (Fantastical
-    /// pattern); the page's own ink for the beat before the color streams in.
-    private var coverInk: Color {
-        hasImage || quietWash != nil ? .white : DS.textPrimary
     }
 
     /// Slim hero (redesign C, 2026-07-10): the DATA leads — today's kind
-    /// counts ride above the headline, and "Just landed" drops from a
-    /// full-voice display title into a compact card. The chips are the
-    /// summary of the day; one specific capture is a detail, not the moment.
+    /// counts ride above the headline, and "Just landed" is a compact card.
+    /// The chips are the summary of the day; one specific capture is a
+    /// detail, not the moment.
     private var textBlock: some View {
         VStack(alignment: .leading, spacing: DS.Space.s3) {
             if !chips.isEmpty {
@@ -1284,112 +1093,29 @@ private struct GenCover: View {
             VStack(alignment: .leading, spacing: DS.Space.s1) {
                 Text(el.str(0))
                     .dsText(.label12)
-                    .foregroundStyle(coverInk.opacity(0.7))
+                    .foregroundStyle(DS.textSecondary)
                 Text(el.str(1))
                     // SF Rounded stays — still the display tier (36g), just
                     // no longer shouting: 19pt in a card, not 26pt full-bleed.
                     .font(.system(size: 19, weight: .semibold, design: .rounded))
-                    .foregroundStyle(coverInk)
+                    .foregroundStyle(DS.textPrimary)
                     .lineLimit(2)
                     .minimumScaleFactor(0.7)
                     .fixedSize(horizontal: false, vertical: true)
                 if !el.str(2).isEmpty {
                     Text(el.str(2))
                         .dsText(.subhead13)
-                        .foregroundStyle(coverInk.opacity(0.85))
+                        .foregroundStyle(DS.textSecondary)
                 }
             }
             .padding(DS.Space.s3)
             .frame(maxWidth: .infinity, alignment: .leading)
-            // One translucent white wash reads on every canvas this card can
-            // sit on — the black field, a color banner, a photo banner.
-            .background(Color.white.opacity(0.08),
+            // The same sheet surface every other card wears — opaque, so
+            // its own inks hold on any wallpaper behind it.
+            .background(DS.surfaceSheet,
                         in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
         }
         .padding(DS.Space.s4)
-    }
-
-    private func load() async {
-        guard hasImage else { return }
-        // A set banner isn't a thing — it's the person's own chosen image,
-        // loaded straight from its store, no lookup. Always reloads (no
-        // image == nil guard): the task re-fires per revision, and the old
-        // banner is exactly what's being replaced. The bleed cache keys on
-        // the revision too — "banner" alone served the previous banner's
-        // tint forever.
-        if isBanner {
-            guard let ui = HomeCoverStore.shared.banner else { return }
-            image = ui
-            let key = loadID
-            if let hit = CoverBleed.cached(key) {
-                bleed = hit
-            } else {
-                bleed = await Task.detached(priority: .utility) {
-                    CoverBleed.extract(from: ui, id: key)
-                }.value
-            }
-            return
-        }
-        guard image == nil else { return }
-        // Resolve the thing locally (the doc only names facts).
-        guard let uuid = UUID(uuidString: thingID) else { return }
-        let all = (try? modelContext.fetch(FetchDescriptor<Thing>(
-            predicate: #Predicate { $0.id == uuid }
-        ))) ?? []
-        guard let ref = all.first?.sourceRef else { return }
-        // Sample things carry the bundled photo (same rule as PhotoWell).
-        if ref.hasPrefix("sample:") {
-            if let ui = UIImage.demoSample(for: ref) {
-                image = ui
-                if let hit = CoverBleed.cached(thingID) {
-                    bleed = hit
-                } else {
-                    let id = thingID
-                    bleed = await Task.detached(priority: .utility) {
-                        CoverBleed.extract(from: ui, id: id)
-                    }.value
-                }
-            }
-            return
-        }
-        let assetID = ref.replacingOccurrences(of: "phasset:", with: "")
-        let assets = PHAsset.fetchAssets(withLocalIdentifiers: [assetID], options: nil)
-        guard let asset = assets.firstObject else { return }
-        let loaded: UIImage? = await withCheckedContinuation { cont in
-            // iCloud-optimized photos need the network; without it the final
-            // image never arrives and the cover stayed black on real devices.
-            let opts = PHImageRequestOptions()
-            opts.isNetworkAccessAllowed = true
-            opts.deliveryMode = .highQualityFormat
-            var reported = false
-            PHImageManager.default().requestImage(
-                for: asset, targetSize: CGSize(width: 1200, height: 900),
-                contentMode: .aspectFill, options: opts
-            ) { img, info in
-                // A network-backed asset calls back TWICE: first a degraded
-                // placeholder while it downloads, then the real image — taking
-                // the first unconditionally latched onto the placeholder (often
-                // nil) and threw the real download away (cover stayed black on
-                // real devices even after the network-access fix above).
-                let degraded = (info?[PHImageResultIsDegradedKey] as? Bool) ?? false
-                if degraded { return }
-                guard !reported else { return }
-                reported = true
-                cont.resume(returning: img)
-            }
-        }
-        guard let loaded else { return }
-        image = loaded
-        // Extraction off-main, cached per thing id.
-        if let hit = CoverBleed.cached(thingID) {
-            bleed = hit
-        } else {
-            let id = thingID
-            let color = await Task.detached(priority: .utility) {
-                CoverBleed.extract(from: loaded, id: id)
-            }.value
-            withAnimation(DS.Motion.standard) { bleed = color }
-        }
     }
 }
 
