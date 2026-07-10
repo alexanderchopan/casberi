@@ -1232,13 +1232,16 @@ private struct GenCover: View {
         .animation(DS.Motion.standard, value: el.str(5))
         // The date line rides the top edge, centered between the nav buttons;
         // it fades over the first 60pt of scroll (§4).
-        .overlay(alignment: .top) {
+        // Left-aligned with the content below it (2026-07-10, user) —
+        // centered read as a title; the date is a label, and every other
+        // label on the page starts at the leading edge.
+        .overlay(alignment: .topLeading) {
             if !el.str(4).isEmpty {
                 Text(el.str(4))
                     .font(.system(size: 13, weight: .semibold))
-                    
                     .foregroundStyle(coverInk.opacity(0.92))
                     .padding(.top, topInset + DS.Space.s2)
+                    .padding(.leading, DS.Space.s4)
                     .opacity(datelineFade)
             }
         }
