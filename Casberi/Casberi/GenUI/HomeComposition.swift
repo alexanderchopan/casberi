@@ -355,7 +355,13 @@ enum HomeComposition {
                                              rootRefs: inout [String]) {
         for (i, g) in groups.enumerated() {
             let id = "walletMap\(i)"
-            doc.append("\(id) = TagMap(\(q(g.label)), \(q(g.subline)), [\(g.cells.joined(separator: ", "))], \(q("token")))")
+            // "@pin " leading the eyebrow → GenTagMap renders the Pinned
+            // card's tilted pin, small, before the wallet's name (ruling
+            // 2026-07-10): these maps are on Home because the wallet is
+            // pinned, and everything pin-born wears the pin. The Wallet
+            // screen and the Feed block compose the same maps WITHOUT the
+            // marker — there, nothing is pinned.
+            doc.append("\(id) = TagMap(\(q("@pin " + g.label)), \(q(g.subline)), [\(g.cells.joined(separator: ", "))], \(q("token")))")
             rootRefs.append(id)
         }
     }
