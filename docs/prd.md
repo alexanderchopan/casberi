@@ -1242,3 +1242,17 @@ own things stay the photo-viewer black. BridgeIcon's glyph fallback
 keeps the eyebrow seat filled either way ("person" for You, "waveform"
 for Voice). ChatGPT's white and X's black wash faithfully — the recipe
 is the brand's own color or nothing.
+
+## 37. Drop the "Ask before acting" writes toggle (2026-07-10)
+
+User caught it on a bridge detail: "what does 'writes wait for your OK'
+mean, we don't write." Correct — every bridge is READ-ONLY today, and
+the toggle was a dead control on all of them: `askBeforeActing` was
+stored when flipped but read nowhere (no write path ever consulted it),
+so it asked permission for something that never happens and implied the
+app could act on your accounts (a wallet especially — it can't move
+funds). Straight against the honesty rule ("no dead controls, no fake
+status"). Removed the Writes section from BridgeDetailScreen. It returns
+— gated to a genuinely write-capable bridge AND wired to a real write —
+when agent writes ship (the Alice job/run/output kinds). The dormant
+`askBeforeActing` / `setAsk` scaffolding stays in the model for that.

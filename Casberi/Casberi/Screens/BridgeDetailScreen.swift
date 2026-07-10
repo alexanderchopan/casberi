@@ -1,9 +1,11 @@
 import SwiftUI
 import SwiftData
 
-/// A bridge's detail — the app, what it can do (sentences), its ask-before-
-/// acting switch (writes default on), its recent things, and its controls:
-/// Reconnect when broken, Pause/Resume, Remove with keep-or-purge.
+/// A bridge's detail — the app, what it can do (sentences), its recent things,
+/// and its controls: Reconnect when broken, Pause/Resume, Remove with
+/// keep-or-purge. No "ask before acting" switch: every bridge is read-only
+/// today (nothing writes back to a source), so a writes toggle would be a
+/// dead control — it returns, gated to a real write, when agent writes ship.
 struct BridgeDetailScreen: View {
     let bridgeID: String
     @Environment(BridgeStore.self) private var store
@@ -60,24 +62,6 @@ struct BridgeDetailScreen: View {
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 .staggerIn(index: i)
                         }
-                    }
-
-                    // Ask before acting — the one switch that matters.
-                    section("Writes") {
-                        Toggle(isOn: Binding(
-                            get: { bridge.askBeforeActing },
-                            set: { store.setAsk(bridge.id, $0); DSHaptic.tap() }
-                        )) {
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text("Ask before acting")
-                                    .dsText(.body17).foregroundStyle(DS.textPrimary)
-                                Text("Writes wait for your OK")
-                                    .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-                            }
-                        }
-                        .tint(DS.tint)
-                        .padding(.horizontal, DS.Space.s4)
-                        .padding(.vertical, DS.Space.s3)
                     }
 
                     // Recent = EVIDENCE, not content: three receipts that the
