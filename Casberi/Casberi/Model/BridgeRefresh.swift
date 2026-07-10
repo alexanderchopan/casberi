@@ -35,7 +35,9 @@ enum BridgeRefresh {
             Task { @MainActor in _ = await HealthIngest.connectAndIngest(context: context) }
         }
         if connected("music") {
-            Task { @MainActor in _ = await AppleMusicIngest.connectAndIngest(context: context) }
+            // The bare re-scan — refresh must never re-present the
+            // permission dialog (2026-07-10).
+            Task { @MainActor in _ = await AppleMusicIngest.ingest(context: context) }
         }
         if !RSSStore.shared.feeds.isEmpty {
             Task { @MainActor in _ = await RSSIngest.refresh(context: context) }

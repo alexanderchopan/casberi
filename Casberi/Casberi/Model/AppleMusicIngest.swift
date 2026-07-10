@@ -15,15 +15,23 @@ enum AppleMusicIngest {
     /// songs. Returns the new count, or nil when access is denied/unavailable.
     @MainActor
     static func connectAndIngest(context: ModelContext) async -> Int? {
-        guard !running else { return 0 }
-        running = true
-        defer { running = false }
-
         let status = await MusicAuthorization.request()
         guard status == .authorized else {
             NSLog("[Casberi] Apple Music: authorization %@", String(describing: status))
             return nil
         }
+        return await ingest(context: context)
+    }
+
+    /// The bare re-scan BridgeRefresh uses — NEVER requests authorization
+    /// (2026-07-10: the refresh path called the full connect, so an
+    /// unanswered permission dialog re-presented on every foreground).
+    @MainActor
+    static func ingest(context: ModelContext) async -> Int? {
+        guard MusicAuthorization.currentStatus == .authorized else { return nil }
+        guard !running else { return 0 }
+        running = true
+        defer { running = false }
 
         var request = MusicRecentlyPlayedRequest<Song>()
         request.limit = 25

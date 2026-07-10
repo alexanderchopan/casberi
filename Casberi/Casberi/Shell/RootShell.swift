@@ -591,7 +591,10 @@ struct RootShell: View {
             return false
         }
         let stops: Set<String> = ["about", "my", "the", "a", "in", "from", "for", "of",
-                                  "what", "whats", "what's", "landed", "on", "happened"]
+                                  "what", "whats", "what's", "landed", "on", "happened",
+                                  "is", "are", "was", "were", "do", "does", "did", "i",
+                                  "me", "you", "your", "who", "how", "when", "where",
+                                  "why", "which", "it", "and", "or", "to", "with"]
         terms.removeAll { stops.contains($0) }
 
         // A date phrase ("today", "last week", "thursday") is a WHEN filter,
@@ -605,12 +608,19 @@ struct RootShell: View {
         descriptor.fetchLimit = 500
         let all = (try? modelContext.fetch(descriptor)) ?? []
 
+        // Whole words, not substrings (2026-07-10): "what is my name" used
+        // to match the "is" inside "Lisbon" and answer with nonsense — a
+        // term now has to BE a word somewhere in the thing.
+        func words(_ s: String) -> Set<String> {
+            Set(s.lowercased().components(separatedBy: CharacterSet.alphanumerics.inverted)
+                .filter { !$0.isEmpty })
+        }
         return all.compactMap { thing -> (Thing, Double)? in
             if let kindFilter, thing.kind != kindFilter { return nil }
             if let dateMatch, !dateMatch.range.contains(thing.capturedAt) { return nil }
-            let title = thing.title.lowercased()
-            let tags = thing.tags.joined(separator: " ").lowercased()
-            let content = thing.content.lowercased()
+            let title = words(thing.title)
+            let tags = words(thing.tags.joined(separator: " "))
+            let content = words(thing.content)
             var score = 0.0
             for term in terms {
                 if title.contains(term) { score += 3 }
