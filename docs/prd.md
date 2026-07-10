@@ -852,3 +852,27 @@ bled full-height" — is now dead in practice; simplified to a constant
 178. The word content (eyebrow/title/subline) is unchanged either way,
 same as before: a banner only ever substitutes the picture, never the
 words.
+
+## 36k. Home: slim data-first hero; Threads removed; the map stays a map (2026-07-10)
+
+The cover leads with the DATA now: today's kind-count chips ride above
+the headline, and "Just landed" dropped from a 26pt full-voice display
+title to a 19pt title in a compact translucent card — one specific
+capture is a detail of the day, not the moment. SF Rounded stays (36g);
+the height didn't change, the emphasis did.
+
+"Threads across apps" (3-day-old links resurfacing, plus its weekend
+"Worth returning to" variant and the empty-state skeleton preview) is
+GONE. For a feed-heavy corpus everything ages into that bucket, so it
+read as noise, not a nudge — Home is what you pinned and what's going
+on, nothing else. `resurfaceable()` deleted with it.
+
+Projects were briefly chips (same day) and reverted within the hour:
+without a pinned wallet, Home would have had no treemap at all, and the
+map is the visual anchor of the screen. "What's going on" stays a
+treemap. What DID land from that experiment: holdings maps wear ONE hue
+family per wallet (teal/purple/orange/pink by watch order —
+`WalletIngest.hueName(forWalletIndex:)`, resolved in GenTagMap via
+TagMap's new 5th arg), shade by value, so each wallet reads as a
+coherent block and money-treemaps stay visually apart from the
+multicolored project map. The Pinned token price chart is untouched.

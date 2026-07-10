@@ -527,8 +527,12 @@ private struct GenVoiceTile: View {
     }
 }
 
-/// TagMap(eyebrow, subline, ["Label N", ...], iconMode) — treemap, magnitude
-/// fill: tint at opacity scaled by count (the color rule's magnitude clause).
+/// TagMap(eyebrow, subline, ["Label N", ...], iconMode, hue) — treemap,
+/// magnitude fill: tint at opacity scaled by count (the color rule's
+/// magnitude clause). A named `hue` (arg 5) paints EVERY cell in that one
+/// family, shade by value — the holdings maps use it so each wallet reads
+/// as one coherent block (2026-07-10) and the treemap world stays visually
+/// apart from the multicolored project chips.
 private struct GenTagMap: View {
     let el: GenEl
     /// Preview mode (TagMapPreview): the starter shape before tags exist —
@@ -570,6 +574,23 @@ private struct GenTagMap: View {
     /// or a tag cluster) spans sources by nature, so it carries neither —
     /// name only, never a guessed icon.
     private var iconMode: String { el.str(3) }
+
+    /// Arg 5 — the one hue family every cell wears (holdings maps). Empty
+    /// means per-name ProjectHue, the project world's coloring.
+    private var hueName: String { el.str(4) }
+
+    /// The named wallet hues — assigned per wallet index by the emitters
+    /// (WalletIngest / HomeComposition), resolved here. Same vivid primaries
+    /// the Banner swatches use.
+    private static let walletHues: [String: String] = [
+        "teal": "#00b3bf", "purple": "#8a3ffc",
+        "orange": "#ff7a00", "pink": "#ff2d78",
+    ]
+
+    private func cellColor(for tag: String) -> Color {
+        if let hex = Self.walletHues[hueName] { return Color(hex: hex) }
+        return ProjectHue.color(for: tag)
+    }
 
     private var isWeekend: Bool {
         let wd = Calendar.current.component(.weekday, from: .now)
@@ -667,9 +688,11 @@ private struct GenTagMap: View {
                     .background(
                         // V3b: the tile wears ITS project's hue (magnitude
                         // still rides opacity) — one color per project,
-                        // matching its tag ink in the feed. Preview mutes the
-                        // fill flat: shape without claiming substance.
-                        ProjectHue.color(for: item.tag)
+                        // matching its tag ink in the feed; a holdings map
+                        // wears ONE wallet hue instead, shade by value.
+                        // Preview mutes the fill flat: shape without
+                        // claiming substance.
+                        cellColor(for: item.tag)
                             .opacity((preview ? (breathe ? 0.20 : 0.12)
                                       : 0.30 + 0.45 * Double(item.n) / Double(maxN))
                                      * (isWeekend && animated && !on ? 0 : 1)),
@@ -1252,28 +1275,39 @@ private struct GenCover: View {
         hasImage || quietWash != nil ? .white : DS.textPrimary
     }
 
+    /// Slim hero (redesign C, 2026-07-10): the DATA leads — today's kind
+    /// counts ride above the headline, and "Just landed" drops from a
+    /// full-voice display title into a compact card. The chips are the
+    /// summary of the day; one specific capture is a detail, not the moment.
     private var textBlock: some View {
-        VStack(alignment: .leading, spacing: DS.Space.s1) {
-            Text(el.str(0))
-                .dsText(.label12)
-                .foregroundStyle(coverInk.opacity(0.7))
-            Text(el.str(1))
-                // SF Rounded — the cover title is Home's signature display
-                // moment (2026-07-09); functional text stays SF Pro.
-                .font(.system(size: 26, weight: .heavy, design: .rounded))
-                .foregroundStyle(coverInk)
-                .lineLimit(2)
-                .minimumScaleFactor(0.7)
-                .fixedSize(horizontal: false, vertical: true)
-            if !el.str(2).isEmpty {
-                Text(el.str(2))
-                    .dsText(.subhead13)
-                    .foregroundStyle(coverInk.opacity(0.85))
-            }
+        VStack(alignment: .leading, spacing: DS.Space.s3) {
             if !chips.isEmpty {
                 KindCountRow(items: chips, ink: coverInk)
-                    .padding(.top, DS.Space.s1)
             }
+            VStack(alignment: .leading, spacing: DS.Space.s1) {
+                Text(el.str(0))
+                    .dsText(.label12)
+                    .foregroundStyle(coverInk.opacity(0.7))
+                Text(el.str(1))
+                    // SF Rounded stays — still the display tier (36g), just
+                    // no longer shouting: 19pt in a card, not 26pt full-bleed.
+                    .font(.system(size: 19, weight: .semibold, design: .rounded))
+                    .foregroundStyle(coverInk)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.7)
+                    .fixedSize(horizontal: false, vertical: true)
+                if !el.str(2).isEmpty {
+                    Text(el.str(2))
+                        .dsText(.subhead13)
+                        .foregroundStyle(coverInk.opacity(0.85))
+                }
+            }
+            .padding(DS.Space.s3)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            // One translucent white wash reads on every canvas this card can
+            // sit on — the black field, a color banner, a photo banner.
+            .background(Color.white.opacity(0.08),
+                        in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
         }
         .padding(DS.Space.s4)
     }

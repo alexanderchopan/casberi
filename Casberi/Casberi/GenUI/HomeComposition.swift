@@ -62,7 +62,9 @@ enum HomeComposition {
         // preview slots in here, not at the tail.
         let mapSlot = rootRefs.count
         // Projects — an interactive treemap: magnitude fill, tap opens the
-        // project (amendment: the tile bento died; the map is the projects).
+        // project. Chips were tried and reverted same day (2026-07-10):
+        // without a pinned wallet Home would have no treemap at all, and
+        // the map IS the visual anchor of the screen.
         if !projects.isEmpty {
             let items = projects.prefix(6).map { "\($0.name) \($0.things.count)" }
             doc.append("map = TagMap(\(q("What's going on")), null, [\(items.joined(separator: ", "))])")
@@ -75,21 +77,9 @@ enum HomeComposition {
                 rootRefs.append("map")
             }
         }
-        // Threads resurface what's slipping away — links older than 3 days
-        // (yesterday's links are Feed's top rows; mirroring them is filler).
-        // Widget child-drop rule (gap §9.2): no rows → no widget line at all.
-        let links = resurfaceable(things).prefix(2)
-        if !links.isEmpty {
-            let ids = links.indices.map { "t\($0)" }
-            doc.append("themes = Widget(\(q("Threads across apps")), null, [\(ids.joined(separator: ", "))])")
-            for (i, t) in links.enumerated() { doc.append(row(id: "t\(i)", t)) }
-            rootRefs.append("themes")
-        }
-
         appendStarterPreviews(things: things,
                               hasMap: rootRefs.contains("map"),
-                              mapSlot: mapSlot,
-                              hasThreads: !links.isEmpty, to: &doc, rootRefs: &rootRefs)
+                              mapSlot: mapSlot, to: &doc, rootRefs: &rootRefs)
 
         doc.insert("root = Stack([\(rootRefs.joined(separator: ", "))])", at: 0)
         return doc
@@ -125,19 +115,9 @@ enum HomeComposition {
                 rootRefs.append("map")
             }
         }
-        // Threads — resurfacing, not mirroring (see morning).
-        let links = resurfaceable(things).prefix(2)
-        if !links.isEmpty {
-            let ids = links.indices.map { "t\($0)" }
-            doc.append("themes = Widget(\(q("Threads across apps")), null, [\(ids.joined(separator: ", "))])")
-            for (i, t) in links.enumerated() { doc.append(row(id: "t\(i)", t)) }
-            rootRefs.append("themes")
-        }
-
         appendStarterPreviews(things: things,
                               hasMap: rootRefs.contains("map"),
-                              mapSlot: mapSlot,
-                              hasThreads: !links.isEmpty, to: &doc, rootRefs: &rootRefs)
+                              mapSlot: mapSlot, to: &doc, rootRefs: &rootRefs)
 
         doc.insert("root = Stack([\(rootRefs.joined(separator: ", "))])", at: 0)
         return doc
@@ -184,58 +164,37 @@ enum HomeComposition {
             doc.append("map = TagMap(\(q("The week")), \(q("What it was about")), [\(items.joined(separator: ", "))])")
             rootRefs.append("map")
         }
-        let links = resurfaceable(things).prefix(2)
-        if !links.isEmpty {
-            let ids = links.indices.map { "t\($0)" }
-            doc.append("themes = Widget(\(q("Worth returning to")), null, [\(ids.joined(separator: ", "))])")
-            for (i, t) in links.enumerated() { doc.append(row(id: "t\(i)", t)) }
-            rootRefs.append("themes")
-        }
-
         doc.insert("root = Stack([\(rootRefs.joined(separator: ", "))])", at: 0)
         return doc
     }
 
-    /// The empty state previews the real modules — the muted map and skeleton
-    /// thread rows show the SHAPE of home and say plainly that connecting apps
-    /// fills it. Preview, not fake data: kind names, no counts, nothing to tap.
+    /// The empty state previews the real modules — the muted map shows the
+    /// SHAPE of home and says plainly that connecting apps fills it.
+    /// Preview, not fake data: kind names, no counts, nothing to tap.
     static let empty: [String] = [
-        "root = Stack([hero, map, threads])",
+        "root = Stack([hero, map])",
         "hero = Hero(\"Getting started\", \"Your home builds itself\", \"Connect an app or capture one thing - what lands composes this screen.\")",
         previewMapLine,
-        previewThreadsLine,
-        "s1 = Skeleton()",
-        "s2 = Skeleton()",
     ]
 
-    /// The preview modules, shared by the empty doc and the sparse-corpus path.
+    /// The preview module, shared by the empty doc and the sparse-corpus path.
     private static let previewMapLine =
         "map = TagMapPreview(\(q("What's going on")), \(q("Your things map here as they land")), [Links, Notes, Events, Mail, Screenshots])"
-    private static let previewThreadsLine =
-        "threads = Widget(\(q("Threads across apps")), \(q("Saved links resurface here")), [s1, s2])"
 
     /// A corpus this small hasn't earned real modules yet — one connected app
     /// or a first capture. The previews stay alongside the real rows so the
     /// screen shows where it's going instead of trailing off.
     private static func isSparse(_ things: [Thing]) -> Bool { things.count < 8 }
 
-    /// Appends the preview map / threads when the real ones didn't compose.
-    /// `mapSlot` is where a real map would have landed in `rootRefs` (right
-    /// after cover/quiet/insight) — the preview takes that slot too, instead
-    /// of trailing behind pinned/threads content composed after it.
-    private static func appendStarterPreviews(things: [Thing], hasMap: Bool, mapSlot: Int, hasThreads: Bool,
+    /// Appends the preview map when the real one didn't compose. `mapSlot`
+    /// is where a real map would have landed in `rootRefs` (right after
+    /// cover/quiet/insight) — the preview takes that slot too, instead of
+    /// trailing behind pinned content composed after it.
+    private static func appendStarterPreviews(things: [Thing], hasMap: Bool, mapSlot: Int,
                                               to doc: inout [String], rootRefs: inout [String]) {
-        guard isSparse(things) else { return }
-        if !hasMap {
-            doc.append(previewMapLine)
-            rootRefs.insert("map", at: mapSlot)
-        }
-        if !hasThreads {
-            doc.append(previewThreadsLine)
-            doc.append("s1 = Skeleton()")
-            doc.append("s2 = Skeleton()")
-            rootRefs.append("threads")
-        }
+        guard isSparse(things), !hasMap else { return }
+        doc.append(previewMapLine)
+        rootRefs.insert("map", at: mapSlot)
     }
 
     // MARK: - Derivations
@@ -283,14 +242,6 @@ enum HomeComposition {
 
     private static func tagCounts(things: [Thing]) -> [(String, Int)] {
         projectClusters(things: things).map { ($0.name, $0.things.count) }
-    }
-
-    /// Links old enough to be slipping away (3+ days), oldest last so the
-    /// most recently at-risk lead.
-    private static func resurfaceable(_ things: [Thing]) -> [Thing] {
-        things.filter {
-            $0.kind == .link && $0.capturedAt < .now.addingTimeInterval(-3 * 86_400)
-        }
     }
 
     // MARK: - Cover (H7 — the doc names facts; the renderer owns the rest)
@@ -403,7 +354,7 @@ enum HomeComposition {
                                              rootRefs: inout [String]) {
         for (i, g) in groups.enumerated() {
             let id = "walletMap\(i)"
-            doc.append("\(id) = TagMap(\(q(g.label)), \(q("Holdings by value")), [\(g.cells.joined(separator: ", "))], \(q("token")))")
+            doc.append("\(id) = TagMap(\(q(g.label)), \(q("Holdings by value")), [\(g.cells.joined(separator: ", "))], \(q("token")), \(q(WalletIngest.hueName(forWalletIndex: i))))")
             rootRefs.append(id)
         }
     }
