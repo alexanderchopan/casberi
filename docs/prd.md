@@ -1379,3 +1379,18 @@ pages still show the blob's rim and lens) from the door until it
 swallows the screen; Settings pushes beneath at full cover and the
 glass clarifies away. ~280ms to push. Home only for now; Feed keeps
 the plain zoom until this earns its keep on device.
+
+## 43c. The liquid page melt (third draft, 2026-07-10)
+
+The droplet blob was rejected too ("too fast, isn't smooth, weird") —
+the ask was never an object crossing the screen but THE SCREEN ITSELF
+turning liquid: "the entire screen transitioning to the settings page
+but like glass or liquid." Built as a Metal displacement shader
+(LiquidDissolve.metal): tap the avatar → the outgoing frame is frozen
+(window snapshot), Settings pushes INSTANTLY beneath it (zero added
+latency — the earlier delay objection is structurally gone), and the
+frozen frame melts — two crossed sine fields whose amplitude rises
+from zero, peaks mid-flight, and relaxes — while it thins to reveal
+the new page. 0.9s, ease-in-out. Works on default black: it's the
+page's own pixels doing the rippling. Home only until it's felt on
+device. (Required the Xcode Metal toolchain component — now installed.)
