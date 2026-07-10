@@ -919,3 +919,10 @@ identity is the label ink (wallet hue / project hue) and the icons.
 Applies to every TagMap — holdings and "What's going on" alike. The
 starter preview breathes the surface's own opacity now instead of a
 muted wash.
+
+**Second amendment (same day, user): white ink too.** The colored label
+ink ("gross teal") went the way of the colored fills — tile labels are
+plain `DS.textPrimary`, exactly like a Settings tile's title. The whole
+wallet-hue pipeline (TagMap arg 5, `hueName(forWalletIndex:)`,
+walletHues) is deleted; a treemap tile is now surface + white label +
+icon, nothing else. Identity rides the name and the icon alone.

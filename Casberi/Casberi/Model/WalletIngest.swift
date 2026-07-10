@@ -148,18 +148,9 @@ enum WalletIngest {
         let ids = groups.indices.map { "w\($0)" }
         var doc = ["root = Stack([\(ids.joined(separator: ", "))])"]
         for (i, g) in groups.enumerated() {
-            doc.append("w\(i) = TagMap(\(q(g.label)), \(q("Holdings by value")), [\(g.cells.joined(separator: ", "))], \(q("token")), \(q(hueName(forWalletIndex: i))))")
+            doc.append("w\(i) = TagMap(\(q(g.label)), \(q("Holdings by value")), [\(g.cells.joined(separator: ", "))], \(q("token")))")
         }
         return doc
-    }
-
-    /// The one hue family a wallet's holdings map wears, by watch-order
-    /// index (2026-07-10): each wallet reads as a coherent block — shade
-    /// carries value, the token icons carry identity — and the treemap
-    /// world stays visually apart from the multicolored project chips.
-    /// GenTagMap resolves the name to its color.
-    static func hueName(forWalletIndex i: Int) -> String {
-        ["teal", "purple", "orange", "pink"][i % 4]
     }
 
     private static func q(_ s: String) -> String {

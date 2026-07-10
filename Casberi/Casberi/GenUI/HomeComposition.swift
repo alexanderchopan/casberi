@@ -354,7 +354,7 @@ enum HomeComposition {
                                              rootRefs: inout [String]) {
         for (i, g) in groups.enumerated() {
             let id = "walletMap\(i)"
-            doc.append("\(id) = TagMap(\(q(g.label)), \(q("Holdings by value")), [\(g.cells.joined(separator: ", "))], \(q("token")), \(q(WalletIngest.hueName(forWalletIndex: i))))")
+            doc.append("\(id) = TagMap(\(q(g.label)), \(q("Holdings by value")), [\(g.cells.joined(separator: ", "))], \(q("token")))")
             rootRefs.append(id)
         }
     }

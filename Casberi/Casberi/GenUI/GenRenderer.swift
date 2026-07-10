@@ -527,12 +527,11 @@ private struct GenVoiceTile: View {
     }
 }
 
-/// TagMap(eyebrow, subline, ["Label N", ...], iconMode, hue) — treemap,
-/// magnitude fill: tint at opacity scaled by count (the color rule's
-/// magnitude clause). A named `hue` (arg 5) paints EVERY cell in that one
-/// family, shade by value — the holdings maps use it so each wallet reads
-/// as one coherent block (2026-07-10) and the treemap world stays visually
-/// apart from the multicolored project chips.
+/// TagMap(eyebrow, subline, ["Label N", ...], iconMode) — treemap of flat
+/// sheet-surface cards (2026-07-10, user: the tiles are LITERALLY the
+/// Settings-tile surface; colored fills and colored label inks were both
+/// tried the same day and read as noise). Magnitude is size alone;
+/// identity is the white label and the token/bridge icons.
 private struct GenTagMap: View {
     let el: GenEl
     /// Preview mode (TagMapPreview): the starter shape before tags exist —
@@ -540,7 +539,6 @@ private struct GenTagMap: View {
     var preview = false
     @Environment(\.genProjectTap) private var projectTap
     @Environment(\.genZoomNS) private var zoomNS
-    @Environment(\.colorScheme) private var scheme
     /// The entrance plays once per screen appearance (§3); filter and theme
     /// re-renders never replay it.
     @State private var settled = false
@@ -575,23 +573,6 @@ private struct GenTagMap: View {
     /// or a tag cluster) spans sources by nature, so it carries neither —
     /// name only, never a guessed icon.
     private var iconMode: String { el.str(3) }
-
-    /// Arg 5 — the one hue family every cell wears (holdings maps). Empty
-    /// means per-name ProjectHue, the project world's coloring.
-    private var hueName: String { el.str(4) }
-
-    /// The named wallet hues — assigned per wallet index by the emitters
-    /// (WalletIngest / HomeComposition), resolved here. Same vivid primaries
-    /// the Banner swatches use.
-    private static let walletHues: [String: String] = [
-        "teal": "#00b3bf", "purple": "#8a3ffc",
-        "orange": "#ff7a00", "pink": "#ff2d78",
-    ]
-
-    private func cellColor(for tag: String) -> Color {
-        if let hex = Self.walletHues[hueName] { return Color(hex: hex) }
-        return ProjectHue.color(for: tag)
-    }
 
     private var isWeekend: Bool {
         let wd = Calendar.current.component(.weekday, from: .now)
@@ -670,7 +651,6 @@ private struct GenTagMap: View {
                 // logo URL that arrived with the cell, or none at all rather
                 // than a wrong one). A project cell carries neither — see
                 // GenTagMap's iconMode doc.
-                let hue = cellColor(for: item.tag)
                 let label = VStack(alignment: .leading, spacing: DS.Space.s1) {
                     if iconMode == "source" {
                         BridgeIcon(name: item.tag, size: 20)
@@ -679,12 +659,10 @@ private struct GenTagMap: View {
                     }
                     Text(item.tag)
                         .dsText(.body17)
-                        // The color lives in the INK now (V3b's own rule,
-                        // finally applied to the map itself, 2026-07-10):
-                        // tiles went calm — the saturated fills shouted
-                        // loudest while saying least.
-                        .foregroundStyle(preview ? DS.textTertiary
-                                         : (scheme == .light ? hue.mix(with: .black, by: 0.35) : hue))
+                        // Plain primary ink, exactly like a Settings tile's
+                        // title (2026-07-10, user) — colored label inks were
+                        // tried the same day and read as noise.
+                        .foregroundStyle(preview ? DS.textTertiary : DS.textPrimary)
                         .lineLimit(item.tag.contains(" ") ? 2 : 1)
                         .minimumScaleFactor(0.4)
                         .allowsTightening(true)
