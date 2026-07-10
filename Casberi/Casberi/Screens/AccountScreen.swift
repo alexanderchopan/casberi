@@ -165,6 +165,7 @@ struct SettingsScreen: View {
             // of on-device facts instead of a description (2026-07-09).
             TileSpec(title: "Diagnostics",
                      value: "Test and report",
+                     badge: ("waveform.path.ecg", DS.textSecondary),
                      action: { diagnosticsOpen = true }),
         ].sorted { $0.title < $1.title }
     }

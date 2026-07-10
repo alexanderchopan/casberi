@@ -311,8 +311,12 @@ struct FeedScreen: View {
                     }
                 }
                 // The one feed coach line — first run only, retires on the
-                // first chip tap. Plain words, no overlays, no arrows.
-                if !chipCoachDone, sources.count > 2 {
+                // first chip tap. Plain words, no overlays, no arrows. It never
+                // shows while a filter is already in force (deep-link or tap):
+                // inviting "tap a chip to shape the feed" when the feed is
+                // already shaped reads as a dead instruction.
+                if !chipCoachDone, sources.count > 2,
+                   filter.source == "All", filter.tag == "All" {
                     Text("Tap a chip — the feed takes that app's shape.")
                         .dsText(.subhead13)
                         .foregroundStyle(DS.tint)
@@ -376,6 +380,9 @@ struct FeedScreen: View {
         }
         .onDisappear { lastSeenStamp = Date.now.timeIntervalSince1970 }
         .onChange(of: filter.source) {
+            // Any source filter — including one arrived at by deep link, not a
+            // tap — teaches the same lesson, so the coach retires here too.
+            if filter.source != "All" { chipCoachDone = true }
             shapeWave += 1
             streamBlock()
         }

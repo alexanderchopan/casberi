@@ -2,8 +2,11 @@ import SwiftUI
 import SwiftData
 
 /// Project detail (gap §9.1 / PRD open item 4) — the header paints from the
-/// tile (record), the composition streams under it (synthesis). Things group
-/// by what they're doing in the project: in motion, saved, recent.
+/// tile, the composition paints under it. Both are RECORD, not synthesis:
+/// `compose()` is deterministic grouping of things the person already owns, so
+/// per brief §5 ("generated surfaces stream; records paint") it paints whole,
+/// not through the typewriter. Things group by what they're doing in the
+/// project: in motion, saved, recent.
 struct ProjectDetailScreen: View {
     let projectName: String
     @Query(sort: \Thing.capturedAt, order: .reverse) private var things: [Thing]
@@ -42,7 +45,7 @@ struct ProjectDetailScreen: View {
                 .padding(DS.Space.s4)
                 .mountIn()
 
-                // The synthesis streams under the painted record.
+                // The composition paints under the header (record, §5).
                 GenRender(id: "root", els: stream.els)
             }
             .padding(.top, ShellMetrics.topInset)
@@ -52,28 +55,15 @@ struct ProjectDetailScreen: View {
         .scrollIndicators(.hidden)
         .dsPageBackground()
         .navigationBarTitleDisplayMode(.inline)
-        .task {
-            let doc = compose()
-            stream.stream(doc)
-            // The entrance can freeze mid-parse — main-actor contention under the
-            // zoom transition suspends the tick (leaving a half-streamed widget,
-            // e.g. `Widget("In motion", nu`, no rows) without cancelling it, so
-            // waiting on `streaming` never wakes. Instead watch progress: a live
-            // stream advances at least every ~400ms (boundary pause), so ~800ms
-            // without a character means it stalled — reconcile to the whole doc.
-            // `.task` is bound to this instance, so a remount's survivor re-runs.
-            var last = -1, still = 0, waited = 0
-            while !stream.completed, waited < 60 {
-                try? await Task.sleep(for: .milliseconds(100)); waited += 1
-                if Task.isCancelled { return }
-                if stream.progress == last { still += 1 } else { still = 0; last = stream.progress }
-                if still >= 8 { break }
-            }
-            if !Task.isCancelled, !stream.completed { stream.paint(doc) }
-        }
-        // The corpus changed under the composition — repaint whole, no replayed
-        // entrance (matches Home's recovery). Also a belt to the .task's braces:
-        // any settle that lands after the reconcile still paints the full doc.
+        // Paint the whole composition at once — a record, not a stream (§5).
+        // The typewriter path was removed 2026-07-10: its main-actor tick (and
+        // the watchdog meant to rescue a stalled tick) both suspended under the
+        // shell's continuous chrome animation and never resumed, leaving a
+        // half-parsed widget — an empty "Recent"/"Saved" pane (audit finding).
+        // A record has no "still writing" state, so painting is also the honest
+        // load model here.
+        .onAppear { stream.paint(compose()) }
+        // The corpus changed under it — repaint whole.
         .onChange(of: things.count) { stream.paint(compose()) }
         // The person renames; the person never files. (The project PIN died
         // 2026-07-07 — every project already sits on Home's map, so a pin

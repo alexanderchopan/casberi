@@ -167,6 +167,8 @@ enum FoundationAnswer {
 
         let instructions = """
         You help someone find and make sense of the things they have saved. \
+        Speak TO them as "you" — never write in the first person, and never \
+        narrate as if you are the person ("You saved…", never "I saved…"). \
         Answer only from the things you are given. Never invent a thing or a \
         fact. Keep every word plain — no metaphors, no marketing. If none of \
         the things answer the question, say so plainly and pick none.
@@ -205,7 +207,10 @@ enum FoundationAnswer {
         }.joined(separator: "\n")
 
         let instructions = """
-        You help someone reflect on the things they have saved. Answer in two \
+        You help someone reflect on the things they have saved. Speak TO them \
+        as "you" — never write in the first person, and never narrate as if you \
+        are the person ("This week you spent…", never "This week I spent…"). \
+        Answer in two \
         or three plain sentences using ONLY the things listed. Never invent a \
         thing, a number, or a detail that isn't in the list. No metaphors, no \
         marketing. Write the answer directly — no preamble like "Here is" or \
