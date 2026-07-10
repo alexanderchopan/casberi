@@ -23,9 +23,73 @@ struct SettingsScreen: View {
     private let columns = [GridItem(.flexible(), spacing: DS.Space.s3),
                            GridItem(.flexible(), spacing: DS.Space.s3)]
 
+    /// Settings opens as YOUR room, not a utility closet (2026-07-10): the
+    /// avatar large — the toolbar door's face, grown — tappable to change,
+    /// like the tile. Personalization is the air here, not just a control.
+    private var heroHeader: some View {
+        Button {
+            DSHaptic.tap()
+            if ProfileStore.shared.avatar == nil { avatarPickerOpen = true }
+            else { avatarDialogOpen = true }
+        } label: {
+            Group {
+                if let avatar = ProfileStore.shared.avatar {
+                    Image(uiImage: avatar)
+                        .resizable().scaledToFill()
+                        .frame(width: 88, height: 88)
+                        .clipShape(Circle())
+                } else {
+                    ZStack {
+                        Circle().fill(DS.fillFaint)
+                        Image(systemName: "person.crop.circle")
+                            .font(.system(size: 42))
+                            .foregroundStyle(DS.textSecondary)
+                    }
+                    .frame(width: 88, height: 88)
+                }
+            }
+            .shadow(color: .black.opacity(0.35), radius: 12, y: 4)
+        }
+        .buttonStyle(DSTileButtonStyle())
+        .frame(maxWidth: .infinity)
+        .padding(.top, DS.Space.s2)
+        .padding(.bottom, DS.Space.s6)
+        .accessibilityLabel("Your photo")
+    }
+
+    /// The room wears YOUR color — the Home background you chose, washing
+    /// down from the top the way a source's brand hue washes its shape.
+    /// A photo background arrives blurred and dimmed; no background set =
+    /// no wash (black, honestly — the room is waiting to be painted).
+    @ViewBuilder private var settingsWash: some View {
+        let store = HomeBackgroundStore.shared
+        if store.kind == .photo, let image = store.image {
+            Color.clear
+                .frame(height: 430)
+                .overlay(
+                    Image(uiImage: image)
+                        .resizable().scaledToFill()
+                        .blur(radius: 42, opaque: true)
+                )
+                .clipped()
+                .overlay(Color.black.opacity(0.45))
+                .mask(LinearGradient(colors: [.black, .black, .clear],
+                                     startPoint: .top, endPoint: .bottom))
+                .ignoresSafeArea(edges: .top)
+        } else if let color = store.wallpaperColor {
+            LinearGradient(colors: [color.opacity(0.9), .clear],
+                           startPoint: .top, endPoint: .bottom)
+                .frame(height: 430)
+                .ignoresSafeArea(edges: .top)
+        }
+    }
+
     var body: some View {
         ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
+                    // Your room greets you (ruling 2026-07-10): the bubble
+                    // grows from the little avatar and lands on the big one.
+                    heroHeader
                     // One grid, no group headers — every tile in one A–Z field,
                     // uniform, rows left to right, odd counts fine.
                     tileGrid(allTiles)
@@ -36,6 +100,7 @@ struct SettingsScreen: View {
             .scrollIndicators(.hidden)
         .minimizesChrome(chrome)
         .dsSoftTopEdge()
+            .background(alignment: .top) { settingsWash }
             .dsPageBackground()
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.large)

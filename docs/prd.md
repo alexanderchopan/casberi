@@ -1348,3 +1348,16 @@ Built A (recorded on-sim; the pop deflates back into the avatar).
 B stays on the shelf unless A proves not enough — a transition tax
 on every Settings visit is a real cost, the bubble is not.
 Also: casberi://settings deep link added (recording + parity).
+
+## 43a. Settings is your room (amendment, 2026-07-10)
+
+The bubble transition alone read "fine but not special" (user) — the
+harshness was the DESTINATION, not the motion. Settings is where the
+personal things live, so it now receives you: your avatar LARGE at
+the top (the toolbar door's face, grown — the bubble visually lands
+on it; tap = the same change/remove flow), and the page washed in
+YOUR color — the Home background you chose (photo backgrounds arrive
+blurred + dimmed), the same wash grammar sources get, but in the
+person's own hue. No background chosen = no wash: the room stays
+black until painted, which quietly teaches what the Background tile
+does.
