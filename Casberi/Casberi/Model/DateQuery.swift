@@ -37,10 +37,18 @@ enum DateQuery {
             let end = calendar.date(byAdding: .day, value: 2, to: start)!.addingTimeInterval(-1)
             return Match(range: start...end, words: ["weekend", "this", "the", "last"])
         }
-        if q.contains("this week") || q.contains("the week") {
+        if q.contains("week") {
+            // Any remaining "week" phrase means the current one — "last week"
+            // and "weekend" already matched and returned above. Bare
+            // `.contains("week")` (not "this week"/"the week" only) matters
+            // because the built-in Siri/Spotlight shortcut literally asks
+            // "What's my week" — that phrase silently missed this filter
+            // before, so "week" fell through as a plain search term and a
+            // Calendar event whose title never says "week" scored zero and
+            // never showed (2026-07-09).
             let week = calendar.dateInterval(of: .weekOfYear, for: now)!
             return Match(range: week.start...week.end.addingTimeInterval(-1),
-                         words: ["this", "the", "week"])
+                         words: ["this", "the", "my", "week"])
         }
         if q.contains("this month") {
             let month = calendar.dateInterval(of: .month, for: now)!
