@@ -2,12 +2,14 @@ import SwiftUI
 import SwiftData
 
 /// The thing sheet (M4, redesigned 2026-07-07 — "Ink with Gallery grafted
-/// in", user's pick): ink-black ground, no cards. An eyebrow (source-colored
-/// dot · kind · age), the title large, the thing's media, then a quiet spec
-/// table (WHEN/SITE/BY/FROM/TAGS — labels change per kind). Verbs are text
-/// rows (derived, cap three; writes confirm), plus Pin and Share. The tag
-/// editor keeps all its power behind a tap on the TAGS row. Related streams
-/// last. Spacing does the separating — no hairlines.
+/// in", user's pick): ink-black ground, no cards. The source's hue washes
+/// down from the top (2026-07-10 ruling — wash + icon, the dot died), an
+/// eyebrow (source icon · kind · age), the title large, the thing's media,
+/// then a quiet spec table (WHEN/SITE/BY/FROM/TAGS — labels change per
+/// kind). Verbs are text rows (derived, cap three; writes confirm), plus
+/// Pin and Share. The tag editor keeps all its power behind a tap on the
+/// TAGS row. Related streams last. Spacing does the separating — no
+/// hairlines.
 struct ThingSheetView: View {
     @Bindable var thing: Thing
     /// True when the Tag swipe opened the sheet — it lands scrolled to the
@@ -58,6 +60,23 @@ struct ThingSheetView: View {
             .padding(.bottom, DS.Space.s6)
         }
         .scrollIndicators(.hidden)
+        .background(alignment: .top) {
+            // The source's hue washes down from the top and fades into the
+            // ink (ruling 2026-07-10, user: "it's gorgeous"). One fixed
+            // recipe — 45% into clear over 260pt, no per-hue tuning — and
+            // it sits UNDER the content as atmosphere: no ink ever depends
+            // on it for contrast, which is why this wash lives while the
+            // treemap fills and the banner died. Hueless sources (your own
+            // notes, unknown apps) stay pure ink: the gray fallback is a
+            // fill, not an identity.
+            if let hue = DS.brandHue(for: thing.source) {
+                LinearGradient(colors: [hue.opacity(0.45), .clear],
+                               startPoint: .top, endPoint: .bottom)
+                    .frame(height: 260)
+                    .frame(maxHeight: .infinity, alignment: .top)
+                    .ignoresSafeArea()
+            }
+        }
         // Ink: the sheet is black in both modes, like a photo viewer — its
         // controls render dark regardless of the app's theme.
         .presentationBackground(Color.black)
@@ -93,13 +112,15 @@ struct ThingSheetView: View {
         }
     }
 
-    // MARK: - Eyebrow (source dot · kind · age — the only color up top)
+    // MARK: - Eyebrow (source icon · kind · age)
 
     private var eyebrow: some View {
         HStack(spacing: DS.Space.s2) {
-            Circle()
-                .fill(BridgeGlyph.color(for: thing.source))
-                .frame(width: 6, height: 6)
+            // The source's own mark names the wash above it — the 6px dot
+            // died with the hue ruling (2026-07-10). BridgeIcon falls back
+            // to the glyph-on-hue circle for sources without a bundled
+            // asset, so the seat is never empty.
+            BridgeIcon(name: thing.source, size: 18, circular: true)
             Text("\(thing.kind.typeTag) · \(shortTime(thing.capturedAt)) ago")
                 .dsText(.label12)
                 .foregroundStyle(DS.textTertiary)

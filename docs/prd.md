@@ -349,7 +349,7 @@ tag-by-source is the composer's job, and "tag farcaster as Crypto"
 already matches on source). Low visibility of the WRITE affordance is
 correct under this model, not a bug — the real discoverability question
 is "how does the person learn the composer organizes," answered by the
-derived organize chip (36q), never by new tag surfaces. Every future
+derived organize chip (36aa), never by new tag surfaces. Every future
 "should tags appear here?" resolves against this paragraph.
 
 ## 21. Projects
@@ -1152,27 +1152,40 @@ deltaText/sparkline are third copies of existing formatters/renderers;
 GenTokenRow + TokenChartContent should read TokenPulse instead of
 fetching their own charts.
 
-## 36q. The composer invites the first bulk tag (2026-07-10, user)
+## 36aa. The composer invites the first bulk tag (2026-07-10, user)
 
 Companion to the §20 ruling (tags are a retrieval vocabulary; the write
 doors stay two). The person's path to learning that the composer
 organizes was invisible — the tag command existed but nothing taught it.
 Now the empty-composer chip row can carry ONE organize invite, derived
-like the ask chips are: the largest pile of things from a single source
-still wearing only their type tag (≥3, "You" excluded — as a query word
-it matches far beyond its own things) earns "Tag your 6 Farcaster
-things", tag-glyphed and tinted to read as organizing, not asking. The
-invite LEADS the row (the row scrolls; the last seat hid the one chip
-that teaches — verified on the sim before the swap).
+like the ask chips are: the source with the most things still wearing
+only their type tag (≥3 untagged is the trigger) earns "Tag your 33
+Farcaster things", tag-glyphed and tinted to read as organizing, not
+asking. The LABEL counts the source's whole pile — that is what "tag
+farcaster as X" actually proposes (review 2026-07-10: the untagged
+count understated the match set; honesty rule). Skipped sources: "You"
+(as a query word it matches far beyond its own things) and any name the
+command grammar can't quote faithfully — "Reminders"/"Voice" are kind
+words (the command would match by KIND across every source) and filler
+words ("The …") would shrink the query to a bare term
+(Organize.faithfulSourceQuery guards both). Count ties break by name so
+the invite doesn't change identity between opens. The invite LEADS the
+row (the row scrolls; the last seat hid the one chip that teaches —
+verified on the sim before the swap); ask chips cap at two so the row
+stays three.
 
 Tap PREFILLS, never sends: the field takes "tag farcaster as " and the
 person types the name — the name is theirs to choose, tag autocomplete
 helps, and the write still waits behind the proposal card's Apply.
-Typed-text-never-saves holds (a guard keeps the programmatic prefill
-from tripping the paste-capture heuristic). When the invite shows, ask
-chips cap at two so the row stays three. The label counts the untagged
-pile; the proposal card remains the truth surface for what the command
-actually matches.
+Typed-text-never-saves holds at the right altitude (review 2026-07-10):
+every programmatic draft-writer (this chip, tag completion, the debug
+hooks) routes through one fillDraft() door that suppresses the
+paste-capture heuristic — tag completion carried the same latent bug
+(a completed long tag read as a paste, and the whole typed command
+SAVED as a note) — and at commit a command-shaped draft beats the paste
+flag, so pasting the tag name into the prefill still reaches the
+proposal card, never the capture path. The proposal card remains the
+truth surface for what the command actually matches.
 
 ## 36z. Follow more than one Bluesky / Farcaster account (2026-07-10)
 
@@ -1204,3 +1217,28 @@ via userDataByFid (the endpoint ignores the type filter and returns
 every profile field in a `messages` array — scan for USER_DATA_TYPE_PFP).
 The connect screen lists watched accounts with swipe-to-remove; the
 field becomes "Add". Pinterest stays single (RSS-backed, one board).
+
+## 36ab. The thing sheet wears its source's hue (2026-07-10, user: "ship it. it's gorgeous")
+
+Picked from four live sim mockups (tinted eyebrow ink / brand icon
+eyebrow / hue wash / wash + icon — the user chose the combination and
+killed the dot: "I HATE the dot bullet"). The Ink sheet stays ink, and
+now the source's brand hue washes down from the top, fading into black
+before the media begins; the eyebrow leads with the 18pt circular
+BridgeIcon in place of the dead 6px dot, so the color always arrives
+NAMED — the mark above explains the glow.
+
+Why this wash lives while the treemap fills and the banner died: it
+sits UNDER the content as atmosphere, never a surface ink depends on
+for contrast, and it follows one fixed recipe — hue at 45% into clear
+over 260pt, no per-hue tuning, no scrims. The moment it needs either,
+it has become the banner again and should die the same way.
+
+Hueless things stay pure ink: DS.brandColor split into an optional
+DS.brandHue (nil for "You" and unknown sources — the gray fallback is
+a FILL, not an identity), and the sheet only washes when a real hue
+exists. Two moods, both honest: bridged things wear their source; your
+own things stay the photo-viewer black. BridgeIcon's glyph fallback
+keeps the eyebrow seat filled either way ("person" for You, "waveform"
+for Voice). ChatGPT's white and X's black wash faithfully — the recipe
+is the brand's own color or nothing.

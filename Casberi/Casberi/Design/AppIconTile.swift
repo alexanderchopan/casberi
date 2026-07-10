@@ -31,6 +31,13 @@ extension DS {
     /// Brand-color table for the icon stand-ins. Identity color, kept out of the
     /// component. Unknown sources fall back to the neutral gray fill.
     static func brandColor(for source: String) -> Color {
+        brandHue(for: source) ?? DS.gray300
+    }
+
+    /// The hue itself, nil when the source has none — the gray fallback is
+    /// a fill, not an identity, so surfaces that WEAR the hue (the thing
+    /// sheet's wash) ask this and stay pure ink on nil (ruling 2026-07-10).
+    static func brandHue(for source: String) -> Color? {
         switch source.lowercased() {
         case "calendar":            return Color.fixed("#ff3b30")
         case "gmail", "mail":       return Color.fixed("#ea4335")
@@ -61,7 +68,7 @@ extension DS {
         case "steam":               return Color.fixed("#1b2838")   // their dark navy
         case "obsidian":            return Color.fixed("#7c3aed")   // vault purple
         case "twitch":              return Color.fixed("#9146ff")
-        default:                    return DS.gray300
+        default:                    return nil
         }
     }
 }
