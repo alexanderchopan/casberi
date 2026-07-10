@@ -659,7 +659,6 @@ private struct GenTagMap: View {
         let gap = DS.Space.s2
         let uw = (width - gap * 3) / 4
         let uh = (220 - gap * 2) / 3
-        let maxN = max(1, items.map(\.n).max() ?? 1)
         ZStack(alignment: .topLeading) {
             ForEach(Array(items.enumerated()), id: \.offset) { i, item in
                 let f = frames[i]
@@ -693,20 +692,17 @@ private struct GenTagMap: View {
                     .padding(DS.Space.s3)
                     .frame(width: w, height: h, alignment: .topLeading)
                     .background {
-                        // Tiles are CARDS now (2026-07-10): the same sheet
-                        // surface Pinned and "Just landed" sit on, with only
-                        // a wash of the hue — magnitude still rides the wash
-                        // (and size, the treemap's real voice); identity
-                        // moved into the label ink and the token/bridge
-                        // icons. Preview mutes the wash flat: shape without
-                        // claiming substance.
-                        ZStack {
-                            DS.surfaceSheet
-                            hue.opacity(preview ? (breathe ? 0.10 : 0.05)
-                                        : 0.08 + 0.14 * Double(item.n) / Double(maxN))
-                        }
-                        .opacity(isWeekend && animated && !on ? 0 : 1)
-                        .clipShape(RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+                        // Tiles are CARDS, literally (2026-07-10, user):
+                        // the exact sheet surface the Settings tiles and
+                        // Pinned card use — no hue wash at all. Magnitude
+                        // is size, the treemap's real voice; identity is
+                        // the label ink and the token/bridge icons. The
+                        // preview breathes the surface itself: shape
+                        // without claiming substance.
+                        DS.surfaceSheet
+                            .opacity((preview ? (breathe ? 0.55 : 0.85) : 1)
+                                     * (isWeekend && animated && !on ? 0 : 1))
+                            .clipShape(RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
                     }
                 Group {
                     if preview {

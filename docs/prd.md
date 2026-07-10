@@ -911,3 +911,11 @@ chip's own shape, where they're that source's native view (everything
 watched, regardless of pin). `holdingsChart()` lost its unused
 `pinnedOnly` parameter with this; Home's `topHoldingsByWallet(
 pinnedOnly: true)` is untouched.
+
+**Amendment (same day, user): no wash at all.** The tiles are LITERALLY
+the sheet surface the Settings tiles and Pinned card use — flat
+`DS.surfaceSheet`, zero hue in the fill. Magnitude is size alone;
+identity is the label ink (wallet hue / project hue) and the icons.
+Applies to every TagMap — holdings and "What's going on" alike. The
+starter preview breathes the surface's own opacity now instead of a
+muted wash.
