@@ -1394,3 +1394,16 @@ from zero, peaks mid-flight, and relaxes — while it thins to reveal
 the new page. 0.9s, ease-in-out. Works on default black: it's the
 page's own pixels doing the rippling. Home only until it's felt on
 device. (Required the Xcode Metal toolchain component — now installed.)
+
+## 43d. The wave carries its own light (fourth draft, 2026-07-10)
+
+The uniform melt failed on sight ("can't even tell it's happening") —
+diagnosis: displacement alone is INVISIBLE on an ink-black app; black
+pixels bending over a black page show nothing. Water reads by its
+light, not its bending. Rebuilt as a single circular wavefront from
+the avatar: ahead of the front the old page stands untouched; at the
+crest, pixels stretch radially AND the band carries an additive glass
+shine (visible on pure black); behind the front, transparent — the
+new page is washed in spatially, never crossfaded. 0.85s ease-out.
+Doctrine for future liquid work: on this app's ink ground, any glass
+effect must EMIT, not just distort.

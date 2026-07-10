@@ -23,9 +23,11 @@ enum LiquidTransition {
     }
 }
 
-/// The melting snapshot itself — full screen, above everything. TimelineView
-/// drives the shader's progress (shader uniforms don't ride withAnimation),
-/// eased so the liquid builds gently and settles gently.
+/// The wave itself — the frozen outgoing frame, full screen, above
+/// everything. TimelineView drives the shader's progress (uniforms don't
+/// ride withAnimation); ease-out so the wave lands softly. The shader owns
+/// the reveal: everything behind the front is transparent, so the page
+/// beneath arrives spatially — no whole-frame fade anywhere.
 struct LiquidDissolveOverlay: View {
     let image: UIImage
     let duration: Double
@@ -36,22 +38,21 @@ struct LiquidDissolveOverlay: View {
     var body: some View {
         TimelineView(.animation) { context in
             let raw = min(1, context.date.timeIntervalSince(start) / duration)
-            // Ease-in-out: the melt breathes instead of snapping.
-            let progress = raw * raw * (3 - 2 * raw)
+            let progress = 1 - pow(1 - raw, 2)   // ease-out: fast rise, soft landing
             GeometryReader { geo in
                 Image(uiImage: image)
                     .resizable()
                     .frame(width: geo.size.width, height: geo.size.height)
-                    .distortionEffect(
-                        ShaderLibrary.liquidDissolve(
+                    .layerEffect(
+                        ShaderLibrary.liquidWave(
                             .float2(Float(geo.size.width), Float(geo.size.height)),
+                            // The wave is born where the finger was — the
+                            // avatar door, top-right of the nav bar.
+                            .float2(Float(geo.size.width - 44), 84),
                             .float(Float(progress))
                         ),
                         maxSampleOffset: CGSize(width: 80, height: 80)
                     )
-                    // The new page shows through as the liquid thins: fade
-                    // begins once the melt is underway, ends with it.
-                    .opacity(1 - smoothstep(0.35, 0.95, progress))
             }
             .ignoresSafeArea()
             .onChange(of: raw >= 1) { _, done in
@@ -59,10 +60,5 @@ struct LiquidDissolveOverlay: View {
             }
         }
         .allowsHitTesting(false)
-    }
-
-    private func smoothstep(_ a: Double, _ b: Double, _ x: Double) -> Double {
-        let t = min(1, max(0, (x - a) / (b - a)))
-        return t * t * (3 - 2 * t)
     }
 }

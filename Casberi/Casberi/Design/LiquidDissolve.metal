@@ -2,17 +2,40 @@
 #include <SwiftUI/SwiftUI_Metal.h>
 using namespace metal;
 
-/// The liquid page dissolve (2026-07-10) — the OUTGOING screen's pixels are
-/// displaced by two crossed sine fields whose amplitude rises from zero,
-/// peaks mid-transition, and relaxes to zero: the page turns to liquid and
-/// settles into the next one. Pure displacement; the fade rides the view's
-/// opacity, not the shader.
-[[ stitchable ]] float2 liquidDissolve(float2 position, float2 size, float progress) {
-    float2 uv = position / size;
-    // Zero at both ends, peak at the middle — crisp in, liquid, settled out.
-    float envelope = progress * (1.0 - progress) * 4.0;
-    float ampl = 34.0 * envelope;
-    float x = sin(uv.y * 16.0 + progress * 7.0) + sin(uv.y * 5.0 - progress * 3.0) * 0.6;
-    float y = sin(uv.x * 13.0 + progress * 6.0) + sin(uv.x * 4.0 + progress * 2.5) * 0.6;
-    return position + float2(x, y) * ampl;
+/// The liquid wave (fourth draft, 2026-07-10) — a single circular wavefront
+/// sweeps from the avatar across the page. Ahead of the wave: the outgoing
+/// page, untouched. At the ring: pixels stretch radially and the front
+/// carries its own LIGHT (a soft glass shine — displacement alone is
+/// invisible on an ink-black app). Behind the wave: transparent, so the
+/// destination page is revealed spatially, washed in by the front — never
+/// a crossfade.
+[[ stitchable ]] half4 liquidWave(float2 position, SwiftUI::Layer layer,
+                                  float2 size, float2 origin, float progress) {
+    float maxDist = length(size);
+    float radius = progress * maxDist * 1.12;
+    float band = 130.0;                       // the wave's thickness, points
+    float dist = distance(position, origin);
+    float d = dist - radius;                  // >0 ahead, <0 behind
+
+    if (d > band)  { return layer.sample(position); }   // not reached yet
+    if (d < -band) { return half4(0.0); }               // fully revealed
+
+    float t = d / band;                       // -1 … 1 across the wave
+    float bump = 1.0 - t * t;                 // 0 at edges, 1 at the crest
+
+    // Pixels get dragged toward the origin as the crest passes — the page
+    // visibly stretches into the wave.
+    float2 dir = dist > 1.0 ? (position - origin) / dist : float2(0.0, 1.0);
+    half4 c = layer.sample(position - dir * bump * 56.0);
+
+    // The crest carries light: a soft additive shine, strongest at the
+    // center of the band — this is what makes water readable on black.
+    float shine = bump * bump * 0.38;
+    c.rgb += half3(shine);
+
+    // The trailing half of the band dissolves to reveal the new page.
+    float alpha = smoothstep(-1.0, -0.2, t);
+    c.rgb *= half(alpha);                     // premultiplied
+    c.a   *= half(alpha);
+    return c;
 }
