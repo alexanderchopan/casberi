@@ -888,3 +888,16 @@ voice — and the color moved into the label ink, the same V3b rule the
 feed rows already follow ("color lives in the tag text, not the row").
 Preview keeps its muted flat wash. Weekend's left-to-right fill sweep
 and the share card render unchanged.
+
+## 36m. A pin is a HOME pin (2026-07-10, user)
+
+Pinning a thing used to do two jobs: put it on Home AND lift it into a
+"Pinned" section at the top of Feed. The Feed section doubled what Home
+already shows and cluttered the record — Feed's whole grammar is one
+chronological stream, and a copy of your pins sitting above it broke
+that. Pinning now affects Home only; a pinned thing rides Feed in its
+natural chronological place like everything else. The swipe verb stays
+where it was — the row lifts briefly and a toast says "Pinned to Home",
+since nothing on the Feed screen moves anymore. The wallet holdings
+module still leads Feed (36h): it's the one pinned element with no row
+of its own in the record, so it has nowhere else to live.

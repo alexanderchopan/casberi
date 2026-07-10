@@ -125,21 +125,18 @@ struct FeedScreen: View {
         return ["All"] + ordered
     }
 
-    private var pinned: [Thing] { visible.filter(\.pinned) }
-
     /// The one row that teaches the swipe (demo only, once): it nudges left,
     /// a pin peeks out, it settles back. Motion, not a tooltip.
     private var hintThingID: UUID? {
         guard !swipeCoachDone else { return nil }
-        return unpinned.first(where: { $0.kind != .approval })?.id
+        return visible.first(where: { $0.kind != .approval })?.id
     }
-    private var unpinned: [Thing] { visible.filter { !$0.pinned } }
 
     /// Day groups, newest day first ("Today", "Yesterday", then dated).
     private var dayGroups: [(String, [Thing])] {
         var order: [String] = []
         var groups: [String: [Thing]] = [:]
-        for thing in unpinned {
+        for thing in visible {
             let label = dayLabel(thing.capturedAt)
             if groups[label] == nil { order.append(label) }
             groups[label, default: []].append(thing)
@@ -338,13 +335,12 @@ struct FeedScreen: View {
                     .listRowSeparator(.hidden)
                     .listRowInsets(EdgeInsets())
             } else {
-                if !pinned.isEmpty, shape != .photos {
-                    daySection("Pinned", pinned)
-                }
-                // A wallet pinned to Home leads Feed too (ruling 2026-07-09) —
-                // same "keep this in view" rule, same module, so the two
-                // surfaces agree. The Wallet chip's own shape already leads
-                // with it, so this only rides the other shapes.
+                // A pin is a HOME pin only (ruling 2026-07-10): the Feed's
+                // own Pinned section doubled what Home already shows and
+                // cluttered the record — pinned things now ride the feed in
+                // their natural chronological place. The wallet module is
+                // the one pinned element that leads Feed, since it has no
+                // row of its own in the record.
                 if wallet.addresses.contains(where: \.pinnedToHome), shape != .photos, shape != .wallet {
                     holdingsBlockSection
                 }
@@ -428,7 +424,7 @@ struct FeedScreen: View {
             groupedSections(agentDayGroups)
         default:
             if filter.tag != "All" && shape == .all {
-                daySection(filterLabel, unpinned)
+                daySection(filterLabel, visible)
             } else if shape == .all {
                 // All is where volume floods — bundles + the new-since
                 // divider live here. A single source's shape IS that source;
@@ -568,7 +564,7 @@ struct FeedScreen: View {
         let cal = Calendar.current
         let today = cal.startOfDay(for: .now)
         var buckets: [Date: [Thing]] = [:]
-        for thing in unpinned {
+        for thing in visible {
             buckets[cal.startOfDay(for: thing.capturedAt), default: []].append(thing)
         }
         let futureDays = buckets.keys.filter { $0 >= today }.sorted()
@@ -582,7 +578,7 @@ struct FeedScreen: View {
     /// Events only: in the All shape other kinds share the list, and only
     /// an event's capture time means "starts at".
     private var nextEventID: UUID? {
-        unpinned.filter { $0.kind == .event && $0.capturedAt > .now }
+        visible.filter { $0.kind == .event && $0.capturedAt > .now }
             .min { $0.capturedAt < $1.capturedAt }?.id
     }
 
@@ -595,7 +591,7 @@ struct FeedScreen: View {
 
     /// Gmail: what's waiting on you, capped at two (mock G1).
     private var waiting: [Thing] {
-        unpinned.filter { $0.mark == .doing || $0.content.contains("?") }.prefix(2).map { $0 }
+        visible.filter { $0.mark == .doing || $0.content.contains("?") }.prefix(2).map { $0 }
     }
 
     @ViewBuilder
@@ -611,12 +607,12 @@ struct FeedScreen: View {
     /// (same-day only).
     @ViewBuilder
     private var reminderSections: some View {
-        let doing = unpinned.filter { $0.mark == .doing }
-        let todos = unpinned.filter { $0.mark == .todo || $0.mark == .none }
+        let doing = visible.filter { $0.mark == .doing }
+        let todos = visible.filter { $0.mark == .todo || $0.mark == .none }
         let weekAgo = Date.now.addingTimeInterval(-7 * 86_400)
         let fresh = todos.filter { $0.capturedAt > weekAgo }
         let stale = todos.filter { $0.capturedAt <= weekAgo }
-        let doneToday = unpinned.filter {
+        let doneToday = visible.filter {
             $0.mark == .done && Calendar.current.isDateInToday($0.capturedAt)
         }
         if !doing.isEmpty { daySection("Doing", doing) }
@@ -651,7 +647,7 @@ struct FeedScreen: View {
     /// OpenClaw: pending asks lead as consent cards; the groups below
     /// carry runs and jobs with their status ticks.
     private var pendingApprovals: [Thing] {
-        unpinned.filter { $0.kind == .approval && $0.mark != .done }
+        visible.filter { $0.kind == .approval && $0.mark != .done }
     }
 
     @ViewBuilder
@@ -666,7 +662,7 @@ struct FeedScreen: View {
         let shown = Set(pendingApprovals.map(\.id))
         var order: [String] = []
         var groups: [String: [Thing]] = [:]
-        for thing in unpinned where !shown.contains(thing.id) {
+        for thing in visible where !shown.contains(thing.id) {
             let label = dayLabel(thing.capturedAt)
             if groups[label] == nil { order.append(label) }
             groups[label, default: []].append(thing)
@@ -685,8 +681,8 @@ struct FeedScreen: View {
             .modifier(SwipeHintNudge(active: thing.id == hintThingID) {
                 swipeCoachDone = true
             })
-            // The pin lift (§11): a brief raise while the row glides to the
-            // Pinned section.
+            // The pin lift (§11): a brief raise acknowledging the pin — the
+            // row stays in its chronological place (Home pin, 2026-07-10).
             .scaleEffect(lifted ? 1.02 : 1)
             .shadow(color: .black.opacity(lifted ? 0.2 : 0), radius: lifted ? 8 : 0)
             .contentShape(Rectangle())
@@ -1007,6 +1003,9 @@ struct FeedScreen: View {
             thing.pinned.toggle()
             try? modelContext.save()
         }
+        // The row stays put now (a pin is a Home pin, ruling 2026-07-10) —
+        // the toast says where it went, since nothing on this screen moves.
+        chrome.flash(thing.pinned ? "Pinned to Home" : "Unpinned from Home")
         Task { @MainActor in
             try? await Task.sleep(for: .milliseconds(300))
             withAnimation(DS.Motion.standard) { liftedID = nil }
