@@ -141,10 +141,13 @@ struct WalletScreen: View {
                     )).labelsHidden().tint(DS.tint)
                 }
                 .listRowBackground(DS.surfaceSheet)
-                // Swipe reads the same everywhere else in the app (Feed's
-                // rows) — either gesture flips this one wallet's pin, never
-                // another wallet's.
-                .swipeActions(edge: .leading, allowsFullSwipe: true) {
+                // The pin swipe is the SAME GESTURE everywhere (2026-07-10,
+                // user: it was leading here, trailing in Feed — one verb,
+                // two directions): trailing edge, Feed's edge.
+                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                    // Full swipe = pin (Feed's grammar). An explicit trailing
+                    // group replaces the system delete, so Remove rides here
+                    // too — Edit mode's red minus still works.
                     Button {
                         DSHaptic.tap()
                         wallet.togglePin(addr.id)
@@ -153,6 +156,13 @@ struct WalletScreen: View {
                               systemImage: addr.pinnedToHome ? "pin.slash" : "pin")
                     }
                     .tint(DS.tint)
+                    Button(role: .destructive) {
+                        if let i = wallet.addresses.firstIndex(where: { $0.id == addr.id }) {
+                            wallet.remove(at: IndexSet(integer: i))
+                        }
+                    } label: {
+                        Label("Remove", systemImage: "trash")
+                    }
                 }
             }
             .onDelete { wallet.remove(at: $0) }

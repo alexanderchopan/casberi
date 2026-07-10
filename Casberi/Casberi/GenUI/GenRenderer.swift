@@ -142,7 +142,10 @@ struct GenRender: View {
         // The starter shape: same geometry, muted fill, nothing to tap — an
         // honest preview of the map that composes once things land.
         case "TagMapPreview": GenTagMap(el: el, preview: true).mountIn()
-        case "Quiet":       GenQuiet(el: el).mountIn()
+        // A quiet day's slot is a DOOR now, not a logo (2026-07-10, user:
+        // the berry under a quiet cover was saying quiet twice and doing
+        // nothing) — connect more apps and quiet days get rarer.
+        case "AppsInvite":  GenAppsInvite(el: el).mountIn()
         // One retiring teaching line (Feed's coach grammar) — plain tinted
         // words, no overlays, no arrows.
         case "Coach":       GenCoach(el: el).mountIn()
@@ -923,18 +926,52 @@ private struct GenKindBar: View {
     }
 }
 
-/// Quiet(line) — a quiet moment earns the berry: the mark draws itself on,
-/// one plain line under it. A fact, not a nudge (§5 polish).
-private struct GenQuiet: View {
+/// AppsInvite(title, subline) — the quiet day's door: a card inviting more
+/// apps, with a few of the catalog's icons and a chevron. Tap opens the
+/// Apps page (the "@apps" marker through projectTap, same routing move as
+/// the holdings map's "@wallet").
+private struct GenAppsInvite: View {
     let el: GenEl
+    @Environment(\.genProjectTap) private var projectTap
+
+    private static let sampleApps = ["Photos", "Calendar", "Reminders", "Gmail"]
 
     var body: some View {
-        QuietStateView(line: el.str(0))
+        Button {
+            DSHaptic.selection()
+            projectTap?("@apps")
+        } label: {
+            HStack(spacing: DS.Space.s3) {
+                HStack(spacing: -6) {
+                    ForEach(Self.sampleApps, id: \.self) { name in
+                        BridgeIcon(name: name, size: 26, circular: true)
+                            .overlay(Circle().strokeBorder(DS.surfaceSheet, lineWidth: 1.5))
+                    }
+                }
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(el.str(0))
+                        .dsText(.body17).foregroundStyle(DS.textPrimary)
+                    if !el.str(1).isEmpty {
+                        Text(el.str(1))
+                            .dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                    }
+                }
+                Spacer(minLength: 0)
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(DS.textTertiary)
+            }
+            .padding(DS.Space.s4)
+            .background(DS.surfaceSheet,
+                        in: RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
+        }
+        .buttonStyle(DSTileButtonStyle())
+        .padding(.horizontal, DS.Space.s4)
+        .padding(.top, DS.Space.s4)
     }
 }
 
-/// The shared quiet-state body — Home's quiet day and Feed's empty state use
-/// the same moment.
+/// The shared quiet-state body — Feed's empty state's moment.
 struct QuietStateView: View {
     let line: String
 

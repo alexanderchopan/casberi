@@ -1006,3 +1006,18 @@ and skipped (naggy).
   The first real pin retires it forever, even if every pin is later
   removed. New `-unpinAll YES` debug hook clears pins and re-arms it
   for screenshots.
+
+## 36s. Quiet days invite apps; the pin swipe has ONE direction (2026-07-10, user)
+
+- The quiet-day berry ("Quiet so far today." under a cover that already
+  said "A quiet day") said quiet twice and did nothing. The slot is a
+  DOOR now: an AppsInvite card — a few catalog icons, "Connect another
+  app · More of your day lands by itself." — that opens the Apps page.
+  Connect more apps and quiet days get rarer, which is the honest
+  response to a quiet day. GenQuiet deleted; Feed's empty state keeps
+  QuietStateView.
+- The pin swipe was LEADING on the Wallet and Dexscreener management
+  rows but TRAILING in Feed — one verb, two directions. Standardized
+  to trailing (Feed's edge, full-swipe = pin) everywhere. Since an
+  explicit trailing group replaces the system swipe-delete, Remove/
+  Unwatch ride the same group as the second button — nothing lost.

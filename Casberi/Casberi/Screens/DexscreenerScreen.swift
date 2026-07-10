@@ -64,8 +64,9 @@ struct DexscreenerScreen: View {
     /// precedent; the Feed's reads-only swipe rule governs feed rows). A
     /// watched token could already be pinned from Feed (it's a normal thing,
     /// same swipe everywhere) but not from here, where you're most likely to
-    /// reach for it right after watching one — a leading-edge pin swipe
-    /// closes that gap (2026-07-09), same verb, same icon, as Feed's own.
+    /// reach for it right after watching one — the pin swipe closes that
+    /// gap on the TRAILING edge, Feed's edge (2026-07-10: it briefly lived
+    /// on leading here, so one verb had two directions).
     /// Unwatching deletes the thing: the thing IS the watch, not landed
     /// history — and its sourceRef leaving the store lets a re-add resolve.
     private var watchlistSection: some View {
@@ -79,7 +80,9 @@ struct DexscreenerScreen: View {
                         .dsText(.subhead13).foregroundStyle(DS.textTertiary)
                 }
                 .listRowBackground(DS.surfaceSheet)
-                .swipeActions(edge: .leading, allowsFullSwipe: true) {
+                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                    // Full swipe = pin (Feed's grammar). The explicit group
+                    // replaces the system delete, so Unwatch rides here too.
                     Button {
                         DSHaptic.tap()
                         thing.pinned.toggle()
@@ -89,6 +92,13 @@ struct DexscreenerScreen: View {
                               systemImage: thing.pinned ? "pin.slash" : "pin")
                     }
                     .tint(DS.tint)
+                    Button(role: .destructive) {
+                        if let i = watched.firstIndex(where: { $0.id == thing.id }) {
+                            unwatch(at: IndexSet(integer: i))
+                        }
+                    } label: {
+                        Label("Unwatch", systemImage: "trash")
+                    }
                 }
             }
             .onDelete(perform: unwatch)

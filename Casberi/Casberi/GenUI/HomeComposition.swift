@@ -46,10 +46,11 @@ enum HomeComposition {
         doc.append(cover(things: things))
         rootRefs.append("cover")
 
-        // A quiet day says so with the berry, not an empty lineup (§5).
+        // A quiet day's slot invites more apps (2026-07-10, user — the
+        // berry said quiet twice under the quiet cover and did nothing).
         if isQuietDay(things) {
-            doc.append("quiet = Quiet(\(q("Quiet so far today.")))")
-            rootRefs.append("quiet")
+            doc.append("invite = AppsInvite(\(q("Connect another app")), \(q("More of your day lands by itself.")))")
+            rootRefs.append("invite")
         }
 
         // Pinned — things the person chose to keep in view, ahead of the map
@@ -94,9 +95,11 @@ enum HomeComposition {
         doc.append(cover(things: things))
         rootRefs.append("cover")
 
+        // A quiet day's slot invites more apps (2026-07-10, user — the
+        // berry said quiet twice under the quiet cover and did nothing).
         if isQuietDay(things) {
-            doc.append("quiet = Quiet(\(q("Quiet so far today.")))")
-            rootRefs.append("quiet")
+            doc.append("invite = AppsInvite(\(q("Connect another app")), \(q("More of your day lands by itself.")))")
+            rootRefs.append("invite")
         }
 
         // Pinned rides evening too — same rule as morning, ahead of the map.

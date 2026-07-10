@@ -91,6 +91,8 @@ struct HomeScreen: View {
                 // A holdings cell routes to the Wallet screen — there's no
                 // per-token view to open (2026-07-10).
                 if name == "@wallet" { walletOpen = true; return }
+                // The quiet day's invite opens the Apps page.
+                if name == "@apps" { route.push = .apps; return }
                 let isTag = things.contains { $0.tags.contains(name) }
                 if !isTag, things.contains(where: { $0.source == name }) {
                     FeedFilter.shared.source = name
