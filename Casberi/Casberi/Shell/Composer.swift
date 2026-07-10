@@ -59,6 +59,28 @@ struct Composer: View {
     /// fetch per character (review 2026-07-08).
     @State private var tagPool: [String] = []
 
+    /// One corpus-derived nudge toward the tag command ("Tag your 6
+    /// Farcaster things"). Unlike ask chips, tap PREFILLS the command —
+    /// the name is the person's to type, and the write still waits behind
+    /// the proposal's Apply (ruling 2026-07-10). Count is the source's
+    /// WHOLE pile — that's what "tag <source> as X" proposes; the untagged
+    /// pile is only the trigger.
+    private struct OrganizeHint { let source: String; let count: Int }
+    @State private var organizeHint: OrganizeHint?
+    /// One-shot guard: a programmatic fill inserts more than 8 characters
+    /// at once, which the draft onChange would read as a paste — and paste
+    /// CAPTURES on send. fillDraft() sets it; onChange consumes it.
+    @State private var prefilled = false
+
+    /// The one door for setting the draft from code — the organize chip,
+    /// tag completion, and the debug hooks. Writing `draft` directly trips
+    /// the paste heuristic (review 2026-07-10: a completed long tag turned
+    /// a typed command into a captured note).
+    private func fillDraft(_ text: String) {
+        prefilled = true
+        draft = text
+    }
+
     private var isRecording: Bool { voice.phase == .recording }
     private var hasDraft: Bool { !draft.trimmingCharacters(in: .whitespaces).isEmpty }
 
@@ -78,7 +100,7 @@ struct Composer: View {
         DSHaptic.selection()
         var words = draft.split(separator: " ").map(String.init)
         if words.isEmpty { words = [tag] } else { words[words.count - 1] = tag }
-        draft = words.joined(separator: " ") + " "
+        fillDraft(words.joined(separator: " ") + " ")
     }
 
     /// Builds the ask chips from what the corpus can answer TODAY. Empty
@@ -110,7 +132,24 @@ struct Composer: View {
         if !all.isEmpty {
             out.append("What's this week?")
         }
-        suggestions = Array(out.prefix(3))
+        // The organize invite (ruling 2026-07-10): the source with the most
+        // things still wearing only their type tag (≥3) earns the nudge.
+        // The label counts the source's WHOLE pile — what "tag <source> as
+        // X" actually proposes. Skipped: "You" (as a query word it matches
+        // far beyond its own things) and unfaithful names ("Reminders" is a
+        // kind word — the command would match by kind across sources).
+        var counts: [String: (untagged: Int, total: Int)] = [:]
+        for thing in all where thing.source != "You" {
+            counts[thing.source, default: (0, 0)].total += 1
+            if thing.tags.count <= 1 { counts[thing.source, default: (0, 0)].untagged += 1 }
+        }
+        organizeHint = counts
+            .filter { $0.value.untagged >= 3 && Organize.faithfulSourceQuery($0.key) }
+            // Largest pile wins; the name breaks ties so the invite doesn't
+            // change identity between opens.
+            .max { ($0.value.total, $1.key) < ($1.value.total, $0.key) }
+            .map { OrganizeHint(source: $0.key, count: $0.value.total) }
+        suggestions = Array(out.prefix(organizeHint == nil ? 3 : 2))
     }
 
     // The bubble's asymmetric corners: 24 / 24 / 10 / 24 (TL/TR/BR/BL).
@@ -158,7 +197,8 @@ struct Composer: View {
                         // (the Paste chip died; the flag lives on) — pasted
                         // content still previews in the parse card and saves.
                         .onChange(of: draft) { old, new in
-                            if new.count - old.count > 8 { pasted = true }
+                            if prefilled { prefilled = false }
+                            else if new.count - old.count > 8 { pasted = true }
                             if new.isEmpty { pasted = false }
                         }
                         .lineLimit(1...6)
@@ -193,9 +233,25 @@ struct Composer: View {
             // the field is empty (re-ruling 2026-07-08; the dead generic
             // chips stay dead — these are derived, and tap = send).
             if isOpen && !hasDraft && !answering && !isRecording,
-               proposal == nil, !suggestions.isEmpty {
+               proposal == nil, !suggestions.isEmpty || organizeHint != nil {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: DS.Space.s2) {
+                        // The organize invite LEADS — it exists to be seen
+                        // (the row scrolls; last seat hid the one chip that
+                        // teaches). Tap starts the command, not the send:
+                        // the field takes "tag <source> as " and the person
+                        // types the name (ruling 2026-07-10).
+                        if let hint = organizeHint {
+                            Button {
+                                DSHaptic.selection()
+                                fillDraft("tag \(hint.source.lowercased()) as ")
+                                fieldFocused = true
+                            } label: {
+                                Chip(text: "Tag your \(hint.count) \(hint.source) things",
+                                     style: .tint, glyph: "tag")
+                            }
+                            .buttonStyle(.plain)
+                        }
                         ForEach(suggestions, id: \.self) { ask in
                             Button {
                                 DSHaptic.selection()
@@ -352,8 +408,9 @@ struct Composer: View {
         if isOpen, !didAutoSend,
            let d = UserDefaults.standard.string(forKey: "composerDraft") {
             didAutoSend = true
-            draft = d
-            pasted = false
+            // fillDraft, not `pasted = false`: onChange runs AFTER this
+            // block, so a post-hoc reset was clobbered right back to true.
+            fillDraft(d)
             return
         }
         // `-composerType "…"` types the string character by character (for a
@@ -374,11 +431,10 @@ struct Composer: View {
         guard isOpen, !didAutoSend,
               let q = UserDefaults.standard.string(forKey: "uiAnswerProbe") else { return }
         didAutoSend = true
-        draft = q
+        // The probe is an utterance — answer, never save. fillDraft keeps
+        // the paste heuristic from reading the one-shot set as a capture.
+        fillDraft(q)
         try? await Task.sleep(for: .milliseconds(500))
-        // The one-shot draft set reads as a paste to the heuristic above;
-        // the probe is an utterance — answer, never save.
-        pasted = false
         commit()
         #endif
     }
@@ -449,8 +505,12 @@ struct Composer: View {
                 onCommitVoice(piece.transcript, piece.sourceRef)
             }
             close()
-        } else if pasted {
-            // Paste is a capture path — send keeps what came in.
+        } else if pasted, OrganizeCommand.parse(draft) == nil {
+            // Paste is a capture path — send keeps what came in. A command-
+            // shaped draft wins over the flag, though: the organize chip
+            // prefills "tag <source> as " and the person may PASTE the name
+            // (review 2026-07-10) — that paste must not turn the command
+            // into a captured note. The proposal card stays the consent.
             onCommit(Array(chosenTags))
             close()
         } else if let pinIntent = PinAsk.parse(draft) {

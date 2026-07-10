@@ -174,6 +174,17 @@ enum Organize {
         .sorted { $0.capturedAt > $1.capturedAt }
     }
 
+    /// True when a source NAME survives match() as a faithful source query —
+    /// no word of it would be swallowed as a kind filter or filler stopword.
+    /// The composer's organize invite only offers faithful sources: "tag
+    /// reminders as X" would match by KIND across every source, and "The
+    /// Browser" would shrink to the bare term "browser" (review 2026-07-10).
+    static func faithfulSourceQuery(_ source: String) -> Bool {
+        let words = source.lowercased().split(separator: " ").map(String.init)
+        guard !words.isEmpty else { return false }
+        return words.allSatisfy { !filler.contains($0) && kindWords[$0] == nil }
+    }
+
     /// A new tag reuses an existing tag's casing when one matches.
     private static func canonicalTag(_ raw: String, in all: [Thing]) -> String {
         let trimmed = raw.trimmingCharacters(in: .whitespaces)
