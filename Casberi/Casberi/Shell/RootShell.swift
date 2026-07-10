@@ -339,6 +339,9 @@ struct RootShell: View {
         case "account", "apps":
             tab = .home
             HomeRoute.shared.push = .apps
+        case "settings":
+            tab = .home
+            HomeRoute.shared.push = .settings
         case "thing":
             tab = .feed
             let part = url.pathComponents.filter { $0 != "/" }.first

@@ -1336,3 +1336,15 @@ Home background feature. B won: you're clearly inside that app's
 room, reading still happens on black. One recipe, no per-hue tuning;
 a source without a brand hue (and the All feed) stays black. The hue
 crossfades between shapes (id-keyed transition), never smears.
+
+## 43. Settings inflates out of the avatar (2026-07-10)
+
+User asked for a glass-bubble / water transition into Settings. Two
+candidates: (A) the system zoom transition anchored on the avatar —
+Settings inflates out of the circle with the system's fluid spring,
+zero added latency; (B) a Metal lens-refraction shader — literal
+water, but it must delay every push ~300ms while the ripple plays.
+Built A (recorded on-sim; the pop deflates back into the avatar).
+B stays on the shelf unless A proves not enough — a transition tax
+on every Settings visit is a real cost, the bubble is not.
+Also: casberi://settings deep link added (recording + parity).

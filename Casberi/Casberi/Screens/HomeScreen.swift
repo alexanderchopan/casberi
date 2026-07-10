@@ -26,6 +26,8 @@ final class HomeRoute {
 /// (top-right) pushes Apps. The grid wears an attention dot only when a bridge
 /// needs reconnecting — surfaced where it's earned, never a standing banner.
 struct HomeScreen: View {
+    /// Anchors the Settings zoom transition to the avatar door.
+    @Namespace private var doorNS
     @Query(sort: \Thing.capturedAt, order: .reverse) private var things: [Thing]
     @Environment(ShellChrome.self) private var chrome
     @Environment(BridgeStore.self) private var bridges
@@ -84,7 +86,8 @@ struct HomeScreen: View {
                 // them): avatar → Settings, grid (+ attention dot) → Apps.
                 TopDoors(onSettings: { route.push = .settings },
                          onApps: { route.push = .apps },
-                         refreshSpin: refreshTick)
+                         refreshSpin: refreshTick,
+                         zoomNS: doorNS)
             }
             // Topic blocks open project detail, not a Feed filter (gap §9.1).
             // The source-fallback map's cells name APPS, not tags — those open
@@ -158,7 +161,11 @@ struct HomeScreen: View {
             .navigationDestination(item: $route.push) { push in
                 switch push {
                 case .apps:     AppsScreen()
-                case .settings: SettingsScreen()
+                case .settings:
+                    // Settings inflates out of the avatar — a bubble, the
+                    // system's own glass grammar (B-ask ruling 2026-07-10).
+                    SettingsScreen()
+                        .navigationTransition(.zoom(sourceID: "settingsDoor", in: doorNS))
                 }
             }
             .navigationDestination(isPresented: $walletOpen) {

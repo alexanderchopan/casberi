@@ -24,6 +24,8 @@ import SwiftData
 /// (the consent card). Day groups, pins, swipes, the sheet, and write-confirm
 /// all survive inside shapes.
 struct FeedScreen: View {
+    /// Anchors the Settings zoom transition to the avatar door.
+    @Namespace private var doorNS
     @Query(sort: \Thing.capturedAt, order: .reverse) private var things: [Thing]
     @Environment(ShellChrome.self) private var chrome
     @Environment(BridgeStore.self) private var bridges
@@ -253,12 +255,15 @@ struct FeedScreen: View {
                     // The shell's doors ride every tab root (ruling 2026-07-06)
                     // — Feed had no way to Apps/Settings without visiting Home.
                     TopDoors(onSettings: { feedRoute.push = .settings },
-                             onApps: { feedRoute.push = .apps })
+                             onApps: { feedRoute.push = .apps },
+                             zoomNS: doorNS)
                 }
                 .navigationDestination(item: $feedRoute.push) { push in
                     switch push {
                     case .apps:     AppsScreen()
-                    case .settings: SettingsScreen()
+                    case .settings:
+                        SettingsScreen()
+                            .navigationTransition(.zoom(sourceID: "settingsDoor", in: doorNS))
                     }
                 }
                 .navigationDestination(item: $pushedBridge) { BridgeDestinationView(destination: $0) }
