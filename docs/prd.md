@@ -569,7 +569,7 @@ One synthesis statement per render. Facts only, provable from the corpus. Linked
 ## 32. Design principles
 
 ### 1. Apple grammar, token discipline
-One surface token `--ds-surface-sheet` (#111113 dark, #fff light) for cards, tiles, trays. Tinted background washes are banned. Text ramp: white / 60% / 30%. Hairline separators died by amendment: rows separate by spacing and press fills, groups by their card surfaces; nothing draws a line — the one exception is the Apps page's `fillLine` divider between the CONNECTED strip and Discover (the newer, more specific ruling at line 491, where the line does semantic work: management above, store below). SF ramp: 34/22/17/15/13/12/10. Squircle radii: cards 10, sheets 16, app icons 22.37%. Motion: 250ms, Apple sheet curve, one animation per moment. Every value routes through a token; components hold zero raw hex.
+One surface token `--ds-surface-sheet` (#111113 dark, #fff light) for cards, tiles, trays. Tinted background washes are banned. Text ramp: white / 60% / 30%. Hairline separators died by amendment: rows separate by spacing and press fills, groups by their card surfaces; nothing draws a line — the one exception is the Apps page's `fillLine` divider between the CONNECTED strip and Discover (the newer, more specific "Apps page — store anatomy" ruling, where the line does semantic work: management above, store below). SF ramp: 34/22/17/15/13/12/10. Squircle radii: cards 10, sheets 16, app icons 22.37%. Motion: 250ms, Apple sheet curve, one animation per moment. Every value routes through a token; components hold zero raw hex.
 
 ### 2. One tint
 iOS systemBlue dark `#0A84FF`, token `--ds-tint`, one-line swap. Tint marks the interactive and the primary. Orange attention, red destructive, green confirmation, nowhere else.
@@ -581,7 +581,7 @@ Color carries identity, state, or magnitude. Decoration banned. Magnitude: tint 
 Search, ask, capture in one field. Engaged, it takes the surface: the parse card assembles under the words as pieces resolve.
 
 ### 5. Bob's words
-Copy names what people control. "Apps," not connectors. Sentence case, plain verbs, numerals, no "successfully." Buttons say what happens. Errors say the fix. Empty states point to the first action.
+Copy names what people control. "Apps," not connectors. Sentence case, plain verbs, numerals, no "successfully." Buttons say what happens. Errors say the fix. Empty states point to the first action. Headers are sentence case too — no ALL-CAPS eyebrows, no letter-spacing / `.kerning()`; the type ramp carries hierarchy by size and weight alone (2026-07-08). This supersedes the ALL-CAPS eyebrow strings quoted in earlier rulings (e.g. "START HERE", "WHAT LANDED TODAY", "NEW") — those record the words, not the letterforms; the words render in sentence case.
 
 ### 6. Rows carry status
 Status on the row, in words, in semantic color. Broken sorts to top. No sections for one row, no chips on short lists, no dashboards.
