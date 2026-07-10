@@ -867,16 +867,17 @@ struct FeedScreen: View {
                         // chip names itself. "All" keeps its word — it has no app.
                         HStack(spacing: DS.Space.s1 + 2) {
                             if label != "All" {
-                                BridgeIcon(name: label, size: 24)
+                                // Circular, and sized to the chip when it's
+                                // icon-only: the logo IS the chip, not a
+                                // square floating in a circle (2026-07-10).
+                                BridgeIcon(name: label, size: isActive ? 24 : 32, circular: true)
                             }
                             if isActive || label == "All" {
                                 Text(label).dsText(.label12)
                                     .foregroundStyle(isActive ? DS.page : DS.textSecondary)
                             }
                         }
-                        // Icon-only chips are true 32pt circles — the logo
-                        // fills the chip instead of floating in it.
-                        .padding(.horizontal, isActive || label == "All" ? DS.Space.s3 : DS.Space.s1)
+                        .padding(.horizontal, isActive || label == "All" ? DS.Space.s3 : 0)
                         .frame(height: 32)
                         .background(isActive ? DS.textPrimary : DS.gray100,
                                     in: Capsule(style: .continuous))

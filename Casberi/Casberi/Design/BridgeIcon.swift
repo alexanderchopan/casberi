@@ -12,6 +12,10 @@ import SwiftUI
 struct BridgeIcon: View {
     let name: String
     var size: CGFloat = 44
+    /// Clip to a circle instead of the app-icon squircle — for chip
+    /// contexts, where a square asset inside a round chip read as a square
+    /// floating in a circle (report 2026-07-10).
+    var circular: Bool = false
     @Environment(\.colorScheme) private var scheme
 
     private var assetName: String {
@@ -20,21 +24,25 @@ struct BridgeIcon: View {
             .replacingOccurrences(of: ".", with: "")
     }
 
+    private var shape: AnyShape {
+        circular ? AnyShape(Circle())
+                 : AnyShape(RoundedRectangle(cornerRadius: DS.Radius.appIcon(size), style: .continuous))
+    }
+
     var body: some View {
-        let radius = DS.Radius.appIcon(size)
         if let ui = UIImage(named: assetName) {
             Image(uiImage: ui)
                 .resizable()
                 .scaledToFill()
                 .frame(width: size, height: size)
-                .clipShape(RoundedRectangle(cornerRadius: radius, style: .continuous))
+                .clipShape(shape)
         } else {
             let brand = BridgeGlyph.color(for: name)
             // Light mode pulls bright brand hues (Notes yellow, Reminders
             // orange) toward black and deepens the fill so the glyph reads
             // on light chips and cards.
             let glyph = scheme == .light ? brand.mix(with: .black, by: 0.35) : brand
-            RoundedRectangle(cornerRadius: radius, style: .continuous)
+            shape
                 .fill(brand.opacity(scheme == .light ? 0.24 : 0.18))
                 .frame(width: size, height: size)
                 .overlay(
