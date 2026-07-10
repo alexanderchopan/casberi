@@ -1,7 +1,31 @@
 {
   "images" : [
     {
-      "filename" : "casberi-icon.png",
+      "filename" : "casberi-final-berry-opaque-1024-light.png",
+      "idiom" : "universal",
+      "platform" : "ios",
+      "size" : "1024x1024"
+    },
+    {
+      "appearances" : [
+        {
+          "appearance" : "luminosity",
+          "value" : "dark"
+        }
+      ],
+      "filename" : "casberi-final-berry-opaque-1024-dark.png",
+      "idiom" : "universal",
+      "platform" : "ios",
+      "size" : "1024x1024"
+    },
+    {
+      "appearances" : [
+        {
+          "appearance" : "luminosity",
+          "value" : "tinted"
+        }
+      ],
+      "filename" : "casberi-final-berry-opaque-1024-tinted.png",
       "idiom" : "universal",
       "platform" : "ios",
       "size" : "1024x1024"
