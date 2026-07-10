@@ -1,12 +1,12 @@
 import SwiftUI
 import SwiftData
 
-/// Apps — store anatomy (docs/handoff-apps-page.md, mock M4): the connected
-/// strip (management) sits above a hairline; everything below the "Discover"
-/// heading is the store — a swipeable story carousel, a Browse category
-/// shelf, and one ranked "For you" chart. The grouped directory and the
-/// hardcoded featured hero died with it (singleton section headers, a wall of
-/// "Soon"); `CatalogScreen` is deleted — this page IS the catalog.
+/// Apps — ONE catalog (ruling 2026-07-10: the Connected strip died; the feed
+/// is where connected apps live, and this page is where you add and manage
+/// them from a single grid). Every app sits in its category shelf; a
+/// connected app's tile wears its status dot and opens MANAGEMENT, a
+/// broken one wears Fix, an available one wears Connect, a coming one Soon.
+/// The strip's hairline died with it — the app now draws no lines at all.
 ///
 /// LAYOUT LAW (the doc's): no fixed heights anywhere — every card, pill, and
 /// row sizes to its content plus token padding (minHeight only where a target
@@ -55,16 +55,17 @@ struct AppsScreen: View {
         offer.connectable || (offer.name == "Claude" && MCPPairing.transportReady)
     }
 
-    /// The chart is SMART (ruling 2026-07-06): it never repeats what the
-    /// strip already shows. Connected apps — healthy or broken — live in the
-    /// strip (breakage = the attention-dot grammar + Fix on the detail);
-    /// the chart is only what you can ADD: ready bridges, then coming ones.
+    /// ONE ranked list for the whole catalog (2026-07-10, strip removed):
+    /// tier 0 = connected but broken (Fix leads — it needs you), tier 1 =
+    /// ready to connect, tier 2 = connected and healthy (Open → manage),
+    /// tier 3 = coming (Soon). Every app appears exactly once.
     private var ranked: [Ranked] {
         BridgeCatalog.offers.compactMap { offer in
             let bridge = store.bridges.first { $0.name == offer.name }
-            // In the strip → not in the chart.
-            if let bridge, bridge.status != .paused { return nil }
-            let tier = actionable(offer) ? 1 : 3           // ready → Connect / Pair; coming → Soon
+            let tier: Int
+            if let bridge, bridge.status == .attention { tier = 0 }
+            else if let bridge, bridge.status != .paused { tier = 2 }
+            else { tier = actionable(offer) ? 1 : 3 }
             return Ranked(offer: offer, bridge: bridge, tier: tier)
         }
         .sorted { $0.tier < $1.tier }
@@ -111,19 +112,10 @@ struct AppsScreen: View {
 
     // MARK: - Body
 
-    /// The strip = active seats only. Paused bridges aren't connected — they
-    /// move to the chart as Connect, so nothing appears twice on this page.
-    private var connected: [BridgeApp] {
-        store.bridges.filter { $0.status != .paused }
-            .sorted { $0.status.rank < $1.status.rank }
-    }
-
     var body: some View {
         ScrollViewReader { proxy in
             ScrollView {
                 VStack(alignment: .leading, spacing: DS.Space.s6) {
-                    if !connected.isEmpty { connectedStrip }
-                    discoverDivide
                     if !stories.isEmpty {
                         storyCarousel
                         pageDots
@@ -165,67 +157,6 @@ struct AppsScreen: View {
                 setupRoute = BridgeRouter.destination(forOffer: name)
             }
             #endif
-        }
-    }
-
-    // MARK: - Connected strip (management — it never merchandises)
-
-    private var connectedStrip: some View {
-        VStack(alignment: .leading, spacing: DS.Space.s2) {
-            sectionHeader("Connected")
-                .padding(.horizontal, DS.Space.s4)
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(alignment: .top, spacing: DS.Space.s4) {
-                    ForEach(connected) { app in
-                        NavigationLink {
-                            BridgeDestinationView(destination: BridgeRouter.destination(forID: app.id))
-                        } label: {
-                            connectedChip(app)
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
-                .padding(.vertical, 4)
-            }
-            .contentMargins(.horizontal, DS.Space.s4, for: .scrollContent)
-        }
-    }
-
-    private func connectedChip(_ app: BridgeApp) -> some View {
-        let paused = app.status == .paused
-        return VStack(spacing: DS.Space.s1) {
-            BridgeIcon(name: app.name, size: 56)
-                .overlay(alignment: .topTrailing) {
-                    if !paused {
-                        Circle()
-                            .fill(app.status.color)
-                            .frame(width: 12, height: 12)
-                            .overlay(Circle().strokeBorder(DS.themedPage, lineWidth: 2))
-                            // One soft blink when the seat's proof updates —
-                            // "just checked", said without words.
-                            .pulseOnChange(of: app.statusLine)
-                            .offset(x: 3, y: -3)
-                    }
-                }
-            Text(paused ? "Paused" : app.name)
-                .dsText(.subhead13)
-                .foregroundStyle(paused ? DS.textTertiary : DS.textPrimary)
-                .lineLimit(1)
-        }
-        .frame(width: 64)
-        .opacity(paused ? 0.5 : 1)
-    }
-
-    // MARK: - The divide (management above, store below)
-
-    private var discoverDivide: some View {
-        VStack(alignment: .leading, spacing: DS.Space.s4) {
-            if !connected.isEmpty {
-                Rectangle().fill(DS.fillLine).frame(height: 1)
-                    .padding(.horizontal, DS.Space.s4)
-            }
-            Text("Discover").dsText(.heading22).foregroundStyle(DS.textPrimary)
-                .padding(.horizontal, DS.Space.s4)
         }
     }
 
@@ -468,17 +399,38 @@ struct AppsScreen: View {
         .contentMargins(.horizontal, DS.Space.s4, for: .scrollContent)
     }
 
-    /// One app inside a shelf — icon, name, honest subline, action capsule. The
-    /// row tap (outside the capsule) opens the product page. No rank number: a
-    /// shelf is a category, not a leaderboard.
+    /// One app inside a shelf — icon, name, honest subline, action capsule.
+    /// The row tap opens the product page for an app you could add, and
+    /// MANAGEMENT for one that's connected (its store pitch already worked).
+    /// A connected tile wears the status dot the old strip carried. No rank
+    /// number: a shelf is a category, not a leaderboard.
     private func appRow(_ entry: Ranked) -> some View {
         let soon = entry.tier == 3
+        let isConnected = entry.tier == 0 || entry.tier == 2
         return HStack(spacing: DS.Space.s3) {
-            NavigationLink { AppDetailScreen(offer: entry.offer) } label: {
+            NavigationLink {
+                if isConnected, let bridge = entry.bridge {
+                    BridgeDestinationView(destination: BridgeRouter.destination(forID: bridge.id))
+                } else {
+                    AppDetailScreen(offer: entry.offer)
+                }
+            } label: {
                 HStack(spacing: DS.Space.s3) {
                     BridgeIcon(name: entry.offer.name, size: 44)
                         .saturation(soon ? 0 : 1)
                         .opacity(soon ? 0.5 : 1)
+                        .overlay(alignment: .topTrailing) {
+                            if isConnected, let bridge = entry.bridge {
+                                Circle()
+                                    .fill(bridge.status.color)
+                                    .frame(width: 11, height: 11)
+                                    .overlay(Circle().strokeBorder(DS.themedPage, lineWidth: 2))
+                                    // One soft blink when the seat's proof
+                                    // updates — "just checked", without words.
+                                    .pulseOnChange(of: bridge.statusLine)
+                                    .offset(x: 3, y: -3)
+                            }
+                        }
                     VStack(alignment: .leading, spacing: 2) {
                         Text(entry.offer.name)
                             .dsText(.body17).fontWeight(.semibold)
@@ -512,6 +464,19 @@ struct AppsScreen: View {
     @ViewBuilder
     private func capsule(_ entry: Ranked) -> some View {
         switch entry.tier {
+        case 0:
+            // Broken connection — Fix opens management, where Reconnect lives.
+            if let bridge = entry.bridge {
+                VerbCapsule(verb: .fix) {
+                    setupRoute = BridgeRouter.destination(forID: bridge.id)
+                }
+            }
+        case 2:
+            if let bridge = entry.bridge {
+                VerbCapsule(verb: .open) {
+                    setupRoute = BridgeRouter.destination(forID: bridge.id)
+                }
+            }
         case 1:
             if entry.offer.name == "Claude" {
                 VerbCapsule(verb: .pair) { pairing = true }

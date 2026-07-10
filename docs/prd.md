@@ -1273,3 +1273,37 @@ glyph. Two causes, both corrected:
   backfills it onto EVERY existing post of theirs (matched by the handle
   in the permalink), so the whole feed wears faces, not just posts
   landed since the field shipped.
+
+## 39. One catalog — the Connected strip dies (2026-07-10)
+
+User: seeing connected apps in the Apps page AND as feed chips was
+redundant and confused navigation. Ruled: connected apps LIVE in the
+feed (chips to read, the shape's header door to manage); the Apps page
+is ONE grid where every app appears exactly once, and a connected
+app's tile wears its state instead of moving to a separate strip:
+
+- tier 0 connected-broken: status dot (orange), "Needs reconnecting",
+  Fix → management. Leads its shelf — it needs the person.
+- tier 1 ready: Connect (or Pair), as before.
+- tier 2 connected-healthy: status dot (green), statusLine subline,
+  Open → management. Row tap opens MANAGEMENT, not the store pitch —
+  its pitch already worked.
+- tier 3 coming: Soon.
+
+The strip's divider dies with it — the app now draws NO lines
+anywhere (supersedes the "one exception" hairline law; CLAUDE.md
+updated). Connection health also surfaces where the person lives: a
+feed chip whose bridge is in .attention wears an ORANGE ring (ink =
+active, orange = needs you, green = new since last visit).
+
+## 40. Approve/Deny tell the truth (2026-07-10)
+
+User: "how would a user 'approve' from inside our app?" Audit found
+two behaviors behind one button: an MCP save approval really commits
+the carried payload (consent → write, kept), but every other agent
+ask only marks the thing done locally — and the toast claimed
+"Approved — sent to your gateway" / "Denied — your gateway was told"
+when NOTHING is sent (no agent transport exists). Fake status,
+removed: the toasts now say just "Approved" / "Denied" — the answer
+is recorded on the thing, which is all that happens. Real outbound
+consent returns with the agent transport.

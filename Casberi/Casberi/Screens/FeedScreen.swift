@@ -955,6 +955,9 @@ struct FeedScreen: View {
                     ForEach(labels, id: \.self) { label in
                         let isActive = label == active
                         let hasNew = fresh.contains(label)
+                        let broken = bridges.bridges.contains {
+                            $0.name == label && $0.status == .attention
+                        }
                         ZStack {
                             if label == "All" {
                                 Circle().fill(DS.gray100)
@@ -967,14 +970,19 @@ struct FeedScreen: View {
                         .frame(width: 46, height: 46)
                         .padding(2.5)
                         .overlay(
+                            // Ink = active, orange = the connection needs you
+                            // (health lives where you live, 2026-07-10),
+                            // green = new since your last visit.
                             Circle().strokeBorder(
                                 isActive ? DS.textPrimary
-                                    : (hasNew ? DS.confirm : .clear),
+                                    : (broken ? DS.attention
+                                        : (hasNew ? DS.confirm : .clear)),
                                 lineWidth: 2.5)
                         )
                         .frame(width: 56, height: 56)
                         .id(label)
-                        .accessibilityLabel(label + (hasNew ? ", new things" : ""))
+                        .accessibilityLabel(label
+                            + (broken ? ", needs reconnecting" : (hasNew ? ", new things" : "")))
                         .accessibilityAddTraits(isActive ? .isSelected : [])
                         .onTapGesture { DSHaptic.selection(); withAnimation(DS.Motion.standard) { onTap(label) } }
                     }
@@ -1077,14 +1085,17 @@ struct FeedScreen: View {
                     try? modelContext.save()
                 }
                 DSHaptic.success()
-                chrome.flash("Approved — sent to your gateway")
+                // Honesty: the answer is recorded on the thing. Nothing is
+                // sent anywhere — no agent transport exists yet (2026-07-10;
+                // the old copy claimed a gateway was told).
+                chrome.flash("Approved")
             }
         case .deny:
             withAnimation(DS.Motion.standard) {
                 thing.mark = .done
                 try? modelContext.save()
             }
-            chrome.flash("Denied — your gateway was told")
+            chrome.flash("Denied")
         }
     }
 
