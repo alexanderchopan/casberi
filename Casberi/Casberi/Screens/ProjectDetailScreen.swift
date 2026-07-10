@@ -56,12 +56,19 @@ struct ProjectDetailScreen: View {
         .dsPageBackground()
         .navigationBarTitleDisplayMode(.inline)
         // Paint the whole composition at once — a record, not a stream (§5).
-        // The typewriter path was removed 2026-07-10: its main-actor tick (and
-        // the watchdog meant to rescue a stalled tick) both suspended under the
-        // shell's continuous chrome animation and never resumed, leaving a
-        // half-parsed widget — an empty "Recent"/"Saved" pane (audit finding).
-        // A record has no "still writing" state, so painting is also the honest
-        // load model here.
+        // This screen is a zoom-transition DESTINATION (HomeScreen pushes it
+        // with .navigationTransition(.zoom)). Streaming gen content under a zoom
+        // transition HANGS THE MAIN THREAD: each typewriter tick mutates `els`,
+        // which remounts widgets incrementally, and a widget mounting into the
+        // zoom-presented geometry drives SwiftUI into a layout cycle that never
+        // returns — the tick, its watchdog, and every other main-actor task stop
+        // (proven 2026-07-10 by a background-vs-main heartbeat: BG kept ticking,
+        // MAIN died at the 3rd widget). It reads as a half-parsed widget — an
+        // empty "Recent"/"Saved" pane (audit finding) — but the whole app is
+        // frozen; simctl still screenshots the framebuffer, which masked it.
+        // Painting sets `els` once (no incremental mounts) and sidesteps it, and
+        // a record has no "still writing" state, so painting is also honest here.
+        // RULE: any gen surface presented under a zoom transition must paint.
         .onAppear { stream.paint(compose()) }
         // The corpus changed under it — repaint whole.
         .onChange(of: things.count) { stream.paint(compose()) }
