@@ -58,7 +58,13 @@ final class ShareViewController: UIViewController {
         guard let container = try? SharedStore.extensionContainer() else { return false }
         let context = ModelContext(container)
         context.insert(thing)
-        return (try? context.save()) != nil
+        guard (try? context.save()) != nil else { return false }
+        // Leave the app a note: its @Query views never hear another
+        // process's save (SwiftData; Apple forums thread 764290), so a
+        // capture landed here stayed invisible until relaunch. The shell
+        // reconciles on its next foreground when this flag is up.
+        UserDefaults(suiteName: SharedStore.appGroup)?.set(true, forKey: "capture.landed")
+        return true
     }
 
     /// A small confirmation pill — Bob's words, no "successfully".

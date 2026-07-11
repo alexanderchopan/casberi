@@ -1711,3 +1711,34 @@ fake a curve. (8) Light mode pulls the state hues 35% toward black
 range switch is a data arrival. TokenChart.fetch gained a range
 parameter (default .day; TokenPulse and Diagnostics unchanged);
 `change24h` became range-generic `change`.
+
+## 52. Composer invisible — root-caused; the glass becomes a veneer (2026-07-11)
+
+The prd 44 symptom returned, now on Home (device report: FAB tap →
+keyboard up, no bubble). prd 44's underlay couldn't have held: it was
+a `.background` on the same view that `glassEffect` wraps, and
+glassEffect renders the WHOLE modified view as the glass element's
+content — a glitched morph takes the content and its underlay down
+together. Restructured so the failure can't reach the content: the
+field and chips never enter the glass; the bubble's background is a
+ZStack of the solid ink (plain fill, no glass) under a Color.clear
+glass VENEER that carries the "composer" morph id. A failed hardware
+morph now loses only the veneer's sheen — the composer itself cannot
+disappear. Look and morph are unchanged when the glass behaves.
+
+## 53. Shared captures land without a relaunch (2026-07-11)
+
+Device report: a note shared from Apple Notes said "Saved to Casberi"
+and never appeared. The write was real (same app-group store, correct
+entitlements); the app just never saw it — SwiftData's @Query does not
+observe another process's saves (Apple: forums thread 764290; their
+pattern is a foreground reconcile). Fix, both sides: the share
+extension leaves a `capture.landed` flag in the app-group defaults
+after a successful save (the `compose.request` handshake, reused);
+RootShell consumes it on foreground and nudges — one no-op dirty-save
+on the main context makes every @Query re-fetch, and fresh fetches DO
+read cross-process rows; the newest thing also gets the Spotlight pass
+the extension process couldn't give it. Honest caveat, prd 44 style:
+the dirty-save-as-@Query-kick is the standard workaround, not a
+documented contract — if a shared note still doesn't paint, the next
+step is consuming SwiftData history (HistoryDescriptor) instead.
