@@ -48,6 +48,14 @@ struct HomeScreen: View {
     @AppStorage("milestone.reached") private var milestoneReached = 0
     @State private var walletHoldings: [WalletIngest.HoldingsGroup] = []
     @Namespace private var zoomNS
+    /// The board (prd 58, Goal 1): which root refs from the last compose are
+    /// drag-reorderable modules, and their current display order (natural
+    /// order, permuted by any saved arrangement). `boardOrder` holds ref ids
+    /// (what GenRender needs to draw them); persistence goes through stable
+    /// content-derived keys (`moduleKey`) so a wallet's card stays "its"
+    /// card even if its slot index shifts as wallets are pinned/unpinned.
+    @State private var boardModuleRefs: Set<String> = []
+    @State private var boardOrder: [String] = []
 
     struct ProjectRoute: Identifiable, Hashable {
         let name: String
@@ -63,7 +71,18 @@ struct HomeScreen: View {
             GeometryReader { geo in
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
-                    GenRender(id: "root", els: stream.els)
+                    // The fixed head (cover, quiet-day invite, pin coach)
+                    // renders plainly, in doc order — only the board section
+                    // below it is a drag-reorderable stack (prd 58).
+                    let rootRefs = stream.els["root"]?.refs(0) ?? []
+                    ForEach(rootRefs.filter { !boardModuleRefs.contains($0) }, id: \.self) { ref in
+                        GenRender(id: ref, els: stream.els)
+                    }
+                    ReorderableBoard(order: $boardOrder) { ref in
+                        GenRender(id: ref, els: stream.els)
+                    } onReorder: { newOrder in
+                        HomeBoardOrder.shared.save(newOrder.map(moduleKey))
+                    }
                 }
                 .padding(.bottom, ShellMetrics.bottomInset)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -250,10 +269,51 @@ struct HomeScreen: View {
             : HomeComposition.compose(things: things, walletHoldings: walletHoldings,
                                       pinCoach: !pinCoachDone)
         if instant {
-            stream.paint(doc)   // an update, not an entrance — no typewriter
+            stream.paint(doc.lines)   // an update, not an entrance — no typewriter
         } else {
-            stream.stream(doc)
+            stream.stream(doc.lines)
         }
+        syncBoard(doc.boardRefs)
+    }
+
+    /// Re-derives the board's display order after a compose: which root refs
+    /// are modules this time (a wallet can appear/disappear from one compose
+    /// to the next), and where the saved arrangement puts them. Modules the
+    /// composer names today but the saved order never saw (a freshly pinned
+    /// wallet) land in their natural composed position — see
+    /// `HomeBoardOrder.apply`.
+    private func syncBoard(_ refs: [String]) {
+        boardModuleRefs = Set(refs)
+        // Two wallets can carry the same label (WalletStore only guards
+        // address uniqueness, never label) — de-duplicate colliding keys so
+        // a second "Main" wallet gets its own slot instead of silently
+        // overwriting the first one's in `refForKey` and vanishing.
+        var seen: [String: Int] = [:]
+        var refForKey: [String: String] = [:]
+        var naturalKeys: [String] = []
+        for ref in refs {
+            var key = moduleKey(ref)
+            let count = (seen[key] ?? 0) + 1
+            seen[key] = count
+            if count > 1 { key += " #\(count)" }
+            naturalKeys.append(key)
+            refForKey[key] = ref
+        }
+        boardOrder = HomeBoardOrder.shared.apply(to: naturalKeys).compactMap { refForKey[$0] }
+    }
+
+    /// A stable identity for a board ref, independent of its slot index — a
+    /// wallet's holdings map keeps its own key even as other wallets are
+    /// pinned/unpinned and shift `walletMapN`'s number around.
+    private func moduleKey(_ ref: String) -> String {
+        if ref == "pinnedW" { return "pinned" }
+        if ref == "map" { return "map" }
+        if ref.hasPrefix("walletMap"), let el = stream.els[ref] {
+            let eyebrow = el.str(0)
+            let label = eyebrow.hasPrefix("@pin ") ? String(eyebrow.dropFirst(5)) : eyebrow
+            return "wallet:\(label)"
+        }
+        return ref
     }
 
     /// Composing is synchronous; the holdings fetch isn't — load in the

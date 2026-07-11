@@ -12,11 +12,21 @@ import SwiftData
 /// bridge arrival. Evening (hour ≥ 15) leads with the TagMap.
 enum HomeComposition {
 
+    /// A composed document plus which of its root-level refs are board
+    /// MODULES (prd 58, Goal 1) — pinned things, a wallet's holdings map,
+    /// "What's going on". Everything else at root (the cover, the quiet-day
+    /// invite, the pin coach line) is fixed furniture, not a card the person
+    /// drags. HomeScreen reorders only within `boardRefs`.
+    struct Document {
+        let lines: [String]
+        let boardRefs: [String]
+    }
+
     static func compose(things: [Thing],
                         walletHoldings: [WalletIngest.HoldingsGroup] = [],
                         pinCoach: Bool = false,
                         hour: Int = Calendar.current.component(.hour, from: .now),
-                        weekday: Int = Calendar.current.component(.weekday, from: .now)) -> [String] {
+                        weekday: Int = Calendar.current.component(.weekday, from: .now)) -> Document {
         let projects = projectClusters(things: things)
         // Saturday/Sunday reads as a recap — the week, banked.
         if weekday == 1 || weekday == 7 {
@@ -35,9 +45,10 @@ enum HomeComposition {
 
     // MARK: - Documents
 
-    private static func morning(things: [Thing], projects: [Cluster], walletHoldings: [WalletIngest.HoldingsGroup] = [], pinCoach: Bool = false) -> [String] {
+    private static func morning(things: [Thing], projects: [Cluster], walletHoldings: [WalletIngest.HoldingsGroup] = [], pinCoach: Bool = false) -> Document {
         var doc: [String] = []
         var rootRefs: [String] = []
+        var boardRefs: [String] = []
 
         // The COVER (H7) replaces the sheet-card hero: the day's newest image
         // thing when one landed (this week as the fallback image), else the
@@ -57,8 +68,8 @@ enum HomeComposition {
         // (ruling 2026-07-09): a deliberate choice outranks an automatic
         // clustering, and it shouldn't cost a scroll to reach. User-chosen,
         // so it passes the no-obligations rule: Casberi never picked these.
-        appendPinned(things, coach: pinCoach, to: &doc, rootRefs: &rootRefs)
-        appendWalletHoldings(walletHoldings, to: &doc, rootRefs: &rootRefs)
+        appendPinned(things, coach: pinCoach, to: &doc, rootRefs: &rootRefs, boardRefs: &boardRefs)
+        appendWalletHoldings(walletHoldings, to: &doc, rootRefs: &rootRefs, boardRefs: &boardRefs)
 
         // Where the map belongs even when it didn't compose yet — the starter
         // preview slots in here, not at the tail.
@@ -71,25 +82,28 @@ enum HomeComposition {
             let items = projects.prefix(6).map { "\($0.name) \($0.things.count)" }
             doc.append("map = TagMap(\(q("What's going on")), null, [\(items.joined(separator: ", "))])")
             rootRefs.append("map")
+            boardRefs.append("map")
         } else {
             let sources = sourceClusters(things: things)
             if !sources.isEmpty {
                 let items = sources.prefix(6).map { "\($0.name) \($0.things.count)" }
                 doc.append("map = TagMap(\(q("What's going on")), \(q("By app — tags take over as they form")), [\(items.joined(separator: ", "))], \(q("source")))")
                 rootRefs.append("map")
+                boardRefs.append("map")
             }
         }
         appendStarterPreviews(things: things,
                               hasMap: rootRefs.contains("map"),
-                              mapSlot: mapSlot, to: &doc, rootRefs: &rootRefs)
+                              mapSlot: mapSlot, to: &doc, rootRefs: &rootRefs, boardRefs: &boardRefs)
 
         doc.insert("root = Stack([\(rootRefs.joined(separator: ", "))])", at: 0)
-        return doc
+        return Document(lines: doc, boardRefs: boardRefs)
     }
 
-    private static func evening(things: [Thing], projects: [Cluster], walletHoldings: [WalletIngest.HoldingsGroup] = [], pinCoach: Bool = false) -> [String] {
+    private static func evening(things: [Thing], projects: [Cluster], walletHoldings: [WalletIngest.HoldingsGroup] = [], pinCoach: Bool = false) -> Document {
         var doc: [String] = []
         var rootRefs: [String] = []
+        var boardRefs: [String] = []
 
         // The cover leads (H7); evening keeps its own lineup below it.
         doc.append(cover(things: things))
@@ -103,36 +117,39 @@ enum HomeComposition {
         }
 
         // Pinned rides evening too — same rule as morning, ahead of the map.
-        appendPinned(things, coach: pinCoach, to: &doc, rootRefs: &rootRefs)
-        appendWalletHoldings(walletHoldings, to: &doc, rootRefs: &rootRefs)
+        appendPinned(things, coach: pinCoach, to: &doc, rootRefs: &rootRefs, boardRefs: &boardRefs)
+        appendWalletHoldings(walletHoldings, to: &doc, rootRefs: &rootRefs, boardRefs: &boardRefs)
 
         let mapSlot = rootRefs.count
         if !projects.isEmpty {
             let items = projects.prefix(6).map { "\($0.name) \($0.things.count)" }
             doc.append("map = TagMap(\(q("What's going on")), null, [\(items.joined(separator: ", "))])")
             rootRefs.append("map")
+            boardRefs.append("map")
         } else {
             let sources = sourceClusters(things: things)
             if !sources.isEmpty {
                 let items = sources.prefix(6).map { "\($0.name) \($0.things.count)" }
                 doc.append("map = TagMap(\(q("What's going on")), \(q("By app — tags take over as they form")), [\(items.joined(separator: ", "))], \(q("source")))")
                 rootRefs.append("map")
+                boardRefs.append("map")
             }
         }
         appendStarterPreviews(things: things,
                               hasMap: rootRefs.contains("map"),
-                              mapSlot: mapSlot, to: &doc, rootRefs: &rootRefs)
+                              mapSlot: mapSlot, to: &doc, rootRefs: &rootRefs, boardRefs: &boardRefs)
 
         doc.insert("root = Stack([\(rootRefs.joined(separator: ", "))])", at: 0)
-        return doc
+        return Document(lines: doc, boardRefs: boardRefs)
     }
 
     /// Weekend — the week, banked: the recap voice rides the cover's eyebrow
     /// with the week's newest image (H7); then the map and threads. Same
     /// grammar, calmer voice; still no obligations.
-    private static func weekend(things: [Thing], projects: [Cluster], walletHoldings: [WalletIngest.HoldingsGroup] = [], pinCoach: Bool = false) -> [String] {
+    private static func weekend(things: [Thing], projects: [Cluster], walletHoldings: [WalletIngest.HoldingsGroup] = [], pinCoach: Bool = false) -> Document {
         var doc: [String] = []
         var rootRefs: [String] = []
+        var boardRefs: [String] = []
 
         let week = things.filter { $0.capturedAt > .now.addingTimeInterval(-7 * 86_400) }
 
@@ -162,26 +179,27 @@ enum HomeComposition {
             rootRefs.append("cover")
         }
 
-        appendPinned(things, coach: pinCoach, to: &doc, rootRefs: &rootRefs)
-        appendWalletHoldings(walletHoldings, to: &doc, rootRefs: &rootRefs)
+        appendPinned(things, coach: pinCoach, to: &doc, rootRefs: &rootRefs, boardRefs: &boardRefs)
+        appendWalletHoldings(walletHoldings, to: &doc, rootRefs: &rootRefs, boardRefs: &boardRefs)
 
         if !projects.isEmpty {
             let items = projects.prefix(6).map { "\($0.name) \($0.things.count)" }
             doc.append("map = TagMap(\(q("The week")), \(q("What it was about")), [\(items.joined(separator: ", "))])")
             rootRefs.append("map")
+            boardRefs.append("map")
         }
         doc.insert("root = Stack([\(rootRefs.joined(separator: ", "))])", at: 0)
-        return doc
+        return Document(lines: doc, boardRefs: boardRefs)
     }
 
     /// The empty state previews the real modules — the muted map shows the
     /// SHAPE of home and says plainly that connecting apps fills it.
     /// Preview, not fake data: kind names, no counts, nothing to tap.
-    static let empty: [String] = [
+    static let empty = Document(lines: [
         "root = Stack([hero, map])",
         "hero = Hero(\"Getting started\", \"Your home builds itself\", \"Connect an app or capture one thing - what lands composes this screen.\")",
         previewMapLine,
-    ]
+    ], boardRefs: [])
 
     /// The preview module, shared by the empty doc and the sparse-corpus path.
     private static let previewMapLine =
@@ -197,10 +215,13 @@ enum HomeComposition {
     /// cover/quiet/insight) — the preview takes that slot too, instead of
     /// trailing behind pinned content composed after it.
     private static func appendStarterPreviews(things: [Thing], hasMap: Bool, mapSlot: Int,
-                                              to doc: inout [String], rootRefs: inout [String]) {
+                                              to doc: inout [String], rootRefs: inout [String],
+                                              boardRefs: inout [String]) {
         guard isSparse(things), !hasMap else { return }
         doc.append(previewMapLine)
         rootRefs.insert("map", at: mapSlot)
+        // The preview isn't tappable (no real modules exist yet), so it
+        // isn't a board module either — nothing to drag before things land.
     }
 
     // MARK: - Derivations
@@ -332,12 +353,14 @@ enum HomeComposition {
     /// never learned the swipe. The surface owns the retire flag.
     private static func appendPinned(_ things: [Thing], coach: Bool,
                                      to doc: inout [String],
-                                     rootRefs: inout [String]) {
+                                     rootRefs: inout [String],
+                                     boardRefs: inout [String]) {
         let pinned = things.filter(\.pinned).prefix(6)
         guard !pinned.isEmpty else {
             if coach {
                 doc.append("pinCoach = Coach(\(q("Swipe a thing in Feed to pin it here.")))")
                 rootRefs.append("pinCoach")
+                // The coach line is a lesson, not a card — it isn't dragged.
             }
             return
         }
@@ -346,6 +369,7 @@ enum HomeComposition {
         doc.append("pinnedW = Widget(\(q("@pin")), null, [\(ids.joined(separator: ", "))])")
         for (i, t) in pinned.enumerated() { doc.append(row(id: "pn\(i)", t)) }
         rootRefs.append("pinnedW")
+        boardRefs.append("pinnedW")
     }
 
     /// Wallet holdings on Home (ruling 2026-07-08): pinning the wallet shows
@@ -358,7 +382,8 @@ enum HomeComposition {
     /// composing the doc is synchronous and the fetch is not.
     private static func appendWalletHoldings(_ groups: [WalletIngest.HoldingsGroup],
                                              to doc: inout [String],
-                                             rootRefs: inout [String]) {
+                                             rootRefs: inout [String],
+                                             boardRefs: inout [String]) {
         for (i, g) in groups.enumerated() {
             let id = "walletMap\(i)"
             // "@pin " leading the eyebrow → GenTagMap renders the Pinned
@@ -369,6 +394,7 @@ enum HomeComposition {
             // marker — there, nothing is pinned.
             doc.append("\(id) = TagMap(\(q("@pin " + g.label)), \(q(g.subline)), [\(g.cells.joined(separator: ", "))], \(q("token")))")
             rootRefs.append(id)
+            boardRefs.append(id)
         }
     }
 
