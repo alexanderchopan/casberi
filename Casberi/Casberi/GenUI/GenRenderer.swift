@@ -709,8 +709,18 @@ private struct GenMediaTile: View {
             if let size {
                 image.frame(width: size, height: size)
             } else {
-                image.aspectRatio(aspectRatio, contentMode: .fill)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                // A resizable().scaledToFill() image with no GeometryReader
+                // pins itself to the SOURCE photo's native size, not the
+                // card — a portrait screenshot then overflows the tile
+                // horizontally (the moodboard grid ran off-page, review
+                // 2026-07-11). GeometryReader + explicit frame + .clipped()
+                // is the same fix HomePageBackground already uses.
+                GeometryReader { geo in
+                    image
+                        .aspectRatio(aspectRatio, contentMode: .fill)
+                        .frame(width: geo.size.width, height: geo.size.height)
+                        .clipped()
+                }
             }
         }
         .clipShape(RoundedRectangle(cornerRadius: DS.Radius.control, style: .continuous))

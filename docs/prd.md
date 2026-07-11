@@ -1927,3 +1927,18 @@ catalog) both landed same-day. Home is the pinboard the mocks
 promised — movable, resizable, richly-drawn, and growing from wherever
 a person connects an app. prd 58/58a doctrine is now BUILT, not just
 ruled.
+
+## 58c. Large media tiles stay on the page (fix, 2026-07-11)
+
+Bug found in build 32: a screenshot's large-mode moodboard tile
+rendered off-page — the image overflowed past the screen edge. Root
+cause: `GenMediaTile`'s flexible-size path did
+`.aspectRatio(_, contentMode: .fill).frame(maxWidth: .infinity,
+maxHeight: .infinity)` with no GeometryReader, so a portrait photo
+sized itself to its OWN native pixels instead of the card — the
+same SwiftUI trap CLAUDE.md already documents ("a bare
+Image().resizable().scaledToFill() ... expands to image size").
+Fixed with the pattern HomePageBackground already uses:
+GeometryReader pins an explicit width/height, then `.clipped()`.
+Verified on sim with live Pinterest content (25 things) rendering a
+correctly bounded 2-column grid.
