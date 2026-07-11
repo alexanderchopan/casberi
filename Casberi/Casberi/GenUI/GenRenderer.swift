@@ -2,7 +2,6 @@ import SwiftUI
 import SwiftData
 import Photos
 import CoreImage
-import Charts
 
 /// The gen UI renderer — recursive over the element map, faithful to the v94
 /// prototype's RenderEl. A missing reference renders a skeleton in a row/tile
@@ -471,41 +470,34 @@ private struct GenTokenRow: View {
     @Environment(\.genThingUnpin) private var thingUnpin
     @Environment(\.genThingHandoff) private var thingHandoff
     @Environment(\.genRefreshTick) private var refreshTick
+    @Environment(\.colorScheme) private var scheme
 
-    private var up: Bool { (chart?.change24h ?? 0) >= 0 }
-    private var accent: Color { up ? DS.confirm : DS.destructive }
+    private var accent: Color {
+        TokenChartStyle.accent(up: (chart?.change ?? 0) >= 0, scheme: scheme)
+    }
 
     var body: some View {
         let row = VStack(alignment: .leading, spacing: DS.Space.s2) {
-            HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+            HStack(alignment: .center, spacing: DS.Space.s2) {
                 Text(el.str(0))
                     .dsText(.body17).foregroundStyle(DS.textPrimary)
                     .lineLimit(1)
                     .frame(maxWidth: .infinity, alignment: .leading)
                 if let chart {
-                    Text(priceText(chart.price))
+                    Text(TokenChartStyle.priceText(chart.price))
                         .dsText(.callout15).foregroundStyle(DS.textPrimary)
                         .contentTransition(.numericText())
                         .animation(DS.Motion.standard, value: chart.price)
-                    Text(changeText(chart.change24h))
-                        .dsText(.subhead13).foregroundStyle(accent)
+                    // The compact delta pill (prd 51) — Home and the sheet
+                    // read as one family; the row stays the glance (24h
+                    // fixed, no chips, no scrub at 48pt).
+                    TokenDeltaPill(change: chart.change, label: "24h", compact: true)
                 } else {
                     Text(el.str(3)).dsText(.subhead13).foregroundStyle(DS.textTertiary)
                 }
             }
             if let chart {
-                Chart(Array(chart.closes.enumerated()), id: \.offset) { i, close in
-                    LineMark(x: .value("t", i), y: .value("price", close))
-                        .interpolationMethod(.catmullRom)
-                        .foregroundStyle(accent)
-                    AreaMark(x: .value("t", i), y: .value("price", close))
-                        .interpolationMethod(.catmullRom)
-                        .foregroundStyle(accent.opacity(0.12))
-                }
-                .chartXAxis(.hidden)
-                .chartYAxis(.hidden)
-                .chartYScale(domain: .automatic(includesZero: false))
-                .frame(height: 48)
+                TokenChartPlot(chart: chart, accent: accent, height: 48)
                 .mask(alignment: .leading) {
                     GeometryReader { geo in
                         Rectangle().frame(width: revealed ? geo.size.width : 0)
@@ -535,15 +527,6 @@ private struct GenTokenRow: View {
         }
         row.pinnedRowActions(id: el.str(4), openable: el.str(5) == "app",
                              open: thingOpen, unpin: thingUnpin, handoff: thingHandoff)
-    }
-
-    private func priceText(_ p: Double) -> String {
-        if p >= 1 { return String(format: "$%.2f", p) }
-        if p >= 0.01 { return String(format: "$%.4f", p) }
-        return String(format: "$%.8f", p)
-    }
-    private func changeText(_ c: Double) -> String {
-        String(format: "%@%.1f%%", c >= 0 ? "+" : "", c * 100)
     }
 }
 
@@ -1250,16 +1233,19 @@ private struct GenApprovalCard: View {
 
 // MARK: - Cover (the slim data-first hero)
 
-/// Cover(eyebrow, title, subline, _, dateline, tag, [Tag N, ...]) — the
-/// slim data-first hero, painted straight on the page (2026-07-10): date,
-/// today's kind chips, and the "Just landed" card. The cover stopped being
-/// an image element when the Banner became the Background setting — the
-/// wallpaper is HomeScreen's page background now, and this block is just
-/// content on it. Arg 4 (the old thingId/banner ref) is vestigial and
-/// always empty; arg 6's tag still marks the stream complete.
+/// Cover(eyebrow, title, subline, source, dateline, tag, [Tag N, ...],
+/// thingId) — the slim data-first hero, painted straight on the page
+/// (2026-07-10): date, today's kind chips, and the "Just landed" card. The
+/// cover stopped being an image element when the Banner became the
+/// Background setting — the wallpaper is HomeScreen's page background now,
+/// and this block is just content on it. Arg 6's tag still marks the
+/// stream complete; arg 8 (2026-07-11, user) is the landed thing's id —
+/// the card opens it, same tap the Pinned rows carry.
 private struct GenCover: View {
     let el: GenEl
     @Environment(\.genCoverTopInset) private var topInset
+    @Environment(\.genThingOpen) private var thingOpen
+    @Environment(\.genProjectTap) private var projectTap
 
     /// Today's kind counts (arg 7) — the chip row that replaced the subline
     /// (ruling 2026-07-09); requireCount keeps a half-streamed tag from
@@ -1354,6 +1340,18 @@ private struct GenCover: View {
             // its own inks hold on any wallpaper behind it.
             .background(DS.surfaceSheet,
                         in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+            // What landed opens (2026-07-11, user: "shouldn't a user be
+            // able to tap it and go to it?") — the Pinned rows' tap, on
+            // the one freshest thing. The id streams in last, so the card
+            // simply isn't tappable until the line completes. "@week"
+            // (the weekend recap, prd 54) routes to the surface's tap
+            // handler instead — the ask, not a thing.
+            .contentShape(RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+            .onTapGesture {
+                let id = el.str(7)
+                guard !id.isEmpty else { return }
+                if id.hasPrefix("@") { projectTap?(id) } else { thingOpen?(id) }
+            }
         }
         .padding(DS.Space.s4)
     }

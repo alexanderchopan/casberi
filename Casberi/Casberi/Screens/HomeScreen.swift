@@ -98,6 +98,9 @@ struct HomeScreen: View {
                 if name == "@wallet" { walletOpen = true; return }
                 // The quiet day's invite opens the Apps page.
                 if name == "@apps" { route.push = .apps; return }
+                // The weekend recap is a door to the week's synthesis
+                // (prd 54): the composer opens and runs the week ask.
+                if name == "@week" { chrome.ask("What's this week?"); return }
                 let isTag = things.contains { $0.tags.contains(name) }
                 if !isTag, things.contains(where: { $0.source == name }) {
                     FeedFilter.shared.source = name

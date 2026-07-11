@@ -388,19 +388,42 @@ struct Composer: View {
             .padding(.bottom, DS.Space.s3)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        // A solid surface UNDER the glass (2026-07-10, device report:
-        // composer opened invisible over the store — keyboard up, no
-        // bubble). The real Liquid Glass morph can glitch on hardware;
-        // the underlay guarantees the bubble is never lost, and reads
-        // near-identically (glass over ink).
-        .background(DS.surfaceSheet.opacity(0.94), in: bubbleShape)
-        .dsGlass(cornerRadius: 24, glassID: "composer", in: glassNamespace)
+        // The bubble's surface, restructured (2026-07-11, device report:
+        // keyboard up, no bubble — this time on Home; prd 44's underlay
+        // didn't hold). Root cause: glassEffect renders the whole modified
+        // view AS the glass element's content, so when the hardware morph
+        // glitches, the content — and prd 44's underlay riding the same
+        // view — vanish with it. Now the field and chips never enter the
+        // glass: the solid ink is one background layer, the glass a clear
+        // VENEER above it carrying the morph id. A failed morph can only
+        // lose the veneer — the composer itself cannot disappear. Same
+        // look (glass over ink), same FAB→bubble morph when it works.
+        .background {
+            ZStack {
+                bubbleShape.fill(DS.surfaceSheet.opacity(0.94))
+                Color.clear
+                    .dsGlass(cornerRadius: 24, glassID: "composer", in: glassNamespace)
+            }
+        }
         .clipShape(bubbleShape)
         .scaleEffect(isOpen ? 1 : 0.3, anchor: .bottomTrailing)
         .task(id: isOpen) {
             if isOpen { computeSuggestions() }
+            await consumeAskRequest()
             await autoSendIfProbed()
         }
+    }
+
+    /// A surface handed the shell an ask (chrome.ask — the weekend cover's
+    /// week synthesis, prd 54): consume it once the bubble is up and send
+    /// through the real answer path. fillDraft keeps the paste heuristic
+    /// from reading the programmatic set as a capture.
+    private func consumeAskRequest() async {
+        guard isOpen, let query = chrome.askRequest else { return }
+        chrome.askRequest = nil
+        fillDraft(query)
+        try? await Task.sleep(for: .milliseconds(400))   // let the bubble settle
+        commit()
     }
 
     /// DEBUG hook: `simctl launch ... -uiAnswerProbe "what's my week"` opens

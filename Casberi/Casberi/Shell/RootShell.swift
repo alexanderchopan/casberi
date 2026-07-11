@@ -137,6 +137,15 @@ struct RootShell: View {
                     group?.removeObject(forKey: "compose.request")
                     withAnimation(DS.Motion.bubble) { composerOpen = true }
                 }
+                // A share-extension capture landed while we were away. Its
+                // write IS in the store file, but @Query never hears a
+                // foreign process's save (SwiftData; Apple's pattern is a
+                // foreground reconcile — forums thread 764290), so shared
+                // things stayed invisible until relaunch (2026-07-11).
+                if group?.bool(forKey: "capture.landed") == true {
+                    group?.removeObject(forKey: "capture.landed")
+                    nudgeAfterExternalCapture()
+                }
             } else {
                 if hasBeenActive && hidePreviews { redactNow = true }
                 if phase == .background {
@@ -150,6 +159,12 @@ struct RootShell: View {
         // Feed's back arrow asks this way (it can't hold a binding to
         // `tab`) — same shape as popHome/popFeed.
         .onChange(of: chrome.goHomeRequest) { withAnimation(DS.Motion.standard) { tab = .home } }
+        // A surface requested an ask (the weekend cover) — open the bubble;
+        // the composer consumes the query once it's up (prd 54).
+        .onChange(of: chrome.askRequest) { _, request in
+            guard request != nil else { return }
+            withAnimation(DS.Motion.bubble) { composerOpen = true }
+        }
         .dsSensoryFeedback()
         .environment(bridges)
         .environment(chrome)
@@ -430,6 +445,23 @@ struct RootShell: View {
         DSHaptic.success()
         land(thing, undoable: true)
         Task { @MainActor in await LinkTitle.enrich(thing, context: modelContext) }
+    }
+
+    /// Makes the share extension's writes visible without a relaunch:
+    /// re-assigning a stored property marks an object dirty, the save posts
+    /// this context's didSave, and every @Query re-runs — and a fresh fetch
+    /// DOES read rows another process committed. Net data change: none.
+    /// The newest thing also gets its missed Spotlight pass (the extension
+    /// process never indexes).
+    private func nudgeAfterExternalCapture() {
+        var descriptor = FetchDescriptor<Thing>(
+            sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
+        descriptor.fetchLimit = 1
+        guard let newest = try? modelContext.fetch(descriptor).first else { return }
+        newest.tags = newest.tags
+        try? modelContext.save()
+        SpotlightIndex.index([newest])
+        CorpusSignal.shared.bump()
     }
 
     /// A finished voice note lands as a voice thing; the transcript is its

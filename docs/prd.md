@@ -1667,3 +1667,116 @@ bar (timeline, tray, stack, plain waveform); ruled: Feed KEEPS the
 ECG trace — it's the pulse of your stuff. Diagnostics moves to
 "stethoscope": the instrument that listens, not the trace itself.
 The -feedSymbol mock hook came and went in the same session.
+
+## 50. Home's Pinned card holds six (user, 2026-07-11)
+
+The Pinned card's cap rises from 3 to 6 (the 2026-07-06 cap predated
+token watching — a small watchlist alone filled all three seats and
+the fourth pin silently never showed). Still newest first, still
+user-chosen only, so the no-obligations voice rule holds; the cap
+exists so Home stays a composition, not a scroll of pins.
+
+## 50a. "Just landed" opens (user, 2026-07-11)
+
+The cover's Just-landed card was the one thing-bearing block on Home
+you couldn't tap (user: "shouldn't a user be able to tap it and go to
+it?"). It now opens its thing's sheet — the same tap the Pinned rows
+earned on 2026-07-10, no long-press menu (nothing to unpin). The
+composition carries the thing id as the Cover's new trailing arg; the
+id streams in last, so a half-streamed card simply isn't tappable yet.
+
+## 51. The token chart grows up (user-approved mock, 2026-07-11)
+
+Ruled on an interactive mock (two passes), then built. One anatomy at
+two doses — `TokenChartView` is the sheet's full read, `TokenChartPlot`
+the bare plot the Home row reuses; the feed Sparkline is deliberately
+untouched. What shipped: (1) range chips 24h/7d/30d in the pill grammar
+— GeckoTerminal's hourly candles carry 24h and 7d, daily carry 30d, all
+free; the chosen range persists per token. (2) The delta wears a
+state-fill pill that names its window ("−1.8% · 24h") so the percent
+can't be misread against the wrong period. (3) Scrub, sheet only:
+press-then-drag (sequenced after a long-press so the sheet's scroll
+still wins a plain swipe); the header rolls to the scrubbed value, the
+finger carries only the when ("9h ago"), selection ticks per point.
+(4) High/low are the only numbers on the plot, tertiary, each anchored
+to its point by a 2.5pt dot — still no axes, no grid (the hairline law
+holds on charts). (5) Gradient area fade; the live endpoint pulses
+gently (the pulse claims only the endpoint; off under reduce-motion).
+(6) Loading is a skeleton of the exact anatomy with one slow shimmer,
+never a spinner. (7) The Dexscreener 5-point fallback stops pretending:
+straight segments, visible dots, "24h · 5 price points", no range
+chips; longer ranges without candles say so and step back rather than
+fake a curve. (8) Light mode pulls the state hues 35% toward black
+(BridgeIcon's mix). The draw-on reveal replays on range switch — a
+range switch is a data arrival. TokenChart.fetch gained a range
+parameter (default .day; TokenPulse and Diagnostics unchanged);
+`change24h` became range-generic `change`.
+
+## 52. Composer invisible — root-caused; the glass becomes a veneer (2026-07-11)
+
+The prd 44 symptom returned, now on Home (device report: FAB tap →
+keyboard up, no bubble). prd 44's underlay couldn't have held: it was
+a `.background` on the same view that `glassEffect` wraps, and
+glassEffect renders the WHOLE modified view as the glass element's
+content — a glitched morph takes the content and its underlay down
+together. Restructured so the failure can't reach the content: the
+field and chips never enter the glass; the bubble's background is a
+ZStack of the solid ink (plain fill, no glass) under a Color.clear
+glass VENEER that carries the "composer" morph id. A failed hardware
+morph now loses only the veneer's sheen — the composer itself cannot
+disappear. Look and morph are unchanged when the glass behaves.
+
+## 53. Shared captures land without a relaunch (2026-07-11)
+
+Device report: a note shared from Apple Notes said "Saved to Casberi"
+and never appeared. The write was real (same app-group store, correct
+entitlements); the app just never saw it — SwiftData's @Query does not
+observe another process's saves (Apple: forums thread 764290; their
+pattern is a foreground reconcile). Fix, both sides: the share
+extension leaves a `capture.landed` flag in the app-group defaults
+after a successful save (the `compose.request` handshake, reused);
+RootShell consumes it on foreground and nudges — one no-op dirty-save
+on the main context makes every @Query re-fetch, and fresh fetches DO
+read cross-process rows; the newest thing also gets the Spotlight pass
+the extension process couldn't give it. Honest caveat, prd 44 style:
+the dirty-save-as-@Query-kick is the standard workaround, not a
+documented contract — if a shared note still doesn't paint, the next
+step is consuming SwiftData history (HistoryDescriptor) instead.
+
+## 54. The weekend recap opens the week's synthesis (user, 2026-07-11)
+
+"Your week, banked" was a statement you could only read (user: it
+"should be a tappable object that synthesizes the week"). The weekend
+cover now carries "@week" in the Cover's id seat (the same seat the
+Just-landed card uses for its thing id, prd 50a); tapping the card
+opens the composer and sends "What's this week?" through the real
+answer path — a new chrome.ask(query) channel: RootShell opens the
+bubble on set, the composer consumes the query and commits it. One
+synthesis engine: the recap is a door into the ask, not a second
+week-renderer. A quiet week answers honestly.
+
+## 55. Your notes — the import group, and Notes tells the truth (user, 2026-07-11)
+
+Ruled after API research (verified live, not from memory): Day One has
+no public API and Zapier/IFTTT are write-only, but its iOS app exports
+a JSON zip; Apple Journal has no read API (JournalingSuggestions flows
+the OTHER way) but exports per-entry HTML from the profile menu; Apple
+Notes has nothing — no API, no export, share sheet only. So the
+catalog gains a "Your notes" group of three, each saying exactly what
+it is: DAY ONE and APPLE JOURNAL are one-time imports (the ChatGPT
+pattern — steps stated, one picker, dedupe on stable refs, newest-500
+cap, re-runs add only what's new; entries land as note things dated as
+written, Day One keeps tags, photos stay in the export for now, said
+on-screen). APPLE NOTES is the share-path explainer: its Connect
+routes to a screen that teaches open-note → share → Casberi, offers
+one real verb (Open Notes), and REGISTERS NO SEAT ever — nothing to
+connect, so no connected state to fake; the user's instinct ("then our
+whole notes section is some type of import... notes would be just a
+share to") became the design. The Journal parse is deliberately
+tolerant (filename carries date+title; body strips to text; Apple's
+format is undocumented and may drift). Debug: `-dayoneImport <path>`,
+`-journalImport <folder>`. Evernote stays OUT: key issuance frozen
+since Jan 2026, .enex is desktop-only — recheck later. Website updated
+in-session per the standing rule (marquee ×3, "Notes & journals"
+section, self-drawn inline icons — no Apple assets hotlinked or
+bundled).

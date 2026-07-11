@@ -1,8 +1,31 @@
 import Foundation
 
+/// A chart's time window (prd 51) — 24h stays the default everywhere the
+/// range picker doesn't show (feed pulse, Home row). GeckoTerminal serves
+/// all three for free: hourly candles carry 24h and 7d, daily carry 30d.
+enum TokenRange: String, CaseIterable {
+    case day = "24h", week = "7d", month = "30d"
+
+    /// GeckoTerminal OHLCV path piece + candle count.
+    var ohlcv: (timeframe: String, limit: Int) {
+        switch self {
+        case .day:   ("hour", 24)
+        case .week:  ("hour", 168)
+        case .month: ("day", 30)
+        }
+    }
+    /// Seconds per candle — the scrub's "9h ago" math.
+    var step: TimeInterval {
+        switch self {
+        case .day, .week: 3600
+        case .month:      86_400
+        }
+    }
+}
+
 /// A token's recent price, drawn natively (2026-07-07). The curve comes from
-/// GeckoTerminal's free public OHLCV (no key) — 24 real hourly candles — with
-/// a Dexscreener fallback for the long tail of tokens GeckoTerminal hasn't
+/// GeckoTerminal's free public OHLCV (no key) — real candles — with a
+/// Dexscreener fallback for the long tail of tokens GeckoTerminal hasn't
 /// indexed (a coarse 5-point curve back-solved from its m5/h1/h6/h24 change
 /// buckets; added 2026-07-09 after pinned memecoins stayed chartless on
 /// device). Either way Casberi draws it itself with Swift Charts rather than
@@ -10,7 +33,11 @@ import Foundation
 struct TokenChart {
     let closes: [Double]
     let price: Double
-    let change24h: Double   // fraction, e.g. -0.048 = -4.8%
+    let change: Double   // fraction over the fetched range, e.g. -0.048 = -4.8%
+    /// True for the Dexscreener 5-point fallback — the chart draws it as it
+    /// is (dots, straight segments, said out loud) and offers no ranges
+    /// (prd 51: a fallback curve stops pretending).
+    var coarse: Bool = false
 
     /// Pulls the token address (and chain) out of a dexscreener link like
     /// `https://dexscreener.com/base/0x…`.
@@ -34,18 +61,24 @@ struct TokenChart {
         "fantom": "ftm",
     ]
 
-    /// Fetches a token's recent price curve. GeckoTerminal's hourly OHLCV is the
-    /// primary source (24 real candles); when it has no pool for the token —
-    /// common for the long tail of memecoins it hasn't indexed — it falls back
-    /// to Dexscreener, which resolved the token in the first place and always
-    /// has a price for it. Returns nil only when neither source has any price.
-    static func fetch(chain: String, address: String) async -> TokenChart? {
-        if let chart = await geckoTerminal(chain: chain, address: address) { return chart }
-        return await dexscreener(chain: chain, address: address)
+    /// Fetches a token's price curve for the range. GeckoTerminal's OHLCV is
+    /// the primary source (real candles); when it has no pool for the token —
+    /// common for the long tail of memecoins it hasn't indexed — the 24h
+    /// fetch falls back to Dexscreener, which resolved the token in the first
+    /// place and always has a price for it. Longer ranges have no fallback
+    /// (Dexscreener's buckets only cover 24h): they return nil and the chart
+    /// says so instead of faking a week.
+    static func fetch(chain: String, address: String,
+                      range: TokenRange = .day) async -> TokenChart? {
+        if let chart = await geckoTerminal(chain: chain, address: address, range: range) {
+            return chart
+        }
+        return range == .day ? await dexscreener(chain: chain, address: address) : nil
     }
 
-    /// GeckoTerminal's ~24 hourly candles for the token's most-liquid pool.
-    private static func geckoTerminal(chain: String, address: String) async -> TokenChart? {
+    /// GeckoTerminal candles for the token's most-liquid pool.
+    private static func geckoTerminal(chain: String, address: String,
+                                      range: TokenRange) async -> TokenChart? {
         let network = geckoTerminalNetwork[chain] ?? chain
         let base = "https://api.geckoterminal.com/api/v2/networks/\(network)"
         guard let poolsRoot = await IngestSupport.getJSON("\(base)/tokens/\(address)/pools")
@@ -54,8 +87,9 @@ struct TokenChart {
               let pool = pools.first?["attributes"] as? [String: Any],
               let poolAddress = pool["address"] as? String else { return nil }
 
+        let (timeframe, limit) = range.ohlcv
         guard let ohlcvRoot = await IngestSupport.getJSON(
-            "\(base)/pools/\(poolAddress)/ohlcv/hour?limit=24") as? [String: Any],
+            "\(base)/pools/\(poolAddress)/ohlcv/\(timeframe)?limit=\(limit)") as? [String: Any],
               let data = ohlcvRoot["data"] as? [String: Any],
               let attrs = data["attributes"] as? [String: Any],
               let list = attrs["ohlcv_list"] as? [[Any]], list.count >= 2 else { return nil }
@@ -69,7 +103,7 @@ struct TokenChart {
         }
         guard let first = closes.first, let last = closes.last, first > 0 else { return nil }
         return TokenChart(closes: closes, price: last,
-                          change24h: (last - first) / first)
+                          change: (last - first) / first)
     }
 
     /// Dexscreener fallback — the token's live price plus its m5/h1/h6/h24
@@ -101,7 +135,8 @@ struct TokenChart {
 
         // Oldest → newest, the order the chart draws left to right.
         let closes = [ago("h24"), ago("h6"), ago("h1"), ago("m5"), price]
-        return TokenChart(closes: closes, price: price, change24h: pct("h24") / 100)
+        return TokenChart(closes: closes, price: price, change: pct("h24") / 100,
+                          coarse: true)
     }
 
     /// A JSON number that may arrive as Double, Int, or String.

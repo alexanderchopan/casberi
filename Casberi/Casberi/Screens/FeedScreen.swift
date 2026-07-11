@@ -75,7 +75,7 @@ struct FeedScreen: View {
             case "Reminders", "Todoist": self = .reminders
             case "OpenClaw":            self = .agent
             case "Safari":              self = .safari
-            case "Notes":               self = .notes
+            case "Notes", "Day One", "Apple Journal": self = .notes
             case "You", "Voice":        self = .you
             case "Apple Music", "Spotify": self = .music
             default:                    self = .plain
@@ -306,13 +306,16 @@ struct FeedScreen: View {
     }
 
     /// A slim, tappable strip above a single source's shaped feed: the app, its
-    /// live status, a chevron. Tapping opens the app's control panel (the detail
-    /// page): manage the connection, and Reconnect when the seat is broken. It
+    /// live status, a chevron. Tapping opens the app's control panel through
+    /// the router — the dedicated screen when the bridge has one (Dexscreener's
+    /// watchlist, Wallet's addresses), the generic detail page otherwise. It
     /// rides `pushedBridge` — the same channel a Wallet row already uses.
+    /// (2026-07-11: this hardcoded `.detail`, so Dexscreener's Feed header
+    /// opened a page with no way to watch a second token.)
     private func sourceHeader(_ bridge: BridgeApp) -> some View {
         Button {
             DSHaptic.selection()
-            pushedBridge = .detail(id: bridge.id)
+            pushedBridge = BridgeRouter.destination(forID: bridge.id)
         } label: {
             HStack(spacing: DS.Space.s3) {
                 BridgeIcon(name: bridge.name, size: 40)

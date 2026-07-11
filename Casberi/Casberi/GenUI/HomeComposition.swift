@@ -155,7 +155,10 @@ enum HomeComposition {
             // subline already carries that story; today-only counts under
             // "your week, banked" would misread as the week's composition
             // (and stacking both broke the counts-are-the-subline rule).
-            doc.append("cover = Cover(\(q("Weekend")), \(q(title)), \(q(subline)), \(q("")), \(q(dateline(things: things))), \(q("quiet")))")
+            // The trailing "@week" (prd 54) makes the card an ASK: tap
+            // sends "What's this week?" through the composer's answer
+            // path — the recap is a door to the week's synthesis.
+            doc.append("cover = Cover(\(q("Weekend")), \(q(title)), \(q(subline)), \(q("")), \(q(dateline(things: things))), \(q("quiet")), [], \(q("@week")))")
             rootRefs.append("cover")
         }
 
@@ -269,7 +272,6 @@ enum HomeComposition {
         // corpus enough times per render).
         let today = things.filter { Calendar.current.isDateInToday($0.capturedAt) }
         let chips = coverChips(today)
-        let chipsArg = chips.map { ", \($0)" } ?? ""
         // Quiet cover — the shipped Hero lines, verbatim priority. Approvals
         // never lead Home (voice guardrail: agent asks live in Feed; the cover
         // states what landed, never what's waiting on the person).
@@ -280,9 +282,12 @@ enum HomeComposition {
             // The 6th arg marks the stream complete so the renderer's black
             // field doesn't flash in before the doc settles. Arg 4 (the old
             // banner slot) carries the SOURCE now — the card leads with its
-            // app icon (2026-07-10, user).
+            // app icon (2026-07-10, user). Arg 8 is the thing's id — the
+            // card opens what landed (2026-07-11, user); the chips slot
+            // always emits (empty when quiet) so the id's seat holds.
             let subline = chips != nil ? "" : "\(latest.kind.typeTag) · \(latest.source)"
-            return "cover = Cover(\(q("Just landed · \(latest.source)")), \(q(latest.title)), \(q(subline)), \(q(latest.source)), \(q(date)), \(q(latest.kind.typeTag))\(chipsArg))"
+            let chipsSeat = chips.map { ", \($0)" } ?? ", []"
+            return "cover = Cover(\(q("Just landed · \(latest.source)")), \(q(latest.title)), \(q(subline)), \(q(latest.source)), \(q(date)), \(q(latest.kind.typeTag))\(chipsSeat), \(q(latest.id.uuidString)))"
         }
         return "cover = Cover(\(q("Now")), \(q("Your things go here")), \(q("Paste, speak, or share one in.")), \(q("")), \(q(date)), \(q("quiet")))"
     }
@@ -320,14 +325,15 @@ enum HomeComposition {
     }
 
     /// Feed pins surface on Home too (ruling 2026-07-06): a pin means "keep
-    /// this in view", and Home is the view. Newest first, capped at 3. With
-    /// no pins yet, one retiring coach line takes the slot (2026-07-10) —
-    /// the empty Pinned state taught nothing, so a new user never learned
-    /// the swipe. The surface owns the retire flag.
+    /// this in view", and Home is the view. Newest first, capped at 6
+    /// (raised from 3, prd 50 — a token watchlist alone can fill three
+    /// seats). With no pins yet, one retiring coach line takes the slot
+    /// (2026-07-10) — the empty Pinned state taught nothing, so a new user
+    /// never learned the swipe. The surface owns the retire flag.
     private static func appendPinned(_ things: [Thing], coach: Bool,
                                      to doc: inout [String],
                                      rootRefs: inout [String]) {
-        let pinned = things.filter(\.pinned).prefix(3)
+        let pinned = things.filter(\.pinned).prefix(6)
         guard !pinned.isEmpty else {
             if coach {
                 doc.append("pinCoach = Coach(\(q("Swipe a thing in Feed to pin it here.")))")

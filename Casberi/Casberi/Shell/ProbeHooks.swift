@@ -32,6 +32,19 @@ enum ProbeHooks {
             NSLog("ChatGPT probe: %d imported, %d skipped, failed=%d",
                   summary.imported, summary.skipped, summary.failed ? 1 : 0)
         },
+        // `-dayoneImport <path>` imports a Day One export .json from disk.
+        Hook(key: "dayoneImport") { path, context in
+            guard let data = FileManager.default.contents(atPath: path) else { return }
+            let summary = DayOneImport.run(data: data, context: context)
+            NSLog("Day One probe: %d imported, %d skipped, failed=%d",
+                  summary.imported, summary.skipped, summary.failed ? 1 : 0)
+        },
+        // `-journalImport <path>` imports an unzipped Apple Journal export folder.
+        Hook(key: "journalImport") { path, context in
+            let summary = JournalImport.run(folder: URL(fileURLWithPath: path), context: context)
+            NSLog("Journal probe: %d imported, %d skipped, failed=%d",
+                  summary.imported, summary.skipped, summary.failed ? 1 : 0)
+        },
         // `-tokenBridge "<Name>:<token>"` connects a token bridge headlessly.
         Hook(key: "tokenBridge") { spec, context in
             guard let colon = spec.firstIndex(of: ":"),

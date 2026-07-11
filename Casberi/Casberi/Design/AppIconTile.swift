@@ -47,7 +47,9 @@ extension DS {
         case "reminders":           return Color.fixed("#ff9500")
         case "photos":              return Color.fixed("#5e9ee6")
         case "x", "twitter":        return Color.fixed("#000000")
-        case "notes":               return Color.fixed("#ffcc00")
+        case "notes", "apple notes": return Color.fixed("#ffcc00")
+        case "apple journal":       return Color.fixed("#a06ee1")   // Journal's lavender
+        case "day one":             return Color.fixed("#44c0ff")   // Day One blue
         case "safari":              return Color.fixed("#1d9bf6")
         case "wallet":              return Color.fixed("#2461ff")
         case "dexscreener":         return Color.fixed("#151a21")   // their dark field
