@@ -91,8 +91,10 @@ enum RSSIngest {
         var reachedAny = false
 
         var existing = IngestSupport.existingSourceRefs(context)
+        let landed = IngestSupport.thingsByRef(context, source: "RSS")
         let backfill = ArtlessBackfill(context, source: "RSS")
         var added = 0
+        var touched = false
 
         for feed in store.feeds {
             guard let url = URL(string: feed.url) else { continue }
@@ -109,6 +111,12 @@ enum RSSIngest {
                     // An already-landed item still in the feed's window can
                     // hand its lead image to the artless row it became.
                     backfill.patch(ref, image: item.imageURL)
+                    // Titles stored before the entity decoder existed keep
+                    // their raw "&#8217;" forever unless healed here.
+                    if let thing = landed[ref] {
+                        let decoded = IngestSupport.decodeHTMLEntities(thing.title)
+                        if decoded != thing.title { thing.title = decoded; touched = true }
+                    }
                     continue
                 }
                 guard !item.title.isEmpty else { continue }
@@ -130,7 +138,7 @@ enum RSSIngest {
                 added += 1
             }
         }
-        if added > 0 || backfill.any { try? context.save() }
+        if added > 0 || backfill.any || touched { try? context.save() }
         // Every feed unreachable is a failed sync, not "up to date".
         return reachedAny ? added : nil
     }

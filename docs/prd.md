@@ -1591,3 +1591,19 @@ faces always but show pictures too." The avatar keeps the leading
 slot (WHO); when a post carries an image it rides at 26pt just before
 the timestamp (WHAT). Same scale, same one-line band — the ledger's
 rhythm holds, and a photo post finally shows its photo.
+
+## 47. Typography lands where it started (2026-07-10)
+
+The "everyone has their own font" question, explored and ruled. The
+list of candidates was surveyed (Söhne, Untitled Sans, ABC Diatype,
+GT America, Basel, custom commissions); the one concrete idea worth
+testing — SF Mono for data (timestamps, counts, prices, day
+numbers) — was mocked in the live app and rejected: at 11–13pt data
+sizes the mono texture is invisible, so it would be a cost (a second
+family, a new rule to police) with no visible yield. Ruled: "we
+stress tested the idea and for now this is where we land." The type
+system stays all-SF: SF Rounded for the display tier (heading34,
+heading22 — the soft voice, 2026-07-09), SF Pro crisp for everything
+functional. The identity carried by type is the soft-display /
+crisp-function contrast, not a licensed face. Revisit only if a real
+legibility or identity failure shows up, not for novelty.
