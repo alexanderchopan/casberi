@@ -1500,3 +1500,15 @@ effects CANNOT run on UIKit-backed views — a NavigationStack is one —
 so the live page can never wear the shader; frozen frames + the lift
 are the only honest mechanism. Settle haptic now fires when the liquid
 stills (lift start), not at unmount.
+
+## 43j. One liquid, both rooms (ruling, 2026-07-10)
+
+Asked and ruled: Settings and the app catalog share the SAME liquid
+transition — no per-destination effects. The transition is grammar,
+not decoration: it means "you're crossing from your content into a
+management room," and both doors are the same class of place in the
+same pill. Destinations differentiate by CONTENT (Settings arrives in
+your color; the store arrives with its carousel and shelves), never
+by transition. The system's one motion distinction stays directional:
+arriving 1.5s, leaving 1.1s — entering a room is heavier than
+stepping out.
