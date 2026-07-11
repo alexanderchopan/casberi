@@ -131,7 +131,6 @@ struct AppsScreen: View {
         .dsPageBackground()
         .navigationTitle("Apps")
         .navigationBarTitleDisplayMode(.large)
-        .liquidPoppable()
         .sheet(isPresented: $pairing) { PairClientSheet() }
         .navigationDestination(item: $setupRoute) { dest in
             BridgeDestinationView(destination: dest)

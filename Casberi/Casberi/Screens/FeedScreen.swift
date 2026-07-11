@@ -24,8 +24,8 @@ import SwiftData
 /// (the consent card). Day groups, pins, swipes, the sheet, and write-confirm
 /// all survive inside shapes.
 struct FeedScreen: View {
-    /// Both doors open through the liquid dissolve, same as Home.
-    @State private var liquid = LiquidPusher()
+    /// Anchors the doors' zoom transitions (each room grows from its door).
+    @Namespace private var doorNS
     @Query(sort: \Thing.capturedAt, order: .reverse) private var things: [Thing]
     @Environment(ShellChrome.self) private var chrome
     @Environment(BridgeStore.self) private var bridges
@@ -254,23 +254,21 @@ struct FeedScreen: View {
                     }
                     // The shell's doors ride every tab root (ruling 2026-07-06)
                     // — Feed had no way to Apps/Settings without visiting Home.
-                    TopDoors(onSettings: { liquid.open(push: { feedRoute.push = .settings },
-                                                        pop: { feedRoute.push = nil }) },
-                             onApps: { liquid.open(push: { feedRoute.push = .apps },
-                                                   pop: { feedRoute.push = nil }) })
+                    TopDoors(onSettings: { feedRoute.push = .settings },
+                             onApps: { feedRoute.push = .apps },
+                             zoomNS: doorNS)
                 }
                 .navigationDestination(item: $feedRoute.push) { push in
                     switch push {
-                    case .apps:     AppsScreen()
-                    case .settings: SettingsScreen()
+                    case .apps:
+                        AppsScreen()
+                            .navigationTransition(.zoom(sourceID: "appsDoor", in: doorNS))
+                    case .settings:
+                        SettingsScreen()
+                            .navigationTransition(.zoom(sourceID: "settingsDoor", in: doorNS))
                     }
                 }
                 .navigationDestination(item: $pushedBridge) { BridgeDestinationView(destination: $0) }
-        }
-        .liquidPushOverlay(liquid)
-        .environment(liquid)
-        .onChange(of: feedRoute.push) { _, now in
-            if now == nil, !liquid.active { liquid.clearPop() }
         }
         .tint(DS.tint)
         // Re-tapping the Feed tab pops pushed screens and sheets back to root.

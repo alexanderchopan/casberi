@@ -1548,3 +1548,22 @@ look), the final register: FELT more than watched. Open 0.65s / pop
 a gentle heave, not a buzz); shimmer to 0.06/0.04. The liquid should
 read as the page taking a breath, not a water show. Full parameter
 trail: 0.95→1.3→1.5→1.15→0.65; amplitudes 26→42→16.
+
+## 45. The zoom returns; the liquid retires (2026-07-10, the settling)
+
+After twelve drafts of liquid, the closing critique named the category
+error: "it feels like an effect, not a transition." A transition reads
+as TRAVEL when it has GEOMETRY — the page itself moving encodes where
+the new place came from. The dissolve deliberately had none: two
+static pages under rippling pixels, so at every amplitude it read as a
+treatment over a swap. No tuning could fix that.
+
+Settled: both rooms open with the system ZOOM, each growing from ITS
+door (Settings from the avatar, the store from the grid — sourceIDs
+settingsDoor/appsDoor). This is the first draft returned to with
+conviction: it is causal, native, and it restores for free everything
+the liquid hand-built — real interactive edge-swipe scrubbing, system
+back, Reduce Motion handling — with zero shaders, snapshots, or races.
+One grammar, both rooms (43j holds). The liquid code is deleted (git
+history keeps every draft); its yield stays: the doctrine trail in
+43–43l and prd 44's composer hardening, which remains shipped.

@@ -13,6 +13,10 @@ struct TopDoors: ToolbarContent {
     /// while the refresh runs (2026-07-10): it's the person's own face
     /// doing the work. 0 everywhere else (Feed never spins).
     var refreshSpin: Int = 0
+    /// The zoom transitions' anchors (restored 2026-07-10, prd 45): each
+    /// room grows out of ITS door — Settings from the avatar, the store
+    /// from the grid. Geometry is what makes a transition read as travel.
+    var zoomNS: Namespace.ID? = nil
     /// Taps bounce their door (Telegram grammar, same as the tab icons).
     @State private var appsBounce = 0
     @State private var avatarBounce = 0
@@ -26,7 +30,12 @@ struct TopDoors: ToolbarContent {
                 appsBounce += 1
                 onApps()
             } label: {
-                AppsDoor().symbolEffect(.bounce, value: appsBounce)
+                if let zoomNS {
+                    AppsDoor().symbolEffect(.bounce, value: appsBounce)
+                        .matchedTransitionSource(id: "appsDoor", in: zoomNS)
+                } else {
+                    AppsDoor().symbolEffect(.bounce, value: appsBounce)
+                }
             }
             .accessibilityLabel("Apps")
             .tint(DS.tint)
@@ -34,9 +43,16 @@ struct TopDoors: ToolbarContent {
                 avatarBounce += 1
                 onSettings()
             } label: {
-                AvatarDoor()
-                    .modifier(DoorBounce(trigger: avatarBounce))
-                    .modifier(DoorSpin(trigger: refreshSpin))
+                if let zoomNS {
+                    AvatarDoor()
+                        .modifier(DoorBounce(trigger: avatarBounce))
+                        .modifier(DoorSpin(trigger: refreshSpin))
+                        .matchedTransitionSource(id: "settingsDoor", in: zoomNS)
+                } else {
+                    AvatarDoor()
+                        .modifier(DoorBounce(trigger: avatarBounce))
+                        .modifier(DoorSpin(trigger: refreshSpin))
+                }
             }
             .accessibilityLabel("Settings")
         }
