@@ -1539,3 +1539,12 @@ solid surfaceSheet underlay beneath the bubble's glass — a failed
 morph can no longer leave the composer invisible, and the look is
 unchanged (glass over ink). If the next build still fails on device,
 next step is on-device instrumentation of the glass container.
+
+## 43l. Fast and subtle — the liquid settles (2026-07-10)
+
+After living with big waves ("more liquid and faster" lasted one
+look), the final register: FELT more than watched. Open 0.65s / pop
+0.5s, lift 0.2s; amplitudes down to 16/12pt (broad wave shapes kept —
+a gentle heave, not a buzz); shimmer to 0.06/0.04. The liquid should
+read as the page taking a breath, not a water show. Full parameter
+trail: 0.95→1.3→1.5→1.15→0.65; amplitudes 26→42→16.

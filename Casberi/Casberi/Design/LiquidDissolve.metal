@@ -27,10 +27,10 @@ static float2 rippleField(float2 uv, float t, float phase) {
     float2 uv = position / size;
     float env = progress * (1.0 - progress) * 4.0;     // 0 → 1 → 0
     float2 wave = rippleField(uv, progress, 0.0);
-    half4 c = layer.sample(position + wave * env * 42.0);
+    half4 c = layer.sample(position + wave * env * 16.0);
 
     // Shimmer: the ripples catch light where they crest — subtle, additive.
-    float shimmer = env * max(0.0, wave.x * wave.y) * 0.13;
+    float shimmer = env * max(0.0, wave.x * wave.y) * 0.06;
     c.rgb += half3(shimmer);
 
     // The dissolve itself: full through 25%, gone by 85% — wide overlap so
@@ -50,8 +50,8 @@ static float2 rippleField(float2 uv, float t, float phase) {
     float settle = (1.0 - progress) * (1.0 - progress); // 1 → 0, soft landing
     float env = min(1.0, progress * 3.0) * settle;      // ramps in, settles out
     float2 wave = rippleField(uv, progress, 1.7);
-    half4 c = layer.sample(position + wave * env * 34.0);
-    float shimmer = env * max(0.0, wave.x * wave.y) * 0.06;
+    half4 c = layer.sample(position + wave * env * 12.0);
+    float shimmer = env * max(0.0, wave.x * wave.y) * 0.04;
     c.rgb += half3(shimmer);
     return c;
 }
