@@ -1581,3 +1581,13 @@ shape; Casberi is where things LAND, reading happens one tap away
 numeric HTML entities in RSS titles ("&#8217;") — decoding now lives
 in IngestSupport.decodeHTMLEntities (named + numeric refs), shared by
 RSS titles and LinkTitle.
+
+## 46a. Faces AND pictures (amendment, 2026-07-10)
+
+The one-slot casualty surfaced: since faces always lead (38), a
+post's attached photo vanished from the feed entirely — "From my walk
+this morning" showed a face and a caption, not the walk. Ruled: "keep
+faces always but show pictures too." The avatar keeps the leading
+slot (WHO); when a post carries an image it rides at 26pt just before
+the timestamp (WHAT). Same scale, same one-line band — the ledger's
+rhythm holds, and a photo post finally shows its photo.

@@ -143,6 +143,14 @@ struct BandRow: View {
                 .strikethrough(done, color: DS.textTertiary)
                 .lineLimit(2)
                 .frame(maxWidth: .infinity, alignment: .leading)
+            // A post with a photo shows BOTH (ruling 2026-07-10: "keep faces
+            // always but show pictures too"): the avatar keeps the leading
+            // slot — who — and the attached image rides here before the
+            // time — what. Same 26pt scale, so the band's rhythm holds.
+            if identityAvatarURL != nil,
+               let art = thing.previewImageURL, !art.isEmpty {
+                RemoteThumb(urlString: art, size: 26, fallback: thing.source)
+            }
             VStack(alignment: .trailing, spacing: 1) {
                 if let pulse {
                     Sparkline(closes: pulse.closes, up: pulse.change24h >= 0)
