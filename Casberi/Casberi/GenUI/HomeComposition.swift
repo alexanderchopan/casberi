@@ -70,6 +70,7 @@ enum HomeComposition {
         // so it passes the no-obligations rule: Casberi never picked these.
         appendPinned(things, coach: pinCoach, to: &doc, rootRefs: &rootRefs, boardRefs: &boardRefs)
         appendWalletHoldings(walletHoldings, to: &doc, rootRefs: &rootRefs, boardRefs: &boardRefs)
+        appendMediaModules(things, to: &doc, rootRefs: &rootRefs, boardRefs: &boardRefs)
 
         // Where the map belongs even when it didn't compose yet — the starter
         // preview slots in here, not at the tail.
@@ -119,6 +120,7 @@ enum HomeComposition {
         // Pinned rides evening too — same rule as morning, ahead of the map.
         appendPinned(things, coach: pinCoach, to: &doc, rootRefs: &rootRefs, boardRefs: &boardRefs)
         appendWalletHoldings(walletHoldings, to: &doc, rootRefs: &rootRefs, boardRefs: &boardRefs)
+        appendMediaModules(things, to: &doc, rootRefs: &rootRefs, boardRefs: &boardRefs)
 
         let mapSlot = rootRefs.count
         if !projects.isEmpty {
@@ -181,6 +183,7 @@ enum HomeComposition {
 
         appendPinned(things, coach: pinCoach, to: &doc, rootRefs: &rootRefs, boardRefs: &boardRefs)
         appendWalletHoldings(walletHoldings, to: &doc, rootRefs: &rootRefs, boardRefs: &boardRefs)
+        appendMediaModules(things, to: &doc, rootRefs: &rootRefs, boardRefs: &boardRefs)
 
         if !projects.isEmpty {
             let items = projects.prefix(6).map { "\($0.name) \($0.things.count)" }
@@ -398,6 +401,83 @@ enum HomeComposition {
         }
     }
 
+    // MARK: - Rich module interiors (prd 58, Goal 3)
+
+    /// Music, Pinterest, and screenshots each earn a board module once a
+    /// source has landed enough to be worth its own card — same threshold
+    /// `sourceClusters` uses for the treemap (2, min-magnitude rule). Social
+    /// (Bluesky/Farcaster) earns a card the moment ONE post exists: it's a
+    /// single latest-post card, not a magnitude cluster, so there's no
+    /// "not enough yet" state to wait out.
+    private static func appendMediaModules(_ things: [Thing], to doc: inout [String],
+                                           rootRefs: inout [String], boardRefs: inout [String]) {
+        let pinned = HomePinnedSources.shared.sources
+        // A pinned source (prd 58, Goal 4 — "Pin to Home" on the source's
+        // own screen) earns its card the moment it has ONE real thing,
+        // instead of waiting to cross the automatic magnitude threshold —
+        // pinning doesn't invent content, it just skips the wait.
+        func earned(_ items: [Thing], pinnedAs name: String) -> Bool {
+            items.count >= 2 || (pinned.contains(name) && !items.isEmpty)
+        }
+        let music = things.filter { $0.source == "Apple Music" }
+        if earned(music, pinnedAs: "Apple Music") {
+            appendMediaShelf(id: "musicShelf", eyebrow: "Apple Music", kind: "music",
+                             items: music, to: &doc, rootRefs: &rootRefs, boardRefs: &boardRefs)
+        }
+        let pins = things.filter { $0.source == "Pinterest" }
+        if earned(pins, pinnedAs: "Pinterest") {
+            appendMediaShelf(id: "pinShelf", eyebrow: "Pinterest", kind: "pinterest",
+                             items: pins, to: &doc, rootRefs: &rootRefs, boardRefs: &boardRefs)
+        }
+        let shots = things.filter { $0.kind == .screenshot }
+        if earned(shots, pinnedAs: "Photos") {
+            appendMediaShelf(id: "shotShelf", eyebrow: "Screenshots", kind: "screenshot",
+                             items: shots, to: &doc, rootRefs: &rootRefs, boardRefs: &boardRefs)
+        }
+        for source in ["Bluesky", "Farcaster"] {
+            guard let latest = things.first(where: { $0.source == source }) else { continue }
+            appendSocialCard(id: "social\(source)", source: source, thing: latest,
+                             to: &doc, rootRefs: &rootRefs, boardRefs: &boardRefs)
+        }
+    }
+
+    /// A source's image strip — newest first, capped at 12 (regular shows
+    /// what fits on a scroll, large's grid shows the rest as it grows).
+    private static func appendMediaShelf(id: String, eyebrow: String, kind: String, items: [Thing],
+                                         to doc: inout [String], rootRefs: inout [String],
+                                         boardRefs: inout [String]) {
+        let capped = Array(items.prefix(12))
+        let itemIds = capped.indices.map { "\(id)i\($0)" }
+        doc.append("\(id) = MediaShelf(\(q(eyebrow)), \(q("")), [\(itemIds.joined(separator: ", "))], \(q(kind)))")
+        for (i, t) in capped.enumerated() { doc.append(mediaItem(id: "\(id)i\(i)", t)) }
+        rootRefs.append(id)
+        boardRefs.append(id)
+    }
+
+    /// MediaItem(title, imageURL, thingId, openable) — a shelf's child line.
+    /// A screenshot carries no image URL (its bytes are local, prd 48); the
+    /// renderer resolves those by thing id instead (`genThumbnailData`).
+    private static func mediaItem(id: String, _ t: Thing) -> String {
+        let openable = VerbDerivation.verbs(for: t).contains {
+            if case .openURL = $0.action { return true } else { return false }
+        } ? "app" : ""
+        return "\(id) = MediaItem(\(q(t.title)), \(q(t.previewImageURL ?? "")), \(q(t.id.uuidString)), \(q(openable)))"
+    }
+
+    /// SocialCard(source, handle, avatarURL, text, imageURL, thingId,
+    /// openable) — the source's single newest post. "Clean" per the ruling:
+    /// one card, not a mini-feed.
+    private static func appendSocialCard(id: String, source: String, thing t: Thing,
+                                         to doc: inout [String], rootRefs: inout [String],
+                                         boardRefs: inout [String]) {
+        let openable = VerbDerivation.verbs(for: t).contains {
+            if case .openURL = $0.action { return true } else { return false }
+        } ? "app" : ""
+        doc.append("\(id) = SocialCard(\(q(source)), \(q(t.authorHandle ?? "")), \(q(t.authorAvatarURL ?? "")), \(q(t.title)), \(q(t.previewImageURL ?? "")), \(q(t.id.uuidString)), \(q(openable)))")
+        rootRefs.append(id)
+        boardRefs.append(id)
+    }
+
     /// A token link leads with its price chart, same rule as the thing sheet
     /// (ThingContent.swift) — the token's "media" is the chart, not a link
     /// row. The trailing thing id makes the row interactive on Home (tap
@@ -425,7 +505,13 @@ enum HomeComposition {
     /// Quotes a string for the document; strips embedded quotes rather than
     /// escaping (the line grammar has no escape sequence).
     private static func q(_ s: String) -> String {
-        "\"\(s.replacingOccurrences(of: "\"", with: ""))\""
+        // GenParser splits the whole document on "\n" per line (brief §5) —
+        // a raw newline inside a value (a multi-line social post, Goal 3)
+        // would fracture one doc line into several malformed ones. Collapse
+        // to spaces, same "no escape sequence" treatment as embedded quotes.
+        let flat = s.replacingOccurrences(of: "\r\n", with: " ")
+            .replacingOccurrences(of: "\n", with: " ")
+        return "\"\(flat.replacingOccurrences(of: "\"", with: ""))\""
     }
 }
 

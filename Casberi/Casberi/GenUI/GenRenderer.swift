@@ -68,6 +68,28 @@ extension EnvironmentValues {
         get { self[GenRefreshTickKey.self] }
         set { self[GenRefreshTickKey.self] = newValue }
     }
+    /// True while the board module currently rendering is in its LARGE
+    /// state (prd 58a) — set per top-level card by the surface (HomeScreen
+    /// scopes it to each board ref); descendants inherit it, so a pinned
+    /// row rendered inside a large Widget sees the same flag. false (and a
+    /// no-op) outside Home.
+    var genModuleLarge: Bool {
+        get { self[GenModuleLargeKey.self] }
+        set { self[GenModuleLargeKey.self] = newValue }
+    }
+    /// Tap-the-pin (prd 58a): the pin on any board module is a button —
+    /// tap toggles that module between regular and large. nil outside Home.
+    var genSizeToggle: ((String) -> Void)? {
+        get { self[GenSizeToggleKey.self] }
+        set { self[GenSizeToggleKey.self] = newValue }
+    }
+    /// A screenshot's own stored thumbnail bytes (prd 48) — local, not a
+    /// URL, so a media tile resolves it by thing id rather than a doc-line
+    /// image ref. nil outside Home.
+    var genThumbnailData: ((String) -> Data?)? {
+        get { self[GenThumbnailDataKey.self] }
+        set { self[GenThumbnailDataKey.self] = newValue }
+    }
 }
 
 private struct GenProseStreamingKey: EnvironmentKey {
@@ -88,6 +110,15 @@ private struct GenThingHandoffKey: EnvironmentKey {
 }
 private struct GenRefreshTickKey: EnvironmentKey {
     static let defaultValue = 0
+}
+private struct GenModuleLargeKey: EnvironmentKey {
+    static let defaultValue = false
+}
+private struct GenSizeToggleKey: EnvironmentKey {
+    static let defaultValue: ((String) -> Void)? = nil
+}
+private struct GenThumbnailDataKey: EnvironmentKey {
+    static let defaultValue: ((String) -> Data?)? = nil
 }
 
 private struct GenZoomNSKey: EnvironmentKey {
@@ -148,7 +179,7 @@ struct GenRender: View {
                     .padding(.top, DS.Space.s2)
             }
             #endif
-            GenWidget(el: el, els: els).mountIn()
+            GenWidget(id: id, el: el, els: els).mountIn()
         case "Row":         GenRow(el: el).mountIn()
         case "TokenRow":    GenTokenRow(el: el).mountIn()
         case "Suggest":     GenSuggest().mountIn()
@@ -171,14 +202,20 @@ struct GenRender: View {
                     .padding(.top, DS.Space.s2)
             }
             #endif
-            GenTagMap(el: el).mountIn()
+            GenTagMap(id: id, el: el).mountIn()
         // The starter shape: same geometry, muted fill, nothing to tap — an
         // honest preview of the map that composes once things land.
-        case "TagMapPreview": GenTagMap(el: el, preview: true).mountIn()
+        case "TagMapPreview": GenTagMap(id: id, el: el, preview: true).mountIn()
         // A quiet day's slot is a DOOR now, not a logo (2026-07-10, user:
         // the berry under a quiet cover was saying quiet twice and doing
         // nothing) — connect more apps and quiet days get rarer.
         case "AppsInvite":  GenAppsInvite(el: el).mountIn()
+        // Rich module interiors (prd 58, Goal 3) — music/Pinterest/
+        // screenshots (a source's own image strip) and a social source's
+        // single latest post. Board members exactly like pinned/wallet/map:
+        // draggable (Goal 1), sizable via the same pin (Goal 2).
+        case "MediaShelf":  GenMediaShelf(id: id, el: el, els: els).mountIn()
+        case "SocialCard":  GenSocialCard(id: id, el: el).mountIn()
         // One retiring teaching line (Feed's coach grammar) — plain tinted
         // words, no overlays, no arrows.
         case "Coach":       GenCoach(el: el).mountIn()
@@ -349,15 +386,20 @@ private struct GenInsight: View {
 /// Widget(title, count?, children) — a sheet card of rows. The literal
 /// title "@pin" renders as an oversized, tilted pin instead of a word
 /// (2026-07-10, user): the pin glyph is universally readable, and the
-/// Pinned card earns a little personality.
+/// Pinned card earns a little personality. The pin is also the size
+/// control (prd 58a) — tap it and the card blooms to LARGE, where its rows
+/// become a moodboard grid of tiles instead of a list.
 private struct GenWidget: View {
+    let id: String
     let el: GenEl
     let els: GenEls
+    @Environment(\.genModuleLarge) private var large
+    @Environment(\.genSizeToggle) private var sizeToggle
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
                 if el.str(0) == "@pin" {
-                    PinMark()
+                    PinMark(large: large) { sizeToggle?(id) }
                 } else {
                     Text(el.str(0)).dsText(.heading22).foregroundStyle(DS.textPrimary)
                 }
@@ -369,7 +411,11 @@ private struct GenWidget: View {
             }
             .padding(.init(top: DS.Space.s4, leading: DS.Space.s4,
                            bottom: DS.Space.s1, trailing: DS.Space.s4))
-            ForEach(el.refs(2), id: \.self) { GenRender(id: $0, els: els, slot: .row) }
+            if large {
+                GenMoodboardGrid(refs: el.refs(2), els: els)
+            } else {
+                ForEach(el.refs(2), id: \.self) { GenRender(id: $0, els: els, slot: .row) }
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.bottom, DS.Space.s2)
@@ -383,20 +429,422 @@ private struct GenWidget: View {
 /// The Pinned card's oversized pin — it SETTLES on appearance, a small
 /// spring from upright toward its resting tilt, like being pressed into
 /// the card (2026-07-10; same entrance-plays-once rule as everything else).
+/// Now also the module's size control (prd 58a): a tap presses the pin in
+/// and toggles regular/large — the only way to grow a card, no menu, no
+/// edit mode.
 private struct PinMark: View {
+    var large: Bool = false
+    var onTap: (() -> Void)? = nil
     @State private var settled = false
     var body: some View {
-        Image(systemName: "pin.fill")
-            .font(.system(size: 28, weight: .semibold))
-            .foregroundStyle(DS.textPrimary)
-            .rotationEffect(.degrees(settled ? -35 : -8), anchor: .bottomLeading)
-            .padding(.top, DS.Space.s1)
-            .accessibilityLabel("Pinned")
-            .onAppear {
-                withAnimation(.spring(response: 0.5, dampingFraction: 0.55).delay(0.15)) {
-                    settled = true
+        Button {
+            onTap?()
+        } label: {
+            Image(systemName: "pin.fill")
+                .font(.system(size: 28, weight: .semibold))
+                .foregroundStyle(DS.textPrimary)
+                .rotationEffect(.degrees(settled ? -35 : -8), anchor: .bottomLeading)
+                .padding(.top, DS.Space.s1)
+        }
+        .buttonStyle(PressSpring())
+        .accessibilityLabel(large ? "Pinned things, tap to shrink" : "Pinned things, tap to grow")
+        .onAppear {
+            withAnimation(.spring(response: 0.5, dampingFraction: 0.55).delay(0.15)) {
+                settled = true
+            }
+        }
+    }
+}
+
+/// The pinned card's LARGE interior (prd 58, 58a) — a moodboard grid of
+/// square tiles instead of thin rows; each thing gets a tile-sized surface
+/// (glyph, title, source/time) instead of a line. Same tap/long-press
+/// actions as the regular row (`pinnedRowActions`) — growing the card
+/// changes its shape, never its behavior.
+private struct GenMoodboardGrid: View {
+    let refs: [String]
+    let els: GenEls
+    var body: some View {
+        LazyVGrid(columns: [GridItem(.flexible(), spacing: DS.Space.s3),
+                             GridItem(.flexible(), spacing: DS.Space.s3)],
+                  spacing: DS.Space.s3) {
+            ForEach(refs, id: \.self) { ref in
+                if let el = els[ref] {
+                    GenMoodTile(el: el).mountIn()
+                } else {
+                    GenSkeletonTile(minHeight: 128)
                 }
             }
+        }
+        .padding(.horizontal, DS.Space.s4)
+        .padding(.top, DS.Space.s1)
+        .padding(.bottom, DS.Space.s2)
+    }
+}
+
+/// One moodboard tile — reads the SAME args a Row/TokenRow line already
+/// carries (title, tag/chain, source, time, thing id, openable), just laid
+/// out as a square card instead of a line. No new doc grammar.
+private struct GenMoodTile: View {
+    let el: GenEl
+    @Environment(\.genThingOpen) private var thingOpen
+    @Environment(\.genThingUnpin) private var thingUnpin
+    @Environment(\.genThingHandoff) private var thingHandoff
+
+    private var isToken: Bool { el.comp == "TokenRow" }
+    private var glyphTag: String { isToken ? "Link" : el.str(1) }
+    private var subline: String { isToken ? el.str(1) : el.str(2) }
+    private var thingId: String { el.str(4) }
+    private var openable: Bool { el.str(5) == "app" }
+
+    var body: some View {
+        let tile = VStack(alignment: .leading, spacing: DS.Space.s2) {
+            TagGlyph(tag: glyphTag, size: 26)
+            Spacer(minLength: 0)
+            Text(el.str(0))
+                .dsText(.body17).foregroundStyle(DS.textPrimary)
+                .lineLimit(2).fixedSize(horizontal: false, vertical: true)
+            if !subline.isEmpty {
+                Text(subline).dsText(.subhead13).foregroundStyle(DS.textTertiary).lineLimit(1)
+            }
+        }
+        .padding(DS.Space.s3)
+        .frame(maxWidth: .infinity, minHeight: 128, alignment: .topLeading)
+        .background(DS.surfaceSheet,
+                    in: RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
+        .contentShape(RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
+        tile.pinnedRowActions(id: thingId, openable: openable,
+                              open: thingOpen, unpin: thingUnpin, handoff: thingHandoff)
+    }
+}
+
+/// MediaShelf(eyebrow, subline, [itemRefs], kind) — a source's own image
+/// strip (regular) or grid/full-bleed (large): music album art, Pinterest
+/// pins, screenshot thumbnails (prd 58, Goal 3). Same pin, same drag, same
+/// row actions as every other board module — only the interior is source-
+/// shaped. `kind` ∈ "music" | "pinterest" | "screenshot": music alone goes
+/// full-bleed large (prd 58's literal wording); the other two grow into a
+/// moodboard grid, the same idiom the pinned card's large form uses.
+private struct GenMediaShelf: View {
+    let id: String
+    let el: GenEl
+    let els: GenEls
+    @Environment(\.genModuleLarge) private var large
+    @Environment(\.genSizeToggle) private var sizeToggle
+
+    private var kind: String { el.str(3) }
+    private var refs: [String] { el.refs(2) }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: 7) {
+                if let sizeToggle {
+                    Button {
+                        sizeToggle(id)
+                    } label: {
+                        Image(systemName: "pin.fill")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(DS.textSecondary)
+                            .rotationEffect(.degrees(-35), anchor: .bottomLeading)
+                    }
+                    .buttonStyle(PressSpring())
+                    .accessibilityLabel(large ? "Shrink" : "Grow")
+                }
+                Text(el.str(0)).dsText(.label12).foregroundStyle(DS.textSecondary)
+            }
+            .padding(.leading, DS.Space.s4)
+            .padding(.bottom, el.str(1).isEmpty ? DS.Space.s3 : 0)
+            if !el.str(1).isEmpty {
+                Text(el.str(1))
+                    .dsText(.callout15).foregroundStyle(DS.textSecondary)
+                    .padding(.leading, DS.Space.s4)
+                    .padding(.top, DS.Space.s1)
+                    .padding(.bottom, DS.Space.s3)
+            }
+
+            if kind == "music", large {
+                GenMusicHero(refs: refs, els: els)
+            } else if large {
+                GenMediaGrid(refs: refs, els: els)
+            } else {
+                GenMediaStrip(refs: refs, els: els)
+            }
+        }
+        .padding(.top, DS.Space.s4)
+        .padding(.bottom, DS.Space.s2)
+    }
+}
+
+/// The regular strip — square tiles, horizontally scrolling.
+private struct GenMediaStrip: View {
+    let refs: [String]
+    let els: GenEls
+    var body: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: DS.Space.s2) {
+                ForEach(refs, id: \.self) { ref in
+                    if let el = els[ref] {
+                        GenMediaTile(el: el, size: 96)
+                    } else {
+                        GenSkeletonTile(minHeight: 96).frame(width: 96)
+                    }
+                }
+            }
+            .padding(.horizontal, DS.Space.s4)
+        }
+    }
+}
+
+/// The large grid — Pinterest/screenshots grow into a moodboard, the same
+/// 2-column idiom the pinned card's large form uses (Goal 2), just with
+/// real images instead of glyph tiles.
+private struct GenMediaGrid: View {
+    let refs: [String]
+    let els: GenEls
+    var body: some View {
+        Group {
+            // A single pinned item (below the usual 2-item magnitude) gets
+            // one full-width tile rather than a 2-column grid with an empty
+            // half — a lone tile beside a blank cell reads as broken, not
+            // as a moodboard.
+            if refs.count == 1 {
+                if let ref = refs.first, let el = els[ref] {
+                    GenMediaTile(el: el, size: nil).frame(height: 220)
+                } else {
+                    GenSkeletonTile(minHeight: 220)
+                }
+            } else {
+                LazyVGrid(columns: [GridItem(.flexible(), spacing: DS.Space.s3),
+                                     GridItem(.flexible(), spacing: DS.Space.s3)],
+                          spacing: DS.Space.s3) {
+                    ForEach(refs, id: \.self) { ref in
+                        if let el = els[ref] {
+                            GenMediaTile(el: el, size: nil).frame(height: 160)
+                        } else {
+                            GenSkeletonTile(minHeight: 160)
+                        }
+                    }
+                }
+            }
+        }
+        .padding(.horizontal, DS.Space.s4)
+    }
+}
+
+/// Music's large form — literally full-bleed (prd 58's wording): the
+/// newest track's own art fills the card edge to edge, title/artist over
+/// a bottom scrim. The rest of the strip rides below, still tappable.
+private struct GenMusicHero: View {
+    let refs: [String]
+    let els: GenEls
+    private var lead: GenEl? { refs.first.flatMap { els[$0] } }
+    private var rest: [String] { Array(refs.dropFirst()) }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s3) {
+            if let lead {
+                GenMediaTile(el: lead, size: nil, aspectRatio: 1.4, overlayTitle: true)
+                    .frame(height: 220)
+                    .padding(.horizontal, DS.Space.s4)
+            }
+            if !rest.isEmpty { GenMediaStrip(refs: rest, els: els) }
+        }
+    }
+}
+
+/// One media tile — reads a MediaItem's args (title, imageURL, thing id,
+/// openable). A screenshot carries no imageURL (its bytes are local, prd
+/// 48) — `genThumbnailData` resolves those by thing id instead. Same tap/
+/// long-press vocabulary as every other Home row (`pinnedRowActions`).
+private struct GenMediaTile: View {
+    let el: GenEl
+    /// A fixed square side, or nil to fill the parent (the grid/hero cases).
+    var size: CGFloat? = 96
+    var aspectRatio: CGFloat = 1
+    /// Hero mode: the title/artist ride a bottom scrim over the image.
+    var overlayTitle: Bool = false
+    @Environment(\.genThingOpen) private var thingOpen
+    @Environment(\.genThingUnpin) private var thingUnpin
+    @Environment(\.genThingHandoff) private var thingHandoff
+    @Environment(\.genThumbnailData) private var thumbnailData
+
+    private var title: String { el.str(0) }
+    private var imageURL: String { el.str(1) }
+    private var thingId: String { el.str(2) }
+    private var openable: Bool { el.str(3) == "app" }
+
+    /// "Title — Artist" (the music ingest's own stored form, ShapedRows'
+    /// MusicRow parses the same way) — the hero splits it so the artist
+    /// rides its own line; every other tile shows the raw title.
+    private var heroParts: (title: String, artist: String?) {
+        let comps = title.components(separatedBy: " — ")
+        guard comps.count > 1, let artist = comps.last else { return (title, nil) }
+        return (comps.dropLast().joined(separator: " — "), artist)
+    }
+
+    @ViewBuilder private var image: some View {
+        if !imageURL.isEmpty {
+            // RemoteThumb is a fixed icon square (its own `.frame` inside);
+            // the grid/hero forms need the image to FILL whatever frame
+            // the layout gives it, so they get the flexible loader instead.
+            if let size {
+                RemoteThumb(urlString: imageURL, size: size)
+            } else {
+                GenFlexThumb(urlString: imageURL)
+            }
+        } else if let data = thumbnailData?(thingId), let ui = UIImage(data: data) {
+            Image(uiImage: ui).resizable().scaledToFill()
+        } else {
+            ZStack {
+                DS.gray200
+                Image(systemName: "photo")
+                    .font(.system(size: (size ?? 96) * 0.3, weight: .medium))
+                    .foregroundStyle(DS.textTertiary)
+            }
+        }
+    }
+
+    var body: some View {
+        let frame = Group {
+            if let size {
+                image.frame(width: size, height: size)
+            } else {
+                image.aspectRatio(aspectRatio, contentMode: .fill)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+        }
+        .clipShape(RoundedRectangle(cornerRadius: DS.Radius.control, style: .continuous))
+        .overlay(alignment: .bottomLeading) {
+            if overlayTitle {
+                let parts = heroParts
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(parts.title).dsText(.heading17).foregroundStyle(.white).lineLimit(1)
+                    if let artist = parts.artist {
+                        Text(artist).dsText(.subhead13).foregroundStyle(.white.opacity(0.85)).lineLimit(1)
+                    }
+                }
+                .padding(DS.Space.s3)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(
+                    LinearGradient(colors: [.black.opacity(0.55), .clear],
+                                   startPoint: .bottom, endPoint: .center)
+                )
+                .clipShape(RoundedRectangle(cornerRadius: DS.Radius.control, style: .continuous))
+            }
+        }
+        .contentShape(RoundedRectangle(cornerRadius: DS.Radius.control, style: .continuous))
+        frame.pinnedRowActions(id: thingId, openable: openable,
+                               open: thingOpen, unpin: thingUnpin, handoff: thingHandoff)
+    }
+}
+
+/// A flexible-size remote image — the same bytes `RemoteThumb` would fetch,
+/// but scaled to FILL whatever frame the caller gives it instead of
+/// RemoteThumb's fixed icon-square shape (which the large-form grid/hero/
+/// attached-post-image layouts all need). No cache/dead-URL bookkeeping —
+/// a lighter loader for a first pass; URLSession's own HTTP cache still
+/// avoids re-fetching the same URL.
+private struct GenFlexThumb: View {
+    let urlString: String
+    @State private var image: UIImage?
+    @State private var failed = false
+    var body: some View {
+        Group {
+            if let image {
+                Image(uiImage: image).resizable().scaledToFill()
+            } else if failed {
+                ZStack {
+                    DS.gray200
+                    Image(systemName: "photo")
+                        .font(.system(size: 24, weight: .medium))
+                        .foregroundStyle(DS.textTertiary)
+                }
+            } else {
+                DS.gray200
+            }
+        }
+        .task(id: urlString) { await load() }
+    }
+    private func load() async {
+        image = nil
+        failed = false
+        guard let url = URL(string: urlString),
+              let (data, _) = try? await URLSession.shared.data(from: url),
+              let ui = UIImage(data: data) else {
+            failed = !Task.isCancelled
+            return
+        }
+        withAnimation(DS.Motion.standard) { image = ui }
+    }
+}
+
+/// SocialCard(source, handle, avatarURL, text, imageURL, thingId, openable)
+/// — a social source's single latest post, clean (prd 58: "avatar + latest
+/// post, clean"). Regular is compact; large gives the avatar and text more
+/// room and the attached image (if any) rides full width — still ONE post,
+/// never a feed (that's what Feed is for).
+private struct GenSocialCard: View {
+    let id: String
+    let el: GenEl
+    @Environment(\.genModuleLarge) private var large
+    @Environment(\.genSizeToggle) private var sizeToggle
+    @Environment(\.genThingOpen) private var thingOpen
+    @Environment(\.genThingUnpin) private var thingUnpin
+    @Environment(\.genThingHandoff) private var thingHandoff
+
+    private var source: String { el.str(0) }
+    private var handle: String { el.str(1) }
+    private var avatarURL: String { el.str(2) }
+    private var text: String { el.str(3) }
+    private var imageURL: String { el.str(4) }
+    private var thingId: String { el.str(5) }
+    private var openable: Bool { el.str(6) == "app" }
+    private var avatarSize: CGFloat { large ? 44 : 28 }
+
+    var body: some View {
+        let card = VStack(alignment: .leading, spacing: DS.Space.s3) {
+            HStack(spacing: 7) {
+                if let sizeToggle {
+                    Button {
+                        sizeToggle(id)
+                    } label: {
+                        Image(systemName: "pin.fill")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(DS.textSecondary)
+                            .rotationEffect(.degrees(-35), anchor: .bottomLeading)
+                    }
+                    .buttonStyle(PressSpring())
+                    .accessibilityLabel(large ? "Shrink" : "Grow")
+                }
+                Text(source).dsText(.label12).foregroundStyle(DS.textSecondary)
+            }
+            HStack(alignment: .top, spacing: DS.Space.s3) {
+                RemoteThumb(urlString: avatarURL, size: avatarSize, fallback: source, circular: true)
+                VStack(alignment: .leading, spacing: 2) {
+                    if !handle.isEmpty {
+                        Text(handle).dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                    }
+                    Text(text)
+                        .dsText(.body17).foregroundStyle(DS.textPrimary)
+                        .lineLimit(large ? nil : 3)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            if large, !imageURL.isEmpty {
+                GenFlexThumb(urlString: imageURL)
+                    .frame(maxWidth: .infinity, minHeight: 200, maxHeight: 240)
+                    .clipShape(RoundedRectangle(cornerRadius: DS.Radius.control, style: .continuous))
+            }
+        }
+        .padding(DS.Space.s4)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(DS.surfaceSheet,
+                    in: RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
+        .contentShape(RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
+        .padding(.horizontal, DS.Space.s4)
+        .padding(.top, DS.Space.s4)
+        card.pinnedRowActions(id: thingId, openable: openable,
+                              open: thingOpen, unpin: thingUnpin, handoff: thingHandoff)
     }
 }
 
@@ -692,12 +1140,15 @@ private struct GenVoiceTile: View {
 /// tried the same day and read as noise). Magnitude is size alone;
 /// identity is the white label and the token/bridge icons.
 private struct GenTagMap: View {
+    let id: String
     let el: GenEl
     /// Preview mode (TagMapPreview): the starter shape before tags exist —
     /// muted fill, no tap targets, no weekend share.
     var preview = false
     @Environment(\.genProjectTap) private var projectTap
     @Environment(\.genZoomNS) private var zoomNS
+    @Environment(\.genModuleLarge) private var large
+    @Environment(\.genSizeToggle) private var sizeToggle
     /// The entrance plays once per screen appearance (§3); filter and theme
     /// re-renders never replay it.
     @State private var settled = false
@@ -748,12 +1199,35 @@ private struct GenTagMap: View {
     private var eyebrow: String {
         pinBorn ? String(el.str(0).dropFirst("@pin ".count)) : el.str(0)
     }
+    /// Every board module wears the same small tertiary pin (prd 58) —
+    /// not just pin-born wallet maps — and it's the size control (prd
+    /// 58a): tap it, the module blooms to large. The preview map isn't a
+    /// real module yet (nothing to size), so it carries no pin.
+    private var boardHeight: CGFloat { large ? 320 : 220 }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             if !el.str(0).isEmpty {
                 HStack(spacing: 7) {
-                    if pinBorn {
+                    // Only where a real handler is wired (Home's board) —
+                    // the same TagMap renders wallet/project maps on the
+                    // Wallet and Feed screens too, and a pin with nothing
+                    // behind it is a dead control (CLAUDE.md honesty rule).
+                    if !preview, let sizeToggle {
+                        Button {
+                            sizeToggle(id)
+                        } label: {
+                            Image(systemName: "pin.fill")
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundStyle(DS.textSecondary)
+                                .rotationEffect(.degrees(-35), anchor: .bottomLeading)
+                        }
+                        .buttonStyle(PressSpring())
+                        .accessibilityLabel(large ? "Shrink" : "Grow")
+                    } else if pinBorn {
+                        // Outside Home (Wallet/Feed's own composition of
+                        // this same wallet map) the pin stays decorative —
+                        // it still means "here because you pinned it".
                         Image(systemName: "pin.fill")
                             .font(.system(size: 11, weight: .semibold))
                             .foregroundStyle(DS.textSecondary)
@@ -788,9 +1262,9 @@ private struct GenTagMap: View {
                     .padding(.bottom, DS.Space.s3)
             }
             GeometryReader { geo in
-                cells(width: geo.size.width, animated: true)
+                cells(width: geo.size.width, height: boardHeight, animated: true)
             }
-            .frame(height: 220)
+            .frame(height: boardHeight)
         }
         .padding(.horizontal, DS.Space.s4)
         .padding(.top, DS.Space.s4)
@@ -815,10 +1289,10 @@ private struct GenTagMap: View {
     /// The six cells at a given width. Animated: §3's scale-in stagger on
     /// weekdays; §6's left-to-right magnitude fill on weekends (never both).
     @ViewBuilder
-    private func cells(width: CGFloat, animated: Bool) -> some View {
+    private func cells(width: CGFloat, height: CGFloat = 220, animated: Bool) -> some View {
         let gap = DS.Space.s2
         let uw = (width - gap * 3) / 4
-        let uh = (220 - gap * 2) / 3
+        let uh = (height - gap * 2) / 3
         ZStack(alignment: .topLeading) {
             ForEach(Array(items.enumerated()), id: \.offset) { i, item in
                 let f = frames[i]
@@ -1073,10 +1547,11 @@ struct GenSkeletonRow: View {
 }
 
 struct GenSkeletonTile: View {
+    var minHeight: CGFloat = 96
     var body: some View {
         RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous)
             .fill(DS.surfaceSheet)
-            .frame(minHeight: 96)
+            .frame(minHeight: minHeight)
     }
 }
 

@@ -18,6 +18,14 @@ struct BridgeDetailScreen: View {
     private var bridge: BridgeApp? {
         store.bridges.first { $0.id == bridgeID }
     }
+    private var pinnedToHome: Bool {
+        guard let bridge else { return false }
+        return HomePinnedSources.shared.isPinned(bridge.name)
+    }
+    private var isPinnable: Bool {
+        guard let bridge else { return false }
+        return HomePinnedSources.pinnable.contains(bridge.name)
+    }
     /// This bridge's three most recent things — cached on appearance rather than
     /// re-fetched twice on every body pass. The predicate is per-bridge, so this
     /// is the cache path rather than a static @Query.
@@ -103,6 +111,31 @@ struct BridgeDetailScreen: View {
                         }
                     }
 
+                    // Pin to Home (prd 58, Goal 4) — the board grows from
+                    // the catalog: connecting an app can end here, on its
+                    // own screen, without waiting for it to earn a card the
+                    // automatic way. One verb, both directions (place/
+                    // remove) — same shape as Wallet's own per-address pin.
+                    // Gated to sources HomeComposition actually places
+                    // (HomePinnedSources.pinnable) — elsewhere the toggle
+                    // would persist with no effect on the board.
+                    if isPinnable {
+                        Button {
+                            HomePinnedSources.shared.toggle(bridge.name)
+                            DSHaptic.tap()
+                        } label: {
+                            HStack(spacing: DS.Space.s2) {
+                                Image(systemName: pinnedToHome ? "pin.fill" : "pin")
+                                Text(pinnedToHome ? "Pinned to Home" : "Pin to Home")
+                            }
+                            .dsText(.body17).foregroundStyle(pinnedToHome ? DS.tint : DS.textPrimary)
+                            .frame(maxWidth: .infinity).frame(height: 44)
+                            .background(pinnedToHome ? DS.tintDim : DS.gray100,
+                                        in: Capsule(style: .continuous))
+                        }
+                        .buttonStyle(.plain)
+                    }
+
                     // Controls — words say what happens.
                     HStack(spacing: DS.Space.s3) {
                         Button(bridge.status == .paused ? "Resume" : "Pause") {
@@ -135,9 +168,11 @@ struct BridgeDetailScreen: View {
             .confirmationDialog("Remove \(bridge.name)?",
                                 isPresented: $confirmRemove, titleVisibility: .visible) {
                 Button("Keep its things") {
+                    HomePinnedSources.shared.clear(bridge.name)
                     store.remove(bridge.id); dismiss()
                 }
                 Button("Remove its things too", role: .destructive) {
+                    HomePinnedSources.shared.clear(bridge.name)
                     purgeThings(from: bridge.name)
                     store.remove(bridge.id); dismiss()
                 }

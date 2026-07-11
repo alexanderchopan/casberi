@@ -44,6 +44,10 @@ struct HomeScreen: View {
     /// One retiring lesson (Feed's coach grammar): with no pins yet, the
     /// Pinned slot teaches the swipe; the first real pin retires it forever.
     @AppStorage("coach.pin.done") private var pinCoachDone = false
+    /// One retiring lesson for the size control (prd 58a): tap a pin, the
+    /// card blooms to large. Retires on the first tap, forever — same
+    /// grammar as `pinCoachDone`.
+    @AppStorage("coach.size.done") private var sizeCoachDone = false
     /// The last celebrated corpus milestone — each fires exactly once, ever.
     @AppStorage("milestone.reached") private var milestoneReached = 0
     @State private var walletHoldings: [WalletIngest.HoldingsGroup] = []
@@ -78,8 +82,18 @@ struct HomeScreen: View {
                     ForEach(rootRefs.filter { !boardModuleRefs.contains($0) }, id: \.self) { ref in
                         GenRender(id: ref, els: stream.els)
                     }
+                    // One retiring line (prd 58a) — shown until the first
+                    // pin tap, forever, same grammar as the pin coach.
+                    if !sizeCoachDone, !boardOrder.isEmpty {
+                        Text("Tap a pin to grow its card")
+                            .dsText(.subhead13)
+                            .foregroundStyle(DS.tint)
+                            .padding(.horizontal, DS.Space.s4)
+                            .padding(.top, DS.Space.s4)
+                    }
                     ReorderableBoard(order: $boardOrder) { ref in
                         GenRender(id: ref, els: stream.els)
+                            .environment(\.genModuleLarge, HomeModuleSize.shared.isLarge(moduleKey(ref)))
                     } onReorder: { newOrder in
                         HomeBoardOrder.shared.save(newOrder.map(moduleKey))
                     }
@@ -165,6 +179,20 @@ struct HomeScreen: View {
                       case .openURL(let url) = verb.action else { return }
                 DSHaptic.selection()
                 openURL(url)
+            }
+            // Tap the pin (prd 58a) — the only way a module grows: no
+            // menu, no edit mode. The pin itself never removes anything
+            // (unpin lives elsewhere per module), so it's free to mean
+            // "press me".
+            .environment(\.genSizeToggle) { ref in
+                DSHaptic.selection()
+                sizeCoachDone = true
+                HomeModuleSize.shared.toggle(moduleKey(ref))
+            }
+            // A screenshot's own stored thumbnail (prd 48) — local bytes,
+            // not a URL, so the media tile resolves it by thing id.
+            .environment(\.genThumbnailData) { id in
+                things.first(where: { $0.id.uuidString == id })?.previewImageData
             }
             .sheet(item: $pinnedThing) { thing in
                 ThingSheetView(thing: thing)

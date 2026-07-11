@@ -249,10 +249,17 @@ struct HandleSetupScreen: View {
                 RecentThingsSection(header: bridge.recentHeader, things: recent)
                     .listRowSeparator(.hidden)
             }
+            if !bridge.currentName.isEmpty, HomePinnedSources.pinnable.contains(bridge.rawValue) {
+                pinToHomeSection.listRowSeparator(.hidden)
+            }
             if !bridge.currentName.isEmpty {
                 BridgeDisconnectSection(
                     bridgeID: bridge.bridgeID, name: bridge.rawValue,
-                    teardown: { bridge.setName(""); accountNames = [] }
+                    teardown: {
+                        bridge.setName("")
+                        accountNames = []
+                        HomePinnedSources.shared.clear(bridge.rawValue)
+                    }
                 ).listRowSeparator(.hidden)
             }
             footerSection.listRowSeparator(.hidden)
@@ -282,6 +289,29 @@ struct HandleSetupScreen: View {
             }) {
                 hits = found
             }
+        }
+    }
+
+    /// Pin to Home (prd 58, Goal 4) — the board grows from the catalog:
+    /// connecting an account can end here, without waiting for it to earn
+    /// a card the automatic way. Same verb, both directions, as Wallet's
+    /// own per-address pin.
+    private var pinnedToHome: Bool { HomePinnedSources.shared.isPinned(bridge.rawValue) }
+
+    private var pinToHomeSection: some View {
+        Section {
+            Button {
+                HomePinnedSources.shared.toggle(bridge.rawValue)
+                DSHaptic.tap()
+            } label: {
+                HStack(spacing: DS.Space.s2) {
+                    Image(systemName: pinnedToHome ? "pin.fill" : "pin")
+                    Text(pinnedToHome ? "Pinned to Home" : "Pin to Home")
+                    Spacer()
+                }
+                .dsText(.body17).foregroundStyle(pinnedToHome ? DS.tint : DS.textPrimary)
+            }
+            .buttonStyle(.plain)
         }
     }
 
