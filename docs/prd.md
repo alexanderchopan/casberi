@@ -1887,3 +1887,18 @@ avatar card, screenshots strip; (4) "pin to Home" verbs from source
 screens so the board grows from the catalog. Mocks deleted; the
 Desktop comparisons (home-board-ABC, home-rich-board-123) are the
 visual record.
+
+## 58a. The pin is the control (amendment, 2026-07-11)
+
+How sizes change, ruled — "why not just tap the pin": TAP THE PIN.
+Every pin on the board is a button: tap it and its card blooms to
+large (the pin presses in, the media spreads); tap again and it
+settles back. No menu, no edit mode, no resize gesture to teach —
+one coach line ("Tap a pin to grow its card"), retiring on first
+use. The ambiguity with "unpin" is dissolved by placement: removal
+NEVER lives on the pin (a wallet unpins from its own screen; the
+pinned-things card can't be removed), so the pin is free to mean
+"press me". Same rule for the big pin: tapping it grows the
+pinned-things card, whose large form is the moodboard-tile interior
+(mock B's yield). Long-press still lifts a card to drag; pinch may
+arrive later as an unadvertised extra, or never.
