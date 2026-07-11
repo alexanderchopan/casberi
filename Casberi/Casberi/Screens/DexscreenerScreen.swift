@@ -14,6 +14,11 @@ struct DexscreenerScreen: View {
     @State private var resultIsError = false
     @State private var watched: [Thing] = []
 
+    /// Tokens matching what's typed so far (2026-07-11) — the field doubles
+    /// as a finder, so "degen" shows its candidates instead of silently
+    /// watching whichever is most liquid. Cleared on watch and on emptying.
+    @State private var hits: [TokenWatch.Resolved] = []
+
     private func loadWatched() {
         watched = recentBridgeThings(source: "Dexscreener", context: modelContext)
     }
@@ -40,13 +45,54 @@ struct DexscreenerScreen: View {
         .navigationTitle("Dexscreener")
         .navigationBarTitleDisplayMode(.large)
         .onAppear { loadWatched() }
+        // The debounced token search — each keystroke restarts the task, so
+        // only a 300ms pause actually asks the network. Already-watched
+        // tokens stay out of the results; they're in the watchlist below.
+        .task(id: queryField) {
+            let q = queryField.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard q.count >= 2 else {
+                if !hits.isEmpty { hits = [] }
+                return
+            }
+            try? await Task.sleep(for: .milliseconds(300))
+            guard !Task.isCancelled else { return }
+            let refs = Set(watched.compactMap(\.sourceRef))
+            let found = await TokenWatch.search(q)
+                .filter { !refs.contains("dexscreener:\($0.id)") }
+            guard !Task.isCancelled else { return }
+            hits = found
+        }
     }
 
     private var addSection: some View {
         Section {
-            BridgeFieldRow(placeholder: "Token address, symbol, or link",
+            BridgeFieldRow(placeholder: "Token name, address, or link",
                            text: $queryField,
                            buttonLabel: "Watch", action: watch)
+            ForEach(hits) { token in
+                Button { watchHit(token) } label: {
+                    HStack(spacing: DS.Space.s3) {
+                        if let art = token.imageURL {
+                            RemoteThumb(urlString: art, size: 28,
+                                        fallback: "Dexscreener", circular: true)
+                        } else {
+                            BridgeIcon(name: "Dexscreener", size: 28, circular: true)
+                        }
+                        VStack(alignment: .leading, spacing: 0) {
+                            Text("\(token.name) · $\(token.symbol)")
+                                .dsText(.body17).foregroundStyle(DS.textPrimary)
+                                .lineLimit(1)
+                            Text(token.priceUsd.map { "\(token.chain.capitalized) · $\($0)" }
+                                    ?? token.chain.capitalized)
+                                .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                                .lineLimit(1)
+                        }
+                        Spacer()
+                    }
+                }
+                .buttonStyle(.plain)
+                .listRowBackground(DS.surfaceSheet)
+            }
             BridgeSyncStatusRows(syncing: working,
                                  syncingLine: "Finding the token…",
                                  result: result, resultIsError: resultIsError)
@@ -54,7 +100,7 @@ struct DexscreenerScreen: View {
             Text("Watch a token").dsText(.label12)
                 .foregroundStyle(DS.textTertiary)
         } footer: {
-            Text("Paste a token address or a Dexscreener link — its live price chart lands in your feed.")
+            Text("Type a name or paste an address — matching tokens appear as you type, and a watched token's live price chart lands in your feed.")
                 .dsText(.callout15).foregroundStyle(DS.textTertiary)
         }
     }
@@ -143,15 +189,28 @@ struct DexscreenerScreen: View {
                 resultIsError = true
                 return
             }
-            resultIsError = false
-            if let thing = TokenWatch.add(token, context: modelContext) {
-                result = "Watching \(thing.title)"
-                queryField = ""
-                loadWatched()
-                register()
-            } else {
-                result = "\(token.name) is already on your watchlist."
-            }
+            add(token)
+        }
+    }
+
+    /// A tapped search result skips the resolve — the search already
+    /// carried everything the watchlist stores.
+    private func watchHit(_ token: TokenWatch.Resolved) {
+        guard !working else { return }
+        DSHaptic.tap()
+        add(token)
+    }
+
+    private func add(_ token: TokenWatch.Resolved) {
+        resultIsError = false
+        if let thing = TokenWatch.add(token, context: modelContext) {
+            result = "Watching \(thing.title)"
+            queryField = ""
+            hits = []
+            loadWatched()
+            register()
+        } else {
+            result = "\(token.name) is already on your watchlist."
         }
     }
 
