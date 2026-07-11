@@ -196,7 +196,9 @@ struct SettingsScreen: View {
             // of on-device facts instead of a description (2026-07-09).
             TileSpec(title: "Diagnostics",
                      value: "Test and report",
-                     badge: ("waveform.path.ecg", DS.textSecondary),
+                     // The instrument, not the trace — the ECG line is the
+                     // Feed tab's glyph (ruled 2026-07-10: Feed keeps it).
+                     badge: ("stethoscope", DS.textSecondary),
                      action: { diagnosticsOpen = true }),
         ].sorted { $0.title < $1.title }
     }

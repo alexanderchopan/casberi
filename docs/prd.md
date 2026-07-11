@@ -1658,3 +1658,12 @@ Verified on sim via the -seedThing hook (a live flip drew the ring;
 mount-with-news showed it full). Sim note: recordVideo kept
 truncating mid-run — screenshots + NSLog probes are the reliable
 motion evidence there.
+
+## 49a. Feed keeps the pulse; Diagnostics gets the instrument (2026-07-10)
+
+The tab bar's Feed glyph and the Diagnostics tile both wore
+waveform.path.ecg. Candidates for Feed were mocked in the live tab
+bar (timeline, tray, stack, plain waveform); ruled: Feed KEEPS the
+ECG trace — it's the pulse of your stuff. Diagnostics moves to
+"stethoscope": the instrument that listens, not the trace itself.
+The -feedSymbol mock hook came and went in the same session.
