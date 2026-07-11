@@ -101,6 +101,12 @@ struct HomeScreen: View {
                 // The weekend recap is a door to the week's synthesis
                 // (prd 54): the composer opens and runs the week ask.
                 if name == "@week" { chrome.ask("What's this week?"); return }
+                // Any OTHER @-name is a sentinel we don't know — including a
+                // mid-stream partial ("@we") tapped during the typewriter
+                // entrance, which GenParser fills before the line completes.
+                // Falling through opened a bogus empty project (review
+                // 2026-07-11); an unknown sentinel does nothing.
+                if name.hasPrefix("@") { return }
                 let isTag = things.contains { $0.tags.contains(name) }
                 if !isTag, things.contains(where: { $0.source == name }) {
                     FeedFilter.shared.source = name

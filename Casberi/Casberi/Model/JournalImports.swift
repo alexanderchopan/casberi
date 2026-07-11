@@ -26,21 +26,29 @@ enum DayOneImport {
         }
 
         let existing = IngestSupport.existingSourceRefs(context)
-        let iso = ISO8601DateFormatter()
 
+        // IngestSupport.isoDate, not a bare ISO8601DateFormatter — Day One
+        // stamps both plain and fractional-second forms, and the bare
+        // formatter silently dropped every fractional entry (review 2026-07-11).
         let dated: [(date: Date, entry: [String: Any])] = entries.compactMap { entry in
-            guard let stamp = entry["creationDate"] as? String,
-                  let date = iso.date(from: stamp) else { return nil }
+            guard let date = IngestSupport.isoDate(entry["creationDate"]) else { return nil }
             return (date, entry)
         }.sorted { $0.date > $1.date }
+        // Entries that exist but none parseable is a FAILED read, not
+        // "Nothing new" — a fake success here registers a connected seat
+        // for an import that brought nothing (honesty rule, review 2026-07-11).
+        guard !dated.isEmpty else { return Summary(failed: true) }
 
         var summary = Summary()
+        var landed: [Thing] = []
         for (date, entry) in dated.prefix(500) {
-            let text = cleanMarkdown(entry["text"] as? String ?? "")
-            guard !text.isEmpty else { summary.skipped += 1; continue }
+            // Dedupe BEFORE the markdown cleanup — a re-import of an
+            // unchanged export should cost set lookups, not regex passes.
             let id = (entry["uuid"] as? String) ?? "\(date.timeIntervalSince1970)"
             let ref = "dayone:\(id)"
             guard !existing.contains(ref) else { summary.skipped += 1; continue }
+            let text = cleanMarkdown(entry["text"] as? String ?? "")
+            guard !text.isEmpty else { summary.skipped += 1; continue }
 
             let thing = Thing(
                 kind: .note,
@@ -52,11 +60,26 @@ enum DayOneImport {
                 sourceRef: ref
             )
             context.insert(thing)
-            SpotlightIndex.index([thing])
+            landed.append(thing)
             summary.imported += 1
         }
-        if summary.imported > 0 { try? context.save() }
+        finish(&summary, landed: landed, context: context)
         return summary
+    }
+
+    /// The shared tail of both importers: one save whose failure is REPORTED
+    /// (a swallowed save with a success screen is fake status), and one
+    /// batched Spotlight submission instead of an XPC round-trip per entry.
+    @MainActor
+    static func finish(_ summary: inout Summary, landed: [Thing], context: ModelContext) {
+        guard summary.imported > 0 else { return }
+        do {
+            try context.save()
+            SpotlightIndex.index(landed)
+        } catch {
+            summary.failed = true
+            summary.imported = 0
+        }
     }
 
     /// Day One embeds media as `![](dayone-moment://…)` placeholders — the
@@ -73,12 +96,13 @@ enum DayOneImport {
         return joined.count > 4000 ? String(joined.prefix(4000)) + "…" : joined
     }
 
-    /// The first real line, unburdened of markdown heading marks.
+    /// The first real line, unburdened of markdown heading marks. The clamp
+    /// is IngestSupport.titleLine's — one definition of "titles are one line".
     static func title(from text: String) -> String {
         let first = text.components(separatedBy: .newlines)
             .map { $0.trimmingCharacters(in: CharacterSet(charactersIn: "# ")) }
             .first { !$0.isEmpty } ?? "Journal entry"
-        return first.count > 80 ? String(first.prefix(80)) + "…" : first
+        return IngestSupport.titleLine(first)
     }
 }
 
@@ -106,7 +130,7 @@ enum JournalImport {
         }
         guard !files.isEmpty else { return Summary(failed: true) }
 
-        let existing = IngestSupport.existingSourceRefs(context)
+        var existing = IngestSupport.existingSourceRefs(context)
         var summary = Summary()
 
         let dated: [(date: Date, title: String, url: URL)] = files.compactMap { url in
@@ -114,7 +138,12 @@ enum JournalImport {
             else { return nil }
             return (date, title, url)
         }.sorted { $0.date > $1.date }
+        // HTML files exist but no filename parsed: the export's shape isn't
+        // what we assumed — that's a FAILED read the person should see, not
+        // "Nothing new" plus a connected seat (honesty rule, review 2026-07-11).
+        guard !dated.isEmpty else { return Summary(failed: true) }
 
+        var landed: [Thing] = []
         for (date, nameTitle, url) in dated.prefix(500) {
             let ref = "journal:\(url.lastPathComponent)"
             guard !existing.contains(ref) else { summary.skipped += 1; continue }
@@ -135,10 +164,14 @@ enum JournalImport {
                 sourceRef: ref
             )
             context.insert(thing)
-            SpotlightIndex.index([thing])
+            landed.append(thing)
+            // Two same-named files in one walk (a Resources/ backup copy)
+            // must not both land under one ref — the set grows as RSSIngest's
+            // does (review 2026-07-11).
+            existing.insert(ref)
             summary.imported += 1
         }
-        if summary.imported > 0 { try? context.save() }
+        DayOneImport.finish(&summary, landed: landed, context: context)
         return summary
     }
 
@@ -158,6 +191,11 @@ enum JournalImport {
     }
 
     /// Tags and entities out, line structure kept — tolerant by design.
+    /// Entity decoding is IngestSupport.decodeHTMLEntities — the shared
+    /// helper decodes numeric refs ("&#8217;", Apple Journal's typographic
+    /// punctuation) and &amp; LAST, which the hand map here got wrong twice:
+    /// no numeric refs, and dictionary order could double-decode "&amp;lt;"
+    /// (review 2026-07-11). Only &apos;/&nbsp; stay local (HTML-only names).
     static func plainText(fromHTML html: String) -> String {
         var s = html.replacingOccurrences(
             of: #"(?is)<(style|script)[^>]*>.*?</\1>"#,
@@ -165,10 +203,9 @@ enum JournalImport {
         s = s.replacingOccurrences(of: #"(?i)<br[^>]*>|</p>|</div>|</h[1-6]>"#,
                                    with: "\n", options: .regularExpression)
         s = s.replacingOccurrences(of: #"<[^>]+>"#, with: "", options: .regularExpression)
-        for (entity, char) in ["&amp;": "&", "&lt;": "<", "&gt;": ">", "&quot;": "\"",
-                               "&#39;": "'", "&apos;": "'", "&nbsp;": " "] {
-            s = s.replacingOccurrences(of: entity, with: char)
-        }
+        s = s.replacingOccurrences(of: "&apos;", with: "'")
+            .replacingOccurrences(of: "&nbsp;", with: " ")
+        s = IngestSupport.decodeHTMLEntities(s)
         let lines = s.components(separatedBy: .newlines)
             .map { $0.trimmingCharacters(in: .whitespaces) }
             .filter { !$0.isEmpty }

@@ -497,7 +497,7 @@ private struct GenTokenRow: View {
                 }
             }
             if let chart {
-                TokenChartPlot(chart: chart, accent: accent, height: 48)
+                TokenChartPlot(chart: chart, accent: accent, height: 48, pulses: false)
                 .mask(alignment: .leading) {
                     GeometryReader { geo in
                         Rectangle().frame(width: revealed ? geo.size.width : 0)

@@ -72,6 +72,10 @@ struct TokenChartPlot: View {
     let accent: Color
     var height: CGFloat = 140
 
+    /// The Home row's chart is fetched once per visit, not streamed — a
+    /// pulsing endpoint there overclaims (the row's own ruling; review
+    /// 2026-07-11). The sheet, which refetches per range, keeps the pulse.
+    var pulses = true
     @State private var pulsing = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -98,7 +102,7 @@ struct TokenChartPlot: View {
         .chartOverlay { proxy in
             GeometryReader { geo in
                 // The live endpoint — solid dot plus a soft breathing halo.
-                if !chart.coarse, let plotAnchor = proxy.plotFrame,
+                if pulses, !chart.coarse, let plotAnchor = proxy.plotFrame,
                    let last = chart.closes.last,
                    let x = proxy.position(forX: chart.closes.count - 1),
                    let y = proxy.position(forY: last) {
@@ -409,6 +413,10 @@ struct TokenChartView<Fallback: View>: View {
         return "\(Int(ago / 86_400))d ago"
     }
 
+    /// The range whose failure produced the current note — lets the note
+    /// survive exactly one revert fetch (see load()'s success path).
+    @State private var noteRange: TokenRange?
+
     private func load() async {
         if charts[range] != nil {
             phase = .ready
@@ -420,7 +428,11 @@ struct TokenChartView<Fallback: View>: View {
         if let fetched {
             charts[range] = fetched
             phase = .ready
-            note = nil
+            // A note set by the range we just stepped BACK from survives one
+            // success — clearing it here wiped the "No 7d prices yet"
+            // explanation on the same beat it would first render, so the
+            // revert read as a silent malfunction (review 2026-07-11).
+            if noteRange == range { note = nil } else { noteRange = range }
             replayReveal()
             return
         }
@@ -434,8 +446,11 @@ struct TokenChartView<Fallback: View>: View {
         // window — say so and step back rather than fake a curve or
         // strand the card on an empty selection.
         note = "No \(range.rawValue) prices for this token yet."
+        noteRange = range
+        // The DISPLAY steps back but the remembered preference stays — a
+        // transient network failure at 7d must not permanently downgrade a
+        // 7d watcher to 24h (the prd-51 invariant; review 2026-07-11).
         let back: TokenRange = charts[.day] != nil ? .day : (charts.keys.first ?? .day)
-        TokenChartStyle.remember(back, chain: chain, address: address)
         range = back   // task(id: range) refires and shows (or fetches) it
     }
 

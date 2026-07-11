@@ -1780,3 +1780,37 @@ since Jan 2026, .enex is desktop-only — recheck later. Website updated
 in-session per the standing rule (marquee ×3, "Notes & journals"
 section, self-drawn inline icons — no Apple assets hotlinked or
 bundled).
+
+## 56. Build-29 review: the import batch, hardened (2026-07-11)
+
+Eight-finder review of the notes/chart/composer batch; confirmed
+fixes applied:
+- Day One dates parse via IngestSupport.isoDate — a fractional-second
+  export previously dropped EVERY entry and reported "Nothing new".
+- Zero-yield imports (empty entries, or Journal filenames that don't
+  parse) are now FAILED reads — no success haptic, no connected seat.
+- The import save is do/catch — a failed save fails the summary
+  instead of reporting "N entries in" for things never persisted.
+- Journal HTML entities decode via the shared helper (numeric refs
+  like &#8217; now decode; the hand map's dictionary order could
+  double-decode). Journal dedupe set grows during the run.
+- Composer's ask consume re-checks isOpen after the settle sleep —
+  closing the bubble inside 400ms no longer fires an empty ask.
+- TokenChart: a transient fetch failure no longer permanently
+  overwrites the remembered range; the "No 7d prices yet" note
+  survives the step-back so the revert explains itself.
+- Home token rows pass pulses:false — the pulsing "live" endpoint is
+  the sheet's (which refetches); a static row claiming live overclaims.
+- Unknown @-sentinels (incl. mid-stream partials) do nothing instead
+  of opening a bogus project. "Your notes" maps explicitly to the
+  Your life category. Spotlight indexes imports as one batch.
+
+DEFERRED (recorded, not blocking): import-screen triplication (one
+parameterized screen incl. ChatGPT), the five parallel source-name
+switches (belongs in one per-bridge table), GeckoTerminal pool-address
+memoization, regex precompilation in plainText, scrub-path hi/lo
+caching, Cover positional-arg padding (keyed args), share-extension
+reconcile as a SharedStore pending-list (today: newest-only Spotlight
+pass, heals at next launch), Feed header's loss of Pause for routed
+bridges (deliberate reroute in 363667c, needs a ruling on where Pause
+lives from Feed).

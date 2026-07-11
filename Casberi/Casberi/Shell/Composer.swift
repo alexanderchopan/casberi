@@ -423,6 +423,11 @@ struct Composer: View {
         chrome.askRequest = nil
         fillDraft(query)
         try? await Task.sleep(for: .milliseconds(400))   // let the bubble settle
+        // Closing the bubble inside the settle window cancels this task; the
+        // try? above swallows that CancellationError, so without this guard
+        // commit() would fire an empty ask into a CLOSED composer and strand
+        // "Thinking…" for the next open (review 2026-07-11).
+        guard !Task.isCancelled, isOpen else { return }
         commit()
     }
 
