@@ -1903,7 +1903,7 @@ pinned-things card, whose large form is the moodboard-tile interior
 (mock B's yield). Long-press still lifts a card to drag; pinch may
 arrive later as an unadvertised extra, or never.
 
-## 58. Catalog reshuffle: X is social, Slack is work, notes stand alone (user, 2026-07-11)
+## 59. Catalog reshuffle: X is social, Slack is work, notes stand alone (user, 2026-07-11)
 
 Three moves, one ruling: X leaves "Your saves" for "Your network" —
 it's a social account first, bookmarks or not, so it browses under
