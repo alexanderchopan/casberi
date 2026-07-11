@@ -30,6 +30,18 @@ struct DexscreenerScreen: View {
         return hits.filter { !refs.contains("dexscreener:\($0.id)") }
     }
 
+    /// The one swipe lesson, shared across every screen that pins by swipe
+    /// (2026-07-11) — whichever screen a person meets the gesture on first
+    /// retires it everywhere.
+    @AppStorage("coach.swipe.done") private var swipeCoachDone = false
+
+    /// The row that plays the swipe demo — the first watched token, once
+    /// ever, retiring the moment any screen's demo (or a real swipe) does.
+    private var hintTokenID: UUID? {
+        guard !swipeCoachDone else { return nil }
+        return watched.first?.id
+    }
+
     private func loadWatched() {
         watched = recentBridgeThings(source: "Dexscreener", context: modelContext)
     }
@@ -111,6 +123,7 @@ struct DexscreenerScreen: View {
                         .dsText(.subhead13).foregroundStyle(DS.textTertiary)
                 }
                 .listRowBackground(DS.surfaceSheet)
+                .modifier(SwipeHintNudge(active: thing.id == hintTokenID) { swipeCoachDone = true })
                 .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                     // Full swipe = pin (Feed's grammar). The explicit group
                     // replaces the system delete, so Unwatch rides here too.
