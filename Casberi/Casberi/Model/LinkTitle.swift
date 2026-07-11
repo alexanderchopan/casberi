@@ -51,13 +51,9 @@ enum LinkTitle {
         return detector?.firstMatch(in: text, range: range)?.url
     }
 
-    /// The five entities titles actually use — full HTML decoding would drag
-    /// in AttributedString round-trips for no gain.
+    /// One decoder for every ingest path (moved to IngestSupport 2026-07-10;
+    /// it also handles numeric references now).
     private static func decodeEntities(_ s: String) -> String {
-        s.replacingOccurrences(of: "&amp;", with: "&")
-            .replacingOccurrences(of: "&lt;", with: "<")
-            .replacingOccurrences(of: "&gt;", with: ">")
-            .replacingOccurrences(of: "&#39;", with: "'")
-            .replacingOccurrences(of: "&quot;", with: "\"")
+        IngestSupport.decodeHTMLEntities(s)
     }
 }

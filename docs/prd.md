@@ -1567,3 +1567,17 @@ back, Reduce Motion handling — with zero shaders, snapshots, or races.
 One grammar, both rooms (43j holds). The liquid code is deleted (git
 history keeps every draft); its yield stays: the doctrine trail in
 43–43l and prd 44's composer hardening, which remains shipped.
+
+## 46. The ledger holds — everywhere (2026-07-10)
+
+The reading tension, mocked and ruled: content sources (RSS, posts)
+were candidates for a "reader" shape in their own chip views (bigger
+image, wrapping headline, posts-as-posts). The mockup made the case
+well and was REJECTED: "it's better they all read the same — easier
+to scan and catch up, and it doesn't feel like it's trying to
+replicate another app." Doctrine: the feed is a LEDGER in every
+shape; Casberi is where things LAND, reading happens one tap away
+(sheet, open-in-app). The mockup's one lasting yield: it exposed raw
+numeric HTML entities in RSS titles ("&#8217;") — decoding now lives
+in IngestSupport.decodeHTMLEntities (named + numeric refs), shared by
+RSS titles and LinkTitle.

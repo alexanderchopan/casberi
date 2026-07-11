@@ -50,6 +50,29 @@ enum IngestSupport {
     /// paths and empty strings rejected. A bad URL stored is worse than
     /// none: a non-nil previewImageURL takes the row out of the artless set
     /// for good.
+    /// HTML entities in ingested text — the five named ones titles actually
+    /// use PLUS numeric character references ("&#8217;" landed raw in feed
+    /// titles, caught in a mockup 2026-07-10). &amp; decodes LAST so a
+    /// double-encoded reference resolves in one pass.
+    static func decodeHTMLEntities(_ s: String) -> String {
+        var out = s.replacingOccurrences(of: "&lt;", with: "<")
+            .replacingOccurrences(of: "&gt;", with: ">")
+            .replacingOccurrences(of: "&#39;", with: "'")
+            .replacingOccurrences(of: "&quot;", with: "\"")
+        while let r = out.range(of: "&#[xX]?[0-9a-fA-F]+;", options: .regularExpression) {
+            let body = out[r].dropFirst(2).dropLast()
+            let scalar: UInt32? = (body.hasPrefix("x") || body.hasPrefix("X"))
+                ? UInt32(body.dropFirst(), radix: 16)
+                : UInt32(body)
+            if let scalar, let u = Unicode.Scalar(scalar) {
+                out.replaceSubrange(r, with: String(Character(u)))
+            } else {
+                out.replaceSubrange(r, with: "")   // malformed — drop, never loop
+            }
+        }
+        return out.replacingOccurrences(of: "&amp;", with: "&")
+    }
+
     static func imageURL(_ raw: String?) -> String? {
         guard var s = raw?.trimmingCharacters(in: .whitespacesAndNewlines),
               !s.isEmpty else { return nil }

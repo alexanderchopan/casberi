@@ -114,7 +114,7 @@ enum RSSIngest {
                 guard !item.title.isEmpty else { continue }
                 let thing = Thing(
                     kind: .link,
-                    title: item.title,
+                    title: IngestSupport.decodeHTMLEntities(item.title),
                     content: item.link,
                     source: "RSS",
                     capturedAt: item.date ?? .now,
