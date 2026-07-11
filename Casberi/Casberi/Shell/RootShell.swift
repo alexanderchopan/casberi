@@ -159,6 +159,12 @@ struct RootShell: View {
         // Feed's back arrow asks this way (it can't hold a binding to
         // `tab`) — same shape as popHome/popFeed.
         .onChange(of: chrome.goHomeRequest) { withAnimation(DS.Motion.standard) { tab = .home } }
+        // A surface requested an ask (the weekend cover) — open the bubble;
+        // the composer consumes the query once it's up (prd 54).
+        .onChange(of: chrome.askRequest) { _, request in
+            guard request != nil else { return }
+            withAnimation(DS.Motion.bubble) { composerOpen = true }
+        }
         .dsSensoryFeedback()
         .environment(bridges)
         .environment(chrome)

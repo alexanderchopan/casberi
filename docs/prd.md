@@ -1742,3 +1742,15 @@ the extension process couldn't give it. Honest caveat, prd 44 style:
 the dirty-save-as-@Query-kick is the standard workaround, not a
 documented contract — if a shared note still doesn't paint, the next
 step is consuming SwiftData history (HistoryDescriptor) instead.
+
+## 54. The weekend recap opens the week's synthesis (user, 2026-07-11)
+
+"Your week, banked" was a statement you could only read (user: it
+"should be a tappable object that synthesizes the week"). The weekend
+cover now carries "@week" in the Cover's id seat (the same seat the
+Just-landed card uses for its thing id, prd 50a); tapping the card
+opens the composer and sends "What's this week?" through the real
+answer path — a new chrome.ask(query) channel: RootShell opens the
+bubble on set, the composer consumes the query and commits it. One
+synthesis engine: the recap is a door into the ask, not a second
+week-renderer. A quiet week answers honestly.

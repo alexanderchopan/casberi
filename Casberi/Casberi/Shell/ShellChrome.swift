@@ -52,6 +52,12 @@ final class ShellChrome {
     /// can't hold a binding to `tab`, so it asks the way popHome/popFeed do.
     var goHomeRequest = 0
 
+    /// A surface asked the composer to run an ask (the weekend cover's week
+    /// synthesis, prd 54) — RootShell opens the bubble on set; the composer
+    /// consumes the query and sends it through the real answer path.
+    var askRequest: String?
+    func ask(_ query: String) { askRequest = query }
+
     func flash(_ text: String, action: ToastAction? = nil, seconds: Double = 2) {
         // Replacing an in-flight toast crossfades (id change), never stacks.
         withAnimation(DS.Motion.standard) {

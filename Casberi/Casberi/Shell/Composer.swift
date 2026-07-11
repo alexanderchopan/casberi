@@ -409,8 +409,21 @@ struct Composer: View {
         .scaleEffect(isOpen ? 1 : 0.3, anchor: .bottomTrailing)
         .task(id: isOpen) {
             if isOpen { computeSuggestions() }
+            await consumeAskRequest()
             await autoSendIfProbed()
         }
+    }
+
+    /// A surface handed the shell an ask (chrome.ask — the weekend cover's
+    /// week synthesis, prd 54): consume it once the bubble is up and send
+    /// through the real answer path. fillDraft keeps the paste heuristic
+    /// from reading the programmatic set as a capture.
+    private func consumeAskRequest() async {
+        guard isOpen, let query = chrome.askRequest else { return }
+        chrome.askRequest = nil
+        fillDraft(query)
+        try? await Task.sleep(for: .milliseconds(400))   // let the bubble settle
+        commit()
     }
 
     /// DEBUG hook: `simctl launch ... -uiAnswerProbe "what's my week"` opens

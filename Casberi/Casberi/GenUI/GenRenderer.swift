@@ -1245,6 +1245,7 @@ private struct GenCover: View {
     let el: GenEl
     @Environment(\.genCoverTopInset) private var topInset
     @Environment(\.genThingOpen) private var thingOpen
+    @Environment(\.genProjectTap) private var projectTap
 
     /// Today's kind counts (arg 7) — the chip row that replaced the subline
     /// (ruling 2026-07-09); requireCount keeps a half-streamed tag from
@@ -1342,12 +1343,14 @@ private struct GenCover: View {
             // What landed opens (2026-07-11, user: "shouldn't a user be
             // able to tap it and go to it?") — the Pinned rows' tap, on
             // the one freshest thing. The id streams in last, so the card
-            // simply isn't tappable until the line completes.
+            // simply isn't tappable until the line completes. "@week"
+            // (the weekend recap, prd 54) routes to the surface's tap
+            // handler instead — the ask, not a thing.
             .contentShape(RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
             .onTapGesture {
                 let id = el.str(7)
                 guard !id.isEmpty else { return }
-                thingOpen?(id)
+                if id.hasPrefix("@") { projectTap?(id) } else { thingOpen?(id) }
             }
         }
         .padding(DS.Space.s4)

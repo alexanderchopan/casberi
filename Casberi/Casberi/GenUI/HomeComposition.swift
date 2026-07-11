@@ -155,7 +155,10 @@ enum HomeComposition {
             // subline already carries that story; today-only counts under
             // "your week, banked" would misread as the week's composition
             // (and stacking both broke the counts-are-the-subline rule).
-            doc.append("cover = Cover(\(q("Weekend")), \(q(title)), \(q(subline)), \(q("")), \(q(dateline(things: things))), \(q("quiet")))")
+            // The trailing "@week" (prd 54) makes the card an ASK: tap
+            // sends "What's this week?" through the composer's answer
+            // path — the recap is a door to the week's synthesis.
+            doc.append("cover = Cover(\(q("Weekend")), \(q(title)), \(q(subline)), \(q("")), \(q(dateline(things: things))), \(q("quiet")), [], \(q("@week")))")
             rootRefs.append("cover")
         }
 
