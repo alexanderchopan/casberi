@@ -27,6 +27,9 @@ struct ThingRow: View {
                 Image(systemName: "pin.fill")
                     .font(.system(size: 11))
                     .foregroundStyle(DS.tint)
+                    // The pin draws on/off with the symbol's own transition
+                    // when the flip is animated (motion pass 2026-07-11).
+                    .transition(.symbolEffect)
             }
         }
         .padding(.horizontal, DS.Space.s4)
@@ -42,9 +45,14 @@ struct LiveTimeText: View {
 
     var body: some View {
         TimelineView(.periodic(from: .now, by: 60)) { _ in
-            Text(Self.short(date))
+            let label = Self.short(date)
+            // "2h" → "3h" rolls its digit (the Clock app's grammar) instead
+            // of swapping — the change is the moment (motion pass 2026-07-11).
+            Text(label)
                 .dsText(.subhead13)
                 .foregroundStyle(color)
+                .contentTransition(.numericText())
+                .animation(DS.Motion.standard, value: label)
         }
     }
 

@@ -194,6 +194,11 @@ struct BandRow: View {
 struct Sparkline: View {
     let closes: [Double]
     let up: Bool
+    /// One-shot left-to-right reveal when the row lands — the Home chart's
+    /// draw-in grammar (prd 36q) at row scale. Plays on appearance, then
+    /// rests; the mask's rectangle is what animates (Canvas itself isn't
+    /// animatable).
+    @State private var drawn = false
 
     var body: some View {
         Canvas { ctx, canvasSize in
@@ -214,6 +219,12 @@ struct Sparkline: View {
                        style: StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round))
         }
         .frame(width: 46, height: 14)
+        .mask(alignment: .leading) {
+            Rectangle().scaleEffect(x: drawn ? 1 : 0.001, anchor: .leading)
+        }
+        .onAppear {
+            withAnimation(.easeOut(duration: 0.7)) { drawn = true }
+        }
     }
 }
 
@@ -275,7 +286,8 @@ struct RemoteThumb: View {
     private func load() async {
         if Self.dead.contains(urlString) { failed = true; return }
         // Cache hit is instant and also covers a recycled row landing on a new
-        // URL (its own key, so a stale pin never shows through).
+        // URL (its own key, so a stale pin never shows through) — no fade: an
+        // already-known image re-appearing softly would read as re-loading.
         if !perishable, let hit = Self.cache.object(forKey: urlString as NSString) {
             image = hit; return
         }
@@ -305,7 +317,50 @@ struct RemoteThumb: View {
         }
         guard !Task.isCancelled else { return }
         if !perishable { Self.cache.setObject(thumb, forKey: urlString as NSString) }
-        image = thumb
+        // A freshly downloaded image fades in over the placeholder — arrival,
+        // never a pop (the App Store's grammar; motion pass 2026-07-11).
+        withAnimation(.easeOut(duration: 0.2)) { image = thumb }
+    }
+}
+
+
+/// Apple Music's own shape (2026-07-11): in the music room, art leads at
+/// track size — the 26pt band thumb honors All's rhythm, but a source's
+/// shaped feed is allowed its native anatomy, and music's native anatomy is
+/// the cover. Title over artist (split from the stored "Title — Artist"),
+/// time trailing; same card surface, no new colors.
+struct MusicRow: View {
+    let thing: Thing
+
+    private var parts: (title: String, artist: String?) {
+        let comps = thing.title.components(separatedBy: " — ")
+        guard comps.count > 1, let artist = comps.last else { return (thing.title, nil) }
+        return (comps.dropLast().joined(separator: " — "), artist)
+    }
+
+    var body: some View {
+        HStack(spacing: DS.Space.s3) {
+            if let art = thing.previewImageURL, !art.isEmpty {
+                RemoteThumb(urlString: art, size: 44, fallback: thing.source)
+            } else {
+                BridgeIcon(name: thing.source, size: 44)
+            }
+            VStack(alignment: .leading, spacing: 1) {
+                Text(parts.title)
+                    .dsText(.body17)
+                    .foregroundStyle(DS.textPrimary)
+                    .lineLimit(1)
+                if let artist = parts.artist {
+                    Text(artist)
+                        .dsText(.subhead13)
+                        .foregroundStyle(DS.textSecondary)
+                        .lineLimit(1)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            LiveTimeText(date: thing.capturedAt)
+        }
+        .padding(.vertical, DS.Space.s2)
     }
 }
 

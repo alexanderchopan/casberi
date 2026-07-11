@@ -35,8 +35,6 @@ struct GlassTabBar: View {
     /// The selection lozenge slides between tabs like liquid (iOS 26 grammar).
     @Namespace private var lozengeNS
     @Environment(ShellChrome.self) private var chrome
-    /// One pulse when a capture lands (§1 choreography) — scale up then back.
-    @State private var feedPulse = false
     /// A tap bounces ITS tab's icon (Telegram grammar) — select and re-tap
     /// both; the other tab never moves.
     @State private var bounces: [Tab: Int] = [:]
@@ -116,21 +114,23 @@ struct GlassTabBar: View {
 
     @ViewBuilder
     private func tabIcon(for tab: Tab, active: Bool) -> some View {
+        // One native symbol bounce carries both moments: a tap bounces ITS
+        // tab, and a capture landing (§1 choreography) bounces Feed — the
+        // hand-rolled scale pulse retired for the system's own move
+        // (motion pass 2026-07-11; Reduce Motion handled for free).
         Image(systemName: tab.symbol)
             .font(.system(size: 20, weight: active ? .semibold : .regular))
-            .symbolEffect(.bounce, value: bounces[tab, default: 0])
-            .scaleEffect(tab == .feed && feedPulse ? 1.15 : 1.0)
-            .modifier(FeedTabInstruments(isFeed: tab == .feed, chrome: chrome,
-                                         pulse: $feedPulse))
+            .symbolEffect(.bounce, value: bounces[tab, default: 0]
+                + (tab == .feed ? chrome.landedPulse : 0))
+            .modifier(FeedTabInstruments(isFeed: tab == .feed, chrome: chrome))
     }
 }
 
 /// Instruments on the Feed tab only: reports its frame so the capture flight
-/// knows where to land, and pulses the icon once when one does.
+/// knows where to land.
 private struct FeedTabInstruments: ViewModifier {
     let isFeed: Bool
     let chrome: ShellChrome
-    @Binding var pulse: Bool
 
     func body(content: Content) -> some View {
         if isFeed {
@@ -139,13 +139,6 @@ private struct FeedTabInstruments: ViewModifier {
                     proxy.frame(in: .global)
                 } action: { frame in
                     chrome.feedTabFrame = frame
-                }
-                .onChange(of: chrome.landedPulse) {
-                    withAnimation(.easeOut(duration: 0.125)) { pulse = true }
-                    Task {
-                        try? await Task.sleep(for: .milliseconds(125))
-                        withAnimation(.easeIn(duration: 0.125)) { pulse = false }
-                    }
                 }
         } else {
             content
