@@ -4,47 +4,54 @@ import UIKit
 /// The liquid page transition (2026-07-10) — the WHOLE screen turns to
 /// liquid and resolves into the next page: both sides frozen around an
 /// animation-less route change, then the `liquidOut`/`liquidIn` shaders
-/// ripple the two frames as one surface. The system now runs BOTH ways
-/// (open and pop), honors Reduce Motion, ends in a settle haptic, and the
-/// pop can be SCRUBBED — a drag from the leading edge drives the liquid
-/// under the finger.
+/// ripple the two frames as one surface.
+///
+/// Why snapshots on BOTH sides: SwiftUI shader effects cannot run on
+/// UIKit-backed views (a NavigationStack is one — trying paints the yellow
+/// no-entry placeholder), so the live destination can never wear the
+/// shader; only a frozen frame can ripple. The two hazards of frozen
+/// frames are handled explicitly:
+/// - the incoming capture waits for the DESTINATION to report .onAppear
+///   (deterministic — snapshotting in the same turn raced SwiftUI's commit
+///   and sometimes photographed the OLD page: the ride played into itself
+///   and ended in a hard cut);
+/// - the ride ends through a LIFT (the crisp final frame fades ~0.25s), so
+///   whatever moved on the live page under the veil — entrances, pulsing
+///   dots, ticking times — is handed off softly, never snapped.
 enum LiquidTransition {
 
-    /// Freezes BOTH sides of a route change in one pass: snapshot the
-    /// outgoing page, cover the window with a UIKit hold (immediate — no
-    /// SwiftUI commit latency), run the change, then snapshot the ROOT VIEW
-    /// beneath the hold with afterScreenUpdates so the destination is laid
-    /// out and drawn. The hold is window-level, the capture is root-level,
-    /// so the hold can never photobomb the incoming frame.
     @MainActor
-    static func capturePair(around change: () -> Void) -> (outgoing: UIImage, incoming: UIImage)? {
-        guard let scene = UIApplication.shared.connectedScenes
-                .compactMap({ $0 as? UIWindowScene }).first,
-              let window = scene.keyWindow else { return nil }
+    static func window() -> UIWindow? {
+        UIApplication.shared.connectedScenes
+            .compactMap({ $0 as? UIWindowScene }).first?.keyWindow
+    }
+
+    /// Freezes the current screen and covers the window with a UIKit hold
+    /// (immediate — no SwiftUI commit latency). The caller owns removing
+    /// the hold once the overlay is up.
+    @MainActor
+    static func freeze() -> (frame: UIImage, hold: UIImageView)? {
+        guard let window = window() else { return nil }
         let bounds = window.bounds
-        let renderer = UIGraphicsImageRenderer(bounds: bounds)
-        let outgoing = renderer.image { _ in
+        let frame = UIGraphicsImageRenderer(bounds: bounds).image { _ in
             window.drawHierarchy(in: bounds, afterScreenUpdates: false)
         }
-
-        let hold = UIImageView(image: outgoing)
+        let hold = UIImageView(image: frame)
         hold.frame = bounds
         window.addSubview(hold)
+        return (frame, hold)
+    }
 
-        change()
-
+    /// The destination's frame, captured from the ROOT VIEW beneath the
+    /// window-level hold (the hold can't photobomb it) once the pushed
+    /// screen has actually appeared.
+    @MainActor
+    static func captureRoot() -> UIImage? {
+        guard let window = window() else { return nil }
         let root = window.rootViewController?.view ?? window
-        let incoming = renderer.image { _ in
-            root.drawHierarchy(in: bounds, afterScreenUpdates: true)
+        return UIGraphicsImageRenderer(bounds: window.bounds).image { _ in
+            root.drawHierarchy(in: window.bounds, afterScreenUpdates: true)
         }
-        // The SwiftUI overlay (progress 0 = the same outgoing pixels) takes
-        // over on the next commit; the hold leaves a beat later so no naked
-        // frame of the destination ever presents.
-        Task { @MainActor in
-            try? await Task.sleep(for: .milliseconds(80))
-            hold.removeFromSuperview()
-        }
-        return (outgoing, incoming)
     }
 }
 
@@ -59,9 +66,13 @@ enum LiquidTransition {
 final class LiquidPusher {
     static let duration: Double = 1.5
     static let popDuration: Double = 1.1
+    /// The lift: when the liquid stills, the overlay holds the crisp final
+    /// image and FADES over this window instead of unmounting in one frame.
+    static let lift: Double = 0.25
 
-    /// What drives the ride: a clock (tap) or the finger (scrub).
-    enum Drive { case clock(start: Date, duration: Double), scrub }
+    /// What drives the ride: a clock (tap), the finger (scrub), or the
+    /// final fade (lift — `at` is the frozen progress: 1 done, 0 cancelled).
+    enum Drive { case clock(start: Date, duration: Double), scrub, lift(start: Date, at: Double) }
 
     var outgoing: UIImage?
     var incoming: UIImage?
@@ -75,10 +86,13 @@ final class LiquidPusher {
     /// through the same liquid (and the scrub can cancel, re-pushing).
     private var popAction: (() -> Void)?
     private var pushAction: (() -> Void)?
-    /// True while a completed pop is being cleaned up — blocks re-entry.
-    private var ramping = false
+    /// A ride waiting for its destination to appear: the frozen outgoing
+    /// frame, the UIKit hold covering the switch, and how to ride once the
+    /// incoming frame exists (nil duration = scrub).
+    private var pending: (frame: UIImage, hold: UIImageView, duration: Double?)?
+    private var settling = false
 
-    var active: Bool { outgoing != nil }
+    var active: Bool { outgoing != nil || pending != nil }
     /// The pushed screen may offer the liquid way back (custom chevron +
     /// edge scrub) only when this pusher did the opening.
     var canPop: Bool { popAction != nil && !active }
@@ -87,68 +101,101 @@ final class LiquidPusher {
     /// gets plain, instant navigation — no snapshots, no shader, no ride.
     private var reduceMotion: Bool { UIAccessibility.isReduceMotionEnabled }
 
-    // MARK: - Open (tap)
+    // MARK: - Open / pop (tap)
 
-    /// Freezes both sides around the animation-less push. Falls back to the
-    /// plain push if snapshotting fails (never block navigation on a shader).
+    /// Freezes the outgoing page, runs the animation-less push beneath the
+    /// hold, then WAITS for the destination's .onAppear to capture the
+    /// incoming frame and start the clock. Falls back to the plain push if
+    /// freezing fails — never block navigation on a shader.
     func open(push: @escaping () -> Void, pop: @escaping () -> Void) {
-        guard !active, !ramping else { push(); return }
+        guard !active, !settling else { push(); return }
         pushAction = push
         popAction = pop
         guard !reduceMotion else { push(); return }
         DSHaptic.tap()
-        let pair = LiquidTransition.capturePair {
+        begin(duration: Self.duration) {
             var t = Transaction()
             t.disablesAnimations = true
             withTransaction(t) { push() }
         }
-        guard let pair else { push(); return }
-        drive = .clock(start: .now, duration: Self.duration)
-        outgoing = pair.outgoing
-        incoming = pair.incoming
     }
 
-    // MARK: - Pop (tap on the way back)
-
     func liquidPop() {
-        guard let popAction, !active, !ramping else { return }
+        guard let popAction, !active, !settling else { return }
         guard !reduceMotion else {
             popAction()
             clearPop()
             return
         }
         DSHaptic.tap()
-        let pair = LiquidTransition.capturePair {
+        self.popAction = nil
+        self.pushAction = nil
+        begin(duration: Self.popDuration) {
             var t = Transaction()
             t.disablesAnimations = true
             withTransaction(t) { popAction() }
         }
-        guard let pair else { popAction(); clearPop(); return }
-        drive = .clock(start: .now, duration: Self.popDuration)
-        outgoing = pair.outgoing
-        incoming = pair.incoming
-        self.popAction = nil
-        self.pushAction = nil
+    }
+
+    private func begin(duration: Double?, change: () -> Void) {
+        guard let frozen = LiquidTransition.freeze() else {
+            change()
+            return
+        }
+        change()
+        pending = (frozen.frame, frozen.hold, duration)
+        // Fallback: if no destination ever reports in (a pop to an already-
+        // mounted root can miss .onAppear), complete after a beat anyway.
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(250))
+            destinationAppeared()
+        }
+    }
+
+    /// The destination is on screen — capture it and ride. Called from the
+    /// pushed screens' .onAppear (liquidPoppable) and the tab roots'
+    /// .onAppear (liquidPushOverlay); idempotent, a no-op with no pending
+    /// ride.
+    func destinationAppeared() {
+        guard let pending else { return }
+        self.pending = nil
+        let incoming = LiquidTransition.captureRoot()
+        guard let incoming else {
+            pending.hold.removeFromSuperview()
+            return
+        }
+        if let duration = pending.duration {
+            drive = .clock(start: .now, duration: duration)
+        } else {
+            drive = .scrub
+            scrubProgress = 0
+            isScrubbing = true
+        }
+        outgoing = pending.frame
+        self.incoming = incoming
+        // The SwiftUI overlay (progress 0 = the hold's exact pixels) takes
+        // over on the next commit; the hold leaves a beat later so no naked
+        // frame of the destination ever presents.
+        let hold = pending.hold
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(80))
+            hold.removeFromSuperview()
+        }
     }
 
     // MARK: - Scrub (the finger owns the pop)
 
-    /// Pops INSTANTLY beneath the veil, then the drag drives the liquid.
+    /// Pops INSTANTLY beneath the hold, then the drag drives the liquid.
     /// A cancelled scrub re-pushes beneath the veil and unwinds — the
     /// person never sees either seam.
     func scrubBegin() {
-        guard popAction != nil, !active, !ramping, !reduceMotion else { return }
-        let pair = LiquidTransition.capturePair {
+        guard popAction != nil, !active, !settling, !reduceMotion else { return }
+        let pop = popAction
+        begin(duration: nil) {
             var t = Transaction()
             t.disablesAnimations = true
-            withTransaction(t) { self.popAction?() }
+            withTransaction(t) { pop?() }
         }
-        guard let pair else { return }
-        drive = .scrub
-        scrubProgress = 0
-        isScrubbing = true
-        outgoing = pair.outgoing
-        incoming = pair.incoming
     }
 
     func scrubUpdate(_ progress: Double) {
@@ -157,11 +204,11 @@ final class LiquidPusher {
     }
 
     /// Release: ramp to completion (stay popped) or back to zero (re-push
-    /// beneath the veil, then lift it).
+    /// beneath the veil), then hand off through the lift.
     func scrubEnd(complete: Bool) {
         guard isScrubbing else { return }
         isScrubbing = false
-        ramping = true
+        settling = true
         let from = scrubProgress
         let to: Double = complete ? 1 : 0
         Task { @MainActor in
@@ -174,6 +221,7 @@ final class LiquidPusher {
             if complete {
                 popAction = nil
                 pushAction = nil
+                DSHaptic.selection()
             } else if let pushAction {
                 var t = Transaction()
                 t.disablesAnimations = true
@@ -181,20 +229,23 @@ final class LiquidPusher {
                 // One beat for the re-pushed page to lay out under the veil.
                 try? await Task.sleep(for: .milliseconds(80))
             }
-            ramping = false
-            finish(settle: complete)
+            settling = false
+            // Hand off through the lift — never a hard unmount.
+            drive = .lift(start: .now, at: complete ? 1 : 0)
         }
     }
 
     // MARK: - Lifecycle
 
-    func finish(settle: Bool = true) {
+    func finish() {
         outgoing = nil
         incoming = nil
-        // The ripple stills — a soft touch says so (the app's motion-ends-
-        // in-a-touch grammar: chart tick, refresh thud, this).
-        if settle { DSHaptic.selection() }
     }
+
+    /// The ripple stills — a soft touch says so (the app's motion-ends-in-
+    /// a-touch grammar: chart tick, refresh thud, this). Fired as the lift
+    /// begins, exactly when the liquid stops moving.
+    func settleHaptic() { DSHaptic.selection() }
 
     /// The route emptied by some other hand (tab re-tap, deep link) — the
     /// remembered way back is stale.
@@ -205,7 +256,8 @@ final class LiquidPusher {
 }
 
 /// The ride itself — both frozen frames, full screen, above everything.
-/// Clock rides ease in-out on a TimelineView; scrub rides the finger.
+/// Clock rides ease in-out and exit through the lift; scrub rides the
+/// finger and exits through scrubEnd's ramp + lift.
 struct LiquidDissolveOverlay: View {
     let pusher: LiquidPusher
     let outgoing: UIImage
@@ -214,17 +266,26 @@ struct LiquidDissolveOverlay: View {
     /// @State, NOT let: the parent re-renders mid-ride (live times, chip
     /// staggers) and recreates this struct — a plain let would reset the
     /// clock and visibly RESTART the liquid.
-    @State private var start = Date()
+    @State private var settled = false
 
     var body: some View {
         TimelineView(.animation) { context in
-            let (progress, done): (Double, Bool) = {
+            let (progress, alpha, done): (Double, Double, Bool) = {
                 switch pusher.drive {
                 case .clock(let start, let duration):
-                    let raw = min(1, context.date.timeIntervalSince(start) / duration)
-                    return (raw * raw * (3 - 2 * raw), raw >= 1)   // ease-in-out
+                    let t = context.date.timeIntervalSince(start)
+                    if t < duration {
+                        let raw = t / duration
+                        return (raw * raw * (3 - 2 * raw), 1, false)   // ease-in-out
+                    }
+                    // The lift: liquid still, image crisp, fading to live.
+                    let lt = min(1, (t - duration) / LiquidPusher.lift)
+                    return (1, 1 - lt, lt >= 1)
                 case .scrub:
-                    return (pusher.scrubProgress, false)   // scrubEnd owns completion
+                    return (pusher.scrubProgress, 1, false)   // scrubEnd owns completion
+                case .lift(let start, let at):
+                    let lt = min(1, context.date.timeIntervalSince(start) / LiquidPusher.lift)
+                    return (at, 1 - lt, lt >= 1)
                 }
             }()
             GeometryReader { geo in
@@ -253,6 +314,14 @@ struct LiquidDissolveOverlay: View {
                 }
             }
             .ignoresSafeArea()
+            .opacity(alpha)
+            .onChange(of: alpha < 1 && progress >= 1) { _, lifting in
+                // The liquid just stilled (clock rides) — say so once.
+                if lifting, !settled {
+                    settled = true
+                    pusher.settleHaptic()
+                }
+            }
             .onChange(of: done) { _, isDone in
                 if isDone { pusher.finish() }
             }
@@ -264,13 +333,17 @@ struct LiquidDissolveOverlay: View {
 extension View {
     /// Hangs the dissolve overlay for a screen's LiquidPusher — put it on
     /// the NavigationStack so the veil covers nav chrome and pushed content.
+    /// Also reports the ROOT's appearance so a POP ride (back to this
+    /// screen) can capture its incoming frame deterministically.
     @ViewBuilder
     func liquidPushOverlay(_ pusher: LiquidPusher) -> some View {
-        overlay {
-            if let out = pusher.outgoing, let inc = pusher.incoming {
-                LiquidDissolveOverlay(pusher: pusher, outgoing: out, incoming: inc)
+        self
+            .onAppear { pusher.destinationAppeared() }
+            .overlay {
+                if let out = pusher.outgoing, let inc = pusher.incoming {
+                    LiquidDissolveOverlay(pusher: pusher, outgoing: out, incoming: inc)
+                }
             }
-        }
     }
 
     /// A pushed screen's liquid way back: the system back button gives way
@@ -278,6 +351,8 @@ extension View {
     /// scrubs it under the finger. Only bites when the environment's pusher
     /// actually did the opening (a deep-linked or probe-pushed screen keeps
     /// the system back). Reduce Motion keeps the plain pop and no scrub.
+    /// Also reports .onAppear — the moment an OPEN ride's destination is
+    /// real, its incoming frame is captured and the liquid starts.
     func liquidPoppable() -> some View {
         modifier(LiquidPoppable())
     }
@@ -289,6 +364,7 @@ private struct LiquidPoppable: ViewModifier {
 
     func body(content: Content) -> some View {
         content
+            .onAppear { liquid.destinationAppeared() }
             .navigationBarBackButtonHidden(liquid.canPop)
             .toolbar {
                 if liquid.canPop {

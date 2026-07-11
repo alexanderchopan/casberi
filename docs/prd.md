@@ -1476,3 +1476,27 @@ Five upgrades, ruled together ("do all of these including scrubbing"):
   instant. Do not spread it.
 
 The vestigial zoom transition (43's first draft) is deleted.
+
+## 43i. The end-snap dies (seventh draft, 2026-07-10)
+
+User on device: "it snaps at the end." Two real causes, both structural:
+
+1. The incoming snapshot RACED SwiftUI's commit — afterScreenUpdates
+   flushes UIKit, not SwiftUI, so the "incoming" frame sometimes
+   photographed the OLD page; the ride played into itself and the
+   destination only appeared as a hard cut. Fixed deterministically:
+   the destination screen itself reports .onAppear (liquidPoppable on
+   pushed screens, liquidPushOverlay on tab roots) and ONLY THEN is
+   the incoming frame captured and the clock started; a UIKit hold
+   keeps the screen frozen while waiting (250ms fallback for pops
+   whose root .onAppear doesn't refire).
+2. Even a correct frozen frame diverges from the LIVE page under the
+   veil (entrances finish, dots pulse, times tick), so a one-frame
+   unmount snapped. Fixed with the LIFT: the crisp final frame fades
+   ~0.25s into the live page — drift becomes a soft handoff.
+
+Doctrine learned the hard way (yellow no-entry screen): SwiftUI shader
+effects CANNOT run on UIKit-backed views — a NavigationStack is one —
+so the live page can never wear the shader; frozen frames + the lift
+are the only honest mechanism. Settle haptic now fires when the liquid
+stills (lift start), not at unmount.
