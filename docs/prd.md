@@ -1639,3 +1639,22 @@ removed (an unselected asset is indistinguishable from a deleted
 one). Verified end-to-end on sim: 4/4 things thumbed, a seeded
 dangling thing removed. Sim note: `simctl privacy grant photos` does
 NOT take on the iOS 26 runtime — the real dialog is the only path.
+
+## 49. The new-things ring becomes an event (2026-07-10)
+
+Two rulings from "could be better". (1) GLASS STAYS OFF THE CHIPS:
+Liquid Glass is the floating layer's material (composer, tab bar,
+toasts) — the feed chips are content, and content never wears glass;
+the chips' identity is their brand color, which a glass film would
+mute. (2) The green "new since last visit" ring stops being a state
+that blinks and becomes an event that moves: when a source gains new
+things mid-visit the arc DRAWS ON clockwise from 12 o'clock (0.55s
+spring, one soft 1.06 pulse), and when a return visit acknowledges
+them it DRAINS back the same way. A chip scrolling into view with
+new things shows the full ring instantly — the sweep never replays
+for old news. Reduce Motion gets plain state changes. Ink and orange
+rings unchanged: selection travels (43h), attention is steady.
+Verified on sim via the -seedThing hook (a live flip drew the ring;
+mount-with-news showed it full). Sim note: recordVideo kept
+truncating mid-run — screenshots + NSLog probes are the reliable
+motion evidence there.

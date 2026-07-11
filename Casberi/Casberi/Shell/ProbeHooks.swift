@@ -132,6 +132,22 @@ enum ProbeHooks {
             let n = ScreenshotIngest.ingest(context: context)
             NSLog("Photos re-ingest probe: %d new", n)
         },
+        // `-seedThing "Source:delay"` lands a link thing for that source
+        // after the delay — flips the chip's "new" ring mid-visit exactly
+        // the way a foreground sync does (motion verification).
+        Hook(key: "seedThing") { spec, context in
+            let parts = spec.split(separator: ":")
+            guard let src = parts.first.map(String.init) else { return }
+            let delay = parts.count > 1 ? Double(parts[1]) ?? 0 : 0
+            Task { @MainActor in
+                try? await Task.sleep(for: .seconds(delay))
+                let t = Thing(kind: .link, title: "Ring demo", source: src,
+                              sourceRef: "probe:ring-demo-\(UUID().uuidString)")
+                context.insert(t)
+                try? context.save()
+                NSLog("Seed thing probe: landed for %@", src)
+            }
+        },
         // `-healPhotos YES` runs the screenshot heal sweep (thumbnails +
         // confirmed-gone removal) and logs both counts. `-healPhotos
         // seed-dangling` first plants a screenshot thing with a ref no

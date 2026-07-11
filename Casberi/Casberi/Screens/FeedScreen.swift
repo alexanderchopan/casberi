@@ -1019,9 +1019,12 @@ struct FeedScreen: View {
                                 } else {
                                     ring.matchedGeometryEffect(id: "chipRing", in: chipRingNS)
                                 }
-                            } else if broken || hasNew {
-                                Circle().strokeBorder(broken ? DS.attention : DS.confirm,
-                                                      lineWidth: 2.5)
+                            } else if broken {
+                                Circle().strokeBorder(DS.attention, lineWidth: 2.5)
+                            } else {
+                                // Stays mounted so the trim can animate both
+                                // ways — an unmounted ring can only blink.
+                                NewRing(on: hasNew, reduceMotion: reduceMotion)
                             }
                         }
                         .frame(width: 56, height: 56)
@@ -1049,6 +1052,44 @@ struct FeedScreen: View {
                 guard now != "All" else { return }
                 withAnimation(DS.Motion.standard) { proxy.scrollTo(now, anchor: .center) }
             }
+        }
+    }
+
+    /// The green "new since last visit" ring, as an event instead of a state
+    /// (2026-07-10): when a source gains new things mid-visit it DRAWS ON —
+    /// the arc sweeps clockwise from 12 o'clock with one soft pulse — and
+    /// when a return visit acknowledges them it DRAINS the same way back.
+    /// Arrival is an event, acknowledgment is a release, never a blink.
+    /// Orange (needs you) stays a steady state — a broken connection is not
+    /// an event. First mount takes the current state instantly, so chips
+    /// scrolling into view never replay the sweep.
+    private struct NewRing: View {
+        let on: Bool
+        let reduceMotion: Bool
+        @State private var progress: CGFloat
+        @State private var pulse: CGFloat = 1
+
+        init(on: Bool, reduceMotion: Bool) {
+            self.on = on
+            self.reduceMotion = reduceMotion
+            _progress = State(initialValue: on ? 1 : 0)
+        }
+
+        var body: some View {
+            Circle()
+                .inset(by: 1.25)
+                .trim(from: 0, to: progress)
+                .stroke(DS.confirm, style: StrokeStyle(lineWidth: 2.5, lineCap: .round))
+                .rotationEffect(.degrees(-90))
+                .scaleEffect(pulse)
+                .onChange(of: on) { _, now in
+                    guard !reduceMotion else { progress = now ? 1 : 0; return }
+                    withAnimation(.spring(duration: 0.55)) { progress = now ? 1 : 0 }
+                    if now {
+                        withAnimation(.spring(duration: 0.22)) { pulse = 1.06 }
+                        withAnimation(.spring(duration: 0.4).delay(0.22)) { pulse = 1 }
+                    }
+                }
         }
     }
 
