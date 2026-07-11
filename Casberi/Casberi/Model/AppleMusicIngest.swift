@@ -84,10 +84,23 @@ enum AppleMusicIngest {
         let artlessStored = IngestSupport.artlessThings(context, source: "Apple Music")
 
         var artByRef: [String: String] = [:]
+        // A title+artist search term for every ref that DOESN'T get https art
+        // the direct way — the fuel for the last-resort catalog search below.
+        var termForRef: [String: String] = [:]
         for song in response.items {
-            if let art = artURL(song) { artByRef[sourceRef(song)] = art }
+            let ref = sourceRef(song)
+            if let art = artURL(song) { artByRef[ref] = art }
+            else { termForRef[ref] = "\(song.title) \(song.artistName)" }
+        }
+        for (ref, thing) in artlessStored where artByRef[ref] == nil {
+            // The stored title is "Title — Artist"; the em-dash split is a
+            // clean search term (and the only handle a stored row that aged
+            // out of the recent window still has).
+            termForRef[ref] = thing.title.replacingOccurrences(of: " — ", with: " ")
         }
 
+        // Pass 1 — catalog id lookup: resolves plays that came from the
+        // catalog directly.
         var lookupIDs: [MusicItemID] = artlessStored.keys
             .filter { artByRef[$0] == nil }
             .map { songID(fromRef: $0) }
@@ -103,18 +116,34 @@ enum AppleMusicIngest {
                     if let art = artURL(song) { artByRef[sourceRef(song)] = art }
                 }
             } catch {
-                // Surfaced, never swallowed: a library-format ID can fail
-                // the whole batch, and "the lookup failed" must read
-                // differently in Console than "the catalog has no art".
-                NSLog("[Casberi] Apple Music catalog artwork lookup failed: %@",
+                NSLog("[Casberi] Apple Music catalog id lookup failed: %@",
                       String(describing: error))
             }
-            let stillArtless = lookupIDs.filter { artByRef["applemusic:\($0.rawValue)"] == nil }
-            if !stillArtless.isEmpty {
-                NSLog("[Casberi] Apple Music: %d of %d looked-up songs still have no usable artwork",
-                      stillArtless.count, lookupIDs.count)
+        }
+
+        // Pass 2 — catalog SEARCH by title+artist (2026-07-11 fix): a LIBRARY
+        // play's id can't be resolved by the catalog id lookup at all, so its
+        // row was stuck glyph-only; searching the catalog for the same track
+        // finds the copy that carries mzstatic art. This is what heals a
+        // corpus that re-ingested without art (device report: music covers
+        // "worked before, broke recently" — a schema-change reinstall wiped
+        // the stored URLs and the id lookup alone couldn't rebuild them).
+        // One request per still-artless ref, capped so a large backlog can't
+        // stall a foreground refresh; the rest heal on later passes.
+        let searchable = termForRef.filter { artByRef[$0.key] == nil }
+        var healedBySearch = 0
+        for (ref, term) in searchable.prefix(25) {
+            var search = MusicCatalogSearchRequest(term: term, types: [Song.self])
+            search.limit = 1
+            if let hit = try? await search.response().songs.first,
+               let art = artURL(hit) {
+                artByRef[ref] = art
+                healedBySearch += 1
             }
         }
+        NSLog("[Casberi] Apple Music artwork: %d recent-played, %d stored artless, %d id-lookups, %d resolved (%d via search), %d still artless",
+              response.items.count, artlessStored.count, lookupIDs.count,
+              artByRef.count, healedBySearch, searchable.count - healedBySearch)
 
         var patched = 0
         for (ref, thing) in artlessStored {

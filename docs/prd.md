@@ -1972,3 +1972,26 @@ helper), so N-1 of N cards carry no competing recognizer at any given
 moment instead of all N carrying one permanently. Unverifiable on
 simulator by construction (never reproduced there) — needs the
 person's own device to confirm.
+
+## 58e. Weekend chips return (as week counts); music art re-heal (2026-07-11)
+
+WEEKEND CHIPS — the "Your week, banked" cover dropped the kind-count
+chips entirely; ruled (user) that losing the count row read as the
+weekend flattening the screen. The original objection (today-only
+counts misread under a week headline) is answered by scoping the
+chips to the WEEK on weekends: week counts under "your week, banked"
+ARE the week's composition, so they belong. Weekday cover keeps
+today's counts; weekend cover shows the week's. Verified on sim.
+
+MUSIC ARTWORK — device report: covers "worked before, broke
+recently" (a schema-change reinstall wiped the stored previewImageURL
+values, and the id-only catalog lookup couldn't rebuild them because
+a LIBRARY play's id can't be resolved via MusicCatalogResourceRequest
+matching id). Added a Pass-2 catalog SEARCH by title+artist for every
+still-artless music ref — the copy the search finds carries mzstatic
+art — so a re-ingested corpus self-heals. Plus a stage-by-stage
+NSLog (recent-played / stored-artless / id-lookups / resolved / via-
+search / still-artless counts) so the next build tells us exactly
+where it fails if search doesn't cover it. Render path confirmed
+correct on both surfaces (Home shelf + feed row read previewImageURL);
+this was never a display bug.

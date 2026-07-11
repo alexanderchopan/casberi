@@ -177,14 +177,18 @@ enum HomeComposition {
             subline = week.count == 1 ? "1 thing landed" : "\(week.count) things landed"
         }
         if !things.isEmpty {
-            // No chips here: the weekend cover is a WEEK recap and its
-            // subline already carries that story; today-only counts under
-            // "your week, banked" would misread as the week's composition
-            // (and stacking both broke the counts-are-the-subline rule).
+            // Chips carry the WEEK's kind counts here, not today's (user,
+            // 2026-07-11): the original ruling dropped them because today-only
+            // counts under a week headline misread as the week's composition —
+            // but WEEK counts under "your week, banked" ARE the week's
+            // composition, so they belong, and losing the count row entirely
+            // read as the weekend flattening the screen. The subline stays
+            // ("Work led" is project info the chips don't carry).
             // The trailing "@week" (prd 54) makes the card an ASK: tap
             // sends "What's this week?" through the composer's answer
             // path — the recap is a door to the week's synthesis.
-            doc.append("cover = Cover(\(q("Weekend")), \(q(title)), \(q(subline)), \(q("")), \(q(dateline(things: things))), \(q("quiet")), [], \(q("@week")))")
+            let weekChips = coverChips(week) ?? "[]"
+            doc.append("cover = Cover(\(q("Weekend")), \(q(title)), \(q(subline)), \(q("")), \(q(dateline(things: things))), \(q("quiet")), \(weekChips), \(q("@week")))")
             rootRefs.append("cover")
         }
 
