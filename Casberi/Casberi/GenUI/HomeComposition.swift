@@ -24,17 +24,21 @@ enum HomeComposition {
 
     static func compose(things: [Thing],
                         walletHoldings: [WalletIngest.HoldingsGroup] = [],
+                        walletPending: Bool = false,
                         pinCoach: Bool = false,
                         hour: Int = Calendar.current.component(.hour, from: .now),
                         weekday: Int = Calendar.current.component(.weekday, from: .now)) -> Document {
         let projects = projectClusters(things: things)
         // Saturday/Sunday reads as a recap — the week, banked.
         if weekday == 1 || weekday == 7 {
-            return weekend(things: things, projects: projects, walletHoldings: walletHoldings, pinCoach: pinCoach)
+            return weekend(things: things, projects: projects, walletHoldings: walletHoldings,
+                          walletPending: walletPending, pinCoach: pinCoach)
         }
         return hour < 15
-            ? morning(things: things, projects: projects, walletHoldings: walletHoldings, pinCoach: pinCoach)
-            : evening(things: things, projects: projects, walletHoldings: walletHoldings, pinCoach: pinCoach)
+            ? morning(things: things, projects: projects, walletHoldings: walletHoldings,
+                     walletPending: walletPending, pinCoach: pinCoach)
+            : evening(things: things, projects: projects, walletHoldings: walletHoldings,
+                     walletPending: walletPending, pinCoach: pinCoach)
     }
 
     /// True when nothing has landed today — the composition acknowledges the
@@ -45,7 +49,8 @@ enum HomeComposition {
 
     // MARK: - Documents
 
-    private static func morning(things: [Thing], projects: [Cluster], walletHoldings: [WalletIngest.HoldingsGroup] = [], pinCoach: Bool = false) -> Document {
+    private static func morning(things: [Thing], projects: [Cluster], walletHoldings: [WalletIngest.HoldingsGroup] = [],
+                                     walletPending: Bool = false, pinCoach: Bool = false) -> Document {
         var doc: [String] = []
         var rootRefs: [String] = []
         var boardRefs: [String] = []
@@ -69,7 +74,7 @@ enum HomeComposition {
         // clustering, and it shouldn't cost a scroll to reach. User-chosen,
         // so it passes the no-obligations rule: Casberi never picked these.
         appendPinned(things, coach: pinCoach, to: &doc, rootRefs: &rootRefs, boardRefs: &boardRefs)
-        appendWalletHoldings(walletHoldings, to: &doc, rootRefs: &rootRefs, boardRefs: &boardRefs)
+        appendWalletHoldings(walletHoldings, pending: walletPending, to: &doc, rootRefs: &rootRefs, boardRefs: &boardRefs)
         appendMediaModules(things, to: &doc, rootRefs: &rootRefs, boardRefs: &boardRefs)
 
         // Where the map belongs even when it didn't compose yet — the starter
@@ -101,7 +106,8 @@ enum HomeComposition {
         return Document(lines: doc, boardRefs: boardRefs)
     }
 
-    private static func evening(things: [Thing], projects: [Cluster], walletHoldings: [WalletIngest.HoldingsGroup] = [], pinCoach: Bool = false) -> Document {
+    private static func evening(things: [Thing], projects: [Cluster], walletHoldings: [WalletIngest.HoldingsGroup] = [],
+                                     walletPending: Bool = false, pinCoach: Bool = false) -> Document {
         var doc: [String] = []
         var rootRefs: [String] = []
         var boardRefs: [String] = []
@@ -119,7 +125,7 @@ enum HomeComposition {
 
         // Pinned rides evening too — same rule as morning, ahead of the map.
         appendPinned(things, coach: pinCoach, to: &doc, rootRefs: &rootRefs, boardRefs: &boardRefs)
-        appendWalletHoldings(walletHoldings, to: &doc, rootRefs: &rootRefs, boardRefs: &boardRefs)
+        appendWalletHoldings(walletHoldings, pending: walletPending, to: &doc, rootRefs: &rootRefs, boardRefs: &boardRefs)
         appendMediaModules(things, to: &doc, rootRefs: &rootRefs, boardRefs: &boardRefs)
 
         let mapSlot = rootRefs.count
@@ -148,7 +154,8 @@ enum HomeComposition {
     /// Weekend — the week, banked: the recap voice rides the cover's eyebrow
     /// with the week's newest image (H7); then the map and threads. Same
     /// grammar, calmer voice; still no obligations.
-    private static func weekend(things: [Thing], projects: [Cluster], walletHoldings: [WalletIngest.HoldingsGroup] = [], pinCoach: Bool = false) -> Document {
+    private static func weekend(things: [Thing], projects: [Cluster], walletHoldings: [WalletIngest.HoldingsGroup] = [],
+                                     walletPending: Bool = false, pinCoach: Bool = false) -> Document {
         var doc: [String] = []
         var rootRefs: [String] = []
         var boardRefs: [String] = []
@@ -182,7 +189,7 @@ enum HomeComposition {
         }
 
         appendPinned(things, coach: pinCoach, to: &doc, rootRefs: &rootRefs, boardRefs: &boardRefs)
-        appendWalletHoldings(walletHoldings, to: &doc, rootRefs: &rootRefs, boardRefs: &boardRefs)
+        appendWalletHoldings(walletHoldings, pending: walletPending, to: &doc, rootRefs: &rootRefs, boardRefs: &boardRefs)
         appendMediaModules(things, to: &doc, rootRefs: &rootRefs, boardRefs: &boardRefs)
 
         if !projects.isEmpty {
@@ -384,6 +391,7 @@ enum HomeComposition {
     /// Groups arrive pre-computed (WalletIngest.topHoldingsByWallet()) since
     /// composing the doc is synchronous and the fetch is not.
     private static func appendWalletHoldings(_ groups: [WalletIngest.HoldingsGroup],
+                                             pending: Bool = false,
                                              to doc: inout [String],
                                              rootRefs: inout [String],
                                              boardRefs: inout [String]) {
@@ -398,6 +406,17 @@ enum HomeComposition {
             doc.append("\(id) = TagMap(\(q("@pin " + g.label)), \(q(g.subline)), [\(g.cells.joined(separator: ", "))], \(q("token")))")
             rootRefs.append(id)
             boardRefs.append(id)
+        }
+        // A pinned wallet's balance fetch is a real network round-trip — the
+        // slot sat empty for that whole window and read as "my holdings
+        // disappeared" (device report, 2026-07-11) instead of "loading". The
+        // starter-preview idiom already says this honestly elsewhere
+        // (appendStarterPreviews): same muted shape, breathing, nothing to
+        // tap, gone the moment real cells land. Not a board module (nothing
+        // to drag before the real card exists).
+        if groups.isEmpty, pending {
+            doc.append("walletPreview = TagMapPreview(\(q("Your wallet")), \(q("Loading your holdings…")), [ETH, BTC, SOL, USDC, More])")
+            rootRefs.append("walletPreview")
         }
     }
 

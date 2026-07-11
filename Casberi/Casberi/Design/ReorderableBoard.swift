@@ -38,38 +38,46 @@ struct ReorderableBoard<ID: Hashable, Content: View>: View {
                     .onGeometryChange(for: CGRect.self) { proxy in
                         proxy.frame(in: .named("homeBoard"))
                     } action: { frames[id] = $0 }
-                    .simultaneousGesture(liftAndDrag(for: id))
+                    // Detection only — onLongPressGesture is Apple's own
+                    // well-behaved recognizer, tuned to coexist with a
+                    // ScrollView's pan the way a hand-composed
+                    // LongPressGesture.sequenced(before: DragGesture) isn't
+                    // (device report, 2026-07-11: scrolling read as
+                    // "sticky", every card's own recognizer competing with
+                    // the scroll pan for the touch, all the time — not just
+                    // the one actually being dragged).
+                    .onLongPressGesture(minimumDuration: 0.35, maximumDistance: 24) {
+                        lift(id)
+                    }
+                    // The actual drag tracker — attached ONLY to the ONE
+                    // card currently lifted. Every other card carries zero
+                    // extra touch-competing recognizers, which is the part
+                    // that actually frees up the scroll.
+                    .ifTrue(draggingID == id) {
+                        $0.gesture(dragGesture(for: id))
+                    }
             }
         }
         .coordinateSpace(name: "homeBoard")
         .animation(.spring(response: 0.35, dampingFraction: 0.8), value: order)
     }
 
-    /// Long-press to lift, sequenced into a drag — the standard "hold then
-    /// carry" gesture. `.simultaneousGesture` (not `.gesture`) so it never
-    /// steals a plain tap from a card's own buttons/rows underneath; a
-    /// quick tap ends before the long-press threshold and this recognizer's
-    /// first phase just never succeeds.
-    private func liftAndDrag(for id: ID) -> some Gesture {
-        LongPressGesture(minimumDuration: 0.35)
-            .sequenced(before: DragGesture(coordinateSpace: .named("homeBoard")))
-            .onChanged { phase in
-                switch phase {
-                case .second(true, let drag):
-                    if draggingID != id {
-                        DSHaptic.selection()
-                        orderAtDragStart = order
-                        liftFrame = frames[id]
-                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                            draggingID = id
-                        }
-                    }
-                    guard let drag else { return }
-                    dragTranslation = drag.translation
-                    reorderIfNeeded(id: id, translation: drag.translation)
-                default:
-                    break
-                }
+    private func lift(_ id: ID) {
+        guard draggingID != id else { return }
+        DSHaptic.selection()
+        orderAtDragStart = order
+        liftFrame = frames[id]
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+            draggingID = id
+        }
+    }
+
+    private func dragGesture(for id: ID) -> some Gesture {
+        DragGesture(minimumDistance: 0, coordinateSpace: .named("homeBoard"))
+            .onChanged { drag in
+                guard draggingID == id else { return }
+                dragTranslation = drag.translation
+                reorderIfNeeded(id: id, translation: drag.translation)
             }
             .onEnded { _ in
                 guard draggingID == id else { return }
@@ -106,5 +114,15 @@ struct ReorderableBoard<ID: Hashable, Content: View>: View {
                        toOffset: i > fromIndex ? i + 1 : i)
             break
         }
+    }
+}
+
+private extension View {
+    /// Applies a modifier only when `condition` holds — the standard,
+    /// guaranteed-correct way to attach a gesture (or anything else)
+    /// conditionally in SwiftUI, since `.gesture` has no built-in "off" state.
+    @ViewBuilder
+    func ifTrue(_ condition: Bool, _ transform: (Self) -> some View) -> some View {
+        if condition { transform(self) } else { self }
     }
 }

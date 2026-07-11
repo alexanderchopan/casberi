@@ -51,6 +51,12 @@ struct HomeScreen: View {
     /// The last celebrated corpus milestone — each fires exactly once, ever.
     @AppStorage("milestone.reached") private var milestoneReached = 0
     @State private var walletHoldings: [WalletIngest.HoldingsGroup] = []
+    /// True from the moment a pinned wallet's balance fetch starts until it
+    /// resolves — lets the composer show an honest loading placeholder in
+    /// the wallet's slot instead of leaving it blank (device report,
+    /// 2026-07-11: the empty window during that real network round-trip
+    /// read as "my holdings disappeared").
+    @State private var walletHoldingsLoading = false
     @Namespace private var zoomNS
     /// The board (prd 58, Goal 1): which root refs from the last compose are
     /// drag-reorderable modules, and their current display order (natural
@@ -252,8 +258,12 @@ struct HomeScreen: View {
         // per-address now, so the whole list is the thing to watch.
         .onChange(of: wallet.addresses) { loadWalletHoldings() }
         .onAppear {
-            streamComposition()
+            // loadWalletHoldings FIRST — it sets the loading flag
+            // synchronously before kicking off the fetch, so the very first
+            // compose already knows to show the wallet slot's placeholder
+            // rather than nothing.
             loadWalletHoldings()
+            streamComposition()
             #if DEBUG
             // Debug hooks: `-openSettings YES` pushes Settings;
             // `-openProject "Work"` pushes a project — both for screenshots.
@@ -295,7 +305,7 @@ struct HomeScreen: View {
         let doc = things.isEmpty
             ? HomeComposition.empty
             : HomeComposition.compose(things: things, walletHoldings: walletHoldings,
-                                      pinCoach: !pinCoachDone)
+                                      walletPending: walletHoldingsLoading, pinCoach: !pinCoachDone)
         if instant {
             stream.paint(doc.lines)   // an update, not an entrance — no typewriter
         } else {
@@ -349,14 +359,17 @@ struct HomeScreen: View {
     /// it lands. Unpinning drops the cells and repaints without them.
     private func loadWalletHoldings() {
         guard wallet.addresses.contains(where: \.pinnedToHome) else {
+            walletHoldingsLoading = false
             if !walletHoldings.isEmpty {
                 walletHoldings = []
                 streamComposition(instant: true)
             }
             return
         }
+        walletHoldingsLoading = true
         Task { @MainActor in
             walletHoldings = await WalletIngest.topHoldingsByWallet(pinnedOnly: true)
+            walletHoldingsLoading = false
             streamComposition(instant: true)
         }
     }

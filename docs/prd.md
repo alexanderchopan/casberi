@@ -434,7 +434,7 @@ BANKR IS REAL — AND READ-ONLY (2026-07-07, user, after reading docs.bankr.bot 
 
 INK SHEET TYPE SCALE, FULLER (2026-07-07, user: "fill this sheet better and more welcoming. same format, just w/ different font sizes"): same structure, bigger type — the title is now heading34 (display), spec-table values are body17 (was callout15), the TAGS line matches at 17pt, and action rows carry 18pt icons + heading17 labels with roomier vertical padding. The metadata reads substantially instead of whispering, and the rows fill the sheet. The tag-detail toolbar's rename control is now a text "Rename" button (was a bare pencil — a lone icon didn't read as rename; a nav-bar Label collapses to icon-only, so it's a plain text button like iOS "Edit").
 
-THE INK SHEET (2026-07-07, user picked "Ink with Gallery grafted in" from three mockups, then "i like it"): the thing sheet is INK-BLACK IN BOTH MODES (like a photo viewer; the sheet forces dark controls), no cards, no hairlines — spacing separates. Structure: eyebrow (6px source-colored dot · KIND · AGE), title large, the thing's media (a screenshot leads with its image — sample refs now load their bundled photos here too), then Gallery's spec table with per-kind labels (WHEN for events — replacing the old ScheduleCard; SITE for links; BY for agent provenance; FROM; TAGS). Tags read as a text line — type tags gray, your tags in their hue — and tapping the row opens the full chip editor in place (add, remove, rename everywhere, delete everywhere: nothing lost). Verbs are quiet text rows (derived, cap three; writes still confirm), plus Pin (new to the sheet) and Share as rows. The Related shelf still streams last.
+THE INK SHEET (2026-07-07, user picked "Ink with Gallery grafted in" from three mockups, then "i like it" — the two specifics called out below are SUPERSEDED by §36ab (2026-07-10): the sheet is no longer flat ink-black (the source's brand hue now washes down from the top, fading into black before the media), and the 6px source dot died for an 18pt circular brand icon; everything else here — the Gallery spec table, tags-as-text-line, the verb rows, the Related shelf — still holds): the thing sheet is INK-BLACK IN BOTH MODES (like a photo viewer; the sheet forces dark controls), no cards, no hairlines — spacing separates. Structure: eyebrow (6px source-colored dot · KIND · AGE), title large, the thing's media (a screenshot leads with its image — sample refs now load their bundled photos here too), then Gallery's spec table with per-kind labels (WHEN for events — replacing the old ScheduleCard; SITE for links; BY for agent provenance; FROM; TAGS). Tags read as a text line — type tags gray, your tags in their hue — and tapping the row opens the full chip editor in place (add, remove, rename everywhere, delete everywhere: nothing lost). Verbs are quiet text rows (derived, cap three; writes still confirm), plus Pin (new to the sheet) and Share as rows. The Related shelf still streams last.
 
 THE GLASS (2026-07-07, user; amended same day — NO POUR): onboarding's sixteen icons fall as BIG 84pt cubes, one after another with real bounce, stacking bottom-up until they fill the BOTTOM HALF of the screen — ice filling a glass — and they STAY at full size. The feed card lives in the top half from the start; nothing shrinks. APPLE HEALTH LEAVES ONBOARDING (same turn): health data reads as sensitive before trust exists — minute zero offers Photos, Calendar, Reminders ("Start with three"); Health waits in the store one tap away.
 
@@ -1942,3 +1942,33 @@ Fixed with the pattern HomePageBackground already uses:
 GeometryReader pins an explicit width/height, then `.clipped()`.
 Verified on sim with live Pinterest content (25 things) rendering a
 correctly bounded 2-column grid.
+
+## 58d. Two device reports fixed: wallet loading gap, sticky scroll (2026-07-11)
+
+Both traced to real causes, both fixed:
+
+WALLET "DISAPPEARED" — actually a loading gap, not data loss. A
+pinned wallet's balance is a real network round-trip; the slot sat
+completely empty for that window (verified via logging: the compose/
+board-sync pipeline was always correct, the card lands the moment the
+fetch resolves) and read as "my holdings disappeared" instead of
+"loading". Fixed the honest way, reusing the app's own starter-
+preview idiom (appendStarterPreviews's muted TagMapPreview): a
+"Your wallet · Loading your holdings…" placeholder occupies the slot
+from the moment a fetch starts until real cells land. Not a board
+module — nothing to drag before the real card exists.
+
+SCROLL "STICKY" — the drag-to-reorder gesture (Goal 1) attached a
+composed LongPressGesture.sequenced(before: DragGesture) via
+.simultaneousGesture to EVERY board card, all the time — the exact
+class of bug CLAUDE.md already names ("a child .gesture(DragGesture)
+beats ScrollView vertical scroll on device"), reproducible only on
+hardware (sim never showed it). Rebuilt on the two-phase pattern real
+apps use for reorderable-in-scrollview: `.onLongPressGesture` (Apple's
+own well-behaved recognizer) detects the lift on every card with zero
+scroll interference; the actual DragGesture is now attached ONLY to
+the one card currently lifted (a small `ifTrue` conditional-modifier
+helper), so N-1 of N cards carry no competing recognizer at any given
+moment instead of all N carrying one permanently. Unverifiable on
+simulator by construction (never reproduced there) — needs the
+person's own device to confirm.
