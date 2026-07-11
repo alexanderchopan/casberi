@@ -1917,3 +1917,13 @@ group inside the Your life category to its OWN Browse category
 vault is notes, not project tracking. Website sections mirrored in
 the same session per the standing rule: X → "Social & messages",
 Slack → "Work & scheduling", Obsidian → "Notes & journals".
+
+## 58b. The board is complete (2026-07-11)
+
+All four goals of prd 58 shipped: Goal 1 (drag-to-reorder, order
+persists) and Goals 2-4 (tap-the-pin sizing, rich media modules for
+music/Pinterest/screenshots/social, and "pin to home" from the
+catalog) both landed same-day. Home is the pinboard the mocks
+promised — movable, resizable, richly-drawn, and growing from wherever
+a person connects an app. prd 58/58a doctrine is now BUILT, not just
+ruled.
