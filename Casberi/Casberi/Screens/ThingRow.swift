@@ -27,9 +27,6 @@ struct ThingRow: View {
                 Image(systemName: "pin.fill")
                     .font(.system(size: 11))
                     .foregroundStyle(DS.tint)
-                    // The pin draws on/off with the symbol's own transition
-                    // when the flip is animated (motion pass 2026-07-11).
-                    .transition(.symbolEffect)
             }
         }
         .padding(.horizontal, DS.Space.s4)

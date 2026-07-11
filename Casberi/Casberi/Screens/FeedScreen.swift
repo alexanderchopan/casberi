@@ -56,6 +56,9 @@ struct FeedScreen: View {
     /// The active chip's ink ring glides between chips instead of blinking
     /// (the tab lozenge's grammar, motion pass 2026-07-11).
     @Namespace private var chipRingNS
+    /// prd 43h: Reduce Motion is law — the hand-rolled moves (ring glide,
+    /// chip edge scale) fall back to plain state changes under it.
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.openURL) private var openURL
 
     /// The shape a source takes when its chip is in force.
@@ -74,7 +77,7 @@ struct FeedScreen: View {
             case "Safari":              self = .safari
             case "Notes":               self = .notes
             case "You", "Voice":        self = .you
-            case "Apple Music":         self = .music
+            case "Apple Music", "Spotify": self = .music
             default:                    self = .plain
             }
         }
@@ -1001,31 +1004,33 @@ struct FeedScreen: View {
                         }
                         .frame(width: 46, height: 46)
                         .padding(2.5)
-                        .overlay(
-                            // Orange = the connection needs you (health lives
-                            // where you live, 2026-07-10), green = new since
-                            // your last visit. The active chip's ink ring
-                            // rides its own layer below so it can travel.
-                            Circle().strokeBorder(
-                                !isActive && broken ? DS.attention
-                                    : (!isActive && hasNew ? DS.confirm : .clear),
-                                lineWidth: 2.5)
-                        )
                         .overlay {
-                            // Ink = active: ONE ring that slides from the old
-                            // chip to the new one — selection reads as an
-                            // object traveling, not two states blinking.
+                            // One ring, three exclusive states: ink = active
+                            // — a single ring that SLIDES from the old chip
+                            // to the new (selection is an object traveling,
+                            // not two states blinking); orange = the
+                            // connection needs you (health lives where you
+                            // live, 2026-07-10); green = new since your last
+                            // visit.
                             if isActive {
-                                Circle().strokeBorder(DS.textPrimary, lineWidth: 2.5)
-                                    .matchedGeometryEffect(id: "chipRing", in: chipRingNS)
+                                let ring = Circle().strokeBorder(DS.textPrimary, lineWidth: 2.5)
+                                if reduceMotion {
+                                    ring
+                                } else {
+                                    ring.matchedGeometryEffect(id: "chipRing", in: chipRingNS)
+                                }
+                            } else if broken || hasNew {
+                                Circle().strokeBorder(broken ? DS.attention : DS.confirm,
+                                                      lineWidth: 2.5)
                             }
                         }
                         .frame(width: 56, height: 56)
                         // Finger-driven, never idle: chips ease down slightly
                         // as they leave the viewport edges (Stories grammar).
+                        // Under Reduce Motion only the fade remains.
                         .scrollTransition(.interactive, axis: .horizontal) { content, phase in
                             content
-                                .scaleEffect(phase.isIdentity ? 1 : 0.88)
+                                .scaleEffect(reduceMotion || phase.isIdentity ? 1 : 0.88)
                                 .opacity(phase.isIdentity ? 1 : 0.6)
                         }
                         .id(label)

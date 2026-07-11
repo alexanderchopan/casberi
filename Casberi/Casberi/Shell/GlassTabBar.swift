@@ -115,33 +115,19 @@ struct GlassTabBar: View {
     @ViewBuilder
     private func tabIcon(for tab: Tab, active: Bool) -> some View {
         // One native symbol bounce carries both moments: a tap bounces ITS
-        // tab, and a capture landing (§1 choreography) bounces Feed — the
-        // hand-rolled scale pulse retired for the system's own move
-        // (motion pass 2026-07-11; Reduce Motion handled for free).
+        // tab, and a capture landing (§1 choreography) bounces Feed — both
+        // counters only ever increment, so the sum changes whenever either
+        // does. The hand-rolled scale pulse retired for the system's own
+        // move (motion pass 2026-07-11; Reduce Motion handled for free).
         Image(systemName: tab.symbol)
             .font(.system(size: 20, weight: active ? .semibold : .regular))
             .symbolEffect(.bounce, value: bounces[tab, default: 0]
                 + (tab == .feed ? chrome.landedPulse : 0))
-            .modifier(FeedTabInstruments(isFeed: tab == .feed, chrome: chrome))
-    }
-}
-
-/// Instruments on the Feed tab only: reports its frame so the capture flight
-/// knows where to land.
-private struct FeedTabInstruments: ViewModifier {
-    let isFeed: Bool
-    let chrome: ShellChrome
-
-    func body(content: Content) -> some View {
-        if isFeed {
-            content
-                .onGeometryChange(for: CGRect.self) { proxy in
-                    proxy.frame(in: .global)
-                } action: { frame in
-                    chrome.feedTabFrame = frame
-                }
-        } else {
-            content
-        }
+            // The capture flight lands on the Feed tab — report its frame.
+            .onGeometryChange(for: CGRect.self) { proxy in
+                proxy.frame(in: .global)
+            } action: { frame in
+                if tab == .feed { chrome.feedTabFrame = frame }
+            }
     }
 }
