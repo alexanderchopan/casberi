@@ -27,6 +27,9 @@ struct RootShell: View {
 
     var body: some View {
         ZStack(alignment: .bottom) {
+            #if DEBUG
+            MockFlipboardOverlay().zIndex(99)
+            #endif
             // The themed page — the same field each screen paints for itself
             // (NavigationStack's backing is opaque, so photo rendering lives
             // inside the screens via dsPageBackground; this is the base coat).
@@ -177,6 +180,16 @@ struct RootShell: View {
         // the newest thing's sheet (the widget-tap route).
         .onOpenURL { route($0) }
         .onAppear {
+            #if DEBUG
+            // Perf pass: log init→ready (first content appearance) once per
+            // process. `ready` = this onAppear, i.e. the first frame's view tree
+            // is assembled — read by scripts/perf.sh, not an in-app surface.
+            if !LaunchClock.didLog {
+                LaunchClock.didLog = true
+                let ms = Int(Date().timeIntervalSince(LaunchClock.start) * 1000)
+                NSLog("[Casberi] launchTimer init→ready %dms", ms)
+            }
+            #endif
             // Spotlight mirrors the store; launch reconciles (covers things
             // the share extension made while the app was closed). The fetch
             // reads the main-actor store, so it stays on the main actor — a

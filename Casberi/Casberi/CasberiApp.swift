@@ -1,6 +1,18 @@
 import SwiftUI
 import SwiftData
 
+#if DEBUG
+/// Cold-launch stopwatch (DEBUG only). `start` is stamped the instant the first
+/// line of `CasberiApp.init` runs — the earliest app-owned code — so RootShell
+/// can log init→ready latency once per process for the perf pass
+/// (`scripts/perf.sh`). One `Date` plus one `NSLog`; it never touches the
+/// launch path's stack depth (see CLAUDE.md's 4MB main-stack note).
+enum LaunchClock {
+    static let start = Date()
+    nonisolated(unsafe) static var didLog = false   // read/written on main only
+}
+#endif
+
 /// Casberi — one home for a person's things.
 ///
 /// M0: project scaffold, token layer, glass tab shell + composer, demo corpus.
@@ -10,6 +22,9 @@ struct CasberiApp: App {
     let container: ModelContainer
 
     init() {
+        #if DEBUG
+        _ = LaunchClock.start   // stamp the earliest app-code moment
+        #endif
         do {
             // The store lives in the app group so the share extension writes
             // to the same corpus (S3: every capture surface routes here).
