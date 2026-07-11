@@ -1,6 +1,7 @@
 import SwiftUI
 import SwiftData
 import Photos
+import MusicKit
 
 /// Diagnostics (2026-07-09) — runs the exact device paths that have been
 /// failing in the field (the Home cover's photo load, the pinned token's
@@ -102,6 +103,37 @@ struct DiagnosticsScreen: View {
             } else {
                 log("FAIL chart fetch — neither GeckoTerminal nor Dexscreener had a price")
             }
+        }
+
+        // — The Apple Music artwork path (field report 2026-07-11: music
+        // rows still wear the glyph). Gated on authorization having been
+        // decided, NOT on stored songs — "connected but every request
+        // fails" lands zero songs and is exactly the state that must show
+        // up here. The model layer runs the real path (recent-feed art, the
+        // catalog fallback, one test fetch); the watchdog keeps a stalled
+        // request from holding up the rest of the report (same guard as
+        // the cover load above). —
+        let songs = all.filter { $0.source == "Apple Music" }
+        if !songs.isEmpty || MusicAuthorization.currentStatus != .notDetermined {
+            let withArt = songs.filter { $0.previewImageURL != nil }.count
+            log("Apple Music: \(songs.count) songs in, \(withArt) with art stored")
+            let context = modelContext
+            let musicLines: [String] = await withCheckedContinuation { cont in
+                var finished = false
+                Task { @MainActor in
+                    let probe = await AppleMusicIngest.artworkDiagnostic(context: context)
+                    guard !finished else { return }
+                    finished = true
+                    cont.resume(returning: probe)
+                }
+                Task { @MainActor in
+                    try? await Task.sleep(for: .seconds(25))
+                    guard !finished else { return }
+                    finished = true
+                    cont.resume(returning: ["FAIL music probe timed out after 25s — a request never returned"])
+                }
+            }
+            for line in musicLines { log(line) }
         }
 
         // — Wallet state —
