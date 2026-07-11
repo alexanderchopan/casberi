@@ -45,10 +45,15 @@ enum AggregateAsk {
     }
 
     /// The timeframe as the person said it ("this week", "today"), for the
-    /// answer to repeat back.
-    private static func rangePhrase(in q: String) -> String? {
-        for phrase in ["yesterday", "today", "last week", "this week", "the week",
-                       "this month", "weekend", "my week"] where q.contains(phrase) {
+    /// answer to repeat back. Internal so StatusAsk names windows the same way.
+    /// "weekend" is checked BEFORE the week phrases — "this weekend" contains
+    /// "this week", and matching the wrong one labels weekend counts as the
+    /// week's (review 2026-07-11); it reads back as "over the weekend" so the
+    /// answer scans as a sentence.
+    static func rangePhrase(in q: String) -> String? {
+        for phrase in ["yesterday", "today", "weekend", "last week", "this week",
+                       "the week", "this month", "my week"] where q.contains(phrase) {
+            if phrase == "weekend" { return "over the weekend" }
             return phrase == "the week" || phrase == "my week" ? "this week" : phrase
         }
         // A weekday name.
@@ -92,6 +97,112 @@ enum AggregateAsk {
             let noun = top.value == 1 ? "thing" : "things"
             return "\(top.key) sent the most\(when) — \(top.value) \(noun)."
         }
+    }
+}
+
+/// Status asks (2026-07-11) — "tell me what's going on", "catch me up",
+/// "anything new?". The ask names no content, so the term-scored retriever
+/// would ground it on nothing (or on noise — a title that happens to say
+/// "going"). Instead the grounding IS recency: the newest things from every
+/// source in a recent window — the feeds' pulse. The on-device model
+/// synthesizes over that sample; everywhere else the counted line answers.
+enum StatusAsk {
+
+    struct Pulse {
+        /// The window as words the answer repeats ("today", "in the last three days").
+        let windowWords: String
+        /// Everything in the window, newest first — the honest counts.
+        let pool: [Thing]
+        /// The grounding set: every active source represented before any
+        /// repeats (newest first, at most 2 per source, capped at 16).
+        let sample: [Thing]
+    }
+
+    private static let cues = ["going on", "happening", "what's new", "whats new",
+                               "anything new", "catch me up", "did i miss",
+                               "what's up", "whats up", "fill me in", "the latest"]
+
+    /// The words a status ask may be made of — anything else is CONTENT, and
+    /// content means the scored retriever should run instead ("what's going
+    /// on with bitcoin" stays a search).
+    private static let filler: Set<String> = [
+        "hey", "so", "tell", "me", "what", "whats", "s", "is", "are", "there",
+        "was", "were", "been", "has", "have", "had", "it", "that", "a", "an",
+        "going", "on", "up", "new", "newest", "latest", "lately", "happening",
+        "happened", "anything", "any", "news", "catch", "fill", "in", "did",
+        "i", "miss", "missed", "the", "my", "with", "everything", "all",
+        "stuff", "things", "thing", "feeds", "feed", "apps", "app", "sources",
+        "around", "here", "right", "now", "recently", "please", "really"
+    ]
+
+    /// The parsed pulse, or nil when the query isn't a status ask.
+    /// `things` must arrive newest-first (the answer path's fetch order).
+    static func pulse(_ query: String, things: [Thing], now: Date = .now) -> Pulse? {
+        // iOS smart punctuation types U+2019 — "What's new?" must match the
+        // "what's new" cue whichever apostrophe the keyboard chose.
+        let q = query.lowercased().replacingOccurrences(of: "\u{2019}", with: "'")
+        guard cues.contains(where: q.contains) else { return nil }
+        var words = q.components(separatedBy: CharacterSet.alphanumerics.inverted)
+            .filter { !$0.isEmpty }
+        let date = DateQuery.match(in: q, now: now)
+        if let dateWords = date?.words { words.removeAll { dateWords.contains($0) } }
+        words.removeAll { filler.contains($0) }
+        guard words.isEmpty else { return nil }
+
+        if let date {
+            // rangePhrase covers every DateQuery phrase today; "recently" is
+            // the readable fallback if the two lists ever drift.
+            let windowWords = AggregateAsk.rangePhrase(in: q) ?? "recently"
+            let pool = things.filter { date.range.contains($0.capturedAt) }
+            return Pulse(windowWords: windowWords, pool: pool, sample: sample(of: pool))
+        }
+        // No timeframe named: the last three days; a quiet stretch widens to
+        // the week so the answer isn't "nothing" while the Feed shows things.
+        var pool = things.filter { $0.capturedAt >= now.addingTimeInterval(-3 * 86_400) }
+        var windowWords = "in the last three days"
+        if pool.isEmpty {
+            pool = things.filter { $0.capturedAt >= now.addingTimeInterval(-7 * 86_400) }
+            windowWords = "in the last week"
+        }
+        return Pulse(windowWords: windowWords, pool: pool, sample: sample(of: pool))
+    }
+
+    /// Every active source speaks before any repeats: one thing per source
+    /// first, then a second, newest first, capped at 16. One pass — the pool
+    /// can be a whole month's window.
+    private static func sample(of pool: [Thing]) -> [Thing] {
+        var taken: [String: Int] = [:]
+        var firsts: [Thing] = [], seconds: [Thing] = []
+        for thing in pool {
+            let n = taken[thing.source, default: 0]
+            guard n < 2 else { continue }
+            taken[thing.source] = n + 1
+            if n == 0 { firsts.append(thing) } else { seconds.append(thing) }
+        }
+        return (firsts + seconds).prefix(16).sorted { $0.capturedAt > $1.capturedAt }
+    }
+
+    /// The computed status line — counts per source, no model, always
+    /// correct. The non-AI answer, and the honest empty.
+    static func line(_ pulse: Pulse) -> String {
+        let opener = pulse.windowWords.prefix(1).uppercased() + pulse.windowWords.dropFirst()
+        guard !pulse.pool.isEmpty else { return "Nothing landed \(pulse.windowWords)." }
+        var counts: [String: Int] = [:]
+        for t in pulse.pool { counts[t.source, default: 0] += 1 }
+        let ranked = counts.sorted { $0.value != $1.value ? $0.value > $1.value : $0.key < $1.key }
+        let shown = ranked.prefix(4)
+        var parts = shown.enumerated().map { i, e in
+            i == 0 ? "\(e.value) thing\(e.value == 1 ? "" : "s") from \(e.key)"
+                   : "\(e.value) from \(e.key)"
+        }
+        if ranked.count > shown.count {
+            let rest = ranked.count - shown.count
+            parts.append("more from \(rest) other app\(rest == 1 ? "" : "s")")
+        }
+        let joined = parts.count == 1
+            ? parts[0]
+            : parts.dropLast().joined(separator: ", ") + ", and " + parts.last!
+        return "\(opener): \(joined)."
     }
 }
 

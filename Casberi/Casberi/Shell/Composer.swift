@@ -113,7 +113,17 @@ struct Composer: View {
         // the miss silent).
         let all = (try? modelContext.fetch(FetchDescriptor<Thing>())) ?? []
         let dayStart = Calendar.current.startOfDay(for: .now)
-        if all.contains(where: { $0.capturedAt >= dayStart }) {
+        // The feeds' pulse (2026-07-11): "What's going on?" synthesizes the
+        // recent window across every source. Gated on the SAME computation
+        // that will answer it — the chip can't drift from the ask it
+        // teaches — and it needs two things to say anything. When it shows,
+        // "What landed today?" sits out (near-duplicate recency asks would
+        // crowd out the chips that teach counting and pinning).
+        let pulseChip = StatusAsk.pulse("what's going on", things: all)
+            .map { $0.pool.count >= 2 } ?? false
+        if pulseChip {
+            out.append("What's going on?")
+        } else if all.contains(where: { $0.capturedAt >= dayStart }) {
             out.append("What landed today?")
         }
         // The chips teach what the composer can DO (2026-07-10) — counting

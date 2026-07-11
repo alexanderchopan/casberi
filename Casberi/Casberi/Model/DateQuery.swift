@@ -23,12 +23,9 @@ enum DateQuery {
 
         if q.contains("yesterday") { return Match(range: day(-1), words: ["yesterday"]) }
         if q.contains("today") { return Match(range: day(0), words: ["today"]) }
-        if q.contains("last week") {
-            let thisWeekStart = calendar.dateInterval(of: .weekOfYear, for: now)!.start
-            let start = calendar.date(byAdding: .day, value: -7, to: thisWeekStart)!
-            return Match(range: start...thisWeekStart.addingTimeInterval(-1),
-                         words: ["last", "week"])
-        }
+        // "weekend" before "last week": "last weekend" CONTAINS "last week",
+        // and matching the wrong phrase handed it the full prior week
+        // (review 2026-07-11).
         if q.contains("weekend") {
             // The most recent Saturday–Sunday (including one in progress).
             let today = calendar.component(.weekday, from: now)   // 1=Sun…7=Sat
@@ -36,6 +33,12 @@ enum DateQuery {
             let start = calendar.startOfDay(for: calendar.date(byAdding: .day, value: -satBack, to: now)!)
             let end = calendar.date(byAdding: .day, value: 2, to: start)!.addingTimeInterval(-1)
             return Match(range: start...end, words: ["weekend", "this", "the", "last"])
+        }
+        if q.contains("last week") {
+            let thisWeekStart = calendar.dateInterval(of: .weekOfYear, for: now)!.start
+            let start = calendar.date(byAdding: .day, value: -7, to: thisWeekStart)!
+            return Match(range: start...thisWeekStart.addingTimeInterval(-1),
+                         words: ["last", "week"])
         }
         if q.contains("week") {
             // Any remaining "week" phrase means the current one — "last week"

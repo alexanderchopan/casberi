@@ -552,18 +552,26 @@ struct RootShell: View {
     private enum AnswerMode { case lookup, synthesis }
 
     private func answerMode(_ query: String) -> AnswerMode {
-        let q = query.lowercased()
+        // Smart punctuation types U+2019 — "what's my week" must match the
+        // "what's my" cue whichever apostrophe the keyboard chose.
+        let q = query.lowercased().replacingOccurrences(of: "\u{2019}", with: "'")
         // A retrieval verb is a strong lookup signal — it wins outright, even
         // over a temporal cue ("what did I save this week" is still a lookup).
         let lookupVerbs = ["find", "search", "show", "save", "saved",
                            "where", "which", "list", "look up"]
         if lookupVerbs.contains(where: q.contains) { return .lookup }
-        // Otherwise a reflection/summary cue routes to prose.
+        // Otherwise a reflection/summary cue routes to prose. The status
+        // cues ride along so a content-qualified status ask ("what's
+        // happening with bitcoin") streams prose like its bare form would —
+        // one phrase family, one answer shape (review 2026-07-11).
         let synthesisCues = ["what's my", "whats my", "how was", "how's my", "hows my",
                              "summar", "synthes", "digest", "tl;dr", "tldr",
                              "recap", "overview", "catch me up", "my week",
                              "my day", "my month", "lately", "what did i do",
-                             "what have i", "going on", "highlights"]
+                             "what have i", "going on", "highlights",
+                             "happening", "what's new", "whats new", "anything new",
+                             "what's up", "whats up", "fill me in", "the latest",
+                             "did i miss"]
         if synthesisCues.contains(where: q.contains) { return .synthesis }
         return .lookup
     }
@@ -589,6 +597,20 @@ struct RootShell: View {
             let line = AggregateAsk.answer(agg, things: allThings)
             return ["root = Stack([ins])", "ins = Insight(\"\(genSafe(line))\")"]
         }
+        // A status ask ("tell me what's going on") names no content to score,
+        // so it grounds on recency itself: the newest things from every source
+        // in a recent window — the feeds' pulse. The model synthesizes over
+        // that sample; everywhere else the counted pulse line answers
+        // (2026-07-11).
+        if let pulse = StatusAsk.pulse(query, things: allThings) {
+            lastAnswerHits = pulse.sample
+            guard !pulse.pool.isEmpty else { return proseDoc(StatusAsk.line(pulse)) }
+            if let prose = await streamSynthesis(query, over: candidates(pulse.sample),
+                                                 onProseDoc: onProseDoc) {
+                return proseDoc(prose)
+            }
+            return pulseDoc(pulse)
+        }
         // A follow-up ("which ones were from sam") searches the LAST
         // answer's grounding, not the whole corpus (2026-07-10).
         let pool = isFollowUp(query) && !lastAnswerHits.isEmpty ? lastAnswerHits : nil
@@ -601,28 +623,47 @@ struct RootShell: View {
         guard OnDeviceModel.isAvailable, !hits.isEmpty else {
             return retrievalDoc(hits, tag: tag)
         }
-        let candidates = hits.map {
-            OnDeviceModel.Candidate(title: $0.title, kind: $0.kind.typeTag,
-                                    source: $0.source, when: shortTime($0.capturedAt))
-        }
         switch answerMode(query) {
         case .lookup:
-            guard let answer = await OnDeviceModel.compose(query: query, candidates: candidates) else {
+            guard let answer = await OnDeviceModel.compose(query: query, candidates: candidates(hits)) else {
                 return retrievalDoc(hits, tag: tag)   // model declined or errored — fall back
             }
             return modelDoc(insight: answer.insight, hits: hits, picks: answer.picks, tag: tag)
         case .synthesis:
-            guard let stream = OnDeviceModel.synthesisStream(query: query, candidates: candidates) else {
+            guard let prose = await streamSynthesis(query, over: candidates(hits),
+                                                    onProseDoc: onProseDoc) else {
                 return synthesisEmptyDoc(hits)
             }
-            var last = ""
-            for await snapshot in stream {
-                last = snapshot
-                onProseDoc(proseDoc(snapshot))
-            }
-            let final = last.trimmingCharacters(in: .whitespacesAndNewlines)
-            return final.isEmpty ? synthesisEmptyDoc(hits) : proseDoc(final)
+            return proseDoc(prose)
         }
+    }
+
+    /// Retrieved things flattened for the model — the one place the mapping
+    /// lives, so every answer path hands the model the same shape.
+    private func candidates(_ things: [Thing]) -> [OnDeviceModel.Candidate] {
+        things.map {
+            OnDeviceModel.Candidate(title: $0.title, kind: $0.kind.typeTag,
+                                    source: $0.source, when: shortTime($0.capturedAt))
+        }
+    }
+
+    /// Streams the model's grounded synthesis, painting each snapshot through
+    /// `onProseDoc`; returns the final prose, or nil when the model is
+    /// unavailable, declined, or wrote nothing — the caller then paints its
+    /// grounded fallback. One loop for every synthesis path, so a streaming
+    /// fix can't miss one.
+    private func streamSynthesis(_ query: String, over candidates: [OnDeviceModel.Candidate],
+                                 onProseDoc: @escaping ([String]) -> Void) async -> String? {
+        guard let stream = OnDeviceModel.synthesisStream(query: query, candidates: candidates) else {
+            return nil
+        }
+        var last = ""
+        for await snapshot in stream {
+            last = snapshot
+            onProseDoc(proseDoc(snapshot))
+        }
+        let final = last.trimmingCharacters(in: .whitespacesAndNewlines)
+        return final.isEmpty ? nil : final
     }
 
     /// A synthesis snapshot as a composition — a single growing Insight. The
@@ -630,6 +671,18 @@ struct RootShell: View {
     private func proseDoc(_ text: String) -> [String] {
         ["root = Stack([ins])",
          "ins = Insight(\"\(genSafe(text))\")"]
+    }
+
+    /// The grounding list as doc lines — `res = Widget(title, count, rows)`
+    /// plus one Row per real thing. Every answer doc that paints things emits
+    /// its rows here, so the Row grammar and its escaping live in one place.
+    private func groundingLines(_ things: [Thing], title: String) -> [String] {
+        let ids = things.indices.map { "r\($0)" }
+        var lines = ["res = Widget(\"\(title)\", \"\(things.count)\", [\(ids.joined(separator: ", "))])"]
+        for (i, t) in things.enumerated() {
+            lines.append("r\(i) = Row(\"\(genSafe(t.title))\", \"\(t.kind.typeTag)\", \"\(t.source)\", \"\(shortTime(t.capturedAt))\")")
+        }
+        return lines
     }
 
     /// A synthesis that came back empty — the model refused (a title tripped a
@@ -641,15 +694,21 @@ struct RootShell: View {
     private func synthesisEmptyDoc(_ hits: [Thing]) -> [String] {
         let shown = Array(hits.prefix(4))
         guard !shown.isEmpty else { return retrievalDoc(hits) }
-        var doc = ["root = Stack([ins, res])",
-                   "ins = Insight(\"\(genSafe("Couldn't pull these into a summary — here's what's there."))\")"]
-        let ids = shown.indices.map { "r\($0)" }
-        doc.append("res = Widget(\"From your things\", \"\(shown.count)\", [\(ids.joined(separator: ", "))])")
-        for (i, t) in shown.enumerated() {
-            let title = t.title.replacingOccurrences(of: "\"", with: "")
-            doc.append("r\(i) = Row(\"\(title)\", \"\(t.kind.typeTag)\", \"\(t.source)\", \"\(shortTime(t.capturedAt))\")")
-        }
-        return doc
+        return ["root = Stack([ins, res])",
+                "ins = Insight(\"\(genSafe("Couldn't pull these into a summary — here's what's there."))\")"]
+            + groundingLines(shown, title: "From your things")
+    }
+
+    /// The status answer where the model isn't (or declined): the counted
+    /// pulse line, grounded by the things it was counted from — one row per
+    /// active source, so "what's going on" reads across the feeds.
+    private func pulseDoc(_ pulse: StatusAsk.Pulse) -> [String] {
+        var seen = Set<String>()
+        let shown = Array(pulse.sample.filter { seen.insert($0.source).inserted }.prefix(4))
+        guard !shown.isEmpty else { return proseDoc(StatusAsk.line(pulse)) }
+        return ["root = Stack([ins, res])",
+                "ins = Insight(\"\(genSafe(StatusAsk.line(pulse)))\")"]
+            + groundingLines(shown, title: "From your feeds")
     }
 
     /// The scoring engine — retrieval only. Matches are scored, not just found:
@@ -761,13 +820,7 @@ struct RootShell: View {
         let tile = tagTile(tag)
         var doc = ["root = Stack([\(tile == nil ? "res" : "tag, res")])"]
         if let tile { doc.append(tile) }
-        let ids = shown.indices.map { "r\($0)" }
-        doc.append("res = Widget(\"Found\", \"\(shown.count)\", [\(ids.joined(separator: ", "))])")
-        for (i, t) in shown.enumerated() {
-            let title = t.title.replacingOccurrences(of: "\"", with: "")
-            doc.append("r\(i) = Row(\"\(title)\", \"\(t.kind.typeTag)\", \"\(t.source)\", \"\(shortTime(t.capturedAt))\")")
-        }
-        return doc
+        return doc + groundingLines(shown, title: "Found")
     }
 
     /// A tappable tile for the tag an answer is about — opens that tag's view.
@@ -820,12 +873,7 @@ struct RootShell: View {
         var doc = ["root = Stack([\(children)])",
                    "ins = Insight(\"\(clean)\")"]
         if let tile { doc.append(tile) }
-        let ids = picked.indices.map { "r\($0)" }
-        doc.append("res = Widget(\"Found\", \"\(picked.count)\", [\(ids.joined(separator: ", "))])")
-        for (i, t) in picked.enumerated() {
-            doc.append("r\(i) = Row(\"\(genSafe(t.title))\", \"\(t.kind.typeTag)\", \"\(t.source)\", \"\(shortTime(t.capturedAt))\")")
-        }
-        return doc
+        return doc + groundingLines(Array(picked), title: "Found")
     }
 
     /// Strips what would break the one-line gen-UI grammar (quotes end a
