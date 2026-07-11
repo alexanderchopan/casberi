@@ -613,7 +613,7 @@ struct RootShell: View {
             return modelDoc(insight: answer.insight, hits: hits, picks: answer.picks, tag: tag)
         case .synthesis:
             guard let stream = OnDeviceModel.synthesisStream(query: query, candidates: candidates) else {
-                return retrievalDoc(hits)
+                return synthesisEmptyDoc(hits)
             }
             var last = ""
             for await snapshot in stream {
@@ -621,7 +621,7 @@ struct RootShell: View {
                 onProseDoc(proseDoc(snapshot))
             }
             let final = last.trimmingCharacters(in: .whitespacesAndNewlines)
-            return final.isEmpty ? retrievalDoc(hits) : proseDoc(final)
+            return final.isEmpty ? synthesisEmptyDoc(hits) : proseDoc(final)
         }
     }
 
@@ -630,6 +630,26 @@ struct RootShell: View {
     private func proseDoc(_ text: String) -> [String] {
         ["root = Stack([ins])",
          "ins = Insight(\"\(genSafe(text))\")"]
+    }
+
+    /// A synthesis that came back empty — the model refused (a title tripped a
+    /// guardrail) or the window's things don't sum into a line. It must NOT
+    /// read as a failed lookup: a bare "Found" list under "what's my week"
+    /// looks broken (audit 2026-07-11). Instead say so plainly and frame the
+    /// grounding things as grounding, not search results. No hits → the honest
+    /// nothing-here line the retrieval path already writes.
+    private func synthesisEmptyDoc(_ hits: [Thing]) -> [String] {
+        let shown = Array(hits.prefix(4))
+        guard !shown.isEmpty else { return retrievalDoc(hits) }
+        var doc = ["root = Stack([ins, res])",
+                   "ins = Insight(\"\(genSafe("Couldn't pull these into a summary — here's what's there."))\")"]
+        let ids = shown.indices.map { "r\($0)" }
+        doc.append("res = Widget(\"From your things\", \"\(shown.count)\", [\(ids.joined(separator: ", "))])")
+        for (i, t) in shown.enumerated() {
+            let title = t.title.replacingOccurrences(of: "\"", with: "")
+            doc.append("r\(i) = Row(\"\(title)\", \"\(t.kind.typeTag)\", \"\(t.source)\", \"\(shortTime(t.capturedAt))\")")
+        }
+        return doc
     }
 
     /// The scoring engine — retrieval only. Matches are scored, not just found:
