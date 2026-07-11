@@ -24,6 +24,8 @@ enum BridgeRefresh {
         }
         if connected("pho") {
             _ = ScreenshotIngest.ingest(context: context)
+            // Thumbnails for new rows, removal of confirmed-gone hollow ones.
+            Task { @MainActor in _ = await ScreenshotIngest.heal(context: context) }
         }
         if connected("cal") {
             Task { @MainActor in _ = await ScheduleIngest.connectCalendar(context: context) }

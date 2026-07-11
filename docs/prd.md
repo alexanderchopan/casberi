@@ -1620,3 +1620,22 @@ crispness at 15-17pt and small text (timestamps, sublines) got mushy
 at 12-13pt, exactly where SF Pro Text is engineered to win. 47
 holds, now stress-tested against both a mono accent and a real
 licensed-face swap. The mock (MockFonts/, -fontMock) is deleted.
+
+## 48. Screenshots survive Photos (2026-07-10)
+
+The "green squares" diagnosed and closed: a screenshot thing stored
+only its PHAsset identifier, so when the original left Photos the row
+fell back to the kind's green hue field forever — honest, but it
+reads as a bug. Two changes, both in ScreenshotIngest.heal():
+(1) THUMBNAIL — every screenshot thing gets a small JPEG of its
+picture saved into the corpus (externalStorage → CKAsset, the voice
+audio pattern), at connect and on every foreground refresh, so the
+row and its detail sheet outlive the Photos original. (2) RECONCILE —
+ruled "if it can't find deleted photos we just don't show them at
+all": a thing whose asset is CONFIRMED gone (full library access,
+fetch finds nothing, no thumbnail ever saved) is removed — it holds
+nothing but a dangling ref. Under limited access nothing is ever
+removed (an unselected asset is indistinguishable from a deleted
+one). Verified end-to-end on sim: 4/4 things thumbed, a seeded
+dangling thing removed. Sim note: `simctl privacy grant photos` does
+NOT take on the iOS 26 runtime — the real dialog is the only path.

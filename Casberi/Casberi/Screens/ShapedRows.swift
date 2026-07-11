@@ -668,6 +668,14 @@ struct PhotoWell: View {
             image = UIImage.demoSample(for: ref)
             return
         }
+        // The corpus's own copy first (saved by ScreenshotIngest.heal since
+        // 2026-07-10) — instant, and it outlives the Photos original. No
+        // fade: stored bytes are ready before first paint, like a bundle
+        // image.
+        if let data = thing.previewImageData, let stored = UIImage(data: data) {
+            image = stored
+            return
+        }
         let assetID = ref.replacingOccurrences(of: "phasset:", with: "")
         let assets = PHAsset.fetchAssets(withLocalIdentifiers: [assetID], options: nil)
         guard let asset = assets.firstObject else { return }

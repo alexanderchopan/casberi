@@ -132,6 +132,30 @@ enum ProbeHooks {
             let n = ScreenshotIngest.ingest(context: context)
             NSLog("Photos re-ingest probe: %d new", n)
         },
+        // `-healPhotos YES` runs the screenshot heal sweep (thumbnails +
+        // confirmed-gone removal) and logs both counts. `-healPhotos
+        // seed-dangling` first plants a screenshot thing with a ref no
+        // asset will ever match — the removal path, end to end.
+        Hook(key: "healPhotos") { spec, context in
+            Task { @MainActor in
+                if spec == "seed-dangling" {
+                    let ghost = Thing(kind: .screenshot, title: "Screenshot",
+                                      source: "Photos",
+                                      sourceRef: "phasset:DEAD-BEEF-PROBE/L0/001")
+                    context.insert(ghost)
+                    try? context.save()
+                    NSLog("Photos heal probe: dangling thing seeded")
+                }
+                let auth = PHPhotoLibrary.authorizationStatus(for: .readWrite)
+                let r = await ScreenshotIngest.heal(context: context)
+                let all = ((try? context.fetch(FetchDescriptor<Thing>(
+                    predicate: #Predicate { $0.source == "Photos" }))) ?? [])
+                    .filter { $0.kind == .screenshot }
+                NSLog("Photos heal probe: auth=%d, %d thumbed, %d removed, %d/%d have stored thumbs",
+                      auth.rawValue, r.thumbed, r.removed,
+                      all.filter { $0.previewImageData != nil }.count, all.count)
+            }
+        },
         // `-setHomeBanner <color-name|photo>` sets the Home cover
         // headlessly — screenshot verification of the picker's two kinds.
         Hook(key: "setHomeBanner") { spec, _ in

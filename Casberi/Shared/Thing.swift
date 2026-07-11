@@ -99,6 +99,13 @@ final class Thing {
     /// keeps CloudKit mirroring happy; it's set after init, so the initializer
     /// and its callers are untouched.
     var previewImageURL: String? = nil
+    /// A screenshot's own picture, saved small into the corpus so the row
+    /// survives the Photos original being deleted (2026-07-10) — the
+    /// voice-audio pattern: externalStorage keeps the bytes beside the
+    /// store, CloudKit mirrors them as a CKAsset. nil for everything else,
+    /// and for screenshots from before this field until the heal sweep
+    /// reaches them.
+    @Attribute(.externalStorage) var previewImageData: Data? = nil
     /// The onchain address a Wallet transaction came from — lets a row say
     /// which watched wallet it belongs to when more than one is watched
     /// (2026-07-09). Optional + default nil keeps CloudKit mirroring happy;

@@ -1,5 +1,6 @@
 import Photos
 import SwiftData
+import UIKit
 
 /// Screenshot ingestion through PhotoKit (M1 capture path). The permission ask
 /// happens in context — connecting the Photos bridge is the moment of unlock —
@@ -12,7 +13,10 @@ enum ScreenshotIngest {
     static func connectAndIngest(context: ModelContext, limit: Int = 20) async -> Int? {
         let status = await PHPhotoLibrary.requestAuthorization(for: .readWrite)
         guard status == .authorized || status == .limited else { return nil }
-        return ingest(context: context, limit: limit)
+        let added = ingest(context: context, limit: limit)
+        // Thumbnails save behind the connect proof, never blocking it.
+        Task { @MainActor in _ = await heal(context: context) }
+        return added
     }
 
     /// Ingests the most recent screenshots as things, deduped on the asset id.
@@ -57,5 +61,83 @@ enum ScreenshotIngest {
         }
         if added > 0 { try? context.save() }
         return added
+    }
+
+    /// The screenshot corpus heals itself (2026-07-10). Two passes over every
+    /// Photos screenshot thing:
+    ///   1. THUMBNAIL — a thing whose asset still exists but carries no stored
+    ///      picture gets a small JPEG saved into the corpus, so the row
+    ///      survives the original later leaving Photos.
+    ///   2. RECONCILE — a thing whose asset is CONFIRMED gone (full library
+    ///      access, the fetch finds nothing, and no thumbnail was ever saved)
+    ///      is removed: it could only ever render as its hue-field fallback
+    ///      (the "green square"), which reads as a bug, not a record. Under
+    ///      LIMITED access nothing is removed — an unselected asset is
+    ///      indistinguishable from a deleted one, and re-granting would have
+    ///      brought it back.
+    @MainActor
+    static func heal(context: ModelContext) async -> (thumbed: Int, removed: Int) {
+        let descriptor = FetchDescriptor<Thing>(predicate: #Predicate { $0.source == "Photos" })
+        // Kind filters run in memory — #Predicate can't compare Codable enums.
+        let things = ((try? context.fetch(descriptor)) ?? [])
+            .filter { $0.kind == .screenshot && $0.sourceRef != nil }
+        guard !things.isEmpty else { return (0, 0) }
+
+        let ids = things.map { $0.sourceRef!.replacingOccurrences(of: "phasset:", with: "") }
+        var found: Set<String> = []
+        var assets: [String: PHAsset] = [:]
+        PHAsset.fetchAssets(withLocalIdentifiers: ids, options: nil)
+            .enumerateObjects { asset, _, _ in
+                found.insert(asset.localIdentifier)
+                assets[asset.localIdentifier] = asset
+            }
+        let fullAccess = PHPhotoLibrary.authorizationStatus(for: .readWrite) == .authorized
+
+        var thumbed = 0, removed = 0
+        var removedIDs: [UUID] = []
+        for (thing, id) in zip(things, ids) {
+            if let asset = assets[id] {
+                // Bound the per-refresh work — the rest heal on later passes.
+                if thing.previewImageData == nil, thumbed < 40,
+                   let data = await thumbnail(asset) {
+                    thing.previewImageData = data
+                    thumbed += 1
+                }
+            } else if fullAccess, thing.previewImageData == nil, !found.contains(id) {
+                removedIDs.append(thing.id)
+                context.delete(thing)
+                removed += 1
+            }
+        }
+        if thumbed > 0 || removed > 0 {
+            try? context.save()
+            SpotlightIndex.remove(ids: removedIDs)
+        }
+        return (thumbed, removed)
+    }
+
+    /// One small JPEG for the corpus — 480pt longest side is retina-sharp at
+    /// every row size and a detail-sheet preview, tens of KB, and safe to
+    /// mirror through CloudKit.
+    private static func thumbnail(_ asset: PHAsset) async -> Data? {
+        let loaded: UIImage? = await withCheckedContinuation { cont in
+            let opts = PHImageRequestOptions()
+            opts.isNetworkAccessAllowed = true   // iCloud-optimized originals
+            opts.deliveryMode = .highQualityFormat
+            var reported = false
+            PHImageManager.default().requestImage(
+                for: asset, targetSize: CGSize(width: 480, height: 480),
+                contentMode: .aspectFill, options: opts
+            ) { img, info in
+                // Skip the degraded first callback so the real image isn't
+                // discarded (the PhotoWell/GenCover fix).
+                let degraded = (info?[PHImageResultIsDegradedKey] as? Bool) ?? false
+                if degraded { return }
+                guard !reported else { return }
+                reported = true
+                cont.resume(returning: img)
+            }
+        }
+        return loaded?.jpegData(compressionQuality: 0.7)
     }
 }
