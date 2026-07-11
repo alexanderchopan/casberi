@@ -1754,3 +1754,29 @@ answer path — a new chrome.ask(query) channel: RootShell opens the
 bubble on set, the composer consumes the query and commits it. One
 synthesis engine: the recap is a door into the ask, not a second
 week-renderer. A quiet week answers honestly.
+
+## 55. Your notes — the import group, and Notes tells the truth (user, 2026-07-11)
+
+Ruled after API research (verified live, not from memory): Day One has
+no public API and Zapier/IFTTT are write-only, but its iOS app exports
+a JSON zip; Apple Journal has no read API (JournalingSuggestions flows
+the OTHER way) but exports per-entry HTML from the profile menu; Apple
+Notes has nothing — no API, no export, share sheet only. So the
+catalog gains a "Your notes" group of three, each saying exactly what
+it is: DAY ONE and APPLE JOURNAL are one-time imports (the ChatGPT
+pattern — steps stated, one picker, dedupe on stable refs, newest-500
+cap, re-runs add only what's new; entries land as note things dated as
+written, Day One keeps tags, photos stay in the export for now, said
+on-screen). APPLE NOTES is the share-path explainer: its Connect
+routes to a screen that teaches open-note → share → Casberi, offers
+one real verb (Open Notes), and REGISTERS NO SEAT ever — nothing to
+connect, so no connected state to fake; the user's instinct ("then our
+whole notes section is some type of import... notes would be just a
+share to") became the design. The Journal parse is deliberately
+tolerant (filename carries date+title; body strips to text; Apple's
+format is undocumented and may drift). Debug: `-dayoneImport <path>`,
+`-journalImport <folder>`. Evernote stays OUT: key issuance frozen
+since Jan 2026, .enex is desktop-only — recheck later. Website updated
+in-session per the standing rule (marquee ×3, "Notes & journals"
+section, self-drawn inline icons — no Apple assets hotlinked or
+bundled).

@@ -75,7 +75,7 @@ struct FeedScreen: View {
             case "Reminders", "Todoist": self = .reminders
             case "OpenClaw":            self = .agent
             case "Safari":              self = .safari
-            case "Notes":               self = .notes
+            case "Notes", "Day One", "Apple Journal": self = .notes
             case "You", "Voice":        self = .you
             case "Apple Music", "Spotify": self = .music
             default:                    self = .plain
