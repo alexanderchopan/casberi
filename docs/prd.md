@@ -1607,3 +1607,16 @@ heading22 — the soft voice, 2026-07-09), SF Pro crisp for everything
 functional. The identity carried by type is the soft-display /
 crisp-function contrast, not a licensed face. Revisit only if a real
 legibility or identity failure shows up, not for novelty.
+
+## 47a. Cabinet Grotesk, tested and passed on (2026-07-10)
+
+The strongest external candidate got the full live test: Cabinet
+Grotesk (Fontshare, free ITF license) rendered across the whole ramp
+in the real app — Extrabold display, Bold/Medium/Regular below —
+side-by-side against SF. Verdict: "looks way better w SF." The
+display tier in Cabinet was genuinely distinctive, but the
+functional tier — most of the app — went soft: rows lost scan
+crispness at 15-17pt and small text (timestamps, sublines) got mushy
+at 12-13pt, exactly where SF Pro Text is engineered to win. 47
+holds, now stress-tested against both a mono accent and a real
+licensed-face swap. The mock (MockFonts/, -fontMock) is deleted.
