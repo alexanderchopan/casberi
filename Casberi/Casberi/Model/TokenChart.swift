@@ -4,7 +4,7 @@ import Foundation
 /// range picker doesn't show (feed pulse, Home row). GeckoTerminal serves
 /// all three for free: hourly candles carry 24h and 7d, daily carry 30d.
 enum TokenRange: String, CaseIterable {
-    case day = "24h", week = "7d", month = "30d"
+    case day = "1D", week = "7D", month = "30D"
 
     /// GeckoTerminal OHLCV path piece + candle count.
     var ohlcv: (timeframe: String, limit: Int) {

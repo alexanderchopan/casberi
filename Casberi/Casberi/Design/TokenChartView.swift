@@ -290,6 +290,10 @@ struct TokenChartView<Fallback: View>: View {
                 } label: {
                     Text(r.rawValue)
                         .dsText(.label12)
+                        // Never wraps — squeezed, the row gives, not the
+                        // label ("24h" once folded into a circled "24/h").
+                        .lineLimit(1)
+                        .fixedSize()
                         .foregroundStyle(r == range ? DS.textPrimary : DS.textSecondary)
                         .padding(.horizontal, 10)
                         .padding(.vertical, 4)

@@ -1836,3 +1836,13 @@ as parked 2026-07-08 (prd, no-server ruling): reading Telegram needs
 MTProto — a server and a platform wall — so it sits as a Soon card
 ("Chats join your things", not connectable) alongside X and YouTube
 until the server question is answered deliberately.
+
+## 51a. Ranges speak finance: 1D / 7D / 30D (2026-07-11)
+
+Two fixes from a device report: (1) the range chips read 1D/7D/30D
+now — "24h" was both wordier and the odd one out against how every
+price app names windows; the Home row's delta pill follows ("−1.8% ·
+1D"). (2) The chip label pins to one line (.fixedSize) — squeezed
+for width, "24h" folded into a circled "24/h"; under pressure the
+row gives, never the label. Remembered ranges stored under the old
+raw values fall back to 1D once, then re-persist.

@@ -491,7 +491,7 @@ private struct GenTokenRow: View {
                     // The compact delta pill (prd 51) — Home and the sheet
                     // read as one family; the row stays the glance (24h
                     // fixed, no chips, no scrub at 48pt).
-                    TokenDeltaPill(change: chart.change, label: "24h", compact: true)
+                    TokenDeltaPill(change: chart.change, label: "1D", compact: true)
                 } else {
                     Text(el.str(3)).dsText(.subhead13).foregroundStyle(DS.textTertiary)
                 }
