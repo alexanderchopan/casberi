@@ -152,6 +152,55 @@ struct BridgeSyncStatusRows: View {
     }
 }
 
+/// Waits for typing to pause before searching, so a fast typist doesn't fire
+/// one request per keystroke — shared by every field that doubles as a
+/// finder (Bluesky/Farcaster people search, Dexscreener token search), so
+/// the delay and minimum length live in one place, not copied per screen.
+/// Returns nil when superseded by a newer keystroke (the caller leaves its
+/// results alone); `[]` when the query's too short to search yet.
+@MainActor
+func debouncedSearch<T>(_ query: String, minLength: Int = 2,
+                        delay: Duration = .milliseconds(300),
+                        fetch: () async -> [T]) async -> [T]? {
+    guard query.count >= minLength else { return [] }
+    try? await Task.sleep(for: delay)
+    guard !Task.isCancelled else { return nil }
+    let found = await fetch()
+    return Task.isCancelled ? nil : found
+}
+
+/// A tappable search-result row — a face or logo, a two-line name+handle
+/// stack, and a tap that connects it. Shared by every finder field.
+struct BridgeSearchResultRow: View {
+    let imageURL: String?
+    let fallbackIcon: String
+    let title: String
+    let subtitle: String
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: DS.Space.s3) {
+                if let imageURL {
+                    RemoteThumb(urlString: imageURL, size: 28,
+                                fallback: fallbackIcon, circular: true)
+                } else {
+                    BridgeIcon(name: fallbackIcon, size: 28, circular: true)
+                }
+                VStack(alignment: .leading, spacing: 0) {
+                    Text(title).dsText(.body17).foregroundStyle(DS.textPrimary)
+                        .lineLimit(1)
+                    Text(subtitle).dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                        .lineLimit(1)
+                }
+                Spacer()
+            }
+        }
+        .buttonStyle(.plain)
+        .listRowBackground(DS.surfaceSheet)
+    }
+}
+
 /// The section every bridge screen ends with — what landed, newest first.
 struct RecentThingsSection: View {
     let header: String

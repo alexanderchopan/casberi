@@ -53,6 +53,16 @@ final class FarcasterStore {
     func remove(_ username: String) { accounts.removeAll { $0.username == username } }
     func removeAll() { accounts = [] }
 
+    /// Adds a username together with an already-known fid — search resolves
+    /// both in one call, so this skips the first sync's separate name→fid
+    /// lookup for it (the fid-caching invariant lives here, not in a caller).
+    @discardableResult
+    func add(_ raw: String, fid: Int) -> Bool {
+        let added = add(raw)
+        setFid(fid, for: Self.normalize(raw))
+        return added
+    }
+
     /// Caches an fid once resolved, so the name→fid lookup runs once per name.
     func setFid(_ fid: Int, for username: String) {
         guard let i = accounts.firstIndex(where: { $0.username == username }) else { return }

@@ -74,9 +74,11 @@ enum HandleBridge: String {
         case .bluesky:
             BlueskyStore.shared.add(hit.handle)
         case .farcaster:
-            let name = FarcasterStore.normalize(hit.handle)
-            FarcasterStore.shared.add(name)
-            if let fid = hit.fid { FarcasterStore.shared.setFid(fid, for: name) }
+            if let fid = hit.fid {
+                FarcasterStore.shared.add(hit.handle, fid: fid)
+            } else {
+                FarcasterStore.shared.add(hit.handle)
+            }
         case .pinterest:
             break
         }
@@ -268,23 +270,18 @@ struct HandleSetupScreen: View {
                 Task { await sync() }
             }
         }
-        // The debounced people search — each keystroke restarts the task,
-        // so only a 300ms pause actually asks the network. Already-watched
-        // accounts stay out of the results; they're in the list above.
+        // The debounced people search — already-watched accounts stay out of
+        // the results; they're in the list above.
         .task(id: nameField) {
             guard bridge.supportsSearch else { return }
             let q = nameField.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard q.count >= 2 else {
-                if !hits.isEmpty { hits = [] }
-                return
+            if let found = await debouncedSearch(q, fetch: {
+                let watched = Set(bridge.names)
+                return await bridge.search(q)
+                    .filter { !watched.contains(bridge.normalize($0.handle)) }
+            }) {
+                hits = found
             }
-            try? await Task.sleep(for: .milliseconds(300))
-            guard !Task.isCancelled else { return }
-            let watched = Set(bridge.names)
-            let found = await bridge.search(q)
-                .filter { !watched.contains(bridge.normalize($0.handle)) }
-            guard !Task.isCancelled else { return }
-            hits = found
         }
     }
 
@@ -320,27 +317,10 @@ struct HandleSetupScreen: View {
                            prefix: bridge.fieldPrefix, suffix: bridge.fieldSuffix,
                            action: connect)
             ForEach(hits) { hit in
-                Button { pick(hit) } label: {
-                    HStack(spacing: DS.Space.s3) {
-                        if let avatar = hit.avatarURL {
-                            RemoteThumb(urlString: avatar, size: 28,
-                                        fallback: bridge.rawValue, circular: true)
-                        } else {
-                            BridgeIcon(name: bridge.rawValue, size: 28, circular: true)
-                        }
-                        VStack(alignment: .leading, spacing: 0) {
-                            Text(hit.displayName)
-                                .dsText(.body17).foregroundStyle(DS.textPrimary)
-                                .lineLimit(1)
-                            Text("@\(bridge.shortName(hit.handle))")
-                                .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-                                .lineLimit(1)
-                        }
-                        Spacer()
-                    }
-                }
-                .buttonStyle(.plain)
-                .listRowBackground(DS.surfaceSheet)
+                BridgeSearchResultRow(
+                    imageURL: hit.avatarURL, fallbackIcon: bridge.rawValue,
+                    title: hit.displayName, subtitle: "@\(bridge.shortName(hit.handle))",
+                    action: { pick(hit) })
             }
             BridgeSyncStatusRows(syncing: syncing,
                                  syncingLine: "Fetching \(bridge.noun)…",
@@ -383,9 +363,7 @@ struct HandleSetupScreen: View {
             bridge.setName(name)
             nameField = name
         }
-        hits = []
-        DSHaptic.tap()
-        Task { await sync() }
+        afterAdd()
     }
 
     /// A tapped search result connects that account — same path as typing
@@ -394,6 +372,10 @@ struct HandleSetupScreen: View {
         bridge.add(hit: hit)
         accountNames = bridge.names
         nameField = ""
+        afterAdd()
+    }
+
+    private func afterAdd() {
         hits = []
         DSHaptic.tap()
         Task { await sync() }

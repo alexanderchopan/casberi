@@ -10,7 +10,7 @@ import SwiftData
 /// has no read API).
 enum TokenWatch {
 
-    struct Resolved: Identifiable, Equatable {
+    struct Resolved: Identifiable {
         let chain: String
         let address: String
         let name: String
@@ -37,33 +37,29 @@ enum TokenWatch {
         func liquidity(_ p: [String: Any]) -> Double {
             (p["liquidity"] as? [String: Any])?["usd"] as? Double ?? 0
         }
-        var best: [String: (pair: [String: Any], liquidity: Double)] = [:]
+        // One parse per pair — the dedupe key and the emitted row come from
+        // the same Resolved, so they can't drift out of sync.
+        var best: [String: (token: Resolved, liquidity: Double)] = [:]
         for pair in pairs {
             guard let chain = pair["chainId"] as? String,
                   let base = pair["baseToken"] as? [String: Any],
-                  let address = base["address"] as? String else { continue }
-            let key = "\(chain):\(address.lowercased())"
+                  let address = base["address"] as? String,
+                  let name = base["name"] as? String,
+                  let symbol = base["symbol"] as? String else { continue }
             let liq = liquidity(pair)
-            if best[key] == nil || liq > best[key]!.liquidity {
-                best[key] = (pair, liq)
+            let token = Resolved(
+                chain: chain, address: address, name: name, symbol: symbol,
+                priceUsd: pair["priceUsd"] as? String,
+                imageURL: IngestSupport.imageURL(
+                    (pair["info"] as? [String: Any])?["imageUrl"] as? String))
+            if liq > (best[token.id]?.liquidity ?? -1) {
+                best[token.id] = (token, liq)
             }
         }
         return best.values
             .sorted { $0.liquidity > $1.liquidity }
             .prefix(limit)
-            .compactMap { entry in
-                let p = entry.pair
-                guard let chain = p["chainId"] as? String,
-                      let base = p["baseToken"] as? [String: Any],
-                      let address = base["address"] as? String,
-                      let name = base["name"] as? String,
-                      let symbol = base["symbol"] as? String else { return nil }
-                return Resolved(
-                    chain: chain, address: address, name: name, symbol: symbol,
-                    priceUsd: p["priceUsd"] as? String,
-                    imageURL: IngestSupport.imageURL(
-                        (p["info"] as? [String: Any])?["imageUrl"] as? String))
-            }
+            .map(\.token)
     }
 
     /// Resolves a query to its most-liquid token — the Watch button's path.

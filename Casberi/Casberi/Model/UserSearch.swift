@@ -8,7 +8,7 @@ import Foundation
 /// search shows nothing — typing the exact name still connects, unchanged.
 enum UserSearch {
 
-    struct Hit: Identifiable, Equatable {
+    struct Hit: Identifiable {
         /// What connect stores — the full Bluesky handle, or the Farcaster
         /// username (the stores normalize again on add; harmless).
         let handle: String
