@@ -214,6 +214,11 @@ struct Sparkline: View {
                        style: StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round))
         }
         .frame(width: 46, height: 14)
+        // A draw-on reveal was built here and REVERTED (review 2026-07-11):
+        // row @State resets on List recycling, so the wipe replayed on every
+        // scroll pass — motion claiming a data arrival that didn't happen.
+        // The draw-in belongs where data actually lands (the Home chart,
+        // prd 36q); a row's one arrival animation is RowEntrance's.
     }
 }
 
@@ -250,6 +255,12 @@ struct RemoteThumb: View {
     /// stores nothing. Session-scoped on purpose: a redeploy can revive art.
     @MainActor private static var dead: Set<String> = []
 
+    /// The decoded cache keys on URL AND render size — one Apple Music cover
+    /// renders at 26pt in the All band and 44pt in MusicRow; a URL-only key
+    /// served the 78px thumb into the 132px slot, blurry for the session
+    /// (review 2026-07-11).
+    private var cacheKey: NSString { "\(Int(size))|\(urlString)" as NSString }
+
     var body: some View {
         Group {
             if let image {
@@ -275,8 +286,9 @@ struct RemoteThumb: View {
     private func load() async {
         if Self.dead.contains(urlString) { failed = true; return }
         // Cache hit is instant and also covers a recycled row landing on a new
-        // URL (its own key, so a stale pin never shows through).
-        if !perishable, let hit = Self.cache.object(forKey: urlString as NSString) {
+        // URL (its own key, so a stale pin never shows through) — no fade: an
+        // already-known image re-appearing softly would read as re-loading.
+        if !perishable, let hit = Self.cache.object(forKey: cacheKey) {
             image = hit; return
         }
         // A recycled row: drop the previous pin before the new one arrives.
@@ -304,8 +316,89 @@ struct RemoteThumb: View {
             full.prepareThumbnail(of: CGSize(width: side, height: side)) { cont.resume(returning: $0 ?? full) }
         }
         guard !Task.isCancelled else { return }
-        if !perishable { Self.cache.setObject(thumb, forKey: urlString as NSString) }
-        image = thumb
+        if !perishable { Self.cache.setObject(thumb, forKey: cacheKey) }
+        // A freshly downloaded image fades in over the placeholder — arrival,
+        // never a pop (the App Store's grammar; motion pass 2026-07-11). The
+        // token motion, not an ad-hoc curve; a pure crossfade, so Reduce
+        // Motion needs no gate.
+        withAnimation(DS.Motion.standard) { image = thumb }
+    }
+}
+
+
+/// Apple Music's own shape (2026-07-11): in the music room, art leads at
+/// track size — the 26pt band thumb honors All's rhythm, but a source's
+/// shaped feed is allowed its native anatomy, and music's native anatomy is
+/// the cover. Title over artist (split from the stored "Title — Artist"),
+/// time trailing; same card surface, no new colors.
+struct MusicRow: View {
+    let thing: Thing
+
+    /// The stored "Title — Artist" splits at the LAST separator (the ingest
+    /// appends the artist last, so an artist is the final segment). Known
+    /// limit: a title that itself contains " — " with NO artist appended
+    /// still splits — undetectable without a stored artist field, and
+    /// catalog songs always carry an artist.
+    private var parts: (title: String, artist: String?) {
+        let comps = thing.title.components(separatedBy: " — ")
+        guard comps.count > 1, let artist = comps.last else { return (thing.title, nil) }
+        return (comps.dropLast().joined(separator: " — "), artist)
+    }
+
+    @Environment(\.colorScheme) private var scheme
+
+    private var done: Bool { thing.mark == .done }
+
+    private var project: String? {
+        thing.tags.first { ThingKind.from(typeTag: $0) == nil }
+    }
+
+    private var projectInk: Color {
+        guard let project else { return DS.textTertiary }
+        let base = ProjectHue.color(for: project)
+        return scheme == .light ? base.mix(with: .black, by: 0.35) : base
+    }
+
+    var body: some View {
+        let parts = self.parts   // one split per render, read twice below
+        HStack(spacing: DS.Space.s3) {
+            if let art = thing.previewImageURL, !art.isEmpty {
+                RemoteThumb(urlString: art, size: 44, fallback: thing.source)
+            } else {
+                BridgeIcon(name: thing.source, size: 44)
+            }
+            VStack(alignment: .leading, spacing: 1) {
+                Text(parts.title)
+                    .dsText(.body17)
+                    .foregroundStyle(done ? DS.textTertiary : DS.textPrimary)
+                    .strikethrough(done, color: DS.textTertiary)
+                    .lineLimit(1)
+                if let artist = parts.artist {
+                    Text(artist)
+                        .dsText(.subhead13)
+                        .foregroundStyle(done ? DS.textTertiary : DS.textSecondary)
+                        .lineLimit(1)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            // Rows carry status (principle 6) — the pin and the project tag
+            // survive the shape switch, same slots as the band.
+            if thing.pinned {
+                Image(systemName: "pin.fill")
+                    .font(.system(size: 11))
+                    .foregroundStyle(DS.tint)
+            }
+            VStack(alignment: .trailing, spacing: 1) {
+                LiveTimeText(date: thing.capturedAt)
+                if let project {
+                    Text(project)
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(projectInk)
+                        .lineLimit(1)
+                }
+            }
+        }
+        .padding(.vertical, DS.Space.s2)
     }
 }
 
@@ -579,7 +672,7 @@ struct PhotoWell: View {
         let assets = PHAsset.fetchAssets(withLocalIdentifiers: [assetID], options: nil)
         guard let asset = assets.firstObject else { return }
         let side = (size ?? 300) * 3
-        image = await withCheckedContinuation { cont in
+        let loaded: UIImage? = await withCheckedContinuation { cont in
             let opts = PHImageRequestOptions()
             opts.isNetworkAccessAllowed = true   // iCloud-optimized originals
             opts.deliveryMode = .highQualityFormat
@@ -598,6 +691,9 @@ struct PhotoWell: View {
                 cont.resume(returning: img)
             }
         }
+        // Same arrival grammar as RemoteThumb (one fade for every image
+        // loader, review 2026-07-11) — never two grammars in one scroll.
+        withAnimation(DS.Motion.standard) { image = loaded }
     }
 }
 

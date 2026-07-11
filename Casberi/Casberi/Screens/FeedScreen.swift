@@ -53,11 +53,17 @@ struct FeedScreen: View {
     @AppStorage("feed.lastSeen") private var lastSeenStamp = 0.0
     @State private var newSince: Date?
     @Namespace private var zoomNS
+    /// The active chip's ink ring glides between chips instead of blinking
+    /// (the tab lozenge's grammar, motion pass 2026-07-11).
+    @Namespace private var chipRingNS
+    /// prd 43h: Reduce Motion is law — the hand-rolled moves (ring glide,
+    /// chip edge scale) fall back to plain state changes under it.
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.openURL) private var openURL
 
     /// The shape a source takes when its chip is in force.
     private enum Shape {
-        case all, photos, wallet, calendar, gmail, chat, reminders, agent, safari, notes, you, plain
+        case all, photos, wallet, calendar, gmail, chat, reminders, agent, safari, notes, you, music, plain
         init(source: String) {
             switch source {
             case "All":                 self = .all
@@ -71,6 +77,7 @@ struct FeedScreen: View {
             case "Safari":              self = .safari
             case "Notes":               self = .notes
             case "You", "Voice":        self = .you
+            case "Apple Music", "Spotify": self = .music
             default:                    self = .plain
             }
         }
@@ -85,6 +92,7 @@ struct FeedScreen: View {
         case .calendar: .init(dx: -28, dy: 0, scale: 1, step: 0.045)
         case .wallet:   .init(dx: 0, dy: 16, scale: 1, step: 0.04)
         case .photos:   .init(dx: 0, dy: 0, scale: 0.92, step: 0.03)
+        case .music:    .init(dx: 0, dy: 10, scale: 1, step: 0.035)
         default:        .init(dx: 0, dy: 8, scale: 1, step: 0.028)
         }
     }
@@ -848,6 +856,7 @@ struct FeedScreen: View {
             switch shape {
             case .calendar:  BandRow(thing: thing, emphasized: thing.id == nextEventID)
             case .reminders: CheckRow(thing: thing, onToggle: { toggleReminder(thing) })
+            case .music:     MusicRow(thing: thing)
             case .chat where thing.pinned || thing.mark == .doing:
                 TakeawayCard(thing: thing)
             default:
@@ -995,17 +1004,35 @@ struct FeedScreen: View {
                         }
                         .frame(width: 46, height: 46)
                         .padding(2.5)
-                        .overlay(
-                            // Ink = active, orange = the connection needs you
-                            // (health lives where you live, 2026-07-10),
-                            // green = new since your last visit.
-                            Circle().strokeBorder(
-                                isActive ? DS.textPrimary
-                                    : (broken ? DS.attention
-                                        : (hasNew ? DS.confirm : .clear)),
-                                lineWidth: 2.5)
-                        )
+                        .overlay {
+                            // One ring, three exclusive states: ink = active
+                            // — a single ring that SLIDES from the old chip
+                            // to the new (selection is an object traveling,
+                            // not two states blinking); orange = the
+                            // connection needs you (health lives where you
+                            // live, 2026-07-10); green = new since your last
+                            // visit.
+                            if isActive {
+                                let ring = Circle().strokeBorder(DS.textPrimary, lineWidth: 2.5)
+                                if reduceMotion {
+                                    ring
+                                } else {
+                                    ring.matchedGeometryEffect(id: "chipRing", in: chipRingNS)
+                                }
+                            } else if broken || hasNew {
+                                Circle().strokeBorder(broken ? DS.attention : DS.confirm,
+                                                      lineWidth: 2.5)
+                            }
+                        }
                         .frame(width: 56, height: 56)
+                        // Finger-driven, never idle: chips ease down slightly
+                        // as they leave the viewport edges (Stories grammar).
+                        // Under Reduce Motion only the fade remains.
+                        .scrollTransition(.interactive, axis: .horizontal) { content, phase in
+                            content
+                                .scaleEffect(reduceMotion || phase.isIdentity ? 1 : 0.88)
+                                .opacity(phase.isIdentity ? 1 : 0.6)
+                        }
                         .id(label)
                         .accessibilityLabel(label
                             + (broken ? ", needs reconnecting" : (hasNew ? ", new things" : "")))
