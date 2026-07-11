@@ -1667,3 +1667,11 @@ bar (timeline, tray, stack, plain waveform); ruled: Feed KEEPS the
 ECG trace — it's the pulse of your stuff. Diagnostics moves to
 "stethoscope": the instrument that listens, not the trace itself.
 The -feedSymbol mock hook came and went in the same session.
+
+## 50. Home's Pinned card holds six (user, 2026-07-11)
+
+The Pinned card's cap rises from 3 to 6 (the 2026-07-06 cap predated
+token watching — a small watchlist alone filled all three seats and
+the fourth pin silently never showed). Still newest first, still
+user-chosen only, so the no-obligations voice rule holds; the cap
+exists so Home stays a composition, not a scroll of pins.

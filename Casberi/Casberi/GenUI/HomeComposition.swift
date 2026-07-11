@@ -320,14 +320,15 @@ enum HomeComposition {
     }
 
     /// Feed pins surface on Home too (ruling 2026-07-06): a pin means "keep
-    /// this in view", and Home is the view. Newest first, capped at 3. With
-    /// no pins yet, one retiring coach line takes the slot (2026-07-10) —
-    /// the empty Pinned state taught nothing, so a new user never learned
-    /// the swipe. The surface owns the retire flag.
+    /// this in view", and Home is the view. Newest first, capped at 6
+    /// (raised from 3, prd 50 — a token watchlist alone can fill three
+    /// seats). With no pins yet, one retiring coach line takes the slot
+    /// (2026-07-10) — the empty Pinned state taught nothing, so a new user
+    /// never learned the swipe. The surface owns the retire flag.
     private static func appendPinned(_ things: [Thing], coach: Bool,
                                      to doc: inout [String],
                                      rootRefs: inout [String]) {
-        let pinned = things.filter(\.pinned).prefix(3)
+        let pinned = things.filter(\.pinned).prefix(6)
         guard !pinned.isEmpty else {
             if coach {
                 doc.append("pinCoach = Coach(\(q("Swipe a thing in Feed to pin it here.")))")
