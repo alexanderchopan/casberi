@@ -55,6 +55,35 @@ enum HandleBridge: String {
     /// following feed, not just your own mirror. Pinterest stays single.
     var supportsMultiple: Bool { self == .bluesky || self == .farcaster }
 
+    /// Bluesky and Farcaster have public, keyless people search (2026-07-11)
+    /// — the field doubles as a finder. Pinterest has no such surface.
+    var supportsSearch: Bool { self == .bluesky || self == .farcaster }
+
+    func search(_ query: String) async -> [UserSearch.Hit] {
+        switch self {
+        case .bluesky:   await UserSearch.bluesky(query)
+        case .farcaster: await UserSearch.farcaster(query)
+        case .pinterest: []
+        }
+    }
+
+    /// A tapped search hit connects like a typed name — plus, for Farcaster,
+    /// the fid the search already carried (saves the first sync's resolve).
+    func add(hit: UserSearch.Hit) {
+        switch self {
+        case .bluesky:
+            BlueskyStore.shared.add(hit.handle)
+        case .farcaster:
+            if let fid = hit.fid {
+                FarcasterStore.shared.add(hit.handle, fid: fid)
+            } else {
+                FarcasterStore.shared.add(hit.handle)
+            }
+        case .pinterest:
+            break
+        }
+    }
+
     /// The connected accounts, for the list the multi-account screen shows.
     var names: [String] {
         switch self {
@@ -110,9 +139,9 @@ enum HandleBridge: String {
     var fieldFooter: String {
         switch self {
         case .bluesky:
-            "Just the handle — your posts are public, so there's no password to give."
+            "Type a few letters to find someone, or the full handle — posts are public, so there's no password to give."
         case .farcaster:
-            "Just the username — casts are public on the open protocol, so there's no password to give."
+            "Type a few letters to find someone, or the exact username — casts are public on the open protocol, so there's no password to give."
         case .pinterest:
             "Just the username — your public pins arrive through Pinterest's own feed, so there's no password to give."
         }
@@ -201,6 +230,10 @@ struct HandleSetupScreen: View {
     /// each add/remove, since the screen doesn't observe the store directly.
     @State private var accountNames: [String] = []
 
+    /// People matching what's typed so far — the field doubles as a finder
+    /// on the bridges with public search. Cleared on add and on emptying.
+    @State private var hits: [UserSearch.Hit] = []
+
     private func loadRecent() {
         recent = recentBridgeThings(source: bridge.rawValue, context: modelContext)
     }
@@ -237,6 +270,19 @@ struct HandleSetupScreen: View {
                 Task { await sync() }
             }
         }
+        // The debounced people search — already-watched accounts stay out of
+        // the results; they're in the list above.
+        .task(id: nameField) {
+            guard bridge.supportsSearch else { return }
+            let q = nameField.trimmingCharacters(in: .whitespacesAndNewlines)
+            if let found = await debouncedSearch(q, fetch: {
+                let watched = Set(bridge.names)
+                return await bridge.search(q)
+                    .filter { !watched.contains(bridge.normalize($0.handle)) }
+            }) {
+                hits = found
+            }
+        }
     }
 
     /// The watched-accounts list (Bluesky/Farcaster) — each removable, the
@@ -270,6 +316,12 @@ struct HandleSetupScreen: View {
                            buttonLabel: buttonLabel,
                            prefix: bridge.fieldPrefix, suffix: bridge.fieldSuffix,
                            action: connect)
+            ForEach(hits) { hit in
+                BridgeSearchResultRow(
+                    imageURL: hit.avatarURL, fallbackIcon: bridge.rawValue,
+                    title: hit.displayName, subtitle: "@\(bridge.shortName(hit.handle))",
+                    action: { pick(hit) })
+            }
             BridgeSyncStatusRows(syncing: syncing,
                                  syncingLine: "Fetching \(bridge.noun)…",
                                  result: result, resultIsError: resultIsError)
@@ -311,6 +363,20 @@ struct HandleSetupScreen: View {
             bridge.setName(name)
             nameField = name
         }
+        afterAdd()
+    }
+
+    /// A tapped search result connects that account — same path as typing
+    /// the name exactly, minus the typing.
+    private func pick(_ hit: UserSearch.Hit) {
+        bridge.add(hit: hit)
+        accountNames = bridge.names
+        nameField = ""
+        afterAdd()
+    }
+
+    private func afterAdd() {
+        hits = []
         DSHaptic.tap()
         Task { await sync() }
     }

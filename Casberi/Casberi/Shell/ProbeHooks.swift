@@ -93,6 +93,32 @@ enum ProbeHooks {
                       added != nil ? "watched" : "already")
             }
         },
+        // `-userSearch "<bluesky|farcaster>:<query>"` runs the find-a-person
+        // search and logs the hits — headless test of the search endpoints.
+        Hook(key: "userSearch") { spec, _ in
+            guard let colon = spec.firstIndex(of: ":") else { return }
+            let which = String(spec[..<colon]).lowercased()
+            let query = String(spec[spec.index(after: colon)...])
+            Task { @MainActor in
+                let hits = which.hasPrefix("f")
+                    ? await UserSearch.farcaster(query)
+                    : await UserSearch.bluesky(query)
+                NSLog("User search probe (%@ '%@'): %d hits%@", which, query, hits.count,
+                      hits.isEmpty ? "" : " — " + hits.map {
+                          "\($0.displayName) @\($0.handle)"
+                      }.joined(separator: ", "))
+            }
+        },
+        // `-tokenSearch <query>` runs the token search and logs the matches.
+        Hook(key: "tokenSearch") { query, _ in
+            Task { @MainActor in
+                let hits = await TokenWatch.search(query)
+                NSLog("Token search probe ('%@'): %d hits%@", query, hits.count,
+                      hits.isEmpty ? "" : " — " + hits.map {
+                          "\($0.name) $\($0.symbol) (\($0.chain))"
+                      }.joined(separator: ", "))
+            }
+        },
         // `-walletAddress <0x…>` (or `<0x…>|<Label>`) watches a wallet headlessly.
         Hook(key: "walletAddress") { spec, context in
             let parts = spec.split(separator: "|", maxSplits: 1).map(String.init)

@@ -14,6 +14,34 @@ struct DexscreenerScreen: View {
     @State private var resultIsError = false
     @State private var watched: [Thing] = []
 
+    /// Tokens matching what's typed so far (2026-07-11), most liquid first,
+    /// UNFILTERED — the field doubles as a finder, so "degen" shows its
+    /// candidates instead of silently watching whichever is most liquid.
+    /// Kept unfiltered (not just the not-yet-watched ones) so the Watch
+    /// button can reuse `hits.first` as the exact answer a fresh resolve()
+    /// would give, "already on your watchlist" included. Cleared on watch
+    /// and on emptying.
+    @State private var hits: [TokenWatch.Resolved] = []
+
+    /// What the search rows actually show — already-watched tokens are in
+    /// the watchlist below, so they drop out here for display only.
+    private var displayHits: [TokenWatch.Resolved] {
+        let refs = Set(watched.compactMap(\.sourceRef))
+        return hits.filter { !refs.contains("dexscreener:\($0.id)") }
+    }
+
+    /// The one swipe lesson, shared across every screen that pins by swipe
+    /// (2026-07-11) — whichever screen a person meets the gesture on first
+    /// retires it everywhere.
+    @AppStorage("coach.swipe.done") private var swipeCoachDone = false
+
+    /// The row that plays the swipe demo — the first watched token, once
+    /// ever, retiring the moment any screen's demo (or a real swipe) does.
+    private var hintTokenID: UUID? {
+        guard !swipeCoachDone else { return nil }
+        return watched.first?.id
+    }
+
     private func loadWatched() {
         watched = recentBridgeThings(source: "Dexscreener", context: modelContext)
     }
@@ -40,13 +68,28 @@ struct DexscreenerScreen: View {
         .navigationTitle("Dexscreener")
         .navigationBarTitleDisplayMode(.large)
         .onAppear { loadWatched() }
+        // The debounced token search.
+        .task(id: queryField) {
+            let q = queryField.trimmingCharacters(in: .whitespacesAndNewlines)
+            if let found = await debouncedSearch(q, fetch: { await TokenWatch.search(q) }) {
+                hits = found
+            }
+        }
     }
 
     private var addSection: some View {
         Section {
-            BridgeFieldRow(placeholder: "Token address, symbol, or link",
+            BridgeFieldRow(placeholder: "Name, symbol, address, or link",
                            text: $queryField,
                            buttonLabel: "Watch", action: watch)
+            ForEach(displayHits) { token in
+                BridgeSearchResultRow(
+                    imageURL: token.imageURL, fallbackIcon: "Dexscreener",
+                    title: "\(token.name) · $\(token.symbol)",
+                    subtitle: token.priceUsd.map { "\(token.chain.capitalized) · $\($0)" }
+                        ?? token.chain.capitalized,
+                    action: { watchHit(token) })
+            }
             BridgeSyncStatusRows(syncing: working,
                                  syncingLine: "Finding the token…",
                                  result: result, resultIsError: resultIsError)
@@ -54,7 +97,7 @@ struct DexscreenerScreen: View {
             Text("Watch a token").dsText(.label12)
                 .foregroundStyle(DS.textTertiary)
         } footer: {
-            Text("Paste a token address or a Dexscreener link — its live price chart lands in your feed.")
+            Text("Type a name, symbol, address, or Dexscreener link — matching tokens appear as you type. A watched token's live price chart lands in your feed.")
                 .dsText(.callout15).foregroundStyle(DS.textTertiary)
         }
     }
@@ -80,6 +123,7 @@ struct DexscreenerScreen: View {
                         .dsText(.subhead13).foregroundStyle(DS.textTertiary)
                 }
                 .listRowBackground(DS.surfaceSheet)
+                .modifier(SwipeHintNudge(active: thing.id == hintTokenID) { swipeCoachDone = true })
                 .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                     // Full swipe = pin (Feed's grammar). The explicit group
                     // replaces the system delete, so Unwatch rides here too.
@@ -133,8 +177,15 @@ struct DexscreenerScreen: View {
     private func watch() {
         let q = queryField.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !q.isEmpty, !working else { return }
-        working = true
         DSHaptic.tap()
+        // The debounced search already ran this exact query — its top hit
+        // IS what a fresh resolve() would return, so reuse it rather than
+        // repeating the network round-trip.
+        if let top = hits.first {
+            add(top)
+            return
+        }
+        working = true
         Task {
             let token = await TokenWatch.resolve(q)
             working = false
@@ -143,15 +194,28 @@ struct DexscreenerScreen: View {
                 resultIsError = true
                 return
             }
-            resultIsError = false
-            if let thing = TokenWatch.add(token, context: modelContext) {
-                result = "Watching \(thing.title)"
-                queryField = ""
-                loadWatched()
-                register()
-            } else {
-                result = "\(token.name) is already on your watchlist."
-            }
+            add(token)
+        }
+    }
+
+    /// A tapped search result skips the resolve — the search already
+    /// carried everything the watchlist stores.
+    private func watchHit(_ token: TokenWatch.Resolved) {
+        guard !working else { return }
+        DSHaptic.tap()
+        add(token)
+    }
+
+    private func add(_ token: TokenWatch.Resolved) {
+        resultIsError = false
+        if let thing = TokenWatch.add(token, context: modelContext) {
+            result = "Watching \(thing.title)"
+            queryField = ""
+            hits = []
+            loadWatched()
+            register()
+        } else {
+            result = "\(token.name) is already on your watchlist."
         }
     }
 

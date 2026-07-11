@@ -1283,38 +1283,3 @@ struct RowEntrance: ViewModifier {
         }
     }
 }
-
-
-/// The demo's swipe lesson: the first row nudges left once, the pin peeks
-/// from the trailing edge, and the row settles back. Plays a single time.
-struct SwipeHintNudge: ViewModifier {
-    let active: Bool
-    var onDone: () -> Void
-    @State private var nudge: CGFloat = 0
-
-    func body(content: Content) -> some View {
-        content
-            .offset(x: nudge)
-            .background(alignment: .trailing) {
-                if active {
-                    Image(systemName: "pin.fill")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(DS.tint)
-                        .opacity(nudge < -8 ? Double(min(1, -nudge / 48)) : 0)
-                }
-            }
-            .onAppear {
-                guard active else { return }
-                Task { @MainActor in
-                    try? await Task.sleep(for: .milliseconds(1400))
-                    withAnimation(.spring(duration: 0.45, bounce: 0.35)) { nudge = -56 }
-                    try? await Task.sleep(for: .milliseconds(800))
-                    withAnimation(.spring(duration: 0.4, bounce: 0.3)) { nudge = 0 }
-                    try? await Task.sleep(for: .milliseconds(400))
-                    onDone()
-                }
-            }
-    }
-}
-
-

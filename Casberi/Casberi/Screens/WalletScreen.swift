@@ -33,6 +33,10 @@ struct WalletScreen: View {
     @State private var holdings = GenStream()
     @State private var result: String?
     @State private var resultIsError = false
+    /// The one swipe lesson, shared across every screen that pins by swipe
+    /// (2026-07-11) — whichever screen a person meets the gesture on first
+    /// retires it everywhere.
+    @AppStorage("coach.swipe.done") private var swipeCoachDone = false
 
     @Query(walletRecentDescriptor) private var recent: [Thing]
 
@@ -114,7 +118,11 @@ struct WalletScreen: View {
     /// wallet's holdings show on Home and Feed only when THAT wallet is
     /// pinned — watching more than one is usually two different purposes
     /// (main vs. cold), and a shared switch couldn't say which one it meant.
-    /// Swipe and the inline toggle both flip the same per-address flag.
+    /// Pin lives on the swipe alone now (2026-07-11) — the row briefly also
+    /// carried an inline toggle, but a second control for the exact same
+    /// verb read as two different actions rather than one (user: "confusing
+    /// which is which"); the row shows its pin state passively instead
+    /// (Feed's grammar), and the swipe hint nudge covers discoverability.
     private var watchingSection: some View {
         Section {
             ForEach(wallet.addresses) { addr in
@@ -135,12 +143,14 @@ struct WalletScreen: View {
                         }
                     }
                     Spacer()
-                    Toggle("", isOn: Binding(
-                        get: { addr.pinnedToHome },
-                        set: { _ in wallet.togglePin(addr.id); DSHaptic.tap() }
-                    )).labelsHidden().tint(DS.tint)
+                    if addr.pinnedToHome {
+                        Image(systemName: "pin.fill")
+                            .font(.system(size: 11))
+                            .foregroundStyle(DS.tint)
+                    }
                 }
                 .listRowBackground(DS.surfaceSheet)
+                .modifier(SwipeHintNudge(active: addr.id == hintAddressID) { swipeCoachDone = true })
                 // The pin swipe is the SAME GESTURE everywhere (2026-07-10,
                 // user: it was leading here, trailing in Feed — one verb,
                 // two directions): trailing edge, Feed's edge.
@@ -171,9 +181,16 @@ struct WalletScreen: View {
             Text("Watching").dsText(.label12)
                 .foregroundStyle(DS.textSecondary)
         } footer: {
-            Text("Pin a wallet to show its holdings on Home and Feed.")
+            Text("Swipe a wallet to pin its holdings to Home and Feed.")
                 .dsText(.callout15).foregroundStyle(DS.textSecondary)
         }
+    }
+
+    /// The row that plays the swipe demo — the first watched address, once
+    /// ever, retiring the moment any screen's demo (or a real swipe) does.
+    private var hintAddressID: WalletStore.WatchedAddress.ID? {
+        guard !swipeCoachDone else { return nil }
+        return wallet.addresses.first?.id
     }
 
     private var addSection: some View {
