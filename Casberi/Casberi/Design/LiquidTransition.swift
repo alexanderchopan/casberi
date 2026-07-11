@@ -64,8 +64,8 @@ enum LiquidTransition {
 @MainActor
 @Observable
 final class LiquidPusher {
-    static let duration: Double = 1.5
-    static let popDuration: Double = 1.1
+    static let duration: Double = 1.15
+    static let popDuration: Double = 0.85
     /// The lift: when the liquid stills, the overlay holds the crisp final
     /// image and FADES over this window instead of unmounting in one frame.
     static let lift: Double = 0.25
@@ -299,7 +299,7 @@ struct LiquidDissolveOverlay: View {
                                 .float2(Float(size.width), Float(size.height)),
                                 .float(Float(progress))
                             ),
-                            maxSampleOffset: CGSize(width: 60, height: 60)
+                            maxSampleOffset: CGSize(width: 90, height: 90)
                         )
                     Image(uiImage: outgoing)
                         .resizable()
@@ -309,7 +309,7 @@ struct LiquidDissolveOverlay: View {
                                 .float2(Float(size.width), Float(size.height)),
                                 .float(Float(progress))
                             ),
-                            maxSampleOffset: CGSize(width: 60, height: 60)
+                            maxSampleOffset: CGSize(width: 90, height: 90)
                         )
                 }
             }

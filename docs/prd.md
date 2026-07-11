@@ -1512,3 +1512,12 @@ your color; the store arrives with its carousel and shelves), never
 by transition. The system's one motion distinction stays directional:
 arriving 1.5s, leaving 1.1s — entering a room is heavier than
 stepping out.
+
+## 43k. Wetter and quicker (2026-07-10)
+
+Ruled after living with 1.5s: "more liquid and faster." Pace: open
+1.15s / pop 0.85s (the bracketing holds: 0.95 was too fast bare, but
+with the bigger waves the shorter ride reads fuller). Waves: broader
+and deeper — frequencies down (~8.5/5.5/7/4.5 from 11/7/9/6), outgoing
+amplitude 26→42pt, incoming 22→34pt, shimmer 0.10→0.13, sample offsets
+widened to match. The page heaves instead of buzzing.
