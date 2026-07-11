@@ -136,7 +136,19 @@ struct GenRender: View {
         case "Cover":       GenCover(el: el).mountIn()
         case "KindPills":   GenKindPills(el: el).mountIn()
         case "Insight":     GenInsight(el: el).mountIn()
-        case "Widget":      GenWidget(el: el, els: els).mountIn()
+        case "Widget":
+            #if DEBUG
+            // MOCK (-homeTitles YES): Home's sections named in the cover's
+            // voice — "Kept" above the pin widget. Delete with the verdict.
+            if UserDefaults.standard.bool(forKey: "homeTitles"), el.str(0) == "@pin" {
+                Text("Kept")
+                    .dsText(.heading22)
+                    .foregroundStyle(DS.textPrimary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.top, DS.Space.s2)
+            }
+            #endif
+            GenWidget(el: el, els: els).mountIn()
         case "Row":         GenRow(el: el).mountIn()
         case "TokenRow":    GenTokenRow(el: el).mountIn()
         case "Suggest":     GenSuggest().mountIn()
@@ -146,7 +158,20 @@ struct GenRender: View {
         case "ProjectTile": GenProjectTile(el: el).mountIn()
         case "PhotoTile":   GenPhotoTile(el: el).mountIn()
         case "VoiceTile":   GenVoiceTile(el: el).mountIn()
-        case "TagMap":      GenTagMap(el: el).mountIn()
+        case "TagMap":
+            #if DEBUG
+            // MOCK (-homeTitles YES): "Your holdings" above the first wallet
+            // map; the week map keeps its in-card title for contrast.
+            if UserDefaults.standard.bool(forKey: "homeTitles"),
+               el.str(0).hasPrefix("@pin "), el.str(3) == "token" {
+                Text("Your holdings")
+                    .dsText(.heading22)
+                    .foregroundStyle(DS.textPrimary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.top, DS.Space.s2)
+            }
+            #endif
+            GenTagMap(el: el).mountIn()
         // The starter shape: same geometry, muted fill, nothing to tap — an
         // honest preview of the map that composes once things land.
         case "TagMapPreview": GenTagMap(el: el, preview: true).mountIn()

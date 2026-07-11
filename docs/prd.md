@@ -1846,3 +1846,44 @@ price app names windows; the Home row's delta pill follows ("−1.8% ·
 for width, "24h" folded into a circled "24/h"; under pressure the
 row gives, never the label. Remembered ranges stored under the old
 raw values fall back to 1D once, then re-persist.
+
+## 58. Home becomes the board (ruled 2026-07-11, build TBD)
+
+The direction that reframes Home, ruled from three mock rounds
+("holy shit that is so cool"): Home is a PINBOARD of movable,
+richly-drawn pieces.
+
+THE GRAMMAR (mock V1 + V3 synthesis):
+- Home below the cover is a single column of module cards — pinned
+  things, each wallet's holdings map, the "What's going on" treemap,
+  and source modules (music, social, Pinterest, screenshots…).
+- The person owns the ORDER: long-press lifts a card (scale, slight
+  turn, shadow — the mocked drag state), drag reorders, order
+  persists. "What's going on" moves like everything else.
+- The person owns the SIZE: any card can be promoted to LARGE, where
+  its media becomes the card (the full-bleed album-artwork treatment
+  from mock V3). Order and scale, both user-owned — that is the
+  personalization story, not themes or fonts.
+
+THE PIN RULE (answers "why does one pin outsize another"): the big
+tilted pin belongs to ONE card — the things the person pinned by
+hand. Every other piece wears the same small tertiary pin in its
+corner: big pin = what I keep close, small pin = a piece I placed.
+The pin itself is untouchable (user: "i love the pin").
+
+FORM RULES: "What's going on" is ALWAYS the treemap — it moves and
+resizes but never collapses to a text tile (amendment, same session;
+the OpenClaw status line is a different creature and not this
+module). Rich module interiors: music = album artwork; social
+(Bluesky/Farcaster) = avatar + latest post, clean; Pinterest and
+screenshots = image tiles (screenshots draw from the corpus's own
+stored thumbnails, prd 48).
+
+BUILD PLAN (goals, for a future session): (1) module registry +
+persisted order, drag-to-reorder on the GenUI root; (2) card sizes
+(regular/large) persisted per module, large = media-led rendering;
+(3) rich module renderers — music artwork strip/bleed, social
+avatar card, screenshots strip; (4) "pin to Home" verbs from source
+screens so the board grows from the catalog. Mocks deleted; the
+Desktop comparisons (home-board-ABC, home-rich-board-123) are the
+visual record.

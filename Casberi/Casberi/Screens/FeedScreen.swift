@@ -84,6 +84,7 @@ struct FeedScreen: View {
     }
     private var shape: Shape { Shape(source: filter.source) }
 
+
     /// How this shape's rows arrive: the agenda slides in from the leading
     /// edge like a day filling, photos scale in like the grid, transactions
     /// rise like entries posting, everything else lifts gently.
