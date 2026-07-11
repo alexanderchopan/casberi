@@ -28,12 +28,12 @@ struct AppsScreen: View {
     private static let categories: [(name: String, exemplar: String, groups: Set<String>)] = [
         ("Onchain",      "Wallet",    ["Your wallet"]),
         ("Your life",    "Photos",    ["Your photos", "Your schedule", "Your fitness", "Your notes"]),
-        ("Social",       "Bluesky",   ["Your network"]),
+        ("Social",       "Bluesky",   ["Your network", "Your messages"]),
         ("Your agents",  "Claude",    ["Your agent", "Your machines"]),
         ("Your mail",    "Gmail",     ["Your mail"]),
         ("Your work",    "GitHub",    ["Your work"]),
         ("Your reading", "Readwise",  ["Your reading", "Your saves"]),
-        ("Your media",   "Spotify",   ["Your watching", "Your listening", "Your messages", "Your games"]),
+        ("Your media",   "Spotify",   ["Your watching", "Your listening", "Your games"]),
     ]
 
     private func category(of offer: BridgeCatalog.Offer) -> String {

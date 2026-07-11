@@ -1814,3 +1814,25 @@ reconcile as a SharedStore pending-list (today: newest-only Spotlight
 pass, heals at next launch), Feed header's loss of Pause for routed
 bridges (deliberate reroute in 363667c, needs a ruling on where Pause
 lives from Feed).
+
+## 52a. The bubble goes solid (2026-07-11)
+
+Third pass on the composer surface, and the ruling that ends it: the
+OPEN bubble wears solid ink, no glass. prd 44 put glass ON the
+content (device: bubble vanished — a glitched morph loses the glass
+element's whole content); prd 52 split a clear glass veneer behind
+the content (sim: the whole bubble FROSTED — iOS 26 hoists glass
+into its own composited layer above app content, so a veneer is
+never truly behind). Same lesson twice: the open composer must not
+depend on the glass pipeline. The FAB keeps its glass; the scale
+animation carries the open; §8 permits glass on the floating layer,
+it does not require it. Verified crisp on sim via -uiAnswerProbe.
+
+## 57. Messages are social, not media (2026-07-11)
+
+Telegram (and Slack with it — the "Your messages" group) moves from
+the Your media category to Social in Browse. Telegram's plan stays
+as parked 2026-07-08 (prd, no-server ruling): reading Telegram needs
+MTProto — a server and a platform wall — so it sits as a Soon card
+("Chats join your things", not connectable) alongside X and YouTube
+until the server question is answered deliberately.

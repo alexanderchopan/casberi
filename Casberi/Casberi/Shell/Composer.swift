@@ -398,13 +398,17 @@ struct Composer: View {
         // VENEER above it carrying the morph id. A failed morph can only
         // lose the veneer — the composer itself cannot disappear. Same
         // look (glass over ink), same FAB→bubble morph when it works.
-        .background {
-            ZStack {
-                bubbleShape.fill(DS.surfaceSheet.opacity(0.94))
-                Color.clear
-                    .dsGlass(cornerRadius: 24, glassID: "composer", in: glassNamespace)
-            }
-        }
+        // The bubble's surface, third pass (2026-07-11): SOLID ink, no glass.
+        // prd 44 put glass ON the content (device: bubble vanished — a
+        // glitched morph loses the glass element's whole content); prd 52
+        // split the glass into a clear veneer behind the content (sim: the
+        // veneer FROSTS the bubble — iOS 26 hoists glass into its own layer
+        // above app content, so "behind" isn't behind). Both failures are
+        // the same lesson: the open composer cannot depend on the glass
+        // pipeline. The FAB keeps its glass; the bubble is ink, and the
+        // scale animation carries the open. Glass on the floating layer is
+        // permitted, not required (§8).
+        .background(DS.surfaceSheet.opacity(0.97), in: bubbleShape)
         .clipShape(bubbleShape)
         .scaleEffect(isOpen ? 1 : 0.3, anchor: .bottomTrailing)
         .task(id: isOpen) {
