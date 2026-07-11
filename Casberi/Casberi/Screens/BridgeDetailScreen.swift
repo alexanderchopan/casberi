@@ -148,14 +148,7 @@ struct BridgeDetailScreen: View {
 
     private func header(_ bridge: BridgeApp) -> some View {
         HStack(spacing: DS.Space.s3) {
-            RoundedRectangle(cornerRadius: DS.Radius.appIcon(56), style: .continuous)
-                .fill(DS.fillFaint)
-                .frame(width: 56, height: 56)
-                .overlay(
-                    Image(systemName: BridgeGlyph.symbol(for: bridge.name))
-                        .font(.system(size: 26, weight: .medium))
-                        .foregroundStyle(DS.textSecondary)
-                )
+            BridgeIcon(name: bridge.name, size: 56, circular: true)
                 .padding(3)
                 .overlay(Circle().strokeBorder(bridge.status.color, lineWidth: 2))
             VStack(alignment: .leading, spacing: 2) {
