@@ -388,6 +388,12 @@ struct Composer: View {
             .padding(.bottom, DS.Space.s3)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+        // A solid surface UNDER the glass (2026-07-10, device report:
+        // composer opened invisible over the store — keyboard up, no
+        // bubble). The real Liquid Glass morph can glitch on hardware;
+        // the underlay guarantees the bubble is never lost, and reads
+        // near-identically (glass over ink).
+        .background(DS.surfaceSheet.opacity(0.94), in: bubbleShape)
         .dsGlass(cornerRadius: 24, glassID: "composer", in: glassNamespace)
         .clipShape(bubbleShape)
         .scaleEffect(isOpen ? 1 : 0.3, anchor: .bottomTrailing)

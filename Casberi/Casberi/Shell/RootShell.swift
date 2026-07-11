@@ -256,6 +256,17 @@ struct RootShell: View {
                 || UserDefaults.standard.bool(forKey: "openComposer") {
                 composerOpen = true
             }
+            // `-openComposerDelay <s>` opens the composer THROUGH the real
+            // animation path after a delay — reproduces "tap the FAB after
+            // a liquid ride" (device report 2026-07-10) headlessly.
+            let composerDelay = UserDefaults.standard.double(forKey: "openComposerDelay")
+            if composerDelay > 0 {
+                Task { @MainActor in
+                    try? await Task.sleep(for: .seconds(composerDelay))
+                    DSHaptic.tap()
+                    withAnimation(DS.Motion.bubble) { composerOpen = true }
+                }
+            }
             // Debug hook: `-linkTitleProbe <url>` exercises the title fetch
             // headlessly — NSLogs what a pasted link would be renamed to.
             if let raw = UserDefaults.standard.string(forKey: "linkTitleProbe"),

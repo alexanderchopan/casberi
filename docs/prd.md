@@ -1521,3 +1521,21 @@ with the bigger waves the shorter ride reads fuller). Waves: broader
 and deeper — frequencies down (~8.5/5.5/7/4.5 from 11/7/9/6), outgoing
 amplitude 26→42pt, incoming 22→34pt, shimmer 0.10→0.13, sample offsets
 widened to match. The page heaves instead of buzzing.
+
+## 44. Composer invisible over the store — hardened (2026-07-10)
+
+Device report: over the app catalog, tapping the FAB opened the
+keyboard but no bubble. Home works; the bubble is truly absent, not
+behind the keyboard; the store is only reachable through the liquid
+ride. Sim reproduction of the exact flow (liquid open → settle →
+composer through the real animation path) renders CORRECTLY — the
+state machine is clean, so the failure lives in the device render
+layer, prime suspect the real Liquid Glass FAB→bubble morph glitching
+on hardware (sim glass and device glass are different engines; the
+bubble's ONLY surface was the glass).
+
+Hardening shipped (not a confirmed root-cause fix, said honestly): a
+solid surfaceSheet underlay beneath the bubble's glass — a failed
+morph can no longer leave the composer invisible, and the look is
+unchanged (glass over ink). If the next build still fails on device,
+next step is on-device instrumentation of the glass container.
