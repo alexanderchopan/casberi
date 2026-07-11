@@ -1675,3 +1675,12 @@ token watching — a small watchlist alone filled all three seats and
 the fourth pin silently never showed). Still newest first, still
 user-chosen only, so the no-obligations voice rule holds; the cap
 exists so Home stays a composition, not a scroll of pins.
+
+## 50a. "Just landed" opens (user, 2026-07-11)
+
+The cover's Just-landed card was the one thing-bearing block on Home
+you couldn't tap (user: "shouldn't a user be able to tap it and go to
+it?"). It now opens its thing's sheet — the same tap the Pinned rows
+earned on 2026-07-10, no long-press menu (nothing to unpin). The
+composition carries the thing id as the Cover's new trailing arg; the
+id streams in last, so a half-streamed card simply isn't tappable yet.

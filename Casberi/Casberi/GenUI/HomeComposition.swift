@@ -269,7 +269,6 @@ enum HomeComposition {
         // corpus enough times per render).
         let today = things.filter { Calendar.current.isDateInToday($0.capturedAt) }
         let chips = coverChips(today)
-        let chipsArg = chips.map { ", \($0)" } ?? ""
         // Quiet cover — the shipped Hero lines, verbatim priority. Approvals
         // never lead Home (voice guardrail: agent asks live in Feed; the cover
         // states what landed, never what's waiting on the person).
@@ -280,9 +279,12 @@ enum HomeComposition {
             // The 6th arg marks the stream complete so the renderer's black
             // field doesn't flash in before the doc settles. Arg 4 (the old
             // banner slot) carries the SOURCE now — the card leads with its
-            // app icon (2026-07-10, user).
+            // app icon (2026-07-10, user). Arg 8 is the thing's id — the
+            // card opens what landed (2026-07-11, user); the chips slot
+            // always emits (empty when quiet) so the id's seat holds.
             let subline = chips != nil ? "" : "\(latest.kind.typeTag) · \(latest.source)"
-            return "cover = Cover(\(q("Just landed · \(latest.source)")), \(q(latest.title)), \(q(subline)), \(q(latest.source)), \(q(date)), \(q(latest.kind.typeTag))\(chipsArg))"
+            let chipsSeat = chips.map { ", \($0)" } ?? ", []"
+            return "cover = Cover(\(q("Just landed · \(latest.source)")), \(q(latest.title)), \(q(subline)), \(q(latest.source)), \(q(date)), \(q(latest.kind.typeTag))\(chipsSeat), \(q(latest.id.uuidString)))"
         }
         return "cover = Cover(\(q("Now")), \(q("Your things go here")), \(q("Paste, speak, or share one in.")), \(q("")), \(q(date)), \(q("quiet")))"
     }

@@ -1250,16 +1250,18 @@ private struct GenApprovalCard: View {
 
 // MARK: - Cover (the slim data-first hero)
 
-/// Cover(eyebrow, title, subline, _, dateline, tag, [Tag N, ...]) — the
-/// slim data-first hero, painted straight on the page (2026-07-10): date,
-/// today's kind chips, and the "Just landed" card. The cover stopped being
-/// an image element when the Banner became the Background setting — the
-/// wallpaper is HomeScreen's page background now, and this block is just
-/// content on it. Arg 4 (the old thingId/banner ref) is vestigial and
-/// always empty; arg 6's tag still marks the stream complete.
+/// Cover(eyebrow, title, subline, source, dateline, tag, [Tag N, ...],
+/// thingId) — the slim data-first hero, painted straight on the page
+/// (2026-07-10): date, today's kind chips, and the "Just landed" card. The
+/// cover stopped being an image element when the Banner became the
+/// Background setting — the wallpaper is HomeScreen's page background now,
+/// and this block is just content on it. Arg 6's tag still marks the
+/// stream complete; arg 8 (2026-07-11, user) is the landed thing's id —
+/// the card opens it, same tap the Pinned rows carry.
 private struct GenCover: View {
     let el: GenEl
     @Environment(\.genCoverTopInset) private var topInset
+    @Environment(\.genThingOpen) private var thingOpen
 
     /// Today's kind counts (arg 7) — the chip row that replaced the subline
     /// (ruling 2026-07-09); requireCount keeps a half-streamed tag from
@@ -1354,6 +1356,16 @@ private struct GenCover: View {
             // its own inks hold on any wallpaper behind it.
             .background(DS.surfaceSheet,
                         in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+            // What landed opens (2026-07-11, user: "shouldn't a user be
+            // able to tap it and go to it?") — the Pinned rows' tap, on
+            // the one freshest thing. The id streams in last, so the card
+            // simply isn't tappable until the line completes.
+            .contentShape(RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+            .onTapGesture {
+                let id = el.str(7)
+                guard !id.isEmpty else { return }
+                thingOpen?(id)
+            }
         }
         .padding(DS.Space.s4)
     }
