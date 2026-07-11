@@ -1902,3 +1902,18 @@ pinned-things card can't be removed), so the pin is free to mean
 pinned-things card, whose large form is the moodboard-tile interior
 (mock B's yield). Long-press still lifts a card to drag; pinch may
 arrive later as an unadvertised extra, or never.
+
+## 58. Catalog reshuffle: X is social, Slack is work, notes stand alone (user, 2026-07-11)
+
+Three moves, one ruling: X leaves "Your saves" for "Your network" —
+it's a social account first, bookmarks or not, so it browses under
+Social beside Bluesky and Farcaster. Slack leaves "Your messages" for
+"Your work" — a workplace tool, shelved with GitHub, Linear, and
+Notion (this narrows prd 57: Telegram stays the Social messenger;
+Slack no longer rides with it). And "Your notes" graduates from a
+group inside the Your life category to its OWN Browse category
+(supersedes prd 56's Your-life mapping), with Obsidian moving in from
+"Your work" to join Apple Notes, Day One, and Apple Journal — the
+vault is notes, not project tracking. Website sections mirrored in
+the same session per the standing rule: X → "Social & messages",
+Slack → "Work & scheduling", Obsidian → "Notes & journals".
