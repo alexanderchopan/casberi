@@ -1684,3 +1684,30 @@ it?"). It now opens its thing's sheet — the same tap the Pinned rows
 earned on 2026-07-10, no long-press menu (nothing to unpin). The
 composition carries the thing id as the Cover's new trailing arg; the
 id streams in last, so a half-streamed card simply isn't tappable yet.
+
+## 51. The token chart grows up (user-approved mock, 2026-07-11)
+
+Ruled on an interactive mock (two passes), then built. One anatomy at
+two doses — `TokenChartView` is the sheet's full read, `TokenChartPlot`
+the bare plot the Home row reuses; the feed Sparkline is deliberately
+untouched. What shipped: (1) range chips 24h/7d/30d in the pill grammar
+— GeckoTerminal's hourly candles carry 24h and 7d, daily carry 30d, all
+free; the chosen range persists per token. (2) The delta wears a
+state-fill pill that names its window ("−1.8% · 24h") so the percent
+can't be misread against the wrong period. (3) Scrub, sheet only:
+press-then-drag (sequenced after a long-press so the sheet's scroll
+still wins a plain swipe); the header rolls to the scrubbed value, the
+finger carries only the when ("9h ago"), selection ticks per point.
+(4) High/low are the only numbers on the plot, tertiary, each anchored
+to its point by a 2.5pt dot — still no axes, no grid (the hairline law
+holds on charts). (5) Gradient area fade; the live endpoint pulses
+gently (the pulse claims only the endpoint; off under reduce-motion).
+(6) Loading is a skeleton of the exact anatomy with one slow shimmer,
+never a spinner. (7) The Dexscreener 5-point fallback stops pretending:
+straight segments, visible dots, "24h · 5 price points", no range
+chips; longer ranges without candles say so and step back rather than
+fake a curve. (8) Light mode pulls the state hues 35% toward black
+(BridgeIcon's mix). The draw-on reveal replays on range switch — a
+range switch is a data arrival. TokenChart.fetch gained a range
+parameter (default .day; TokenPulse and Diagnostics unchanged);
+`change24h` became range-generic `change`.

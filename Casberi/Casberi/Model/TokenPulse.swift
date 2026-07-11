@@ -75,7 +75,7 @@ final class TokenPulse {
             return out
         }
         pulses.merge(fetched.mapValues {
-            Pulse(closes: $0.closes, change24h: $0.change24h, fetchedAt: stamp)
+            Pulse(closes: $0.closes, change24h: $0.change, fetchedAt: stamp)
         }) { _, new in new }
     }
 }

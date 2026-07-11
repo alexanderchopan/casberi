@@ -2,7 +2,6 @@ import SwiftUI
 import SwiftData
 import Photos
 import CoreImage
-import Charts
 
 /// The gen UI renderer — recursive over the element map, faithful to the v94
 /// prototype's RenderEl. A missing reference renders a skeleton in a row/tile
@@ -471,41 +470,34 @@ private struct GenTokenRow: View {
     @Environment(\.genThingUnpin) private var thingUnpin
     @Environment(\.genThingHandoff) private var thingHandoff
     @Environment(\.genRefreshTick) private var refreshTick
+    @Environment(\.colorScheme) private var scheme
 
-    private var up: Bool { (chart?.change24h ?? 0) >= 0 }
-    private var accent: Color { up ? DS.confirm : DS.destructive }
+    private var accent: Color {
+        TokenChartStyle.accent(up: (chart?.change ?? 0) >= 0, scheme: scheme)
+    }
 
     var body: some View {
         let row = VStack(alignment: .leading, spacing: DS.Space.s2) {
-            HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+            HStack(alignment: .center, spacing: DS.Space.s2) {
                 Text(el.str(0))
                     .dsText(.body17).foregroundStyle(DS.textPrimary)
                     .lineLimit(1)
                     .frame(maxWidth: .infinity, alignment: .leading)
                 if let chart {
-                    Text(priceText(chart.price))
+                    Text(TokenChartStyle.priceText(chart.price))
                         .dsText(.callout15).foregroundStyle(DS.textPrimary)
                         .contentTransition(.numericText())
                         .animation(DS.Motion.standard, value: chart.price)
-                    Text(changeText(chart.change24h))
-                        .dsText(.subhead13).foregroundStyle(accent)
+                    // The compact delta pill (prd 51) — Home and the sheet
+                    // read as one family; the row stays the glance (24h
+                    // fixed, no chips, no scrub at 48pt).
+                    TokenDeltaPill(change: chart.change, label: "24h", compact: true)
                 } else {
                     Text(el.str(3)).dsText(.subhead13).foregroundStyle(DS.textTertiary)
                 }
             }
             if let chart {
-                Chart(Array(chart.closes.enumerated()), id: \.offset) { i, close in
-                    LineMark(x: .value("t", i), y: .value("price", close))
-                        .interpolationMethod(.catmullRom)
-                        .foregroundStyle(accent)
-                    AreaMark(x: .value("t", i), y: .value("price", close))
-                        .interpolationMethod(.catmullRom)
-                        .foregroundStyle(accent.opacity(0.12))
-                }
-                .chartXAxis(.hidden)
-                .chartYAxis(.hidden)
-                .chartYScale(domain: .automatic(includesZero: false))
-                .frame(height: 48)
+                TokenChartPlot(chart: chart, accent: accent, height: 48)
                 .mask(alignment: .leading) {
                     GeometryReader { geo in
                         Rectangle().frame(width: revealed ? geo.size.width : 0)
@@ -535,15 +527,6 @@ private struct GenTokenRow: View {
         }
         row.pinnedRowActions(id: el.str(4), openable: el.str(5) == "app",
                              open: thingOpen, unpin: thingUnpin, handoff: thingHandoff)
-    }
-
-    private func priceText(_ p: Double) -> String {
-        if p >= 1 { return String(format: "$%.2f", p) }
-        if p >= 0.01 { return String(format: "$%.4f", p) }
-        return String(format: "$%.8f", p)
-    }
-    private func changeText(_ c: Double) -> String {
-        String(format: "%@%.1f%%", c >= 0 ? "+" : "", c * 100)
     }
 }
 
