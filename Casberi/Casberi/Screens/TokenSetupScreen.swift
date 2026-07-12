@@ -92,7 +92,7 @@ struct TokenSetupScreen: View {
             }
             .listRowBackground(DS.surfaceSheet)
         } header: {
-            Text("Your token").dsText(.label12)
+            Text("Token").dsText(.label12)
                 .foregroundStyle(DS.textTertiary)
         } footer: {
             Text("The token stays in this iPhone's Keychain and goes only to \(bridge.rawValue) itself. Read-only.")

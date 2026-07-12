@@ -39,7 +39,7 @@ enum StorePreview {
         ]
         case "Dexscreener": [
             "root = Stack([w])",
-            "w = Widget(\"Your watchlist\", null, [r1, r2])",
+            "w = Widget(\"Watchlist\", null, [r1, r2])",
             "r1 = Row(\"BankrCoin · $BNKR\", \"Link\", \"Dexscreener\", \"now\")",
             "r2 = Row(\"Degen · $DEGEN\", \"Link\", \"Dexscreener\", \"now\")",
         ]
@@ -64,7 +64,7 @@ enum StorePreview {
         ]
         case "Notion": [
             "root = Stack([w])",
-            "w = Widget(\"Your pages\", null, [r1])",
+            "w = Widget(\"Pages\", null, [r1])",
             "r1 = Row(\"Q3 planning notes\", \"Note\", \"Notion\", \"1d\")",
         ]
         case "X": [
@@ -89,7 +89,7 @@ enum StorePreview {
         ]
         case "Apple Music", "Spotify": [
             "root = Stack([w])",
-            "w = Widget(\"Your listening\", null, [r1])",
+            "w = Widget(\"Listening\", null, [r1])",
             "r1 = Row(\"Liked: Verano porteño\", \"Link\", \"\(name)\", \"1d\")",
         ]
         case "Telegram": [
@@ -99,13 +99,13 @@ enum StorePreview {
         ]
         case "Apple Health": [
             "root = Stack([w])",
-            "w = Widget(\"Your training\", null, [r1, r2])",
+            "w = Widget(\"Training\", null, [r1, r2])",
             "r1 = Row(\"Evening run · 5.2 km\", \"Event\", \"Apple Health\", \"6:31 PM\")",
             "r2 = Row(\"Strength · 45 min\", \"Event\", \"Apple Health\", \"Yesterday\")",
         ]
         case "Strava": [
             "root = Stack([w])",
-            "w = Widget(\"Your activities\", null, [r1, r2])",
+            "w = Widget(\"Activities\", null, [r1, r2])",
             "r1 = Row(\"Morning ride · 24.1 km\", \"Event\", \"Strava\", \"7:02 AM\")",
             "r2 = Row(\"Long run · 12 km\", \"Event\", \"Strava\", \"Sun\")",
         ]

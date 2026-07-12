@@ -23,7 +23,7 @@ struct ObsidianScreen: View {
             BridgeSetupHeader(name: "Obsidian")
             vaultSection.listRowSeparator(.hidden)
             if !recent.isEmpty {
-                RecentThingsSection(header: "Your notes", things: recent)
+                RecentThingsSection(header: "Notes", things: recent)
                     .listRowSeparator(.hidden)
             }
             if obsidian.connected { removeSection.listRowSeparator(.hidden) }
@@ -59,7 +59,7 @@ struct ObsidianScreen: View {
                         .font(.system(size: 17, weight: .medium))
                         .foregroundStyle(DS.tint)
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(obsidian.vaultName.isEmpty ? "Your vault" : obsidian.vaultName)
+                        Text(obsidian.vaultName.isEmpty ? "Vault" : obsidian.vaultName)
                             .dsText(.body17).foregroundStyle(DS.textPrimary)
                         Text("Connected — notes sync when you visit or open the app.")
                             .dsText(.subhead13).foregroundStyle(DS.textSecondary)
@@ -93,7 +93,7 @@ struct ObsidianScreen: View {
             BridgeSyncStatusRows(syncing: syncing, syncingLine: "Reading your notes…",
                                  result: result, resultIsError: resultIsError)
         } header: {
-            Text("Your vault").dsText(.label12)
+            Text("Vault").dsText(.label12)
                 .foregroundStyle(DS.textTertiary)
         } footer: {
             Text("A vault is a folder of Markdown — find it in Files (often iCloud Drive → Obsidian). Read-only: the vault is never changed.")

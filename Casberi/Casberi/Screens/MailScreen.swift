@@ -97,7 +97,7 @@ struct MailScreen: View {
             BridgeSyncStatusRows(syncing: syncing, syncingLine: "Reading your inbox…",
                                  result: result, resultIsError: resultIsError)
         } header: {
-            Text("Your account").dsText(.label12)
+            Text("Account").dsText(.label12)
                 .foregroundStyle(DS.textTertiary)
         } footer: {
             Text(provider.footer).dsText(.callout15).foregroundStyle(DS.textTertiary)

@@ -149,9 +149,9 @@ enum HandleBridge: String {
 
     var recentHeader: String {
         switch self {
-        case .bluesky:   "Your posts"
-        case .farcaster: "Your casts"
-        case .pinterest: "Your pins"
+        case .bluesky:   "Posts"
+        case .farcaster: "Casts"
+        case .pinterest: "Pins"
         }
     }
 

@@ -140,7 +140,7 @@ struct KalshiScreen: View {
             }
             .onDelete(perform: unwatch)
         } header: {
-            Text("Your watchlist").dsText(.label12)
+            Text("Watchlist").dsText(.label12)
                 .foregroundStyle(DS.textTertiary)
         } footer: {
             Text("Swipe a market to pin it to Home and Feed, or to stop watching it.")

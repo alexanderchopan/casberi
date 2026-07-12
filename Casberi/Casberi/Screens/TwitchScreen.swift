@@ -113,7 +113,7 @@ struct TwitchScreen: View {
             BridgeSyncStatusRows(syncing: syncing, syncingLine: "Checking who's live…",
                                  result: result, resultIsError: resultIsError)
         } header: {
-            Text("Your follows").dsText(.label12)
+            Text("Follows").dsText(.label12)
                 .foregroundStyle(DS.textTertiary)
         } footer: {
             Text("Sign-in happens on Twitch's own page — a short code, no password in the app. Read-only: it can never chat, follow, or subscribe.")
