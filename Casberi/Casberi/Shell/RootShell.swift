@@ -211,37 +211,53 @@ struct RootShell: View {
                 // One-time migrations run once per install (bump the version
                 // when adding one) — steady-state launches skip the scans.
                 let migrationsKey = "migrations.version"
-                let migrationsCurrent = 1
-                if UserDefaults.standard.integer(forKey: migrationsKey) < migrationsCurrent {
-                    // Migration v1 also purged sample things left by the retired
-                    // demo-seed path; `Thing.isSample` is gone now (nothing set it
-                    // true, and every container that reached v1 already purged),
-                    // so lightweight migration simply drops the column.
-                    // One-time rename (2026-07-06): voice notes' source is
-                    // "Voice" now; older ones carried "You".
-                    let stale = (try? modelContext.fetch(FetchDescriptor<Thing>(
-                        predicate: #Predicate { $0.source == "You" }
-                    ))) ?? []
-                    for thing in stale where thing.kind == .voice {
-                        thing.source = "Voice"
+                let migrationsCurrent = 2
+                let migrationsStored = UserDefaults.standard.integer(forKey: migrationsKey)
+                if migrationsStored < migrationsCurrent {
+                    if migrationsStored < 1 {
+                        // Migration v1 also purged sample things left by the retired
+                        // demo-seed path; `Thing.isSample` is gone now (nothing set it
+                        // true, and every container that reached v1 already purged),
+                        // so lightweight migration simply drops the column.
+                        // One-time rename (2026-07-06): voice notes' source is
+                        // "Voice" now; older ones carried "You".
+                        let stale = (try? modelContext.fetch(FetchDescriptor<Thing>(
+                            predicate: #Predicate { $0.source == "You" }
+                        ))) ?? []
+                        for thing in stale where thing.kind == .voice {
+                            thing.source = "Voice"
+                        }
+                        // One-time move (2026-07-07): voice audio used to live as
+                        // loose files keyed by sourceRef; it belongs in the store
+                        // so sync carries it. Load each file in, then remove it.
+                        let voiceThings = (try? modelContext.fetch(FetchDescriptor<Thing>())) ?? []
+                        for thing in voiceThings where thing.kind == .voice && thing.audio == nil {
+                            guard let ref = thing.sourceRef,
+                                  let url = VoiceCapture.audioURL(for: ref),
+                                  let data = try? Data(contentsOf: url) else { continue }
+                            thing.audio = data
+                            try? FileManager.default.removeItem(at: url)
+                        }
+                        // One-time retitle (2026-07-07): early screenshot ingests
+                        // carried the timestamp in the title — pure noise.
+                        let noisy = (try? modelContext.fetch(FetchDescriptor<Thing>(
+                            predicate: #Predicate { $0.title.starts(with: "Screenshot · ") }
+                        ))) ?? []
+                        for thing in noisy { thing.title = "Screenshot" }
                     }
-                    // One-time move (2026-07-07): voice audio used to live as
-                    // loose files keyed by sourceRef; it belongs in the store
-                    // so sync carries it. Load each file in, then remove it.
-                    let voiceThings = (try? modelContext.fetch(FetchDescriptor<Thing>())) ?? []
-                    for thing in voiceThings where thing.kind == .voice && thing.audio == nil {
-                        guard let ref = thing.sourceRef,
-                              let url = VoiceCapture.audioURL(for: ref),
-                              let data = try? Data(contentsOf: url) else { continue }
-                        thing.audio = data
-                        try? FileManager.default.removeItem(at: url)
+                    if migrationsStored < 2 {
+                        // One-time heal (2026-07-12): an earlier Apple Music artwork
+                        // search took the top catalog hit blindly, so obscure tracks
+                        // wore a stranger's cover ("Daddy Your Rose" → Nirvana). Clear
+                        // stored art on every Apple Music thing so it reads as artless;
+                        // the corrected title-matching search (AppleMusicIngest.ingest)
+                        // re-resolves each on the next foreground — the right cover, or
+                        // an honest glyph when no catalog match is trustworthy.
+                        let music = (try? modelContext.fetch(FetchDescriptor<Thing>(
+                            predicate: #Predicate { $0.source == "Apple Music" }
+                        ))) ?? []
+                        for thing in music { thing.previewImageURL = nil }
                     }
-                    // One-time retitle (2026-07-07): early screenshot ingests
-                    // carried the timestamp in the title — pure noise.
-                    let noisy = (try? modelContext.fetch(FetchDescriptor<Thing>(
-                        predicate: #Predicate { $0.title.starts(with: "Screenshot · ") }
-                    ))) ?? []
-                    for thing in noisy { thing.title = "Screenshot" }
                     try? modelContext.save()
                     UserDefaults.standard.set(migrationsCurrent, forKey: migrationsKey)
                 }
