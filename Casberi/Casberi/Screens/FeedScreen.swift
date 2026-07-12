@@ -197,6 +197,11 @@ struct FeedScreen: View {
     private func bundleable(_ t: Thing) -> Bool {
         t.kind != .screenshot && t.kind != .voice && t.kind != .approval
             && t.source != "You" && t.source != "Voice"
+            // Social posts read individually — you follow an account to SEE the
+            // posts, so Bluesky/Farcaster never collapse into an "N links"
+            // bundle (user, 2026-07-12). They're deliberate reads, not machine
+            // bulk like an RSS sync or a wallet backfill.
+            && t.source != "Bluesky" && t.source != "Farcaster"
     }
 
     /// 3+ bundleable things from one source in one day collapse into a
@@ -1037,6 +1042,14 @@ struct FeedScreen: View {
                         let broken = bridges.bridges.contains {
                             $0.name == label && $0.status == .attention
                         }
+                        // A Button, not .onTapGesture (fix 2026-07-12): tap
+                        // recognition for a chip inside a horizontal ScrollView
+                        // nested in the List was flaky — taps dropped and the
+                        // filter "stuck" on a source you couldn't switch off.
+                        Button {
+                            DSHaptic.selection()
+                            withAnimation(DS.Motion.standard) { onTap(label) }
+                        } label: {
                         ZStack {
                             if label == "All" {
                                 Circle().fill(DS.gray100)
@@ -1073,6 +1086,8 @@ struct FeedScreen: View {
                             }
                         }
                         .frame(width: 56, height: 56)
+                        }
+                        .buttonStyle(.plain)
                         // Finger-driven, never idle: chips ease down slightly
                         // as they leave the viewport edges (Stories grammar).
                         // Under Reduce Motion only the fade remains.
@@ -1085,7 +1100,6 @@ struct FeedScreen: View {
                         .accessibilityLabel(label
                             + (broken ? ", needs reconnecting" : (hasNew ? ", new things" : "")))
                         .accessibilityAddTraits(isActive ? .isSelected : [])
-                        .onTapGesture { DSHaptic.selection(); withAnimation(DS.Motion.standard) { onTap(label) } }
                     }
                 }
                 .padding(.horizontal, DS.Space.s4)
