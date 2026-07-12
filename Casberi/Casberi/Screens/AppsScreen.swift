@@ -15,6 +15,7 @@ struct AppsScreen: View {
     @Environment(ShellChrome.self) private var chrome
     @Environment(BridgeStore.self) private var store
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var pairing = false
     @State private var storyID: String?
     @State private var setupRoute: BridgeRouter.Destination?
@@ -171,6 +172,16 @@ struct AppsScreen: View {
                     storyCard(story)
                         .containerRelativeFrame(.horizontal) { length, _ in length - 12 }
                         .frame(maxHeight: .infinity, alignment: .topLeading)
+                        // Coverflow depth (delight, 2026-07-12): a card turns and
+                        // recedes a touch as it leaves center, so the marquee has
+                        // dimension instead of sliding flat. Off under Reduce Motion.
+                        .scrollTransition(.interactive, axis: .horizontal) { content, phase in
+                            content
+                                .scaleEffect(reduceMotion || phase.isIdentity ? 1 : 0.94)
+                                .opacity(reduceMotion || phase.isIdentity ? 1 : 0.8)
+                                .rotation3DEffect(.degrees(reduceMotion ? 0 : phase.value * -5),
+                                                  axis: (x: 0, y: 1, z: 0), perspective: 0.5)
+                        }
                         .id(story.id)
                 }
             }
@@ -373,6 +384,26 @@ struct AppsScreen: View {
 
     /// The shelf's rows, three per page. One page renders exactly like the old
     /// full-width card; more apps page sideways, view-aligned.
+    /// A one-shot "stocking the shelf" entrance — a row fades and rises into
+    /// place, staggered by its position, when the shelf appears (delight,
+    /// 2026-07-12). Off under Reduce Motion.
+    private struct StockEntrance: ViewModifier {
+        let index: Int
+        @State private var shown = false
+        @Environment(\.accessibilityReduceMotion) private var reduceMotion
+        func body(content: Content) -> some View {
+            content
+                .opacity(shown ? 1 : 0)
+                .offset(y: shown ? 0 : 12)
+                .onAppear {
+                    guard !reduceMotion else { shown = true; return }
+                    withAnimation(DS.Motion.standard.delay(Double(min(index, 8)) * 0.05)) {
+                        shown = true
+                    }
+                }
+        }
+    }
+
     private func shelfPages(_ apps: [Ranked], key: String) -> some View {
         let pages: [[Ranked]] = stride(from: 0, to: apps.count, by: 3).map {
             Array(apps[$0..<min($0 + 3, apps.count)])
@@ -381,7 +412,9 @@ struct AppsScreen: View {
             HStack(alignment: .top, spacing: DS.Space.s3) {
                 ForEach(pages.indices, id: \.self) { i in
                     VStack(spacing: DS.Space.s1) {
-                        ForEach(pages[i]) { entry in appRow(entry) }
+                        ForEach(Array(pages[i].enumerated()), id: \.element.id) { j, entry in
+                            appRow(entry).modifier(StockEntrance(index: j))
+                        }
                     }
                     .padding(.vertical, DS.Space.s1)
                     .background(DS.surfaceSheet,

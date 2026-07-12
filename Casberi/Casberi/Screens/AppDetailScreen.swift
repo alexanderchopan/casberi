@@ -13,6 +13,10 @@ struct AppDetailScreen: View {
     @State private var pairing = false
     @State private var openBridge: BridgeRouter.Destination?
     @State private var previewStream = GenStream()
+    /// The connect payoff (delight, 2026-07-12): eases 1 → 0 when a connect
+    /// lands, blooming the app's hue over the page — "connect ends in proof",
+    /// the ruling turned into a moment.
+    @State private var connectPulse: CGFloat = 0
 
     private var bridge: BridgeApp? {
         store.bridges.first { $0.name == offer.name }
@@ -50,6 +54,8 @@ struct AppDetailScreen: View {
         // as stepping into that app's world (delight, 2026-07-12). One fixed
         // recipe, under the content; hueless apps stay pure page, honestly.
         .background(alignment: .top) { brandWash }
+        // The connect payoff blooms over the content, then recedes.
+        .overlay(alignment: .top) { connectBloom }
         .dsPageBackground()
         .navigationTitle(offer.name)
         .navigationBarTitleDisplayMode(.inline)
@@ -95,9 +101,7 @@ struct AppDetailScreen: View {
                 if offer.needsSetup {
                     openBridge = BridgeRouter.destination(forOffer: offer.name)
                 } else {
-                    BridgeConnect.connect(offer, store: store, context: modelContext) { ok in
-                        if !ok { chrome.flash("Couldn't connect \(offer.name).") }
-                    }
+                    doConnect()
                 }
             }
         } else if connected {
@@ -111,13 +115,42 @@ struct AppDetailScreen: View {
                 VerbCapsule(verb: .connect) { openBridge = BridgeRouter.destination(forOffer: offer.name) }
             } else {
                 VerbCapsule(verb: .connect) {
-                    BridgeConnect.connect(offer, store: store, context: modelContext) { ok in
-                        if !ok { chrome.flash("Couldn't connect \(offer.name).") }
-                    }
+                    doConnect()
                 }
             }
         } else {
             VerbCapsule(verb: .soon)
+        }
+    }
+
+    /// Fires the connect and turns success into a moment (delight): the app's
+    /// hue blooms over the page, a success haptic lands, and the toast names
+    /// what's now happening — real things landing in the feed. Failure stays a
+    /// plain flash. `connected` (VerbCapsule → Open) recomputes when the bridge
+    /// reaches the store, so the button flips to Open on its own.
+    private func doConnect() {
+        BridgeConnect.connect(offer, store: store, context: modelContext) { ok in
+            guard ok else { chrome.flash("Couldn't connect \(offer.name)."); return }
+            DSHaptic.success()
+            connectPulse = 1
+            withAnimation(.easeOut(duration: 0.75)) { connectPulse = 0 }
+            chrome.flash("Connected — your \(offer.name) things are landing.")
+        }
+    }
+
+    /// The connect bloom — the app's hue flooding the page as the connection
+    /// lands, then receding. The proof itself arrives in the feed; this is the
+    /// beat that says it worked. A hueless app blooms on the tint so it still
+    /// gets a payoff.
+    @ViewBuilder private var connectBloom: some View {
+        if connectPulse > 0.001 {
+            let hue = DS.brandHue(for: offer.name) ?? DS.tint
+            LinearGradient(colors: [hue.opacity(0.5), hue.opacity(0.12), .clear],
+                           startPoint: .top, endPoint: .bottom)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                .opacity(connectPulse)
+                .ignoresSafeArea()
+                .allowsHitTesting(false)
         }
     }
 
