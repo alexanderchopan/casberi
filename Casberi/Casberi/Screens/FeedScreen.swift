@@ -166,25 +166,35 @@ struct FeedScreen: View {
 
     // MARK: - Bundling (ruling 2026-07-09: volume compresses, never reorders)
 
-    /// A feed row in the All shape: a thing, or one row standing in for a
-    /// source's bulk arrivals that day.
+    /// A feed row in the All shape: a thing, or a source's same-day arrivals
+    /// grouped into one VISIBLE cluster — a light header, its newest few rows,
+    /// then a "N more" tail into the source's shape (user, 2026-07-12: with a
+    /// feed-heavy corpus a source's items want to read together, structured,
+    /// not scattered through a strict chronological interleave — and not
+    /// hidden behind a count either). Placed at its newest member's slot, so
+    /// the day still flows by recency.
     private enum FeedRow: Identifiable {
         case single(Thing)
-        case bundle(source: String, word: String, count: Int, newest: Date)
+        case cluster(source: String, word: String, members: [Thing], newest: Date)
         var id: String {
             switch self {
             case .single(let t): t.id.uuidString
-            case .bundle(let source, _, _, let newest):
-                "bundle-\(source)-\(newest.timeIntervalSince1970)"
+            case .cluster(let source, _, _, let newest):
+                "cluster-\(source)-\(newest.timeIntervalSince1970)"
             }
         }
         var date: Date {
             switch self {
             case .single(let t): t.capturedAt
-            case .bundle(_, _, _, let newest): newest
+            case .cluster(_, _, _, let newest): newest
             }
         }
     }
+
+    /// A cluster shows its newest few members inline; the rest fold into the
+    /// "N more" tail (opens the source's shape). Bounds a heavy day's height
+    /// while keeping the group visible and scannable.
+    private let clusterCap = 4
 
     /// Machine bulk bundles; human captures never do. A screenshot, a voice
     /// note, or anything typed/pasted is one deliberate act each — an RSS
@@ -194,10 +204,12 @@ struct FeedScreen: View {
             && t.source != "You" && t.source != "Voice"
     }
 
-    /// 3+ bundleable things from one source in one day collapse into a
-    /// BundleRow at the position of their newest member (threshold lowered
-    /// from 4, 2026-07-12 — smaller same-source runs were the real All-feed
-    /// clutter). Order is untouched otherwise — compression, not ranking.
+    /// 3+ bundleable things from one source in one day form a VISIBLE cluster
+    /// (header + newest few rows + "N more" tail), placed at their newest
+    /// member's slot (threshold lowered from 4, and clusters replaced the old
+    /// collapse-to-count bundle, 2026-07-12 — the user wanted a source's items
+    /// grouped and readable, not scattered nor hidden behind a count). The
+    /// day's top-level order still flows by recency — grouping, not ranking.
     private var bundledDayGroups: [(String, [FeedRow])] {
         dayGroups.map { label, dayThings in
             var counts: [String: Int] = [:]
@@ -213,8 +225,8 @@ struct FeedScreen: View {
                     let kinds = Set(members.map(\.kind))
                     let word = kinds.count == 1
                         ? kinds.first!.typeTagPlural.lowercased() : "things"
-                    rows.append(.bundle(source: t.source, word: word,
-                                        count: members.count, newest: t.capturedAt))
+                    rows.append(.cluster(source: t.source, word: word,
+                                         members: members, newest: t.capturedAt))
                 } else {
                     rows.append(.single(t))
                 }
@@ -542,9 +554,21 @@ struct FeedScreen: View {
                     switch row {
                     case .single(let thing):
                         shapedListRow(thing, index: i)
-                    case .bundle(let source, let word, let count, let newest):
-                        bundleListRow(source: source, word: word, count: count,
-                                      newest: newest, index: i)
+                    case .cluster(let source, let word, let members, _):
+                        // The group, VISIBLE: a light header, its newest few
+                        // rows, then a "N more" tail (the old BundleRow) into
+                        // the source's shape when it overflows the cap.
+                        clusterHeaderRow(source: source, count: members.count)
+                        ForEach(Array(members.prefix(clusterCap).enumerated()),
+                                id: \.element.id) { j, member in
+                            shapedListRow(member, index: i + j)
+                        }
+                        if members.count > clusterCap {
+                            bundleListRow(source: source, word: word,
+                                          count: members.count - clusterCap,
+                                          newest: members[clusterCap].capturedAt,
+                                          index: i)
+                        }
                     }
                 }
             } header: {
@@ -582,6 +606,25 @@ struct FeedScreen: View {
         }
         if Calendar.current.isDateInYesterday(newSince) { return "yesterday" }
         return newSince.formatted(.dateTime.weekday(.wide))
+    }
+
+    /// A cluster's light header — the source's icon and name over the group's
+    /// rows, with its member count. No card, no line (design law: no
+    /// hairlines); the rows that follow read as its group by proximity.
+    private func clusterHeaderRow(source: String, count: Int) -> some View {
+        HStack(spacing: DS.Space.s2) {
+            BridgeIcon(name: source, size: 20)
+            Text(source).dsText(.label12).foregroundStyle(DS.textSecondary)
+            Text("\(count)").dsText(.label12).foregroundStyle(DS.textTertiary)
+                .contentTransition(.numericText())
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, DS.Space.s4)
+        .padding(.top, DS.Space.s3)
+        .padding(.bottom, DS.Space.s1)
+        .listRowBackground(Color.clear)
+        .listRowInsets(EdgeInsets())
+        .listRowSeparator(.hidden)
     }
 
     /// A bundle in the list: same card treatment as a thing row; the tap
