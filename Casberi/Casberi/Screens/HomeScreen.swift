@@ -81,6 +81,10 @@ struct HomeScreen: View {
     /// the reorder that must re-run as content slides).
     @State private var probe = BoardScrollProbe()
     @State private var scrollPos = ScrollPosition(edge: .top)
+    /// Board edit mode (2026-07-12) — the long-press-to-jiggle rearrange state.
+    /// Home owns it so the Done button can live in the fixed toolbar; the board
+    /// flips it on the first lift and clears it on leaving Home.
+    @State private var boardEditing = false
 
     struct ProjectRoute: Identifiable, Hashable {
         let name: String
@@ -155,6 +159,22 @@ struct HomeScreen: View {
                          onApps: { route.push = .apps },
                          refreshSpin: refreshTick,
                          zoomNS: doorNS)
+            }
+            // Edit mode's exit — the leading edge TopDoors leaves clear. Only
+            // present while rearranging; tapping it stills the jiggle and locks
+            // the new order in place (the board already persisted each move).
+            .toolbar {
+                if boardEditing {
+                    ToolbarItem(placement: .topBarLeading) {
+                        Button("Done") {
+                            DSHaptic.tap()
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                                boardEditing = false
+                            }
+                        }
+                        .fontWeight(.semibold)
+                    }
+                }
             }
             // Topic blocks open project detail, not a Feed filter (gap §9.1).
             // The source-fallback map's cells name APPS, not tags — those open
@@ -444,6 +464,7 @@ struct HomeScreen: View {
         let _ = boardSizeRevision
         ReorderableBoard(
             order: $boardOrder,
+            editing: $boardEditing,
             content: { ref in moduleView(ref) },
             isMagazine: { isMagazine($0) },
             onReorder: { flat in

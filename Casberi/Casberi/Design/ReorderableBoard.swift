@@ -117,6 +117,26 @@ struct MagazineLayout: Layout {
     }
 }
 
+/// The per-frame drag values the LIFTED card renders from (2026-07-12 perf
+/// pass) — @Observable, so mutating them repaints only the one view that
+/// reads them (the dragged card), never the board that merely owns the
+/// reference. Parking translation here instead of in the board's @State is
+/// what stops a ~120 Hz drag from re-evaluating the whole board body — and
+/// every module's view value — on every finger sample.
+@Observable final class DragMotion {
+    var translation: CGSize = .zero
+    var autoScrollDelta: CGFloat = 0
+}
+
+/// The per-frame drag values only the reorder MATH reads — never a view body.
+/// A plain class like BoardScrollProbe: writing them on every drag tick
+/// repaints nothing, which is exactly what the reorder loop wants.
+final class DragScratch<ID: Hashable> {
+    var frames: [ID: CGRect] = [:]
+    var lastTranslation: CGSize = .zero
+    var lastFingerY: CGFloat = 0
+}
+
 /// A board of drag-reorderable module cards (prd 58 Goal 1, prd 58h free
 /// drag). Long-press lifts a card — the mocked drag state (scale up, slight
 /// turn, a shadow lands under it) — the board linearizes to one full-width
@@ -128,6 +148,13 @@ struct ReorderableBoard<ID: Hashable, Content: View>: View {
     /// The FLAT module order (prd 58h) — a single module is the drag unit, so
     /// a tile paired into a 2-up row can be pulled out and dropped anywhere.
     @Binding var order: [ID]
+    /// Edit mode (2026-07-12): the Home Screen model. A long-press enters it —
+    /// every tile jiggles and STAYS jiggling, and a light press grabs any tile
+    /// to drag without the full hold, so you rearrange freely until you tap
+    /// Done. The persistent wobble is the discoverability tell: it's how a
+    /// person learns the board is rearrangeable at all. The owner (Home) reads
+    /// this to show the Done button; the board sets it true on the first lift.
+    @Binding var editing: Bool
     @ViewBuilder let content: (ID) -> Content
     /// Whether a module is a compact media tile (packs 2-up, wears the inset)
     /// vs a full-width module. Read fresh each layout so growing/shrinking a
@@ -144,28 +171,26 @@ struct ReorderableBoard<ID: Hashable, Content: View>: View {
     var scrollBy: ((CGFloat) -> Void)? = nil
 
     @State private var draggingID: ID?
-    @State private var dragTranslation: CGSize = .zero
-    @State private var frames: [ID: CGRect] = [:]
     @State private var orderAtDragStart: [ID] = []
-    /// The scroll offset when the drag lifted, and how far the board has
-    /// auto-scrolled since (cumulative). Reorder AND the dragged card's offset
-    /// both add this, so a stationary finger over auto-scrolling content keeps
-    /// the card under the finger and crossing the right slots.
+    /// The per-frame drag values the lifted card renders from — held OUT of
+    /// board @State on purpose (perf pass): only the dragged BoardCard reads
+    /// `motion`, so a per-frame translation repaints that one card, not the
+    /// whole board. See DragMotion.
+    @State private var motion = DragMotion()
+    /// The per-frame values only the reorder math reads (frames, last sample)
+    /// — a plain holder, so writing them every tick repaints nothing.
+    @State private var scratch = DragScratch<ID>()
+    /// The scroll offset when the drag lifted; auto-scroll deltas are measured
+    /// against it. Set once per lift — not a per-frame value.
     @State private var scrollYAtLift: CGFloat = 0
-    @State private var autoScrollDelta: CGFloat = 0
-    /// The last drag sample — the auto-scroll loop re-runs reorder with these
-    /// as content slides, since a stationary finger sends no new drag events.
-    @State private var lastTranslation: CGSize = .zero
-    @State private var lastFingerY: CGFloat = 0
     @State private var autoScrollDir = 0
     @State private var autoScrollTask: Task<Void, Never>?
     /// The dragged card's frame at the moment the DRAG began (not the lift):
     /// lifting linearizes the board, so a paired tile's frame moves out from
     /// under the finger before the first drag sample. Captured on the first
-    /// `onChanged`, when the column has settled — the fixed origin
-    /// `dragTranslation` moves it from. `frames[id]` keeps updating live for
-    /// the SAME view this offset is applied to, so reading it again in
-    /// `reorderIfNeeded` would double the displacement.
+    /// `onChanged`, when the column has settled — the fixed origin the pure
+    /// translation moves it from. (Read once and held; never re-read live,
+    /// which would double-count the displacement.)
     @State private var liftFrame: CGRect?
     /// The board relinearizes on lift, so the START frame can't be read until
     /// the first drag sample lands (below). `dragStarted` gates that one-time
@@ -179,24 +204,22 @@ struct ReorderableBoard<ID: Hashable, Content: View>: View {
                        linear: draggingID != nil,
                        hPad: DS.Space.s4, pairGap: DS.Space.s3, rowGap: DS.Space.s4) {
             ForEach(order, id: \.self) { id in
-                content(id)
+                // The module + its lifted-state transforms + the finger-tracking
+                // offset live in BoardCard, which reads `motion` ONLY while it's
+                // the lifted card — so a per-frame translation repaints just
+                // that one card. Everything that must NOT rebuild per frame
+                // (zIndex, the frame probe, the gestures, a11y) stays out here
+                // on the board body, which re-evaluates only on a discrete
+                // lift / settle / reorder — never on a plain finger move.
+                BoardCard(dragged: draggingID == id,
+                          editing: editing,
+                          phase: id.hashValue & 3,
+                          motion: motion,
+                          content: content(id))
                     .zIndex(draggingID == id ? 1 : 0)
-                    .scaleEffect(draggingID == id ? 1.03 : 1)
-                    .rotationEffect(.degrees(draggingID == id ? 1.5 : 0))
-                    .shadow(color: .black.opacity(draggingID == id ? 0.28 : 0),
-                            radius: draggingID == id ? 18 : 0,
-                            y: draggingID == id ? 8 : 0)
-                    // The lifted card follows the finger (dragTranslation) AND
-                    // compensates for any auto-scroll: its base moves with the
-                    // scrolling content, so adding autoScrollDelta keeps it
-                    // pinned under a stationary finger while the board scrolls.
-                    .offset(draggingID == id
-                            ? CGSize(width: dragTranslation.width,
-                                     height: dragTranslation.height + autoScrollDelta)
-                            : .zero)
                     .onGeometryChange(for: CGRect.self) { proxy in
                         proxy.frame(in: .named("homeBoard"))
-                    } action: { frames[id] = $0 }
+                    } action: { scratch.frames[id] = $0 }
                     // Detection only — onLongPressGesture is Apple's own
                     // well-behaved recognizer, tuned to coexist with a
                     // ScrollView's pan the way a hand-composed
@@ -205,7 +228,13 @@ struct ReorderableBoard<ID: Hashable, Content: View>: View {
                     // "sticky", every card's own recognizer competing with
                     // the scroll pan for the touch, all the time — not just
                     // the one actually being dragged).
-                    .onLongPressGesture(minimumDuration: 0.35, maximumDistance: 24) {
+                    // A full hold ENTERS edit mode from rest; once editing, a
+                    // light press grabs the next tile — you rearrange freely
+                    // without re-holding, the Home Screen feel. Still Apple's
+                    // own recognizer either way, so it yields to the scroll pan
+                    // (the sticky-scroll fix above holds in both modes).
+                    .onLongPressGesture(minimumDuration: editing ? 0.12 : 0.35,
+                                        maximumDistance: 24) {
                         lift(id)
                     }
                     // The actual drag tracker — attached to EVERY card, all
@@ -234,8 +263,9 @@ struct ReorderableBoard<ID: Hashable, Content: View>: View {
         .coordinateSpace(name: "homeBoard")
         .animation(.spring(response: 0.35, dampingFraction: 0.8), value: order)
         // A board torn down mid-drag (leaving Home) never sends finger-up —
-        // cancel the loop so it can't scroll a gone view.
-        .onDisappear { stopAutoScroll() }
+        // cancel the loop so it can't scroll a gone view, and drop edit mode
+        // so returning to Home isn't stuck jiggling with no Done in reach.
+        .onDisappear { stopAutoScroll(); editing = false }
     }
 
     /// Moves a card one slot in `order` and persists — the accessible path to
@@ -255,15 +285,19 @@ struct ReorderableBoard<ID: Hashable, Content: View>: View {
     private func lift(_ id: ID) {
         guard draggingID != id else { return }
         DSHaptic.selection()
+        // The first lift arms edit mode; it STAYS armed after this drag
+        // settles (persistent — only Done, or leaving Home, clears it), so
+        // the board keeps jiggling and the next tile takes only a light press.
+        if !editing { editing = true }
         orderAtDragStart = order
         // liftFrame is captured on the first drag sample, not here: setting
         // draggingID linearizes the board, so a paired tile's frame is about
         // to move. dragStarted gates that one-shot capture.
         liftFrame = nil
         dragStarted = false
-        dragTranslation = .zero
+        motion.translation = .zero
         scrollYAtLift = scrollProbe?.y ?? 0
-        autoScrollDelta = 0
+        motion.autoScrollDelta = 0
         withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
             draggingID = id
         }
@@ -284,17 +318,17 @@ struct ReorderableBoard<ID: Hashable, Content: View>: View {
                     // START frame from THAT column, and treat this sample's
                     // translation as the zero point, so the card tracks the
                     // finger from where it now sits.
-                    liftFrame = frames[id]
+                    liftFrame = scratch.frames[id]
                     dragBaseline = drag.translation
                 }
                 let t = CGSize(width: drag.translation.width - dragBaseline.width,
                                height: drag.translation.height - dragBaseline.height)
-                dragTranslation = t
-                lastTranslation = t
-                lastFingerY = drag.location.y
+                motion.translation = t
+                scratch.lastTranslation = t
+                scratch.lastFingerY = drag.location.y
                 // Keep the cumulative auto-scroll current (0 when disabled or
                 // un-scrolled) so offset and reorder read one consistent value.
-                autoScrollDelta = (scrollProbe?.y ?? 0) - scrollYAtLift
+                motion.autoScrollDelta = (scrollProbe?.y ?? 0) - scrollYAtLift
                 refreshAutoScroll()
                 reorderIfNeeded(id: id, translation: t)
             }
@@ -306,13 +340,17 @@ struct ReorderableBoard<ID: Hashable, Content: View>: View {
 
     private func settle(_ id: ID) {
         stopAutoScroll()
+        // Clearing draggingID inside the animation flips this card to its
+        // resting state (offset → .zero) and springs it home; the card stops
+        // observing `motion` the same instant, so resetting motion after is
+        // just housekeeping for the next lift.
         withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
             draggingID = nil
-            dragTranslation = .zero
         }
+        motion.translation = .zero
+        motion.autoScrollDelta = 0
         liftFrame = nil
         dragStarted = false
-        autoScrollDelta = 0
         if order != orderAtDragStart {
             DSHaptic.tap()
             onReorder(order)
@@ -327,8 +365,8 @@ struct ReorderableBoard<ID: Hashable, Content: View>: View {
         guard let probe = scrollProbe, scrollBy != nil,
               probe.viewportBottom > probe.viewportTop else { return 0 }
         let band: CGFloat = 110
-        if lastFingerY < probe.viewportTop + band { return -1 }
-        if lastFingerY > probe.viewportBottom - band { return 1 }
+        if scratch.lastFingerY < probe.viewportTop + band { return -1 }
+        if scratch.lastFingerY > probe.viewportBottom - band { return 1 }
         return 0
     }
 
@@ -346,8 +384,8 @@ struct ReorderableBoard<ID: Hashable, Content: View>: View {
                 // The scroll landed — carry the new offset into the card's
                 // position and re-run reorder against the now-scrolled frames
                 // (a stationary finger sends no drag events of its own).
-                autoScrollDelta = (scrollProbe?.y ?? 0) - scrollYAtLift
-                reorderIfNeeded(id: id, translation: lastTranslation)
+                motion.autoScrollDelta = (scrollProbe?.y ?? 0) - scrollYAtLift
+                reorderIfNeeded(id: id, translation: scratch.lastTranslation)
             }
         }
     }
@@ -370,14 +408,94 @@ struct ReorderableBoard<ID: Hashable, Content: View>: View {
     /// column, so a single Y test resolves every slot unambiguously.
     private func reorderIfNeeded(id: ID, translation: CGSize) {
         guard let liftFrame, let fromIndex = order.firstIndex(of: id) else { return }
-        let draggedMidY = liftFrame.midY + translation.height + autoScrollDelta
+        let draggedMidY = liftFrame.midY + translation.height + motion.autoScrollDelta
         for (i, otherID) in order.enumerated() where otherID != id {
-            guard let otherFrame = frames[otherID], otherFrame.contains(
+            guard let otherFrame = scratch.frames[otherID], otherFrame.contains(
                 CGPoint(x: otherFrame.midX, y: draggedMidY)) else { continue }
             guard i != fromIndex else { continue }
             order.move(fromOffsets: IndexSet(integer: fromIndex),
                        toOffset: i > fromIndex ? i + 1 : i)
+            // A tick per slot crossed, not just at lift/drop — the native
+            // Home Screen icon-drag feel (2026-07-12): a live drag that never
+            // ticks reads as unresponsive even when the reorder itself is
+            // working, because the only feedback was at the start and end.
+            DSHaptic.selection()
             break
         }
+    }
+}
+
+/// One board card: the module plus its lifted-state transforms. Split out of
+/// the board's ForEach (2026-07-12 perf pass) so a per-frame drag offset
+/// repaints ONLY the card being dragged. Two things make that hold:
+///  • it reads `motion` — the per-frame translation — only inside the
+///    `dragged` branch, so an idle card never observes it and is never
+///    re-rendered as the finger moves; and
+///  • it takes the already-built `content` VALUE (not a rebuilding closure),
+///    so even the dragged card diffs its module subtree away — only the
+///    CoreAnimation transform (offset/scale/rotate) changes each frame, on
+///    the render thread, not a SwiftUI body re-evaluation.
+private struct BoardCard<Content: View>: View {
+    let dragged: Bool
+    /// A drag is in flight SOMEWHERE on the board — the other tiles wobble
+    /// (the Home Screen "you're rearranging now" tell). The lifted card
+    /// itself doesn't jiggle; it wears the lift transform instead.
+    let editing: Bool
+    /// A stable 0–3 bucket (from the id's hash) that desyncs this card's
+    /// jiggle period, so the board shimmers rather than pulsing in lockstep.
+    let phase: Int
+    let motion: DragMotion
+    let content: Content
+
+    var body: some View {
+        content
+            .scaleEffect(dragged ? 1.03 : 1)
+            .rotationEffect(.degrees(dragged ? 1.5 : 0))
+            .shadow(color: .black.opacity(dragged ? 0.28 : 0),
+                    radius: dragged ? 18 : 0,
+                    y: dragged ? 8 : 0)
+            // A separate rotation layer from the lift tilt above, so the two
+            // never fight. Runs on the render thread (a repeatForever CA
+            // animation), so a jiggling board costs no SwiftUI body work —
+            // it starts on the one re-render when `editing` flips at lift and
+            // stops on the one at settle, nothing in between.
+            .modifier(JiggleEffect(active: editing && !dragged, phase: phase))
+            // The lifted card follows the finger AND compensates for any
+            // auto-scroll: its base moves with the scrolling content, so
+            // adding autoScrollDelta keeps it pinned under a stationary finger.
+            // Reading `motion` here — only when `dragged` — is what scopes the
+            // per-frame repaint to this one card. The offset is ALWAYS applied
+            // (value .zero when idle), never conditionally added/removed, so
+            // the settle springs the value home instead of snapping.
+            .offset(dragged
+                    ? CGSize(width: motion.translation.width,
+                             height: motion.translation.height + motion.autoScrollDelta)
+                    : .zero)
+    }
+}
+
+/// The Home Screen jiggle — a subtle endless rotation wobble while the board
+/// is being rearranged. A single state flip into a `repeatForever(autoreverses:)`
+/// animation gives continuous oscillation between the two angle endpoints with
+/// no per-frame driving from us; CoreAnimation owns it on the render thread.
+/// Off under Reduce Motion, and it springs flat (not snaps) when editing ends.
+private struct JiggleEffect: ViewModifier {
+    let active: Bool
+    let phase: Int
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var swung = false
+
+    private var on: Bool { active && !reduceMotion }
+
+    func body(content: Content) -> some View {
+        content
+            .rotationEffect(.degrees(on ? (swung ? 0.9 : -0.9) : 0), anchor: .center)
+            .animation(on
+                       ? .easeInOut(duration: 0.15 + Double(phase) * 0.012)
+                            .repeatForever(autoreverses: true)
+                       : .spring(response: 0.28, dampingFraction: 0.72),
+                       value: swung)
+            .onChange(of: on) { _, now in swung = now }
+            .onAppear { if on { swung = true } }
     }
 }
