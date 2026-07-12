@@ -174,10 +174,6 @@ enum HomeComposition {
             }
     }
 
-    private static func tagCounts(things: [Thing]) -> [(String, Int)] {
-        projectClusters(things: things).map { ($0.name, $0.things.count) }
-    }
-
     // MARK: - Cover (H7 — the doc names facts; the renderer owns the rest)
 
     /// "Thursday, July 9" — the day, stated plainly (ruling 2026-07-09: the
@@ -236,20 +232,6 @@ enum HomeComposition {
             $0.value != $1.value ? $0.value > $1.value : $0.key.typeTag < $1.key.typeTag
         }.prefix(5).map { "\($0.key.typeTag) \($0.value)" }
         return "[\(items.joined(separator: ", "))]"
-    }
-
-    // MARK: - Line builders
-
-    private static func hero(eyebrow: String, title: String, subline: String) -> String {
-        "hero = Hero(\(q(eyebrow)), \(q(title)), \(q(subline)))"
-    }
-
-    private static func projectTile(id: String, _ c: Cluster) -> String {
-        let sources = Array(Set(c.things.map(\.source))).sorted().prefix(3).joined(separator: ",")
-        // Subline reads content, not status: name the kinds inside.
-        let kindWords = Array(Set(c.things.map { $0.kind.typeTag.lowercased() + "s" })).sorted().prefix(3)
-        let subline = kindWords.joined(separator: ", ").capitalizedFirst
-        return "\(id) = ProjectTile(\(q("1")), \(q(c.name)), \(q(sources)), \(q(subline)), \(q(String(localized: "\(c.things.count) things"))), blue)"
     }
 
     /// Feed pins surface on Home too (ruling 2026-07-06): a pin means "keep
@@ -463,12 +445,5 @@ enum HomeComposition {
         let flat = s.replacingOccurrences(of: "\r\n", with: " ")
             .replacingOccurrences(of: "\n", with: " ")
         return "\"\(flat.replacingOccurrences(of: "\"", with: ""))\""
-    }
-}
-
-private extension String {
-    var capitalizedFirst: String {
-        guard let first = first else { return self }
-        return first.uppercased() + dropFirst()
     }
 }

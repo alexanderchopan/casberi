@@ -849,6 +849,30 @@ private struct GenFlexThumb: View {
     }
 }
 
+/// The sheet-square board tile (prd 58h): a `surfaceSheet` card at the widget
+/// radius, interior padded by s4, carrying the board packer's inset contract
+/// in ONE place so the sheet radius / packer inset / 1×1 floor each live here,
+/// not hand-copied per tile (GenSocialCard's two forms + GenTokenRow). A
+/// `small` (1×1) tile is inset and top-gapped by the packer, so it self-pads to
+/// 0 and stretches to its row-mate's height (`maxHeight: .infinity` keeps a
+/// paired 1×1 from under-filling raggedly); wide/big span full width and inset
+/// themselves by s4. `minHeight` floors a 1×1's seat; wide/big size to content.
+private extension View {
+    func boardTile(small: Bool, minHeight: CGFloat = 150) -> some View {
+        self
+            .padding(DS.Space.s4)
+            .frame(maxWidth: .infinity,
+                   minHeight: small ? minHeight : nil,
+                   maxHeight: small ? .infinity : nil,
+                   alignment: .topLeading)
+            .background(DS.surfaceSheet,
+                        in: RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
+            .contentShape(RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
+            .padding(.horizontal, small ? 0 : DS.Space.s4)
+            .padding(.top, small ? 0 : DS.Space.s4)
+    }
+}
+
 /// SocialCard(source, handle, avatarURL, text, imageURL, thingId, openable)
 /// — a social source's single latest post, clean (prd 58: "avatar + latest
 /// post, clean"). Regular is compact; large gives the avatar and text more
@@ -902,11 +926,7 @@ private struct GenSocialCard: View {
                 Text(handle).dsText(.subhead13).foregroundStyle(DS.textSecondary).lineLimit(1)
             }
         }
-        .padding(DS.Space.s4)
-        .frame(maxWidth: .infinity, minHeight: 150, maxHeight: .infinity, alignment: .topLeading)
-        .background(DS.surfaceSheet,
-                    in: RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
-        .contentShape(RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
+        .boardTile(small: true)
     }
 
     private var wideCard: some View {
@@ -935,13 +955,7 @@ private struct GenSocialCard: View {
                     .clipShape(RoundedRectangle(cornerRadius: DS.Radius.control, style: .continuous))
             }
         }
-        .padding(DS.Space.s4)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(DS.surfaceSheet,
-                    in: RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
-        .contentShape(RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
-        .padding(.horizontal, DS.Space.s4)
-        .padding(.top, DS.Space.s4)
+        .boardTile(small: false)
     }
 }
 
@@ -1147,15 +1161,7 @@ private struct GenTokenRow: View {
     var body: some View {
         let small = span == .small
         let tile = interior
-            .frame(maxWidth: .infinity, minHeight: small ? 150 : nil, alignment: .topLeading)
-            .padding(DS.Space.s4)
-            .background(DS.surfaceSheet,
-                        in: RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
-            .contentShape(RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
-            // Small tiles are inset + top-gapped by the board's packer; wide and
-            // big span full width and inset themselves.
-            .padding(.horizontal, small ? 0 : DS.Space.s4)
-            .padding(.top, small ? 0 : DS.Space.s4)
+            .boardTile(small: small)
             // Keyed by chain/address, not plain .task: Home's first render
             // streams the doc token-by-token (H7 typewriter), so this view can
             // mount before those args arrive (fixed 2026-07-08). Reveal replays
