@@ -572,8 +572,14 @@ struct HomeScreen: View {
         if wallet.addresses.contains(where: \.pinnedToHome) {
             walletHoldings = await WalletIngest.topHoldingsByWallet(pinnedOnly: true)
         }
-        streamComposition(instant: true)
-        // The refresh LANDS — a soft thud when the fresh data is on screen
+        // Pull RE-STREAMS the composition, it doesn't just repaint (A, ruling
+        // 2026-07-12): the modules dissolve to their skeletons and stream back
+        // in — the same entrance the first compose plays — so a pull reads as
+        // the agent re-authoring Home before your eyes, not a spinner. (Every
+        // other in-session update stays `instant` so only a deliberate pull
+        // earns the re-compose.)
+        streamComposition(instant: false)
+        // The refresh LANDS — a soft thud as the fresh document starts landing
         // (2026-07-10 haptics pass: motion that completes gets felt).
         DSHaptic.success()
     }
