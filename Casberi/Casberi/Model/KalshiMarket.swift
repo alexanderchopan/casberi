@@ -1,0 +1,57 @@
+import Foundation
+
+/// A Kalshi market's live read (2026-07-11) — the probability-market analog
+/// of TokenChart, without a historical curve: Kalshi's public candlestick
+/// endpoint is thin for most game markets, so rather than fake a chart,
+/// Casberi shows the one honest number it can stand behind — the live YES
+/// price (the market's odds) — against the price it last moved from.
+struct KalshiMarket {
+    let ticker: String
+    let title: String
+    let subtitle: String
+    let probability: Double        // 0...1
+    let previousProbability: Double?
+    let status: String             // "active", "closed", "settled", …
+    let closeTime: Date?
+
+    /// Pulls a market's series+event tickers out of a kalshi.com market URL
+    /// (`https://kalshi.com/markets/kxnflgame/kxnflgame-26sep14denkc`).
+    static func route(from content: String) -> (series: String, event: String)? {
+        guard let url = URL(string: content),
+              url.host()?.contains("kalshi.com") == true else { return nil }
+        let parts = url.pathComponents.filter { $0 != "/" }
+        guard parts.count >= 3, parts[0] == "markets" else { return nil }
+        return (series: parts[1], event: parts[2])
+    }
+
+    /// Refetches a market's current price by its event ticker — the leaf
+    /// market ticker isn't in the URL (a game's two outcomes share one
+    /// page), so this reads the event's still-open market, or its first
+    /// market at all once the game has settled.
+    static func fetch(series: String, event: String) async -> KalshiMarket? {
+        guard let root = await IngestSupport.getJSON(
+            "https://api.elections.kalshi.com/trade-api/v2/events/\(event.uppercased())?with_nested_markets=true")
+            as? [String: Any],
+            let markets = root["markets"] as? [[String: Any]]
+        else { return nil }
+        let market = markets.first { ($0["status"] as? String) == "active" } ?? markets.first
+        guard let market,
+              let ticker = market["ticker"] as? String,
+              let title = market["title"] as? String,
+              let prob = num(market["last_price_dollars"])
+        else { return nil }
+        return KalshiMarket(
+            ticker: ticker, title: title,
+            subtitle: (market["yes_sub_title"] as? String) ?? "",
+            probability: prob,
+            previousProbability: num(market["previous_price_dollars"]),
+            status: (market["status"] as? String) ?? "active",
+            closeTime: IngestSupport.isoDate(market["close_time"]))
+    }
+
+    private static func num(_ any: Any?) -> Double? {
+        if let d = any as? Double { return d }
+        if let s = any as? String { return Double(s) }
+        return nil
+    }
+}

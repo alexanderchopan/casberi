@@ -19,6 +19,8 @@ struct ThingContentView: View {
             // like a screenshot leads with its image); everything else previews.
             if let route = TokenChart.route(from: thing.content) {
                 TokenChartContent(chain: route.chain, address: route.address)
+            } else if let route = KalshiMarket.route(from: thing.content) {
+                KalshiMarketContent(series: route.series, event: route.event)
             } else if let url = Capture.detectURL(in: thing.content.isEmpty ? thing.title : thing.content) {
                 LinkPreviewCard(url: url, storedImageURL: thing.previewImageURL)
             }
@@ -367,6 +369,25 @@ private struct TokenChartContent: View {
         TokenChartView(chain: chain, address: address) {
             // No pool (dead/illiquid) — the plain link, honestly.
             if let url = URL(string: "https://dexscreener.com/\(chain)/\(address)") {
+                LinkPreviewCard(url: url)
+            }
+        }
+        .padding(.horizontal, DS.Space.s4)
+        .padding(.bottom, DS.Space.s3)
+    }
+}
+
+/// A Kalshi market's odds, drawn natively — the KalshiMarketView read: a
+/// live probability, a delta pill, honest about active vs settled. A market
+/// Kalshi no longer resolves (rare — expired far past close) falls back to
+/// the plain link, never a blank read.
+private struct KalshiMarketContent: View {
+    let series: String
+    let event: String
+
+    var body: some View {
+        KalshiMarketView(series: series, event: event) {
+            if let url = URL(string: "https://kalshi.com/markets/\(series)/\(event)") {
                 LinkPreviewCard(url: url)
             }
         }

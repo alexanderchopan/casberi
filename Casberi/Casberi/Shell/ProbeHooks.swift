@@ -93,6 +93,18 @@ enum ProbeHooks {
                       added != nil ? "watched" : "already")
             }
         },
+        // `-watchMarket <team|event query>` watches a Kalshi market headlessly.
+        Hook(key: "watchMarket") { query, context in
+            Task { @MainActor in
+                guard let market = await KalshiWatch.resolve(query) else {
+                    NSLog("Kalshi probe: FAILED to resolve"); return
+                }
+                let added = KalshiWatch.add(market, context: context)
+                NSLog("Kalshi probe: %@ (%d%% · %@)", market.title,
+                      Int((market.probability * 100).rounded()),
+                      added != nil ? "watched" : "already")
+            }
+        },
         // `-userSearch "<bluesky|farcaster>:<query>"` runs the find-a-person
         // search and logs the hits — headless test of the search endpoints.
         Hook(key: "userSearch") { spec, _ in

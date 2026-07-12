@@ -15,6 +15,7 @@ enum BridgeRouter {
     enum Destination: Identifiable, Hashable {
         case wallet
         case dexscreener
+        case kalshi
         case icloudMail
         case gmail
         case rss
@@ -37,6 +38,7 @@ enum BridgeRouter {
             switch self {
             case .wallet:         "wallet"
             case .dexscreener:    "dexscreener"
+            case .kalshi:         "kalshi"
             case .icloudMail:     "icloudmail"
             case .gmail:          "gmail"
             case .rss:            "rss"
@@ -68,6 +70,7 @@ enum BridgeRouter {
     private static let rows: [Row] = [
         Row(offer: "Wallet",    id: "wallet", destination: .wallet),
         Row(offer: "Dexscreener", id: "dexscreener", destination: .dexscreener),
+        Row(offer: "Kalshi",     id: "kalshi",     destination: .kalshi),
         Row(offer: "iCloud Mail", id: "icloudmail",  destination: .icloudMail),
         Row(offer: "Gmail",       id: "gmail",       destination: .gmail),
         Row(offer: "RSS",       id: "rss",    destination: .rss),
@@ -110,6 +113,7 @@ struct BridgeDestinationView: View {
         switch destination {
         case .wallet:         WalletScreen()
         case .dexscreener:    DexscreenerScreen()
+        case .kalshi:         KalshiScreen()
         case .icloudMail:     MailScreen(provider: .icloud)
         case .gmail:          MailScreen(provider: .gmail)
         case .rss:            RSSScreen()
