@@ -1034,7 +1034,7 @@ private struct GenFlexThumb: View {
     }
 }
 
-/// SocialCard(source, handle, avatarURL, text, imageURL, thingId, openable)
+/// SocialCard(source, handle, avatarURL, text, imageURL, thingId, openable, pin)
 /// — a social source's single latest post, clean (prd 58: "avatar + latest
 /// post, clean"). Regular is compact; large gives the avatar and text more
 /// room and the attached image (if any) rides full width — still ONE post,
@@ -1045,8 +1045,12 @@ private struct GenSocialCard: View {
     @Environment(\.genModuleLarge) private var large
     @Environment(\.genSizeToggle) private var sizeToggle
     @Environment(\.genThingOpen) private var thingOpen
-    @Environment(\.genThingUnpin) private var thingUnpin
     @Environment(\.genThingHandoff) private var thingHandoff
+    /// Social is pin-governed (prd 58, "Full pin model"): removal drops the
+    /// source's pin, the same "Remove from Home" a pinned media shelf carries
+    /// — NOT the pinned-row "Unpin", which flipped a post flag the card never
+    /// read (a dead control, the bug this fix closes).
+    @Environment(\.genSourceUnpin) private var sourceUnpin
     /// nil off the board; `small` gives a 1×1 avatar tile (prd 58h).
     @Environment(\.genSpan) private var span
 
@@ -1057,12 +1061,41 @@ private struct GenSocialCard: View {
     private var imageURL: String { el.str(4) }
     private var thingId: String { el.str(5) }
     private var openable: Bool { el.str(6) == "app" }
+    /// On the board by an explicit pin (arg 7) — only then is "Remove from
+    /// Home" offered (parallels GenMediaShelf's pin gate).
+    private var pinned: Bool { el.str(7) == "pin" }
     private var avatarSize: CGFloat { large ? 44 : 28 }
 
     var body: some View {
         let content = span == .small ? AnyView(smallTile) : AnyView(wideCard)
-        content.pinnedRowActions(id: thingId, openable: openable,
-                                 open: thingOpen, unpin: thingUnpin, handoff: thingHandoff)
+        // Tap opens the post; long-press offers Open / Open in app, plus
+        // "Remove from Home" when the card is board-by-pin (drops the pin).
+        content
+            .contentShape(Rectangle())
+            .onTapGesture { if !thingId.isEmpty { thingOpen?(thingId) } }
+            .contextMenu {
+                if !thingId.isEmpty {
+                    Button {
+                        thingOpen?(thingId)
+                    } label: {
+                        Label("Open", systemImage: "rectangle.portrait.and.arrow.right")
+                    }
+                    if openable {
+                        Button {
+                            thingHandoff?(thingId)
+                        } label: {
+                            Label("Open in app", systemImage: "arrow.up.right")
+                        }
+                    }
+                }
+                if pinned, let sourceUnpin {
+                    Button(role: .destructive) {
+                        sourceUnpin(id)
+                    } label: {
+                        Label("Remove from Home", systemImage: "pin.slash")
+                    }
+                }
+            }
     }
 
     /// The small (1×1) form: the source's avatar and handle, no post text —

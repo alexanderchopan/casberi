@@ -448,9 +448,13 @@ enum HomeComposition {
     /// Music, Pinterest, and screenshots each earn a board module once a
     /// source has landed enough to be worth its own card — same threshold
     /// `sourceClusters` uses for the treemap (2, min-magnitude rule). Social
-    /// (Bluesky/Farcaster) earns a card the moment ONE post exists: it's a
-    /// single latest-post card, not a magnitude cluster, so there's no
-    /// "not enough yet" state to wait out.
+    /// (Bluesky/Farcaster) is pin-governed like RSS (prd 58, "Full pin
+    /// model" ruling 2026-07-12): its single latest-post card rides the board
+    /// only when the source is pinned — no magnitude to cross, so the pin is
+    /// what puts it there, and dropping the pin ("Remove from Home") takes it
+    /// off. That replaced an always-on card whose long-press "Unpin" flipped
+    /// the post's pin flag and did nothing (a dead control — the card never
+    /// read that flag).
     private static func appendMediaModules(_ things: [Thing], to doc: inout [String],
                                            rootRefs: inout [String], boardRefs: inout [String]) {
         let pinned = HomePinnedSources.shared.sources
@@ -494,7 +498,10 @@ enum HomeComposition {
                                  to: &doc, rootRefs: &rootRefs, boardRefs: &boardRefs)
             }
         }
-        for source in ["Bluesky", "Farcaster"] {
+        // Social rides the board only by an explicit pin (prd 58, Goal 4) —
+        // same rule as RSS above. Pinning doesn't invent content: the card
+        // still needs one real post to show.
+        for source in ["Bluesky", "Farcaster"] where pinned.contains(source) {
             guard let latest = things.first(where: { $0.source == source }) else { continue }
             appendSocialCard(id: "social\(source)", source: source, thing: latest,
                              to: &doc, rootRefs: &rootRefs, boardRefs: &boardRefs)
@@ -530,15 +537,19 @@ enum HomeComposition {
     }
 
     /// SocialCard(source, handle, avatarURL, text, imageURL, thingId,
-    /// openable) — the source's single newest post. "Clean" per the ruling:
-    /// one card, not a mini-feed.
+    /// openable, pin) — the source's single newest post. "Clean" per the
+    /// ruling: one card, not a mini-feed. Arg 7 ("pin") marks the card as
+    /// board-by-explicit-pin, so its long-press offers "Remove from Home"
+    /// (dropping the source's pin) — always emitted now that the card only
+    /// composes when the source is pinned. Trailing arg, so readers 0–6 are
+    /// unmoved.
     private static func appendSocialCard(id: String, source: String, thing t: Thing,
                                          to doc: inout [String], rootRefs: inout [String],
                                          boardRefs: inout [String]) {
         let openable = VerbDerivation.verbs(for: t).contains {
             if case .openURL = $0.action { return true } else { return false }
         } ? "app" : ""
-        doc.append("\(id) = SocialCard(\(q(source)), \(q(t.authorHandle ?? "")), \(q(t.authorAvatarURL ?? "")), \(q(t.title)), \(q(t.previewImageURL ?? "")), \(q(t.id.uuidString)), \(q(openable)))")
+        doc.append("\(id) = SocialCard(\(q(source)), \(q(t.authorHandle ?? "")), \(q(t.authorAvatarURL ?? "")), \(q(t.title)), \(q(t.previewImageURL ?? "")), \(q(t.id.uuidString)), \(q(openable)), \(q("pin")))")
         rootRefs.append(id)
         boardRefs.append(id)
     }

@@ -2167,3 +2167,30 @@ short tile sits flush beside a taller one).
 NOT YET DEVICE-VERIFIED (sim can't exercise): drag feel, tap-the-pin
 cycling, real token chart data (needs a pinned token + live Dexscreener
 fetch).
+
+## 58j. Social joins the full pin model — the unpin bug (user, 2026-07-12)
+
+Device report: "I unpinned Farcaster and Bluesky from my home and they
+stayed there." Root cause: social (Bluesky/Farcaster) was the one board
+module that AUTO-EARNED at magnitude 1 — its card appeared the moment one
+post existed and was never gated on any pin. But the card still carried
+the pinned-row long-press menu, whose "Unpin" flipped the underlying
+POST's `pinned` flag — a flag the card never read. So the verb ran, the
+card recomposed identically, and the pin looked stuck. A dead control by
+the letter of the honesty rule.
+
+RULING (user pick from three options): bring social into the SAME pin
+model as RSS/Pinterest/Photos (`HomePinnedSources`). Bluesky and Farcaster
+join `pinnable`; their setup screens now show the standard "Pin to Home"
+toggle; the card composes onto the board ONLY when the source is pinned;
+and its long-press now offers a real "Remove from Home" that drops the
+source's pin (the same verb a pinned media shelf carries), which also
+forgets the module's saved size/order. Social no longer auto-appears —
+consistent with Goal 4 ("the board grows from the catalog" via an explicit
+pin), and there's nothing left that a person can't take off Home.
+
+Headless test: `-pinHomeSource <source>` pins a source via
+`HomePinnedSources` (distinct from `-pinSource`, which pins one thing to
+the Pinned widget). NOT YET DEVICE-VERIFIED (no Xcode in the web session):
+the pin toggle → card appears → "Remove from Home" → card leaves loop
+wants a sim run.

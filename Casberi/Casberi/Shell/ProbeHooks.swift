@@ -326,6 +326,20 @@ enum ProbeHooks {
                 NSLog("Pin probe: FAILED to find a thing from %@", source)
             }
         },
+        // `-pinHomeSource <source>` pins a SOURCE to Home (the "Pin to Home"
+        // verb, HomePinnedSources) — headless test of a pin-governed board
+        // module (RSS, Pinterest, Bluesky, Farcaster…). Distinct from
+        // `-pinSource`, which pins a single thing to the Pinned widget.
+        Hook(key: "pinHomeSource") { source, _ in
+            guard HomePinnedSources.pinnable.contains(source) else {
+                NSLog("Pin-home probe: '%@' is not pinnable", source)
+                return
+            }
+            if !HomePinnedSources.shared.isPinned(source) {
+                HomePinnedSources.shared.toggle(source)
+            }
+            NSLog("Pin-home probe: pinned source '%@'", source)
+        },
     ]
 }
 #endif

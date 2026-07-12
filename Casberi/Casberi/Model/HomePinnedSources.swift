@@ -24,7 +24,7 @@ final class HomePinnedSources {
     /// pinned bypass. A source's own screen only shows "Pin to Home" when
     /// its name is in here — otherwise the pin would persist and flip the
     /// button's state with no effect on the board, a dead control.
-    static let pinnable: Set<String> = ["Apple Music", "Pinterest", "Photos", "RSS"]
+    static let pinnable: Set<String> = ["Apple Music", "Pinterest", "Photos", "RSS", "Bluesky", "Farcaster"]
 
     private(set) var sources: Set<String>
 
@@ -63,6 +63,8 @@ final class HomePinnedSources {
         case "Pinterest":   return "pinShelf"
         case "Photos":      return "shotShelf"
         case "RSS":         return "rssShelf"
+        case "Bluesky":     return "socialBluesky"
+        case "Farcaster":   return "socialFarcaster"
         default:            return nil
         }
     }
@@ -71,11 +73,13 @@ final class HomePinnedSources {
     /// the board's "Remove from Home" knows which pin to drop.
     static func source(forModuleRef ref: String) -> String? {
         switch ref {
-        case "musicShelf": return "Apple Music"
-        case "pinShelf":   return "Pinterest"
-        case "shotShelf":  return "Photos"
-        case "rssShelf":   return "RSS"
-        default:           return nil
+        case "musicShelf":      return "Apple Music"
+        case "pinShelf":        return "Pinterest"
+        case "shotShelf":       return "Photos"
+        case "rssShelf":        return "RSS"
+        case "socialBluesky":   return "Bluesky"
+        case "socialFarcaster": return "Farcaster"
+        default:                return nil
         }
     }
 
