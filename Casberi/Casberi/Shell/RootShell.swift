@@ -88,6 +88,12 @@ struct RootShell: View {
                              answer: answerDocument,
                              tagCandidates: projectTags,
                              knownSources: { bridges.bridges.map(\.name) },
+                             // Looking at one source's feed? Its recap leads the
+                             // composer's ask chips (context-aware asks).
+                             contextSource: {
+                                 tab == .feed && FeedFilter.shared.source != "All"
+                                     ? FeedFilter.shared.source : nil
+                             },
                              onNavigate: navigate,
                              glassNamespace: glassNS)
                         // A tag tile in an answer opens that tag's view: close

@@ -24,6 +24,10 @@ struct Composer: View {
     var tagCandidates: () -> [String] = { [] }
     /// The connected sources ("Gmail", "Steam") — navigation asks match them.
     var knownSources: () -> [String] = { [] }
+    /// The source the person is looking at right now (a Feed filtered to one
+    /// app), or nil — lets the ask chips lead with that source's recap so the
+    /// composer meets you where you are.
+    var contextSource: () -> String? = { nil }
     /// A typed ask that names a place ("show my work stuff") — the shell
     /// closes the composer and goes there.
     var onNavigate: (NavigateIntent) -> Void = { _ in }
@@ -151,6 +155,13 @@ struct Composer: View {
         // the Codable ThingKind enum (it throws at runtime, and try? made
         // the miss silent).
         let all = (try? modelContext.fetch(FetchDescriptor<Thing>())) ?? []
+        // Context-aware lead (2026-07-12): if you opened the composer while
+        // looking at one source's feed, its recap leads the chips — the
+        // composer meets you where you are. Only when that source actually has
+        // things to synthesize (honesty rule: a chip must answer).
+        if let src = contextSource(), all.contains(where: { $0.source == src }) {
+            out.append("What's new in \(src)?")
+        }
         let dayStart = Calendar.current.startOfDay(for: .now)
         // The feeds' pulse (2026-07-11): "What's going on?" synthesizes the
         // recent window across every source. Gated on the SAME computation
