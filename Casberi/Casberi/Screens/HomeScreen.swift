@@ -111,46 +111,10 @@ struct HomeScreen: View {
                             .padding(.horizontal, DS.Space.s4)
                             .padding(.top, DS.Space.s4)
                     }
-                    // The magazine board (prd 58f): image-media modules pair
-                    // into 2-up rows, everything else spans full width — the
-                    // rhythm emerges from your size choices. Rows drag as
-                    // units on the safe 1D reorder (prd 58d).
-                    ReorderableBoard(order: $boardRows, scrollProbe: probe,
-                                     scrollBy: { dy in
-                                         withAnimation(.linear(duration: 0.05)) {
-                                             scrollPos.scrollTo(y: max(0, probe.y + dy))
-                                         }
-                                     }) { row in
-                        if row.count == 2 {
-                            // A pair — two half-width art tiles.
-                            HStack(alignment: .top, spacing: DS.Space.s3) {
-                                magazineTile(row[0])
-                                magazineTile(row[1])
-                            }
-                            .padding(.horizontal, DS.Space.s4)
-                            .padding(.top, DS.Space.s4)
-                        } else if isPairable(row[0]),
-                                  !HomeModuleSize.shared.isLarge(moduleKey(row[0])) {
-                            // A lone regular media module — a full-width art
-                            // tile (one beautiful frame). Tap the pin to grow
-                            // it into the full shelf.
-                            magazineTile(row[0])
-                                .padding(.horizontal, DS.Space.s4)
-                                .padding(.top, DS.Space.s4)
-                        } else {
-                            // Structural modules, and any LARGE media module
-                            // (its full shelf/grid/hero), span full width.
-                            GenRender(id: row[0], els: stream.els)
-                                .environment(\.genModuleLarge, HomeModuleSize.shared.isLarge(moduleKey(row[0])))
-                        }
-                    } onReorder: { newRows in
-                        let flat = newRows.flatMap { $0 }
-                        boardOrder = flat
-                        // Same keying as syncBoard's apply(), suffixes and all
-                        // — bare moduleKey here broke round-trip for two
-                        // same-labeled modules (dedupedKeys' note).
-                        HomeBoardOrder.shared.save(dedupedKeys(flat))
-                    }
+                    // The magazine board — extracted so the body stays within
+                    // the type-checker's budget (the merge of magazine packing
+                    // and auto-scroll plumbing pushed it over, 2026-07-11).
+                    boardSection
                 }
                 .padding(.bottom, ShellMetrics.bottomInset)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -472,6 +436,51 @@ struct HomeScreen: View {
         GenRender(id: ref, els: stream.els)
             .environment(\.genMediaCompact, true)
             .frame(maxWidth: .infinity)
+    }
+
+    /// The magazine board (prd 58f): image-media modules pair into 2-up rows,
+    /// everything else spans full width — the rhythm emerges from your size
+    /// choices. Rows drag as units on the safe 1D reorder (prd 58d), and the
+    /// board auto-scrolls when a drag reaches an edge of a tall board.
+    @ViewBuilder private var boardSection: some View {
+        ReorderableBoard(
+            order: $boardRows,
+            content: { row in boardRow(row) },
+            onReorder: { newRows in
+                let flat = newRows.flatMap { $0 }
+                boardOrder = flat
+                // Same keying as syncBoard's apply(), suffixes and all — bare
+                // moduleKey here broke round-trip for two same-labeled modules.
+                HomeBoardOrder.shared.save(dedupedKeys(flat))
+            },
+            scrollProbe: probe,
+            scrollBy: { dy in
+                withAnimation(.linear(duration: 0.05)) {
+                    scrollPos.scrollTo(y: max(0, probe.y + dy))
+                }
+            })
+    }
+
+    @ViewBuilder private func boardRow(_ row: [String]) -> some View {
+        if row.count == 2 {
+            // A pair — two half-width art tiles.
+            HStack(alignment: .top, spacing: DS.Space.s3) {
+                magazineTile(row[0])
+                magazineTile(row[1])
+            }
+            .padding(.horizontal, DS.Space.s4)
+            .padding(.top, DS.Space.s4)
+        } else if isPairable(row[0]), !HomeModuleSize.shared.isLarge(moduleKey(row[0])) {
+            // A lone regular media module — a full-width art tile. Tap the pin
+            // to grow it into the full shelf.
+            magazineTile(row[0])
+                .padding(.horizontal, DS.Space.s4)
+                .padding(.top, DS.Space.s4)
+        } else {
+            // Structural modules, and any LARGE media module, span full width.
+            GenRender(id: row[0], els: stream.els)
+                .environment(\.genModuleLarge, HomeModuleSize.shared.isLarge(moduleKey(row[0])))
+        }
     }
 
     /// A stable identity for a board ref, independent of its slot index — a
