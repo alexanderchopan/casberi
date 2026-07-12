@@ -379,9 +379,12 @@ struct HomeScreen: View {
         // The first real pin is the lesson learned — the coach retires
         // forever, even if every pin is later removed.
         if !pinCoachDone, things.contains(where: \.pinned) { pinCoachDone = true }
-        let doc = things.isEmpty
+        // Home synthesizes the surfaced corpus — search-only sources (Contacts)
+        // stay out of the treemap the same way they stay out of the feed.
+        let surfaced = Corpus.surfaced(things)
+        let doc = surfaced.isEmpty
             ? HomeComposition.empty
-            : HomeComposition.compose(things: things, walletHoldings: walletHoldings,
+            : HomeComposition.compose(things: surfaced, walletHoldings: walletHoldings,
                                       walletPending: walletHoldingsLoading, pinCoach: !pinCoachDone)
         if instant {
             stream.paint(doc.lines)   // an update, not an entrance — no typewriter

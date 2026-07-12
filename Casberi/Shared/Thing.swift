@@ -51,6 +51,21 @@ enum ThingKind: String, Codable, CaseIterable {
     }
 }
 
+/// Which corpus things surface (2026-07-12). Some sources live in the corpus
+/// for search, Spotlight, and the answer path ONLY — never as feed rows,
+/// source chips, or Home synthesis. Contacts is the first: a big address book
+/// would bury the day's real captures. One rule, read by every surface that
+/// shows the corpus, so a search-only source is declared in exactly one place.
+enum Corpus {
+    static let searchOnlySources: Set<String> = ["Contacts"]
+
+    /// The things a surface (Feed, Home) should show — the corpus minus the
+    /// search-only sources.
+    static func surfaced(_ things: [Thing]) -> [Thing] {
+        things.filter { !searchOnlySources.contains($0.source) }
+    }
+}
+
 /// A mark on a thing. Things enter unmarked (`none`); inference proposes through
 /// `suggested`, one tap admits. Build brief §3.
 enum Mark: String, Codable, CaseIterable {

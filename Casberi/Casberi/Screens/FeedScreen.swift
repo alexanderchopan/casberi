@@ -108,9 +108,8 @@ struct FeedScreen: View {
     /// The corpus MINUS the search-only sources — Contacts land as things for
     /// lookup and the answer path, but never as feed rows or a source chip
     /// (ruling 2026-07-12): hundreds of names would bury the day's captures.
-    private var feedThings: [Thing] {
-        things.filter { $0.source != "Contacts" }
-    }
+    /// One rule (`Corpus.surfaced`), shared with Home's synthesis.
+    private var feedThings: [Thing] { Corpus.surfaced(things) }
 
     private var visible: [Thing] {
         feedThings.filter { thing in
