@@ -457,6 +457,20 @@ enum HomeComposition {
             appendMediaShelf(id: "shotShelf", eyebrow: "Screenshots", kind: "screenshot",
                              items: shots, to: &doc, rootRefs: &rootRefs, boardRefs: &boardRefs)
         }
+        // RSS earns its shelf ONLY by an explicit pin — a feed is a firehose,
+        // already surfaced in the "What's going on" source map, so it never
+        // auto-crosses the magnitude threshold onto the board. Imaged posts
+        // lead (a clean magazine strip); a text-only feed still shows its
+        // newest as tiles so the pin is never a dead control.
+        if pinned.contains("RSS") {
+            let rssAll = things.filter { $0.source == "RSS" }
+            let imaged = rssAll.filter { !($0.previewImageURL ?? "").isEmpty }
+            let rss = imaged.isEmpty ? rssAll : imaged
+            if !rss.isEmpty {
+                appendMediaShelf(id: "rssShelf", eyebrow: "RSS", kind: "rss",
+                                 items: rss, to: &doc, rootRefs: &rootRefs, boardRefs: &boardRefs)
+            }
+        }
         for source in ["Bluesky", "Farcaster"] {
             guard let latest = things.first(where: { $0.source == source }) else { continue }
             appendSocialCard(id: "social\(source)", source: source, thing: latest,

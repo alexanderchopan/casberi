@@ -24,7 +24,7 @@ final class HomePinnedSources {
     /// pinned bypass. A source's own screen only shows "Pin to Home" when
     /// its name is in here — otherwise the pin would persist and flip the
     /// button's state with no effect on the board, a dead control.
-    static let pinnable: Set<String> = ["Apple Music", "Pinterest", "Photos"]
+    static let pinnable: Set<String> = ["Apple Music", "Pinterest", "Photos", "RSS"]
 
     private(set) var sources: Set<String>
 

@@ -33,6 +33,7 @@ struct RSSScreen: View {
             BridgeSetupHeader(name: "RSS")
             if !rss.feeds.isEmpty { followingSection.listRowSeparator(.hidden) }
             addSection.listRowSeparator(.hidden)
+            if !rss.feeds.isEmpty { pinToHomeSection.listRowSeparator(.hidden) }
             if !recent.isEmpty {
                 RecentThingsSection(header: "Recent", things: recent, titleLines: 1)
                     .listRowSeparator(.hidden)
@@ -40,7 +41,12 @@ struct RSSScreen: View {
             if !rss.feeds.isEmpty {
                 BridgeDisconnectSection(
                     bridgeID: "rss", name: "RSS",
-                    teardown: { RSSStore.shared.feeds = [] }
+                    teardown: {
+                        RSSStore.shared.feeds = []
+                        // An outlived pin would silently re-arm the moment RSS
+                        // reconnects — clear it with the feeds it stood for.
+                        HomePinnedSources.shared.clear("RSS")
+                    }
                 ).listRowSeparator(.hidden)
             }
             footerSection.listRowSeparator(.hidden)
@@ -101,6 +107,38 @@ struct RSSScreen: View {
                 .foregroundStyle(DS.textTertiary)
         } footer: {
             Text("Paste a site's feed URL — new posts land in your feed as links.")
+                .dsText(.callout15).foregroundStyle(DS.textTertiary)
+        }
+    }
+
+    // MARK: - Pin to Home
+
+    private var pinnedToHome: Bool { HomePinnedSources.shared.isPinned("RSS") }
+
+    /// Pin to Home (prd 58, Goal 4) — the board grows from the catalog: a
+    /// followed feed can earn a Home card here, on its own screen, without
+    /// waiting to cross the automatic magnitude threshold. One verb, both
+    /// directions; the newest posts ride a magazine strip on Home.
+    private var pinToHomeSection: some View {
+        Section {
+            Button {
+                HomePinnedSources.shared.toggle("RSS")
+                CorpusSignal.shared.bump()   // Home recomposes on this signal.
+                DSHaptic.tap()
+            } label: {
+                HStack(spacing: DS.Space.s2) {
+                    Image(systemName: pinnedToHome ? "pin.fill" : "pin")
+                    Text(pinnedToHome ? "Pinned to Home" : "Pin to Home")
+                }
+                .dsText(.body17).foregroundStyle(pinnedToHome ? DS.tint : DS.textPrimary)
+                .frame(maxWidth: .infinity).frame(height: 44)
+                .background(pinnedToHome ? DS.tintDim : DS.gray100,
+                            in: Capsule(style: .continuous))
+            }
+            .buttonStyle(.plain)
+            .listRowBackground(Color.clear)
+        } footer: {
+            Text("Your feeds' newest posts ride a strip on Home.")
                 .dsText(.callout15).foregroundStyle(DS.textTertiary)
         }
     }
