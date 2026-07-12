@@ -1995,3 +1995,28 @@ search / still-artless counts) so the next build tells us exactly
 where it fails if search doesn't cover it. Render path confirmed
 correct on both surfaces (Home shelf + feed row read previewImageURL);
 this was never a display bug.
+
+## 58f. The magazine board (v1, 2026-07-11)
+
+Flipboard elegance, translated to Casberi's law (ink-black, all-SF,
+the sacred pin, the ledger). Three ideas ruled from a two-variant
+live mock ("variant 1 for real"); v1 ships the LAYOUT:
+- MOSAIC RHYTHM: image-media modules (music, Pinterest, screenshots)
+  render as art TILES on the board — half-width when two pack into a
+  pair row, full-width (one cinematic band) when alone. Structural
+  modules (pinned, wallet, "what's going on") and text posts (social)
+  stay full-width. The rhythm emerges from the person's own size
+  choices, not a fixed template. Tap a tile's pin → it grows to the
+  full shelf/grid/hero (all items).
+- Built on the SAFE row-based reorder (prd 58d): rows drag as units,
+  so the just-fixed scroll gesture is untouched.
+- New: genMediaCompact env + GenMediaCompactTile (lead image + eyebrow
+  scrim + corner pin); packRows in HomeScreen; isPairable gate.
+Verified on sim: Pinterest+Screenshots pair correctly; a lone media
+module renders as a full-width art tile.
+
+DEFERRED to v2 (the mock's other two ideas): the AUTO-HERO (one
+standout image featured full-bleed automatically, editor-style) and
+PARALLAX (images drift within frames on scroll; cover rubber-bands on
+overscroll — the motion that makes it feel alive). Drag FEEL and the
+music tile need device verification (music art can't render on sim).

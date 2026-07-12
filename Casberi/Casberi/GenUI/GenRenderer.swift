@@ -90,6 +90,18 @@ extension EnvironmentValues {
         get { self[GenThumbnailDataKey.self] }
         set { self[GenThumbnailDataKey.self] = newValue }
     }
+    /// True when a media module renders as a HALF-WIDTH tile in a magazine
+    /// pair row (prd 58f) — a single art tile, not the scrolling shelf. Set
+    /// per-tile by MagazineBoard; false everywhere else (the full-width
+    /// shelf/hero is the default).
+    var genMediaCompact: Bool {
+        get { self[GenMediaCompactKey.self] }
+        set { self[GenMediaCompactKey.self] = newValue }
+    }
+}
+
+private struct GenMediaCompactKey: EnvironmentKey {
+    static let defaultValue = false
 }
 
 private struct GenProseStreamingKey: EnvironmentKey {
@@ -531,11 +543,25 @@ private struct GenMediaShelf: View {
     let els: GenEls
     @Environment(\.genModuleLarge) private var large
     @Environment(\.genSizeToggle) private var sizeToggle
+    @Environment(\.genMediaCompact) private var compact
 
     private var kind: String { el.str(3) }
     private var refs: [String] { el.refs(2) }
 
     var body: some View {
+        // Half-width magazine tile (prd 58f): the lead item's art fills a
+        // single tile with the shelf's eyebrow over a scrim — no scrolling
+        // strip in a pair cell. The pin still rides the corner (tap = grow,
+        // which pops it to the full-bleed row).
+        if compact {
+            GenMediaCompactTile(id: id, eyebrow: el.str(0), leadRef: refs.first,
+                                els: els, sizeToggle: sizeToggle)
+        } else {
+            shelf
+        }
+    }
+
+    private var shelf: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 7) {
                 if let sizeToggle {
@@ -572,6 +598,52 @@ private struct GenMediaShelf: View {
         }
         .padding(.top, DS.Space.s4)
         .padding(.bottom, DS.Space.s2)
+    }
+}
+
+/// A media module as a single half-width magazine tile (prd 58f) — the lead
+/// item's art fills the tile, the module's eyebrow rides a bottom scrim, and
+/// the size-pin sits in the top corner. Tapping the tile opens the lead
+/// thing; tapping the pin grows the module to its full-bleed row.
+private struct GenMediaCompactTile: View {
+    let id: String
+    let eyebrow: String
+    let leadRef: String?
+    let els: GenEls
+    let sizeToggle: ((String) -> Void)?
+    private var lead: GenEl? { leadRef.flatMap { els[$0] } }
+
+    var body: some View {
+        Group {
+            if let lead {
+                GenMediaTile(el: lead, size: nil, aspectRatio: 1)
+            } else {
+                GenSkeletonTile(minHeight: 180)
+            }
+        }
+        .frame(height: 180)
+        .overlay(alignment: .bottomLeading) {
+            Text(eyebrow)
+                .dsText(.label12).foregroundStyle(.white)
+                .padding(.horizontal, 8).padding(.vertical, 4)
+                .background(.black.opacity(0.45), in: Capsule())
+                .padding(DS.Space.s3)
+        }
+        .clipShape(RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
+        .overlay(alignment: .topTrailing) {
+            if let sizeToggle {
+                Button { sizeToggle(id) } label: {
+                    Image(systemName: "pin.fill")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(.white.opacity(0.9))
+                        .rotationEffect(.degrees(-35))
+                        .shadow(color: .black.opacity(0.4), radius: 3)
+                }
+                .buttonStyle(PressSpring())
+                .padding(DS.Space.s2)
+                .accessibilityLabel("Grow")
+            }
+        }
     }
 }
 

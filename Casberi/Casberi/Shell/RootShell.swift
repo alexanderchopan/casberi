@@ -27,9 +27,6 @@ struct RootShell: View {
 
     var body: some View {
         ZStack(alignment: .bottom) {
-            #if DEBUG
-            MockFlipboardOverlay().zIndex(99)
-            #endif
             // The themed page — the same field each screen paints for itself
             // (NavigationStack's backing is opaque, so photo rendering lives
             // inside the screens via dsPageBackground; this is the base coat).

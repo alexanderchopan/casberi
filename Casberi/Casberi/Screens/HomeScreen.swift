@@ -66,6 +66,11 @@ struct HomeScreen: View {
     /// card even if its slot index shifts as wallets are pinned/unpinned.
     @State private var boardModuleRefs: Set<String> = []
     @State private var boardOrder: [String] = []
+    /// The magazine packing of `boardOrder` (prd 58f): each entry is a ROW —
+    /// one full-width module, or two paired image-media modules. Recomputed
+    /// whenever the order or a module's size changes; the drag reorders
+    /// whole rows, then flattens back to `boardOrder`.
+    @State private var boardRows: [[String]] = []
 
     struct ProjectRoute: Identifiable, Hashable {
         let name: String
@@ -97,11 +102,37 @@ struct HomeScreen: View {
                             .padding(.horizontal, DS.Space.s4)
                             .padding(.top, DS.Space.s4)
                     }
-                    ReorderableBoard(order: $boardOrder) { ref in
-                        GenRender(id: ref, els: stream.els)
-                            .environment(\.genModuleLarge, HomeModuleSize.shared.isLarge(moduleKey(ref)))
-                    } onReorder: { newOrder in
-                        HomeBoardOrder.shared.save(newOrder.map(moduleKey))
+                    // The magazine board (prd 58f): image-media modules pair
+                    // into 2-up rows, everything else spans full width — the
+                    // rhythm emerges from your size choices. Rows drag as
+                    // units on the safe 1D reorder (prd 58d).
+                    ReorderableBoard(order: $boardRows) { row in
+                        if row.count == 2 {
+                            // A pair — two half-width art tiles.
+                            HStack(alignment: .top, spacing: DS.Space.s3) {
+                                magazineTile(row[0])
+                                magazineTile(row[1])
+                            }
+                            .padding(.horizontal, DS.Space.s4)
+                            .padding(.top, DS.Space.s4)
+                        } else if isPairable(row[0]),
+                                  !HomeModuleSize.shared.isLarge(moduleKey(row[0])) {
+                            // A lone regular media module — a full-width art
+                            // tile (one beautiful frame). Tap the pin to grow
+                            // it into the full shelf.
+                            magazineTile(row[0])
+                                .padding(.horizontal, DS.Space.s4)
+                                .padding(.top, DS.Space.s4)
+                        } else {
+                            // Structural modules, and any LARGE media module
+                            // (its full shelf/grid/hero), span full width.
+                            GenRender(id: row[0], els: stream.els)
+                                .environment(\.genModuleLarge, HomeModuleSize.shared.isLarge(moduleKey(row[0])))
+                        }
+                    } onReorder: { newRows in
+                        let flat = newRows.flatMap { $0 }
+                        boardOrder = flat
+                        HomeBoardOrder.shared.save(flat.map(moduleKey))
                     }
                 }
                 .padding(.bottom, ShellMetrics.bottomInset)
@@ -338,6 +369,48 @@ struct HomeScreen: View {
             refForKey[key] = ref
         }
         boardOrder = HomeBoardOrder.shared.apply(to: naturalKeys).compactMap { refForKey[$0] }
+        boardRows = packRows(boardOrder)
+    }
+
+    /// Packs the flat board order into magazine rows (prd 58f): a run of
+    /// REGULAR image-media modules pairs 2-up; everything else (structural
+    /// modules, social posts, and any LARGE media module as a full-bleed
+    /// feature) spans its own full-width row.
+    private func packRows(_ order: [String]) -> [[String]] {
+        var rows: [[String]] = []
+        var pending: [String] = []
+        func flush() {
+            var i = 0
+            while i < pending.count {
+                if i + 1 < pending.count { rows.append([pending[i], pending[i + 1]]); i += 2 }
+                else { rows.append([pending[i]]); i += 1 }
+            }
+            pending = []
+        }
+        for ref in order {
+            if isPairable(ref), !HomeModuleSize.shared.isLarge(moduleKey(ref)) {
+                pending.append(ref)
+            } else {
+                flush()
+                rows.append([ref])
+            }
+        }
+        flush()
+        return rows
+    }
+
+    /// Only image-media modules pair — a music/Pinterest/screenshot shelf
+    /// makes a clean half-width art tile. Structural modules (pinned, wallet,
+    /// map) and text posts (social) always span full width.
+    private func isPairable(_ ref: String) -> Bool {
+        ["musicShelf", "pinShelf", "shotShelf"].contains { ref.hasPrefix($0) }
+    }
+
+    /// A paired media module as a half-width magazine tile.
+    @ViewBuilder private func magazineTile(_ ref: String) -> some View {
+        GenRender(id: ref, els: stream.els)
+            .environment(\.genMediaCompact, true)
+            .frame(maxWidth: .infinity)
     }
 
     /// A stable identity for a board ref, independent of its slot index — a
