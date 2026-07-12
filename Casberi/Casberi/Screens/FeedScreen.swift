@@ -119,24 +119,17 @@ struct FeedScreen: View {
             .compactMap { $0 }.joined(separator: " · ")
     }
 
-    /// Sources ordered by TODAY's count first, then total, then name — the
-    /// apps moving right now lead the row; a quiet bridge's chip drifts back
-    /// instead of squatting up front on lifetime volume (ruling 2026-07-09).
-    /// (Chips, never a dropdown: menus die.)
+    /// Sources in MOST-RECENT order (user, 2026-07-12): a source leads by when
+    /// it last had something land, not by today's volume — the app you just
+    /// heard from sits up front, and a quiet one drifts back on its own.
+    /// `things` is already newest-first (the @Query sort), so the FIRST time a
+    /// source appears is its newest thing; de-duping in iteration order keeps
+    /// exactly that ranking. (Chips, never a dropdown: menus die.)
     private var sources: [String] {
-        var total: [String: Int] = [:]
-        var today: [String: Int] = [:]
-        for thing in things {
-            total[thing.source, default: 0] += 1
-            if Calendar.current.isDateInToday(thing.capturedAt) {
-                today[thing.source, default: 0] += 1
-            }
-        }
-        let ordered = total.keys.sorted {
-            let ta = today[$0] ?? 0, tb = today[$1] ?? 0
-            if ta != tb { return ta > tb }
-            if total[$0]! != total[$1]! { return total[$0]! > total[$1]! }
-            return $0 < $1
+        var seen: Set<String> = []
+        var ordered: [String] = []
+        for thing in things where seen.insert(thing.source).inserted {
+            ordered.append(thing.source)
         }
         return ["All"] + ordered
     }
