@@ -2080,3 +2080,18 @@ Korean. Rulings:
   format-token integrity of every string was machine-validated (no dropped
   `%@`/`%lld`). Verified on sim across ja/ko/zh-Hans/es: Feed, Settings,
   Home (generative doc), the switcher, tab bar, and the extension bundles.
+
+## 60. "How it works" — the persistent explainer (user, 2026-07-11)
+
+New people need one place to (re)learn the model after the retiring
+coach lines (pin/size/chip) are gone. A "How it works" tile joins the
+Settings grid (badge questionmark.circle, "New here? Start here"),
+and the same sheet greets a new person once at the END of onboarding
+(presented on the cover's onDismiss, never racing the dismissal).
+Named "How it works", NOT "About" (About reads as version/legal).
+DELIBERATELY EVERGREEN — five principle-level points in Casberi's
+voice, no gesture-by-gesture manual (three gestures changed in one
+day; a written how-to would drift): Connect what's yours / It all
+lands in one feed / Act on anything / Home is your board / Ask across
+everything. Text auto-localizes (LocalizedStringKey); English until
+the catalogs carry the new keys.

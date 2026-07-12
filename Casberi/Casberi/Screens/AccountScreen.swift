@@ -13,6 +13,7 @@ struct SettingsScreen: View {
     @AppStorage("icloud.sync") private var icloudSync = false
     @State private var diagnosticsOpen = false
     @State private var languageOpen = false
+    @State private var howItWorksOpen = false
     @State private var detail: AccountDetail?
     @State private var avatarPickerOpen = false
     @State private var avatarDialogOpen = false
@@ -76,6 +77,7 @@ struct SettingsScreen: View {
             }
             .sheet(item: $detail) { AccountDetailSheet(detail: $0) }
             .sheet(isPresented: $languageOpen) { LanguagePickerSheet() }
+            .sheet(isPresented: $howItWorksOpen) { HowItWorksSheet() }
             .photosPicker(isPresented: $avatarPickerOpen,
                           selection: $avatarSelection, matching: .images)
             // A set photo can come off, not just be replaced — every setting
@@ -119,6 +121,9 @@ struct SettingsScreen: View {
             .onAppear {
                 if UserDefaults.standard.bool(forKey: "openDiagnostics") {
                     diagnosticsOpen = true
+                }
+                if UserDefaults.standard.bool(forKey: "openHowItWorks") {
+                    howItWorksOpen = true
                 }
                 if UserDefaults.standard.bool(forKey: "openBanner") {
                     coverDialogOpen = true
@@ -201,6 +206,13 @@ struct SettingsScreen: View {
                      value: LanguageStore.shared.summary,
                      badge: ("globe", DS.textSecondary),
                      action: { languageOpen = true }),
+            // The one persistent explainer of the model (2026-07-11) — for
+            // a new person after the coach lines retire. "How it works", not
+            // "About" (About reads as version/legal).
+            TileSpec(title: "How it works",
+                     value: String(localized: "New here? Start here"),
+                     badge: ("questionmark.circle", DS.textSecondary),
+                     action: { howItWorksOpen = true }),
             // Dev-facing on purpose: TestFlight reports become a screenshot
             // of on-device facts instead of a description (2026-07-09).
             TileSpec(title: "Diagnostics",

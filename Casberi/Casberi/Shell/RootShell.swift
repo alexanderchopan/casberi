@@ -15,6 +15,11 @@ struct RootShell: View {
     @State private var draft = ""
     @State private var deepLinkThing: Thing?
     @AppStorage("onboarded") private var onboarded = false
+    /// After onboarding completes, the "How it works" sheet greets the new
+    /// person once (2026-07-11) — presented on the cover's onDismiss so it
+    /// doesn't race the full-screen cover's own dismissal.
+    @State private var pendingHowItWorks = false
+    @State private var showHowItWorks = false
     @AppStorage("privacy.hidePreviews") private var hidePreviews = true
     @AppStorage("firstThingSaved") private var firstThingSaved = false
     @Environment(\.scenePhase) private var scenePhase
@@ -340,7 +345,11 @@ struct RootShell: View {
         }
         .fullScreenCover(isPresented: Binding(
             get: { !onboarded }, set: { if !$0 { onboarded = true } }
-        )) {
+        ), onDismiss: {
+            // The greeting rides the DISMISS, not the continue — presenting a
+            // sheet mid-cover-dismissal drops it.
+            if pendingHowItWorks { pendingHowItWorks = false; showHowItWorks = true }
+        }) {
             // Onboarding (option 4, 2026-07-07): the mini store connects the
             // three real bridges for REAL, and that's the whole tour — no
             // demo mode, no sample things. The dream lives on the store
@@ -349,8 +358,10 @@ struct RootShell: View {
             OnboardingView(store: bridges) { _ in
                 onboarded = true
                 tab = .feed
+                pendingHowItWorks = true
             }
         }
+        .sheet(isPresented: $showHowItWorks) { HowItWorksSheet() }
     }
 
     /// casberi:// routing — one place, used by onOpenURL and the debug hook.
