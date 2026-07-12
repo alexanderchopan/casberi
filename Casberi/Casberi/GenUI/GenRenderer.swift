@@ -522,17 +522,22 @@ private struct GenMediaShelf: View {
     private var shelf: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 2) {
+                // The card's title leads, real and readable (ruling 2026-07-12):
+                // the type ramp carries the hierarchy — a bigger, primary-ink
+                // header so cards read as separate objects, not one soft field.
+                Text(el.str(0))
+                    .dsText(.callout15).fontWeight(.semibold).foregroundStyle(DS.textPrimary)
+                Spacer(minLength: DS.Space.s2)
                 if let sizeToggle {
                     ShelfSizePin(large: large) { sizeToggle(id) }
-                        // The 44pt hit box overflows into the header's own top
-                        // padding and the leading inset — a full tap target,
-                        // no taller a header.
+                        // Every module's size pin sits in the SAME top-right
+                        // corner now; the 44pt hit box overflows the header's
+                        // top padding and the trailing inset for a full target.
                         .padding(.vertical, -12)
-                        .padding(.leading, -12)
+                        .padding(.trailing, -12)
                 }
-                Text(el.str(0)).dsText(.label12).foregroundStyle(DS.textSecondary)
             }
-            .padding(.leading, DS.Space.s4)
+            .padding(.horizontal, DS.Space.s4)
             .padding(.bottom, el.str(1).isEmpty ? DS.Space.s3 : 0)
             if !el.str(1).isEmpty {
                 Text(el.str(1))
@@ -915,10 +920,12 @@ private struct GenSocialCard: View {
     private var smallTile: some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
             HStack(spacing: 7) {
+                Text(source).dsText(.callout15).fontWeight(.semibold).foregroundStyle(DS.textPrimary)
+                Spacer(minLength: 0)
                 if let sizeToggle {
                     ShelfSizePin(large: false) { sizeToggle(id) }
+                        .padding(.top, -12).padding(.trailing, -12)
                 }
-                Text(source).dsText(.label12).foregroundStyle(DS.textSecondary)
             }
             Spacer(minLength: 0)
             RemoteThumb(urlString: avatarURL, size: 40, fallback: source, circular: true)
@@ -932,10 +939,12 @@ private struct GenSocialCard: View {
     private var wideCard: some View {
         VStack(alignment: .leading, spacing: DS.Space.s3) {
             HStack(spacing: 7) {
+                Text(source).dsText(.callout15).fontWeight(.semibold).foregroundStyle(DS.textPrimary)
+                Spacer(minLength: 0)
                 if let sizeToggle {
                     ShelfSizePin(large: large) { sizeToggle(id) }
+                        .padding(.top, -12).padding(.trailing, -12)
                 }
-                Text(source).dsText(.label12).foregroundStyle(DS.textSecondary)
             }
             HStack(alignment: .top, spacing: DS.Space.s3) {
                 RemoteThumb(urlString: avatarURL, size: avatarSize, fallback: source, circular: true)
@@ -1426,8 +1435,6 @@ private struct GenTagMap: View {
     /// The entrance plays once per screen appearance (§3); filter and theme
     /// re-renders never replay it.
     @State private var settled = false
-    /// Weekend recap: the map rendered to a shareable image (§6).
-    @State private var weekCard: Image?
     /// The starter preview breathes slowly — "waiting to fill", the one
     /// looping motion in the app, and it only exists before things do.
     @State private var breathe = false
@@ -1485,35 +1492,28 @@ private struct GenTagMap: View {
         VStack(alignment: .leading, spacing: 0) {
             if !el.str(0).isEmpty {
                 HStack(spacing: 7) {
-                    // Only where a real handler is wired (Home's board) —
-                    // the same TagMap renders wallet/project maps on the
-                    // Wallet and Feed screens too, and a pin with nothing
-                    // behind it is a dead control (CLAUDE.md honesty rule).
-                    if !preview, let sizeToggle {
-                        ShelfSizePin(large: large) { sizeToggle(id) }
-                    } else if pinBorn {
-                        // Outside Home (Wallet/Feed's own composition of
-                        // this same wallet map) the pin stays decorative —
-                        // it still means "here because you pinned it".
+                    // Off Home (Wallet/Feed compose the same wallet map) the
+                    // pin is a decorative "you pinned it" badge and leads the
+                    // title; on Home the size control sits in the top-right
+                    // corner like every other module's pin (ruling 2026-07-12).
+                    if preview == false, sizeToggle == nil, pinBorn {
                         Image(systemName: "pin.fill")
                             .font(.system(size: 11, weight: .semibold))
                             .foregroundStyle(DS.textSecondary)
                             .rotationEffect(.degrees(-35), anchor: .bottomLeading)
                             .accessibilityLabel("Pinned")
                     }
+                    // A real, readable card title (ruling 2026-07-12): bigger,
+                    // primary ink, so the type ramp carries the separation.
                     Text(eyebrow)
-                        .dsText(.label12)
-                        .foregroundStyle(DS.textSecondary)
+                        .dsText(.callout15).fontWeight(.semibold)
+                        .foregroundStyle(DS.textPrimary)
                     Spacer()
-                    // The banked week is shareable (§6) — weekend only.
-                    if let weekCard {
-                        ShareLink(item: weekCard,
-                                  preview: SharePreview("Your week", image: weekCard)) {
-                            Image(systemName: "square.and.arrow.up")
-                                .font(.system(size: 14))
-                                .foregroundStyle(DS.textSecondary)
-                        }
-                        .accessibilityLabel("Share your week")
+                    // The size control (Home) — same top-right corner as the
+                    // tiles, a pin with a real handler behind it (honesty rule).
+                    if !preview, let sizeToggle {
+                        ShelfSizePin(large: large) { sizeToggle(id) }
+                            .padding(.top, -12).padding(.trailing, -12)
                     }
                 }
                 .padding(.leading, span == .small ? 0 : DS.Space.s4)
@@ -1548,10 +1548,6 @@ private struct GenTagMap: View {
             Task { @MainActor in
                 try? await Task.sleep(for: .milliseconds(30))
                 settled = true
-                if isWeekend, !preview {
-                    try? await Task.sleep(for: .milliseconds(700))
-                    renderWeekCard()
-                }
             }
         }
     }
@@ -1639,38 +1635,6 @@ private struct GenTagMap: View {
             : DS.Motion.standard.delay(Double(order) * 0.035)
     }
 
-    /// Renders the recap card — eyebrow, map, small mark bottom-right — for
-    /// the share sheet. No social copy, no other watermark.
-    @MainActor
-    private func renderWeekCard() {
-        let end = Date.now
-        let start = Calendar.current.date(byAdding: .day, value: -6, to: end) ?? end
-        let range = "\(start.formatted(.dateTime.month(.abbreviated).day())) – \(end.formatted(.dateTime.month(.abbreviated).day()))"
-        let card = VStack(alignment: .leading, spacing: DS.Space.s3) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(eyebrow)   // stripped title — the "@pin" marker never leaves the app
-                    .dsText(.label12)
-                    .foregroundStyle(DS.textSecondary)
-                // The shared image says WHICH week — it leaves the app,
-                // where "The week" alone means nothing (2026-07-10).
-                Text(range)
-                    .dsText(.heading17)
-                    .foregroundStyle(DS.textPrimary)
-            }
-            cells(width: 328, animated: false)
-                .frame(width: 328, height: 220)
-            HStack {
-                Spacer()
-                CasberiMark(size: 16)
-            }
-        }
-        .padding(DS.Space.s4)
-        .frame(width: 360)
-        .background(DS.themedPage)
-        let renderer = ImageRenderer(content: card)
-        renderer.scale = 3
-        if let ui = renderer.uiImage { weekCard = Image(uiImage: ui) }
-    }
 }
 
 /// KindBar(eyebrow, ["Tag N", ...]) — the corpus's composition as one

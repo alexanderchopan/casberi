@@ -202,7 +202,7 @@ struct ReorderableBoard<ID: Hashable, Content: View>: View {
     var body: some View {
         MagazineLayout(magazine: order.map(isMagazine),
                        linear: draggingID != nil,
-                       hPad: DS.Space.s4, pairGap: DS.Space.s3, rowGap: DS.Space.s4) {
+                       hPad: DS.Space.s4, pairGap: DS.Space.s3, rowGap: DS.Space.s6) {
             ForEach(order, id: \.self) { id in
                 // The module + its lifted-state transforms + the finger-tracking
                 // offset live in BoardCard, which reads `motion` ONLY while it's
