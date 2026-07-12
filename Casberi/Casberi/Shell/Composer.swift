@@ -33,6 +33,24 @@ struct Composer: View {
 
     @Environment(\.modelContext) private var modelContext
     @Environment(ShellChrome.self) private var chrome
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    /// The empty field's invitation cycles through what the composer can DO —
+    /// ask, find, organize, recap — so it teaches its range instead of reading
+    /// as one dead line (delight, 2026-07-12). These are honest capability
+    /// invitations, not data claims; the corpus-derived ask CHIPS below carry
+    /// the specifics you can tap.
+    @State private var placeholderIndex = 0
+    private let invitations = [
+        "Ask anything. Organize everything.",
+        "What did I save this week?",
+        "Find that thing I pasted.",
+        "Recap my month.",
+        "Tag everything from an app.",
+    ]
+    /// Flips true just after the bubble opens so the ask chips stagger in
+    /// rather than snapping (delight, 2026-07-12).
+    @State private var chipsAppeared = false
 
     @FocusState private var fieldFocused: Bool
     @State private var answerStream = GenStream()
@@ -67,6 +85,27 @@ struct Composer: View {
     /// pile is only the trigger.
     private struct OrganizeHint { let source: String; let count: Int }
     @State private var organizeHint: OrganizeHint?
+
+    /// The invitation cycles only while the field is genuinely idle and empty —
+    /// typing, answering, recording, or a proposal all stop it.
+    private var cyclingActive: Bool {
+        isOpen && !hasDraft && !answering && !isRecording && proposal == nil && !reduceMotion
+    }
+
+    /// One ask chip's staggered rise-in on open (delight, 2026-07-12).
+    private struct ChipEntrance: ViewModifier {
+        let index: Int
+        let shown: Bool
+        let reduceMotion: Bool
+        func body(content: Content) -> some View {
+            content
+                .opacity(shown || reduceMotion ? 1 : 0)
+                .offset(y: shown || reduceMotion ? 0 : 8)
+                .animation(reduceMotion ? nil
+                           : DS.Motion.standard.delay(Double(min(index, 8)) * 0.05),
+                           value: shown)
+        }
+    }
     /// One-shot guard: a programmatic fill inserts more than 8 characters
     /// at once, which the draft onChange would read as a paste — and paste
     /// CAPTURES on send. fillDraft() sets it; onChange consumes it.
@@ -195,9 +234,11 @@ struct Composer: View {
                 if proposal == nil {
                     TextField("", text: $draft, axis: .vertical)
                         .placeholder(when: !hasDraft) {
-                            Text("Ask anything. Organize everything.")
+                            Text(invitations[placeholderIndex])
                                 .dsText(.heading22)
                                 .foregroundStyle(DS.textTertiary)
+                                .contentTransition(.opacity)
+                                .animation(.easeInOut(duration: 0.4), value: placeholderIndex)
                         }
                         .dsText(.heading22)
                         .foregroundStyle(DS.textPrimary)
@@ -244,6 +285,7 @@ struct Composer: View {
             // chips stay dead — these are derived, and tap = send).
             if isOpen && !hasDraft && !answering && !isRecording,
                proposal == nil, !suggestions.isEmpty || organizeHint != nil {
+                let hintLead = organizeHint != nil ? 1 : 0
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: DS.Space.s2) {
                         // The organize invite LEADS — it exists to be seen
@@ -261,8 +303,9 @@ struct Composer: View {
                                      style: .tint, glyph: "tag")
                             }
                             .buttonStyle(.plain)
+                            .modifier(ChipEntrance(index: 0, shown: chipsAppeared, reduceMotion: reduceMotion))
                         }
-                        ForEach(suggestions, id: \.self) { ask in
+                        ForEach(Array(suggestions.enumerated()), id: \.offset) { i, ask in
                             Button {
                                 DSHaptic.selection()
                                 draft = ask
@@ -271,6 +314,7 @@ struct Composer: View {
                                 Chip(text: ask, style: .neutral, glyph: "sparkle")
                             }
                             .buttonStyle(.plain)
+                            .modifier(ChipEntrance(index: i + hintLead, shown: chipsAppeared, reduceMotion: reduceMotion))
                         }
                     }
                     .padding(.horizontal, DS.Space.s4)
@@ -422,9 +466,24 @@ struct Composer: View {
         .clipShape(bubbleShape)
         .scaleEffect(isOpen ? 1 : 0.3, anchor: .bottomTrailing)
         .task(id: isOpen) {
-            if isOpen { computeSuggestions() }
+            if isOpen {
+                computeSuggestions()
+                // Reset then reveal so the ask chips stagger in on each open.
+                chipsAppeared = false
+                try? await Task.sleep(for: .milliseconds(90))
+                chipsAppeared = true
+            }
             await consumeAskRequest()
             await autoSendIfProbed()
+        }
+        // The empty invitation cycles while the field is genuinely idle.
+        .task(id: cyclingActive) {
+            guard cyclingActive else { return }
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(3))
+                if Task.isCancelled { break }
+                placeholderIndex = (placeholderIndex + 1) % invitations.count
+            }
         }
     }
 
@@ -501,6 +560,8 @@ struct Composer: View {
         proposal = nil
         chosenTags = []
         pasted = false
+        chipsAppeared = false
+        placeholderIndex = 0
     }
 
     private func runPin(_ intent: PinAsk.Intent) {
