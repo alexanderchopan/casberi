@@ -23,6 +23,14 @@ struct ThingContentView: View {
                 KalshiMarketContent(series: route.series, event: route.event)
             } else if let url = Capture.detectURL(in: thing.content.isEmpty ? thing.title : thing.content) {
                 LinkPreviewCard(url: url, storedImageURL: thing.previewImageURL)
+            } else if let art = thing.previewImageURL, !art.isEmpty {
+                // A link with stored art but no openable URL — an Apple Music
+                // LIBRARY play comes back from MusicKit with no song.url, so
+                // the thing's content is empty and detectURL finds nothing,
+                // yet the record still carries its mzstatic cover. Lead with
+                // that art instead of a blank sheet (fix 2026-07-12: every
+                // music item opened to an empty sheet).
+                StoredArtContent(urlString: art)
             }
         case .chat:
             if !thing.content.isEmpty { ChatBubbles(text: thing.content) }
@@ -177,6 +185,47 @@ private struct LinkPreviewCard: View {
                 continuation.resume(returning: object as? UIImage)
             }
         }
+    }
+}
+
+/// A record that carries stored art but no openable URL — an Apple Music
+/// library play (MusicKit returns no song.url, so the link's content is
+/// empty) still holds its mzstatic cover. The sheet leads with that art,
+/// square, instead of rendering nothing.
+private struct StoredArtContent: View {
+    let urlString: String
+    @State private var image: UIImage?
+
+    var body: some View {
+        Group {
+            if let image {
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(maxHeight: 280)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .clipShape(RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+            } else {
+                RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous)
+                    .fill(DS.fillFaint)
+                    .frame(height: 140)
+                    .overlay(
+                        Image(systemName: "music.note")
+                            .font(.system(size: 22))
+                            .foregroundStyle(DS.textTertiary)
+                    )
+            }
+        }
+        .padding(.horizontal, DS.Space.s4)
+        .padding(.bottom, DS.Space.s3)
+        .task(id: urlString) { await load() }
+    }
+
+    private func load() async {
+        guard let url = URL(string: urlString),
+              let (data, _) = try? await URLSession.shared.data(from: url),
+              let ui = UIImage(data: data) else { return }
+        image = ui
     }
 }
 

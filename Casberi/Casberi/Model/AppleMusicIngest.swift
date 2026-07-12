@@ -34,6 +34,23 @@ enum AppleMusicIngest {
         MusicItemID(String(ref.dropFirst("applemusic:".count)))
     }
 
+    /// Lowercase, alphanumerics only — drops punctuation, spacing, and case
+    /// so a forgiving title compare survives "Daddy Your Rose!" vs
+    /// "daddy your rose" without matching across different songs.
+    private static func normalizedTitle(_ s: String) -> String {
+        String(String.UnicodeScalarView(
+            s.lowercased().unicodeScalars.filter { CharacterSet.alphanumerics.contains($0) }))
+    }
+
+    /// A catalog search hit is the track we asked for when either title
+    /// contains the other's normalized form — tolerates a catalog copy's
+    /// "(Remastered)"/" - Single" suffix while still rejecting an unrelated
+    /// song (a non-empty containment both ways, never two empty strings).
+    private static func titleMatches(_ a: String, _ b: String) -> Bool {
+        guard !a.isEmpty, !b.isEmpty else { return false }
+        return a.contains(b) || b.contains(a)
+    }
+
     /// Asks for Apple Music access (in context), then lands recently-played
     /// songs. Returns the new count, or nil when access is denied/unavailable.
     @MainActor
@@ -87,16 +104,26 @@ enum AppleMusicIngest {
         // A title+artist search term for every ref that DOESN'T get https art
         // the direct way — the fuel for the last-resort catalog search below.
         var termForRef: [String: String] = [:]
+        // The pure track title per ref — used to VERIFY a catalog search hit
+        // actually is the track we asked for before trusting its art (an
+        // obscure library track's top search hit can be a totally unrelated
+        // popular song; field report 2026-07-12: "Daddy Your Rose" wore
+        // Nirvana's cover).
+        var titleForRef: [String: String] = [:]
         for song in response.items {
             let ref = sourceRef(song)
             if let art = artURL(song) { artByRef[ref] = art }
-            else { termForRef[ref] = "\(song.title) \(song.artistName)" }
+            else {
+                termForRef[ref] = "\(song.title) \(song.artistName)"
+                titleForRef[ref] = song.title
+            }
         }
         for (ref, thing) in artlessStored where artByRef[ref] == nil {
             // The stored title is "Title — Artist"; the em-dash split is a
             // clean search term (and the only handle a stored row that aged
             // out of the recent window still has).
             termForRef[ref] = thing.title.replacingOccurrences(of: " — ", with: " ")
+            titleForRef[ref] = thing.title.components(separatedBy: " — ").first ?? thing.title
         }
 
         // Pass 1 — catalog id lookup: resolves plays that came from the
@@ -134,12 +161,24 @@ enum AppleMusicIngest {
         var healedBySearch = 0
         for (ref, term) in searchable.prefix(25) {
             var search = MusicCatalogSearchRequest(term: term, types: [Song.self])
-            search.limit = 1
-            if let hit = try? await search.response().songs.first,
+            // A few candidates, not one: the very top hit for an obscure
+            // library track is often an unrelated chart-topper, but the right
+            // track frequently sits just below it — so scan a handful and take
+            // the first whose TITLE actually matches (2026-07-12: `.first`
+            // alone stored Nirvana's cover on "Daddy Your Rose").
+            search.limit = 5
+            guard let songs = try? await search.response().songs else { continue }
+            let want = titleForRef[ref].map { Self.normalizedTitle($0) }
+            if let hit = songs.first(where: {
+                    guard let want else { return true }
+                    return Self.titleMatches(Self.normalizedTitle($0.title), want)
+                }),
                let art = artURL(hit) {
                 artByRef[ref] = art
                 healedBySearch += 1
             }
+            // No matching hit: leave the ref artless (the honest glyph) rather
+            // than pinning a stranger's album cover to the track.
         }
         NSLog("[Casberi] Apple Music artwork: %d recent-played, %d stored artless, %d id-lookups, %d resolved (%d via search), %d still artless",
               response.items.count, artlessStored.count, lookupIDs.count,
