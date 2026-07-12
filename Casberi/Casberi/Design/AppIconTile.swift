@@ -52,6 +52,7 @@ extension DS {
         case "day one":             return Color.fixed("#44c0ff")   // Day One blue
         case "safari":              return Color.fixed("#1d9bf6")
         case "wallet":              return Color.fixed("#2461ff")
+        case "kalshi":              return Color.fixed("#4de4b2")   // their turquoise
         case "dexscreener":         return Color.fixed("#151a21")   // their dark field
         case "venice":              return Color.fixed("#0e2942")   // sampled from their deep-blue mark
         case "voice":               return Color.fixed("#ff375f")   // the voice kind's own pink
