@@ -55,6 +55,7 @@ extension DS {
         case "kalshi":              return Color.fixed("#4fae7b")   // their green (matches the bundled logo)
         case "dexscreener":         return Color.fixed("#151a21")   // their dark field
         case "venice":              return Color.fixed("#0e2942")   // sampled from their deep-blue mark
+        case "openclaw":            return Color.fixed("#e5342e")   // the agents' red (user, 2026-07-12)
         case "voice":               return Color.fixed("#ff375f")   // the voice kind's own pink
         case "apple health":        return Color.fixed("#ff2d55")
         case "strava":              return Color.fixed("#fc4c02")

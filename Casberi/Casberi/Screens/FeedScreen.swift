@@ -1048,15 +1048,16 @@ struct FeedScreen: View {
                         .frame(width: 46, height: 46)
                         .padding(2.5)
                         .overlay {
-                            // One ring, three exclusive states: ink = active
-                            // — a single ring that SLIDES from the old chip
-                            // to the new (selection is an object traveling,
-                            // not two states blinking); orange = the
-                            // connection needs you (health lives where you
-                            // live, 2026-07-10); green = new since your last
-                            // visit.
+                            // One ring, three exclusive states: tint = active
+                            // (blue, the app's selection color — the ink ring
+                            // read as chrome; 2026-07-12, user) — a single ring
+                            // that SLIDES from the old chip to the new (selection
+                            // is an object traveling, not two states blinking);
+                            // orange = the connection needs you (health lives
+                            // where you live, 2026-07-10); green = new since your
+                            // last visit.
                             if isActive {
-                                let ring = Circle().strokeBorder(DS.textPrimary, lineWidth: 2.5)
+                                let ring = Circle().strokeBorder(DS.tint, lineWidth: 2.5)
                                 if reduceMotion {
                                     ring
                                 } else {
