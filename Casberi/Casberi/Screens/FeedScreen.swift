@@ -47,6 +47,11 @@ struct FeedScreen: View {
     /// Bumped when the source chip changes — rows replay their shape's
     /// entrance (each shape arrives its own way, ruling 2026-07-07).
     @State private var shapeWave = 0
+    /// Eases 1 → 0 on each source switch: the app's hue floods down over the
+    /// feed for a beat, then recedes as the shaped rows compose beneath it —
+    /// the color arriving, so a switch reads as "entering this app's feed"
+    /// (delight, 2026-07-12) instead of a quiet crossfade behind the content.
+    @State private var flood: CGFloat = 0
     /// The last time the person left this screen — one timestamp, no
     /// per-thing read state. Frozen into `newSince` on each visit so the
     /// divider doesn't move while you look at it (ruling 2026-07-09).
@@ -307,6 +312,26 @@ struct FeedScreen: View {
         }
     }
 
+    /// The switch flood (delight, 2026-07-12): the source's hue sweeps down
+    /// over the feed and fades out as you land on its chip. Top-heavy and
+    /// brief so it never buries the rows — `flood` eases 1 → 0 in ~0.5s — and
+    /// it's the color moment the quiet background crossfade lacked. Absent for
+    /// All (no identity hue) and under Reduce Motion (`flood` never rises).
+    @ViewBuilder private var switchFlood: some View {
+        if let hue = DS.brandHue(for: filter.source) {
+            // A TOP-BAND kiss, not a full-bleed veil: it reinforces the resting
+            // wash's zone and clears well before the rows, so even a dark-hued
+            // source is a brief tint at the crown, never a screen-wide dim.
+            LinearGradient(colors: [hue.opacity(0.34), .clear],
+                           startPoint: .top, endPoint: .bottom)
+                .frame(height: 300)
+                .frame(maxWidth: .infinity, alignment: .top)
+                .opacity(flood)
+                .ignoresSafeArea(edges: .top)
+                .allowsHitTesting(false)
+        }
+    }
+
     /// A slim, tappable strip above a single source's shaped feed: the app, its
     /// live status, a chevron. Tapping opens the app's control panel through
     /// the router — the dedicated screen when the bridge has one (Dexscreener's
@@ -452,6 +477,7 @@ struct FeedScreen: View {
         .animation(DS.Motion.standard, value: things.count)   // new things rise in
         .scrollContentBackground(.hidden)
         .background(alignment: .top) { shapeWash }
+        .overlay(alignment: .top) { switchFlood }
         .dsPageBackground()
         .environment(\.defaultMinListHeaderHeight, 0)
         .scrollIndicators(.hidden)
@@ -480,6 +506,11 @@ struct FeedScreen: View {
             // tap — teaches the same lesson, so the coach retires here too.
             if filter.source != "All" { chipCoachDone = true }
             shapeWave += 1
+            // The hue floods in, then recedes as the shaped rows compose.
+            if !reduceMotion {
+                flood = 1
+                withAnimation(.easeOut(duration: 0.55)) { flood = 0 }
+            }
             streamBlock()
         }
         // Adding/removing a watched wallet re-fetches the Wallet chip's
