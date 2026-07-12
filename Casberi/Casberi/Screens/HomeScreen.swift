@@ -225,6 +225,15 @@ struct HomeScreen: View {
                 DSHaptic.selection()
                 sizeCoachDone = true
                 HomeModuleSize.shared.toggle(moduleKey(ref))
+                // Size decides packing (a large media module can't sit in a
+                // 2-up row) — re-pack so growing a module lifts it out of its
+                // pair into its own full-width row, and shrinking lets it
+                // re-pair. Nothing else observes HomeModuleSize, so without
+                // this the stored size flipped but the board never repainted
+                // (the pin looked dead for paired Music/Screenshots cards).
+                withAnimation(DS.Motion.standard) {
+                    boardRows = packRows(boardOrder)
+                }
             }
             // A screenshot's own stored thumbnail (prd 48) — local bytes,
             // not a URL, so the media tile resolves it by thing id.
