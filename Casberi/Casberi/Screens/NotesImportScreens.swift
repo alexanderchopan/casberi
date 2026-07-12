@@ -21,15 +21,11 @@ struct DayOneImportScreen: View {
     var body: some View {
         List {
             BridgeSetupHeader(name: "Day One")
-            Section {
-                ImportStepRow(1, "In Day One, open Settings → Import/Export → Export → JSON.")
-                ImportStepRow(2, "Save the zip to Files and tap it once to unzip.")
-                ImportStepRow(3, "Pick the .json inside below.")
-            } header: {
-                Text("Get your export").dsText(.label12)
-                    .foregroundStyle(DS.textTertiary)
-            }
-            .listRowSeparator(.hidden)
+            ImportStepsCard("Get your export", [
+                "In Day One, open Settings → Import/Export → Export → JSON.",
+                "Save the zip to Files and tap it once to unzip.",
+                "Pick the .json inside below.",
+            ])
             Section {
                 ImportPickRow(label: "Choose your Day One .json") { importing = true }
                 BridgeSyncStatusRows(result: result, resultIsError: resultIsError)
@@ -100,15 +96,11 @@ struct JournalImportScreen: View {
     var body: some View {
         List {
             BridgeSetupHeader(name: "Apple Journal")
-            Section {
-                ImportStepRow(1, "In Journal, tap your profile picture → Export Journal.")
-                ImportStepRow(2, "Save the zip to Files and tap it once to unzip.")
-                ImportStepRow(3, "Pick the unzipped folder below.")
-            } header: {
-                Text("Get your export").dsText(.label12)
-                    .foregroundStyle(DS.textTertiary)
-            }
-            .listRowSeparator(.hidden)
+            ImportStepsCard("Get your export", [
+                "In Journal, tap your profile picture → Export Journal.",
+                "Save the zip to Files and tap it once to unzip.",
+                "Pick the unzipped folder below.",
+            ])
             Section {
                 ImportPickRow(label: "Choose the export folder") { importing = true }
                 BridgeSyncStatusRows(result: result, resultIsError: resultIsError)
@@ -171,15 +163,11 @@ struct NotesShareScreen: View {
     var body: some View {
         List {
             BridgeSetupHeader(name: "Apple Notes")
-            Section {
-                ImportStepRow(1, "Open a note in Apple Notes.")
-                ImportStepRow(2, "Tap share, then Casberi.")
-                ImportStepRow(3, "It lands in your feed as a note — findable like everything else.")
-            } header: {
-                Text("How notes come in").dsText(.label12)
-                    .foregroundStyle(DS.textTertiary)
-            }
-            .listRowSeparator(.hidden)
+            ImportStepsCard("How notes come in", [
+                "Open a note in Apple Notes.",
+                "Tap share, then Casberi.",
+                "It lands in your feed as a note — findable like everything else.",
+            ])
             Section {
                 Button {
                     if let url = URL(string: "mobilenotes://") { openURL(url) }
@@ -228,8 +216,33 @@ struct ImportStepRow: View {
             Text(text)
                 .dsText(.callout15).foregroundStyle(DS.textPrimary)
                 .fixedSize(horizontal: false, vertical: true)
+            Spacer(minLength: 0)
         }
-        .listRowBackground(DS.surfaceSheet)
+        .padding(.vertical, DS.Space.s1)
+    }
+}
+
+/// The numbered how-to card — every step in ONE list row (a VStack), so no
+/// inter-row separator can be drawn between them. A Section of separate rows
+/// leaks a hairline that survives row-level .listRowSeparator(.hidden) (SwiftUI
+/// won't suppress the first separator after a section header). Design law: no
+/// hairlines, zero exceptions.
+struct ImportStepsCard: View {
+    let header: String
+    let steps: [String]
+    init(_ header: String, _ steps: [String]) { self.header = header; self.steps = steps }
+
+    var body: some View {
+        Section {
+            VStack(alignment: .leading, spacing: 0) {
+                ForEach(Array(steps.enumerated()), id: \.offset) { i, text in
+                    ImportStepRow(i + 1, text)
+                }
+            }
+            .listRowBackground(DS.surfaceSheet)
+        } header: {
+            Text(header).dsText(.label12).foregroundStyle(DS.textTertiary)
+        }
     }
 }
 

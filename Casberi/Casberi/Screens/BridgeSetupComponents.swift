@@ -212,19 +212,26 @@ struct RecentThingsSection: View {
 
     var body: some View {
         Section {
-            ForEach(Array(things.enumerated()), id: \.element.id) { i, thing in
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(thing.title)
-                        .dsText(.body17).foregroundStyle(DS.textPrimary)
-                        .lineLimit(titleLines)
-                    Text(LiveTimeText.short(thing.capturedAt))
-                        .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+            // One list row holding every landed thing (a VStack) — a Section of
+            // separate rows leaks a hairline between them that survives
+            // row-level .listRowSeparator(.hidden) (SwiftUI won't suppress the
+            // first separator after a section header). Design law: no hairlines.
+            VStack(alignment: .leading, spacing: DS.Space.s3) {
+                ForEach(Array(things.enumerated()), id: \.element.id) { i, thing in
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(thing.title)
+                            .dsText(.body17).foregroundStyle(DS.textPrimary)
+                            .lineLimit(titleLines)
+                        Text(LiveTimeText.short(thing.capturedAt))
+                            .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    // What landed ARRIVES — the feed's stagger, capped so a long
+                    // list doesn't drag the tail, and only on first entrance.
+                    .staggerIn(index: entered ? 0 : min(i, 8))
                 }
-                // What landed ARRIVES — the feed's stagger, capped so a long
-                // list doesn't drag the tail, and only on first entrance.
-                .staggerIn(index: entered ? 0 : min(i, 8))
-                .listRowBackground(DS.surfaceSheet)
             }
+            .listRowBackground(DS.surfaceSheet)
             .onAppear {
                 Task { @MainActor in
                     try? await Task.sleep(for: .milliseconds(800))

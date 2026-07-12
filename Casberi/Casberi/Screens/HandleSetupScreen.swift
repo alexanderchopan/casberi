@@ -333,6 +333,8 @@ struct HandleSetupScreen: View {
                         DSHaptic.tap()
                     } label: { Label("Remove", systemImage: "minus.circle") }
                 }
+                .listRowBackground(DS.surfaceSheet)
+                .listRowSeparator(.hidden)
             }
         } header: {
             Text(accountNames.count == 1 ? "Watching" : "Watching \(accountNames.count)")
@@ -341,20 +343,27 @@ struct HandleSetupScreen: View {
     }
 
     private var nameSection: some View {
+        // Field + search hits + status in ONE list row (a VStack) — a headed
+        // Section of stacked rows leaks a hairline between them that row-level
+        // .listRowSeparator(.hidden) won't suppress (SwiftUI first-post-header
+        // separator). Design law: no hairlines, zero exceptions.
         Section {
-            BridgeFieldRow(placeholder: bridge.placeholder, text: $nameField,
-                           buttonLabel: buttonLabel,
-                           prefix: bridge.fieldPrefix, suffix: bridge.fieldSuffix,
-                           action: connect)
-            ForEach(hits) { hit in
-                BridgeSearchResultRow(
-                    imageURL: hit.avatarURL, fallbackIcon: bridge.rawValue,
-                    title: hit.displayName, subtitle: "@\(bridge.shortName(hit.handle))",
-                    action: { pick(hit) })
+            VStack(alignment: .leading, spacing: DS.Space.s2) {
+                BridgeFieldRow(placeholder: bridge.placeholder, text: $nameField,
+                               buttonLabel: buttonLabel,
+                               prefix: bridge.fieldPrefix, suffix: bridge.fieldSuffix,
+                               action: connect)
+                ForEach(hits) { hit in
+                    BridgeSearchResultRow(
+                        imageURL: hit.avatarURL, fallbackIcon: bridge.rawValue,
+                        title: hit.displayName, subtitle: "@\(bridge.shortName(hit.handle))",
+                        action: { pick(hit) })
+                }
+                BridgeSyncStatusRows(syncing: syncing,
+                                     syncingLine: "Fetching \(bridge.noun)…",
+                                     result: result, resultIsError: resultIsError)
             }
-            BridgeSyncStatusRows(syncing: syncing,
-                                 syncingLine: "Fetching \(bridge.noun)…",
-                                 result: result, resultIsError: resultIsError)
+            .listRowBackground(DS.surfaceSheet)
         } header: {
             Text(bridge.supportsMultiple ? "Add \(anArticle) \(bridge.nameNoun)"
                                          : "Your \(bridge.nameNoun)")

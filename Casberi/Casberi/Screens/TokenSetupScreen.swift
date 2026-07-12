@@ -27,13 +27,12 @@ struct TokenSetupScreen: View {
     var body: some View {
         List {
             BridgeSetupHeader(name: bridge.rawValue)
-            stepsSection.listRowSeparator(.hidden)
-            tokenSection.listRowSeparator(.hidden)
+            stepsSection
+            tokenSection
             if !recent.isEmpty {
                 RecentThingsSection(header: "Landed", things: recent)
-                    .listRowSeparator(.hidden)
             }
-            if bridge.connected { removeSection.listRowSeparator(.hidden) }
+            if bridge.connected { removeSection }
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
@@ -49,20 +48,28 @@ struct TokenSetupScreen: View {
     }
 
     private var stepsSection: some View {
+        // One list row holding the whole numbered list — a Section of ForEach
+        // rows draws a separator between them that survives row-level
+        // .listRowSeparator(.hidden) (SwiftUI won't suppress the first
+        // post-header separator); collapsing to a single row means no inter-row
+        // separator can exist. Design law: no hairlines, zero exceptions.
         Section {
-            ForEach(Array(bridge.steps.enumerated()), id: \.offset) { i, text in
-                HStack(alignment: .firstTextBaseline, spacing: DS.Space.s3) {
-                    Text("\(i + 1)")
-                        .dsText(.body17).fontWeight(.bold)
-                        .foregroundStyle(DS.tint)
-                        .frame(width: 20)
-                    Text(text)
-                        .dsText(.body17).foregroundStyle(DS.textPrimary)
-                        .fixedSize(horizontal: false, vertical: true)
+            VStack(alignment: .leading, spacing: 0) {
+                ForEach(Array(bridge.steps.enumerated()), id: \.offset) { i, text in
+                    HStack(alignment: .firstTextBaseline, spacing: DS.Space.s3) {
+                        Text("\(i + 1)")
+                            .dsText(.body17).fontWeight(.bold)
+                            .foregroundStyle(DS.tint)
+                            .frame(width: 20)
+                        Text(text)
+                            .dsText(.body17).foregroundStyle(DS.textPrimary)
+                            .fixedSize(horizontal: false, vertical: true)
+                        Spacer(minLength: 0)
+                    }
+                    .padding(.vertical, DS.Space.s1)
                 }
-                .padding(.vertical, DS.Space.s1)
-                .listRowBackground(DS.surfaceSheet)
             }
+            .listRowBackground(DS.surfaceSheet)
         } header: {
             Text("Get your token").dsText(.label12)
                 .foregroundStyle(DS.textTertiary)
@@ -70,13 +77,20 @@ struct TokenSetupScreen: View {
     }
 
     private var tokenSection: some View {
+        // Field + status in ONE list row (a VStack) — a headed Section of two
+        // rows leaks a hairline between them that row-level
+        // .listRowSeparator(.hidden) won't suppress (SwiftUI first-post-header
+        // separator). Design law: no hairlines, zero exceptions.
         Section {
-            BridgeFieldRow(placeholder: bridge.placeholder, text: $tokenField,
-                           buttonLabel: bridge.connected ? "Update" : "Connect",
-                           secure: true, action: connect)
-            BridgeSyncStatusRows(syncing: syncing,
-                                 syncingLine: "Fetching your \(bridge.noun)…",
-                                 result: result, resultIsError: resultIsError)
+            VStack(alignment: .leading, spacing: DS.Space.s2) {
+                BridgeFieldRow(placeholder: bridge.placeholder, text: $tokenField,
+                               buttonLabel: bridge.connected ? "Update" : "Connect",
+                               secure: true, action: connect)
+                BridgeSyncStatusRows(syncing: syncing,
+                                     syncingLine: "Fetching your \(bridge.noun)…",
+                                     result: result, resultIsError: resultIsError)
+            }
+            .listRowBackground(DS.surfaceSheet)
         } header: {
             Text("Your token").dsText(.label12)
                 .foregroundStyle(DS.textTertiary)
