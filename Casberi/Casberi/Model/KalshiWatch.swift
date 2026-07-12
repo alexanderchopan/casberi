@@ -22,14 +22,24 @@ enum KalshiWatch {
         var id: String { ticker }
     }
 
-    /// The per-game series for the leagues Casberi searches — Kalshi's
-    /// unfiltered event listing buries real games under its long tail of
-    /// novelty/futures markets (award winners, division odds, "will X be
-    /// named host"), so search goes straight to each league's own game
-    /// series instead. NBA and NCAAB return nothing out of season — that's
-    /// Kalshi's own open-market list, not a bug here.
-    private static let gameSeries = [
+    /// The series Casberi searches — Kalshi's unfiltered event listing buries
+    /// real games under its long tail of novelty/futures markets (award
+    /// winners, division odds, "will X be named host"), so search goes
+    /// straight to each league's own game series instead. NBA and NCAAB return
+    /// nothing out of season — that's Kalshi's own open-market list, not a bug
+    /// here. Any series that doesn't resolve is silently skipped by Cache.get(),
+    /// so a stale or seasonal ticker costs nothing but the request.
+    ///
+    /// FIFA World Cup 2026 is the one curated future that earns a place beside
+    /// the game series: Kalshi is the tournament's official market partner, and
+    /// "who wins the World Cup" is the headline market people search for — not
+    /// the novelty long-tail the rule above guards against. KXMENWORLDCUP (the
+    /// winner future) is confirmed from the live market URL; KXWORLDCUPGAME is
+    /// the per-match series, best-effort until verified on-device against the
+    /// live API (unreachable from CI) — harmless if the ticker's off.
+    private static let searchSeries = [
         "KXNFLGAME", "KXNCAAFGAME", "KXMLBGAME", "KXNBAGAME", "KXNCAABGAME",
+        "KXMENWORLDCUP", "KXWORLDCUPGAME",
     ]
 
     /// The open games across those series, fetched once and reused for two
@@ -44,7 +54,7 @@ enum KalshiWatch {
                 return events
             }
             var fetched: [[String: Any]] = []
-            for series in gameSeries {
+            for series in searchSeries {
                 guard let root = await IngestSupport.getJSON(
                     "https://api.elections.kalshi.com/trade-api/v2/events?series_ticker=\(series)&status=open&with_nested_markets=true&limit=200")
                     as? [String: Any],
