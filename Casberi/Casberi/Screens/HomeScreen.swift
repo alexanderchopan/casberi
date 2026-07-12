@@ -66,11 +66,12 @@ struct HomeScreen: View {
     /// card even if its slot index shifts as wallets are pinned/unpinned.
     @State private var boardModuleRefs: Set<String> = []
     @State private var boardOrder: [String] = []
-    /// The magazine packing of `boardOrder` (prd 58f): each entry is a ROW —
-    /// one full-width module, or two paired image-media modules. Recomputed
-    /// whenever the order or a module's size changes; the drag reorders
-    /// whole rows, then flattens back to `boardOrder`.
-    @State private var boardRows: [[String]] = []
+    /// Bumped when a module's size flips (tap the pin) so the board re-reads
+    /// each module's magazine-vs-full state and re-packs. `HomeModuleSize`
+    /// isn't observable, so this @State is what actually forces the repaint;
+    /// the packing itself now lives in the board's `MagazineLayout` (prd 58h,
+    /// free drag), not a precomputed `[[String]]` of rows.
+    @State private var boardSizeRevision = 0
     /// Drag-to-reorder auto-scroll (prd 58d): the board can grow past one
     /// screen, so a drag into the top/bottom edge nudges the ScrollView while
     /// the card keeps tracking the finger. `probe` carries the live scroll
@@ -213,22 +214,23 @@ struct HomeScreen: View {
                 DSHaptic.selection()
                 openURL(url)
             }
-            // Tap the pin (prd 58a) — the only way a module grows: no
-            // menu, no edit mode. The pin itself never removes anything
-            // (unpin lives elsewhere per module), so it's free to mean
-            // "press me".
+            // Tap the pin (prd 58a/58h) — cycles the module through the spans
+            // it allows (small → wide → big, skipping any it can't take). The
+            // pin never removes anything (unpin lives elsewhere per module),
+            // so it's free to mean "press me".
             .environment(\.genSizeToggle) { ref in
                 DSHaptic.selection()
                 sizeCoachDone = true
-                HomeModuleSize.shared.toggle(moduleKey(ref))
-                // Size decides packing (a large media module can't sit in a
-                // 2-up row) — re-pack so growing a module lifts it out of its
-                // pair into its own full-width row, and shrinking lets it
-                // re-pair. Nothing else observes HomeModuleSize, so without
-                // this the stored size flipped but the board never repainted
-                // (the pin looked dead for paired Music/Screenshots cards).
+                HomeModuleSize.shared.cycle(moduleKey(ref),
+                                            allowed: allowedSpans(ref),
+                                            default: defaultSpan(ref))
+                // Span decides packing — bump the revision so the board re-reads
+                // spans and re-packs (a grown module leaves its 2-up pair for a
+                // full-width row, a shrunk one re-pairs). HomeModuleSize is
+                // observed, but the board reads it through closures the revision
+                // forces to re-run.
                 withAnimation(DS.Motion.standard) {
-                    boardRows = packRows(boardOrder)
+                    boardSizeRevision += 1
                 }
             }
             // Long-press a pinned media shelf → Remove from Home. Drops the
@@ -373,7 +375,6 @@ struct HomeScreen: View {
         var refForKey: [String: String] = [:]
         for (ref, key) in zip(refs, naturalKeys) { refForKey[key] = ref }
         boardOrder = HomeBoardOrder.shared.apply(to: naturalKeys).compactMap { refForKey[$0] }
-        boardRows = packRows(boardOrder)
     }
 
     /// Stable persistence keys for a run of refs, in order. Two wallets can
@@ -397,33 +398,6 @@ struct HomeScreen: View {
         return keys
     }
 
-    /// Packs the flat board order into magazine rows (prd 58f): a run of
-    /// REGULAR image-media modules pairs 2-up; everything else (structural
-    /// modules, social posts, and any LARGE media module as a full-bleed
-    /// feature) spans its own full-width row.
-    private func packRows(_ order: [String]) -> [[String]] {
-        var rows: [[String]] = []
-        var pending: [String] = []
-        func flush() {
-            var i = 0
-            while i < pending.count {
-                if i + 1 < pending.count { rows.append([pending[i], pending[i + 1]]); i += 2 }
-                else { rows.append([pending[i]]); i += 1 }
-            }
-            pending = []
-        }
-        for ref in order {
-            if isPairable(ref), !HomeModuleSize.shared.isLarge(moduleKey(ref)) {
-                pending.append(ref)
-            } else {
-                flush()
-                rows.append([ref])
-            }
-        }
-        flush()
-        return rows
-    }
-
     /// Only image-media modules pair — a music/Pinterest/screenshot shelf
     /// makes a clean half-width art tile. Structural modules (pinned, wallet,
     /// map) and text posts (social) always span full width.
@@ -431,24 +405,49 @@ struct HomeScreen: View {
         ["musicShelf", "pinShelf", "shotShelf"].contains { ref.hasPrefix($0) }
     }
 
-    /// A paired media module as a half-width magazine tile.
-    @ViewBuilder private func magazineTile(_ ref: String) -> some View {
-        GenRender(id: ref, els: stream.els)
-            .environment(\.genMediaCompact, true)
-            .frame(maxWidth: .infinity)
+    /// A module's effective span: the person's stored choice, or the default
+    /// that opens the board one-hero.
+    private func spanOf(_ ref: String) -> ModuleSpan {
+        HomeModuleSize.shared.span(moduleKey(ref)) ?? defaultSpan(ref)
     }
 
-    /// The magazine board (prd 58f): image-media modules pair into 2-up rows,
-    /// everything else spans full width — the rhythm emerges from your size
-    /// choices. Rows drag as units on the safe 1D reorder (prd 58d), and the
-    /// board auto-scrolls when a drag reaches an edge of a tall board.
+    /// One-hero opening (prd 58h): the Pinned card leads big, every other
+    /// module starts small — a composed board before anyone touches it, and
+    /// expressiveness is opt-in.
+    private func defaultSpan(_ ref: String) -> ModuleSpan {
+        ref == "pinnedW" ? .big : .small
+    }
+
+    /// The spans a module allows (the bento guardrails): a treemap needs area
+    /// so it skips `wide`; a social post has no `big`. Everything can still
+    /// shrink to a small square.
+    private func allowedSpans(_ ref: String) -> [ModuleSpan] {
+        if ref.hasPrefix("walletMap") || ref == "map" { return [.small, .big] }
+        if ref.hasPrefix("social") { return [.small, .wide] }
+        return [.small, .wide, .big]
+    }
+
+    /// A small (1×1) tile is what packs 2-up on the board; wide and big span
+    /// the full width (a phone board is two columns), so only smalls pair.
+    private func isMagazine(_ ref: String) -> Bool {
+        spanOf(ref) == .small
+    }
+
+    /// The bento board (prd 58h): a single FLAT module order the person
+    /// reorders freely — drag any card anywhere, it re-packs on drop. Small
+    /// tiles pair 2-up; wide and big span the full width. The board linearizes
+    /// while a drag is in flight so the drop is unambiguous, and auto-scrolls
+    /// when a drag reaches an edge of a tall board (prd 58d).
     @ViewBuilder private var boardSection: some View {
+        // Read so a span change (which bumps this) re-runs this body and hands
+        // the board fresh spans — the pin's grow/shrink re-packing.
+        let _ = boardSizeRevision
         ReorderableBoard(
-            order: $boardRows,
-            content: { row in boardRow(row) },
-            onReorder: { newRows in
-                let flat = newRows.flatMap { $0 }
-                boardOrder = flat
+            order: $boardOrder,
+            content: { ref in moduleView(ref) },
+            isMagazine: { isMagazine($0) },
+            onReorder: { flat in
+                // The board mutates $boardOrder in place; here we only persist.
                 // Same keying as syncBoard's apply(), suffixes and all — bare
                 // moduleKey here broke round-trip for two same-labeled modules.
                 HomeBoardOrder.shared.save(dedupedKeys(flat))
@@ -461,26 +460,17 @@ struct HomeScreen: View {
             })
     }
 
-    @ViewBuilder private func boardRow(_ row: [String]) -> some View {
-        if row.count == 2 {
-            // A pair — two half-width art tiles.
-            HStack(alignment: .top, spacing: DS.Space.s3) {
-                magazineTile(row[0])
-                magazineTile(row[1])
-            }
-            .padding(.horizontal, DS.Space.s4)
-            .padding(.top, DS.Space.s4)
-        } else if isPairable(row[0]), !HomeModuleSize.shared.isLarge(moduleKey(row[0])) {
-            // A lone regular media module — a full-width art tile. Tap the pin
-            // to grow it into the full shelf.
-            magazineTile(row[0])
-                .padding(.horizontal, DS.Space.s4)
-                .padding(.top, DS.Space.s4)
-        } else {
-            // Structural modules, and any LARGE media module, span full width.
-            GenRender(id: row[0], els: stream.els)
-                .environment(\.genModuleLarge, HomeModuleSize.shared.isLarge(moduleKey(row[0])))
-        }
+    /// One board module, rendered at its span. `genSpan` drives the distinct
+    /// small (1×1) forms; `genModuleLarge` / `genMediaCompact` are derived from
+    /// it so the existing two-state renderers (media strip/hero, moodboard)
+    /// keep working. A small media shelf renders as its compact art tile.
+    @ViewBuilder private func moduleView(_ ref: String) -> some View {
+        let span = spanOf(ref)
+        GenRender(id: ref, els: stream.els)
+            .environment(\.genSpan, span)
+            .environment(\.genModuleLarge, span == .big)
+            .environment(\.genMediaCompact, span == .small && isPairable(ref))
+            .frame(maxWidth: .infinity)
     }
 
     /// A stable identity for a board ref, independent of its slot index — a
@@ -493,6 +483,11 @@ struct HomeScreen: View {
             let eyebrow = el.str(0)
             let label = eyebrow.hasPrefix("@pin ") ? String(eyebrow.dropFirst(5)) : eyebrow
             return "wallet:\(label)"
+        }
+        // A pinned token is its own tile (prd 58h); key it by thing id so its
+        // span survives pins being added/removed above it in the list.
+        if let el = stream.els[ref], el.comp == "TokenRow" {
+            return "token:\(el.str(4))"
         }
         return ref
     }

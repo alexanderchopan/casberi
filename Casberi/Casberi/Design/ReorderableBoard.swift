@@ -14,15 +14,125 @@ final class BoardScrollProbe {
     var viewportBottom: CGFloat = 0
 }
 
-/// A single-column board of drag-reorderable cards (prd 58, Goal 1). Long-
-/// press lifts a card — the mocked drag state (scale up, slight turn, a
-/// shadow lands under it) — then drag reorders live against its neighbors;
-/// releasing settles it and hands the new order to `onReorder`. Nobody who
-/// never drags sees any of this: with no gesture in flight every card sits
-/// exactly where a plain VStack would put it.
+/// Arranges board modules in the magazine rhythm (prd 58f) — a compact media
+/// tile packs 2-up, everything else spans full width — OR a single linear
+/// column when a drag is in flight (prd 58h: linearize so the drop target is
+/// one unambiguous sequence, re-pack on release). The subviews are a FLAT
+/// list, one per module, so a module keeps the SAME view — and its in-flight
+/// drag gesture — as it moves between a pair and the column. A row-of-HStacks
+/// structure couldn't: pulling a tile out of a pair would restructure the
+/// tree and tear the lifted card (and its touch) down mid-drag.
+struct MagazineLayout: Layout {
+    /// Per subview, parallel to the board's `order`: true if this module is a
+    /// compact media tile that packs 2-up and wears the magazine inset; false
+    /// spans full width and brings its own padding (structural modules, a
+    /// LARGE media module, social posts).
+    var magazine: [Bool]
+    /// A drag is in flight — ignore pairing, stack every module full-width.
+    var linear: Bool
+    var hPad: CGFloat
+    var pairGap: CGFloat
+    var rowGap: CGFloat
+
+    /// Groups subview indices into rows: a non-magazine module (or any module
+    /// while linear) takes its own full-width row; consecutive magazine tiles
+    /// pack two to a row.
+    private func rows(count: Int) -> [[Int]] {
+        var result: [[Int]] = []
+        var i = 0
+        while i < count {
+            if isMag(i), !linear {
+                if i + 1 < count, isMag(i + 1) { result.append([i, i + 1]); i += 2 }
+                else { result.append([i]); i += 1 }
+            } else {
+                result.append([i]); i += 1
+            }
+        }
+        return result
+    }
+
+    private func isMag(_ i: Int) -> Bool { i < magazine.count && magazine[i] }
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let width = proposal.replacingUnspecifiedDimensions().width
+        var y: CGFloat = 0
+        for row in rows(count: subviews.count) {
+            let m = metrics(row, width: width, subviews: subviews)
+            y += m.topGap + m.height
+        }
+        return CGSize(width: width, height: y)
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize,
+                       subviews: Subviews, cache: inout ()) {
+        let width = bounds.width
+        var y = bounds.minY
+        for row in rows(count: subviews.count) {
+            let m = metrics(row, width: width, subviews: subviews)
+            y += m.topGap
+            if row.count == 2 {
+                let tileW = pairTileWidth(width)
+                // Both tiles fill the row's height (the taller of the pair), so
+                // a short small tile sits flush beside a taller one.
+                subviews[row[0]].place(
+                    at: CGPoint(x: bounds.minX + hPad, y: y),
+                    anchor: .topLeading, proposal: .init(width: tileW, height: m.height))
+                subviews[row[1]].place(
+                    at: CGPoint(x: bounds.minX + hPad + tileW + pairGap, y: y),
+                    anchor: .topLeading, proposal: .init(width: tileW, height: m.height))
+            } else {
+                let i = row[0]
+                let inset = isMag(i) ? hPad : 0
+                subviews[i].place(
+                    at: CGPoint(x: bounds.minX + inset, y: y),
+                    anchor: .topLeading, proposal: .init(width: width - 2 * inset, height: nil))
+            }
+            y += m.height
+        }
+    }
+
+    /// A row's height and the gap above it. Magazine rows carry the s4 top
+    /// inset boardRow used to add; full-width modules bring their own top
+    /// padding, so they get none here (matching prd 58f's spacing exactly).
+    private func metrics(_ row: [Int], width: CGFloat, subviews: Subviews)
+        -> (height: CGFloat, topGap: CGFloat) {
+        if row.count == 2 {
+            let tileW = pairTileWidth(width)
+            let h = max(subviews[row[0]].sizeThatFits(.init(width: tileW, height: nil)).height,
+                        subviews[row[1]].sizeThatFits(.init(width: tileW, height: nil)).height)
+            return (h, rowGap)
+        }
+        let i = row[0]
+        let inset = isMag(i) ? hPad : 0
+        let h = subviews[i].sizeThatFits(.init(width: width - 2 * inset, height: nil)).height
+        return (h, isMag(i) ? rowGap : 0)
+    }
+
+    /// Half-width for a 2-up pair, floored at 1pt: SwiftUI probes layouts with
+    /// tiny/unspecified proposals (the default width is ~10pt), and a raw
+    /// `(width - 44)/2` goes negative there — placing tiles with garbage,
+    /// overlapping frames for a frame (review 2026-07-12).
+    private func pairTileWidth(_ width: CGFloat) -> CGFloat {
+        max(1, (width - 2 * hPad - pairGap) / 2)
+    }
+}
+
+/// A board of drag-reorderable module cards (prd 58 Goal 1, prd 58h free
+/// drag). Long-press lifts a card — the mocked drag state (scale up, slight
+/// turn, a shadow lands under it) — the board linearizes to one full-width
+/// column so the drop is unambiguous, drag reorders live against its
+/// neighbors, and releasing settles it and re-packs the magazine. Nobody who
+/// never drags sees any of this: with no gesture in flight the board is the
+/// plain magazine `Layout`.
 struct ReorderableBoard<ID: Hashable, Content: View>: View {
+    /// The FLAT module order (prd 58h) — a single module is the drag unit, so
+    /// a tile paired into a 2-up row can be pulled out and dropped anywhere.
     @Binding var order: [ID]
     @ViewBuilder let content: (ID) -> Content
+    /// Whether a module is a compact media tile (packs 2-up, wears the inset)
+    /// vs a full-width module. Read fresh each layout so growing/shrinking a
+    /// card (which flips its size) re-packs the board.
+    var isMagazine: (ID) -> Bool = { _ in false }
     /// Fires once per drag that actually changes the order — the caller
     /// persists it (a drag that snaps back to its start fires nothing).
     let onReorder: ([ID]) -> Void
@@ -49,15 +159,25 @@ struct ReorderableBoard<ID: Hashable, Content: View>: View {
     @State private var lastFingerY: CGFloat = 0
     @State private var autoScrollDir = 0
     @State private var autoScrollTask: Task<Void, Never>?
-    /// The dragged card's frame AT THE MOMENT it lifted — the fixed origin
-    /// `dragTranslation` moves it from. `frames[id]` keeps updating live
-    /// (via `.onGeometryChange`) for the SAME view this offset is applied
-    /// to, so once a drag starts it already reflects the offset in flight;
-    /// reading it again in `reorderIfNeeded` would double the displacement.
+    /// The dragged card's frame at the moment the DRAG began (not the lift):
+    /// lifting linearizes the board, so a paired tile's frame moves out from
+    /// under the finger before the first drag sample. Captured on the first
+    /// `onChanged`, when the column has settled — the fixed origin
+    /// `dragTranslation` moves it from. `frames[id]` keeps updating live for
+    /// the SAME view this offset is applied to, so reading it again in
+    /// `reorderIfNeeded` would double the displacement.
     @State private var liftFrame: CGRect?
+    /// The board relinearizes on lift, so the START frame can't be read until
+    /// the first drag sample lands (below). `dragStarted` gates that one-time
+    /// capture; `dragBaseline` is the finger's translation at that instant, so
+    /// the card's own linear slot — not the paired one — is the zero point.
+    @State private var dragStarted = false
+    @State private var dragBaseline: CGSize = .zero
 
     var body: some View {
-        VStack(spacing: 0) {
+        MagazineLayout(magazine: order.map(isMagazine),
+                       linear: draggingID != nil,
+                       hPad: DS.Space.s4, pairGap: DS.Space.s3, rowGap: DS.Space.s4) {
             ForEach(order, id: \.self) { id in
                 content(id)
                     .zIndex(draggingID == id ? 1 : 0)
@@ -129,7 +249,12 @@ struct ReorderableBoard<ID: Hashable, Content: View>: View {
         guard draggingID != id else { return }
         DSHaptic.selection()
         orderAtDragStart = order
-        liftFrame = frames[id]
+        // liftFrame is captured on the first drag sample, not here: setting
+        // draggingID linearizes the board, so a paired tile's frame is about
+        // to move. dragStarted gates that one-shot capture.
+        liftFrame = nil
+        dragStarted = false
+        dragTranslation = .zero
         scrollYAtLift = scrollProbe?.y ?? 0
         autoScrollDelta = 0
         withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
@@ -145,14 +270,26 @@ struct ReorderableBoard<ID: Hashable, Content: View>: View {
         DragGesture(minimumDistance: 0, coordinateSpace: .global)
             .onChanged { drag in
                 guard draggingID == id else { return }
-                dragTranslation = drag.translation
-                lastTranslation = drag.translation
+                if !dragStarted {
+                    dragStarted = true
+                    // The board linearized when the card lifted (pairs →
+                    // column); its frame settled to a new slot. Capture the
+                    // START frame from THAT column, and treat this sample's
+                    // translation as the zero point, so the card tracks the
+                    // finger from where it now sits.
+                    liftFrame = frames[id]
+                    dragBaseline = drag.translation
+                }
+                let t = CGSize(width: drag.translation.width - dragBaseline.width,
+                               height: drag.translation.height - dragBaseline.height)
+                dragTranslation = t
+                lastTranslation = t
                 lastFingerY = drag.location.y
                 // Keep the cumulative auto-scroll current (0 when disabled or
                 // un-scrolled) so offset and reorder read one consistent value.
                 autoScrollDelta = (scrollProbe?.y ?? 0) - scrollYAtLift
                 refreshAutoScroll()
-                reorderIfNeeded(id: id, translation: drag.translation)
+                reorderIfNeeded(id: id, translation: t)
             }
             .onEnded { _ in
                 guard draggingID == id else { return }
@@ -167,6 +304,7 @@ struct ReorderableBoard<ID: Hashable, Content: View>: View {
             dragTranslation = .zero
         }
         liftFrame = nil
+        dragStarted = false
         autoScrollDelta = 0
         if order != orderAtDragStart {
             DSHaptic.tap()
@@ -216,11 +354,13 @@ struct ReorderableBoard<ID: Hashable, Content: View>: View {
     /// As the lifted card's center crosses a neighbor's frame, swap it into
     /// that slot — the classic drag-reorder feel (others slide, the lifted
     /// card keeps following the finger via `dragTranslation`). The dragged
-    /// card's live position is `liftFrame` (its frame BEFORE the drag started)
-    /// plus the pure translation — not `frames[id]`, which tracks the same
-    /// offset view and would double-count it — plus however far the board has
-    /// auto-scrolled since lift (frames are in the fixed content space, so a
-    /// stationary finger over scrolling content still crosses the right slots).
+    /// card's live position is `liftFrame` (its frame when the drag began, in
+    /// the linear column) plus the pure translation — not `frames[id]`, which
+    /// tracks the same offset view and would double-count it — plus however
+    /// far the board has auto-scrolled since lift (frames are in the fixed
+    /// content space, so a stationary finger over scrolling content still
+    /// crosses the right slots). During a drag the board is one full-width
+    /// column, so a single Y test resolves every slot unambiguously.
     private func reorderIfNeeded(id: ID, translation: CGSize) {
         guard let liftFrame, let fromIndex = order.firstIndex(of: id) else { return }
         let draggedMidY = liftFrame.midY + translation.height + autoScrollDelta

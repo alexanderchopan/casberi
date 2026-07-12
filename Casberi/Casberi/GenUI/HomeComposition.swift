@@ -378,12 +378,31 @@ enum HomeComposition {
             }
             return
         }
-        let ids = pinned.indices.map { "pn\($0)" }
-        // "@pin" → GenWidget's oversized tilted pin, not the word (2026-07-10).
-        doc.append("pinnedW = Widget(\(q("@pin")), null, [\(ids.joined(separator: ", "))])")
-        for (i, t) in pinned.enumerated() { doc.append(row(id: "pn\(i)", t)) }
-        rootRefs.append("pinnedW")
-        boardRefs.append("pinnedW")
+        // Tokens leave the Pinned card for their own bento tiles (prd 58h): a
+        // token's content IS its chart (prd 51), so it's sized on its own —
+        // small is a sparkline, big the full plot. Everything else rides in the
+        // Pinned card. The card leads, then the token tiles, in pin order.
+        var pinnedIds: [String] = []
+        var tokenIds: [String] = []
+        for (i, t) in pinned.enumerated() {
+            let id = "pn\(i)"
+            doc.append(row(id: id, t))
+            if t.kind == .link, TokenChart.route(from: t.content) != nil {
+                tokenIds.append(id)
+            } else {
+                pinnedIds.append(id)
+            }
+        }
+        if !pinnedIds.isEmpty {
+            // "@pin" → GenWidget's oversized tilted pin, not the word (2026-07-10).
+            doc.append("pinnedW = Widget(\(q("@pin")), null, [\(pinnedIds.joined(separator: ", "))])")
+            rootRefs.append("pinnedW")
+            boardRefs.append("pinnedW")
+        }
+        for id in tokenIds {
+            rootRefs.append(id)
+            boardRefs.append(id)
+        }
     }
 
     /// Wallet holdings on Home (ruling 2026-07-08): pinning the wallet shows

@@ -105,6 +105,20 @@ extension EnvironmentValues {
         get { self[GenMediaCompactKey.self] }
         set { self[GenMediaCompactKey.self] = newValue }
     }
+    /// The board tile's span (prd 58h bento) — small / wide / big — set per
+    /// module by HomeScreen and inherited by descendants (a pinned row reads
+    /// its card's span). nil off the board (Feed, sheets), where a module
+    /// renders its plain form. `genModuleLarge` / `genMediaCompact` are derived
+    /// from this for the existing two-state renderers; a module reads `genSpan`
+    /// directly only where it needs a distinct SMALL (1×1) form.
+    var genSpan: ModuleSpan? {
+        get { self[GenSpanKey.self] }
+        set { self[GenSpanKey.self] = newValue }
+    }
+}
+
+private struct GenSpanKey: EnvironmentKey {
+    static let defaultValue: ModuleSpan? = nil
 }
 
 private struct GenMediaCompactKey: EnvironmentKey {
@@ -203,7 +217,7 @@ struct GenRender: View {
             #endif
             GenWidget(id: id, el: el, els: els).mountIn()
         case "Row":         GenRow(el: el).mountIn()
-        case "TokenRow":    GenTokenRow(el: el).mountIn()
+        case "TokenRow":    GenTokenRow(id: id, el: el).mountIn()
         case "Suggest":     GenSuggest().mountIn()
         case "Skeleton":    GenSkeletonRow().mountIn()
         case "Chip":        GenChip(el: el).mountIn()
@@ -417,7 +431,36 @@ private struct GenWidget: View {
     let els: GenEls
     @Environment(\.genModuleLarge) private var large
     @Environment(\.genSizeToggle) private var sizeToggle
+    /// nil off the board; on the board `small` gives the card a 1×1 count tile.
+    @Environment(\.genSpan) private var span
     var body: some View {
+        if span == .small {
+            smallTile
+        } else {
+            fullCard
+        }
+    }
+
+    /// The small (1×1) form: the sacred pin over a live count — "5 pinned" —
+    /// so the person keeps the card on the board without spending a big seat.
+    /// Tap the pin to grow it back to a list or the moodboard. The board insets
+    /// small tiles, so this carries no outer padding of its own.
+    private var smallTile: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            PinMark(large: false) { sizeToggle?(id) }
+            Spacer(minLength: DS.Space.s2)
+            Text("\(el.refs(2).count)")
+                .dsText(.heading22).foregroundStyle(DS.textPrimary)
+            Text("pinned").dsText(.subhead13).foregroundStyle(DS.textTertiary)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .padding(DS.Space.s4)
+        .frame(minHeight: 150)
+        .background(DS.surfaceSheet,
+                    in: RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
+    }
+
+    private var fullCard: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
                 if el.str(0) == "@pin" {
@@ -434,7 +477,7 @@ private struct GenWidget: View {
             .padding(.init(top: DS.Space.s4, leading: DS.Space.s4,
                            bottom: DS.Space.s1, trailing: DS.Space.s4))
             if large {
-                GenMoodboardGrid(refs: el.refs(2), els: els)
+                largeInterior
             } else {
                 ForEach(el.refs(2), id: \.self) { GenRender(id: $0, els: els, slot: .row) }
             }
@@ -445,6 +488,46 @@ private struct GenWidget: View {
                     in: RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
         .padding(.horizontal, DS.Space.s4)
         .padding(.top, DS.Space.s4)
+    }
+
+    /// The large interior (prd 58h): a token's content IS its chart (prd 51),
+    /// so tokens grow into full-width chart rows (GenTokenRow reads
+    /// genModuleLarge and draws the plot) rather than losing it to a moodboard
+    /// tile. Every OTHER pinned thing becomes a moodboard tile; consecutive
+    /// non-token pins pack into their own 2-col grid run, in pin order.
+    @ViewBuilder private var largeInterior: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            ForEach(Array(pinnedSegments.enumerated()), id: \.offset) { _, seg in
+                switch seg {
+                case .token(let ref):
+                    GenRender(id: ref, els: els, slot: .row)
+                case .grid(let refs):
+                    GenMoodboardGrid(refs: refs, els: els)
+                }
+            }
+        }
+    }
+
+    private enum PinSegment { case token(String); case grid([String]) }
+
+    /// Splits the pinned refs into token rows and runs of moodboard tiles,
+    /// preserving the person's pin order.
+    private var pinnedSegments: [PinSegment] {
+        var segments: [PinSegment] = []
+        var grid: [String] = []
+        func flushGrid() {
+            if !grid.isEmpty { segments.append(.grid(grid)); grid = [] }
+        }
+        for ref in el.refs(2) {
+            if els[ref]?.comp == "TokenRow" {
+                flushGrid()
+                segments.append(.token(ref))
+            } else {
+                grid.append(ref)
+            }
+        }
+        flushGrid()
+        return segments
     }
 }
 
@@ -944,6 +1027,8 @@ private struct GenSocialCard: View {
     @Environment(\.genThingOpen) private var thingOpen
     @Environment(\.genThingUnpin) private var thingUnpin
     @Environment(\.genThingHandoff) private var thingHandoff
+    /// nil off the board; `small` gives a 1×1 avatar tile (prd 58h).
+    @Environment(\.genSpan) private var span
 
     private var source: String { el.str(0) }
     private var handle: String { el.str(1) }
@@ -955,7 +1040,44 @@ private struct GenSocialCard: View {
     private var avatarSize: CGFloat { large ? 44 : 28 }
 
     var body: some View {
-        let card = VStack(alignment: .leading, spacing: DS.Space.s3) {
+        let content = span == .small ? AnyView(smallTile) : AnyView(wideCard)
+        content.pinnedRowActions(id: thingId, openable: openable,
+                                 open: thingOpen, unpin: thingUnpin, handoff: thingHandoff)
+    }
+
+    /// The small (1×1) form: the source's avatar and handle, no post text —
+    /// the account, kept on the board. Tap the pin to grow to the latest post.
+    /// The board insets small tiles, so no outer padding here.
+    private var smallTile: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+            HStack(spacing: 7) {
+                if let sizeToggle {
+                    Button { sizeToggle(id) } label: {
+                        Image(systemName: "pin.fill")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(DS.textSecondary)
+                            .rotationEffect(.degrees(-35), anchor: .bottomLeading)
+                    }
+                    .buttonStyle(PressSpring())
+                    .accessibilityLabel("Grow")
+                }
+                Text(source).dsText(.label12).foregroundStyle(DS.textSecondary)
+            }
+            Spacer(minLength: 0)
+            RemoteThumb(urlString: avatarURL, size: 40, fallback: source, circular: true)
+            if !handle.isEmpty {
+                Text(handle).dsText(.subhead13).foregroundStyle(DS.textSecondary).lineLimit(1)
+            }
+        }
+        .padding(DS.Space.s4)
+        .frame(maxWidth: .infinity, minHeight: 150, maxHeight: .infinity, alignment: .topLeading)
+        .background(DS.surfaceSheet,
+                    in: RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
+        .contentShape(RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
+    }
+
+    private var wideCard: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s3) {
             HStack(spacing: 7) {
                 if let sizeToggle {
                     Button {
@@ -996,8 +1118,6 @@ private struct GenSocialCard: View {
         .contentShape(RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
         .padding(.horizontal, DS.Space.s4)
         .padding(.top, DS.Space.s4)
-        card.pinnedRowActions(id: thingId, openable: openable,
-                              open: thingOpen, unpin: thingUnpin, handoff: thingHandoff)
     }
 }
 
@@ -1080,79 +1200,156 @@ extension View {
     }
 }
 
-/// TokenRow(title, chain, address, time) — a pinned/resurfaced crypto token
-/// leads with its price chart, same rule as the thing sheet (ThingContent's
-/// TokenChartContent): the chart IS the token's content, not a link. Falls
-/// back to the plain row's time label until the fetch resolves.
+/// TokenRow(title, chain, address, time, thingId, openable) — a pinned crypto
+/// token as its own bento tile (prd 58h): the chart IS the token's content
+/// (prd 51), sized on its own. `small` is a bare sparkline (the "shrunk token
+/// = sparkline" ruling), `wide` adds price + delta beside it, `big` is the
+/// full plot with a header. Its own pin cycles the spans; off the board (nil
+/// span) it falls to the full plot.
 private struct GenTokenRow: View {
+    let id: String
     let el: GenEl
     @State private var chart: TokenChart?
     /// The line DRAWS itself once when the data lands (left → right reveal,
     /// 2026-07-10) — the same entrance-plays-once juice as the pin's settle.
-    /// A continuous pulse was considered and skipped: the chart is fetched
-    /// per visit, not streamed, and a pulsing "live" line would overclaim.
     @State private var revealed = false
     @Environment(\.genThingOpen) private var thingOpen
     @Environment(\.genThingUnpin) private var thingUnpin
     @Environment(\.genThingHandoff) private var thingHandoff
     @Environment(\.genRefreshTick) private var refreshTick
+    @Environment(\.genSizeToggle) private var sizeToggle
+    @Environment(\.genSpan) private var span
     @Environment(\.colorScheme) private var scheme
 
+    private var symbol: String { el.str(0) }
     private var accent: Color {
         TokenChartStyle.accent(up: (chart?.change ?? 0) >= 0, scheme: scheme)
     }
 
     var body: some View {
-        let row = VStack(alignment: .leading, spacing: DS.Space.s2) {
-            HStack(alignment: .center, spacing: DS.Space.s2) {
-                Text(el.str(0))
-                    .dsText(.body17).foregroundStyle(DS.textPrimary)
-                    .lineLimit(1)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                if let chart {
-                    Text(TokenChartStyle.priceText(chart.price))
-                        .dsText(.callout15).foregroundStyle(DS.textPrimary)
-                        .contentTransition(.numericText())
-                        .animation(DS.Motion.standard, value: chart.price)
-                    // The compact delta pill (prd 51) — Home and the sheet
-                    // read as one family; the row stays the glance (24h
-                    // fixed, no chips, no scrub at 48pt).
-                    TokenDeltaPill(change: chart.change, label: "1D", compact: true)
-                } else {
-                    Text(el.str(3)).dsText(.subhead13).foregroundStyle(DS.textTertiary)
-                }
+        let small = span == .small
+        let tile = interior
+            .frame(maxWidth: .infinity, minHeight: small ? 150 : nil, alignment: .topLeading)
+            .padding(DS.Space.s4)
+            .background(DS.surfaceSheet,
+                        in: RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
+            .contentShape(RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
+            // Small tiles are inset + top-gapped by the board's packer; wide and
+            // big span full width and inset themselves.
+            .padding(.horizontal, small ? 0 : DS.Space.s4)
+            .padding(.top, small ? 0 : DS.Space.s4)
+            // Keyed by chain/address, not plain .task: Home's first render
+            // streams the doc token-by-token (H7 typewriter), so this view can
+            // mount before those args arrive (fixed 2026-07-08). Reveal replays
+            // when fresh data lands.
+            .task(id: "\(refreshTick):\(el.str(1))/\(el.str(2))") {
+                guard !el.str(1).isEmpty, !el.str(2).isEmpty else { return }
+                revealed = false
+                chart = await TokenChart.fetch(chain: el.str(1), address: el.str(2))
+                if chart != nil { withAnimation(.easeOut(duration: 0.7)) { revealed = true } }
             }
-            if let chart {
-                TokenChartPlot(chart: chart, accent: accent, height: 48, pulses: false)
+        tile.pinnedRowActions(id: el.str(4), openable: el.str(5) == "app",
+                              open: thingOpen, unpin: thingUnpin, handoff: thingHandoff)
+    }
+
+    @ViewBuilder private var interior: some View {
+        switch span {
+        case .some(.small): smallForm
+        case .some(.wide):  wideForm
+        default:            bigForm
+        }
+    }
+
+    /// The sacred pin, small in the corner — the token's size control.
+    @ViewBuilder private var pin: some View {
+        if let sizeToggle {
+            Button { sizeToggle(id) } label: {
+                Image(systemName: "pin.fill")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(DS.textSecondary)
+                    .rotationEffect(.degrees(-35), anchor: .bottomLeading)
+            }
+            .buttonStyle(PressSpring())
+            .accessibilityLabel("Resize")
+        }
+    }
+
+    /// The plot at a given height, or a ghost while the fetch is out.
+    @ViewBuilder private func plot(height: CGFloat) -> some View {
+        if let chart {
+            TokenChartPlot(chart: chart, accent: accent, height: height, pulses: false)
                 .mask(alignment: .leading) {
                     GeometryReader { geo in
                         Rectangle().frame(width: revealed ? geo.size.width : 0)
                     }
                 }
-                .onAppear {
-                    guard !revealed else { return }
-                    withAnimation(.easeOut(duration: 0.7)) { revealed = true }
-                    // The line finishing its draw gets a tick (2026-07-10
-                    // haptics pass) — once, when the reveal lands.
-                    Task { @MainActor in
-                        try? await Task.sleep(for: .milliseconds(700))
-                        DSHaptic.selection()
-                    }
-                }
+        } else {
+            RoundedRectangle(cornerRadius: 6, style: .continuous)
+                .fill(DS.fillFaint).frame(height: height)
+        }
+    }
+
+    /// small (1×1): symbol + a bare sparkline — the shrunk token.
+    private var smallForm: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s1) {
+            HStack(alignment: .top, spacing: DS.Space.s2) {
+                Text(symbol).dsText(.callout15).foregroundStyle(DS.textPrimary)
+                    .lineLimit(1).frame(maxWidth: .infinity, alignment: .leading)
+                pin
+            }
+            Spacer(minLength: DS.Space.s2)
+            plot(height: 40)
+            if let chart {
+                TokenDeltaPill(change: chart.change, label: "1D", compact: true)
             }
         }
-        .padding(.horizontal, DS.Space.s4)
-        .padding(.vertical, DS.Space.s3)
-        // Keyed by chain/address, not plain .task: Home's first render
-        // streams the doc token-by-token (H7 typewriter), so this view can
-        // mount before those args arrive — a bare .task would fetch once
-        // with empty strings and never retry (fixed 2026-07-08).
-        .task(id: "\(refreshTick):\(el.str(1))/\(el.str(2))") {
-            guard !el.str(1).isEmpty, !el.str(2).isEmpty else { return }
-            chart = await TokenChart.fetch(chain: el.str(1), address: el.str(2))
+    }
+
+    /// wide (2×1): symbol + price + delta on the left, sparkline on the right.
+    private var wideForm: some View {
+        HStack(alignment: .center, spacing: DS.Space.s3) {
+            VStack(alignment: .leading, spacing: DS.Space.s1) {
+                HStack(spacing: DS.Space.s2) {
+                    Text(symbol).dsText(.body17).foregroundStyle(DS.textPrimary).lineLimit(1)
+                    pin
+                }
+                if let chart {
+                    HStack(spacing: DS.Space.s2) {
+                        Text(TokenChartStyle.priceText(chart.price))
+                            .dsText(.callout15).foregroundStyle(DS.textPrimary)
+                            .contentTransition(.numericText())
+                        TokenDeltaPill(change: chart.change, label: "1D", compact: true)
+                    }
+                } else {
+                    Text(el.str(3)).dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            plot(height: 48).frame(maxWidth: 150)
         }
-        row.pinnedRowActions(id: el.str(4), openable: el.str(5) == "app",
-                             open: thingOpen, unpin: thingUnpin, handoff: thingHandoff)
+    }
+
+    /// big (2×2): a header, then the full plot.
+    private var bigForm: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s3) {
+            HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+                Text(symbol).dsText(.body17).foregroundStyle(DS.textPrimary).lineLimit(1)
+                Spacer(minLength: 0)
+                pin
+            }
+            if let chart {
+                HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+                    Text(TokenChartStyle.priceText(chart.price))
+                        .dsText(.heading22).foregroundStyle(DS.textPrimary)
+                        .contentTransition(.numericText())
+                    TokenDeltaPill(change: chart.change, label: "1D")
+                }
+            } else {
+                Text(el.str(3)).dsText(.subhead13).foregroundStyle(DS.textTertiary)
+            }
+            Spacer(minLength: 0)
+            plot(height: 150)
+        }
     }
 }
 
@@ -1302,6 +1499,9 @@ private struct GenTagMap: View {
     @Environment(\.genZoomNS) private var zoomNS
     @Environment(\.genModuleLarge) private var large
     @Environment(\.genSizeToggle) private var sizeToggle
+    /// nil off the board; `small` gives the map a shorter, fewer-cell 1×1
+    /// tile (prd 58h) — a treemap needs area, so it skips `wide`.
+    @Environment(\.genSpan) private var span
     /// The entrance plays once per screen appearance (§3); filter and theme
     /// re-renders never replay it.
     @State private var settled = false
@@ -1325,7 +1525,9 @@ private struct GenTagMap: View {
         }
     }
 
-    private var items: [KindCountRow.Item] { KindCountRow.parse(el.refs(2), cap: 6) }
+    private var items: [KindCountRow.Item] {
+        KindCountRow.parse(el.refs(2), cap: span == .small ? 3 : 6)
+    }
 
     /// Arg 3 — how each cell earns its icon (2026-07-09): "source" reads an
     /// exact bridge name (Gmail, Wallet, …) through BridgeIcon — no fetch,
@@ -1356,7 +1558,7 @@ private struct GenTagMap: View {
     /// not just pin-born wallet maps — and it's the size control (prd
     /// 58a): tap it, the module blooms to large. The preview map isn't a
     /// real module yet (nothing to size), so it carries no pin.
-    private var boardHeight: CGFloat { large ? 320 : 220 }
+    private var boardHeight: CGFloat { span == .small ? 150 : (large ? 320 : 220) }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -1402,12 +1604,14 @@ private struct GenTagMap: View {
                         .accessibilityLabel("Share your week")
                     }
                 }
-                .padding(.leading, DS.Space.s4)
+                .padding(.leading, span == .small ? 0 : DS.Space.s4)
                 // Air before the cells — with or without a subline (the map
                 // sat flush under the eyebrow when the subline was absent).
-                .padding(.bottom, el.str(1).isEmpty ? DS.Space.s3 : 0)
+                .padding(.bottom, (el.str(1).isEmpty || span == .small) ? DS.Space.s3 : 0)
             }
-            if !el.str(1).isEmpty {
+            // The subline ("$19K across 13 tokens") is dropped on a small tile —
+            // no room, and the eyebrow already names the wallet.
+            if !el.str(1).isEmpty, span != .small {
                 Text(el.str(1))
                     .dsText(.callout15).foregroundStyle(DS.textSecondary)
                     .padding(.leading, DS.Space.s4)
@@ -1419,7 +1623,8 @@ private struct GenTagMap: View {
             }
             .frame(height: boardHeight)
         }
-        .padding(.horizontal, DS.Space.s4)
+        // Small tiles are inset by the board's packer; wide/big self-pad.
+        .padding(.horizontal, span == .small ? 0 : DS.Space.s4)
         .padding(.top, DS.Space.s4)
         .onAppear {
             if preview {

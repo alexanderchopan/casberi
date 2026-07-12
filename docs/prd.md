@@ -2126,3 +2126,44 @@ code, NOT yet built:
 Both need DEVICE verification (drag feel; real token/wallet data — the
 sim can't exercise either, and its Photos re-request dialog blocks
 screenshot repro). Build on prd 58/58a/58f grammar.
+
+## 58i. The bento board (user, 2026-07-12) — BUILT, device verification pending
+
+Supersedes 58h's two fixes and the prd-58a two-state (regular/large)
+size model with a THREE-span bento: every module is a tile the person
+sizes independently — small (1×1), wide (2×1), or big (2×2) — and the
+board bin-packs to fill the gaps, no holes. Ruled after live mocks of
+three directions (independent 2-size, three-size, one-hero spotlight):
+the person wants the expressiveness of three sizes, so premium comes
+from GUARDRAILS, not fewer states — a composed one-hero default (Pinned
+opens big, everything else small) plus per-module span limits (a
+treemap skips `wide` — it needs area; a social post has no `big` — one
+post is empty at 2×2).
+
+FREE DRAG (prd 58h Goal 1): built as diagnosed — ReorderableBoard now
+reorders the FLAT module order, linearizing to one column mid-drag so
+the drop is unambiguous, re-packing on release. Small tiles pair 2-up;
+wide/big span full width.
+
+TOKEN SIZING (prd 58h Goal 2, extended): a pinned token is no longer a
+row inside the Pinned card — it's its OWN board tile (HomeComposition's
+appendPinned splits tokens out; everything else still rides pinnedW),
+sized on its own: small is a bare sparkline (the "shrunk token" rule),
+wide adds price + delta, big is the full chart. The token's content IS
+its chart at every size, just at a different dose (prd 51).
+
+Every module grew a small form: Pinned → count tile; wallet/"what's
+going on" treemaps → a short 3-cell mini-map (subline dropped, no room);
+social → avatar only; media shelves already had small (the prd 58f
+compact tile). HomeModuleSize migrates the old large/regular Set to the
+new span dict on first launch; the pin now CYCLES a module through its
+allowed spans instead of a binary toggle.
+
+Also folded in: two drag-engine fixes an adversarial review caught
+(MagazineLayout's pair-tile width could go negative under a probe's
+tiny/unspecified proposal; paired tiles now fill the row's height so a
+short tile sits flush beside a taller one).
+
+NOT YET DEVICE-VERIFIED (sim can't exercise): drag feel, tap-the-pin
+cycling, real token chart data (needs a pinned token + live Dexscreener
+fetch).
