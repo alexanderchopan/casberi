@@ -2095,3 +2095,34 @@ day; a written how-to would drift): Connect what's yours / It all
 lands in one feed / Act on anything / Home is your board / Ask across
 everything. Text auto-localizes (LocalizedStringKey); English until
 the catalogs carry the new keys.
+
+## 58h. Board refinements — OPEN (diagnosed 2026-07-11, for a fresh build)
+
+Two board gaps found on device testing (build 35/36), diagnosed in
+code, NOT yet built:
+
+1. FREE DRAG ("move anything to any position"). The board drag is
+   ROW-based: modules pack into rows first (media pairs 2-up, else
+   full-width), and ReorderableBoard.reorderIfNeeded moves whole ROWS
+   by vertical position (order is [[String]]). So a paired tile can't
+   be pulled out and placed independently — pairs move as a unit.
+   FIX: make the drag operate on the flat MODULE order (not rows) —
+   drag one card, drop anywhere in the sequence, re-pack (packRows) on
+   drop. Likely linearize the board during an active drag (every
+   module full-width) so the drop target is unambiguous, then re-pack
+   on release. Touches ReorderableBoard + HomeScreen's boardRows/
+   packRows/onReorder.
+
+2. TOKEN CHART WON'T SHRINK. GenTokenRow (GenRenderer) has ONE form —
+   name + 1D delta pill + a fixed 48pt TokenChartPlot — and ignores
+   genModuleLarge/genMediaCompact entirely. Tapping the pin to shrink
+   flips HomeModuleSize but the render is unchanged (chart clips, same
+   footprint): the user's "stays same size, loses the chart". FIX: add
+   a COMPACT form to GenTokenRow — symbol + price + colored delta chip,
+   NO chart — shown when the module is regular; the chart only at large.
+   (A token reaches Home as a pinned thing → TokenRow inside pinnedW,
+   or its own module; confirm the exact container when building.)
+
+Both need DEVICE verification (drag feel; real token/wallet data — the
+sim can't exercise either, and its Photos re-request dialog blocks
+screenshot repro). Build on prd 58/58a/58f grammar.
