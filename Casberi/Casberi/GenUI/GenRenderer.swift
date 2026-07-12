@@ -83,6 +83,13 @@ extension EnvironmentValues {
         get { self[GenSizeToggleKey.self] }
         set { self[GenSizeToggleKey.self] = newValue }
     }
+    /// A pinned media shelf's "Remove from Home" (long-press) — the surface
+    /// drops that source's pin (and its saved size/order) and recomposes.
+    /// Takes the shelf's ref id. nil outside Home.
+    var genSourceUnpin: ((String) -> Void)? {
+        get { self[GenSourceUnpinKey.self] }
+        set { self[GenSourceUnpinKey.self] = newValue }
+    }
     /// A screenshot's own stored thumbnail bytes (prd 48) — local, not a
     /// URL, so a media tile resolves it by thing id rather than a doc-line
     /// image ref. nil outside Home.
@@ -127,6 +134,9 @@ private struct GenModuleLargeKey: EnvironmentKey {
     static let defaultValue = false
 }
 private struct GenSizeToggleKey: EnvironmentKey {
+    static let defaultValue: ((String) -> Void)? = nil
+}
+private struct GenSourceUnpinKey: EnvironmentKey {
     static let defaultValue: ((String) -> Void)? = nil
 }
 private struct GenThumbnailDataKey: EnvironmentKey {
@@ -543,21 +553,41 @@ private struct GenMediaShelf: View {
     let els: GenEls
     @Environment(\.genModuleLarge) private var large
     @Environment(\.genSizeToggle) private var sizeToggle
+    @Environment(\.genSourceUnpin) private var sourceUnpin
     @Environment(\.genMediaCompact) private var compact
 
     private var kind: String { el.str(3) }
     private var refs: [String] { el.refs(2) }
+    /// The shelf is on the board by an explicit pin (arg 5) — only then can it
+    /// be removed from Home here (an auto-earned shelf has no pin to drop).
+    private var pinned: Bool { el.str(4) == "pin" }
 
     var body: some View {
         // Half-width magazine tile (prd 58f): the lead item's art fills a
         // single tile with the shelf's eyebrow over a scrim — no scrolling
         // strip in a pair cell. The pin still rides the corner (tap = grow,
         // which pops it to the full-bleed row).
-        if compact {
-            GenMediaCompactTile(id: id, eyebrow: el.str(0), leadRef: refs.first,
-                                els: els, sizeToggle: sizeToggle)
+        let base = Group {
+            if compact {
+                GenMediaCompactTile(id: id, eyebrow: el.str(0), leadRef: refs.first,
+                                    els: els, sizeToggle: sizeToggle)
+            } else {
+                shelf
+            }
+        }
+        // Long-press to remove a PINNED shelf from Home — the shelf's parallel
+        // to a pinned row's "Unpin" (the corner pin means resize, so removal
+        // needs its own verb). Absent for auto-earned shelves (no pin to drop).
+        if pinned, let sourceUnpin {
+            base.contextMenu {
+                Button(role: .destructive) {
+                    sourceUnpin(id)
+                } label: {
+                    Label("Remove from Home", systemImage: "pin.slash")
+                }
+            }
         } else {
-            shelf
+            base
         }
     }
 

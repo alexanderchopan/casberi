@@ -23,4 +23,13 @@ final class HomeModuleSize {
         if large.contains(moduleKey) { large.remove(moduleKey) } else { large.insert(moduleKey) }
         UserDefaults.standard.set(Array(large), forKey: Self.key)
     }
+
+    /// Drops a module's saved size when it leaves the board for good (its
+    /// source unpinned/disconnected) — otherwise a re-pin later silently
+    /// resurrects the old "large" state. Kept separate from a transient
+    /// absence (a wallet whose fetch hasn't landed), which must NOT forget.
+    func clear(_ moduleKey: String) {
+        guard large.remove(moduleKey) != nil else { return }
+        UserDefaults.standard.set(Array(large), forKey: Self.key)
+    }
 }

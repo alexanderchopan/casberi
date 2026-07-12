@@ -132,7 +132,10 @@ struct HomeScreen: View {
                     } onReorder: { newRows in
                         let flat = newRows.flatMap { $0 }
                         boardOrder = flat
-                        HomeBoardOrder.shared.save(flat.map(moduleKey))
+                        // Same keying as syncBoard's apply(), suffixes and all
+                        // — bare moduleKey here broke round-trip for two
+                        // same-labeled modules (dedupedKeys' note).
+                        HomeBoardOrder.shared.save(dedupedKeys(flat))
                     }
                 }
                 .padding(.bottom, ShellMetrics.bottomInset)
@@ -234,6 +237,17 @@ struct HomeScreen: View {
                 withAnimation(DS.Motion.standard) {
                     boardRows = packRows(boardOrder)
                 }
+            }
+            // Long-press a pinned media shelf → Remove from Home. Drops the
+            // source's pin (HomePinnedSources.clear also forgets its saved
+            // size/order), then recomposes so the shelf leaves the board.
+            .environment(\.genSourceUnpin) { ref in
+                guard let source = HomePinnedSources.source(forModuleRef: ref) else { return }
+                DSHaptic.tap()
+                HomePinnedSources.shared.clear(source)
+                CorpusSignal.shared.bump()
+                streamComposition(instant: true)
+                chrome.flash("Removed from Home")
             }
             // A screenshot's own stored thumbnail (prd 48) — local bytes,
             // not a URL, so the media tile resolves it by thing id.
@@ -362,23 +376,32 @@ struct HomeScreen: View {
     /// `HomeBoardOrder.apply`.
     private func syncBoard(_ refs: [String]) {
         boardModuleRefs = Set(refs)
-        // Two wallets can carry the same label (WalletStore only guards
-        // address uniqueness, never label) — de-duplicate colliding keys so
-        // a second "Main" wallet gets its own slot instead of silently
-        // overwriting the first one's in `refForKey` and vanishing.
-        var seen: [String: Int] = [:]
+        let naturalKeys = dedupedKeys(refs)
         var refForKey: [String: String] = [:]
-        var naturalKeys: [String] = []
+        for (ref, key) in zip(refs, naturalKeys) { refForKey[key] = ref }
+        boardOrder = HomeBoardOrder.shared.apply(to: naturalKeys).compactMap { refForKey[$0] }
+        boardRows = packRows(boardOrder)
+    }
+
+    /// Stable persistence keys for a run of refs, in order. Two wallets can
+    /// carry the same label (WalletStore only guards address uniqueness, never
+    /// label), so a colliding `moduleKey` gets a positional " #n" suffix — a
+    /// second "Main" wallet earns its own slot instead of overwriting the
+    /// first's. `syncBoard` (which READS the saved order) and the reorder save
+    /// (which WRITES it) MUST derive keys the same way, or a duplicate-labeled
+    /// board never round-trips — save wrote bare keys, apply matched suffixed
+    /// ones, and the arrangement silently reset (review 2026-07-12).
+    private func dedupedKeys(_ refs: [String]) -> [String] {
+        var seen: [String: Int] = [:]
+        var keys: [String] = []
         for ref in refs {
             var key = moduleKey(ref)
             let count = (seen[key] ?? 0) + 1
             seen[key] = count
             if count > 1 { key += " #\(count)" }
-            naturalKeys.append(key)
-            refForKey[key] = ref
+            keys.append(key)
         }
-        boardOrder = HomeBoardOrder.shared.apply(to: naturalKeys).compactMap { refForKey[$0] }
-        boardRows = packRows(boardOrder)
+        return keys
     }
 
     /// Packs the flat board order into magazine rows (prd 58f): a run of

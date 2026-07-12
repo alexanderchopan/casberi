@@ -388,6 +388,10 @@ struct ThingSheetView: View {
             t.tags = t.tags.map { $0 == old ? new : $0 }
         }
         try? modelContext.save()
+        // A retag changes projectClusters but not things.count — Home composes
+        // a doc, not a live @Query, so nudge it to recompose (the same signal
+        // HomeScreen already listens on).
+        CorpusSignal.shared.bump()
         DSHaptic.success()
     }
 
@@ -398,6 +402,7 @@ struct ThingSheetView: View {
             t.tags.removeAll { $0 == tag }
         }
         try? modelContext.save()
+        CorpusSignal.shared.bump()
         DSHaptic.success()
     }
 
@@ -406,6 +411,7 @@ struct ThingSheetView: View {
         guard !t.isEmpty, !thing.tags.contains(where: { $0.lowercased() == t.lowercased() }) else { return }
         thing.tags.append(t)
         try? modelContext.save()
+        CorpusSignal.shared.bump()
     }
 
     private func remove(tag: String) {
@@ -413,6 +419,7 @@ struct ThingSheetView: View {
         guard tag != thing.kind.typeTag else { return }
         thing.tags.removeAll { $0 == tag }
         try? modelContext.save()
+        CorpusSignal.shared.bump()
     }
 
     // MARK: - Related shelf (streams last)
@@ -474,16 +481,19 @@ struct ThingSheetView: View {
         case .markDone:
             thing.mark = .done
             try? modelContext.save()
+            CorpusSignal.shared.bump()
             verbResult = "Done"
         case .approve:
             // Demo bridge: the decision lands locally; the gateway wire is M5.
             thing.mark = .done
             try? modelContext.save()
+            CorpusSignal.shared.bump()
             DSHaptic.success()
             verbResult = "Approved — sent to your gateway"
         case .deny:
             thing.mark = .done
             try? modelContext.save()
+            CorpusSignal.shared.bump()
             verbResult = "Denied — your gateway was told"
         }
     }

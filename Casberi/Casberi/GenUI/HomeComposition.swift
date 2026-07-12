@@ -445,17 +445,20 @@ enum HomeComposition {
         let music = things.filter { $0.source == "Apple Music" }
         if earned(music, pinnedAs: "Apple Music") {
             appendMediaShelf(id: "musicShelf", eyebrow: "Apple Music", kind: "music",
-                             items: music, to: &doc, rootRefs: &rootRefs, boardRefs: &boardRefs)
+                             items: music, pinned: pinned.contains("Apple Music"),
+                             to: &doc, rootRefs: &rootRefs, boardRefs: &boardRefs)
         }
         let pins = things.filter { $0.source == "Pinterest" }
         if earned(pins, pinnedAs: "Pinterest") {
             appendMediaShelf(id: "pinShelf", eyebrow: "Pinterest", kind: "pinterest",
-                             items: pins, to: &doc, rootRefs: &rootRefs, boardRefs: &boardRefs)
+                             items: pins, pinned: pinned.contains("Pinterest"),
+                             to: &doc, rootRefs: &rootRefs, boardRefs: &boardRefs)
         }
         let shots = things.filter { $0.kind == .screenshot }
         if earned(shots, pinnedAs: "Photos") {
             appendMediaShelf(id: "shotShelf", eyebrow: "Screenshots", kind: "screenshot",
-                             items: shots, to: &doc, rootRefs: &rootRefs, boardRefs: &boardRefs)
+                             items: shots, pinned: pinned.contains("Photos"),
+                             to: &doc, rootRefs: &rootRefs, boardRefs: &boardRefs)
         }
         // RSS earns its shelf ONLY by an explicit pin — a feed is a firehose,
         // already surfaced in the "What's going on" source map, so it never
@@ -468,7 +471,8 @@ enum HomeComposition {
             let rss = imaged.isEmpty ? rssAll : imaged
             if !rss.isEmpty {
                 appendMediaShelf(id: "rssShelf", eyebrow: "RSS", kind: "rss",
-                                 items: rss, to: &doc, rootRefs: &rootRefs, boardRefs: &boardRefs)
+                                 items: rss, pinned: true,
+                                 to: &doc, rootRefs: &rootRefs, boardRefs: &boardRefs)
             }
         }
         for source in ["Bluesky", "Farcaster"] {
@@ -481,11 +485,16 @@ enum HomeComposition {
     /// A source's image strip — newest first, capped at 12 (regular shows
     /// what fits on a scroll, large's grid shows the rest as it grows).
     private static func appendMediaShelf(id: String, eyebrow: String, kind: String, items: [Thing],
+                                         pinned: Bool = false,
                                          to doc: inout [String], rootRefs: inout [String],
                                          boardRefs: inout [String]) {
         let capped = Array(items.prefix(12))
         let itemIds = capped.indices.map { "\(id)i\($0)" }
-        doc.append("\(id) = MediaShelf(\(q(eyebrow)), \(q("")), [\(itemIds.joined(separator: ", "))], \(q(kind)))")
+        // Arg 5 ("pin"/"") marks a shelf that's on the board by an explicit
+        // pin — only then does its long-press offer "Remove from Home" (an
+        // auto-earned shelf has no pin to drop; hiding it means leaving the
+        // source in Apps). Trailing arg, so existing readers (0–3) are unmoved.
+        doc.append("\(id) = MediaShelf(\(q(eyebrow)), \(q("")), [\(itemIds.joined(separator: ", "))], \(q(kind)), \(q(pinned ? "pin" : "")))")
         for (i, t) in capped.enumerated() { doc.append(mediaItem(id: "\(id)i\(i)", t)) }
         rootRefs.append(id)
         boardRefs.append(id)

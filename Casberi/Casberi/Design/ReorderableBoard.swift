@@ -56,10 +56,31 @@ struct ReorderableBoard<ID: Hashable, Content: View>: View {
                     .ifTrue(draggingID == id) {
                         $0.gesture(dragGesture(for: id))
                     }
+                    // Drag is a pointer gesture VoiceOver can't perform, so
+                    // reordering was unreachable without sight. Custom actions
+                    // (in the rotor) move a card one slot either way — the
+                    // same reorder the drag makes, persisted the same way.
+                    .accessibilityElement(children: .contain)
+                    .accessibilityAction(named: Text("Move up")) { move(id, by: -1) }
+                    .accessibilityAction(named: Text("Move down")) { move(id, by: 1) }
             }
         }
         .coordinateSpace(name: "homeBoard")
         .animation(.spring(response: 0.35, dampingFraction: 0.8), value: order)
+    }
+
+    /// Moves a card one slot in `order` and persists — the accessible path to
+    /// the same reorder the drag performs. Silently no-ops at the ends.
+    private func move(_ id: ID, by delta: Int) {
+        guard let from = order.firstIndex(of: id) else { return }
+        let to = from + delta
+        guard order.indices.contains(to) else { return }
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+            order.move(fromOffsets: IndexSet(integer: from),
+                       toOffset: to > from ? to + 1 : to)
+        }
+        DSHaptic.selection()
+        onReorder(order)
     }
 
     private func lift(_ id: ID) {
