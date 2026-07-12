@@ -38,6 +38,15 @@ const CLIPS = [
     name: 'clip-composer', dur: 6.0, title: 'Ask anything', sub: 'Type a question about<br>anything you\'ve connected.',
     shots: [{ img: 'composer-typing.png', at: 0.15 }, { img: 'composer-answer.png', at: 2.6, sub2: 'Answered on-device —<br>and it cites what it used.' }],
   },
+  {
+    name: 'clip-language', dur: 10.5, title: 'Five languages,<br>one app', sub: 'Pick one — it switches<br>right there, live.',
+    shots: [
+      { img: 'lang-picker.png', at: 0.15 },
+      { img: 'lang-settings-es.png', at: 2.3, sub2: 'Español — down to<br>the date and the tab bar.' },
+      { img: 'lang-settings-ja.png', at: 4.6, sub2: '日本語 — no relaunch,<br>no reset.' },
+      { img: 'lang-settings-zh.png', at: 6.9, sub2: '简体中文 — every screen<br>follows along.' },
+    ],
+  },
 ];
 
 const HELPERS = `

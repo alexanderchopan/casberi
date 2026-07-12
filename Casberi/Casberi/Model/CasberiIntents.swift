@@ -12,12 +12,23 @@ struct SaveThingIntent: AppIntent {
     @Parameter(title: "Text", inputOptions: String.IntentInputOptions(multiline: true))
     var text: String
 
+    /// The app this capture came from — a per-app automation passes its own
+    /// name ("Weather", "Messages") so the thing lands under that source chip
+    /// instead of a flat "Shortcuts" pile. Defaults to "Shortcuts" for the
+    /// generic Save action, so existing shortcuts keep working unchanged.
+    @Parameter(title: "Source", default: "Shortcuts")
+    var source: String
+
     static var parameterSummary: some ParameterSummary {
-        Summary("Save \(\.$text)")
+        Summary("Save \(\.$text)") {
+            \.$source
+        }
     }
 
     func perform() async throws -> some IntentResult & ProvidesDialog {
-        guard let thing = Capture.thing(from: text, source: "Shortcuts") else {
+        let from = source.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let thing = Capture.thing(from: text,
+                                        source: from.isEmpty ? "Shortcuts" : from) else {
             return .result(dialog: "There was nothing to save.")
         }
         let container = try SharedStore.container()
