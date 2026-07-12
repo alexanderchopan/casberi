@@ -208,13 +208,20 @@ struct ReorderableBoard<ID: Hashable, Content: View>: View {
                     .onLongPressGesture(minimumDuration: 0.35, maximumDistance: 24) {
                         lift(id)
                     }
-                    // The actual drag tracker — attached ONLY to the ONE
-                    // card currently lifted. Every other card carries zero
-                    // extra touch-competing recognizers, which is the part
-                    // that actually frees up the scroll.
-                    .ifTrue(draggingID == id) {
-                        $0.gesture(dragGesture(for: id))
-                    }
+                    // The actual drag tracker — attached to EVERY card, all
+                    // the time (device report, 2026-07-12: gating this
+                    // behind `draggingID == id` meant the recognizer didn't
+                    // exist yet when the long-press fired mid-touch, so it
+                    // never caught the rest of that same finger-down — the
+                    // card visibly lifted but never tracked the drag).
+                    // `simultaneousGesture` (not `.gesture`) is what keeps
+                    // this from reopening the sticky-scroll bug above: it
+                    // coexists with the ScrollView's pan instead of
+                    // contesting it, so an idle card's ever-present
+                    // recognizer doesn't compete for the touch. The
+                    // `guard draggingID == id` inside dragGesture(for:)
+                    // keeps it inert everywhere except the lifted card.
+                    .simultaneousGesture(dragGesture(for: id))
                     // Drag is a pointer gesture VoiceOver can't perform, so
                     // reordering was unreachable without sight. Custom actions
                     // (in the rotor) move a card one slot either way — the
@@ -372,15 +379,5 @@ struct ReorderableBoard<ID: Hashable, Content: View>: View {
                        toOffset: i > fromIndex ? i + 1 : i)
             break
         }
-    }
-}
-
-private extension View {
-    /// Applies a modifier only when `condition` holds — the standard,
-    /// guaranteed-correct way to attach a gesture (or anything else)
-    /// conditionally in SwiftUI, since `.gesture` has no built-in "off" state.
-    @ViewBuilder
-    func ifTrue(_ condition: Bool, _ transform: (Self) -> some View) -> some View {
-        if condition { transform(self) } else { self }
     }
 }
