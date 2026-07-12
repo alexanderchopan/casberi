@@ -1045,7 +1045,10 @@ private struct GenSocialCard: View {
     @Environment(\.genModuleLarge) private var large
     @Environment(\.genSizeToggle) private var sizeToggle
     @Environment(\.genThingOpen) private var thingOpen
-    @Environment(\.genThingUnpin) private var thingUnpin
+    // Removal hides the whole auto-earned card (genSourceUnpin), NOT the post's
+    // pin flag — the card's presence never depended on that flag, so the old
+    // thing-level "Unpin" was a dead control (fixed 2026-07-12).
+    @Environment(\.genSourceUnpin) private var sourceUnpin
     @Environment(\.genThingHandoff) private var thingHandoff
     /// nil off the board; `small` gives a 1×1 avatar tile (prd 58h).
     @Environment(\.genSpan) private var span
@@ -1061,8 +1064,10 @@ private struct GenSocialCard: View {
 
     var body: some View {
         let content = span == .small ? AnyView(smallTile) : AnyView(wideCard)
-        content.pinnedRowActions(id: thingId, openable: openable,
-                                 open: thingOpen, unpin: thingUnpin, handoff: thingHandoff)
+        // `id` is the module ref (social<Source>) — what genSourceUnpin maps
+        // back to the source to hide; thingId still drives tap-to-open.
+        content.socialCardActions(moduleRef: id, thingId: thingId, openable: openable,
+                                  open: thingOpen, remove: sourceUnpin, handoff: thingHandoff)
     }
 
     /// The small (1×1) form: the source's avatar and handle, no post text —
@@ -1198,6 +1203,45 @@ extension View {
                         unpin?(id)
                     } label: {
                         Label("Unpin", systemImage: "pin.slash")
+                    }
+                }
+        }
+    }
+
+    /// The social card's parallel to `pinnedRowActions`: tap opens the post,
+    /// long-press offers Open / Open in app / Remove from Home. Removal takes
+    /// the MODULE ref (not the thing id) because it hides the whole auto-earned
+    /// card via genSourceUnpin — the post's pin flag never gated the card, so a
+    /// thing-level "Unpin" here did nothing (dead control, fixed 2026-07-12).
+    @ViewBuilder
+    func socialCardActions(moduleRef: String, thingId: String, openable: Bool,
+                           open: ((String) -> Void)?,
+                           remove: ((String) -> Void)?,
+                           handoff: ((String) -> Void)?) -> some View {
+        if thingId.isEmpty {
+            self
+        } else {
+            contentShape(Rectangle())
+                .onTapGesture { open?(thingId) }
+                .contextMenu {
+                    Button {
+                        open?(thingId)
+                    } label: {
+                        Label("Open", systemImage: "rectangle.portrait.and.arrow.right")
+                    }
+                    if openable {
+                        Button {
+                            handoff?(thingId)
+                        } label: {
+                            Label("Open in app", systemImage: "arrow.up.right")
+                        }
+                    }
+                    if let remove {
+                        Button(role: .destructive) {
+                            remove(moduleRef)
+                        } label: {
+                            Label("Remove from Home", systemImage: "pin.slash")
+                        }
                     }
                 }
         }

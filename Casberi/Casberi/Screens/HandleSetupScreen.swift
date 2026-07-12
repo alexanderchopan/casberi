@@ -252,6 +252,9 @@ struct HandleSetupScreen: View {
             if !bridge.currentName.isEmpty, HomePinnedSources.pinnable.contains(bridge.rawValue) {
                 pinToHomeSection.listRowSeparator(.hidden)
             }
+            if !bridge.currentName.isEmpty, HomePinnedSources.autoSocial.contains(bridge.rawValue) {
+                showOnHomeSection.listRowSeparator(.hidden)
+            }
             if !bridge.currentName.isEmpty {
                 BridgeDisconnectSection(
                     bridgeID: bridge.bridgeID, name: bridge.rawValue,
@@ -312,6 +315,36 @@ struct HandleSetupScreen: View {
                 .dsText(.body17).foregroundStyle(pinnedToHome ? DS.tint : DS.textPrimary)
             }
             .buttonStyle(.plain)
+        }
+    }
+
+    /// Show on Home — the inverse of "Pin to Home" for auto-social sources
+    /// (Bluesky/Farcaster): their latest post shows by default, so this brings
+    /// back a card the person removed (long-press → Remove from Home, or this
+    /// toggle) rather than opting one in. Management lives on the source's own
+    /// screen, per ruling 58a.
+    private var shownOnHome: Bool { !HomePinnedSources.shared.isHidden(bridge.rawValue) }
+
+    private var showOnHomeSection: some View {
+        Section {
+            Button {
+                // shownOnHome true means visible → hide; false means hidden → show.
+                HomePinnedSources.shared.setHidden(bridge.rawValue, shownOnHome)
+                DSHaptic.tap()
+            } label: {
+                HStack(spacing: DS.Space.s2) {
+                    Image(systemName: shownOnHome ? "pin.fill" : "pin.slash")
+                    Text(shownOnHome ? "On Home" : "Show on Home")
+                    Spacer()
+                }
+                .dsText(.body17).foregroundStyle(shownOnHome ? DS.tint : DS.textPrimary)
+            }
+            .buttonStyle(.plain)
+        } footer: {
+            Text(shownOnHome
+                 ? "Your latest \(bridge.rawValue) post shows on Home. Turn this off — or long-press the card — to remove it."
+                 : "Removed from Home. Turn this on to show your latest \(bridge.rawValue) post again.")
+                .dsText(.callout15).foregroundStyle(DS.textTertiary)
         }
     }
 

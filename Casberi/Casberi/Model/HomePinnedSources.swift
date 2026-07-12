@@ -19,6 +19,7 @@ import Observation
 final class HomePinnedSources {
     static let shared = HomePinnedSources()
     private static let key = "home.board.pinnedSources"
+    private static let hiddenKey = "home.board.hiddenSocial"
 
     /// Sources `HomeComposition.appendMediaModules` actually gates on the
     /// pinned bypass. A source's own screen only shows "Pin to Home" when
@@ -26,13 +27,36 @@ final class HomePinnedSources {
     /// button's state with no effect on the board, a dead control.
     static let pinnable: Set<String> = ["Apple Music", "Pinterest", "Photos", "RSS"]
 
+    /// The social sources that auto-earn a Home card from a single post
+    /// (`HomeComposition.appendMediaModules`), in board order. Unlike
+    /// `pinnable` sources they show by default, so their control is the
+    /// inverse — "Show on Home", removable into `hidden` and brought back
+    /// from the source's own screen (they carry no "Pin to Home").
+    static let autoSocial: [String] = ["Bluesky", "Farcaster"]
+
     private(set) var sources: Set<String>
+    /// Auto-social sources the person removed from Home (the inverse of a
+    /// pin — these show unless suppressed). Keyed by source name, same as
+    /// `sources`; persisted separately so a pin and a hide never collide.
+    private(set) var hidden: Set<String>
 
     private init() {
         sources = Set(UserDefaults.standard.stringArray(forKey: Self.key) ?? [])
+        hidden = Set(UserDefaults.standard.stringArray(forKey: Self.hiddenKey) ?? [])
     }
 
     func isPinned(_ source: String) -> Bool { sources.contains(source) }
+
+    /// True when the person removed this auto-social source's card from Home.
+    func isHidden(_ source: String) -> Bool { hidden.contains(source) }
+
+    /// Remove an auto-social card from Home (`true`) or bring it back
+    /// (`false`) — the "Show on Home" toggle and the card's long-press
+    /// "Remove from Home" both land here.
+    func setHidden(_ source: String, _ value: Bool) {
+        if value { hidden.insert(source) } else { hidden.remove(source) }
+        UserDefaults.standard.set(Array(hidden), forKey: Self.hiddenKey)
+    }
 
     func toggle(_ source: String) {
         if sources.contains(source) {
@@ -48,6 +72,11 @@ final class HomePinnedSources {
     /// purged — an outlived pin would otherwise silently reactivate the
     /// magnitude-1 bypass the moment the same-named source reconnects.
     func clear(_ source: String) {
+        // A disconnect also drops a stale hide, so a reconnected social
+        // account starts visible again rather than silently suppressed.
+        if hidden.remove(source) != nil {
+            UserDefaults.standard.set(Array(hidden), forKey: Self.hiddenKey)
+        }
         guard sources.remove(source) != nil else { return }
         forgetBoardState(source)
         UserDefaults.standard.set(Array(sources), forKey: Self.key)
@@ -65,6 +94,14 @@ final class HomePinnedSources {
         case "RSS":         return "rssShelf"
         default:            return nil
         }
+    }
+
+    /// An auto-social card's board ref (`social<Source>`, from
+    /// `appendSocialCard`) back to its source name, so the board's
+    /// "Remove from Home" knows which source to hide.
+    static func socialSource(forModuleRef ref: String) -> String? {
+        for source in autoSocial where ref == "social\(source)" { return source }
+        return nil
     }
 
     /// The inverse of `moduleRef(for:)` — a shelf's ref back to its source, so

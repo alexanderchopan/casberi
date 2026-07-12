@@ -494,8 +494,12 @@ enum HomeComposition {
                                  to: &doc, rootRefs: &rootRefs, boardRefs: &boardRefs)
             }
         }
-        for source in ["Bluesky", "Farcaster"] {
-            guard let latest = things.first(where: { $0.source == source }) else { continue }
+        // Social auto-earns a card from ONE post, but the person can remove it
+        // (long-press → Remove from Home, or the source screen's "Show on Home"
+        // toggle) — a removed source stays off the board until brought back.
+        for source in HomePinnedSources.autoSocial {
+            guard !HomePinnedSources.shared.isHidden(source),
+                  let latest = things.first(where: { $0.source == source }) else { continue }
             appendSocialCard(id: "social\(source)", source: source, thing: latest,
                              to: &doc, rootRefs: &rootRefs, boardRefs: &boardRefs)
         }

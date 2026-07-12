@@ -253,10 +253,19 @@ struct HomeScreen: View {
                     boardSizeRevision += 1
                 }
             }
-            // Long-press a pinned media shelf → Remove from Home. Drops the
-            // source's pin (HomePinnedSources.clear also forgets its saved
-            // size/order), then recomposes so the shelf leaves the board.
+            // Long-press → Remove from Home. A pinned media shelf drops its pin
+            // (HomePinnedSources.clear also forgets its saved size/order); an
+            // auto-earned social card is suppressed instead (it has no pin —
+            // "Show on Home" on its own screen brings it back). Either way,
+            // recompose so the module leaves the board.
             .environment(\.genSourceUnpin) { ref in
+                if let social = HomePinnedSources.socialSource(forModuleRef: ref) {
+                    DSHaptic.tap()
+                    HomePinnedSources.shared.setHidden(social, true)
+                    streamComposition(instant: true)
+                    chrome.flash("Removed from Home")
+                    return
+                }
                 guard let source = HomePinnedSources.source(forModuleRef: ref) else { return }
                 DSHaptic.tap()
                 HomePinnedSources.shared.clear(source)
