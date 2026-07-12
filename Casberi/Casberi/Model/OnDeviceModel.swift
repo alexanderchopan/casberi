@@ -52,6 +52,12 @@ enum OnDeviceModel {
         let kind: String
         let source: String
         let when: String
+        /// A short excerpt of the thing's own body — what the title alone
+        /// can't convey (a note's text, a chat's substance). Empty when the
+        /// body adds nothing (missing, same as the title, or a bare URL).
+        /// Without this the model can only restate titles, which reads as a
+        /// generic inventory rather than an answer about what's IN the things.
+        var note: String = ""
     }
 
     /// The model's answer, grounded strictly on the candidates it was handed:
@@ -158,12 +164,22 @@ struct GroundedAnswerLayout {
 @available(iOS 26.0, *)
 enum FoundationAnswer {
 
+    /// The one serialization both prompts share: a numbered line per thing,
+    /// with the thing's own text (when it has any) quoted on an indented line
+    /// under it — the substance that turns "you saved links from Mail" into an
+    /// answer about what those things actually say.
+    static func numberedCandidates(_ candidates: [OnDeviceModel.Candidate]) -> String {
+        candidates.enumerated().map { i, c in
+            var line = "\(i + 1). \(c.title) — \(c.kind), from \(c.source), \(c.when)"
+            if !c.note.isEmpty { line += "\n   \"\(c.note)\"" }
+            return line
+        }.joined(separator: "\n")
+    }
+
     static func compose(query: String, candidates: [OnDeviceModel.Candidate]) async -> OnDeviceModel.GroundedAnswer? {
         guard OnDeviceModel.isAvailable, !candidates.isEmpty else { return nil }
 
-        let numbered = candidates.enumerated().map { i, c in
-            "\(i + 1). \(c.title) — \(c.kind), from \(c.source), \(c.when)"
-        }.joined(separator: "\n")
+        let numbered = numberedCandidates(candidates)
 
         let instructions = """
         You help someone find and make sense of the things they have saved. \
@@ -176,7 +192,8 @@ enum FoundationAnswer {
         let prompt = """
         Question: "\(query)"
 
-        Their things, numbered:
+        Their things, numbered (an indented quote under a thing is its own \
+        text — use it, don't just repeat the title):
         \(numbered)
 
         Answer in one plain sentence using only these things, then list the \
@@ -202,25 +219,28 @@ enum FoundationAnswer {
     /// stream to a plain `AsyncStream<String>` (cumulative snapshots) so the
     /// caller needs no iOS-26 types and can consume it on the main actor.
     static func synthesisStream(query: String, candidates: [OnDeviceModel.Candidate]) -> AsyncStream<String> {
-        let numbered = candidates.enumerated().map { i, c in
-            "\(i + 1). \(c.title) — \(c.kind), from \(c.source), \(c.when)"
-        }.joined(separator: "\n")
+        let numbered = numberedCandidates(candidates)
 
         let instructions = """
         You help someone reflect on the things they have saved. Speak TO them \
         as "you" — never write in the first person, and never narrate as if you \
         are the person ("This week you spent…", never "This week I spent…"). \
         Answer in two \
-        or three plain sentences using ONLY the things listed. Never invent a \
-        thing, a number, or a detail that isn't in the list. No metaphors, no \
-        marketing. Write the answer directly — no preamble like "Here is" or \
-        "Summary:", no bullet points, no markdown. If the list is thin, say so \
-        plainly.
+        or three plain sentences using ONLY the things listed. Find the \
+        threads ACROSS the things — including the same subject showing up in \
+        different apps — and say what the stretch was actually about, drawing \
+        on the quoted text for substance. Do NOT walk the list item by item — \
+        "You saved X. You saved Y. You saved Z." is wrong; group and \
+        synthesize instead. Never invent a thing, a number, a detail, or a \
+        connection that isn't in the list. No metaphors, no marketing. Write \
+        the answer directly — no preamble like "Here is" or "Summary:", no \
+        bullet points, no markdown. If the list is thin, say so plainly.
         """ + LanguageStore.shared.llmLanguageDirective
         let prompt = """
         Question: "\(query)"
 
-        Their things (this is everything you may use):
+        Their things, numbered (an indented quote under a thing is its own \
+        text — everything you may use):
         \(numbered)
 
         Answer the question directly in plain sentences, grounded only in \

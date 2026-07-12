@@ -668,8 +668,25 @@ struct RootShell: View {
     private func candidates(_ things: [Thing]) -> [OnDeviceModel.Candidate] {
         things.map {
             OnDeviceModel.Candidate(title: $0.title, kind: $0.kind.typeTag,
-                                    source: $0.source, when: shortTime($0.capturedAt))
+                                    source: $0.source, when: shortTime($0.capturedAt),
+                                    note: answerSnippet($0))
         }
+    }
+
+    /// A short, single-line excerpt of a thing's body for the model — the
+    /// substance the title alone can't carry (a note's text, a chat's gist).
+    /// Empty when the body adds nothing over the title: missing, a duplicate
+    /// of the title, or a bare URL (source + title already stand for a link).
+    /// Capped so 16 candidates still fit the on-device context window.
+    private func answerSnippet(_ thing: Thing) -> String {
+        let body = thing.content.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !body.isEmpty, body != thing.title else { return "" }
+        // A bare link carries no prose the title doesn't already imply.
+        if body.lowercased().hasPrefix("http"), !body.contains(" ") { return "" }
+        let flat = body.replacingOccurrences(of: "\n", with: " ")
+            .replacingOccurrences(of: "\t", with: " ")
+        let squeezed = flat.replacingOccurrences(of: "  ", with: " ")
+        return squeezed.count > 180 ? String(squeezed.prefix(180)) + "…" : squeezed
     }
 
     /// Streams the model's grounded synthesis, painting each snapshot through
