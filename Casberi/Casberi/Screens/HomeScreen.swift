@@ -71,6 +71,15 @@ struct HomeScreen: View {
     /// whenever the order or a module's size changes; the drag reorders
     /// whole rows, then flattens back to `boardOrder`.
     @State private var boardRows: [[String]] = []
+    /// Drag-to-reorder auto-scroll (prd 58d): the board can grow past one
+    /// screen, so a drag into the top/bottom edge nudges the ScrollView while
+    /// the card keeps tracking the finger. `probe` carries the live scroll
+    /// offset + viewport bounds to the board (a plain class — written every
+    /// scroll frame, must not repaint); `scrollPos` is the board's handle to
+    /// nudge the scroll. The board owns the loop (it also owns the drag and
+    /// the reorder that must re-run as content slides).
+    @State private var probe = BoardScrollProbe()
+    @State private var scrollPos = ScrollPosition(edge: .top)
 
     struct ProjectRoute: Identifiable, Hashable {
         let name: String
@@ -106,7 +115,12 @@ struct HomeScreen: View {
                     // into 2-up rows, everything else spans full width — the
                     // rhythm emerges from your size choices. Rows drag as
                     // units on the safe 1D reorder (prd 58d).
-                    ReorderableBoard(order: $boardRows) { row in
+                    ReorderableBoard(order: $boardRows, scrollProbe: probe,
+                                     scrollBy: { dy in
+                                         withAnimation(.linear(duration: 0.05)) {
+                                             scrollPos.scrollTo(y: max(0, probe.y + dy))
+                                         }
+                                     }) { row in
                         if row.count == 2 {
                             // A pair — two half-width art tiles.
                             HStack(alignment: .top, spacing: DS.Space.s3) {
@@ -142,6 +156,21 @@ struct HomeScreen: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
             .scrollIndicators(.hidden)
+            // Auto-scroll plumbing for drag-to-reorder on a tall board: a
+            // programmatic scroll handle, the live offset fed to the board's
+            // probe, and the viewport's global bounds (the edge bands a drag
+            // enters). All idle until a card is actually dragged to an edge.
+            .scrollPosition($scrollPos)
+            .onScrollGeometryChange(for: CGFloat.self) { $0.contentOffset.y } action: { _, y in
+                probe.y = y
+            }
+            .background {
+                GeometryReader { g in
+                    Color.clear
+                        .onAppear { setViewport(g.frame(in: .global)) }
+                        .onChange(of: g.frame(in: .global)) { _, f in setViewport(f) }
+                }
+            }
             .ignoresSafeArea(edges: .top)
             // Live modules re-fetch on pull (2026-07-10): holdings straight
             // from Alchemy, and the tick bump re-keys every token chart's
@@ -457,6 +486,13 @@ struct HomeScreen: View {
             return "wallet:\(label)"
         }
         return ref
+    }
+
+    // MARK: - Drag-to-reorder auto-scroll
+
+    private func setViewport(_ frame: CGRect) {
+        probe.viewportTop = frame.minY
+        probe.viewportBottom = frame.maxY
     }
 
     /// Composing is synchronous; the holdings fetch isn't — load in the
