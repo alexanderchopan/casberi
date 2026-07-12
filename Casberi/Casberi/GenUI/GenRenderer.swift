@@ -767,6 +767,7 @@ private struct GenMediaTile: View {
     @Environment(\.genThingUnpin) private var thingUnpin
     @Environment(\.genThingHandoff) private var thingHandoff
     @Environment(\.genThumbnailData) private var thumbnailData
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var title: String { el.str(0) }
     private var imageURL: String { el.str(1) }
@@ -816,8 +817,20 @@ private struct GenMediaTile: View {
                 // 2026-07-11). GeometryReader + explicit frame + .clipped()
                 // is the same fix HomePageBackground already uses.
                 GeometryReader { geo in
+                    // Parallax (prd 58g/v2b): the image is overscanned ~14%
+                    // taller than its tile and drifts vertically as the tile
+                    // scrolls through the viewport — depth, the Flipboard
+                    // "alive" feel. scrollTransition is a RENDER-only
+                    // transform (no gesture surface), so it can't touch the
+                    // scroll/drag the way a hand-rolled gesture would. Reduce
+                    // Motion collapses it: phase stays identity, offset 0.
+                    let overscan = geo.size.height * 0.14
                     image
                         .aspectRatio(aspectRatio, contentMode: .fill)
+                        .frame(width: geo.size.width, height: geo.size.height + overscan)
+                        .scrollTransition(.interactive(timingCurve: .linear)) { content, phase in
+                            content.offset(y: reduceMotion ? 0 : -phase.value * (overscan / 2))
+                        }
                         .frame(width: geo.size.width, height: geo.size.height)
                         .clipped()
                 }

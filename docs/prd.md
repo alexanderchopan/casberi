@@ -2034,11 +2034,13 @@ purpose). You feature what you grow — no auto-picked hero to get
 wrong. Verified on sim: a grown Pinterest tile renders the full-bleed
 hero with title scrim.
 
-DEFERRED (v2b, device territory): PARALLAX — images drifting within
-their frames on scroll, cover rubber-banding on overscroll. It's pure
-scroll-linked motion: the simulator can't touch-scroll and a still
-can't show drift, so it's unverifiable here and belongs with a device
-pass (like the drag FEEL). An AUTO-picked hero (feature the newest
+PARALLAX (v2b, 2026-07-11): BUILT — a media tile's image is overscanned
+~14% and drifts vertically as it scrolls through the viewport
+(scrollTransition, a RENDER-only transform that can't touch the scroll/
+drag gesture; Reduce Motion collapses it to zero). Unverifiable on the
+sim (no touch-scroll, a still can't show drift), so the FEEL is a
+device pass — but it's safe to ship because it's render-only. Cover
+overscroll rubber-band is the one motion piece still deferred. An AUTO-picked hero (feature the newest
 image with no tap) was considered and set aside: it duplicates content
 that also appears in the media tiles, a redundancy the user-grown
 hero avoids entirely.
