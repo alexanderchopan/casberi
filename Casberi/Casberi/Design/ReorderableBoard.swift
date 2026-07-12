@@ -171,6 +171,16 @@ struct ReorderableBoard<ID: Hashable, Content: View>: View {
     var scrollBy: ((CGFloat) -> Void)? = nil
 
     @State private var draggingID: ID?
+    /// A dead-man's switch for the drag (fix 2026-07-12: "Home gets stuck /
+    /// can't scroll"). `draggingID` is imperative @State cleared only in the
+    /// gesture's `.onEnded` — but SwiftUI does NOT fire `.onEnded` when a drag
+    /// is CANCELLED (a scroll pan wins the touch, a system interruption), so an
+    /// interrupted lift left `draggingID` set: the board stayed linearized and
+    /// the edge auto-scroll loop (`while draggingID != nil`) kept yanking the
+    /// ScrollView — frozen, unscrollable. A `@GestureState` resets itself the
+    /// instant the gesture ends OR cancels; watching it force-settles the
+    /// orphaned drag so the board can never lock.
+    @GestureState private var dragActive = false
     @State private var orderAtDragStart: [ID] = []
     /// The per-frame drag values the lifted card renders from — held OUT of
     /// board @State on purpose (perf pass): only the dragged BoardCard reads
@@ -262,6 +272,15 @@ struct ReorderableBoard<ID: Hashable, Content: View>: View {
         }
         .coordinateSpace(name: "homeBoard")
         .animation(.spring(response: 0.35, dampingFraction: 0.8), value: order)
+        // The stuck-drag safety net: `dragActive` falls to false the instant
+        // the drag ends OR is cancelled. On a clean end `.onEnded` already
+        // settled (draggingID is nil, so this no-ops); on a CANCEL — the case
+        // that froze the board — `.onEnded` never ran, so settle the orphaned
+        // drag here. Guarded on draggingID so an ordinary touch that never
+        // lifted a card doesn't trigger a phantom settle.
+        .onChange(of: dragActive) { _, active in
+            if !active, let id = draggingID { settle(id) }
+        }
         // A board torn down mid-drag (leaving Home) never sends finger-up —
         // cancel the loop so it can't scroll a gone view, and drop edit mode
         // so returning to Home isn't stuck jiggling with no Done in reach.
@@ -309,6 +328,10 @@ struct ReorderableBoard<ID: Hashable, Content: View>: View {
         // position — what tells us when the finger has entered an edge band and
         // auto-scroll should kick in.
         DragGesture(minimumDistance: 0, coordinateSpace: .global)
+            // Stays true only while a finger is genuinely down on this card;
+            // SwiftUI resets it on end AND on cancel — the hook the stuck-drag
+            // safety net (`onChange(of: dragActive)`) watches.
+            .updating($dragActive) { _, state, _ in state = true }
             .onChanged { drag in
                 guard draggingID == id else { return }
                 if !dragStarted {
