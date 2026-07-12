@@ -2020,3 +2020,25 @@ standout image featured full-bleed automatically, editor-style) and
 PARALLAX (images drift within frames on scroll; cover rubber-bands on
 overscroll — the motion that makes it feel alive). Drag FEEL and the
 music tile need device verification (music art can't render on sim).
+
+## 58g. The magazine hero (v2a, 2026-07-11)
+
+The "one thing dominates" half of the Flipboard translation, made
+USER-controlled rather than auto: growing a media tile (tap its pin)
+now features its lead image FULL-BLEED as an editorial hero — 300pt,
+the item's title over a bottom scrim, the rest a browsable strip
+below. Unifies Pinterest/screenshots with how music already grows
+(GenMusicHero); replaces the old large-form 2-col grid (the moodboard
+grid stays the pinned card's idiom, so the two large forms differ by
+purpose). You feature what you grow — no auto-picked hero to get
+wrong. Verified on sim: a grown Pinterest tile renders the full-bleed
+hero with title scrim.
+
+DEFERRED (v2b, device territory): PARALLAX — images drifting within
+their frames on scroll, cover rubber-banding on overscroll. It's pure
+scroll-linked motion: the simulator can't touch-scroll and a still
+can't show drift, so it's unverifiable here and belongs with a device
+pass (like the drag FEEL). An AUTO-picked hero (feature the newest
+image with no tap) was considered and set aside: it duplicates content
+that also appears in the media tiles, a redundancy the user-grown
+hero avoids entirely.

@@ -591,7 +591,11 @@ private struct GenMediaShelf: View {
             if kind == "music", large {
                 GenMusicHero(refs: refs, els: els)
             } else if large {
-                GenMediaGrid(refs: refs, els: els)
+                // The user-controlled hero (prd 58g): growing a media tile
+                // features its lead image full-bleed, editorial — one thing
+                // dominates (the Flipboard move), by YOUR choice. The rest
+                // rides as a strip below, still browsable.
+                GenMediaHero(refs: refs, els: els)
             } else {
                 GenMediaStrip(refs: refs, els: els)
             }
@@ -718,6 +722,30 @@ private struct GenMusicHero: View {
                 GenMediaTile(el: lead, size: nil, aspectRatio: 1.4, overlayTitle: true)
                     .frame(height: 220)
                     .padding(.horizontal, DS.Space.s4)
+            }
+            if !rest.isEmpty { GenMediaStrip(refs: rest, els: els) }
+        }
+    }
+}
+
+/// A media module's large form (prd 58g) — the lead image full-bleed as an
+/// editorial feature (Pinterest, screenshots), the rest a browsable strip
+/// below. The magazine's "one thing dominates," grown by the person's own
+/// pin tap. Music keeps its own GenMusicHero (title/artist split).
+private struct GenMediaHero: View {
+    let refs: [String]
+    let els: GenEls
+    private var lead: GenEl? { refs.first.flatMap { els[$0] } }
+    private var rest: [String] { Array(refs.dropFirst()) }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s3) {
+            if let lead {
+                GenMediaTile(el: lead, size: nil, aspectRatio: 1.5, overlayTitle: true)
+                    .frame(height: 300)
+                    .padding(.horizontal, DS.Space.s4)
+            } else {
+                GenSkeletonTile(minHeight: 300).padding(.horizontal, DS.Space.s4)
             }
             if !rest.isEmpty { GenMediaStrip(refs: rest, els: els) }
         }
