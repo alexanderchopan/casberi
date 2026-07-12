@@ -561,6 +561,36 @@ private struct PinMark: View {
     }
 }
 
+/// The media/shelf size control (prd 58a) — the same pin idiom as the Pinned
+/// card, sized as a secondary corner control. A tap cycles the module's span
+/// (small → wide → big). The glyph reads at 15pt for discoverability, but the
+/// button ALWAYS carries a full 44×44 hit target (Apple HIG minimum) via a
+/// framed content shape — the old 11pt inline pins were ~11pt targets, which
+/// is why the music and screenshot shelves were near-impossible to resize
+/// (user, 2026-07-12). Negative padding lets the 44pt hit box overflow into
+/// the surrounding whitespace, so a comfortable target costs no visible bulk.
+/// `onImage` styles it white-with-shadow for a full-bleed corner.
+private struct ShelfSizePin: View {
+    var large: Bool
+    var onImage: Bool = false
+    var onTap: () -> Void
+    var body: some View {
+        Button(action: onTap) {
+            Image(systemName: "pin.fill")
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(onImage ? AnyShapeStyle(.white.opacity(0.95))
+                                         : AnyShapeStyle(DS.textSecondary))
+                .rotationEffect(.degrees(-35))
+                .shadow(color: onImage ? .black.opacity(0.4) : .clear,
+                        radius: onImage ? 3 : 0)
+                .frame(width: 44, height: 44)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(PressSpring())
+        .accessibilityLabel(large ? "Shrink" : "Grow")
+    }
+}
+
 /// The pinned card's LARGE interior (prd 58, 58a) — a moodboard grid of
 /// square tiles instead of thin rows; each thing gets a tile-sized surface
 /// (glyph, title, source/time) instead of a line. Same tap/long-press
@@ -676,18 +706,14 @@ private struct GenMediaShelf: View {
 
     private var shelf: some View {
         VStack(alignment: .leading, spacing: 0) {
-            HStack(spacing: 7) {
+            HStack(spacing: 2) {
                 if let sizeToggle {
-                    Button {
-                        sizeToggle(id)
-                    } label: {
-                        Image(systemName: "pin.fill")
-                            .font(.system(size: 11, weight: .semibold))
-                            .foregroundStyle(DS.textSecondary)
-                            .rotationEffect(.degrees(-35), anchor: .bottomLeading)
-                    }
-                    .buttonStyle(PressSpring())
-                    .accessibilityLabel(large ? "Shrink" : "Grow")
+                    ShelfSizePin(large: large) { sizeToggle(id) }
+                        // The 44pt hit box overflows into the header's own top
+                        // padding and the leading inset — a full tap target,
+                        // no taller a header.
+                        .padding(.vertical, -12)
+                        .padding(.leading, -12)
                 }
                 Text(el.str(0)).dsText(.label12).foregroundStyle(DS.textSecondary)
             }
@@ -749,16 +775,10 @@ private struct GenMediaCompactTile: View {
         .clipShape(RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
         .overlay(alignment: .topTrailing) {
             if let sizeToggle {
-                Button { sizeToggle(id) } label: {
-                    Image(systemName: "pin.fill")
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(.white.opacity(0.9))
-                        .rotationEffect(.degrees(-35))
-                        .shadow(color: .black.opacity(0.4), radius: 3)
-                }
-                .buttonStyle(PressSpring())
-                .padding(DS.Space.s2)
-                .accessibilityLabel("Grow")
+                // Flush to the corner so the whole 44pt hit box stays on the
+                // tile; the glyph centers ~a finger's width in, which reads as
+                // the top-right control and never spills off the art.
+                ShelfSizePin(large: false, onImage: true) { sizeToggle(id) }
             }
         }
     }
