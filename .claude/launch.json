@@ -6,7 +6,7 @@
       "runtimeExecutable": "python3",
       "runtimeArgs": [
         "-c",
-        "import os, http.server, socketserver; os.chdir('/Users/alexanderchopan/Library/Mobile Documents/com~apple~CloudDocs/myStuff/product/casberi/website'); socketserver.TCPServer(('', int(os.environ.get('PORT') or 4173)), http.server.SimpleHTTPRequestHandler).serve_forever()"
+        "import os, http.server, socketserver; os.chdir('/Users/alexanderchopan/Developer/casberi/website'); socketserver.TCPServer(('', int(os.environ.get('PORT') or 4173)), http.server.SimpleHTTPRequestHandler).serve_forever()"
       ],
       "autoPort": true
     }
