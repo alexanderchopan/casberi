@@ -351,8 +351,11 @@ struct ReorderableBoard<ID: Hashable, Content: View>: View {
         motion.autoScrollDelta = 0
         liftFrame = nil
         dragStarted = false
+        // The drop lands — a soft tap every time a tile settles, reordered or
+        // not (2026-07-12: the board only buzzed on a real move, so putting a
+        // card back where it started felt dead).
+        DSHaptic.tap()
         if order != orderAtDragStart {
-            DSHaptic.tap()
             onReorder(order)
         }
     }
@@ -448,29 +451,61 @@ private struct BoardCard<Content: View>: View {
     let content: Content
 
     var body: some View {
-        content
-            .scaleEffect(dragged ? 1.03 : 1)
-            .rotationEffect(.degrees(dragged ? 1.5 : 0))
-            .shadow(color: .black.opacity(dragged ? 0.28 : 0),
-                    radius: dragged ? 18 : 0,
-                    y: dragged ? 8 : 0)
-            // A separate rotation layer from the lift tilt above, so the two
-            // never fight. Runs on the render thread (a repeatForever CA
-            // animation), so a jiggling board costs no SwiftUI body work —
-            // it starts on the one re-render when `editing` flips at lift and
-            // stops on the one at settle, nothing in between.
-            .modifier(JiggleEffect(active: editing && !dragged, phase: phase))
-            // The lifted card follows the finger AND compensates for any
-            // auto-scroll: its base moves with the scrolling content, so
-            // adding autoScrollDelta keeps it pinned under a stationary finger.
-            // Reading `motion` here — only when `dragged` — is what scopes the
-            // per-frame repaint to this one card. The offset is ALWAYS applied
-            // (value .zero when idle), never conditionally added/removed, so
-            // the settle springs the value home instead of snapping.
-            .offset(dragged
-                    ? CGSize(width: motion.translation.width,
-                             height: motion.translation.height + motion.autoScrollDelta)
-                    : .zero)
+        ZStack {
+            // The slot a lifted card leaves shows a recessed well wearing the
+            // mark — the empty place reads "the card lands here" while it's in
+            // the air (2026-07-12). The well stays in the slot; only `content`
+            // below rides the finger, so this costs no per-frame work. `dragged`
+            // is a discrete lift/settle flag, so the ZStack rebuilds twice a
+            // drag, never per move.
+            if dragged {
+                DropWell()
+            }
+            content
+                // A firmer "pick up" pop than the old 1.03 — the lift spring
+                // (dampingFraction 0.7) lends a little overshoot, so the tile
+                // feels grabbed off the board and floated higher (shadow too).
+                .scaleEffect(dragged ? 1.05 : 1)
+                .rotationEffect(.degrees(dragged ? 1.5 : 0))
+                .shadow(color: .black.opacity(dragged ? 0.30 : 0),
+                        radius: dragged ? 22 : 0,
+                        y: dragged ? 10 : 0)
+                // A separate rotation layer from the lift tilt above, so the two
+                // never fight. Runs on the render thread (a repeatForever CA
+                // animation), so a jiggling board costs no SwiftUI body work —
+                // it starts on the one re-render when `editing` flips at lift and
+                // stops on the one at settle, nothing in between.
+                .modifier(JiggleEffect(active: editing && !dragged, phase: phase))
+                // The lifted card follows the finger AND compensates for any
+                // auto-scroll: its base moves with the scrolling content, so
+                // adding autoScrollDelta keeps it pinned under a stationary
+                // finger. Reading `motion` here — only when `dragged` — is what
+                // scopes the per-frame repaint to this one card. The offset is
+                // ALWAYS applied (value .zero when idle), never conditionally
+                // added/removed, so the settle springs it home instead of
+                // snapping.
+                .offset(dragged
+                        ? CGSize(width: motion.translation.width,
+                                 height: motion.translation.height + motion.autoScrollDelta)
+                        : .zero)
+        }
+    }
+}
+
+/// The faint slot a lifted card leaves behind — a recessed well wearing the
+/// Casberi mark, so the empty place says "the card lands here" while it's in
+/// the air. One berry, in the target, earned — not a decorative field behind
+/// the board (§8: decoration banned; the mark carries meaning here).
+private struct DropWell: View {
+    var body: some View {
+        RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous)
+            .fill(DS.fillFaint)
+            .overlay {
+                CasberiBerryShape()
+                    .fill(DS.textTertiary)
+                    .frame(width: 30, height: 30)
+                    .opacity(0.16)
+            }
     }
 }
 
