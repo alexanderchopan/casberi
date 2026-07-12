@@ -23,27 +23,35 @@ matching private key. So the one manual step per ship is putting your
 `AuthKey_TR287WZD72.p8` at `/tmp/asc.p8`. The script deletes it after upload,
 which is why it won't be there next time.
 
-## The one command
+## Who does what (the whole ritual)
 
-Once your intended work is committed and the build number is bumped + committed
-(see steps below), the whole ship is one paste. Point the last line at wherever
-the build should run from (the canonical repo, or a clean isolated worktree):
+**The user's ONLY job is to stage the key.** Paste exactly this one line in a
+terminal — nothing else is needed from the user:
 
 ```sh
-cp ~/path/to/AuthKey_TR287WZD72.p8 /tmp/asc.p8 && \
+cp "/Users/alexanderchopan/Downloads/AuthKey_TR287WZD72.p8" /tmp/asc.p8
+```
+
+(Your `.p8` lives in `~/Downloads`. If you keep it elsewhere, change the source
+path — the destination is always `/tmp/asc.p8`.)
+
+**Claude does everything else** once the user says the key is staged: commit the
+intended work, bump + commit the build number, and run the ship via the Bash
+tool. Claude never copies or reads the `.p8` — it only runs the script, which
+reads the key from `/tmp/asc.p8`. The command Claude runs (from the canonical
+repo, or a clean isolated worktree to exclude another session's WIP):
+
+```sh
 ASC_KEY_ID=TR287WZD72 \
 ASC_ISSUER_ID=2152ec98-0a7c-477a-9c4a-e1c478a3a106 \
 ASC_KEY_PATH=/tmp/asc.p8 \
 SKIP_BUMP=1 \
-~/Developer/casberi/scripts/testflight.sh; \
-rm -f /tmp/asc.p8
+~/Developer/casberi/scripts/testflight.sh
 ```
 
-- Replace `~/path/to/AuthKey_TR287WZD72.p8` with your key's real location. If
-  it's already at `/tmp/asc.p8`, drop the first `cp` line.
-- `SKIP_BUMP=1` reuses the already-committed build number. Drop it to let the
+- `SKIP_BUMP=1` reuses the already-committed build number. Omit it to let the
   script bump the number itself (then commit the bump afterward — step 4).
-- The trailing `rm -f /tmp/asc.p8` wipes the key after upload.
+- After `✓ Uploaded`, Claude wipes the key: `rm -f /tmp/asc.p8`.
 
 ## Steps (what Claude prepares before that command)
 
