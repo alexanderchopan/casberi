@@ -95,6 +95,7 @@ struct RootShell: View {
                                      ? FeedFilter.shared.source : nil
                              },
                              onNavigate: navigate,
+                             onKeepAnswer: keepAnswer,
                              glassNamespace: glassNS)
                         // A tag tile in an answer opens that tag's view: close
                         // the composer, land on Home, push the tag (the same
@@ -534,6 +535,21 @@ struct RootShell: View {
         SpotlightIndex.index([thing])
         DSHaptic.success()
         land(thing)
+    }
+
+    /// Keep a synthesis answer — the recap lands as a note in your things so
+    /// it isn't ephemeral (2026-07-12). A quiet outcome toast, no flight: the
+    /// composer is open over the feed, and a proxy card flying behind it reads
+    /// as noise. The note is findable and syncs like any other.
+    private func keepAnswer(_ text: String) {
+        let firstLine = text.split(separator: "\n", maxSplits: 1).first.map(String.init) ?? text
+        let title = firstLine.count > 80 ? String(firstLine.prefix(80)) + "…" : firstLine
+        let thing = Thing(kind: .note, title: title, content: text, source: "You")
+        modelContext.insert(thing)
+        try? modelContext.save()
+        SpotlightIndex.index([thing])
+        DSHaptic.success()
+        chrome.flash("Kept — it's in your things")
     }
 
     /// Every save ends here (§1): toast, and — unless the person is already

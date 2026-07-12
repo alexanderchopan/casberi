@@ -31,6 +31,9 @@ struct Composer: View {
     /// A typed ask that names a place ("show my work stuff") — the shell
     /// closes the composer and goes there.
     var onNavigate: (NavigateIntent) -> Void = { _ in }
+    /// Keep a synthesis answer — lands it as a note in the feed so the recap
+    /// isn't ephemeral. The composer hands over the answer's plain text.
+    var onKeepAnswer: (String) -> Void = { _ in }
     /// The shell's glass namespace — pill and bubble share one glass identity,
     /// so open/close is a morph of the same substance, not a swap.
     var glassNamespace: Namespace.ID? = nil
@@ -70,6 +73,23 @@ struct Composer: View {
     /// The question currently being answered — shown above the live answer
     /// until it settles into a turn.
     @State private var currentQuestion = ""
+    /// One-shot: the current answer has been kept, so its Keep affordance
+    /// retires (no dead re-tap, no duplicate note). Resets on the next ask.
+    @State private var keptCurrent = false
+    /// True once the current answer STREAMED as prose — only a real synthesis
+    /// is keepable, never a lookup or a "nothing matches" fallback (both of
+    /// which are also Insights). Resets on the next ask.
+    @State private var currentStreamed = false
+
+    /// The keepable text of a synthesis answer — a synthesis is one Insight
+    /// carrying the prose (RootShell's proseDoc). Only that shape is worth
+    /// keeping: a lookup answer IS the things, which already live in the feed;
+    /// a short status line or "Thinking…" isn't a recap. nil otherwise.
+    private func keepableText(_ els: GenEls) -> String? {
+        guard let insight = els.values.first(where: { $0.comp == "Insight" }) else { return nil }
+        let text = insight.str(0)
+        return text.count >= 40 ? text : nil
+    }
     /// A typed organize command's pending change — rendered as a card, the
     /// write waits for Apply (typed words never write silently).
     @State private var proposal: OrganizeProposal?
@@ -391,8 +411,27 @@ struct Composer: View {
                             }
                             if answering {
                                 convoTurn(question: currentQuestion) {
-                                    GenRender(id: "root", els: answerStream.els)
-                                        .environment(\.genProseStreaming, proseStreaming)
+                                    VStack(alignment: .leading, spacing: DS.Space.s2) {
+                                        GenRender(id: "root", els: answerStream.els)
+                                            .environment(\.genProseStreaming, proseStreaming)
+                                        // Keep a settled synthesis (2026-07-12):
+                                        // lands the recap as a note so it isn't
+                                        // ephemeral. The consent tap IS the keep,
+                                        // like the parse card's save-on-send.
+                                        if !proseStreaming, !keptCurrent, currentStreamed,
+                                           let text = keepableText(answerStream.els) {
+                                            Button {
+                                                DSHaptic.tap()
+                                                keptCurrent = true
+                                                onKeepAnswer(text)
+                                            } label: {
+                                                Chip(text: "Keep this", style: .tint,
+                                                     glyph: "tray.and.arrow.down")
+                                            }
+                                            .buttonStyle(.plain)
+                                            .padding(.horizontal, DS.Space.s4)
+                                        }
+                                    }
                                 }
                             }
                             Color.clear.frame(height: 1).id("bottom")
@@ -628,6 +667,7 @@ struct Composer: View {
         placeholderIndex = 0
         turns = []
         currentQuestion = ""
+        keptCurrent = false
     }
 
     private func runPin(_ intent: PinAsk.Intent) {
@@ -735,6 +775,8 @@ struct Composer: View {
             }
             answering = true
             currentQuestion = draft
+            keptCurrent = false
+            currentStreamed = false
             let q = draft
             draft = ""              // clear the field so a follow-up is ready
             answerStream.paint(OnDeviceModel.isAvailable
@@ -761,6 +803,7 @@ struct Composer: View {
                     // Prose arriving live — paint each growing snapshot; the
                     // Insight breathes its dot while this fires (§2).
                     streamed = true
+                    currentStreamed = true   // a real synthesis — keepable
                     proseStreaming = true
                     answerStream.paint(partialDoc)
                 }
