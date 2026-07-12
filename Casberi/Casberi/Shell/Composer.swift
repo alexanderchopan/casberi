@@ -58,6 +58,18 @@ struct Composer: View {
 
     @FocusState private var fieldFocused: Bool
     @State private var answerStream = GenStream()
+    /// The composer is a CONVERSATION now (2026-07-12): each answered ask
+    /// becomes a turn that stays in view, so you can keep asking follow-ups
+    /// without re-opening — the Q&A stacks until you close.
+    private struct ConvoTurn: Identifiable {
+        let id = UUID()
+        let question: String
+        let els: GenEls
+    }
+    @State private var turns: [ConvoTurn] = []
+    /// The question currently being answered — shown above the live answer
+    /// until it settles into a turn.
+    @State private var currentQuestion = ""
     /// A typed organize command's pending change — rendered as a card, the
     /// write waits for Apply (typed words never write silently).
     @State private var proposal: OrganizeProposal?
@@ -212,6 +224,22 @@ struct Composer: View {
         suggestions = Array(out.prefix(organizeHint == nil ? 3 : 2))
     }
 
+    /// One conversation turn — the muted question, then its answer.
+    @ViewBuilder
+    private func convoTurn<Content: View>(question: String,
+                                          @ViewBuilder content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: DS.Space.s1) {
+            if !question.isEmpty {
+                Text(question)
+                    .dsText(.subhead13).fontWeight(.semibold)
+                    .foregroundStyle(DS.textSecondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, DS.Space.s4)
+            }
+            content()
+        }
+    }
+
     // The bubble's asymmetric corners: 24 / 24 / 10 / 24 (TL/TR/BR/BL).
     private var bubbleShape: UnevenRoundedRectangle {
         UnevenRoundedRectangle(
@@ -348,12 +376,37 @@ struct Composer: View {
                 .padding(.top, DS.Space.s2)
             }
 
-            if answering {
-                ScrollView {
-                    GenRender(id: "root", els: answerStream.els)
-                        .environment(\.genProseStreaming, proseStreaming)
+            // The conversation (2026-07-12): answered asks stack as turns you
+            // can keep following up on. The last answer stays LIVE (answerStream)
+            // until you ask the next one or close — so a typewriter reveal never
+            // gets cut. The scroll keeps the newest in view.
+            if !turns.isEmpty || answering {
+                ScrollViewReader { proxy in
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: DS.Space.s4) {
+                            ForEach(turns) { turn in
+                                convoTurn(question: turn.question) {
+                                    GenRender(id: "root", els: turn.els)
+                                }
+                            }
+                            if answering {
+                                convoTurn(question: currentQuestion) {
+                                    GenRender(id: "root", els: answerStream.els)
+                                        .environment(\.genProseStreaming, proseStreaming)
+                                }
+                            }
+                            Color.clear.frame(height: 1).id("bottom")
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    .frame(maxHeight: 300)
+                    .onChange(of: answerStream.progress) { _, _ in
+                        withAnimation(DS.Motion.standard) { proxy.scrollTo("bottom", anchor: .bottom) }
+                    }
+                    .onChange(of: turns.count) { _, _ in
+                        withAnimation(DS.Motion.standard) { proxy.scrollTo("bottom", anchor: .bottom) }
+                    }
                 }
-                .frame(maxHeight: 240)
                 .padding(.top, DS.Space.s2)
             }
 
@@ -573,6 +626,8 @@ struct Composer: View {
         pasted = false
         chipsAppeared = false
         placeholderIndex = 0
+        turns = []
+        currentQuestion = ""
     }
 
     private func runPin(_ intent: PinAsk.Intent) {
@@ -671,15 +726,20 @@ struct Composer: View {
             }
             #endif
         } else {
-            // Typed words are an utterance — the answer streams. On devices
-            // whose model writes the answer there's a beat of composing; show
-            // it plainly. Devices that fall back to the scoring engine answer
-            // without a suspend, so no placeholder ever flashes for them.
-            answering = true
-            if OnDeviceModel.isAvailable {
-                answerStream.paint(["root = Stack([w])", "w = Insight(\"Thinking…\")"])
+            // Typed words are an utterance — the answer streams. A follow-up
+            // first settles the current LIVE answer into the thread so the Q&A
+            // stacks (2026-07-12); the last answer stays live until the next
+            // ask or close, so its typewriter reveal never gets cut.
+            if answering {
+                turns.append(ConvoTurn(question: currentQuestion, els: answerStream.els))
             }
+            answering = true
+            currentQuestion = draft
             let q = draft
+            draft = ""              // clear the field so a follow-up is ready
+            answerStream.paint(OnDeviceModel.isAvailable
+                               ? ["root = Stack([w])", "w = Insight(\"Thinking…\")"]
+                               : [])
             Task { @MainActor in
                 // Organize-ish wording the strict parser missed ("put
                 // everything about lisbon under Trip") — the model fills the
@@ -710,6 +770,7 @@ struct Composer: View {
                 proseStreaming = false
                 if streamed { answerStream.paint(finalDoc) }
                 else { answerStream.stream(finalDoc) }
+                fieldFocused = true     // ready for the next follow-up
             }
         }
     }
