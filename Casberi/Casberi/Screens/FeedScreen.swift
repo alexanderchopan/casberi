@@ -601,9 +601,11 @@ struct FeedScreen: View {
                     .padding(.horizontal, DS.Space.s4)
                     .padding(.vertical, DS.Space.s1)
             )
-            .listRowInsets(.init(top: DS.Space.s2,
+            // Feed rhythm: s3 top/bottom (was s2) opens the row a step for a
+            // more airy, editorial read (2026-07-12). Bump back to s2 to tighten.
+            .listRowInsets(.init(top: DS.Space.s3,
                                  leading: DS.Space.s4 + DS.Space.s3,
-                                 bottom: DS.Space.s2,
+                                 bottom: DS.Space.s3,
                                  trailing: DS.Space.s4 + DS.Space.s3))
             .listRowSeparator(.hidden)
     }
@@ -798,9 +800,11 @@ struct FeedScreen: View {
                     .padding(.horizontal, DS.Space.s4)
                     .padding(.vertical, DS.Space.s1)
             )
-            .listRowInsets(.init(top: DS.Space.s2,
+            // Feed rhythm: s3 top/bottom (was s2) opens the row a step for a
+            // more airy, editorial read (2026-07-12). Bump back to s2 to tighten.
+            .listRowInsets(.init(top: DS.Space.s3,
                                  leading: DS.Space.s4 + DS.Space.s3,
-                                 bottom: DS.Space.s2,
+                                 bottom: DS.Space.s3,
                                  trailing: DS.Space.s4 + DS.Space.s3))
             .listRowSeparator(.hidden)
             // One gesture, one meaning (re-ruling 2026-07-07): TAP opens the
