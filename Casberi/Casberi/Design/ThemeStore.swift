@@ -101,7 +101,7 @@ final class ThemeStore {
 
     /// The Theme tile's subline — states the setting in force.
     var summary: String {
-        isLight ? "Light" : "Dark"
+        isLight ? String(localized: "Light") : String(localized: "Dark")
     }
 
     private init() {

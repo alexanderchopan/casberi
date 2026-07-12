@@ -1,0 +1,62 @@
+{
+  "sourceLanguage": "en",
+  "strings": {
+    "Saved to Casberi": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "已保存到 Casberi"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Casberi に保存しました"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Casberi에 저장됨"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Guardado en Casberi"
+          }
+        }
+      }
+    },
+    "Couldn't save": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "保存失败"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "保存できませんでした"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "저장하지 못했습니다"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "No se pudo guardar"
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}

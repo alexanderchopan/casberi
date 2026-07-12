@@ -65,7 +65,7 @@ enum HomeComposition {
         // A quiet day's slot invites more apps (2026-07-10, user — the
         // berry said quiet twice under the quiet cover and did nothing).
         if isQuietDay(things) {
-            doc.append("invite = AppsInvite(\(q("Connect another app")), \(q("More of your day lands by itself.")))")
+            doc.append("invite = AppsInvite(\(q(String(localized: "Connect another app"))), \(q(String(localized: "More of your day lands by itself."))))")
             rootRefs.append("invite")
         }
 
@@ -86,14 +86,14 @@ enum HomeComposition {
         // the map IS the visual anchor of the screen.
         if !projects.isEmpty {
             let items = projects.prefix(6).map { "\($0.name) \($0.things.count)" }
-            doc.append("map = TagMap(\(q("What's going on")), null, [\(items.joined(separator: ", "))])")
+            doc.append("map = TagMap(\(q(String(localized: "What's going on"))), null, [\(items.joined(separator: ", "))])")
             rootRefs.append("map")
             boardRefs.append("map")
         } else {
             let sources = sourceClusters(things: things)
             if !sources.isEmpty {
                 let items = sources.prefix(6).map { "\($0.name) \($0.things.count)" }
-                doc.append("map = TagMap(\(q("What's going on")), \(q("By app — tags take over as they form")), [\(items.joined(separator: ", "))], \(q("source")))")
+                doc.append("map = TagMap(\(q(String(localized: "What's going on"))), \(q(String(localized: "By app — tags take over as they form"))), [\(items.joined(separator: ", "))], \(q("source")))")
                 rootRefs.append("map")
                 boardRefs.append("map")
             }
@@ -119,7 +119,7 @@ enum HomeComposition {
         // A quiet day's slot invites more apps (2026-07-10, user — the
         // berry said quiet twice under the quiet cover and did nothing).
         if isQuietDay(things) {
-            doc.append("invite = AppsInvite(\(q("Connect another app")), \(q("More of your day lands by itself.")))")
+            doc.append("invite = AppsInvite(\(q(String(localized: "Connect another app"))), \(q(String(localized: "More of your day lands by itself."))))")
             rootRefs.append("invite")
         }
 
@@ -131,14 +131,14 @@ enum HomeComposition {
         let mapSlot = rootRefs.count
         if !projects.isEmpty {
             let items = projects.prefix(6).map { "\($0.name) \($0.things.count)" }
-            doc.append("map = TagMap(\(q("What's going on")), null, [\(items.joined(separator: ", "))])")
+            doc.append("map = TagMap(\(q(String(localized: "What's going on"))), null, [\(items.joined(separator: ", "))])")
             rootRefs.append("map")
             boardRefs.append("map")
         } else {
             let sources = sourceClusters(things: things)
             if !sources.isEmpty {
                 let items = sources.prefix(6).map { "\($0.name) \($0.things.count)" }
-                doc.append("map = TagMap(\(q("What's going on")), \(q("By app — tags take over as they form")), [\(items.joined(separator: ", "))], \(q("source")))")
+                doc.append("map = TagMap(\(q(String(localized: "What's going on"))), \(q(String(localized: "By app — tags take over as they form"))), [\(items.joined(separator: ", "))], \(q("source")))")
                 rootRefs.append("map")
                 boardRefs.append("map")
             }
@@ -167,14 +167,14 @@ enum HomeComposition {
         let title: String
         let subline: String
         if week.isEmpty && !things.isEmpty {
-            title = "A quiet week"
-            subline = "Your things keep — \(things.count) in all."
+            title = String(localized: "A quiet week")
+            subline = String(localized: "Your things keep — \(things.count) in all.")
         } else if let top = projects.first {
-            title = "Your week, banked"
-            subline = "\(week.count) things · \(top.name) led"
+            title = String(localized: "Your week, banked")
+            subline = String(localized: "\(week.count) things · \(top.name) led")
         } else {
-            title = "Your week, banked"
-            subline = week.count == 1 ? "1 thing landed" : "\(week.count) things landed"
+            title = String(localized: "Your week, banked")
+            subline = week.count == 1 ? String(localized: "1 thing landed") : String(localized: "\(week.count) things landed")
         }
         if !things.isEmpty {
             // Chips carry the WEEK's kind counts here, not today's (user,
@@ -188,7 +188,7 @@ enum HomeComposition {
             // sends "What's this week?" through the composer's answer
             // path — the recap is a door to the week's synthesis.
             let weekChips = coverChips(week) ?? "[]"
-            doc.append("cover = Cover(\(q("Weekend")), \(q(title)), \(q(subline)), \(q("")), \(q(dateline(things: things))), \(q("quiet")), \(weekChips), \(q("@week")))")
+            doc.append("cover = Cover(\(q(String(localized: "Weekend"))), \(q(title)), \(q(subline)), \(q("")), \(q(dateline(things: things))), \(q("quiet")), \(weekChips), \(q("@week")))")
             rootRefs.append("cover")
         }
 
@@ -198,7 +198,7 @@ enum HomeComposition {
 
         if !projects.isEmpty {
             let items = projects.prefix(6).map { "\($0.name) \($0.things.count)" }
-            doc.append("map = TagMap(\(q("The week")), \(q("What it was about")), [\(items.joined(separator: ", "))])")
+            doc.append("map = TagMap(\(q(String(localized: "The week"))), \(q(String(localized: "What it was about"))), [\(items.joined(separator: ", "))])")
             rootRefs.append("map")
             boardRefs.append("map")
         }
@@ -211,13 +211,13 @@ enum HomeComposition {
     /// Preview, not fake data: kind names, no counts, nothing to tap.
     static let empty = Document(lines: [
         "root = Stack([hero, map])",
-        "hero = Hero(\"Getting started\", \"Your home builds itself\", \"Connect an app or capture one thing - what lands composes this screen.\")",
+        "hero = Hero(\(q(String(localized: "Getting started"))), \(q(String(localized: "Your home builds itself"))), \(q(String(localized: "Connect an app or capture one thing - what lands composes this screen."))))",
         previewMapLine,
     ], boardRefs: [])
 
     /// The preview module, shared by the empty doc and the sparse-corpus path.
     private static let previewMapLine =
-        "map = TagMapPreview(\(q("What's going on")), \(q("Your things map here as they land")), [Links, Notes, Events, Mail, Screenshots])"
+        "map = TagMapPreview(\(q(String(localized: "What's going on"))), \(q(String(localized: "Your things map here as they land"))), [Links, Notes, Events, Mail, Screenshots])"
 
     /// A corpus this small hasn't earned real modules yet — one connected app
     /// or a first capture. The previews stay alongside the real rows so the
@@ -311,7 +311,7 @@ enum HomeComposition {
         // never lead Home (voice guardrail: agent asks live in Feed; the cover
         // states what landed, never what's waiting on the person).
         if isQuietDay(things) {
-            return "cover = Cover(\(q("Today")), \(q("A quiet day")), \(q("Nothing new yet — your things keep.")), \(q("")), \(q(date)), \(q("quiet")))"
+            return "cover = Cover(\(q(String(localized: "Today"))), \(q(String(localized: "A quiet day"))), \(q(String(localized: "Nothing new yet — your things keep."))), \(q("")), \(q(date)), \(q("quiet")))"
         }
         if let latest = things.first(where: { $0.kind != .approval }) {
             // The 6th arg marks the stream complete so the renderer's black
@@ -322,9 +322,9 @@ enum HomeComposition {
             // always emits (empty when quiet) so the id's seat holds.
             let subline = chips != nil ? "" : "\(latest.kind.typeTag) · \(latest.source)"
             let chipsSeat = chips.map { ", \($0)" } ?? ", []"
-            return "cover = Cover(\(q("Just landed · \(latest.source)")), \(q(latest.title)), \(q(subline)), \(q(latest.source)), \(q(date)), \(q(latest.kind.typeTag))\(chipsSeat), \(q(latest.id.uuidString)))"
+            return "cover = Cover(\(q(String(localized: "Just landed · \(latest.source)"))), \(q(latest.title)), \(q(subline)), \(q(latest.source)), \(q(date)), \(q(latest.kind.typeTag))\(chipsSeat), \(q(latest.id.uuidString)))"
         }
-        return "cover = Cover(\(q("Now")), \(q("Your things go here")), \(q("Paste, speak, or share one in.")), \(q("")), \(q(date)), \(q("quiet")))"
+        return "cover = Cover(\(q(String(localized: "Now"))), \(q(String(localized: "Your things go here"))), \(q(String(localized: "Paste, speak, or share one in."))), \(q("")), \(q(date)), \(q("quiet")))"
     }
 
     // MARK: - Cover chips (what landed today, on the cover — ruling 2026-07-09)
@@ -356,7 +356,7 @@ enum HomeComposition {
         // Subline reads content, not status: name the kinds inside.
         let kindWords = Array(Set(c.things.map { $0.kind.typeTag.lowercased() + "s" })).sorted().prefix(3)
         let subline = kindWords.joined(separator: ", ").capitalizedFirst
-        return "\(id) = ProjectTile(\(q("1")), \(q(c.name)), \(q(sources)), \(q(subline)), \(q("\(c.things.count) things")), blue)"
+        return "\(id) = ProjectTile(\(q("1")), \(q(c.name)), \(q(sources)), \(q(subline)), \(q(String(localized: "\(c.things.count) things"))), blue)"
     }
 
     /// Feed pins surface on Home too (ruling 2026-07-06): a pin means "keep
@@ -372,7 +372,7 @@ enum HomeComposition {
         let pinned = things.filter(\.pinned).prefix(6)
         guard !pinned.isEmpty else {
             if coach {
-                doc.append("pinCoach = Coach(\(q("Swipe a thing in Feed to pin it here.")))")
+                doc.append("pinCoach = Coach(\(q(String(localized: "Swipe a thing in Feed to pin it here."))))")
                 rootRefs.append("pinCoach")
                 // The coach line is a lesson, not a card — it isn't dragged.
             }
@@ -419,7 +419,7 @@ enum HomeComposition {
         // tap, gone the moment real cells land. Not a board module (nothing
         // to drag before the real card exists).
         if groups.isEmpty, pending {
-            doc.append("walletPreview = TagMapPreview(\(q("Your wallet")), \(q("Loading your holdings…")), [ETH, BTC, SOL, USDC, More])")
+            doc.append("walletPreview = TagMapPreview(\(q(String(localized: "Your wallet"))), \(q(String(localized: "Loading your holdings…"))), [ETH, BTC, SOL, USDC, More])")
             rootRefs.append("walletPreview")
         }
     }

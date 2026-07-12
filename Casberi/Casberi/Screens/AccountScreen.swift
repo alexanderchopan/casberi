@@ -12,6 +12,7 @@ struct SettingsScreen: View {
     /// the person turns iCloud sync on.
     @AppStorage("icloud.sync") private var icloudSync = false
     @State private var diagnosticsOpen = false
+    @State private var languageOpen = false
     @State private var detail: AccountDetail?
     @State private var avatarPickerOpen = false
     @State private var avatarDialogOpen = false
@@ -74,6 +75,7 @@ struct SettingsScreen: View {
                 NavigationStack { DiagnosticsScreen() }
             }
             .sheet(item: $detail) { AccountDetailSheet(detail: $0) }
+            .sheet(isPresented: $languageOpen) { LanguagePickerSheet() }
             .photosPicker(isPresented: $avatarPickerOpen,
                           selection: $avatarSelection, matching: .images)
             // A set photo can come off, not just be replaced — every setting
@@ -158,14 +160,14 @@ struct SettingsScreen: View {
             TileSpec(title: "Avatar",
                      // Set, the photo IS the fact — no words needed. It also
                      // rides the Apps nav bar as the settings entry.
-                     value: ProfileStore.shared.avatar == nil ? "Add your photo" : "",
+                     value: ProfileStore.shared.avatar == nil ? String(localized: "Add your photo") : "",
                      avatar: ProfileStore.shared.avatar,
                      avatarSeat: true,
                      action: {
                          if ProfileStore.shared.avatar == nil { avatarPickerOpen = true }
                          else { avatarDialogOpen = true }
                      }),
-            TileSpec(title: "Data", value: "\(thingCount) things · on device",
+            TileSpec(title: "Data", value: String(localized: "\(thingCount) things · on device"),
                      badge: icloudSync ? ("icloud.fill", DS.tint) : ("lock.iphone", DS.confirm),
                      action: { detail = .data }),
         ].sorted { $0.title < $1.title }
@@ -188,14 +190,21 @@ struct SettingsScreen: View {
             // or a dimmed photo behind Home's cards, Home only. Same shape
             // as Avatar: one image, owned locally.
             TileSpec(title: "Background",
-                     value: HomeBackgroundStore.shared.image == nil ? "A color or a photo" : "",
+                     value: HomeBackgroundStore.shared.image == nil ? String(localized: "A color or a photo") : "",
                      avatar: HomeBackgroundStore.shared.image,
                      badge: HomeBackgroundStore.shared.image == nil ? ("photo", DS.textTertiary) : nil,
                      action: { coverDialogOpen = true }),
+            // The app's own language — an override that switches Casberi live,
+            // on top of the device language (LanguageStore). One tap opens the
+            // tray; the subline states the language in force.
+            TileSpec(title: "Language",
+                     value: LanguageStore.shared.summary,
+                     badge: ("globe", DS.textSecondary),
+                     action: { languageOpen = true }),
             // Dev-facing on purpose: TestFlight reports become a screenshot
             // of on-device facts instead of a description (2026-07-09).
             TileSpec(title: "Diagnostics",
-                     value: "Test and report",
+                     value: String(localized: "Test and report"),
                      // The instrument, not the trace — the ECG line is the
                      // Feed tab's glyph (ruled 2026-07-10: Feed keeps it).
                      badge: ("stethoscope", DS.textSecondary),
@@ -240,7 +249,9 @@ struct AccountTile: View {
     var body: some View {
         VStack(alignment: .leading, spacing: DS.Space.s1) {
             HStack {
-                Text(title).dsText(.heading17).foregroundStyle(DS.textPrimary)
+                // The title doubles as its own catalog key — localized at
+                // render so the stored English still drives sort/id.
+                Text(LocalizedStringKey(title)).dsText(.heading17).foregroundStyle(DS.textPrimary)
                 Spacer()
                 if let avatar {
                     Image(uiImage: avatar)

@@ -2044,3 +2044,39 @@ overscroll rubber-band is the one motion piece still deferred. An AUTO-picked he
 image with no tap) was considered and set aside: it duplicates content
 that also appears in the media tiles, a redundancy the user-grown
 hero avoids entirely.
+
+## 60. Casberi speaks five languages (user, 2026-07-11)
+
+BUILT — localization for English, Spanish, Simplified Chinese, Japanese,
+Korean. Rulings:
+
+- SAMPLE CONTENT STAYS ENGLISH (user ruling). Only genuine UI chrome is
+  localized; the fake seeded "things" (Dinner with Sam, Trip plan: Lisbon,
+  Evening run, Deploy the staging build…) read as a person's real saved
+  items, which would never be machine-translated — so they stay as-authored.
+  Real captured content (a shared image's default title, the "You" source)
+  is likewise left as data.
+- IN-APP LANGUAGE SWITCHER, live. A "Language" tile on Settings opens a tray
+  (DSTray, one row per language in its own script + English gloss + accent-
+  selected checkmark, plus "System"). Picking one repaints the whole app on
+  the spot — `RootShell` hands the tree `\.environment(\.locale, LanguageStore
+  .shared.locale)`, so every SwiftUI `Text` re-resolves from its `.lproj`
+  with no relaunch. The choice also writes `AppleLanguages` so `String(
+  localized:)` and the next cold launch agree. This is an override ON TOP of
+  the device language — the phone's language is untouched.
+- TWO SURFACES, both covered: (1) UI chrome via a String Catalog
+  (`Localizable.xcstrings`, source en) — literal `Text("…")` auto-localize;
+  variable-fed chrome (tile titles, tab labels, DSTray titles, Feed day
+  headers, the HomeComposition generative-doc hero) is localized via
+  `Text(LocalizedStringKey(runtimeKey))` or `String(localized:)`. (2) The
+  on-device model answers in the reader's language — `LanguageStore
+  .llmLanguageDirective` is appended to the grounded-answer and synthesis
+  instructions (empty for English, so English prompts are unchanged).
+- WIDGETS + SHARE EXTENSION carry their own catalogs (separate bundles) and
+  follow the DEVICE language — an extension process can't see the app's
+  in-app override; standard iOS behavior.
+- Translations are AI-drafted, marked `needs_review` in the catalog — a
+  native-speaker pass is the remaining gate before the App Store. The
+  format-token integrity of every string was machine-validated (no dropped
+  `%@`/`%lld`). Verified on sim across ja/ko/zh-Hans/es: Feed, Settings,
+  Home (generative doc), the switcher, tab bar, and the extension bundles.

@@ -110,8 +110,8 @@ struct HeroEntry: TimelineEntry {
 
 struct HeroProvider: TimelineProvider {
     func placeholder(in context: Context) -> HeroEntry {
-        HeroEntry(date: .now, eyebrow: "This week",
-                  title: "Your things, one place",
+        HeroEntry(date: .now, eyebrow: String(localized: "This week"),
+                  title: String(localized: "Your things, one place"),
                   subline: "Casberi")
     }
 
@@ -128,15 +128,15 @@ struct HeroProvider: TimelineProvider {
     /// The hero rule, in miniature: the largest moving cluster leads.
     private func compose() -> HeroEntry {
         guard let container = try? SharedStore.extensionContainer() else {
-            return HeroEntry(date: .now, eyebrow: "This week",
-                             title: "Your things, one place", subline: "Casberi")
+            return HeroEntry(date: .now, eyebrow: String(localized: "This week"),
+                             title: String(localized: "Your things, one place"), subline: "Casberi")
         }
         let context = ModelContext(container)
         let things = (try? context.fetch(FetchDescriptor<Thing>())) ?? []
         guard !things.isEmpty else {
-            return HeroEntry(date: .now, eyebrow: "Now",
-                             title: "Your things go here",
-                             subline: "Save one in Casberi")
+            return HeroEntry(date: .now, eyebrow: String(localized: "Now"),
+                             title: String(localized: "Your things go here"),
+                             subline: String(localized: "Save one in Casberi"))
         }
 
         let typeTags = Set(ThingKind.allCases.map(\.typeTag))
@@ -152,13 +152,13 @@ struct HeroProvider: TimelineProvider {
 
         if let top, top.value >= 2 {
             let sources = Set(things.filter { $0.tags.contains(top.key) }.map(\.source)).count
-            return HeroEntry(date: .now, eyebrow: "This week",
+            return HeroEntry(date: .now, eyebrow: String(localized: "This week"),
                              title: "\(top.key) fills your week",
                              subline: "\(top.value) things across \(sources) app\(sources == 1 ? "" : "s")")
         }
         let count = things.count
-        return HeroEntry(date: .now, eyebrow: "Now",
-                         title: "Your things are landing",
+        return HeroEntry(date: .now, eyebrow: String(localized: "Now"),
+                         title: String(localized: "Your things are landing"),
                          subline: count == 1 ? "1 thing so far" : "\(count) things so far")
     }
 }

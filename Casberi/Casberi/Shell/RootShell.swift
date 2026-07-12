@@ -168,6 +168,10 @@ struct RootShell: View {
         .dsSensoryFeedback()
         .environment(bridges)
         .environment(chrome)
+        // The app-language override, applied to the whole tree: reading the
+        // observable store here means picking a language repaints every `Text`
+        // from its `.lproj` live, no relaunch (LanguageStore).
+        .environment(\.locale, LanguageStore.shared.locale)
         // Mode is the person's; a chosen photo implies the dark treatment.
         .preferredColorScheme(
             ThemeStore.shared.isLight && ThemeStore.shared.backgroundPhoto == nil ? .light : .dark

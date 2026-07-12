@@ -172,7 +172,7 @@ enum FoundationAnswer {
         Answer only from the things you are given. Never invent a thing or a \
         fact. Keep every word plain — no metaphors, no marketing. If none of \
         the things answer the question, say so plainly and pick none.
-        """
+        """ + LanguageStore.shared.llmLanguageDirective
         let prompt = """
         Question: "\(query)"
 
@@ -216,7 +216,7 @@ enum FoundationAnswer {
         marketing. Write the answer directly — no preamble like "Here is" or \
         "Summary:", no bullet points, no markdown. If the list is thin, say so \
         plainly.
-        """
+        """ + LanguageStore.shared.llmLanguageDirective
         let prompt = """
         Question: "\(query)"
 

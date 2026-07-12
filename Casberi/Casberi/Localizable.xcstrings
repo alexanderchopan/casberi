@@ -1,0 +1,6376 @@
+{
+  "sourceLanguage": "en",
+  "strings": {
+    "": {},
+    "  +": {},
+    "  −": {},
+    " · ": {},
+    " ●": {},
+    "%@ · %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$@ · %2$@"
+          }
+        }
+      }
+    },
+    "%@ · %@ ago": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$@ · %2$@ ago"
+          }
+        }
+      }
+    },
+    "%@ · %lld %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$@ · %2$lld %3$@"
+          }
+        }
+      }
+    },
+    "%@ connected": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%@ を接続しました"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%@ 연결됨"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%@ 已连接"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%@ conectado"
+          }
+        }
+      }
+    },
+    "%@ fills your week — %lld things across %lld app%@.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$@ fills your week — %2$lld things across %3$lld app%4$@."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "今週は%1$@が中心 — %3$lld個のアプリにまたがる%2$lld件のアイテム%4$@。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%1$@이(가) 이번 주를 채워요 — 앱 %3$lld개%4$@에 걸쳐 항목 %2$lld개."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%1$@ 填满了你这周 —— %3$lld 个应用里的 %2$lld 条内容%4$@。"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%1$@ llena tu semana: %2$lld elementos en %3$lld app%4$@."
+          }
+        }
+      }
+    },
+    "%@: %@?": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$@: %2$@?"
+          }
+        }
+      }
+    },
+    "%lld": {},
+    "%lld %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$lld %2$@"
+          }
+        }
+      }
+    },
+    "%lld things · %lld apps": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$lld things · %2$lld apps"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%1$lld件のアイテム · %2$lldアプリ"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "항목 %1$lld개 · 앱 %2$lld개"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%1$lld 条内容 · %2$lld 个应用"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%1$lld elementos · %2$lld apps"
+          }
+        }
+      }
+    },
+    "%lld%@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$lld%2$@"
+          }
+        }
+      }
+    },
+    "2 tasks found in mail": {},
+    "24h · 5 price points": {},
+    "A color or a photo behind your Home screen — and only there.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "ホーム画面の背景に色か写真を — ここだけに表示されます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "홈 화면 뒤에 색이나 사진 — 오직 그곳에만."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "在主页背后放一种颜色或一张照片 —— 只在这里。"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Un color o una foto detrás de tu pantalla de Inicio, y solo ahí."
+          }
+        }
+      }
+    },
+    "A preview — this bridge arrives with the connected apps update.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "プレビューです — この連携はアプリ連携のアップデートで登場します。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "미리 보기 — 이 연동은 연결된 앱 업데이트와 함께 제공돼요."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "预览 —— 这个桥接会随已连接应用的更新一同到来。"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Una vista previa: este puente llega con la actualización de apps conectadas."
+          }
+        }
+      }
+    },
+    "A preview — your real things replace it when you connect.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "プレビューです — 接続するとあなたの実際のアイテムに置き換わります。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "미리 보기 — 연결하면 실제 항목으로 바뀌어요."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "预览 —— 连接后会换成你真实的内容。"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Una vista previa: tus elementos reales la reemplazan cuando conectas."
+          }
+        }
+      }
+    },
+    "A vault is a folder of Markdown — find it in Files (often iCloud Drive → Obsidian). Read-only: the vault is never changed.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "vaultはMarkdownのフォルダです — ファイルアプリで探せます（多くはiCloud Drive → Obsidian）。読み取り専用で、vaultが変更されることはありません。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "볼트는 Markdown 폴더예요 — 파일 앱에서 찾을 수 있어요(보통 iCloud Drive → Obsidian). 읽기 전용: 볼트는 절대 바뀌지 않아요."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "vault 是一个 Markdown 文件夹 —— 在“文件”里找到它（通常在 iCloud Drive → Obsidian）。只读：vault 永远不会被改动。"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Un vault es una carpeta de Markdown: encuéntrala en Archivos (a menudo iCloud Drive → Obsidian). Solo lectura: el vault nunca se modifica."
+          }
+        }
+      }
+    },
+    "Add": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "追加"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "추가"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "添加"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Añadir"
+          }
+        }
+      }
+    },
+    "Add %@ %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Add %1$@ %2$@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%1$@ %2$@ を追加"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%1$@ %2$@ 추가"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "添加 %1$@ %2$@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Añadir %1$@ %2$@"
+          }
+        }
+      }
+    },
+    "Add a feed": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Añadir un feed"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "フィードを追加"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "피드 추가"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "添加订阅源"
+          }
+        }
+      }
+    },
+    "Add a tag": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "タグを追加"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "태그 추가"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "添加标签"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Añadir una etiqueta"
+          }
+        }
+      }
+    },
+    "All": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Todo"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "すべて"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "전체"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "全部"
+          }
+        }
+      }
+    },
+    "All in Feed": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Todo en el feed"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "フィードにすべて表示"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "피드 전체"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "全部在订阅流"
+          }
+        }
+      }
+    },
+    "All of this lands here. Start with three.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "すべてがここに集まります。まずは3つから。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "이 모든 게 여기에 담겨요. 세 개로 시작하세요."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "这一切都会落在这里。先从三个开始。"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Todo esto llega aquí. Empieza con tres."
+          }
+        }
+      }
+    },
+    "Apple Journal": {},
+    "Apple Notes": {},
+    "Apple offers no export or live read for Notes, so they arrive one at a time, as you share them — they land as your captures.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Apple Notesはエクスポートもライブ読み取りもできないため、共有するたびに1件ずつ届きます — あなたのキャプチャとして保存されます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Apple은 Apple Notes의 내보내기나 실시간 읽기를 제공하지 않아서, 공유할 때마다 하나씩 들어와요 — 내 캡처로 담겨요."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Apple 没有为“备忘录”提供导出或实时读取，所以它们会在你分享时一条条到来 —— 作为你的捕获落地。"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Apple no ofrece exportación ni lectura en vivo para Notas, así que llegan de una en una, a medida que las compartes: llegan como tus capturas."
+          }
+        }
+      }
+    },
+    "Apply": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "適用"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "적용"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "应用"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Aplicar"
+          }
+        }
+      }
+    },
+    "Approve": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Aprobar"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "承認"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "승인"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "批准"
+          }
+        }
+      }
+    },
+    "Approve on twitch.tv/activate": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "twitch.tv/activate で承認"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "twitch.tv/activate에서 승인"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "在 twitch.tv/activate 上批准"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Aprueba en twitch.tv/activate"
+          }
+        }
+      }
+    },
+    "Apps": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Apps"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "アプリ"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "앱"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "应用"
+          }
+        }
+      }
+    },
+    "Ask anything. Organize everything.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "何でも聞ける。すべてが整う。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "무엇이든 물어보세요. 모든 걸 정리하세요."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "任你提问，一切归位。"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Pregunta lo que sea. Organiza todo."
+          }
+        }
+      }
+    },
+    "Ask or save": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "質問か保存"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "묻거나 저장하기"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "提问或保存"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Pregunta o guarda"
+          }
+        }
+      }
+    },
+    "Browse apps": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Explorar apps"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "アプリを見る"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "앱 둘러보기"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "浏览应用"
+          }
+        }
+      }
+    },
+    "Cancel": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "キャンセル"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "취소"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "取消"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Cancelar"
+          }
+        }
+      }
+    },
+    "Change": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "変更"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "변경"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "更改"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Cambiar"
+          }
+        }
+      }
+    },
+    "Change photo": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "写真を変更"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "사진 변경"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "更换照片"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Cambiar foto"
+          }
+        }
+      }
+    },
+    "ChatGPT": {},
+    "Choose a photo": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "写真を選択"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "사진 선택"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "选择一张照片"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Elegir una foto"
+          }
+        }
+      }
+    },
+    "Choose conversations.json": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "conversations.json を選択"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "conversations.json 선택"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "选择 conversations.json"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Elegir conversations.json"
+          }
+        }
+      }
+    },
+    "Choose your vault folder": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "vaultフォルダを選択"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "볼트 폴더 선택"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "选择你的 vault 文件夹"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Elige la carpeta de tu vault"
+          }
+        }
+      }
+    },
+    "Clear %@ filter": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%@ フィルタをクリア"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%@ 필터 지우기"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "清除 %@ 筛选"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Quitar el filtro %@"
+          }
+        }
+      }
+    },
+    "Close": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "閉じる"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "닫기"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "关闭"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Cerrar"
+          }
+        }
+      }
+    },
+    "Connect": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "接続"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "연결"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "连接"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Conectar"
+          }
+        }
+      }
+    },
+    "Connect %@": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%@ を接続"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%@ 연결"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "连接 %@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Conectar %@"
+          }
+        }
+      }
+    },
+    "Connect one to continue": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "続けるには1つ接続してください"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "계속하려면 하나를 연결하세요"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "连接一个以继续"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Conecta una para continuar"
+          }
+        }
+      }
+    },
+    "Connect Twitch": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Conectar Twitch"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Twitch を接続"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Twitch 연결"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "连接 Twitch"
+          }
+        }
+      }
+    },
+    "Connected": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "接続済み"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "연결됨"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "已连接"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Conectado"
+          }
+        }
+      }
+    },
+    "Connected — live follows land in your feed.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "接続済み — ライブのフォローがフィードに届きます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "연결됨 — 라이브 팔로우가 피드에 담겨요."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "已连接 —— 直播关注会落进你的订阅流。"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Conectado: los seguimientos en vivo llegan a tu feed."
+          }
+        }
+      }
+    },
+    "Connected — notes sync when you visit or open the app.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "接続済み — アプリを開くとノートが同期されます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "연결됨 — 방문하거나 앱을 열 때 노트가 동기화돼요."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "已连接 —— 备忘录会在你访问或打开应用时同步。"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Conectado: las notas se sincronizan cuando visitas o abres la app."
+          }
+        }
+      }
+    },
+    "Connecting goes live when your things sync. Code: %@": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "アイテムが同期されると接続が有効になります。コード: %@"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "항목이 동기화되면 연결이 시작돼요. 코드: %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "当你的内容开始同步，连接便生效。代码：%@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "La conexión se activa cuando tus elementos se sincronizan. Código: %@"
+          }
+        }
+      }
+    },
+    "Continue": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "続ける"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "계속"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "继续"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Continuar"
+          }
+        }
+      }
+    },
+    "Day One": {},
+    "Delete \"%@\" from every thing?": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "すべてのアイテムから「%@」を削除しますか？"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "모든 항목에서 \"%@\"을(를) 삭제할까요?"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "从每条内容中删除“%@”？"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "¿Eliminar \"%@\" de todos los elementos?"
+          }
+        }
+      }
+    },
+    "Delete %lld things": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld件のアイテムを削除"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "항목 %lld개 삭제"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "删除 %lld 条内容"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Eliminar %lld elementos"
+          }
+        }
+      }
+    },
+    "Delete all your things?": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "すべてのアイテムを削除しますか？"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "모든 항목을 삭제할까요?"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "删除你所有的内容？"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "¿Eliminar todos tus elementos?"
+          }
+        }
+      }
+    },
+    "Delete everywhere": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "すべてから削除"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "모든 곳에서 삭제"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "全部删除"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Eliminar en todas partes"
+          }
+        }
+      }
+    },
+    "Delete everywhere…": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "すべてから削除…"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "모든 곳에서 삭제…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "全部删除…"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Eliminar en todas partes…"
+          }
+        }
+      }
+    },
+    "Deny": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Denegar"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "拒否"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "거부"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "拒绝"
+          }
+        }
+      }
+    },
+    "Dexscreener": {},
+    "Diagnostics": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "診断"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "진단"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "诊断"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Diagnóstico"
+          }
+        }
+      }
+    },
+    "Disconnect": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "接続を解除"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "연결 해제"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "断开连接"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Desconectar"
+          }
+        }
+      }
+    },
+    "Disconnect %@": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Desconectar %@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%@ の接続を解除"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%@ 연결 해제"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "断开 %@"
+          }
+        }
+      }
+    },
+    "Disconnect %@?": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%@ の接続を解除しますか？"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%@ 연결을 해제할까요?"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "断开 %@？"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "¿Desconectar %@?"
+          }
+        }
+      }
+    },
+    "Disconnect vault": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "vaultの接続を解除"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "볼트 연결 해제"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "断开 vault"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Desconectar vault"
+          }
+        }
+      }
+    },
+    "Disconnecting stops syncing. What already landed stays yours.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "接続を解除すると同期が止まります。すでに届いたものはそのまま残ります。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "연결을 해제하면 동기화가 멈춰요. 이미 담긴 것은 그대로 남아요."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "断开会停止同步。已经落地的内容仍归你所有。"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Al desconectar se detiene la sincronización. Lo que ya llegó sigue siendo tuyo."
+          }
+        }
+      }
+    },
+    "Evening run": {},
+    "Every thing with this tag gets the new name.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "このタグが付いたすべてのアイテムが新しい名前になります。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "이 태그가 붙은 모든 항목에 새 이름이 적용돼요."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "带有此标签的每条内容都会用上新名称。"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Cada elemento con esta etiqueta recibe el nuevo nombre."
+          }
+        }
+      }
+    },
+    "Feed": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Feed"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "フィード"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "피드"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "订阅流"
+          }
+        }
+      }
+    },
+    "Fetched directly by this iPhone — no account, no server, no ranking.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "このiPhoneが直接取得します — アカウントも、サーバーも、ランキングもなし。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "이 iPhone이 직접 가져와요 — 계정도, 서버도, 순위 매김도 없어요."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "由这台 iPhone 直接抓取 —— 无账户、无服务器、无排序。"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Obtenido directamente por este iPhone: sin cuenta, sin servidor, sin clasificación."
+          }
+        }
+      }
+    },
+    "Following": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Siguiendo"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "フォロー中"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "팔로잉"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "关注中"
+          }
+        }
+      }
+    },
+    "From %@": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%@ から"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%@에서"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "来自 %@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "De %@"
+          }
+        }
+      }
+    },
+    "Get a free key": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "無料キーを取得"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "무료 키 받기"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "获取免费密钥"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Consigue una clave gratis"
+          }
+        }
+      }
+    },
+    "Get an app password": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "アプリパスワードを取得"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "앱 암호 받기"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "获取应用专用密码"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Consigue una contraseña de app"
+          }
+        }
+      }
+    },
+    "Get your export": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "エクスポートを取得"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "내보내기 받기"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "获取你的导出文件"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Consigue tu exportación"
+          }
+        }
+      }
+    },
+    "Get your token": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "トークンを取得"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "토큰 받기"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "获取你的令牌"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Consigue tu token"
+          }
+        }
+      }
+    },
+    "Getting your code…": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "コードを取得中…"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "코드를 가져오는 중…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "正在获取你的代码…"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Obteniendo tu código…"
+          }
+        }
+      }
+    },
+    "Grow": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "拡大"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "펼치기"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "展开"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Ampliar"
+          }
+        }
+      }
+    },
+    "Imported": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "取り込み済み"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "가져옴"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "已导入"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Importado"
+          }
+        }
+      }
+    },
+    "In your photos": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "写真の中に"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "내 사진에"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "在你的照片里"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "En tus fotos"
+          }
+        }
+      }
+    },
+    "Jump to %@": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%@ へ移動"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%@(으)로 이동"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "跳到 %@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Ir a %@"
+          }
+        }
+      }
+    },
+    "Just landed": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "届いたばかり"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "방금 담김"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "刚刚落地"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Recién llegado"
+          }
+        }
+      }
+    },
+    "just now": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "たった今"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "방금"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "刚刚"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "ahora mismo"
+          }
+        }
+      }
+    },
+    "Keep its things": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "アイテムは残す"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "항목은 유지"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "保留它的内容"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Conservar sus elementos"
+          }
+        }
+      }
+    },
+    "Listening": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "録音中"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "듣는 중"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "聆听中"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Escuchando"
+          }
+        }
+      }
+    },
+    "Live": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "ライブ"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "라이브"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "直播中"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "En vivo"
+          }
+        }
+      }
+    },
+    "Mark done": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "完了にする"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "완료로 표시"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "标为完成"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Marcar como hecho"
+          }
+        }
+      }
+    },
+    "Mark not done": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "未完了に戻す"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "미완료로 표시"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "标为未完成"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Marcar como no hecho"
+          }
+        }
+      }
+    },
+    "My week": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "今週のわたし"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "이번 주"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "我的一周"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Mi semana"
+          }
+        }
+      }
+    },
+    "New name": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "新しい名前"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "새 이름"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "新名称"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Nuevo nombre"
+          }
+        }
+      }
+    },
+    "New since %@": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%@ 以降の新着"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%@ 이후 새 항목"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%@ 以来的新内容"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Nuevo desde %@"
+          }
+        }
+      }
+    },
+    "No mic access — allow Casberi in iOS Settings": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "マイクへのアクセスがありません — iOS設定でCasberiを許可してください"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "마이크 접근 불가 — iOS 설정에서 Casberi를 허용하세요"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "无麦克风权限 —— 请在 iOS 设置中允许 Casberi"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Sin acceso al micrófono: permite Casberi en Ajustes de iOS"
+          }
+        }
+      }
+    },
+    "Nothing to change.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "変更するものはありません。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "변경할 내용이 없어요."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "无需更改。"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Nada que cambiar."
+          }
+        }
+      }
+    },
+    "Nothing yet — save a thing and your week starts.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "まだ何もありません — アイテムを保存すると今週が始まります。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "아직 없어요 — 항목을 저장하면 이번 주가 시작돼요."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "还什么都没有 —— 保存一条内容，你的一周就此开始。"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Nada aún: guarda un elemento y tu semana empieza."
+          }
+        }
+      }
+    },
+    "Noticed": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "気づいた"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "발견됨"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "已留意"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Detectado"
+          }
+        }
+      }
+    },
+    "Obsidian": {},
+    "Older": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "以前"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "이전"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "更早"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Más antiguo"
+          }
+        }
+      }
+    },
+    "One line about what your things are up to.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "アイテムの様子を一言で。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "항목들이 무엇을 하고 있는지 한 줄로."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "用一句话讲讲你的内容都在忙些什么。"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Una línea sobre lo que hacen tus elementos."
+          }
+        }
+      }
+    },
+    "One-time import — entries become findable notes, dated as you wrote them. Photos stay in the export for now. Re-importing adds only what's new.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "一度きりの取り込み — 各エントリーは書いた日付のまま、検索できるノートになります。写真は今のところエクスポートに残ります。再取り込みでは新しいものだけが追加されます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "한 번만 가져오기 — 항목이 작성한 날짜 그대로 찾을 수 있는 노트가 돼요. 사진은 당분간 내보내기에 남아 있어요. 다시 가져오면 새로운 것만 추가돼요."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "一次性导入 —— 条目会变成可查找的笔记，日期按你书写时标注。照片暂时留在导出文件里。再次导入只会添加新的部分。"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Importación única: las entradas se vuelven notas que puedes encontrar, fechadas como las escribiste. Las fotos se quedan en la exportación por ahora. Al reimportar solo se añade lo nuevo."
+          }
+        }
+      }
+    },
+    "One-time import — entries become findable notes, dated as you wrote them. Photos stay in the export for now. Re-importing adds only what's new. (Apple offers no live read.)": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "一度きりの取り込み — 各エントリーは書いた日付のまま、検索できるノートになります。写真は今のところエクスポートに残ります。再取り込みでは新しいものだけが追加されます。（Appleはライブ読み取りに対応していません。）"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "한 번만 가져오기 — 항목이 작성한 날짜 그대로 찾을 수 있는 노트가 돼요. 사진은 당분간 내보내기에 남아 있어요. 다시 가져오면 새로운 것만 추가돼요. (Apple은 실시간 읽기를 제공하지 않아요.)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "一次性导入 —— 条目会变成可查找的笔记，日期按你书写时标注。照片暂时留在导出文件里。再次导入只会添加新的部分。（Apple 未提供实时读取。）"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Importación única: las entradas se vuelven notas que puedes encontrar, fechadas como las escribiste. Las fotos se quedan en la exportación por ahora. Al reimportar solo se añade lo nuevo. (Apple no ofrece lectura en vivo.)"
+          }
+        }
+      }
+    },
+    "One-time import — your chats become findable things. Re-importing later adds only what's new.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "一度きりの取り込み — チャットが検索できるアイテムになります。あとで再取り込みしても新しいものだけが追加されます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "한 번만 가져오기 — 대화가 찾을 수 있는 항목이 돼요. 나중에 다시 가져오면 새로운 것만 추가돼요."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "一次性导入 —— 你的对话会变成可查找的内容。以后再次导入只会添加新的部分。"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Importación única: tus chats se vuelven elementos que puedes encontrar. Al reimportar más tarde solo se añade lo nuevo."
+          }
+        }
+      }
+    },
+    "Open": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "開く"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "열기"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "打开"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Abrir"
+          }
+        }
+      }
+    },
+    "Open in app": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "アプリで開く"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "앱에서 열기"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "在应用中打开"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Abrir en la app"
+          }
+        }
+      }
+    },
+    "Open Notes": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Apple Notes を開く"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Notes 열기"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "打开备忘录"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Abrir Notas"
+          }
+        }
+      }
+    },
+    "Paste a site's feed URL — new posts land in your feed as links.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "サイトのフィードURLを貼り付けてください — 新しい投稿がリンクとしてフィードに届きます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "사이트의 피드 URL을 붙여넣으세요 — 새 글이 링크로 피드에 담겨요."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "粘贴网站的订阅源地址 —— 新帖子会作为链接落进你的订阅流。"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Pega la URL del feed de un sitio: las nuevas publicaciones llegan a tu feed como enlaces."
+          }
+        }
+      }
+    },
+    "Paste a wallet address or ENS name — its holdings and activity land in your feed.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "ウォレットアドレスかENS名を貼り付けてください — 保有資産とアクティビティがフィードに届きます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "지갑 주소나 ENS 이름을 붙여넣으세요 — 보유 자산과 활동이 피드에 담겨요."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "粘贴一个钱包地址或 ENS 名称 —— 它的持仓和动态会落进你的订阅流。"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Pega una dirección de cartera o un nombre ENS: sus tenencias y su actividad llegan a tu feed."
+          }
+        }
+      }
+    },
+    "Pause": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "一時停止"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "일시정지"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "暂停"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Pausar"
+          }
+        }
+      }
+    },
+    "Pin": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "ピン留め"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "고정"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "置顶"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Fijar"
+          }
+        }
+      }
+    },
+    "Pin to Home": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "ホームにピン留め"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "홈에 고정"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "置顶到主页"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Fijar en Inicio"
+          }
+        }
+      }
+    },
+    "Pinned": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "ピン留め済み"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "고정됨"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "已置顶"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Fijado"
+          }
+        }
+      }
+    },
+    "Pinned things, tap to grow": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "ピン留めしたアイテム、タップで拡大"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "고정된 항목, 탭하면 펼쳐져요"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "已置顶的内容，点按展开"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Elementos fijados, toca para ampliar"
+          }
+        }
+      }
+    },
+    "Pinned things, tap to shrink": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "ピン留めしたアイテム、タップで縮小"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "고정된 항목, 탭하면 접혀요"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "已置顶的内容，点按收起"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Elementos fijados, toca para reducir"
+          }
+        }
+      }
+    },
+    "Pinned to Home": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "ホームにピン留めしました"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "홈에 고정됨"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "已置顶到主页"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Fijado en Inicio"
+          }
+        }
+      }
+    },
+    "Play": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "再生"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "재생"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "播放"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Reproducir"
+          }
+        }
+      }
+    },
+    "price": {},
+    "Profile name or SteamID": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "プロフィール名かSteamID"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "프로필 이름 또는 SteamID"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "个人资料名称或 SteamID"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Nombre de perfil o SteamID"
+          }
+        }
+      }
+    },
+    "Public price data only — nothing about you leaves your iPhone. Charts open on Dexscreener.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "公開の価格データのみ — あなたの情報がiPhoneから出ることはありません。チャートはDexscreenerで開きます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "공개 시세 데이터만 — 나에 관한 건 iPhone을 떠나지 않아요. 차트는 Dexscreener에서 열려요."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "仅公开价格数据 —— 关于你的一切都不会离开这台 iPhone。图表在 Dexscreener 上打开。"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Solo datos públicos de precios: nada sobre ti sale de tu iPhone. Los gráficos se abren en Dexscreener."
+          }
+        }
+      }
+    },
+    "Read Casberi in your language — it switches right away. Your device language stays as it is.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Casberiをあなたの言語で — すぐに切り替わります。デバイスの言語はそのままです。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Casberi를 원하는 언어로 읽으세요 — 바로 바뀌어요. 기기 언어는 그대로예요."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "用你的语言阅读 Casberi —— 立即切换。你设备的语言保持不变。"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Lee Casberi en tu idioma: cambia al instante. El idioma de tu dispositivo se queda como está."
+          }
+        }
+      }
+    },
+    "Read-only — watching can never trade or move funds. Activity is public, read across chains directly on this iPhone.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "読み取り専用 — 監視で取引や資金移動が行われることはありません。アクティビティは公開情報で、このiPhoneが各チェーンから直接読み取ります。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "읽기 전용 — 지켜보기는 절대 거래하거나 자금을 옮길 수 없어요. 활동은 공개돼 있고, 이 iPhone에서 여러 체인에 걸쳐 직접 읽어와요."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "只读 —— 关注永远无法交易或转移资金。动态是公开的，直接在这台 iPhone 上跨链读取。"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Solo lectura: seguir nunca puede operar ni mover fondos. La actividad es pública y se lee entre cadenas directamente en este iPhone."
+          }
+        }
+      }
+    },
+    "Reads when you ask · saves only what you approve": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "質問したときに読み取り · 承認したものだけを保存"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "물어볼 때만 읽고 · 승인한 것만 저장해요"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "你问才读 · 只保存你批准的内容"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Lee cuando preguntas · guarda solo lo que apruebas"
+          }
+        }
+      }
+    },
+    "Recent": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "最近"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "최근"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "最近"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Reciente"
+          }
+        }
+      }
+    },
+    "Reconnect": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "再接続"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "다시 연결"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "重新连接"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Reconectar"
+          }
+        }
+      }
+    },
+    "Record a voice note": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "ボイスメモを録音"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "음성 메모 녹음"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "录一段语音笔记"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Graba una nota de voz"
+          }
+        }
+      }
+    },
+    "Related": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "関連"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "관련"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "相关"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Relacionado"
+          }
+        }
+      }
+    },
+    "Remove": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "削除"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "제거"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "移除"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Quitar"
+          }
+        }
+      }
+    },
+    "Remove %@?": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%@ を削除しますか？"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%@을(를) 제거할까요?"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "移除 %@？"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "¿Quitar %@?"
+          }
+        }
+      }
+    },
+    "Remove from this thing": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "このアイテムから削除"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "이 항목에서 제거"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "从这条内容中移除"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Quitar de este elemento"
+          }
+        }
+      }
+    },
+    "Remove its things too": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "アイテムも一緒に削除"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "항목도 함께 제거"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "同时移除它的内容"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Quitar también sus elementos"
+          }
+        }
+      }
+    },
+    "Remove key": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "キーを削除"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "키 제거"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "移除密钥"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Quitar clave"
+          }
+        }
+      }
+    },
+    "Remove photo": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "写真を削除"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "사진 제거"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "移除照片"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Quitar foto"
+          }
+        }
+      }
+    },
+    "Remove token": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "トークンを削除"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "토큰 제거"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "移除令牌"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Quitar token"
+          }
+        }
+      }
+    },
+    "Removing the key stops syncing. What already landed stays yours.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "キーを削除すると同期が止まります。すでに届いたものはそのまま残ります。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "키를 제거하면 동기화가 멈춰요. 이미 담긴 것은 그대로 남아요."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "移除密钥会停止同步。已经落地的内容仍归你所有。"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Quitar la clave detiene la sincronización. Lo que ya llegó sigue siendo tuyo."
+          }
+        }
+      }
+    },
+    "Removing the token stops syncing. What already landed stays yours.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "トークンを削除すると同期が止まります。すでに届いたものはそのまま残ります。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "토큰을 제거하면 동기화가 멈춰요. 이미 담긴 것은 그대로 남아요."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "移除令牌会停止同步。已经落地的内容仍归你所有。"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Quitar el token detiene la sincronización. Lo que ya llegó sigue siendo tuyo."
+          }
+        }
+      }
+    },
+    "Rename": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "名前を変更"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "이름 변경"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "重命名"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Renombrar"
+          }
+        }
+      }
+    },
+    "Rename \"%@\" everywhere": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "「%@」をすべてで名前変更"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "모든 곳에서 \"%@\" 이름 변경"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "在所有位置重命名“%@”"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Renombrar \"%@\" en todas partes"
+          }
+        }
+      }
+    },
+    "Rename %@": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%@ の名前を変更"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%@ 이름 변경"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "重命名 %@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Renombrar %@"
+          }
+        }
+      }
+    },
+    "Rename everywhere…": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "すべてで名前変更…"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "모든 곳에서 이름 변경…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "在所有位置重命名…"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Renombrar en todas partes…"
+          }
+        }
+      }
+    },
+    "Rename tag": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "タグの名前を変更"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "태그 이름 변경"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "重命名标签"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Renombrar etiqueta"
+          }
+        }
+      }
+    },
+    "Reset to default": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "デフォルトに戻す"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "기본값으로 재설정"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "恢复默认"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Restablecer valor predeterminado"
+          }
+        }
+      }
+    },
+    "Resume": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "再開"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "다시 시작"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "继续"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Reanudar"
+          }
+        }
+      }
+    },
+    "Review": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "確認"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "검토"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "查看"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Revisar"
+          }
+        }
+      }
+    },
+    "RSS": {},
+    "Running…": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "実行中…"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "실행 중…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "运行中…"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Ejecutando…"
+          }
+        }
+      }
+    },
+    "Save ${text}": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "${text} を保存"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "${text} 저장"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "保存 ${text}"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Guardar ${text}"
+          }
+        }
+      }
+    },
+    "Save a thing": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "アイテムを保存"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "항목 저장"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "保存一条内容"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Guarda un elemento"
+          }
+        }
+      }
+    },
+    "Save to Casberi": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Casberi に保存"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Casberi에 저장"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "保存到 Casberi"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Guardar en Casberi"
+          }
+        }
+      }
+    },
+    "Saved. It's in your feed.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "保存しました。フィードにあります。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "저장됐어요. 피드에 있어요."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "已保存。它在你的订阅流里。"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Guardado. Está en tu feed."
+          }
+        }
+      }
+    },
+    "Saves text or a link as a thing — no app, no destination decision.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "テキストやリンクをアイテムとして保存します — アプリも保存先も選ぶ必要はありません。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "텍스트나 링크를 항목으로 저장해요 — 앱도, 목적지 선택도 필요 없어요."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "把文字或链接保存成一条内容 —— 无需应用，无需选择去向。"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Guarda texto o un enlace como elemento: sin app, sin decidir un destino."
+          }
+        }
+      }
+    },
+    "Scan this in Claude, Raycast, or any MCP client to connect it to your things.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "これをClaude、Raycast、その他のMCPクライアントでスキャンして、あなたのアイテムに接続します。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Claude, Raycast 등 MCP 클라이언트에서 스캔하면 내 항목과 연결돼요."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "在 Claude、Raycast 或任意 MCP 客户端中扫描它，即可连接到你的内容。"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Escanea esto en Claude, Raycast o cualquier cliente MCP para conectarlo con tus elementos."
+          }
+        }
+      }
+    },
+    "Screenshot this screen and send it back — every line is a real result from this device.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "この画面をスクリーンショットして送り返してください — すべての行がこのデバイスの実際の結果です。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "이 화면을 스크린샷해서 보내주세요 — 모든 줄이 이 기기의 실제 결과예요."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "截下这个屏幕并发回来 —— 每一行都是这台设备上的真实结果。"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Haz una captura de esta pantalla y envíala: cada línea es un resultado real de este dispositivo."
+          }
+        }
+      }
+    },
+    "See your feed": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "フィードを見る"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "피드 보기"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "查看你的订阅流"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Ver tu feed"
+          }
+        }
+      }
+    },
+    "Send": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "送信"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "보내기"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "发送"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Enviar"
+          }
+        }
+      }
+    },
+    "Settings": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Ajustes"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "設定"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "설정"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "设置"
+          }
+        }
+      }
+    },
+    "Share your week": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "今週をシェア"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "이번 주 공유"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "分享你的一周"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Comparte tu semana"
+          }
+        }
+      }
+    },
+    "Show everything": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "すべて表示"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "전체 보기"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "显示全部"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Mostrar todo"
+          }
+        }
+      }
+    },
+    "Shrink": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "縮小"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "접기"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "收起"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Reducir"
+          }
+        }
+      }
+    },
+    "Sign-in happens on Twitch's own page — a short code, no password in the app. Read-only: it can never chat, follow, or subscribe.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "サインインはTwitch自身のページで行われます — 短いコードを使い、アプリにパスワードは入りません。読み取り専用で、チャットやフォロー、登録はできません。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "로그인은 Twitch 자체 페이지에서 이뤄져요 — 짧은 코드, 앱에는 암호를 입력하지 않아요. 읽기 전용: 채팅, 팔로우, 구독은 절대 할 수 없어요."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "登录在 Twitch 自己的页面上完成 —— 一个短代码，应用里不输密码。只读：它永远无法聊天、关注或订阅。"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "El inicio de sesión ocurre en la propia página de Twitch: un código corto, sin contraseña en la app. Solo lectura: nunca puede chatear, seguir ni suscribirse."
+          }
+        }
+      }
+    },
+    "Steam": {},
+    "Stop and keep": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "停止して残す"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "멈추고 유지"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "停止并保留"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Detener y conservar"
+          }
+        }
+      }
+    },
+    "Stops new %@ things from landing. What already landed stays yours unless you remove it.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "新しい%@のアイテムが届かなくなります。すでに届いたものは、削除しない限りそのまま残ります。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "새 %@ 항목이 담기지 않게 멈춰요. 이미 담긴 것은 제거하지 않는 한 그대로 남아요."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "阻止新的 %@ 内容落地。已经落地的内容仍归你所有，除非你把它移除。"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Evita que lleguen nuevos elementos de %@. Lo que ya llegó sigue siendo tuyo a menos que lo quites."
+          }
+        }
+      }
+    },
+    "Swipe a token to pin it to Home and Feed, or to stop watching it.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "トークンをスワイプすると、ホームとフィードにピン留めしたり、監視を止めたりできます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "토큰을 스와이프해서 홈과 피드에 고정하거나 지켜보기를 멈추세요."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "滑动一个代币，把它置顶到主页和订阅流，或停止关注它。"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Desliza un token para fijarlo en Inicio y el feed, o para dejar de seguirlo."
+          }
+        }
+      }
+    },
+    "Swipe a wallet to pin its holdings to Home and Feed.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "ウォレットをスワイプすると、保有資産をホームとフィードにピン留めできます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "지갑을 스와이프해서 보유 자산을 홈과 피드에 고정하세요."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "滑动一个钱包，把它的持仓置顶到主页和订阅流。"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Desliza una cartera para fijar sus tenencias en Inicio y el feed."
+          }
+        }
+      }
+    },
+    "t": {},
+    "Tags": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "タグ"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "태그"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "标签"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Etiquetas"
+          }
+        }
+      }
+    },
+    "Tap a chip — the feed takes that app's shape.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "チップをタップすると、フィードがそのアプリの形になります。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "칩을 탭하세요 — 피드가 그 앱의 모습이 돼요."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "点一个标签 —— 订阅流会呈现那个应用的样子。"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Toca un chip: el feed toma la forma de esa app."
+          }
+        }
+      }
+    },
+    "Tap a pin to grow its card": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "ピンをタップするとカードが拡大します"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "고정 항목을 탭하면 카드가 펼쳐져요"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "点一个置顶项展开它的卡片"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Toca un elemento fijado para ampliar su tarjeta"
+          }
+        }
+      }
+    },
+    "Text": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "テキスト"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "텍스트"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "文字"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Texto"
+          }
+        }
+      }
+    },
+    "The key stays in this iPhone's Keychain and goes only to Steam itself. Read-only — public profile data.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "キーはこのiPhoneのKeychainに保管され、Steam本体にだけ送られます。読み取り専用 — 公開プロフィールのデータです。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "키는 이 iPhone의 Keychain에 남아 Steam 자체로만 전송돼요. 읽기 전용 — 공개 프로필 데이터."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "密钥留在这台 iPhone 的 Keychain 里，只发给 Steam 本身。只读 —— 公开的个人资料数据。"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "La clave se queda en el Keychain de este iPhone y va solo a Steam. Solo lectura: datos públicos de perfil."
+          }
+        }
+      }
+    },
+    "The name changes on every thing that carries it.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "その名前が付いたすべてのアイテムで名前が変わります。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "그 이름을 가진 모든 항목에서 이름이 바뀌어요."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "带有它的每条内容都会改成新名称。"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "El nombre cambia en todos los elementos que lo llevan."
+          }
+        }
+      }
+    },
+    "The token stays in this iPhone's Keychain and goes only to %@ itself. Read-only.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "トークンはこのiPhoneのKeychainに保管され、%@本体にだけ送られます。読み取り専用です。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "토큰은 이 iPhone의 Keychain에 남아 %@ 자체로만 전송돼요. 읽기 전용."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "令牌留在这台 iPhone 的 Keychain 里，只发给 %@ 本身。只读。"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "El token se queda en el Keychain de este iPhone y va solo a %@. Solo lectura."
+          }
+        }
+      }
+    },
+    "There was nothing to save.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "保存するものはありませんでした。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "저장할 것이 없었어요."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "没有可保存的内容。"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "No había nada que guardar."
+          }
+        }
+      }
+    },
+    "Things keep their content — only the tag goes.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "アイテムの内容はそのまま — タグだけが消えます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "항목의 내용은 그대로 — 태그만 사라져요."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "内容会保留 —— 只有标签会被移除。"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Los elementos conservan su contenido: solo se quita la etiqueta."
+          }
+        }
+      }
+    },
+    "To do": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "やること"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "할 일"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "待办"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Por hacer"
+          }
+        }
+      }
+    },
+    "Today": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "今日"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "오늘"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "今天"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Hoy"
+          }
+        }
+      }
+    },
+    "Twitch": {},
+    "Type a name, symbol, address, or Dexscreener link — matching tokens appear as you type. A watched token's live price chart lands in your feed.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "名前、シンボル、アドレス、またはDexscreenerのリンクを入力してください — 入力に合わせて一致するトークンが表示されます。監視中のトークンのライブ価格チャートがフィードに届きます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "이름, 심볼, 주소, Dexscreener 링크를 입력하세요 — 입력하는 대로 일치하는 토큰이 나타나요. 지켜보는 토큰의 실시간 시세 차트가 피드에 담겨요."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "输入名称、符号、地址或 Dexscreener 链接 —— 匹配的代币会随你输入出现。被关注代币的实时价格图表会落进你的订阅流。"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Escribe un nombre, símbolo, dirección o enlace de Dexscreener: los tokens que coinciden aparecen mientras escribes. El gráfico de precio en vivo de un token seguido llega a tu feed."
+          }
+        }
+      }
+    },
+    "Unpin": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "ピン留めを解除"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "고정 해제"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "取消置顶"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Dejar de fijar"
+          }
+        }
+      }
+    },
+    "Unwatch": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "監視をやめる"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "지켜보기 해제"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "取消关注"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Dejar de seguir"
+          }
+        }
+      }
+    },
+    "Update": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "更新"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "업데이트"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "更新"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Actualizar"
+          }
+        }
+      }
+    },
+    "Waiting for your approval…": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "承認を待っています…"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "승인을 기다리는 중…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "等待你的批准…"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Esperando tu aprobación…"
+          }
+        }
+      }
+    },
+    "Wallet": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "ウォレット"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "지갑"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "钱包"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Cartera"
+          }
+        }
+      }
+    },
+    "Watch a token": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "トークンを監視"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "토큰 지켜보기"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "关注一个代币"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Sigue un token"
+          }
+        }
+      }
+    },
+    "Watch an address": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "アドレスを監視"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "주소 지켜보기"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "关注一个地址"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Sigue una dirección"
+          }
+        }
+      }
+    },
+    "Watching": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "監視中"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "지켜보는 중"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "关注中"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Siguiendo"
+          }
+        }
+      }
+    },
+    "Watching %lld": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld件を監視中"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld개 지켜보는 중"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "关注 %lld 个"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Siguiendo %lld"
+          }
+        }
+      }
+    },
+    "Web API key": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Web APIキー"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "웹 API 키"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Web API 密钥"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Clave de la API web"
+          }
+        }
+      }
+    },
+    "What it does": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "できること"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "하는 일"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "它有什么用"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Qué hace"
+          }
+        }
+      }
+    },
+    "What lands in your feed": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "フィードに届くもの"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "피드에 담기는 것"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "有什么会落进你的订阅流"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Qué llega a tu feed"
+          }
+        }
+      }
+    },
+    "What's my week": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "今週のわたしは"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "이번 주는 어때"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "我这周怎么样"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Cómo va mi semana"
+          }
+        }
+      }
+    },
+    "Your %@": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "あなたの%@"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "내 %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "你的 %@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Tu %@"
+          }
+        }
+      }
+    },
+    "Your account": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "アカウント"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "내 계정"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "你的账户"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Tu cuenta"
+          }
+        }
+      }
+    },
+    "Your apps, one feed.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "あなたのアプリを、ひとつのフィードに。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "여러 앱, 하나의 피드."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "你的所有应用，汇成一条订阅流。"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Tus apps, un solo feed."
+          }
+        }
+      }
+    },
+    "Your feed": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "あなたのフィード"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "내 피드"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "你的订阅流"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Tu feed"
+          }
+        }
+      }
+    },
+    "Your feed · flowing": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "あなたのフィード · 流れています"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "내 피드 · 흐르는 중"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "你的订阅流 · 流动中"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Tu feed · fluyendo"
+          }
+        }
+      }
+    },
+    "Your follows": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "あなたのフォロー"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "내 팔로우"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "你的关注"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Tus seguimientos"
+          }
+        }
+      }
+    },
+    "Your photo": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "あなたの写真"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "내 사진"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "你的照片"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Tu foto"
+          }
+        }
+      }
+    },
+    "Your things are landing — %lld so far.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "アイテムが届いています — これまでに%lld件。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "항목이 담기고 있어요 — 지금까지 %lld개."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "你的内容正在落地 —— 到目前为止 %lld 条。"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Tus elementos están llegando: %lld hasta ahora."
+          }
+        }
+      }
+    },
+    "Your things, voice recordings, and photo — all on this iPhone. No undo.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "あなたのアイテム、録音、写真 — すべてこのiPhone上にあります。取り消しはできません。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "내 항목, 음성 녹음, 사진 — 모두 이 iPhone에 있어요. 되돌릴 수 없어요."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "你的内容、语音录音和照片 —— 全都在这台 iPhone 上。无法撤销。"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Tus elementos, grabaciones de voz y foto: todo en este iPhone. Sin deshacer."
+          }
+        }
+      }
+    },
+    "Your token": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "あなたのトークン"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "내 토큰"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "你的令牌"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Tu token"
+          }
+        }
+      }
+    },
+    "Your vault": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "あなたのvault"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "내 볼트"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "你的 vault"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Tu vault"
+          }
+        }
+      }
+    },
+    "Your watchlist": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "あなたのウォッチリスト"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "내 관심 목록"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "你的关注列表"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Tu lista de seguimiento"
+          }
+        }
+      }
+    },
+    "Your week": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "今週のわたし"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "이번 주"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "你的一周"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Tu semana"
+          }
+        }
+      }
+    },
+    "Yours to allow": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "許可はあなた次第"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "허용은 당신의 몫"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "由你来允许"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Tú decides qué permitir"
+          }
+        }
+      }
+    },
+    "Home": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "主页"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "ホーム"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "홈"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Inicio"
+          }
+        }
+      }
+    },
+    "Avatar": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "头像"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "アバター"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "아바타"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Foto de perfil"
+          }
+        }
+      }
+    },
+    "Data": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "数据"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "データ"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "데이터"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Datos"
+          }
+        }
+      }
+    },
+    "Theme": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "主题"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "テーマ"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "테마"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Tema"
+          }
+        }
+      }
+    },
+    "Background": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "背景"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "背景"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "배경"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Fondo"
+          }
+        }
+      }
+    },
+    "Add your photo": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "添加照片"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "写真を追加"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "사진 추가"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Añade tu foto"
+          }
+        }
+      }
+    },
+    "A color or a photo": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "颜色或照片"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "色または写真"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "색상 또는 사진"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Un color o una foto"
+          }
+        }
+      }
+    },
+    "Test and report": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "测试并反馈"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "テストして報告"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "테스트 및 보고"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Probar e informar"
+          }
+        }
+      }
+    },
+    "%lld things · on device": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld 条内容 · 在设备上"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld 件のアイテム · この端末に"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "항목 %lld개 · 기기에 저장"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld elementos · en el dispositivo"
+          }
+        }
+      }
+    },
+    "Dark": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "深色"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "ダーク"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "다크"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Oscuro"
+          }
+        }
+      }
+    },
+    "Light": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "浅色"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "ライト"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "라이트"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Claro"
+          }
+        }
+      }
+    },
+    "System": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "系统"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "システム"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "시스템"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Sistema"
+          }
+        }
+      }
+    },
+    "Match your device": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "跟随设备"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "デバイスに合わせる"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "기기 설정 따르기"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Según tu dispositivo"
+          }
+        }
+      }
+    },
+    "Yesterday": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "昨天"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "昨日"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "어제"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Ayer"
+          }
+        }
+      }
+    },
+    "Language": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "语言"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "言語"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "언어"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Idioma"
+          }
+        }
+      }
+    },
+    "Pair a client": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "配对客户端"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "クライアントを接続"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "클라이언트 연결"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Vincular un cliente"
+          }
+        }
+      }
+    },
+    "Connect another app": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "连接更多应用"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "アプリをもっと接続"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "앱 더 연결하기"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Conecta otra app"
+          }
+        }
+      }
+    },
+    "More of your day lands by itself.": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "让更多日常自动汇入。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "一日のできごとがもっと自動で集まります。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "하루의 더 많은 것이 저절로 모여요."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Más de tu día llega solo."
+          }
+        }
+      }
+    },
+    "What's going on": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "近况"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "いま起きていること"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "무슨 일이 있나요"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Qué está pasando"
+          }
+        }
+      }
+    },
+    "By app — tags take over as they form": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "按应用 —— 标签形成后接管"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "アプリ別 — タグができると引き継ぎます"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "앱별 — 태그가 생기면 태그가 대신해요"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Por app: las etiquetas toman el relevo al formarse"
+          }
+        }
+      }
+    },
+    "Your things map here as they land": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "你的内容会随汇入在这里成形"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "あなたのアイテムは集まるとここに配置されます"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "항목이 들어오면 여기에 배치돼요"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Tus elementos se ubican aquí al llegar"
+          }
+        }
+      }
+    },
+    "The week": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "本周"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "今週"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "이번 주"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "La semana"
+          }
+        }
+      }
+    },
+    "What it was about": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "关于什么"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "何についてか"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "무엇에 관한 것"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "De qué trató"
+          }
+        }
+      }
+    },
+    "Weekend": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "周末"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "週末"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "주말"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Fin de semana"
+          }
+        }
+      }
+    },
+    "A quiet day": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "平静的一天"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "静かな一日"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "조용한 하루"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Un día tranquilo"
+          }
+        }
+      }
+    },
+    "Nothing new yet — your things keep.": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "暂无新内容 —— 你的东西都在。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "まだ新しいものはありません — アイテムはそのままです。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "아직 새로운 건 없어요 — 항목은 그대로예요."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Nada nuevo aún: tus elementos siguen ahí."
+          }
+        }
+      }
+    },
+    "Now": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "现在"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "今"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "지금"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Ahora"
+          }
+        }
+      }
+    },
+    "Your things go here": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "你的内容会出现在这里"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "ここにあなたのアイテムが表示されます"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "여기에 항목이 표시돼요"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Aquí van tus elementos"
+          }
+        }
+      }
+    },
+    "Paste, speak, or share one in.": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "粘贴、口述或分享一条进来。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "貼り付け・音声・共有で追加できます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "붙여넣기, 음성, 공유로 추가하세요."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Pega, habla o comparte uno."
+          }
+        }
+      }
+    },
+    "Swipe a thing in Feed to pin it here.": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "在动态中滑动某条内容即可置顶到这里。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "フィードでアイテムをスワイプするとここに固定できます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "피드에서 항목을 밀어 여기에 고정하세요."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Desliza un elemento en Feed para fijarlo aquí."
+          }
+        }
+      }
+    },
+    "Loading your holdings…": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "正在加载你的持仓…"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "保有状況を読み込み中…"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "보유 자산 불러오는 중…"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Cargando tus posiciones…"
+          }
+        }
+      }
+    },
+    "Your wallet": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "你的钱包"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "あなたのウォレット"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "내 지갑"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Tu monedero"
+          }
+        }
+      }
+    },
+    "Getting started": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "开始使用"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "はじめに"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "시작하기"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Primeros pasos"
+          }
+        }
+      }
+    },
+    "Your home builds itself": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "你的主页会自动生成"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "あなたのホームはひとりでに組み上がります"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "홈이 스스로 만들어져요"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Tu inicio se construye solo"
+          }
+        }
+      }
+    },
+    "Connect an app or capture one thing - what lands composes this screen.": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "连接一个应用或捕获一条内容 —— 汇入的内容会构成这个界面。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "アプリを接続するか何か1つ取り込むと — 集まったものがこの画面を構成します。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "앱을 연결하거나 하나를 담아 보세요 — 들어온 것이 이 화면을 구성해요."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Conecta una app o captura algo: lo que llega compone esta pantalla."
+          }
+        }
+      }
+    },
+    "A quiet week": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "平静的一周"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "静かな一週間"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "조용한 한 주"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Una semana tranquila"
+          }
+        }
+      }
+    },
+    "Your week, banked": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "你这周，已归档"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "今週のまとめ"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "이번 주, 정리됨"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Tu semana, guardada"
+          }
+        }
+      }
+    },
+    "Your things keep — %lld in all.": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "你的内容都在 —— 共 %lld 条。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "アイテムはそのまま — 全部で %lld 件。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "항목은 그대로예요 — 모두 %lld개."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Tus elementos siguen — %lld en total."
+          }
+        }
+      }
+    },
+    "%lld things · %@ led": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%1$lld 条内容 · %2$@ 居首"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%1$lld 件 · %2$@ が中心"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "항목 %1$lld개 · %2$@ 주도"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%1$lld elementos · %2$@ al frente"
+          }
+        }
+      }
+    },
+    "1 thing landed": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "汇入 1 条内容"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "1 件が届きました"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "항목 1개 도착"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Llegó 1 elemento"
+          }
+        }
+      }
+    },
+    "%lld things landed": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "汇入 %lld 条内容"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld 件が届きました"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "항목 %lld개 도착"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Llegaron %lld elementos"
+          }
+        }
+      }
+    },
+    "Just landed · %@": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "刚刚汇入 · %@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "たった今届いた · %@"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "방금 도착 · %@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Recién llegado · %@"
+          }
+        }
+      }
+    },
+    "%lld things": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld 条内容"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld 件"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "항목 %lld개"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld elementos"
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}

@@ -70,7 +70,7 @@ final class ShareViewController: UIViewController {
     /// A small confirmation pill — Bob's words, no "successfully".
     private func show(confirmation saved: Bool) {
         let label = UILabel()
-        label.text = saved ? "Saved to Casberi" : "Couldn't save"
+        label.text = saved ? String(localized: "Saved to Casberi") : String(localized: "Couldn't save")
         label.font = .systemFont(ofSize: 17)
         label.textColor = .white
         label.textAlignment = .center

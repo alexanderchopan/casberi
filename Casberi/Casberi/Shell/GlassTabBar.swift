@@ -81,7 +81,7 @@ struct GlassTabBar: View {
                     VStack(spacing: DS.Space.s1) {
                         tabIcon(for: tab, active: active)
                         if !chrome.minimized {
-                            Text(tab.label).dsText(.tab10)
+                            Text(LocalizedStringKey(tab.label)).dsText(.tab10)
                                 .transition(.opacity.combined(with: .scale(scale: 0.8)))
                         }
                     }

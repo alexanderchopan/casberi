@@ -18,7 +18,9 @@ struct DSTray<Content: View>: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: DS.Space.s4) {
-            Text(title)
+            // The title doubles as its own catalog key — a title that isn't a
+            // key just renders verbatim, so dynamic titles stay safe.
+            Text(LocalizedStringKey(title))
                 .dsText(.heading22)
                 .foregroundStyle(DS.textPrimary)
             content()

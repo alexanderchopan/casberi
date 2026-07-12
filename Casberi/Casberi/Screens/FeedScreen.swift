@@ -1238,8 +1238,8 @@ struct FeedScreen: View {
     }
 
     private func dayLabel(_ date: Date) -> String {
-        if Calendar.current.isDateInToday(date) { return "Today" }
-        if Calendar.current.isDateInYesterday(date) { return "Yesterday" }
+        if Calendar.current.isDateInToday(date) { return String(localized: "Today") }
+        if Calendar.current.isDateInYesterday(date) { return String(localized: "Yesterday") }
         return date.formatted(.dateTime.weekday(.wide).month().day())
     }
 }
