@@ -101,6 +101,10 @@ nav { display: flex; align-items: center; justify-content: space-between; paddin
 .ai-obsidian  { background: #7c3aed; }
 .ai-twitch    { background: #9146ff; }
 .ai-pinterest { background: #e60023; }
+.ai-substack  { background: #ff6719; }
+.ai-podcasts  { background: linear-gradient(160deg, #d669ff, #822cbf); }
+.ai-contacts  { background: #34c759; }
+.ai-kindle    { background: linear-gradient(160deg, #4a4f57, #23272e); }
 .ai-more      { background: var(--surface-2); color: var(--muted); }
 .ai-more span { font-size: 20px; font-weight: 800; letter-spacing: -1px; line-height: 1; }
 

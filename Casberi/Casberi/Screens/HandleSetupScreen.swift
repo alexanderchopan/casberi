@@ -1,14 +1,25 @@
 import SwiftUI
 import SwiftData
 
-/// The handle-only bridges — Bluesky and Farcaster connect by public name
-/// alone (no password, no token, nothing stored but the name), so their
-/// screens are the same shape. This enum carries the words that differ,
-/// the way TokenBridge does for the paste-a-token screens.
+/// The name-only bridges — connect by a public name alone (no password, no
+/// token, nothing stored but the name), so their screens are the same shape.
+/// Two families ride this one enum: the people bridges (Bluesky, Farcaster,
+/// Pinterest), and the feed-follow bridges (Substack, Reddit, YouTube,
+/// Podcasts), whose per-bridge words and URL rules live in `FeedFollowKind`.
+/// This enum carries the words that differ, the way TokenBridge does for the
+/// paste-a-token screens; the feed cases delegate to their kind.
 enum HandleBridge: String {
     case bluesky   = "Bluesky"
     case farcaster = "Farcaster"
     case pinterest = "Pinterest"
+    case substack  = "Substack"
+    case reddit    = "Reddit"
+    case youtube   = "YouTube"
+    case podcasts  = "Podcasts"
+
+    /// The feed-follow kind behind the four feed cases, nil for the people
+    /// bridges — the join that lets each switch below fall through to one place.
+    var feedKind: FeedFollowKind? { FeedFollowKind(rawValue: rawValue) }
 
     /// BridgeStore id, and the connected-strip route.
     var bridgeID: String {
@@ -16,6 +27,7 @@ enum HandleBridge: String {
         case .bluesky:   "bsky"
         case .farcaster: "fc"
         case .pinterest: "pinterest"
+        default:         feedKind!.bridgeID
         }
     }
 
@@ -24,6 +36,7 @@ enum HandleBridge: String {
         switch self {
         case .bluesky:   "handle"
         case .farcaster, .pinterest: "username"
+        default:         feedKind!.nameNoun
         }
     }
 
@@ -31,6 +44,7 @@ enum HandleBridge: String {
         switch self {
         case .bluesky:   "you"
         case .farcaster, .pinterest: "yourname"
+        default:         feedKind!.placeholder
         }
     }
 
@@ -38,37 +52,41 @@ enum HandleBridge: String {
     /// types only what's theirs.
     var fieldPrefix: String? {
         switch self {
-        case .bluesky:   nil
         case .farcaster: "farcaster.xyz/"
         case .pinterest: "pinterest.com/"
+        default:         nil
         }
     }
 
     var fieldSuffix: String? {
         switch self {
         case .bluesky:   ".bsky.social"
-        case .farcaster, .pinterest: nil
+        default:         nil
         }
     }
 
-    /// Bluesky and Farcaster watch a LIST of accounts (2026-07-10) — a small
-    /// following feed, not just your own mirror. Pinterest stays single.
-    var supportsMultiple: Bool { self == .bluesky || self == .farcaster }
+    /// Every bridge here but Pinterest watches a LIST — a small following feed,
+    /// not just one mirror. Pinterest stays single (its feed is per-user).
+    var supportsMultiple: Bool { self != .pinterest }
 
-    /// Bluesky and Farcaster have public, keyless people search (2026-07-11)
-    /// — the field doubles as a finder. Pinterest has no such surface.
-    var supportsSearch: Bool { self == .bluesky || self == .farcaster }
+    /// The bridges whose field doubles as a finder: Bluesky/Farcaster people
+    /// search, and Podcasts show search. Pinterest and the templated feeds
+    /// (Substack/Reddit/YouTube) have no such surface — you type the name.
+    var supportsSearch: Bool {
+        self == .bluesky || self == .farcaster || self == .podcasts
+    }
 
     func search(_ query: String) async -> [UserSearch.Hit] {
         switch self {
         case .bluesky:   await UserSearch.bluesky(query)
         case .farcaster: await UserSearch.farcaster(query)
-        case .pinterest: []
+        case .podcasts:  await FeedFetch.searchPodcasts(query)
+        default:         []
         }
     }
 
     /// A tapped search hit connects like a typed name — plus, for Farcaster,
-    /// the fid the search already carried (saves the first sync's resolve).
+    /// the fid the search carried, or for Podcasts, the feed the search found.
     func add(hit: UserSearch.Hit) {
         switch self {
         case .bluesky:
@@ -79,7 +97,10 @@ enum HandleBridge: String {
             } else {
                 FarcasterStore.shared.add(hit.handle)
             }
-        case .pinterest:
+        case .podcasts:
+            FeedFollowStore.podcasts.add(
+                FeedFollowEntry(input: hit.displayName, feedURL: hit.feedURL ?? "", title: hit.displayName))
+        default:
             break
         }
     }
@@ -92,13 +113,21 @@ enum HandleBridge: String {
         case .pinterest:
             let u = PinterestStore.shared.username
             return u.isEmpty ? [] : [u]
+        default:         return feedKind!.store.inputs
         }
     }
 
-    /// The list row's short form — Bluesky's ".bsky.social" comes off.
+    /// The list row's short form — Bluesky's ".bsky.social" comes off; a feed
+    /// follow shows its learned title (the publication's real name).
     func shortName(_ name: String) -> String {
-        self == .bluesky && name.hasSuffix(".bsky.social")
-            ? String(name.dropLast(".bsky.social".count)) : name
+        switch self {
+        case .bluesky:
+            name.hasSuffix(".bsky.social") ? String(name.dropLast(".bsky.social".count)) : name
+        case .farcaster, .pinterest:
+            name
+        default:
+            feedKind!.store.display(for: name)
+        }
     }
 
     func addName(_ raw: String) {
@@ -106,6 +135,7 @@ enum HandleBridge: String {
         case .bluesky:   BlueskyStore.shared.add(raw)
         case .farcaster: FarcasterStore.shared.add(raw)
         case .pinterest: PinterestStore.shared.username = PinterestStore.normalize(raw)
+        default:         feedKind!.store.add(FeedFollowEntry(input: raw))
         }
     }
 
@@ -114,6 +144,7 @@ enum HandleBridge: String {
         case .bluesky:   BlueskyStore.shared.remove(name)
         case .farcaster: FarcasterStore.shared.remove(name)
         case .pinterest: PinterestStore.shared.username = ""
+        default:         feedKind!.store.remove(input: name)
         }
     }
 
@@ -122,8 +153,8 @@ enum HandleBridge: String {
     /// field is a fresh "add another", so it starts empty.
     var displayName: String {
         switch self {
-        case .bluesky, .farcaster: return ""
-        case .pinterest:           return PinterestStore.shared.username
+        case .pinterest: return PinterestStore.shared.username
+        default:         return ""
         }
     }
 
@@ -133,6 +164,7 @@ enum HandleBridge: String {
         case .bluesky:   "posts"
         case .farcaster: "casts"
         case .pinterest: "pins"
+        default:         feedKind!.noun
         }
     }
 
@@ -144,6 +176,8 @@ enum HandleBridge: String {
             "Type a few letters to find someone, or the exact username — casts are public on the open protocol, so there's no password to give."
         case .pinterest:
             "Just the username — your public pins arrive through Pinterest's own feed, so there's no password to give."
+        default:
+            feedKind!.fieldFooter
         }
     }
 
@@ -152,6 +186,7 @@ enum HandleBridge: String {
         case .bluesky:   "Posts"
         case .farcaster: "Casts"
         case .pinterest: "Pins"
+        default:         feedKind!.recentHeader
         }
     }
 
@@ -163,6 +198,8 @@ enum HandleBridge: String {
             "Read-only, public data only — served by the Farcaster team's own public node."
         case .pinterest:
             "Read-only, public boards only — secret boards never appear in the public feed."
+        default:
+            feedKind!.footerLine
         }
     }
 
@@ -171,6 +208,7 @@ enum HandleBridge: String {
         case .bluesky:   "Reads your public posts."
         case .farcaster: "Reads your public casts."
         case .pinterest: "Reads your public pins."
+        default:         feedKind!.canLine
         }
     }
 
@@ -188,6 +226,9 @@ enum HandleBridge: String {
             if name.isEmpty { FarcasterStore.shared.removeAll() } else { FarcasterStore.shared.add(name) }
         case .pinterest:
             PinterestStore.shared.username = name
+        default:
+            if name.isEmpty { feedKind!.store.removeAll() }
+            else { feedKind!.store.add(FeedFollowEntry(input: name)) }
         }
     }
 
@@ -196,6 +237,7 @@ enum HandleBridge: String {
         case .bluesky:   BlueskyStore.normalize(raw)
         case .farcaster: FarcasterStore.normalize(raw)
         case .pinterest: PinterestStore.normalize(raw)
+        default:         feedKind!.normalize(raw)
         }
     }
 
@@ -205,6 +247,7 @@ enum HandleBridge: String {
         case .bluesky:   await BlueskyIngest.refresh(context: context)
         case .farcaster: await FarcasterIngest.refresh(context: context)
         case .pinterest: await PinterestIngest.refresh(context: context)
+        default:         await FeedFollowIngest.refresh(feedKind!, context: context)
         }
     }
 }

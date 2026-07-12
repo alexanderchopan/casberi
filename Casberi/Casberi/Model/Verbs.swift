@@ -174,6 +174,7 @@ enum PlaceWords {
         case .job, .run, .output: return "from your machines"
         case .skill:       return "banked by you"
         case .transaction: return "in your wallet"
+        case .contact:     return "in your contacts"
         default:           return "in your things"
         }
     }

@@ -19,7 +19,14 @@ enum UserSearch {
         /// Farcaster only — carrying the fid saves the name→fid resolve
         /// the first sync would otherwise pay.
         let fid: Int?
-        var id: String { handle }
+        /// Podcasts only — the show's public RSS feed, carried from the
+        /// iTunes search so picking a result stores the feed with no second
+        /// lookup. nil for the people bridges.
+        var feedURL: String? = nil
+        // Podcasts from one network share an artist (the handle), so key the
+        // row on the unique feed when there is one — else two NPR shows would
+        // collide in a ForEach and only one would render.
+        var id: String { feedURL ?? handle }
     }
 
     static let limit = 6

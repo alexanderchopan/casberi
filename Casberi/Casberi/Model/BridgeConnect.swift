@@ -28,6 +28,9 @@ enum BridgeConnect {
             case "Apple Music":
                 result = await AppleMusicIngest.connectAndIngest(context: context)
                     .map { ($0, "music", "songs", "Reads what you've played.") }
+            case "Contacts":
+                result = await ContactsIngest.connectAndIngest(context: context)
+                    .map { ($0, "contacts", "contacts", "Reads your contacts — search-only, never in your feed.") }
             default:
                 result = nil
             }

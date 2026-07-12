@@ -6,6 +6,10 @@ import SwiftData
 enum ThingKind: String, Codable, CaseIterable {
     // v1 (Bob)
     case note, screenshot, chat, event, link, reminder, mail, file, voice
+    // A person from Contacts — a search-only reference thing (2026-07-12): it
+    // rides the corpus for lookup and the answer path, and stays out of the
+    // feed so hundreds of names never bury the day's real captures.
+    case contact
     // Alice load (declared now; unused until bridges prove writes)
     case job, run, output, skill
     // S10 — an agent's ask, waiting on the person. The thing IS the consent
@@ -42,6 +46,7 @@ enum ThingKind: String, Codable, CaseIterable {
         case .skill:      return "Skill"
         case .approval:   return "Approval"
         case .transaction: return "Transaction"
+        case .contact:    return "Contact"
         }
     }
 }

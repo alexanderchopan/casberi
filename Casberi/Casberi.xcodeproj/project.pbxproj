@@ -463,6 +463,7 @@
 				INFOPLIST_FILE = Casberi/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Casberi;
 				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "Casberi reads your events so your day lands as things.";
+				INFOPLIST_KEY_NSContactsUsageDescription = "Casberi reads your contacts so the people you know become findable — search-only, never shown in your feed.";
 				INFOPLIST_KEY_NSCalendarsWriteOnlyAccessUsageDescription = "Casberi adds events to your calendar when you ask.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Casberi records your voice notes when you tap the mic.";
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "Casberi reads your workouts so they land in your feed.";
@@ -509,6 +510,7 @@
 				INFOPLIST_FILE = Casberi/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Casberi;
 				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "Casberi reads your events so your day lands as things.";
+				INFOPLIST_KEY_NSContactsUsageDescription = "Casberi reads your contacts so the people you know become findable — search-only, never shown in your feed.";
 				INFOPLIST_KEY_NSCalendarsWriteOnlyAccessUsageDescription = "Casberi adds events to your calendar when you ask.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Casberi records your voice notes when you tap the mic.";
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "Casberi reads your workouts so they land in your feed.";

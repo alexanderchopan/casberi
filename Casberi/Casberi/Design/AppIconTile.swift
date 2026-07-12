@@ -72,6 +72,12 @@ extension DS {
         case "steam":               return Color.fixed("#1b2838")   // their dark navy
         case "obsidian":            return Color.fixed("#7c3aed")   // vault purple
         case "twitch":              return Color.fixed("#9146ff")
+        case "reddit":              return Color.fixed("#ff4500")
+        case "youtube":             return Color.fixed("#ff0000")
+        case "substack":            return Color.fixed("#ff6719")
+        case "podcasts":            return Color.fixed("#8a2be2")   // Apple Podcasts purple
+        case "contacts":            return Color.fixed("#34c759")   // Contacts green
+        case "kindle":              return Color.fixed("#f2a900")   // Amazon/Kindle amber
         default:                    return nil
         }
     }

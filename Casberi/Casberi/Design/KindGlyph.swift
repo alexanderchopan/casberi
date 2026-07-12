@@ -48,6 +48,7 @@ extension ThingKind {
         case .skill:      return "sparkles"
         case .approval:   return "hand.raised"
         case .transaction: return "arrow.left.arrow.right"
+        case .contact:    return "person.crop.circle"
         }
     }
 
@@ -107,6 +108,10 @@ enum BridgeGlyph {
         case "telegram":  return "paperplane"
         case "reddit":    return "text.bubble"
         case "youtube":   return "play.rectangle"
+        case "substack":  return "doc.text.image"
+        case "podcasts":  return "mic"
+        case "contacts":  return "person.crop.circle"
+        case "kindle":    return "book.pages"
         case "apple music": return "music.note"
         case "spotify":   return "music.note.list"
         case "wallet":    return "wallet.bifold"
@@ -158,6 +163,7 @@ extension ThingKind {
         case .skill:      return Color(hex: "#ffd60a")   // gold — banked craft
         case .approval:   return Color(hex: "#ff375f")   // crimson — needs your call
         case .transaction: return Color(hex: "#f7931a")  // amber — onchain (a vertical kind, may share the warm family)
+        case .contact:    return Color(hex: "#34c759")   // green — people
         }
     }
 }

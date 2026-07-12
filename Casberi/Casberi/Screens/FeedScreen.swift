@@ -105,8 +105,15 @@ struct FeedScreen: View {
 
     // MARK: - Derivations
 
+    /// The corpus MINUS the search-only sources — Contacts land as things for
+    /// lookup and the answer path, but never as feed rows or a source chip
+    /// (ruling 2026-07-12): hundreds of names would bury the day's captures.
+    private var feedThings: [Thing] {
+        things.filter { $0.source != "Contacts" }
+    }
+
     private var visible: [Thing] {
-        things.filter { thing in
+        feedThings.filter { thing in
             (filter.source == "All" || thing.source == filter.source)
                 && (filter.tag == "All" || thing.tags.contains(filter.tag))
         }
@@ -128,7 +135,7 @@ struct FeedScreen: View {
     private var sources: [String] {
         var seen: Set<String> = []
         var ordered: [String] = []
-        for thing in things where seen.insert(thing.source).inserted {
+        for thing in feedThings where seen.insert(thing.source).inserted {
             ordered.append(thing.source)
         }
         return ["All"] + ordered
@@ -446,7 +453,7 @@ struct FeedScreen: View {
             .listRowSeparator(.hidden)
             .listRowInsets(EdgeInsets())
 
-            if things.isEmpty {
+            if feedThings.isEmpty {
                 Group { emptyState }
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
