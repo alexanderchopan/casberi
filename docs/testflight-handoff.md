@@ -5,18 +5,47 @@ way we always do. The whole process is encapsulated in `scripts/testflight.sh`
 — it bumps the build number across all targets, archives Release **unsigned**,
 then signs + uploads for App Store distribution.
 
-## Secrets — read this first
+## Credentials
 
-- **The `.p8` API key is the only secret.** It grants upload access. It is
-  **never** committed, never copied or read by Claude. You (the user) stage it
-  yourself and give the session only its file path.
-- **Key ID and Issuer ID are identifiers, not standalone secrets** — but they
-  identify your App Store Connect API access, so they stay out of committed
-  files too. Pass all three at run time as env vars (below).
-- The only distribution value baked into the repo is `teamID 35428TQK3S` in
-  `scripts/exportOptions.plist` — that's a public identifier and has to be there.
+The App Store Connect API access has three parts. Two are identifiers (safe to
+keep here — useless on their own); the third is the private key (the only real
+secret, never committed):
 
-## Steps
+| Value | Store it here? | Value |
+|---|---|---|
+| `ASC_KEY_ID` | yes | `TR287WZD72` |
+| `ASC_ISSUER_ID` | yes | `2152ec98-0a7c-477a-9c4a-e1c478a3a106` |
+| `.p8` private key | **NO — never commit** | you stage it at `/tmp/asc.p8` each ship |
+| `teamID` | already in `exportOptions.plist` | `35428TQK3S` |
+
+Only the `.p8` grants upload access, and it's worthless to anyone without the
+matching private key. So the one manual step per ship is putting your
+`AuthKey_TR287WZD72.p8` at `/tmp/asc.p8`. The script deletes it after upload,
+which is why it won't be there next time.
+
+## The one command
+
+Once your intended work is committed and the build number is bumped + committed
+(see steps below), the whole ship is one paste. Point the last line at wherever
+the build should run from (the canonical repo, or a clean isolated worktree):
+
+```sh
+cp ~/path/to/AuthKey_TR287WZD72.p8 /tmp/asc.p8 && \
+ASC_KEY_ID=TR287WZD72 \
+ASC_ISSUER_ID=2152ec98-0a7c-477a-9c4a-e1c478a3a106 \
+ASC_KEY_PATH=/tmp/asc.p8 \
+SKIP_BUMP=1 \
+~/Developer/casberi/scripts/testflight.sh; \
+rm -f /tmp/asc.p8
+```
+
+- Replace `~/path/to/AuthKey_TR287WZD72.p8` with your key's real location. If
+  it's already at `/tmp/asc.p8`, drop the first `cp` line.
+- `SKIP_BUMP=1` reuses the already-committed build number. Drop it to let the
+  script bump the number itself (then commit the bump afterward — step 4).
+- The trailing `rm -f /tmp/asc.p8` wipes the key after upload.
+
+## Steps (what Claude prepares before that command)
 
 1. **Work only in `~/Developer/casberi`** — the canonical repo. Never the iCloud
    copy (its xattrs break codesign).
@@ -24,8 +53,10 @@ then signs + uploads for App Store distribution.
 2. **Commit everything you want in the build** to `main`. The script archives
    from the working tree, so any uncommitted files go into the build — do NOT
    sweep in another session's WIP. Check `git status` and confirm the tree is
-   what you intend. The build-number bump especially must be committed so
-   numbers never collide across sessions.
+   what you intend. To exclude in-progress WIP from another session, build from a
+   clean isolated worktree at the committed HEAD:
+   `git worktree add /tmp/casberi-ship-N <commit>` and point the command's last
+   line at `/tmp/casberi-ship-N/scripts/testflight.sh`.
 
 3. **Build-clean check first** — must succeed before shipping:
    ```sh
@@ -33,28 +64,14 @@ then signs + uploads for App Store distribution.
      -destination 'platform=iOS Simulator,name=iPhone 17 Pro' build
    ```
 
-4. **Ask the user to stage the App Store Connect API key.** The user copies the
-   `.p8` to a path themselves. The session receives only three values:
-   `ASC_KEY_ID`, `ASC_ISSUER_ID`, and the key file path — never the key contents.
+4. **Bump the build number and commit it** so it sticks and never collides
+   across sessions. Either let the script bump (omit `SKIP_BUMP`) then commit
+   `Casberi/Casberi.xcodeproj/project.pbxproj`, or bump + commit first and pass
+   `SKIP_BUMP=1`. Commit message: `Bump build number to N for TestFlight (internal)`.
 
-5. **Run the ship script:**
-   ```sh
-   cd ~/Developer/casberi && \
-   ASC_KEY_ID=<key id> \
-   ASC_ISSUER_ID=<issuer id> \
-   ASC_KEY_PATH="<path to AuthKey_XXXX.p8>" \
-   scripts/testflight.sh
-   ```
-   (Set `SKIP_BUMP=1` in front to re-upload without bumping the build number —
-   e.g. a failed upload retry.)
+5. **Run the one command above.** When it finishes you'll see `✓ Uploaded`.
 
-6. **Commit the build-number bump** (`Casberi/Casberi.xcodeproj/project.pbxproj`)
-   so the number sticks:
-   `Bump build number to N for TestFlight (internal)`.
-
-7. **Delete the key** afterward if it was placed anywhere temporary.
-
-8. **Don't re-check the App Store Connect API too soon.** Processing runs from
+6. **Don't re-check the App Store Connect API too soon.** Processing runs from
    ~5 min to over an hour. A build missing from the list right after upload is
    almost always still processing, not rejected.
 
