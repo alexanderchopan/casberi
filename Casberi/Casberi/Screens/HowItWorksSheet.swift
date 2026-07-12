@@ -19,27 +19,27 @@ struct HowItWorksSheet: View {
 
     private let points: [Point] = [
         Point(glyph: "square.grid.2x2.fill", hue: .blue,
-              title: "Connect what's yours",
-              line: "Photos, a calendar, a wallet, a token. Casberi pulls those things in."),
+              title: "Connect your apps",
+              line: "Photos, calendars, wallets, tokens."),
         Point(glyph: "waveform.path.ecg", hue: .green,
-              title: "It all lands in one feed",
-              line: "One stream to catch up on, or filter to a single app."),
+              title: "One feed",
+              line: "Everything together, or one app at a time."),
         Point(glyph: "hand.tap.fill", hue: .orange,
               title: "Act on anything",
-              line: "Open it, pin it, share it."),
+              line: "Open, pin, or share it."),
         Point(glyph: "pin.fill", hue: .pink,
               title: "Home is your board",
-              line: "Pin what matters, then arrange and resize it into a layout that's yours."),
+              line: "Pin, arrange, and resize what matters."),
         Point(glyph: "sparkles", hue: .purple,
-              title: "Ask across everything",
-              line: "Type a question and get an answer drawn from all you've connected — Casberi recaps on its own, too."),
+              title: "Ask across it all",
+              line: "A question, answered from everything."),
     ]
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: DS.Space.s6) {
-                    Text("Casberi keeps the things you care about — from every app — in one place you make your own.")
+                    Text("Everything you care about, from every app, in one place that's yours.")
                         .dsText(.body17)
                         .foregroundStyle(DS.textSecondary)
                         .padding(.top, DS.Space.s2)
