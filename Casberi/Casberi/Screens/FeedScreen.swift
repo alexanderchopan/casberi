@@ -194,14 +194,15 @@ struct FeedScreen: View {
             && t.source != "You" && t.source != "Voice"
     }
 
-    /// 4+ bundleable things from one source in one day collapse into a
-    /// BundleRow at the position of their newest member. Order is untouched
-    /// otherwise — compression, not ranking.
+    /// 3+ bundleable things from one source in one day collapse into a
+    /// BundleRow at the position of their newest member (threshold lowered
+    /// from 4, 2026-07-12 — smaller same-source runs were the real All-feed
+    /// clutter). Order is untouched otherwise — compression, not ranking.
     private var bundledDayGroups: [(String, [FeedRow])] {
         dayGroups.map { label, dayThings in
             var counts: [String: Int] = [:]
             for t in dayThings where bundleable(t) { counts[t.source, default: 0] += 1 }
-            let bundledSources = Set(counts.filter { $0.value >= 4 }.keys)
+            let bundledSources = Set(counts.filter { $0.value >= 3 }.keys)
             var rows: [FeedRow] = []
             var seen: Set<String> = []
             for t in dayThings {
