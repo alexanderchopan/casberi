@@ -474,6 +474,7 @@ struct FeedScreen: View {
                 .listRowSeparator(.hidden)
         }
         .listStyle(.plain)
+        .refreshable { await refreshFeed() }
         .animation(DS.Motion.standard, value: things.count)   // new things rise in
         .scrollContentBackground(.hidden)
         .background(alignment: .top) { shapeWash }
@@ -1263,6 +1264,20 @@ struct FeedScreen: View {
     /// wallet's native view. Composing is synchronous elsewhere in this
     /// screen; the wallet fetch isn't, so it lands in the background and
     /// repaints.
+    /// Pull-to-refresh (2026-07-12): re-polls every connected bridge for fresh
+    /// things, then RECOMPOSES the feed the way a source switch does — the
+    /// shaped rows re-cascade (shapeWave replays their entrance) and the
+    /// synthesis block re-streams. The Feed's take on Home's pull re-compose:
+    /// records paint, so the delight is the cascade, not a typewriter. A short
+    /// beat lets the pull read before it lands with a soft thud.
+    private func refreshFeed() async {
+        BridgeRefresh.refreshAllConnected(context: modelContext, store: bridges)
+        shapeWave += 1
+        streamBlock()
+        try? await Task.sleep(for: .milliseconds(450))
+        DSHaptic.success()
+    }
+
     private func streamBlock() {
         guard filter.source == "Wallet" else {
             if !blockStream.els.isEmpty { blockStream.paint([]) }
