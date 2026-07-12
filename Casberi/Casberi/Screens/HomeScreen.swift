@@ -71,6 +71,15 @@ struct HomeScreen: View {
     /// whenever the order or a module's size changes; the drag reorders
     /// whole rows, then flattens back to `boardOrder`.
     @State private var boardRows: [[String]] = []
+    /// Drag-to-reorder auto-scroll (prd 58d): the board can grow past one
+    /// screen, so a drag into the top/bottom edge nudges the ScrollView while
+    /// the card keeps tracking the finger. `probe` carries the live scroll
+    /// offset + viewport bounds to the board (a plain class — written every
+    /// scroll frame, must not repaint); `scrollPos` is the board's handle to
+    /// nudge the scroll. The board owns the loop (it also owns the drag and
+    /// the reorder that must re-run as content slides).
+    @State private var probe = BoardScrollProbe()
+    @State private var scrollPos = ScrollPosition(edge: .top)
 
     struct ProjectRoute: Identifiable, Hashable {
         let name: String
@@ -106,7 +115,12 @@ struct HomeScreen: View {
                     // into 2-up rows, everything else spans full width — the
                     // rhythm emerges from your size choices. Rows drag as
                     // units on the safe 1D reorder (prd 58d).
-                    ReorderableBoard(order: $boardRows) { row in
+                    ReorderableBoard(order: $boardRows, scrollProbe: probe,
+                                     scrollBy: { dy in
+                                         withAnimation(.linear(duration: 0.05)) {
+                                             scrollPos.scrollTo(y: max(0, probe.y + dy))
+                                         }
+                                     }) { row in
                         if row.count == 2 {
                             // A pair — two half-width art tiles.
                             HStack(alignment: .top, spacing: DS.Space.s3) {
@@ -132,13 +146,31 @@ struct HomeScreen: View {
                     } onReorder: { newRows in
                         let flat = newRows.flatMap { $0 }
                         boardOrder = flat
-                        HomeBoardOrder.shared.save(flat.map(moduleKey))
+                        // Same keying as syncBoard's apply(), suffixes and all
+                        // — bare moduleKey here broke round-trip for two
+                        // same-labeled modules (dedupedKeys' note).
+                        HomeBoardOrder.shared.save(dedupedKeys(flat))
                     }
                 }
                 .padding(.bottom, ShellMetrics.bottomInset)
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
             .scrollIndicators(.hidden)
+            // Auto-scroll plumbing for drag-to-reorder on a tall board: a
+            // programmatic scroll handle, the live offset fed to the board's
+            // probe, and the viewport's global bounds (the edge bands a drag
+            // enters). All idle until a card is actually dragged to an edge.
+            .scrollPosition($scrollPos)
+            .onScrollGeometryChange(for: CGFloat.self) { $0.contentOffset.y } action: { _, y in
+                probe.y = y
+            }
+            .background {
+                GeometryReader { g in
+                    Color.clear
+                        .onAppear { setViewport(g.frame(in: .global)) }
+                        .onChange(of: g.frame(in: .global)) { _, f in setViewport(f) }
+                }
+            }
             .ignoresSafeArea(edges: .top)
             // Live modules re-fetch on pull (2026-07-10): holdings straight
             // from Alchemy, and the tick bump re-keys every token chart's
@@ -225,6 +257,26 @@ struct HomeScreen: View {
                 DSHaptic.selection()
                 sizeCoachDone = true
                 HomeModuleSize.shared.toggle(moduleKey(ref))
+                // Size decides packing (a large media module can't sit in a
+                // 2-up row) — re-pack so growing a module lifts it out of its
+                // pair into its own full-width row, and shrinking lets it
+                // re-pair. Nothing else observes HomeModuleSize, so without
+                // this the stored size flipped but the board never repainted
+                // (the pin looked dead for paired Music/Screenshots cards).
+                withAnimation(DS.Motion.standard) {
+                    boardRows = packRows(boardOrder)
+                }
+            }
+            // Long-press a pinned media shelf → Remove from Home. Drops the
+            // source's pin (HomePinnedSources.clear also forgets its saved
+            // size/order), then recomposes so the shelf leaves the board.
+            .environment(\.genSourceUnpin) { ref in
+                guard let source = HomePinnedSources.source(forModuleRef: ref) else { return }
+                DSHaptic.tap()
+                HomePinnedSources.shared.clear(source)
+                CorpusSignal.shared.bump()
+                streamComposition(instant: true)
+                chrome.flash("Removed from Home")
             }
             // A screenshot's own stored thumbnail (prd 48) — local bytes,
             // not a URL, so the media tile resolves it by thing id.
@@ -353,23 +405,32 @@ struct HomeScreen: View {
     /// `HomeBoardOrder.apply`.
     private func syncBoard(_ refs: [String]) {
         boardModuleRefs = Set(refs)
-        // Two wallets can carry the same label (WalletStore only guards
-        // address uniqueness, never label) — de-duplicate colliding keys so
-        // a second "Main" wallet gets its own slot instead of silently
-        // overwriting the first one's in `refForKey` and vanishing.
-        var seen: [String: Int] = [:]
+        let naturalKeys = dedupedKeys(refs)
         var refForKey: [String: String] = [:]
-        var naturalKeys: [String] = []
+        for (ref, key) in zip(refs, naturalKeys) { refForKey[key] = ref }
+        boardOrder = HomeBoardOrder.shared.apply(to: naturalKeys).compactMap { refForKey[$0] }
+        boardRows = packRows(boardOrder)
+    }
+
+    /// Stable persistence keys for a run of refs, in order. Two wallets can
+    /// carry the same label (WalletStore only guards address uniqueness, never
+    /// label), so a colliding `moduleKey` gets a positional " #n" suffix — a
+    /// second "Main" wallet earns its own slot instead of overwriting the
+    /// first's. `syncBoard` (which READS the saved order) and the reorder save
+    /// (which WRITES it) MUST derive keys the same way, or a duplicate-labeled
+    /// board never round-trips — save wrote bare keys, apply matched suffixed
+    /// ones, and the arrangement silently reset (review 2026-07-12).
+    private func dedupedKeys(_ refs: [String]) -> [String] {
+        var seen: [String: Int] = [:]
+        var keys: [String] = []
         for ref in refs {
             var key = moduleKey(ref)
             let count = (seen[key] ?? 0) + 1
             seen[key] = count
             if count > 1 { key += " #\(count)" }
-            naturalKeys.append(key)
-            refForKey[key] = ref
+            keys.append(key)
         }
-        boardOrder = HomeBoardOrder.shared.apply(to: naturalKeys).compactMap { refForKey[$0] }
-        boardRows = packRows(boardOrder)
+        return keys
     }
 
     /// Packs the flat board order into magazine rows (prd 58f): a run of
@@ -425,6 +486,13 @@ struct HomeScreen: View {
             return "wallet:\(label)"
         }
         return ref
+    }
+
+    // MARK: - Drag-to-reorder auto-scroll
+
+    private func setViewport(_ frame: CGRect) {
+        probe.viewportTop = frame.minY
+        probe.viewportBottom = frame.maxY
     }
 
     /// Composing is synchronous; the holdings fetch isn't — load in the

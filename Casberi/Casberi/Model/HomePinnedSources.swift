@@ -24,7 +24,7 @@ final class HomePinnedSources {
     /// pinned bypass. A source's own screen only shows "Pin to Home" when
     /// its name is in here — otherwise the pin would persist and flip the
     /// button's state with no effect on the board, a dead control.
-    static let pinnable: Set<String> = ["Apple Music", "Pinterest", "Photos"]
+    static let pinnable: Set<String> = ["Apple Music", "Pinterest", "Photos", "RSS"]
 
     private(set) var sources: Set<String>
 
@@ -35,7 +35,12 @@ final class HomePinnedSources {
     func isPinned(_ source: String) -> Bool { sources.contains(source) }
 
     func toggle(_ source: String) {
-        if sources.contains(source) { sources.remove(source) } else { sources.insert(source) }
+        if sources.contains(source) {
+            sources.remove(source)
+            forgetBoardState(source)
+        } else {
+            sources.insert(source)
+        }
         UserDefaults.standard.set(Array(sources), forKey: Self.key)
     }
 
@@ -44,6 +49,43 @@ final class HomePinnedSources {
     /// magnitude-1 bypass the moment the same-named source reconnects.
     func clear(_ source: String) {
         guard sources.remove(source) != nil else { return }
+        forgetBoardState(source)
         UserDefaults.standard.set(Array(sources), forKey: Self.key)
+    }
+
+    /// The Home board module a pinned source composes as (`HomeComposition`'s
+    /// media shelves) — the bridge between a source NAME (what pins are keyed
+    /// by) and a board module REF (what size/order are keyed by). nil for a
+    /// source with no shelf of its own.
+    static func moduleRef(for source: String) -> String? {
+        switch source {
+        case "Apple Music": return "musicShelf"
+        case "Pinterest":   return "pinShelf"
+        case "Photos":      return "shotShelf"
+        case "RSS":         return "rssShelf"
+        default:            return nil
+        }
+    }
+
+    /// The inverse of `moduleRef(for:)` — a shelf's ref back to its source, so
+    /// the board's "Remove from Home" knows which pin to drop.
+    static func source(forModuleRef ref: String) -> String? {
+        switch ref {
+        case "musicShelf": return "Apple Music"
+        case "pinShelf":   return "Pinterest"
+        case "shotShelf":  return "Photos"
+        case "rssShelf":   return "RSS"
+        default:           return nil
+        }
+    }
+
+    /// Unpinning a source for good drops its module's saved size and order
+    /// too — a deliberate removal shouldn't leave state that resurrects the
+    /// old card (large, in its old slot) on a later re-pin. Transient absence
+    /// never routes through here, so a returning wallet keeps its placement.
+    private func forgetBoardState(_ source: String) {
+        guard let ref = Self.moduleRef(for: source) else { return }
+        HomeModuleSize.shared.clear(ref)
+        HomeBoardOrder.shared.remove(ref)
     }
 }

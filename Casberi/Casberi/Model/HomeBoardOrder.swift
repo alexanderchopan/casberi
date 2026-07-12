@@ -39,4 +39,16 @@ final class HomeBoardOrder {
         saved = order
         UserDefaults.standard.set(order, forKey: Self.key)
     }
+
+    /// Drops a module key from the saved arrangement when its source leaves
+    /// the board for good — a stale key is otherwise harmless (apply() skips
+    /// unknown keys), but keeping it would restore an old placement if the
+    /// same-named module ever returns, which for a deliberate unpin is a
+    /// surprise. A transient absence must NOT call this — apply()'s skip is
+    /// exactly what preserves a returning wallet's spot.
+    func remove(_ key: String) {
+        guard saved.contains(key) else { return }
+        saved.removeAll { $0 == key }
+        UserDefaults.standard.set(saved, forKey: Self.key)
+    }
 }
