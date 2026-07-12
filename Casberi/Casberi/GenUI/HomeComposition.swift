@@ -9,7 +9,10 @@ import SwiftData
 /// Voice constraints (Home spec): themes and content, no obligations. Tile
 /// sublines read content, not status. Hero: one synthesis statement, facts
 /// only, priority project movement > pending decision > imminent event >
-/// bridge arrival. Evening (hour ≥ 15) leads with the TagMap.
+/// bridge arrival. One layout every day (2026-07-12): the weekday-triggered
+/// "Your week, banked" recap and the morning/evening split were removed — the
+/// screen shouldn't change shape by the clock, and the week recap lives behind
+/// the composer's "What's this week?" ask, a question you pose, not a mode.
 enum HomeComposition {
 
     /// A composed document plus which of its root-level refs are board
@@ -25,19 +28,9 @@ enum HomeComposition {
     static func compose(things: [Thing],
                         walletHoldings: [WalletIngest.HoldingsGroup] = [],
                         walletPending: Bool = false,
-                        pinCoach: Bool = false,
-                        hour: Int = Calendar.current.component(.hour, from: .now),
-                        weekday: Int = Calendar.current.component(.weekday, from: .now)) -> Document {
+                        pinCoach: Bool = false) -> Document {
         let projects = projectClusters(things: things)
-        // Saturday/Sunday reads as a recap — the week, banked.
-        if weekday == 1 || weekday == 7 {
-            return weekend(things: things, projects: projects, walletHoldings: walletHoldings,
-                          walletPending: walletPending, pinCoach: pinCoach)
-        }
-        return hour < 15
-            ? morning(things: things, projects: projects, walletHoldings: walletHoldings,
-                     walletPending: walletPending, pinCoach: pinCoach)
-            : evening(things: things, projects: projects, walletHoldings: walletHoldings,
+        return daily(things: things, projects: projects, walletHoldings: walletHoldings,
                      walletPending: walletPending, pinCoach: pinCoach)
     }
 
@@ -49,7 +42,7 @@ enum HomeComposition {
 
     // MARK: - Documents
 
-    private static func morning(things: [Thing], projects: [Cluster], walletHoldings: [WalletIngest.HoldingsGroup] = [],
+    private static func daily(things: [Thing], projects: [Cluster], walletHoldings: [WalletIngest.HoldingsGroup] = [],
                                      walletPending: Bool = false, pinCoach: Bool = false) -> Document {
         var doc: [String] = []
         var rootRefs: [String] = []
@@ -102,106 +95,6 @@ enum HomeComposition {
                               hasMap: rootRefs.contains("map"),
                               mapSlot: mapSlot, to: &doc, rootRefs: &rootRefs, boardRefs: &boardRefs)
 
-        doc.insert("root = Stack([\(rootRefs.joined(separator: ", "))])", at: 0)
-        return Document(lines: doc, boardRefs: boardRefs)
-    }
-
-    private static func evening(things: [Thing], projects: [Cluster], walletHoldings: [WalletIngest.HoldingsGroup] = [],
-                                     walletPending: Bool = false, pinCoach: Bool = false) -> Document {
-        var doc: [String] = []
-        var rootRefs: [String] = []
-        var boardRefs: [String] = []
-
-        // The cover leads (H7); evening keeps its own lineup below it.
-        doc.append(cover(things: things))
-        rootRefs.append("cover")
-
-        // A quiet day's slot invites more apps (2026-07-10, user — the
-        // berry said quiet twice under the quiet cover and did nothing).
-        if isQuietDay(things) {
-            doc.append("invite = AppsInvite(\(q(String(localized: "Connect another app"))), \(q(String(localized: "More of your day lands by itself."))))")
-            rootRefs.append("invite")
-        }
-
-        // Pinned rides evening too — same rule as morning, ahead of the map.
-        appendPinned(things, coach: pinCoach, to: &doc, rootRefs: &rootRefs, boardRefs: &boardRefs)
-        appendWalletHoldings(walletHoldings, pending: walletPending, to: &doc, rootRefs: &rootRefs, boardRefs: &boardRefs)
-        appendMediaModules(things, to: &doc, rootRefs: &rootRefs, boardRefs: &boardRefs)
-
-        let mapSlot = rootRefs.count
-        if !projects.isEmpty {
-            let items = projects.prefix(6).map { "\($0.name) \($0.things.count)" }
-            doc.append("map = TagMap(\(q(String(localized: "What's going on"))), null, [\(items.joined(separator: ", "))])")
-            rootRefs.append("map")
-            boardRefs.append("map")
-        } else {
-            let sources = sourceClusters(things: things)
-            if !sources.isEmpty {
-                let items = sources.prefix(6).map { "\($0.name) \($0.things.count)" }
-                doc.append("map = TagMap(\(q(String(localized: "What's going on"))), \(q(String(localized: "By app — tags take over as they form"))), [\(items.joined(separator: ", "))], \(q("source")))")
-                rootRefs.append("map")
-                boardRefs.append("map")
-            }
-        }
-        appendStarterPreviews(things: things,
-                              hasMap: rootRefs.contains("map"),
-                              mapSlot: mapSlot, to: &doc, rootRefs: &rootRefs, boardRefs: &boardRefs)
-
-        doc.insert("root = Stack([\(rootRefs.joined(separator: ", "))])", at: 0)
-        return Document(lines: doc, boardRefs: boardRefs)
-    }
-
-    /// Weekend — the week, banked: the recap voice rides the cover's eyebrow
-    /// with the week's newest image (H7); then the map and threads. Same
-    /// grammar, calmer voice; still no obligations.
-    private static func weekend(things: [Thing], projects: [Cluster], walletHoldings: [WalletIngest.HoldingsGroup] = [],
-                                     walletPending: Bool = false, pinCoach: Bool = false) -> Document {
-        var doc: [String] = []
-        var rootRefs: [String] = []
-        var boardRefs: [String] = []
-
-        let week = things.filter { $0.capturedAt > .now.addingTimeInterval(-7 * 86_400) }
-
-        // The weekend cover: recap words, a set banner behind them or black
-        // (2-tier, ruling 2026-07-10) — same as every other day.
-        let title: String
-        let subline: String
-        if week.isEmpty && !things.isEmpty {
-            title = String(localized: "A quiet week")
-            subline = String(localized: "Your things keep — \(things.count) in all.")
-        } else if let top = projects.first {
-            title = String(localized: "Your week, banked")
-            subline = String(localized: "\(week.count) things · \(top.name) led")
-        } else {
-            title = String(localized: "Your week, banked")
-            subline = week.count == 1 ? String(localized: "1 thing landed") : String(localized: "\(week.count) things landed")
-        }
-        if !things.isEmpty {
-            // Chips carry the WEEK's kind counts here, not today's (user,
-            // 2026-07-11): the original ruling dropped them because today-only
-            // counts under a week headline misread as the week's composition —
-            // but WEEK counts under "your week, banked" ARE the week's
-            // composition, so they belong, and losing the count row entirely
-            // read as the weekend flattening the screen. The subline stays
-            // ("Work led" is project info the chips don't carry).
-            // The trailing "@week" (prd 54) makes the card an ASK: tap
-            // sends "What's this week?" through the composer's answer
-            // path — the recap is a door to the week's synthesis.
-            let weekChips = coverChips(week) ?? "[]"
-            doc.append("cover = Cover(\(q(String(localized: "Weekend"))), \(q(title)), \(q(subline)), \(q("")), \(q(dateline(things: things))), \(q("quiet")), \(weekChips), \(q("@week")))")
-            rootRefs.append("cover")
-        }
-
-        appendPinned(things, coach: pinCoach, to: &doc, rootRefs: &rootRefs, boardRefs: &boardRefs)
-        appendWalletHoldings(walletHoldings, pending: walletPending, to: &doc, rootRefs: &rootRefs, boardRefs: &boardRefs)
-        appendMediaModules(things, to: &doc, rootRefs: &rootRefs, boardRefs: &boardRefs)
-
-        if !projects.isEmpty {
-            let items = projects.prefix(6).map { "\($0.name) \($0.things.count)" }
-            doc.append("map = TagMap(\(q(String(localized: "The week"))), \(q(String(localized: "What it was about"))), [\(items.joined(separator: ", "))])")
-            rootRefs.append("map")
-            boardRefs.append("map")
-        }
         doc.insert("root = Stack([\(rootRefs.joined(separator: ", "))])", at: 0)
         return Document(lines: doc, boardRefs: boardRefs)
     }
@@ -295,49 +188,49 @@ enum HomeComposition {
         Date.now.formatted(.dateTime.weekday(.wide).month(.wide).day())
     }
 
-    /// The cover line for morning/evening — pure content now (2026-07-10):
-    /// the Banner became the Background setting, so the cover carries no
-    /// image ref at all (arg 4 stays for arity, always empty). Today's kind
-    /// counts ride every cover as chips (ruling 2026-07-09): the counts ARE
-    /// the subline, so the old bottom "What landed today" section is gone.
-    /// The word subline returns only when nothing landed today.
+    /// The cover line — pure content (2026-07-10): the Banner became the
+    /// Background setting, so the cover carries no image ref (arg 4 stays for
+    /// arity, always empty). The chips now read the WHOLE corpus by kind
+    /// (ruling 2026-07-12) — a stable synthesis of what your stuff is made of,
+    /// the same every day, no daily reset. Today's activity was noise for
+    /// anyone with feeds (always a big number, never news); recency is Feed's
+    /// job. The chips complement the map: the map is your corpus by theme, the
+    /// chips are your corpus by kind. Both ride every cover, quiet or active.
     private static func cover(things: [Thing]) -> String {
         let date = dateline(things: things)
-        // One today-sweep, shared by the chips (compose already scans the
-        // corpus enough times per render).
-        let today = things.filter { Calendar.current.isDateInToday($0.capturedAt) }
-        let chips = coverChips(today)
-        // Quiet cover — the shipped Hero lines, verbatim priority. Approvals
-        // never lead Home (voice guardrail: agent asks live in Feed; the cover
-        // states what landed, never what's waiting on the person).
+        // Lifetime kind composition — the same chips every day, no reset.
+        let chips = coverChips(things)
+        // The chips slot always emits (empty only for an all-approval corpus)
+        // so the id's seat (arg 8) holds its position.
+        let chipsSeat = chips.map { ", \($0)" } ?? ", []"
+        // Quiet cover — nothing landed today. The words state the quiet; the
+        // chips still show the corpus's composition (a quiet day didn't change
+        // what your stuff is made of). No thing id — nothing fresh to open.
         if isQuietDay(things) {
-            return "cover = Cover(\(q(String(localized: "Today"))), \(q(String(localized: "A quiet day"))), \(q(String(localized: "Nothing new yet — your things keep."))), \(q("")), \(q(date)), \(q("quiet")))"
+            return "cover = Cover(\(q(String(localized: "Today"))), \(q(String(localized: "A quiet day"))), \(q(String(localized: "Nothing new yet — your things keep."))), \(q("")), \(q(date)), \(q("quiet"))\(chipsSeat), \(q("")))"
         }
         if let latest = things.first(where: { $0.kind != .approval }) {
-            // The 6th arg marks the stream complete so the renderer's black
-            // field doesn't flash in before the doc settles. Arg 4 (the old
-            // banner slot) carries the SOURCE now — the card leads with its
-            // app icon (2026-07-10, user). Arg 8 is the thing's id — the
-            // card opens what landed (2026-07-11, user); the chips slot
-            // always emits (empty when quiet) so the id's seat holds.
+            // Arg 5 marks the stream complete so the renderer's black field
+            // doesn't flash in before the doc settles. Arg 4 (the old banner
+            // slot) carries the SOURCE — the card leads with its app icon
+            // (2026-07-10, user). Arg 8 is the thing's id — the card opens
+            // what landed (2026-07-11, user).
             let subline = chips != nil ? "" : "\(latest.kind.typeTag) · \(latest.source)"
-            let chipsSeat = chips.map { ", \($0)" } ?? ", []"
             return "cover = Cover(\(q(String(localized: "Just landed · \(latest.source)"))), \(q(latest.title)), \(q(subline)), \(q(latest.source)), \(q(date)), \(q(latest.kind.typeTag))\(chipsSeat), \(q(latest.id.uuidString)))"
         }
-        return "cover = Cover(\(q(String(localized: "Now"))), \(q(String(localized: "Your things go here"))), \(q(String(localized: "Paste, speak, or share one in."))), \(q("")), \(q(date)), \(q("quiet")))"
+        return "cover = Cover(\(q(String(localized: "Now"))), \(q(String(localized: "Your things go here"))), \(q(String(localized: "Paste, speak, or share one in."))), \(q("")), \(q(date)), \(q("quiet"))\(chipsSeat), \(q("")))"
     }
 
-    // MARK: - Cover chips (what landed today, on the cover — ruling 2026-07-09)
+    // MARK: - Cover chips (the corpus's kind composition — ruling 2026-07-12)
 
-    /// Today's kind counts, "[Tag N, ...]", count-ordered, max 5 — the
-    /// cover's chip row (the KindPills section moved up into the banner).
-    /// Takes the pre-filtered today pool. Nil when nothing landed today: the
-    /// quiet cover states that in words, and yesterday's counts aren't news.
-    /// Approvals never count — same guardrail as the cover lead: the cover
-    /// states what landed, never what's waiting on the person.
-    private static func coverChips(_ today: [Thing]) -> String? {
+    /// The corpus's kind composition, "[Tag N, ...]", count-ordered, max 5 —
+    /// the cover's chip row. Whole corpus, not today or this week: a stable
+    /// read of what your stuff is made of, and a tap opens that kind in Feed.
+    /// Approvals never count (they're pending asks, not saved things). Nil
+    /// only for an all-approval (or empty) corpus.
+    private static func coverChips(_ things: [Thing]) -> String? {
         var counts: [ThingKind: Int] = [:]
-        for t in today where t.kind != .approval { counts[t.kind, default: 0] += 1 }
+        for t in things where t.kind != .approval { counts[t.kind, default: 0] += 1 }
         guard !counts.isEmpty else { return nil }
         let items = counts.sorted {
             $0.value != $1.value ? $0.value > $1.value : $0.key.typeTag < $1.key.typeTag
@@ -365,6 +258,14 @@ enum HomeComposition {
     /// seats). With no pins yet, one retiring coach line takes the slot
     /// (2026-07-10) — the empty Pinned state taught nothing, so a new user
     /// never learned the swipe. The surface owns the retire flag.
+    ///
+    /// Each pin is its OWN board module now (ruling 2026-07-12): the old
+    /// "Pinned" bundle wore an oversized tilted pin and was force-sized big,
+    /// so one card looked and behaved unlike every other — a pin is a mark on
+    /// a thing, not a kind of card. Every pin is a tile carrying the same
+    /// corner pin, sized and reordered on its own; any of them can be grown to
+    /// hero. Tokens already composed as their own tiles (a token's content IS
+    /// its chart, prd 51); now everything else joins them, in pin order.
     private static func appendPinned(_ things: [Thing], coach: Bool,
                                      to doc: inout [String],
                                      rootRefs: inout [String],
@@ -378,28 +279,9 @@ enum HomeComposition {
             }
             return
         }
-        // Tokens leave the Pinned card for their own bento tiles (prd 58h): a
-        // token's content IS its chart (prd 51), so it's sized on its own —
-        // small is a sparkline, big the full plot. Everything else rides in the
-        // Pinned card. The card leads, then the token tiles, in pin order.
-        var pinnedIds: [String] = []
-        var tokenIds: [String] = []
         for (i, t) in pinned.enumerated() {
             let id = "pn\(i)"
             doc.append(row(id: id, t))
-            if t.kind == .link, TokenChart.route(from: t.content) != nil {
-                tokenIds.append(id)
-            } else {
-                pinnedIds.append(id)
-            }
-        }
-        if !pinnedIds.isEmpty {
-            // "@pin" → GenWidget's oversized tilted pin, not the word (2026-07-10).
-            doc.append("pinnedW = Widget(\(q("@pin")), null, [\(pinnedIds.joined(separator: ", "))])")
-            rootRefs.append("pinnedW")
-            boardRefs.append("pinnedW")
-        }
-        for id in tokenIds {
             rootRefs.append(id)
             boardRefs.append(id)
         }
@@ -438,7 +320,7 @@ enum HomeComposition {
         // tap, gone the moment real cells land. Not a board module (nothing
         // to drag before the real card exists).
         if groups.isEmpty, pending {
-            doc.append("walletPreview = TagMapPreview(\(q(String(localized: "Your wallet"))), \(q(String(localized: "Loading your holdings…"))), [ETH, BTC, SOL, USDC, More])")
+            doc.append("walletPreview = TagMapPreview(\(q(String(localized: "Wallet"))), \(q(String(localized: "Loading your holdings…"))), [ETH, BTC, SOL, USDC, More])")
             rootRefs.append("walletPreview")
         }
     }

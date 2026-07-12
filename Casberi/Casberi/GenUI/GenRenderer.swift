@@ -203,20 +203,8 @@ struct GenRender: View {
         case "Cover":       GenCover(el: el).mountIn()
         case "KindPills":   GenKindPills(el: el).mountIn()
         case "Insight":     GenInsight(el: el).mountIn()
-        case "Widget":
-            #if DEBUG
-            // MOCK (-homeTitles YES): Home's sections named in the cover's
-            // voice — "Kept" above the pin widget. Delete with the verdict.
-            if UserDefaults.standard.bool(forKey: "homeTitles"), el.str(0) == "@pin" {
-                Text("Kept")
-                    .dsText(.heading22)
-                    .foregroundStyle(DS.textPrimary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.top, DS.Space.s2)
-            }
-            #endif
-            GenWidget(id: id, el: el, els: els).mountIn()
-        case "Row":         GenRow(el: el).mountIn()
+        case "Widget":      GenWidget(el: el, els: els).mountIn()
+        case "Row":         GenRow(id: id, el: el).mountIn()
         case "TokenRow":    GenTokenRow(id: id, el: el).mountIn()
         case "Suggest":     GenSuggest().mountIn()
         case "Skeleton":    GenSkeletonRow().mountIn()
@@ -227,11 +215,11 @@ struct GenRender: View {
         case "VoiceTile":   GenVoiceTile(el: el).mountIn()
         case "TagMap":
             #if DEBUG
-            // MOCK (-homeTitles YES): "Your holdings" above the first wallet
+            // MOCK (-homeTitles YES): "Holdings" above the first wallet
             // map; the week map keeps its in-card title for contrast.
             if UserDefaults.standard.bool(forKey: "homeTitles"),
                el.str(0).hasPrefix("@pin "), el.str(3) == "token" {
-                Text("Your holdings")
+                Text("Holdings")
                     .dsText(.heading22)
                     .foregroundStyle(DS.textPrimary)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -419,55 +407,18 @@ private struct GenInsight: View {
     }
 }
 
-/// Widget(title, count?, children) — a sheet card of rows. The literal
-/// title "@pin" renders as an oversized, tilted pin instead of a word
-/// (2026-07-10, user): the pin glyph is universally readable, and the
-/// Pinned card earns a little personality. The pin is also the size
-/// control (prd 58a) — tap it and the card blooms to LARGE, where its rows
-/// become a moodboard grid of tiles instead of a list.
+/// Widget(title, count?, children) — a sheet card of a titled group of rows,
+/// used by the store previews (`StorePreview`). Home's pinned things are their
+/// own board tiles now (ruling 2026-07-12), so the old "@pin" oversized-pin
+/// title, the 1×1 count tile, and the large moodboard interior are gone — a
+/// pin is a mark on a thing, not a kind of card.
 private struct GenWidget: View {
-    let id: String
     let el: GenEl
     let els: GenEls
-    @Environment(\.genModuleLarge) private var large
-    @Environment(\.genSizeToggle) private var sizeToggle
-    /// nil off the board; on the board `small` gives the card a 1×1 count tile.
-    @Environment(\.genSpan) private var span
     var body: some View {
-        if span == .small {
-            smallTile
-        } else {
-            fullCard
-        }
-    }
-
-    /// The small (1×1) form: the sacred pin over a live count — "5 pinned" —
-    /// so the person keeps the card on the board without spending a big seat.
-    /// Tap the pin to grow it back to a list or the moodboard. The board insets
-    /// small tiles, so this carries no outer padding of its own.
-    private var smallTile: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            PinMark(large: false) { sizeToggle?(id) }
-            Spacer(minLength: DS.Space.s2)
-            Text("\(el.refs(2).count)")
-                .dsText(.heading22).foregroundStyle(DS.textPrimary)
-            Text("pinned").dsText(.subhead13).foregroundStyle(DS.textTertiary)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .padding(DS.Space.s4)
-        .frame(minHeight: 150)
-        .background(DS.surfaceSheet,
-                    in: RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
-    }
-
-    private var fullCard: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-                if el.str(0) == "@pin" {
-                    PinMark(large: large) { sizeToggle?(id) }
-                } else {
-                    Text(el.str(0)).dsText(.heading22).foregroundStyle(DS.textPrimary)
-                }
+                Text(el.str(0)).dsText(.heading22).foregroundStyle(DS.textPrimary)
                 if !el.str(1).isEmpty {
                     Text(el.str(1)).dsText(.callout15).foregroundStyle(DS.textTertiary)
                         .contentTransition(.numericText())
@@ -476,11 +427,7 @@ private struct GenWidget: View {
             }
             .padding(.init(top: DS.Space.s4, leading: DS.Space.s4,
                            bottom: DS.Space.s1, trailing: DS.Space.s4))
-            if large {
-                largeInterior
-            } else {
-                ForEach(el.refs(2), id: \.self) { GenRender(id: $0, els: els, slot: .row) }
-            }
+            ForEach(el.refs(2), id: \.self) { GenRender(id: $0, els: els, slot: .row) }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.bottom, DS.Space.s2)
@@ -488,76 +435,6 @@ private struct GenWidget: View {
                     in: RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
         .padding(.horizontal, DS.Space.s4)
         .padding(.top, DS.Space.s4)
-    }
-
-    /// The large interior (prd 58h): a token's content IS its chart (prd 51),
-    /// so tokens grow into full-width chart rows (GenTokenRow reads
-    /// genModuleLarge and draws the plot) rather than losing it to a moodboard
-    /// tile. Every OTHER pinned thing becomes a moodboard tile; consecutive
-    /// non-token pins pack into their own 2-col grid run, in pin order.
-    @ViewBuilder private var largeInterior: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            ForEach(Array(pinnedSegments.enumerated()), id: \.offset) { _, seg in
-                switch seg {
-                case .token(let ref):
-                    GenRender(id: ref, els: els, slot: .row)
-                case .grid(let refs):
-                    GenMoodboardGrid(refs: refs, els: els)
-                }
-            }
-        }
-    }
-
-    private enum PinSegment { case token(String); case grid([String]) }
-
-    /// Splits the pinned refs into token rows and runs of moodboard tiles,
-    /// preserving the person's pin order.
-    private var pinnedSegments: [PinSegment] {
-        var segments: [PinSegment] = []
-        var grid: [String] = []
-        func flushGrid() {
-            if !grid.isEmpty { segments.append(.grid(grid)); grid = [] }
-        }
-        for ref in el.refs(2) {
-            if els[ref]?.comp == "TokenRow" {
-                flushGrid()
-                segments.append(.token(ref))
-            } else {
-                grid.append(ref)
-            }
-        }
-        flushGrid()
-        return segments
-    }
-}
-
-/// The Pinned card's oversized pin — it SETTLES on appearance, a small
-/// spring from upright toward its resting tilt, like being pressed into
-/// the card (2026-07-10; same entrance-plays-once rule as everything else).
-/// Now also the module's size control (prd 58a): a tap presses the pin in
-/// and toggles regular/large — the only way to grow a card, no menu, no
-/// edit mode.
-private struct PinMark: View {
-    var large: Bool = false
-    var onTap: (() -> Void)? = nil
-    @State private var settled = false
-    var body: some View {
-        Button {
-            onTap?()
-        } label: {
-            Image(systemName: "pin.fill")
-                .font(.system(size: 28, weight: .semibold))
-                .foregroundStyle(DS.textPrimary)
-                .rotationEffect(.degrees(settled ? -35 : -8), anchor: .bottomLeading)
-                .padding(.top, DS.Space.s1)
-        }
-        .buttonStyle(PressSpring())
-        .accessibilityLabel(large ? "Pinned things, tap to shrink" : "Pinned things, tap to grow")
-        .onAppear {
-            withAnimation(.spring(response: 0.5, dampingFraction: 0.55).delay(0.15)) {
-                settled = true
-            }
-        }
     }
 }
 
@@ -588,68 +465,6 @@ private struct ShelfSizePin: View {
         }
         .buttonStyle(PressSpring())
         .accessibilityLabel(large ? "Shrink" : "Grow")
-    }
-}
-
-/// The pinned card's LARGE interior (prd 58, 58a) — a moodboard grid of
-/// square tiles instead of thin rows; each thing gets a tile-sized surface
-/// (glyph, title, source/time) instead of a line. Same tap/long-press
-/// actions as the regular row (`pinnedRowActions`) — growing the card
-/// changes its shape, never its behavior.
-private struct GenMoodboardGrid: View {
-    let refs: [String]
-    let els: GenEls
-    var body: some View {
-        LazyVGrid(columns: [GridItem(.flexible(), spacing: DS.Space.s3),
-                             GridItem(.flexible(), spacing: DS.Space.s3)],
-                  spacing: DS.Space.s3) {
-            ForEach(refs, id: \.self) { ref in
-                if let el = els[ref] {
-                    GenMoodTile(el: el).mountIn()
-                } else {
-                    GenSkeletonTile(minHeight: 128)
-                }
-            }
-        }
-        .padding(.horizontal, DS.Space.s4)
-        .padding(.top, DS.Space.s1)
-        .padding(.bottom, DS.Space.s2)
-    }
-}
-
-/// One moodboard tile — reads the SAME args a Row/TokenRow line already
-/// carries (title, tag/chain, source, time, thing id, openable), just laid
-/// out as a square card instead of a line. No new doc grammar.
-private struct GenMoodTile: View {
-    let el: GenEl
-    @Environment(\.genThingOpen) private var thingOpen
-    @Environment(\.genThingUnpin) private var thingUnpin
-    @Environment(\.genThingHandoff) private var thingHandoff
-
-    private var isToken: Bool { el.comp == "TokenRow" }
-    private var glyphTag: String { isToken ? "Link" : el.str(1) }
-    private var subline: String { isToken ? el.str(1) : el.str(2) }
-    private var thingId: String { el.str(4) }
-    private var openable: Bool { el.str(5) == "app" }
-
-    var body: some View {
-        let tile = VStack(alignment: .leading, spacing: DS.Space.s2) {
-            TagGlyph(tag: glyphTag, size: 26)
-            Spacer(minLength: 0)
-            Text(el.str(0))
-                .dsText(.body17).foregroundStyle(DS.textPrimary)
-                .lineLimit(2).fixedSize(horizontal: false, vertical: true)
-            if !subline.isEmpty {
-                Text(subline).dsText(.subhead13).foregroundStyle(DS.textTertiary).lineLimit(1)
-            }
-        }
-        .padding(DS.Space.s3)
-        .frame(maxWidth: .infinity, minHeight: 128, alignment: .topLeading)
-        .background(DS.surfaceSheet,
-                    in: RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
-        .contentShape(RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
-        tile.pinnedRowActions(id: thingId, openable: openable,
-                              open: thingOpen, unpin: thingUnpin, handoff: thingHandoff)
     }
 }
 
@@ -1148,12 +963,27 @@ private struct GenCoach: View {
 /// rows: tap opens the thing, long-press offers Open / Unpin (2026-07-10;
 /// swipe can't ride here — these rows live in a ScrollView, and a custom
 /// DragGesture eats vertical scroll on device, a lesson already paid for).
+/// Row(title, tag, source, time, thingId, openable). Two forms by context:
+/// OFF the board (no `genSpan` — a line inside a Widget card, e.g. the store
+/// previews) it's a thin list row; ON the board (a pinned thing is its own
+/// module now, ruling 2026-07-12) it's a square tile carrying the SAME corner
+/// pin every other module wears — no bundle, no oversized pin, no forced hero.
 private struct GenRow: View {
+    let id: String
     let el: GenEl
     @Environment(\.genThingOpen) private var thingOpen
     @Environment(\.genThingUnpin) private var thingUnpin
     @Environment(\.genThingHandoff) private var thingHandoff
+    @Environment(\.genSpan) private var span
+    @Environment(\.genSizeToggle) private var sizeToggle
+
     var body: some View {
+        if span == nil { lineForm } else { tileForm }
+    }
+
+    /// The thin list row — used inside a Widget card (store previews), where
+    /// the card owns the surface and the row is a line, not a tile.
+    private var lineForm: some View {
         let row = HStack(spacing: DS.Space.s3) {
             TagGlyph(tag: el.str(1), size: 24)
             Text(el.str(0))
@@ -1165,7 +995,47 @@ private struct GenRow: View {
         }
         .padding(.horizontal, DS.Space.s4)
         .padding(.vertical, DS.Space.s3)
-        row.pinnedRowActions(id: el.str(4), openable: el.str(5) == "app",
+        return row.pinnedRowActions(id: el.str(4), openable: el.str(5) == "app",
+                             open: thingOpen, unpin: thingUnpin, handoff: thingHandoff)
+    }
+
+    /// A pinned thing as its own board tile — the same sheet square, the same
+    /// corner `ShelfSizePin` (tap cycles the span), the same long-press
+    /// open/hand-off/unpin. Small pairs 2-up; wide and big lead full-width and
+    /// bigger. The subline reads content (source · time), never status.
+    private var tileForm: some View {
+        let small = span == .some(.small)
+        let big = span == .some(.big)
+        let sub = [el.str(2), el.str(3)].filter { !$0.isEmpty }.joined(separator: " · ")
+        let content = VStack(alignment: .leading, spacing: DS.Space.s2) {
+            HStack(alignment: .top, spacing: 0) {
+                TagGlyph(tag: el.str(1), size: big ? 34 : 26)
+                Spacer(minLength: 0)
+                if let sizeToggle {
+                    ShelfSizePin(large: big) { sizeToggle(id) }
+                        .padding(.top, -12).padding(.trailing, -12)
+                }
+            }
+            Spacer(minLength: 0)
+            Text(el.str(0))
+                .dsText(big ? .heading22 : .body17)
+                .foregroundStyle(DS.textPrimary)
+                .lineLimit(big ? 3 : 2)
+                .fixedSize(horizontal: false, vertical: true)
+            if !sub.isEmpty {
+                Text(sub).dsText(.subhead13).foregroundStyle(DS.textTertiary).lineLimit(1)
+            }
+        }
+        .padding(DS.Space.s4)
+        .frame(maxWidth: .infinity, minHeight: big ? 200 : 150, alignment: .topLeading)
+        .background(DS.surfaceSheet,
+                    in: RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
+        .contentShape(RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
+        // Small tiles are inset + top-gapped by the board's packer; wide and
+        // big span full width and inset themselves.
+        .padding(.horizontal, small ? 0 : DS.Space.s4)
+        .padding(.top, small ? 0 : DS.Space.s4)
+        return content.pinnedRowActions(id: el.str(4), openable: el.str(5) == "app",
                              open: thingOpen, unpin: thingUnpin, handoff: thingHandoff)
     }
 }
@@ -2235,11 +2105,11 @@ private struct GenCover: View {
             .background(DS.surfaceSheet,
                         in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
             // What landed opens (2026-07-11, user: "shouldn't a user be
-            // able to tap it and go to it?") — the Pinned rows' tap, on
+            // able to tap it and go to it?") — the pinned tiles' tap, on
             // the one freshest thing. The id streams in last, so the card
-            // simply isn't tappable until the line completes. "@week"
-            // (the weekend recap, prd 54) routes to the surface's tap
-            // handler instead — the ask, not a thing.
+            // simply isn't tappable until the line completes. An "@"-prefixed
+            // id still routes to the surface tap handler (projectTap) for any
+            // future sentinel, but the cover emits a real thing id now.
             .contentShape(RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
             .onTapGesture {
                 let id = el.str(7)

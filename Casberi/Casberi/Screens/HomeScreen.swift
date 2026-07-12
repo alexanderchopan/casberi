@@ -185,9 +185,8 @@ struct HomeScreen: View {
                 if name == "@wallet" { walletOpen = true; return }
                 // The quiet day's invite opens the Apps page.
                 if name == "@apps" { route.push = .apps; return }
-                // The weekend recap is a door to the week's synthesis
-                // (prd 54): the composer opens and runs the week ask.
-                if name == "@week" { chrome.ask("What's this week?"); return }
+                // (The weekend recap's "@week" door is gone with the weekend
+                // layout — prd 58j; the week ask lives in the composer now.)
                 // Any OTHER @-name is a sentinel we don't know — including a
                 // mid-stream partial ("@we") tapped during the typewriter
                 // entrance, which GenParser fills before the line completes.
@@ -440,11 +439,15 @@ struct HomeScreen: View {
         HomeModuleSize.shared.span(moduleKey(ref)) ?? defaultSpan(ref)
     }
 
-    /// One-hero opening (prd 58h): the Pinned card leads big, every other
-    /// module starts small — a composed board before anyone touches it, and
-    /// expressiveness is opt-in.
+    /// One-hero opening (prd 58h, revised 2026-07-12): the FIRST board module
+    /// leads big — a hero slot that's positional, not welded to any one card.
+    /// The old rule sized the "Pinned" bundle big; now that pins are ordinary
+    /// tiles, the hero is a place any card can occupy (reorder to change it,
+    /// grow any card yourself). A module that can't take `big` (a social post)
+    /// stays small even when it leads. Everything else starts small and pairs.
     private func defaultSpan(_ ref: String) -> ModuleSpan {
-        ref == "pinnedW" ? .big : .small
+        guard ref == boardOrder.first else { return .small }
+        return allowedSpans(ref).contains(.big) ? .big : .small
     }
 
     /// The spans a module allows (the bento guardrails): a treemap needs area
@@ -507,17 +510,18 @@ struct HomeScreen: View {
     /// wallet's holdings map keeps its own key even as other wallets are
     /// pinned/unpinned and shift `walletMapN`'s number around.
     private func moduleKey(_ ref: String) -> String {
-        if ref == "pinnedW" { return "pinned" }
         if ref == "map" { return "map" }
         if ref.hasPrefix("walletMap"), let el = stream.els[ref] {
             let eyebrow = el.str(0)
             let label = eyebrow.hasPrefix("@pin ") ? String(eyebrow.dropFirst(5)) : eyebrow
             return "wallet:\(label)"
         }
-        // A pinned token is its own tile (prd 58h); key it by thing id so its
-        // span survives pins being added/removed above it in the list.
-        if let el = stream.els[ref], el.comp == "TokenRow" {
-            return "token:\(el.str(4))"
+        // Each pin is its own tile (prd 58h); key it by thing id so its span
+        // survives other pins being added/removed above it in the list. Tokens
+        // and everything-else pins carry the thing id at the same arg.
+        if let el = stream.els[ref] {
+            if el.comp == "TokenRow" { return "token:\(el.str(4))" }
+            if el.comp == "Row" { return "pin:\(el.str(4))" }
         }
         return ref
     }

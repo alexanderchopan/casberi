@@ -2167,3 +2167,42 @@ short tile sits flush beside a taller one).
 NOT YET DEVICE-VERIFIED (sim can't exercise): drag feel, tap-the-pin
 cycling, real token chart data (needs a pinned token + live Dexscreener
 fetch).
+
+## 58j. A pin is a mark, not a card (user, 2026-07-12) — BUILT, verified on sim
+
+Three consistency rulings, all from the user reviewing 58i's board:
+
+PINS DISSOLVE INTO TILES. The bundled "Pinned" card (`pinnedW`) is gone.
+It carried an oversized tilted pin and was force-sized big, so one card
+looked and behaved unlike every other module — and a bundle can't answer
+"any card can be the hero." A pin is a mark on a thing, not a kind of
+card. Now every pinned thing is its OWN board tile (a span-aware `GenRow`
+tile — small pairs 2-up, wide/big lead full-width), wearing the SAME
+corner `ShelfSizePin` every other module wears. Tokens already composed
+this way (58i); everything else joined them. Supersedes 58i's "Pinned
+opens big / everything rides pinnedW / Pinned → count tile" — none of
+those exist now. The oversized `PinMark`, the "N pinned" count tile, and
+the moodboard grid interior were deleted with the bundle.
+
+HERO IS POSITIONAL. The "composed one-hero opening" is kept but decoupled
+from Pinned: the FIRST board module leads big (its default span), a hero
+SLOT any card can occupy — reorder to change which card heroes, or grow
+any card yourself. A module that can't take `big` (a social post) stays
+small even when it leads. On a pin-less board the treemap now leads big;
+that's the synthesis anchor, so it's the right default hero.
+
+CHIPS ARE THE CORPUS, NOT THE DAY. The cover's kind-count chips now read
+the WHOLE corpus by kind (a stable "what your stuff is made of"), the
+same every day, no reset — superseding "today's counts" (§ around
+prd-677/1978) and the weekend "week's counts" special case. Today's
+activity was noise for anyone with feeds (always a big number, never
+news); recency is Feed's job. The chips complement the map: map = your
+corpus by theme, chips = your corpus by kind. They ride the quiet cover
+too now.
+
+ONE LAYOUT EVERY DAY. The weekday-triggered "Your week, banked" weekend
+composition (§ prd-54, prd-1978) and the morning/evening split are
+removed — Home shouldn't change shape by the clock. The week recap keeps
+its home behind the composer's "What's this week?" ask (prd 54's ruling
+that the recap is a question you pose, not a screen that ambushes you);
+the cover no longer emits `@week`.
