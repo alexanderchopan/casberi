@@ -321,6 +321,9 @@ struct FeedScreen: View {
         } label: {
             HStack(spacing: DS.Space.s3) {
                 BridgeIcon(name: bridge.name, size: 40)
+                    // The app's mark coin-flips when you switch into its feed
+                    // (delight, 2026-07-12) — keyed to the filtered source.
+                    .coinFlip(trigger: filter.source)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(bridge.name)
                         .dsText(.body17).fontWeight(.semibold)

@@ -128,6 +128,8 @@ struct ThingSheetView: View {
             // to the glyph-on-hue circle for sources without a bundled
             // asset, so the seat is never empty.
             BridgeIcon(name: thing.source, size: 18, circular: true)
+                // The mark coin-flips as the sheet opens (delight, 2026-07-12).
+                .coinFlip(trigger: thing.id)
             Text("\(thing.kind.typeTag) · \(shortTime(thing.capturedAt)) ago")
                 .dsText(.label12)
                 .foregroundStyle(DS.textTertiary)
