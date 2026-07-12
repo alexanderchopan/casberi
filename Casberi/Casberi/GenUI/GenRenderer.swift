@@ -1072,14 +1072,7 @@ private struct GenSocialCard: View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
             HStack(spacing: 7) {
                 if let sizeToggle {
-                    Button { sizeToggle(id) } label: {
-                        Image(systemName: "pin.fill")
-                            .font(.system(size: 11, weight: .semibold))
-                            .foregroundStyle(DS.textSecondary)
-                            .rotationEffect(.degrees(-35), anchor: .bottomLeading)
-                    }
-                    .buttonStyle(PressSpring())
-                    .accessibilityLabel("Grow")
+                    ShelfSizePin(large: false) { sizeToggle(id) }
                 }
                 Text(source).dsText(.label12).foregroundStyle(DS.textSecondary)
             }
@@ -1100,16 +1093,7 @@ private struct GenSocialCard: View {
         VStack(alignment: .leading, spacing: DS.Space.s3) {
             HStack(spacing: 7) {
                 if let sizeToggle {
-                    Button {
-                        sizeToggle(id)
-                    } label: {
-                        Image(systemName: "pin.fill")
-                            .font(.system(size: 11, weight: .semibold))
-                            .foregroundStyle(DS.textSecondary)
-                            .rotationEffect(.degrees(-35), anchor: .bottomLeading)
-                    }
-                    .buttonStyle(PressSpring())
-                    .accessibilityLabel(large ? "Shrink" : "Grow")
+                    ShelfSizePin(large: large) { sizeToggle(id) }
                 }
                 Text(source).dsText(.label12).foregroundStyle(DS.textSecondary)
             }
@@ -1280,17 +1264,14 @@ private struct GenTokenRow: View {
         }
     }
 
-    /// The sacred pin, small in the corner — the token's size control.
+    /// The sacred pin, small in the corner — the token's size control. Same
+    /// ShelfSizePin every other tile's corner pin uses (2026-07-12: this was
+    /// its own bespoke 11pt button with no explicit hit target, one of four
+    /// tile types that never got the shelf pins' 44×44 fix — the token pin
+    /// visibly read smaller/harder-to-hit than everything else on Home).
     @ViewBuilder private var pin: some View {
         if let sizeToggle {
-            Button { sizeToggle(id) } label: {
-                Image(systemName: "pin.fill")
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(DS.textSecondary)
-                    .rotationEffect(.degrees(-35), anchor: .bottomLeading)
-            }
-            .buttonStyle(PressSpring())
-            .accessibilityLabel("Resize")
+            ShelfSizePin(large: span == .some(.big)) { sizeToggle(id) }
         }
     }
 
@@ -1589,16 +1570,7 @@ private struct GenTagMap: View {
                     // Wallet and Feed screens too, and a pin with nothing
                     // behind it is a dead control (CLAUDE.md honesty rule).
                     if !preview, let sizeToggle {
-                        Button {
-                            sizeToggle(id)
-                        } label: {
-                            Image(systemName: "pin.fill")
-                                .font(.system(size: 11, weight: .semibold))
-                                .foregroundStyle(DS.textSecondary)
-                                .rotationEffect(.degrees(-35), anchor: .bottomLeading)
-                        }
-                        .buttonStyle(PressSpring())
-                        .accessibilityLabel(large ? "Shrink" : "Grow")
+                        ShelfSizePin(large: large) { sizeToggle(id) }
                     } else if pinBorn {
                         // Outside Home (Wallet/Feed's own composition of
                         // this same wallet map) the pin stays decorative —
