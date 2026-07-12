@@ -447,7 +447,10 @@ struct AppsScreen: View {
                 }
                 .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
+            // A tactile press-pop when you tap into an app (delight, 2026-07-12)
+            // — the row springs slightly under the finger instead of a flat
+            // .plain tap. Keeps the plain look, adds the give.
+            .buttonStyle(PressSpring())
             capsule(entry)
         }
         .padding(.horizontal, DS.Space.s4)

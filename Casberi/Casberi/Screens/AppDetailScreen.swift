@@ -22,6 +22,18 @@ struct AppDetailScreen: View {
     }
     private var brand: Color { BridgeGlyph.color(for: offer.name) }
 
+    /// The app's identity hue washed down from the top — nil for a hueless
+    /// app (the gray fallback is a fill, not an identity: same ruling the
+    /// thing-sheet wash follows), so those pages stay pure page.
+    @ViewBuilder private var brandWash: some View {
+        if let hue = DS.brandHue(for: offer.name) {
+            LinearGradient(colors: [hue.opacity(0.42), .clear], startPoint: .top, endPoint: .bottom)
+                .frame(height: 320)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                .ignoresSafeArea(edges: .top)
+        }
+    }
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: DS.Space.s6) {
@@ -33,6 +45,11 @@ struct AppDetailScreen: View {
             .padding(.bottom, ShellMetrics.bottomInset)
         }
         .scrollIndicators(.hidden)
+        // The app's hue washes down from the top — the same atmosphere the
+        // thing sheet and a source feed wear, so opening a product page reads
+        // as stepping into that app's world (delight, 2026-07-12). One fixed
+        // recipe, under the content; hueless apps stay pure page, honestly.
+        .background(alignment: .top) { brandWash }
         .dsPageBackground()
         .navigationTitle(offer.name)
         .navigationBarTitleDisplayMode(.inline)
@@ -53,6 +70,9 @@ struct AppDetailScreen: View {
     private var header: some View {
         HStack(alignment: .top, spacing: DS.Space.s4) {
             BridgeIcon(name: offer.name, size: 72)
+                // The mark coin-flips as its page opens — the same greeting the
+                // thing-sheet and feed-switch icons give (delight, 2026-07-12).
+                .coinFlip(trigger: offer.name)
             VStack(alignment: .leading, spacing: DS.Space.s1) {
                 Text(offer.group)
                     .dsText(.label12).foregroundStyle(DS.textTertiary)
