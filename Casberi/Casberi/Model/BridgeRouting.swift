@@ -36,9 +36,6 @@ enum BridgeRouter {
         case appleJournal
         case appleNotes
         case token(TokenBridge)
-        /// A Shortcut-backed bridge — the app comes in via an automation the
-        /// person owns, not an API we call (see `ShortcutSetupScreen`).
-        case shortcut(ShortcutBridge)
         /// A connected seat with no dedicated screen (the demo seats — Gmail,
         /// Calendar, …) — the generic detail page, never EmptyView.
         case detail(id: String)
@@ -68,7 +65,6 @@ enum BridgeRouter {
             case .appleJournal:   "journal"
             case .appleNotes:     "notes"
             case .token(let b):   b.bridgeID
-            case .shortcut(let b): "sc.\(b.app.lowercased())"
             case .detail(let id): "detail:\(id)"
             }
         }
@@ -110,10 +106,6 @@ enum BridgeRouter {
         Row(offer: "Apple Notes", id: "notes", destination: .appleNotes),
     ] + TokenBridge.allCases.map {
         Row(offer: $0.rawValue, id: $0.bridgeID, destination: .token($0))
-    } + ShortcutBridges.all.map {
-        // Not in BridgeCatalog.offers yet — these rows let `-openSetup "<App>"`
-        // reach the screen so the flow is testable before the lineup is ruled.
-        Row(offer: $0.app, id: "sc.\($0.app.lowercased())", destination: .shortcut($0))
     }
 
     /// Where an offer's Connect leads (setup route), keyed by catalog name.
@@ -160,7 +152,6 @@ struct BridgeDestinationView: View {
         case .appleJournal:   JournalImportScreen()
         case .appleNotes:     NotesShareScreen()
         case .token(let b):   TokenSetupScreen(bridge: b)
-        case .shortcut(let b): ShortcutSetupScreen(bridge: b)
         case .detail(let id): BridgeDetailScreen(bridgeID: id)
         }
     }
