@@ -148,7 +148,12 @@ struct ThingSheetView: View {
             if thing.kind == .event, !thing.content.isEmpty {
                 specRow("When", thing.content)
             }
-            if thing.kind == .link,
+            // Tokens' content URL is plumbing (the chart's technical
+            // dependency, not a site the person browsed to) — the native
+            // TokenChartView above already carries the read; a "Site" row
+            // would just leak that dependency's brand under the "Tokens"
+            // eyebrow (report 2026-07-13).
+            if thing.kind == .link, thing.source != "Tokens",
                let url = Capture.detectURL(in: thing.content.isEmpty ? thing.title : thing.content),
                let host = url.host() {
                 specRow("Site", host.replacingOccurrences(of: "www.", with: ""))

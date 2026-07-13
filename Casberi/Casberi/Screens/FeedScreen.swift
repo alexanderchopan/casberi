@@ -168,6 +168,10 @@ struct FeedScreen: View {
             // bundle (user, 2026-07-12). They're deliberate reads, not machine
             // bulk like an RSS sync or a wallet backfill.
             && t.source != "Bluesky" && t.source != "Farcaster"
+            // Same reasoning for watched tokens: each row wears its own
+            // sparkline (TokenPulse) — collapsing 3+ into "Tokens · N things"
+            // silently drops every one of them.
+            && t.source != "Tokens"
     }
 
     /// 3+ bundleable things from one source in one day collapse into a

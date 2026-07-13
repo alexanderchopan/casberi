@@ -19,11 +19,13 @@ struct RootShell: View {
     @State private var actionsHeight: CGFloat = 360
     @State private var deepLinkThing: Thing?
     @AppStorage("onboarded") private var onboarded = false
-    /// After onboarding completes, the "How it works" sheet greets the new
-    /// person once (2026-07-11) — presented on the cover's onDismiss so it
-    /// doesn't race the full-screen cover's own dismissal.
-    @State private var pendingHowItWorks = false
-    @State private var showHowItWorks = false
+    /// After onboarding completes, the "How it works" greeting shows a new
+    /// person once (2026-07-11) — swapped in as a SECOND STEP inside the same
+    /// full-screen cover (not a sheet presented after the cover dismisses),
+    /// so the feed never flashes underneath between the two (2026-07-13 fix:
+    /// the old onDismiss handoff had a visible gap where the cover had
+    /// already revealed the feed before the sheet slid up).
+    @State private var onboardingHowItWorks = false
     @AppStorage("privacy.hidePreviews") private var hidePreviews = true
     @AppStorage("firstThingSaved") private var firstThingSaved = false
     @Environment(\.scenePhase) private var scenePhase
@@ -361,22 +363,29 @@ struct RootShell: View {
             ThingSheetView(thing: thing)
         }
         .fullScreenCover(isPresented: Binding(
-            get: { !onboarded }, set: { if !$0 { onboarded = true } }
-        ), onDismiss: {
-            // The greeting rides the DISMISS, not the continue — presenting a
-            // sheet mid-cover-dismissal drops it.
-            if pendingHowItWorks { pendingHowItWorks = false; showHowItWorks = true }
-        }) {
+            get: { !onboarded }, set: { if !$0 { onboarded = true; onboardingHowItWorks = false } }
+        )) {
             // Onboarding (option 4, 2026-07-07): the mini store connects the
             // three real bridges for REAL, and that's the whole tour — no
             // demo mode, no sample things. The dream lives on the store
             // pages as engine-rendered previews. Landing is the record ("All"
             // chip): the connects just filled it, and a brand-new person has
-            // nothing pinned yet.
-            OnboardingView(store: bridges) { _ in
-                onboarded = true
-                FeedFilter.shared.source = "All"
-                pendingHowItWorks = true
+            // nothing pinned yet. The "How it works" greeting is a second
+            // step of this SAME cover (below), not a separate presentation —
+            // it swaps in in place, so the feed is never revealed until the
+            // person taps Done on the greeting.
+            Group {
+                if onboardingHowItWorks {
+                    // Its own Done button calls the environment's dismiss(),
+                    // which resolves to this cover's binding and exits both
+                    // steps at once.
+                    HowItWorksSheet()
+                } else {
+                    OnboardingView(store: bridges) { _ in
+                        FeedFilter.shared.source = "All"
+                        onboardingHowItWorks = true
+                    }
+                }
             }
             // fullScreenCover hosts its content in a separate presentation
             // that doesn't reliably inherit `\.locale` from the presenter
@@ -384,7 +393,6 @@ struct RootShell: View {
             // language override too.
             .environment(\.locale, LanguageStore.shared.locale)
         }
-        .sheet(isPresented: $showHowItWorks) { HowItWorksSheet() }
     }
 
     /// casberi:// routing — one place, used by onOpenURL and the debug hook.

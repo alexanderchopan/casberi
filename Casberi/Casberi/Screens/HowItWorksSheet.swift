@@ -32,7 +32,7 @@ struct HowItWorksSheet: View {
               line: "Ask, organize, or jump to a tool."),
         Point(glyph: "slider.horizontal.3", hue: .orange,
               title: "Make it yours",
-              line: "Avatar, background, language, and data — your call."),
+              line: "Your avatar, background, language, data."),
     ]
 
     var body: some View {
