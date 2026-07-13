@@ -1044,7 +1044,13 @@ private struct GenRow: View {
                 .lineLimit(big ? 3 : 2)
                 .fixedSize(horizontal: false, vertical: true)
             if !sub.isEmpty {
-                Text(sub).dsText(.subhead13).foregroundStyle(DS.textTertiary).lineLimit(1)
+                // A narrow (small-span) tile could crush "source · time" down
+                // to an unreadable fragment ("C") under character truncation
+                // — scale down instead so the whole subline stays legible
+                // (design audit fix).
+                Text(sub).dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
             }
         }
         .padding(DS.Space.s4)
