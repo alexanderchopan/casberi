@@ -2285,3 +2285,41 @@ special-case. Contacts stays a full real bridge everywhere else — the Apps
 catalog, Browse (People group), and its connect path are unchanged; it is only
 absent from the first-run mini store. Contacts icons still fall in the glass
 pile (decorative brand art, not a permission ask).
+
+## 63. The source-feed header: one card for expand, its own row for compose (user, 2026-07-12)
+
+A single-source feed used to stack two full-width bars under the circular chip
+row: the synced header card, then an "act in this source" row. Two slabs of
+chrome before any content, and the header already re-asserts the identity the
+active chip carries. The ruling collapses that — but only where honesty allows,
+because the two "act" flavors go to different places.
+
+- The **synced header card stays load-bearing and untouched**: icon (with the
+  source-switch coin-flip delight), name, `statusLine`, chevron; the whole card
+  taps into that source's settings/setup screen (`destination(forID:)`, which
+  by the 2026-07-11 routing fix already lands on the add-another-capable screen).
+- **Expand** sources (watch/follow: wallet, dexscreener, kalshi, bluesky,
+  farcaster, twitch, pinterest, and now RSS) fold their "add another" into that
+  same card as a trailing tinted **"+ Add" hint**. It is a *signpost, not a
+  second tap target* — the card already opens where you add another, so the hint
+  just advertises the capability. The separate expand row is gone. ("+ Add" is
+  a localized literal; the per-source phrase — "Track another account" etc. — is
+  no longer displayed and lives only on the destination screen.)
+- **Compose** sources (Gmail, Todoist, Calendar, Reminders → "New email / task /
+  event / reminder") **keep their own row**. That action hands off to *another
+  app* — a genuinely different destination than the card's in-app settings — so
+  it can't be a hint on the settings card and earns its own bar. (Corollary,
+  same session: Gmail now composes IN the Gmail app via `googlegmail:///co` when
+  installed, matching the Calendar/Reminders hand-off rule, falling back to
+  `mailto:` only when it isn't — a Gmail source no longer silently opens Apple
+  Mail.)
+- **Read-only** sources (Photos, one-time imports) get neither — no dead
+  affordance.
+
+The rejected alternatives are on record: demoting the synced line to a caption
+(it's the tap target into settings and carries the coin-flip — kept), a dashed
+ghost "+" chip at the end of the chip row (read as a placeholder, not "add"),
+and a "+" button on the card as a second tap target (re-introduces the
+two-targets-on-one-bar ambiguity the ruling exists to remove). The rule of
+thumb: an affordance may fold onto the card only when it shares the card's
+destination; anything that leaves for elsewhere keeps its own row.
