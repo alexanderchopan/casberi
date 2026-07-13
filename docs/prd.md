@@ -2208,3 +2208,25 @@ removed — Home shouldn't change shape by the clock. The week recap keeps
 its home behind the composer's "What's this week?" ask (prd 54's ruling
 that the recap is a question you pose, not a screen that ambushes you);
 the cover no longer emits `@week`.
+
+## Audit note — 2026-07-12 screen sweep (nightly)
+
+Build codesigned clean from `~/Developer/casberi`. Perf warm: **launch
+319ms · memory 253MB · answer 1771ms** — all under ceilings, no flags,
+`answer` down 28% from the prior run (2453ms). Headless answer probe
+returned a well-formed structured answer (Insight + ProjectTile + 3-row
+Widget) in 1766ms.
+
+No confirmed regressions or honesty violations. Data tray, Diagnostics,
+product/setup screens, project detail, and both answer fallbacks all
+render honestly; no hairlines; single-grid catalog, light mode, and
+Dynamic Type XXL all hold.
+
+ONE ITEM TO RE-VERIFY once the Home-board WIP commits (§58h/58i/58j,
+uncommitted in `GenRenderer`/`HomeComposition`/`HomeScreen` at audit
+time): the by-app "What's happening now" board widget rendered its app
+header ("Claude") over an **empty body** (no thing rows) across three
+warm shots — could be an unfinished renderer or an intended empty board
+tile. Flagged WIP-in-flight, NOT filed as a regression; re-audit after
+the board work lands. Corpus was the 3-thing reseed and `app.language`
+was left on `ja` by a prior session — both environment, not findings.
