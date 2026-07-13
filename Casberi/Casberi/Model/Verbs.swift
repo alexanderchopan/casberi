@@ -279,20 +279,6 @@ enum HandOff {
         try store.save(reminder, commit: true)
     }
 
-    /// A fresh reminder from a title — Reminders has no editor UI to present,
-    /// so the Reminders source feed's "New reminder" writes directly after a
-    /// one-field prompt (the parallel of the event editor's native compose).
-    static func newReminder(title: String) async throws {
-        let store = EKEventStore()
-        guard try await store.requestFullAccessToReminders() else {
-            throw HandOffError.declined
-        }
-        let reminder = EKReminder(eventStore: store)
-        reminder.title = title
-        reminder.calendar = store.defaultCalendarForNewReminders()
-        try store.save(reminder, commit: true)
-    }
-
     /// Tomorrow 9:00 — a sane default until the parse carries dates (M6).
     private static func defaultStart() -> Date {
         let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: .now) ?? .now

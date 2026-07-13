@@ -654,7 +654,15 @@ struct PhotoWell: View {
                 }
             }
         }
+        // Fill mode (size == nil, the Photos grid): `.frame(width:nil,height:nil)`
+        // is a NO-OP, so a `scaledToFill` screenshot reported its own (tall)
+        // bounds and overflowed the cell, painting over the next photo (user,
+        // 2026-07-13). Pin the fill frame to the container and clip, so every
+        // grid cell holds exactly its slot. Fixed mode keeps its exact square.
         .frame(width: size, height: size)
+        .frame(maxWidth: size == nil ? .infinity : nil,
+               maxHeight: size == nil ? .infinity : nil)
+        .clipped()
         .clipShape(RoundedRectangle(cornerRadius: size != nil ? DS.Radius.appIcon(size!) : 0,
                                     style: .continuous))
         .task(id: thing.sourceRef) { await load() }
