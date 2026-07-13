@@ -418,7 +418,7 @@ private struct GenWidget: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-                Text(el.str(0)).dsText(.heading22).foregroundStyle(DS.textPrimary)
+                Text(LocalizedStringKey(el.str(0))).dsText(.heading22).foregroundStyle(DS.textPrimary)
                 if !el.str(1).isEmpty {
                     Text(el.str(1)).dsText(.callout15).foregroundStyle(DS.textTertiary)
                         .contentTransition(.numericText())

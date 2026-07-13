@@ -158,11 +158,11 @@ struct ThingSheetView: View {
 
     private func specRow(_ label: String, _ value: String) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: 0) {
-            Text(label)
+            Text(LocalizedStringKey(label))
                 .dsText(.label12)
                 .foregroundStyle(DS.textTertiary)
                 .frame(width: 80, alignment: .leading)
-            Text(value)
+            Text(LocalizedStringKey(value))
                 .dsText(.body17).foregroundStyle(DS.textPrimary)
                 .lineLimit(2)
             Spacer(minLength: 0)
@@ -242,7 +242,7 @@ struct ThingSheetView: View {
                 .font(.system(size: 18))
                 .foregroundStyle(DS.textSecondary)
                 .frame(width: 26, alignment: .center)
-            Text(label)
+            Text(LocalizedStringKey(label))
                 .dsText(.heading17).foregroundStyle(DS.textPrimary)
             Spacer()
         }

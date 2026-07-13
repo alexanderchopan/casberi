@@ -739,7 +739,7 @@ struct Composer: View {
                             .frame(width: 50, height: 50)
                             .background(tool.tint.opacity(scheme == .light ? 0.20 : 0.24),
                                         in: RoundedRectangle(cornerRadius: DS.Radius.appIcon(50), style: .continuous))
-                        Text(tool.label)
+                        Text(LocalizedStringKey(tool.label))
                             .dsText(.subhead13)
                             .foregroundStyle(DS.textSecondary)
                             .lineLimit(1)
