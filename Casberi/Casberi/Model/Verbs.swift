@@ -67,7 +67,18 @@ enum VerbDerivation {
                        action: .addToReminders))
             if let v = externalVerb(for: thing, apps: [.todoist]) { out.append(v) }
         case .link:
-            if let url = Capture.detectURL(in: thing.content.isEmpty ? thing.title : thing.content) {
+            // Music rows open the exact track in their app — the stored content
+            // is a music.apple.com / open.spotify.com universal link. Named and
+            // iconed by the app (like "Open in Calendar"), with the app scheme
+            // as a fallback for a library play that carries no per-track URL, so
+            // every music row can hand off the way events and items do (user,
+            // 2026-07-13).
+            if thing.source == "Apple Music" || thing.source == "Spotify" {
+                if let url = Capture.detectURL(in: thing.content) ?? sourceURL(thing.source) {
+                    out.append(Verb(label: "Open in \(thing.source)",
+                                    icon: "music.note", action: .openURL(url)))
+                }
+            } else if let url = Capture.detectURL(in: thing.content.isEmpty ? thing.title : thing.content) {
                 out.append(Verb(label: "Open link", icon: "safari", action: .openURL(url)))
             }
         case .screenshot:
@@ -218,6 +229,10 @@ enum VerbDerivation {
         case "photos":    return URL(string: "photos-redirect://")
         case "gmail":     return URL(string: "googlegmail://")
         case "chatgpt":   return URL(string: "chatgpt://")
+        // Music apps — the per-track universal link opens the exact song; this
+        // is the fallback that still opens the app for a URL-less library play.
+        case "apple music": return URL(string: "music://")
+        case "spotify":     return URL(string: "spotify://")
         case "safari":    return nil   // links open directly via Open link
         default:          return nil
         }
