@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import EventKit
 
 /// Feed's door pushes, shared so the shell can tell when a management screen
 /// (Apps/Settings, and whatever they push) is covering this tab — the floating
@@ -39,6 +40,12 @@ struct FeedScreen: View {
     @Bindable private var feedRoute = FeedRoute.shared
     @Bindable private var wallet = WalletStore.shared
     @State private var pushedBridge: BridgeRouter.Destination?
+    // Source-feed compose: Calendar's native event editor (once access is
+    // granted, the store is set and the sheet opens) and a one-field reminder.
+    @State private var composingEvent = false
+    @State private var eventStore: EKEventStore?
+    @State private var composingReminder = false
+    @State private var reminderDraft = ""
     @State private var liftedID: UUID?
     // First-run teaching (option 4: no demo mode — these live in the real
     // app and retire on first use, forever).
@@ -386,8 +393,9 @@ struct FeedScreen: View {
         Button {
             DSHaptic.selection()
             switch action.run {
-            case .openURL(let url): openURL(url)
-            case .route(let dest):  pushedBridge = dest
+            case .openURL(let url):  openURL(url)
+            case .route(let dest):   pushedBridge = dest
+            case .compose(let kind): Task { await startCompose(kind) }
             }
         } label: {
             HStack(spacing: DS.Space.s2) {
@@ -407,6 +415,28 @@ struct FeedScreen: View {
         .buttonStyle(.plain)
         .padding(.horizontal, DS.Space.s4)
         .padding(.bottom, DS.Space.s2)
+    }
+
+    /// Present the right native composer for an in-app source action. Calendar
+    /// gets Apple's event editor (after write access); Reminders — which has no
+    /// editor UI — gets a one-field prompt that writes on Add.
+    private func startCompose(_ kind: SourceAction.Compose) async {
+        switch kind {
+        case .calendarEvent:
+            let store = EKEventStore()
+            do {
+                guard try await store.requestWriteOnlyAccessToEvents() else {
+                    chrome.flash("No access — allow Casberi in iOS Settings"); return
+                }
+                eventStore = store
+                composingEvent = true
+            } catch {
+                chrome.flash("No access — allow Casberi in iOS Settings")
+            }
+        case .reminder:
+            reminderDraft = ""
+            composingReminder = true
+        }
     }
 
     private var feedList: some View {
@@ -571,6 +601,27 @@ struct FeedScreen: View {
                 Button(verb.label) { perform(verb, on: thing); confirming = nil }
                 Button("Cancel", role: .cancel) { confirming = nil }
             }
+        }
+        // Calendar source feed → the system's native new-event editor.
+        .sheet(isPresented: $composingEvent) {
+            if let eventStore {
+                EventEditSheet(store: eventStore) { composingEvent = false }
+                    .ignoresSafeArea()
+            }
+        }
+        // Reminders source feed → a one-field prompt (Reminders has no editor UI).
+        .alert("New reminder", isPresented: $composingReminder) {
+            TextField("Reminder", text: $reminderDraft)
+            Button("Add") {
+                let title = reminderDraft.trimmingCharacters(in: .whitespaces)
+                reminderDraft = ""
+                guard !title.isEmpty else { return }
+                Task {
+                    do { try await HandOff.newReminder(title: title); chrome.flash("On your list") }
+                    catch { chrome.flash("No access — allow Casberi in iOS Settings") }
+                }
+            }
+            Button("Cancel", role: .cancel) { reminderDraft = "" }
         }
     }
 
