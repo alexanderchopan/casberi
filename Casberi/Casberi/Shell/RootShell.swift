@@ -1106,6 +1106,12 @@ struct RootShell: View {
         // A replacing flash swaps identity — crossfade, never a stack (§12).
         .id(text)
         .transition(.move(edge: .bottom).combined(with: .opacity))
+        // The toast floats ABOVE content in the shell ZStack. A plain outcome
+        // pill must let taps fall through to what's under it — only a toast
+        // carrying an action (the drop-capture Undo) stays interactive, so its
+        // button still works without the pill swallowing taps on content
+        // beneath it (perf/hit-test pass 2026-07-13).
+        .allowsHitTesting(chrome.toastAction != nil)
     }
 }
 

@@ -92,6 +92,12 @@ struct HomeScreen: View {
         var id: String { name }
     }
 
+    /// Thing-by-id lookup for the media tiles' thumbnail resolver — built once
+    /// per render so each tile is an O(1) read, not a full corpus scan.
+    private var thingsByID: [String: Thing] {
+        Dictionary(things.map { ($0.id.uuidString, $0) }, uniquingKeysWith: { first, _ in first })
+    }
+
     var body: some View {
         NavigationStack {
             // The cover is full-bleed (H7): the scroll ignores the top safe
@@ -270,9 +276,12 @@ struct HomeScreen: View {
                 chrome.flash("Removed from Home")
             }
             // A screenshot's own stored thumbnail (prd 48) — local bytes,
-            // not a URL, so the media tile resolves it by thing id.
-            .environment(\.genThumbnailData) { id in
-                things.first(where: { $0.id.uuidString == id })?.previewImageData
+            // not a URL, so the media tile resolves it by thing id. One O(1)
+            // dict lookup per tile — the old `things.first(where:)` was a full
+            // corpus scan per tile, up to 12 tiles a shelf (perf pass
+            // 2026-07-13).
+            .environment(\.genThumbnailData) { [thingsByID] id in
+                thingsByID[id]?.previewImageData
             }
             .sheet(item: $pinnedThing) { thing in
                 ThingSheetView(thing: thing)
