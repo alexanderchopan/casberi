@@ -48,12 +48,22 @@ struct MainSurface: View {
     /// leaving the chips and status bar flat black above it). Same recipe as
     /// the thing sheet's wash — no per-hue tuning — and nil (no wash) for
     /// Pinned/All/a hueless source, honestly.
+    ///
+    /// Rendered as an OVERLAY, not a background: FeedScreen's own
+    /// `.dsPageBackground()` is opaque and painted behind its entire List, so
+    /// as a background this wash was fully hidden the instant the List began
+    /// — a hard cut right under the chip row, not the fade the gradient
+    /// itself describes (user, 2026-07-13). Sitting on top lets the same
+    /// gradient tint the List's own background through to wherever it
+    /// actually reaches `.clear`, instead of being clipped by whatever
+    /// happens to render underneath it.
     @ViewBuilder private var shapeWash: some View {
         if let hue = DS.brandHue(for: filter.source) {
             LinearGradient(colors: [hue.mix(with: .black, by: 0.35).opacity(0.9), .clear],
                            startPoint: .top, endPoint: .bottom)
-                .frame(height: 620)
+                .frame(height: 420)
                 .ignoresSafeArea(edges: .top)
+                .allowsHitTesting(false)
                 .transition(.opacity)
                 .id(filter.source)   // crossfade between hues, not a smear
         }
@@ -92,7 +102,7 @@ struct MainSurface: View {
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
-            .background(alignment: .top) { shapeWash }
+            .overlay(alignment: .top) { shapeWash }
             .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackgroundVisibility(.hidden, for: .navigationBar)

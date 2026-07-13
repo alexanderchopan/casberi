@@ -257,10 +257,10 @@ struct FeedScreen: View {
 
     /// A slim, tappable strip above a single source's shaped feed: the app, its
     /// live status. Tapping opens the app's control panel through the router —
-    /// the dedicated screen when the bridge has one (Dexscreener's watchlist,
+    /// the dedicated screen when the bridge has one (Tokens' watchlist,
     /// Wallet's addresses), the generic detail page otherwise. It rides
     /// `pushedBridge` — the same channel a Wallet row already uses. (2026-07-11:
-    /// this hardcoded `.detail`, so Dexscreener's Feed header opened a page with
+    /// this hardcoded `.detail`, so Tokens' Feed header opened a page with
     /// no way to watch a second token.)
     ///
     /// A slim capsule now, not a card (2026-07-14, user: the full-width block
@@ -650,21 +650,49 @@ struct FeedScreen: View {
     private var photoGridSection: some View {
         Section {
             let items = visible
-            let columns = Array(repeating: GridItem(.flexible(), spacing: DS.Space.s3),
-                                count: items.count > 12 ? 3 : 2)
-            LazyVGrid(columns: columns, spacing: DS.Space.s3) {
-                ForEach(Array(items.enumerated()), id: \.element.id) { i, thing in
-                    let firstOfDay = i == 0
-                        || dayLabel(items[i - 1].capturedAt) != dayLabel(thing.capturedAt)
-                    Button {
-                        sheetThing = thing
-                    } label: {
-                        PhotoCell(thing: thing, dayPill: firstOfDay ? dayLabel(thing.capturedAt) : nil)
+            // Hand-rolled row-chunking, NOT LazyVGrid: on iOS 26,
+            // `GridItem.spacing` and even `.padding()`'s horizontal
+            // component are silently ignored on a `.flexible()` column's
+            // cross axis — confirmed empirically (a 60pt spacing value and
+            // later an 80pt padding both only ever showed up as VERTICAL
+            // gap, never horizontal, no matter which mechanism carried it).
+            // `HStack`/`VStack` spacing has no such bug, so rows are built
+            // by hand instead (user, 2026-07-13 — tiles were touching edge
+            // to edge with no gutter at all).
+            let perRow = items.count > 12 ? 3 : 2
+            let rows = stride(from: 0, to: items.count, by: perRow).map {
+                Array(items[$0..<min($0 + perRow, items.count)])
+            }
+            // The real fix for the leak was in `PhotoWell` (a `scaledToFill`
+            // image reporting its own huge intrinsic size instead of
+            // respecting the cell) — with that fixed, a plain HStack's normal
+            // equal-flexible-child distribution is enough; no manual width
+            // math needed here.
+            VStack(spacing: DS.Space.s3) {
+                ForEach(Array(rows.enumerated()), id: \.offset) { rowIndex, row in
+                    HStack(spacing: DS.Space.s3) {
+                        ForEach(Array(row.enumerated()), id: \.element.id) { colIndex, thing in
+                            let i = rowIndex * perRow + colIndex
+                            let firstOfDay = i == 0
+                                || dayLabel(items[i - 1].capturedAt) != dayLabel(thing.capturedAt)
+                            Button {
+                                sheetThing = thing
+                            } label: {
+                                PhotoCell(thing: thing, dayPill: firstOfDay ? dayLabel(thing.capturedAt) : nil)
+                            }
+                            // The tiles press like tiles (2026-07-10) — the same
+                            // settle the Settings tiles and treemap cells wear.
+                            .buttonStyle(DSTileButtonStyle())
+                            .matchedTransitionSource(id: thing.id, in: zoomNS)
+                        }
+                        // An incomplete last row keeps its tiles at the same
+                        // width as full rows rather than stretching to fill.
+                        if row.count < perRow {
+                            ForEach(0..<(perRow - row.count), id: \.self) { _ in
+                                Color.clear
+                            }
+                        }
                     }
-                    // The tiles press like tiles (2026-07-10) — the same
-                    // settle the Settings tiles and treemap cells wear.
-                    .buttonStyle(DSTileButtonStyle())
-                    .matchedTransitionSource(id: thing.id, in: zoomNS)
                 }
             }
             .listRowBackground(Color.clear)

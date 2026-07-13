@@ -28,7 +28,7 @@ struct BandRow: View {
     /// stack carries a sparkline over the signed change instead of
     /// time-over-tag (a watchlist row's timestamp says only "watched N days
     /// ago"; its 24h is what you actually glance for). The caller derives
-    /// it from TokenPulse, so only Dexscreener rows ever carry one.
+    /// it from TokenPulse, so only Tokens rows ever carry one.
     var pulse: TokenPulse.Pulse? = nil
     @Environment(\.colorScheme) private var scheme
 
@@ -642,30 +642,41 @@ struct PhotoWell: View {
 
     var body: some View {
         Group {
-            if let image {
-                Image(uiImage: image)
-                    .resizable().scaledToFill()
+            if size != nil {
+                content
             } else {
-                ZStack {
-                    thing.kind.hue.opacity(0.22)
-                    Image(systemName: "photo")
-                        .font(.system(size: (size ?? 100) * 0.34, weight: .medium))
-                        .foregroundStyle(thing.kind.hue)
+                // Fill mode (the Photos grid): `.frame(maxWidth: .infinity)` only
+                // caps the SIZE the parent proposes — it doesn't stop a
+                // `scaledToFill` image from reporting its own (large) intrinsic
+                // size back up, which inflated the grid row's ideal width past
+                // the screen and let a screenshot bleed over its neighbor cell
+                // (user, 2026-07-13). A `GeometryReader` pins the image to
+                // whatever space the row actually allocated, same fix already
+                // proven in `GenMediaTile` for the same class of leak.
+                GeometryReader { geo in
+                    content.frame(width: geo.size.width, height: geo.size.height)
                 }
             }
         }
-        // Fill mode (size == nil, the Photos grid): `.frame(width:nil,height:nil)`
-        // is a NO-OP, so a `scaledToFill` screenshot reported its own (tall)
-        // bounds and overflowed the cell, painting over the next photo (user,
-        // 2026-07-13). Pin the fill frame to the container and clip, so every
-        // grid cell holds exactly its slot. Fixed mode keeps its exact square.
         .frame(width: size, height: size)
-        .frame(maxWidth: size == nil ? .infinity : nil,
-               maxHeight: size == nil ? .infinity : nil)
         .clipped()
         .clipShape(RoundedRectangle(cornerRadius: size != nil ? DS.Radius.appIcon(size!) : 0,
                                     style: .continuous))
         .task(id: thing.sourceRef) { await load() }
+    }
+
+    @ViewBuilder private var content: some View {
+        if let image {
+            Image(uiImage: image)
+                .resizable().scaledToFill()
+        } else {
+            ZStack {
+                thing.kind.hue.opacity(0.22)
+                Image(systemName: "photo")
+                    .font(.system(size: (size ?? 100) * 0.34, weight: .medium))
+                    .foregroundStyle(thing.kind.hue)
+            }
+        }
     }
 
     private func load() async {
