@@ -77,6 +77,11 @@ struct OnboardingView: View {
                         // the Home cover title and the heading ramp.
                         .font(.system(size: 34, weight: .heavy, design: .rounded))
                         .foregroundStyle(DS.textPrimary)
+                        // First-run copy must never truncate — a longer
+                        // translation (ja) wrapped instead of ellipsizing
+                        // mid-word without this (design audit fix).
+                        .minimumScaleFactor(0.8)
+                        .fixedSize(horizontal: false, vertical: true)
                     Text("All of this lands here. Start with three.")
                         .dsText(.body17)
                         .foregroundStyle(DS.textSecondary)

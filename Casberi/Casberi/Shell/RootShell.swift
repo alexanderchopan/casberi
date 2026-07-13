@@ -348,6 +348,11 @@ struct RootShell: View {
                 tab = .feed
                 pendingHowItWorks = true
             }
+            // fullScreenCover hosts its content in a separate presentation
+            // that doesn't reliably inherit `\.locale` from the presenter
+            // (unlike `.sheet`) — reapply so first-run copy honors the
+            // language override too.
+            .environment(\.locale, LanguageStore.shared.locale)
         }
         .sheet(isPresented: $showHowItWorks) { HowItWorksSheet() }
     }
