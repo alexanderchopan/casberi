@@ -8,20 +8,22 @@ import SwiftUI
 /// no indicator (ruling); breakage shows as an attention dot on Home's Apps
 /// button, which is a nav button, not a tab.
 enum Tab: String, CaseIterable, Identifiable {
-    case home, feed
+    case home, feed, actions
     var id: String { rawValue }
 
     var label: String {
         switch self {
-        case .home: return "Home"
-        case .feed: return "Feed"
+        case .home:    return "Home"
+        case .feed:    return "Feed"
+        case .actions: return "Actions"
         }
     }
 
     var symbol: String {
         switch self {
-        case .home: return "house"
-        case .feed: return "waveform.path.ecg"
+        case .home:    return "house"
+        case .feed:    return "waveform.path.ecg"
+        case .actions: return "bolt"
         }
     }
 }
@@ -61,8 +63,9 @@ struct GlassTabBar: View {
                         // management screen is up, that pop (popHome/popFeed
                         // clears the tab's route push) is what leaves it.
                         switch tab {
-                        case .home: chrome.popHome += 1
-                        case .feed: chrome.popFeed += 1
+                        case .home:    chrome.popHome += 1
+                        case .feed:    chrome.popFeed += 1
+                        case .actions: break   // re-tapping Actions does nothing
                         }
                     } else {
                         // A deliberate tab tap supersedes a stale jump AND

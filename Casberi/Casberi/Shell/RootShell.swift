@@ -11,7 +11,6 @@ struct RootShell: View {
     @State private var tab: Tab = .home            // landing: Home
     @State private var bridges = BridgeStore()
     @State private var chrome = ShellChrome()
-    @State private var composerOpen = false
     @State private var draft = ""
     @State private var deepLinkThing: Thing?
     @AppStorage("onboarded") private var onboarded = false
@@ -52,17 +51,6 @@ struct RootShell: View {
                     return true
                 }
 
-            // Scrim behind the engaged composer — light: the glass itself
-            // separates the layers; the dim only settles focus.
-            if composerOpen {
-                DS.scrim.opacity(0.5).ignoresSafeArea()
-                    .transition(.opacity)
-                    .onTapGesture {
-                        withAnimation(DS.Motion.standard) { composerOpen = false }
-                        draft = ""
-                    }
-            }
-
             if let toast = chrome.toast { toastView(toast) }
 
             // The capture flight (§1): a proxy card glides from the capture
@@ -75,55 +63,14 @@ struct RootShell: View {
                 .zIndex(2)
             }
 
-            // Floating bottom bar: tab capsule + composer FAB on one axis —
-            // one glass substance; the FAB morphs into the bubble (iOS 26).
-            // It STAYS over a management screen (Apps/Settings) now, but lights
-            // no tab there (GlassTabBar.managementOpen) — so you can jump to
-            // Home or Feed in one tap instead of backing out first (2026-07-10,
-            // replacing the earlier hide-the-bar treatment).
-            DSGlassContainer(spacing: DS.Space.s3) {
-                VStack(spacing: DS.Space.s3) {
-                    Composer(isOpen: $composerOpen, draft: $draft,
-                             onCommit: saveDraft, onCommitVoice: saveVoice,
-                             answer: answerDocument,
-                             tagCandidates: projectTags,
-                             knownSources: { bridges.bridges.map(\.name) },
-                             // Looking at one source's feed? Its recap leads the
-                             // composer's ask chips (context-aware asks).
-                             contextSource: {
-                                 tab == .feed && FeedFilter.shared.source != "All"
-                                     ? FeedFilter.shared.source : nil
-                             },
-                             onNavigate: navigate,
-                             onKeepAnswer: keepAnswer,
-                             glassNamespace: glassNS)
-                        // A tag tile in an answer opens that tag's view: close
-                        // the composer, land on Home, push the tag (the same
-                        // destination the Home treemap opens).
-                        .environment(\.genProjectTap) { name in
-                            withAnimation(DS.Motion.standard) { composerOpen = false }
-                            draft = ""
-                            // Drop a stale Apps/Settings push so the tag view
-                            // opens cleanly instead of the store re-presenting.
-                            HomeRoute.shared.push = nil
-                            FeedRoute.shared.push = nil
-                            tab = .home
-                            HomeRoute.shared.openTag = name
-                        }
-                    if !composerOpen {
-                        HStack(spacing: DS.Space.s3) {
-                            GlassTabBar(selection: $tab, glassNamespace: glassNS)
-                            ComposerFAB(glassNamespace: glassNS) {
-                                DSHaptic.tap()
-                                withAnimation(DS.Motion.bubble) { composerOpen = true }
-                            }
-                        }
-                        .transition(.move(edge: .bottom).combined(with: .opacity))
-                    }
-                }
-            }
-            .padding(.horizontal, DS.Space.s4)
-            .padding(.bottom, DS.Space.s2)
+            // Just the tab capsule floats now — the composer lives IN the
+            // Actions tab and the FAB is gone (2026-07-12: three tabs, no FAB).
+            // The bar stays over a management screen (Apps/Settings) but lights
+            // no tab there (GlassTabBar.managementOpen) — jump to a tab in one
+            // tap instead of backing out first.
+            GlassTabBar(selection: $tab, glassNamespace: glassNS)
+                .padding(.horizontal, DS.Space.s4)
+                .padding(.bottom, DS.Space.s2)
         }
         // Privacy as the default (goal 6): leaving the app redacts the
         // corpus — the app-switcher snapshot shows choreography, not content.
@@ -148,11 +95,12 @@ struct RootShell: View {
                 HandOffState.refresh(connected: Set(
                     bridges.bridges.filter { $0.status == .connected }
                         .map { $0.name.lowercased() }))
-                // Control Center's button left a flag — open the composer.
+                // Control Center's button left a flag — jump to the Actions tab
+                // (the composer lives there now).
                 let group = UserDefaults(suiteName: SharedStore.appGroup)
                 if group?.bool(forKey: "compose.request") == true {
                     group?.removeObject(forKey: "compose.request")
-                    withAnimation(DS.Motion.bubble) { composerOpen = true }
+                    withAnimation(DS.Motion.standard) { tab = .actions }
                 }
                 // A share-extension capture landed while we were away. Its
                 // write IS in the store file, but @Query never hears a
@@ -172,15 +120,14 @@ struct RootShell: View {
                 }
             }
         }
-        .animation(DS.Motion.standard, value: composerOpen)
         // Feed's back arrow asks this way (it can't hold a binding to
         // `tab`) — same shape as popHome/popFeed.
         .onChange(of: chrome.goHomeRequest) { withAnimation(DS.Motion.standard) { tab = .home } }
-        // A surface requested an ask (the weekend cover) — open the bubble;
-        // the composer consumes the query once it's up (prd 54).
+        // A surface requested an ask (the weekend cover) — jump to the Actions
+        // tab; the composer there consumes the query once it mounts (prd 54).
         .onChange(of: chrome.askRequest) { _, request in
             guard request != nil else { return }
-            withAnimation(DS.Motion.bubble) { composerOpen = true }
+            withAnimation(DS.Motion.standard) { tab = .actions }
         }
         .dsSensoryFeedback()
         .environment(bridges)
@@ -310,23 +257,20 @@ struct RootShell: View {
                     NSLog("[Casberi] answerProbe(\"%@\") %dms →\n%@", q, ms, doc.joined(separator: "\n"))
                 }
             }
-            // Debug hook: open the composer so `-uiAnswerProbe` (handled in the
-            // composer) can drive a real send for an on-screen answer render.
+            // Debug hook: land on the Actions tab so `-uiAnswerProbe` (handled
+            // in the composer) can drive a real send for an on-screen answer.
             if UserDefaults.standard.string(forKey: "uiAnswerProbe") != nil
                 || UserDefaults.standard.string(forKey: "composerDraft") != nil
                 || UserDefaults.standard.string(forKey: "composerType") != nil
                 || UserDefaults.standard.bool(forKey: "openComposer") {
-                composerOpen = true
+                tab = .actions
             }
-            // `-openComposerDelay <s>` opens the composer THROUGH the real
-            // animation path after a delay — reproduces "tap the FAB after
-            // a liquid ride" (device report 2026-07-10) headlessly.
+            // `-openComposerDelay <s>` lands on the Actions tab after a delay.
             let composerDelay = UserDefaults.standard.double(forKey: "openComposerDelay")
             if composerDelay > 0 {
                 Task { @MainActor in
                     try? await Task.sleep(for: .seconds(composerDelay))
-                    DSHaptic.tap()
-                    withAnimation(DS.Motion.bubble) { composerOpen = true }
+                    withAnimation(DS.Motion.standard) { tab = .actions }
                 }
             }
             // Debug hook: `-linkTitleProbe <url>` exercises the title fetch
@@ -442,9 +386,40 @@ struct RootShell: View {
     @ViewBuilder
     private var content: some View {
         switch tab {
-        case .home: HomeScreen()
-        case .feed: FeedScreen()
+        case .home:    HomeScreen()
+        case .feed:    FeedScreen()
+        case .actions: actionsTab
         }
+    }
+
+    /// The Actions tab (2026-07-12): the composer, always open — ask a question
+    /// or say what to do — with its tool grid below. No FAB, no floating morph;
+    /// it's a real screen. Same wiring the floating composer used.
+    private var actionsTab: some View {
+        VStack(spacing: 0) {
+            Composer(isOpen: .constant(true), draft: $draft,
+                     onCommit: saveDraft, onCommitVoice: saveVoice,
+                     answer: answerDocument,
+                     tagCandidates: projectTags,
+                     knownSources: { bridges.bridges.map(\.name) },
+                     contextSource: { nil },
+                     onNavigate: navigate,
+                     onKeepAnswer: keepAnswer,
+                     glassNamespace: nil)
+                // A tag tile in an answer opens that tag's view on Home.
+                .environment(\.genProjectTap) { name in
+                    HomeRoute.shared.push = nil
+                    FeedRoute.shared.push = nil
+                    tab = .home
+                    HomeRoute.shared.openTag = name
+                }
+                .padding(.horizontal, DS.Space.s4)
+                .padding(.top, DS.Space.s6)
+            Spacer(minLength: 0)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .padding(.bottom, 96)   // clear the floating tab bar
+        .dsPageBackground()
     }
 
     // MARK: - Capture (rung 1 write: the composer saves to us)
