@@ -81,8 +81,10 @@ enum ObsidianIngest {
                                          options: [.skipsHiddenFiles]) else { return nil }
 
         // Collect (url, modified) for every .md outside dot-directories.
+        // `allObjects` materializes the walk synchronously — iterating the
+        // NSEnumerator directly is unavailable from async contexts in Swift 6.
         var notes: [(url: URL, modified: Date)] = []
-        for case let url as URL in walker {
+        for case let url as URL in walker.allObjects {
             guard url.pathExtension.lowercased() == "md" else { continue }
             let values = try? url.resourceValues(forKeys: Set(keys))
             guard values?.isRegularFile == true else { continue }
