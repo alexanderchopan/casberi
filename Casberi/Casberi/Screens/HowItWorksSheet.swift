@@ -17,22 +17,22 @@ struct HowItWorksSheet: View {
         var id: String { glyph }
     }
 
+    // The four beats mirror the docs' four feature sections (2026-07-13):
+    // Just connect → Keep tabs → Take action → Make it yours. One line each —
+    // the essence of the section, never the full card list.
     private let points: [Point] = [
         Point(glyph: "square.grid.2x2.fill", hue: .blue,
-              title: "Connect your apps",
-              line: "Photos, calendars, wallets, tokens."),
-        Point(glyph: "waveform.path.ecg", hue: .green,
-              title: "One feed",
-              line: "Everything together, or one app at a time."),
-        Point(glyph: "hand.tap.fill", hue: .orange,
-              title: "Act on anything",
-              line: "Open, pin, or share it."),
+              title: "Just connect",
+              line: "No account. Your apps, in one feed."),
         Point(glyph: "pin.fill", hue: .pink,
-              title: "Home is your board",
-              line: "Pin, arrange, and resize what matters."),
+              title: "Keep tabs",
+              line: "Pin, share, tag, and act on your things."),
         Point(glyph: "sparkles", hue: .purple,
-              title: "Ask across it all",
-              line: "A question, answered from everything."),
+              title: "Take action",
+              line: "Ask, organize, or jump to a tool."),
+        Point(glyph: "slider.horizontal.3", hue: .orange,
+              title: "Make it yours",
+              line: "Avatar, background, language, and data — your call."),
     ]
 
     var body: some View {
