@@ -98,11 +98,11 @@ Some things are missing on purpose. There's no separate actions or to-do tab —
 
 ## How to use — every screen, explained
 
-### The shell
+### Shell
 
-Casberi is dark and clean, with barely any buttons or menus. Wherever you are, two doors sit in the top-right corner: your avatar opens your settings, and the grid icon opens your apps. The grid shows a small dot only when a connected app needs reconnecting — nothing nags you otherwise. Everything else is the three tabs below. Tap the tab you're already on to jump back to its top.
+Casberi is dark and clean, with barely any buttons or menus. Wherever you are, two doors sit in the top-right corner: your avatar opens Settings, and the grid icon opens your apps. The grid shows a small dot only when a connected app needs reconnecting — nothing nags you otherwise. Everything else is the three tabs below. Tap the tab you're already on to jump back to its top.
 
-### The tab bar
+### Tab bar
 
 The whole app is three tabs, in a bar at the bottom:
 
@@ -124,7 +124,7 @@ Tap your avatar and Settings opens. Seven tiles, no account, no sign-in:
 
 ### Apps
 
-Open Apps from the grid icon. Your connected apps sit at the top; below is a store of everything you can add — 43 apps and counting, in shelves by category (Onchain, Markets, Life, Notes, and more), App-Store style.
+Open Apps from the grid icon. Your connected apps sit at the top; below is a store of everything you can add — 43 apps and counting, in shelves by category (Onchain, Markets, Notes, Work, and more), App-Store style.
 
 Every app opens a page that tells you what it does and what shows up in your feed, with one clear button that says what it does — Connect, Open, Fix, or Soon. Apps connect three ways, and each page says which:
 
@@ -138,24 +138,24 @@ Agents live here too. Connect a coding agent or a gateway like OpenClaw, and its
 
 Feed is where everything lands, newest first. Tap a chip — one per app — and the feed takes that app's shape: Calendar reads like an agenda, Photos becomes a grid, a wallet leads with its balance.
 
-Tap any row to open the thing — its details, its tags, and what you can do next: open it in the app it came from, pin it, or share it. Tags group things without folders; add or remove them right there.
+Tap any row to open the thing — its details, its tags, and what you can do next: open it in the app it came from, pin it to Home, or share it. Tags group things without folders; add or remove them right there.
 
-Some rows let you act in place. Filter to Gmail and a "New email" row lets you write one; Calendar offers a new event, Reminders a new task — each hands off to the right app. Music rows open in Apple Music or Spotify.
+Some rows let you act in place. Filter to Gmail and you can start a new email; Calendar offers a new event, Reminders a new task — each opens the right app, ready to go. Music rows open in Apple Music or Spotify. Tick a reminder off and it completes for real — tap again to undo.
 
-And when an agent wants to do something, it arrives as a card with the exact command and Approve / Deny buttons. The card is the consent — no extra popup.
+And when an agent wants to do something, it arrives as a card with the exact command and Approve / Deny. The card is the consent — no extra popup.
 
 ### Home
 
-Home is your board. You build it. Pin what matters, drag cards where you want them, and tap a pin to make one bigger or smaller. Long-press to rearrange everything at once.
+Home is your board. You build it. Pin anything to Home and it becomes a card. Drag cards to rearrange them, tap a pin to grow a card bigger, and long-press to rearrange the whole board at once.
 
-Up top: today's date, a row of counts — one per kind of thing, and a "Just landed" card for the newest arrival. Below sit your pinned cards — a wallet's balance, your recent chats, a trip's plans — laid out the way you like. It's the one screen that's just yours.
+Up top: today's date, a row of counts — one per kind of thing you have — and a "Just landed" card for the newest arrival. Below sit your pinned cards — a wallet's balance, your recent chats, a trip's plans — laid out the way you like. It's the one screen that's just yours.
 
-### The composer
+### Composer
 
 The Actions tab is where you ask and do. It opens with "What now?" and two ways forward.
 
-Jump to a tool: a grid of your apps — Note, Message, Email, Event, Reminder, Search web, and the tools you use like ChatGPT or Claude. One tap opens the right app.
+Jump to a tool: a grid of quick openers — Note, Message, Email, Event, Reminder, Search web, plus ChatGPT or Claude if you have them. One tap opens the right app, ready to go.
 
-Or ask below: type a question and Casberi answers from your own things ("what did I save this week?"), or say what you want ("show my work stuff") and it takes you there. On iPhones with Apple Intelligence the answer is written on your phone, from your things. It's free, and nothing leaves your phone.
+Or ask below: type a question and Casberi answers from your own things ("what did I save this week?"). Follow up and it keeps the thread; tap "Keep this" to save an answer as a note. On iPhones with Apple Intelligence the answer is written on your phone, from your things — it's free, and nothing leaves your phone.
 
-It's also how you capture. Paste something and a card shows exactly what will be saved; tap the mic and talk. From anywhere else in iOS, share to Casberi — and once Photos is connected, screenshots flow in on their own.
+It's also how you capture. Paste something and a card shows exactly what will be saved before you send. Tap the mic and talk — your words arrive live and save when you're done. And from anywhere else in iOS, share to Casberi; once Photos is connected, screenshots flow in on their own.
