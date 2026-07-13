@@ -139,20 +139,15 @@ enum RSSIngest {
         var touched = false
 
         // Fetch and parse every followed feed concurrently, then process the
-        // results back in feed order (a task group yields in COMPLETION
-        // order, and the same ref appearing in two feeds should resolve the
-        // same way it always did — first-in-list wins). Only the
-        // ModelContext/RSSStore bookkeeping below still runs sequentially.
-        let feeds = store.feeds
-        let indexed = await withTaskGroup(of: (Int, Fetched?).self) { group in
-            for (i, feed) in feeds.enumerated() {
-                group.addTask { (i, await fetchAndParse(feed)) }
-            }
-            var collected: [(Int, Fetched?)] = []
-            for await result in group { collected.append(result) }
-            return collected
+        // results back in feed order (the same ref appearing in two feeds
+        // should resolve the same way it always did — first-in-list wins).
+        // Only the ModelContext/RSSStore bookkeeping below still runs
+        // sequentially. Capped at 8 in flight — feeds are diverse hosts
+        // (unlike a single API key), but an unbounded burst still opens more
+        // simultaneous connections than any real feed list needs.
+        let fetched = await IngestSupport.boundedGather(store.feeds, maxConcurrent: 8) { feed in
+            await fetchAndParse(feed)
         }
-        let fetched = indexed.sorted { $0.0 < $1.0 }.map(\.1)
 
         var reachedAny = false
         for case let f? in fetched {

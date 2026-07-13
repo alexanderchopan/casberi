@@ -326,11 +326,16 @@ enum FeedFollowIngest {
     @MainActor private static var running: Set<String> = []
 
     /// One followed entry's fetch outcome — the sequential bookkeeping loop
-    /// below needs the resolved feed URL (to remember it) alongside the parse.
+    /// below needs the resolved feed URL (to remember it) alongside the
+    /// parse. `parsed` is nil when resolution succeeded but the feed's
+    /// content couldn't be fetched THIS pass — the resolution still gets
+    /// persisted (see `refresh`) so a transient content-fetch failure
+    /// doesn't undo an expensive resolution (YouTube's channel-page scrape,
+    /// Podcasts' iTunes search) and force it to re-run next time.
     private struct Fetched {
         let entry: FeedFollowEntry
         let resolvedFeedURL: String?
-        let parsed: FeedParser.Parsed
+        let parsed: FeedParser.Parsed?
     }
 
     /// Resolving/fetching/parsing one entry — no shared state, so every
@@ -344,7 +349,14 @@ enum FeedFollowIngest {
             feedURL = built
             resolvedFeedURL = built
         }
-        guard let url = URL(string: feedURL), let data = await FeedFetch.data(url) else { return nil }
+        guard let url = URL(string: feedURL) else { return nil }
+        guard let data = await FeedFetch.data(url) else {
+            // The resolution (if any) is still worth returning and
+            // persisting even though this pass never reached the feed's
+            // actual content (review 2026-07-13 — see the struct doc above).
+            return resolvedFeedURL != nil
+                ? Fetched(entry: entry, resolvedFeedURL: resolvedFeedURL, parsed: nil) : nil
+        }
         return Fetched(entry: entry, resolvedFeedURL: resolvedFeedURL, parsed: FeedParser.parse(data))
     }
 
@@ -364,27 +376,27 @@ enum FeedFollowIngest {
         let backfill = ArtlessBackfill(context, source: kind.source)
         var added = 0
 
-        // Concurrent fetch, then processed back in the entries' own order —
-        // a task group yields in COMPLETION order, and the same ref landing
-        // from two entries should resolve the same way it always did
-        // (first-in-list wins).
+        // Concurrent fetch, then processed back in the entries' own order
+        // (the same ref landing from two entries should resolve the same
+        // way it always did — first-in-list wins). Capped at 4 in flight —
+        // every entry under one bridge hits the SAME host (all Reddit, all
+        // YouTube, …), and this file's own FeedFetch comment notes Reddit
+        // already 429s a plain client under normal load; an uncapped burst
+        // made that far more likely than the old serial pacing (review
+        // 2026-07-13).
         let entries = store.entries
-        let indexed = await withTaskGroup(of: (Int, Fetched?).self) { group in
-            for (i, entry) in entries.enumerated() {
-                group.addTask { (i, await fetchAndParse(entry, kind: kind)) }
-            }
-            var collected: [(Int, Fetched?)] = []
-            for await result in group { collected.append(result) }
-            return collected
+        let fetched = await IngestSupport.boundedGather(entries, maxConcurrent: 4) { entry in
+            await fetchAndParse(entry, kind: kind)
         }
-        let fetched = indexed.sorted { $0.0 < $1.0 }.map(\.1)
 
         var reachedAny = false
         for case let f? in fetched {
-            reachedAny = true
             let entry = f.entry
-            let parsed = f.parsed
             if let resolvedFeedURL = f.resolvedFeedURL { store.setFeedURL(resolvedFeedURL, for: entry.id) }
+            // Resolved but unreachable this pass (see `Fetched` doc) — the
+            // resolution is saved above; nothing else to do until next time.
+            guard let parsed = f.parsed else { continue }
+            reachedAny = true
             if entry.title.isEmpty, !parsed.title.isEmpty {
                 store.setTitle(parsed.title, for: entry.id)
             }

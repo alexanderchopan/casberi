@@ -151,6 +151,39 @@ enum IngestSupport {
               (response as? HTTPURLResponse)?.statusCode == 200 else { return nil }
         return try? JSONSerialization.jsonObject(with: data)
     }
+
+    // MARK: - Bounded concurrent fan-out
+
+    /// Runs `work` across `items` with at most `maxConcurrent` in flight at
+    /// once, returning results in `items`' ORIGINAL order (not completion
+    /// order) — the shape every ingest's fetch-then-sequential-bookkeeping
+    /// split needs. A wallet/RSS/feed-follow refresh used to fetch one item
+    /// at a time; firing every item at once instead can out-burst a
+    /// provider's rate limit (Alchemy's key, Reddit's `.rss` endpoint) in a
+    /// way the old serial pacing never did. Capping keeps the concurrency
+    /// win without the burst (2026-07-13).
+    static func boundedGather<Item, Output>(
+        _ items: [Item], maxConcurrent: Int, _ work: @escaping (Item) async -> Output
+    ) async -> [Output] {
+        guard !items.isEmpty else { return [] }
+        return await withTaskGroup(of: (Int, Output).self) { group in
+            var results = [Output?](repeating: nil, count: items.count)
+            var nextIndex = 0
+            func submitNext() {
+                guard nextIndex < items.count else { return }
+                let i = nextIndex
+                let item = items[i]
+                group.addTask { (i, await work(item)) }
+                nextIndex += 1
+            }
+            for _ in 0..<min(maxConcurrent, items.count) { submitNext() }
+            while let (i, output) = await group.next() {
+                results[i] = output
+                submitNext()
+            }
+            return results.map { $0! }
+        }
+    }
 }
 
 

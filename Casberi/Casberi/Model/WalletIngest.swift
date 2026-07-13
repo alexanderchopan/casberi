@@ -48,24 +48,19 @@ enum WalletIngest {
         // network call — fetched serially before, up to
         // `addresses × chains × 2` round trips in a row on every foreground
         // (2026-07-13: seconds of wall-clock for a couple of watched
-        // wallets). Fan them out with a task group, same as
-        // `topHoldingsByWallet` below already does across wallets — then
-        // insert sequentially, since `ModelContext` isn't safe to touch
-        // concurrently.
+        // wallets). Fanned out, capped at 4 in flight — Alchemy's free-tier
+        // key rate-limits per second, and an uncapped burst (up to 30
+        // requests for 3 wallets) drew silent 429s that the old serial
+        // pacing never triggered (review 2026-07-13). `boundedGather`
+        // preserves job order, matching `topHoldingsByWallet` below.
         let jobs = addresses.flatMap { address in
             chains.flatMap { chain in
                 [true, false].map { received in (address, chain, received) }   // received (to) + sent (from)
             }
         }
-        let results = await withTaskGroup(of: (String, Chain, Bool, [[String: Any]]?).self) { group in
-            for (address, chain, received) in jobs {
-                group.addTask {
-                    (address, chain, received, await fetch(address: address, chain: chain, received: received))
-                }
-            }
-            var collected: [(String, Chain, Bool, [[String: Any]]?)] = []
-            for await result in group { collected.append(result) }
-            return collected
+        let results = await IngestSupport.boundedGather(jobs, maxConcurrent: 4) { job in
+            let (address, chain, received) = job
+            return (address, chain, received, await fetch(address: address, chain: chain, received: received))
         }
 
         var added = 0
