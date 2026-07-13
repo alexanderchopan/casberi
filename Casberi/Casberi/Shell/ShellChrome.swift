@@ -30,27 +30,17 @@ final class ShellChrome {
     }
     var flight: Flight?
 
-    /// Bumped when a flight lands — the Feed tab icon pulses once on change.
+    /// Bumped when a flight lands — the target chip pulses once on change.
     var landedPulse = 0
 
-    /// The Feed tab's frame in global space, reported by GlassTabBar so the
+    /// The "All" chip's frame in global space, reported by SourceChips so the
     /// flight knows where to land.
     var feedTabFrame: CGRect = .zero
 
-    /// Bumped when a tab is tapped while already selected — that tab's screen
-    /// pops everything (pushed screens, sheets) back to its root.
+    /// Bumped when the active chip is tapped again — the surface pops
+    /// everything (pushed screens, sheets) back to its root (the tab era's
+    /// "re-tap to pop" habit, now the "re-tap the active chip" habit).
     var popHome = 0
-    var popFeed = 0
-
-    /// True only when Home itself pushed the person into Feed (a map cell,
-    /// a source jump) — never on an ordinary tab tap. Feed's back arrow
-    /// reads this so it appears only when it means something (2026-07-09):
-    /// tabs aren't hierarchical, so "back" has no meaning otherwise. Cleared
-    /// on any manual tab switch, and by the arrow itself.
-    var jumpedFromHome = false
-    /// Bumped to ask RootShell to switch to Home — the arrow's own tab
-    /// can't hold a binding to `tab`, so it asks the way popHome/popFeed do.
-    var goHomeRequest = 0
 
     /// A surface asked the composer to run an ask (the weekend cover's week
     /// synthesis, prd 54) — RootShell opens the bubble on set; the composer

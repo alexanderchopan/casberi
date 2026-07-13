@@ -2,18 +2,18 @@ import SwiftUI
 import SwiftData
 import CoreSpotlight
 
-/// The shell. Three tabs behind a glass capsule; the composer spans full width
-/// above the bar; no FAB; content scrolls under the floating stack. The phone
-/// frame from the prototype is demo chrome and is dropped — the shell fills the
-/// device (brief §7).
+/// The shell (2026-07-13, drastic restructure: no tabs). `MainSurface` is the
+/// one destination — a fixed chip header over a body that swaps between the
+/// board (Pinned) and the feed. The composer is a FAB floating over it,
+/// content scrolls under the floating stack. The phone frame from the
+/// prototype is demo chrome and is dropped — the shell fills the device
+/// (brief §7).
 struct RootShell: View {
     @Environment(\.modelContext) private var modelContext
-    @State private var tab: Tab = .home            // landing: Home
     @State private var bridges = BridgeStore()
     @State private var chrome = ShellChrome()
     @State private var draft = ""
-    /// The tab to return to when the Actions sheet dismisses.
-    @State private var priorTab: Tab = .home
+    @State private var composerOpen = false
     /// The Actions sheet's height — the composer reports its content height so
     /// the sheet hugs it (grows on its own when an answer streams in).
     @State private var actionsHeight: CGFloat = 360
@@ -32,7 +32,6 @@ struct RootShell: View {
     /// Sam?") searches inside it instead of the whole corpus (2026-07-10).
     @State private var lastAnswerHits: [Thing] = []
     @State private var redactNow = false
-    @Namespace private var glassNS
 
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -43,7 +42,7 @@ struct RootShell: View {
 
             // Content — records paint, generated surfaces stream (brief §5).
             // Anything dropped on the shell lands as a thing (capture: drop).
-            content
+            MainSurface()
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .dropDestination(for: URL.self) { urls, _ in
                     guard let url = urls.first else { return false }
@@ -59,7 +58,7 @@ struct RootShell: View {
             if let toast = chrome.toast { toastView(toast) }
 
             // The capture flight (§1): a proxy card glides from the capture
-            // point to the Feed tab, then the tab pulses once.
+            // point to the "All" chip, then it pulses once.
             if let flight = chrome.flight {
                 CaptureFlight(flight: flight, target: chrome.feedTabFrame) {
                     chrome.flight = nil
@@ -68,14 +67,21 @@ struct RootShell: View {
                 .zIndex(2)
             }
 
-            // Just the tab capsule floats now — the composer lives IN the
-            // Actions tab and the FAB is gone (2026-07-12: three tabs, no FAB).
-            // The bar stays over a management screen (Apps/Settings) but lights
-            // no tab there (GlassTabBar.managementOpen) — jump to a tab in one
-            // tap instead of backing out first.
-            GlassTabBar(selection: $tab, glassNamespace: glassNS)
-                .padding(.horizontal, DS.Space.s4)
-                .padding(.bottom, DS.Space.s2)
+            // The FAB (2026-07-13, drastic restructure: the tab bar is gone —
+            // this is the one floating control left). Tap opens the composer
+            // sheet; the chip header handles every other move now.
+            VStack {
+                Spacer()
+                HStack {
+                    Spacer()
+                    ComposerFAB {
+                        DSHaptic.tap()
+                        composerOpen = true
+                    }
+                }
+            }
+            .padding(.horizontal, DS.Space.s4)
+            .padding(.bottom, DS.Space.s2)
         }
         // Privacy as the default (goal 6): leaving the app redacts the
         // corpus — the app-switcher snapshot shows choreography, not content.
@@ -104,12 +110,11 @@ struct RootShell: View {
                 HandOffState.refresh(connected: Set(
                     bridges.bridges.filter { $0.status == .connected }
                         .map { $0.name.lowercased() }))
-                // Control Center's button left a flag — jump to the Actions tab
-                // (the composer lives there now).
+                // Control Center's button left a flag — open the composer.
                 let group = UserDefaults(suiteName: SharedStore.appGroup)
                 if group?.bool(forKey: "compose.request") == true {
                     group?.removeObject(forKey: "compose.request")
-                    withAnimation(DS.Motion.standard) { tab = .actions }
+                    composerOpen = true
                 }
                 // A share-extension capture landed while we were away. Its
                 // write IS in the store file, but @Query never hears a
@@ -129,25 +134,16 @@ struct RootShell: View {
                 }
             }
         }
-        // Actions is a sheet: remember where we came from, and present it while
-        // the Actions tab is selected; dismissing returns to that tab.
-        .onChange(of: tab) { old, new in
-            if new == .actions && old != .actions { priorTab = old }
-        }
-        .sheet(isPresented: Binding(
-            get: { tab == .actions },
-            set: { if !$0 { tab = priorTab } }
-        )) {
+        // The composer is a sheet the FAB opens — no tab to remember and
+        // return to now; dismissing just closes it over whatever's on screen.
+        .sheet(isPresented: $composerOpen) {
             actionsSheet
         }
-        // Feed's back arrow asks this way (it can't hold a binding to
-        // `tab`) — same shape as popHome/popFeed.
-        .onChange(of: chrome.goHomeRequest) { withAnimation(DS.Motion.standard) { tab = .home } }
-        // A surface requested an ask (the weekend cover) — jump to the Actions
-        // tab; the composer there consumes the query once it mounts (prd 54).
+        // A surface requested an ask (the weekend cover) — open the composer;
+        // it consumes the query once it mounts (prd 54).
         .onChange(of: chrome.askRequest) { _, request in
             guard request != nil else { return }
-            withAnimation(DS.Motion.standard) { tab = .actions }
+            composerOpen = true
         }
         .dsSensoryFeedback()
         .environment(bridges)
@@ -165,6 +161,14 @@ struct RootShell: View {
         // the newest thing's sheet (the widget-tap route).
         .onOpenURL { route($0) }
         .onAppear {
+            // Landing (2026-07-13): a curator who's pinned something lands on
+            // their board — they know what they want. Someone with nothing
+            // pinned yet (new, or never curated) lands on the whole record
+            // instead of an empty board. Deep links and debug hooks below can
+            // still override this within the same launch.
+            let hasPins = !HomePinnedSources.shared.sources.isEmpty
+                || WalletStore.shared.addresses.contains(where: \.pinnedToHome)
+            FeedFilter.shared.source = hasPins ? "Pinned" : "All"
             #if DEBUG
             // Perf pass: log init→ready (first content appearance) once per
             // process. `ready` = this onAppear, i.e. the first frame's view tree
@@ -281,20 +285,20 @@ struct RootShell: View {
                     NSLog("[Casberi] answerProbe(\"%@\") %dms →\n%@", q, ms, doc.joined(separator: "\n"))
                 }
             }
-            // Debug hook: land on the Actions tab so `-uiAnswerProbe` (handled
-            // in the composer) can drive a real send for an on-screen answer.
+            // Debug hook: open the composer so `-uiAnswerProbe` (handled in the
+            // composer) can drive a real send for an on-screen answer.
             if UserDefaults.standard.string(forKey: "uiAnswerProbe") != nil
                 || UserDefaults.standard.string(forKey: "composerDraft") != nil
                 || UserDefaults.standard.string(forKey: "composerType") != nil
                 || UserDefaults.standard.bool(forKey: "openComposer") {
-                tab = .actions
+                composerOpen = true
             }
-            // `-openComposerDelay <s>` lands on the Actions tab after a delay.
+            // `-openComposerDelay <s>` opens the composer after a delay.
             let composerDelay = UserDefaults.standard.double(forKey: "openComposerDelay")
             if composerDelay > 0 {
                 Task { @MainActor in
                     try? await Task.sleep(for: .seconds(composerDelay))
-                    withAnimation(DS.Motion.standard) { tab = .actions }
+                    composerOpen = true
                 }
             }
             // Debug hook: `-linkTitleProbe <url>` exercises the title fetch
@@ -330,9 +334,8 @@ struct RootShell: View {
                 predicate: #Predicate { $0.id == id }
             ))) ?? []
             if let thing = all.first {
-                HomeRoute.shared.push = nil   // land on Feed, not a stale store push
-                FeedRoute.shared.push = nil
-                tab = .feed
+                HomeRoute.shared.push = nil   // land on the record, not a stale store push
+                FeedFilter.shared.source = "All"
                 deepLinkThing = thing
             }
         }
@@ -349,11 +352,12 @@ struct RootShell: View {
             // Onboarding (option 4, 2026-07-07): the mini store connects the
             // three real bridges for REAL, and that's the whole tour — no
             // demo mode, no sample things. The dream lives on the store
-            // pages as engine-rendered previews. Landing is FEED: the record
-            // the connects just filled.
+            // pages as engine-rendered previews. Landing is the record ("All"
+            // chip): the connects just filled it, and a brand-new person has
+            // nothing pinned yet.
             OnboardingView(store: bridges) { _ in
                 onboarded = true
-                tab = .feed
+                FeedFilter.shared.source = "All"
                 pendingHowItWorks = true
             }
             // fullScreenCover hosts its content in a separate presentation
@@ -368,16 +372,16 @@ struct RootShell: View {
     /// casberi:// routing — one place, used by onOpenURL and the debug hook.
     private func route(_ url: URL) {
         // A deep link lands you AT a destination, not back in a store the route
-        // singletons still hold from an earlier visit — clear both first (only
-        // tab taps clear them otherwise). account/apps re-sets one below. Without
-        // this, a stale push makes the tab bar read "management open" (no tab
-        // lit) over an ordinary Home/Feed view.
+        // singleton still holds from an earlier visit. apps/settings re-set it
+        // below.
         HomeRoute.shared.push = nil
-        FeedRoute.shared.push = nil
         switch url.host() {
-        case "home":    tab = .home
+        // casberi://home is back-compat (the app was a Home tab once) — it
+        // now lands on the board.
+        case "home":    FeedFilter.shared.source = "Pinned"; FeedFilter.shared.tag = "All"
         case "feed":
-            tab = .feed
+            FeedFilter.shared.source = "All"
+            FeedFilter.shared.tag = "All"
             // casberi://feed/type/Link — Home's kind bar lands here filtered.
             // casberi://feed/source/Zerion — lands in that source's shape.
             let parts = url.pathComponents.filter { $0 != "/" }
@@ -386,16 +390,15 @@ struct RootShell: View {
             } else if parts.count == 2, parts[0] == "source" {
                 FeedFilter.shared.source = parts[1]
             }
-        // Apps is no longer a tab — land on Home and push the Apps screen from
-        // its toolbar route (back-compat for casberi://apps and //account).
+        // Apps is reached through the shared doors now — push it directly,
+        // wherever the chip header currently sits (back-compat for
+        // casberi://apps and //account).
         case "account", "apps":
-            tab = .home
             HomeRoute.shared.push = .apps
         case "settings":
-            tab = .home
             HomeRoute.shared.push = .settings
         case "thing":
-            tab = .feed
+            FeedFilter.shared.source = "All"
             let part = url.pathComponents.filter { $0 != "/" }.first
             if part == "latest" {
                 deepLinkThing = (try? modelContext.fetch(FetchDescriptor<Thing>(
@@ -411,19 +414,6 @@ struct RootShell: View {
     }
 
     // MARK: - Screens
-
-    @ViewBuilder
-    private var content: some View {
-        switch tab {
-        case .home:    HomeScreen()
-        case .feed:    FeedScreen()
-        case .actions:
-            // Actions is a sheet (2026-07-12) — the content is less than a page,
-            // so a half/three-quarter sheet sizes to it instead of stranding it
-            // on a full screen. Behind the sheet, the tab you came from.
-            if priorTab == .feed { FeedScreen() } else { HomeScreen() }
-        }
-    }
 
     /// The Actions sheet: the composer, always open — ask a question or say what
     /// to do — with its tools. Presented at 1/2, expandable to 3/4. Same wiring
@@ -441,8 +431,8 @@ struct RootShell: View {
                  glassNamespace: nil)
             .environment(\.genProjectTap) { name in
                 HomeRoute.shared.push = nil
-                FeedRoute.shared.push = nil
-                tab = .home
+                composerOpen = false
+                FeedFilter.shared.source = "Pinned"
                 HomeRoute.shared.openTag = name
             }
             // Hug the content — the sheet grows/shrinks with what's inside, so
@@ -461,22 +451,20 @@ struct RootShell: View {
         // The composer closed itself before calling here (its close() owns
         // the morph + state reset) — this only moves the shell.
         // Every destination here is content, not a door — drop any Apps/Settings
-        // the singletons still hold, else asking to open a tag while in the store
-        // re-presents the store (and leaves the tab bar reading "management").
+        // the singleton still holds, else asking to open a tag while in the
+        // store re-presents the store.
         HomeRoute.shared.push = nil
-        FeedRoute.shared.push = nil
+        composerOpen = false
         switch intent {
         case .tag(let name):
-            tab = .home
+            FeedFilter.shared.source = "Pinned"
             HomeRoute.shared.openTag = name
         case .source(let source):
             FeedFilter.shared.source = source
             FeedFilter.shared.tag = "All"
-            tab = .feed
         case .kind(let kind):
             FeedFilter.shared.source = "All"
             FeedFilter.shared.tag = kind.typeTag
-            tab = .feed
         }
     }
 
@@ -564,9 +552,10 @@ struct RootShell: View {
     }
 
     /// Every save ends here (§1): toast, and — unless the person is already
-    /// watching Feed, where the new row IS the arrival — the proxy-card
-    /// flight to the Feed tab. The very first thing ever gets its own toast
-    /// and always flies (§8). Haptic stays at commit, in the callers.
+    /// watching the record (any feed shape), where the new row IS the
+    /// arrival — the proxy-card flight to the "All" chip. The very first
+    /// thing ever gets its own toast and always flies (§8). Haptic stays at
+    /// commit, in the callers.
     private func land(_ thing: Thing, undoable: Bool = false) {
         let first = !firstThingSaved
         if first { firstThingSaved = true }
@@ -580,7 +569,7 @@ struct RootShell: View {
             chrome.flash(first ? "Your first thing" : "Saved")
         }
 
-        if tab != .feed || first {
+        if FeedFilter.shared.source == "Pinned" || first {
             chrome.flight = ShellChrome.Flight(kind: thing.kind, title: thing.title)
         }
     }
@@ -1116,7 +1105,7 @@ struct RootShell: View {
 }
 
 /// The §1 proxy card: KindGlyph + truncated title, gliding from above the
-/// bar to the Feed tab, shrinking and fading. One keyframe pair.
+/// bar to the "All" chip, shrinking and fading. One keyframe pair.
 private struct CaptureFlight: View {
     let flight: ShellChrome.Flight
     let target: CGRect

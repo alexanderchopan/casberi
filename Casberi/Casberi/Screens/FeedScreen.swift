@@ -1,16 +1,6 @@
 import SwiftUI
 import SwiftData
 
-/// Feed's door pushes, shared so the shell can tell when a management screen
-/// (Apps/Settings, and whatever they push) is covering this tab — the floating
-/// tab bar hides then, so it never falsely reads "Feed" over a store you're
-/// only visiting. Mirrors `HomeRoute` for the Home tab.
-@Observable final class FeedRoute {
-    static let shared = FeedRoute()
-    var push: HomeRoute.Push?
-    private init() {}
-}
-
 /// Feed — the record paints (M3), and it is ENTIRELY a feed (re-ruling
 /// 2026-07-04): source chips, machine presence, then rows. The type chart
 /// moved to Home as the kind bar — its segments land here filtered via
@@ -24,8 +14,6 @@ import SwiftData
 /// (the consent card). Day groups, pins, swipes, the sheet, and write-confirm
 /// all survive inside shapes.
 struct FeedScreen: View {
-    /// Anchors the doors' zoom transitions (each room grows from its door).
-    @Namespace private var doorNS
     @Query(sort: \Thing.capturedAt, order: .reverse) private var things: [Thing]
     @Environment(ShellChrome.self) private var chrome
     @Environment(BridgeStore.self) private var bridges
@@ -36,12 +24,10 @@ struct FeedScreen: View {
     @State private var confirming: (Verb, Thing)?
     @State private var staleExpanded = false
     @State private var blockStream = GenStream()
-    @Bindable private var feedRoute = FeedRoute.shared
     @Bindable private var wallet = WalletStore.shared
     @State private var pushedBridge: BridgeRouter.Destination?
-    // First-run teaching (option 4: no demo mode — these live in the real
-    // app and retire on first use, forever).
-    @AppStorage("coach.chip.done") private var chipCoachDone = false
+    // First-run teaching (option 4: no demo mode — this lives in the real
+    // app and retires on first use, forever).
     @AppStorage("coach.swipe.done") private var swipeCoachDone = false
     /// Bumped when the source chip changes — rows replay their shape's
     /// entrance (each shape arrives its own way, ruling 2026-07-07).
@@ -57,11 +43,8 @@ struct FeedScreen: View {
     @AppStorage("feed.lastSeen") private var lastSeenStamp = 0.0
     @State private var newSince: Date?
     @Namespace private var zoomNS
-    /// The active chip's ink ring glides between chips instead of blinking
-    /// (the tab lozenge's grammar, motion pass 2026-07-11).
-    @Namespace private var chipRingNS
-    /// prd 43h: Reduce Motion is law — the hand-rolled moves (ring glide,
-    /// chip edge scale) fall back to plain state changes under it.
+    /// prd 43h: Reduce Motion is law — the hand-rolled moves (the switch flood,
+    /// row entrances) fall back to plain state changes under it.
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.openURL) private var openURL
 
@@ -122,21 +105,6 @@ struct FeedScreen: View {
             : (ThingKind.from(typeTag: filter.tag)?.typeTagPlural ?? filter.tag)
         return [filter.source == "All" ? nil : filter.source, tagLabel]
             .compactMap { $0 }.joined(separator: " · ")
-    }
-
-    /// Sources in MOST-RECENT order (user, 2026-07-12): a source leads by when
-    /// it last had something land, not by today's volume — the app you just
-    /// heard from sits up front, and a quiet one drifts back on its own.
-    /// `things` is already newest-first (the @Query sort), so the FIRST time a
-    /// source appears is its newest thing; de-duping in iteration order keeps
-    /// exactly that ranking. (Chips, never a dropdown: menus die.)
-    private var sources: [String] {
-        var seen: Set<String> = []
-        var ordered: [String] = []
-        for thing in feedThings where seen.insert(thing.source).inserted {
-            ordered.append(thing.source)
-        }
-        return ["All"] + ordered
     }
 
     /// The connected bridge the feed is currently filtered to, if any. A source
@@ -252,57 +220,19 @@ struct FeedScreen: View {
     // MARK: - Body
 
     var body: some View {
-        NavigationStack {
-            feedList
-                .navigationTitle("Feed")
-                .navigationBarTitleDisplayMode(.large)
-                .toolbar {
-                    // Only when Home itself caused this switch (a source
-                    // jump) — never on an ordinary tab visit. Tabs aren't
-                    // hierarchical, so "back" means nothing otherwise
-                    // (report 2026-07-09).
-                    if chrome.jumpedFromHome {
-                        ToolbarItem(placement: .topBarLeading) {
-                            Button {
-                                DSHaptic.selection()
-                                chrome.jumpedFromHome = false
-                                withAnimation(DS.Motion.standard) {
-                                    filter.source = "All"
-                                    filter.tag = "All"
-                                }
-                                chrome.goHomeRequest += 1
-                            } label: {
-                                Image(systemName: "chevron.left")
-                                    .font(.system(size: 17, weight: .semibold))
-                            }
-                            .tint(DS.textPrimary)
-                        }
-                    }
-                    // The shell's doors ride every tab root (ruling 2026-07-06)
-                    // — Feed had no way to Apps/Settings without visiting Home.
-                    TopDoors(onSettings: { feedRoute.push = .settings },
-                             onApps: { feedRoute.push = .apps },
-                             zoomNS: doorNS)
-                }
-                .navigationDestination(item: $feedRoute.push) { push in
-                    switch push {
-                    case .apps:
-                        AppsScreen()
-                            .navigationTransition(.zoom(sourceID: "appsDoor", in: doorNS))
-                    case .settings:
-                        SettingsScreen()
-                            .navigationTransition(.zoom(sourceID: "settingsDoor", in: doorNS))
-                    }
-                }
-                .navigationDestination(item: $pushedBridge) { BridgeDestinationView(destination: $0) }
-        }
-        .tint(DS.tint)
-        // Re-tapping the Feed tab pops pushed screens and sheets back to root.
-        .onChange(of: chrome.popFeed) {
-            feedRoute.push = nil
-            sheetThing = nil
-            pushedBridge = nil
-        }
+        // The single surface owns the NavigationStack, the chip header, and the
+        // shared doors now (MainSurface) — this is just the feed's body, hosted
+        // inside that one stack. Its own inner push (a bridge control panel)
+        // stays here; Apps/Settings moved up to the shell.
+        feedList
+            .navigationDestination(item: $pushedBridge) { BridgeDestinationView(destination: $0) }
+            // Re-tapping the active chip pops this surface's own pushed
+            // screens and sheets back to root (the old per-tab pop habit).
+            .onChange(of: chrome.popHome) {
+                sheetThing = nil
+                pushedBridge = nil
+                confirming = nil
+            }
     }
 
     /// A shaped feed wears its source's hue (B ruling 2026-07-10, picked
@@ -344,22 +274,26 @@ struct FeedScreen: View {
     }
 
     /// A slim, tappable strip above a single source's shaped feed: the app, its
-    /// live status, a chevron. Tapping opens the app's control panel through
-    /// the router — the dedicated screen when the bridge has one (Dexscreener's
-    /// watchlist, Wallet's addresses), the generic detail page otherwise. It
-    /// rides `pushedBridge` — the same channel a Wallet row already uses.
-    /// (2026-07-11: this hardcoded `.detail`, so Dexscreener's Feed header
-    /// opened a page with no way to watch a second token.)
+    /// live status. Tapping opens the app's control panel through the router —
+    /// the dedicated screen when the bridge has one (Dexscreener's watchlist,
+    /// Wallet's addresses), the generic detail page otherwise. It rides
+    /// `pushedBridge` — the same channel a Wallet row already uses. (2026-07-11:
+    /// this hardcoded `.detail`, so Dexscreener's Feed header opened a page with
+    /// no way to watch a second token.)
+    ///
+    /// Row-scale now, not a settings card (2026-07-14, user): the feed carries
+    /// an icon on every real row, so a bare header read as the odd one out —
+    /// but a 40pt animated icon right under the same icon in the source chips
+    /// read as doubled. The icon shrinks to row-glyph size and drops its own
+    /// coin-flip — that delight belongs on the chip that actually switches
+    /// sources, not duplicated here too.
     private func sourceHeader(_ bridge: BridgeApp, showAddHint: Bool) -> some View {
         Button {
             DSHaptic.selection()
             pushedBridge = BridgeRouter.destination(forID: bridge.id)
         } label: {
             HStack(spacing: DS.Space.s3) {
-                BridgeIcon(name: bridge.name, size: 40)
-                    // The app's mark coin-flips when you switch into its feed
-                    // (delight, 2026-07-12) — keyed to the filtered source.
-                    .coinFlip(trigger: filter.source)
+                BridgeIcon(name: bridge.name, size: 28)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(bridge.name)
                         .dsText(.body17).fontWeight(.semibold)
@@ -386,8 +320,11 @@ struct FeedScreen: View {
                     }
                     .foregroundStyle(DS.tint)
                 }
+                // Quieted, not gone (2026-07-14): a light hint that this row
+                // leads somewhere, without the bold settings-navigation weight
+                // that made it read as a control panel dropped into the feed.
                 Image(systemName: "chevron.right")
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.system(size: 12, weight: .regular))
                     .foregroundStyle(DS.textTertiary)
             }
             .padding(.horizontal, DS.Space.s4)
@@ -449,48 +386,27 @@ struct FeedScreen: View {
                     .padding(.horizontal, DS.Space.s4)
                     .padding(.bottom, DS.Space.s2)
                 }
-                // A feed is a feed (re-ruling): one chip row — sources, plus
-                // a clear chip when Home's kind bar filtered by type. The
-                // type chart itself lives on Home.
-                if sources.count > 2 || filter.tag != "All" {
-                    HStack(spacing: DS.Space.s2) {
-                        if filter.tag != "All" {
-                            let label = ThingKind.from(typeTag: filter.tag)?.typeTagPlural ?? filter.tag
-                            HStack(spacing: DS.Space.s1) {
-                                Image(systemName: "xmark").font(.system(size: 10, weight: .semibold))
-                                Text(label).dsText(.label12)
-                            }
-                            .foregroundStyle(DS.tint)
-                            .padding(.horizontal, DS.Space.s3).frame(height: 28)
-                            .background(DS.tintDim, in: Capsule(style: .continuous))
-                            .padding(.leading, DS.Space.s4)
-                            .onTapGesture {
-                                DSHaptic.selection()
-                                withAnimation(DS.Motion.standard) { filter.tag = "All" }
-                            }
-                            .accessibilityLabel("Clear \(label) filter")
-                        }
-                        if sources.count > 2 {
-                            filterChips(sources, active: filter.source) { label in
-                                filter.source = label
-                                chipCoachDone = true   // lesson learned — coach retires
-                            }
-                        }
-                        Spacer()
+                // The source chips moved to the shell's fixed header
+                // (MainSurface / SourceChips) — the app is one surface now. What
+                // stays here is the kind-clear chip: Home's kind bar and the
+                // casberi://feed/type/<Tag> route can land the feed filtered by
+                // type, and that filter clears from a chip in place.
+                if filter.tag != "All" {
+                    let label = ThingKind.from(typeTag: filter.tag)?.typeTagPlural ?? filter.tag
+                    HStack(spacing: DS.Space.s1) {
+                        Image(systemName: "xmark").font(.system(size: 10, weight: .semibold))
+                        Text(label).dsText(.label12)
                     }
-                }
-                // The one feed coach line — first run only, retires on the
-                // first chip tap. Plain words, no overlays, no arrows. It never
-                // shows while a filter is already in force (deep-link or tap):
-                // inviting "tap a chip to shape the feed" when the feed is
-                // already shaped reads as a dead instruction.
-                if !chipCoachDone, sources.count > 2,
-                   filter.source == "All", filter.tag == "All" {
-                    Text("Tap a chip — the feed takes that app's shape.")
-                        .dsText(.subhead13)
-                        .foregroundStyle(DS.tint)
-                        .padding(.horizontal, DS.Space.s4)
-                        .padding(.top, DS.Space.s1)
+                    .foregroundStyle(DS.tint)
+                    .padding(.horizontal, DS.Space.s3).frame(height: 28)
+                    .background(DS.tintDim, in: Capsule(style: .continuous))
+                    .padding(.leading, DS.Space.s4)
+                    .padding(.bottom, DS.Space.s2)
+                    .onTapGesture {
+                        DSHaptic.selection()
+                        withAnimation(DS.Motion.standard) { filter.tag = "All" }
+                    }
+                    .accessibilityLabel("Clear \(label) filter")
                 }
                 // The door back to the app: when the feed wears one connected
                 // source's shape, its header opens that app's control panel
@@ -575,9 +491,6 @@ struct FeedScreen: View {
         }
         .onDisappear { lastSeenStamp = Date.now.timeIntervalSince1970 }
         .onChange(of: filter.source) {
-            // Any source filter — including one arrived at by deep link, not a
-            // tap — teaches the same lesson, so the coach retires here too.
-            if filter.source != "All" { chipCoachDone = true }
             shapeWave += 1
             // The hue floods in, then recedes as the shaped rows compose.
             if !reduceMotion {
@@ -1014,7 +927,7 @@ struct FeedScreen: View {
             QuietStateView(line: "Things you capture land here.")
             Button {
                 DSHaptic.selection()
-                feedRoute.push = .apps
+                HomeRoute.shared.push = .apps
             } label: {
                 Text("Browse apps")
                     .dsText(.callout15).fontWeight(.semibold)
@@ -1085,94 +998,6 @@ struct FeedScreen: View {
         case (true, false):  return "Nothing from \(filter.source) yet."
         case (false, true):  return "No \(tagLabel.lowercased()) yet."
         default:             return "Nothing here yet."
-        }
-    }
-
-    /// Source chips, Stories-sized (ruling 2026-07-10, Option A): 56pt
-    /// icon-only circles — the brand logo IS the chip. The active chip wears
-    /// the blue ink ring; a source whose connection needs you wears an orange
-    /// one. Newness is NOT a chip ring (removed 2026-07-13, user: the green
-    /// "new since last visit" ring read as a status light and confused — the
-    /// "New since …" divider already marks what's new in the list). No labels
-    /// — labels were what made the row scroll (ruling 2026-07-09); "All" keeps
-    /// its word, it has no app.
-    private func filterChips(_ labels: [String], active: String,
-                             onTap: @escaping (String) -> Void) -> some View {
-        // ScrollViewReader keeps the ACTIVE chip visible — a deep link
-        // (casberi://feed/source/Zerion) can select a chip that sits past
-        // the fold, and a filter you can't see reads as no filter at all.
-        return ScrollViewReader { proxy in
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: DS.Space.s3) {
-                    ForEach(labels, id: \.self) { label in
-                        let isActive = label == active
-                        let broken = bridges.bridges.contains {
-                            $0.name == label && $0.status == .attention
-                        }
-                        // A Button, not .onTapGesture (fix 2026-07-12): tap
-                        // recognition for a chip inside a horizontal ScrollView
-                        // nested in the List was flaky — taps dropped and the
-                        // filter "stuck" on a source you couldn't switch off.
-                        Button {
-                            DSHaptic.selection()
-                            withAnimation(DS.Motion.standard) { onTap(label) }
-                        } label: {
-                        ZStack {
-                            if label == "All" {
-                                Circle().fill(DS.gray100)
-                                Text("All").dsText(.label12)
-                                    .foregroundStyle(DS.textPrimary)
-                            } else {
-                                BridgeIcon(name: label, size: 46, circular: true)
-                            }
-                        }
-                        .frame(width: 46, height: 46)
-                        .padding(2.5)
-                        .overlay {
-                            // One ring, two exclusive states: tint = active
-                            // (blue, the app's selection color — the ink ring
-                            // read as chrome; 2026-07-12, user) — a single ring
-                            // that SLIDES from the old chip to the new (selection
-                            // is an object traveling, not two states blinking);
-                            // orange = the connection needs you (health lives
-                            // where you live, 2026-07-10). Newness lives in the
-                            // "New since …" divider, not a chip ring (2026-07-13).
-                            if isActive {
-                                let ring = Circle().strokeBorder(DS.tint, lineWidth: 2.5)
-                                if reduceMotion {
-                                    ring
-                                } else {
-                                    ring.matchedGeometryEffect(id: "chipRing", in: chipRingNS)
-                                }
-                            } else if broken {
-                                Circle().strokeBorder(DS.attention, lineWidth: 2.5)
-                            }
-                        }
-                        .frame(width: 56, height: 56)
-                        }
-                        .buttonStyle(.plain)
-                        // Finger-driven, never idle: chips ease down slightly
-                        // as they leave the viewport edges (Stories grammar).
-                        // Under Reduce Motion only the fade remains.
-                        .scrollTransition(.interactive, axis: .horizontal) { content, phase in
-                            content
-                                .scaleEffect(reduceMotion || phase.isIdentity ? 1 : 0.88)
-                                .opacity(phase.isIdentity ? 1 : 0.6)
-                        }
-                        .id(label)
-                        .accessibilityLabel(label + (broken ? ", needs reconnecting" : ""))
-                        .accessibilityAddTraits(isActive ? .isSelected : [])
-                    }
-                }
-                .padding(.horizontal, DS.Space.s4)
-            }
-            .onAppear {
-                if active != "All" { proxy.scrollTo(active, anchor: .center) }
-            }
-            .onChange(of: active) { _, now in
-                guard now != "All" else { return }
-                withAnimation(DS.Motion.standard) { proxy.scrollTo(now, anchor: .center) }
-            }
         }
     }
 

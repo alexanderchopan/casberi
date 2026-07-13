@@ -1,0 +1,99 @@
+import SwiftUI
+import SwiftData
+
+/// The one surface (2026-07-13, drastic restructure): Home and Feed stopped
+/// being separate tabs. The app is a single scrolling destination with a fixed
+/// chip header — Pinned (your board) leads, then All, then every source. The
+/// body under the header swaps between the board (Pinned) and the feed
+/// (everything else); the composer is a FAB the shell floats over this.
+///
+/// This container owns the ONE `NavigationStack` and the shared management
+/// doors (avatar → Settings, grid → Apps) so they can't drift between screens
+/// or reconcile two route singletons the way the old Home/Feed split did. Each
+/// body keeps its own inner pushes (a project, a bridge panel) but no longer
+/// carries a stack of its own.
+struct MainSurface: View {
+    @Query(sort: \Thing.capturedAt, order: .reverse) private var things: [Thing]
+    @Environment(ShellChrome.self) private var chrome
+    @Bindable private var filter = FeedFilter.shared
+    @Bindable private var route = HomeRoute.shared
+    /// Anchors the doors' zoom transitions (each room grows from its door).
+    @Namespace private var doorNS
+
+    /// The corpus MINUS search-only sources (Contacts) — the same rule Home and
+    /// Feed already share (`Corpus.surfaced`), so the chip row lists exactly the
+    /// sources the feed shows.
+    private var feedThings: [Thing] { Corpus.surfaced(things) }
+
+    /// Chip order: Pinned, All, then every source most-recent-first (the app you
+    /// just heard from sits up front). `things` is newest-first, so first
+    /// appearance IS the newest thing per source.
+    private var chipLabels: [String] {
+        var seen: Set<String> = []
+        var ordered: [String] = []
+        for thing in feedThings where seen.insert(thing.source).inserted {
+            ordered.append(thing.source)
+        }
+        return ["Pinned", "All"] + ordered
+    }
+
+    private var showingBoard: Bool { filter.source == "Pinned" }
+
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 0) {
+                // The fixed navigation strip — always in reach, never scrolls
+                // away with content (the whole point of dropping the tab bar).
+                SourceChips(labels: chipLabels, active: filter.source) { label in
+                    if label == filter.source {
+                        // Re-tapping the chip you're already on pops back to
+                        // root (the old per-tab habit) instead of doing nothing.
+                        chrome.popHome += 1
+                        return
+                    }
+                    withAnimation(DS.Motion.standard) {
+                        filter.source = label
+                        // Leaving the board for the feed clears any stray kind
+                        // filter so "All" means all; entering the board is
+                        // source-only. A specific source keeps its own tag.
+                        if label == "Pinned" || label == "All" { filter.tag = "All" }
+                    }
+                }
+                .padding(.top, DS.Space.s2)
+                .padding(.bottom, DS.Space.s2)
+
+                // The body under the header — the board, or the feed.
+                Group {
+                    if showingBoard {
+                        HomeScreen()
+                    } else {
+                        FeedScreen()
+                    }
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+            .navigationTitle("")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackgroundVisibility(.hidden, for: .navigationBar)
+            .toolbar {
+                // The shared doors — one place now, not duplicated onto two
+                // tab roots. Home's pull-to-refresh spins the avatar; the feed
+                // never spins, so no spin trigger flows here.
+                TopDoors(onSettings: { route.push = .settings },
+                         onApps: { route.push = .apps },
+                         zoomNS: doorNS)
+            }
+            .navigationDestination(item: $route.push) { push in
+                switch push {
+                case .apps:
+                    AppsScreen()
+                        .navigationTransition(.zoom(sourceID: "appsDoor", in: doorNS))
+                case .settings:
+                    SettingsScreen()
+                        .navigationTransition(.zoom(sourceID: "settingsDoor", in: doorNS))
+                }
+            }
+        }
+        .tint(DS.tint)
+    }
+}

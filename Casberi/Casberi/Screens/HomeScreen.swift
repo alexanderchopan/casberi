@@ -26,8 +26,6 @@ final class HomeRoute {
 /// (top-right) pushes Apps. The grid wears an attention dot only when a bridge
 /// needs reconnecting — surfaced where it's earned, never a standing banner.
 struct HomeScreen: View {
-    /// Anchors the doors' zoom transitions (each room grows from its door).
-    @Namespace private var doorNS
     @Query(sort: \Thing.capturedAt, order: .reverse) private var things: [Thing]
     @Environment(ShellChrome.self) private var chrome
     @Environment(BridgeStore.self) private var bridges
@@ -99,11 +97,12 @@ struct HomeScreen: View {
     }
 
     var body: some View {
-        NavigationStack {
-            // The cover is full-bleed (H7): the scroll ignores the top safe
-            // area and the nav buttons overlay it; the geometry reader hands
-            // the cover the inset its date eyebrow needs. The 34pt "Home"
-            // title is gone — the cover is the title.
+            // The single surface (MainSurface) owns the NavigationStack, the
+            // fixed chip header, and the shared doors now — this is the board
+            // body hosted inside that one stack, shown when "Pinned" leads. The
+            // cover no longer bleeds to the status bar (the chip strip sits
+            // above it); the geometry reader still hands the cover its eyebrow
+            // inset.
             GeometryReader { geo in
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
@@ -159,14 +158,6 @@ struct HomeScreen: View {
             .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackgroundVisibility(.hidden, for: .navigationBar)
-            .toolbar {
-                // The shell's doors — shared with Feed (every tab root wears
-                // them): avatar → Settings, grid (+ attention dot) → Apps.
-                TopDoors(onSettings: { route.push = .settings },
-                         onApps: { route.push = .apps },
-                         refreshSpin: refreshTick,
-                         zoomNS: doorNS)
-            }
             // Edit mode's exit — the leading edge TopDoors leaves clear. Only
             // present while rearranging; tapping it stills the jiggle and locks
             // the new order in place (the board already persisted each move).
@@ -202,12 +193,13 @@ struct HomeScreen: View {
                 if name.hasPrefix("@") { return }
                 let isTag = things.contains { $0.tags.contains(name) }
                 if !isTag, things.contains(where: { $0.source == name }) {
-                    FeedFilter.shared.source = name
-                    FeedFilter.shared.tag = "All"
-                    // Home caused this switch — Feed's back arrow only
-                    // appears when that's true (2026-07-09).
-                    chrome.jumpedFromHome = true
-                    if let url = URL(string: "casberi://feed") { openURL(url) }
+                    // Selecting the source in the shared header swaps the board
+                    // for that source's shaped feed — no separate destination,
+                    // no back arrow (the chip strip is the way back now).
+                    withAnimation(DS.Motion.standard) {
+                        FeedFilter.shared.source = name
+                        FeedFilter.shared.tag = "All"
+                    }
                 } else {
                     openProject = ProjectRoute(name: name)
                 }
@@ -303,23 +295,13 @@ struct HomeScreen: View {
             .onChange(of: route.openTag) { _, name in
                 if let name { openProject = ProjectRoute(name: name); route.openTag = nil }
             }
-            .navigationDestination(item: $route.push) { push in
-                switch push {
-                case .apps:
-                    AppsScreen()
-                        .navigationTransition(.zoom(sourceID: "appsDoor", in: doorNS))
-                case .settings:
-                    SettingsScreen()
-                        .navigationTransition(.zoom(sourceID: "settingsDoor", in: doorNS))
-                }
-            }
+            // Apps/Settings moved to the shell's shared destination
+            // (MainSurface) — the doors live there once now.
             .navigationDestination(isPresented: $walletOpen) {
                 BridgeDestinationView(destination: .wallet)
             }
             }
-        }
-        .tint(DS.tint)
-        // Re-tapping the Home tab pops pushed screens and sheets back to root.
+        // Re-tapping the surface pops pushed screens and sheets back to root.
         .onChange(of: chrome.popHome) {
             route.push = nil
             openProject = nil
