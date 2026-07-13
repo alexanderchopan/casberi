@@ -740,9 +740,9 @@ struct FeedScreen: View {
     private var photoGridSection: some View {
         Section {
             let items = visible
-            let columns = Array(repeating: GridItem(.flexible(), spacing: 6),
+            let columns = Array(repeating: GridItem(.flexible(), spacing: DS.Space.s3),
                                 count: items.count > 12 ? 3 : 2)
-            LazyVGrid(columns: columns, spacing: 6) {
+            LazyVGrid(columns: columns, spacing: DS.Space.s3) {
                 ForEach(Array(items.enumerated()), id: \.element.id) { i, thing in
                     let firstOfDay = i == 0
                         || dayLabel(items[i - 1].capturedAt) != dayLabel(thing.capturedAt)
@@ -759,7 +759,12 @@ struct FeedScreen: View {
             }
             .listRowBackground(Color.clear)
             .listRowSeparator(.hidden)
-            .listRowInsets(EdgeInsets())
+            // The grid rides the same content gutter as every other feed row —
+            // tiles no longer bleed to the screen edge (which clipped the day
+            // pills), and the page background reads clearly between them so a
+            // run of light screenshots stops merging into one slab.
+            .listRowInsets(.init(top: DS.Space.s3, leading: DS.Space.s4,
+                                 bottom: DS.Space.s3, trailing: DS.Space.s4))
         }
     }
 
