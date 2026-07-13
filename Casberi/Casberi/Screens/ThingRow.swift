@@ -22,12 +22,6 @@ struct ThingRow: View {
             TagPill(thing.tags.first ?? thing.kind.typeTag)
 
             LiveTimeText(date: thing.capturedAt)
-
-            if thing.pinned {
-                Image(systemName: "pin.fill")
-                    .font(.system(size: 11))
-                    .foregroundStyle(DS.tint)
-            }
         }
         .padding(.horizontal, DS.Space.s4)
         .padding(.vertical, DS.Space.s3)

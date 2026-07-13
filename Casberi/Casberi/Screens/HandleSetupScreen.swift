@@ -292,7 +292,13 @@ struct HandleSetupScreen: View {
                 RecentThingsSection(header: bridge.recentHeader, things: recent)
                     .listRowSeparator(.hidden)
             }
-            if !bridge.currentName.isEmpty, HomePinnedSources.pinnable.contains(bridge.rawValue) {
+            // Every connected account is pinnable (ruling 2026-07-12) — except
+            // the auto-social ones (Bluesky/Farcaster), which show by default
+            // and carry the inverse "Show on Home" toggle instead. Shown once
+            // the account has landed a thing — an empty source composes no tile,
+            // so its pin would be a dead control.
+            if !bridge.currentName.isEmpty, !recent.isEmpty,
+               !HomePinnedSources.autoSocial.contains(bridge.rawValue) {
                 pinToHomeSection.listRowSeparator(.hidden)
             }
             if !bridge.currentName.isEmpty, HomePinnedSources.autoSocial.contains(bridge.rawValue) {
@@ -348,6 +354,7 @@ struct HandleSetupScreen: View {
         Section {
             Button {
                 HomePinnedSources.shared.toggle(bridge.rawValue)
+                CorpusSignal.shared.bump()
                 DSHaptic.tap()
             } label: {
                 HStack(spacing: DS.Space.s2) {
@@ -373,6 +380,7 @@ struct HandleSetupScreen: View {
             Button {
                 // shownOnHome true means visible → hide; false means hidden → show.
                 HomePinnedSources.shared.setHidden(bridge.rawValue, shownOnHome)
+                CorpusSignal.shared.bump()
                 DSHaptic.tap()
             } label: {
                 HStack(spacing: DS.Space.s2) {

@@ -22,10 +22,6 @@ struct BridgeDetailScreen: View {
         guard let bridge else { return false }
         return HomePinnedSources.shared.isPinned(bridge.name)
     }
-    private var isPinnable: Bool {
-        guard let bridge else { return false }
-        return HomePinnedSources.pinnable.contains(bridge.name)
-    }
     /// This bridge's three most recent things — cached on appearance rather than
     /// re-fetched twice on every body pass. The predicate is per-bridge, so this
     /// is the cache path rather than a static @Query.
@@ -111,29 +107,15 @@ struct BridgeDetailScreen: View {
                         }
                     }
 
-                    // Pin to Home (prd 58, Goal 4) — the board grows from
-                    // the catalog: connecting an app can end here, on its
-                    // own screen, without waiting for it to earn a card the
-                    // automatic way. One verb, both directions (place/
-                    // remove) — same shape as Wallet's own per-address pin.
-                    // Gated to sources HomeComposition actually places
-                    // (HomePinnedSources.pinnable) — elsewhere the toggle
-                    // would persist with no effect on the board.
-                    if isPinnable {
-                        Button {
-                            HomePinnedSources.shared.toggle(bridge.name)
-                            DSHaptic.tap()
-                        } label: {
-                            HStack(spacing: DS.Space.s2) {
-                                Image(systemName: pinnedToHome ? "pin.fill" : "pin")
-                                Text(pinnedToHome ? "Pinned to Home" : "Pin to Home")
-                            }
-                            .dsText(.body17).foregroundStyle(pinnedToHome ? DS.tint : DS.textPrimary)
-                            .frame(maxWidth: .infinity).frame(height: 44)
-                            .background(pinnedToHome ? DS.tintDim : DS.gray100,
-                                        in: Capsule(style: .continuous))
-                        }
-                        .buttonStyle(.plain)
+                    // Pin to Home — the board grows from the catalog: pinning
+                    // an app places its tile (its recent things, in the app's
+                    // shape) on Home. Every connected app is pinnable now (ruling
+                    // 2026-07-12: pinning is per-APP, not per-item); one verb,
+                    // both directions. Shown only once the app has landed a thing
+                    // — pinning an empty source is a dead control (it composes no
+                    // tile). The corpus bump recomposes Home while this is on top.
+                    if !recent.isEmpty {
+                        PinToHomeButton(source: bridge.name)
                     }
 
                     // Controls — words say what happens.

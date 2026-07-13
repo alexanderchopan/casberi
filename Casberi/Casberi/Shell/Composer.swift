@@ -232,14 +232,12 @@ struct Composer: View {
             out.append("What landed today?")
         }
         // The chips teach what the composer can DO (2026-07-10) — counting
-        // and pinning stayed secret powers until the chips showed them.
-        // Only asks the corpus can honestly answer right now.
+        // stayed a secret power until the chips showed it. Only asks the corpus
+        // can honestly answer right now. (Pinning left the composer 2026-07-12:
+        // it's per-APP now, placed from the app's own screen, not a phrase.)
         let weekStart = Calendar.current.dateInterval(of: .weekOfYear, for: .now)?.start ?? dayStart
         if all.contains(where: { $0.kind == .link && $0.capturedAt >= weekStart }) {
             out.append("How many links this week?")
-        }
-        if all.contains(where: { $0.kind == .link && !$0.pinned }) {
-            out.append("Pin the last link")
         }
         if let top = tagPool.first {
             out.append("Show \(top)")
@@ -841,41 +839,6 @@ struct Composer: View {
         }
     }
 
-    private func runPin(_ intent: PinAsk.Intent) {
-        let all = (try? modelContext.fetch(FetchDescriptor<Thing>(
-            sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]
-        ))) ?? []
-        guard let thing = PinAsk.target(intent, in: all) else {
-            // Named nothing that exists (or nothing pinned to unpin) — say
-            // so in the answer surface instead of silently closing.
-            fieldFocused = false
-            withAnimation(DS.Motion.standard) { answering = true }
-            let what = intent.words.isEmpty
-                ? (intent.kind.map { $0.typeTag.lowercased() } ?? "that")
-                : intent.words.joined(separator: " ")
-            let line = intent.pin
-                ? "Nothing called '\(what)' to pin."
-                : "Nothing pinned called '\(what)'."
-            answerStream.paint(["root = Stack([ins])",
-                                "ins = Insight(\"\(line.replacingOccurrences(of: "\"", with: "'"))\")"])
-            draft = ""
-            return
-        }
-        thing.pinned = intent.pin
-        try? modelContext.save()
-        // A pin flip changes no count — Home recomposes on this signal.
-        CorpusSignal.shared.bump()
-        DSHaptic.success()
-        let title = thing.title.count > 28 ? String(thing.title.prefix(28)) + "…" : thing.title
-        chrome.flash(intent.pin ? "Pinned to Home — \(title)" : "Unpinned — \(title)",
-                     action: .init(label: "Undo") {
-                         thing.pinned = !intent.pin
-                         try? modelContext.save()
-                         CorpusSignal.shared.bump()
-                     })
-        close()
-    }
-
     private func applyProposal(_ proposal: OrganizeProposal) {
         guard proposal.canApply else { return }
         let (summary, undo) = Organize.apply(proposal, context: modelContext)
@@ -899,12 +862,6 @@ struct Composer: View {
             // into a captured note. The proposal card stays the consent.
             onCommit(Array(chosenTags))
             close()
-        } else if let pinIntent = PinAsk.parse(draft) {
-            // "pin the last link" / "unpin ethereum" — the app's lightest,
-            // undoable write; the Feed swipe fires it without a confirm, so
-            // the composer does too, and the toast carries Undo
-            // (2026-07-10).
-            runPin(pinIntent)
         } else if let intent = NavigateCommand.parse(draft, tags: tagPool,
                                                      sources: knownSources()) {
             // A place, named — go there. Reads only (a navigation), so no

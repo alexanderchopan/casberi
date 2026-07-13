@@ -37,17 +37,19 @@ extension EnvironmentValues {
         get { self[GenThingOpenKey.self] }
         set { self[GenThingOpenKey.self] = newValue }
     }
-    /// A pinned row's Unpin (context menu) — the surface flips the pin and
-    /// recomposes. nil outside Home.
-    var genThingUnpin: ((String) -> Void)? {
-        get { self[GenThingUnpinKey.self] }
-        set { self[GenThingUnpinKey.self] = newValue }
-    }
     /// A pinned row's "Open in app" — the real hand-off to the thing's
     /// source (calshow://, the link, …). nil outside Home.
     var genThingHandoff: ((String) -> Void)? {
         get { self[GenThingHandoffKey.self] }
         set { self[GenThingHandoffKey.self] = newValue }
+    }
+    /// "Remove from Home" for the pinned APP tile a row lives in — set by
+    /// GenWidget for its children so a long-press on ANY row can drop the whole
+    /// app (each row carries its own contextMenu, which would otherwise shadow
+    /// the card's). nil off a pinned tile.
+    var genAppRemove: (() -> Void)? {
+        get { self[GenAppRemoveKey.self] }
+        set { self[GenAppRemoveKey.self] = newValue }
     }
     /// The screen's top safe-area inset — the cover is full-bleed, so its
     /// date eyebrow needs the clearance the surface measured.
@@ -135,11 +137,11 @@ private struct GenCoverTopInsetKey: EnvironmentKey {
 private struct GenThingOpenKey: EnvironmentKey {
     static let defaultValue: ((String) -> Void)? = nil
 }
-private struct GenThingUnpinKey: EnvironmentKey {
-    static let defaultValue: ((String) -> Void)? = nil
-}
 private struct GenThingHandoffKey: EnvironmentKey {
     static let defaultValue: ((String) -> Void)? = nil
+}
+private struct GenAppRemoveKey: EnvironmentKey {
+    static let defaultValue: (() -> Void)? = nil
 }
 private struct GenRefreshTickKey: EnvironmentKey {
     static let defaultValue = 0
@@ -203,9 +205,9 @@ struct GenRender: View {
         case "Cover":       GenCover(el: el).mountIn()
         case "KindPills":   GenKindPills(el: el).mountIn()
         case "Insight":     GenInsight(el: el).mountIn()
-        case "Widget":      GenWidget(el: el, els: els).mountIn()
+        case "Widget":      GenWidget(id: id, el: el, els: els).mountIn()
         case "Row":         GenRow(id: id, el: el).mountIn()
-        case "TokenRow":    GenTokenRow(id: id, el: el).mountIn()
+        case "TokenChip":   GenTokenChip(el: el).mountIn()
         case "Suggest":     GenSuggest().mountIn()
         case "Skeleton":    GenSkeletonRow().mountIn()
         case "Chip":        GenChip(el: el).mountIn()
@@ -239,7 +241,6 @@ struct GenRender: View {
         // single latest post. Board members exactly like pinned/wallet/map:
         // draggable (Goal 1), sizable via the same pin (Goal 2).
         case "MediaShelf":  GenMediaShelf(id: id, el: el, els: els).mountIn()
-        case "SocialCard":  GenSocialCard(id: id, el: el).mountIn()
         // One retiring teaching line (Feed's coach grammar) — plain tinted
         // words, no overlays, no arrows.
         case "Coach":       GenCoach(el: el).mountIn()
@@ -412,11 +413,33 @@ private struct GenInsight: View {
 /// own board tiles now (ruling 2026-07-12), so the old "@pin" oversized-pin
 /// title, the 1×1 count tile, and the large moodboard interior are gone — a
 /// pin is a mark on a thing, not a kind of card.
+/// Widget(title, subline, [rowRefs], source?) — a titled card of rows. Off the
+/// board (store previews) it's a plain display card. On Home, arg 3 names the
+/// pinned SOURCE the card stands for (2026-07-12): the card becomes a board
+/// module — draggable, sized by the same corner pin every tile wears, and
+/// removable via long-press "Remove from Home" (which drops that source's pin).
+/// Its rows always render as thin list lines (`genSpan` reset to nil), never
+/// the square board-tile form, since the CARD is the module, not each row.
 private struct GenWidget: View {
+    let id: String
     let el: GenEl
     let els: GenEls
+    @Environment(\.genSpan) private var span
+    @Environment(\.genSizeToggle) private var sizeToggle
+    @Environment(\.genSourceUnpin) private var sourceUnpin
+
+    /// arg 3 — the pinned source this tile stands for; empty off the board.
+    private var source: String { el.str(3) }
+    private var pinned: Bool { !source.isEmpty }
+    /// Grown tiles show more of the app; a small/wide tile stays a peek.
+    private var rowRefs: [String] {
+        let all = el.refs(2)
+        guard pinned else { return all }
+        return Array(all.prefix(span == .some(.big) ? 5 : 3))
+    }
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
+        let card = VStack(alignment: .leading, spacing: 0) {
             HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
                 Text(LocalizedStringKey(el.str(0))).dsText(.heading22).foregroundStyle(DS.textPrimary)
                 if !el.str(1).isEmpty {
@@ -424,16 +447,45 @@ private struct GenWidget: View {
                         .contentTransition(.numericText())
                         .animation(DS.Motion.standard, value: el.str(1))
                 }
+                if pinned, let sizeToggle {
+                    Spacer(minLength: DS.Space.s2)
+                    ShelfSizePin(large: span == .some(.big)) { sizeToggle(id) }
+                        // Same top-right corner, same 44pt hit box overflowing
+                        // the header padding, as every other module's size pin.
+                        .padding(.top, -12).padding(.trailing, -12)
+                }
             }
             .padding(.init(top: DS.Space.s4, leading: DS.Space.s4,
                            bottom: DS.Space.s1, trailing: DS.Space.s4))
-            ForEach(el.refs(2), id: \.self) { GenRender(id: $0, els: els, slot: .row) }
+            // A pinned tile's rows are lines within the card — reset the board
+            // span so a Row renders its lineForm, not its own square tile — and
+            // carry the tile's "Remove from Home" so a long-press on any row can
+            // drop the app (each row's own contextMenu shadows the card's).
+            ForEach(rowRefs, id: \.self) {
+                GenRender(id: $0, els: els, slot: .row)
+                    .environment(\.genSpan, pinned ? ModuleSpan?.none : span)
+                    .environment(\.genAppRemove, pinned ? { sourceUnpin?(id) } : nil)
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.bottom, DS.Space.s2)
         .dsWidgetSurface()
         .padding(.horizontal, DS.Space.s4)
         .padding(.top, DS.Space.s4)
+
+        // Long-press → Remove from Home (the corner pin means resize, so
+        // removal needs its own verb) — parallel to a media shelf's menu.
+        if pinned, let sourceUnpin {
+            card.contextMenu {
+                Button(role: .destructive) {
+                    sourceUnpin(id)
+                } label: {
+                    Label("Remove from Home", systemImage: "pin.slash")
+                }
+            }
+        } else {
+            card
+        }
     }
 }
 
@@ -716,7 +768,6 @@ private struct GenMediaTile: View {
     /// Hero mode: the title/artist ride a bottom scrim over the image.
     var overlayTitle: Bool = false
     @Environment(\.genThingOpen) private var thingOpen
-    @Environment(\.genThingUnpin) private var thingUnpin
     @Environment(\.genThingHandoff) private var thingHandoff
     @Environment(\.genThumbnailData) private var thumbnailData
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -809,7 +860,7 @@ private struct GenMediaTile: View {
         }
         .contentShape(RoundedRectangle(cornerRadius: DS.Radius.control, style: .continuous))
         frame.pinnedRowActions(id: thingId, openable: openable,
-                               open: thingOpen, unpin: thingUnpin, handoff: thingHandoff)
+                               open: thingOpen, unpin: nil, handoff: thingHandoff)
     }
 }
 
@@ -853,119 +904,6 @@ private struct GenFlexThumb: View {
     }
 }
 
-/// The sheet-square board tile (prd 58h): a `surfaceSheet` card at the widget
-/// radius, interior padded by s4, carrying the board packer's inset contract
-/// in ONE place so the sheet radius / packer inset / 1×1 floor each live here,
-/// not hand-copied per tile (GenSocialCard's two forms + GenTokenRow). A
-/// `small` (1×1) tile is inset and top-gapped by the packer, so it self-pads to
-/// 0 and stretches to its row-mate's height (`maxHeight: .infinity` keeps a
-/// paired 1×1 from under-filling raggedly); wide/big span full width and inset
-/// themselves by s4. `minHeight` floors a 1×1's seat; wide/big size to content.
-private extension View {
-    func boardTile(small: Bool, minHeight: CGFloat = 150) -> some View {
-        self
-            .padding(DS.Space.s4)
-            .frame(maxWidth: .infinity,
-                   minHeight: small ? minHeight : nil,
-                   maxHeight: small ? .infinity : nil,
-                   alignment: .topLeading)
-            .dsWidgetSurface()
-            .contentShape(RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
-            .padding(.horizontal, small ? 0 : DS.Space.s4)
-            .padding(.top, small ? 0 : DS.Space.s4)
-    }
-}
-
-/// SocialCard(source, handle, avatarURL, text, imageURL, thingId, openable)
-/// — a social source's single latest post, clean (prd 58: "avatar + latest
-/// post, clean"). Regular is compact; large gives the avatar and text more
-/// room and the attached image (if any) rides full width — still ONE post,
-/// never a feed (that's what Feed is for).
-private struct GenSocialCard: View {
-    let id: String
-    let el: GenEl
-    @Environment(\.genModuleLarge) private var large
-    @Environment(\.genSizeToggle) private var sizeToggle
-    @Environment(\.genThingOpen) private var thingOpen
-    // Removal hides the whole auto-earned card (genSourceUnpin), NOT the post's
-    // pin flag — the card's presence never depended on that flag, so the old
-    // thing-level "Unpin" was a dead control (fixed 2026-07-12).
-    @Environment(\.genSourceUnpin) private var sourceUnpin
-    @Environment(\.genThingHandoff) private var thingHandoff
-    /// nil off the board; `small` gives a 1×1 avatar tile (prd 58h).
-    @Environment(\.genSpan) private var span
-
-    private var source: String { el.str(0) }
-    private var handle: String { el.str(1) }
-    private var avatarURL: String { el.str(2) }
-    private var text: String { el.str(3) }
-    private var imageURL: String { el.str(4) }
-    private var thingId: String { el.str(5) }
-    private var openable: Bool { el.str(6) == "app" }
-    private var avatarSize: CGFloat { large ? 44 : 28 }
-
-    var body: some View {
-        let content = span == .small ? AnyView(smallTile) : AnyView(wideCard)
-        // `id` is the module ref (social<Source>) — what genSourceUnpin maps
-        // back to the source to hide; thingId still drives tap-to-open.
-        content.socialCardActions(moduleRef: id, thingId: thingId, openable: openable,
-                                  open: thingOpen, remove: sourceUnpin, handoff: thingHandoff)
-    }
-
-    /// The small (1×1) form: the source's avatar and handle, no post text —
-    /// the account, kept on the board. Tap the pin to grow to the latest post.
-    /// The board insets small tiles, so no outer padding here.
-    private var smallTile: some View {
-        VStack(alignment: .leading, spacing: DS.Space.s2) {
-            HStack(spacing: 7) {
-                Text(source).dsText(.callout15).fontWeight(.semibold).foregroundStyle(DS.textPrimary)
-                Spacer(minLength: 0)
-                if let sizeToggle {
-                    ShelfSizePin(large: false) { sizeToggle(id) }
-                        .padding(.top, -12).padding(.trailing, -12)
-                }
-            }
-            Spacer(minLength: 0)
-            RemoteThumb(urlString: avatarURL, size: 40, fallback: source, circular: true)
-            if !handle.isEmpty {
-                Text(handle).dsText(.subhead13).foregroundStyle(DS.textSecondary).lineLimit(1)
-            }
-        }
-        .boardTile(small: true)
-    }
-
-    private var wideCard: some View {
-        VStack(alignment: .leading, spacing: DS.Space.s3) {
-            HStack(spacing: 7) {
-                Text(source).dsText(.callout15).fontWeight(.semibold).foregroundStyle(DS.textPrimary)
-                Spacer(minLength: 0)
-                if let sizeToggle {
-                    ShelfSizePin(large: large) { sizeToggle(id) }
-                        .padding(.top, -12).padding(.trailing, -12)
-                }
-            }
-            HStack(alignment: .top, spacing: DS.Space.s3) {
-                RemoteThumb(urlString: avatarURL, size: avatarSize, fallback: source, circular: true)
-                VStack(alignment: .leading, spacing: 2) {
-                    if !handle.isEmpty {
-                        Text(handle).dsText(.subhead13).foregroundStyle(DS.textSecondary)
-                    }
-                    Text(text)
-                        .dsText(.body17).foregroundStyle(DS.textPrimary)
-                        .lineLimit(large ? nil : 3)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-            }
-            if large, !imageURL.isEmpty {
-                GenFlexThumb(urlString: imageURL)
-                    .frame(maxWidth: .infinity, minHeight: 200, maxHeight: 240)
-                    .clipShape(RoundedRectangle(cornerRadius: DS.Radius.control, style: .continuous))
-            }
-        }
-        .boardTile(small: false)
-    }
-}
-
 /// Coach(text) — the one-time teaching line, Feed's coach style verbatim:
 /// tinted words on the page, retired forever by the surface once the
 /// lesson is learned (the flag lives with the surface, not here).
@@ -989,22 +927,19 @@ private struct GenCoach: View {
 /// previews) it's a thin list row; ON the board (a pinned thing is its own
 /// module now, ruling 2026-07-12) it's a square tile carrying the SAME corner
 /// pin every other module wears — no bundle, no oversized pin, no forced hero.
+/// Row(title, tag, source, time, thingId?, openable?) — a thin list line: tag
+/// glyph, title, trailing time. Inside a pinned app tile (or a store preview),
+/// where the card owns the surface. arg 4/5 (thing id + openable) only on a
+/// pinned tile's rows: tap opens the thing, long-press offers Open / Open in
+/// app (no per-item Unpin — removal is the whole app's, on the card).
 private struct GenRow: View {
     let id: String
     let el: GenEl
     @Environment(\.genThingOpen) private var thingOpen
-    @Environment(\.genThingUnpin) private var thingUnpin
     @Environment(\.genThingHandoff) private var thingHandoff
-    @Environment(\.genSpan) private var span
-    @Environment(\.genSizeToggle) private var sizeToggle
+    @Environment(\.genAppRemove) private var appRemove
 
     var body: some View {
-        if span == nil { lineForm } else { tileForm }
-    }
-
-    /// The thin list row — used inside a Widget card (store previews), where
-    /// the card owns the surface and the row is a line, not a tile.
-    private var lineForm: some View {
         let row = HStack(spacing: DS.Space.s3) {
             TagGlyph(tag: el.str(1), size: 24)
             Text(el.str(0))
@@ -1017,52 +952,8 @@ private struct GenRow: View {
         .padding(.horizontal, DS.Space.s4)
         .padding(.vertical, DS.Space.s3)
         return row.pinnedRowActions(id: el.str(4), openable: el.str(5) == "app",
-                             open: thingOpen, unpin: thingUnpin, handoff: thingHandoff)
-    }
-
-    /// A pinned thing as its own board tile — the same sheet square, the same
-    /// corner `ShelfSizePin` (tap cycles the span), the same long-press
-    /// open/hand-off/unpin. Small pairs 2-up; wide and big lead full-width and
-    /// bigger. The subline reads content (source · time), never status.
-    private var tileForm: some View {
-        let small = span == .some(.small)
-        let big = span == .some(.big)
-        let sub = [el.str(2), el.str(3)].filter { !$0.isEmpty }.joined(separator: " · ")
-        let content = VStack(alignment: .leading, spacing: DS.Space.s2) {
-            HStack(alignment: .top, spacing: 0) {
-                TagGlyph(tag: el.str(1), size: big ? 34 : 26)
-                Spacer(minLength: 0)
-                if let sizeToggle {
-                    ShelfSizePin(large: big) { sizeToggle(id) }
-                        .padding(.top, -12).padding(.trailing, -12)
-                }
-            }
-            Spacer(minLength: 0)
-            Text(el.str(0))
-                .dsText(big ? .heading22 : .body17)
-                .foregroundStyle(DS.textPrimary)
-                .lineLimit(big ? 3 : 2)
-                .fixedSize(horizontal: false, vertical: true)
-            if !sub.isEmpty {
-                // A narrow (small-span) tile could crush "source · time" down
-                // to an unreadable fragment ("C") under character truncation
-                // — scale down instead so the whole subline stays legible
-                // (design audit fix).
-                Text(sub).dsText(.subhead13).foregroundStyle(DS.textTertiary)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.7)
-            }
-        }
-        .padding(DS.Space.s4)
-        .frame(maxWidth: .infinity, minHeight: big ? 200 : 150, alignment: .topLeading)
-        .dsWidgetSurface()
-        .contentShape(RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
-        // Small tiles are inset + top-gapped by the board's packer; wide and
-        // big span full width and inset themselves.
-        .padding(.horizontal, small ? 0 : DS.Space.s4)
-        .padding(.top, small ? 0 : DS.Space.s4)
-        return content.pinnedRowActions(id: el.str(4), openable: el.str(5) == "app",
-                             open: thingOpen, unpin: thingUnpin, handoff: thingHandoff)
+                             open: thingOpen, unpin: nil, handoff: thingHandoff,
+                             removeApp: appRemove)
     }
 }
 
@@ -1076,7 +967,8 @@ extension View {
     func pinnedRowActions(id: String, openable: Bool,
                           open: ((String) -> Void)?,
                           unpin: ((String) -> Void)?,
-                          handoff: ((String) -> Void)?) -> some View {
+                          handoff: ((String) -> Void)?,
+                          removeApp: (() -> Void)? = nil) -> some View {
         if id.isEmpty {
             self
         } else {
@@ -1095,46 +987,22 @@ extension View {
                             Label("Open in app", systemImage: "arrow.up.right")
                         }
                     }
-                    Button {
-                        unpin?(id)
-                    } label: {
-                        Label("Unpin", systemImage: "pin.slash")
-                    }
-                }
-        }
-    }
-
-    /// The social card's parallel to `pinnedRowActions`: tap opens the post,
-    /// long-press offers Open / Open in app / Remove from Home. Removal takes
-    /// the MODULE ref (not the thing id) because it hides the whole auto-earned
-    /// card via genSourceUnpin — the post's pin flag never gated the card, so a
-    /// thing-level "Unpin" here did nothing (dead control, fixed 2026-07-12).
-    @ViewBuilder
-    func socialCardActions(moduleRef: String, thingId: String, openable: Bool,
-                           open: ((String) -> Void)?,
-                           remove: ((String) -> Void)?,
-                           handoff: ((String) -> Void)?) -> some View {
-        if thingId.isEmpty {
-            self
-        } else {
-            contentShape(Rectangle())
-                .onTapGesture { open?(thingId) }
-                .contextMenu {
-                    Button {
-                        open?(thingId)
-                    } label: {
-                        Label("Open", systemImage: "rectangle.portrait.and.arrow.right")
-                    }
-                    if openable {
+                    // Unpin only when the surface wired one (a pinned APP tile's
+                    // rows have no per-item pin to drop — removal is the whole
+                    // app's, on the card — so they pass nil and show no Unpin).
+                    if let unpin {
                         Button {
-                            handoff?(thingId)
+                            unpin(id)
                         } label: {
-                            Label("Open in app", systemImage: "arrow.up.right")
+                            Label("Unpin", systemImage: "pin.slash")
                         }
                     }
-                    if let remove {
+                    // A row inside a pinned app tile carries the whole tile's
+                    // "Remove from Home" — each row's own contextMenu would
+                    // otherwise shadow the card's, leaving removal unreachable.
+                    if let removeApp {
                         Button(role: .destructive) {
-                            remove(moduleRef)
+                            removeApp()
                         } label: {
                             Label("Remove from Home", systemImage: "pin.slash")
                         }
@@ -1142,27 +1010,24 @@ extension View {
                 }
         }
     }
+
 }
 
-/// TokenRow(title, chain, address, time, thingId, openable) — a pinned crypto
-/// token as its own bento tile (prd 58h): the chart IS the token's content
-/// (prd 51), sized on its own. `small` is a bare sparkline (the "shrunk token
-/// = sparkline" ruling), `wide` adds price + delta beside it, `big` is the
-/// full plot with a header. Its own pin cycles the spans; off the board (nil
-/// span) it falls to the full plot.
-private struct GenTokenRow: View {
-    let id: String
+/// TokenChip(symbol, chain, address, thingId, openable) — a compact token line
+/// inside a pinned Dexscreener tile: the symbol, an inline sparkline drawn
+/// on-device (prd 51 — a token's content IS its chart), its price, and the 1D
+/// delta. A thin row with NO surface of its own; the pinned Widget card owns the
+/// surface, so a chart never nests a card inside a card. Tap opens the token;
+/// long-press offers Open / Open in app / Remove from Home (the watchlist tile).
+private struct GenTokenChip: View {
     let el: GenEl
     @State private var chart: TokenChart?
-    /// The line DRAWS itself once when the data lands (left → right reveal,
-    /// 2026-07-10) — the same entrance-plays-once juice as the pin's settle.
+    /// The line DRAWS itself once when the data lands (left → right reveal).
     @State private var revealed = false
     @Environment(\.genThingOpen) private var thingOpen
-    @Environment(\.genThingUnpin) private var thingUnpin
     @Environment(\.genThingHandoff) private var thingHandoff
+    @Environment(\.genAppRemove) private var appRemove
     @Environment(\.genRefreshTick) private var refreshTick
-    @Environment(\.genSizeToggle) private var sizeToggle
-    @Environment(\.genSpan) private var span
     @Environment(\.colorScheme) private var scheme
 
     private var symbol: String { el.str(0) }
@@ -1171,117 +1036,46 @@ private struct GenTokenRow: View {
     }
 
     var body: some View {
-        let small = span == .small
-        let tile = interior
-            .boardTile(small: small)
-            // Keyed by chain/address, not plain .task: Home's first render
-            // streams the doc token-by-token (H7 typewriter), so this view can
-            // mount before those args arrive (fixed 2026-07-08). Reveal replays
-            // when fresh data lands.
-            .task(id: "\(refreshTick):\(el.str(1))/\(el.str(2))") {
-                guard !el.str(1).isEmpty, !el.str(2).isEmpty else { return }
-                revealed = false
-                chart = await TokenChart.fetch(chain: el.str(1), address: el.str(2))
-                if chart != nil { withAnimation(.easeOut(duration: 0.7)) { revealed = true } }
+        let row = HStack(spacing: DS.Space.s3) {
+            Text(symbol).dsText(.body17).foregroundStyle(DS.textPrimary)
+                .lineLimit(1).frame(maxWidth: .infinity, alignment: .leading)
+            plot.frame(width: 60, height: 26)
+            if let chart {
+                VStack(alignment: .trailing, spacing: 1) {
+                    Text(TokenChartStyle.priceText(chart.price))
+                        .dsText(.subhead13).foregroundStyle(DS.textPrimary)
+                        .contentTransition(.numericText())
+                    TokenDeltaPill(change: chart.change, label: "1D", compact: true)
+                }
             }
-        tile.pinnedRowActions(id: el.str(4), openable: el.str(5) == "app",
-                              open: thingOpen, unpin: thingUnpin, handoff: thingHandoff)
-    }
-
-    @ViewBuilder private var interior: some View {
-        switch span {
-        case .some(.small): smallForm
-        case .some(.wide):  wideForm
-        default:            bigForm
         }
-    }
-
-    /// The sacred pin, small in the corner — the token's size control. Same
-    /// ShelfSizePin every other tile's corner pin uses (2026-07-12: this was
-    /// its own bespoke 11pt button with no explicit hit target, one of four
-    /// tile types that never got the shelf pins' 44×44 fix — the token pin
-    /// visibly read smaller/harder-to-hit than everything else on Home).
-    @ViewBuilder private var pin: some View {
-        if let sizeToggle {
-            ShelfSizePin(large: span == .some(.big)) { sizeToggle(id) }
+        .padding(.horizontal, DS.Space.s4)
+        .padding(.vertical, DS.Space.s2)
+        // Keyed by chain/address (+ refresh tick), not a plain .task: Home's
+        // first render streams token-by-token, so this can mount before those
+        // args arrive; a pull re-fetches. Reveal replays when fresh data lands.
+        .task(id: "\(refreshTick):\(el.str(1))/\(el.str(2))") {
+            guard !el.str(1).isEmpty, !el.str(2).isEmpty else { return }
+            revealed = false
+            chart = await TokenChart.fetch(chain: el.str(1), address: el.str(2))
+            if chart != nil { withAnimation(.easeOut(duration: 0.7)) { revealed = true } }
         }
+        return row.pinnedRowActions(id: el.str(3), openable: el.str(4) == "app",
+                                    open: thingOpen, unpin: nil, handoff: thingHandoff,
+                                    removeApp: appRemove)
     }
 
-    /// The plot at a given height, or a ghost while the fetch is out.
-    @ViewBuilder private func plot(height: CGFloat) -> some View {
+    /// The sparkline, or a ghost bar while the fetch is out.
+    @ViewBuilder private var plot: some View {
         if let chart {
-            TokenChartPlot(chart: chart, accent: accent, height: height, pulses: false)
+            TokenChartPlot(chart: chart, accent: accent, height: 26, pulses: false)
                 .mask(alignment: .leading) {
                     GeometryReader { geo in
                         Rectangle().frame(width: revealed ? geo.size.width : 0)
                     }
                 }
         } else {
-            RoundedRectangle(cornerRadius: 6, style: .continuous)
-                .fill(DS.surfaceWell).frame(height: height)
-        }
-    }
-
-    /// small (1×1): symbol + a bare sparkline — the shrunk token.
-    private var smallForm: some View {
-        VStack(alignment: .leading, spacing: DS.Space.s1) {
-            HStack(alignment: .top, spacing: DS.Space.s2) {
-                Text(symbol).dsText(.callout15).foregroundStyle(DS.textPrimary)
-                    .lineLimit(1).frame(maxWidth: .infinity, alignment: .leading)
-                pin
-            }
-            Spacer(minLength: DS.Space.s2)
-            plot(height: 40)
-            if let chart {
-                TokenDeltaPill(change: chart.change, label: "1D", compact: true)
-            }
-        }
-    }
-
-    /// wide (2×1): symbol + price + delta on the left, sparkline on the right.
-    private var wideForm: some View {
-        HStack(alignment: .center, spacing: DS.Space.s3) {
-            VStack(alignment: .leading, spacing: DS.Space.s1) {
-                HStack(spacing: DS.Space.s2) {
-                    Text(symbol).dsText(.body17).foregroundStyle(DS.textPrimary).lineLimit(1)
-                    pin
-                }
-                if let chart {
-                    HStack(spacing: DS.Space.s2) {
-                        Text(TokenChartStyle.priceText(chart.price))
-                            .dsText(.callout15).foregroundStyle(DS.textPrimary)
-                            .contentTransition(.numericText())
-                        TokenDeltaPill(change: chart.change, label: "1D", compact: true)
-                    }
-                } else {
-                    Text(el.str(3)).dsText(.subhead13).foregroundStyle(DS.textTertiary)
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            plot(height: 48).frame(maxWidth: 150)
-        }
-    }
-
-    /// big (2×2): a header, then the full plot.
-    private var bigForm: some View {
-        VStack(alignment: .leading, spacing: DS.Space.s3) {
-            HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-                Text(symbol).dsText(.body17).foregroundStyle(DS.textPrimary).lineLimit(1)
-                Spacer(minLength: 0)
-                pin
-            }
-            if let chart {
-                HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-                    Text(TokenChartStyle.priceText(chart.price))
-                        .dsText(.heading22).foregroundStyle(DS.textPrimary)
-                        .contentTransition(.numericText())
-                    TokenDeltaPill(change: chart.change, label: "1D")
-                }
-            } else {
-                Text(el.str(3)).dsText(.subhead13).foregroundStyle(DS.textTertiary)
-            }
-            Spacer(minLength: 0)
-            plot(height: 150)
+            RoundedRectangle(cornerRadius: 6, style: .continuous).fill(DS.surfaceWell)
         }
     }
 }
@@ -1886,11 +1680,18 @@ private struct GenAgendaRow: View {
     }
 }
 
-/// MailRow(subject, snippet, meta)
+/// MailRow(subject, snippet, meta, thingId?, openable?) — args 4/5 only on a
+/// pinned Gmail/iCloud tile's rows: a tap opens the mail, long-press offers
+/// Open / Open in app (no Unpin — removal is the whole app's, on the card).
+/// Off the board (store previews) the trailing args are absent and the row is
+/// display-only.
 private struct GenMailRow: View {
     let el: GenEl
+    @Environment(\.genThingOpen) private var thingOpen
+    @Environment(\.genThingHandoff) private var thingHandoff
+    @Environment(\.genAppRemove) private var appRemove
     var body: some View {
-        HStack(spacing: DS.Space.s3) {
+        let row = HStack(spacing: DS.Space.s3) {
             KindGlyph(kind: .mail, size: 28)
             VStack(alignment: .leading, spacing: 2) {
                 Text(el.str(0)).dsText(.body17).foregroundStyle(DS.textPrimary).lineLimit(1)
@@ -1903,6 +1704,9 @@ private struct GenMailRow: View {
         }
         .padding(.horizontal, DS.Space.s4)
         .padding(.vertical, DS.Space.s1)
+        return row.pinnedRowActions(id: el.str(3), openable: el.str(4) == "app",
+                                    open: thingOpen, unpin: nil, handoff: thingHandoff,
+                                    removeApp: appRemove)
     }
 }
 

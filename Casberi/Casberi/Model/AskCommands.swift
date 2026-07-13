@@ -237,63 +237,6 @@ enum StatusAsk {
     }
 }
 
-/// Pin/unpin spoken to the composer (2026-07-10) — "pin the last link",
-/// "unpin ethereum". A pin is the app's lightest, undoable write (the Feed
-/// swipe fires it without a confirm), so the composer executes it directly
-/// and the toast carries Undo — same consent weight as the swipe.
-enum PinAsk {
-
-    struct Intent {
-        let pin: Bool          // false = unpin
-        let kind: ThingKind?   // "the last link"
-        let words: [String]    // "ethereum" — title/tag words to match
-    }
-
-    private static let filler: Set<String> = ["the", "my", "last", "latest",
-                                              "newest", "recent", "most", "a", "an",
-                                              "thing", "to", "home", "from"]
-
-    static func parse(_ raw: String) -> Intent? {
-        let q = raw.lowercased().trimmingCharacters(in: CharacterSet(charactersIn: "?! "))
-        let pin: Bool
-        if q.hasPrefix("unpin ") { pin = false }
-        else if q.hasPrefix("pin ") { pin = true }
-        else { return nil }
-
-        var words = q.components(separatedBy: CharacterSet.alphanumerics.inverted)
-            .filter { !$0.isEmpty }
-        words.removeFirst()   // the verb
-        words.removeAll { filler.contains($0) }
-
-        let kind = ThingKind.allCases.first { k in
-            words.contains(k.typeTag.lowercased()) || words.contains(k.typeTagPlural.lowercased())
-        }
-        if let kind {
-            words.removeAll {
-                $0 == kind.typeTag.lowercased() || $0 == kind.typeTagPlural.lowercased()
-            }
-        }
-        guard kind != nil || !words.isEmpty else { return nil }
-        return Intent(pin: pin, kind: kind, words: words)
-    }
-
-    /// The newest thing the intent names — kind narrows, remaining words
-    /// must all appear in the title or tags. Unpin searches pinned things
-    /// only (you can only unpin what's pinned).
-    static func target(_ intent: Intent, in things: [Thing]) -> Thing? {
-        things.first { t in
-            if intent.pin == false && !t.pinned { return false }
-            if intent.pin && t.pinned { return false }
-            if let kind = intent.kind, t.kind != kind { return false }
-            guard !intent.words.isEmpty else { return intent.kind != nil }
-            let hay = Set("\(t.title) \(t.tags.joined(separator: " "))".lowercased()
-                .components(separatedBy: CharacterSet.alphanumerics.inverted)
-                .filter { !$0.isEmpty })
-            return intent.words.allSatisfy(hay.contains)
-        }
-    }
-}
-
 /// On-device semantic term expansion (2026-07-10) — Apple's word embedding
 /// widens retrieval so "car stuff" can reach "vehicle"/"automobile" titles
 /// without word overlap. Neighbors only (no per-thing vector math): cheap,

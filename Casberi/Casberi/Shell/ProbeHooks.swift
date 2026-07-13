@@ -158,14 +158,16 @@ enum ProbeHooks {
             }
             NSLog("Pin-wallet probe: pinned %d address(es)", WalletStore.shared.addresses.count)
         },
-        // `-unpinAll YES` clears every thing pin and re-arms the pin coach —
-        // screenshot verification of the no-pins teaching state.
-        Hook(key: "unpinAll") { _, context in
-            let all = (try? context.fetch(FetchDescriptor<Thing>())) ?? []
-            for t in all where t.pinned { t.pinned = false }
-            try? context.save()
-            UserDefaults.standard.removeObject(forKey: "coach.pin.done")
-            NSLog("Unpin probe: cleared, coach re-armed")
+        // `-unpinAll YES` removes every pinned app from Home — screenshot
+        // verification of the no-pins state. (Pinning is per-APP now, so this
+        // clears HomePinnedSources, not any thing flag.)
+        Hook(key: "unpinAll") { _, _ in
+            let store = HomePinnedSources.shared
+            let sources = store.sources
+            for source in sources { store.clear(source) }
+            for source in HomePinnedSources.autoSocial { store.setHidden(source, true) }
+            CorpusSignal.shared.bump()
+            NSLog("Unpin probe: cleared %d pinned app(s)", sources.count)
         },
         // `-appleMusic YES` runs the real Apple Music connect+ingest and
         // logs the outcome (or the underlying MusicKit error).
@@ -312,9 +314,10 @@ enum ProbeHooks {
                 NSLog("RSS probe: %@ new things", n.map(String.init) ?? "FAILED")
             }
         },
-        // `-pinSource <source>` pins the newest thing from that source —
-        // headless test of the Home "Pinned" widget (waits for an async
-        // ingest hook like -watchToken to land its thing first, up to 5s).
+        // `-pinSource <source>` pins that APP to Home — headless test of the
+        // pinned app tile (waits up to 5s for an async ingest hook like
+        // -watchToken to land the source's first thing, since a pinned app
+        // with no things shows no tile).
         Hook(key: "pinSource") { source, context in
             Task { @MainActor in
                 for _ in 0..<25 {
@@ -323,10 +326,10 @@ enum ProbeHooks {
                         sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]
                     )
                     descriptor.fetchLimit = 1
-                    if let thing = (try? context.fetch(descriptor))?.first {
-                        thing.pinned = true
-                        try? context.save()
-                        NSLog("Pin probe: pinned '%@'", thing.title)
+                    if (try? context.fetch(descriptor))?.first != nil {
+                        HomePinnedSources.shared.toggle(source)
+                        CorpusSignal.shared.bump()
+                        NSLog("Pin probe: pinned app '%@'", source)
                         return
                     }
                     try? await Task.sleep(for: .milliseconds(200))

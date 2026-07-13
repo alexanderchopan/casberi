@@ -37,6 +37,8 @@ struct DayOneImportScreen: View {
             if !recent.isEmpty {
                 RecentThingsSection(header: "Imported", things: Array(recent))
                     .listRowSeparator(.hidden)
+                PinToHomeButton(source: "Day One", inSection: true)
+                    .listRowSeparator(.hidden)
             }
         }
         .listStyle(.insetGrouped)
@@ -112,6 +114,8 @@ struct JournalImportScreen: View {
             if !recent.isEmpty {
                 RecentThingsSection(header: "Imported", things: Array(recent))
                     .listRowSeparator(.hidden)
+                PinToHomeButton(source: "Apple Journal", inSection: true)
+                    .listRowSeparator(.hidden)
             }
         }
         .listStyle(.insetGrouped)
@@ -159,6 +163,9 @@ private let journalRecentDescriptor: FetchDescriptor<Thing> = {
 /// your captures.
 struct NotesShareScreen: View {
     @Environment(\.openURL) private var openURL
+    /// Whether any note has been shared in yet — only then is there a tile to
+    /// pin to Home (pinning doesn't invent content).
+    @Query(filter: #Predicate<Thing> { $0.source == "Apple Notes" }) private var notes: [Thing]
 
     var body: some View {
         List {
@@ -168,6 +175,10 @@ struct NotesShareScreen: View {
                 "Tap share, then Casberi.",
                 "It lands in your feed as a note — findable like everything else.",
             ])
+            if !notes.isEmpty {
+                PinToHomeButton(source: "Apple Notes", inSection: true)
+                    .listRowSeparator(.hidden)
+            }
             Section {
                 Button {
                     if let url = URL(string: "mobilenotes://") { openURL(url) }

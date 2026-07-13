@@ -2209,6 +2209,53 @@ its home behind the composer's "What's this week?" ask (prd 54's ruling
 that the recap is a question you pose, not a screen that ambushes you);
 the cover no longer emits `@week`.
 
+## 58k. Pin the app, not the item (user, 2026-07-13) — BUILT, verified on sim
+
+Supersedes 58j's "PINS DISSOLVE INTO TILES" and the whole per-item pin
+model. The user's ruling: pinning is per-APP now, not per-thing. You keep
+"your reminders" in view, not one reminder; "your watchlist", not one
+token; "your Bluesky", not one post. A pinned app is ONE board tile of its
+recent things, in the app's own shape.
+
+WHAT WENT. `Thing.pinned` is deleted (property, init arg, CloudKit field).
+Every per-item pin affordance is gone with it: the Feed swipe's Pin action
+(swipe is now the hand-off only), the thing sheet's Pin row, the
+Dexscreener/Kalshi watchlist swipe pins, the composer's "pin the last
+link" phrase (`PinAsk`), the Feed pin badges, and `HomeComposition.appendPinned`.
+
+WHAT REPLACED IT. Pinning is `HomePinnedSources` (already the model for the
+four media shelves), now generalized to EVERY connected source — the
+4-app `pinnable` gate is gone. `appendPinnedApps` composes each pinned
+source as its store-preview shape filled from the live corpus: image
+sources keep their bespoke `MediaShelf`; the wallet keeps its treemap;
+everyone else composes as a `Widget(title, [rows], source)` — a titled
+card of the app's recent things (a `TokenChip` — inline sparkline + price + 1D
+delta, surface-less so it never nests a card in the card — for Dexscreener
+tokens; `MailRow` for the inboxes; a tappable `Row` for the rest). The trailing
+`source` arg marks the Widget a board module: draggable, sized by the same
+corner `ShelfSizePin`, removed via long-press "Remove from Home" (which drops
+that source's pin — carried on every row too, since a row's own contextMenu
+would otherwise shadow the card's). Board key `app:<source>`, handed over by the
+composer in `Document.boardKeys` so it round-trips on a streamed cold launch
+(deriving it from `stream.els` would miss while the doc is still parsing). Rows
+tap to open the thing and carry the "Open in app" hand-off, but no per-row
+Unpin — removal is the whole app's.
+
+Deletions cleaned up in the same pass: `GenSocialCard`, `GenTokenRow`, and
+`GenRow`'s square board-tile form are gone (no emitter after social→Widget and
+tokens→TokenChip). Not migrated: a pre-update board's old `pin:`/`token:`/
+`social*` size/order keys don't map to the new `app:<source>` keys, so an
+existing board's customization resets once on upgrade (acceptable pre-launch;
+no real users yet).
+
+WHERE YOU PIN. "Pin to Home" moved onto every app's OWN screen (the reused
+`PinToHomeButton`): `BridgeDetailScreen` (ungated to all connected apps),
+`HandleSetupScreen`, `RSSScreen`, and the bespoke screens (Dexscreener,
+Kalshi, Mail, Twitch, Steam, Obsidian, the imports). Shown once the app
+has landed a thing (pinning doesn't invent content). Bluesky/Farcaster
+still show by default and carry the inverse "Show on Home" — they just
+grew from one auto-earned post to a plural tile.
+
 ## Audit note — 2026-07-12 screen sweep (nightly)
 
 Build codesigned clean from `~/Developer/casberi`. Perf warm: **launch

@@ -25,6 +25,8 @@ struct ObsidianScreen: View {
             if !recent.isEmpty {
                 RecentThingsSection(header: "Notes", things: recent)
                     .listRowSeparator(.hidden)
+                PinToHomeButton(source: "Obsidian", inSection: true)
+                    .listRowSeparator(.hidden)
             }
             if obsidian.connected { removeSection.listRowSeparator(.hidden) }
         }

@@ -28,6 +28,8 @@ struct MailScreen: View {
             if !recent.isEmpty {
                 RecentThingsSection(header: "Recent", things: recent)
                     .listRowSeparator(.hidden)
+                PinToHomeButton(source: provider.source, inSection: true)
+                    .listRowSeparator(.hidden)
             }
             if provider.connected {
                 BridgeDisconnectSection(

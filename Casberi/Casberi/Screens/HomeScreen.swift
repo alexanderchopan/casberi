@@ -32,7 +32,6 @@ struct HomeScreen: View {
     @Environment(ShellChrome.self) private var chrome
     @Environment(BridgeStore.self) private var bridges
     @Environment(\.openURL) private var openURL
-    @Environment(\.modelContext) private var modelContext
     @Bindable private var route = HomeRoute.shared
     @Bindable private var wallet = WalletStore.shared
     @State private var stream = GenStream()
@@ -41,12 +40,8 @@ struct HomeScreen: View {
     @State private var walletOpen = false
     /// Bumped by pull-to-refresh — token charts key their fetch on it.
     @State private var refreshTick = 0
-    /// One retiring lesson (Feed's coach grammar): with no pins yet, the
-    /// Pinned slot teaches the swipe; the first real pin retires it forever.
-    @AppStorage("coach.pin.done") private var pinCoachDone = false
     /// One retiring lesson for the size control (prd 58a): tap a pin, the
-    /// card blooms to large. Retires on the first tap, forever — same
-    /// grammar as `pinCoachDone`.
+    /// card blooms to large. Retires on the first tap, forever.
     @AppStorage("coach.size.done") private var sizeCoachDone = false
     /// The last celebrated corpus milestone — each fires exactly once, ever.
     @AppStorage("milestone.reached") private var milestoneReached = 0
@@ -66,6 +61,12 @@ struct HomeScreen: View {
     /// card even if its slot index shifts as wallets are pinned/unpinned.
     @State private var boardModuleRefs: Set<String> = []
     @State private var boardOrder: [String] = []
+    /// The composer's ref → stable-key map for this composition (`app:<source>`,
+    /// `wallet:<label>`). Read by `moduleKey` so a board ref resolves to its
+    /// persistence key WITHOUT waiting for the streamed doc to finish parsing —
+    /// a `stream.els`-based key would be empty during the cold-launch stream and
+    /// reset the saved arrangement (fix 2026-07-13).
+    @State private var boardKeys: [String: String] = [:]
     /// Bumped when a module's size flips (tap the pin) so the board re-reads
     /// each module's magazine-vs-full state and re-packs. `HomeModuleSize`
     /// isn't observable, so this @State is what actually forces the repaint;
@@ -205,22 +206,14 @@ struct HomeScreen: View {
                     openProject = ProjectRoute(name: name)
                 }
             }
-            // Pinned rows are interactive (2026-07-10): tap opens the
-            // thing; long-press offers Open/Unpin. Unpinning recomposes
-            // immediately — the pin flip changes no count, so nothing else
-            // would repaint.
+            // A pinned app tile's rows are interactive: tap opens the thing;
+            // long-press offers Open / Open in app. Removal is the whole app's
+            // (the card's long-press "Remove from Home"), so a row carries no
+            // Unpin — pinning is per-app now, not per-item.
             .environment(\.genThingOpen) { id in
                 if let thing = things.first(where: { $0.id.uuidString == id }) {
                     pinnedThing = thing
                 }
-            }
-            .environment(\.genThingUnpin) { id in
-                guard let thing = things.first(where: { $0.id.uuidString == id }) else { return }
-                DSHaptic.tap()
-                thing.pinned = false
-                try? modelContext.save()
-                streamComposition(instant: true)
-                chrome.flash("Unpinned from Home")
             }
             // The real hand-off — the same "Open in app" the Feed swipe
             // carries (2026-07-10: moving pins to Home must not cost it).
@@ -252,22 +245,26 @@ struct HomeScreen: View {
                     boardSizeRevision += 1
                 }
             }
-            // Long-press → Remove from Home. A pinned media shelf drops its pin
-            // (HomePinnedSources.clear also forgets its saved size/order); an
-            // auto-earned social card is suppressed instead (it has no pin —
-            // "Show on Home" on its own screen brings it back). Either way,
-            // recompose so the module leaves the board.
+            // Long-press → Remove from Home. A media shelf maps its ref → source
+            // via the static table; a generic app tile carries its source in the
+            // element (arg 3). An explicit pin is dropped (clear also forgets its
+            // saved size/order); an auto-social account is hidden instead, so
+            // "Show on Home" can bring it back. Either way, recompose so the
+            // module leaves the board.
             .environment(\.genSourceUnpin) { ref in
-                if let social = HomePinnedSources.socialSource(forModuleRef: ref) {
-                    DSHaptic.tap()
-                    HomePinnedSources.shared.setHidden(social, true)
-                    streamComposition(instant: true)
-                    chrome.flash("Removed from Home")
-                    return
-                }
-                guard let source = HomePinnedSources.source(forModuleRef: ref) else { return }
+                let source = HomePinnedSources.source(forModuleRef: ref)
+                    ?? (ref.hasPrefix("appTile") ? stream.els[ref]?.str(3) : nil)
+                guard let source else { return }
                 DSHaptic.tap()
+                // Drop any explicit pin first (also forgets the tile's saved
+                // size/order). An auto-social account can be BOTH explicitly
+                // pinned AND auto-shown, so also suppress the auto-show — else
+                // its `sources` membership would resurrect the tile on the next
+                // compose (setHidden alone left the explicit pin standing).
                 HomePinnedSources.shared.clear(source)
+                if HomePinnedSources.autoSocial.contains(source) {
+                    HomePinnedSources.shared.setHidden(source, true)
+                }
                 CorpusSignal.shared.bump()
                 streamComposition(instant: true)
                 chrome.flash("Removed from Home")
@@ -376,21 +373,22 @@ struct HomeScreen: View {
     }
 
     private func streamComposition(instant: Bool = false) {
-        // The first real pin is the lesson learned — the coach retires
-        // forever, even if every pin is later removed.
-        if !pinCoachDone, things.contains(where: \.pinned) { pinCoachDone = true }
         // Home synthesizes the surfaced corpus — search-only sources (Contacts)
         // stay out of the treemap the same way they stay out of the feed.
         let surfaced = Corpus.surfaced(things)
         let doc = surfaced.isEmpty
             ? HomeComposition.empty
             : HomeComposition.compose(things: surfaced, walletHoldings: walletHoldings,
-                                      walletPending: walletHoldingsLoading, pinCoach: !pinCoachDone)
+                                      walletPending: walletHoldingsLoading)
         if instant {
             stream.paint(doc.lines)   // an update, not an entrance — no typewriter
         } else {
             stream.stream(doc.lines)
         }
+        // Capture the stable keys BEFORE syncBoard reads them — the streamed
+        // doc's elements aren't parsed yet, so moduleKey can't derive them from
+        // stream.els; the composer handed them over instead.
+        boardKeys = doc.boardKeys
         syncBoard(doc.boardRefs)
     }
 
@@ -449,16 +447,23 @@ struct HomeScreen: View {
     /// grow any card yourself). A module that can't take `big` (a social post)
     /// stays small even when it leads. Everything else starts small and pairs.
     private func defaultSpan(_ ref: String) -> ModuleSpan {
-        guard ref == boardOrder.first else { return .small }
-        return allowedSpans(ref).contains(.big) ? .big : .small
+        let allowed = allowedSpans(ref)
+        // The hero slot leads big when its module can take it.
+        if ref == boardOrder.first, allowed.contains(.big) { return .big }
+        // A module that can't be a 1×1 square (an app tile is a full-width
+        // list, never a paired thumbnail) starts at its smallest ALLOWED span,
+        // not the shared `.small` default it can't render.
+        if !allowed.contains(.small) { return allowed.first ?? .wide }
+        return .small
     }
 
     /// The spans a module allows (the bento guardrails): a treemap needs area
-    /// so it skips `wide`; a social post has no `big`. Everything can still
-    /// shrink to a small square.
+    /// so it skips `wide`; an app tile is a full-width list of rows, so it
+    /// skips the 1×1 `small` (a cramped square can't hold a readable row).
+    /// Everything else can still shrink to a small square.
     private func allowedSpans(_ ref: String) -> [ModuleSpan] {
         if ref.hasPrefix("walletMap") || ref == "map" { return [.small, .big] }
-        if ref.hasPrefix("social") { return [.small, .wide] }
+        if ref.hasPrefix("appTile") { return [.wide, .big] }
         return [.small, .wide, .big]
     }
 
@@ -512,21 +517,12 @@ struct HomeScreen: View {
     /// A stable identity for a board ref, independent of its slot index — a
     /// wallet's holdings map keeps its own key even as other wallets are
     /// pinned/unpinned and shift `walletMapN`'s number around.
+    /// A ref's stable persistence key: the composer's `app:<source>` /
+    /// `wallet:<label>` when it supplied one (see `HomeComposition.Document`),
+    /// else the ref itself (media shelves, the map). Independent of the streamed
+    /// doc's parse state, so a saved arrangement round-trips on cold launch.
     private func moduleKey(_ ref: String) -> String {
-        if ref == "map" { return "map" }
-        if ref.hasPrefix("walletMap"), let el = stream.els[ref] {
-            let eyebrow = el.str(0)
-            let label = eyebrow.hasPrefix("@pin ") ? String(eyebrow.dropFirst(5)) : eyebrow
-            return "wallet:\(label)"
-        }
-        // Each pin is its own tile (prd 58h); key it by thing id so its span
-        // survives other pins being added/removed above it in the list. Tokens
-        // and everything-else pins carry the thing id at the same arg.
-        if let el = stream.els[ref] {
-            if el.comp == "TokenRow" { return "token:\(el.str(4))" }
-            if el.comp == "Row" { return "pin:\(el.str(4))" }
-        }
-        return ref
+        boardKeys[ref] ?? ref
     }
 
     // MARK: - Drag-to-reorder auto-scroll

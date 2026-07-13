@@ -87,13 +87,12 @@ struct DiagnosticsScreen: View {
             log("No screenshot thing this week — the cover has nothing to show (quiet cover is correct)")
         }
 
-        // — The pinned-token chart path —
-        let pinnedTokens = all.filter { $0.pinned && TokenChart.route(from: $0.content) != nil }
+        // — The token chart path — (any watched token; the chart lives on the
+        //   token's sheet and in Feed now, and Dexscreener pins as a watchlist
+        //   tile — pinning is per-app, not per-token.)
+        let pinnedTokens = all.filter { TokenChart.route(from: $0.content) != nil }
         if pinnedTokens.isEmpty {
-            log("No pinned token thing (nothing with a dexscreener link is pinned)")
-            if let anyToken = all.first(where: { $0.source == "Dexscreener" }) {
-                log("(Watched but unpinned: \(anyToken.title) — pin it in Feed for the Home chart)")
-            }
+            log("No token thing (nothing with a dexscreener link is watched)")
         }
         for t in pinnedTokens.prefix(2) {
             let route = TokenChart.route(from: t.content)!

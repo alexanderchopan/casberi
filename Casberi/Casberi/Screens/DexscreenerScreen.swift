@@ -52,6 +52,10 @@ struct DexscreenerScreen: View {
             addSection.listRowSeparator(.hidden)
             if !watched.isEmpty {
                 watchlistSection.listRowSeparator(.hidden)
+                // Pin the whole watchlist to Home as one tile (ruling
+                // 2026-07-12) — no longer one token at a time.
+                PinToHomeButton(source: "Dexscreener", inSection: true)
+                    .listRowSeparator(.hidden)
             }
             if !watched.isEmpty {
                 // A watched token IS its thing, so there's no separate store to
@@ -125,18 +129,10 @@ struct DexscreenerScreen: View {
                 .dsListCardRow()
                 .modifier(SwipeHintNudge(active: thing.id == hintTokenID) { swipeCoachDone = true })
                 .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                    // Full swipe = pin (Feed's grammar). The explicit group
-                    // replaces the system delete, so Unwatch rides here too.
-                    Button {
-                        DSHaptic.tap()
-                        thing.pinned.toggle()
-                        try? modelContext.save()
-                        CorpusSignal.shared.bump()
-                    } label: {
-                        Label(thing.pinned ? "Unpin" : "Pin",
-                              systemImage: thing.pinned ? "pin.slash" : "pin")
-                    }
-                    .tint(DS.tint)
+                    // Full swipe = Unwatch (the explicit group replaces the
+                    // system delete). Pinning a single token left the swipe
+                    // (2026-07-12) — pin "Dexscreener" from its screen for a
+                    // watchlist tile on Home, not one token at a time.
                     Button(role: .destructive) {
                         if let i = watched.firstIndex(where: { $0.id == thing.id }) {
                             unwatch(at: IndexSet(integer: i))

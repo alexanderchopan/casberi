@@ -44,6 +44,8 @@ struct KalshiScreen: View {
             addSection.listRowSeparator(.hidden)
             if !watched.isEmpty {
                 watchlistSection.listRowSeparator(.hidden)
+                PinToHomeButton(source: "Kalshi", inSection: true)
+                    .listRowSeparator(.hidden)
             }
             if !watched.isEmpty {
                 // A watched market IS its thing, so there's no separate store
@@ -119,16 +121,6 @@ struct KalshiScreen: View {
                 .dsListCardRow()
                 .modifier(SwipeHintNudge(active: thing.id == hintTokenID) { swipeCoachDone = true })
                 .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                    Button {
-                        DSHaptic.tap()
-                        thing.pinned.toggle()
-                        try? modelContext.save()
-                        CorpusSignal.shared.bump()
-                    } label: {
-                        Label(thing.pinned ? "Unpin" : "Pin",
-                              systemImage: thing.pinned ? "pin.slash" : "pin")
-                    }
-                    .tint(DS.tint)
                     Button(role: .destructive) {
                         if let i = watched.firstIndex(where: { $0.id == thing.id }) {
                             unwatch(at: IndexSet(integer: i))

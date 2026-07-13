@@ -103,7 +103,6 @@ final class Thing {
     var mark: Mark = Mark.none
     /// Type + project + user tags (brief §3). Project membership rides a tag.
     var tags: [String] = []
-    var pinned: Bool = false
     var provenance: Provenance = Provenance(app: "You")
     /// Stable identifier in the source system (PHAsset id, message id, URL) —
     /// ingestion (and CloudKit merge) dedupes on it.
@@ -162,7 +161,6 @@ final class Thing {
         capturedAt: Date = .now,
         mark: Mark = .none,
         tags: [String] = [],
-        pinned: Bool = false,
         provenance: Provenance? = nil,
         sourceRef: String? = nil
     ) {
@@ -176,7 +174,6 @@ final class Thing {
         self.mark = mark
         // The type tag is always present; caller-supplied tags follow.
         self.tags = ([kind.typeTag] + tags).reduced()
-        self.pinned = pinned
         self.provenance = provenance ?? Provenance(app: source)
         self.sourceRef = sourceRef
     }

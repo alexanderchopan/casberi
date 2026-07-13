@@ -39,7 +39,6 @@ struct FeedScreen: View {
     @Bindable private var feedRoute = FeedRoute.shared
     @Bindable private var wallet = WalletStore.shared
     @State private var pushedBridge: BridgeRouter.Destination?
-    @State private var liftedID: UUID?
     // First-run teaching (option 4: no demo mode — these live in the real
     // app and retire on first use, forever).
     @AppStorage("coach.chip.done") private var chipCoachDone = false
@@ -884,17 +883,12 @@ struct FeedScreen: View {
 
     /// The row inside a list section, with the standard list plumbing attached.
     private func shapedListRow(_ thing: Thing, index: Int = 0) -> some View {
-        let lifted = liftedID == thing.id
         // AnyView: same metadata-depth insurance as GenRender (crash fix).
         return AnyView(shapedRow(thing))
             .modifier(RowEntrance(index: index, wave: shapeWave, style: entranceStyle))
             .modifier(SwipeHintNudge(active: thing.id == hintThingID) {
                 swipeCoachDone = true
             })
-            // The pin lift (§11): a brief raise acknowledging the pin — the
-            // row stays in its chronological place (Home pin, 2026-07-10).
-            .scaleEffect(lifted ? 1.02 : 1)
-            .shadow(color: .black.opacity(lifted ? 0.2 : 0), radius: lifted ? 8 : 0)
             .contentShape(Rectangle())
             .matchedTransitionSource(id: thing.id, in: zoomNS)
             .onTapGesture { openThing(thing) }
@@ -915,20 +909,13 @@ struct FeedScreen: View {
                                  bottom: DS.Space.s3,
                                  trailing: DS.Space.s4 + DS.Space.s3))
             .listRowSeparator(.hidden)
-            // One gesture, one meaning (re-ruling 2026-07-07): TAP opens the
-            // sheet — tags and verbs live there — and SWIPE is Pin plus the
-            // real hand-off: Open IN THE SOURCE APP, only when the thing has
-            // a destination (calshow://, the link, photos-redirect://…).
-            // Tag left the swipe — it was the tap in disguise, and reaching
-            // past it kept misfiring the pin.
+            // One gesture, one meaning: TAP opens the sheet — tags and verbs
+            // live there — and SWIPE is the real hand-off: Open IN THE SOURCE
+            // APP, only when the thing has a destination (calshow://, the link,
+            // photos-redirect://…). Pinning left the swipe entirely (ruling
+            // 2026-07-12): a pin is per-APP now, placed from the app's own
+            // screen, not a per-item Feed gesture.
             .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                Button {
-                    togglePin(thing)
-                } label: {
-                    Label(thing.pinned ? "Unpin" : "Pin",
-                          systemImage: thing.pinned ? "pin.slash" : "pin")
-                }
-                .tint(DS.tint)
                 if let openVerb = VerbDerivation.verbs(for: thing).first(where: {
                     if case .openURL = $0.action { return true } else { return false }
                 }) {
@@ -968,12 +955,12 @@ struct FeedScreen: View {
             // B2b (ruling 2026-07-06): ONE row anatomy — the band — for every
             // kind and every shape. The wash carries the kind; per-kind row
             // shapes retired. Two earned exceptions: the reminders check
-            // circle (the lightest write) and the pinned/doing chat takeaway.
+            // circle (the lightest write) and the doing chat takeaway.
             switch shape {
             case .calendar:  BandRow(thing: thing, emphasized: thing.id == nextEventID)
             case .reminders: CheckRow(thing: thing, onToggle: { toggleReminder(thing) })
             case .music:     MusicRow(thing: thing)
-            case .chat where thing.pinned || thing.mark == .doing:
+            case .chat where thing.mark == .doing:
                 TakeawayCard(thing: thing)
             default:
                 // Perishables show their clock everywhere (ruling 2026-07-09):
@@ -1272,24 +1259,6 @@ struct FeedScreen: View {
         }
     }
 
-    private func togglePin(_ thing: Thing) {
-        DSHaptic.tap()
-        liftedID = thing.id
-        withAnimation(DS.Motion.standard) {
-            thing.pinned.toggle()
-            try? modelContext.save()
-        }
-        // A pin flip changes no count — Home's Pinned card recomposes on
-        // this signal (it was stale until the next unrelated change).
-        CorpusSignal.shared.bump()
-        // The row stays put now (a pin is a Home pin, ruling 2026-07-10) —
-        // the toast says where it went, since nothing on this screen moves.
-        chrome.flash(thing.pinned ? "Pinned to Home" : "Unpinned from Home")
-        Task { @MainActor in
-            try? await Task.sleep(for: .milliseconds(300))
-            withAnimation(DS.Motion.standard) { liftedID = nil }
-        }
-    }
 
     /// Loads the real per-wallet holdings for the Wallet chip's own shape —
     /// the ONLY place holdings show in Feed (amendment 2026-07-10: the

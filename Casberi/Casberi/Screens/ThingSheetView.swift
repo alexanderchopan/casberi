@@ -222,15 +222,6 @@ struct ThingSheetView: View {
                 }
                 .buttonStyle(.plain)
             }
-            Button {
-                thing.pinned.toggle()
-                try? modelContext.save()
-                DSHaptic.tap()
-            } label: {
-                actionRow(icon: thing.pinned ? "pin.slash" : "pin",
-                          label: thing.pinned ? "Unpin" : "Pin")
-            }
-            .buttonStyle(.plain)
             shareRow
             if let verbResult {
                 Text(verbResult)

@@ -381,13 +381,9 @@ struct MusicRow: View {
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            // Rows carry status (principle 6) — the pin and the project tag
-            // survive the shape switch, same slots as the band.
-            if thing.pinned {
-                Image(systemName: "pin.fill")
-                    .font(.system(size: 11))
-                    .foregroundStyle(DS.tint)
-            }
+            // Rows carry status (principle 6) — the project tag survives the
+            // shape switch, same slot as the band. (The pin badge retired
+            // 2026-07-12: pinning is per-APP now, not a mark on a thing.)
             VStack(alignment: .trailing, spacing: 1) {
                 LiveTimeText(date: thing.capturedAt)
                 if let project {
@@ -732,12 +728,6 @@ struct TakeawayCard: View {
                     .foregroundStyle(DS.textSecondary)
                 Spacer()
                 LiveTimeText(date: thing.capturedAt)
-                if thing.pinned {
-                    Image(systemName: "pin.fill")
-                        .font(.system(size: 11))
-                        .foregroundStyle(DS.tint)
-                        .frame(width: 24, height: 24)
-                }
             }
             Text(thing.title)
                 .dsText(.heading17).foregroundStyle(DS.textPrimary)

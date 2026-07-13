@@ -23,15 +23,23 @@ enum HomeComposition {
     struct Document {
         let lines: [String]
         let boardRefs: [String]
+        /// The STABLE persistence key for each board ref whose key isn't the ref
+        /// itself — `appTileN → app:<source>`, `walletMapN → wallet:<label>`.
+        /// Composed here (where the source/label is known) rather than re-derived
+        /// from the rendered element, because on a streamed cold-launch compose
+        /// the elements aren't parsed yet when the board reads its saved order —
+        /// so a `stream.els`-based key would miss and the arrangement would reset
+        /// (fix 2026-07-13). Refs absent here key by themselves (media shelves,
+        /// the map).
+        var boardKeys: [String: String] = [:]
     }
 
     static func compose(things: [Thing],
                         walletHoldings: [WalletIngest.HoldingsGroup] = [],
-                        walletPending: Bool = false,
-                        pinCoach: Bool = false) -> Document {
+                        walletPending: Bool = false) -> Document {
         let projects = projectClusters(things: things)
         return daily(things: things, projects: projects, walletHoldings: walletHoldings,
-                     walletPending: walletPending, pinCoach: pinCoach)
+                     walletPending: walletPending)
     }
 
     /// True when nothing has landed today — the composition acknowledges the
@@ -43,10 +51,11 @@ enum HomeComposition {
     // MARK: - Documents
 
     private static func daily(things: [Thing], projects: [Cluster], walletHoldings: [WalletIngest.HoldingsGroup] = [],
-                                     walletPending: Bool = false, pinCoach: Bool = false) -> Document {
+                                     walletPending: Bool = false) -> Document {
         var doc: [String] = []
         var rootRefs: [String] = []
         var boardRefs: [String] = []
+        var boardKeys: [String: String] = [:]
 
         // The COVER (H7) replaces the sheet-card hero: the day's newest image
         // thing when one landed (this week as the fallback image), else the
@@ -62,12 +71,15 @@ enum HomeComposition {
             rootRefs.append("invite")
         }
 
-        // Pinned — things the person chose to keep in view, ahead of the map
-        // (ruling 2026-07-09): a deliberate choice outranks an automatic
-        // clustering, and it shouldn't cost a scroll to reach. User-chosen,
-        // so it passes the no-obligations rule: Casberi never picked these.
-        appendPinned(things, coach: pinCoach, to: &doc, rootRefs: &rootRefs, boardRefs: &boardRefs)
-        appendWalletHoldings(walletHoldings, pending: walletPending, to: &doc, rootRefs: &rootRefs, boardRefs: &boardRefs)
+        // Pinned apps — the sources the person chose to keep in view, ahead of
+        // the map (ruling 2026-07-09): a deliberate choice outranks an automatic
+        // clustering, and it shouldn't cost a scroll to reach. User-chosen, so
+        // it passes the no-obligations rule: Casberi never picked these. Pinning
+        // is per-APP now (2026-07-12) — a pinned app is one tile of its recent
+        // things, not a single item; image sources keep their bespoke shelf
+        // (appendMediaModules), everyone else composes as a Widget of rows.
+        appendPinnedApps(things, to: &doc, rootRefs: &rootRefs, boardRefs: &boardRefs, boardKeys: &boardKeys)
+        appendWalletHoldings(walletHoldings, pending: walletPending, to: &doc, rootRefs: &rootRefs, boardRefs: &boardRefs, boardKeys: &boardKeys)
         appendMediaModules(things, to: &doc, rootRefs: &rootRefs, boardRefs: &boardRefs)
 
         // Where the map belongs even when it didn't compose yet — the starter
@@ -96,7 +108,7 @@ enum HomeComposition {
                               mapSlot: mapSlot, to: &doc, rootRefs: &rootRefs, boardRefs: &boardRefs)
 
         doc.insert("root = Stack([\(rootRefs.joined(separator: ", "))])", at: 0)
-        return Document(lines: doc, boardRefs: boardRefs)
+        return Document(lines: doc, boardRefs: boardRefs, boardKeys: boardKeys)
     }
 
     /// The empty state previews the real modules — the muted map shows the
@@ -234,39 +246,112 @@ enum HomeComposition {
         return "[\(items.joined(separator: ", "))]"
     }
 
-    /// Feed pins surface on Home too (ruling 2026-07-06): a pin means "keep
-    /// this in view", and Home is the view. Newest first, capped at 6
-    /// (raised from 3, prd 50 — a token watchlist alone can fill three
-    /// seats). With no pins yet, one retiring coach line takes the slot
-    /// (2026-07-10) — the empty Pinned state taught nothing, so a new user
-    /// never learned the swipe. The surface owns the retire flag.
+    /// The image-media sources whose pin composes as a bespoke shelf
+    /// (`appendMediaModules`) rather than the generic Widget tile — their
+    /// content IS pictures, so a strip/grid beats a list of titled rows.
+    static let mediaSources: Set<String> = ["Apple Music", "Pinterest", "Photos", "RSS"]
+
+    /// A pinned app is one board tile of its recent things (ruling 2026-07-12):
+    /// pinning is per-APP now, not per-item — you keep "your reminders" in
+    /// view, not one reminder. Each non-image pinned source composes as a
+    /// `Widget(title, [rows], source)` — the same shape its store-page preview
+    /// draws (StorePreview), now filled from the corpus. The trailing `source`
+    /// arg marks the Widget a board module (draggable, sizable via its corner
+    /// pin, removable via long-press) and names which pin its "Remove from
+    /// Home" drops. Image sources keep their shelf; the wallet keeps its
+    /// treemap; both compose elsewhere and are skipped here.
     ///
-    /// Each pin is its OWN board module now (ruling 2026-07-12): the old
-    /// "Pinned" bundle wore an oversized tilted pin and was force-sized big,
-    /// so one card looked and behaved unlike every other — a pin is a mark on
-    /// a thing, not a kind of card. Every pin is a tile carrying the same
-    /// corner pin, sized and reordered on its own; any of them can be grown to
-    /// hero. Tokens already composed as their own tiles (a token's content IS
-    /// its chart, prd 51); now everything else joins them, in pin order.
-    private static func appendPinned(_ things: [Thing], coach: Bool,
-                                     to doc: inout [String],
-                                     rootRefs: inout [String],
-                                     boardRefs: inout [String]) {
-        let pinned = things.filter(\.pinned).prefix(6)
-        guard !pinned.isEmpty else {
-            if coach {
-                doc.append("pinCoach = Coach(\(q(String(localized: "Swipe a thing in Feed to pin it here."))))")
-                rootRefs.append("pinCoach")
-                // The coach line is a lesson, not a card — it isn't dragged.
+    /// Which sources land here: every explicitly pinned source, plus the
+    /// auto-social accounts (Bluesky/Farcaster) that show unless hidden — the
+    /// same "on the board" set the old single-post card used, now plural.
+    /// Sorted by name so the natural order is stable across composes (the
+    /// person's own arrangement rides `HomeBoardOrder` on top).
+    private static func appendPinnedApps(_ things: [Thing],
+                                         to doc: inout [String],
+                                         rootRefs: inout [String],
+                                         boardRefs: inout [String],
+                                         boardKeys: inout [String: String]) {
+        let store = HomePinnedSources.shared
+        let onBoard = store.sources
+            .union(HomePinnedSources.autoSocial.filter { !store.isHidden($0) })
+            .subtracting(mediaSources)
+            .sorted()
+        var emitted = 0
+        for source in onBoard {
+            // Pinning doesn't invent content — a source with nothing landed
+            // yet shows no tile (its pin persists; the tile appears when the
+            // first thing arrives), same rule the media shelves follow.
+            let items = Array(things.filter { $0.source == source }.prefix(5))
+            guard !items.isEmpty else { continue }
+            let id = "appTile\(emitted)"
+            let mail = source == "Gmail" || source == "iCloud Mail"
+            let childIds = items.indices.map { "\(id)c\($0)" }
+            doc.append("\(id) = Widget(\(q(appTitle(source))), \(q("")), [\(childIds.joined(separator: ", "))], \(q(source)))")
+            for (i, t) in items.enumerated() {
+                doc.append(appChild(id: "\(id)c\(i)", t, mail: mail))
             }
-            return
-        }
-        for (i, t) in pinned.enumerated() {
-            let id = "pn\(i)"
-            doc.append(row(id: id, t))
             rootRefs.append(id)
             boardRefs.append(id)
+            // Key by SOURCE so the tile's size/slot survive other apps being
+            // pinned/unpinned above it — matches HomePinnedSources.boardKey.
+            boardKeys[id] = "app:\(source)"
+            emitted += 1
         }
+    }
+
+    /// A pinned app tile's header — a bespoke phrase where the app has one
+    /// (its store preview's voice), else the app's own name. Sentence case,
+    /// no eyebrow caps (design law): the words carry it.
+    private static func appTitle(_ source: String) -> String {
+        switch source {
+        case "Gmail", "iCloud Mail":                       return String(localized: "Waiting on you")
+        case "GitHub":                                     return String(localized: "In your feed")
+        case "Linear":                                     return String(localized: "Assigned to you")
+        case "Notion":                                     return String(localized: "Pages")
+        case "Reddit", "Raindrop":                         return String(localized: "Saved")
+        case "X":                                          return String(localized: "Bookmarked")
+        case "YouTube":                                    return String(localized: "Liked and saved")
+        case "Twitch":                                     return String(localized: "Live now")
+        case "Telegram", "Slack":                          return String(localized: "Worth keeping")
+        // Twitch keeps its plain name (default) — a fixed "Live now" header
+        // would assert real-time state the recency-ordered rows can't verify
+        // (honesty rule; TwitchBridge gates its own live indicator on liveRefs).
+        case "Apple Health":                               return String(localized: "Training")
+        case "Strava":                                     return String(localized: "Activities")
+        case "Cal.com":                                    return String(localized: "Booked with you")
+        case "Calendly":                                   return String(localized: "On your schedule")
+        case "Calendar":                                   return String(localized: "On your calendar")
+        case "Todoist", "Reminders":                       return String(localized: "On your list")
+        case "Readwise", "Kindle":                         return String(localized: "Highlights")
+        case "Dexscreener":                                return String(localized: "Watchlist")
+        case "Kalshi":                                     return String(localized: "Markets")
+        case "Bluesky", "Farcaster":                       return String(localized: "Recent posts")
+        case "ChatGPT", "Claude":                          return String(localized: "Recent chats")
+        case "Substack", "Podcasts":                       return String(localized: "New")
+        case "Steam":                                      return String(localized: "Recently played")
+        case "Apple Notes", "Day One", "Apple Journal", "Obsidian":
+                                                           return String(localized: "Notes")
+        default:                                           return source
+        }
+    }
+
+    /// One line inside a pinned app tile — a live TokenChip (sparkline + price)
+    /// for a token link (Dexscreener: a token's content IS its chart, prd 51), a
+    /// MailRow for the inboxes (subject + snippet), a plain tappable Row for
+    /// everything else. All carry the thing id so a tap opens it, and the
+    /// hand-off flag so "Open in app" appears only when it goes somewhere.
+    private static func appChild(id: String, _ t: Thing, mail: Bool) -> String {
+        let openable = VerbDerivation.verbs(for: t).contains {
+            if case .openURL = $0.action { return true } else { return false }
+        } ? "app" : ""
+        if t.kind == .link, let route = TokenChart.route(from: t.content) {
+            return "\(id) = TokenChip(\(q(t.title)), \(q(route.chain)), \(q(route.address)), \(q(t.id.uuidString)), \(q(openable)))"
+        }
+        if mail {
+            let snippet = String(t.content.prefix(120))
+            return "\(id) = MailRow(\(q(t.title)), \(q(snippet)), \(q(shortTime(t.capturedAt))), \(q(t.id.uuidString)), \(q(openable)))"
+        }
+        return "\(id) = Row(\(q(t.title)), \(q(t.kind.typeTag)), \(q(t.source)), \(q(shortTime(t.capturedAt))), \(q(t.id.uuidString)), \(q(openable)))"
     }
 
     /// Wallet holdings on Home (ruling 2026-07-08): pinning the wallet shows
@@ -281,9 +366,13 @@ enum HomeComposition {
                                              pending: Bool = false,
                                              to doc: inout [String],
                                              rootRefs: inout [String],
-                                             boardRefs: inout [String]) {
+                                             boardRefs: inout [String],
+                                             boardKeys: inout [String: String]) {
         for (i, g) in groups.enumerated() {
             let id = "walletMap\(i)"
+            // Key by the wallet's label so its treemap keeps its slot/size as
+            // other wallets are pinned/unpinned (matches HomeScreen.moduleKey).
+            boardKeys[id] = "wallet:\(g.label)"
             // "@pin " leading the eyebrow → GenTagMap renders the Pinned
             // card's tilted pin, small, before the wallet's name (ruling
             // 2026-07-10): these maps are on Home because the wallet is
@@ -358,15 +447,11 @@ enum HomeComposition {
                                  to: &doc, rootRefs: &rootRefs, boardRefs: &boardRefs)
             }
         }
-        // Social auto-earns a card from ONE post, but the person can remove it
-        // (long-press → Remove from Home, or the source screen's "Show on Home"
-        // toggle) — a removed source stays off the board until brought back.
-        for source in HomePinnedSources.autoSocial {
-            guard !HomePinnedSources.shared.isHidden(source),
-                  let latest = things.first(where: { $0.source == source }) else { continue }
-            appendSocialCard(id: "social\(source)", source: source, thing: latest,
-                             to: &doc, rootRefs: &rootRefs, boardRefs: &boardRefs)
-        }
+        // Social (Bluesky/Farcaster) composes as a pinned APP tile now
+        // (2026-07-12) — a plural list of recent posts, not one auto-earned
+        // card — through `appendPinnedApps`. It still shows unless hidden
+        // ("Show on Home"), so nothing is lost; the tile just grew from one
+        // post to a feed of them.
     }
 
     /// A source's image strip — newest first, capped at 12 (regular shows
@@ -395,37 +480,6 @@ enum HomeComposition {
             if case .openURL = $0.action { return true } else { return false }
         } ? "app" : ""
         return "\(id) = MediaItem(\(q(t.title)), \(q(t.previewImageURL ?? "")), \(q(t.id.uuidString)), \(q(openable)))"
-    }
-
-    /// SocialCard(source, handle, avatarURL, text, imageURL, thingId,
-    /// openable) — the source's single newest post. "Clean" per the ruling:
-    /// one card, not a mini-feed.
-    private static func appendSocialCard(id: String, source: String, thing t: Thing,
-                                         to doc: inout [String], rootRefs: inout [String],
-                                         boardRefs: inout [String]) {
-        let openable = VerbDerivation.verbs(for: t).contains {
-            if case .openURL = $0.action { return true } else { return false }
-        } ? "app" : ""
-        doc.append("\(id) = SocialCard(\(q(source)), \(q(t.authorHandle ?? "")), \(q(t.authorAvatarURL ?? "")), \(q(t.title)), \(q(t.previewImageURL ?? "")), \(q(t.id.uuidString)), \(q(openable)))")
-        rootRefs.append(id)
-        boardRefs.append(id)
-    }
-
-    /// A token link leads with its price chart, same rule as the thing sheet
-    /// (ThingContent.swift) — the token's "media" is the chart, not a link
-    /// row. The trailing thing id makes the row interactive on Home (tap
-    /// opens, long-press offers Open/Unpin — 2026-07-10).
-    private static func row(id: String, _ t: Thing) -> String {
-        // Arg 6 marks a thing with a real hand-off destination — the row's
-        // long-press offers "Open in app" only when it would actually go
-        // somewhere (2026-07-10).
-        let openable = VerbDerivation.verbs(for: t).contains {
-            if case .openURL = $0.action { return true } else { return false }
-        } ? "app" : ""
-        if t.kind == .link, let route = TokenChart.route(from: t.content) {
-            return "\(id) = TokenRow(\(q(t.title)), \(q(route.chain)), \(q(route.address)), \(q(shortTime(t.capturedAt))), \(q(t.id.uuidString)), \(q(openable)))"
-        }
-        return "\(id) = Row(\(q(t.title)), \(q(t.kind.typeTag)), \(q(t.source)), \(q(shortTime(t.capturedAt))), \(q(t.id.uuidString)), \(q(openable)))"
     }
 
     private static func shortTime(_ date: Date) -> String {

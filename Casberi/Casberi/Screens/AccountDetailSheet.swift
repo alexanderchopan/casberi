@@ -257,7 +257,6 @@ struct AccountDetailSheet: View {
                 "content": t.content,
                 "source": t.source,
                 "tags": t.tags,
-                "pinned": t.pinned,
                 "mark": t.mark.rawValue,
                 "provenance": prov,
                 "createdAt": iso.string(from: t.createdAt),
@@ -319,7 +318,6 @@ struct AccountDetailSheet: View {
                 capturedAt: (item["capturedAt"] as? String).flatMap { iso.date(from: $0) } ?? .now,
                 mark: mark,
                 tags: item["tags"] as? [String] ?? [],
-                pinned: item["pinned"] as? Bool ?? false,
                 provenance: provenance,
                 sourceRef: item["sourceRef"] as? String
             )

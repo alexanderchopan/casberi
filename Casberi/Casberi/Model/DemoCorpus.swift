@@ -26,7 +26,7 @@ enum DemoCorpus {
             Thing(kind: .chat, title: "Trip plan: Lisbon",
                   content: "5 days, Alfama + Belém, day trip to Sintra. Hotel near Praça do Comércio.",
                   source: "ChatGPT", capturedAt: ago(hours: 1), mark: .saved,
-                  tags: ["Lisbon trip"], pinned: true,
+                  tags: ["Lisbon trip"],
                   provenance: Provenance(app: "ChatGPT", agent: "gpt-4o")),
             Thing(kind: .event, title: "Flight to Lisbon",
                   content: "TAP 1147 · 8:40 AM departure", source: "Calendar",
@@ -133,7 +133,7 @@ enum DemoCorpus {
                   capturedAt: ago(hours: 0.5), tags: ["Work"]),
             Thing(kind: .event, title: "Dinner with Sam",
                   content: "7:00 PM · Uma", source: "Calendar",
-                  capturedAt: ago(hours: 0.8), pinned: true),
+                  capturedAt: ago(hours: 0.8)),
             Thing(kind: .reminder, title: "Book dentist",
                   source: "Reminders", capturedAt: ago(hours: 34), mark: .todo),
             // A FUTURE event (negative ago) — the agenda shape emphasizes the

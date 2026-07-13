@@ -4,30 +4,37 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Casberi — Docs</title>
-<meta name="description" content="What Casberi is, why it exists, and how to use every surface — capture, feed, search, apps, agents, and ownership.">
+<meta name="description" content="What Casberi is, why it exists, and how to use it — capture, feed, search, apps, agents, and ownership.">
 <meta property="og:title" content="Casberi — Docs">
-<meta property="og:description" content="What Casberi is, why it exists, and how to use every surface.">
+<meta property="og:description" content="What Casberi is, why it exists, and how to use it.">
 <meta property="og:type" content="article">
 <link rel="icon" href="icons/casberi-logo.png">
 <link rel="stylesheet" href="styles.css">
 <style>
   /* ---------- docs page styles (page-scoped) ---------- */
+  /* SF Rounded for display type — ui-rounded resolves to SF Rounded on Apple
+     devices and falls back to the regular system face everywhere else.
+     Headings and small labels wear it; body text stays plain for reading. */
+  .doc-hero h1, .doc h2, .doc h3, .doc-cta h2,
+  .doc .part-eyebrow, .doc .deck, .evi-label,
+  .toc a, .subtoc a,
+  .prob i, .mech-row i,
+  .prob b, .mech-row b, .persona b, a.glance b,
+  .goal b, .pager a {
+    font-family: ui-rounded, -apple-system, BlinkMacSystemFont, "SF Pro Rounded", "Segoe UI", Roboto, sans-serif;
+  }
+
   .doc { max-width: 700px; margin: 0 auto; }
-  .doc-hero { padding: 36px 0 10px; }
+  .doc-hero { padding: 44px 0 12px; }
   .doc-hero h1 {
     font-size: clamp(38px, 7vw, 64px);
-    line-height: 1.02; font-weight: 850; letter-spacing: -0.03em;
+    line-height: 1.02; font-weight: 850; color: var(--ink);
     text-wrap: balance;
   }
-  .doc-hero h1 em {
-    font-style: normal;
-    background: linear-gradient(120deg, var(--blue-bright), var(--berry));
-    -webkit-background-clip: text; background-clip: text; color: transparent;
-  }
   .doc-hero p.sub { font-size: 18px; color: var(--muted); max-width: 620px; margin-top: 18px; }
-  .updated { font-size: 13px; color: var(--faint); margin-top: 18px; }
+  .updated { font-size: 13px; color: var(--faint); margin-top: 20px; }
 
-  .toc { display: flex; gap: 9px; flex-wrap: wrap; margin-top: 24px; }
+  .toc { display: flex; gap: 9px; flex-wrap: wrap; margin-top: 26px; }
   .toc a {
     font-size: 13.5px; font-weight: 650; color: var(--ink);
     background: var(--surface); border-radius: 999px; padding: 9px 18px;
@@ -36,15 +43,8 @@
   .toc a:hover { background: var(--surface-2); text-decoration: none; transform: translateY(-1px); }
   .toc a span { color: var(--blue-bright); margin-right: 7px; font-weight: 800; }
 
-  /* the kinds of things, as quiet chips */
-  .kindkey { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 26px; }
-  .kindkey span {
-    font-size: 12.5px; font-weight: 600; color: var(--muted);
-    background: var(--surface); border-radius: 999px; padding: 6px 13px;
-  }
-
   /* small anchor chips inside How to use */
-  .subtoc { display: flex; gap: 7px; flex-wrap: wrap; margin: 14px 0 4px; }
+  .subtoc { display: flex; gap: 7px; flex-wrap: wrap; margin: 16px 0 4px; }
   .subtoc a {
     font-size: 12.5px; font-weight: 600; color: var(--muted);
     background: var(--surface); border-radius: 999px; padding: 6px 13px;
@@ -67,252 +67,182 @@
   .docrail a.top + a.top, .docrail a.sub + a.top { margin-top: 12px; }
   .docrail a.on { color: var(--ink); border-left-color: var(--blue-bright); }
 
-  .doc section { padding: 44px 0 8px; }
+  /* generous air between sections — content breathes, not boxed */
+  .doc section { padding: 72px 0 8px; }
   .doc .part-eyebrow {
-    font-size: 13px; font-weight: 800; letter-spacing: 0.1em;
+    font-size: 13px; font-weight: 800;
     text-transform: uppercase; color: var(--blue-bright); margin-bottom: 8px;
   }
-  .doc h2 { margin-bottom: 12px; }
+  .doc h2 { margin-bottom: 8px; }
+  .doc .deck { font-size: 18px; color: var(--muted); max-width: 600px; margin: 0 0 8px; line-height: 1.5; }
   .doc h3 {
-    font-size: 20px; font-weight: 750; letter-spacing: -0.01em;
-    margin: 36px 0 10px;
+    font-size: 20px; font-weight: 750;
+    margin: 40px 0 12px;
     scroll-margin-top: 24px;
   }
   .doc p { font-size: 16.5px; color: var(--muted); margin-bottom: 14px; }
   .doc p strong, .doc li strong { color: var(--ink); font-weight: 600; }
-  .doc p.setpiece { font-size: 19px; line-height: 1.65; color: var(--ink); }
+  .doc p.setpiece { font-size: 20px; line-height: 1.6; color: var(--ink); max-width: 640px; }
   .doc ul { margin: 0 0 14px; padding-left: 22px; }
   .doc li { font-size: 16.5px; color: var(--muted); margin-bottom: 8px; }
 
-  /* persona cards */
-  .persona-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 18px 0 6px; }
-  @media (max-width: 640px) { .persona-grid { grid-template-columns: 1fr; } }
-  .persona {
-    background: var(--surface); border-radius: var(--radius-sm); padding: 20px 22px;
-    transition: background .18s ease;
-  }
+  /* personas — typographic, not boxed */
+  .persona-list { margin: 22px 0 6px; display: grid; gap: 22px; }
+  @media (min-width: 641px) { .persona-list { grid-template-columns: 1fr 1fr; gap: 32px; } }
   .persona b { display: block; font-size: 17px; color: var(--ink); margin-bottom: 6px; }
-  .persona p { font-size: 15px; margin: 0; }
+  .persona p { font-size: 15.5px; color: var(--muted); margin: 0; line-height: 1.55; }
 
-  /* goals grid */
-  .goal-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin: 18px 0 6px; }
-  @media (max-width: 720px) { .goal-grid { grid-template-columns: 1fr 1fr; } }
-  @media (max-width: 460px) { .goal-grid { grid-template-columns: 1fr; } }
-  .goal {
-    background: var(--surface); border-radius: var(--radius-sm); padding: 16px 18px;
-    transition: background .18s ease;
+  /* goals — a clean numbered-feel list, no card boxes */
+  .goal-list { margin: 22px 0 6px; padding: 0; list-style: none; display: grid; gap: 16px; }
+  @media (min-width: 561px) { .goal-list { grid-template-columns: 1fr 1fr; gap: 16px 40px; } }
+  .goal-list li { margin: 0; padding-left: 44px; position: relative; }
+  .goal-list li b { display: block; font-size: 16px; color: var(--ink); margin-bottom: 2px; }
+  .goal-list li span { font-size: 14.5px; color: var(--muted); line-height: 1.5; display: block; }
+  .goal-list li::before {
+    content: counter(goalc); counter-increment: goalc;
+    position: absolute; left: 0; top: 1px;
+    width: 28px; height: 28px; border-radius: 50%;
+    background: var(--surface); color: var(--blue-bright);
+    font-size: 13px; font-weight: 800; font-family: ui-rounded, -apple-system, sans-serif;
+    display: flex; align-items: center; justify-content: center;
   }
-  .goal i {
-    display: block; font-style: normal; font-size: 11px; font-weight: 800;
-    letter-spacing: .1em; margin-bottom: 6px;
-  }
-  .goal b { display: block; font-size: 15.5px; color: var(--ink); margin-bottom: 4px; }
-  .goal span { font-size: 13.5px; color: var(--muted); line-height: 1.45; display: block; }
-  .g1 i { color: var(--k-link); } .g2 i { color: var(--k-shot); } .g3 i { color: var(--k-note); }
-  .g4 i { color: var(--k-chat); } .g5 i { color: var(--k-rem); } .g6 i { color: var(--confirm); }
+  .goal-list { counter-reset: goalc; }
 
-  /* evidence — vignettes, not facts, so they read as quiet quotes */
+  /* evidence — little stories, so they read as quiet quotes */
   .evi-label {
-    font-size: 11.5px; font-weight: 800; letter-spacing: .09em; text-transform: uppercase;
-    color: var(--faint); margin: 18px 0 10px;
+    font-size: 11.5px; font-weight: 800; text-transform: uppercase;
+    color: var(--faint); margin: 24px 0 12px;
   }
-  .evidence { display: grid; gap: 12px; margin: 0 0 6px; padding: 0; }
+  .evidence { display: grid; gap: 14px; margin: 0 0 6px; padding: 0; }
   .evidence li {
     list-style: none; margin: 0; font-size: 15.5px; color: var(--muted); line-height: 1.6;
     padding: 1px 0 1px 16px; border-left: 2px solid rgba(255,255,255,.14);
   }
 
-  /* problems */
-  .prob-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 18px 0 6px; }
-  @media (max-width: 640px) { .prob-grid { grid-template-columns: 1fr; } }
-  .prob {
+  /* problems & solutions — genuine paired collections, so they stay carded */
+  .prob-grid, .mech { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 22px 0 6px; }
+  @media (max-width: 640px) { .prob-grid, .mech { grid-template-columns: 1fr; } }
+  .prob, .mech-row {
     background: var(--surface); border-radius: var(--radius-sm); padding: 16px 18px;
     transition: background .18s ease;
   }
-  .prob i {
+  .prob i, .mech-row i {
     display: inline-block; font-style: normal; font-size: 11px; font-weight: 800;
-    letter-spacing: .06em; color: var(--berry);
-    background: rgba(224,52,92,.12); border-radius: 6px; padding: 2px 8px; margin-bottom: 8px;
+    border-radius: 6px; padding: 2px 8px; margin-bottom: 8px; white-space: nowrap;
   }
-  .prob b { display: block; font-size: 15.5px; color: var(--ink); margin-bottom: 4px; }
-  .prob span { font-size: 13.5px; color: var(--muted); line-height: 1.5; display: block; }
+  .prob i { color: var(--berry); background: rgba(224,52,92,.12); }
+  .mech-row i { color: var(--blue-bright); background: rgba(22,115,230,.14); }
+  .prob b, .mech-row b { display: block; font-size: 15.5px; color: var(--ink); margin-bottom: 4px; }
+  .prob span, .mech-row span { font-size: 13.5px; color: var(--muted); line-height: 1.5; display: block; }
 
-  /* solutions — two columns, same anatomy as the problems */
-  .mech { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 18px 0 6px; }
-  @media (max-width: 640px) { .mech { grid-template-columns: 1fr; } }
-  .mech-row {
-    background: var(--surface); border-radius: var(--radius-sm); padding: 16px 18px;
-    transition: background .18s ease;
+  /* features at a glance — verb cards that link to their walkthroughs */
+  .glance-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin: 22px 0 6px; }
+  @media (max-width: 720px) { .glance-grid { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 460px) { .glance-grid { grid-template-columns: 1fr; } }
+  a.glance {
+    display: block; background: var(--surface); border-radius: var(--radius-sm);
+    padding: 16px 18px; transition: background .18s ease;
   }
-  .mech-row i {
-    display: inline-block; font-style: normal; font-size: 11px; font-weight: 800;
-    letter-spacing: .06em; color: var(--blue-bright);
-    background: rgba(22,115,230,.14); border-radius: 6px; padding: 2px 8px; margin-bottom: 8px;
-    white-space: nowrap;
-  }
-  .mech-row b { display: block; font-size: 15.5px; color: var(--ink); margin-bottom: 4px; }
-  .mech-row span { font-size: 13.5px; color: var(--muted); line-height: 1.5; display: block; }
+  a.glance:hover { background: var(--surface-2); text-decoration: none; }
+  a.glance b { display: block; font-size: 15.5px; color: var(--ink); margin-bottom: 4px; }
+  a.glance span { font-size: 13.5px; color: var(--muted); line-height: 1.5; display: block; }
 
-  /* card hover — background shift only (transform is the reveal's) */
   @media (hover: hover) and (pointer: fine) {
-    .goal:hover, .prob:hover, .mech-row:hover, .persona:hover { background: var(--surface-2); }
+    .prob:hover, .mech-row:hover { background: var(--surface-2); }
   }
 
-  /* walkthrough headers: a counted number in the section's kind color */
+  /* walkthrough headers: one quiet accent number, not a rainbow */
   .walk { counter-reset: walksec; }
-  .walk h3 { margin-top: 48px; counter-increment: walksec; }
+  .walk h3 { margin-top: 64px; counter-increment: walksec; }
+  .walk h3:first-of-type { margin-top: 28px; }
   .walk h3::before {
     content: counter(walksec, decimal-leading-zero);
-    font-size: 13px; font-weight: 800; letter-spacing: .06em;
-    color: var(--wd, var(--blue-bright));
+    font-size: 13px; font-weight: 800;
+    color: var(--faint);
     margin-right: 12px; vertical-align: 2px;
   }
-  #first-run  { --wd: var(--k-shot); }   #shell    { --wd: var(--blue-bright); }
-  #capture    { --wd: var(--k-voice); }  #feed     { --wd: var(--k-link); }
-  #thing-sheet{ --wd: var(--k-event); }  #tags     { --wd: var(--k-note); }
-  #home       { --wd: var(--k-rem); }    #composer { --wd: var(--k-chat); }
-  #apps       { --wd: var(--k-mail); }   #agents   { --wd: var(--k-chat); }
-  #settings   { --wd: var(--confirm); }  #not-here { --wd: var(--faint); }
 
-  .doc .divider { height: 1px; background: rgba(255,255,255,.07); margin: 52px 0 0; }
+  /* screenshots — the hero of each section: centered figure on a soft well */
+  figure.shot {
+    margin: 24px 0 8px; padding: 30px 0 26px; text-align: center;
+    background: radial-gradient(120% 90% at 50% 0%, rgba(22,115,230,.09), transparent 68%);
+    border-radius: 22px;
+  }
+  figure.shot .frame {
+    display: inline-block; border-radius: 20px; overflow: hidden;
+    border: 1px solid #242a36; box-shadow: 0 22px 55px rgba(0,0,0,.45);
+    max-width: 88%;
+  }
+  figure.shot img { display: block; width: 100%; height: auto; }
+  figure.shot figcaption {
+    font-size: 13px; color: var(--faint); margin: 18px auto 0; max-width: 460px; line-height: 1.5;
+  }
 
-  .doc-cta { text-align: center; padding: 56px 0 10px; }
+  /* forward-pulling "Next" link, guide-style */
+  .pager { margin: 32px 0 0; padding-top: 20px; border-top: 1px solid rgba(255,255,255,.07); text-align: right; }
+  .pager a { font-size: 14.5px; font-weight: 650; color: var(--blue-bright); }
+  .pager a:hover { text-decoration: none; color: var(--ink); }
+  .pager a span { color: var(--faint); font-weight: 600; margin-right: 6px; }
+
+  .doc .divider { height: 1px; background: rgba(255,255,255,.07); margin: 64px 0 0; }
+
+  .doc-cta { text-align: center; padding: 72px 0 10px; }
   .doc-cta p { color: var(--muted); }
 
-  /* ---------- skeleton drawings ----------
-     Abstract sketches of each surface — shapes and the color grammar only,
-     no real content, so they never go stale. */
-  .sk {
-    background: var(--surface); border-radius: var(--radius-sm);
-    padding: 16px; margin: 18px 0 10px; max-width: 400px;
-    box-shadow: 0 14px 34px rgba(0,0,0,.28);
+  /* about diagrams — the thesis drawn in the site's own shapes, no characters */
+  .dia { display: flex; align-items: center; justify-content: center; gap: 20px; margin: 30px 0 10px; flex-wrap: wrap; }
+  .dia .apps9 { display: grid; grid-template-columns: repeat(3, 46px); gap: 9px; }
+  .dia .apptile {
+    width: 46px; height: 46px; border-radius: 12px; background: var(--surface-2);
+    display: flex; flex-wrap: wrap; align-items: center; justify-content: center;
+    gap: 4px; padding: 9px;
   }
-  .doc .sk-cap { font-size: 12.5px; color: var(--faint); margin: 0 0 18px; }
-  .sk .bar { height: 9px; border-radius: 5px; background: rgba(255,255,255,.10); }
-  .sk .bar.big { height: 13px; }
-  .sk .bar.dim { background: rgba(255,255,255,.06); }
-  .sk .bar.w25 { width: 25%; } .sk .bar.w35 { width: 35%; } .sk .bar.w45 { width: 45%; }
-  .sk .bar.w55 { width: 55%; } .sk .bar.w65 { width: 65%; } .sk .bar.w80 { width: 80%; }
-  .sk .bar + .bar { margin-top: 7px; }
-  .sk-row { display: flex; align-items: center; gap: 10px; }
-  .sk-row + .sk-row, .sk-row + .sk-block, .sk-block + .sk-row, .sk-block + .sk-block { margin-top: 10px; }
-  .sk .grow { flex: 1; min-width: 0; }
-  .sk .sq { width: 30px; height: 30px; border-radius: 8px; flex: none; }
-  .sk .sq.sm { width: 24px; height: 24px; border-radius: 7px; }
-  .sk .dot { width: 7px; height: 7px; border-radius: 50%; flex: none; }
-  .sk .pill {
-    font-size: 11px; font-weight: 700; padding: 5px 13px; border-radius: 999px;
-    flex: none; margin-left: auto; line-height: 1;
+  .dia .apptile i { width: 7px; height: 7px; border-radius: 50%; display: block; }
+  .dia .arrow { color: var(--faint); font-size: 24px; font-weight: 700; }
+  @media (max-width: 480px) { .dia .arrow { width: 100%; text-align: center; transform: rotate(90deg); font-size: 20px; } }
+  .dia .feedcol {
+    background: var(--surface); border-radius: 14px; padding: 12px 14px; width: 200px;
+    box-shadow: 0 12px 30px rgba(0,0,0,.3);
   }
-  .sk .pill.go { background: var(--blue); color: #fff; }
-  .sk .pill.ok { background: rgba(52,199,123,.15); color: var(--confirm); }
-  .sk .pill.deny { background: rgba(255,69,58,.15); color: var(--k-event); }
-  .sk .pill.soon { background: var(--surface-2); color: var(--faint); }
-  .sk .pill.blank { background: var(--surface-2); width: 42px; height: 21px; padding: 0; }
-  .sk .pill.blank.on { background: var(--blue); }
-  /* kind hues */
-  .c-link { background: rgba(10,132,255,.30); }  .c-shot { background: rgba(48,209,88,.30); }
-  .c-event{ background: rgba(255,69,58,.30); }   .c-note { background: rgba(255,214,10,.26); }
-  .c-chat { background: rgba(191,90,242,.30); }  .c-rem  { background: rgba(255,159,10,.30); }
-  .c-voice{ background: rgba(255,55,95,.30); }   .c-mail { background: rgba(100,210,255,.28); }
-  /* washed feed rows */
-  .sk .wash { border-radius: 10px; padding: 9px 10px; }
-  .sk .wash.c-link { background: rgba(10,132,255,.10); }
-  .sk .wash.c-shot { background: rgba(48,209,88,.10); }
-  .sk .wash.c-event{ background: rgba(255,69,58,.10); }
-  /* chip strips */
-  .sk .chips { display: flex; gap: 6px; margin-bottom: 12px; }
-  /* the shell drawing floats free — no card behind chrome */
-  .sk.sk-shell {
-    background: none; box-shadow: none; padding: 14px 0 6px;
-    display: flex; flex-direction: column; align-items: center; gap: 14px;
+  .dia .frow { display: flex; align-items: center; gap: 9px; padding: 7px 2px; }
+  .dia .frow i { width: 9px; height: 9px; border-radius: 3px; flex: none; }
+  .dia .frow u { height: 8px; border-radius: 4px; background: rgba(255,255,255,.12); flex: 1; display: block; text-decoration: none; }
+  .dia .world {
+    background: var(--surface); border-radius: 14px; padding: 14px;
+    display: grid; grid-template-columns: repeat(2, 42px); gap: 9px;
   }
-  .sk-shell .toast { display: flex; align-items: center; gap: 7px; background: var(--surface); border-radius: 999px; padding: 7px 14px; box-shadow: 0 10px 24px rgba(0,0,0,.3); }
-  .sk-shell .toast .dot { background: var(--confirm); }
-  .sk-shell .toast .bar { width: 64px; margin: 0; }
-  .sk .barrow { display: flex; align-items: center; gap: 10px; justify-content: center; }
-  .sk .tabcap { display: flex; gap: 18px; padding: 13px 22px; border-radius: 999px; background: var(--surface-2); }
-  .sk .tab { width: 24px; height: 8px; border-radius: 4px; background: rgba(255,255,255,.16); }
-  .sk .tab.on { background: var(--blue); }
-  .sk .fab { width: 38px; height: 38px; border-radius: 50%; background: var(--surface-2); box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.12); }
-  .sk-shell .tabcap { background: var(--surface); box-shadow: 0 10px 24px rgba(0,0,0,.3); }
-  .sk-shell .fab { background: var(--surface); box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.12), 0 10px 24px rgba(0,0,0,.3); }
-  /* phone-framed sketches — the two hero surfaces read as app screens */
-  .sk.phone-sk {
-    background: #0d0f14; border: 1px solid #242a36; border-radius: 30px;
-    padding: 14px; width: 254px;
-    box-shadow: 0 20px 48px rgba(0,0,0,.42);
+  .dia .world b {
+    grid-column: 1 / -1; font-size: 10.5px; font-weight: 800;
+    color: var(--faint); text-transform: uppercase;
   }
-  .sk .minibar { display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 14px; }
-  .sk .minibar .tabcap { padding: 8px 14px; gap: 12px; }
-  .sk .minibar .tab { width: 16px; height: 6px; }
-  .sk .minibar .fab { width: 26px; height: 26px; box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.12); }
-  /* the thing sheet — taller, narrower, a real sheet with a grabber */
-  .sk.ink { background: #0b0d11; width: 254px; padding: 12px 16px 18px; }
-  .sk .grabber { width: 36px; height: 4px; border-radius: 2px; background: rgba(255,255,255,.18); margin: 0 auto 12px; }
-  /* composer capsule */
-  .sk .capsule { display: flex; align-items: center; gap: 10px; background: var(--surface-2); border-radius: 999px; padding: 11px 15px; }
-  .sk.ink .capsule { background: #161a22; }
-  .sk .capsule .bar { flex: 1; margin: 0; }
-  .sk .capsule .dot { background: var(--k-voice); }
-  /* media / cover / chart blocks */
-  .sk .media { height: 64px; border-radius: 10px; }
-  .sk .chart { background: #11151c; border-radius: 10px; height: 58px; padding: 8px 10px; }
-  .sk .chart svg { width: 100%; height: 100%; display: block; }
-  .sk .cover {
-    height: 74px; border-radius: 10px; padding: 12px 12px 0;
-    background: linear-gradient(180deg, #ff6157 0%, #f2372b 100%);
+  .dia .wtile { width: 42px; height: 42px; border-radius: 11px; }
+  .dia .nobridge {
+    width: 46px; border-top: 2px dashed rgba(255,255,255,.16);
+    position: relative; align-self: center;
   }
-  .sk .cover .bar { background: rgba(255,255,255,.4); }
-  .sk .cover .bar.dim { background: rgba(255,255,255,.25); }
-  /* treemap cells */
-  .sk .map { display: grid; grid-template-columns: 2fr 1fr 1fr; grid-auto-rows: 34px; gap: 6px; }
-  .sk .cell { border-radius: 9px; display: flex; align-items: flex-end; padding: 6px 8px; }
-  .sk .cell .bar { width: 45%; height: 6px; margin: 0; background: rgba(255,255,255,.30); }
-  .sk .cell.tall { grid-row: span 2; }
-  /* code block (approval) */
-  .sk .code { background: #0b0d11; border-radius: 9px; padding: 10px 12px; }
-  .sk .code .bar { background: rgba(52,199,123,.35); width: 70%; margin: 0; }
-  /* stat cards + toggles (settings) */
-  .sk .stats { display: flex; gap: 8px; }
-  .sk .stat { flex: 1; background: var(--surface-2); border-radius: 10px; padding: 12px; }
-  .sk .stat .bar.big { width: 55%; }
-  .sk .switch { width: 36px; height: 22px; border-radius: 999px; background: var(--surface-2); position: relative; flex: none; margin-left: auto; transition: background .25s ease; }
-  .sk .switch::after { content: ""; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: #fff; transition: transform .25s ease; }
-  .sk .switch.on { background: var(--blue); }
-  .sk .switch.on::after { transform: translateX(14px); }
-  .sk .fillline { height: 1px; background: rgba(255,255,255,.08); margin: 12px 0; }
+  .dia .nobridge::after {
+    content: "×"; position: absolute; top: -12px; left: 50%; transform: translateX(-50%);
+    color: var(--faint); font-size: 15px; font-weight: 700; background: var(--bg); padding: 0 4px;
+  }
+  .doc .dia-cap { font-size: 12.5px; color: var(--faint); margin: 0 0 18px; text-align: center; }
 
-  /* ---------- microanimation: one-shot draw-in (JS-gated) ----------
-     The script adds .anim; without JS everything is simply visible. */
-  .sk.anim > * { opacity: 0; transform: translateY(9px); transition: opacity .5s cubic-bezier(.2,.7,.2,1), transform .5s cubic-bezier(.2,.7,.2,1); }
-  .sk.anim > :nth-child(2) { transition-delay: .07s; }
-  .sk.anim > :nth-child(3) { transition-delay: .14s; }
-  .sk.anim > :nth-child(4) { transition-delay: .21s; }
-  .sk.anim > :nth-child(5) { transition-delay: .28s; }
-  .sk.anim > :nth-child(6) { transition-delay: .35s; }
-  .sk.anim > :nth-child(7) { transition-delay: .42s; }
-  .sk.anim > :nth-child(8) { transition-delay: .49s; }
-  .sk.anim.in > * { opacity: 1; transform: none; }
+  /* a single, barely-there fade — reading pages shouldn't perform */
+  .fade { opacity: 0; transform: translateY(10px); transition: opacity .6s ease, transform .6s ease; }
+  .fade.in { opacity: 1; transform: none; }
+  @media (prefers-reduced-motion: reduce) { .fade { opacity: 1; transform: none; transition: none; } }
 
-  /* ---------- signature moments — one state change per sketch, once ---------- */
-  /* first run: a Connect flips to its check */
-  .sk .pillswap { position: relative; margin-left: auto; flex: none; }
-  .sk .pillswap .pill { margin-left: 0; }
-  .sk .pillswap .pill.ok {
-    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
-    opacity: 0; transform: scale(.7);
-    transition: opacity .3s ease, transform .35s cubic-bezier(.2,.9,.3,1.4);
+  /* MOCKUP ③c: ALL icons rain the full column into an OVERLAPPING HEAP at the fold; lower opacity; more fall as you scroll */
+  .chute { display: none; }
+  @media (min-width: 1320px) {
+    .chute { display: block; position: fixed; right: max(8px, calc(50% - 720px)); top: 0; bottom: 0; width: 250px; z-index: 0; pointer-events: none; }
+    .chute .ai {
+      position: absolute; width: 44px; height: 44px; border-radius: 11px; font-size: 17px;
+      opacity: 0; will-change: transform;
+      transition: transform 1s cubic-bezier(.3,1.1,.45,1), opacity .4s ease;
+      box-shadow: 0 5px 14px rgba(0,0,0,.45);
+    }
+    .chute .ai.landed { opacity: .5; }
   }
-  .sk .pillswap .pill.go { transition: opacity .3s ease; }
-  .sk.anim.in.done .pillswap .pill.ok { opacity: 1; transform: scale(1); }
-  .sk.anim.in.done .pillswap .pill.go { opacity: 0; }
-  /* feed: the newest thing lands on top */
-  .sk.anim.in > .landrow { opacity: 0; transform: translateY(-10px); }
-  .sk.anim.in.done > .landrow { opacity: 1; transform: none; }
-  /* settings: a toggle flips on */
-  .sk.anim.in.done .switch.flip { background: var(--blue); }
-  .sk.anim.in.done .switch.flip::after { transform: translateX(14px); }
 </style>
 </head>
 <body>
@@ -332,127 +262,176 @@
 </div>
 
 <nav class="docrail" aria-label="On this page">
+  <a class="top" href="#features">Features</a>
   <a class="top" href="#about">About</a>
   <a class="sub" href="#problems">The problems</a>
   <a class="sub" href="#solution">The solution</a>
   <a class="top" href="#how-to-use">How to use</a>
-  <a class="sub" href="#first-run">First run</a>
   <a class="sub" href="#shell">The shell</a>
-  <a class="sub" href="#capture">Capture</a>
+  <a class="sub" href="#tab-bar">The tab bar</a>
+  <a class="sub" href="#account">Account</a>
+  <a class="sub" href="#apps">Apps</a>
   <a class="sub" href="#feed">Feed</a>
-  <a class="sub" href="#thing-sheet">The thing sheet</a>
-  <a class="sub" href="#tags">Tags</a>
   <a class="sub" href="#home">Home</a>
   <a class="sub" href="#composer">The composer</a>
-  <a class="sub" href="#apps">Apps</a>
-  <a class="sub" href="#agents">Agents</a>
-  <a class="sub" href="#settings">Settings</a>
 </nav>
 
+<div class="chute" aria-hidden="true"><div class="ai tilefull ai-wallet" style="animation-delay:0.05s"><svg viewBox="0 0 24 24" width="58%" height="58%" style="margin:auto;display:block" xmlns="http://www.w3.org/2000/svg"><path fill="#fff" d="M4 7a3 3 0 0 1 3-3h9a2 2 0 0 1 2 2v1h1a2 2 0 0 1 2 2v7a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3V7Zm14 6.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z"/></svg></div><div class="ai ai-farcaster" style="animation-delay:0.09s"><img src="data:image/svg+xml;base64,PHN2ZyBmaWxsPSIjZmZmZmZmIiByb2xlPSJpbWciIHZpZXdCb3g9IjAgMCAyNCAyNCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48dGl0bGU+RmFyY2FzdGVyPC90aXRsZT48cGF0aCBkPSJNMTguMjQuMjRINS43NkMyLjU3ODkuMjQgMCAyLjgxODggMCA2djEyYzAgMy4xODExIDIuNTc4OSA1Ljc2IDUuNzYgNS43NmgxMi40OGMzLjE4MTIgMCA1Ljc2LTIuNTc4OSA1Ljc2LTUuNzZWNkMyNCAyLjgxODggMjEuNDIxMi4yNCAxOC4yNC4yNG0uODE1NSAxNy4xNjYydi41MDRjLjI4NjgtLjAyNTYuNTQ1OC4xOTA1LjU0MzkuNDc5di41Njg4aC01LjE0Mzd2LS41Njg4Yy0uMDAxOS0uMjg4NS4yNTc2LS41MDQ3LjU0NDMtLjQ3OXYtLjUwNGMwLS4yMi4xNTI1LS40MDIuMzU4LS40NThsLS4wMDk1LTQuMzY0NWMtLjE1ODktMS43MzY2LTEuNjQwMi0zLjA5NzktMy40NDM1LTMuMDk3OS0xLjgwMzggMC0zLjI4NDYgMS4zNjEzLTMuNDQzNSAzLjA5NzlsLS4wMDk2IDQuMzU3OGMuMjI3Ni4wNDI0LjUzMTguMjA4My41Mzk1LjQ2NDh2LjUwNGMuMjg2My0uMDI1Ni41NDU3LjE5MDUuNTQzOC40Nzl2LjU2ODhINC4zOTE1di0uNTY4OGMtLjAwMTktLjI4ODUuMjU3NS0uNTA0Ny41NDM4LS40Nzl2LS41MDRjMC0uMjUyOS4yMDExLS40NTQ4LjQ1MzYtLjQ3MjR2LTcuODk1aC0uNDkwNUw0LjI4OTggNy4wMDhsMi42NDA1LS4wMDA1VjUuMDQxOWg5Ljk0OTV2MS45NjU2aDIuODIxOWwtLjYwOTEgMi4wMzE0aC0uNDkwMXY3Ljg5NDljLjI1MTkuMDE3Ny40NTMuMjE5NS40NTMuNDcyNCIvPjwvc3ZnPg==" alt="Farcaster"></div><div class="ai tilefull ai-dexscreener" style="animation-delay:0.13s"><img src="data:image/png;base64,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" alt="Dexscreener"></div><div class="ai ai-chatgpt" style="animation-delay:0.17s"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHAAAABwCAYAAADG4PRLAAAABGdBTUEAALGPC/xhBQAAACBjSFJNAAB6JgAAgIQAAPoAAACA6AAAdTAAAOpgAAA6mAAAF3CculE8AAAARGVYSWZNTQAqAAAACAABh2kABAAAAAEAAAAaAAAAAAADoAEAAwAAAAEAAQAAoAIABAAAAAEAAABwoAMABAAAAAEAAABwAAAAAN6CUbEAAAGdaVRYdFhNTDpjb20uYWRvYmUueG1wAAAAAAA8eDp4bXBtZXRhIHhtbG5zOng9ImFkb2JlOm5zOm1ldGEvIiB4OnhtcHRrPSJYTVAgQ29yZSA2LjAuMCI+CiAgIDxyZGY6UkRGIHhtbG5zOnJkZj0iaHR0cDovL3d3dy53My5vcmcvMTk5OS8wMi8yMi1yZGYtc3ludGF4LW5zIyI+CiAgICAgIDxyZGY6RGVzY3JpcHRpb24gcmRmOmFib3V0PSIiCiAgICAgICAgICAgIHhtbG5zOmV4aWY9Imh0dHA6Ly9ucy5hZG9iZS5jb20vZXhpZi8xLjAvIj4KICAgICAgICAgPGV4aWY6UGl4ZWxYRGltZW5zaW9uPjUxMjwvZXhpZjpQaXhlbFhEaW1lbnNpb24+CiAgICAgICAgIDxleGlmOlBpeGVsWURpbWVuc2lvbj41MTI8L2V4aWY6UGl4ZWxZRGltZW5zaW9uPgogICAgICA8L3JkZjpEZXNjcmlwdGlvbj4KICAgPC9yZGY6UkRGPgo8L3g6eG1wbWV0YT4KuC9IVwAAD5tJREFUeAHtnQXMJbUTwOcOORwOdw443F2Cc0C4cEDwoEEDBIJrIARLsMPh0IRwQQ4JTnAP7hDcHUJwt/7nV9Kl3dd9b98nu6/330m+b7vdttvO7LQd6xtiFKSBZDEwNNmeNx23GGgImPiH0BCwIWDiGEi8+w0HNgRMHAOJd7/hwIaAiWMg8e43HNgQMHEMJN79hgMbAiaOgcS733BgQ8DEMZB49xsObAiYOAYS737DgQ0BE8dA4t1vOLAhYOIYSLz7DQc2BEwcA4l3v+HAhoCJYyDx7k+aeP+z7v/666/y/fffyy+//CJDhw6VaaaZRmaYYQaZdNKJZojZWP1E0qN77bXX5M4775RHHnlE3nzzTfn666/ljz/+kCFDhsiUU04pc8wxhyy99NKy4YYbygYbbCCzzTabP/aJI41rfWqgBDObb765USIRFlDqb8455zSHHnqo+fDDD1Mbbtv+StunPfZQOczsvffeZrLJJitFtBhxIeSll17aYyPre3eSIeCrr75qll122ULC6ZpnRo4caZZbbjmz2GKLGZ0ujU6lheX32msvo+tm3zHXIzWH0I9eXwxeeukl2XTTTeWjjz4Kujps2DAZPXq0bLvttrLyyivL7LPPLpNPPrn89ddf8uOPP8q7774r9913n0yYMEFeeeWVoC4322yzjRx88MHy6aefyldffSV///23TD311DLXXHPJggsuKCNGjLAbopaKvZTRIx9SYTc++eQTs9BCC7Vw0vrrr2+efPLJwnr+g59//tlcdNFFZr755mtpR2kRzYOj9aMwJ554onnrrbf85noq3dNTqHKSUc5rQfBhhx1mfv/9964ReeqppxoVMVraKyKiy59++unN/vvvb/iYeg16moDjx49vQfaxxx7bNQ6fffZZM2bMGDPJJJO0tOeIVOYKB994441dv38wK/TsGqjTnqy00kry+uuvK27/ha222kquu+46K+e5vHbXzz77TJTr5LLLLrMCfqws69yKK64o888/v7CmfvPNN/L222/bNfOLL75oqYJi4OSTT5bDDz+85VktGYP5dfSn7euvvz7glllmmaW0DKfaGHPeeeeZueeeO2hDEWzvdaNjdthhB3Pvvfca1d5Eu6mbGnP11VebNddcM9rGKaecEq1XdWbPTaEffPCBufLKK80yyywTIO7oo48uhZs77rjDKOcGdR3huKpWxjz++OOl2qLQn3/+aS655BIz44wzBm2ylvKR1Q09Q0CQuv3225vhw4cHiALprF3PPfdcW1y9/PLLZuutt26p64iHbAhHqajQtp2ih08//bTRaTZoX1V1RkWboiqV5NdOwC+//NIgVDOtOWTnrwjoTIsxoP6RRx5ppp122mj9mWaayZxwwgnm22+/jVXvKu/55583TOV+/3bbbbeu2hjowrUS8KmnnrJaEx8hsTSiRAyuuuoqs8ACCwQIdfXh2l122WXAZTh2xr6GZ4oppjCqJIh1r5K82gj4wAMPmJlnnrkF+SAeNZgjBNddd921BRlwg+4Ig3KuzlprrWVovxOAeHSrbGjuv//+TsXtc6bgddddN3jvIYccUqruYBSqhYCqGjOzzjprgASQ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" alt="ChatGPT"></div><div class="ai ai-claude" style="animation-delay:0.21s"><img src="data:image/svg+xml;base64,PHN2ZyBmaWxsPSIjZmZmZmZmIiByb2xlPSJpbWciIHZpZXdCb3g9IjAgMCAyNCAyNCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48dGl0bGU+Q2xhdWRlPC90aXRsZT48cGF0aCBkPSJtNC43MTQ0IDE1Ljk1NTUgNC43MTc0LTIuNjQ3MS4wNzktLjIzMDctLjA3OS0uMTI3NWgtLjIzMDdsLS43ODkzLS4wNDg2LTIuNjk1Ni0uMDcyOS0yLjMzNzUtLjA5NzEtMi4yNjQ2LS4xMjE0LS41NzA3LS4xMjE1LS41MzQzLS43MDQyLjA1NDYtLjM1MjIuNDc5Ny0uMzIxOC42ODYuMDYwOCAxLjUxNzkuMTAzMiAyLjI3NjcuMTU3OCAxLjY1MTQuMDk3MiAyLjQ0NjguMjU1aC4zODg2bC4wNTQ2LS4xNTc5LS4xMzM2LS4wOTcxLS4xMDMyLS4wOTcyTDYuOTczIDkuODM1NmwtMi41NS0xLjY4NzktMS4zMzU2LS45NzE0LS43MjI1LS40OTE4LS4zNjQzLS40NjE0LS4xNTc4LTEuMDA3OC42NTU3LS43MjI1Ljg4MDMuMDYwNy4yMjQ2LjA2MDcuODkyNS42ODYgMS45MDY0IDEuNDc1NCAyLjQ4OTMgMS44MzM2LjM2NDMuMzAzNS4xNDU3LS4xMDMyLjAxODItLjA3MjgtLjE2NC0uMjczMy0xLjM1MzktMi40NDY3LTEuNDQ1LTIuNDg5My0uNjQzNS0xLjAzMi0uMTctLjYxOTRjLS4wNjA3LS4yNTUtLjEwMzItLjQ2NzQtLjEwMzItLjcyODVMNi4yODcuMTMzNSA2LjY5OTcgMGwuOTk1Ny4xMzM2LjQxOS4zNjQyLjYxOTIgMS40MTQ3IDEuMDAxOCAyLjIyODIgMS41NTQzIDMuMDI5Ni40NTUzLjg5ODUuMjQyOS44MzE4LjA5MS4yNTVoLjE1Nzl2LS4xNDU3bC4xMjc1LTEuNzA2LjIzNjgtMi4wOTQ3LjIzMDctMi42OTU3LjA3ODktLjc1ODkuMzc2NC0uOTEwNy43NDY4LS40OTE4LjU4MjguMjc5My40Nzk3LjY4Ni0uMDY2OC40NDMzLS4yODUzIDEuODUxNy0uNTU4NiAyLjkwMjEtLjM2NDMgMS45NDI5aC4yMTI1bC4yNDI5LS4yNDI5Ljk4MzUtMS4zMDUzIDEuNjUxNC0yLjA2NDMuNzI4Ni0uODE5Ni44NS0uOTA0Ni41NDY0LS40MzExaDEuMDMyMWwuNzU5IDEuMTI5My0uMzQgMS4xNjU3LTEuMDYyNSAxLjM0NzgtLjg4MDQgMS4xNDE0LTEuMjYyOCAxLjctLjc4OTMgMS4zNi4wNzI5LjEwOTMuMTg4Mi0uMDE4MyAyLjg1MzUtLjYwNyAxLjU0MjEtLjI3OTQgMS44Mzk2LS4zMTU3LjgzMTguMzg4Ni4wOTEuMzk0Ni0uMzI3OC44MDc1LTEuOTY3LjQ4NTctMi4zMDcyLjQ2MTQtMy40MzY0LjgxMzYtLjA0MjUuMDMwNC4wNDg2LjA2MDcgMS41NDgyLjE0NTcuNjYxOC4wMzY0aDEuNjIxbDMuMDE3NS4yMjQ3Ljc4OTIuNTIyLjQ3MzYuNjM3Ni0uMDc5LjQ4NTctMS4yMTQyLjYxOTMtMS42MzkzLS4zODg2LTMuODI1LS45MTA3LTEuMzExMy0uMzI3OWgtLjE4MjJ2LjEwOTNsMS4wOTI5IDEuMDY4NiAyLjAwMzUgMS44MDkyIDIuNTA3NSAyLjMzMTQuMTI3NS41NzY4LS4zMjE4LjQ1NTQtLjM0LS4wNDg2LTIuMjAzOS0xLjY1NzUtLjg1LS43NDY4LTEuOTI0Ni0xLjYyMWgtLjEyNzV2LjE3bC40NDMyLjY0OTYgMi4zNDM2IDMuNTIxNC4xMjE0IDEuMDgwNy0uMTcuMzUyMS0uNjA3MS4yMTI1LS42Njc5LS4xMjE0LTEuMzcyMS0xLjkyNDZMMTQuMzggMTcuOTU5bC0xLjE0MTQtMS45NDI4LS4xMzk3LjA3OS0uNjc0IDcuMjU1Mi0uMzE1Ni4zNzAzLS43Mjg2LjI3OTMtLjYwNzEtLjQ2MTQtLjMyMTgtLjc0NjguMzIxOC0xLjQ3NTMuMzg4Ni0xLjkyNDYuMzE1Ny0xLjUzLjI4NTMtMS45MDA0LjE3LS42MzE0LS4wMTIxLS4wNDI1LS4xMzk3LjAxODItMS40MzI4IDEuOTY3Mi0yLjE3OTYgMi45NDQ2LTEuNzI0MyAxLjg0NTYtLjQxMjguMTY0LS43MTY0LS4zNzA0LjA2NjctLjY2MTguNDAwOC0uNTg4OSAyLjM4Ni0zLjAzNTcgMS40Mzg5LTEuODgyLjkyOS0xLjA4NjgtLjAwNjItLjE1NzloLS4wNTQ2bC02LjMzODUgNC4xMTY0LTEuMTI5My4xNDU3LS40ODU3LS40NTU0LjA2MDgtLjc0NjcuMjMwNy0uMjQyOSAxLjkwNjQtMS4zMTE0WiIvPjwvc3ZnPg==" alt="Claude"></div><div class="ai tilefull ai-venice" style="animation-delay:0.25s"><img src="data:image/png;base64,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" alt="Venice"></div><div class="ai tilefull ai-openclaw" style="animation-delay:0.29s"><img src="data:image/png;base64,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" alt="OpenClaw"></div><div class="ai ai-bluesky" style="animation-delay:0.33s"><img src="data:image/svg+xml;base64,PHN2ZyBmaWxsPSIjZmZmZmZmIiByb2xlPSJpbWciIHZpZXdCb3g9IjAgMCAyNCAyNCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48dGl0bGU+Qmx1ZXNreTwvdGl0bGU+PHBhdGggZD0iTTUuMjAyIDIuODU3QzcuOTU0IDQuOTIyIDEwLjkxMyA5LjExIDEyIDExLjM1OGMxLjA4Ny0yLjI0NyA0LjA0Ni02LjQzNiA2Ljc5OC04LjUwMUMyMC43ODMgMS4zNjYgMjQgLjIxMyAyNCAzLjg4M2MwIC43MzItLjQyIDYuMTU2LS42NjcgNy4wMzctLjg1NiAzLjA2MS0zLjk3OCAzLjg0Mi02Ljc1NSAzLjM3IDQuODU0LjgyNiA2LjA4OSAzLjU2MiAzLjQyMiA2LjI5OS01LjA2NSA1LjE5Ni03LjI4LTEuMzA0LTcuODQ3LTIuOTctLjEwNC0uMzA1LS4xNTItLjQ0OC0uMTUzLS4zMjcgMC0uMTIxLS4wNS4wMjItLjE1My4zMjctLjU2OCAxLjY2Ni0yLjc4MiA4LjE2Ni03Ljg0NyAyLjk3LTIuNjY3LTIuNzM3LTEuNDMyLTUuNDczIDMuNDIyLTYuMy0yLjc3Ny40NzMtNS44OTktLjMwOC02Ljc1NS0zLjM2OUMuNDIgMTAuMDQgMCA0LjYxNSAwIDMuODgzYzAtMy42NyAzLjIxNy0yLjUxNyA1LjIwMi0xLjAyNiIvPjwvc3ZnPg==" alt="Bluesky"></div><div class="ai ai-telegram" style="animation-delay:0.37s"><img src="data:image/svg+xml;base64,PHN2ZyBmaWxsPSIjZmZmZmZmIiByb2xlPSJpbWciIHZpZXdCb3g9IjAgMCAyNCAyNCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48dGl0bGU+VGVsZWdyYW08L3RpdGxlPjxwYXRoIGQ9Ik0xMS45NDQgMEExMiAxMiAwIDAgMCAwIDEyYTEyIDEyIDAgMCAwIDEyIDEyIDEyIDEyIDAgMCAwIDEyLTEyQTEyIDEyIDAgMCAwIDEyIDBhMTIgMTIgMCAwIDAtLjA1NiAwem00Ljk2MiA3LjIyNGMuMS0uMDAyLjMyMS4wMjMuNDY1LjE0YS41MDYuNTA2IDAgMCAxIC4xNzEuMzI1Yy4wMTYuMDkzLjAzNi4zMDYuMDIuNDcyLS4xOCAxLjg5OC0uOTYyIDYuNTAyLTEuMzYgOC42MjctLjE2OC45LS40OTkgMS4yMDEtLjgyIDEuMjMtLjY5Ni4wNjUtMS4yMjUtLjQ2LTEuOS0uOTAyLTEuMDU2LS42OTMtMS42NTMtMS4xMjQtMi42NzgtMS44LTEuMTg1LS43OC0uNDE3LTEuMjEuMjU4LTEuOTEuMTc3LS4xODQgMy4yNDctMi45NzcgMy4zMDctMy4yMy4wMDctLjAzMi4wMTQtLjE1LS4wNTYtLjIxMnMtLjE3NC0uMDQxLS4yNDktLjAyNGMtLjEwNi4wMjQtMS43OTMgMS4xNC01LjA2MSAzLjM0NS0uNDguMzMtLjkxMy40OS0xLjMwMi40OC0uNDI4LS4wMDgtMS4yNTItLjI0MS0xLjg2NS0uNDQtLjc1Mi0uMjQ1LTEuMzQ5LS4zNzQtMS4yOTctLjc4OS4wMjctLjIxNi4zMjUtLjQzNy44OTMtLjY2MyAzLjQ5OC0xLjUyNCA1LjgzLTIuNTI5IDYuOTk4LTMuMDE0IDMuMzMyLTEuMzg2IDQuMDI1LTEuNjI3IDQuNDc2LTEuNjM1eiIvPjwvc3ZnPg==" alt="Telegram"></div><div class="ai ai-slack" style="animation-delay:0.41s"><img src="data:image/png;base64,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" alt="Slack"></div><div class="ai ai-photos" style="animation-delay:0.45s"><svg class="pw" viewBox="0 0 24 24"><ellipse cx="12" cy="6.8" rx="2.5" ry="4.4" fill="#ff453a" opacity=".85" transform="rotate(0 12 12)"/><ellipse cx="12" cy="6.8" rx="2.5" ry="4.4" fill="#ff9f0a" opacity=".85" transform="rotate(45 12 12)"/><ellipse cx="12" cy="6.8" rx="2.5" ry="4.4" fill="#ffd60a" opacity=".85" transform="rotate(90 12 12)"/><ellipse cx="12" cy="6.8" rx="2.5" ry="4.4" fill="#30d158" opacity=".85" transform="rotate(135 12 12)"/><ellipse cx="12" cy="6.8" rx="2.5" ry="4.4" fill="#63e6e2" opacity=".85" transform="rotate(180 12 12)"/><ellipse cx="12" cy="6.8" rx="2.5" ry="4.4" fill="#0a84ff" opacity=".85" transform="rotate(225 12 12)"/><ellipse cx="12" cy="6.8" rx="2.5" ry="4.4" fill="#bf5af2" opacity=".85" transform="rotate(270 12 12)"/><ellipse cx="12" cy="6.8" rx="2.5" ry="4.4" fill="#ff375f" opacity=".85" transform="rotate(315 12 12)"/></svg></div><div class="ai ai-calendar" style="animation-delay:0.49s">7</div><div class="ai ai-reminders" style="animation-delay:0.53s">✓</div><div class="ai ai-health" style="animation-delay:0.57s">♥</div><div class="ai ai-gmail" style="animation-delay:0.61s"><img src="data:image/svg+xml;base64,PHN2ZyBmaWxsPSIjRUE0MzM1IiByb2xlPSJpbWciIHZpZXdCb3g9IjAgMCAyNCAyNCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48dGl0bGU+R21haWw8L3RpdGxlPjxwYXRoIGQ9Ik0yNCA1LjQ1N3YxMy45MDljMCAuOTA0LS43MzIgMS42MzYtMS42MzYgMS42MzZoLTMuODE5VjExLjczTDEyIDE2LjY0bC02LjU0NS00LjkxdjkuMjczSDEuNjM2QTEuNjM2IDEuNjM2IDAgMCAxIDAgMTkuMzY2VjUuNDU3YzAtMi4wMjMgMi4zMDktMy4xNzggMy45MjctMS45NjRMNS40NTUgNC42NCAxMiA5LjU0OGw2LjU0NS00LjkxIDEuNTI4LTEuMTQ1QzIxLjY5IDIuMjggMjQgMy40MzQgMjQgNS40NTd6Ii8+PC9zdmc+" alt="Gmail"></div><div class="ai ai-icloud" style="animation-delay:0.65s"><img src="data:image/svg+xml;base64,PHN2ZyBmaWxsPSIjZmZmZmZmIiByb2xlPSJpbWciIHZpZXdCb3g9IjAgMCAyNCAyNCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48dGl0bGU+aUNsb3VkPC90aXRsZT48cGF0aCBkPSJNMTMuNzYyIDQuMjlhNi41MSA2LjUxIDAgMCAwLTUuNjY5IDMuMzMyIDMuNTcxIDMuNTcxIDAgMCAwLTEuNTU4LS4zNiAzLjU3MSAzLjU3MSAwIDAgMC0zLjUxNiAzQTQuOTE4IDQuOTE4IDAgMCAwIDAgMTQuNzk2YTQuOTE4IDQuOTE4IDAgMCAwIDQuOTIgNC45MTQgNC45MyA0LjkzIDAgMCAwIC42MTctLjA0NWgxNC40MmMyLjMwNS0uMjcyIDQuMDQxLTIuMjU4IDQuMDQzLTQuNTg5di0uMDA5YTQuNTk0IDQuNTk0IDAgMCAwLTMuNzI3LTQuNTA4IDYuNTEgNi41MSAwIDAgMC02LjUxMS02LjI3eiIvPjwvc3ZnPg==" alt="iCloud Mail"></div><div class="ai ai-youtube" style="animation-delay:0.69s"><img src="data:image/svg+xml;base64,PHN2ZyBmaWxsPSIjZmZmZmZmIiByb2xlPSJpbWciIHZpZXdCb3g9IjAgMCAyNCAyNCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48dGl0bGU+WW91VHViZTwvdGl0bGU+PHBhdGggZD0iTTIzLjQ5OCA2LjE4NmEzLjAxNiAzLjAxNiAwIDAgMC0yLjEyMi0yLjEzNkMxOS41MDUgMy41NDUgMTIgMy41NDUgMTIgMy41NDVzLTcuNTA1IDAtOS4zNzcuNTA1QTMuMDE3IDMuMDE3IDAgMCAwIC41MDIgNi4xODZDMCA4LjA3IDAgMTIgMCAxMnMwIDMuOTMuNTAyIDUuODE0YTMuMDE2IDMuMDE2IDAgMCAwIDIuMTIyIDIuMTM2YzEuODcxLjUwNSA5LjM3Ni41MDUgOS4zNzYuNTA1czcuNTA1IDAgOS4zNzctLjUwNWEzLjAxNSAzLjAxNSAwIDAgMCAyLjEyMi0yLjEzNkMyNCAxNS45MyAyNCAxMiAyNCAxMnMwLTMuOTMtLjUwMi01LjgxNHpNOS41NDUgMTUuNTY4VjguNDMyTDE1LjgxOCAxMmwtNi4yNzMgMy41Njh6Ii8+PC9zdmc+" alt="YouTube"></div><div class="ai ai-music" style="animation-delay:0.73s"><img src="data:image/svg+xml;base64,PHN2ZyBmaWxsPSIjZmZmZmZmIiByb2xlPSJpbWciIHZpZXdCb3g9IjAgMCAyNCAyNCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48dGl0bGU+QXBwbGUgTXVzaWM8L3RpdGxlPjxwYXRoIGQ9Ik0yMy45OTQgNi4xMjRhOS4yMyA5LjIzIDAgMDAtLjI0LTIuMTljLS4zMTctMS4zMS0xLjA2Mi0yLjMxLTIuMTgtMy4wNDNhNS4wMjIgNS4wMjIgMCAwMC0xLjg3Ny0uNzI2IDEwLjQ5NiAxMC40OTYgMCAwMC0xLjU2NC0uMTVjLS4wNC0uMDAzLS4wODMtLjAxLS4xMjQtLjAxM0g1Ljk4NmMtLjE1Mi4wMS0uMzAzLjAxNy0uNDU1LjAyNi0uNzQ3LjA0My0xLjQ5LjEyMy0yLjE5My40LTEuMzM2LjUzLTIuMyAxLjQ1Mi0yLjg2NSAyLjc4LS4xOTIuNDQ4LS4yOTIuOTI1LS4zNjMgMS40MDgtLjA1Ni4zOTItLjA4OC43ODUtLjEgMS4xOCAwIC4wMzItLjAwNy4wNjItLjAxLjA5M3YxMi4yMjNjLjAxLjE0LjAxNy4yODMuMDI3LjQyNC4wNS44MTUuMTU0IDEuNjI0LjQ5NyAyLjM3My42NSAxLjQyIDEuNzM4IDIuMzUzIDMuMjM0IDIuODAxLjQyLjEyNy44NTYuMTg3IDEuMjkzLjIyOC41NTUuMDUzIDEuMTEuMDYgMS42NjcuMDZoMTEuMDNhMTIuNSAxMi41IDAgMDAxLjU3LS4xYy44MjItLjEwNiAxLjU5Ni0uMzUgMi4yOTUtLjgxYTUuMDQ2IDUuMDQ2IDAgMDAxLjg4LTIuMjA3Yy4xODYtLjQyLjI5My0uODcuMzctMS4zMjQuMTEzLS42NzUuMTM4LTEuMzU4LjEzNy0yLjA0LS4wMDItMy44IDAtNy41OTUtLjAwMy0xMS4zOTN6bS02LjQyMyAzLjk5djUuNzEyYzAgLjQxNy0uMDU4LjgyNy0uMjQ0IDEuMjA2LS4yOS41OS0uNzYuOTYyLTEuMzg4IDEuMTQtLjM1LjEtLjcwNi4xNTctMS4wNy4xNzMtLjk1LjA0NS0xLjc3My0uNi0xLjk0My0xLjUzNmExLjg4IDEuODggMCAwMTEuMDM4LTIuMDIyYy4zMjMtLjE2LjY3LS4yNSAxLjAxOC0uMzI0LjM3OC0uMDgyLjc1OC0uMTUzIDEuMTM0LS4yNC4yNzQtLjA2My40NTctLjIzLjUxLS41MTZhLjkwNC45MDQgMCAwMC4wMi0uMTkzYzAtMS44MTUgMC0zLjYzLS4wMDItNS40NDNhLjcyNS43MjUgMCAwMC0uMDI2LS4xODVjLS4wNC0uMTUtLjE1LS4yNDMtLjMwNC0uMjM0LS4xNi4wMS0uMzE4LjAzNS0uNDc1LjA2Ni0uNzYuMTUtMS41Mi4zMDMtMi4yOC40NTZsLTIuMzI1LjQ3LTEuMzc0LjI3OGMtLjAxNi4wMDMtLjAzMi4wMS0uMDQ4LjAxMy0uMjc3LjA3Ny0uMzc3LjIwMy0uMzkuNDktLjAwMi4wNDIgMCAuMDg2IDAgLjEzLS4wMDIgMi42MDIgMCA1LjIwNC0uMDAzIDcuODA1IDAgLjQyLS4wNDcuODM2LS4yMTUgMS4yMjctLjI3OC42NC0uNzcgMS4wNC0xLjQzNCAxLjIzMy0uMzUuMS0uNzEuMTYtMS4wNzUuMTcyLS45Ni4wMzYtMS43NTUtLjYtMS45Mi0xLjU0NC0uMTQtLjgxMi4yMy0xLjY4NSAxLjE1NC0yLjA3NS4zNTctLjE1LjczLS4yMzIgMS4xMDgtLjMxLjI4Ny0uMDYuNTc1LS4xMTYuODYtLjE3Ny4zODMtLjA4My41ODMtLjMyMy42LS43MTR2LS4xNWMwLTIuOTYgMC01LjkyMi4wMDItOC44ODIgMC0uMTIzLjAxMy0uMjUuMDQyLS4zNy4wNy0uMjg1LjI3My0uNDQ4LjU0Ni0uNTE4LjI1NS0uMDY2LjUxNS0uMTEyLjc3NC0uMTY1LjczMy0uMTUgMS40NjYtLjI5NiAyLjItLjQ0NGwyLjI3LS40NmMuNjctLjEzNCAxLjM0LS4yNyAyLjAxLS40MDMuMjItLjA0My40NDItLjA4OC42NjMtLjEwNi4zMS0uMDI1LjUyMy4xNy41NTQuNDgyLjAwOC4wNzMuMDEyLjE0OC4wMTIuMjIzLjAwMiAxLjkxLjAwMiAzLjgyMiAwIDUuNzMyeiIvPjwvc3ZnPg==" alt="Apple Music"></div><div class="ai ai-spotify" style="animation-delay:0.77s"><img src="data:image/svg+xml;base64,PHN2ZyBmaWxsPSIjZmZmZmZmIiByb2xlPSJpbWciIHZpZXdCb3g9IjAgMCAyNCAyNCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48dGl0bGU+U3BvdGlmeTwvdGl0bGU+PHBhdGggZD0iTTEyIDBDNS40IDAgMCA1LjQgMCAxMnM1LjQgMTIgMTIgMTIgMTItNS40IDEyLTEyUzE4LjY2IDAgMTIgMHptNS41MjEgMTcuMzRjLS4yNC4zNTktLjY2LjQ4LTEuMDIxLjI0LTIuODItMS43NC02LjM2LTIuMTAxLTEwLjU2MS0xLjE0MS0uNDE4LjEyMi0uNzc5LS4xNzktLjg5OS0uNTM5LS4xMi0uNDIxLjE4LS43OC41NC0uOSA0LjU2LTEuMDIxIDguNTItLjYgMTEuNjQgMS4zMi40Mi4xOC40NzkuNjU5LjMwMSAxLjAyem0xLjQ0LTMuM2MtLjMwMS40Mi0uODQxLjYtMS4yNjIuMy0zLjIzOS0xLjk4LTguMTU5LTIuNTgtMTEuOTM5LTEuMzgtLjQ3OS4xMi0xLjAyLS4xMi0xLjE0LS42LS4xMi0uNDguMTItMS4wMjEuNi0xLjE0MUM5LjYgOS45IDE1IDEwLjU2MSAxOC43MiAxMi44NGMuMzYxLjE4MS41NC43OC4yNDEgMS4yem0uMTItMy4zNkMxNS4yNCA4LjQgOC44MiA4LjE2IDUuMTYgOS4zMDFjLS42LjE3OS0xLjItLjE4MS0xLjM4LS43MjEtLjE4LS42MDEuMTgtMS4yLjcyLTEuMzgxIDQuMjYtMS4yNiAxMS4yOC0xLjAyIDE1LjcyMSAxLjYyMS41MzkuMy43MTkgMS4wMi40MTkgMS41Ni0uMjk5LjQyMS0xLjAyLjU5OS0xLjU1OS4zeiIvPjwvc3ZnPg==" alt="Spotify"></div><div class="ai ai-strava" style="animation-delay:0.81s"><img src="data:image/svg+xml;base64,PHN2ZyBmaWxsPSIjZmZmZmZmIiByb2xlPSJpbWciIHZpZXdCb3g9IjAgMCAyNCAyNCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48dGl0bGU+U3RyYXZhPC90aXRsZT48cGF0aCBkPSJNMTUuMzg3IDE3Ljk0NGwtMi4wODktNC4xMTZoLTMuMDY1TDE1LjM4NyAyNGw1LjE1LTEwLjE3MmgtMy4wNjZtLTcuMDA4LTUuNTk5bDIuODM2IDUuNTk4aDQuMTcyTDEwLjQ2MyAwbC03IDEzLjgyOGg0LjE2OSIvPjwvc3ZnPg==" alt="Strava"></div><div class="ai ai-readwise" style="animation-delay:0.85s">❝</div><div class="ai ai-rss" style="animation-delay:0.89s"><img src="data:image/svg+xml;base64,PHN2ZyBmaWxsPSIjZmZmZmZmIiByb2xlPSJpbWciIHZpZXdCb3g9IjAgMCAyNCAyNCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48dGl0bGU+UlNTPC90aXRsZT48cGF0aCBkPSJNMTkuMTk5IDI0QzE5LjE5OSAxMy40NjcgMTAuNTMzIDQuOCAwIDQuOFYwYzEzLjE2NSAwIDI0IDEwLjgzNSAyNCAyNGgtNC44MDF6TTMuMjkxIDE3LjQxNWMxLjgxNCAwIDMuMjkzIDEuNDc5IDMuMjkzIDMuMjk1IDAgMS44MTMtMS40ODUgMy4yOS0zLjMwMSAzLjI5QzEuNDcgMjQgMCAyMi41MjYgMCAyMC43MXMxLjQ3NS0zLjI5NCAzLjI5MS0zLjI5NXpNMTUuOTA5IDI0aC00LjY2NWMwLTYuMTY5LTUuMDc1LTExLjI0NS0xMS4yNDQtMTEuMjQ1VjguMDljOC43MjcgMCAxNS45MDkgNy4xODQgMTUuOTA5IDE1LjkxeiIvPjwvc3ZnPg==" alt="RSS"></div><div class="ai ai-raindrop" style="animation-delay:0.93s"><svg class="dropmark" viewBox="0 0 24 24"><path d="M12 2C12 2 5 10.2 5 15a7 7 0 0 0 14 0C19 10.2 12 2 12 2Z" fill="#fff"/></svg></div><div class="ai ai-x" style="animation-delay:0.97s"><img src="data:image/svg+xml;base64,PHN2ZyBmaWxsPSIjZmZmZmZmIiByb2xlPSJpbWciIHZpZXdCb3g9IjAgMCAyNCAyNCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48dGl0bGU+WDwvdGl0bGU+PHBhdGggZD0iTTE0LjIzNCAxMC4xNjIgMjIuOTc3IDBoLTIuMDcybC03LjU5MSA4LjgyNEw3LjI1MSAwSC4yNThsOS4xNjggMTMuMzQzTC4yNTggMjRIMi4zM2w4LjAxNi05LjMxOEwxNi43NDkgMjRoNi45OTN6bS0yLjgzNyAzLjI5OS0uOTI5LTEuMzI5TDMuMDc2IDEuNTZoMy4xODJsNS45NjUgOC41MzIuOTI5IDEuMzI5IDcuNzU0IDExLjA5aC0zLjE4MnoiLz48L3N2Zz4=" alt="X"></div><div class="ai ai-reddit" style="animation-delay:1.01s"><img src="data:image/svg+xml;base64,PHN2ZyBmaWxsPSIjZmZmZmZmIiByb2xlPSJpbWciIHZpZXdCb3g9IjAgMCAyNCAyNCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48dGl0bGU+UmVkZGl0PC90aXRsZT48cGF0aCBkPSJNMTIgMEM1LjM3MyAwIDAgNS4zNzMgMCAxMmMwIDMuMzE0IDEuMzQzIDYuMzE0IDMuNTE1IDguNDg1bC0yLjI4NiAyLjI4NkMuNzc1IDIzLjIyNSAxLjA5NyAyNCAxLjczOCAyNEgxMmM2LjYyNyAwIDEyLTUuMzczIDEyLTEyUzE4LjYyNyAwIDEyIDBabTQuMzg4IDMuMTk5YzEuMTA0IDAgMS45OTkuODk1IDEuOTk5IDEuOTk5IDAgMS4xMDUtLjg5NSAyLTEuOTk5IDItLjk0NiAwLTEuNzM5LS42NTctMS45NDctMS41Mzl2LjAwMmMtMS4xNDcuMTYyLTIuMDMyIDEuMTUtMi4wMzIgMi4zNDF2LjAwN2MxLjc3Ni4wNjcgMy40LjU2NyA0LjY4NiAxLjM2My40NzMtLjM2MyAxLjA2NC0uNTggMS43MDctLjU4IDEuNTQ3IDAgMi44MDIgMS4yNTQgMi44MDIgMi44MDIgMCAxLjExNy0uNjU1IDIuMDgxLTEuNjAxIDIuNTMxLS4wODggMy4yNTYtMy42MzcgNS44NzYtNy45OTcgNS44NzYtNC4zNjEgMC03LjkwNS0yLjYxNy03Ljk5OC01Ljg3LS45NTQtLjQ0Ny0xLjYxNC0xLjQxNS0xLjYxNC0yLjUzOCAwLTEuNTQ4IDEuMjU1LTIuODAyIDIuODAzLTIuODAyLjY0NSAwIDEuMjM5LjIxOCAxLjcxMi41ODUgMS4yNzUtLjc5IDIuODgxLTEuMjkxIDQuNjQtMS4zNjV2LS4wMWMwLTEuNjYzIDEuMjYzLTMuMDM0IDIuODgtMy4yMDcuMTg4LS45MTEuOTkzLTEuNTk1IDEuOTU5LTEuNTk1Wm0tOC4wODUgOC4zNzZjLS43ODQgMC0xLjQ1OS43OC0xLjUwNiAxLjc5Ny0uMDQ3IDEuMDE2LjY0IDEuNDI5IDEuNDI2IDEuNDI5Ljc4NiAwIDEuMzcxLS4zNjkgMS40MTgtMS4zODUuMDQ3LTEuMDE3LS41NTMtMS44NDEtMS4zMzgtMS44NDFabTcuNDA2IDBjLS43ODYgMC0xLjM4NS44MjQtMS4zMzggMS44NDEuMDQ3IDEuMDE3LjYzNCAxLjM4NSAxLjQxOCAxLjM4NS43ODUgMCAxLjQ3My0uNDEzIDEuNDI2LTEuNDI5LS4wNDYtMS4wMTctLjcyMS0xLjc5Ny0xLjUwNi0xLjc5N1ptLTMuNzAzIDQuMDEzYy0uOTc0IDAtMS45MDcuMDQ4LTIuNzcuMTM1LS4xNDcuMDE1LS4yNDEuMTY4LS4xODMuMzA1LjQ4MyAxLjE1NCAxLjYyMiAxLjk2NCAyLjk1MyAxLjk2NCAxLjMzIDAgMi40Ny0uODEgMi45NTMtMS45NjQuMDU3LS4xMzctLjAzNy0uMjktLjE4NC0uMzA1LS44NjMtLjA4Ny0xLjc5NS0uMTM1LTIuNzY5LS4xMzVaIi8+PC9zdmc+" alt="Reddit"></div><div class="ai ai-github" style="animation-delay:1.05s"><img src="data:image/svg+xml;base64,PHN2ZyBmaWxsPSIjZmZmZmZmIiByb2xlPSJpbWciIHZpZXdCb3g9IjAgMCAyNCAyNCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48dGl0bGU+R2l0SHViPC90aXRsZT48cGF0aCBkPSJNMTIgLjI5N2MtNi42MyAwLTEyIDUuMzczLTEyIDEyIDAgNS4zMDMgMy40MzggOS44IDguMjA1IDExLjM4NS42LjExMy44Mi0uMjU4LjgyLS41NzcgMC0uMjg1LS4wMS0xLjA0LS4wMTUtMi4wNC0zLjMzOC43MjQtNC4wNDItMS42MS00LjA0Mi0xLjYxQzQuNDIyIDE4LjA3IDMuNjMzIDE3LjcgMy42MzMgMTcuN2MtMS4wODctLjc0NC4wODQtLjcyOS4wODQtLjcyOSAxLjIwNS4wODQgMS44MzggMS4yMzYgMS44MzggMS4yMzYgMS4wNyAxLjgzNSAyLjgwOSAxLjMwNSAzLjQ5NS45OTguMTA4LS43NzYuNDE3LTEuMzA1Ljc2LTEuNjA1LTIuNjY1LS4zLTUuNDY2LTEuMzMyLTUuNDY2LTUuOTMgMC0xLjMxLjQ2NS0yLjM4IDEuMjM1LTMuMjItLjEzNS0uMzAzLS41NC0xLjUyMy4xMDUtMy4xNzYgMCAwIDEuMDA1LS4zMjIgMy4zIDEuMjMuOTYtLjI2NyAxLjk4LS4zOTkgMy0uNDA1IDEuMDIuMDA2IDIuMDQuMTM4IDMgLjQwNSAyLjI4LTEuNTUyIDMuMjg1LTEuMjMgMy4yODUtMS4yMy42NDUgMS42NTMuMjQgMi44NzMuMTIgMy4xNzYuNzY1Ljg0IDEuMjMgMS45MSAxLjIzIDMuMjIgMCA0LjYxLTIuODA1IDUuNjI1LTUuNDc1IDUuOTIuNDIuMzYuODEgMS4wOTYuODEgMi4yMiAwIDEuNjA2LS4wMTUgMi44OTYtLjAxNSAzLjI4NiAwIC4zMTUuMjEuNjkuODI1LjU3QzIwLjU2NSAyMi4wOTIgMjQgMTcuNTkyIDI0IDEyLjI5N2MwLTYuNjI3LTUuMzczLTEyLTEyLTEyIi8+PC9zdmc+" alt="GitHub"></div><div class="ai ai-linear" style="animation-delay:1.09s"><img src="data:image/svg+xml;base64,PHN2ZyBmaWxsPSIjZmZmZmZmIiByb2xlPSJpbWciIHZpZXdCb3g9IjAgMCAyNCAyNCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48dGl0bGU+TGluZWFyPC90aXRsZT48cGF0aCBkPSJNMi44ODYgNC4xOEExMS45ODIgMTEuOTgyIDAgMCAxIDExLjk5IDBDMTguNjI0IDAgMjQgNS4zNzYgMjQgMTIuMDA5YzAgMy42NC0xLjYyIDYuOTAzLTQuMTggOS4xMDVMMi44ODcgNC4xOFpNMS44MTcgNS42MjZsMTYuNTU2IDE2LjU1NmMtLjUyNC4zMy0xLjA3NS42Mi0xLjY1Ljg2NkwuOTUxIDcuMjc3Yy4yNDctLjU3NS41MzctMS4xMjYuODY2LTEuNjVaTS4zMjIgOS4xNjNsMTQuNTE1IDE0LjUxNWMtLjcxLjE3Mi0xLjQ0My4yODItMi4xOTUuMzIyTDAgMTEuMzU4YTEyIDEyIDAgMCAxIC4zMjItMi4xOTVabS0uMTcgNC44NjIgOS44MjMgOS44MjRhMTIuMDIgMTIuMDIgMCAwIDEtOS44MjQtOS44MjRaIi8+PC9zdmc+" alt="Linear"></div><div class="ai ai-notion" style="animation-delay:1.13s"><img src="data:image/svg+xml;base64,PHN2ZyBmaWxsPSIjMDAwMDAwIiByb2xlPSJpbWciIHZpZXdCb3g9IjAgMCAyNCAyNCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48dGl0bGU+Tm90aW9uPC90aXRsZT48cGF0aCBkPSJNNC40NTkgNC4yMDhjLjc0Ni42MDYgMS4wMjYuNTYgMi40MjguNDY2bDEzLjIxNS0uNzkzYy4yOCAwIC4wNDctLjI4LS4wNDYtLjMyNkwxNy44NiAxLjk2OGMtLjQyLS4zMjYtLjk4MS0uNy0yLjA1NS0uNjA3TDMuMDEgMi4yOTVjLS40NjYuMDQ2LS41Ni4yOC0uMzc0LjQ2NnptLjc5MyAzLjA4djEzLjkwNGMwIC43NDcuMzczIDEuMDI3IDEuMjE0Ljk4bDE0LjUyMy0uODRjLjg0MS0uMDQ2LjkzNS0uNTYuOTM1LTEuMTY3VjYuMzU0YzAtLjYwNi0uMjMzLS45MzMtLjc0OC0uODg3bC0xNS4xNzcuODg3Yy0uNTYuMDQ3LS43NDcuMzI3LS43NDcuOTMzem0xNC4zMzcuNzQ1Yy4wOTMuNDIgMCAuODQtLjQyLjg4OGwtLjcuMTR2MTAuMjY0Yy0uNjA4LjMyNy0xLjE2OC41MTQtMS42MzUuNTE0LS43NDggMC0uOTM1LS4yMzQtMS40OTUtLjkzM2wtNC41NzctNy4xODZ2Ni45NTJMMTIuMjEgMTlzMCAuODQtMS4xNjguODRsLTMuMjIyLjE4NmMtLjA5My0uMTg2IDAtLjY1My4zMjctLjc0NmwuODQtLjIzM1Y5Ljg1NEw3LjgyMiA5Ljc2Yy0uMDk0LS40Mi4xNC0xLjAyNi43OTMtMS4wNzNsMy40NTYtLjIzMyA0Ljc2NCA3LjI3OXYtNi40NGwtMS4yMTUtLjEzOWMtLjA5My0uNTE0LjI4LS44ODcuNzQ3LS45MzN6TTEuOTM2IDEuMDM1bDEzLjMxLS45OGMxLjYzNC0uMTQgMi4wNTUtLjA0NyAzLjA4Mi43bDQuMjQ5IDIuOTg2Yy43LjUxMy45MzQuNjUzLjkzNCAxLjIxM3YxNi4zNzhjMCAxLjAyNi0uMzczIDEuNjM0LTEuNjggMS43MjZsLTE1LjQ1OC45MzRjLS45OC4wNDctMS40NDgtLjA5My0xLjk2Mi0uNzQ3bC0zLjEyOS00LjA2Yy0uNTYtLjc0Ny0uNzkzLTEuMzA2LS43OTMtMS45NlYyLjY2N2MwLS44MzkuMzc0LTEuNTQgMS40NDctMS42MzJ6Ii8+PC9zdmc+" alt="Notion"></div><div class="ai ai-todoist" style="animation-delay:1.17s"><img src="data:image/svg+xml;base64,PHN2ZyBmaWxsPSIjZmZmZmZmIiByb2xlPSJpbWciIHZpZXdCb3g9IjAgMCAyNCAyNCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48dGl0bGU+VG9kb2lzdDwvdGl0bGU+PHBhdGggZD0iTTIxIDBIM0MxLjM1IDAgMCAxLjM1IDAgM3YzLjg1OHMzLjg1NCAyLjI0IDQuMDk4IDIuMzhjLjMxLjE4LjY5NC4xNzcgMS4wMDQgMCAuMjYtLjE0NyA4LjAyLTQuNjA4IDguMTM2LTQuNjc1LjI3OS0uMTYxLjU4LS4xMDcuNzQ4LS4wMS4xNjQuMDk3LjYwNi4zNDguODQuNDguMjMyLjEzNC4yMjEuNTAyLjAxMy42MjJsLTkuNzEyIDUuNTljLS4zNDYuMi0uNjkuMjA0LTEuMDQ4LjAwMkMzLjQ3OCAxMC45MDcuOTk4IDkuNDYzIDAgOC44ODJ2Mi4wMmw0LjA5OCAyLjM4Yy4zMS4xOC42OTQuMTc3IDEuMDA0IDAgLjI2LS4xNDcgOC4wMi00LjYwOSA4LjEzNi00LjY3Ni4yNzktLjE2LjU4LS4xMDYuNzQ4LS4wMDguMTY0LjA5Ni42MDYuMzQ3Ljg0LjQ4LjIzMi4xMzMuMjIxLjUuMDEzLjYyLS4yMDguMTIxLTkuMjg4IDUuMzQ2LTkuNzEyIDUuNTktLjM0Ni4yLS42OS4yMDUtMS4wNDguMDAyQzMuNDc4IDE0Ljk1MS45OTggMTMuNTA2IDAgMTIuOTI2djIuMDJsNC4wOTggMi4zOGMuMzEuMTguNjk0LjE3NyAxLjAwNCAwIC4yNi0uMTQ3IDguMDItNC42MDkgOC4xMzYtNC42NzYuMjc5LS4xNi41OC0uMTA2Ljc0OC0uMDA5LjE2NC4wOTcuNjA2LjM0OC44NC40OC4yMzIuMTMzLjIyMS41MDIuMDEzLjYyMmwtOS43MTIgNS41OWMtLjM0Ni4xOTktLjY5LjIwNC0xLjA0OC4wMDFDMy40NzggMTguOTk0Ljk5OCAxNy41NSAwIDE2Ljk3VjIxYzAgMS42NSAxLjM1IDMgMyAzaDE4YzEuNjUgMCAzLTEuMzUgMy0zVjNjMC0xLjY1LTEuMzUtMy0zLTN6Ii8+PC9zdmc+" alt="Todoist"></div><div class="ai ai-calcom" style="animation-delay:1.21s"><img src="data:image/svg+xml;base64,PHN2ZyBmaWxsPSIjZmZmZmZmIiByb2xlPSJpbWciIHZpZXdCb3g9IjAgMCAyNCAyNCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48dGl0bGU+Q2FsLmNvbTwvdGl0bGU+PHBhdGggZD0iTTIuNDA4IDE0LjQ4OEMxLjAzNSAxNC40ODggMCAxMy40IDAgMTIuMDU4YzAtMS4zNDYuOTgyLTIuNDQzIDIuNDA4LTIuNDQzLjc1OCAwIDEuMjgyLjIzMyAxLjY5MS43NjVsLS42Ni41NWExLjM0MyAxLjM0MyAwIDAgMC0xLjAzLS40NDJjLS45MyAwLTEuNDQuNzExLTEuNDQgMS41NyAwIC44Ni41NTkgMS41NTcgMS40NCAxLjU1Ny40MTMgMCAuNzY1LS4xNDcgMS4wNDMtLjQ0M2wuNjUxLjU3M2MtLjM5MS41MS0uOTI5Ljc0My0xLjY5NS43NDN6TTYuOTQ4IDEwLjkxM2guODl2My40OWgtLjg5di0uNTFjLS4xODUuMzYyLS40OTMuNjA0LTEuMDgzLjYwNC0uOTQzIDAtMS42OTUtLjgyLTEuNjk1LTEuODI2IDAtMS4wMDcuNzUyLTEuODI1IDEuNjk1LTEuODI1LjU4NSAwIC44OTguMjQxIDEuMDgzLjYwNHptLjAyNiAxLjc1OGMwLS41NDYtLjM3NC0uOTk4LS45NjQtLjk5OC0uNTY4IDAtLjkzOC40NTctLjkzOC45OTggMCAuNTI4LjM3Ljk5OC45MzguOTk4LjU4NiAwIC45NjQtLjQ1Ni45NjQtLjk5OHpNOC40NjcgOS41MDNoLjg5djQuODk1aC0uODl6TTkuNzUyIDEzLjkzN2EuNTMuNTMgMCAwIDEgLjU0Mi0uNTI4Yy4zMTMgMCAuNTMzLjI0Mi41MzMuNTI4YS41MjcuNTI3IDAgMCAxLS41MzMuNTM3LjUzNC41MzQgMCAwIDEtLjU0Mi0uNTM3ek0xNC4yMyAxMy44MzljLS4zMy40MDMtLjgzMi42NTgtMS40MjYuNjU4YTEuODA2IDEuODA2IDAgMCAxLTEuODQtMS44MjZjMC0xLjAwNy43NzgtMS44MjUgMS44NC0xLjgyNS41NzIgMCAxLjA3LjI0MSAxLjQuNjIybC0uNjg3LjU3N2MtLjE3Mi0uMjE1LS4zOTYtLjM3Ni0uNzEzLS4zNzYtLjU2OCAwLS45MzguNDU2LS45MzguOTk4IDAgLjU0MS4zNy45OTcuOTM4Ljk5Ny4zNDMgMCAuNTgtLjE3OS43NTctLjQyek0xNC4zMDUgMTIuNjcxYzAtMS4wMDcuNzgtMS44MjUgMS44NC0xLjgyNSAxLjA2MSAwIDEuODQuODE4IDEuODQgMS44MjUgMCAxLjAwNy0uNzc5IDEuODI2LTEuODQgMS44MjYtMS4wNi0uMDA1LTEuODQtLjgyLTEuODQtMS44MjZ6bTIuNzc4IDBjMC0uNTQ2LS4zNy0uOTk4LS45MzgtLjk5OC0uNTY4LS4wMDQtLjkzNy40NTItLjkzNy45OTggMCAuNTQyLjM3Ljk5OC45MzcuOTk4LjU2OCAwIC45MzgtLjQ1Ni45MzgtLjk5OHpNMjQgMTIuMjY5djIuMTNoLS44OXYtMS45MTFjMC0uNjA0LS4yODEtLjg2NC0uNzA0LS44NjQtLjM5NiAwLS42NzguMTk3LS42NzguODY0djEuOTFoLS44OXYtMS45MWMwLS42MDQtLjI4NS0uODY0LS43MDQtLjg2NC0uMzk2IDAtLjc0NC4xOTctLjc0NC44NjR2MS45MWgtLjg5di0zLjQ5aC44OXYuNDg0Yy4xODUtLjM3Ni41Mi0uNTY0IDEuMDM1LS41NjQuNDg5IDAgLjg5OC4yNDEgMS4xMjMuNjQ5LjIyNC0uNDE3LjU1NC0uNjUgMS4xNTMtLjY1LjczMS4wMDUgMS4yOTkuNTYgMS4yOTkgMS40NDJ6Ii8+PC9zdmc+" alt="Cal.com"></div><div class="ai ai-calendly" style="animation-delay:1.25s"><img src="data:image/svg+xml;base64,PHN2ZyBmaWxsPSIjZmZmZmZmIiByb2xlPSJpbWciIHZpZXdCb3g9IjAgMCAyNCAyNCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48dGl0bGU+Q2FsZW5kbHk8L3RpdGxlPjxwYXRoIGQ9Ik0xOS42NTUgMTQuMjYyYy4yODEgMCAuNTU3LjAyMy44MjguMDY0IDAgLjAwNS0uMDA1LjAxLS4wMDUuMDE0LS4xMDUuMjY3LS4yMzQuNTM0LS4zODEuNzg2bC0xLjIxOSAyLjEwNmMtMS4xMTIgMS45MzYtMy4xNzcgMy4xMjctNS40MTEgMy4xMjdoLTIuNDMyYy0yLjIzIDAtNC4yOTQtMS4xOTEtNS40MTItMy4xMjdsLTEuMjE4LTIuMTA2YTYuMjUxIDYuMjUxIDAgMCAxIDAtNi4yNTJsMS4yMTgtMi4xMDZDNi43MzYgNC44MzIgOC44IDMuNjQxIDExLjAzNSAzLjY0MWgyLjQzMmMyLjIzIDAgNC4yOTQgMS4xOTEgNS40MTEgMy4xMjdsMS4yMTkgMi4xMDZjLjE0Ny4yNTIuMjcxLjUxOS4zODEuNzg2IDAgLjAwNC4wMDUuMDA5LjAwNS4wMTQtLjI2Ny4wNDEtLjU0My4wNjQtLjgyOC4wNjQtMS44MTYgMC0yLjUwMS0uNjA3LTMuMjkxLTEuMzA2LS43NjQtLjY3Ni0xLjcxMS0xLjUxNy0zLjQ0LTEuNTE3aC0xLjAyOWMtMS4yNTEgMC0yLjM4Ny40NTUtMy4yIDEuMjc4LS43OTYuODA1LTEuMjMzIDEuOTA0LTEuMjMzIDMuMDk5djEuNDExYzAgMS4xOTYuNDM3IDIuMjk1IDEuMjMzIDMuMDk5LjgxMy44MjMgMS45NDkgMS4yNzggMy4yIDEuMjc4aDEuMDM0YzEuNzI5IDAgMi42NzYtLjg0MSAzLjQzOS0xLjUxNy43OTEtLjcwMyAxLjQ3MS0xLjMwNiAzLjI4Ny0xLjMwMVptLjAwNS0zLjIzN2MuMzk5IDAgLjc5NC0uMDM2IDEuMTc5LS4xMS0uMDAyLS4wMDQtLjAwMi0uMDEtLjAwMi0uMDE0LS4wNzMtLjQxNC0uMTkzLS44MjMtLjM0OS0xLjIxOC43MzEtLjEyIDEuNDA3LS4zOTYgMS45ODYtLjgxOSAwLS4wMDQtLjAwNS0uMDEzLS4wMDUtLjAxOC0uMzMxLTEuMDg1LS44MzItMi4xMDEtMS40ODktMy4wMy0uNjQ5LS45MTUtMS40MzUtMS43MTktMi4zMzEtMi4zOTUtMS44NjctMS4zOTgtNC4wODgtMi4xMzgtNi40MjgtMi4xMzgtMS40NDggMC0yLjg1NS4yOC00LjE3NS44NDEtMS4yNzMuNTQzLTIuNDIzIDEuMzE1LTMuNDA3IDIuMjk5UzIuODc4IDYuNTUyIDIuMzQxIDcuODNjLS41NTcgMS4zMjQtLjg0MiAyLjcyNi0uODQyIDQuMTc1IDAgMS40NDguMjgxIDIuODU1Ljg0MiA0LjE3NC41NDIgMS4yNzQgMS4zMTQgMi40MjMgMi4yOTggMy40MDdzMi4xMjkgMS43NjEgMy40MDcgMi4yOTljMS4zMjQuNTU2IDIuNzI3Ljg0MSA0LjE3NS44NDEgMi4zNCAwIDQuNTYxLS43NCA2LjQyOC0yLjEzN2ExMC44MTUgMTAuODE1IDAgMCAwIDIuMzMxLTIuMzk2Yy42NTItLjkyOSAxLjE1OC0xLjk0OSAxLjQ4OS0zLjAzIDAtLjAwNC4wMDUtLjAxNC4wMDUtLjAxOC0uNTc5LS40MjMtMS4yNTUtLjY5OS0xLjk4Ni0uODE5LjE2MS0uMzk1LjI3Ni0uODA0LjM0OS0xLjIxOC4wMDUtLjAwOS4wMDUtLjAxNC4wMDUtLjAyMy44NjkuMTY2IDEuNjkyLjUwNiAyLjQwNCAxLjAzNS42ODUuNTA1LjU1MiAxLjA3NS40NDYgMS40MTZDMjIuMTg0IDIwLjQzNyAxNy42MTkgMjQgMTIuMjIxIDI0Yy02LjYyNSAwLTEyLTUuMzc1LTEyLTEyczUuMzctMTIgMTItMTJjNS4zOTggMCA5Ljk2MyAzLjU2MyAxMS40NzEgOC40NjQuMTA2LjM0MS4yMzkuOTE1LS40NDYgMS40MjEtLjcxNy41MjktMS41MzUuODczLTIuNDA0IDEuMDM0LjEyOC43MTYuMTI4IDEuNDUgMCAyLjE2Ni0uMzg3LS4wNzQtLjc4Mi0uMTEtMS4xODItLjExLTQuMTg0IDAtMy45NjggMi44MjMtNi43MzYgMi44MjNoLTEuMDI5Yy0xLjg5OSAwLTMuMTUtMS4zNTctMy4xNS0zLjA5NXYtMS40MTFjMC0xLjczOCAxLjI1MS0zLjA5NCAzLjE1LTMuMDk0aDEuMDM0YzIuNzY4IDAgMi41NTIgMi44MjMgNi43MzEgMi44MjdaIi8+PC9zdmc+" alt="Calendly"></div><div class="ai ai-steam" style="animation-delay:1.29s"><img src="data:image/svg+xml;base64,PHN2ZyBmaWxsPSIjZmZmZmZmIiByb2xlPSJpbWciIHZpZXdCb3g9IjAgMCAyNCAyNCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48dGl0bGU+U3RlYW08L3RpdGxlPjxwYXRoIGQ9Ik0xMS45NzkgMEM1LjY3OCAwIC41MTEgNC44Ni4wMjIgMTEuMDM3bDYuNDMyIDIuNjU4Yy41NDUtLjM3MSAxLjIwMy0uNTkgMS45MTItLjU5LjA2MyAwIC4xMjUuMDA0LjE4OC4wMDZsMi44NjEtNC4xNDJWOC45MWMwLTIuNDk1IDIuMDI4LTQuNTI0IDQuNTI0LTQuNTI0IDIuNDk0IDAgNC41MjQgMi4wMzEgNC41MjQgNC41MjdzLTIuMDMgNC41MjUtNC41MjQgNC41MjVoLS4xMDVsLTQuMDc2IDIuOTExYzAgLjA1Mi4wMDQuMTA1LjAwNC4xNTkgMCAxLjg3NS0xLjUxNSAzLjM5Ni0zLjM5IDMuMzk2LTEuNjM1IDAtMy4wMTYtMS4xNzMtMy4zMzEtMi43MjdMLjQzNiAxNS4yN0MxLjg2MiAyMC4zMDcgNi40ODYgMjQgMTEuOTc5IDI0YzYuNjI3IDAgMTEuOTk5LTUuMzczIDExLjk5OS0xMlMxOC42MDUgMCAxMS45NzkgMHpNNy41NCAxOC4yMWwtMS40NzMtLjYxYy4yNjIuNTQzLjcxNC45OTkgMS4zMTQgMS4yNSAxLjI5Ny41MzkgMi43OTMtLjA3NiAzLjMzMi0xLjM3NS4yNjMtLjYzLjI2NC0xLjMxOS4wMDUtMS45NDlzLS43NS0xLjEyMS0xLjM3Ny0xLjM4M2MtLjYyNC0uMjYtMS4yOS0uMjQ5LTEuODc4LS4wM2wxLjUyMy42M2MuOTU2LjQgMS40MDkgMS41IDEuMDA5IDIuNDU1LS4zOTcuOTU3LTEuNDk3IDEuNDEtMi40NTQgMS4wMTJINy41NHptMTEuNDE1LTkuMzAzYzAtMS42NjItMS4zNTMtMy4wMTUtMy4wMTUtMy4wMTUtMS42NjUgMC0zLjAxNSAxLjM1My0zLjAxNSAzLjAxNSAwIDEuNjY1IDEuMzUgMy4wMTUgMy4wMTUgMy4wMTUgMS42NjMgMCAzLjAxNS0xLjM1IDMuMDE1LTMuMDE1em0tNS4yNzMtLjAwNWMwLTEuMjUyIDEuMDEzLTIuMjY2IDIuMjY1LTIuMjY2IDEuMjQ5IDAgMi4yNjYgMS4wMTQgMi4yNjYgMi4yNjYgMCAxLjI1MS0xLjAxNyAyLjI2NS0yLjI2NiAyLjI2NS0xLjI1MyAwLTIuMjY1LTEuMDE0LTIuMjY1LTIuMjY1eiIvPjwvc3ZnPg==" alt="Steam"></div><div class="ai ai-obsidian" style="animation-delay:1.33s"><img src="data:image/svg+xml;base64,PHN2ZyBmaWxsPSIjZmZmZmZmIiByb2xlPSJpbWciIHZpZXdCb3g9IjAgMCAyNCAyNCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48dGl0bGU+T2JzaWRpYW48L3RpdGxlPjxwYXRoIGQ9Ik0xOS4zNTUgMTguNTM4YTY4Ljk2NyA2OC45NTkgMCAwIDAgMS44NTgtMi45NTQuODEuODEgMCAwIDAtLjA2Mi0uOWMtLjUxNi0uNjg1LTEuNTA0LTIuMDc1LTIuMDQyLTMuMzYyLS41NTMtMS4zMjEtLjYzNi0zLjM3NS0uNjQtNC4zNzdhMS43MDcgMS43MDcgMCAwIDAtLjM1OC0xLjA1bC0zLjE5OC00LjA2NGEzLjc0NCAzLjc0NCAwIDAgMS0uMDc2LjU0M2MtLjEwNi41MDMtLjMwNyAxLjAwNC0uNTM2IDEuNS0uMTM0LjI5LS4yOS42LS40NDYuOTE0bC0uMzEuNjI2Yy0uNTE2IDEuMDY4LS45OTcgMi4yMjctMS4xMzIgMy41OS0uMTI0IDEuMjYuMDQ2IDIuNzMuODE1IDQuNDgxLjEyOC4wMTEuMjU3LjAyNS4zODYuMDQ0YTYuMzYzIDYuMzYzIDAgMCAxIDMuMzI2IDEuNTA1Yy45MTYuNzkgMS43NDQgMS45MjIgMi40MTUgMy41ek04LjE5OSAyMi41NjljLjA3My4wMTIuMTQ2LjAyLjIyLjAyLjc4LjAyNCAyLjA5NS4wOTIgMy4xNi4yOS44Ny4xNiAyLjU5My42NCA0LjAxIDEuMDU1IDEuMDgzLjMxNiAyLjE5OC0uNTQ4IDIuMzU1LTEuNjY0LjExNC0uODE0LjMzLTEuNzM1LjcyNS0yLjU4bC0uMDEuMDA1Yy0uNjctMS44Ny0xLjUyMi0zLjA3OC0yLjQxNi0zLjg0OWE1LjI5NSA1LjI5NSAwIDAgMC0yLjc3OC0xLjI1N2MtMS41NC0uMjE2LTIuOTUyLjE5LTMuODQuNDUuNTMyIDIuMjE4LjM2OCA0LjgyOS0xLjQyNSA3LjUzMXpNNS41MzMgOS45MzhjLS4wMjMuMS0uMDU2LjE5Ny0uMDk4LjI5TDIuODIgMTYuMDU5YTEuNjAyIDEuNjAyIDAgMCAwIC4zMTMgMS43NzJsNC4xMTYgNC4yNGMyLjEwMy0zLjEwMSAxLjc5Ni02LjAyLjgzNi04LjMtLjcyOC0xLjczLTEuODMyLTMuMDgxLTIuNTUtMy44MzF6TTkuMzIgMTQuMDFjLjYxNS0uMTgzIDEuNjA2LS40NjUgMi43NDUtLjUzNC0uNjgzLTEuNzI1LS44NDgtMy4yMzMtLjcxNi00LjU3Ny4xNTQtMS41NTIuNy0yLjg0NyAxLjIzNS0zLjk1LjExMy0uMjM1LjIyMy0uNDU0LjMyOC0uNjY0LjE0OS0uMjk3LjI4OC0uNTc3LjQxOS0uODYuMjE3LS40Ny4zNzktLjg4NS40Ni0xLjI3LjA4LS4zOC4wOC0uNzItLjAxNC0xLjA0My0uMDk1LS4zMjUtLjI5Ny0uNjc1LS42OC0xLjA2YTEuNiAxLjYgMCAwIDAtMS40NzUuMzZsLTQuOTUgNC40NTJhMS42MDIgMS42MDIgMCAwIDAtLjUxMy45NTJsLS40MjcgMi44M2MuNjcyLjU5IDIuMzI4IDIuMzE2IDMuMzM1IDQuNzExLjA5LjIxLjE3NS40My4yNTMuNjUzeiIvPjwvc3ZnPg==" alt="Obsidian"></div><div class="ai ai-twitch" style="animation-delay:1.37s"><img src="data:image/svg+xml;base64,PHN2ZyBmaWxsPSIjZmZmZmZmIiByb2xlPSJpbWciIHZpZXdCb3g9IjAgMCAyNCAyNCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48dGl0bGU+VHdpdGNoPC90aXRsZT48cGF0aCBkPSJNMTEuNTcxIDQuNzE0aDEuNzE1djUuMTQzSDExLjU3em00LjcxNSAwSDE4djUuMTQzaC0xLjcxNHpNNiAwTDEuNzE0IDQuMjg2djE1LjQyOGg1LjE0M1YyNGw0LjI4Ni00LjI4NmgzLjQyOEwyMi4yODYgMTJWMHptMTQuNTcxIDExLjE0M2wtMy40MjggMy40MjhoLTMuNDI5bC0zIDN2LTNINi44NTdWMS43MTRoMTMuNzE0WiIvPjwvc3ZnPg==" alt="Twitch"></div><div class="ai ai-applenotes" style="animation-delay:1.46s"><svg viewBox="0 0 24 24" width="62%" height="62%" style="margin:auto;display:block" xmlns="http://www.w3.org/2000/svg"><path d="M3.5 7A3.5 3.5 0 0 1 7 3.5h10A3.5 3.5 0 0 1 20.5 7v1.5h-17Z" fill="#ffcc00"/><path stroke="#c7c7cc" stroke-width="1.4" stroke-linecap="round" d="M7 12.2h10M7 15.4h10M7 18.6h6"/></svg></div><div class="ai ai-journal" style="animation-delay:1.50s"><svg viewBox="0 0 24 24" width="56%" height="56%" style="margin:auto;display:block" xmlns="http://www.w3.org/2000/svg"><rect x="5.2" y="3.6" width="13" height="16.4" rx="2.6" fill="#fff" opacity=".45" transform="rotate(-8 11.7 11.8)"/><rect x="5.8" y="3.8" width="13" height="16.4" rx="2.6" fill="#fff"/></svg></div><div class="ai ai-dayone" style="animation-delay:1.54s">1</div><div class="ai ai-more" style="animation-delay:1.58s"><span>· · ·</span></div></div>
 <div class="wrap doc">
 
   <header class="doc-hero">
     <p class="part-eyebrow">Docs</p>
-    <h1>Your apps,<br><em>one feed.</em></h1>
-    <p class="sub">What Casberi is, why it exists, and how to use every surface. Written plainly.</p>
+    <h1>Your apps, one feed.</h1>
+    <p class="sub">What Casberi is, why it exists, and how to use it.</p>
     <div class="toc">
-      <a href="#about"><span>1</span>About</a>
-      <a href="#how-to-use"><span>2</span>How to use</a>
+      <a href="#features"><span>1</span>Features</a>
+      <a href="#about"><span>2</span>About</a>
+      <a href="#how-to-use"><span>3</span>How to use</a>
     </div>
-    <div class="kindkey" aria-label="Kinds of things">
-      <span>Links</span>
-      <span>Screenshots</span>
-      <span>Events</span>
-      <span>Notes</span>
-      <span>Chats</span>
-      <span>Reminders</span>
-      <span>Voice</span>
-      <span>Mail</span>
-    </div>
-    <p class="updated">Last updated July 8, 2026</p>
+    <p class="updated">Last updated July 13, 2026</p>
   </header>
+
+  <!-- ================= FEATURES AT A GLANCE ================= -->
+  <section id="features">
+    <p class="part-eyebrow">Features</p>
+    <h2>Everything you can do</h2>
+    <p class="deck">One line each. Tap any card to jump to how it works.</p>
+    <div class="glance-grid">
+      <a class="glance" href="#tab-bar"><b>Get around</b><span>Home, Feed, Actions. The whole app, in three tabs.</span></a>
+      <a class="glance" href="#apps"><b>Connect apps</b><span>43 and counting. Pick the ones you love.</span></a>
+      <a class="glance" href="#feed"><b>See your feed</b><span>Everything together. Or one app at a time.</span></a>
+      <a class="glance" href="#feed"><b>Act on anything</b><span>Open it, pin it, or reply right from the row.</span></a>
+      <a class="glance" href="#feed"><b>Approve agents</b><span>See what they want to do. Then yes, or no.</span></a>
+      <a class="glance" href="#home"><b>Build your board</b><span>Pin what matters. Arrange it your way.</span></a>
+      <a class="glance" href="#composer"><b>Ask across it all</b><span>One question, answered from all your things.</span></a>
+      <a class="glance" href="#composer"><b>Jump to a tool</b><span>A note, an email, ChatGPT. One tap away.</span></a>
+      <a class="glance" href="#composer"><b>Capture anything</b><span>Share, snap, paste, or say it. It lands.</span></a>
+      <a class="glance" href="#account"><b>Own your data</b><span>On your phone. Yours to export or delete.</span></a>
+    </div>
+  </section>
+
+  <div class="divider"></div>
 
   <!-- ================= ABOUT ================= -->
   <section id="about">
     <p class="part-eyebrow">About</p>
     <h2>What Casberi is, and why</h2>
+    <p class="deck">The short version, and the thinking behind it.</p>
 
     <h3>The situation</h3>
-    <p class="setpiece">Doing creates things. Things land in apps. Apps multiply with the doing, and every new app adds a boundary — another place to look, another container to remember. The friction grows with the boundaries: the more you produce, the more it costs to use what you produced. The market's answer is agents, and each agent ships as another app — another history, another memory, another settings panel. The remedy repeats the disease.</p>
+    <p class="setpiece">Everything you do creates something — a note, a link, a screenshot, a plan. Each one lands in a different app. The more apps you use, the more places you have to look, and the harder it gets to find and use your own stuff. AI assistants were supposed to help, but each one is another app, with its own history and its own settings. That just adds to the pile.</p>
+    <div class="dia" aria-hidden="true">
+      <div class="apps9">
+        <div class="apptile"><i style="background: var(--k-link)"></i><i style="background: var(--k-note)"></i></div>
+        <div class="apptile"><i style="background: var(--k-shot)"></i></div>
+        <div class="apptile"><i style="background: var(--k-event)"></i><i style="background: var(--k-rem)"></i></div>
+        <div class="apptile"><i style="background: var(--k-chat)"></i></div>
+        <div class="apptile"><i style="background: var(--k-mail)"></i><i style="background: var(--k-link)"></i></div>
+        <div class="apptile"><i style="background: var(--k-voice)"></i></div>
+        <div class="apptile"><i style="background: var(--k-note)"></i></div>
+        <div class="apptile"><i style="background: var(--k-shot)"></i><i style="background: var(--k-event)"></i></div>
+        <div class="apptile"><i style="background: var(--k-chat)"></i></div>
+      </div>
+      <span class="arrow">→</span>
+      <div class="feedcol">
+        <div class="frow"><i style="background: var(--k-shot)"></i><u></u></div>
+        <div class="frow"><i style="background: var(--k-link)"></i><u></u></div>
+        <div class="frow"><i style="background: var(--k-event)"></i><u></u></div>
+        <div class="frow"><i style="background: var(--k-chat)"></i><u></u></div>
+        <div class="frow"><i style="background: var(--k-note)"></i><u></u></div>
+      </div>
+    </div>
+    <p class="dia-cap">The same things — scattered across ten apps, or together in one feed.</p>
 
-    <h3>Who it's for</h3>
-    <div class="persona-grid stagger">
+    <h3>Who it’s for</h3>
+    <div class="persona-list">
       <div class="persona">
-        <b>Casual users — built for first</b>
-        <p>The iPhone is their computer. Many apps — Notes, Calendar, Reminders, Messages — and one agent app. No tolerance for setup.</p>
+        <b>Casual users — built for you first</b>
+        <p>Your iPhone is your computer. You use a lot of apps — Notes, Calendar, Reminders, Messages — and maybe one AI app. You don’t want to set anything up. You shouldn’t have to.</p>
       </div>
       <div class="persona">
-        <b>Power users — served on the same app</b>
-        <p>They run agents as labor: a coding agent in a terminal, a gateway supervising agents across their machines. The phone is a remote, not the computer. They never get new screens — just more kinds of things and connections, plus approvals.</p>
+        <b>Power users — same app, more reach</b>
+        <p>You run AI agents that work for you — a coding agent on your laptop, jobs on a server. Your phone is how you check on them. You get the same app, with more kinds of things and connections, plus approvals.</p>
       </div>
     </div>
 
-    <h3>What they're trying to do</h3>
-    <div class="goal-grid stagger">
-      <div class="goal g1"><i>GOAL 1</i><b>Stay mobile</b><span>The phone completes the job.</span></div>
-      <div class="goal g2"><i>GOAL 2</i><b>Capture things</b><span>Any thought, image, or link, in the moment.</span></div>
-      <div class="goal g3"><i>GOAL 3</i><b>Organize things</b><span>Order among the things.</span></div>
-      <div class="goal g4"><i>GOAL 4</i><b>Find things</b><span>Retrieve by what a thing is.</span></div>
-      <div class="goal g5"><i>GOAL 5</i><b>Do things</b><span>Finish tasks: plan, book, draft, schedule.</span></div>
-      <div class="goal g6"><i>GOAL 6</i><b>Own things</b><span>On the device, offline, leaving only by choice.</span></div>
-    </div>
-    <p>Configuring, directing, and tracking — "operate" — is not a goal. It's what a person spends to get the goals. Casual users' operate budget is zero; power users' is large, but the spend must accrue. The product minimizes operate at every budget.</p>
+    <h3>What you’ve trying to do</h3>
+    <ul class="goal-list">
+      <li><b>Stay mobile</b><span>Your phone finishes the job.</span></li>
+      <li><b>Capture things</b><span>Save any thought, image, or link the moment it happens.</span></li>
+      <li><b>Organize things</b><span>Keep order without doing the filing.</span></li>
+      <li><b>Find things</b><span>Search by what something is, not where you left it.</span></li>
+      <li><b>Do things</b><span>Plan, book, draft, schedule — all the way to done.</span></li>
+      <li><b>Own things</b><span>Your things stay on your phone and leave only when you choose.</span></li>
+    </ul>
 
     <h3>How it works today</h3>
-    <p><strong>A casual user runs two worlds on one phone.</strong> The Apple world: capture through screenshots, Notes, Siri, Messages-to-self; organization per app; retrieval per app. The agent world: threads, projects, memory, a settings panel that explains nothing. Neither world writes to the other — the agent can't put anything on the calendar, and no search spans the two.</p>
-    <p><strong>A power user runs four worlds across three machines.</strong> The Apple world, the agent-app world, the terminal world (output stays in the filesystem and never reaches the phone), and the gateway world (approvals arrive as pushes; a missed notification is gone). Each world holds its own record of their labor: one job's prompt sits in the terminal, its output in a repo, its approval in the gateway, its writeup in a chat. Reconstructing one job means visiting four records.</p>
+    <p>Right now, your stuff lives in two separate worlds. There’s the <strong>Apple world</strong>: you screenshot things, jot notes, text yourself, set reminders with Siri — and each app keeps its own pile, with its own search. Then there’s the <strong>AI world</strong>: chats, threads, and memories inside an assistant app. The two don’t talk. Your assistant can’t put anything on your calendar, and no search covers both.</p>
+    <div class="dia" aria-hidden="true">
+      <div class="world">
+        <b>Your apps</b>
+        <div class="wtile" style="background: rgba(48,209,88,.30)"></div>
+        <div class="wtile" style="background: rgba(255,69,58,.30)"></div>
+        <div class="wtile" style="background: rgba(255,159,10,.30)"></div>
+        <div class="wtile" style="background: rgba(255,214,10,.26)"></div>
+      </div>
+      <span class="nobridge"></span>
+      <div class="world">
+        <b>Your AI</b>
+        <div class="wtile" style="background: rgba(191,90,242,.30)"></div>
+        <div class="wtile" style="background: rgba(255,255,255,.08)"></div>
+      </div>
+    </div>
+    <p class="dia-cap">Two worlds — and nothing crosses the gap.</p>
+    <p>If you run agents, it’s four worlds. Your phone, your AI apps, the machines where agents actually work (their output stays there), and the dashboard that supervises them. One job leaves pieces in all four places — the prompt in one, the result in another, the approval in a third. Putting the story back together is your job.</p>
 
     <h3>What actually happens</h3>
     <p class="evi-label">For casual users</p>
-    <ul class="evidence stagger">
-      <li>A recipe sits untitled in Notes; it's never found and never cooked. An itinerary sits 40 messages deep in one of three chats; at the airport they re-ask and the new answer drops the hotel address.</li>
-      <li>A dentist reminder is snoozed six times because booking takes a call. A dinner plan scatters across Calendar, Messages, and Safari by hand; the guest list never leaves the chat.</li>
-      <li>They open the agent's settings once, connect nothing, and close it. They download a second agent, get a second history and memory, and delete it in a week.</li>
+    <ul class="evidence">
+      <li>You save a recipe in Notes with no title — and never find it again. Your travel plan sits 40 messages deep in a chat; at the airport you ask again, and the new answer is missing the hotel address.</li>
+      <li>A dentist reminder gets snoozed six times, because booking takes a call. A dinner plan gets copied by hand into Calendar, Messages, and Safari — and the guest list never leaves the chat.</li>
+      <li>You open your assistant’s settings once, connect nothing, and close it. You try a second assistant, end up with two of everything, and delete it within a week.</li>
     </ul>
     <p class="evi-label">For power users</p>
-    <ul class="evidence stagger">
-      <li>An overnight run finishes at 11pm; they learn at 8am and the follow-up starts a day late. They approve a diff bigger than its notification on trust, and the write breaks a config.</li>
-      <li>They rebuild in June a skill they wrote in March, because the March version lives in a forgotten directory on a retired machine. A new laptop costs two days of keys and scopes.</li>
-      <li>A cron job dies silently; they notice a week later, from the absence.</li>
+    <ul class="evidence">
+      <li>A run finishes at 11pm. You find out at 8am, and the follow-up starts a day late. You approve a change bigger than its notification on trust — and it breaks a config.</li>
+      <li>You rebuild in June a skill you wrote in March, because the March version lives in a folder on a machine you retired. A new laptop costs two days of keys and setup.</li>
+      <li>A scheduled job dies quietly. You notice a week later — from the silence.</li>
     </ul>
 
     <h3 id="problems">The problems</h3>
-    <p>One problem set at two magnitudes — casual users hit each at app scale, power users at machine-and-agent scale:</p>
-    <div class="prob-grid stagger">
-      <div class="prob"><i>PROBLEM 1</i><b>Mobile gets hard</b><span>Tasks cross apps by copy → switch → paste; the phone can't reach the machines at all.</span></div>
-      <div class="prob"><i>PROBLEM 2</i><b>Capture betrays them</b><span>The moment picks the container — or the machinery does — and the choice is permanent.</span></div>
-      <div class="prob"><i>PROBLEM 3</i><b>They can't organize</b><span>Order costs labor per container; nothing spans containers; no unit of "job" exists anywhere.</span></div>
-      <div class="prob"><i>PROBLEM 4</i><b>They can't find</b><span>Retrieval starts with "which app" — or "which world, which machine, which session." Failure lands at the moment of use.</span></div>
-      <div class="prob"><i>PROBLEM 5</i><b>They can't finish</b><span>Agent output is stranded one copy-paste from done; approvals arrive without their context.</span></div>
-      <div class="prob"><i>PROBLEM 6</i><b>They won't configure — or the spend evaporates</b><span>Casual users connect nothing; power users configure constantly and nothing accrues.</span></div>
-      <div class="prob"><i>PROBLEM 7</i><b>They won't add another agent — or pay for five</b><span>Agents share nothing; each addition multiplies containers.</span></div>
-      <div class="prob"><i>PROBLEM 8</i><b>They aren't aware</b><span>What they keep stays mute; their machines finish, fail, and die without a signal. The state exists and never arrives.</span></div>
+    <p>The same problems hit everyone — casual users across their apps, power users across their machines and agents:</p>
+    <div class="prob-grid">
+      <div class="prob"><i>PROBLEM 1</i><b>Everything takes copy-paste</b><span>To finish anything, you copy, switch apps, and paste. And if agents do your work, your phone can’t reach them at all.</span></div>
+      <div class="prob"><i>PROBLEM 2</i><b>Saving scatters your stuff</b><span>Where something ends up depends on how you saved it — and you’ve stuck with that choice.</span></div>
+      <div class="prob"><i>PROBLEM 3</i><b>Organizing never ends</b><span>Keeping things tidy means doing the same filing in every app, forever.</span></div>
+      <div class="prob"><i>PROBLEM 4</i><b>Finding means remembering</b><span>You have to recall which app holds the thing — and you find out it’s lost right when you need it.</span></div>
+      <div class="prob"><i>PROBLEM 5</i><b>Nothing gets finished</b><span>An assistant’s answer still has to be moved into the real app by hand. That’s where it stalls.</span></div>
+      <div class="prob"><i>PROBLEM 6</i><b>Setup doesn’t stick</b><span>Casual users skip it. Power users redo it for every machine and agent. Either way, none of it carries forward.</span></div>
+      <div class="prob"><i>PROBLEM 7</i><b>Every AI app starts from zero</b><span>A new assistant brings its own history, memory, and settings. Nothing is shared with the last one.</span></div>
+      <div class="prob"><i>PROBLEM 8</i><b>You don’t find out</b><span>What you saved doesn’t speak up when it matters, and your agents finish or fail in silence.</span></div>
     </div>
 
     <h3 id="solution">The solution</h3>
-    <p><strong>One assistant that works across your apps instead of adding another one.</strong> Casberi is a native iOS app: one home where everything you make becomes a <strong>thing</strong> — notes, links, screenshots, events, chats, voice notes, transactions, and, for power users, jobs, runs, and approvals. The mechanism, feature by feature:</p>
-
-    <div class="mech stagger">
-      <div class="mech-row"><i>SOLUTION 1</i><b>One home for your things.</b><span>One container joins the containers. A job is one thing: prompt, output, approval, and writeup under one record.</span></div>
-      <div class="mech-row"><i>SOLUTION 2</i><b>Find by what it is.</b><span>One search over the home. Query by content, get the thing — not the thread. Provenance is a set of fields: source, agent, run, machine. "Which agent broke the build" is a query.</span></div>
-      <div class="mech-row"><i>SOLUTION 3</i><b>Capture in one gesture.</b><span>Every capture surface routes here with no destination decision, no title, no folder. Connected machines capture for you — output flows in on its own.</span></div>
-      <div class="mech-row"><i>SOLUTION 4</i><b>Captures become outcomes.</b><span>The thing carries its next action. Writes exit through bridges; the connected app finishes the job. A follow-up job leaves from the sheet.</span></div>
-      <div class="mech-row"><i>SOLUTION 5</i><b>Setup accrues.</b><span>Zero setup to start: useful before it asks for anything, permissions at the moment they unlock something. Power users pay once and keep it: keys, scopes, and skills are saved as things — the secret itself lives only in the Keychain.</span></div>
-      <div class="mech-row"><i>SOLUTION 6</i><b>Not another agent.</b><span>Casberi presents as an organizer. No model picker, no memory panel, no persona. Agents are rows in Apps and labor in the feed — the sixth agent adds a row, not a world.</span></div>
-      <div class="mech-row"><i>SOLUTION 7</i><b>Feels like an Apple product.</b><span>iOS grammar in type, motion, and touch targets. The polish is how the promises land — felt, not announced.</span></div>
-      <div class="mech-row"><i>SOLUTION 8</i><b>Apps are bridges.</b><span>Adding an app builds the bridge: iOS frameworks for Apple apps, OAuth or a pasted token for services, a key or endpoint for agents and machines. Three grades — framework (live, on-device), account (live via token), import (batch via official export) — and every detail page says which one it is.</span></div>
-      <div class="mech-row"><i>SOLUTION 9</i><b>Approvals carry context.</b><span>An agent's ask arrives with what judgment needs — the exact command, scope, agent, and target — rendered for the phone. Approve or deny from the sheet.</span></div>
-      <div class="mech-row"><i>SOLUTION 10</i><b>Status arrives in your feed.</b><span>Run finished, run failed, cron died — each a feed row. An expected thing that fails to arrive is itself a thing.</span></div>
+    <p><strong>Casberi is one assistant that works across your apps — not another app that runs separate from them.</strong> It gives everything you make one home. Notes, links, screenshots, events, chats, voice notes — they all become <strong>things</strong> in one feed. Here’s how that fixes each problem:</p>
+    <div class="mech">
+      <div class="mech-row"><i>SOLUTION 1</i><b>One home for your things.</b><span>Everything lands in one place. For power users, one job — its prompt, its output, its approval — is one thing, not four scattered pieces.</span></div>
+      <div class="mech-row"><i>SOLUTION 2</i><b>Find by what it is.</b><span>One search covers everything. You get the thing itself — not the chat it was buried in. Power users can also search by which agent, run, or machine made it.</span></div>
+      <div class="mech-row"><i>SOLUTION 3</i><b>Capture in one gesture.</b><span>Save from anywhere in one step — no folder to pick, no title to type. Connected apps and machines send their things in on their own.</span></div>
+      <div class="mech-row"><i>SOLUTION 4</i><b>Captures become outcomes.</b><span>A saved thing carries its next step. An event can go on your calendar, a task can become a reminder — right from the thing.</span></div>
+      <div class="mech-row"><i>SOLUTION 5</i><b>Setup adds up.</b><span>Casberi is useful before you set up anything, and asks for permissions only when they unlock something. What power users set up once is kept — secrets live only in the Keychain — so a new machine picks up where the old one left off.</span></div>
+      <div class="mech-row"><i>SOLUTION 6</i><b>Not another AI app.</b><span>Casberi looks and feels like an organizer, not a chatbot. No model picker, no memory panel. Your agents show up as rows in Apps, and their work shows up in your feed.</span></div>
+      <div class="mech-row"><i>SOLUTION 7</i><b>Feels like an Apple product.</b><span>It follows iOS in type, motion, and touch. It should feel like it came with your phone.</span></div>
+      <div class="mech-row"><i>SOLUTION 8</i><b>Apps are bridges.</b><span>Connecting an app builds a bridge. Apple apps connect through iOS itself. Services connect with a login or a pasted token. Agents and machines connect with a key. Every app’s page tells you which kind it is.</span></div>
+      <div class="mech-row"><i>SOLUTION 9</i><b>Approvals carry context.</b><span>When an agent asks to do something, the request shows you what you need to judge it — the exact command, who’s asking, what it touches. Approve or deny with one tap.</span></div>
+      <div class="mech-row"><i>SOLUTION 10</i><b>Status arrives in your feed.</b><span>Run finished, run failed, scheduled job died — each shows up as a row in your feed. Even something that should have arrived but didn’t.</span></div>
     </div>
 
-    <h3>The platform is the ownership answer</h3>
-    <p>Native iOS: your things in a local database on the device, iCloud sync through your own iCloud (opt-in, default off), no Casberi server holding them. Reads and capture work offline. No analytics, no trackers. Answers run on the person's own device by default; a stronger opt-in cloud brain is the planned power layer — and the day it ships, the "nothing leaves the phone" copy goes conditional, because the claim always tracks the truth.</p>
+    <h3>Your things stay yours</h3>
+    <p>Casberi is a native iPhone app. Your things live in a database on your phone — no Casberi server holds them. iCloud sync is off until you turn it on. Reading and saving work offline. No analytics, no trackers. Answers are written on your own phone.</p>
 
+    <h3 id="not-here">What’s deliberately not here</h3>
+    <p>Some things are missing on purpose. There’s no separate actions or to-do tab — you act on a thing where the thing is. No automations yet. No model picker and no chatbot persona — Casberi shows results, not a character. No note editor — Casberi collects and connects; your apps stay the editors. No streaks, goals, or guilt mechanics. And no trading, ever.</p>
   </section>
 
   <div class="divider"></div>
@@ -460,168 +439,80 @@
   <!-- ================= HOW TO USE ================= -->
   <section id="how-to-use" class="walk">
     <p class="part-eyebrow">How to use</p>
-    <h2>Every surface, walked through</h2>
+    <h2>Every screen, explained</h2>
+    <p class="deck">Walk through the app one screen at a time.</p>
     <div class="subtoc">
-      <a href="#first-run">First run</a>
       <a href="#shell">The shell</a>
-      <a href="#capture">Capture</a>
+      <a href="#tab-bar">The tab bar</a>
+      <a href="#account">Account</a>
+      <a href="#apps">Apps</a>
       <a href="#feed">Feed</a>
-      <a href="#thing-sheet">The thing sheet</a>
-      <a href="#tags">Tags</a>
       <a href="#home">Home</a>
       <a href="#composer">The composer</a>
-      <a href="#apps">Apps</a>
-      <a href="#agents">Agents</a>
-      <a href="#settings">Settings</a>
     </div>
-
-    <h3 id="first-run">First run</h3>
-    <div class="sk" aria-hidden="true">
-      <div class="sk-row"><span class="sq c-shot"></span><div class="grow"><div class="bar w55"></div><div class="bar w35 dim"></div></div><span class="pill ok">✓</span></div>
-      <div class="sk-row"><span class="sq c-event"></span><div class="grow"><div class="bar w45"></div><div class="bar w25 dim"></div></div><span class="pillswap"><span class="pill go">Connect</span><span class="pill ok">✓</span></span></div>
-      <div class="sk-row"><span class="sq c-rem"></span><div class="grow"><div class="bar w55"></div><div class="bar w35 dim"></div></div><span class="pill go">Connect</span></div>
-    </div>
-    <p class="sk-cap">Three one-tap connects — the iOS permission ask is the whole setup.</p>
-    <p>Onboarding is one screen that acts out the pitch. App icons rain from the top of the screen and stack into the bottom half — the visual is the headline: <strong>all of this lands here</strong>. Above them, a mini store offers exactly the three bridges that connect in one tap — Photos, Calendar, Reminders — and Connect runs the real flow; the iOS permission dialog is the in-context ask. Each connect fills its slot in place: the icon springs to color, the line flips to present tense ("Your screenshots, flowing in"), a green check pops. There is no demo data anywhere — the feed is 100% real from the first minute. When you continue, you land on the <strong>Feed</strong>, watching your own things arrive. The rest of the catalog waits one tap away.</p>
 
     <h3 id="shell">The shell</h3>
-    <div class="sk sk-shell" aria-hidden="true">
-      <div class="toast"><span class="dot"></span><div class="bar"></div></div>
-      <div class="barrow">
-        <div class="tabcap"><span class="tab on"></span><span class="tab"></span></div>
-        <div class="fab"></div>
-      </div>
-    </div>
-    <p class="sk-cap">Two tabs and the composer button — think, browse, capture. The toast reports outcomes.</p>
-    <p>Two tabs — <strong>Home</strong> (synthesis) and <strong>Feed</strong> (the record) — in a glass capsule, with the <strong>composer</strong> as a glass button on the same axis. Think, browse, capture. Management lives behind two doors worn by every tab root, top-right: the avatar opens Settings; a grid glyph opens Apps, and it pulses only when a bridge needs attention. Re-tapping a tab pops its stack back to the root. One toast surface above the bar reports every outcome ("Saved", "On your calendar") — no write ends in silence, and a failure states the actual fix.</p>
+    <figure class="shot fade"><span class="frame" style="max-width: 440px"><img src="images/docs/shell.jpg" width="660" height="199" loading="lazy" alt="The top-right nav — a grid icon and an avatar"></span><figcaption>Two doors, top-right: your apps and your settings.</figcaption></figure>
+    <p>Casberi is dark and clean, with barely any buttons or menus. Wherever you are, two doors sit in the top-right corner: your <strong>avatar</strong> opens your settings, and the <strong>grid</strong> icon opens your apps. The grid shows a small dot only when a connected app needs reconnecting — nothing nags you otherwise.</p>
+    <p>Everything else is the three tabs below. Tap the tab you’re already on to jump back to its top.</p>
+    <div class="pager"><a href="#tab-bar"><span>Next</span>The tab bar →</a></div>
 
-    <h3 id="capture">Capture</h3>
-    <div class="sk" aria-hidden="true">
-      <div class="capsule"><div class="bar w65"></div><span class="dot"></span></div>
-      <div class="sk-row"><span class="pill blank on"></span><span class="pill blank"></span></div>
-      <div class="sk-block"><div class="bar w80"></div><div class="bar w45 dim"></div></div>
-    </div>
-    <p class="sk-cap">The parse card shows what will save before anything saves.</p>
-    <p>Things enter through deliberate gestures, never through typing:</p>
+    <h3 id="tab-bar">The tab bar</h3>
+    <figure class="shot fade"><span class="frame" style="max-width: 440px"><img src="images/docs/tabbar.jpg" width="660" height="161" loading="lazy" alt="The glass tab capsule — Home, Feed, Actions"></span><figcaption>Home, Feed, Actions — your three tabs.</figcaption></figure>
+    <p>The whole app is three tabs, in a bar at the bottom:</p>
     <ul>
-      <li><strong>Share sheet</strong> from any app — the thing arrives with no folder or title step.</li>
-      <li><strong>Screenshots</strong> flow in automatically once Photos is connected.</li>
-      <li><strong>Siri and App Intents</strong> capture by voice from anywhere on the phone.</li>
-      <li><strong>Paste</strong> into the composer — the parse card shows what will be saved, with editable fields and tags, and save happens on send.</li>
-      <li><strong>Mic</strong> — speech routes through the same parse; a recording gets a Live Activity on the lock screen while it runs.</li>
+      <li><strong>Home</strong> is your board — the things you’ve pinned, arranged the way you like.</li>
+      <li><strong>Feed</strong> is everything, as it arrives — newest first.</li>
+      <li><strong>Actions</strong> is where you ask and do — one field, plus quick jumps to your other apps.</li>
     </ul>
-    <p>A captured thing flies as a small card to the Feed tab, which pulses once. The toast reads "Saved · Undo." The first thing ever gets its own moment. Casberi never authors or edits content — it collects and connects; the source app stays the editor.</p>
+    <div class="pager"><a href="#account"><span>Next</span>Account →</a></div>
+
+    <h3 id="account">Account</h3>
+    <figure class="shot fade" style="--w: 340px"><span class="frame" style="max-width: 340px"><img src="images/docs/account.jpg" width="660" height="736" loading="lazy" alt="Settings — Avatar, Background, Data, Diagnostics, How it works, Language, Theme"></span><figcaption>Seven tiles, each with a real job.</figcaption></figure>
+    <p>Tap your avatar and Settings opens. Seven tiles, no account, no sign-in:</p>
+    <ul>
+      <li><strong>Avatar</strong> — your photo.</li>
+      <li><strong>Background</strong> — a color or a photo for Home.</li>
+      <li><strong>Data</strong> — how many things you have and the space they use, plus Export, Import, and Delete everything. It all lives on your phone.</li>
+      <li><strong>Diagnostics</strong> — runs real checks on your device, so a bug report can be a screenshot of facts instead of a guess.</li>
+      <li><strong>How it works</strong> — a quick tour if you’re new.</li>
+      <li><strong>Language</strong> — Casberi speaks several languages; pick yours.</li>
+      <li><strong>Theme</strong> — light or dark.</li>
+    </ul>
+    <div class="pager"><a href="#apps"><span>Next</span>Apps →</a></div>
+
+    <h3 id="apps">Apps</h3>
+    <figure class="shot fade" style="--w: 320px"><span class="frame" style="max-width: 320px"><img src="images/docs/apps.jpg" width="660" height="908" loading="lazy" alt="The Apps store — a featured card and category shelves"></span><figcaption>Your apps up top; a store of more below.</figcaption></figure>
+    <p>Open Apps from the grid icon. Your connected apps sit at the top; below is a store of everything you can add — <strong>43 apps and counting</strong>, in shelves by category (Onchain, Markets, Life, Notes, and more), App-Store style.</p>
+    <p>Every app opens a page that tells you what it does and what shows up in your feed, with one clear button that says what it does — Connect, Open, Fix, or Soon. Apps connect three ways, and each page says which:</p>
+    <ul>
+      <li><strong>Through iOS</strong> — Photos, Calendar, Reminders, Contacts, Apple Health, Apple Music, Apple Notes. Live and on your device.</li>
+      <li><strong>With a login or key</strong> — Gmail, GitHub, Notion, Spotify, Strava, and dozens more.</li>
+      <li><strong>By import</strong> — ChatGPT, Claude, Day One, Apple Journal, Kindle.</li>
+    </ul>
+    <p>Agents live here too. Connect a coding agent or a gateway like OpenClaw, and its work shows up in your feed — and when it wants to act, it asks you first (that’s next).</p>
+    <div class="pager"><a href="#feed"><span>Next</span>Feed →</a></div>
 
     <h3 id="feed">Feed</h3>
-    <div class="sk phone-sk" aria-hidden="true">
-      <div class="chips"><span class="pill blank on"></span><span class="pill blank"></span><span class="pill blank"></span></div>
-      <div class="sk-row wash c-shot landrow"><span class="sq sm c-shot"></span><div class="grow"><div class="bar w45"></div></div><div class="bar w25 dim" style="width:26px"></div></div>
-      <div class="sk-row wash c-link"><span class="sq sm c-link"></span><div class="grow"><div class="bar w65"></div></div><div class="bar w25 dim" style="width:26px"></div></div>
-      <div class="sk-row wash c-event"><span class="sq sm c-event"></span><div class="grow"><div class="bar w55"></div></div><div class="bar w25 dim" style="width:26px"></div></div>
-      <div class="minibar"><div class="tabcap"><span class="tab"></span><span class="tab on"></span></div><div class="fab"></div></div>
-    </div>
-    <p class="sk-cap">Rows wear their kind's color; the leading icon is the source. The newest lands on top.</p>
-    <p>The record. It paints instantly from the local store, newest on top — no spinner, no stream. Every row is one anatomy: a separate rounded card washed in its kind's color, with the source's icon leading (where it came from), the title full-width (what it is), and time plus tag on the right. Pinned rows hold a section above Today.</p>
-    <ul>
-      <li><strong>Filtering:</strong> one row of source chips, each wearing its app's real icon; kind filters arrive from Home's map. A filter with zero hits shows the app's own icon and a "Show everything" pill.</li>
-      <li><strong>One gesture, one meaning:</strong> tap opens the thing sheet; swipe offers exactly Pin and — when a real destination exists — Open in the source app.</li>
-      <li><strong>Shapes:</strong> a source chip changes the feed's shape, not just its query. Calendar reads as an agenda with the next event emphasized; Reminders groups by state with a check circle that completes the real reminder (tap again to undo); Photos becomes a continuous grid with day pills; a wallet leads with a holdings treemap.</li>
-      <li><strong>Rhythm-breakers:</strong> an agent's approval renders as a consent card — provenance in the header, the exact command in monospace, Approve/Deny as the verbs. The card is the consent; no dialog rides it.</li>
-    </ul>
-
-    <h3 id="thing-sheet">The thing sheet</h3>
-    <div class="sk ink" aria-hidden="true">
-      <div class="grabber"></div>
-      <div class="sk-row"><span class="dot" style="background: var(--k-shot)"></span><div class="bar w35 dim"></div></div>
-      <div class="sk-block"><div class="bar big w65"></div></div>
-      <div class="sk-block chart"><svg viewBox="0 0 200 42" preserveAspectRatio="none"><path d="M0,34 L20,27 L40,31 L60,20 L80,24 L100,13 L120,18 L140,9 L160,14 L180,5 L200,9" fill="none" stroke="#34c77b" stroke-width="2" stroke-linejoin="round"/></svg></div>
-      <div class="sk-row"><div class="bar w25 dim"></div><div class="bar w45"></div></div>
-      <div class="sk-row"><div class="bar w25 dim"></div><div class="bar w35"></div></div>
-      <div class="sk-block"><div class="bar w45"></div><div class="bar w35"></div></div>
-    </div>
-    <p class="sk-cap">Ink in both modes — media first (here, a token's live chart), then facts, then verbs.</p>
-    <p>Tap any row and the sheet opens ink-black in both modes, like a photo viewer. No cards, no lines — spacing separates. From top: an eyebrow (source dot · kind · age), the title large, then the thing's media — a screenshot leads with its image, a watched token leads with a live native price chart. Below, a spec table with per-kind labels (WHEN for events, SITE for links, BY for agent provenance), then tags as a text line — tap it and the full chip editor opens in place: add, remove, rename everywhere, delete everywhere. Verbs are quiet text rows, derived from what the thing is (Open in Calendar, Add Reminder), capped at three; writes confirm before acting. Pin and Share are rows. A Related shelf streams last.</p>
-
-    <h3 id="tags">Tags</h3>
-    <div class="sk" aria-hidden="true">
-      <div class="map">
-        <div class="cell tall c-link"><div class="bar"></div></div>
-        <div class="cell c-chat"><div class="bar"></div></div>
-        <div class="cell c-rem"><div class="bar"></div></div>
-        <div class="cell c-shot" style="grid-column: span 2"><div class="bar"></div></div>
-      </div>
-    </div>
-    <p class="sk-cap">Your tags as a map, sized by count — tap one to filter.</p>
-    <p>The one word for grouping — the app never says "project" or "folder." A tag is a name on things that belong together; a thing carries many. Two flavors: type tags the app assigns (Link, Event — structural, unrenameable) and your own. Each tag owns one stable color everywhere — its text on feed rows, its tile on Home's map, its detail header. The system proposes groupings by clustering; you rename or remove, never file. There is no tag-management screen; a tag with zero things dies. The composer understands organizing as a command — "tag lisbon as Trip", "rename Trip to Travel" — and streams a proposal card showing the matched things and the exact change; the write happens on Apply, with Undo in the toast.</p>
+    <figure class="shot fade" style="--w: 320px"><span class="frame" style="max-width: 320px"><img src="images/docs/feed.jpg" width="660" height="917" loading="lazy" alt="The feed — app chips, day groups, and an agent approval card"></span><figcaption>Everything together, or one app at a time.</figcaption></figure>
+    <p>Feed is where everything lands, newest first. Tap a chip — one per app — and the feed takes that app’s shape: Calendar reads like an agenda, Photos becomes a grid, a wallet leads with its balance.</p>
+    <p>Tap any row to open the thing — its details, its tags, and what you can do next: open it in the app it came from, pin it, or share it. Tags group things without folders; add or remove them right there.</p>
+    <p>Some rows let you act in place. Filter to Gmail and a “New email” row lets you write one; Calendar offers a new event, Reminders a new task — each hands off to the right app. Music rows open in Apple Music or Spotify.</p>
+    <p>And when an agent wants to do something, it arrives as a card with the exact command and Approve / Deny buttons. The card is the consent — no extra popup.</p>
+    <div class="pager"><a href="#home"><span>Next</span>Home →</a></div>
 
     <h3 id="home">Home</h3>
-    <div class="sk phone-sk" aria-hidden="true">
-      <div class="cover"><div class="bar w25 dim"></div><div class="bar big w65" style="margin-top:9px"></div></div>
-      <div class="sk-block"><div class="bar w25 dim"></div><div class="bar w80" style="margin-top:8px"></div></div>
-      <div class="map" style="grid-auto-rows: 26px">
-        <div class="cell c-link"><div class="bar"></div></div>
-        <div class="cell c-note"><div class="bar"></div></div>
-        <div class="cell c-voice"><div class="bar"></div></div>
-      </div>
-      <div class="minibar"><div class="tabcap"><span class="tab on"></span><span class="tab"></span></div><div class="fab"></div></div>
-    </div>
-    <p class="sk-cap">The cover takes the day's color; the map says what's going on.</p>
-    <p>The synthesis surface, authored fresh each open and streamed in. From top: a full-bleed <strong>cover</strong> — the newest screenshot's photo with its own color bled into the page, or a bright field of the day's lead kind color — carrying the dateline ("MONDAY · 24 THINGS"); one <strong>insight</strong> under a "Noticed" eyebrow, a cross-source fact the corpus proves; the <strong>tag map</strong> ("What's going on") — an interactive treemap of your tags, sized by count; <strong>kind pills</strong> (what arrived today, tap-through to the filtered feed); the <strong>Pinned</strong> card; and <strong>Threads</strong>, links the system found across apps. The voice rule: Home speaks to themes and content, never obligations — nothing reads as "you should." No task lists, no counters, no streaks. A new user with a sparse corpus sees real previews of the same modules — kind names and skeletons, never fake data.</p>
+    <figure class="shot fade" style="--w: 340px"><span class="frame" style="max-width: 340px"><img src="images/docs/board.jpg" width="660" height="613" loading="lazy" alt="Home — kind pills, a Just landed card, and a pinned Recent chats module"></span><figcaption>Pin, arrange, and resize what matters.</figcaption></figure>
+    <p>Home is your board. You build it. Pin what matters, drag cards where you want them, and tap a pin to make one bigger or smaller. Long-press to rearrange everything at once.</p>
+    <p>Up top: today’s date, a row of counts — one per kind of thing, and a “Just landed” card for the newest arrival. Below sit your pinned cards — a wallet’s balance, your recent chats, a trip’s plans — laid out the way you like. It’s the one screen that’s just yours.</p>
+    <div class="pager"><a href="#composer"><span>Next</span>The composer →</a></div>
 
     <h3 id="composer">The composer</h3>
-    <div class="sk" aria-hidden="true">
-      <div class="capsule"><div class="bar w45"></div><span class="dot"></span></div>
-      <div class="sk-block"><div class="bar w80"></div><div class="bar w55 dim"></div></div>
-      <div class="sk-row"><span class="sq sm c-note"></span><div class="grow"><div class="bar w55"></div></div></div>
-      <div class="sk-row"><span class="sq sm c-mail"></span><div class="grow"><div class="bar w45"></div></div></div>
-    </div>
-    <p class="sk-cap">An answer: one plain sentence, then the real things it stands on.</p>
-    <p>One field for ask, search, and capture. Tap the glass button and it morphs into the bubble: "Ask anything. Organize everything."</p>
-    <p>Asking runs in two layers, both on the phone. A scoring engine always retrieves first — it ranks your corpus by title, tags, content, and freshness, and returns the top hits; on any iPhone, that alone answers. On Apple-Intelligence iPhones the free on-device model then composes over those same hits: a lookup ("find what I saved about work") returns one plain sentence plus the real things, most relevant first; a reflection ("what's my week") streams a short plain summary. Two rails hold the truth: the model can only choose among retrieved things, never invent one, and every displayed row paints from the real thing. Nothing leaves the phone; nothing is billed.</p>
-
-    <h3 id="apps">Apps — the store</h3>
-    <div class="sk" aria-hidden="true">
-      <div class="sk-row"><span class="sq sm c-shot"></span><span class="sq sm c-event"></span><span class="sq sm c-rem"></span><span class="sq sm c-link"></span></div>
-      <div class="fillline"></div>
-      <div class="sk-row"><span class="sq c-chat"></span><div class="grow"><div class="bar w45"></div><div class="bar w25 dim"></div></div><span class="pill go">Connect</span></div>
-      <div class="sk-row"><span class="sq c-mail"></span><div class="grow"><div class="bar w55"></div><div class="bar w35 dim"></div></div><span class="pill soon">Soon</span></div>
-    </div>
-    <p class="sk-cap">Management above the line, the store below — one verb per offer.</p>
-    <p>Behind the grid door. One scroll, two zones split by the app's only line: <strong>management above</strong> — the connected strip, where paused bridges dim and broken ones lead with Fix — and <strong>the store below</strong>. Discover leads with a story carousel of the track-anything bridges (watch any token, any wallet, any Farcaster account), then category shelves like the App Store. Every offer opens a product page: the real icon, what it does, what shows up in your feed, and one verb that means what it says — Connect, Pair, Fix, Open, or Soon. Never "GET," never a dead button; an offer that needs a key it doesn't have yet stays a Soon card.</p>
-    <p>Every bridge states its grade plainly, and every connect ends in proof — your things arrive. A snapshot of the grades (the in-app catalog is always current):</p>
-    <ul>
-      <li><strong>Framework (live, on-device):</strong> Photos, Calendar, Reminders, Apple Health, Apple Music.</li>
-      <li><strong>Account (live, no server):</strong> RSS, Bluesky, Farcaster, token watchlists; iCloud Mail and Gmail over IMAP with an app-specific password; paste-token bridges like Readwise, GitHub, Todoist, Raindrop, Cal.com, Calendly, Notion, and Linear. Tokens go straight to the Keychain and never render.</li>
-      <li><strong>Import (batch, official export):</strong> ChatGPT — conversations arrive as chat things, deduped on re-import.</li>
-    </ul>
-    <p>Apps with no readable API (Apple Notes, Messages) are never listed as bridges — they reach Casberi through capture, and the catalog says so.</p>
-
-    <h3 id="agents">Agents and approvals</h3>
-    <div class="sk" aria-hidden="true">
-      <div class="sk-row"><span class="dot" style="background: var(--k-chat)"></span><div class="bar w45 dim"></div></div>
-      <div class="code"><div class="bar"></div></div>
-      <div class="sk-row"><span class="pill ok" style="margin-left:0">Approve</span><span class="pill deny" style="margin-left:0">Deny</span></div>
-    </div>
-    <p class="sk-cap">The exact command, then your tap — the card is the consent.</p>
-    <p>An agent, gateway, or machine connects like any app — a key or endpoint, a row with a state ring; multiple agents behind one gateway are provenance fields on things, never extra rows. Their labor arrives in the feed: outputs as things carrying provenance (source, agent, run, machine), state changes as rows (run finished, run failed, cron died). When an agent wants to act, the ask arrives as an approval thing — the exact command, who's asking, by what route — and the Approve tap is the consent. Casberi never holds keys to money and never trades; any bridge to a trading platform is read-only.</p>
-    <p><strong>MCP — Casberi is the server.</strong> Outside clients (Claude, Raycast, any MCP client) connect to your corpus, not the other way around. Three tools: search over real things, the week's synthesis, and save — which never writes silently but arrives as an approval in the feed. Reads are gated by the connection being live (unpair revokes); writes are gated by your tap. Pairing is a QR code; the client appears as a bridge-shaped row like everything else.</p>
-
-    <h3 id="settings">Settings and ownership</h3>
-    <div class="sk" aria-hidden="true">
-      <div class="stats">
-        <div class="stat"><div class="bar big"></div><div class="bar w45 dim"></div></div>
-        <div class="stat"><div class="bar big"></div><div class="bar w45 dim"></div></div>
-      </div>
-      <div class="sk-row"><span class="sq sm" style="background: rgba(52,199,123,.30)"></span><div class="grow"><div class="bar w45"></div></div><span class="switch on"></span></div>
-      <div class="sk-row"><span class="sq sm c-link"></span><div class="grow"><div class="bar w55"></div></div><span class="switch flip"></span></div>
-    </div>
-    <p class="sk-cap">Two numbers, one guarantee, and controls that are all real.</p>
-    <p>Behind the avatar: Avatar, Data, Theme — three tiles, each with a real job, and nothing else. No account, no sign-in.</p>
-    <p><strong>Data is the trust surface.</strong> Two big numbers lead — things and storage — then the guarantee in plain rows: answers run on this iPhone; iCloud sync is a real toggle, default off (its badge is the tell: green lock = on this iPhone, blue cloud = your iCloud); Hide previews redacts the app switcher, default on. Three controls, all real: Export (everything to one file, provenance included), Import, and Delete everything — which purges the local store, the voice recordings, and the iCloud copy, and reports what it did. Every fact on the sheet is answered live.</p>
-    <p><strong>Theme</strong> is one knob: light or dark. Identity stays with the system — one fixed Casberi blue marks everything pressable; kind hues say what things are; orange means needs-you; green means done.</p>
-
-    <h3 id="not-here">What's deliberately not here</h3>
-    <p>No Actions tab — do lives where its object lives (the composer creates, the feed triages, sheets consent). No automations yet; the product takes no alert away from the app that owns it. No model picker, no persona, no "I", no thinking indicators — agency renders as results. No note editor. No streaks, goals, or guilt mechanics. No trading surface, ever. Each absence has a return trigger; until a trigger fires, the absence is the feature.</p>
+    <figure class="shot fade" style="--w: 360px"><span class="frame" style="max-width: 360px"><img src="images/docs/composer.jpg" width="660" height="668" loading="lazy" alt="The Actions tab — a tool grid and an ask field"></span><figcaption>Ask, jump to a tool, or capture — one field.</figcaption></figure>
+    <p>The Actions tab is where you ask and do. It opens with “What now?” and two ways forward.</p>
+    <p><strong>Jump to a tool:</strong> a grid of your apps — Note, Message, Email, Event, Reminder, Search web, and the tools you use like ChatGPT or Claude. One tap opens the right app.</p>
+    <p><strong>Or ask below:</strong> type a question and Casberi answers from your own things (“what did I save this week?”), or say what you want (“show my work stuff”) and it takes you there. On iPhones with Apple Intelligence the answer is written on your phone, from your things. It’s free, and nothing leaves your phone.</p>
+    <p>It’s also how you capture. Paste something and a card shows exactly what will be saved; tap the mic and talk. From anywhere else in iOS, share to Casberi — and once Photos is connected, screenshots flow in on their own.</p>
   </section>
 
   <div class="doc-cta">
@@ -640,9 +531,7 @@
 </footer>
 
 <script>
-// Docs behavior — scrollspy always; animations gated on JS + motion preference.
-// Every hidden state is added here first, so no-JS and reduced-motion readers
-// see a plain, fully visible page.
+// Docs behavior — scrollspy always; a single gentle fade, gated on motion pref.
 (function () {
   if (!('IntersectionObserver' in window)) return;
 
@@ -667,43 +556,61 @@
 
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
-  // Card grids rise in with a small stagger the first time they appear.
-  var containers = document.querySelectorAll('.stagger');
+  // One barely-there fade on the screenshots as they enter view. Nothing else moves.
+  var fades = document.querySelectorAll('.fade');
   var io = new IntersectionObserver(function (entries) {
     entries.forEach(function (e) {
       if (!e.isIntersecting) return;
-      Array.prototype.forEach.call(e.target.children, function (el) {
-        el.classList.add('in');
-      });
+      e.target.classList.add('in');
       io.unobserve(e.target);
     });
-  }, { threshold: 0.12 });
-  containers.forEach(function (c) {
-    Array.prototype.forEach.call(c.children, function (el, i) {
-      el.classList.add('reveal');
-      el.style.transitionDelay = Math.min(i * 55, 380) + 'ms';
-    });
-    io.observe(c);
-  });
-
-  // Skeleton drawings sketch themselves in part by part, then play their one
-  // signature moment (a connect flips to its check, the newest row lands, a
-  // toggle flips on). Once each — nothing loops.
-  var sks = document.querySelectorAll('.sk');
-  var skio = new IntersectionObserver(function (entries) {
-    entries.forEach(function (e) {
-      if (!e.isIntersecting) return;
-      e.target.classList.add('in');
-      setTimeout(function () { e.target.classList.add('done'); }, 1300);
-      skio.unobserve(e.target);
-    });
-  }, { threshold: 0.4 });
-  sks.forEach(function (sk) {
-    sk.classList.add('anim');
-    skio.observe(sk);
-  });
+  }, { threshold: 0.15 });
+  fades.forEach(function (f) { io.observe(f); });
 })();
 </script>
 
+
+<script>
+(function () {
+  var chute = document.querySelector('.chute');
+  if (!chute || !window.matchMedia('(min-width:1320px)').matches) return;
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  var icons = Array.prototype.slice.call(chute.querySelectorAll('.ai'));
+  var COLS = 6, COLW = 38, ROWH = 38, BASE = 8;   // COLW/ROWH < 44 => icons OVERLAP into a heap
+  icons.forEach(function (el, i) {
+    var col = i % COLS, row = Math.floor(i / COLS);
+    var jx = ((i * 37) % 15) - 7, jy = ((i * 53) % 13) - 6, rot = ((i * 71) % 17) - 8;
+    el.dataset.x = 8 + col * COLW + jx;
+    el.dataset.y = 14 + row * ROWH + jy;   // from bottom
+    el.dataset.rot = rot;
+    el.style.left = el.dataset.x + 'px';
+    el.style.bottom = el.dataset.y + 'px';
+    el.style.transform = 'translateY(-150vh)';
+  });
+  function landCount() {
+    var max = document.body.scrollHeight - window.innerHeight;
+    var p = max > 0 ? Math.min(1, window.scrollY / max) : 0;
+    return Math.min(icons.length, BASE + Math.round(p * (icons.length - BASE)));
+  }
+  function apply(n) {
+    icons.forEach(function (el, i) {
+      if (i < n) { el.classList.add('landed'); el.style.transform = 'translateY(0) rotate(' + el.dataset.rot + 'deg)'; }
+      else { el.classList.remove('landed'); el.style.transform = 'translateY(-150vh)'; }
+    });
+  }
+  var target = landCount(), i = 0;
+  (function drop() {
+    if (i >= target) { wire(); return; }
+    var el = icons[i]; el.classList.add('landed');
+    el.style.transform = 'translateY(0) rotate(' + el.dataset.rot + 'deg)';
+    i++; setTimeout(drop, 90);
+  })();
+  function wire() {
+    var t = false;
+    window.addEventListener('scroll', function () { if (!t) { requestAnimationFrame(function(){ apply(landCount()); t=false; }); t=true; } }, { passive: true });
+    window.addEventListener('resize', function(){ apply(landCount()); });
+  }
+})();
+</script>
 </body>
 </html>

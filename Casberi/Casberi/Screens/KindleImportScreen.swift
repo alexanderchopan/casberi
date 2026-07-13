@@ -33,6 +33,8 @@ struct KindleImportScreen: View {
             if !recent.isEmpty {
                 RecentThingsSection(header: "Imported", things: Array(recent))
                     .listRowSeparator(.hidden)
+                PinToHomeButton(source: "Kindle", inSection: true)
+                    .listRowSeparator(.hidden)
             }
         }
         .listStyle(.insetGrouped)

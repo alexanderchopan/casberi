@@ -21,12 +21,6 @@ final class HomePinnedSources {
     private static let key = "home.board.pinnedSources"
     private static let hiddenKey = "home.board.hiddenSocial"
 
-    /// Sources `HomeComposition.appendMediaModules` actually gates on the
-    /// pinned bypass. A source's own screen only shows "Pin to Home" when
-    /// its name is in here — otherwise the pin would persist and flip the
-    /// button's state with no effect on the board, a dead control.
-    static let pinnable: Set<String> = ["Apple Music", "Pinterest", "Photos", "RSS"]
-
     /// The social sources that auto-earn a Home card from a single post
     /// (`HomeComposition.appendMediaModules`), in board order. Unlike
     /// `pinnable` sources they show by default, so their control is the
@@ -82,10 +76,11 @@ final class HomePinnedSources {
         UserDefaults.standard.set(Array(sources), forKey: Self.key)
     }
 
-    /// The Home board module a pinned source composes as (`HomeComposition`'s
-    /// media shelves) — the bridge between a source NAME (what pins are keyed
-    /// by) and a board module REF (what size/order are keyed by). nil for a
-    /// source with no shelf of its own.
+    /// The Home board module an IMAGE-media source composes as
+    /// (`HomeComposition`'s bespoke shelves) — the bridge between a source
+    /// NAME and its board module REF. Image sources keep their own shelf id;
+    /// every other pinned app composes as a generic `Widget` tile whose
+    /// board key is `app:<source>` (see `boardKey`). nil for a non-media source.
     static func moduleRef(for source: String) -> String? {
         switch source {
         case "Apple Music": return "musicShelf"
@@ -96,16 +91,10 @@ final class HomePinnedSources {
         }
     }
 
-    /// An auto-social card's board ref (`social<Source>`, from
-    /// `appendSocialCard`) back to its source name, so the board's
-    /// "Remove from Home" knows which source to hide.
-    static func socialSource(forModuleRef ref: String) -> String? {
-        for source in autoSocial where ref == "social\(source)" { return source }
-        return nil
-    }
-
-    /// The inverse of `moduleRef(for:)` — a shelf's ref back to its source, so
-    /// the board's "Remove from Home" knows which pin to drop.
+    /// The inverse of `moduleRef(for:)` — a media shelf's ref back to its
+    /// source, so the board's "Remove from Home" knows which pin to drop.
+    /// A generic app tile carries its source in the doc instead (arg 3), read
+    /// straight off the element, so it needs no entry here.
     static func source(forModuleRef ref: String) -> String? {
         switch ref {
         case "musicShelf": return "Apple Music"
@@ -116,13 +105,21 @@ final class HomePinnedSources {
         }
     }
 
+    /// The stable board key a source's tile persists its size/order under —
+    /// a media source uses its shelf ref (which equals its module key), every
+    /// other app uses `app:<source>`. `HomeScreen.moduleKey` derives the same
+    /// key from a live element, so a pin/unpin and a reorder round-trip.
+    static func boardKey(for source: String) -> String {
+        moduleRef(for: source) ?? "app:\(source)"
+    }
+
     /// Unpinning a source for good drops its module's saved size and order
     /// too — a deliberate removal shouldn't leave state that resurrects the
     /// old card (large, in its old slot) on a later re-pin. Transient absence
     /// never routes through here, so a returning wallet keeps its placement.
     private func forgetBoardState(_ source: String) {
-        guard let ref = Self.moduleRef(for: source) else { return }
-        HomeModuleSize.shared.clear(ref)
-        HomeBoardOrder.shared.remove(ref)
+        let key = Self.boardKey(for: source)
+        HomeModuleSize.shared.clear(key)
+        HomeBoardOrder.shared.remove(key)
     }
 }
