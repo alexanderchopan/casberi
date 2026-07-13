@@ -41,6 +41,8 @@ struct Composer: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(ShellChrome.self) private var chrome
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.openURL) private var openURL
+    @Environment(\.colorScheme) private var scheme
 
     /// The empty field's invitation cycles through what the composer can DO —
     /// ask, find, organize, recap — so it teaches its range instead of reading
@@ -277,9 +279,11 @@ struct Composer: View {
             if isOpen { openBubble }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .onChange(of: isOpen) { _, open in
-            if open { fieldFocused = true }
-        }
+        // Opens UNFOCUSED (2026-07-12): the tray leads with the field's
+        // invitation, the ask chips, and the tool grid all visible — tapping
+        // the field is what raises the keyboard to ask. Auto-focusing hid the
+        // tools behind the keyboard, biasing the surface toward "ask" when it's
+        // now "ask OR jump to a tool".
     }
 
     // MARK: - Open
@@ -379,6 +383,13 @@ struct Composer: View {
                     .padding(.horizontal, DS.Space.s4)
                 }
                 .padding(.top, DS.Space.s2)
+            }
+
+            // The finite tool launcher — a fixed grid of jumps to the person's
+            // OWN tools, shown while the field is empty (the "ask OR jump"
+            // surface). Hidden the moment you start composing.
+            if isOpen && !hasDraft && !answering && !isRecording, proposal == nil {
+                toolGrid
             }
 
             // Tag completions — your real tags finish the word being typed.
@@ -668,6 +679,49 @@ struct Composer: View {
         turns = []
         currentQuestion = ""
         keptCurrent = false
+    }
+
+    // MARK: - Tool launcher (jumps to the person's own tools)
+
+    private var toolGrid: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s3) {
+            Text("Your tools")
+                .dsText(.label12)
+                .foregroundStyle(DS.textTertiary)
+                .padding(.horizontal, DS.Space.s4)
+            LazyVGrid(
+                columns: Array(repeating: GridItem(.flexible(), spacing: DS.Space.s2), count: 4),
+                spacing: DS.Space.s4
+            ) {
+                ForEach(QuickTool.all) { tool in
+                    Button { runTool(tool) } label: {
+                        VStack(spacing: DS.Space.s2) {
+                            Image(systemName: tool.symbol)
+                                .font(.system(size: 22, weight: scheme == .light ? .semibold : .medium))
+                                .foregroundStyle(scheme == .light ? tool.tint.mix(with: .black, by: 0.15) : tool.tint)
+                                .frame(width: 50, height: 50)
+                                .background(tool.tint.opacity(scheme == .light ? 0.20 : 0.24),
+                                            in: RoundedRectangle(cornerRadius: DS.Radius.appIcon(50), style: .continuous))
+                            Text(tool.label)
+                                .dsText(.subhead13)
+                                .foregroundStyle(DS.textSecondary)
+                                .lineLimit(1)
+                        }
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal, DS.Space.s4)
+        }
+        .padding(.top, DS.Space.s3)
+    }
+
+    /// A tool tile jumps out to that app and closes the composer — nothing
+    /// lands in Casberi (the ruling: people create in their own tools).
+    private func runTool(_ tool: QuickTool) {
+        DSHaptic.selection()
+        openURL(tool.url)
+        close()
     }
 
     private func runPin(_ intent: PinAsk.Intent) {
