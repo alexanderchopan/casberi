@@ -95,6 +95,10 @@ struct RootShell: View {
                 // Connected bridges are cheap to poll — every foreground
                 // refreshes them all (one place, reusable from screens).
                 BridgeRefresh.refreshAllConnected(context: modelContext, store: bridges)
+                // Build the on-device semantic index for anything new or not
+                // yet embedded — a bounded background sweep, so Ask can retrieve
+                // by meaning, not just shared words.
+                EmbeddingIndex.backfill(context: modelContext)
                 // Resnapshot hand-off state so the thing sheet's "Add to <app>"
                 // verbs only show apps the person connected AND has installed.
                 HandOffState.refresh(connected: Set(
@@ -218,7 +222,7 @@ struct RootShell: View {
                         let noisy = (try? modelContext.fetch(FetchDescriptor<Thing>(
                             predicate: #Predicate { $0.title.starts(with: "Screenshot · ") }
                         ))) ?? []
-                        for thing in noisy { thing.title = "Screenshot" }
+                        for thing in noisy { thing.title = "Screenshot"; thing.embedding = nil }
                     }
                     if migrationsStored < 2 {
                         // One-time heal (2026-07-12): an earlier Apple Music artwork
@@ -265,6 +269,10 @@ struct RootShell: View {
                 let delay = UserDefaults.standard.double(forKey: "probeDelay")
                 Task {
                     if delay > 0 { try? await Task.sleep(for: .seconds(delay)) }
+                    // Ensure the semantic index is built before the headless
+                    // ask, so a probe verifies meaning-retrieval deterministically
+                    // (the live app builds this on foreground instead).
+                    await EmbeddingIndex.indexPending(context: modelContext)
                     let start = Date()
                     let doc = await answerDocument(q) { partial in
                         NSLog("[Casberi] answerProbe stream →\n%@", partial.joined(separator: "\n"))
@@ -895,6 +903,7 @@ struct RootShell: View {
         let dateMatch = DateQuery.match(in: query)
         if let dateMatch { terms.removeAll { dateMatch.words.contains($0) } }
 
+        let usingPool = pool != nil
         let all: [Thing]
         if let pool {
             all = pool
@@ -908,6 +917,29 @@ struct RootShell: View {
         // Semantic widening: near-synonyms of the query's words, scored
         // BELOW exact matches — "car stuff" reaches "vehicle" titles.
         let expanded = SemanticExpand.expand(terms)
+
+        // Sentence-level semantic match (2026-07-12): embed the natural-language
+        // ask and score each thing by cosine to its stored vector — so a query
+        // can reach a thing that shares NO words with it. The whole ASK is
+        // embedded (a sentence embedding wants a sentence — the stripped keyword
+        // fragments below would degrade it), only its trailing "?" trimmed.
+        // Skipped for follow-up pool refinements and bare kind/date lists (no
+        // words to carry meaning), and a no-op when the on-device embedding
+        // model is unavailable — the keyword engine then stands alone (zero
+        // regression). The query norm is computed once, not per thing.
+        let ask = query.trimmingCharacters(in: CharacterSet(charactersIn: "? ").union(.whitespaces))
+        let queryVec: [Float]? = (!usingPool && !terms.isEmpty)
+            ? EmbeddingIndex.vector(for: ask) : nil
+        let queryNorm = queryVec.map(EmbeddingIndex.norm) ?? 0
+        // Similarity above the boost floor refines ranking; but a thing with NO
+        // keyword score must clear the higher QUALIFY floor to answer at all —
+        // so a loosely-related recent thing can't ride the freshness bonus into
+        // a false answer, and the honest "nothing matches" path survives. The
+        // lift is normalized 0…1 above the boost floor and weighted so a strong
+        // meaning-match rivals a title hit (+3).
+        let semanticBoostFloor = 0.55
+        let semanticQualifyFloor = 0.62
+        let semanticWeight = 3.0
 
         // Whole words, not substrings (2026-07-10): "what is my name" used
         // to match the "is" inside "Lisbon" and answer with nonsense — a
@@ -932,6 +964,15 @@ struct RootShell: View {
                 if title.contains(term) { score += 1.5 }
                 if tags.contains(term) { score += 1 }
                 if content.contains(term) { score += 0.5 }
+            }
+            // Semantic lift: meaning-match adds to the score and can qualify a
+            // thing that shares no words at all — but only a STRONG match
+            // (>= qualify floor) may answer without a keyword hit.
+            if let queryVec, let data = thing.embedding, !data.isEmpty {
+                let sim = EmbeddingIndex.similarity(query: queryVec, queryNorm: queryNorm, packed: data)
+                if sim >= semanticBoostFloor, score > 0 || sim >= semanticQualifyFloor {
+                    score += semanticWeight * (sim - semanticBoostFloor) / (1 - semanticBoostFloor)
+                }
             }
             // A bare kind query ("screenshots?") lists that kind; a bare date
             // query ("what landed today?") lists the day.

@@ -136,7 +136,10 @@ enum RSSIngest {
                     // their raw "&#8217;" forever unless healed here.
                     if let thing = landed[ref] {
                         let decoded = IngestSupport.decodeHTMLEntities(thing.title)
-                        if decoded != thing.title { thing.title = decoded; touched = true }
+                        if decoded != thing.title {
+                            thing.title = decoded; touched = true
+                            thing.embedding = nil   // title changed — re-embed on the next sweep
+                        }
                     }
                     continue
                 }

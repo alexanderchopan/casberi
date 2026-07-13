@@ -41,6 +41,10 @@ enum LinkTitle {
         else { return }
         guard let title = await fetch(url), title != thing.title else { return }
         thing.title = title
+        // The title just changed — drop the stale vector so the next semantic
+        // sweep re-embeds this thing on its real title, not the URL it was born
+        // with (EmbeddingIndex).
+        thing.embedding = nil
         try? context.save()
         SpotlightIndex.index([thing])
     }

@@ -141,6 +141,16 @@ final class Thing {
     /// circle) only when more than one account is watched. nil keeps the
     /// source glyph.
     var authorAvatarURL: String? = nil
+    /// A sentence-embedding vector of the thing's title+body, packed as Float32
+    /// bytes — the on-device semantic index (2026-07-12), so the answer path can
+    /// retrieve by MEANING, not just shared words. Derived by a lazy foreground
+    /// sweep (`EmbeddingIndex`), never at the capture sites, so every bridge,
+    /// CloudKit-synced thing, and the pre-existing corpus gets embedded alike.
+    /// Kept INLINE (not externalStorage): ~2KB, and retrieval reads every
+    /// vector each query — a per-thing file read would be far slower. Optional +
+    /// default nil keeps CloudKit mirroring happy and marks a thing as
+    /// not-yet-indexed; an empty `Data` means "indexed, but unembeddable".
+    var embedding: Data? = nil
 
     init(
         id: UUID = UUID(),
