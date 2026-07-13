@@ -1,11 +1,13 @@
 import SwiftUI
 import SwiftData
 
-/// Dexscreener, connected — the token-watch screen. Paste a token (address,
-/// symbol, or Dexscreener link); it resolves through public search and joins
-/// your watchlist as a thing whose sheet draws its live price chart. Read-only
-/// public price data — no wallet, no account, no trading.
-struct DexscreenerScreen: View {
+/// Tokens, connected (renamed from Dexscreener, 2026-07-13 — the chart itself
+/// blends GeckoTerminal/Alchemy/Dexscreener, so one vendor's name overclaimed).
+/// Paste a token (address, symbol, or link); it resolves through public
+/// search and joins your watchlist as a thing whose sheet draws its live
+/// price chart. Read-only public price data — no wallet, no account, no
+/// trading.
+struct TokenWatchScreen: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(BridgeStore.self) private var store
     @State private var queryField = ""
@@ -27,7 +29,7 @@ struct DexscreenerScreen: View {
     /// the watchlist below, so they drop out here for display only.
     private var displayHits: [TokenWatch.Resolved] {
         let refs = Set(watched.compactMap(\.sourceRef))
-        return hits.filter { !refs.contains("dexscreener:\($0.id)") }
+        return hits.filter { !refs.contains("tokens:\($0.id)") }
     }
 
     /// The one swipe lesson, shared across every screen that pins by swipe
@@ -43,24 +45,24 @@ struct DexscreenerScreen: View {
     }
 
     private func loadWatched() {
-        watched = recentBridgeThings(source: "Dexscreener", context: modelContext)
+        watched = recentBridgeThings(source: "Tokens", context: modelContext)
     }
 
     var body: some View {
         List {
-            BridgeSetupHeader(name: "Dexscreener")
+            BridgeSetupHeader(name: "Tokens")
             addSection.listRowSeparator(.hidden)
             if !watched.isEmpty {
                 watchlistSection.listRowSeparator(.hidden)
                 // Pin the whole watchlist to Home as one tile (ruling
                 // 2026-07-12) — no longer one token at a time.
-                PinToHomeButton(source: "Dexscreener", inSection: true)
+                PinToHomeButton(source: "Tokens", inSection: true)
                     .listRowSeparator(.hidden)
             }
             if !watched.isEmpty {
                 // A watched token IS its thing, so there's no separate store to
                 // clear — "Remove its things too" is what drops the watchlist.
-                BridgeDisconnectSection(bridgeID: "dexscreener", name: "Dexscreener",
+                BridgeDisconnectSection(bridgeID: "tokens", name: "Tokens",
                                         teardown: {})
                     .listRowSeparator(.hidden)
             }
@@ -69,7 +71,7 @@ struct DexscreenerScreen: View {
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
         .dsPageBackground()
-        .navigationTitle("Dexscreener")
+        .navigationTitle("Tokens")
         .navigationBarTitleDisplayMode(.large)
         .onAppear { loadWatched() }
         // The debounced token search.
@@ -88,7 +90,7 @@ struct DexscreenerScreen: View {
                            buttonLabel: "Watch", action: watch)
             ForEach(displayHits) { token in
                 BridgeSearchResultRow(
-                    imageURL: token.imageURL, fallbackIcon: "Dexscreener",
+                    imageURL: token.imageURL, fallbackIcon: "Tokens",
                     title: "\(token.name) · $\(token.symbol)",
                     subtitle: token.priceUsd.map { "\(token.chain.capitalized) · $\($0)" }
                         ?? token.chain.capitalized,
@@ -101,7 +103,7 @@ struct DexscreenerScreen: View {
             Text("Watch a token").dsText(.label12)
                 .foregroundStyle(DS.textTertiary)
         } footer: {
-            Text("Type a name, symbol, address, or Dexscreener link — matching tokens appear as you type. A watched token's live price chart lands in your feed.")
+            Text("Type a name, symbol, address, or link — matching tokens appear as you type. A watched token's live price chart lands in your feed.")
                 .dsText(.callout15).foregroundStyle(DS.textTertiary)
         }
     }
@@ -131,7 +133,7 @@ struct DexscreenerScreen: View {
                 .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                     // Full swipe = Unwatch (the explicit group replaces the
                     // system delete). Pinning a single token left the swipe
-                    // (2026-07-12) — pin "Dexscreener" from its screen for a
+                    // (2026-07-12) — pin "Tokens" from its screen for a
                     // watchlist tile on Home, not one token at a time.
                     Button(role: .destructive) {
                         if let i = watched.firstIndex(where: { $0.id == thing.id }) {
@@ -154,7 +156,7 @@ struct DexscreenerScreen: View {
 
     private var footerSection: some View {
         Section {
-            Text("Public price data only — nothing about you leaves your iPhone. Charts open on Dexscreener.")
+            Text("Public price data only — nothing about you leaves your iPhone.")
                 .dsText(.subhead13).foregroundStyle(DS.textTertiary)
                 .listRowBackground(Color.clear)
         }
@@ -217,11 +219,11 @@ struct DexscreenerScreen: View {
 
     private func register() {
         let proof = "\(watched.count) token\(watched.count == 1 ? "" : "s") watched"
-        if let existing = store.bridges.first(where: { $0.name == "Dexscreener" }) {
+        if let existing = store.bridges.first(where: { $0.name == "Tokens" }) {
             store.reconnect(existing.id, proof: proof)
         } else {
             store.bridges.append(BridgeApp(
-                id: "dexscreener", name: "Dexscreener", status: .connected,
+                id: "tokens", name: "Tokens", status: .connected,
                 statusLine: proof,
                 can: ["Watches the tokens you add.", "Read-only — public price data only."]
             ))

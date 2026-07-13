@@ -19,7 +19,7 @@ Links, screenshots, notes, voice memos, events, chats, tasks, workouts, wallet a
 Save now, ask later in plain words.
 
 **3/**
-It connects to dozens of apps. Working today: Photos, Calendar, Reminders, Apple Health, Apple Music, Gmail, iCloud Mail, ChatGPT, GitHub, Linear, Notion, Obsidian, Todoist, Cal.com, Calendly, Readwise, Raindrop, RSS, Bluesky, Farcaster, Steam, Wallet, Dexscreener.
+It connects to dozens of apps. Working today: Photos, Calendar, Reminders, Apple Health, Apple Music, Gmail, iCloud Mail, ChatGPT, GitHub, Linear, Notion, Obsidian, Todoist, Cal.com, Calendly, Readwise, Raindrop, RSS, Bluesky, Farcaster, Steam, Wallet, Tokens.
 
 Coming next: Claude, Venice, OpenClaw, X, Reddit, YouTube, Spotify, Telegram, Slack, Strava, Twitch. Tell me which you'd use — that decides what I build first.
 

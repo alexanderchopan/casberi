@@ -327,7 +327,7 @@ enum HomeComposition {
         case "Calendar":                                   return String(localized: "On your calendar")
         case "Todoist", "Reminders":                       return String(localized: "On your list")
         case "Readwise", "Kindle":                         return String(localized: "Highlights")
-        case "Dexscreener":                                return String(localized: "Watchlist")
+        case "Tokens":                                      return String(localized: "Watchlist")
         case "Kalshi":                                     return String(localized: "Markets")
         case "Bluesky", "Farcaster":                       return String(localized: "Recent posts")
         case "ChatGPT", "Claude":                          return String(localized: "Recent chats")
@@ -340,7 +340,7 @@ enum HomeComposition {
     }
 
     /// One line inside a pinned app tile — a live TokenChip (sparkline + price)
-    /// for a token link (Dexscreener: a token's content IS its chart, prd 51), a
+    /// for a token link (Tokens: a token's content IS its chart, prd 51), a
     /// PostRow for Bluesky/Farcaster (the author's own avatar leads, same as the
     /// old single-post card carried), a MailRow for the inboxes (subject +
     /// snippet), a plain tappable Row for everything else. All carry the thing

@@ -639,7 +639,7 @@ private struct SoloPostTile: View {
     }
 }
 
-/// A pinned Dexscreener token as a solo 1×1 tile — the layout that actually
+/// A pinned Tokens-bridge token as a solo 1×1 tile — the layout that actually
 /// motivated small-span support (2026-07-14): the symbol gets its OWN full-
 /// width line, never sharing horizontal space with the plot or price the way
 /// the list row does, so "ETH" (or any symbol) never truncates. Plot and
@@ -1235,7 +1235,7 @@ extension View {
 }
 
 /// TokenChip(symbol, chain, address, thingId, openable) — a compact token line
-/// inside a pinned Dexscreener tile: the symbol, an inline sparkline drawn
+/// inside a pinned Tokens tile: the symbol, an inline sparkline drawn
 /// on-device (prd 51 — a token's content IS its chart), its price, and the 1D
 /// delta. A thin row with NO surface of its own; the pinned Widget card owns the
 /// surface, so a chart never nests a card inside a card. Tap opens the token;

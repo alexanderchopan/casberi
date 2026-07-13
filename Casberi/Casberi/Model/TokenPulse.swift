@@ -4,7 +4,7 @@ import SwiftData
 
 /// The watchlist's 24h heartbeat (Option A ruling 2026-07-10) — an in-memory
 /// cache of each watched token's recent closes and 24h change, refreshed each
-/// foreground alongside the bridges, so a Dexscreener feed row can wear a
+/// foreground alongside the bridges, so a Tokens feed row can wear a
 /// sparkline the way a Twitch row wears Live. Ephemeral by design: prices are
 /// perishable, so nothing persists — a cold launch fetches fresh, and a row
 /// without a pulse yet just shows its timestamp like any other.
@@ -30,7 +30,7 @@ final class TokenPulse {
 
     /// The row's pulse — nil for everything but a watched token.
     func pulse(for thing: Thing) -> Pulse? {
-        guard thing.source == "Dexscreener", let ref = thing.sourceRef else { return nil }
+        guard thing.source == "Tokens", let ref = thing.sourceRef else { return nil }
         return pulses[ref]
     }
 
@@ -45,7 +45,7 @@ final class TokenPulse {
         defer { refreshing = false }
 
         let descriptor = FetchDescriptor<Thing>(predicate: #Predicate {
-            $0.source == "Dexscreener"
+            $0.source == "Tokens"
         })
         var stale: [(ref: String, chain: String, address: String)] = []
         for thing in (try? context.fetch(descriptor)) ?? [] {

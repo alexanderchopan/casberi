@@ -86,7 +86,7 @@ struct AppsScreen: View {
     /// wallet, or a Farcaster handle and its activity lands in the feed. These
     /// are the standout hooks, so they head the carousel; everything else
     /// backfills in catalog order.
-    private static let featuredStories = ["Dexscreener", "Wallet", "Farcaster"]
+    private static let featuredStories = ["Tokens", "Wallet", "Farcaster"]
 
     private var stories: [Story] {
         let active = Set(store.bridges.filter { $0.status != .paused }.map(\.name))

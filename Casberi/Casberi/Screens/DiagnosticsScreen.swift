@@ -88,11 +88,11 @@ struct DiagnosticsScreen: View {
         }
 
         // — The token chart path — (any watched token; the chart lives on the
-        //   token's sheet and in Feed now, and Dexscreener pins as a watchlist
+        //   token's sheet and in Feed now, and Tokens pins as a watchlist
         //   tile — pinning is per-app, not per-token.)
         let pinnedTokens = all.filter { TokenChart.route(from: $0.content) != nil }
         if pinnedTokens.isEmpty {
-            log("No token thing (nothing with a dexscreener link is watched)")
+            log("No token thing (nothing watched has a resolvable token link)")
         }
         for t in pinnedTokens.prefix(2) {
             let route = TokenChart.route(from: t.content)!
@@ -100,7 +100,7 @@ struct DiagnosticsScreen: View {
             if let chart = await TokenChart.fetch(chain: route.chain, address: route.address) {
                 log("OK chart: \(chart.closes.count) points, price \(chart.price)")
             } else {
-                log("FAIL chart fetch — neither GeckoTerminal nor Dexscreener had a price")
+                log("FAIL chart fetch — neither GeckoTerminal, Alchemy, nor Dexscreener had a price")
             }
         }
 

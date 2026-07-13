@@ -147,7 +147,7 @@ Behind the grid door. One scroll, two zones split by the app's only line: **mana
 Bridges are graded truthfully, and every connect ends in proof — things land:
 
 - **Framework (live, on-device):** Photos, Calendar, Reminders, Apple Health, Apple Music.
-- **Account (live, no server):** RSS, Bluesky, Farcaster, Dexscreener token watching; iCloud Mail and Gmail over IMAP with an app-specific password; eight paste-token bridges (Readwise, GitHub, Todoist, Raindrop, Cal.com, Calendly, Notion, Linear); Reddit and Spotify built and gated on free client ids. Tokens go straight to the Keychain and never render.
+- **Account (live, no server):** RSS, Bluesky, Farcaster, Tokens (price watching, renamed from Dexscreener 2026-07-13 — the chart blends GeckoTerminal/Alchemy/Dexscreener, so one vendor's name overclaimed); iCloud Mail and Gmail over IMAP with an app-specific password; eight paste-token bridges (Readwise, GitHub, Todoist, Raindrop, Cal.com, Calendly, Notion, Linear); Reddit and Spotify built and gated on free client ids. Auth tokens go straight to the Keychain and never render.
 - **Import (batch, official export):** ChatGPT — conversations land as chat things, deduped on re-import.
 
 Apps with no readable API (Apple Notes, Messages) are never listed as bridges — they reach Casberi through capture, and the catalog says so.

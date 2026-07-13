@@ -157,7 +157,7 @@ struct CountUpText: View {
 // MARK: - Swipe hint nudge (teaches the swipe-to-pin gesture, once ever)
 
 /// The one swipe lesson, shared by every list that pins via a trailing swipe
-/// (Feed, Wallet, Dexscreener's watchlist, 2026-07-11): the first row nudges
+/// (Feed, Wallet, Tokens' watchlist, 2026-07-11): the first row nudges
 /// left once, a pin peeks from the trailing edge, the row settles back, then
 /// `onDone` retires it — for good, everywhere, since callers key `active` off
 /// the same "coach.swipe.done" flag. One gesture, one lesson, taught once no

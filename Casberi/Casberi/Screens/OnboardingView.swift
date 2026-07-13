@@ -58,7 +58,7 @@ struct OnboardingView: View {
                                "Claude", "Spotify", "Strava", "Bluesky",
                                "Telegram", "Slack", "X", "Notion", "Reddit",
                                "YouTube", "Todoist", "RSS", "ChatGPT",
-                               "Linear", "Raindrop", "Readwise", "Dexscreener",
+                               "Linear", "Raindrop", "Readwise", "Tokens",
                                "Venice", "OpenClaw", "Cal.com", "Calendly",
                                "iCloud Mail", "Apple Music", "Apple Health",
                                "Reminders", "Calendar", "Photos"]

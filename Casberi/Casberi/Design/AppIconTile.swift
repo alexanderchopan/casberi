@@ -53,7 +53,7 @@ extension DS {
         case "safari":              return Color.fixed("#1d9bf6")
         case "wallet":              return Color.fixed("#2461ff")
         case "kalshi":              return Color.fixed("#4fae7b")   // their green (matches the bundled logo)
-        case "dexscreener":         return Color.fixed("#151a21")   // their dark field
+        case "tokens":              return Color.fixed("#f5a623")   // coin gold — this app's own mark, not a vendor's (2026-07-13 rename)
         case "venice":              return Color.fixed("#0e2942")   // sampled from their deep-blue mark
         case "openclaw":            return Color.fixed("#e5342e")   // the agents' red (user, 2026-07-12)
         case "voice":               return Color.fixed("#ff375f")   // the voice kind's own pink
@@ -90,11 +90,11 @@ extension DS {
         return 0.2126 * Double(r) + 0.7152 * Double(g) + 0.0722 * Double(b)
     }
 
-    /// The brand hue as a CARD fill — a near-black brand mark (Dexscreener's
-    /// dark field, #151a21) would render its story card as an empty void, so
-    /// a too-dark hue lifts toward the app tint instead of showing raw
-    /// (design audit fix, 2026-07-12). Icons and other identity uses keep the
-    /// true `brandHue`; only this fill-legibility path substitutes.
+    /// The brand hue as a CARD fill — a near-black brand mark (X's, #000000)
+    /// would render its story card as an empty void, so a too-dark hue lifts
+    /// toward the app tint instead of showing raw (design audit fix,
+    /// 2026-07-12). Icons and other identity uses keep the true `brandHue`;
+    /// only this fill-legibility path substitutes.
     static func legibleCardFill(for source: String) -> Color {
         let hue = brandHue(for: source) ?? DS.tint
         return luminance(of: hue) < 0.12 ? hue.mix(with: DS.tint, by: 0.6) : hue

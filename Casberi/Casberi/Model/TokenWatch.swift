@@ -2,12 +2,15 @@ import Foundation
 import SwiftData
 
 /// Watching a token (2026-07-07) — the general capability that replaced the
-/// Bankr bridge. A pasted token (address, symbol, or Dexscreener link) resolves
-/// through Dexscreener's public search (no key), and the token joins the
-/// watchlist as a thing whose sheet draws its live price chart (TokenChart).
-/// Read-only public price data — no wallet, no account, no trading. This is
-/// Casberi's OWN watchlist, not a sync of anyone's Dexscreener account (which
-/// has no read API).
+/// Bankr bridge, presented to the person as "Tokens" (2026-07-13 rename — the
+/// chart itself blends GeckoTerminal/Alchemy/Dexscreener, so branding the
+/// whole capability as one vendor overclaimed). A pasted token (address,
+/// symbol, or link) resolves through Dexscreener's public search (no key,
+/// the one piece nothing else replaces — see TokenChart.swift), and joins
+/// the watchlist as a thing whose sheet draws its live price chart
+/// (TokenChart). Read-only public price data — no wallet, no account, no
+/// trading. This is Casberi's OWN watchlist, not a sync of any exchange
+/// account.
 enum TokenWatch {
 
     struct Resolved: Identifiable {
@@ -72,13 +75,13 @@ enum TokenWatch {
     @MainActor
     @discardableResult
     static func add(_ token: Resolved, context: ModelContext) -> Thing? {
-        let ref = "dexscreener:\(token.chain):\(token.address.lowercased())"
+        let ref = "tokens:\(token.chain):\(token.address.lowercased())"
         guard !IngestSupport.existingSourceRefs(context).contains(ref) else { return nil }
         let thing = Thing(
             kind: .link,
             title: "\(token.name) · $\(token.symbol)",
             content: "https://dexscreener.com/\(token.chain)/\(token.address)",
-            source: "Dexscreener",
+            source: "Tokens",
             capturedAt: .now,
             tags: ["Watchlist"],
             sourceRef: ref

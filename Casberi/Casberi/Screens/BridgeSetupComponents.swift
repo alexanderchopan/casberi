@@ -157,7 +157,7 @@ struct BridgeSyncStatusRows: View {
 
 /// Waits for typing to pause before searching, so a fast typist doesn't fire
 /// one request per keystroke — shared by every field that doubles as a
-/// finder (Bluesky/Farcaster people search, Dexscreener token search), so
+/// finder (Bluesky/Farcaster people search, token search), so
 /// the delay and minimum length live in one place, not copied per screen.
 /// Returns nil when superseded by a newer keystroke (the caller leaves its
 /// results alone); `[]` when the query's too short to search yet.

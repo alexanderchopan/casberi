@@ -105,7 +105,7 @@ struct KalshiScreen: View {
         }
     }
 
-    /// Same swipe grammar as every watchlist screen (Dexscreener, Wallet):
+    /// Same swipe grammar as every watchlist screen (Tokens, Wallet):
     /// full trailing swipe pins, the explicit group carries Unwatch.
     /// Unwatching deletes the thing — the thing IS the watch.
     private var watchlistSection: some View {

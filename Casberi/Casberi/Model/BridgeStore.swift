@@ -134,9 +134,9 @@ struct BridgeApp: Identifiable, Codable {
         // can never trade or move funds; a wallet's swaps/sends/receives just land as things.
         .init(id: "wallet", name: "Wallet", status: .connected, statusLine: "0x1a2b…4f · 4 this week",
               can: ["Reads your wallet's activity.", "Read-only — never trades or moves funds."]),
-        // Token-watching, powered by public price data (Dexscreener search +
-        // GeckoTerminal candles). Read-only — no wallet, no keys, no trading.
-        .init(id: "dexscreener", name: "Dexscreener", status: .connected, statusLine: "2 tokens watched",
+        // Token-watching, powered by public price data (Dexscreener search,
+        // GeckoTerminal/Alchemy candles). Read-only — no wallet, no keys, no trading.
+        .init(id: "tokens", name: "Tokens", status: .connected, statusLine: "2 tokens watched",
               can: ["Watches the tokens you add.", "Read-only — public price data only."]),
     ]
 }

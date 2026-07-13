@@ -68,7 +68,7 @@ enum SourceActions {
         default:
             let phrases: [String: String] = [
                 "wallet":      "Watch another wallet",
-                "dexscreener": "Watch another token",
+                "tokens":      "Watch another token",
                 "kalshi":      "Watch another market",
                 "bluesky":     "Track another account",
                 "farcaster":   "Track another account",

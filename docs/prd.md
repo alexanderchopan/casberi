@@ -2486,3 +2486,43 @@ bundled-icon call — but it's a different feature (wallet treemap, not
 Dexscreener token-watch) and reverses a deliberate static-over-live
 architecture choice, so it's flagged for a separate decision rather than
 folded into this one.
+
+## 66. Dexscreener the bridge becomes "Tokens" (user, 2026-07-13) — BUILT
+
+§65 already made the point: the chart underneath a watched token blends
+GeckoTerminal, Alchemy, and Dexscreener — three vendors, not one — so
+presenting the whole capability to the person as "Dexscreener" overclaimed a
+single-vendor identity it no longer had. Renamed everywhere, same pattern
+`Wallet` already set (a capability name, not a vendor's): the bridge, its
+screen (`DexscreenerScreen.swift` → `TokenWatchScreen.swift`), its `Offer` in
+`BridgeCatalog.swift`, its `thing.source` ("Dexscreener" → "Tokens"), its
+sourceRef prefix ("dexscreener:" → "tokens:"), its `BridgeRouter.Destination`
+case, and its website marquee/catalog tile.
+
+**Icon**: the bundled `brand-dexscreener.imageset` logo is gone — `BridgeIcon`
+already falls back to an SF Symbol on a brand-hue squircle when no bundled
+asset exists (the exact path `Wallet` already takes, having never had a
+bundled logo). Symbol stays `chart.line.uptrend.xyaxis` (unchanged, just
+rekeyed from "dexscreener" to "tokens" in `BridgeGlyph.symbol(for:)`); the
+brand hue becomes a new gold, `#f5a623` — this app's own mark now, not
+Dexscreener's near-black "their dark field" — since a renamed, de-vendored
+capability earns its own color rather than inheriting one that named a logo
+that's gone. Website mirrors it: the marquee/catalog tile drops its base64
+Dexscreener logo for an inline SVG (a filled trending-up-arrow glyph, the
+same fill-path convention `Wallet`'s tile already uses) on the new gold
+background; the orphaned `website/icons/icon_dexscreener.png` source file is
+deleted.
+
+**What stayed named "Dexscreener"**: every place that names the actual
+running dexscreener.com API — the search endpoint (`TokenWatch.swift`), the
+stored `content` URL a watched token's thing carries, `TokenChart.swift`'s
+private `dexscreener()` fallback function, the privacy policy's vendor
+disclosure (now also naming Alchemy, which it had missed) — because those
+are real, accurate technical facts, not branding. Diagnostic `NSLog` labels
+in `ProbeHooks.swift` also keep saying "Dexscreener probe" — internal
+dev-only tooling output, not user-facing.
+
+Historical `docs/prd.md` entries before this one that say "Dexscreener" are
+NOT retroactively renamed — they're an append-only record of what was true
+when written. Read them as: "Dexscreener" there means what "Tokens" means
+now.

@@ -4,7 +4,7 @@ import SwiftData
 /// The uniform "Disconnect" control for a connected bridge's own screen — the
 /// source-level counterpart to the item-level swipe-to-remove each screen
 /// already has (delete an address / a feed / a token). Before this, the live
-/// bridges with dedicated screens (Wallet, RSS, Dexscreener, Mail, the handle
+/// bridges with dedicated screens (Wallet, RSS, Tokens, Mail, the handle
 /// bridges) could only shed their ITEMS, never the source itself: deleting
 /// every item left the seat "connected" and the next foreground re-synced it.
 /// So a person could connect a source but never cleanly stop it — an honesty
