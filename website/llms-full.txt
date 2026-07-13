@@ -13,9 +13,9 @@ Last updated: July 13, 2026
 - Watch one feed — One screen, no tabs. Everything together, or one app at a time.
 - Tag your things — Group without folders. One thing, many tags.
 - Pin your favorites — Build a board, arranged your way.
-- Ask anything — A question, answered from your own things.
-- Organize everything — Tell it to tag or rename across the lot.
 - Act on items — From your feed: open, pin, or share, in the app it came from.
+- Organize everything — Tell it to tag or rename across the lot.
+- Ask anything — A question, answered from your own things.
 - Jump to tools — From the composer: a note, message, email, event, reminder, search, or a ChatGPT or Claude session.
 - Make it yours — Set your avatar, background, language, and data preferences.
 
