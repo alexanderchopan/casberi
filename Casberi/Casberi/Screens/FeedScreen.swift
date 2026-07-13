@@ -1,6 +1,5 @@
 import SwiftUI
 import SwiftData
-import EventKit
 
 /// Feed's door pushes, shared so the shell can tell when a management screen
 /// (Apps/Settings, and whatever they push) is covering this tab — the floating
@@ -40,12 +39,6 @@ struct FeedScreen: View {
     @Bindable private var feedRoute = FeedRoute.shared
     @Bindable private var wallet = WalletStore.shared
     @State private var pushedBridge: BridgeRouter.Destination?
-    // Source-feed compose: Calendar's native event editor (once access is
-    // granted, the store is set and the sheet opens) and a one-field reminder.
-    @State private var composingEvent = false
-    @State private var eventStore: EKEventStore?
-    @State private var composingReminder = false
-    @State private var reminderDraft = ""
     @State private var liftedID: UUID?
     // First-run teaching (option 4: no demo mode — these live in the real
     // app and retire on first use, forever).
@@ -382,19 +375,22 @@ struct FeedScreen: View {
         }
         .buttonStyle(.plain)
         .padding(.horizontal, DS.Space.s4)
+        // A clear gap above the header so it never touches the source-chip row
+        // (user, 2026-07-13) — the chips are the strip, the card is its own bar.
+        .padding(.top, DS.Space.s3)
         .padding(.bottom, DS.Space.s2)
     }
 
-    /// The "act in this source" row under the header — a tinted CTA. Compose
-    /// hands off through `openURL`; expand rides `pushedBridge`, the same
-    /// channel the header uses to open the bridge's setup.
+    /// The "act in this source" row under the header — same neutral surface as
+    /// the header so the two stacked bars read as one color (user, 2026-07-13);
+    /// the tint stays on the label/icon alone. Compose hands off through
+    /// `openURL`; expand rides `pushedBridge`, the same channel the header uses.
     private func sourceActionRow(_ action: SourceAction) -> some View {
         Button {
             DSHaptic.selection()
             switch action.run {
             case .openURL(let url):  openURL(url)
             case .route(let dest):   pushedBridge = dest
-            case .compose(let kind): Task { await startCompose(kind) }
             }
         } label: {
             HStack(spacing: DS.Space.s2) {
@@ -407,35 +403,13 @@ struct FeedScreen: View {
             .foregroundStyle(DS.tint)
             .padding(.horizontal, DS.Space.s4)
             .padding(.vertical, DS.Space.s3)
-            .background(DS.tintDim,
+            .background(DS.surfaceSheet,
                         in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .padding(.horizontal, DS.Space.s4)
         .padding(.bottom, DS.Space.s2)
-    }
-
-    /// Present the right native composer for an in-app source action. Calendar
-    /// gets Apple's event editor (after write access); Reminders — which has no
-    /// editor UI — gets a one-field prompt that writes on Add.
-    private func startCompose(_ kind: SourceAction.Compose) async {
-        switch kind {
-        case .calendarEvent:
-            let store = EKEventStore()
-            do {
-                guard try await store.requestWriteOnlyAccessToEvents() else {
-                    chrome.flash("No access — allow Casberi in iOS Settings"); return
-                }
-                eventStore = store
-                composingEvent = true
-            } catch {
-                chrome.flash("No access — allow Casberi in iOS Settings")
-            }
-        case .reminder:
-            reminderDraft = ""
-            composingReminder = true
-        }
     }
 
     private var feedList: some View {
@@ -600,27 +574,6 @@ struct FeedScreen: View {
                 Button(verb.label) { perform(verb, on: thing); confirming = nil }
                 Button("Cancel", role: .cancel) { confirming = nil }
             }
-        }
-        // Calendar source feed → the system's native new-event editor.
-        .sheet(isPresented: $composingEvent) {
-            if let eventStore {
-                EventEditSheet(store: eventStore) { composingEvent = false }
-                    .ignoresSafeArea()
-            }
-        }
-        // Reminders source feed → a one-field prompt (Reminders has no editor UI).
-        .alert("New reminder", isPresented: $composingReminder) {
-            TextField("Reminder", text: $reminderDraft)
-            Button("Add") {
-                let title = reminderDraft.trimmingCharacters(in: .whitespaces)
-                reminderDraft = ""
-                guard !title.isEmpty else { return }
-                Task {
-                    do { try await HandOff.newReminder(title: title); chrome.flash("On your list") }
-                    catch { chrome.flash("No access — allow Casberi in iOS Settings") }
-                }
-            }
-            Button("Cancel", role: .cancel) { reminderDraft = "" }
         }
     }
 
@@ -1105,18 +1058,15 @@ struct FeedScreen: View {
     }
 
     /// Source chips, Stories-sized (ruling 2026-07-10, Option A): 56pt
-    /// icon-only circles — the brand logo IS the chip. A DS.confirm ring
-    /// marks a source with things NEWER than the last visit (same state as
-    /// the "New since" divider; it quiets when the visit stamp advances).
-    /// The active chip wears the ink ring. No labels — labels were what
-    /// made the row scroll (ruling 2026-07-09); "All" keeps its word, it
-    /// has no app.
+    /// icon-only circles — the brand logo IS the chip. The active chip wears
+    /// the blue ink ring; a source whose connection needs you wears an orange
+    /// one. Newness is NOT a chip ring (removed 2026-07-13, user: the green
+    /// "new since last visit" ring read as a status light and confused — the
+    /// "New since …" divider already marks what's new in the list). No labels
+    /// — labels were what made the row scroll (ruling 2026-07-09); "All" keeps
+    /// its word, it has no app.
     private func filterChips(_ labels: [String], active: String,
                              onTap: @escaping (String) -> Void) -> some View {
-        let fresh: Set<String> = {
-            guard let newSince else { return [] }
-            return Set(things.filter { $0.capturedAt > newSince }.map(\.source))
-        }()
         // ScrollViewReader keeps the ACTIVE chip visible — a deep link
         // (casberi://feed/source/Zerion) can select a chip that sits past
         // the fold, and a filter you can't see reads as no filter at all.
@@ -1125,7 +1075,6 @@ struct FeedScreen: View {
                 HStack(spacing: DS.Space.s3) {
                     ForEach(labels, id: \.self) { label in
                         let isActive = label == active
-                        let hasNew = fresh.contains(label)
                         let broken = bridges.bridges.contains {
                             $0.name == label && $0.status == .attention
                         }
@@ -1149,14 +1098,14 @@ struct FeedScreen: View {
                         .frame(width: 46, height: 46)
                         .padding(2.5)
                         .overlay {
-                            // One ring, three exclusive states: tint = active
+                            // One ring, two exclusive states: tint = active
                             // (blue, the app's selection color — the ink ring
                             // read as chrome; 2026-07-12, user) — a single ring
                             // that SLIDES from the old chip to the new (selection
                             // is an object traveling, not two states blinking);
                             // orange = the connection needs you (health lives
-                            // where you live, 2026-07-10); green = new since your
-                            // last visit.
+                            // where you live, 2026-07-10). Newness lives in the
+                            // "New since …" divider, not a chip ring (2026-07-13).
                             if isActive {
                                 let ring = Circle().strokeBorder(DS.tint, lineWidth: 2.5)
                                 if reduceMotion {
@@ -1166,10 +1115,6 @@ struct FeedScreen: View {
                                 }
                             } else if broken {
                                 Circle().strokeBorder(DS.attention, lineWidth: 2.5)
-                            } else {
-                                // Stays mounted so the trim can animate both
-                                // ways — an unmounted ring can only blink.
-                                NewRing(on: hasNew, reduceMotion: reduceMotion)
                             }
                         }
                         .frame(width: 56, height: 56)
@@ -1184,8 +1129,7 @@ struct FeedScreen: View {
                                 .opacity(phase.isIdentity ? 1 : 0.6)
                         }
                         .id(label)
-                        .accessibilityLabel(label
-                            + (broken ? ", needs reconnecting" : (hasNew ? ", new things" : "")))
+                        .accessibilityLabel(label + (broken ? ", needs reconnecting" : ""))
                         .accessibilityAddTraits(isActive ? .isSelected : [])
                     }
                 }
@@ -1198,44 +1142,6 @@ struct FeedScreen: View {
                 guard now != "All" else { return }
                 withAnimation(DS.Motion.standard) { proxy.scrollTo(now, anchor: .center) }
             }
-        }
-    }
-
-    /// The green "new since last visit" ring, as an event instead of a state
-    /// (2026-07-10): when a source gains new things mid-visit it DRAWS ON —
-    /// the arc sweeps clockwise from 12 o'clock with one soft pulse — and
-    /// when a return visit acknowledges them it DRAINS the same way back.
-    /// Arrival is an event, acknowledgment is a release, never a blink.
-    /// Orange (needs you) stays a steady state — a broken connection is not
-    /// an event. First mount takes the current state instantly, so chips
-    /// scrolling into view never replay the sweep.
-    private struct NewRing: View {
-        let on: Bool
-        let reduceMotion: Bool
-        @State private var progress: CGFloat
-        @State private var pulse: CGFloat = 1
-
-        init(on: Bool, reduceMotion: Bool) {
-            self.on = on
-            self.reduceMotion = reduceMotion
-            _progress = State(initialValue: on ? 1 : 0)
-        }
-
-        var body: some View {
-            Circle()
-                .inset(by: 1.25)
-                .trim(from: 0, to: progress)
-                .stroke(DS.confirm, style: StrokeStyle(lineWidth: 2.5, lineCap: .round))
-                .rotationEffect(.degrees(-90))
-                .scaleEffect(pulse)
-                .onChange(of: on) { _, now in
-                    guard !reduceMotion else { progress = now ? 1 : 0; return }
-                    withAnimation(.spring(duration: 0.55)) { progress = now ? 1 : 0 }
-                    if now {
-                        withAnimation(.spring(duration: 0.22)) { pulse = 1.06 }
-                        withAnimation(.spring(duration: 0.4).delay(0.22)) { pulse = 1 }
-                    }
-                }
         }
     }
 

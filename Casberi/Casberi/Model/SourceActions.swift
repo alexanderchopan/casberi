@@ -14,12 +14,7 @@ struct SourceAction {
     enum Run {
         case openURL(URL)                     // A: compose in another app
         case route(BridgeRouter.Destination)  // B: expand via the bridge's setup
-        case compose(Compose)                 // A: compose in-app (EventKit)
     }
-    /// In-app compose targets — Apple's Calendar/Reminders expose no URL that
-    /// opens a NEW blank composer, so these present native UI instead of a
-    /// hand-off (an event editor sheet / a one-field reminder prompt).
-    enum Compose { case calendarEvent, reminder }
     let run: Run
 }
 
@@ -44,13 +39,17 @@ enum SourceActions {
             guard let url = URL(string: "mailto:") else { return nil }
             return SourceAction(label: "New email", icon: "square.and.pencil", run: .openURL(url))
 
-        // Apple's own — no compose URL exists, so they present native in-app UI.
+        // Apple's own — no "new item" compose URL exists, so these OPEN THE APP
+        // itself (calshow:// / x-apple-reminderkit://). A new event/reminder is
+        // made there, never written inside Casberi (user, 2026-07-13).
         case "calendar":
+            guard let url = URL(string: "calshow://") else { return nil }
             return SourceAction(label: "New event", icon: "calendar.badge.plus",
-                                run: .compose(.calendarEvent))
+                                run: .openURL(url))
         case "reminders":
+            guard let url = URL(string: "x-apple-reminderkit://") else { return nil }
             return SourceAction(label: "New reminder", icon: "plus",
-                                run: .compose(.reminder))
+                                run: .openURL(url))
 
         // B — expand. The verb differs per source; the destination is the
         // bridge's own setup screen, reached through the one router.
