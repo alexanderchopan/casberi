@@ -409,7 +409,7 @@ struct FeedScreen: View {
             HStack(spacing: DS.Space.s2) {
                 Image(systemName: action.icon)
                     .font(.system(size: 15, weight: .semibold))
-                Text(action.label)
+                Text(LocalizedStringKey(action.label))
                     .dsText(.body17).fontWeight(.medium)
                 Spacer(minLength: 0)
             }
