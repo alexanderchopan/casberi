@@ -8,9 +8,11 @@ import SwiftUI
 /// value is that the tile never moves, so the thumb learns where it is (never
 /// alphabetized, never reordered by use).
 ///
-/// None is a dead control: the Apple targets (Notes/Messages/Mail/Calendar/
-/// Reminders) are always present, and ChatGPT/Claude/Search use https so they
-/// open the app when installed and the website otherwise — always something.
+/// The Apple targets (Notes/Messages/Mail/Calendar/Reminders) and Search web
+/// are always offered. The third-party apps (ChatGPT/Claude) open their APP by
+/// URL scheme and are `probe`-gated — a tile appears only when the app is
+/// installed (opening a website instead of the app is worse than no tile;
+/// user, 2026-07-12), so its scheme must be listed in `LSApplicationQueriesSchemes`.
 struct QuickTool: Identifiable {
     let id: String
     let label: String
@@ -19,6 +21,9 @@ struct QuickTool: Identifiable {
     /// modes read (mirrors BridgeIcon's fallback).
     let tint: Color
     let url: URL
+    /// True = show only when `url`'s app is installed (canOpenURL). The tray
+    /// filters these out otherwise, so the tile never falls back to a website.
+    let probe: Bool
 
     static let all: [QuickTool] = [
         t("note",     "Note",       "note.text",       "#E8A400", "mobilenotes://"),
@@ -27,13 +32,13 @@ struct QuickTool: Identifiable {
         t("event",    "Event",      "calendar",        "#E5372B", "calshow://"),
         t("reminder", "Reminder",   "checklist",       "#E8890C", "x-apple-reminderkit://"),
         t("web",      "Search web", "magnifyingglass", "#1C6DD0", "https://www.google.com"),
-        t("chatgpt",  "ChatGPT",    "bubble.left",     "#0F8A6B", "https://chatgpt.com"),
-        t("claude",   "Claude",     "sparkles",        "#C4633B", "https://claude.ai"),
+        t("chatgpt",  "ChatGPT",    "bubble.left",     "#0F8A6B", "chatgpt://", probe: true),
+        t("claude",   "Claude",     "sparkles",        "#C4633B", "claude://",  probe: true),
     ]
 
     private static func t(_ id: String, _ label: String, _ symbol: String,
-                          _ hex: String, _ url: String) -> QuickTool {
+                          _ hex: String, _ url: String, probe: Bool = false) -> QuickTool {
         QuickTool(id: id, label: label, symbol: symbol,
-                  tint: Color.fixed(hex), url: URL(string: url)!)
+                  tint: Color.fixed(hex), url: URL(string: url)!, probe: probe)
     }
 }

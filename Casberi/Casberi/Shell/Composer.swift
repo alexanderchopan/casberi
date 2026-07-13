@@ -683,6 +683,12 @@ struct Composer: View {
 
     // MARK: - Tool launcher (jumps to the person's own tools)
 
+    /// The tiles to show — a `probe` tile (ChatGPT/Claude) only appears when its
+    /// app is installed, so a tile never opens a website instead of the app.
+    private var visibleTools: [QuickTool] {
+        QuickTool.all.filter { !$0.probe || UIApplication.shared.canOpenURL($0.url) }
+    }
+
     private var toolGrid: some View {
         VStack(alignment: .leading, spacing: DS.Space.s3) {
             Text("Your tools")
@@ -693,7 +699,7 @@ struct Composer: View {
                 columns: Array(repeating: GridItem(.flexible(), spacing: DS.Space.s2), count: 4),
                 spacing: DS.Space.s4
             ) {
-                ForEach(QuickTool.all) { tool in
+                ForEach(visibleTools) { tool in
                     Button { runTool(tool) } label: {
                         VStack(spacing: DS.Space.s2) {
                             Image(systemName: tool.symbol)
