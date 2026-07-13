@@ -1913,6 +1913,34 @@
         }
       }
     },
+    "Jump to a tool, or ask below." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ツールを開くか、下で質問しましょう。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "도구를 열거나 아래에서 질문하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "打开工具,或在下方提问。"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Abre una herramienta o pregunta abajo."
+          }
+        }
+      }
+    },
     "Just landed": {
       "localizations": {
         "ja": {
