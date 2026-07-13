@@ -33,9 +33,21 @@ enum SourceActions {
                   let url = URL(string: "todoist://addtask") else { return nil }
             return SourceAction(label: "New task", icon: "plus", run: .openURL(url))
 
-        // Mail composes through the universal mailto: — always reachable, opens
-        // the default mail composer (blank, no address needed).
-        case "gmail", "icloud mail":
+        // Gmail composes IN the Gmail app when it's installed — matching today's
+        // hand-off rule (Calendar/Reminders open their own apps, never a generic
+        // proxy). Gated on the scheme resolving, like Todoist; falls back to the
+        // universal mailto: only when Gmail isn't installed, so a Gmail source no
+        // longer silently opens Apple Mail (user, 2026-07-12).
+        case "gmail":
+            let composeURL = HandOffState.installedSchemes.contains("googlegmail")
+                ? URL(string: "googlegmail:///co")
+                : URL(string: "mailto:")
+            guard let url = composeURL else { return nil }
+            return SourceAction(label: "New email", icon: "square.and.pencil", run: .openURL(url))
+
+        // iCloud Mail rides the universal mailto: — Apple Mail is its native
+        // client, so the default composer already lands in the right place.
+        case "icloud mail":
             guard let url = URL(string: "mailto:") else { return nil }
             return SourceAction(label: "New email", icon: "square.and.pencil", run: .openURL(url))
 
@@ -62,6 +74,7 @@ enum SourceActions {
                 "farcaster":   "Track another account",
                 "twitch":      "Follow another channel",
                 "pinterest":   "Add another board",
+                "rss":         "Follow another feed",
             ]
             guard let phrase = phrases[name.lowercased()],
                   let dest = BridgeRouter.destination(forOffer: name) else { return nil }

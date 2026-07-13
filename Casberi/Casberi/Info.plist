@@ -31,6 +31,7 @@
 		<string>todoist</string>
 		<string>chatgpt</string>
 		<string>claude</string>
+		<string>googlegmail</string>
 	</array>
 </dict>
 </plist>

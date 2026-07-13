@@ -253,7 +253,7 @@ enum HandOffState {
     /// "Add to <app>" hand-offs (user ruling: bridge-tied, never arbitrary).
     nonisolated(unsafe) static var connectedBridges: Set<String> = []
 
-    private static let candidates = ["todoist"]
+    private static let candidates = ["todoist", "googlegmail"]
 
     @MainActor static func refresh(connected: Set<String>) {
         installedSchemes = Set(candidates.filter {

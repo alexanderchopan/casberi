@@ -343,7 +343,7 @@ struct FeedScreen: View {
     /// rides `pushedBridge` — the same channel a Wallet row already uses.
     /// (2026-07-11: this hardcoded `.detail`, so Dexscreener's Feed header
     /// opened a page with no way to watch a second token.)
-    private func sourceHeader(_ bridge: BridgeApp) -> some View {
+    private func sourceHeader(_ bridge: BridgeApp, showAddHint: Bool) -> some View {
         Button {
             DSHaptic.selection()
             pushedBridge = BridgeRouter.destination(forID: bridge.id)
@@ -364,6 +364,21 @@ struct FeedScreen: View {
                         .lineLimit(1)
                 }
                 Spacer(minLength: 0)
+                // A watch/follow source advertises "there's more in here" — the
+                // add-another action folds into this one bar (which already opens
+                // the same setup screen) rather than a second stacked row (user,
+                // 2026-07-12). It's a signpost, not a separate target: the whole
+                // card taps through. Compose sources keep their own row instead —
+                // that action leaves for another app, a genuinely other place.
+                if showAddHint {
+                    HStack(spacing: DS.Space.s1) {
+                        Image(systemName: "plus")
+                            .font(.system(size: 13, weight: .semibold))
+                        Text("Add")
+                            .dsText(.subhead13).fontWeight(.semibold)
+                    }
+                    .foregroundStyle(DS.tint)
+                }
                 Image(systemName: "chevron.right")
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(DS.textTertiary)
@@ -381,17 +396,15 @@ struct FeedScreen: View {
         .padding(.bottom, DS.Space.s2)
     }
 
-    /// The "act in this source" row under the header — same neutral surface as
-    /// the header so the two stacked bars read as one color (user, 2026-07-13);
-    /// the tint stays on the label/icon alone. Compose hands off through
-    /// `openURL`; expand rides `pushedBridge`, the same channel the header uses.
+    /// The compose row under the header — "New email / task / event", a hand-off
+    /// that leaves for another app, so it earns its own bar (expand actions fold
+    /// into the header's "+ Add" hint instead; user, 2026-07-12). Same neutral
+    /// surface as the header so the two bars read as one color (user,
+    /// 2026-07-13); the tint stays on the label/icon alone.
     private func sourceActionRow(_ action: SourceAction) -> some View {
         Button {
             DSHaptic.selection()
-            switch action.run {
-            case .openURL(let url):  openURL(url)
-            case .route(let dest):   pushedBridge = dest
-            }
+            if case .openURL(let url) = action.run { openURL(url) }
         } label: {
             HStack(spacing: DS.Space.s2) {
                 Image(systemName: action.icon)
@@ -478,12 +491,21 @@ struct FeedScreen: View {
                 // "All in Feed". It lives inside this always-present group so it
                 // inserts reliably on mount (a standalone conditional row won't).
                 if let bridge = activeSourceBridge {
-                    sourceHeader(bridge)
-                    // Act in this source: compose a new item, or add another of
-                    // a watch/follow source (routes to its setup). Nil for
-                    // read-only sources — no dead affordance.
-                    if let action = SourceActions.action(forSource: bridge.name) {
-                        sourceActionRow(action)
+                    let action = SourceActions.action(forSource: bridge.name)
+                    // Expand (add-another) folds into the header as a "+ Add"
+                    // hint — same destination, one bar. Compose keeps its own row
+                    // (it leaves for another app). Read-only sources get neither.
+                    let composeAction: SourceAction? = {
+                        if let action, case .openURL = action.run { return action }
+                        return nil
+                    }()
+                    let showsAddHint: Bool = {
+                        if let action, case .route = action.run { return true }
+                        return false
+                    }()
+                    sourceHeader(bridge, showAddHint: showsAddHint)
+                    if let composeAction {
+                        sourceActionRow(composeAction)
                     }
                 }
             }
