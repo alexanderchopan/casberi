@@ -74,6 +74,13 @@ struct SourceChips: View {
                 }
             }
             .frame(width: 46, height: 46)
+            // The identity flip (2026-07-14, user): the chip is where
+            // switching sources actually happens, so it's the one true flip
+            // moment — the Feed source header dropped its own animated icon
+            // in favor of this one, rather than two competing for the same
+            // delight. Keyed to isActive: the chip you're leaving flips away,
+            // the one you're landing on flips in.
+            .coinFlip(trigger: isActive)
             .padding(2.5)
             .overlay {
                 // One ring, two exclusive states: tint = active (a single ring
