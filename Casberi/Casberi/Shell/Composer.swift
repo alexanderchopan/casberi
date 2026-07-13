@@ -67,6 +67,9 @@ struct Composer: View {
     /// Flips true just after the bubble opens so the ask chips stagger in
     /// rather than snapping (delight, 2026-07-12).
     @State private var chipsAppeared = false
+    /// The tool tile currently launching — pops it up and fades it as its app
+    /// takes over, so the hand-off reads physical (delight, 2026-07-12).
+    @State private var launchingTool: String?
 
     @FocusState private var fieldFocused: Bool
     @State private var answerStream = GenStream()
@@ -135,6 +138,17 @@ struct Composer: View {
     /// typing, answering, recording, or a proposal all stop it.
     private var cyclingActive: Bool {
         isOpen && !hasDraft && !answering && !isRecording && proposal == nil && !reduceMotion
+    }
+
+    /// A tool tile's press: it gives under the finger and springs back —
+    /// the app-icon feel (delight, 2026-07-12).
+    private struct TilePress: ButtonStyle {
+        func makeBody(configuration: Configuration) -> some View {
+            configuration.label
+                .scaleEffect(configuration.isPressed ? 0.90 : 1)
+                .animation(.spring(response: 0.28, dampingFraction: 0.6),
+                           value: configuration.isPressed)
+        }
     }
 
     /// One ask chip's staggered rise-in on open (delight, 2026-07-12).
@@ -307,6 +321,15 @@ struct Composer: View {
                     .foregroundStyle(DS.textPrimary)
                     .padding(.horizontal, DS.Space.s4)
                     .padding(.top, DS.Space.s2)
+                    .settleIn()
+                // The pairing line — teaches the sheet's dual nature (jump OR
+                // ask) and keeps the greeting from reading as an orphan label.
+                Text("Jump to a tool, or ask below.")
+                    .dsText(.subhead13)
+                    .foregroundStyle(DS.textTertiary)
+                    .padding(.horizontal, DS.Space.s4)
+                    .padding(.top, 2)
+                    .settleIn(delay: 0.06)
             }
             // The content sizes to ITSELF (no filling scroll) so the sheet can
             // hug it — no stranded empty space. The answer conversation carries
@@ -610,7 +633,10 @@ struct Composer: View {
                         .buttonStyle(.plain)
                         .modifier(ChipEntrance(index: 0, shown: chipsAppeared, reduceMotion: reduceMotion))
                     }
-                    ForEach(Array(suggestions.enumerated()), id: \.offset) { i, ask in
+                    // Two suggestions, no more — the chips whisper "you could
+                    // ask" beside the field; a wall of them fought the tiles
+                    // for attention (v2 pass, 2026-07-12).
+                    ForEach(Array(suggestions.prefix(2).enumerated()), id: \.offset) { i, ask in
                         Button {
                             DSHaptic.selection()
                             draft = ask
@@ -632,6 +658,9 @@ struct Composer: View {
                                        .init(color: .clear, location: 1)],
                                startPoint: .leading, endPoint: .trailing)
             )
+            // Clear air between the tool card and the chips — the chips are a
+            // separate band (ask), not stuck to the tools (jump).
+            .padding(.top, DS.Space.s4)
             .padding(.bottom, DS.Space.s2)
         }
     }
@@ -647,8 +676,10 @@ struct Composer: View {
                 else { DSHaptic.tap(); Task { await voice.start() } }
             } label: {
                 Image(systemName: isRecording ? "stop.circle.fill" : "mic")
-                    .font(.system(size: 19))
-                    .foregroundStyle(isRecording ? DS.destructive : DS.textTertiary)
+                    .font(.system(size: 17))
+                    .foregroundStyle(isRecording ? DS.destructive : DS.textSecondary)
+                    .frame(width: 36, height: 36)
+                    .background(DS.fillFaint, in: Circle())
             }
             .buttonStyle(.plain)
             .accessibilityLabel(isRecording ? "Stop and keep" : "Record a voice note")
@@ -680,33 +711,34 @@ struct Composer: View {
                 }
                 .lineLimit(1...5)
 
-            if hasDraft || isRecording {
-                Button(action: commit) {
-                    Image(systemName: "arrow.up")
-                        .font(.system(size: 16, weight: .bold))
-                        .foregroundStyle(.white)
-                        .frame(width: 34, height: 34)
-                        .background(DS.tint, in: Circle())
-                }
-                .buttonStyle(.plain)
-                .transition(.scale.combined(with: .opacity))
-                .accessibilityLabel("Send")
+            // The send dot is ALWAYS present — grey and waiting when the field
+            // is empty (tap = focus the field), springing to tint the moment
+            // there's something to send. A visible affordance beats a control
+            // that pops out of nowhere (v2 pass, 2026-07-12).
+            Button {
+                if hasDraft || isRecording { commit() } else { fieldFocused = true }
+            } label: {
+                Image(systemName: "arrow.up")
+                    .font(.system(size: 15, weight: .bold))
+                    .foregroundStyle(hasDraft || isRecording ? .white : DS.textTertiary)
+                    .frame(width: 32, height: 32)
+                    .background(hasDraft || isRecording ? AnyShapeStyle(DS.tint)
+                                                        : AnyShapeStyle(DS.fillFaint),
+                                in: Circle())
+                    .symbolEffect(.bounce, value: hasDraft || isRecording)
             }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Send")
         }
-        .padding(.leading, DS.Space.s4)
-        .padding(.trailing, hasDraft || isRecording ? DS.Space.s2 : DS.Space.s4)
-        .padding(.vertical, DS.Space.s3)
-        // The hero of the sheet: a quiet tint ring and a breath of shadow lift
-        // the field off the surface — it reads as THE control, not a disabled
-        // strip (design pass 2026-07-12).
-        .background(DS.fillFaint, in: RoundedRectangle(cornerRadius: 26, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 26, style: .continuous)
-                .strokeBorder(DS.tint.opacity(fieldFocused ? 0.45 : 0.22), lineWidth: 1)
-        )
-        .shadow(color: DS.tint.opacity(0.08), radius: 6, y: 2)
+        .padding(.leading, DS.Space.s2)
+        .padding(.trailing, DS.Space.s2)
+        .padding(.vertical, DS.Space.s2)
+        // The hero of the sheet, by tone and shadow alone (the ladder — never
+        // by line): an elevated field, no ring. Focus shows in the cursor and
+        // the keyboard; state shows in the send dot.
+        .background(DS.background100, in: RoundedRectangle(cornerRadius: 26, style: .continuous))
+        .shadow(color: DS.cardShadow, radius: 10, x: 0, y: 3)
         .animation(DS.Motion.standard, value: hasDraft || isRecording)
-        .animation(DS.Motion.standard, value: fieldFocused)
         .padding(.horizontal, DS.Space.s4)
         .padding(.bottom, DS.Space.s3)
     }
@@ -723,41 +755,90 @@ struct Composer: View {
         // No label — the tiles are self-evident (the "Your tools" caption was
         // an orphan). Columns adapt to the count so no row is ever ragged:
         // 6 tools (no AI apps) → 3×2, 8 (both installed) → 4×2; only the rare
-        // 7 leaves a short second row.
+        // 7 leaves a short second row. The grid sits on an ELEVATED card —
+        // depth by tone and shadow, never by line (the ladder, 2026-07-12) —
+        // and the tiles rise in with the ask chips' stagger.
         let tools = visibleTools
         let cols = tools.count <= 6 ? 3 : 4
         return LazyVGrid(
             columns: Array(repeating: GridItem(.flexible(), spacing: DS.Space.s2), count: cols),
             spacing: DS.Space.s4
         ) {
-            ForEach(tools) { tool in
+            ForEach(Array(tools.enumerated()), id: \.element.id) { i, tool in
                 Button { runTool(tool) } label: {
                     VStack(spacing: DS.Space.s2) {
-                        Image(systemName: tool.symbol)
-                            .font(.system(size: 22, weight: scheme == .light ? .semibold : .medium))
-                            .foregroundStyle(scheme == .light ? tool.tint.mix(with: .black, by: 0.15) : tool.tint)
-                            .frame(width: 50, height: 50)
-                            .background(tool.tint.opacity(scheme == .light ? 0.20 : 0.24),
-                                        in: RoundedRectangle(cornerRadius: DS.Radius.appIcon(50), style: .continuous))
+                        toolIcon(tool)
+                            // The launch pop — the tapped tile springs up and
+                            // fades as its app takes over the screen.
+                            .scaleEffect(launchingTool == tool.id ? 1.22 : 1)
+                            .opacity(launchingTool == tool.id ? 0.55 : 1)
                         Text(LocalizedStringKey(tool.label))
                             .dsText(.subhead13)
                             .foregroundStyle(DS.textSecondary)
                             .lineLimit(1)
                     }
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(TilePress())
+                .modifier(ChipEntrance(index: i, shown: chipsAppeared, reduceMotion: reduceMotion))
             }
         }
+        .padding(.vertical, DS.Space.s4)
+        .padding(.horizontal, DS.Space.s2)
+        .background(DS.background100,
+                    in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+        .shadow(color: DS.cardShadow, radius: 18, x: 0, y: 6)
         .padding(.horizontal, DS.Space.s4)
         .padding(.top, DS.Space.s4)
+    }
+
+    /// A tool's face: the real brand mark when one is bundled (ChatGPT, Claude
+    /// — they coin-flip in, the bridge icons' own delight), else the app-icon
+    /// treatment — a solid brand-color squircle, white glyph, a whisper of top
+    /// sheen. The washy tint fills died with the v2 pass (2026-07-12): solid
+    /// reads as an app, tint read as a stain, worst in dark.
+    @ViewBuilder
+    private func toolIcon(_ tool: QuickTool) -> some View {
+        let shape = RoundedRectangle(cornerRadius: DS.Radius.appIcon(50), style: .continuous)
+        if let ui = UIImage(named: "brand-\(tool.id)") {
+            Image(uiImage: ui)
+                .resizable()
+                .scaledToFill()
+                .frame(width: 50, height: 50)
+                .clipShape(shape)
+                .coinFlip(trigger: chipsAppeared)
+        } else {
+            shape
+                .fill(tool.tint)
+                .overlay(
+                    shape.fill(LinearGradient(colors: [.white.opacity(0.16), .clear],
+                                              startPoint: .top, endPoint: .center))
+                )
+                .overlay(
+                    Image(systemName: tool.symbol)
+                        .font(.system(size: 21, weight: .semibold))
+                        .foregroundStyle(.white)
+                )
+                .frame(width: 50, height: 50)
+        }
     }
 
     /// A tool tile jumps out to that app and closes the composer — nothing
     /// lands in Casberi (the ruling: people create in their own tools).
     private func runTool(_ tool: QuickTool) {
-        DSHaptic.selection()
-        openURL(tool.url)
-        close()
+        // The hand-off is physical: the tile POPS like a home-screen icon
+        // opening — a heavier tap and a spring-up mask the app switch, so
+        // jumping to your tool reads as a deliberate throw, not a silent
+        // close (delight, 2026-07-12). Reduce Motion takes the instant path.
+        guard !reduceMotion else { DSHaptic.tap(); openURL(tool.url); close(); return }
+        DSHaptic.tap()
+        withAnimation(.spring(response: 0.24, dampingFraction: 0.5)) {
+            launchingTool = tool.id
+        }
+        Task {
+            try? await Task.sleep(for: .milliseconds(170))
+            openURL(tool.url)
+            close()
+        }
     }
 
     private func runPin(_ intent: PinAsk.Intent) {

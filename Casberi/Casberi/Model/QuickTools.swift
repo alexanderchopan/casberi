@@ -27,8 +27,8 @@ struct QuickTool: Identifiable {
 
     static let all: [QuickTool] = [
         t("note",     "Note",       "note.text",       "#E8A400", "mobilenotes://"),
-        t("message",  "Message",    "message",         "#1FA855", "sms:"),
-        t("email",    "Email",      "envelope",        "#2E6FD6", "mailto:"),
+        t("message",  "Message",    "message.fill",    "#1FA855", "sms:"),
+        t("email",    "Email",      "envelope.fill",   "#2E6FD6", "mailto:"),
         t("event",    "Event",      "calendar",        "#E5372B", "calshow://"),
         t("reminder", "Reminder",   "checklist",       "#E8890C", "x-apple-reminderkit://"),
         t("web",      "Search web", "magnifyingglass", "#1C6DD0", "https://www.google.com"),
