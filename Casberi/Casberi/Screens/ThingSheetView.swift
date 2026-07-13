@@ -44,7 +44,12 @@ struct ThingSheetView: View {
                     .dsText(.heading34).foregroundStyle(DS.textPrimary)
                     .padding(.horizontal, DS.Space.s4)
                     .padding(.top, DS.Space.s3)
-                if thing.kind != .event {   // events speak through WHEN below
+                // Events speak through WHEN below; and when the content is
+                // just the title again (a short note with no body beyond its
+                // own headline), showing it twice reads as a stutter.
+                if thing.kind != .event,
+                   thing.content.trimmingCharacters(in: .whitespacesAndNewlines)
+                        != thing.title.trimmingCharacters(in: .whitespacesAndNewlines) {
                     ThingContentView(thing: thing)
                         .padding(.top, DS.Space.s3)
                 }
