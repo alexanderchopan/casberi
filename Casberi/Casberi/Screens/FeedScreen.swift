@@ -1312,9 +1312,14 @@ struct FeedScreen: View {
         }
     }
 
+    /// One calendar for the per-thing day grouping — `Calendar.current` copies
+    /// the user's calendar on every access, and `dayLabel` runs once per thing
+    /// inside `dayGroups`/`agendaGroups`, which the feed re-derives per paint.
+    private static let groupingCalendar = Calendar.current
+
     private func dayLabel(_ date: Date) -> String {
-        if Calendar.current.isDateInToday(date) { return String(localized: "Today") }
-        if Calendar.current.isDateInYesterday(date) { return String(localized: "Yesterday") }
+        if Self.groupingCalendar.isDateInToday(date) { return String(localized: "Today") }
+        if Self.groupingCalendar.isDateInYesterday(date) { return String(localized: "Yesterday") }
         return date.formatted(.dateTime.weekday(.wide).month().day())
     }
 }

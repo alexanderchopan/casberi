@@ -325,6 +325,41 @@ enum FeedFollowIngest {
 
     @MainActor private static var running: Set<String> = []
 
+    /// One followed entry's fetch outcome — the sequential bookkeeping loop
+    /// below needs the resolved feed URL (to remember it) alongside the
+    /// parse. `parsed` is nil when resolution succeeded but the feed's
+    /// content couldn't be fetched THIS pass — the resolution still gets
+    /// persisted (see `refresh`) so a transient content-fetch failure
+    /// doesn't undo an expensive resolution (YouTube's channel-page scrape,
+    /// Podcasts' iTunes search) and force it to re-run next time.
+    private struct Fetched {
+        let entry: FeedFollowEntry
+        let resolvedFeedURL: String?
+        let parsed: FeedParser.Parsed?
+    }
+
+    /// Resolving/fetching/parsing one entry — no shared state, so every
+    /// followed entry can run concurrently instead of one round trip at a
+    /// time (2026-07-13).
+    private static func fetchAndParse(_ entry: FeedFollowEntry, kind: FeedFollowKind) async -> Fetched? {
+        var feedURL = entry.feedURL
+        var resolvedFeedURL: String?
+        if feedURL.isEmpty {
+            guard let built = await kind.feedURL(for: entry.input) else { return nil }
+            feedURL = built
+            resolvedFeedURL = built
+        }
+        guard let url = URL(string: feedURL) else { return nil }
+        guard let data = await FeedFetch.data(url) else {
+            // The resolution (if any) is still worth returning and
+            // persisting even though this pass never reached the feed's
+            // actual content (review 2026-07-13 — see the struct doc above).
+            return resolvedFeedURL != nil
+                ? Fetched(entry: entry, resolvedFeedURL: resolvedFeedURL, parsed: nil) : nil
+        }
+        return Fetched(entry: entry, resolvedFeedURL: resolvedFeedURL, parsed: FeedParser.parse(data))
+    }
+
     /// Fetches every followed feed for one bridge and lands new items as link
     /// things. Returns new count, 0 when up to date, nil when nothing was
     /// reachable (offline / every feed dead) — the setup screen words each.
@@ -340,20 +375,28 @@ enum FeedFollowIngest {
         var existing = IngestSupport.existingSourceRefs(context)
         let backfill = ArtlessBackfill(context, source: kind.source)
         var added = 0
-        var reachedAny = false
 
-        for entry in store.entries {
-            // Ensure a feed URL — built at add time for most, resolved once
-            // (and remembered) on first sync for YouTube.
-            var feedURL = entry.feedURL
-            if feedURL.isEmpty {
-                guard let built = await kind.feedURL(for: entry.input) else { continue }
-                feedURL = built
-                store.setFeedURL(built, for: entry.id)
-            }
-            guard let url = URL(string: feedURL), let data = await FeedFetch.data(url) else { continue }
+        // Concurrent fetch, then processed back in the entries' own order
+        // (the same ref landing from two entries should resolve the same
+        // way it always did — first-in-list wins). Capped at 4 in flight —
+        // every entry under one bridge hits the SAME host (all Reddit, all
+        // YouTube, …), and this file's own FeedFetch comment notes Reddit
+        // already 429s a plain client under normal load; an uncapped burst
+        // made that far more likely than the old serial pacing (review
+        // 2026-07-13).
+        let entries = store.entries
+        let fetched = await IngestSupport.boundedGather(entries, maxConcurrent: 4) { entry in
+            await fetchAndParse(entry, kind: kind)
+        }
+
+        var reachedAny = false
+        for case let f? in fetched {
+            let entry = f.entry
+            if let resolvedFeedURL = f.resolvedFeedURL { store.setFeedURL(resolvedFeedURL, for: entry.id) }
+            // Resolved but unreachable this pass (see `Fetched` doc) — the
+            // resolution is saved above; nothing else to do until next time.
+            guard let parsed = f.parsed else { continue }
             reachedAny = true
-            let parsed = FeedParser.parse(data)
             if entry.title.isEmpty, !parsed.title.isEmpty {
                 store.setTitle(parsed.title, for: entry.id)
             }

@@ -42,6 +42,15 @@ struct Verb: Identifiable {
 
 enum VerbDerivation {
 
+    /// `NSDataDetector` loads linguistic data on construction, so building one
+    /// per call is expensive — and `verbs(for:)` runs twice per visible feed
+    /// row (leading + trailing swipeActions) and once per Home child. Built
+    /// once and reused; the detectors are thread-safe for concurrent matching.
+    private static let addressDetector =
+        try? NSDataDetector(types: NSTextCheckingResult.CheckingType.address.rawValue)
+    private static let phoneDetector =
+        try? NSDataDetector(types: NSTextCheckingResult.CheckingType.phoneNumber.rawValue)
+
     /// The cap-three rule: primary kind verb, then the source hand-off, then
     /// one utility. Reads pass; writes confirm.
     static func verbs(for thing: Thing) -> [Verb] {
@@ -151,9 +160,8 @@ enum VerbDerivation {
             }
         }
 
-        let detector = try? NSDataDetector(types: NSTextCheckingResult.CheckingType.address.rawValue)
         let range = NSRange(text.startIndex..., in: text)
-        guard let match = detector?.firstMatch(in: text, range: range),
+        guard let match = addressDetector?.firstMatch(in: text, range: range),
               let r = Range(match.range, in: text) else { return nil }
         var comps = URLComponents(string: "https://maps.apple.com/")
         comps?.queryItems = [URLQueryItem(name: "daddr", value: String(text[r]))]
@@ -163,9 +171,8 @@ enum VerbDerivation {
     /// A phone number in the thing → a tel: URL, else nil (the verb drops).
     private static func telURL(in thing: Thing) -> URL? {
         let text = thing.content.isEmpty ? thing.title : thing.content
-        let detector = try? NSDataDetector(types: NSTextCheckingResult.CheckingType.phoneNumber.rawValue)
         let range = NSRange(text.startIndex..., in: text)
-        guard let number = detector?.firstMatch(in: text, range: range)?.phoneNumber else { return nil }
+        guard let number = phoneDetector?.firstMatch(in: text, range: range)?.phoneNumber else { return nil }
         let dialable = number.filter { $0.isNumber || $0 == "+" }
         return dialable.isEmpty ? nil : URL(string: "tel:\(dialable)")
     }

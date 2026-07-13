@@ -43,27 +43,41 @@ enum WalletIngest {
         guard !addresses.isEmpty else { return nil }
 
         let existing = IngestSupport.existingSourceRefs(context)
+
+        // Every (address, chain, direction) combination is an independent
+        // network call — fetched serially before, up to
+        // `addresses × chains × 2` round trips in a row on every foreground
+        // (2026-07-13: seconds of wall-clock for a couple of watched
+        // wallets). Fanned out, capped at 4 in flight — Alchemy's free-tier
+        // key rate-limits per second, and an uncapped burst (up to 30
+        // requests for 3 wallets) drew silent 429s that the old serial
+        // pacing never triggered (review 2026-07-13). `boundedGather`
+        // preserves job order, matching `topHoldingsByWallet` below.
+        let jobs = addresses.flatMap { address in
+            chains.flatMap { chain in
+                [true, false].map { received in (address, chain, received) }   // received (to) + sent (from)
+            }
+        }
+        let results = await IngestSupport.boundedGather(jobs, maxConcurrent: 4) { job in
+            let (address, chain, received) = job
+            return (address, chain, received, await fetch(address: address, chain: chain, received: received))
+        }
+
         var added = 0
         var reachedAny = false
-
-        for address in addresses {
-            for chain in chains {
-                for received in [true, false] {   // received (to) + sent (from)
-                    guard let transfers = await fetch(address: address, chain: chain,
-                                                      received: received) else { continue }
-                    reachedAny = true
-                    for t in transfers {
-                        guard let uid = t["uniqueId"] as? String else { continue }
-                        let ref = "wallet:\(uid)"
-                        guard !existing.contains(ref) else { continue }
-                        guard let thing = thing(from: t, chain: chain, received: received,
-                                                ref: ref, address: address)
-                        else { continue }
-                        context.insert(thing)
-                        SpotlightIndex.index([thing])
-                        added += 1
-                    }
-                }
+        for (address, chain, received, transfers) in results {
+            guard let transfers else { continue }
+            reachedAny = true
+            for t in transfers {
+                guard let uid = t["uniqueId"] as? String else { continue }
+                let ref = "wallet:\(uid)"
+                guard !existing.contains(ref) else { continue }
+                guard let thing = thing(from: t, chain: chain, received: received,
+                                        ref: ref, address: address)
+                else { continue }
+                context.insert(thing)
+                SpotlightIndex.index([thing])
+                added += 1
             }
         }
         if added > 0 { try? context.save() }
