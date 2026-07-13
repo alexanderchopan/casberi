@@ -141,7 +141,11 @@ struct BandRow: View {
                 .fontWeight(emphasized ? .semibold : .regular)
                 .foregroundStyle(done ? DS.textTertiary : DS.textPrimary)
                 .strikethrough(done, color: DS.textTertiary)
-                .lineLimit(2)
+                // Two lines everywhere (ruling 2026-07-09) — except Kalshi,
+                // whose title IS the full market question ("Will the Chiefs
+                // win the Super Bowl?"), not a headline, and was clipping
+                // mid-word at 2 lines (user, 2026-07-13).
+                .lineLimit(thing.source == "Kalshi" ? 3 : 2)
                 .frame(maxWidth: .infinity, alignment: .leading)
             // A post with a photo shows BOTH (ruling 2026-07-10: "keep faces
             // always but show pictures too"): the avatar keeps the leading

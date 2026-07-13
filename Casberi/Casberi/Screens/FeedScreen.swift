@@ -792,6 +792,14 @@ struct FeedScreen: View {
 
     // MARK: - Row dispatch (the shape decides what a row leads with)
 
+    /// The swipe's hand-off target, when the thing has one — shared by both
+    /// swipe edges so they agree on what counts as "has a destination".
+    private func openVerb(for thing: Thing) -> Verb? {
+        VerbDerivation.verbs(for: thing).first {
+            if case .openURL = $0.action { return true } else { return false }
+        }
+    }
+
     /// The row inside a list section, with the standard list plumbing attached.
     private func shapedListRow(_ thing: Thing, index: Int = 0) -> some View {
         // AnyView: same metadata-depth insurance as GenRender (crash fix).
@@ -825,11 +833,14 @@ struct FeedScreen: View {
             // APP, only when the thing has a destination (calshow://, the link,
             // photos-redirect://…). Pinning left the swipe entirely (ruling
             // 2026-07-12): a pin is per-APP now, placed from the app's own
-            // screen, not a per-item Feed gesture.
-            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                if let openVerb = VerbDerivation.verbs(for: thing).first(where: {
-                    if case .openURL = $0.action { return true } else { return false }
-                }) {
+            // screen, not a per-item Feed gesture. Share joined the trailing
+            // edge (2026-07-13, user): it sits ahead of Open so a full swipe
+            // still hands off to the source app unchanged — full swipe is
+            // gated to ONLY when Open exists, so a thing with no destination
+            // (a voice note, a chat import) doesn't get Share fired by a full
+            // swipe that used to do nothing.
+            .swipeActions(edge: .trailing, allowsFullSwipe: openVerb(for: thing) != nil) {
+                if let openVerb = openVerb(for: thing) {
                     Button {
                         run(openVerb, on: thing)
                     } label: {
@@ -837,14 +848,16 @@ struct FeedScreen: View {
                     }
                     .tint(DS.gray600)
                 }
+                ThingShareLink(thing: thing) {
+                    Label("Share", systemImage: "square.and.arrow.up")
+                }
+                .tint(DS.tint)
             }
             // The hand-off earns its own edge too (2026-07-10, user):
             // full-swipe RIGHT opens in the source app — the second button
             // on the left-swipe stays for one-handed reach either way.
             .swipeActions(edge: .leading, allowsFullSwipe: true) {
-                if let openVerb = VerbDerivation.verbs(for: thing).first(where: {
-                    if case .openURL = $0.action { return true } else { return false }
-                }) {
+                if let openVerb = openVerb(for: thing) {
                     Button {
                         run(openVerb, on: thing)
                     } label: {

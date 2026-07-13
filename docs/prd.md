@@ -2402,3 +2402,47 @@ Each solo tile's own long-press already offers Remove from Home (via
 `genAppRemove`, wired the same way the card's rows drop the pin) — no
 redundant outer contextMenu on the small branch (that would just be shadowed,
 the same bug fixed for the card's rows in 58k).
+
+## 64. Kalshi titles get a third line; Share joins the Feed swipe (user, 2026-07-13) — BUILT
+
+Two small device reports, same session.
+
+**Kalshi clipping.** `BandRow`'s title caps at 2 lines everywhere (ruling
+2026-07-09) — right for a headline, wrong for Kalshi, whose title IS the full
+market question ("Will the Argentina win the 2026 Men's World Cup?"). Rather
+than lift the cap for every source, `ShapedRows.swift` now special-cases
+`thing.source == "Kalshi"` to 3 lines; every other source keeps 2. Verified
+live against the real Kalshi API (keyless, public) via `-watchMarket`.
+
+**Share widens — amends §18.** Swipe on a Feed row was hand-off-only (Open,
+ruling 2026-07-12) — deliberately one gesture, one meaning. §18's Feed spec
+also states "utilities like Copy never ride the swipe — they live in the
+sheet," which Share (a non-mutating utility, same class as Copy) would
+literally fall under. The user asked for it explicitly this session, so this
+supersedes that line for Share specifically: it now sits on the trailing edge
+too, declared *before* Open so a full swipe still triggers Open unchanged
+(SwiftUI: the first trailing action is the one a full swipe performs) — full
+swipe is further gated to only fire when Open exists (`openVerb(for:) != nil`),
+so a thing with no destination (a voice note, a chat import) doesn't get
+Share fired by a full swipe that used to do nothing. Share otherwise only
+surfaces on a partial swipe or a tap. Copy itself stays in the sheet — this
+amendment is scoped to Share, not a blanket reopening of §18's utility rule.
+
+**Share carries the real thing, not just its title.** The thing sheet's Share
+row (and now the Feed swipe) shared `thing.content`/`thing.title` as bare
+text — hollow for a screenshot, whose whole point IS the image. New
+`ThingShareLink` (`ThingContent.swift`) shares the photo itself via
+`ShareLink(item: Image(...))`, loaded the same way `PhotoWell` (ShapedRows.swift,
+fixed same session) already does: the corpus's own healed copy
+(`thing.previewImageData`) first — instant, no Photos round trip — then the
+PHAsset, waiting past a network asset's degraded placeholder so Share never
+hands out a blurry stand-in. Every other kind is unchanged (URL when one's
+detected, else title/content as text). One implementation, used by both
+surfaces.
+
+**Researched and passed on:** basedbot.app (a Base/BSC/ETH/Solana trading
+*execution* terminal — no publishing API/RSS, and trade-execution conflicts
+with the read-only bridge philosophy) and Etherscan (free-tier REST API
+exists, but `WalletIngest` already covers ETH activity via Alchemy — Etherscan
+URLs are already used, just as the "view transaction" explorer link, not a
+data source). Neither earns a bridge.

@@ -249,17 +249,10 @@ struct ThingSheetView: View {
 
     /// The universal out-door: the system share sheet reaches every app with
     /// a share target — the only sanctioned route INTO Apple Notes, for one.
-    @ViewBuilder
+    /// A screenshot shares its actual photo, not just its title (ThingShareLink).
     private var shareRow: some View {
-        let text = thing.content.isEmpty ? thing.title : thing.content
-        Group {
-            if let url = Capture.detectURL(in: text) {
-                ShareLink(item: url) { actionRow(icon: "square.and.arrow.up", label: "Share") }
-            } else {
-                ShareLink(item: text, subject: Text(thing.title)) {
-                    actionRow(icon: "square.and.arrow.up", label: "Share")
-                }
-            }
+        ThingShareLink(thing: thing) {
+            actionRow(icon: "square.and.arrow.up", label: "Share")
         }
         .buttonStyle(.plain)
     }

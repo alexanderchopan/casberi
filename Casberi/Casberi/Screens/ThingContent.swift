@@ -118,6 +118,77 @@ private struct ScreenshotContent: View {
     }
 }
 
+/// The universal Share entry (2026-07-13) — text/URL for most kinds, but a
+/// screenshot's whole point IS the image, so sharing it as bare title text
+/// read as hollow. Loads the same PHAsset ScreenshotContent already shows and
+/// shares the real photo instead. One implementation, used by both the thing
+/// sheet's Share row and the Feed row's swipe-to-share.
+struct ThingShareLink<Label: View>: View {
+    let thing: Thing
+    @ViewBuilder let label: () -> Label
+    @State private var screenshotImage: UIImage?
+
+    private var shareText: String {
+        thing.content.isEmpty ? thing.title : thing.content
+    }
+
+    var body: some View {
+        Group {
+            if thing.kind == .screenshot, let screenshotImage {
+                ShareLink(item: Image(uiImage: screenshotImage),
+                          preview: SharePreview(thing.title, image: Image(uiImage: screenshotImage))) {
+                    label()
+                }
+            } else if let url = Capture.detectURL(in: shareText) {
+                ShareLink(item: url) { label() }
+            } else {
+                ShareLink(item: shareText, subject: Text(thing.title)) { label() }
+            }
+        }
+        .onAppear { loadScreenshotIfNeeded() }
+    }
+
+    /// Mirrors PhotoWell's loader (ShapedRows.swift) rather than reinventing
+    /// a third copy: the corpus's own healed copy first (instant, no Photos
+    /// round trip), then the PHAsset — waiting past a network asset's
+    /// degraded placeholder callback so Share never hands out a blurry
+    /// stand-in (same fix as GenCover/PhotoWell).
+    private func loadScreenshotIfNeeded() {
+        guard thing.kind == .screenshot, screenshotImage == nil,
+              let ref = thing.sourceRef else { return }
+        if ref.hasPrefix("sample:") {
+            screenshotImage = UIImage.demoSample(for: ref)
+            return
+        }
+        if let data = thing.previewImageData, let stored = UIImage(data: data) {
+            screenshotImage = stored
+            return
+        }
+        let assetID = ref.replacingOccurrences(of: "phasset:", with: "")
+        guard let asset = PHAsset.fetchAssets(withLocalIdentifiers: [assetID], options: nil)
+            .firstObject else { return }
+        Task {
+            let options = PHImageRequestOptions()
+            options.deliveryMode = .highQualityFormat
+            options.isNetworkAccessAllowed = true
+            let loaded: UIImage? = await withCheckedContinuation { cont in
+                var reported = false
+                PHImageManager.default().requestImage(
+                    for: asset, targetSize: CGSize(width: 1200, height: 1200),
+                    contentMode: .aspectFit, options: options
+                ) { img, info in
+                    let degraded = (info?[PHImageResultIsDegradedKey] as? Bool) ?? false
+                    if degraded { return }
+                    guard !reported else { return }
+                    reported = true
+                    cont.resume(returning: img)
+                }
+            }
+            if let loaded { screenshotImage = loaded }
+        }
+    }
+}
+
 /// A link's preview — title and image fetched through the system's own
 /// LinkPresentation metadata. Falls back to the bare host line offline.
 /// When the record already holds art (an Apple Music cover, a pin's photo),
