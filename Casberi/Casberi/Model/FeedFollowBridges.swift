@@ -325,6 +325,29 @@ enum FeedFollowIngest {
 
     @MainActor private static var running: Set<String> = []
 
+    /// One followed entry's fetch outcome — the sequential bookkeeping loop
+    /// below needs the resolved feed URL (to remember it) alongside the parse.
+    private struct Fetched {
+        let entry: FeedFollowEntry
+        let resolvedFeedURL: String?
+        let parsed: FeedParser.Parsed
+    }
+
+    /// Resolving/fetching/parsing one entry — no shared state, so every
+    /// followed entry can run concurrently instead of one round trip at a
+    /// time (2026-07-13).
+    private static func fetchAndParse(_ entry: FeedFollowEntry, kind: FeedFollowKind) async -> Fetched? {
+        var feedURL = entry.feedURL
+        var resolvedFeedURL: String?
+        if feedURL.isEmpty {
+            guard let built = await kind.feedURL(for: entry.input) else { return nil }
+            feedURL = built
+            resolvedFeedURL = built
+        }
+        guard let url = URL(string: feedURL), let data = await FeedFetch.data(url) else { return nil }
+        return Fetched(entry: entry, resolvedFeedURL: resolvedFeedURL, parsed: FeedParser.parse(data))
+    }
+
     /// Fetches every followed feed for one bridge and lands new items as link
     /// things. Returns new count, 0 when up to date, nil when nothing was
     /// reachable (offline / every feed dead) — the setup screen words each.
@@ -340,20 +363,28 @@ enum FeedFollowIngest {
         var existing = IngestSupport.existingSourceRefs(context)
         let backfill = ArtlessBackfill(context, source: kind.source)
         var added = 0
-        var reachedAny = false
 
-        for entry in store.entries {
-            // Ensure a feed URL — built at add time for most, resolved once
-            // (and remembered) on first sync for YouTube.
-            var feedURL = entry.feedURL
-            if feedURL.isEmpty {
-                guard let built = await kind.feedURL(for: entry.input) else { continue }
-                feedURL = built
-                store.setFeedURL(built, for: entry.id)
+        // Concurrent fetch, then processed back in the entries' own order —
+        // a task group yields in COMPLETION order, and the same ref landing
+        // from two entries should resolve the same way it always did
+        // (first-in-list wins).
+        let entries = store.entries
+        let indexed = await withTaskGroup(of: (Int, Fetched?).self) { group in
+            for (i, entry) in entries.enumerated() {
+                group.addTask { (i, await fetchAndParse(entry, kind: kind)) }
             }
-            guard let url = URL(string: feedURL), let data = await FeedFetch.data(url) else { continue }
+            var collected: [(Int, Fetched?)] = []
+            for await result in group { collected.append(result) }
+            return collected
+        }
+        let fetched = indexed.sorted { $0.0 < $1.0 }.map(\.1)
+
+        var reachedAny = false
+        for case let f? in fetched {
             reachedAny = true
-            let parsed = FeedParser.parse(data)
+            let entry = f.entry
+            let parsed = f.parsed
+            if let resolvedFeedURL = f.resolvedFeedURL { store.setFeedURL(resolvedFeedURL, for: entry.id) }
             if entry.title.isEmpty, !parsed.title.isEmpty {
                 store.setTitle(parsed.title, for: entry.id)
             }

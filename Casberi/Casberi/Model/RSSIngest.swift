@@ -94,13 +94,43 @@ enum RSSIngest {
     /// racing the foreground refresh). Overlapping calls bail.
     @MainActor private static var running = false
 
+    /// One feed's fetch-and-parse outcome — everything the sequential
+    /// bookkeeping loop below needs, computed off the main actor.
+    private struct Fetched {
+        let feed: RSSStore.Feed
+        let parsed: FeedParser.Parsed
+        /// Set when autodiscovery resolved a pasted SITE to its real feed.
+        let resolvedURL: String?
+    }
+
+    /// The network fetch and XML parse are both stateless — no reason either
+    /// ran serially, one feed at a time, on the main actor (2026-07-13). Only
+    /// `FeedDiscovery.find`'s dead-ends cache is main-actor state, and it
+    /// stays safe here since the compiler hops back to the main actor for
+    /// that specific call.
+    private static func fetchAndParse(_ feed: RSSStore.Feed) async -> Fetched? {
+        guard let url = URL(string: feed.url) else { return nil }
+        guard let (data, _) = try? await URLSession.shared.data(from: url) else { return nil }
+        var parsed = FeedParser.parse(data)
+        var resolvedURL: String?
+        // People paste a SITE, not a feed URL (the field even invites it) —
+        // its homepage is HTML, so XML parsing yields no items and nothing
+        // ever lands. Autodiscover the feed the page points to (its
+        // <link rel="alternate">, then common feed paths) and remember it.
+        if parsed.items.isEmpty,
+           let (feedURL, discovered) = await FeedDiscovery.find(from: data, site: url) {
+            parsed = discovered
+            resolvedURL = feedURL.absoluteString
+        }
+        return Fetched(feed: feed, parsed: parsed, resolvedURL: resolvedURL)
+    }
+
     @MainActor
     static func refresh(context: ModelContext) async -> Int? {
         let store = RSSStore.shared
         guard !store.feeds.isEmpty, !running else { return running ? 0 : nil }
         running = true
         defer { running = false }
-        var reachedAny = false
 
         var existing = IngestSupport.existingSourceRefs(context)
         let landed = IngestSupport.thingsByRef(context, source: "RSS")
@@ -108,20 +138,28 @@ enum RSSIngest {
         var added = 0
         var touched = false
 
-        for feed in store.feeds {
-            guard let url = URL(string: feed.url) else { continue }
-            guard let (data, _) = try? await URLSession.shared.data(from: url) else { continue }
-            reachedAny = true
-            var parsed = FeedParser.parse(data)
-            // People paste a SITE, not a feed URL (the field even invites it) —
-            // its homepage is HTML, so XML parsing yields no items and nothing
-            // ever lands. Autodiscover the feed the page points to (its
-            // <link rel="alternate">, then common feed paths) and remember it.
-            if parsed.items.isEmpty,
-               let (feedURL, discovered) = await FeedDiscovery.find(from: data, site: url) {
-                parsed = discovered
-                store.setURL(feedURL.absoluteString, for: feed.id)
+        // Fetch and parse every followed feed concurrently, then process the
+        // results back in feed order (a task group yields in COMPLETION
+        // order, and the same ref appearing in two feeds should resolve the
+        // same way it always did — first-in-list wins). Only the
+        // ModelContext/RSSStore bookkeeping below still runs sequentially.
+        let feeds = store.feeds
+        let indexed = await withTaskGroup(of: (Int, Fetched?).self) { group in
+            for (i, feed) in feeds.enumerated() {
+                group.addTask { (i, await fetchAndParse(feed)) }
             }
+            var collected: [(Int, Fetched?)] = []
+            for await result in group { collected.append(result) }
+            return collected
+        }
+        let fetched = indexed.sorted { $0.0 < $1.0 }.map(\.1)
+
+        var reachedAny = false
+        for case let f? in fetched {
+            reachedAny = true
+            let feed = f.feed
+            let parsed = f.parsed
+            if let resolvedURL = f.resolvedURL { store.setURL(resolvedURL, for: feed.id) }
             if !parsed.title.isEmpty {
                 store.setTitle(parsed.title, for: feed.id)
             }
