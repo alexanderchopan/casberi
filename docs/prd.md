@@ -2268,3 +2268,20 @@ controls (Deny button, onboarding capsules — controls, not surfaces). A
 survive light mode (a white chip on a white card), and it would need a
 per-element shadow to work — not worth a fourth mechanic. Lift + recess are the
 two that hold in both modes.
+
+## 62. Contacts leaves onboarding — no address-book ask at minute zero (user, 2026-07-12)
+
+The Contacts bridge (added 2026-07-12) auto-joined onboarding's mini store like
+every other one-tap local connect. But an address-book ask at minute zero reads
+as "this app wants to harvest my contacts" — the exact suspicion the app's
+"your things are yours" spine exists to avoid — before any trust is built, and
+the person hasn't seen a single one of their things yet. Same reasoning that
+held Apple Health out of minute zero (health is sensitive before trust exists,
+ruling 2026-07-07): both wait one tap away in the store, where the product page
+can state the guarantee (search-only, never leaves the phone, read-only) before
+the permission sheet fires. Fix: `OnboardingView.offers` now filters a
+`heldBack` set `{Apple Health, Contacts}` rather than the single Health
+special-case. Contacts stays a full real bridge everywhere else — the Apps
+catalog, Browse (People group), and its connect path are unchanged; it is only
+absent from the first-run mini store. Contacts icons still fall in the glass
+pile (decorative brand art, not a permission ask).

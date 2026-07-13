@@ -23,10 +23,14 @@ struct OnboardingView: View {
 
     /// The mini store: exactly the bridges that connect for real today.
     private var offers: [BridgeCatalog.Offer] {
-        // Apple Health sits out of minute zero (ruling 2026-07-07: health
-        // reads as sensitive before trust exists) — it waits in the store.
-        BridgeCatalog.offers.filter {
-            $0.connectable && !$0.needsSetup && $0.name != "Apple Health"
+        // Two bridges sit out of minute zero — both read as "this app wants my
+        // sensitive data" before any trust exists. Apple Health (ruling
+        // 2026-07-07: health is sensitive before trust). Contacts (ruling
+        // 2026-07-12: an address-book ask on onboarding reads as harvesting
+        // your info). Both wait in the store.
+        let heldBack: Set<String> = ["Apple Health", "Contacts"]
+        return BridgeCatalog.offers.filter {
+            $0.connectable && !$0.needsSetup && !heldBack.contains($0.name)
         }
     }
 
