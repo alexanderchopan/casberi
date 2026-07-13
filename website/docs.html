@@ -147,6 +147,14 @@
   a.glance b { display: block; font-size: 15.5px; color: var(--ink); margin-bottom: 4px; }
   a.glance span { font-size: 13.5px; color: var(--muted); line-height: 1.5; display: block; }
 
+  /* feature groups — same cards, sorted into four labeled sections */
+  .glance-group + .glance-group { margin-top: 34px; }
+  .glance-group h4 {
+    font-family: ui-rounded, -apple-system, BlinkMacSystemFont, "SF Pro Rounded", "Segoe UI", Roboto, sans-serif;
+    font-size: 13px; font-weight: 800; text-transform: uppercase; color: var(--faint); margin-bottom: 12px;
+  }
+  .glance-grid.solo { grid-template-columns: 1fr; max-width: 360px; }
+
   @media (hover: hover) and (pointer: fine) {
     .prob:hover, .mech-row:hover { background: var(--surface-2); }
   }
@@ -296,17 +304,39 @@
     <p class="part-eyebrow">Features</p>
     <h2>Everything you can do</h2>
     <p class="deck">One line each. Tap any card to jump to how it works.</p>
-    <div class="glance-grid">
-      <a class="glance" href="#settings"><b>Own your data</b><span>No account, no sign-in. It’s all on your phone.</span></a>
-      <a class="glance" href="#apps"><b>Connect your apps</b><span>Mail, photos, wallets, calendars, and dozens more.</span></a>
-      <a class="glance" href="#feed"><b>Watch one feed</b><span>One screen, no tabs. Everything together, or one app at a time.</span></a>
-      <a class="glance" href="#open"><b>Tag your things</b><span>Group without folders. One thing, many tags.</span></a>
-      <a class="glance" href="#pinned"><b>Pin your favorites</b><span>Build a board, arranged your way.</span></a>
-      <a class="glance" href="#open"><b>Act on items</b><span>From your feed: open, pin, or share, in the app it came from.</span></a>
-      <a class="glance" href="#action-button"><b>Organize everything</b><span>Tell it to tag or rename across the lot.</span></a>
-      <a class="glance" href="#action-button"><b>Ask anything</b><span>A question, answered from your own things.</span></a>
-      <a class="glance" href="#action-button"><b>Jump to tools</b><span>From the composer: a note, message, email, event, reminder, search, or a ChatGPT or Claude session.</span></a>
-      <a class="glance" href="#settings"><b>Make it yours</b><span>Set your avatar, background, language, and data preferences.</span></a>
+
+    <div class="glance-group">
+      <h4>Just connect</h4>
+      <div class="glance-grid">
+        <a class="glance" href="#settings"><b>Own your data</b><span>No account, no sign-in. It’s all on your phone.</span></a>
+        <a class="glance" href="#apps"><b>Connect your apps</b><span>Mail, photos, wallets, calendars, and dozens more.</span></a>
+        <a class="glance" href="#feed"><b>Watch one feed</b><span>One screen, no tabs. Everything together, or one app at a time.</span></a>
+      </div>
+    </div>
+
+    <div class="glance-group">
+      <h4>Keep tabs</h4>
+      <div class="glance-grid">
+        <a class="glance" href="#pinned"><b>Pin your favorites</b><span>Build a board, arranged your way.</span></a>
+        <a class="glance" href="#open"><b>Act on items</b><span>From your feed: open, pin, or share, in the app it came from.</span></a>
+        <a class="glance" href="#open"><b>Tag your things</b><span>Group without folders. One thing, many tags.</span></a>
+      </div>
+    </div>
+
+    <div class="glance-group">
+      <h4>Take action</h4>
+      <div class="glance-grid">
+        <a class="glance" href="#action-button"><b>Ask anything</b><span>A question, answered from your own things.</span></a>
+        <a class="glance" href="#action-button"><b>Organize everything</b><span>Tell it to tag or rename across the lot.</span></a>
+        <a class="glance" href="#action-button"><b>Jump to tools</b><span>From the composer: a note, message, email, event, reminder, search, or a ChatGPT or Claude session.</span></a>
+      </div>
+    </div>
+
+    <div class="glance-group">
+      <h4>Make it yours</h4>
+      <div class="glance-grid solo">
+        <a class="glance" href="#settings"><b>Make it yours</b><span>Set your avatar, background, language, and data preferences.</span></a>
+      </div>
     </div>
   </section>
 
