@@ -6,18 +6,18 @@ Website: https://casberi.app · Docs: https://casberi.app/docs.html · TestFligh
 
 Last updated: July 13, 2026
 
-## Features — everything you can do, in one line each
+## Features — everything you can do
 
-- Get around — Home, Feed, Actions. The whole app, in three tabs.
-- Connect apps — 43 and counting. Pick the ones you love.
-- See your feed — Everything together. Or one app at a time.
-- Act on anything — Open it, pin it, or reply right from the row.
-- Approve agents — See what they want to do. Then yes, or no.
-- Build your board — Pin what matters. Arrange it your way.
-- Ask across it all — One question, answered from all your things.
-- Jump to a tool — A note, an email, ChatGPT. One tap away.
-- Capture anything — Share, snap, paste, or say it. It lands.
-- Own your data — On your phone. Yours to export or delete.
+- Own your data — No account, no sign-in. It's all on your phone.
+- Connect your apps — Mail, photos, wallets, calendars, and dozens more.
+- Watch one feed — One screen, no tabs. Everything together, or one app at a time.
+- Tag your things — Group without folders. One thing, many tags.
+- Pin your favorites — Build a board, arranged your way.
+- Ask anything — A question, answered from your own things.
+- Organize everything — Tell it to tag or rename across the lot.
+- Act on items — From your feed: open, pin, or share, in the app it came from.
+- Jump to tools — From the composer: a note, message, email, event, reminder, search, or a ChatGPT or Claude session.
+- Make it yours — Set your avatar, background, language, and data preferences.
 
 ## About — what Casberi is, and why
 
@@ -96,66 +96,39 @@ Casberi is a native iPhone app. Your things live in a database on your phone —
 
 Some things are missing on purpose. There's no separate actions or to-do tab — you act on a thing where the thing is. No automations yet. No model picker and no chatbot persona — Casberi shows results, not a character. No note editor — Casberi collects and connects; your apps stay the editors. No streaks, goals, or guilt mechanics. And no trading, ever.
 
-## How to use — every screen, explained
+## How to use — the whole app
 
-### Shell
+### One screen
 
-Casberi is dark and clean, with barely any buttons or menus. Wherever you are, two doors sit in the top-right corner: your avatar opens Settings, and the grid icon opens your apps. The grid shows a small dot only when a connected app needs reconnecting — nothing nags you otherwise. Everything else is the three tabs below. Tap the tab you're already on to jump back to its top.
+Casberi is one screen — no tabs to learn, no account to make. Open it and it's yours. A row of chips across the top stays put wherever you scroll: Pinned (your board), All (everything you've saved), then one chip for each app you've connected — the app you just heard from sits up front. Tap a chip to switch. Down in the corner, a single round button — your Action button — is where everything you do lives. And two small doors up top: your avatar opens Settings, the grid opens your apps.
 
-### Tab bar
+### Pinned — your board
 
-The whole app is three tabs, in a bar at the bottom:
+Pin anything and it shows up here as a card. Drag cards to arrange them, and tap a pin to grow a card bigger. It's the one screen that's just yours — a wallet's balance, a trip's plans, your recent chats, laid out the way you like.
 
-- Home is your board — the things you've pinned, arranged the way you like.
-- Feed is everything, as it arrives — newest first.
-- Actions is where you ask and do — one field, plus quick jumps to your other apps.
+### All & your apps
 
-### Account
+Tap All to see everything, newest first. Tap an app's chip to see just that app — and the feed takes its shape: Calendar reads like an agenda, Photos becomes a grid, a wallet leads with its balance. Everything you keep tabs on, in one place.
 
-Tap your avatar and Settings opens. Seven tiles, no account, no sign-in:
+### Open a thing, act on it
 
-- Avatar — your photo.
-- Background — a color or a photo for Home.
-- Data — how many things you have and the space they use, plus Export, Import, and Delete everything. It all lives on your phone.
-- Diagnostics — runs real checks on your device, so a bug report can be a screenshot of facts instead of a guess.
-- How it works — a quick tour if you're new.
-- Language — Casberi speaks several languages; pick yours.
-- Theme — light or dark.
+Tap any row to open it. From there you do the thing where it belongs — open it in the app it came from, pin it to your board, or share it. Tags group things without folders — one thing can carry many; add or remove them right there. Some rows let you act in place: start a new email from Gmail, a new event from Calendar, tick a reminder off for real. Casberi keeps tabs; your own apps do the work.
+
+### Action button
+
+The round button in the corner is your Action button — the one place you do things. Tap it and it opens with "What now?"
+
+- Ask a question, answered from your own things ("what did I save this week?"). Follow up, and keep an answer as a note.
+- Organize — tell it to tag or rename across everything ("tag these as Trip," "rename Work to Projects"). It shows you exactly what will change before you tap Apply.
+- Say what you want ("show my work stuff") and it takes you there.
+- Jump to a tool — create a note, message, email, event, reminder, or web search, or open a ChatGPT or Claude session. The right app opens, ready to go. Nothing is created inside Casberi; you create in the tools you already use.
+
+You can also paste something to save it, or tap the mic and talk.
 
 ### Apps
 
-Open Apps from the grid icon. Your connected apps sit at the top; below is a store of everything you can add — 43 apps and counting, in shelves by category (Onchain, Markets, Notes, Work, and more), App-Store style.
+Open Apps from the grid icon. Your connected apps sit at the top; below is a store of everything you can add, in shelves by category. Each opens a page that says what it does and what shows up in your feed, with one clear button — Connect, Open, Fix, or Soon. This version is built around iOS and the Apple apps you already use.
 
-Every app opens a page that tells you what it does and what shows up in your feed, with one clear button that says what it does — Connect, Open, Fix, or Soon. Apps connect three ways, and each page says which:
+### Settings
 
-- Through iOS — Photos, Calendar, Reminders, Contacts, Apple Health, Apple Music, Apple Notes. Live and on your device.
-- With a login or key — Gmail, GitHub, Notion, Spotify, Strava, and dozens more.
-- By import — ChatGPT, Claude, Day One, Apple Journal, Kindle.
-
-Agents live here too. Connect a coding agent or a gateway like OpenClaw, and its work shows up in your feed — and when it wants to act, it asks you first.
-
-### Feed
-
-Feed is where everything lands, newest first. Tap a chip — one per app — and the feed takes that app's shape: Calendar reads like an agenda, Photos becomes a grid, a wallet leads with its balance.
-
-Tap any row to open the thing — its details, its tags, and what you can do next: open it in the app it came from, pin it to Home, or share it. Tags group things without folders; add or remove them right there.
-
-Some rows let you act in place. Filter to Gmail and you can start a new email; Calendar offers a new event, Reminders a new task — each opens the right app, ready to go. Music rows open in Apple Music or Spotify. Tick a reminder off and it completes for real — tap again to undo.
-
-And when an agent wants to do something, it arrives as a card with the exact command and Approve / Deny. The card is the consent — no extra popup.
-
-### Home
-
-Home is your board. You build it. Pin anything to Home and it becomes a card. Drag cards to rearrange them, tap a pin to grow a card bigger, and long-press to rearrange the whole board at once.
-
-Up top: today's date, a row of counts — one per kind of thing you have — and a "Just landed" card for the newest arrival. Below sit your pinned cards — a wallet's balance, your recent chats, a trip's plans — laid out the way you like. It's the one screen that's just yours.
-
-### Composer
-
-The Actions tab is where you ask and do. It opens with "What now?" and two ways forward.
-
-Jump to a tool: a grid of quick openers — Note, Message, Email, Event, Reminder, Search web, plus ChatGPT or Claude if you have them. One tap opens the right app, ready to go.
-
-Or ask below: type a question and Casberi answers from your own things ("what did I save this week?"). Follow up and it keeps the thread; tap "Keep this" to save an answer as a note. On iPhones with Apple Intelligence the answer is written on your phone, from your things — it's free, and nothing leaves your phone.
-
-It's also how you capture. Paste something and a card shows exactly what will be saved before you send. Tap the mic and talk — your words arrive live and save when you're done. And from anywhere else in iOS, share to Casberi; once Photos is connected, screenshots flow in on their own.
+Behind your avatar: your photo, a background for your board, your data (all on your phone — export or delete anytime), diagnostics, language, and light or dark. No account, no sign-in — there was never anything to sign up for.
