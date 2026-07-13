@@ -663,6 +663,17 @@ struct Composer: View {
                 .tint(DS.tint)
                 .focused($fieldFocused)
                 .onChange(of: draft) { old, new in
+                    // Return SENDS (chat grammar). A vertical-axis field's
+                    // return key types "\n" and never submits — so hitting the
+                    // keyboard's return silently did nothing, the heart of the
+                    // "send rarely fires" report (2026-07-12). The one-character
+                    // newline insertion IS the send gesture; a paste keeps its
+                    // newlines (it inserts more than one character at once).
+                    if new.count - old.count == 1, new.hasSuffix("\n") {
+                        draft = String(new.dropLast())
+                        if hasDraft { commit() }
+                        return
+                    }
                     if prefilled { prefilled = false }
                     else if new.count - old.count > 8 { pasted = true }
                     if new.isEmpty { pasted = false }
