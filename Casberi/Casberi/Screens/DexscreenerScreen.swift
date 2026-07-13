@@ -122,7 +122,7 @@ struct DexscreenerScreen: View {
                     Text(LiveTimeText.short(thing.capturedAt))
                         .dsText(.subhead13).foregroundStyle(DS.textTertiary)
                 }
-                .listRowBackground(DS.surfaceSheet)
+                .dsListCardRow()
                 .modifier(SwipeHintNudge(active: thing.id == hintTokenID) { swipeCoachDone = true })
                 .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                     // Full swipe = pin (Feed's grammar). The explicit group

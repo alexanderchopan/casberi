@@ -58,7 +58,7 @@ struct TwitchScreen: View {
                     Spacer()
                 }
                 .padding(.vertical, DS.Space.s1)
-                .listRowBackground(DS.surfaceSheet)
+                .dsListCardRow()
             } else if waiting, let code {
                 // The code, big — the person approves it on Twitch's side.
                 VStack(alignment: .leading, spacing: DS.Space.s3) {
@@ -85,7 +85,7 @@ struct TwitchScreen: View {
                     }
                 }
                 .padding(.vertical, DS.Space.s2)
-                .listRowBackground(DS.surfaceSheet)
+                .dsListCardRow()
             } else if waiting {
                 HStack(spacing: DS.Space.s2) {
                     ProgressView().controlSize(.small)
@@ -93,7 +93,7 @@ struct TwitchScreen: View {
                         .dsText(.callout15).foregroundStyle(DS.textTertiary)
                 }
                 .padding(.vertical, DS.Space.s1)
-                .listRowBackground(DS.surfaceSheet)
+                .dsListCardRow()
             } else {
                 Button(action: connect) {
                     HStack(spacing: DS.Space.s3) {
@@ -108,7 +108,7 @@ struct TwitchScreen: View {
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .listRowBackground(DS.surfaceSheet)
+                .dsListCardRow()
             }
             BridgeSyncStatusRows(syncing: syncing, syncingLine: String(localized: "Checking who's live…"),
                                  result: result, resultIsError: resultIsError)
@@ -131,7 +131,7 @@ struct TwitchScreen: View {
                 DSHaptic.tap()
             }
             .dsText(.callout15)
-            .listRowBackground(DS.surfaceSheet)
+            .dsListCardRow()
         } footer: {
             Text("Disconnecting stops syncing. What already landed stays yours.")
                 .dsText(.callout15).foregroundStyle(DS.textTertiary)

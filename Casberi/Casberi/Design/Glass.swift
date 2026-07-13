@@ -66,12 +66,42 @@ struct DSGlassContainer<Content: View>: View {
 
 extension View {
     /// The one sheet-surface treatment for cards, tiles, and trays.
-    /// No border (anti-pattern: borders on cards) — the fill carries elevation.
-    /// Content never wears glass — glass is the floating layer only.
+    /// No border (anti-pattern: borders on cards) — the sheet fill plus a soft
+    /// ambient shadow carry elevation (elevation ladder, 2026-07-12). Content
+    /// never wears glass — glass is the floating layer only.
     func dsCard(cornerRadius: CGFloat = DS.Radius.card) -> some View {
-        background(
-            DS.surfaceSheet,
-            in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+        dsElevatedSurface(cornerRadius: cornerRadius)
+    }
+
+    /// The elevated widget-card surface — the one sheet fill at the widget
+    /// radius, lifted off the page by the ambient card shadow. The Home board's
+    /// tiles and every gen-UI module card route through this so the lift lives
+    /// in ONE place, not hand-copied per renderer (elevation ladder 2026-07-12).
+    func dsWidgetSurface(cornerRadius: CGFloat = DS.Radius.widget) -> some View {
+        dsElevatedSurface(cornerRadius: cornerRadius)
+    }
+
+    /// The shared sheet-fill-plus-shadow recipe. The shadow rides the FILL
+    /// SHAPE (a simple rounded rect), not the composited view — so Core
+    /// Animation casts it from a cheap path instead of rasterizing each card's
+    /// content offscreen every scroll frame (matches `dsSheetSurface`, which
+    /// shadows the clipped shape rather than the live view).
+    private func dsElevatedSurface(cornerRadius: CGFloat) -> some View {
+        background {
+            RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                .fill(DS.surfaceSheet)
+                .shadow(color: DS.cardShadow, radius: 18, x: 0, y: 6)
+        }
+    }
+
+    /// A grouped-list row background that lifts the whole SECTION as one card.
+    /// The sheet fill carries the ambient card shadow; in an inset-grouped List
+    /// the rows are gapless, so a row's shadow falls on the adjacent same-color
+    /// row and vanishes — only the section's outer silhouette casts, reading as
+    /// one lifted card rather than a stack of shadowed rows (ladder 2026-07-12).
+    func dsListCardRow() -> some View {
+        listRowBackground(
+            DS.surfaceSheet.shadow(color: DS.cardShadow, radius: 18, x: 0, y: 6)
         )
     }
 

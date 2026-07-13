@@ -78,7 +78,7 @@ struct RSSScreen: View {
                         .dsText(.subhead13).foregroundStyle(DS.textTertiary)
                         .lineLimit(1)
                 }
-                .listRowBackground(DS.surfaceSheet)
+                .dsListCardRow()
             }
             .onDelete { rss.remove(at: $0) }
         } header: {

@@ -68,7 +68,7 @@ struct ChatGPTImportScreen: View {
                 .dsText(.callout15).foregroundStyle(DS.textPrimary)
                 .fixedSize(horizontal: false, vertical: true)
         }
-        .listRowBackground(DS.surfaceSheet)
+        .dsListCardRow()
     }
 
     // MARK: - Import
@@ -91,7 +91,7 @@ struct ChatGPTImportScreen: View {
                 }
             }
             .buttonStyle(.plain)
-            .listRowBackground(DS.surfaceSheet)
+            .dsListCardRow()
             BridgeSyncStatusRows(result: result, resultIsError: resultIsError)
         } footer: {
             Text("One-time import — your chats become findable things. Re-importing later adds only what's new.")
@@ -112,7 +112,7 @@ struct ChatGPTImportScreen: View {
                             .lineLimit(1)
                     }
                 }
-                .listRowBackground(DS.surfaceSheet)
+                .dsListCardRow()
             }
         } header: {
             Text("Imported").dsText(.label12)

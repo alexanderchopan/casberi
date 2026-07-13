@@ -377,8 +377,7 @@ struct FeedScreen: View {
             }
             .padding(.horizontal, DS.Space.s4)
             .padding(.vertical, DS.Space.s3)
-            .background(DS.surfaceSheet,
-                        in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+            .dsCard()
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -727,6 +726,7 @@ struct FeedScreen: View {
                     .fill(DS.surfaceSheet)
                     .padding(.horizontal, DS.Space.s4)
                     .padding(.vertical, DS.Space.s1)
+                    .shadow(color: DS.cardShadow, radius: 18, x: 0, y: 6)
             )
             // Feed rhythm: s3 top/bottom (was s2) opens the row a step for a
             // more airy, editorial read (2026-07-12). Bump back to s2 to tighten.
@@ -926,6 +926,7 @@ struct FeedScreen: View {
                     .fill(DS.surfaceSheet)
                     .padding(.horizontal, DS.Space.s4)
                     .padding(.vertical, DS.Space.s1)
+                    .shadow(color: DS.cardShadow, radius: 18, x: 0, y: 6)
             )
             // Feed rhythm: s3 top/bottom (was s2) opens the row a step for a
             // more airy, editorial read (2026-07-12). Bump back to s2 to tighten.

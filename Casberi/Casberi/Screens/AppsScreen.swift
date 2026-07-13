@@ -415,8 +415,7 @@ struct AppsScreen: View {
                         }
                     }
                     .padding(.vertical, DS.Space.s1)
-                    .background(DS.surfaceSheet,
-                                in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+                    .dsCard()
                     .containerRelativeFrame(.horizontal) { length, _ in length - 12 }
                     .id(i)
                 }

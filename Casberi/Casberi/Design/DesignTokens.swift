@@ -66,6 +66,18 @@ enum DS {
     static let fillLine   = Color.adaptive(dark: "#ffffff1a", light: "#00000014")
     static let fillStrong = Color.adaptive(dark: "#ffffff29", light: "#00000024")
 
+    // MARK: - Elevation ladder  (2026-07-12 — depth by tone, never by line)
+
+    /// A recessed WELL — cover/chart/media backings that sit BELOW the card
+    /// plane. In dark it steps toward the page (darker than `surfaceSheet`);
+    /// in light it dips back to a soft gray under the white card. The tonal
+    /// step alone carries the recess — no inner stroke (that reads as a line).
+    static let surfaceWell   = Color.adaptive(dark: "#080809", light: "#e9e9ef")
+    /// The ambient shadow a card casts to lift off the page. Not a hairline:
+    /// soft, wide, low-opacity — the iOS-native way a surface says "surface".
+    /// Heavy in dark (a `#111` card on `#000` needs it), whisper-light in light.
+    static let cardShadow    = Color.adaptive(dark: "#0000008c", light: "#0000001f")
+
     // MARK: - Tint (one accent)  — brief §8, principle 2
 
     /// The one tint. Routed through `ThemeStore` so the swap ("pink one line

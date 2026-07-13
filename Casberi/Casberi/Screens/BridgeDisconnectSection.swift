@@ -37,7 +37,7 @@ struct BridgeDisconnectSection: View {
                     .dsText(.body17)
                     .frame(maxWidth: .infinity, alignment: .center)
             }
-            .listRowBackground(DS.surfaceSheet)
+            .dsListCardRow()
             // Keep-or-purge — the same choice the generic detail screen offers,
             // so "stop this source" and "clear what it dropped in my feed" are
             // one gesture apart, not two screens apart.

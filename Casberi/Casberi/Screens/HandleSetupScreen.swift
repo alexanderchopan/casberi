@@ -409,7 +409,7 @@ struct HandleSetupScreen: View {
                         DSHaptic.tap()
                     } label: { Label("Remove", systemImage: "minus.circle") }
                 }
-                .listRowBackground(DS.surfaceSheet)
+                .dsListCardRow()
                 .listRowSeparator(.hidden)
             }
         } header: {
@@ -439,7 +439,7 @@ struct HandleSetupScreen: View {
                                      syncingLine: String(localized: "Fetching \(bridge.noun)…"),
                                      result: result, resultIsError: resultIsError)
             }
-            .listRowBackground(DS.surfaceSheet)
+            .dsListCardRow()
         } header: {
             Text(bridge.supportsMultiple ? "Add \(anArticle) \(bridge.nameNoun)"
                                          : "Your \(bridge.nameNoun)")

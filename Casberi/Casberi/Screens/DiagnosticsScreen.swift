@@ -21,7 +21,7 @@ struct DiagnosticsScreen: View {
                         .font(.system(size: 13, design: .monospaced))
                         .foregroundStyle(line.hasPrefix("FAIL") ? DS.attention
                                          : line.hasPrefix("OK") ? DS.confirm : DS.textPrimary)
-                        .listRowBackground(DS.surfaceSheet)
+                        .dsListCardRow()
                         .listRowSeparator(.hidden)
                         .textSelection(.enabled)
                 }
@@ -30,7 +30,7 @@ struct DiagnosticsScreen: View {
                         ProgressView().controlSize(.small)
                         Text("Running…").dsText(.subhead13).foregroundStyle(DS.textTertiary)
                     }
-                    .listRowBackground(DS.surfaceSheet)
+                    .dsListCardRow()
                 }
             } footer: {
                 Text("Screenshot this screen and send it back — every line is a real result from this device.")

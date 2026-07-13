@@ -571,7 +571,7 @@ One synthesis statement per render. Facts only, provable from the corpus. Linked
 ## 32. Design principles
 
 ### 1. Apple grammar, token discipline
-One surface token `--ds-surface-sheet` (#111113 dark, #fff light) for cards, tiles, trays. Tinted background washes are banned. Text ramp: white / 60% / 30%. Hairline separators died by amendment: rows separate by spacing and press fills, groups by their card surfaces; nothing draws a line — zero exceptions (§39, 2026-07-10: the Apps page's Connected strip and its `fillLine` divider died too; the catalog is one grid where connected tiles wear state and open management). SF ramp: 34/22/17/15/13/12/10. Squircle radii: cards 10, sheets 16, app icons 22.37%. Motion: 250ms, Apple sheet curve, one animation per moment. Every value routes through a token; components hold zero raw hex.
+One surface token `--ds-surface-sheet` (#111113 dark, #fff light) for cards, tiles, trays. Tinted background washes are banned. Text ramp: white / 60% / 30%. Hairline separators died by amendment: rows separate by spacing and press fills, groups by their card surfaces; nothing draws a line — zero exceptions (§39, 2026-07-10: the Apps page's Connected strip and its `fillLine` divider died too; the catalog is one grid where connected tiles wear state and open management). Elevation is carried by tone AND a soft ambient shadow, never by a line (§61, 2026-07-12 — the elevation ladder): cards lift off the page, inset-grouped sections lift as one card, wells recess by tone. SF ramp: 34/22/17/15/13/12/10. Squircle radii: cards 10, sheets 16, app icons 22.37%. Motion: 250ms, Apple sheet curve, one animation per moment. Every value routes through a token; components hold zero raw hex.
 
 ### 2. One tint
 iOS systemBlue dark `#0A84FF`, token `--ds-tint`, one-line swap. Tint marks the interactive and the primary. Orange attention, red destructive, green confirmation, nowhere else.
@@ -2230,3 +2230,41 @@ warm shots — could be an unfinished renderer or an intended empty board
 tile. Flagged WIP-in-flight, NOT filed as a regression; re-audit after
 the board work lands. Corpus was the 3-thing reseed and `app.language`
 was left on `ja` by a prior session — both environment, not findings.
+
+## 61. The elevation ladder — depth by tone and shadow, never by line (user, 2026-07-12)
+
+The surfaces read flat: #000 page and one flat #111 sheet, with no border
+and no shadow, made every screen a wireframe — worst in light mode, where
+white cards on the #f2f2f7 page were nearly invisible. The fix is an
+**elevation ladder**: depth carried by tone and a soft ambient shadow, never
+by a line. This amends design-principle 1 / build-brief §8's "the fill carries
+elevation" — the fill alone wasn't enough — WITHOUT reviving hairlines: a
+shadow is not a line, and nothing draws one.
+
+Three mechanics, three tokens/modifiers (`Design/Glass.swift`,
+`Design/DesignTokens.swift`):
+
+1. **Card lift** — `DS.cardShadow` (dark `#0000008c`, light `#0000001f`) via
+   `dsWidgetSurface()` (widget radius) and `dsCard()` (card radius). The shadow
+   rides the fill SHAPE, not the composited view, so it casts from a cheap path
+   with no per-card offscreen pass on a scrolling board. Every gen-UI module
+   card (Home board, Project/App detail, Thing sheets, Wallet), plus the Apps
+   catalog cells, Account/Settings bento, Feed rows + header, and Onboarding.
+2. **Section lift** — `dsListCardRow()` for inset-grouped `List` rows: the sheet
+   fill carries the card shadow, and because inset-grouped rows are GAPLESS a
+   row's shadow falls on the adjacent same-color row and vanishes — only the
+   section's outer silhouette casts, so a whole section reads as one lifted card
+   (no per-row banding). The ~16 setup / import / detail screens. NOT for
+   `.plain` lists (Feed), where rows aren't gapless — Feed's rows lift via their
+   own inset-card `listRowBackground`.
+3. **Well recess** — `DS.surfaceWell` (dark `#080809`, light `#e9e9ef`) steps a
+   nested backing BELOW the card plane (chart/cover/media wells). Tone alone
+   carries the recess — no inner stroke.
+
+Deliberately EXCLUDED: the floating layer (composer, toasts, tab bar — Liquid
+Glass carries its own elevation; a card shadow would double up) and pills /
+controls (Deny button, onboarding capsules — controls, not surfaces). A
+"raised chip" token was prototyped and DROPPED: raising by tone alone can't
+survive light mode (a white chip on a white card), and it would need a
+per-element shadow to work — not worth a fourth mechanic. Lift + recess are the
+two that hold in both modes.

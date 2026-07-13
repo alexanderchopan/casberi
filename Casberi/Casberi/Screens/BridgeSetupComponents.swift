@@ -98,7 +98,7 @@ struct BridgeFieldRow: View {
                 .buttonStyle(.plain)
         }
         .padding(.vertical, DS.Space.s1)
-        .listRowBackground(DS.surfaceSheet)
+        .dsListCardRow()
     }
 
     private var field: some View {
@@ -136,7 +136,7 @@ struct BridgeSyncStatusRows: View {
                 Text(syncingLine)
                     .dsText(.callout15).foregroundStyle(DS.textTertiary)
             }
-            .listRowBackground(DS.surfaceSheet)
+            .dsListCardRow()
         } else if let result {
             Group {
                 if resultIsError {
@@ -150,7 +150,7 @@ struct BridgeSyncStatusRows: View {
             }
             .dsText(.callout15)
             .foregroundStyle(resultIsError ? DS.attention : DS.confirm)
-            .listRowBackground(DS.surfaceSheet)
+            .dsListCardRow()
         }
     }
 }
@@ -200,7 +200,7 @@ struct BridgeSearchResultRow: View {
             }
         }
         .buttonStyle(.plain)
-        .listRowBackground(DS.surfaceSheet)
+        .dsListCardRow()
     }
 }
 
@@ -234,7 +234,7 @@ struct RecentThingsSection: View {
                     .staggerIn(index: entered ? 0 : min(i, 8))
                 }
             }
-            .listRowBackground(DS.surfaceSheet)
+            .dsListCardRow()
             .onAppear {
                 Task { @MainActor in
                     try? await Task.sleep(for: .milliseconds(800))

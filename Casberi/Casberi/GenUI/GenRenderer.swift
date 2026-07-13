@@ -431,8 +431,7 @@ private struct GenWidget: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.bottom, DS.Space.s2)
-        .background(DS.surfaceSheet,
-                    in: RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
+        .dsWidgetSurface()
         .padding(.horizontal, DS.Space.s4)
         .padding(.top, DS.Space.s4)
     }
@@ -870,8 +869,7 @@ private extension View {
                    minHeight: small ? minHeight : nil,
                    maxHeight: small ? .infinity : nil,
                    alignment: .topLeading)
-            .background(DS.surfaceSheet,
-                        in: RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
+            .dsWidgetSurface()
             .contentShape(RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
             .padding(.horizontal, small ? 0 : DS.Space.s4)
             .padding(.top, small ? 0 : DS.Space.s4)
@@ -1051,8 +1049,7 @@ private struct GenRow: View {
         }
         .padding(DS.Space.s4)
         .frame(maxWidth: .infinity, minHeight: big ? 200 : 150, alignment: .topLeading)
-        .background(DS.surfaceSheet,
-                    in: RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
+        .dsWidgetSurface()
         .contentShape(RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
         // Small tiles are inset + top-gapped by the board's packer; wide and
         // big span full width and inset themselves.
@@ -1215,7 +1212,7 @@ private struct GenTokenRow: View {
                 }
         } else {
             RoundedRectangle(cornerRadius: 6, style: .continuous)
-                .fill(DS.fillFaint).frame(height: height)
+                .fill(DS.surfaceWell).frame(height: height)
         }
     }
 
@@ -1327,8 +1324,7 @@ private struct GenTile: View {
         }
         .padding(DS.Space.s4)
         .frame(maxWidth: .infinity, minHeight: 96, alignment: .topLeading)
-        .background(DS.surfaceSheet,
-                    in: RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
+        .dsWidgetSurface()
     }
 }
 
@@ -1358,8 +1354,7 @@ private struct GenProjectTile: View {
         }
         .padding(DS.Space.s4)
         .frame(maxWidth: .infinity, minHeight: el.str(0) == "2" ? 132 : 120, alignment: .topLeading)
-        .background(DS.surfaceSheet,
-                    in: RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
+        .dsWidgetSurface()
         .contentShape(RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
         .onTapGesture {
             let name = el.str(1)
@@ -1386,8 +1381,7 @@ private struct GenPhotoTile: View {
         }
         .padding(DS.Space.s4)
         .frame(maxWidth: .infinity, alignment: .topLeading)
-        .background(DS.surfaceSheet,
-                    in: RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
+        .dsWidgetSurface()
     }
 }
 
@@ -1409,8 +1403,7 @@ private struct GenVoiceTile: View {
         }
         .padding(DS.Space.s4)
         .frame(maxWidth: .infinity, minHeight: 96, alignment: .topLeading)
-        .background(DS.surfaceSheet,
-                    in: RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
+        .dsWidgetSurface()
     }
 }
 
@@ -1739,8 +1732,7 @@ private struct GenAppsInvite: View {
                     .foregroundStyle(DS.textTertiary)
             }
             .padding(DS.Space.s4)
-            .background(DS.surfaceSheet,
-                        in: RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
+            .dsWidgetSurface()
         }
         .buttonStyle(DSTileButtonStyle())
         .padding(.horizontal, DS.Space.s4)
@@ -1926,8 +1918,7 @@ private struct GenTakeawayCard: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(DS.Space.s4)
-        .background(DS.surfaceSheet,
-                    in: RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
+        .dsWidgetSurface()
         .padding(.horizontal, DS.Space.s4)
         .padding(.top, DS.Space.s2)
     }
@@ -1958,8 +1949,7 @@ private struct GenApprovalCard: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(DS.Space.s4)
-        .background(DS.surfaceSheet,
-                    in: RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
+        .dsWidgetSurface()
         .padding(.horizontal, DS.Space.s4)
         .padding(.top, DS.Space.s2)
     }

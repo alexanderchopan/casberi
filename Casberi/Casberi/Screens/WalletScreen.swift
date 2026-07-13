@@ -149,7 +149,7 @@ struct WalletScreen: View {
                             .foregroundStyle(DS.tint)
                     }
                 }
-                .listRowBackground(DS.surfaceSheet)
+                .dsListCardRow()
                 .modifier(SwipeHintNudge(active: addr.id == hintAddressID) { swipeCoachDone = true })
                 // The pin swipe is the SAME GESTURE everywhere (2026-07-10,
                 // user: it was leading here, trailing in Feed — one verb,
@@ -259,7 +259,7 @@ struct WalletScreen: View {
                     Text(shortTime(thing.capturedAt))
                         .dsText(.subhead13).foregroundStyle(DS.textSecondary)
                 }
-                .listRowBackground(DS.surfaceSheet)
+                .dsListCardRow()
             }
         } header: {
             Text("Recent").dsText(.label12)

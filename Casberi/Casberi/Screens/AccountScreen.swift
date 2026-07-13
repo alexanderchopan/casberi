@@ -314,8 +314,7 @@ struct AccountTile: View {
         }
         .padding(DS.Space.s4)
         .frame(maxWidth: .infinity, minHeight: 96, alignment: .topLeading)
-        .background(DS.surfaceSheet,
-                    in: RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
+        .dsWidgetSurface()
         .contentShape(RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
     }
 

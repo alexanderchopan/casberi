@@ -59,7 +59,7 @@ struct SteamScreen: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 .padding(.vertical, DS.Space.s1)
-                .listRowBackground(DS.surfaceSheet)
+                .dsListCardRow()
             }
         } header: {
             Text("Get a free key").dsText(.label12)
@@ -73,7 +73,7 @@ struct SteamScreen: View {
                 .dsText(.body17).foregroundStyle(DS.textPrimary).tint(DS.tint)
                 .textInputAutocapitalization(.never).autocorrectionDisabled()
                 .padding(.vertical, DS.Space.s1)
-                .listRowBackground(DS.surfaceSheet)
+                .dsListCardRow()
             HStack(spacing: DS.Space.s2) {
                 SecureField("Web API key", text: $keyField)
                     .dsText(.body17).foregroundStyle(DS.textPrimary).tint(DS.tint)
@@ -91,7 +91,7 @@ struct SteamScreen: View {
                     .buttonStyle(.plain)
             }
             .padding(.vertical, DS.Space.s1)
-            .listRowBackground(DS.surfaceSheet)
+            .dsListCardRow()
             BridgeSyncStatusRows(syncing: syncing, syncingLine: String(localized: "Reading your games…"),
                                  result: result, resultIsError: resultIsError)
         } header: {
@@ -113,7 +113,7 @@ struct SteamScreen: View {
                 DSHaptic.tap()
             }
             .dsText(.callout15)
-            .listRowBackground(DS.surfaceSheet)
+            .dsListCardRow()
         } footer: {
             Text("Removing the key stops syncing. What already landed stays yours.")
                 .dsText(.callout15).foregroundStyle(DS.textTertiary)

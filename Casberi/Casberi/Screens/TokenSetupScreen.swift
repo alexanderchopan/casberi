@@ -69,7 +69,7 @@ struct TokenSetupScreen: View {
                     .padding(.vertical, DS.Space.s1)
                 }
             }
-            .listRowBackground(DS.surfaceSheet)
+            .dsListCardRow()
         } header: {
             Text("Get your token").dsText(.label12)
                 .foregroundStyle(DS.textTertiary)
@@ -90,7 +90,7 @@ struct TokenSetupScreen: View {
                                      syncingLine: String(localized: "Fetching your \(bridge.noun)…"),
                                      result: result, resultIsError: resultIsError)
             }
-            .listRowBackground(DS.surfaceSheet)
+            .dsListCardRow()
         } header: {
             Text("Token").dsText(.label12)
                 .foregroundStyle(DS.textTertiary)
@@ -110,7 +110,7 @@ struct TokenSetupScreen: View {
                 DSHaptic.tap()
             }
             .dsText(.callout15)
-            .listRowBackground(DS.surfaceSheet)
+            .dsListCardRow()
         } footer: {
             Text("Removing the token stops syncing. What already landed stays yours.")
                 .dsText(.subhead13).foregroundStyle(DS.textTertiary)

@@ -93,7 +93,7 @@ struct KalshiScreen: View {
                                      syncingLine: String(localized: "Finding the market…"),
                                      result: result, resultIsError: resultIsError)
             }
-            .listRowBackground(DS.surfaceSheet)
+            .dsListCardRow()
         } header: {
             Text("Watch a market").dsText(.label12)
                 .foregroundStyle(DS.textTertiary)
@@ -116,7 +116,7 @@ struct KalshiScreen: View {
                     Text(LiveTimeText.short(thing.capturedAt))
                         .dsText(.subhead13).foregroundStyle(DS.textTertiary)
                 }
-                .listRowBackground(DS.surfaceSheet)
+                .dsListCardRow()
                 .modifier(SwipeHintNudge(active: thing.id == hintTokenID) { swipeCoachDone = true })
                 .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                     Button {

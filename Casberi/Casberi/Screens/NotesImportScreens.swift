@@ -185,7 +185,7 @@ struct NotesShareScreen: View {
                     }
                 }
                 .buttonStyle(.plain)
-                .listRowBackground(DS.surfaceSheet)
+                .dsListCardRow()
             } footer: {
                 Text("Apple offers no export or live read for Notes, so they arrive one at a time, as you share them — they land as your captures.")
                     .dsText(.subhead13).foregroundStyle(DS.textTertiary)
@@ -239,7 +239,7 @@ struct ImportStepsCard: View {
                     ImportStepRow(i + 1, text)
                 }
             }
-            .listRowBackground(DS.surfaceSheet)
+            .dsListCardRow()
         } header: {
             Text(LocalizedStringKey(header)).dsText(.label12).foregroundStyle(DS.textTertiary)
         }
@@ -265,6 +265,6 @@ struct ImportPickRow: View {
             }
         }
         .buttonStyle(.plain)
-        .listRowBackground(DS.surfaceSheet)
+        .dsListCardRow()
     }
 }

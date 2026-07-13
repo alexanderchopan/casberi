@@ -148,8 +148,7 @@ struct OnboardingView: View {
             }
         }
         .padding(.bottom, DS.Space.s1)
-        .background(DS.surfaceSheet,
-                    in: RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
+        .dsWidgetSurface()
         .padding(.horizontal, DS.Space.s4)
     }
 

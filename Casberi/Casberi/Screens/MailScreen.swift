@@ -60,7 +60,7 @@ struct MailScreen: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 .padding(.vertical, DS.Space.s1)
-                .listRowBackground(DS.surfaceSheet)
+                .dsListCardRow()
             }
         } header: {
             Text("Get an app password").dsText(.label12)
@@ -75,7 +75,7 @@ struct MailScreen: View {
                 .textInputAutocapitalization(.never).autocorrectionDisabled()
                 .keyboardType(.emailAddress)
                 .padding(.vertical, DS.Space.s1)
-                .listRowBackground(DS.surfaceSheet)
+                .dsListCardRow()
             HStack(spacing: DS.Space.s2) {
                 SecureField(provider.passwordPlaceholder, text: $passwordField)
                     .dsText(.body17).foregroundStyle(DS.textPrimary).tint(DS.tint)
@@ -93,7 +93,7 @@ struct MailScreen: View {
                     .buttonStyle(.plain)
             }
             .padding(.vertical, DS.Space.s1)
-            .listRowBackground(DS.surfaceSheet)
+            .dsListCardRow()
             BridgeSyncStatusRows(syncing: syncing, syncingLine: String(localized: "Reading your inbox…"),
                                  result: result, resultIsError: resultIsError)
         } header: {

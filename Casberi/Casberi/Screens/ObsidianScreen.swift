@@ -71,7 +71,7 @@ struct ObsidianScreen: View {
                         .buttonStyle(.plain)
                 }
                 .padding(.vertical, DS.Space.s1)
-                .listRowBackground(DS.surfaceSheet)
+                .dsListCardRow()
             } else {
                 Button {
                     picking = true
@@ -88,7 +88,7 @@ struct ObsidianScreen: View {
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .listRowBackground(DS.surfaceSheet)
+                .dsListCardRow()
             }
             BridgeSyncStatusRows(syncing: syncing, syncingLine: String(localized: "Reading your notes…"),
                                  result: result, resultIsError: resultIsError)
@@ -111,7 +111,7 @@ struct ObsidianScreen: View {
                 DSHaptic.tap()
             }
             .dsText(.callout15)
-            .listRowBackground(DS.surfaceSheet)
+            .dsListCardRow()
         } footer: {
             Text("Disconnecting stops syncing. What already landed stays yours.")
                 .dsText(.callout15).foregroundStyle(DS.textTertiary)
