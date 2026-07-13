@@ -977,10 +977,16 @@ struct ParseCard: View {
                     HStack(spacing: DS.Space.s2) {
                         ForEach(candidates, id: \.self) { tag in
                             let active = chosen.contains(tag)
-                            Chip(text: tag, style: active ? .tint : .neutral)
-                                .onTapGesture {
-                                    if active { chosen.remove(tag) } else { chosen.insert(tag) }
-                                }
+                            // A Button, not .onTapGesture (same fix the Feed
+                            // source chips carry, 2026-07-12): tap recognition
+                            // for a chip inside a horizontal ScrollView is flaky
+                            // — taps drop and the toggle "sticks."
+                            Button {
+                                if active { chosen.remove(tag) } else { chosen.insert(tag) }
+                            } label: {
+                                Chip(text: tag, style: active ? .tint : .neutral)
+                            }
+                            .buttonStyle(.plain)
                         }
                     }
                 }

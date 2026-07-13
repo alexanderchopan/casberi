@@ -206,8 +206,11 @@ struct FeedScreen: View {
     /// BundleRow at the position of their newest member (threshold lowered
     /// from 4, 2026-07-12 — smaller same-source runs were the real All-feed
     /// clutter). Order is untouched otherwise — compression, not ranking.
-    private var bundledDayGroups: [(String, [FeedRow])] {
-        dayGroups.map { label, dayThings in
+    /// Takes the already-computed day groups so the caller derives `dayGroups`
+    /// (→`visible`→`feedThings`) ONCE per render and reuses it for the day
+    /// totals too, instead of rebuilding the whole chain here a second time.
+    private func bundle(_ days: [(String, [Thing])]) -> [(String, [FeedRow])] {
+        days.map { label, dayThings in
             var counts: [String: Int] = [:]
             for t in dayThings where bundleable(t) { counts[t.source, default: 0] += 1 }
             let bundledSources = Set(counts.filter { $0.value >= 3 }.keys)
@@ -229,6 +232,21 @@ struct FeedScreen: View {
             }
             return (label, rows)
         }
+    }
+
+    /// The first row at-or-past the last-visit boundary — the "new since"
+    /// divider renders above it. Nil when nothing is new (no divider at the
+    /// very top) or everything is (no divider at the very bottom).
+    ///
+    /// Takes the already-bundled groups so the caller computes them ONCE per
+    /// render and shares them — as a bare computed property this rebuilt the
+    /// whole bundle chain, and it was read once per row (the Feed-freeze
+    /// O(rows × corpus) blowup, perf pass 2026-07-13).
+    private func boundaryID(in groups: [(String, [FeedRow])]) -> String? {
+        guard let newSince else { return nil }
+        let all = groups.flatMap(\.1)
+        guard let first = all.first, first.date > newSince else { return nil }
+        return all.first(where: { $0.date <= newSince })?.id
     }
 
     // MARK: - Body
@@ -622,19 +640,18 @@ struct FeedScreen: View {
         }
     }
 
-    @ViewBuilder
     private var bundledSections: some View {
-        // Derive the whole pipeline ONCE per body pass. These were computed
-        // properties, so SwiftUI re-ran the full corpus scan on every access:
-        // `newBoundaryID` (which rebuilds `bundledDayGroups`) was referenced
-        // once per row, and the header's count rebuilt `dayGroups` once per
-        // section — O(rows × corpus) per paint on the busiest screen. Hoisted
-        // to `let`s, the corpus is walked a fixed number of times per paint.
-        let groups = bundledDayGroups
-        let dayCounts = Dictionary(dayGroups.map { ($0.0, $0.1.count) },
-                                   uniquingKeysWith: { first, _ in first })
+        // Derive ONCE per render, then share — the day bundles, each day's true
+        // total, and the new-since boundary. Read inside the row/header loops
+        // (as `newBoundaryID` and `dayGroups.first(where:)` were) they rebuilt
+        // the whole chain per row/section — the Feed freeze (perf pass
+        // 2026-07-13).
+        let days = dayGroups
+        let groups = bundle(days)
         let boundary = boundaryID(in: groups)
-        ForEach(groups, id: \.0) { label, rows in
+        let dayTotals = Dictionary(days.map { ($0.0, $0.1.count) },
+                                   uniquingKeysWith: { first, _ in first })
+        return ForEach(groups, id: \.0) { label, rows in
             Section {
                 ForEach(Array(rows.enumerated()), id: \.element.id) { i, row in
                     if row.id == boundary { newSinceDivider }
@@ -651,7 +668,7 @@ struct FeedScreen: View {
                     Text(label).dsText(.heading17).foregroundStyle(DS.textPrimary)
                     // The count stays the day's true total — a bundle
                     // compresses rows, never the record.
-                    Text("\(dayCounts[label] ?? rows.count)")
+                    Text("\(dayTotals[label] ?? rows.count)")
                         .dsText(.subhead13).foregroundStyle(DS.textTertiary)
                         .contentTransition(.numericText())
                 }
@@ -660,17 +677,6 @@ struct FeedScreen: View {
                 .padding(.vertical, DS.Space.s1)
             }
         }
-    }
-
-    /// The new-since boundary row id, computed once from an
-    /// already-materialized `bundledDayGroups` — the same logic `newBoundaryID`
-    /// carried, but taking the groups as a parameter so `bundledSections`
-    /// doesn't rebuild the corpus pipeline once per row.
-    private func boundaryID(in groups: [(String, [FeedRow])]) -> String? {
-        guard let newSince else { return nil }
-        let all = groups.flatMap(\.1)
-        guard let first = all.first, first.date > newSince else { return nil }
-        return all.first(where: { $0.date <= newSince })?.id
     }
 
     /// The boundary line — words only, no drawn rule (the no-hairlines law).
