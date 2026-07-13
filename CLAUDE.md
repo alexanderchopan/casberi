@@ -52,7 +52,7 @@ All read via UserDefaults in `Shell/RootShell.swift` unless noted:
 - `-noPrewarm` — skip model session prewarm.
 - `-fresh YES|NO` — sticky new-user mode (persists until flipped or reinstall); re-shows onboarding.
 - `-accountDetail <case>` — open a settings detail sheet (`Screens/AccountScreen.swift`).
-- `-openSettings YES` — push the settings screen.
+- `-openSettings YES` — pushes the settings screen. **Unreliable since the tab-bar-drop shell redesign (`0764ee3`, 2026-07-13):** it sets `route.push=.settings` in Home's onAppear, which gets dropped during launch (lands on Home). Use `-deeplink casberi://settings` instead (the post-mount deep link navigates reliably). Same for anything that pairs with it (`-openDiagnostics`, `-accountDetail`, `-openBanner`).
 - `-icloud.sync YES` — AppStorage override for the sync toggle copy.
 - `-onboarded YES` — AppStorage override that skips first-launch onboarding (fresh installs otherwise land on it, hiding the screen you deep-linked to).
 - `-openApp "<Offer name>"` — open a store product page; `-openSetup "<Offer name>"` — push a bridge's setup screen (both need `casberi://account` opened after launch); `-openProject "<Tag>"` — push a project detail (`Screens/AccountScreen.swift` / `HomeScreen.swift`).
@@ -66,7 +66,7 @@ All read via UserDefaults in `Shell/RootShell.swift` unless noted:
 - `-connectPhotos YES` — runs the real Photos connect+ingest headlessly; `-reingestPhotos YES` — calls the bare re-scan (no permission request) that `BridgeRefresh` now runs each foreground.
 - `-setHomeBanner <swatch-name|photo>` — sets the Home banner headlessly (e.g. `Teal`, or `photo` for a synthetic photo); `-openBanner YES` — open the Banner tray (pair with `-openSettings YES`).
 
-Deep links: `casberi://home`, `casberi://feed`, `casberi://feed/type/<Tag>`, `casberi://account` (→ apps tab), `casberi://thing/<id>`.
+Deep links: `casberi://home`, `casberi://feed`, `casberi://feed/type/<Tag>`, `casberi://account` (→ apps; the tab bar is gone — this pushes the Apps door), `casberi://settings` (→ settings; the reliable route since `-openSettings` broke), `casberi://thing/<id>`.
 
 ## SwiftUI/UIKit gotchas already paid for
 
@@ -80,7 +80,7 @@ Deep links: `casberi://home`, `casberi://feed`, `casberi://feed/type/<Tag>`, `ca
 ## Design law (read docs/build-brief.md §8 before UI work)
 
 - Trays are NEVER hand-rolled — use `DSTray(title:height:)` (`Design/DSTray.swift`).
-- Liquid Glass on the floating layer only (composer/tab bar/toasts) — never on content.
+- Liquid Glass on the floating layer only (composer/FAB/toasts) — never on content. (The tab bar was dropped in `0764ee3` (2026-07-13): one surface now, a Pinned-first source-chip header + a FAB, no tabs. prd §61/§63 text still says "tab bar" — stale.)
 - No letter-spacing, no ALL-CAPS eyebrows — headers are words in sentence case ("Getting started", never "G E T T I N G  S T A R T E D" or "GETTING STARTED"). `.kerning()` is banned; the type ramp carries hierarchy by size/weight alone (ruling 2026-07-08).
 - No hairlines — zero exceptions (2026-07-10: the Apps page's CONNECTED strip and its divider died; the catalog is one grid where connected tiles wear state and open management). Nothing draws a line. Widget/tile radius = `DS.Radius.widget`.
 - Apps Browse categories follow prd §59 (2026-07-11): X browses under **Social** (with Bluesky, Farcaster, Telegram) — a social account first, not a saves source; Slack browses under **Work** (with GitHub, Linear, Notion) — a workplace tool, not a messenger; and **Notes** is its own category (Apple Notes, Day One, Apple Journal, Obsidian) — the vault is notes, not project tracking. Taxonomy lives in `Model/BridgeCatalog.swift`; website Browse sections mirror it in the same session.
