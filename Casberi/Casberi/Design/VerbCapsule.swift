@@ -49,7 +49,7 @@ struct VerbCapsule: View {
     }
 
     private var label: some View {
-        Text(verb.label)
+        Text(LocalizedStringKey(verb.label))
             .dsText(.label12)
             .foregroundStyle(verb.foreground)
             .padding(.horizontal, DS.Space.s3)

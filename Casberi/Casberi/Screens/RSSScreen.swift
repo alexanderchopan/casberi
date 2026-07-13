@@ -168,10 +168,10 @@ struct RSSScreen: View {
         let added = await RSSIngest.refresh(context: modelContext)
         syncing = false
         guard let added else {
-            lastResult = "Couldn't reach your feeds — check your connection."
+            lastResult = String(localized: "Couldn't reach your feeds — check your connection.")
             return
         }
-        lastResult = added > 0 ? "\(added) new" : "Up to date"
+        lastResult = added > 0 ? String(localized: "\(added) new") : String(localized: "Up to date")
         let proof = added > 0 ? "\(added) posts in" : "Synced just now"
         store.registerConnected(id: "rss", name: "RSS", proof: proof,
                                 can: ["Reads the feeds you follow."])

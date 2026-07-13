@@ -78,10 +78,10 @@ struct AppDetailScreen: View {
                 // thing-sheet and feed-switch icons give (delight, 2026-07-12).
                 .coinFlip(trigger: offer.name)
             VStack(alignment: .leading, spacing: DS.Space.s1) {
-                Text(offer.group)
+                Text(LocalizedStringKey(offer.group))
                     .dsText(.label12).foregroundStyle(DS.textTertiary)
                 Text(offer.name).dsText(.heading22).foregroundStyle(DS.textPrimary)
-                Text(offer.tagline).dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                Text(LocalizedStringKey(offer.tagline)).dsText(.subhead13).foregroundStyle(DS.textSecondary)
                 actionButton.padding(.top, DS.Space.s2)
             }
             Spacer(minLength: 0)
@@ -156,7 +156,7 @@ struct AppDetailScreen: View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
             Text("What it does")
                 .dsText(.label12).foregroundStyle(DS.textTertiary)
-            Text(offer.summary)
+            Text(LocalizedStringKey(offer.summary))
                 .dsText(.body17).foregroundStyle(DS.textPrimary)
                 .fixedSize(horizontal: false, vertical: true)
         }
@@ -184,7 +184,7 @@ struct AppDetailScreen: View {
                                 .font(.system(size: 15, weight: .medium))
                                 .foregroundStyle(brand)
                         )
-                    Text(offer.tagline).dsText(.body17).foregroundStyle(DS.textPrimary)
+                    Text(LocalizedStringKey(offer.tagline)).dsText(.body17).foregroundStyle(DS.textPrimary)
                     Spacer(minLength: 0)
                 }
             }

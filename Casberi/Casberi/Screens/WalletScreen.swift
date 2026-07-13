@@ -59,7 +59,7 @@ struct WalletScreen: View {
             }
             if syncing || result != nil {
                 Section {
-                    BridgeSyncStatusRows(syncing: syncing, syncingLine: "Reading onchain activity…",
+                    BridgeSyncStatusRows(syncing: syncing, syncingLine: String(localized: "Reading onchain activity…"),
                                         result: result, resultIsError: resultIsError)
                 }
                 .listRowSeparator(.hidden)
@@ -97,12 +97,12 @@ struct WalletScreen: View {
             // (review 2026-07-08: this fired unconditionally, so a dead key
             // showed "connected" in Apps with nothing ever landing in Feed).
             guard let added else {
-                result = "Couldn't reach the chain — check your connection."
+                result = String(localized: "Couldn't reach the chain — check your connection.")
                 resultIsError = true
                 return
             }
             resultIsError = false
-            result = added > 0 ? "\(added) new" : "Connected — watching for activity."
+            result = added > 0 ? String(localized: "\(added) new") : String(localized: "Connected — watching for activity.")
             let proof = added > 0 ? "\(added) new" : "Synced just now"
             if store.registerConnected(id: "wallet", name: "Wallet", proof: proof,
                                        can: ["Reads your wallet's activity.",
@@ -218,7 +218,7 @@ struct WalletScreen: View {
             Task {
                 guard let hex = await ENS.resolve(input) else {
                     resultIsError = true
-                    result = "Couldn't resolve \(input) — check the name or paste a 0x address."
+                    result = String(localized: "Couldn't resolve \(input) — check the name or paste a 0x address.")
                     return
                 }
                 addWatched(address: hex, label: input)
@@ -231,7 +231,7 @@ struct WalletScreen: View {
     private func addWatched(address: String, label: String) {
         guard wallet.add(address, label: label) else {
             resultIsError = true
-            result = "Already watching that address."
+            result = String(localized: "Already watching that address.")
             return
         }
         newAddress = ""

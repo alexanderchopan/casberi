@@ -54,7 +54,7 @@ struct SteamScreen: View {
                     Text("\(i + 1)")
                         .dsText(.body17).fontWeight(.bold)
                         .foregroundStyle(DS.tint).frame(width: 20)
-                    Text(text)
+                    Text(LocalizedStringKey(text))
                         .dsText(.body17).foregroundStyle(DS.textPrimary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -92,7 +92,7 @@ struct SteamScreen: View {
             }
             .padding(.vertical, DS.Space.s1)
             .listRowBackground(DS.surfaceSheet)
-            BridgeSyncStatusRows(syncing: syncing, syncingLine: "Reading your games…",
+            BridgeSyncStatusRows(syncing: syncing, syncingLine: String(localized: "Reading your games…"),
                                  result: result, resultIsError: resultIsError)
         } header: {
             Text("Account").dsText(.label12)
@@ -108,7 +108,7 @@ struct SteamScreen: View {
             Button("Remove key", role: .destructive) {
                 SteamBridge.disconnect()
                 store.bridges.removeAll { $0.id == "steam" }
-                result = "Key removed — your things stay."
+                result = String(localized: "Key removed — your things stay.")
                 resultIsError = false
                 DSHaptic.tap()
             }
@@ -145,12 +145,12 @@ struct SteamScreen: View {
             // A fresh key that fails doesn't stay (same rule as the token
             // bridges) — no dead connection retrying on every foreground.
             if justConnected { SteamBridge.disconnect() }
-            result = "Couldn't reach Steam — check the key, the profile name, and that the profile is public."
+            result = String(localized: "Couldn't reach Steam — check the key, the profile name, and that the profile is public.")
             resultIsError = true
             return
         }
         resultIsError = false
-        result = added > 0 ? "\(added) games in" : "Up to date"
+        result = added > 0 ? String(localized: "\(added) games in") : String(localized: "Up to date")
         let proof = added > 0 ? "\(added) games in" : "Synced just now"
         if store.registerConnected(id: "steam", name: "Steam", proof: proof,
                                    can: ["Reads what you've played.",

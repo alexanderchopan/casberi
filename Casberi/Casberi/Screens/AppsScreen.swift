@@ -232,10 +232,10 @@ struct AppsScreen: View {
                                name: String, brand: Color, verb: CapsuleVerb,
                                action: @escaping () -> Void) -> some View {
         VStack(alignment: .leading, spacing: DS.Space.s3) {
-            Text(eyebrow)
+            Text(LocalizedStringKey(eyebrow))
                 .dsText(.label12)
                 .foregroundStyle(.white.opacity(0.7))
-            Text(headline)
+            Text(LocalizedStringKey(headline))
                 .dsText(.heading22).fontWeight(.heavy)
                 .foregroundStyle(.white)
                 .lineLimit(2)
@@ -249,7 +249,7 @@ struct AppsScreen: View {
                 Text(name).dsText(.callout15).foregroundStyle(.white)
                 Spacer()
                 Button(action: action) {
-                    Text(verb.label)
+                    Text(LocalizedStringKey(verb.label))
                         .dsText(.label12).foregroundStyle(brand)
                         .padding(.horizontal, DS.Space.s4)
                         .frame(minHeight: 32)
@@ -308,7 +308,7 @@ struct AppsScreen: View {
                                 Image(systemName: BridgeGlyph.symbol(for: cat.exemplar))
                                     .font(.system(size: 15, weight: .medium))
                                     .foregroundStyle(BridgeGlyph.color(for: cat.exemplar))
-                                Text(cat.name)
+                                Text(LocalizedStringKey(cat.name))
                                     .dsText(.callout15).fontWeight(.medium)
                                     .foregroundStyle(DS.textPrimary)
                             }
@@ -362,7 +362,7 @@ struct AppsScreen: View {
                 }
             } label: {
                 HStack(spacing: DS.Space.s2) {
-                    Text(name)
+                    Text(LocalizedStringKey(name))
                         .dsText(.heading22).foregroundStyle(DS.textPrimary)
                     Image(systemName: "chevron.right")
                         .font(.system(size: 17, weight: .semibold))
@@ -374,7 +374,7 @@ struct AppsScreen: View {
             }
             .buttonStyle(.plain)
         } else {
-            Text(name)
+            Text(LocalizedStringKey(name))
                 .dsText(.heading22).foregroundStyle(DS.textPrimary)
                 .padding(.horizontal, DS.Space.s4)
         }
@@ -469,7 +469,7 @@ struct AppsScreen: View {
                             .dsText(.body17).fontWeight(.semibold)
                             .foregroundStyle(soon ? DS.textSecondary : DS.textPrimary)
                             .lineLimit(1)
-                        Text(subline(entry))
+                        Text(LocalizedStringKey(subline(entry)))
                             .dsText(.subhead13)
                             .foregroundStyle(entry.tier == 0 ? DS.attention : DS.textTertiary)
                             .lineLimit(1)
@@ -533,7 +533,7 @@ struct AppsScreen: View {
     }
 
     private func sectionHeader(_ text: String) -> some View {
-        Text(text)
+        Text(LocalizedStringKey(text))
             .dsText(.label12)
             .foregroundStyle(DS.textSecondary)
     }

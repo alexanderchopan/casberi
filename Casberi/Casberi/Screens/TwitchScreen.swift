@@ -110,7 +110,7 @@ struct TwitchScreen: View {
                 .buttonStyle(.plain)
                 .listRowBackground(DS.surfaceSheet)
             }
-            BridgeSyncStatusRows(syncing: syncing, syncingLine: "Checking who's live…",
+            BridgeSyncStatusRows(syncing: syncing, syncingLine: String(localized: "Checking who's live…"),
                                  result: result, resultIsError: resultIsError)
         } header: {
             Text("Follows").dsText(.label12)
@@ -126,7 +126,7 @@ struct TwitchScreen: View {
             Button("Disconnect", role: .destructive) {
                 TwitchAuth.disconnect()
                 store.bridges.removeAll { $0.id == "twitch" }
-                result = "Disconnected — your things stay."
+                result = String(localized: "Disconnected — your things stay.")
                 resultIsError = false
                 DSHaptic.tap()
             }
@@ -147,7 +147,7 @@ struct TwitchScreen: View {
             defer { flow = nil }
             guard let fresh = await TwitchAuth.startDeviceFlow() else {
                 waiting = false
-                result = "Couldn't reach Twitch — check your connection."
+                result = String(localized: "Couldn't reach Twitch — check your connection.")
                 resultIsError = true
                 return
             }
@@ -161,7 +161,7 @@ struct TwitchScreen: View {
                 DSHaptic.success()
                 await sync()
             } else {
-                result = "That code wasn't approved in time — tap Connect for a fresh one."
+                result = String(localized: "That code wasn't approved in time — tap Connect for a fresh one.")
                 resultIsError = true
             }
         }
@@ -174,12 +174,12 @@ struct TwitchScreen: View {
         syncing = false
         loadRecent()
         guard let added else {
-            result = "Couldn't read your follows — try again in a moment."
+            result = String(localized: "Couldn't read your follows — try again in a moment.")
             resultIsError = true
             return
         }
         resultIsError = false
-        result = added > 0 ? "\(added) live now" : "Connected — follows land when they go live."
+        result = added > 0 ? String(localized: "\(added) live now") : String(localized: "Connected — follows land when they go live.")
         let proof = added > 0 ? "\(added) live now" : "Synced just now"
         if store.registerConnected(id: "twitch", name: "Twitch", proof: proof,
                                    can: ["Reads channels you follow.",

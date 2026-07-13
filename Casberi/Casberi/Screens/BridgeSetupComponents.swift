@@ -32,7 +32,10 @@ struct BridgeSetupHeader: View {
                 BridgeIcon(name: name, size: 60)
                     .settleIn()
                 if let line = blurb ?? BridgeCatalog.offers.first(where: { $0.name == name })?.summary {
-                    Text(line)
+                    // The catalog copy is stored as English key strings; treat
+                    // each as a LocalizedStringKey so it resolves from the
+                    // active .lproj and switches live with the language.
+                    Text(LocalizedStringKey(line))
                         .dsText(.body17).foregroundStyle(DS.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
                         .settleIn(delay: 0.06)
@@ -82,7 +85,7 @@ struct BridgeFieldRow: View {
                         .layoutPriority(1)
                 }
             }
-            Button(buttonLabel, action: action)
+            Button(LocalizedStringKey(buttonLabel), action: action)
                 .dsText(.callout15).fontWeight(.semibold)
                 .foregroundStyle(text.isEmpty ? DS.textTertiary : .white)
                 .padding(.horizontal, DS.Space.s4)
@@ -101,9 +104,9 @@ struct BridgeFieldRow: View {
     private var field: some View {
         Group {
             if secure {
-                SecureField(placeholder, text: $text)
+                SecureField(LocalizedStringKey(placeholder), text: $text)
             } else {
-                TextField(placeholder, text: $text)
+                TextField(LocalizedStringKey(placeholder), text: $text)
             }
         }
         .dsText(.body17)
@@ -239,7 +242,7 @@ struct RecentThingsSection: View {
                 }
             }
         } header: {
-            Text(header).dsText(.label12)
+            Text(LocalizedStringKey(header)).dsText(.label12)
                 .foregroundStyle(DS.textTertiary)
         }
     }

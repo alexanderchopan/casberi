@@ -55,7 +55,7 @@ struct MailScreen: View {
                     Text("\(i + 1)")
                         .dsText(.body17).fontWeight(.bold)
                         .foregroundStyle(DS.tint).frame(width: 20)
-                    Text(text)
+                    Text(LocalizedStringKey(text))
                         .dsText(.body17).foregroundStyle(DS.textPrimary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -94,13 +94,13 @@ struct MailScreen: View {
             }
             .padding(.vertical, DS.Space.s1)
             .listRowBackground(DS.surfaceSheet)
-            BridgeSyncStatusRows(syncing: syncing, syncingLine: "Reading your inbox…",
+            BridgeSyncStatusRows(syncing: syncing, syncingLine: String(localized: "Reading your inbox…"),
                                  result: result, resultIsError: resultIsError)
         } header: {
             Text("Account").dsText(.label12)
                 .foregroundStyle(DS.textTertiary)
         } footer: {
-            Text(provider.footer).dsText(.callout15).foregroundStyle(DS.textTertiary)
+            Text(LocalizedStringKey(provider.footer)).dsText(.callout15).foregroundStyle(DS.textTertiary)
         }
     }
 
@@ -127,12 +127,12 @@ struct MailScreen: View {
         loadRecent()
         guard let added else {
             if justConnected { TokenVault.delete(provider.passwordKey) }
-            result = "Couldn't sign in — check the address and app-specific password."
+            result = String(localized: "Couldn't sign in — check the address and app-specific password.")
             resultIsError = true
             return
         }
         resultIsError = false
-        result = added > 0 ? "\(added) in your feed" : "Up to date"
+        result = added > 0 ? String(localized: "\(added) in your feed") : String(localized: "Up to date")
         let proof = added > 0 ? "\(added) mail in" : "Synced just now"
         if let existing = store.bridges.first(where: { $0.name == provider.source }) {
             store.reconnect(existing.id, proof: proof)

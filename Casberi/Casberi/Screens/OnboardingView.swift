@@ -176,7 +176,7 @@ struct OnboardingView: View {
                     Text(offer.name)
                         .dsText(.body17).fontWeight(.semibold)
                         .foregroundStyle(DS.textPrimary)
-                    Text(offer.tagline)
+                    Text(LocalizedStringKey(offer.tagline))
                         .dsText(.subhead13)
                         .foregroundStyle(DS.textTertiary)
                         .lineLimit(1)

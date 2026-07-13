@@ -90,7 +90,7 @@ struct KalshiScreen: View {
                         action: { watchHit(market) })
                 }
                 BridgeSyncStatusRows(syncing: working,
-                                     syncingLine: "Finding the market…",
+                                     syncingLine: String(localized: "Finding the market…"),
                                      result: result, resultIsError: resultIsError)
             }
             .listRowBackground(DS.surfaceSheet)
@@ -179,7 +179,7 @@ struct KalshiScreen: View {
             let market = await KalshiWatch.resolve(q)
             working = false
             guard let market else {
-                result = "Couldn't find an open market for that — try a team name."
+                result = String(localized: "Couldn't find an open market for that — try a team name.")
                 resultIsError = true
                 return
             }
@@ -196,13 +196,13 @@ struct KalshiScreen: View {
     private func add(_ market: KalshiWatch.Resolved) {
         resultIsError = false
         if let thing = KalshiWatch.add(market, context: modelContext) {
-            result = "Watching \(thing.title)"
+            result = String(localized: "Watching \(thing.title)")
             queryField = ""
             hits = []
             loadWatched()
             register()
         } else {
-            result = "\(market.title) is already on your watchlist."
+            result = String(localized: "\(market.title) is already on your watchlist.")
         }
     }
 

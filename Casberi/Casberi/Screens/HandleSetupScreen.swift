@@ -436,7 +436,7 @@ struct HandleSetupScreen: View {
                         action: { pick(hit) })
                 }
                 BridgeSyncStatusRows(syncing: syncing,
-                                     syncingLine: "Fetching \(bridge.noun)…",
+                                     syncingLine: String(localized: "Fetching \(bridge.noun)…"),
                                      result: result, resultIsError: resultIsError)
             }
             .listRowBackground(DS.surfaceSheet)
@@ -445,7 +445,7 @@ struct HandleSetupScreen: View {
                                          : "Your \(bridge.nameNoun)")
                 .dsText(.label12).foregroundStyle(DS.textTertiary)
         } footer: {
-            Text(bridge.fieldFooter)
+            Text(LocalizedStringKey(bridge.fieldFooter))
                 .dsText(.callout15).foregroundStyle(DS.textTertiary)
         }
     }
@@ -461,7 +461,7 @@ struct HandleSetupScreen: View {
 
     private var footerSection: some View {
         Section {
-            Text(bridge.footerLine)
+            Text(LocalizedStringKey(bridge.footerLine))
                 .dsText(.subhead13).foregroundStyle(DS.textTertiary)
                 .listRowBackground(Color.clear)
         }
@@ -503,12 +503,12 @@ struct HandleSetupScreen: View {
         syncing = false
         loadRecent()
         guard let added else {
-            result = "Couldn't find that \(bridge.nameNoun) — check the spelling."
+            result = String(localized: "Couldn't find that \(bridge.nameNoun) — check the spelling.")
             resultIsError = true
             return
         }
         resultIsError = false
-        result = added > 0 ? "\(added) \(bridge.noun) in" : "Up to date"
+        result = added > 0 ? String(localized: "\(added) \(bridge.noun) in") : String(localized: "Up to date")
         let proof = added > 0 ? "\(added) \(bridge.noun) in" : "Synced just now"
         if store.registerConnected(id: bridge.bridgeID, name: bridge.rawValue,
                                    proof: proof, can: [bridge.canLine]) {

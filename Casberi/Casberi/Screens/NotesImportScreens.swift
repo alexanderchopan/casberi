@@ -50,13 +50,13 @@ struct DayOneImportScreen: View {
             let scoped = url.startAccessingSecurityScopedResource()
             defer { if scoped { url.stopAccessingSecurityScopedResource() } }
             guard let data = try? Data(contentsOf: url) else {
-                result = "Couldn't read that file. Pick the .json from the unzipped export."
+                result = String(localized: "Couldn't read that file. Pick the .json from the unzipped export.")
                 resultIsError = true
                 return
             }
             let summary = DayOneImport.run(data: data, context: modelContext)
             if summary.failed {
-                result = "That file isn't a Day One export. Pick the .json inside the unzipped folder."
+                result = String(localized: "That file isn't a Day One export. Pick the .json inside the unzipped folder.")
                 resultIsError = true
                 return
             }
@@ -126,7 +126,7 @@ struct JournalImportScreen: View {
             defer { if scoped { url.stopAccessingSecurityScopedResource() } }
             let summary = JournalImport.run(folder: url, context: modelContext)
             if summary.failed {
-                result = "No journal pages in that folder — pick the unzipped export (it holds an Entries folder)."
+                result = String(localized: "No journal pages in that folder — pick the unzipped export (it holds an Entries folder).")
                 resultIsError = true
                 return
             }
@@ -213,7 +213,7 @@ struct ImportStepRow: View {
                 .dsText(.subhead13).fontWeight(.bold)
                 .foregroundStyle(DS.tint)
                 .frame(width: 16)
-            Text(text)
+            Text(LocalizedStringKey(text))
                 .dsText(.callout15).foregroundStyle(DS.textPrimary)
                 .fixedSize(horizontal: false, vertical: true)
             Spacer(minLength: 0)
@@ -241,7 +241,7 @@ struct ImportStepsCard: View {
             }
             .listRowBackground(DS.surfaceSheet)
         } header: {
-            Text(header).dsText(.label12).foregroundStyle(DS.textTertiary)
+            Text(LocalizedStringKey(header)).dsText(.label12).foregroundStyle(DS.textTertiary)
         }
     }
 }
@@ -259,7 +259,7 @@ struct ImportPickRow: View {
                     .frame(width: 28, height: 28)
                     .background(DS.tintDim,
                                 in: RoundedRectangle(cornerRadius: DS.Radius.appIcon(28), style: .continuous))
-                Text(label)
+                Text(LocalizedStringKey(label))
                     .dsText(.body17).foregroundStyle(DS.textPrimary)
                 Spacer()
             }

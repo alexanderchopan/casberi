@@ -65,7 +65,7 @@ struct ClaudeImportScreen: View {
                 .dsText(.subhead13).fontWeight(.bold)
                 .foregroundStyle(DS.tint)
                 .frame(width: 16)
-            Text(text)
+            Text(LocalizedStringKey(text))
                 .dsText(.callout15).foregroundStyle(DS.textPrimary)
                 .fixedSize(horizontal: false, vertical: true)
         }
@@ -127,13 +127,13 @@ struct ClaudeImportScreen: View {
         let scoped = url.startAccessingSecurityScopedResource()
         defer { if scoped { url.stopAccessingSecurityScopedResource() } }
         guard let data = try? Data(contentsOf: url) else {
-            result = "Couldn't read that file. Pick conversations.json from the unzipped export."
+            result = String(localized: "Couldn't read that file. Pick conversations.json from the unzipped export.")
             resultIsError = true
             return
         }
         let summary = ClaudeImport.run(data: data, context: modelContext)
         if summary.failed {
-            result = "That file isn't a Claude export. Pick conversations.json."
+            result = String(localized: "That file isn't a Claude export. Pick conversations.json.")
             resultIsError = true
             return
         }

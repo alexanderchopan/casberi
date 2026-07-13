@@ -41,7 +41,7 @@ struct ObsidianScreen: View {
                 DSHaptic.tap()
                 Task { await sync(justConnected: true) }
             } else {
-                result = "Couldn't keep access to that folder — try picking it again."
+                result = String(localized: "Couldn't keep access to that folder — try picking it again.")
                 resultIsError = true
             }
         }
@@ -90,7 +90,7 @@ struct ObsidianScreen: View {
                 .buttonStyle(.plain)
                 .listRowBackground(DS.surfaceSheet)
             }
-            BridgeSyncStatusRows(syncing: syncing, syncingLine: "Reading your notes…",
+            BridgeSyncStatusRows(syncing: syncing, syncingLine: String(localized: "Reading your notes…"),
                                  result: result, resultIsError: resultIsError)
         } header: {
             Text("Vault").dsText(.label12)
@@ -106,7 +106,7 @@ struct ObsidianScreen: View {
             Button("Disconnect vault", role: .destructive) {
                 obsidian.disconnect()
                 store.bridges.removeAll { $0.id == "obsidian" }
-                result = "Vault disconnected — your things stay."
+                result = String(localized: "Vault disconnected — your things stay.")
                 resultIsError = false
                 DSHaptic.tap()
             }
@@ -126,12 +126,12 @@ struct ObsidianScreen: View {
         loadRecent()
         guard let added else {
             if justConnected { obsidian.disconnect() }
-            result = "Couldn't read that folder — pick your vault again."
+            result = String(localized: "Couldn't read that folder — pick your vault again.")
             resultIsError = true
             return
         }
         resultIsError = false
-        result = added > 0 ? "\(added) notes in" : "Up to date"
+        result = added > 0 ? String(localized: "\(added) notes in") : String(localized: "Up to date")
         let proof = added > 0 ? "\(added) notes in" : "Synced just now"
         if store.registerConnected(id: "obsidian", name: "Obsidian", proof: proof,
                                    can: ["Reads the vault you picked.",

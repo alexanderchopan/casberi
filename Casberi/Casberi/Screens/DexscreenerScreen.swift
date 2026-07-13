@@ -91,7 +91,7 @@ struct DexscreenerScreen: View {
                     action: { watchHit(token) })
             }
             BridgeSyncStatusRows(syncing: working,
-                                 syncingLine: "Finding the token…",
+                                 syncingLine: String(localized: "Finding the token…"),
                                  result: result, resultIsError: resultIsError)
         } header: {
             Text("Watch a token").dsText(.label12)
@@ -190,7 +190,7 @@ struct DexscreenerScreen: View {
             let token = await TokenWatch.resolve(q)
             working = false
             guard let token else {
-                result = "Couldn't find that token — try its contract address."
+                result = String(localized: "Couldn't find that token — try its contract address.")
                 resultIsError = true
                 return
             }
@@ -209,13 +209,13 @@ struct DexscreenerScreen: View {
     private func add(_ token: TokenWatch.Resolved) {
         resultIsError = false
         if let thing = TokenWatch.add(token, context: modelContext) {
-            result = "Watching \(thing.title)"
+            result = String(localized: "Watching \(thing.title)")
             queryField = ""
             hits = []
             loadWatched()
             register()
         } else {
-            result = "\(token.name) is already on your watchlist."
+            result = String(localized: "\(token.name) is already on your watchlist.")
         }
     }
 

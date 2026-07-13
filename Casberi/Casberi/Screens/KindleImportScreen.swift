@@ -46,13 +46,13 @@ struct KindleImportScreen: View {
             let scoped = url.startAccessingSecurityScopedResource()
             defer { if scoped { url.stopAccessingSecurityScopedResource() } }
             guard let data = try? Data(contentsOf: url) else {
-                result = "Couldn't read that file. Pick My Clippings.txt from your Kindle."
+                result = String(localized: "Couldn't read that file. Pick My Clippings.txt from your Kindle.")
                 resultIsError = true
                 return
             }
             let summary = KindleImport.run(data: data, context: modelContext)
             if summary.failed {
-                result = "That file isn't a Kindle export. Pick My Clippings.txt from the Kindle's documents folder."
+                result = String(localized: "That file isn't a Kindle export. Pick My Clippings.txt from the Kindle's documents folder.")
                 resultIsError = true
                 return
             }

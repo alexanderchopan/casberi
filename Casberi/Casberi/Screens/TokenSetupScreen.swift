@@ -61,7 +61,7 @@ struct TokenSetupScreen: View {
                             .dsText(.body17).fontWeight(.bold)
                             .foregroundStyle(DS.tint)
                             .frame(width: 20)
-                        Text(text)
+                        Text(LocalizedStringKey(text))
                             .dsText(.body17).foregroundStyle(DS.textPrimary)
                             .fixedSize(horizontal: false, vertical: true)
                         Spacer(minLength: 0)
@@ -87,7 +87,7 @@ struct TokenSetupScreen: View {
                                buttonLabel: bridge.connected ? "Update" : "Connect",
                                secure: true, action: connect)
                 BridgeSyncStatusRows(syncing: syncing,
-                                     syncingLine: "Fetching your \(bridge.noun)…",
+                                     syncingLine: String(localized: "Fetching your \(bridge.noun)…"),
                                      result: result, resultIsError: resultIsError)
             }
             .listRowBackground(DS.surfaceSheet)
@@ -105,7 +105,7 @@ struct TokenSetupScreen: View {
             Button("Remove token", role: .destructive) {
                 TokenVault.delete(bridge.tokenKey)
                 store.bridges.removeAll { $0.id == bridge.bridgeID }
-                result = "Token removed — your things stay."
+                result = String(localized: "Token removed — your things stay.")
                 resultIsError = false
                 DSHaptic.tap()
             }
@@ -138,18 +138,18 @@ struct TokenSetupScreen: View {
                 // "Update"/"Remove token" for a connection that never worked and
                 // retry a dead token on every foreground.
                 TokenVault.delete(bridge.tokenKey)
-                result = "That token didn't work — check it (and your connection) and paste again."
+                result = String(localized: "That token didn't work — check it (and your connection) and paste again.")
             } else {
                 // A background re-sync of an already-connected bridge failed. The
                 // user didn't just paste anything, so don't accuse the empty field
                 // — say what actually happened: the saved token or the network.
-                result = "Couldn't refresh \(bridge.rawValue) just now — your saved token may need renewing."
+                result = String(localized: "Couldn't refresh \(bridge.rawValue) just now — your saved token may need renewing.")
             }
             resultIsError = true
             return
         }
         resultIsError = false
-        result = added > 0 ? "\(added) \(bridge.noun) in" : "Up to date"
+        result = added > 0 ? String(localized: "\(added) \(bridge.noun) in") : String(localized: "Up to date")
         let proof = added > 0 ? "\(added) \(bridge.noun) in" : "Synced just now"
         if store.registerConnected(id: bridge.bridgeID, name: bridge.rawValue,
                                    proof: proof, can: [bridge.canLine]) {
