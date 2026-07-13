@@ -285,10 +285,11 @@ enum HomeComposition {
             guard !items.isEmpty else { continue }
             let id = "appTile\(emitted)"
             let mail = source == "Gmail" || source == "iCloud Mail"
+            let social = HomePinnedSources.autoSocial.contains(source)
             let childIds = items.indices.map { "\(id)c\($0)" }
             doc.append("\(id) = Widget(\(q(appTitle(source))), \(q("")), [\(childIds.joined(separator: ", "))], \(q(source)))")
             for (i, t) in items.enumerated() {
-                doc.append(appChild(id: "\(id)c\(i)", t, mail: mail))
+                doc.append(appChild(id: "\(id)c\(i)", t, mail: mail, social: social))
             }
             rootRefs.append(id)
             boardRefs.append(id)
@@ -337,15 +338,20 @@ enum HomeComposition {
 
     /// One line inside a pinned app tile — a live TokenChip (sparkline + price)
     /// for a token link (Dexscreener: a token's content IS its chart, prd 51), a
-    /// MailRow for the inboxes (subject + snippet), a plain tappable Row for
-    /// everything else. All carry the thing id so a tap opens it, and the
-    /// hand-off flag so "Open in app" appears only when it goes somewhere.
-    private static func appChild(id: String, _ t: Thing, mail: Bool) -> String {
+    /// PostRow for Bluesky/Farcaster (the author's own avatar leads, same as the
+    /// old single-post card carried), a MailRow for the inboxes (subject +
+    /// snippet), a plain tappable Row for everything else. All carry the thing
+    /// id so a tap opens it, and the hand-off flag so "Open in app" appears
+    /// only when it goes somewhere.
+    private static func appChild(id: String, _ t: Thing, mail: Bool, social: Bool = false) -> String {
         let openable = VerbDerivation.verbs(for: t).contains {
             if case .openURL = $0.action { return true } else { return false }
         } ? "app" : ""
         if t.kind == .link, let route = TokenChart.route(from: t.content) {
             return "\(id) = TokenChip(\(q(t.title)), \(q(route.chain)), \(q(route.address)), \(q(t.id.uuidString)), \(q(openable)))"
+        }
+        if social {
+            return "\(id) = PostRow(\(q(t.authorHandle ?? "")), \(q(t.title)), \(q(t.authorAvatarURL ?? "")), \(q(t.id.uuidString)), \(q(openable)))"
         }
         if mail {
             let snippet = String(t.content.prefix(120))

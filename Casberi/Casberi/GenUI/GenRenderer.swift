@@ -252,6 +252,7 @@ struct GenRender: View {
         case "TxRow":        GenTxRow(el: el).mountIn()
         case "AgendaRow":    GenAgendaRow(el: el).mountIn()
         case "MailRow":      GenMailRow(el: el).mountIn()
+        case "PostRow":      GenPostRow(el: el).mountIn()
         case "TakeawayCard": GenTakeawayCard(el: el).mountIn()
         case "ApprovalCard": GenApprovalCard(el: el).mountIn()
 
@@ -1704,6 +1705,35 @@ private struct GenMailRow: View {
         }
         .padding(.horizontal, DS.Space.s4)
         .padding(.vertical, DS.Space.s1)
+        return row.pinnedRowActions(id: el.str(3), openable: el.str(4) == "app",
+                                    open: thingOpen, unpin: nil, handoff: thingHandoff,
+                                    removeApp: appRemove)
+    }
+}
+
+/// PostRow(handle, text, avatarURL, thingId, openable) — a social post inside
+/// a pinned Bluesky/Farcaster tile: the author's own avatar leads (circular,
+/// same idiom the old single-post SocialCard used), then handle + text. An
+/// account with no avatar URL falls back to its initial via RemoteThumb, same
+/// as everywhere else a remote image can be dead or missing.
+private struct GenPostRow: View {
+    let el: GenEl
+    @Environment(\.genThingOpen) private var thingOpen
+    @Environment(\.genThingHandoff) private var thingHandoff
+    @Environment(\.genAppRemove) private var appRemove
+    var body: some View {
+        let row = HStack(spacing: DS.Space.s3) {
+            RemoteThumb(urlString: el.str(2), size: 28, fallback: el.str(0), circular: true)
+            VStack(alignment: .leading, spacing: 2) {
+                if !el.str(0).isEmpty {
+                    Text(el.str(0)).dsText(.subhead13).foregroundStyle(DS.textSecondary).lineLimit(1)
+                }
+                Text(el.str(1)).dsText(.body17).foregroundStyle(DS.textPrimary).lineLimit(2)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, DS.Space.s4)
+        .padding(.vertical, DS.Space.s2)
         return row.pinnedRowActions(id: el.str(3), openable: el.str(4) == "app",
                                     open: thingOpen, unpin: nil, handoff: thingHandoff,
                                     removeApp: appRemove)
