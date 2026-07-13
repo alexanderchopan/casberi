@@ -1057,18 +1057,15 @@ struct FeedScreen: View {
     }
 
     /// Source chips, Stories-sized (ruling 2026-07-10, Option A): 56pt
-    /// icon-only circles — the brand logo IS the chip. A DS.confirm ring
-    /// marks a source with things NEWER than the last visit (same state as
-    /// the "New since" divider; it quiets when the visit stamp advances).
-    /// The active chip wears the ink ring. No labels — labels were what
-    /// made the row scroll (ruling 2026-07-09); "All" keeps its word, it
-    /// has no app.
+    /// icon-only circles — the brand logo IS the chip. The active chip wears
+    /// the blue ink ring; a source whose connection needs you wears an orange
+    /// one. Newness is NOT a chip ring (removed 2026-07-13, user: the green
+    /// "new since last visit" ring read as a status light and confused — the
+    /// "New since …" divider already marks what's new in the list). No labels
+    /// — labels were what made the row scroll (ruling 2026-07-09); "All" keeps
+    /// its word, it has no app.
     private func filterChips(_ labels: [String], active: String,
                              onTap: @escaping (String) -> Void) -> some View {
-        let fresh: Set<String> = {
-            guard let newSince else { return [] }
-            return Set(things.filter { $0.capturedAt > newSince }.map(\.source))
-        }()
         // ScrollViewReader keeps the ACTIVE chip visible — a deep link
         // (casberi://feed/source/Zerion) can select a chip that sits past
         // the fold, and a filter you can't see reads as no filter at all.
@@ -1077,7 +1074,6 @@ struct FeedScreen: View {
                 HStack(spacing: DS.Space.s3) {
                     ForEach(labels, id: \.self) { label in
                         let isActive = label == active
-                        let hasNew = fresh.contains(label)
                         let broken = bridges.bridges.contains {
                             $0.name == label && $0.status == .attention
                         }
@@ -1101,14 +1097,14 @@ struct FeedScreen: View {
                         .frame(width: 46, height: 46)
                         .padding(2.5)
                         .overlay {
-                            // One ring, three exclusive states: tint = active
+                            // One ring, two exclusive states: tint = active
                             // (blue, the app's selection color — the ink ring
                             // read as chrome; 2026-07-12, user) — a single ring
                             // that SLIDES from the old chip to the new (selection
                             // is an object traveling, not two states blinking);
                             // orange = the connection needs you (health lives
-                            // where you live, 2026-07-10); green = new since your
-                            // last visit.
+                            // where you live, 2026-07-10). Newness lives in the
+                            // "New since …" divider, not a chip ring (2026-07-13).
                             if isActive {
                                 let ring = Circle().strokeBorder(DS.tint, lineWidth: 2.5)
                                 if reduceMotion {
@@ -1118,10 +1114,6 @@ struct FeedScreen: View {
                                 }
                             } else if broken {
                                 Circle().strokeBorder(DS.attention, lineWidth: 2.5)
-                            } else {
-                                // Stays mounted so the trim can animate both
-                                // ways — an unmounted ring can only blink.
-                                NewRing(on: hasNew, reduceMotion: reduceMotion)
                             }
                         }
                         .frame(width: 56, height: 56)
@@ -1136,8 +1128,7 @@ struct FeedScreen: View {
                                 .opacity(phase.isIdentity ? 1 : 0.6)
                         }
                         .id(label)
-                        .accessibilityLabel(label
-                            + (broken ? ", needs reconnecting" : (hasNew ? ", new things" : "")))
+                        .accessibilityLabel(label + (broken ? ", needs reconnecting" : ""))
                         .accessibilityAddTraits(isActive ? .isSelected : [])
                     }
                 }
@@ -1150,44 +1141,6 @@ struct FeedScreen: View {
                 guard now != "All" else { return }
                 withAnimation(DS.Motion.standard) { proxy.scrollTo(now, anchor: .center) }
             }
-        }
-    }
-
-    /// The green "new since last visit" ring, as an event instead of a state
-    /// (2026-07-10): when a source gains new things mid-visit it DRAWS ON —
-    /// the arc sweeps clockwise from 12 o'clock with one soft pulse — and
-    /// when a return visit acknowledges them it DRAINS the same way back.
-    /// Arrival is an event, acknowledgment is a release, never a blink.
-    /// Orange (needs you) stays a steady state — a broken connection is not
-    /// an event. First mount takes the current state instantly, so chips
-    /// scrolling into view never replay the sweep.
-    private struct NewRing: View {
-        let on: Bool
-        let reduceMotion: Bool
-        @State private var progress: CGFloat
-        @State private var pulse: CGFloat = 1
-
-        init(on: Bool, reduceMotion: Bool) {
-            self.on = on
-            self.reduceMotion = reduceMotion
-            _progress = State(initialValue: on ? 1 : 0)
-        }
-
-        var body: some View {
-            Circle()
-                .inset(by: 1.25)
-                .trim(from: 0, to: progress)
-                .stroke(DS.confirm, style: StrokeStyle(lineWidth: 2.5, lineCap: .round))
-                .rotationEffect(.degrees(-90))
-                .scaleEffect(pulse)
-                .onChange(of: on) { _, now in
-                    guard !reduceMotion else { progress = now ? 1 : 0; return }
-                    withAnimation(.spring(duration: 0.55)) { progress = now ? 1 : 0 }
-                    if now {
-                        withAnimation(.spring(duration: 0.22)) { pulse = 1.06 }
-                        withAnimation(.spring(duration: 0.4).delay(0.22)) { pulse = 1 }
-                    }
-                }
         }
     }
 
