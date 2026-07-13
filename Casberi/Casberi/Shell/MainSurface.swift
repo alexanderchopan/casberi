@@ -39,6 +39,26 @@ struct MainSurface: View {
 
     private var showingBoard: Bool { filter.source == "Pinned" }
 
+    /// A shaped feed wears its source's hue (B ruling 2026-07-10): the whole
+    /// top of the screen — status bar, doors, chip strip, then the feed's own
+    /// header — sits on the brand color mixed toward black, fading out as the
+    /// day groups begin. Lives here (not inside FeedScreen) because the chip
+    /// strip and status bar are OUTSIDE the feed's own view, on this shared
+    /// surface (bug, 2026-07-14: the wash used to start at the feed's List,
+    /// leaving the chips and status bar flat black above it). Same recipe as
+    /// the thing sheet's wash — no per-hue tuning — and nil (no wash) for
+    /// Pinned/All/a hueless source, honestly.
+    @ViewBuilder private var shapeWash: some View {
+        if let hue = DS.brandHue(for: filter.source) {
+            LinearGradient(colors: [hue.mix(with: .black, by: 0.35).opacity(0.9), .clear],
+                           startPoint: .top, endPoint: .bottom)
+                .frame(height: 620)
+                .ignoresSafeArea(edges: .top)
+                .transition(.opacity)
+                .id(filter.source)   // crossfade between hues, not a smear
+        }
+    }
+
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
@@ -72,6 +92,7 @@ struct MainSurface: View {
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
+            .background(alignment: .top) { shapeWash }
             .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackgroundVisibility(.hidden, for: .navigationBar)

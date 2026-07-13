@@ -235,24 +235,6 @@ struct FeedScreen: View {
             }
     }
 
-    /// A shaped feed wears its source's hue (B ruling 2026-07-10, picked
-    /// from three on-sim mocks): the header region — title, status, chips —
-    /// sits on the brand color mixed toward black, fading out right where
-    /// the day groups begin, so you're clearly inside that app's room but
-    /// reading still happens on ink. Same discipline as the thing sheet's
-    /// wash: ONE recipe, no per-hue tuning — a source without a brand hue
-    /// (or the All feed) stays black, honestly.
-    @ViewBuilder private var shapeWash: some View {
-        if filter.source != "All", let hue = DS.brandHue(for: filter.source) {
-            LinearGradient(colors: [hue.mix(with: .black, by: 0.35).opacity(0.9), .clear],
-                           startPoint: .top, endPoint: .bottom)
-                .frame(height: 430)
-                .ignoresSafeArea(edges: .top)
-                .transition(.opacity)
-                .id(filter.source)   // crossfade between hues, not a smear
-        }
-    }
-
     /// The switch flood (delight, 2026-07-12): the source's hue sweeps down
     /// over the feed and fades out as you land on its chip. Top-heavy and
     /// brief so it never buries the rows — `flood` eases 1 → 0 in ~0.5s — and
@@ -281,62 +263,62 @@ struct FeedScreen: View {
     /// this hardcoded `.detail`, so Dexscreener's Feed header opened a page with
     /// no way to watch a second token.)
     ///
-    /// Row-scale now, not a settings card (2026-07-14, user): the feed carries
-    /// an icon on every real row, so a bare header read as the odd one out —
-    /// but a 40pt animated icon right under the same icon in the source chips
-    /// read as doubled. The icon shrinks to row-glyph size and drops its own
-    /// coin-flip — that delight belongs on the chip that actually switches
-    /// sources, not duplicated here too.
+    /// A slim capsule now, not a card (2026-07-14, user: the full-width block
+    /// read as a settings panel dropped into the feed). Picked from three
+    /// on-sim mocks — this one echoes the Dynamic-Island-style pill already
+    /// riding the top of the screen instead of introducing a new rectangular
+    /// shape, and it hugs its own content instead of stretching edge to edge.
+    /// The per-row brand icon is gone too (it doubled the same icon in the
+    /// source chip right above) — a status dot carries connection health
+    /// instead, same grammar as the OpenClaw presence line below the chips.
     private func sourceHeader(_ bridge: BridgeApp, showAddHint: Bool) -> some View {
         Button {
             DSHaptic.selection()
             pushedBridge = BridgeRouter.destination(forID: bridge.id)
         } label: {
-            HStack(spacing: DS.Space.s3) {
-                BridgeIcon(name: bridge.name, size: 28)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(bridge.name)
-                        .dsText(.body17).fontWeight(.semibold)
-                        .foregroundStyle(DS.textPrimary)
-                        .lineLimit(1)
+            HStack(spacing: DS.Space.s2) {
+                Circle()
+                    .fill(bridge.status == .connected ? DS.confirm : bridge.status.color)
+                    .frame(width: 6, height: 6)
+                HStack(spacing: 4) {
+                    Text(bridge.name).fontWeight(.semibold).foregroundStyle(DS.textPrimary)
                     Text(bridge.statusLine)
-                        .dsText(.subhead13)
                         .foregroundStyle(bridge.status == .connected ? DS.textSecondary : bridge.status.color)
-                        .lineLimit(1)
                 }
-                Spacer(minLength: 0)
+                .dsText(.subhead13)
+                .lineLimit(1)
                 // A watch/follow source advertises "there's more in here" — the
-                // add-another action folds into this one bar (which already opens
-                // the same setup screen) rather than a second stacked row (user,
-                // 2026-07-12). It's a signpost, not a separate target: the whole
-                // card taps through. Compose sources keep their own row instead —
-                // that action leaves for another app, a genuinely other place.
+                // add-another action folds into this one capsule (which already
+                // opens the same setup screen) rather than a second stacked row
+                // (user, 2026-07-12). Compose sources keep their own row instead
+                // — that action leaves for another app, a genuinely other place.
                 if showAddHint {
-                    HStack(spacing: DS.Space.s1) {
-                        Image(systemName: "plus")
-                            .font(.system(size: 13, weight: .semibold))
-                        Text("Add")
-                            .dsText(.subhead13).fontWeight(.semibold)
-                    }
-                    .foregroundStyle(DS.tint)
+                    Rectangle()
+                        .fill(DS.textTertiary.opacity(0.3))
+                        .frame(width: 1, height: 12)
+                    Image(systemName: "plus")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(DS.tint)
+                } else {
+                    // Quieted, not gone (2026-07-14): a light hint that this
+                    // capsule leads somewhere, without the bold
+                    // settings-navigation weight of a chevron-only row.
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 11, weight: .regular))
+                        .foregroundStyle(DS.textTertiary)
                 }
-                // Quieted, not gone (2026-07-14): a light hint that this row
-                // leads somewhere, without the bold settings-navigation weight
-                // that made it read as a control panel dropped into the feed.
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 12, weight: .regular))
-                    .foregroundStyle(DS.textTertiary)
             }
-            .padding(.horizontal, DS.Space.s4)
-            .padding(.vertical, DS.Space.s3)
-            .dsCard()
-            .contentShape(Rectangle())
+            .padding(.horizontal, DS.Space.s3)
+            .padding(.vertical, DS.Space.s2)
+            .background(DS.surfaceSheet, in: Capsule(style: .continuous))
+            .contentShape(Capsule())
         }
         .buttonStyle(.plain)
         .padding(.horizontal, DS.Space.s4)
-        // A clear gap above the header so it never touches the source-chip row
-        // (user, 2026-07-13) — the chips are the strip, the card is its own bar.
-        .padding(.top, DS.Space.s3)
+        // A generous gap above the capsule (2026-07-14, user: s3/12pt read as
+        // still touching the chip row) — the chips are the strip, the capsule
+        // is clearly its own thing below it.
+        .padding(.top, DS.Space.s8)
         .padding(.bottom, DS.Space.s2)
     }
 
@@ -465,7 +447,6 @@ struct FeedScreen: View {
         .refreshable { await refreshFeed() }
         .animation(DS.Motion.standard, value: things.count)   // new things rise in
         .scrollContentBackground(.hidden)
-        .background(alignment: .top) { shapeWash }
         .overlay(alignment: .top) { switchFlood }
         .dsPageBackground()
         .environment(\.defaultMinListHeaderHeight, 0)
