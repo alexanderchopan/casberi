@@ -126,10 +126,10 @@ struct BridgeApp: Identifiable, Codable {
               can: ["Reads screenshots you take."]),
         .init(id: "claw",  name: "OpenClaw",  status: .connected, statusLine: "Listening · 3 agents",
               can: ["Brings in what your agents make.", "Their state lands in your feed.", "Approvals reach you here."]),
-        // An MCP client connected TO us (PRD §34) — the inverse of a bridge:
-        // Claude reads the person's things and can only save what they approve.
-        .init(id: "mcp-claude", name: "Claude", status: .connected, statusLine: "Connected · reads on ask",
-              can: ["Reads your things when you ask.", "Saves only what you approve."]),
+        // Claude chats, imported from the official export (PRD S9 "import"
+        // grade) — one chat thing per conversation, kept findable.
+        .init(id: "claude", name: "Claude", status: .connected, statusLine: "Synced 1h ago",
+              can: ["Brings in your Claude chats.", "Kept findable alongside your things."]),
         // A read bridge for onchain activity (Wallet, on Alchemy). Read-only — it
         // can never trade or move funds; a wallet's swaps/sends/receives just land as things.
         .init(id: "wallet", name: "Wallet", status: .connected, statusLine: "0x1a2b…4f · 4 this week",

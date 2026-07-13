@@ -20,6 +20,7 @@ enum BridgeRouter {
         case gmail
         case rss
         case chatgpt
+        case claude
         case bluesky
         case farcaster
         case pinterest
@@ -51,6 +52,7 @@ enum BridgeRouter {
             case .gmail:          "gmail"
             case .rss:            "rss"
             case .chatgpt:        "gpt"
+            case .claude:         "claude"
             case .bluesky:        "bsky"
             case .farcaster:      "fc"
             case .pinterest:      "pinterest"
@@ -89,6 +91,7 @@ enum BridgeRouter {
         Row(offer: "Gmail",       id: "gmail",       destination: .gmail),
         Row(offer: "RSS",       id: "rss",    destination: .rss),
         Row(offer: "ChatGPT",   id: "gpt",    destination: .chatgpt),
+        Row(offer: "Claude",    id: "claude", destination: .claude),
         Row(offer: "Bluesky",   id: "bsky",   destination: .bluesky),
         Row(offer: "Farcaster", id: "fc",     destination: .farcaster),
         Row(offer: "Pinterest", id: "pinterest", destination: .pinterest),
@@ -141,6 +144,7 @@ struct BridgeDestinationView: View {
         case .gmail:          MailScreen(provider: .gmail)
         case .rss:            RSSScreen()
         case .chatgpt:        ChatGPTImportScreen()
+        case .claude:         ClaudeImportScreen()
         case .bluesky:        HandleSetupScreen(bridge: .bluesky)
         case .farcaster:      HandleSetupScreen(bridge: .farcaster)
         case .pinterest:      HandleSetupScreen(bridge: .pinterest)

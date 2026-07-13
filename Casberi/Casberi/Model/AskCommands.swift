@@ -100,6 +100,37 @@ enum AggregateAsk {
     }
 }
 
+/// Tag-vocabulary asks (2026-07-12) — "what tags do i have", "list my tags",
+/// "how many tags". A meta-question about the tag SET itself, not a search
+/// for content. It used to fall into the term-scored retriever, which read
+/// the literal words ("tags", "have") as search terms and surfaced noise (or
+/// nothing) — reading as "nothing happened" on send. Answered from the tag
+/// set directly: computed, no model, always correct.
+enum TagsAsk {
+    enum Intent { case list, count }
+
+    /// nil unless the WHOLE question is about the tag set. Phrase-gated on
+    /// purpose: "what did i tag as work" is a search, "tag lisbon as Trip" is
+    /// an organize command (both handled elsewhere) — neither should list
+    /// every tag. Organize/navigate commands are parsed before the answer
+    /// path, so by the time this runs a leading "tag "/"show " has already
+    /// had its chance.
+    static func parse(_ raw: String) -> Intent? {
+        let q = raw.lowercased()
+            .replacingOccurrences(of: "\u{2019}", with: "'")
+            .trimmingCharacters(in: CharacterSet(charactersIn: "?!. "))
+        // Count wins over listing: "how many tags do i have".
+        if q.contains("how many tags") { return .count }
+        let listCues = ["what tags", "which tags", "what are my tags",
+                        "what are all my tags", "list my tags", "list tags",
+                        "show my tags", "show me my tags", "see my tags",
+                        "my tags", "tags do i have", "tags i have",
+                        "tags have i", "tags do i use", "tags have i made",
+                        "tags do i", "all my tags"]
+        return listCues.contains(where: { q.contains($0) }) ? .list : nil
+    }
+}
+
 /// Status asks (2026-07-11) — "tell me what's going on", "catch me up",
 /// "anything new?". The ask names no content, so the term-scored retriever
 /// would ground it on nothing (or on noise — a title that happens to say

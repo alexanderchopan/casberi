@@ -5,6 +5,7 @@ import Photos
 import UIKit
 
 /// The launch-arg connect-and-sync probes: `-chatgptImport <path>`,
+/// `-claudeImport <path>`,
 /// `-tokenBridge "<Name>:<token>"`, `-fcName <username>`, `-bskyHandle
 /// <handle>`, `-rssFeed <url>`. Each reads one UserDefaults key a `simctl
 /// launch` arg set, performs the connect, and NSLogs its result — one shape,
@@ -30,6 +31,13 @@ enum ProbeHooks {
             guard let data = FileManager.default.contents(atPath: path) else { return }
             let summary = ChatGPTImport.run(data: data, context: context)
             NSLog("ChatGPT probe: %d imported, %d skipped, failed=%d",
+                  summary.imported, summary.skipped, summary.failed ? 1 : 0)
+        },
+        // `-claudeImport <path>` imports a Claude conversations.json from disk.
+        Hook(key: "claudeImport") { path, context in
+            guard let data = FileManager.default.contents(atPath: path) else { return }
+            let summary = ClaudeImport.run(data: data, context: context)
+            NSLog("Claude probe: %d imported, %d skipped, failed=%d",
                   summary.imported, summary.skipped, summary.failed ? 1 : 0)
         },
         // `-dayoneImport <path>` imports a Day One export .json from disk.

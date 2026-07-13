@@ -52,10 +52,8 @@ struct AppsScreen: View {
         var id: String { offer.name }
     }
 
-    /// Claude pairs over MCP, so it acts without a wired bridge — but only
-    /// once the transport is real; until then it's a Soon row.
     private func actionable(_ offer: BridgeCatalog.Offer) -> Bool {
-        offer.connectable || (offer.name == "Claude" && MCPPairing.transportReady)
+        offer.connectable
     }
 
     /// ONE ranked list for the whole catalog (2026-07-10, strip removed):
@@ -516,9 +514,7 @@ struct AppsScreen: View {
                 }
             }
         case 1:
-            if entry.offer.name == "Claude" {
-                VerbCapsule(verb: .pair) { pairing = true }
-            } else if entry.offer.needsSetup {
+            if entry.offer.needsSetup {
                 // Setup bridges collect input first — Connect opens their
                 // screen; the connect happens there, with proof.
                 VerbCapsule(verb: .connect) {

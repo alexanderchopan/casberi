@@ -611,6 +611,58 @@ struct RootShell: View {
         return Array(Set(all.flatMap(\.tags)).subtracting(typeTags)).sorted()
     }
 
+    /// The person's OWN tags — every tag minus the built-in kind tags (Link,
+    /// Note, …, which every thing wears automatically) — with how many things
+    /// carry each, biggest first, the name breaking ties.
+    private func tagCounts(in all: [Thing]) -> [(tag: String, count: Int)] {
+        let typeTags = Set(ThingKind.allCases.map { $0.typeTag.lowercased() })
+        var counts: [String: Int] = [:]
+        for thing in all {
+            for tag in thing.tags where !typeTags.contains(tag.lowercased()) {
+                counts[tag, default: 0] += 1
+            }
+        }
+        return counts
+            .sorted { $0.value != $1.value ? $0.value > $1.value : $0.key < $1.key }
+            .map { (tag: $0.key, count: $0.value) }
+    }
+
+    /// "what tags do i have" — the tag set, computed. A list shows the tag
+    /// treemap (tap a cell to open that tag, the same push Home makes); a
+    /// count answers in one line. No tags yet points at how tags get made
+    /// (honesty rule: no dead end).
+    private func tagsDoc(_ ask: TagsAsk.Intent, in all: [Thing]) -> [String] {
+        let counts = tagCounts(in: all)
+        guard !counts.isEmpty else {
+            let line = "You haven't made any tags yet. Tag things from a thing's sheet, or type 'tag <app> as <name>' here."
+            return ["root = Stack([ins])", "ins = Insight(\"\(genSafe(line))\")"]
+        }
+        switch ask {
+        case .count:
+            let line = "You have \(counts.count) tag\(counts.count == 1 ? "" : "s")."
+            return ["root = Stack([ins])", "ins = Insight(\"\(genSafe(line))\")"]
+        case .list:
+            let n = counts.count
+            let line = n > 6
+                ? "You have \(n) tags. Your biggest are here — tap one to open it."
+                : "You have \(n) tag\(n == 1 ? "" : "s") — tap one to open it."
+            // TagMap caps at 6 cells; hand it the biggest, "Label Count" each.
+            let cells = counts.prefix(6).map { "\(tagMapLabel($0.tag)) \($0.count)" }
+            return ["root = Stack([ins, map])",
+                    "ins = Insight(\"\(genSafe(line))\")",
+                    "map = TagMap(\"\(genSafe(String(localized: "Your tags")))\", null, [\(cells.joined(separator: ", "))])"]
+        }
+    }
+
+    /// A tag name safe as a bare TagMap cell label — a comma or bracket would
+    /// break the cell list's grammar, and the trailing count is its own token.
+    private func tagMapLabel(_ tag: String) -> String {
+        genSafe(tag)
+            .replacingOccurrences(of: ",", with: " ")
+            .replacingOccurrences(of: "[", with: "")
+            .replacingOccurrences(of: "]", with: "")
+    }
+
     /// How an Ask gets answered. Lookups ("find X", "what did I save") want a
     /// structured list, so they use guided generation → a Widget of real things
     /// (the strong honesty rail: the model returns indices, never free text).
@@ -661,6 +713,14 @@ struct RootShell: View {
             sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]
         ))) ?? []
         let knownSources = Array(Set(allThings.map(\.source)))
+        // A tag-vocabulary ask ("what tags do i have", "how many tags") is
+        // answered from the tag SET itself — computed, never the model, always
+        // correct. Runs BEFORE AggregateAsk so "how many tags" counts tags, not
+        // things, and before retrieval so the literal words never become search
+        // terms and surface noise (2026-07-12).
+        if let tagsAsk = TagsAsk.parse(query) {
+            return tagsDoc(tagsAsk, in: allThings)
+        }
         if let agg = AggregateAsk.parse(query, sources: knownSources) {
             let line = AggregateAsk.answer(agg, things: allThings)
             return ["root = Stack([ins])", "ins = Insight(\"\(genSafe(line))\")"]

@@ -10,7 +10,6 @@ struct AppDetailScreen: View {
     let offer: BridgeCatalog.Offer
     @Environment(BridgeStore.self) private var store
     @Environment(\.modelContext) private var modelContext
-    @State private var pairing = false
     @State private var openBridge: BridgeRouter.Destination?
     @State private var previewStream = GenStream()
     /// The connect payoff (delight, 2026-07-12): eases 1 → 0 when a connect
@@ -65,7 +64,6 @@ struct AppDetailScreen: View {
                 previewStream.stream(doc)
             }
         }
-        .sheet(isPresented: $pairing) { PairClientSheet() }
         .navigationDestination(item: $openBridge) { dest in
             BridgeDestinationView(destination: dest)
         }
@@ -91,7 +89,7 @@ struct AppDetailScreen: View {
     }
 
     /// The product page's action — the SAME honest capsule verbs as the Apps
-    /// chart (shared `VerbCapsule`): Fix / Pair / Connect / Open / Soon.
+    /// chart (shared `VerbCapsule`): Fix / Connect / Open / Soon.
     @ViewBuilder
     private var actionButton: some View {
         if bridge?.status == .attention {
@@ -108,8 +106,6 @@ struct AppDetailScreen: View {
             VerbCapsule(verb: .open) {
                 if let id = bridge?.id { openBridge = BridgeRouter.destination(forID: id) }
             }
-        } else if offer.name == "Claude" && MCPPairing.transportReady {
-            VerbCapsule(verb: .pair) { pairing = true }
         } else if offer.connectable {
             if offer.needsSetup {
                 VerbCapsule(verb: .connect) { openBridge = BridgeRouter.destination(forOffer: offer.name) }

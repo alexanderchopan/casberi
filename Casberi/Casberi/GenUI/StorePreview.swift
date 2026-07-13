@@ -49,7 +49,7 @@ enum StorePreview {
         ]
         case "Claude": [
             "root = Stack([c])",
-            "c = TakeawayCard(\"ON ASK\", \"Claude reaches your things\", \"Reads only when you ask. Saves only what you approve.\")",
+            "c = TakeawayCard(\"IMPORTED\", \"Refactor plan: sync layer\", \"CloudKit zones, conflict rules, and the migration order.\")",
         ]
         case "GitHub": [
             "root = Stack([w])",
