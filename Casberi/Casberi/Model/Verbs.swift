@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 import EventKit
 
 /// Verb derivation — verbs derive; menus die (brief §12). A thing's verbs come
@@ -64,6 +65,7 @@ enum VerbDerivation {
                 ? Verb(label: "Mark done", icon: "checkmark.circle", action: .markDone)
                 : Verb(label: "Add to Reminders", icon: "checklist",
                        action: .addToReminders))
+            if let v = externalVerb(for: thing, apps: [.todoist]) { out.append(v) }
         case .link:
             if let url = Capture.detectURL(in: thing.content.isEmpty ? thing.title : thing.content) {
                 out.append(Verb(label: "Open link", icon: "safari", action: .openURL(url)))
@@ -76,11 +78,29 @@ enum VerbDerivation {
             // become outcomes). The write confirms; copy follows.
             out.append(Verb(label: "Add to Reminders", icon: "checklist",
                             action: .addToReminders))
+            if let v = externalVerb(for: thing, apps: [.todoist]) { out.append(v) }
             out.append(Verb(label: "Copy text", icon: "doc.on.doc", action: .copyText))
         case .chat, .mail, .file, .voice:
             out.append(Verb(label: "Copy text", icon: "doc.on.doc", action: .copyText))
         default:
             break
+        }
+
+        // 1b — a place leads with Directions. When the thing carries an
+        // address or a maps link, routing to it is the most useful move —
+        // prepend so it survives the cap. Apple Maps over the web URL, so it
+        // opens even if the Maps app was removed (never a dead hand-off).
+        if let maps = placeURL(for: thing) {
+            out.insert(Verb(label: "Directions", icon: "map", action: .openURL(maps)), at: 0)
+        }
+
+        // 1c — reach a person: call a detected number, email a detected address.
+        if let tel = telURL(in: thing) {
+            out.append(Verb(label: "Call", icon: "phone", action: .openURL(tel)))
+        }
+        if let mail = mailtoURL(for: thing) {
+            out.append(Verb(label: thing.kind == .mail ? "Reply" : "Email",
+                            icon: "envelope", action: .openURL(mail)))
         }
 
         // 2 — the source hand-off, when the source has an address.
@@ -97,7 +117,97 @@ enum VerbDerivation {
             out.append(Verb(label: "Mark done", icon: "checkmark.circle", action: .markDone))
         }
 
-        return Array(out.prefix(3))   // the cap
+        // The cap (was three): a place-y or contactful thing can earn a fourth
+        // hand-off, but no thing becomes a menu (brief §12).
+        return Array(out.prefix(4))
+    }
+
+    /// A place the thing points at, as an Apple Maps directions URL — or nil
+    /// when there's no address to route to (the verb drops; no dead control).
+    /// A maps/geo link passes straight through; otherwise a detected street
+    /// address becomes the destination query.
+    private static func placeURL(for thing: Thing) -> URL? {
+        let text = thing.content.isEmpty ? thing.title : thing.content
+
+        if let url = Capture.detectURL(in: text) {
+            let host = url.host()?.lowercased() ?? ""
+            if url.scheme == "geo"
+                || host.contains("maps.apple.com")
+                || host.contains("google.com/maps")
+                || host.contains("maps.google")
+                || host.contains("goo.gl/maps") {
+                return url
+            }
+        }
+
+        let detector = try? NSDataDetector(types: NSTextCheckingResult.CheckingType.address.rawValue)
+        let range = NSRange(text.startIndex..., in: text)
+        guard let match = detector?.firstMatch(in: text, range: range),
+              let r = Range(match.range, in: text) else { return nil }
+        var comps = URLComponents(string: "https://maps.apple.com/")
+        comps?.queryItems = [URLQueryItem(name: "daddr", value: String(text[r]))]
+        return comps?.url
+    }
+
+    /// A phone number in the thing → a tel: URL, else nil (the verb drops).
+    private static func telURL(in thing: Thing) -> URL? {
+        let text = thing.content.isEmpty ? thing.title : thing.content
+        let detector = try? NSDataDetector(types: NSTextCheckingResult.CheckingType.phoneNumber.rawValue)
+        let range = NSRange(text.startIndex..., in: text)
+        guard let number = detector?.firstMatch(in: text, range: range)?.phoneNumber else { return nil }
+        let dialable = number.filter { $0.isNumber || $0 == "+" }
+        return dialable.isEmpty ? nil : URL(string: "tel:\(dialable)")
+    }
+
+    /// An email address in the thing → a mailto: compose URL, else nil. Only
+    /// fires when there's a real address to reach — never a blank composer.
+    private static func mailtoURL(for thing: Thing) -> URL? {
+        let text = thing.content.isEmpty ? thing.title : thing.content
+        guard let r = text.range(of: #"[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}"#,
+                                 options: [.regularExpression, .caseInsensitive]) else { return nil }
+        var comps = URLComponents()
+        comps.scheme = "mailto"
+        comps.path = String(text[r])
+        comps.queryItems = [URLQueryItem(name: "subject", value: thing.title)]
+        return comps.url
+    }
+
+    /// A third-party app a task-shaped thing can hand off to. The rule (user,
+    /// 2026-07-12): ONLY apps the person already connected as a Casberi bridge
+    /// — never an arbitrary popular app — and each must carry a documented
+    /// create URL. Todoist is the one that qualifies today; the table grows as
+    /// more connected bridges gain schemes.
+    private enum ExternalApp {
+        case todoist
+
+        /// The catalog/bridge name, lowercased — matched against connected seats.
+        var bridgeName: String { switch self { case .todoist: "todoist" } }
+        var scheme: String { switch self { case .todoist: "todoist" } }
+        var label: String { switch self { case .todoist: "Todoist" } }
+        var icon: String { switch self { case .todoist: "checklist" } }
+
+        func url(for thing: Thing) -> URL? {
+            switch self {
+            case .todoist:
+                var c = URLComponents(string: "todoist://addtask")
+                c?.queryItems = [URLQueryItem(name: "content", value: thing.title)]
+                return c?.url
+            }
+        }
+    }
+
+    /// An "Add to …" hand-off for the first app that is BOTH a connected bridge
+    /// and installed — else nil, so the verb only shows what the person chose
+    /// and can actually reach. Reads cached snapshots (no UIApplication /
+    /// BridgeStore here) so derivation runs off-main inside GenUI.
+    private static func externalVerb(for thing: Thing, apps: [ExternalApp]) -> Verb? {
+        for app in apps
+        where HandOffState.connectedBridges.contains(app.bridgeName)
+           && HandOffState.installedSchemes.contains(app.scheme) {
+            guard let url = app.url(for: thing) else { continue }
+            return Verb(label: "Add to \(app.label)", icon: app.icon, action: .openURL(url))
+        }
+        return nil
     }
 
     /// Where a source can be opened. Nil = no hand-off; the verb drops.
@@ -111,6 +221,31 @@ enum VerbDerivation {
         case "safari":    return nil   // links open directly via Open link
         default:          return nil
         }
+    }
+}
+
+/// Cached hand-off state, refreshed on the main actor each foreground.
+/// `VerbDerivation` reads it off any thread — it's only ever written on main,
+/// and a stale read just hides or shows one optional verb — so derivation
+/// stays free of UIApplication / BridgeStore isolation and can run inside
+/// off-main GenUI composition.
+enum HandOffState {
+    /// Custom URL schemes (from `LSApplicationQueriesSchemes`) that resolve to
+    /// an installed app. A scheme not listed in Info.plist always reads absent,
+    /// so the two must move together.
+    nonisolated(unsafe) static var installedSchemes: Set<String> = []
+    /// Lowercased names of the bridges the person has connected — the gate for
+    /// "Add to <app>" hand-offs (user ruling: bridge-tied, never arbitrary).
+    nonisolated(unsafe) static var connectedBridges: Set<String> = []
+
+    private static let candidates = ["todoist"]
+
+    @MainActor static func refresh(connected: Set<String>) {
+        installedSchemes = Set(candidates.filter {
+            guard let url = URL(string: "\($0)://") else { return false }
+            return UIApplication.shared.canOpenURL(url)
+        })
+        connectedBridges = connected
     }
 }
 

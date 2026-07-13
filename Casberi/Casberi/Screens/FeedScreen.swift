@@ -379,6 +379,36 @@ struct FeedScreen: View {
         .padding(.bottom, DS.Space.s2)
     }
 
+    /// The "act in this source" row under the header — a tinted CTA. Compose
+    /// hands off through `openURL`; expand rides `pushedBridge`, the same
+    /// channel the header uses to open the bridge's setup.
+    private func sourceActionRow(_ action: SourceAction) -> some View {
+        Button {
+            DSHaptic.selection()
+            switch action.run {
+            case .openURL(let url): openURL(url)
+            case .route(let dest):  pushedBridge = dest
+            }
+        } label: {
+            HStack(spacing: DS.Space.s2) {
+                Image(systemName: action.icon)
+                    .font(.system(size: 15, weight: .semibold))
+                Text(action.label)
+                    .dsText(.body17).fontWeight(.medium)
+                Spacer(minLength: 0)
+            }
+            .foregroundStyle(DS.tint)
+            .padding(.horizontal, DS.Space.s4)
+            .padding(.vertical, DS.Space.s3)
+            .background(DS.tintDim,
+                        in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .padding(.horizontal, DS.Space.s4)
+        .padding(.bottom, DS.Space.s2)
+    }
+
     private var feedList: some View {
         List {
             Group {
@@ -446,6 +476,12 @@ struct FeedScreen: View {
                 // inserts reliably on mount (a standalone conditional row won't).
                 if let bridge = activeSourceBridge {
                     sourceHeader(bridge)
+                    // Act in this source: compose a new item, or add another of
+                    // a watch/follow source (routes to its setup). Nil for
+                    // read-only sources — no dead affordance.
+                    if let action = SourceActions.action(forSource: bridge.name) {
+                        sourceActionRow(action)
+                    }
                 }
             }
             .listRowBackground(Color.clear)

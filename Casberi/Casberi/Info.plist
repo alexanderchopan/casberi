@@ -21,5 +21,12 @@
 	<array>
 		<string>remote-notification</string>
 	</array>
+	<!-- Query-only: lets the thing sheet show an "Add to <app>" hand-off ONLY
+	     when that app is installed (canOpenURL). Without this list the check
+	     always returns false and the honest verb would never appear. -->
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>todoist</string>
+	</array>
 </dict>
 </plist>

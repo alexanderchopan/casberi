@@ -143,6 +143,11 @@ struct RootShell: View {
                 // Connected bridges are cheap to poll — every foreground
                 // refreshes them all (one place, reusable from screens).
                 BridgeRefresh.refreshAllConnected(context: modelContext, store: bridges)
+                // Resnapshot hand-off state so the thing sheet's "Add to <app>"
+                // verbs only show apps the person connected AND has installed.
+                HandOffState.refresh(connected: Set(
+                    bridges.bridges.filter { $0.status == .connected }
+                        .map { $0.name.lowercased() }))
                 // Control Center's button left a flag — open the composer.
                 let group = UserDefaults(suiteName: SharedStore.appGroup)
                 if group?.bool(forKey: "compose.request") == true {
