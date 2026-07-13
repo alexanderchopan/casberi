@@ -200,7 +200,7 @@ struct AppsScreen: View {
                 headline: offer.tagline,
                 iconName: offer.name,
                 name: offer.name,
-                brand: BridgeGlyph.color(for: offer.name),
+                brand: DS.legibleCardFill(for: offer.name),
                 verb: .connect
             ) {
                 // Setup bridges (paste an address/token/handle) route to their

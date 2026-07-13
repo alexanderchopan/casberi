@@ -81,4 +81,22 @@ extension DS {
         default:                    return nil
         }
     }
+
+    /// A brand hue's perceptual luminance (ITU-R BT.709), 0 (black) to 1
+    /// (white) — used to catch hues too dark to read as a filled surface.
+    private static func luminance(of color: Color) -> Double {
+        var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+        UIColor(color).getRed(&r, green: &g, blue: &b, alpha: &a)
+        return 0.2126 * Double(r) + 0.7152 * Double(g) + 0.0722 * Double(b)
+    }
+
+    /// The brand hue as a CARD fill — a near-black brand mark (Dexscreener's
+    /// dark field, #151a21) would render its story card as an empty void, so
+    /// a too-dark hue lifts toward the app tint instead of showing raw
+    /// (design audit fix, 2026-07-12). Icons and other identity uses keep the
+    /// true `brandHue`; only this fill-legibility path substitutes.
+    static func legibleCardFill(for source: String) -> Color {
+        let hue = brandHue(for: source) ?? DS.tint
+        return luminance(of: hue) < 0.12 ? hue.mix(with: DS.tint, by: 0.6) : hue
+    }
 }
