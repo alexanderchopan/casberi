@@ -28,7 +28,6 @@ struct AppsScreen: View {
 
     private static let categories: [(name: String, exemplar: String, groups: Set<String>)] = [
         ("Onchain", "Wallet",      ["Wallet"]),
-        ("Markets", "Kalshi",      ["Markets"]),
         ("Life",    "Photos",      ["Photos", "Schedule", "Fitness"]),
         ("Notes",   "Apple Notes", ["Notes"]),
         ("Social",  "Bluesky",     ["Network", "Messages"]),
@@ -36,6 +35,10 @@ struct AppsScreen: View {
         ("Mail",    "Gmail",       ["Mail"]),
         ("Work",    "GitHub",      ["Work"]),
         ("Reading", "Readwise",    ["Reading", "Saves"]),
+        // Markets rides near the bottom (user ruling 2026-07-13): Onchain
+        // leads the catalog; prediction markets are a tail interest, not
+        // the front door.
+        ("Markets", "Kalshi",      ["Markets"]),
         ("Media",   "Spotify",     ["Watching", "Listening", "Games"]),
     ]
 

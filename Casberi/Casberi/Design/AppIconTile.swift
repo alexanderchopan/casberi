@@ -82,6 +82,25 @@ extension DS {
         }
     }
 
+    /// The brand hue normalized for the WASH surfaces — the feed's shape
+    /// wash, the switch flood, the thing sheet, the app detail page. Raw
+    /// brand hexes aren't a designed ramp: RGB-mixing them toward black
+    /// shifted yellows to olive and browns, and left the near-black marks
+    /// (Steam, Venice) as colorless smudges (user, 2026-07-13). Still one
+    /// formula, no per-hue tables — keep the hue angle, pin saturation into
+    /// a rich band, settle brightness into a wash band. Near-neutral marks
+    /// (X, Cal.com, ChatGPT) return nil: no honest hue, no wash — the same
+    /// ruling as `brandHue`'s nil. Identity uses (icons, the connect bloom)
+    /// keep the true `brandHue`.
+    static func washHue(for source: String) -> Color? {
+        guard let brand = brandHue(for: source) else { return nil }
+        var h: CGFloat = 0, s: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+        UIColor(brand).getHue(&h, saturation: &s, brightness: &b, alpha: &a)
+        guard s >= 0.15 else { return nil }
+        return Color(hue: h, saturation: max(s, 0.55),
+                     brightness: min(max(b * 0.65, 0.40), 0.62))
+    }
+
     /// A brand hue's perceptual luminance (ITU-R BT.709), 0 (black) to 1
     /// (white) — used to catch hues too dark to read as a filled surface.
     private static func luminance(of color: Color) -> Double {

@@ -29,7 +29,7 @@ struct AppDetailScreen: View {
     /// app (the gray fallback is a fill, not an identity: same ruling the
     /// thing-sheet wash follows), so those pages stay pure page.
     @ViewBuilder private var brandWash: some View {
-        if let hue = DS.brandHue(for: offer.name) {
+        if let hue = DS.washHue(for: offer.name) {
             LinearGradient(colors: [hue.opacity(0.42), .clear], startPoint: .top, endPoint: .bottom)
                 .frame(height: 320)
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)

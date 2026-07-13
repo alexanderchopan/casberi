@@ -241,7 +241,7 @@ struct FeedScreen: View {
     /// it's the color moment the quiet background crossfade lacked. Absent for
     /// All (no identity hue) and under Reduce Motion (`flood` never rises).
     @ViewBuilder private var switchFlood: some View {
-        if let hue = DS.brandHue(for: filter.source) {
+        if let hue = DS.washHue(for: filter.source) {
             // A TOP-BAND kiss, not a full-bleed veil: it reinforces the resting
             // wash's zone and clears well before the rows, so even a dark-hued
             // source is a brief tint at the crown, never a screen-wide dim.
@@ -613,11 +613,12 @@ struct FeedScreen: View {
                     .padding(.vertical, DS.Space.s1)
                     .shadow(color: DS.cardShadow, radius: 18, x: 0, y: 6)
             )
-            // Feed rhythm: s3 top/bottom (was s2) opens the row a step for a
-            // more airy, editorial read (2026-07-12). Bump back to s2 to tighten.
-            .listRowInsets(.init(top: DS.Space.s3,
+            // Feed rhythm (2026-07-13): back to s2 — the s3 airy read made
+            // every gap the same size, so days never clustered. Rows sit
+            // tight within their day; the day header carries the big gap.
+            .listRowInsets(.init(top: DS.Space.s2,
                                  leading: DS.Space.s4 + DS.Space.s3,
-                                 bottom: DS.Space.s3,
+                                 bottom: DS.Space.s2,
                                  trailing: DS.Space.s4 + DS.Space.s3))
             .listRowSeparator(.hidden)
     }
@@ -849,11 +850,12 @@ struct FeedScreen: View {
                     .padding(.vertical, DS.Space.s1)
                     .shadow(color: DS.cardShadow, radius: 18, x: 0, y: 6)
             )
-            // Feed rhythm: s3 top/bottom (was s2) opens the row a step for a
-            // more airy, editorial read (2026-07-12). Bump back to s2 to tighten.
-            .listRowInsets(.init(top: DS.Space.s3,
+            // Feed rhythm (2026-07-13): back to s2 — the s3 airy read made
+            // every gap the same size, so days never clustered. Rows sit
+            // tight within their day; the day header carries the big gap.
+            .listRowInsets(.init(top: DS.Space.s2,
                                  leading: DS.Space.s4 + DS.Space.s3,
-                                 bottom: DS.Space.s3,
+                                 bottom: DS.Space.s2,
                                  trailing: DS.Space.s4 + DS.Space.s3))
             .listRowSeparator(.hidden)
             // One gesture, one meaning: TAP opens the sheet — tags and verbs
@@ -1052,7 +1054,11 @@ struct FeedScreen: View {
             }
             .textCase(nil)
             .padding(.leading, DS.Space.s4)
-            .padding(.vertical, DS.Space.s1)
+            // Days read as clusters (2026-07-13): the gap ABOVE a day header
+            // is the feed's biggest — rows within a day sit at s2, so the s6
+            // says "new day" without merging cards or drawing a line.
+            .padding(.top, DS.Space.s6)
+            .padding(.bottom, DS.Space.s1)
         }
     }
 

@@ -78,7 +78,7 @@ struct ThingSheetView: View {
             // treemap fills and the banner died. Hueless sources (your own
             // notes, unknown apps) stay pure ink: the gray fallback is a
             // fill, not an identity.
-            if let hue = DS.brandHue(for: thing.source) {
+            if let hue = DS.washHue(for: thing.source) {
                 LinearGradient(colors: [hue.opacity(0.45), .clear],
                                startPoint: .top, endPoint: .bottom)
                     .frame(height: 260)
