@@ -459,20 +459,17 @@ struct HomeScreen: View {
         let allowed = allowedSpans(ref)
         // The hero slot leads big when its module can take it.
         if ref == boardOrder.first, allowed.contains(.big) { return .big }
-        // A module that can't be a 1×1 square (an app tile is a full-width
-        // list, never a paired thumbnail) starts at its smallest ALLOWED span,
-        // not the shared `.small` default it can't render.
         if !allowed.contains(.small) { return allowed.first ?? .wide }
         return .small
     }
 
     /// The spans a module allows (the bento guardrails): a treemap needs area
-    /// so it skips `wide`; an app tile is a full-width list of rows, so it
-    /// skips the 1×1 `small` (a cramped square can't hold a readable row).
-    /// Everything else can still shrink to a small square.
+    /// so it skips `wide`. A pinned app tile now takes all three (2026-07-14) —
+    /// small renders its ONE most recent item full-size (never a cramped row);
+    /// wide shows one item as a line beneath the header; big shows three, a
+    /// proper card. Everything else can shrink to a small square too.
     private func allowedSpans(_ ref: String) -> [ModuleSpan] {
         if ref.hasPrefix("walletMap") || ref == "map" { return [.small, .big] }
-        if ref.hasPrefix("appTile") { return [.wide, .big] }
         return [.small, .wide, .big]
     }
 

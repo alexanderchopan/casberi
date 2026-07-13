@@ -409,18 +409,15 @@ private struct GenInsight: View {
     }
 }
 
-/// Widget(title, count?, children) — a sheet card of a titled group of rows,
-/// used by the store previews (`StorePreview`). Home's pinned things are their
-/// own board tiles now (ruling 2026-07-12), so the old "@pin" oversized-pin
-/// title, the 1×1 count tile, and the large moodboard interior are gone — a
-/// pin is a mark on a thing, not a kind of card.
 /// Widget(title, subline, [rowRefs], source?) — a titled card of rows. Off the
 /// board (store previews) it's a plain display card. On Home, arg 3 names the
 /// pinned SOURCE the card stands for (2026-07-12): the card becomes a board
-/// module — draggable, sized by the same corner pin every tile wears, and
-/// removable via long-press "Remove from Home" (which drops that source's pin).
-/// Its rows always render as thin list lines (`genSpan` reset to nil), never
-/// the square board-tile form, since the CARD is the module, not each row.
+/// module, sized by the same corner pin every tile wears, removable via
+/// long-press "Remove from Home" (which drops that source's pin) — and now
+/// (2026-07-14) it takes all three spans, not just wide/big: `big` is a card
+/// of THREE items, `wide` a card of ONE item as a line, `small` a 1×1 tile
+/// rendering that ONE item full-size (`SoloRowTile` etc. below) — never a row
+/// cramped into a square, which is what truncated a token's own symbol.
 private struct GenWidget: View {
     let id: String
     let el: GenEl
@@ -432,15 +429,38 @@ private struct GenWidget: View {
     /// arg 3 — the pinned source this tile stands for; empty off the board.
     private var source: String { el.str(3) }
     private var pinned: Bool { !source.isEmpty }
-    /// Grown tiles show more of the app; a small/wide tile stays a peek.
+    /// Grown tiles show more of the app; a wide tile stays a one-line peek.
     private var rowRefs: [String] {
         let all = el.refs(2)
         guard pinned else { return all }
-        return Array(all.prefix(span == .some(.big) ? 5 : 3))
+        return Array(all.prefix(span == .some(.big) ? 3 : 1))
     }
 
     var body: some View {
-        let card = VStack(alignment: .leading, spacing: 0) {
+        // A pinned tile at SMALL is its own square — the multi-row card
+        // chrome (header + list) never fits a readable row into a 1×1 seat,
+        // so it renders its one most recent item full-size instead. Its own
+        // pinnedRowActions() already offers Remove from Home, so no outer
+        // contextMenu here — a second one would just be shadowed by it, the
+        // same bug fixed for the card's own rows.
+        if pinned, span == .some(.small) {
+            soloContent
+                .environment(\.genAppRemove) { sourceUnpin?(id) }
+        } else if pinned, let sourceUnpin {
+            card.contextMenu {
+                Button(role: .destructive) {
+                    sourceUnpin(id)
+                } label: {
+                    Label("Remove from Home", systemImage: "pin.slash")
+                }
+            }
+        } else {
+            card
+        }
+    }
+
+    private var card: some View {
+        VStack(alignment: .leading, spacing: 0) {
             HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
                 Text(LocalizedStringKey(el.str(0))).dsText(.heading22).foregroundStyle(DS.textPrimary)
                 if !el.str(1).isEmpty {
@@ -473,19 +493,219 @@ private struct GenWidget: View {
         .dsWidgetSurface()
         .padding(.horizontal, DS.Space.s4)
         .padding(.top, DS.Space.s4)
+    }
 
-        // Long-press → Remove from Home (the corner pin means resize, so
-        // removal needs its own verb) — parallel to a media shelf's menu.
-        if pinned, let sourceUnpin {
-            card.contextMenu {
-                Button(role: .destructive) {
-                    sourceUnpin(id)
-                } label: {
-                    Label("Remove from Home", systemImage: "pin.slash")
-                }
+    /// The small-span solo tile — dispatches on the one child's component so
+    /// each kind renders in its own full shape (a token's symbol full-width,
+    /// a post's avatar, a mail's snippet), not a squeezed generic line.
+    @ViewBuilder private var soloContent: some View {
+        if let ref = el.refs(2).first, let childEl = els[ref] {
+            switch childEl.comp {
+            case "Row":       SoloRowTile(widgetID: id, el: childEl)
+            case "MailRow":   SoloMailTile(widgetID: id, el: childEl)
+            case "PostRow":   SoloPostTile(widgetID: id, el: childEl)
+            case "TokenChip": SoloTokenTile(widgetID: id, el: childEl)
+            default:          GenSkeletonTile()
             }
         } else {
-            card
+            GenSkeletonTile()
+        }
+    }
+}
+
+/// The 1×1 solo-tile chrome shared by the four `Solo*Tile` forms below — the
+/// same sheet-square surface every other small board tile wears. Small tiles
+/// are inset and top-gapped by the board's packer (not here), and stretch to
+/// their row-mate's height so a paired 1×1 never under-fills raggedly.
+private extension View {
+    func soloTileChrome() -> some View {
+        self
+            .padding(DS.Space.s4)
+            .frame(maxWidth: .infinity, minHeight: 150, maxHeight: .infinity, alignment: .topLeading)
+            .dsWidgetSurface()
+            .contentShape(RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
+    }
+}
+
+/// A pinned Row (everything without a bespoke shape — Reminders, Calendar,
+/// GitHub, Linear, …) as a solo 1×1 tile: icon, the title given its full
+/// height (up to 3 lines, never truncated to a fragment), source · time below.
+private struct SoloRowTile: View {
+    let widgetID: String
+    let el: GenEl
+    @Environment(\.genThingOpen) private var thingOpen
+    @Environment(\.genThingHandoff) private var thingHandoff
+    @Environment(\.genSizeToggle) private var sizeToggle
+    @Environment(\.genAppRemove) private var appRemove
+
+    var body: some View {
+        let sub = [el.str(2), el.str(3)].filter { !$0.isEmpty }.joined(separator: " · ")
+        let content = VStack(alignment: .leading, spacing: DS.Space.s2) {
+            HStack(alignment: .top, spacing: 0) {
+                TagGlyph(tag: el.str(1), size: 26)
+                Spacer(minLength: 0)
+                if let sizeToggle {
+                    ShelfSizePin(large: false) { sizeToggle(widgetID) }
+                        .padding(.top, -12).padding(.trailing, -12)
+                }
+            }
+            Spacer(minLength: 0)
+            Text(el.str(0))
+                .dsText(.body17).foregroundStyle(DS.textPrimary)
+                .lineLimit(3)
+                .fixedSize(horizontal: false, vertical: true)
+            if !sub.isEmpty {
+                Text(sub).dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                    .lineLimit(1).minimumScaleFactor(0.7)
+            }
+        }
+        .soloTileChrome()
+        return content.pinnedRowActions(id: el.str(4), openable: el.str(5) == "app",
+                                        open: thingOpen, unpin: nil, handoff: thingHandoff,
+                                        removeApp: appRemove)
+    }
+}
+
+/// A pinned Gmail/iCloud Mail thing as a solo 1×1 tile: subject and snippet
+/// given room to breathe, instead of a one-line-each list row.
+private struct SoloMailTile: View {
+    let widgetID: String
+    let el: GenEl
+    @Environment(\.genThingOpen) private var thingOpen
+    @Environment(\.genThingHandoff) private var thingHandoff
+    @Environment(\.genSizeToggle) private var sizeToggle
+    @Environment(\.genAppRemove) private var appRemove
+
+    var body: some View {
+        let content = VStack(alignment: .leading, spacing: DS.Space.s2) {
+            HStack(alignment: .top, spacing: 0) {
+                KindGlyph(kind: .mail, size: 26)
+                Spacer(minLength: 0)
+                if let sizeToggle {
+                    ShelfSizePin(large: false) { sizeToggle(widgetID) }
+                        .padding(.top, -12).padding(.trailing, -12)
+                }
+            }
+            Spacer(minLength: 0)
+            Text(el.str(0)).dsText(.body17).foregroundStyle(DS.textPrimary)
+                .lineLimit(2).fixedSize(horizontal: false, vertical: true)
+            if !el.str(1).isEmpty {
+                Text(el.str(1)).dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                    .lineLimit(2).fixedSize(horizontal: false, vertical: true)
+            }
+            if !el.str(2).isEmpty {
+                Text(el.str(2)).dsText(.subhead13).foregroundStyle(DS.textTertiary)
+            }
+        }
+        .soloTileChrome()
+        return content.pinnedRowActions(id: el.str(3), openable: el.str(4) == "app",
+                                        open: thingOpen, unpin: nil, handoff: thingHandoff,
+                                        removeApp: appRemove)
+    }
+}
+
+/// A pinned Bluesky/Farcaster post as a solo 1×1 tile: the author's own
+/// avatar and handle up top, the post's full text below — the same idiom
+/// the old single-post card carried, now the tile's small form.
+private struct SoloPostTile: View {
+    let widgetID: String
+    let el: GenEl
+    @Environment(\.genThingOpen) private var thingOpen
+    @Environment(\.genThingHandoff) private var thingHandoff
+    @Environment(\.genSizeToggle) private var sizeToggle
+    @Environment(\.genAppRemove) private var appRemove
+
+    var body: some View {
+        let content = VStack(alignment: .leading, spacing: DS.Space.s2) {
+            HStack(spacing: 7) {
+                RemoteThumb(urlString: el.str(2), size: 26, fallback: el.str(0), circular: true)
+                if !el.str(0).isEmpty {
+                    Text(el.str(0)).dsText(.subhead13).foregroundStyle(DS.textSecondary).lineLimit(1)
+                }
+                Spacer(minLength: 0)
+                if let sizeToggle {
+                    ShelfSizePin(large: false) { sizeToggle(widgetID) }
+                        .padding(.top, -12).padding(.trailing, -12)
+                }
+            }
+            Spacer(minLength: 0)
+            Text(el.str(1)).dsText(.body17).foregroundStyle(DS.textPrimary)
+                .lineLimit(4).fixedSize(horizontal: false, vertical: true)
+        }
+        .soloTileChrome()
+        return content.pinnedRowActions(id: el.str(3), openable: el.str(4) == "app",
+                                        open: thingOpen, unpin: nil, handoff: thingHandoff,
+                                        removeApp: appRemove)
+    }
+}
+
+/// A pinned Dexscreener token as a solo 1×1 tile — the layout that actually
+/// motivated small-span support (2026-07-14): the symbol gets its OWN full-
+/// width line, never sharing horizontal space with the plot or price the way
+/// the list row does, so "ETH" (or any symbol) never truncates. Plot and
+/// price/delta stack below it.
+private struct SoloTokenTile: View {
+    let widgetID: String
+    let el: GenEl
+    @State private var chart: TokenChart?
+    @State private var revealed = false
+    @Environment(\.genThingOpen) private var thingOpen
+    @Environment(\.genThingHandoff) private var thingHandoff
+    @Environment(\.genSizeToggle) private var sizeToggle
+    @Environment(\.genAppRemove) private var appRemove
+    @Environment(\.genRefreshTick) private var refreshTick
+    @Environment(\.colorScheme) private var scheme
+
+    private var symbol: String { el.str(0) }
+    private var accent: Color {
+        TokenChartStyle.accent(up: (chart?.change ?? 0) >= 0, scheme: scheme)
+    }
+
+    var body: some View {
+        let content = VStack(alignment: .leading, spacing: DS.Space.s1) {
+            HStack(alignment: .top, spacing: DS.Space.s2) {
+                Text(symbol).dsText(.callout15).foregroundStyle(DS.textPrimary)
+                    .lineLimit(1).minimumScaleFactor(0.8)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                if let sizeToggle {
+                    ShelfSizePin(large: false) { sizeToggle(widgetID) }
+                        .padding(.top, -12).padding(.trailing, -12)
+                }
+            }
+            Spacer(minLength: DS.Space.s2)
+            plot
+            if let chart {
+                HStack(spacing: DS.Space.s2) {
+                    Text(TokenChartStyle.priceText(chart.price))
+                        .dsText(.subhead13).foregroundStyle(DS.textPrimary)
+                        .contentTransition(.numericText())
+                    TokenDeltaPill(change: chart.change, label: "1D", compact: true)
+                }
+            }
+        }
+        .soloTileChrome()
+        .task(id: "\(refreshTick):\(el.str(1))/\(el.str(2))") {
+            guard !el.str(1).isEmpty, !el.str(2).isEmpty else { return }
+            revealed = false
+            chart = await TokenChart.fetch(chain: el.str(1), address: el.str(2))
+            if chart != nil { withAnimation(.easeOut(duration: 0.7)) { revealed = true } }
+        }
+        return content.pinnedRowActions(id: el.str(3), openable: el.str(4) == "app",
+                                        open: thingOpen, unpin: nil, handoff: thingHandoff,
+                                        removeApp: appRemove)
+    }
+
+    @ViewBuilder private var plot: some View {
+        if let chart {
+            TokenChartPlot(chart: chart, accent: accent, height: 40, pulses: false)
+                .mask(alignment: .leading) {
+                    GeometryReader { geo in
+                        Rectangle().frame(width: revealed ? geo.size.width : 0)
+                    }
+                }
+        } else {
+            RoundedRectangle(cornerRadius: 6, style: .continuous)
+                .fill(DS.surfaceWell).frame(height: 40)
         }
     }
 }

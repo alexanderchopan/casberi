@@ -280,8 +280,11 @@ enum HomeComposition {
         for source in onBoard {
             // Pinning doesn't invent content — a source with nothing landed
             // yet shows no tile (its pin persists; the tile appears when the
-            // first thing arrives), same rule the media shelves follow.
-            let items = Array(things.filter { $0.source == source }.prefix(5))
+            // first thing arrives), same rule the media shelves follow. Three
+            // is the ceiling now (2026-07-14): big shows all three as a card,
+            // wide shows the first as one line, small shows it full-size —
+            // no span ever needs a fourth.
+            let items = Array(things.filter { $0.source == source }.prefix(3))
             guard !items.isEmpty else { continue }
             let id = "appTile\(emitted)"
             let mail = source == "Gmail" || source == "iCloud Mail"
@@ -348,7 +351,7 @@ enum HomeComposition {
             if case .openURL = $0.action { return true } else { return false }
         } ? "app" : ""
         if t.kind == .link, let route = TokenChart.route(from: t.content) {
-            return "\(id) = TokenChip(\(q(t.title)), \(q(route.chain)), \(q(route.address)), \(q(t.id.uuidString)), \(q(openable)))"
+            return "\(id) = TokenChip(\(q(tickerSymbol(t.title))), \(q(route.chain)), \(q(route.address)), \(q(t.id.uuidString)), \(q(openable)))"
         }
         if social {
             return "\(id) = PostRow(\(q(t.authorHandle ?? "")), \(q(t.title)), \(q(t.authorAvatarURL ?? "")), \(q(t.id.uuidString)), \(q(openable)))"
@@ -358,6 +361,16 @@ enum HomeComposition {
             return "\(id) = MailRow(\(q(t.title)), \(q(snippet)), \(q(shortTime(t.capturedAt))), \(q(t.id.uuidString)), \(q(openable)))"
         }
         return "\(id) = Row(\(q(t.title)), \(q(t.kind.typeTag)), \(q(t.source)), \(q(shortTime(t.capturedAt))), \(q(t.id.uuidString)), \(q(openable)))"
+    }
+
+    /// The bare ticker from a watched token's own "Name · $TICKER" title
+    /// (`TokenWatch`'s format) — TokenChip's symbol shares its line with the
+    /// plot and price, so the FULL title truncated there (2026-07-14: even a
+    /// short ticker like ETH scrolled past its slot inside "Ethereum · $ETH").
+    /// Falls back to the whole title when the format doesn't match.
+    private static func tickerSymbol(_ title: String) -> String {
+        guard let dollar = title.range(of: "$", options: .backwards) else { return title }
+        return String(title[dollar.upperBound...])
     }
 
     /// Wallet holdings on Home (ruling 2026-07-08): pinning the wallet shows

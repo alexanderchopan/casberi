@@ -2370,3 +2370,35 @@ and a "+" button on the card as a second tap target (re-introduces the
 two-targets-on-one-bar ambiguity the ruling exists to remove). The rule of
 thumb: an affordance may fold onto the card only when it shares the card's
 destination; anything that leaves for elsewhere keeps its own row.
+
+## 58l. A pinned app tile takes all three spans (user, 2026-07-14) — BUILT
+
+Ruling: every pinned app tile — not just media shelves and the wallet — must
+support the full small/wide/big bento range: **small** = a 1×1 tile of ONE
+item, rendered fully; **wide** = a full-width card of ONE item as a line;
+**big** = a full-width card of THREE items. Previously `allowedSpans` excluded
+`.small` for `appTile*` refs (a cramped square couldn't hold a readable row),
+so a pinned app was stuck at wide/big. That guardrail is gone — `GenWidget`
+now branches on span instead of assuming rows always fit a list.
+
+WHAT SMALL RENDERS. Not the card chrome shrunk down — a dedicated per-kind
+solo tile (`SoloRowTile`/`SoloMailTile`/`SoloPostTile`/`SoloTokenTile` in
+GenRenderer.swift), dispatched off the one child's component name. Each gets
+the full 1×1 seat: a Reminders/Calendar/GitHub/etc. Row shows its title up to
+3 lines (never a fragment); Gmail/iCloud shows subject + snippet; Bluesky/
+Farcaster shows the avatar + full post; Dexscreener shows the ticker on its
+OWN line, a sparkline, and price/delta below — solving the entangled ask
+underneath this ruling: a token's symbol (e.g. "ETH") was truncating because
+it shared one HStack with the plot and price. Root cause fixed at the source
+too — `appChild` had been passing a WATCHED token's full `"Name · $TICKER"`
+title into the symbol slot (`TokenWatch`'s own title format); it now extracts
+the bare ticker (`HomeComposition.tickerSymbol`), so the list-row form (wide/
+big) stops truncating too, not just the new small tile.
+
+Item ceiling dropped from 5 to 3 (`appendPinnedApps`) — big only ever shows
+three, wide one, small one, so nothing past the third was ever reachable.
+
+Each solo tile's own long-press already offers Remove from Home (via
+`genAppRemove`, wired the same way the card's rows drop the pin) — no
+redundant outer contextMenu on the small branch (that would just be shadowed,
+the same bug fixed for the card's rows in 58k).
