@@ -6,6 +6,12 @@ import SwiftData
 /// seconds, the one-line title clamp, and the JSON calls.
 enum IngestSupport {
 
+    /// Alchemy read-only key, restricted to reads, shared by every caller
+    /// (wallet transfers, token charts) so a rotation touches one line — not
+    /// one per file. If it ever leaks, the worst case is quota use on public
+    /// data — rotate at dashboard.alchemy.com.
+    static let alchemyKey = "8ilcJd0_tmnF-IPrI3CRl"
+
     /// Every sourceRef already in the corpus — the set incoming items
     /// dedupe against. Runs on the caller's context, like the fetches it
     /// replaced. A partial fetch: the predicate skips the many rows with no

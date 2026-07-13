@@ -9,10 +9,6 @@ import SwiftData
 /// only by their rules, so it couldn't stay serverless; Alchemy can.)
 enum WalletIngest {
 
-    /// Alchemy read-only key, restricted to reads. If it ever leaks, the worst
-    /// case is quota use on public data — rotate at dashboard.alchemy.com.
-    private static let alchemyKey = "8ilcJd0_tmnF-IPrI3CRl"
-
     /// The chains we read, and where a tx opens. One `getAssetTransfers` per
     /// direction per chain.
     private struct Chain { let network, explorer, symbol: String }
@@ -97,7 +93,7 @@ enum WalletIngest {
 
     private static func fetch(address: String, chain: Chain,
                               received: Bool) async -> [[String: Any]]? {
-        let url = "https://\(chain.network).g.alchemy.com/v2/\(alchemyKey)"
+        let url = "https://\(chain.network).g.alchemy.com/v2/\(IngestSupport.alchemyKey)"
         let params: [String: Any] = [
             "fromBlock": "0x0", "toBlock": "latest",
             received ? "toAddress" : "fromAddress": address,
@@ -230,7 +226,7 @@ enum WalletIngest {
         // network → native symbol, so a chain's own coin (ETH/MATIC) — which
         // the API returns with a null symbol — still names itself.
         let native = Dictionary(uniqueKeysWithValues: chains.map { ($0.network, $0.symbol) })
-        let url = "https://api.g.alchemy.com/data/v1/\(alchemyKey)/assets/tokens/by-address"
+        let url = "https://api.g.alchemy.com/data/v1/\(IngestSupport.alchemyKey)/assets/tokens/by-address"
 
         var bySymbol: [String: Double] = [:]
         var pageKey: String? = nil
@@ -295,7 +291,7 @@ enum WalletIngest {
         }
 
         let networks = chains.map(\.network)
-        let url = "https://api.g.alchemy.com/data/v1/\(alchemyKey)/assets/tokens/by-address"
+        let url = "https://api.g.alchemy.com/data/v1/\(IngestSupport.alchemyKey)/assets/tokens/by-address"
         let body: [String: Any] = [
             "addresses": addresses.map { ["address": $0, "networks": networks] },
             "withMetadata": true, "withPrices": true,

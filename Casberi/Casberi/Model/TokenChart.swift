@@ -24,12 +24,16 @@ enum TokenRange: String, CaseIterable {
 }
 
 /// A token's recent price, drawn natively (2026-07-07). The curve comes from
-/// GeckoTerminal's free public OHLCV (no key) — real candles — with a
-/// Dexscreener fallback for the long tail of tokens GeckoTerminal hasn't
-/// indexed (a coarse 5-point curve back-solved from its m5/h1/h6/h24 change
-/// buckets; added 2026-07-09 after pinned memecoins stayed chartless on
-/// device). Either way Casberi draws it itself with Swift Charts rather than
-/// embedding anyone's web chart (native content, per the design law).
+/// GeckoTerminal's free public OHLCV (no key) — real candles — with Alchemy's
+/// Prices API as a second tier (2026-07-13) for the EVM chains it covers: real
+/// hourly/daily candles too, just from a different indexer, so a token
+/// GeckoTerminal hasn't crawled yet — but Alchemy has — gets a real curve
+/// instead of dropping straight to the coarse fallback (and, unlike that
+/// fallback, Alchemy also covers the week/month ranges). Dexscreener is the
+/// last resort, for everything neither indexes (a coarse 5-point curve
+/// back-solved from its m5/h1/h6/h24 change buckets, 24h only; added
+/// 2026-07-09). Either way Casberi draws it itself with Swift Charts rather
+/// than embedding anyone's web chart (native content, per the design law).
 struct TokenChart {
     let closes: [Double]
     let price: Double
@@ -62,15 +66,19 @@ struct TokenChart {
     ]
 
     /// Fetches a token's price curve for the range. GeckoTerminal's OHLCV is
-    /// the primary source (real candles); when it has no pool for the token —
-    /// common for the long tail of memecoins it hasn't indexed — the 24h
-    /// fetch falls back to Dexscreener, which resolved the token in the first
-    /// place and always has a price for it. Longer ranges have no fallback
-    /// (Dexscreener's buckets only cover 24h): they return nil and the chart
-    /// says so instead of faking a week.
+    /// the primary source (real candles); when it has no pool for the
+    /// token — common for the long tail of memecoins it hasn't indexed —
+    /// Alchemy's Prices API tries next, for chains it covers. Only if BOTH
+    /// come up empty does the 24h fetch fall back to Dexscreener, which
+    /// resolved the token in the first place and always has a price for it.
+    /// Dexscreener's buckets only cover 24h, so week/month return nil past
+    /// that point and the chart says so instead of faking a week.
     static func fetch(chain: String, address: String,
                       range: TokenRange = .day) async -> TokenChart? {
         if let chart = await geckoTerminal(chain: chain, address: address, range: range) {
+            return chart
+        }
+        if let chart = await alchemy(chain: chain, address: address, range: range) {
             return chart
         }
         return range == .day ? await dexscreener(chain: chain, address: address) : nil
@@ -104,6 +112,57 @@ struct TokenChart {
         guard let first = closes.first, let last = closes.last, first > 0 else { return nil }
         return TokenChart(closes: closes, price: last,
                           change: (last - first) / first)
+    }
+
+    /// Dexscreener's chain slugs → Alchemy's network params — the EVM chains
+    /// WalletIngest already reads wallets on. A chain not in this table (or a
+    /// token Alchemy hasn't priced) falls through to the Dexscreener tier.
+    private static let alchemyNetwork: [String: String] = [
+        "ethereum": "eth-mainnet",
+        "base": "base-mainnet",
+        "arbitrum": "arb-mainnet",
+        "optimism": "opt-mainnet",
+        "polygon": "matic-mainnet",
+    ]
+
+    /// Alchemy's Prices API historical endpoint — real candles for the EVM
+    /// chains it covers, at the same resolution/count GeckoTerminal's ranges
+    /// use (24 hourly points for a day, 168 for a week, 30 daily for a month)
+    /// so a chart that falls to this tier reads no differently than one that
+    /// didn't.
+    private static func alchemy(chain: String, address: String,
+                                range: TokenRange) async -> TokenChart? {
+        guard let network = alchemyNetwork[chain] else { return nil }
+        let (interval, span): (String, TimeInterval) = switch range {
+        case .day:   ("1h", 86_400)
+        case .week:  ("1h", 7 * 86_400)
+        case .month: ("1d", 30 * 86_400)
+        }
+        let iso = ISO8601DateFormatter()
+        let end = Date.now
+        let body: [String: Any] = [
+            "network": network, "address": address, "interval": interval,
+            "startTime": iso.string(from: end.addingTimeInterval(-span)),
+            "endTime": iso.string(from: end),
+        ]
+        guard let root = await IngestSupport.postJSON(
+            "https://api.g.alchemy.com/prices/v1/\(IngestSupport.alchemyKey)/tokens/historical",
+            body: body) as? [String: Any],
+              let points = root["data"] as? [[String: Any]]
+        else { return nil }
+
+        // Sorted by its own timestamp rather than trusted as oldest-first —
+        // a dropped/out-of-order point (a null value mid-range, say) must not
+        // silently swap what `first`/`last` mean. ISO 8601 UTC strings sort
+        // chronologically as plain strings, so no date parsing needed.
+        let closes = points.compactMap { p -> (String, Double)? in
+            guard let ts = p["timestamp"] as? String,
+                  let value = (p["value"] as? String).flatMap(Double.init) else { return nil }
+            return (ts, value)
+        }.sorted { $0.0 < $1.0 }.map(\.1)
+        guard closes.count >= 2, let first = closes.first, let last = closes.last, first > 0
+        else { return nil }
+        return TokenChart(closes: closes, price: last, change: (last - first) / first)
     }
 
     /// Dexscreener fallback — the token's live price plus its m5/h1/h6/h24

@@ -2446,3 +2446,43 @@ with the read-only bridge philosophy) and Etherscan (free-tier REST API
 exists, but `WalletIngest` already covers ETH activity via Alchemy — Etherscan
 URLs are already used, just as the "view transaction" explorer link, not a
 data source). Neither earns a bridge.
+
+## 65. Alchemy's Prices API becomes a second chart tier (user, 2026-07-13) — BUILT
+
+Follow-up to §64's Alchemy research: could Alchemy's Prices/Token APIs
+replace Dexscreener in `TokenWatch`? Verified live against the shipping key
+(`dashboard.alchemy.com`) before writing any code.
+
+**What moved.** `TokenChart.fetch` (`TokenChart.swift`) gains a second tier —
+Alchemy's Prices API historical endpoint — between GeckoTerminal (primary,
+unchanged) and the Dexscreener coarse fallback (still last resort). Alchemy
+covers the same EVM chains `WalletIngest` already reads (`alchemyNetwork`
+table: ethereum/base/arbitrum/optimism/polygon) and returns REAL candles at
+GeckoTerminal's exact resolutions (verified: 24 hourly points/24h, 168/7d, 30
+daily/30d) — so a token GeckoTerminal hasn't indexed yet, on a chain Alchemy
+covers, now gets a real curve with week/month ranges too, instead of dropping
+straight to Dexscreener's 24h-only 5-point approximation. The Alchemy key
+(previously private to `WalletIngest`) moved to `IngestSupport.alchemyKey`,
+shared by both callers now.
+
+**What didn't move, and why.** Dexscreener's free-text search
+(`/search?q=`) — typing "pepe" and getting live candidates across chains and
+DEXs — has no Alchemy equivalent (Prices/Token APIs are address/symbol-scoped,
+not full-text discovery); it stays the entry point for watching a token.
+Token API logos for the search-result rows were also considered and passed
+on: Dexscreener's search response already carries a free inline image field
+for those rows, and it's never even persisted onto the `Thing` after
+watching — swapping it for a live Alchemy call would trade a free field for
+extra round trips with nothing to show for it.
+
+**Separately noted, not done:** the wallet holdings treemap's token icons
+(`WalletIngest.swift`) are a bundled static set (`TokenIcon`/`brand-*`,
+Trust Wallet's public asset repo) specifically BECAUSE Alchemy's
+Portfolio-API logo field came back null for nearly everything (2026-07-09).
+Live-tested this session: Alchemy's dedicated Token API metadata endpoint
+(`alchemy_getTokenMetadata`, distinct from the Portfolio API) DOES return
+real logos for WETH/PEPE/USDC. That's a genuine reason to revisit the
+bundled-icon call — but it's a different feature (wallet treemap, not
+Dexscreener token-watch) and reverses a deliberate static-over-live
+architecture choice, so it's flagged for a separate decision rather than
+folded into this one.

@@ -35,9 +35,10 @@ final class TokenPulse {
     }
 
     /// Fetches 24h curves for watched tokens whose pulse is stale (15 min —
-    /// the foreground cadence; TokenChart is two GETs per token, so a
-    /// same-minute re-foreground shouldn't refetch the lot). BridgeRefresh
-    /// fires this; it exits instantly when nothing is watched.
+    /// the foreground cadence; TokenChart is up to 4 GETs per token across
+    /// its three tiers, so a same-minute re-foreground shouldn't refetch the
+    /// lot). BridgeRefresh fires this; it exits instantly when nothing is
+    /// watched.
     func refresh(context: ModelContext) async {
         guard !refreshing else { return }
         refreshing = true
@@ -58,24 +59,20 @@ final class TokenPulse {
         let stamp = Date.now
         for item in stale { lastTried[item.ref] = stamp }
 
-        // Tokens are independent and TokenChart.fetch is 2-3 GETs strung
-        // together — serially, N tokens cost up to 3N round trips end to
-        // end. Fan out, then land every pulse in ONE dictionary write so
-        // the feed repaints once, not once per token.
-        let fetched = await withTaskGroup(of: (String, TokenChart?).self) { group in
-            for item in stale {
-                group.addTask {
-                    (item.ref, await TokenChart.fetch(chain: item.chain, address: item.address))
-                }
-            }
-            var out: [String: TokenChart] = [:]
-            for await (ref, chart) in group {
-                if let chart { out[ref] = chart }
-            }
-            return out
+        // Tokens are independent and TokenChart.fetch can be up to 4 GETs
+        // strung together across its tiers — an uncapped fan-out burst on
+        // the same Alchemy key WalletIngest reads wallets with drew silent
+        // 429s (2026-07-13); capped at 4 in flight for the same reason.
+        // Land every pulse in ONE dictionary write so the feed repaints
+        // once, not once per token.
+        let fetched = await IngestSupport.boundedGather(stale, maxConcurrent: 4) { item in
+            (item.ref, await TokenChart.fetch(chain: item.chain, address: item.address))
         }
-        pulses.merge(fetched.mapValues {
-            Pulse(closes: $0.closes, change24h: $0.change, fetchedAt: stamp)
-        }) { _, new in new }
+        var out: [String: Pulse] = [:]
+        for (ref, chart) in fetched {
+            guard let chart else { continue }
+            out[ref] = Pulse(closes: chart.closes, change24h: chart.change, fetchedAt: stamp)
+        }
+        pulses.merge(out) { _, new in new }
     }
 }
