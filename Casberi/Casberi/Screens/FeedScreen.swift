@@ -231,16 +231,6 @@ struct FeedScreen: View {
         }
     }
 
-    /// The first row at-or-past the last-visit boundary — the "new since"
-    /// divider renders above it. Nil when nothing is new (no divider at the
-    /// very top) or everything is (no divider at the very bottom).
-    private var newBoundaryID: String? {
-        guard let newSince else { return nil }
-        let all = bundledDayGroups.flatMap(\.1)
-        guard let first = all.first, first.date > newSince else { return nil }
-        return all.first(where: { $0.date <= newSince })?.id
-    }
-
     // MARK: - Body
 
     var body: some View {
@@ -634,10 +624,20 @@ struct FeedScreen: View {
 
     @ViewBuilder
     private var bundledSections: some View {
-        ForEach(bundledDayGroups, id: \.0) { label, rows in
+        // Derive the whole pipeline ONCE per body pass. These were computed
+        // properties, so SwiftUI re-ran the full corpus scan on every access:
+        // `newBoundaryID` (which rebuilds `bundledDayGroups`) was referenced
+        // once per row, and the header's count rebuilt `dayGroups` once per
+        // section — O(rows × corpus) per paint on the busiest screen. Hoisted
+        // to `let`s, the corpus is walked a fixed number of times per paint.
+        let groups = bundledDayGroups
+        let dayCounts = Dictionary(dayGroups.map { ($0.0, $0.1.count) },
+                                   uniquingKeysWith: { first, _ in first })
+        let boundary = boundaryID(in: groups)
+        ForEach(groups, id: \.0) { label, rows in
             Section {
                 ForEach(Array(rows.enumerated()), id: \.element.id) { i, row in
-                    if row.id == newBoundaryID { newSinceDivider }
+                    if row.id == boundary { newSinceDivider }
                     switch row {
                     case .single(let thing):
                         shapedListRow(thing, index: i)
@@ -651,7 +651,7 @@ struct FeedScreen: View {
                     Text(label).dsText(.heading17).foregroundStyle(DS.textPrimary)
                     // The count stays the day's true total — a bundle
                     // compresses rows, never the record.
-                    Text("\(dayGroups.first(where: { $0.0 == label })?.1.count ?? rows.count)")
+                    Text("\(dayCounts[label] ?? rows.count)")
                         .dsText(.subhead13).foregroundStyle(DS.textTertiary)
                         .contentTransition(.numericText())
                 }
@@ -660,6 +660,17 @@ struct FeedScreen: View {
                 .padding(.vertical, DS.Space.s1)
             }
         }
+    }
+
+    /// The new-since boundary row id, computed once from an
+    /// already-materialized `bundledDayGroups` — the same logic `newBoundaryID`
+    /// carried, but taking the groups as a parameter so `bundledSections`
+    /// doesn't rebuild the corpus pipeline once per row.
+    private func boundaryID(in groups: [(String, [FeedRow])]) -> String? {
+        guard let newSince else { return nil }
+        let all = groups.flatMap(\.1)
+        guard let first = all.first, first.date > newSince else { return nil }
+        return all.first(where: { $0.date <= newSince })?.id
     }
 
     /// The boundary line — words only, no drawn rule (the no-hairlines law).
@@ -1295,9 +1306,14 @@ struct FeedScreen: View {
         }
     }
 
+    /// One calendar for the per-thing day grouping — `Calendar.current` copies
+    /// the user's calendar on every access, and `dayLabel` runs once per thing
+    /// inside `dayGroups`/`agendaGroups`, which the feed re-derives per paint.
+    private static let groupingCalendar = Calendar.current
+
     private func dayLabel(_ date: Date) -> String {
-        if Calendar.current.isDateInToday(date) { return String(localized: "Today") }
-        if Calendar.current.isDateInYesterday(date) { return String(localized: "Yesterday") }
+        if Self.groupingCalendar.isDateInToday(date) { return String(localized: "Today") }
+        if Self.groupingCalendar.isDateInYesterday(date) { return String(localized: "Yesterday") }
         return date.formatted(.dateTime.weekday(.wide).month().day())
     }
 }
