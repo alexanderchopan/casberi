@@ -12,6 +12,11 @@ struct RootShell: View {
     @State private var bridges = BridgeStore()
     @State private var chrome = ShellChrome()
     @State private var draft = ""
+    /// The tab to return to when the Actions sheet dismisses.
+    @State private var priorTab: Tab = .home
+    /// The Actions sheet's height — the composer reports its content height so
+    /// the sheet hugs it (grows on its own when an answer streams in).
+    @State private var actionsHeight: CGFloat = 360
     @State private var deepLinkThing: Thing?
     @AppStorage("onboarded") private var onboarded = false
     /// After onboarding completes, the "How it works" sheet greets the new
@@ -119,6 +124,17 @@ struct RootShell: View {
                     OnDeviceModel.teardown()
                 }
             }
+        }
+        // Actions is a sheet: remember where we came from, and present it while
+        // the Actions tab is selected; dismissing returns to that tab.
+        .onChange(of: tab) { old, new in
+            if new == .actions && old != .actions { priorTab = old }
+        }
+        .sheet(isPresented: Binding(
+            get: { tab == .actions },
+            set: { if !$0 { tab = priorTab } }
+        )) {
+            actionsSheet
         }
         // Feed's back arrow asks this way (it can't hold a binding to
         // `tab`) — same shape as popHome/popFeed.
@@ -388,38 +404,40 @@ struct RootShell: View {
         switch tab {
         case .home:    HomeScreen()
         case .feed:    FeedScreen()
-        case .actions: actionsTab
+        case .actions:
+            // Actions is a sheet (2026-07-12) — the content is less than a page,
+            // so a half/three-quarter sheet sizes to it instead of stranding it
+            // on a full screen. Behind the sheet, the tab you came from.
+            if priorTab == .feed { FeedScreen() } else { HomeScreen() }
         }
     }
 
-    /// The Actions tab (2026-07-12): the composer, always open — ask a question
-    /// or say what to do — with its tool grid below. No FAB, no floating morph;
-    /// it's a real screen. Same wiring the floating composer used.
-    private var actionsTab: some View {
-        VStack(spacing: 0) {
-            Composer(isOpen: .constant(true), draft: $draft,
-                     onCommit: saveDraft, onCommitVoice: saveVoice,
-                     answer: answerDocument,
-                     tagCandidates: projectTags,
-                     knownSources: { bridges.bridges.map(\.name) },
-                     contextSource: { nil },
-                     onNavigate: navigate,
-                     onKeepAnswer: keepAnswer,
-                     glassNamespace: nil)
-                // A tag tile in an answer opens that tag's view on Home.
-                .environment(\.genProjectTap) { name in
-                    HomeRoute.shared.push = nil
-                    FeedRoute.shared.push = nil
-                    tab = .home
-                    HomeRoute.shared.openTag = name
-                }
-                .padding(.horizontal, DS.Space.s4)
-                .padding(.top, DS.Space.s6)
-            Spacer(minLength: 0)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        .padding(.bottom, 96)   // clear the floating tab bar
-        .dsPageBackground()
+    /// The Actions sheet: the composer, always open — ask a question or say what
+    /// to do — with its tools. Presented at 1/2, expandable to 3/4. Same wiring
+    /// the floating composer used.
+    private var actionsSheet: some View {
+        Composer(isOpen: .constant(true), draft: $draft, embedded: true,
+                 onHeight: { actionsHeight = min(max($0, 220), 720) },
+                 onCommit: saveDraft, onCommitVoice: saveVoice,
+                 answer: answerDocument,
+                 tagCandidates: projectTags,
+                 knownSources: { bridges.bridges.map(\.name) },
+                 contextSource: { nil },
+                 onNavigate: navigate,
+                 onKeepAnswer: keepAnswer,
+                 glassNamespace: nil)
+            .environment(\.genProjectTap) { name in
+                HomeRoute.shared.push = nil
+                FeedRoute.shared.push = nil
+                tab = .home
+                HomeRoute.shared.openTag = name
+            }
+            // Hug the content — the sheet grows/shrinks with what's inside, so
+            // there's no stranded empty space. Drag up to full for a long answer.
+            .presentationDetents([.height(actionsHeight), .large])
+            .presentationDragIndicator(.visible)
+            .presentationCornerRadius(DS.Radius.sheet)
+            .presentationBackground(DS.surfaceSheet)
     }
 
     // MARK: - Capture (rung 1 write: the composer saves to us)

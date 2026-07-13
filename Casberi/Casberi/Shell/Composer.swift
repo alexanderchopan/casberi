@@ -11,6 +11,13 @@ import SwiftData
 struct Composer: View {
     @Binding var isOpen: Bool
     @Binding var draft: String
+    /// Hosted inside a tab (the Actions screen) rather than floating — sheds the
+    /// bubble's card surface and morph so the field, chips, and tools read as
+    /// native page content, not a stranded card.
+    var embedded: Bool = false
+    /// Reports the content's natural height (embedded only) so the hosting sheet
+    /// can hug it — no stranded empty space.
+    var onHeight: (CGFloat) -> Void = { _ in }
     /// Commit carries the parse card's chosen tags (M6: save writes to us).
     var onCommit: ([String]) -> Void
     /// A finished voice note: transcript + the audio file's sourceRef.
@@ -290,100 +297,24 @@ struct Composer: View {
 
     private var openBubble: some View {
         VStack(alignment: .leading, spacing: 0) {
-            HStack(alignment: .top, spacing: DS.Space.s2) {
-                // When a proposal is up, the input phase is over — the field
-                // (and its blinking cursor over the placeholder) hides, so the
-                // proposal's own headline reads as the statement, uncontested.
-                if proposal == nil {
-                    TextField("", text: $draft, axis: .vertical)
-                        .placeholder(when: !hasDraft) {
-                            Text(invitations[placeholderIndex])
-                                .dsText(.heading22)
-                                .foregroundStyle(DS.textTertiary)
-                                .contentTransition(.opacity)
-                                .animation(.easeInOut(duration: 0.4), value: placeholderIndex)
-                        }
-                        .dsText(.heading22)
-                        .foregroundStyle(DS.textPrimary)
-                        .tint(DS.tint)
-                        .focused($fieldFocused)
-                        // A paste-sized insertion marks the draft as a capture
-                        // (the Paste chip died; the flag lives on) — pasted
-                        // content still previews in the parse card and saves.
-                        .onChange(of: draft) { old, new in
-                            if prefilled { prefilled = false }
-                            else if new.count - old.count > 8 { pasted = true }
-                            if new.isEmpty { pasted = false }
-                        }
-                        .lineLimit(1...6)
-                } else {
-                    Spacer(minLength: 0)
-                }
-
-                Button(action: close) {
-                    Image(systemName: "chevron.down")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundStyle(DS.textSecondary)
-                        .frame(width: 28, height: 28)
-                        .background(DS.gray100, in: Circle())
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Close")
-            }
-            .padding(.horizontal, DS.Space.s4)
-            .padding(.top, DS.Space.s3)
-
-            // The action chips ("Open app" / "Open shortcut") left with the
-            // Save button: dead controls don't ride the hero surface. They
-            // return when the parse can actually run them (Goal 3).
-
-            // The suggestion chips DIED (ruling 2026-07-06 — "no need"): the
-            // open composer is just the field. Paste capture survives without
-            // its chip — a paste-sized insertion into the field sets the
-            // `pasted` flag below, so pasted content still saves on send.
-            // AnswerStream — search intent streams a composition (engine law:
-            // any prefix renders).
-            // Ask chips — asks the corpus can answer RIGHT NOW, shown while
-            // the field is empty (re-ruling 2026-07-08; the dead generic
-            // chips stay dead — these are derived, and tap = send).
-            if isOpen && !hasDraft && !answering && !isRecording,
-               proposal == nil, !suggestions.isEmpty || organizeHint != nil {
-                let hintLead = organizeHint != nil ? 1 : 0
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: DS.Space.s2) {
-                        // The organize invite LEADS — it exists to be seen
-                        // (the row scrolls; last seat hid the one chip that
-                        // teaches). Tap starts the command, not the send:
-                        // the field takes "tag <source> as " and the person
-                        // types the name (ruling 2026-07-10).
-                        if let hint = organizeHint {
-                            Button {
-                                DSHaptic.selection()
-                                fillDraft("tag \(hint.source.lowercased()) as ")
-                                fieldFocused = true
-                            } label: {
-                                Chip(text: "Tag your \(hint.count) \(hint.source) things",
-                                     style: .tint, glyph: "tag")
-                            }
-                            .buttonStyle(.plain)
-                            .modifier(ChipEntrance(index: 0, shown: chipsAppeared, reduceMotion: reduceMotion))
-                        }
-                        ForEach(Array(suggestions.enumerated()), id: \.offset) { i, ask in
-                            Button {
-                                DSHaptic.selection()
-                                draft = ask
-                                commit()
-                            } label: {
-                                Chip(text: ask, style: .neutral, glyph: "sparkle")
-                            }
-                            .buttonStyle(.plain)
-                            .modifier(ChipEntrance(index: i + hintLead, shown: chipsAppeared, reduceMotion: reduceMotion))
-                        }
-                    }
+            // The greeting (embedded sheet only) — frames the whole surface as
+            // one question the tools and the field both answer, and gives the
+            // sheet its warmth (design pass 2026-07-12, "B: greeting-led").
+            // Hidden once a conversation is underway: the answer is the header.
+            if embedded, turns.isEmpty, !answering, proposal == nil {
+                Text("What now?")
+                    .dsText(.heading22)
+                    .foregroundStyle(DS.textPrimary)
                     .padding(.horizontal, DS.Space.s4)
-                }
-                .padding(.top, DS.Space.s2)
+                    .padding(.top, DS.Space.s2)
             }
+            // The content sizes to ITSELF (no filling scroll) so the sheet can
+            // hug it — no stranded empty space. The answer conversation carries
+            // its own capped scroll, so nothing overflows. (2026-07-12)
+              VStack(alignment: .leading, spacing: 0) {
+
+            // Ask chips moved DOWN to sit by the input (2026-07-12) — rendered
+            // as `askChips` just above the bottom bar, near where you compose.
 
             // The finite tool launcher — a fixed grid of jumps to the person's
             // OWN tools, shown while the field is empty (the "ask OR jump"
@@ -516,46 +447,21 @@ struct Composer: View {
                     .padding(.top, DS.Space.s3)
             }
 
-            // Bottom bar: mic + primary action.
-            HStack(spacing: DS.Space.s2) {
-                Button {
-                    if isRecording {
-                        // The live (red) mic is the STOP: finalize and keep the
-                        // note, same as send. Previously this early-returned, so
-                        // a started recording had no way to stop from the mic.
-                        commit()
-                    } else {
-                        DSHaptic.tap()
-                        Task { await voice.start() }
-                    }
-                } label: {
-                    Image(systemName: isRecording ? "stop.circle.fill" : "mic")
-                        .font(.system(size: 18))
-                        .foregroundStyle(isRecording ? DS.destructive : DS.textTertiary)
-                        .padding(DS.Space.s1)
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel(isRecording ? "Stop and keep" : "Record a voice note")
+              }
+              .frame(maxWidth: .infinity, alignment: .leading)
+              .padding(.top, DS.Space.s3)
 
-                Button(action: commit) {
-                    Image(systemName: "arrow.up")
-                        .font(.system(size: 17, weight: .semibold))
-                        .foregroundStyle(hasDraft || isRecording ? .white : DS.textTertiary)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 40)
-                        .dsGlassProminent(tint: hasDraft || isRecording ? DS.tint : DS.gray100,
-                                          cornerRadius: DS.Radius.pill)
-                }
-                .buttonStyle(.plain)
-                .disabled(!hasDraft && !isRecording)
-                .animation(DS.Motion.standard, value: hasDraft || isRecording)
-                .accessibilityLabel("Send")
-            }
-            .padding(.horizontal, DS.Space.s3)
-            .padding(.top, DS.Space.s3)
-            .padding(.bottom, DS.Space.s3)
+            // Chips sit right by the input — asks/commands you can fire from
+            // where you compose (moved down 2026-07-12).
+            askChips
+            // The input, pinned to the bottom — a friendly rounded bar.
+            inputBar
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(maxWidth: .infinity, alignment: .top)
+        // Report the content's natural height so the hosting sheet hugs it.
+        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { h in
+            if embedded { onHeight(h) }
+        }
         // The bubble's surface, restructured (2026-07-11, device report:
         // keyboard up, no bubble — this time on Home; prd 44's underlay
         // didn't hold). Root cause: glassEffect renders the whole modified
@@ -576,9 +482,9 @@ struct Composer: View {
         // pipeline. The FAB keeps its glass; the bubble is ink, and the
         // scale animation carries the open. Glass on the floating layer is
         // permitted, not required (§8).
-        .background(DS.surfaceSheet.opacity(0.97), in: bubbleShape)
-        .clipShape(bubbleShape)
-        .scaleEffect(isOpen ? 1 : 0.3, anchor: .bottomTrailing)
+        .background(embedded ? Color.clear : DS.surfaceSheet.opacity(0.97), in: bubbleShape)
+        .clipShape(embedded ? AnyShape(Rectangle()) : AnyShape(bubbleShape))
+        .scaleEffect(embedded ? 1 : (isOpen ? 1 : 0.3), anchor: .bottomTrailing)
         .task(id: isOpen) {
             if isOpen {
                 computeSuggestions()
@@ -681,6 +587,119 @@ struct Composer: View {
         keptCurrent = false
     }
 
+    // MARK: - Ask chips + input bar (chat grammar: by the bottom)
+
+    /// The ask chips — asks the corpus can answer now, plus the organize invite
+    /// — shown while the field is empty, right above the input.
+    @ViewBuilder
+    private var askChips: some View {
+        if isOpen && !hasDraft && !answering && !isRecording,
+           proposal == nil, !suggestions.isEmpty || organizeHint != nil {
+            let hintLead = organizeHint != nil ? 1 : 0
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: DS.Space.s2) {
+                    if let hint = organizeHint {
+                        Button {
+                            DSHaptic.selection()
+                            fillDraft("tag \(hint.source.lowercased()) as ")
+                            fieldFocused = true
+                        } label: {
+                            Chip(text: "Tag your \(hint.count) \(hint.source) things",
+                                 style: .tint, glyph: "tag")
+                        }
+                        .buttonStyle(.plain)
+                        .modifier(ChipEntrance(index: 0, shown: chipsAppeared, reduceMotion: reduceMotion))
+                    }
+                    ForEach(Array(suggestions.enumerated()), id: \.offset) { i, ask in
+                        Button {
+                            DSHaptic.selection()
+                            draft = ask
+                            commit()
+                        } label: {
+                            Chip(text: ask, style: .neutral, glyph: "sparkle")
+                        }
+                        .buttonStyle(.plain)
+                        .modifier(ChipEntrance(index: i + hintLead, shown: chipsAppeared, reduceMotion: reduceMotion))
+                    }
+                }
+                .padding(.horizontal, DS.Space.s4)
+            }
+            // A soft trailing fade so a clipped chip reads as "more to scroll",
+            // not cut off mid-word.
+            .mask(
+                LinearGradient(stops: [.init(color: .black, location: 0),
+                                       .init(color: .black, location: 0.88),
+                                       .init(color: .clear, location: 1)],
+                               startPoint: .leading, endPoint: .trailing)
+            )
+            .padding(.bottom, DS.Space.s2)
+        }
+    }
+
+    // MARK: - Input bar (chat grammar: pinned to the bottom)
+
+    /// The mic, the ask field, and a send button that appears once there's
+    /// something to send — a soft rounded bar so the surface feels inviting.
+    private var inputBar: some View {
+        HStack(spacing: DS.Space.s2) {
+            Button {
+                if isRecording { commit() }   // the live mic is STOP + keep
+                else { DSHaptic.tap(); Task { await voice.start() } }
+            } label: {
+                Image(systemName: isRecording ? "stop.circle.fill" : "mic")
+                    .font(.system(size: 19))
+                    .foregroundStyle(isRecording ? DS.destructive : DS.textTertiary)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(isRecording ? "Stop and keep" : "Record a voice note")
+
+            TextField("", text: $draft, axis: .vertical)
+                .placeholder(when: !hasDraft) {
+                    Text("Ask, or say what to do")
+                        .dsText(.body17).foregroundStyle(DS.textTertiary)
+                }
+                .dsText(.body17)
+                .foregroundStyle(DS.textPrimary)
+                .tint(DS.tint)
+                .focused($fieldFocused)
+                .onChange(of: draft) { old, new in
+                    if prefilled { prefilled = false }
+                    else if new.count - old.count > 8 { pasted = true }
+                    if new.isEmpty { pasted = false }
+                }
+                .lineLimit(1...5)
+
+            if hasDraft || isRecording {
+                Button(action: commit) {
+                    Image(systemName: "arrow.up")
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundStyle(.white)
+                        .frame(width: 34, height: 34)
+                        .background(DS.tint, in: Circle())
+                }
+                .buttonStyle(.plain)
+                .transition(.scale.combined(with: .opacity))
+                .accessibilityLabel("Send")
+            }
+        }
+        .padding(.leading, DS.Space.s4)
+        .padding(.trailing, hasDraft || isRecording ? DS.Space.s2 : DS.Space.s4)
+        .padding(.vertical, DS.Space.s3)
+        // The hero of the sheet: a quiet tint ring and a breath of shadow lift
+        // the field off the surface — it reads as THE control, not a disabled
+        // strip (design pass 2026-07-12).
+        .background(DS.fillFaint, in: RoundedRectangle(cornerRadius: 26, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 26, style: .continuous)
+                .strokeBorder(DS.tint.opacity(fieldFocused ? 0.45 : 0.22), lineWidth: 1)
+        )
+        .shadow(color: DS.tint.opacity(0.08), radius: 6, y: 2)
+        .animation(DS.Motion.standard, value: hasDraft || isRecording)
+        .animation(DS.Motion.standard, value: fieldFocused)
+        .padding(.horizontal, DS.Space.s4)
+        .padding(.bottom, DS.Space.s3)
+    }
+
     // MARK: - Tool launcher (jumps to the person's own tools)
 
     /// The tiles to show — a `probe` tile (ChatGPT/Claude) only appears when its
@@ -690,36 +709,36 @@ struct Composer: View {
     }
 
     private var toolGrid: some View {
-        VStack(alignment: .leading, spacing: DS.Space.s3) {
-            Text("Your tools")
-                .dsText(.label12)
-                .foregroundStyle(DS.textTertiary)
-                .padding(.horizontal, DS.Space.s4)
-            LazyVGrid(
-                columns: Array(repeating: GridItem(.flexible(), spacing: DS.Space.s2), count: 4),
-                spacing: DS.Space.s4
-            ) {
-                ForEach(visibleTools) { tool in
-                    Button { runTool(tool) } label: {
-                        VStack(spacing: DS.Space.s2) {
-                            Image(systemName: tool.symbol)
-                                .font(.system(size: 22, weight: scheme == .light ? .semibold : .medium))
-                                .foregroundStyle(scheme == .light ? tool.tint.mix(with: .black, by: 0.15) : tool.tint)
-                                .frame(width: 50, height: 50)
-                                .background(tool.tint.opacity(scheme == .light ? 0.20 : 0.24),
-                                            in: RoundedRectangle(cornerRadius: DS.Radius.appIcon(50), style: .continuous))
-                            Text(tool.label)
-                                .dsText(.subhead13)
-                                .foregroundStyle(DS.textSecondary)
-                                .lineLimit(1)
-                        }
+        // No label — the tiles are self-evident (the "Your tools" caption was
+        // an orphan). Columns adapt to the count so no row is ever ragged:
+        // 6 tools (no AI apps) → 3×2, 8 (both installed) → 4×2; only the rare
+        // 7 leaves a short second row.
+        let tools = visibleTools
+        let cols = tools.count <= 6 ? 3 : 4
+        return LazyVGrid(
+            columns: Array(repeating: GridItem(.flexible(), spacing: DS.Space.s2), count: cols),
+            spacing: DS.Space.s4
+        ) {
+            ForEach(tools) { tool in
+                Button { runTool(tool) } label: {
+                    VStack(spacing: DS.Space.s2) {
+                        Image(systemName: tool.symbol)
+                            .font(.system(size: 22, weight: scheme == .light ? .semibold : .medium))
+                            .foregroundStyle(scheme == .light ? tool.tint.mix(with: .black, by: 0.15) : tool.tint)
+                            .frame(width: 50, height: 50)
+                            .background(tool.tint.opacity(scheme == .light ? 0.20 : 0.24),
+                                        in: RoundedRectangle(cornerRadius: DS.Radius.appIcon(50), style: .continuous))
+                        Text(tool.label)
+                            .dsText(.subhead13)
+                            .foregroundStyle(DS.textSecondary)
+                            .lineLimit(1)
                     }
-                    .buttonStyle(.plain)
                 }
+                .buttonStyle(.plain)
             }
-            .padding(.horizontal, DS.Space.s4)
         }
-        .padding(.top, DS.Space.s3)
+        .padding(.horizontal, DS.Space.s4)
+        .padding(.top, DS.Space.s4)
     }
 
     /// A tool tile jumps out to that app and closes the composer — nothing
