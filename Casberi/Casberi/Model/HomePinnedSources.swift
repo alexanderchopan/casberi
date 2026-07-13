@@ -76,6 +76,23 @@ final class HomePinnedSources {
         UserDefaults.standard.set(Array(sources), forKey: Self.key)
     }
 
+    /// One-time migration support: carry a renamed source across the pin and
+    /// hide sets so a bridge rename (Dexscreener -> Tokens, 2026-07-13) can't
+    /// strand a pinned tile under the dead name. Board size/order key off the
+    /// source name too, but a renamed tile re-derives default placement rather
+    /// than migrating those keys — a rare, acceptable reset over new plumbing.
+    func rename(_ old: String, to new: String) {
+        if sources.remove(old) != nil {
+            forgetBoardState(old)
+            sources.insert(new)
+            UserDefaults.standard.set(Array(sources), forKey: Self.key)
+        }
+        if hidden.remove(old) != nil {
+            hidden.insert(new)
+            UserDefaults.standard.set(Array(hidden), forKey: Self.hiddenKey)
+        }
+    }
+
     /// The Home board module an IMAGE-media source composes as
     /// (`HomeComposition`'s bespoke shelves) — the bridge between a source
     /// NAME and its board module REF. Image sources keep their own shelf id;

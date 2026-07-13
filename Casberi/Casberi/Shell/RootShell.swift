@@ -194,7 +194,7 @@ struct RootShell: View {
                 // One-time migrations run once per install (bump the version
                 // when adding one) — steady-state launches skip the scans.
                 let migrationsKey = "migrations.version"
-                let migrationsCurrent = 2
+                let migrationsCurrent = 3
                 let migrationsStored = UserDefaults.standard.integer(forKey: migrationsKey)
                 if migrationsStored < migrationsCurrent {
                     if migrationsStored < 1 {
@@ -240,6 +240,24 @@ struct RootShell: View {
                             predicate: #Predicate { $0.source == "Apple Music" }
                         ))) ?? []
                         for thing in music { thing.previewImageURL = nil }
+                    }
+                    if migrationsStored < 3 {
+                        // One-time rename (2026-07-13): the token-watch bridge is
+                        // "Tokens" now, not "Dexscreener" — its chart blends three
+                        // vendors (commit a2618a2). Things captured before the rename
+                        // kept the old source and "dexscreener:" sourceRef prefix, so
+                        // the feed still headed them "Dexscreener". Rewrite both, and
+                        // carry the rename across any Home pin.
+                        let staleTokens = (try? modelContext.fetch(FetchDescriptor<Thing>(
+                            predicate: #Predicate { $0.source == "Dexscreener" }
+                        ))) ?? []
+                        for thing in staleTokens {
+                            thing.source = "Tokens"
+                            if let ref = thing.sourceRef, ref.hasPrefix("dexscreener:") {
+                                thing.sourceRef = "tokens:" + String(ref.dropFirst("dexscreener:".count))
+                            }
+                        }
+                        HomePinnedSources.shared.rename("Dexscreener", to: "Tokens")
                     }
                     try? modelContext.save()
                     UserDefaults.standard.set(migrationsCurrent, forKey: migrationsKey)
