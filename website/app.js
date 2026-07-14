@@ -109,3 +109,120 @@
     io.observe(el);
   });
 })();
+
+// Tour delight: tilt, glow, letter cascades, hellos, icon confetti,
+// magnetic CTA, tap-to-pause. All gated behind prefers-reduced-motion.
+(function delight() {
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+  // Phones tilt toward the cursor
+  document.querySelectorAll('.vid, .vid-full').forEach(function (ph) {
+    var card = ph.closest('.b-hero') || ph.parentElement;
+    card.addEventListener('mousemove', function (e) {
+      var r = ph.getBoundingClientRect();
+      var dx = (e.clientX - (r.left + r.width / 2)) / r.width;
+      var dy = (e.clientY - (r.top + r.height / 2)) / r.height;
+      ph.style.transform = 'rotateY(' + (dx * 10) + 'deg) rotateX(' + (-dy * 8) + 'deg)';
+    });
+    card.addEventListener('mouseleave', function () { ph.style.transform = ''; });
+  });
+
+  // Blue card glow follows the cursor
+  document.querySelectorAll('.b-hero.loud').forEach(function (card) {
+    card.addEventListener('mousemove', function (e) {
+      var r = card.getBoundingClientRect();
+      card.style.setProperty('--mx', ((e.clientX - r.left) / r.width * 100) + '%');
+      card.style.setProperty('--my', ((e.clientY - r.top) / r.height * 100) + '%');
+    });
+  });
+
+  // Eyebrow letters cascade in; sections fade up
+  document.querySelectorAll('.m-eyebrow').forEach(function (eb) {
+    var text = eb.textContent;
+    eb.textContent = '';
+    text.split('').forEach(function (ch, i) {
+      var sp = document.createElement('span');
+      sp.textContent = ch === ' ' ? '\u00a0' : ch;
+      sp.style.transitionDelay = (i * 28) + 'ms';
+      eb.appendChild(sp);
+    });
+  });
+  var io = new IntersectionObserver(function (entries) {
+    entries.forEach(function (e) {
+      if (!e.isIntersecting) return;
+      e.target.classList.add('in');
+      var eb = e.target.querySelector('.m-eyebrow');
+      if (eb) eb.classList.add('in');
+      io.unobserve(e.target);
+    });
+  }, { threshold: 0.18 });
+  document.querySelectorAll('.m-section, .m-transition').forEach(function (el) { io.observe(el); });
+
+  // Language card says hello in five languages
+  var hello = document.querySelector('.hello');
+  if (hello) {
+    var his = ['— Hello', '— ¡Hola!', '— 你好', '— こんにちは', '— 안녕하세요'];
+    var i = 0;
+    setInterval(function () {
+      hello.style.opacity = 0;
+      setTimeout(function () {
+        i = (i + 1) % his.length;
+        hello.textContent = his[i];
+        hello.style.opacity = 1;
+      }, 250);
+    }, 2200);
+  }
+
+  // App-icon confetti burst (reuses the hero rain icons)
+  var iconSrcs = Array.prototype.slice.call(document.querySelectorAll('.rain img')).map(function (im) { return im.src; });
+  function burst(x, y, n) {
+    if (!iconSrcs.length) return;
+    for (var k = 0; k < n; k++) {
+      var img = document.createElement('img');
+      img.src = iconSrcs[Math.floor(Math.random() * iconSrcs.length)];
+      img.className = 'burst';
+      img.style.left = (x - 17) + 'px';
+      img.style.top = (y - 17) + 'px';
+      document.body.appendChild(img);
+      var ang = Math.random() * Math.PI * 2;
+      var dist = 70 + Math.random() * 130;
+      var dx = Math.cos(ang) * dist, dy = Math.sin(ang) * dist - 60;
+      img.animate([
+        { transform: 'translate(0,0) scale(.4) rotate(0deg)', opacity: 1 },
+        { transform: 'translate(' + dx + 'px,' + (dy + 160) + 'px) scale(1) rotate(' + ((Math.random() - 0.5) * 540) + 'deg)', opacity: 0 }
+      ], { duration: 900 + Math.random() * 500, easing: 'cubic-bezier(.2,.6,.3,1)' }).onfinish = function () { this.effect.target.remove(); }.bind ? function (ev) { ev.target.effect.target.remove(); } : null;
+      (function (el) { setTimeout(function () { el.remove(); }, 1600); })(img);
+    }
+  }
+  // click an eyebrow (or the headline period) → confetti
+  document.querySelectorAll('.m-eyebrow, .m-h2').forEach(function (el) {
+    el.style.cursor = 'default';
+    el.addEventListener('click', function (e) { burst(e.clientX, e.clientY, 14); });
+  });
+
+  // Magnetic CTA + celebratory burst on click
+  var cta = document.querySelector('#get .cta');
+  if (cta) {
+    var wrap = cta.parentElement;
+    wrap.addEventListener('mousemove', function (e) {
+      var r = cta.getBoundingClientRect();
+      var cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+      var d = Math.hypot(e.clientX - cx, e.clientY - cy);
+      if (d < 160) {
+        cta.style.transform = 'translate(' + (e.clientX - cx) * 0.18 + 'px,' + (e.clientY - cy) * 0.18 + 'px)';
+      } else { cta.style.transform = ''; }
+    });
+    wrap.addEventListener('mouseleave', function () { cta.style.transform = ''; });
+    cta.addEventListener('click', function (e) { burst(e.clientX, e.clientY, 22); });
+  }
+
+  // Tap a phone → pause/play with a spring pop
+  document.querySelectorAll('.vid-live video').forEach(function (v) {
+    v.style.cursor = 'pointer';
+    v.addEventListener('click', function () {
+      v.paused ? v.play() : v.pause();
+      v.animate([{ transform: 'scale(1)' }, { transform: 'scale(.96)' }, { transform: 'scale(1)' }],
+                { duration: 320, easing: 'cubic-bezier(.34,1.56,.64,1)' });
+    });
+  });
+})();

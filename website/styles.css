@@ -614,3 +614,141 @@ footer .tagline { font-size: 16px; font-weight: 600; color: var(--ink); margin-b
 .ai-applenotes { background: #fff; }
 .ai-journal   { background: #a06ee1; }
 .ai-dayone    { background: #fff; color: #44c0ff; font-size: 26px; font-weight: 800; }
+
+
+/* ===== The tour (below the fold, shipped 2026-07-13) ===== */
+  .m-section { padding: 96px 0 10px; }
+  .m-eyebrow { font-size: 13px; font-weight: 800; letter-spacing: .02em; color: var(--blue-bright); margin-bottom: 10px; text-transform: uppercase; }
+  .m-h2 { font-size: clamp(30px, 4.4vw, 46px); font-weight: 800; letter-spacing: -0.02em; line-height: 1.06; max-width: 640px; margin-bottom: 30px; }
+
+  .m-transition { text-align:center; font-size: 19px; color: var(--muted); padding: 8px 0 0; }
+  .m-transition b { color: var(--ink); font-weight: 650; }
+
+  /* bento: hero card + two stacked small cards; .flip mirrors it */
+  .bento { display: grid; grid-template-columns: 1.2fr 1fr; gap: 12px; }
+  .bento.flip { grid-template-columns: 1fr 1.2fr; }
+  .bento.flip .b-hero { grid-column: 2; grid-row: 1 / span 2; }
+  .bento.flip .b-small { grid-column: 1; }
+  @media (max-width: 800px) {
+    .bento, .bento.flip { grid-template-columns: 1fr; }
+    .bento.flip .b-hero { grid-column: auto; grid-row: auto; }
+    .bento.flip .b-small { grid-column: auto; }
+  }
+
+  .b-hero {
+    grid-row: span 2; border-radius: 22px; padding: 26px 26px 0;
+    display: flex; flex-direction: column; gap: 20px;
+    position: relative; overflow: hidden;
+  }
+  .b-hero b { font-size: 21px; font-weight: 800; letter-spacing: -0.015em; }
+  .b-hero > div > span { font-size: 14.5px; line-height: 1.55; max-width: 400px; display:block; margin-top:4px; }
+
+  /* the one blue moment — section 1 only */
+  .b-hero.loud { background: linear-gradient(160deg, #1673e6, #0c3f85); box-shadow: 0 18px 44px rgba(10,40,90,.45); }
+  .b-hero.loud b { color: #fff; }
+  .b-hero.loud > div > span { color: rgba(255,255,255,.85); }
+
+  /* quiet hero cards — neutral dark, blue lives in the glow */
+  .b-hero.quiet { background: var(--surface); }
+  .b-hero.quiet b { color: var(--ink); }
+  .b-hero.quiet > div > span { color: var(--muted); }
+  .b-hero.quiet .glow {
+    position: absolute; left: 50%; bottom: -80px; transform: translateX(-50%);
+    width: 340px; height: 260px; border-radius: 50%;
+    background: radial-gradient(closest-side, rgba(22,115,230,.35), transparent 70%);
+    pointer-events: none;
+  }
+
+  .b-small {
+    border-radius: 18px; padding: 20px 22px; background: var(--surface);
+    display: flex; flex-direction: column; justify-content: center; gap: 10px;
+  }
+  .b-small svg { width: 22px; height: 22px; color: var(--blue-bright); }
+  .b-small b { font-size: 16px; font-weight: 750; color: var(--ink); }
+  .b-small span { font-size: 13.5px; color: var(--muted); line-height: 1.5; display: block; margin-top: 2px; }
+
+  /* phone video placeholder — anchored to the card bottom, bleeds off */
+  .vid {
+    align-self: center; width: 210px; aspect-ratio: 9/19; border-radius: 26px 26px 0 0;
+    background: linear-gradient(165deg, #0e1a2e, #060d18);
+    border: 2px solid rgba(255,255,255,.22); border-bottom: none;
+    position: relative; margin-bottom: 0; margin-top: auto;
+    max-height: 300px; flex: none;
+    box-shadow: 0 -14px 40px rgba(0,0,0,.35);
+  }
+  .vid::before { content:""; position:absolute; top:10px; left:50%; transform:translateX(-50%);
+    width:52px; height:6px; border-radius:4px; background:rgba(255,255,255,.18); }
+  .vid .play {
+    position: absolute; top: 100px; left: 50%; transform: translateX(-50%);
+    width: 54px; height: 54px; border-radius: 50%;
+    background: rgba(255,255,255,.16);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .vid .play::before { content:""; margin-left: 4px;
+    border-left: 16px solid #fff; border-top: 10px solid transparent; border-bottom: 10px solid transparent; }
+  .vid .tag { position:absolute; top: 170px; left:50%; transform:translateX(-50%);
+    font-size:10px; font-weight:800; letter-spacing:.08em; color: rgba(255,255,255,.45); }
+
+  .vid-live { overflow: hidden; }
+
+  /* full phone — for clips whose action lives in a bottom sheet */
+  .vid-full { width: 170px; aspect-ratio: 540/1174; max-height: none;
+    border-radius: 22px; border-bottom: 2px solid rgba(255,255,255,.22);
+    margin-top: auto; margin-bottom: 24px; box-shadow: 0 14px 34px rgba(0,0,0,.45); }
+  .vid-full::before { display: none; }
+  .vid-live video { position: absolute; inset: 0; width: 100%; height: 100%;
+    object-fit: cover; object-position: top; display: block; }
+
+  /* closing settings row — same card language as the grids above */
+  .yours-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  @media (max-width: 900px) { .yours-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 480px) { .yours-grid { grid-template-columns: 1fr; } }
+
+  .m-ctasub { font-size: 14px; color: var(--muted); margin-top: 16px; }
+
+  /* ---- surprise & delight (mock) ---- */
+  .bento, .yours-grid { perspective: 900px; }
+  .vid, .vid-full { transition: transform .18s ease-out; will-change: transform; }
+  .b-hero.loud { position: relative; }
+  .b-hero.loud::after { content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none;
+    background: radial-gradient(220px circle at var(--mx,50%) var(--my,20%), rgba(255,255,255,.14), transparent 70%);
+    opacity:0; transition: opacity .25s; }
+  .b-hero.loud:hover::after { opacity:1; }
+
+  .b-small { transition: transform .22s cubic-bezier(.34,1.56,.64,1); }
+  .b-small:hover { transform: translateY(-3px); }
+  .b-small svg { transition: transform .3s cubic-bezier(.34,1.56,.64,1); transform-origin: 50% 60%; }
+  .b-small:hover svg { transform: scale(1.25) rotate(-8deg); }
+  .yours-grid .b-small:nth-child(3):hover svg { transform: rotate(360deg) scale(1.15); transition: transform .7s cubic-bezier(.3,.7,.3,1); }
+
+  .hello { font-style: normal; font-weight: 650; color: var(--blue-bright); font-size: 13px;
+    display: inline-block; min-width: 86px; transition: opacity .25s; }
+
+  .m-eyebrow span { display:inline-block; transform: translateY(0.7em); opacity:0;
+    transition: transform .45s cubic-bezier(.34,1.56,.64,1), opacity .3s; }
+  .m-eyebrow.in span { transform: translateY(0); opacity:1; }
+
+  .m-section, .m-transition { opacity:0; transform: translateY(18px); transition: opacity .6s ease, transform .6s ease; }
+  .m-section.in, .m-transition.in { opacity:1; transform: none; }
+
+  .cta { transition: transform .15s ease-out; will-change: transform; }
+
+  .burst { position: fixed; width: 34px; height: 34px; border-radius: 8px; pointer-events: none; z-index: 999; }
+
+  .docs-link { display: inline-block; margin-top: 14px; font-size: 13.5px; font-weight: 650;
+    color: var(--muted); text-decoration: none; transition: color .2s; }
+  .docs-link:hover { color: var(--blue-bright); }
+
+  /* device framing — real bezel; the recording carries its own Dynamic Island */
+  .vid { border: 7px solid #14161c; border-bottom: none;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,.09), 0 -14px 40px rgba(0,0,0,.35); }
+  .vid-full { border: 7px solid #14161c;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,.09), 0 16px 38px rgba(0,0,0,.5);
+    border-radius: 30px; }
+  .vid-live::before { display: none; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .m-section, .m-transition { opacity:1; transform:none; transition:none; }
+    .m-eyebrow span { transform:none; opacity:1; transition:none; }
+    .vid, .vid-full, .b-small, .b-small svg, .cta { transition:none; }
+  }
