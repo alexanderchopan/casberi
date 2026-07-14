@@ -619,7 +619,7 @@ footer .tagline { font-size: 16px; font-weight: 600; color: var(--ink); margin-b
 /* ===== The tour (below the fold, shipped 2026-07-13) ===== */
   .m-section { padding: 96px 0 10px; }
   .m-eyebrow { font-size: 13px; font-weight: 800; letter-spacing: .02em; color: var(--blue-bright); margin-bottom: 10px; text-transform: uppercase; }
-  .m-h2 { font-size: clamp(30px, 4.4vw, 46px); font-weight: 800; letter-spacing: -0.02em; line-height: 1.06; max-width: 640px; margin-bottom: 30px; }
+  .m-h2 { font-size: clamp(30px, 4.4vw, 46px); font-weight: 800; letter-spacing: -0.02em; line-height: 1.06; max-width: 640px; margin-bottom: 30px; text-wrap: balance; }
 
   .m-transition { text-align:center; font-size: 19px; color: var(--muted); padding: 8px 0 0; }
   .m-transition b { color: var(--ink); font-weight: 650; }
