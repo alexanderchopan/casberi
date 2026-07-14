@@ -739,13 +739,21 @@ footer .tagline { font-size: 16px; font-weight: 600; color: var(--ink); margin-b
     color: var(--muted); text-decoration: none; transition: color .2s; }
   .docs-link:hover { color: var(--blue-bright); }
 
-  /* device framing — real bezel; the recording carries its own Dynamic Island */
-  .vid { border: 7px solid #14161c; border-bottom: none;
-    box-shadow: inset 0 0 0 1px rgba(255,255,255,.09), 0 -14px 40px rgba(0,0,0,.35); }
-  .vid-full { border: 7px solid #14161c;
-    box-shadow: inset 0 0 0 1px rgba(255,255,255,.09), 0 16px 38px rgba(0,0,0,.5);
-    border-radius: 30px; }
+  /* device framing — hardware-dark bezel with a metallic edge; the
+     recording carries its own Dynamic Island */
+  .vid { border: 8px solid #0b0c10; border-bottom: none;
+    outline: 1px solid rgba(255,255,255,.22);
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,.05), 0 -14px 40px rgba(0,0,0,.4); }
+  .vid-full { border: 8px solid #0b0c10;
+    outline: 1px solid rgba(255,255,255,.22);
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,.05), 0 18px 42px rgba(0,0,0,.55);
+    border-radius: 34px; }
   .vid-live::before { display: none; }
+  /* side buttons — volume on the left, power on the right */
+  .vid-full::after { content: ""; position: absolute; left: -11px; top: 84px;
+    width: 3px; height: 26px; border-radius: 2px; background: #2c2f37;
+    box-shadow: 0 34px 0 #2c2f37, 183px -18px 0 0 #2c2f37, 183px -18px 0 6px transparent;
+    pointer-events: none; }
 
   @media (prefers-reduced-motion: reduce) {
     .m-section, .m-transition { opacity:1; transform:none; transition:none; }
