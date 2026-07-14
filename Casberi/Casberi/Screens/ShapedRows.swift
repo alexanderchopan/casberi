@@ -227,49 +227,122 @@ struct Sparkline: View {
 }
 
 
+/// The one remote-image pipeline behind RemoteThumb and PostMedia (extracted
+/// 2026-07-13 — the two views had grown twin copies of the same fetch/decode/
+/// downsample/cache dance). The loader owns the shared decoded cache and the
+/// session dead-URL set; the views stay thin rendering shells that decide
+/// what each outcome LOOKS like (glyph fallback vs collapsed block).
+@MainActor
+enum RemoteImageLoader {
+    enum Outcome {
+        /// Decoded and downsampled. `fresh` says the bytes just arrived over
+        /// the network (fade in — arrival, never a pop) as opposed to a cache
+        /// hit the session already knew (assign flat — a known image
+        /// re-appearing softly would read as re-loading).
+        case image(UIImage, fresh: Bool)
+        /// The network failed THIS attempt — an answer for this appearance
+        /// only (retry on recycle), never blacklisted.
+        case transientFailure
+        /// The URL served non-image bytes (a delisted Steam header's 404
+        /// page) — dead for the session, so scrolling stops re-fetching it.
+        case dead
+    }
+
+    /// One decoded-image cache for every remote image, bounded by COST
+    /// (decoded bitmap bytes): a card-width post image is ~30× a 26pt thumb,
+    /// so no count limit can speak for both — RemoteThumb's old 120-entry
+    /// limit was a proxy for the few-MB memory bound that cost accounting
+    /// now states directly.
+    private static let cache: NSCache<NSString, UIImage> = {
+        let c = NSCache<NSString, UIImage>()
+        c.totalCostLimit = 48 * 1024 * 1024
+        return c
+    }()
+
+    /// URLs that served non-image bytes. Without this, every scroll pass
+    /// over a dead-URL row re-issues the request — the CDN's 404 carries no
+    /// cache headers, so URLCache stores nothing. Session-scoped on purpose:
+    /// a redeploy can revive art.
+    private static var dead: Set<String> = []
+
+    /// The decoded cache keys on URL AND pixel side — one Apple Music cover
+    /// renders at 26pt in the All band and 44pt in MusicRow; a URL-only key
+    /// served the 78px thumb into the 132px slot, blurry for the session
+    /// (review 2026-07-11).
+    private static func key(_ urlString: String, _ side: CGFloat) -> NSString {
+        "\(Int(side))|\(urlString)" as NSString
+    }
+
+    static func isDead(_ urlString: String) -> Bool { dead.contains(urlString) }
+
+    /// The synchronous cache probe — a hit lands in the same render pass, so
+    /// a recycled row never flashes its placeholder for an image the session
+    /// already holds (an await, however short, is a frame).
+    static func cachedImage(urlString: String, targetSide: CGFloat) -> UIImage? {
+        cache.object(forKey: key(urlString, targetSide))
+    }
+
+    /// Fetch → decode → downsample to `targetSide` pixels. `cached: false`
+    /// is the perishable rule (a live-stream frame changes behind its URL):
+    /// skip the decoded cache both ways so a second broadcast can't wear the
+    /// first broadcast's frame, and never blacklist the URL.
+    static func load(urlString: String, targetSide: CGFloat, cached: Bool = true) async -> Outcome {
+        if dead.contains(urlString) { return .dead }
+        if cached, let hit = cache.object(forKey: key(urlString, targetSide)) {
+            return .image(hit, fresh: false)
+        }
+        guard let url = URL(string: urlString),
+              let (data, _) = try? await URLSession.shared.data(from: url) else {
+            return .transientFailure
+        }
+        guard !Task.isCancelled else { return .transientFailure }
+        guard let full = UIImage(data: data) else {
+            if cached { dead.insert(urlString) }
+            return .dead
+        }
+        // Downsample off the main thread — a wall of full-res images would
+        // otherwise decode at display size on every scroll pass.
+        let thumb: UIImage = await withCheckedContinuation { cont in
+            full.prepareThumbnail(of: CGSize(width: targetSide, height: targetSide)) {
+                cont.resume(returning: $0 ?? full)
+            }
+        }
+        guard !Task.isCancelled else { return .transientFailure }
+        if cached {
+            let cost = Int(thumb.size.width * thumb.size.height
+                           * thumb.scale * thumb.scale * 4)
+            cache.setObject(thumb, forKey: key(urlString, targetSide), cost: cost)
+        }
+        return .image(thumb, fresh: true)
+    }
+}
+
+
 /// A cached remote thumbnail for a feed row — a Pinterest pin's image, loaded
-/// from the URL captured at ingest. URLSession's shared cache holds the bytes;
-/// a small decoded-image cache keeps a scroll from re-decoding, and each image
-/// is downsampled to the thumbnail size so a wall of full-res pins can't bloat
-/// memory. A dead URL falls back to the bridge glyph — what "no image" looks
-/// like everywhere else — never a gray hole (2026-07-10: a 404'd Steam header
-/// or expired frame must not read worse than having no art at all).
+/// from the URL captured at ingest, through RemoteImageLoader (downsampled to
+/// the thumbnail size so a wall of full-res pins can't bloat memory). A dead
+/// URL falls back to the bridge glyph — what "no image" looks like everywhere
+/// else — never a gray hole (2026-07-10: a 404'd Steam header or expired
+/// frame must not read worse than having no art at all).
 struct RemoteThumb: View {
     let urlString: String
     var size: CGFloat = 26
     /// The bridge whose glyph stands in when the URL turns out dead.
     var fallback: String? = nil
     /// A perishable image (a live-stream frame) changes behind its URL —
-    /// skip the decoded cache so a second broadcast can't wear the first
-    /// broadcast's frame, and never blacklist its URL.
+    /// RemoteImageLoader's uncached rule: skip the decoded cache and never
+    /// blacklist.
     var perishable = false
     /// A circle clip instead of the app-icon squircle — for author avatars.
     var circular = false
     @State private var image: UIImage?
     @State private var failed = false
 
-    private static let cache: NSCache<NSString, UIImage> = {
-        let c = NSCache<NSString, UIImage>()
-        c.countLimit = 120
-        return c
-    }()
-    /// URLs that served non-image bytes (a delisted Steam header's 404
-    /// page). Without this, every scroll pass over a dead-URL row re-issues
-    /// the request — the CDN's 404 carries no cache headers, so URLCache
-    /// stores nothing. Session-scoped on purpose: a redeploy can revive art.
-    @MainActor private static var dead: Set<String> = []
-
-    /// The decoded cache keys on URL AND render size — one Apple Music cover
-    /// renders at 26pt in the All band and 44pt in MusicRow; a URL-only key
-    /// served the 78px thumb into the 132px slot, blurry for the session
-    /// (review 2026-07-11).
-    private var cacheKey: NSString { "\(Int(size))|\(urlString)" as NSString }
-
     var body: some View {
         Group {
             if let image {
                 Image(uiImage: image).resizable().scaledToFill()
-            } else if failed || Self.dead.contains(urlString), let fallback {
+            } else if failed || RemoteImageLoader.isDead(urlString), let fallback {
                 BridgeIcon(name: fallback, size: size)
             } else {
                 ZStack {
@@ -288,44 +361,33 @@ struct RemoteThumb: View {
     }
 
     private func load() async {
-        if Self.dead.contains(urlString) { failed = true; return }
+        if RemoteImageLoader.isDead(urlString) { failed = true; return }
         // Cache hit is instant and also covers a recycled row landing on a new
         // URL (its own key, so a stale pin never shows through) — no fade: an
         // already-known image re-appearing softly would read as re-loading.
-        if !perishable, let hit = Self.cache.object(forKey: cacheKey) {
+        if !perishable,
+           let hit = RemoteImageLoader.cachedImage(urlString: urlString, targetSide: size * 3) {
             image = hit; return
         }
         // A recycled row: drop the previous pin before the new one arrives.
         image = nil
         failed = false
-        guard let url = URL(string: urlString),
-              let (data, _) = try? await URLSession.shared.data(from: url) else {
-            // A transient network failure is an answer for THIS appearance
-            // only (glyph now, retry on recycle) — never blacklisted.
+        switch await RemoteImageLoader.load(urlString: urlString, targetSide: size * 3,
+                                            cached: !perishable) {
+        case .image(let thumb, let fresh):
+            // A freshly downloaded image fades in over the placeholder —
+            // arrival, never a pop (the App Store's grammar; motion pass
+            // 2026-07-11). The token motion, not an ad-hoc curve; a pure
+            // crossfade, so Reduce Motion needs no gate.
+            if fresh { withAnimation(DS.Motion.standard) { image = thumb } }
+            else { image = thumb }
+        case .transientFailure:
+            // Glyph now, retry on recycle. A cancelled task is not a failure
+            // — leave the state for the next appearance to reset.
             failed = !Task.isCancelled
-            return
-        }
-        guard !Task.isCancelled else { return }
-        guard let full = UIImage(data: data) else {
-            // The server answered with non-image bytes — the URL itself is
-            // dead (a 404 page). Remember, so scrolling stops re-fetching it.
+        case .dead:
             failed = true
-            if !perishable { Self.dead.insert(urlString) }
-            return
         }
-        // Downsample off the main thread — a wall of full-res pins would
-        // otherwise decode at display size on every scroll pass.
-        let side = size * 3
-        let thumb: UIImage = await withCheckedContinuation { cont in
-            full.prepareThumbnail(of: CGSize(width: side, height: side)) { cont.resume(returning: $0 ?? full) }
-        }
-        guard !Task.isCancelled else { return }
-        if !perishable { Self.cache.setObject(thumb, forKey: cacheKey) }
-        // A freshly downloaded image fades in over the placeholder — arrival,
-        // never a pop (the App Store's grammar; motion pass 2026-07-11). The
-        // token motion, not an ad-hoc curve; a pure crossfade, so Reduce
-        // Motion needs no gate.
-        withAnimation(DS.Motion.standard) { image = thumb }
     }
 }
 
@@ -943,14 +1005,14 @@ struct PostCard: View {
     }
 }
 
-/// A post's attached image at card width. Its own small loader, not
-/// RemoteThumb (that's a fixed-size thumb): a dead URL COLLAPSES the block —
-/// the card just becomes a text post, never a gray hole (the RemoteThumb
-/// honesty rule at a size where a placeholder would dominate the card).
-/// The `.task` stays attached in EVERY state (review 2026-07-13): parked
-/// inside the non-failed branch, a recycled row that once failed would drop
-/// its own retry path and stay text-only for the session. Same reason load()
-/// resets the previous URL's image/failure first — RemoteThumb's
+/// A post's attached image at card width. RemoteImageLoader's bytes, not
+/// RemoteThumb's shell (that's a fixed-size thumb): a dead URL COLLAPSES the
+/// block — the card just becomes a text post, never a gray hole (the
+/// RemoteThumb honesty rule at a size where a placeholder would dominate the
+/// card). The `.task` stays attached in EVERY state (review 2026-07-13):
+/// parked inside the non-failed branch, a recycled row that once failed would
+/// drop its own retry path and stay text-only for the session. Same reason
+/// load() resets the previous URL's image/failure first — RemoteThumb's
 /// recycled-row rule, kept here too.
 struct PostMedia: View {
     let urlString: String
@@ -958,19 +1020,9 @@ struct PostMedia: View {
     @State private var image: UIImage?
     @State private var failed = false
 
-    /// Card-width entries are ~30× a RemoteThumb's bytes — the cache is
-    /// bounded by COST (decoded bitmap bytes), not count, so a long media
-    /// feed can't pin ~100MB of bitmaps.
-    private static let cache: NSCache<NSString, UIImage> = {
-        let c = NSCache<NSString, UIImage>()
-        c.totalCostLimit = 48 * 1024 * 1024
-        return c
-    }()
-    @MainActor private static var dead: Set<String> = []
-
     var body: some View {
         Group {
-            if failed || Self.dead.contains(urlString) {
+            if failed || RemoteImageLoader.isDead(urlString) {
                 // Collapsed — the card reads as a text post.
                 Color.clear.frame(height: 0)
             } else if let image {
@@ -998,34 +1050,20 @@ struct PostMedia: View {
         // resolves — a transient failure was an answer for THAT appearance.
         image = nil
         failed = false
-        if Self.dead.contains(urlString) { return }
-        if let hit = Self.cache.object(forKey: urlString as NSString) {
+        if RemoteImageLoader.isDead(urlString) { return }
+        // Card width is ~1080px at 3×; 640 was soft at display size.
+        if let hit = RemoteImageLoader.cachedImage(urlString: urlString, targetSide: 1080) {
             image = hit; return
         }
-        guard let url = URL(string: urlString),
-              let (data, _) = try? await URLSession.shared.data(from: url) else {
+        switch await RemoteImageLoader.load(urlString: urlString, targetSide: 1080) {
+        case .image(let thumb, let fresh):
+            if fresh { withAnimation(DS.Motion.standard) { image = thumb } }
+            else { image = thumb }
+        case .transientFailure:
             failed = !Task.isCancelled
-            return
-        }
-        guard !Task.isCancelled else { return }
-        guard let full = UIImage(data: data) else {
-            // Non-image bytes — the URL itself is dead (RemoteThumb's rule;
-            // session-scoped, a redeploy can revive it).
+        case .dead:
             failed = true
-            Self.dead.insert(urlString)
-            return
         }
-        // Card width is ~1080px at 3×; 640 was soft at display size.
-        let thumb: UIImage = await withCheckedContinuation { cont in
-            full.prepareThumbnail(of: CGSize(width: 1080, height: 1080)) {
-                cont.resume(returning: $0 ?? full)
-            }
-        }
-        guard !Task.isCancelled else { return }
-        let cost = Int(thumb.size.width * thumb.size.height
-                       * thumb.scale * thumb.scale * 4)
-        Self.cache.setObject(thumb, forKey: urlString as NSString, cost: cost)
-        withAnimation(DS.Motion.standard) { image = thumb }
     }
 }
 
