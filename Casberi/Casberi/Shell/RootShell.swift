@@ -305,6 +305,25 @@ struct RootShell: View {
                     NSLog("[Casberi] answerProbe(\"%@\") %dms →\n%@", q, ms, doc.joined(separator: "\n"))
                 }
             }
+            // Debug hooks for the BYO-key path: `-byokKey <key>` stores a key
+            // headlessly (or "clear" to remove it); `-byokProbe "<query>"` runs
+            // the keyed answer path and logs the doc — with a bogus key it
+            // verifies the honest failure path without spending anything.
+            if let raw = UserDefaults.standard.string(forKey: "byokKey") {
+                if raw == "clear" { ClaudeKey.clear() } else { ClaudeKey.set(raw) }
+                NSLog("[Casberi] byokKey: configured=%d hint=%@",
+                      ClaudeKey.isConfigured ? 1 : 0, ClaudeKey.hint)
+            }
+            if let q = UserDefaults.standard.string(forKey: "byokProbe") {
+                Task {
+                    await EmbeddingIndex.indexPending(context: modelContext)
+                    let start = Date()
+                    let doc = await keyedAnswerDocument(q)
+                    let ms = Int(Date().timeIntervalSince(start) * 1000)
+                    NSLog("[Casberi] byokProbe(\"%@\") %dms →\n%@", q, ms,
+                          doc?.joined(separator: "\n") ?? "nil (key/network failed — composer words it)")
+                }
+            }
             // Debug hook: open the composer so `-uiAnswerProbe` (handled in the
             // composer) can drive a real send for an on-screen answer.
             if UserDefaults.standard.string(forKey: "uiAnswerProbe") != nil
@@ -449,6 +468,7 @@ struct RootShell: View {
                  onHeight: { actionsHeight = min(max($0, 220), 720) },
                  onCommit: saveDraft, onCommitVoice: saveVoice,
                  answer: answerDocument,
+                 answerWithKey: keyedAnswerDocument,
                  tagCandidates: projectTags,
                  knownSources: { bridges.bridges.map(\.name) },
                  contextSource: { nil },
@@ -740,9 +760,14 @@ struct RootShell: View {
         // things, and before retrieval so the literal words never become search
         // terms and surface noise (2026-07-12).
         if let tagsAsk = TagsAsk.parse(query) {
+            // Arithmetic answers carry no retrieval grounding — clear the last
+            // hits so a keyed retry re-retrieves for THIS question instead of
+            // silently grounding on a previous one's evidence (review 2026-07-13).
+            lastAnswerHits = []
             return tagsDoc(tagsAsk, in: allThings)
         }
         if let agg = AggregateAsk.parse(query, sources: knownSources) {
+            lastAnswerHits = []
             let line = AggregateAsk.answer(agg, things: allThings)
             return ["root = Stack([ins])", "ins = Insight(\"\(genSafe(line))\")"]
         }
@@ -785,6 +810,23 @@ struct RootShell: View {
             }
             return proseDoc(prose)
         }
+    }
+
+    /// The BYO-key retry (prd §67) — the same question over the SAME evidence
+    /// the on-device answer saw (`lastAnswerHits`), synthesized by the person's
+    /// own Anthropic key, device→API direct. nil means the key or the network
+    /// failed and the composer words that; an empty grounding gets an honest
+    /// line instead, because a stronger model can't change what's here.
+    private func keyedAnswerDocument(_ query: String) async -> [String]? {
+        let hits = lastAnswerHits.isEmpty ? retrieve(query) : lastAnswerHits
+        guard !hits.isEmpty else {
+            return proseDoc("Nothing in your things matches that — a bigger model can't change what's here.")
+        }
+        guard let prose = await ClaudeAnswer.synthesize(query: query,
+                                                        candidates: candidates(hits)) else {
+            return nil
+        }
+        return proseDoc(prose)
     }
 
     /// Retrieved things flattened for the model — the one place the mapping

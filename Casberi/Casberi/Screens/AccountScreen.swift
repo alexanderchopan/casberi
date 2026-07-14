@@ -180,7 +180,9 @@ struct SettingsScreen: View {
 
     /// Group two — the app itself: housekeeping, rarely visited. A–Z.
     private var secondaryTiles: [TileSpec] {
-        [
+        // One Keychain read per render, not two (the tile needs it twice).
+        let keyed = ClaudeKey.isConfigured
+        return [
             // A binary choice earns a tap, not a tray with one empty screen's
             // worth of nothing below two chips (report 2026-07-09) — the tile
             // itself flips, and the icon states which way.
@@ -206,6 +208,14 @@ struct SettingsScreen: View {
                      value: LanguageStore.shared.summary,
                      badge: ("globe", DS.textSecondary),
                      action: { languageOpen = true }),
+            // Your key (prd §67) — the BYO escape hatch: on-device by default,
+            // your own Anthropic key adds a per-answer "Try with your key".
+            TileSpec(title: "Your key",
+                     value: keyed
+                        ? String(localized: "Claude answers on tap")
+                        : String(localized: "Bring your own AI key"),
+                     badge: ("key.fill", keyed ? DS.confirm : DS.textSecondary),
+                     action: { detail = .key }),
             // The one persistent explainer of the model (2026-07-11) — for
             // a new person after the coach lines retire. "How it works", not
             // "About" (About reads as version/legal).

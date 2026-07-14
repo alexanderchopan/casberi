@@ -27,6 +27,11 @@ struct Composer: View {
     /// each growing doc so prose renders live; lookups and the non-AI fallback
     /// never call it and just return the doc to reveal at once.
     var answer: (_ query: String, _ onProseDoc: @escaping ([String]) -> Void) async -> [String] = { _, _ in [] }
+    /// The BYO-key retry (prd §67): answers the same question with the person's
+    /// own Anthropic key, device→API direct. nil when the key or the network
+    /// failed — the composer words that honestly. The verb only shows when a
+    /// key is configured; it never fires on its own.
+    var answerWithKey: (_ query: String) async -> [String]? = { _ in nil }
     /// Candidate project tags for the parse card, from the corpus.
     var tagCandidates: () -> [String] = { [] }
     /// The connected sources ("Gmail", "Steam") — navigation asks match them.
@@ -80,6 +85,9 @@ struct Composer: View {
         let id = UUID()
         let question: String
         let els: GenEls
+        /// True when the person's own key produced this answer — the settled
+        /// turn keeps its badge (honesty: a keyed answer says so, always).
+        var keyed = false
     }
     @State private var turns: [ConvoTurn] = []
     /// The question currently being answered — shown above the live answer
@@ -92,6 +100,21 @@ struct Composer: View {
     /// is keepable, never a lookup or a "nothing matches" fallback (both of
     /// which are also Insights). Resets on the next ask.
     @State private var currentStreamed = false
+    /// True while an answer is actually being produced (model running) — the
+    /// after-answer verbs (Keep, Try with your key) wait for the settle.
+    @State private var inFlight = false
+    /// True when the current answer came from the person's own key — it wears
+    /// the badge, and the retry verb retires (one keyed try per ask).
+    @State private var keyedCurrent = false
+    /// Monotonic ask generation — every new ask (and close) bumps it, and an
+    /// answer Task that finishes after a newer ask started must not paint
+    /// over the live answer (review 2026-07-13: a slow first answer was
+    /// clobbering the follow-up that overtook it).
+    @State private var askGeneration = 0
+    /// Whether a key is configured, mirrored once per settled answer — the
+    /// chip gate can't afford a Keychain round-trip per render (typing a
+    /// follow-up re-renders per keystroke).
+    @State private var keyAvailable = false
 
     /// The keepable text of a synthesis answer — a synthesis is one Insight
     /// carrying the prose (RootShell's proseDoc). Only that shape is worth
@@ -369,7 +392,10 @@ struct Composer: View {
                         VStack(alignment: .leading, spacing: DS.Space.s4) {
                             ForEach(turns) { turn in
                                 convoTurn(question: turn.question) {
-                                    GenRender(id: "root", els: turn.els)
+                                    VStack(alignment: .leading, spacing: DS.Space.s1) {
+                                        GenRender(id: "root", els: turn.els)
+                                        if turn.keyed { keyedBadge }
+                                    }
                                 }
                             }
                             if answering {
@@ -377,21 +403,41 @@ struct Composer: View {
                                     VStack(alignment: .leading, spacing: DS.Space.s2) {
                                         GenRender(id: "root", els: answerStream.els)
                                             .environment(\.genProseStreaming, proseStreaming)
-                                        // Keep a settled synthesis (2026-07-12):
-                                        // lands the recap as a note so it isn't
-                                        // ephemeral. The consent tap IS the keep,
-                                        // like the parse card's save-on-send.
-                                        if !proseStreaming, !keptCurrent, currentStreamed,
-                                           let text = keepableText(answerStream.els) {
-                                            Button {
-                                                DSHaptic.tap()
-                                                keptCurrent = true
-                                                onKeepAnswer(text)
-                                            } label: {
-                                                Chip(text: "Keep this", style: .tint,
-                                                     glyph: "tray.and.arrow.down")
+                                        // A keyed answer says so, always — the
+                                        // badge is the honesty rule applied to
+                                        // where the answer was made.
+                                        if keyedCurrent, !inFlight { keyedBadge }
+                                        if !proseStreaming, !inFlight {
+                                            HStack(spacing: DS.Space.s2) {
+                                                // Keep a settled synthesis (2026-07-12):
+                                                // lands the recap as a note so it isn't
+                                                // ephemeral. The consent tap IS the keep,
+                                                // like the parse card's save-on-send.
+                                                if !keptCurrent, currentStreamed,
+                                                   let text = keepableText(answerStream.els) {
+                                                    Button {
+                                                        DSHaptic.tap()
+                                                        keptCurrent = true
+                                                        onKeepAnswer(text)
+                                                    } label: {
+                                                        Chip(text: "Keep this", style: .tint,
+                                                             glyph: "tray.and.arrow.down")
+                                                    }
+                                                    .buttonStyle(.plain)
+                                                }
+                                                // The BYO-key retry (prd §67) — a verb,
+                                                // never a fallback: the question and its
+                                                // matched things leave this iPhone only
+                                                // on this tap, straight to Anthropic.
+                                                if !keyedCurrent, keyAvailable,
+                                                   !currentQuestion.isEmpty {
+                                                    Button { askWithKey() } label: {
+                                                        Chip(text: "Try with your key",
+                                                             glyph: "key.fill")
+                                                    }
+                                                    .buttonStyle(.plain)
+                                                }
                                             }
-                                            .buttonStyle(.plain)
                                             .padding(.horizontal, DS.Space.s4)
                                         }
                                     }
@@ -606,6 +652,60 @@ struct Composer: View {
         turns = []
         currentQuestion = ""
         keptCurrent = false
+        keyedCurrent = false
+        inFlight = false
+        askGeneration += 1   // any in-flight answer Task retires silently
+    }
+
+    /// The small honest mark a keyed answer wears — where it was made, stated
+    /// plainly, on the answer itself and on its settled turn.
+    private var keyedBadge: some View {
+        HStack(spacing: DS.Space.s1) {
+            Image(systemName: "key.fill").font(.system(size: 10))
+            Text("Answered with your key")
+        }
+        .dsText(.label12)
+        .foregroundStyle(DS.textTertiary)
+        .padding(.horizontal, DS.Space.s4)
+    }
+
+    /// The BYO-key retry: the same question, re-answered by the person's own
+    /// Anthropic key. The on-device answer settles into the thread first, so
+    /// the two sit side by side — the tap is the consent, the badge is the
+    /// receipt, and a failure is worded plainly (never faked).
+    private func askWithKey() {
+        let q = currentQuestion
+        guard !q.isEmpty, !inFlight else { return }
+        DSHaptic.tap()
+        withAnimation(DS.Motion.standard) {
+            if answering {
+                turns.append(ConvoTurn(question: currentQuestion, els: answerStream.els,
+                                       keyed: keyedCurrent))
+            }
+            answering = true
+            inFlight = true
+            keyedCurrent = true
+            keptCurrent = false
+            currentStreamed = false
+        }
+        askGeneration += 1
+        let gen = askGeneration
+        answerStream.paint(["root = Stack([w])", "w = Insight(\"Asking with your key…\")"])
+        Task { @MainActor in
+            let doc = await answerWithKey(q)
+            // Closed, or a newer ask overtook this one — retire silently.
+            guard isOpen, gen == askGeneration else { return }
+            inFlight = false
+            keyAvailable = ClaudeKey.isConfigured
+            if let doc {
+                currentStreamed = true   // a keyed synthesis is keepable too
+                answerStream.stream(doc)
+            } else {
+                keyedCurrent = false     // no keyed answer arrived — no badge
+                answerStream.stream(["root = Stack([w])",
+                                     "w = Insight(\"That didn't go through — check your key in Settings, or your connection.\")"])
+            }
+        }
     }
 
     // MARK: - Ask chips + input bar (chat grammar: by the bottom)
@@ -746,7 +846,12 @@ struct Composer: View {
     /// The tiles to show — a `probe` tile (ChatGPT/Claude) only appears when its
     /// app is installed, so a tile never opens a website instead of the app.
     private var visibleTools: [QuickTool] {
-        QuickTool.all.filter { !$0.probe || UIApplication.shared.canOpenURL($0.url) }
+        #if DEBUG
+        // `-forceTools YES` shows probe-gated tiles in the simulator, where
+        // third-party apps can't be installed (screenshot/video staging only).
+        if UserDefaults.standard.bool(forKey: "forceTools") { return QuickTool.all }
+        #endif
+        return QuickTool.all.filter { !$0.probe || UIApplication.shared.canOpenURL($0.url) }
     }
 
     private var toolGrid: some View {
@@ -899,12 +1004,17 @@ struct Composer: View {
             // stacks (2026-07-12); the last answer stays live until the next
             // ask or close, so its typewriter reveal never gets cut.
             if answering {
-                turns.append(ConvoTurn(question: currentQuestion, els: answerStream.els))
+                turns.append(ConvoTurn(question: currentQuestion, els: answerStream.els,
+                                       keyed: keyedCurrent))
             }
             answering = true
             currentQuestion = draft
             keptCurrent = false
             currentStreamed = false
+            keyedCurrent = false
+            inFlight = true
+            askGeneration += 1
+            let gen = askGeneration
             let q = draft
             draft = ""              // clear the field so a follow-up is ready
             answerStream.paint(OnDeviceModel.isAvailable
@@ -916,11 +1026,13 @@ struct Composer: View {
                 // SAME proposal form; the write still waits for Apply.
                 if OrganizeLLM.looksOrganizeish(q),
                    let command = await OrganizeLLM.extract(q) {
-                    guard isOpen else { return }   // closed mid-extraction
+                    // Closed, or a newer ask overtook this one mid-extraction.
+                    guard isOpen, gen == askGeneration else { return }
                     let proposed = Organize.propose(command, context: modelContext)
                     fieldFocused = false
                     withAnimation(DS.Motion.standard) {
                         answering = false
+                        inFlight = false
                         proposal = proposed
                     }
                     draft = ""
@@ -929,16 +1041,23 @@ struct Composer: View {
                 var streamed = false
                 let finalDoc = await answer(q) { partialDoc in
                     // Prose arriving live — paint each growing snapshot; the
-                    // Insight breathes its dot while this fires (§2).
+                    // Insight breathes its dot while this fires (§2). A stale
+                    // ask's partials never paint over a newer one.
+                    guard gen == askGeneration else { return }
                     streamed = true
                     currentStreamed = true   // a real synthesis — keepable
                     proseStreaming = true
                     answerStream.paint(partialDoc)
                 }
+                // A newer ask (or close) overtook this one — its answer owns
+                // the stream now; this one retires silently.
+                guard gen == askGeneration else { return }
                 // Prose already painted its way in; settle on the final text.
                 // A lookup or the fallback never streamed, so reveal it with
                 // the typewriter (unchanged behaviour).
                 proseStreaming = false
+                inFlight = false
+                keyAvailable = ClaudeKey.isConfigured   // one read per settle
                 if streamed { answerStream.paint(finalDoc) }
                 else { answerStream.stream(finalDoc) }
                 fieldFocused = true     // ready for the next follow-up

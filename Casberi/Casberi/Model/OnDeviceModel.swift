@@ -99,6 +99,58 @@ enum OnDeviceModel {
         return nil
     }
 
+    // MARK: - Shared synthesis prompt
+
+    /// The one serialization every model path shares: a numbered line per
+    /// thing, with the thing's own text (when it has any) quoted on an
+    /// indented line under it. Lives on the ungated enum so the BYO-key path
+    /// (ClaudeAnswer) hands Anthropic the SAME evidence shape the on-device
+    /// model saw — prd §67: the key buys a stronger model, not a different
+    /// contract.
+    static func numberedCandidates(_ candidates: [Candidate]) -> String {
+        candidates.enumerated().map { i, c in
+            var line = "\(i + 1). \(c.title) — \(c.kind), from \(c.source), \(c.when)"
+            if !c.note.isEmpty { line += "\n   \"\(c.note)\"" }
+            return line
+        }.joined(separator: "\n")
+    }
+
+    /// The synthesis contract both models answer under. `length` is the one
+    /// sanctioned divergence: the small on-device model is held to "two or
+    /// three plain sentences"; the keyed model may run "a few". Everything
+    /// else — grounding, voice, honesty — is one text, so a tuning fix can't
+    /// reach one model and miss the other.
+    static func synthesisInstructions(length: String) -> String {
+        """
+        You help someone reflect on the things they have saved. Speak TO them \
+        as "you" — never write in the first person, and never narrate as if you \
+        are the person ("This week you spent…", never "This week I spent…"). \
+        Answer in \(length) using ONLY the things listed. Find the \
+        threads ACROSS the things — including the same subject showing up in \
+        different apps — and say what the stretch was actually about, drawing \
+        on the quoted text for substance. Do NOT walk the list item by item — \
+        "You saved X. You saved Y. You saved Z." is wrong; group and \
+        synthesize instead. Never invent a thing, a number, a detail, or a \
+        connection that isn't in the list. No metaphors, no marketing. Write \
+        the answer directly — no preamble like "Here is" or "Summary:", no \
+        bullet points, no markdown. If the list is thin, say so plainly.
+        """ + LanguageStore.shared.llmLanguageDirective
+    }
+
+    /// The synthesis user prompt both models receive, over the same evidence.
+    static func synthesisPrompt(query: String, candidates: [Candidate]) -> String {
+        """
+        Question: "\(query)"
+
+        Their things, numbered (an indented quote under a thing is its own \
+        text — everything you may use):
+        \(numberedCandidates(candidates))
+
+        Answer the question directly in plain sentences, grounded only in \
+        these things.
+        """
+    }
+
     // MARK: - Lifecycle
 
     /// Warms the model so the first Ask doesn't pay the one-time load. Safe to
@@ -164,22 +216,10 @@ struct GroundedAnswerLayout {
 @available(iOS 26.0, *)
 enum FoundationAnswer {
 
-    /// The one serialization both prompts share: a numbered line per thing,
-    /// with the thing's own text (when it has any) quoted on an indented line
-    /// under it — the substance that turns "you saved links from Mail" into an
-    /// answer about what those things actually say.
-    static func numberedCandidates(_ candidates: [OnDeviceModel.Candidate]) -> String {
-        candidates.enumerated().map { i, c in
-            var line = "\(i + 1). \(c.title) — \(c.kind), from \(c.source), \(c.when)"
-            if !c.note.isEmpty { line += "\n   \"\(c.note)\"" }
-            return line
-        }.joined(separator: "\n")
-    }
-
     static func compose(query: String, candidates: [OnDeviceModel.Candidate]) async -> OnDeviceModel.GroundedAnswer? {
         guard OnDeviceModel.isAvailable, !candidates.isEmpty else { return nil }
 
-        let numbered = numberedCandidates(candidates)
+        let numbered = OnDeviceModel.numberedCandidates(candidates)
 
         let instructions = """
         You help someone find and make sense of the things they have saved. \
@@ -219,33 +259,10 @@ enum FoundationAnswer {
     /// stream to a plain `AsyncStream<String>` (cumulative snapshots) so the
     /// caller needs no iOS-26 types and can consume it on the main actor.
     static func synthesisStream(query: String, candidates: [OnDeviceModel.Candidate]) -> AsyncStream<String> {
-        let numbered = numberedCandidates(candidates)
-
-        let instructions = """
-        You help someone reflect on the things they have saved. Speak TO them \
-        as "you" — never write in the first person, and never narrate as if you \
-        are the person ("This week you spent…", never "This week I spent…"). \
-        Answer in two \
-        or three plain sentences using ONLY the things listed. Find the \
-        threads ACROSS the things — including the same subject showing up in \
-        different apps — and say what the stretch was actually about, drawing \
-        on the quoted text for substance. Do NOT walk the list item by item — \
-        "You saved X. You saved Y. You saved Z." is wrong; group and \
-        synthesize instead. Never invent a thing, a number, a detail, or a \
-        connection that isn't in the list. No metaphors, no marketing. Write \
-        the answer directly — no preamble like "Here is" or "Summary:", no \
-        bullet points, no markdown. If the list is thin, say so plainly.
-        """ + LanguageStore.shared.llmLanguageDirective
-        let prompt = """
-        Question: "\(query)"
-
-        Their things, numbered (an indented quote under a thing is its own \
-        text — everything you may use):
-        \(numbered)
-
-        Answer the question directly in plain sentences, grounded only in \
-        these things.
-        """
+        // The shared contract (prd §67) — one instructions/prompt pair for the
+        // on-device model and the BYO-key path, differing only in length.
+        let instructions = OnDeviceModel.synthesisInstructions(length: "two or three plain sentences")
+        let prompt = OnDeviceModel.synthesisPrompt(query: query, candidates: candidates)
 
         return AsyncStream { continuation in
             let task = Task {

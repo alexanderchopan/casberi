@@ -10,6 +10,7 @@ import CloudKit
 /// pricing that doesn't exist yet.
 enum AccountDetail: String, Identifiable {
     case data
+    case key
     var id: String { rawValue }
 }
 
@@ -26,13 +27,27 @@ struct AccountDetailSheet: View {
     @State private var importing = false
     @State private var importResult: String?
     @State private var deleteResult: String?
+    /// Your key (prd §67) — draft, outcome line, and a mirrored configured
+    /// flag (ClaudeKey isn't observable; actions refresh it by hand).
+    @State private var keyDraft = ""
+    @State private var keyResult: String?
+    /// A rejected key must READ as a failure — same muted gray as success
+    /// would look like it saved (honesty rule).
+    @State private var keyResultIsError = false
+    @State private var keyChecking = false
+    @State private var keyConfigured = ClaudeKey.isConfigured
 
     var body: some View {
         DSTray(title: title, height: sheetHeight) {
-            dataCard
-            controls
+            switch detail {
+            case .data:
+                dataCard
+                controls
+            case .key:
+                keyCard
+            }
         }
-        .onAppear { exportURL = buildExport() }
+        .onAppear { if detail == .data { exportURL = buildExport() } }
         // The export's other half — the file comes back in whole (dedupe by id).
         .fileImporter(isPresented: $importing,
                       allowedContentTypes: [.json]) { result in
@@ -47,7 +62,12 @@ struct AccountDetailSheet: View {
         }
     }
 
-    private var title: String { "Data" }
+    private var title: String {
+        switch detail {
+        case .data: "Data"
+        case .key: "Your key"
+        }
+    }
 
     /// The actions — Export / Import as real buttons on one row, Delete on
     /// its own full-width row (destructive stands alone). The settings (sync,
@@ -102,7 +122,12 @@ struct AccountDetailSheet: View {
         .contentShape(Capsule(style: .continuous))
     }
 
-    private var sheetHeight: CGFloat { 470 }
+    private var sheetHeight: CGFloat {
+        switch detail {
+        case .data: 470
+        case .key: 460
+        }
+    }
 
     // MARK: - Pieces
 
@@ -133,6 +158,87 @@ struct AccountDetailSheet: View {
                       hidePreviews ? DS.confirm : DS.textSecondary,
                       "Hide previews", "Blur your things in the app switcher",
                       Binding(get: { hidePreviews }, set: { hidePreviews = $0; DSHaptic.tap() }))
+        }
+    }
+
+    /// Your key (prd §67) — the BYO escape hatch, stated honestly: answers run
+    /// on this iPhone by default; your own Anthropic key adds a "Try with your
+    /// key" you tap per answer. The key goes to the Keychain and to Anthropic
+    /// itself — never to us (there is no us to send it to).
+    private var keyCard: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s4) {
+            aliveRow("key.fill", keyConfigured ? DS.confirm : DS.textSecondary,
+                     "Anthropic API key",
+                     keyConfigured ? "Saved in the Keychain \(ClaudeKey.hint)"
+                                   : "Answers run on this iPhone until you add one")
+            Text("With your key saved, every answer offers \"Try with your key\" — the question and the few matched things go straight from this iPhone to Anthropic, only when you tap. Anthropic bills your key directly.")
+                .dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+            HStack(spacing: DS.Space.s3) {
+                SecureField("sk-ant-…", text: $keyDraft)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                    .dsText(.callout15)
+                    .padding(.horizontal, DS.Space.s3)
+                    .frame(height: 44)
+                    .background(DS.fillFaint, in: Capsule(style: .continuous))
+                Button { saveKey() } label: {
+                    Text(keyChecking ? "Checking…" : "Save")
+                        .dsText(.callout15).fontWeight(.semibold)
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, DS.Space.s4)
+                        .frame(height: 44)
+                        .background(DS.tint, in: Capsule(style: .continuous))
+                }
+                .buttonStyle(.plain)
+                .disabled(keyChecking || keyDraft.trimmingCharacters(in: .whitespaces).isEmpty)
+            }
+            if keyConfigured {
+                Button {
+                    DSHaptic.tap()
+                    ClaudeKey.clear()
+                    keyConfigured = false
+                    keyResultIsError = false
+                    keyResult = "Removed — answers stay on this iPhone."
+                } label: {
+                    actionLabel("Remove key", icon: "trash",
+                                fg: DS.destructive, bg: DS.gray100)
+                }
+                .buttonStyle(.plain)
+            }
+            if let keyResult {
+                Text(keyResult)
+                    .dsText(.callout15)
+                    .foregroundStyle(keyResultIsError ? DS.attention : DS.textSecondary)
+                    .settleIn()
+            }
+            Text("Get a key at console.anthropic.com. It stays in this iPhone's Keychain and goes only to Anthropic itself.")
+                .dsText(.label12).foregroundStyle(DS.textTertiary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    /// Saves the key only after Anthropic accepts it — no dead key sitting in
+    /// the Keychain claiming a capability it can't deliver (honesty rule).
+    private func saveKey() {
+        let candidate = keyDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !candidate.isEmpty else { return }
+        keyChecking = true
+        keyResult = nil
+        Task { @MainActor in
+            let ok = await ClaudeAnswer.validate(candidate)
+            keyChecking = false
+            if ok {
+                ClaudeKey.set(candidate)
+                keyConfigured = true
+                keyDraft = ""
+                DSHaptic.success()
+                keyResultIsError = false
+                keyResult = "Saved — answers now offer \"Try with your key\"."
+            } else {
+                keyResultIsError = true
+                keyResult = "Anthropic didn't accept that key — check it and try again."
+            }
         }
     }
 
