@@ -23,55 +23,92 @@
 (function hero() {
   var rain = document.querySelector('.rain');
   var target = document.querySelector('.rain-target .ai-casberi');
+  var em = document.querySelector('.hero h1 em');
   if (!rain || !target) return;
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
   var icons = Array.prototype.slice.call(rain.children);
-  var FLY = 520;       // one icon's flight into the tile
-  var STAGGER = 40;
-  var inFlight = false;
+  var state = 'raining';          // raining → absorbing → rested
 
+  // Act 2 — gather. Icons leave far-first in a rolling wave, curve along an
+  // arc, accelerate into the tile, and recede (scale + fade) as they arrive.
+  // Each arrival feeds the berry: the tile grows a little and gulps.
   function absorb() {
-    if (inFlight) return;
-    inFlight = true;
+    if (state === 'absorbing') return;
+    state = 'absorbing';
     var t = target.getBoundingClientRect();
-    icons.forEach(function (el, i) {
+    var tx = t.left + t.width / 2, ty = t.top + t.height / 2;
+    var infos = icons.map(function (el) {
       var r = el.getBoundingClientRect();
-      var dx = (t.left + t.width / 2) - (r.left + r.width / 2);
-      var dy = (t.top + t.height / 2) - (r.top + r.height / 2);
-      el.animate(
-        [
-          { opacity: 1 },
-          { transform: 'translate(' + dx + 'px,' + dy + 'px) scale(.1)', opacity: 0 }
-        ],
-        { duration: FLY, delay: i * STAGGER, easing: 'cubic-bezier(.5,0,.8,.4)', fill: 'forwards' }
-      );
+      var cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+      return { el: el, dx: tx - cx, dy: ty - cy, d: Math.hypot(tx - cx, ty - cy) };
     });
-    var total = icons.length * STAGGER + FLY;
-    target.animate(
-      [{ transform: 'scale(1)' }, { transform: 'scale(1.14)' }, { transform: 'scale(1)' }],
-      { duration: 460, delay: Math.max(0, total - 260), easing: 'ease-out' }
-    );
-    setTimeout(rerain, total + 500);
+    infos.sort(function (a, b) { return b.d - a.d; });
+    var n = infos.length, done = 0;
+    infos.forEach(function (o, rank) {
+      var mx = o.dx * 0.55 - o.dy * 0.16;   // arc: midpoint pushed off the line
+      var my = o.dy * 0.55 + o.dx * 0.16;
+      var anim = o.el.animate([
+        { transform: 'translate(0px,0px) scale(1)', opacity: 1, easing: 'cubic-bezier(.3,0,.7,.4)' },
+        { transform: 'translate(0px,-8px) scale(1.05)', opacity: 1, offset: 0.14, easing: 'cubic-bezier(.4,0,.9,.4)' },
+        { transform: 'translate(' + mx + 'px,' + my + 'px) scale(.72)', opacity: .95, offset: 0.62, easing: 'cubic-bezier(.5,0,.95,.5)' },
+        { transform: 'translate(' + o.dx + 'px,' + o.dy + 'px) scale(.08)', opacity: 0 }
+      ], { duration: 680, delay: rank * 26, fill: 'forwards' });
+      anim.onfinish = function () {
+        done++;
+        // conservation of mass: the berry grows with every app it drinks
+        target.style.transform = 'scale(' + (1 + 0.10 * done / n).toFixed(3) + ')';
+        if (done % 4 === 0 && done < n) {
+          target.animate(
+            [{ transform: 'scale(1)' }, { transform: 'scale(1.045)' }, { transform: 'scale(1)' }],
+            { duration: 200, easing: 'ease-out', composite: 'add' });
+        }
+        if (done === n) finale();
+      };
+    });
   }
 
-  function rerain() {
+  // Act 3 — payoff. One slow breath, a ring ripple, and the glow bleeds into
+  // the headline. Then everything RESTS — grown. No loop; the end state is
+  // the message.
+  function finale() {
+    target.animate(
+      [{ transform: 'scale(1)' }, { transform: 'scale(1.06)' }, { transform: 'scale(1)' }],
+      { duration: 950, easing: 'cubic-bezier(.4,0,.3,1)', composite: 'add' });
+    var host = target.parentElement;
+    host.style.position = 'relative';
+    var ring = document.createElement('div');
+    ring.style.cssText = 'position:absolute;inset:-4px;border:2px solid rgba(59,140,240,.55);' +
+      'border-radius:26px;pointer-events:none;';
+    host.appendChild(ring);
+    ring.animate(
+      [{ transform: 'scale(1)', opacity: .8 }, { transform: 'scale(2.1)', opacity: 0 }],
+      { duration: 1000, easing: 'cubic-bezier(.2,.6,.3,1)' }).onfinish = function () { ring.remove(); };
+    if (em) em.classList.add('lit');
+    setTimeout(function () { state = 'rested'; }, 1100);
+  }
+
+  // Replay — tap the berry: everything scatters back out, then gathers again.
+  function replay() {
+    if (state !== 'rested') return;
+    state = 'raining';
+    if (em) em.classList.remove('lit');
+    target.style.transform = '';
     icons.forEach(function (el, i) {
       el.getAnimations().forEach(function (a) { a.cancel(); });
       el.style.animation = 'none';
-      void el.offsetWidth;               // reflow so the CSS animation restarts
+      void el.offsetWidth;               // reflow so the CSS rain restarts
       el.style.animation = '';
       el.style.animationDelay = (0.05 + i * 0.04) + 's';
     });
-    // rest — no loop; the tile replays it on tap
-    setTimeout(function () { inFlight = false; }, icons.length * 40 + 1000);
+    setTimeout(absorb, icons.length * 40 + 1400);
   }
 
   target.style.cursor = 'pointer';
   target.title = 'Tap to replay';
-  target.addEventListener('click', absorb);
+  target.addEventListener('click', replay);
 
-  setTimeout(absorb, 4200);   // play the story once after the first rain
+  setTimeout(absorb, 4200);   // the story plays once, then rests
 })();
 
 (function scrollSpy() {
