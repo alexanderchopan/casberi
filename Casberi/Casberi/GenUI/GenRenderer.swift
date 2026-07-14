@@ -1100,9 +1100,13 @@ private struct GenMediaTile: View {
 /// A flexible-size remote image — the same bytes `RemoteThumb` would fetch,
 /// but scaled to FILL whatever frame the caller gives it instead of
 /// RemoteThumb's fixed icon-square shape (which the large-form grid/hero/
-/// attached-post-image layouts all need). No cache/dead-URL bookkeeping —
-/// a lighter loader for a first pass; URLSession's own HTTP cache still
-/// avoids re-fetching the same URL.
+/// attached-post-image layouts all need). Rides `RemoteImageLoader` — the
+/// shared downsample + bounded decoded cache — since 2026-07-13: the first
+/// pass decoded CDN originals at FULL resolution and held one per visible
+/// tile, so a real Pinterest/RSS corpus put Home tens of full-res bitmaps
+/// deep — a device-only jetsam kill mid-compose ("Home loads partway, then
+/// the app dies"; the sim never reproduced it). 1200px covers a full-width
+/// hero at 3× exactly.
 private struct GenFlexThumb: View {
     let urlString: String
     @State private var image: UIImage?
@@ -1127,13 +1131,18 @@ private struct GenFlexThumb: View {
     private func load() async {
         image = nil
         failed = false
-        guard let url = URL(string: urlString),
-              let (data, _) = try? await URLSession.shared.data(from: url),
-              let ui = UIImage(data: data) else {
+        switch await RemoteImageLoader.load(urlString: urlString, targetSide: 1200) {
+        case .image(let ui, let fresh):
+            // Fade only genuine arrivals; a cache hit lands flat (the same
+            // arrival grammar RemoteThumb follows).
+            if fresh {
+                withAnimation(DS.Motion.standard) { image = ui }
+            } else {
+                image = ui
+            }
+        case .transientFailure, .dead:
             failed = !Task.isCancelled
-            return
         }
-        withAnimation(DS.Motion.standard) { image = ui }
     }
 }
 
