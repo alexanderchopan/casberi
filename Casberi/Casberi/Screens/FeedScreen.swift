@@ -10,7 +10,11 @@ import SwiftData
 /// the feed takes that source's native shape — Photos becomes a grid, Zerion
 /// leads with the holdings treemap, Calendar reads as an agenda, Gmail
 /// surfaces what's waiting, Reminders groups by state, chats earn takeaway
-/// cards. "All" renders kind-aware rows; only `.approval` breaks row rhythm
+/// cards. Deepened 2026-07-13: notes lead with their text, chats with their
+/// opening line, posts read as author-led cards with media at width, Safari
+/// reads as a reading list; Music and Tokens carry a lede block; the
+/// new-since divider is per-source; each feed closes with a caught-up line.
+/// "All" renders kind-aware rows; only `.approval` breaks row rhythm
 /// (the consent card). Day groups, pins, swipes, the sheet, and write-confirm
 /// all survive inside shapes.
 struct FeedScreen: View {
@@ -37,11 +41,20 @@ struct FeedScreen: View {
     /// the color arriving, so a switch reads as "entering this app's feed"
     /// (delight, 2026-07-12) instead of a quiet crossfade behind the content.
     @State private var flood: CGFloat = 0
-    /// The last time the person left this screen — one timestamp, no
-    /// per-thing read state. Frozen into `newSince` on each visit so the
-    /// divider doesn't move while you look at it (ruling 2026-07-09).
-    @AppStorage("feed.lastSeen") private var lastSeenStamp = 0.0
+    /// The last time the person left each feed — one timestamp per source
+    /// (All included; "feed.lastSeen" is All's original key, so nothing
+    /// migrates), no per-thing read state. Each room's boundary freezes the
+    /// FIRST time it lands during a visit and holds for the whole visit
+    /// (ruling 2026-07-09: the divider never moves while you look at it —
+    /// a chip bounce out and back must not erase it), and every room visited
+    /// is stamped only when the screen goes away. onDisappear reads the
+    /// visited SET, not `filter.source`: switching to the Pinned chip swaps
+    /// this screen out with the shared filter already reading "Pinned",
+    /// which would stamp a junk key and skip the real room (review
+    /// 2026-07-13).
     @State private var newSince: Date?
+    @State private var visitFrozen: [String: Date?] = [:]
+    @State private var visitedSources: Set<String> = []
     @Namespace private var zoomNS
     /// prd 43h: Reduce Motion is law — the hand-rolled moves (the switch flood,
     /// row entrances) fall back to plain state changes under it.
@@ -50,7 +63,7 @@ struct FeedScreen: View {
 
     /// The shape a source takes when its chip is in force.
     private enum Shape {
-        case all, photos, wallet, calendar, gmail, chat, reminders, agent, safari, notes, you, music, plain
+        case all, photos, wallet, calendar, gmail, chat, social, reminders, agent, safari, notes, you, music, tokens, plain
         init(source: String) {
             switch source {
             case "All":                 self = .all
@@ -58,13 +71,18 @@ struct FeedScreen: View {
             case "Wallet":              self = .wallet
             case "Calendar", "Cal.com", "Calendly": self = .calendar
             case "Gmail", "iCloud Mail": self = .gmail
-            case "ChatGPT", "Claude", "Slack", "Farcaster", "Bluesky": self = .chat
+            case "ChatGPT", "Claude", "Slack": self = .chat
+            // Posts read as posts in their own room (2026-07-13) — split from
+            // .chat: a saved conversation is a snippet row, a post is a card.
+            case "Farcaster", "Bluesky": self = .social
             case "Reminders", "Todoist": self = .reminders
             case "OpenClaw":            self = .agent
             case "Safari":              self = .safari
-            case "Notes", "Day One", "Apple Journal": self = .notes
+            // Obsidian joins the notes room — the vault is notes (prd §59).
+            case "Notes", "Day One", "Apple Journal", "Obsidian": self = .notes
             case "You", "Voice":        self = .you
             case "Apple Music", "Spotify": self = .music
+            case "Tokens":              self = .tokens
             default:                    self = .plain
             }
         }
@@ -78,9 +96,10 @@ struct FeedScreen: View {
     private var entranceStyle: RowEntrance.Style {
         switch shape {
         case .calendar: .init(dx: -28, dy: 0, scale: 1, step: 0.045)
-        case .wallet:   .init(dx: 0, dy: 16, scale: 1, step: 0.04)
+        case .wallet, .tokens: .init(dx: 0, dy: 16, scale: 1, step: 0.04)
         case .photos:   .init(dx: 0, dy: 0, scale: 0.92, step: 0.03)
         case .music:    .init(dx: 0, dy: 10, scale: 1, step: 0.035)
+        case .social:   .init(dx: 0, dy: 12, scale: 0.98, step: 0.035)
         default:        .init(dx: 0, dy: 8, scale: 1, step: 0.028)
         }
     }
@@ -440,6 +459,12 @@ struct FeedScreen: View {
                 // lives on Home too (same-day amendment) — in Feed it shows
                 // only in the Wallet chip's own shape, never leading All.
                 shapedSections
+                // No closing line in the Reminders shape: its state groups
+                // deliberately render a subset (Done shows same-day only), so
+                // a `visible`-count claim would disagree with the rows above.
+                if shape != .reminders {
+                    caughtUpFooter
+                }
             }
 
             // Room for the floating bar.
@@ -465,17 +490,20 @@ struct FeedScreen: View {
         // engine when its chip lands (skeleton entrance, same as Home).
         .onAppear {
             streamBlock()
-            // Freeze the boundary for this visit; leaving re-stamps it.
-            newSince = lastSeenStamp > 0 ? Date(timeIntervalSince1970: lastSeenStamp) : nil
             #if DEBUG
             // `-feedSource Zerion` lands on that chip for screenshots.
             if let src = UserDefaults.standard.string(forKey: "feedSource") {
                 filter.source = src
             }
             #endif
+            // Freeze the boundary for this visit; leaving re-stamps it.
+            // (After the DEBUG hook, so a forced chip reads its own stamp
+            // and All is never marked visited by a hooked launch.)
+            freezeBoundary(for: filter.source)
         }
-        .onDisappear { lastSeenStamp = Date.now.timeIntervalSince1970 }
-        .onChange(of: filter.source) {
+        .onDisappear { visitedSources.forEach(stampSeen) }
+        .onChange(of: filter.source) { _, new in
+            freezeBoundary(for: new)
             shapeWave += 1
             // The hue floods in, then recedes as the shaped rows compose.
             if !reduceMotion {
@@ -508,22 +536,37 @@ struct FeedScreen: View {
 
     @ViewBuilder
     private var shapedSections: some View {
+        // The new-since divider rides every chronological shape now
+        // (2026-07-13) — each source's feed keeps its own last-visit stamp.
+        // Photos (a grid), Calendar (future-first) and Reminders (state
+        // groups) aren't chronological top-to-bottom, so no line there.
         switch shape {
         case .photos:
             photoGridSection
         case .wallet:
             holdingsBlockSection
-            groupedSections(dayGroups)
+            let days = dayGroups
+            groupedSections(days, boundary: boundaryThingID(in: days))
         case .calendar:
             groupedSections(agendaGroups)
         case .gmail:
             waitingSection
-            groupedSections(dayGroups)
+            let days = dayGroups
+            groupedSections(days, boundary: boundaryThingID(in: days))
         case .reminders:
             reminderSections
         case .agent:
             needsYouSection
-            groupedSections(agentDayGroups)
+            let days = agentDayGroups
+            groupedSections(days, boundary: boundaryThingID(in: days))
+        case .music:
+            listeningLedeSection
+            let days = dayGroups
+            groupedSections(days, boundary: boundaryThingID(in: days))
+        case .tokens:
+            watchlistLedeSection
+            let days = dayGroups
+            groupedSections(days, boundary: boundaryThingID(in: days))
         default:
             if filter.tag != "All" && shape == .all {
                 daySection(filterLabel, visible)
@@ -533,8 +576,67 @@ struct FeedScreen: View {
                 // bundling there would collapse the whole screen into one row.
                 bundledSections
             } else {
-                groupedSections(dayGroups)
+                let days = dayGroups
+                groupedSections(days, boundary: boundaryThingID(in: days))
             }
+        }
+    }
+
+    /// The first thing at-or-past the last-visit boundary in a shaped feed's
+    /// day groups — the Thing twin of `boundaryID(in:)` (which speaks FeedRow,
+    /// All's bundled currency). Same freeze semantics: computed ONCE per
+    /// render by the caller and passed down, never re-derived per row.
+    private func boundaryThingID(in groups: [(String, [Thing])]) -> UUID? {
+        guard let newSince else { return nil }
+        let all = groups.flatMap(\.1)
+        guard let first = all.first, first.capturedAt > newSince else { return nil }
+        return all.first(where: { $0.capturedAt <= newSince })?.id
+    }
+
+    /// Music's lede: today's listening, covers lapped, count honest (the
+    /// distinct songs that landed today — recently-played dedupes per song).
+    @ViewBuilder
+    private var listeningLedeSection: some View {
+        let today = visible.filter { Self.groupingCalendar.isDateInToday($0.capturedAt) }
+        if !today.isEmpty {
+            ledeSection(ListeningLede(
+                covers: today.compactMap(\.previewImageURL).filter { !$0.isEmpty },
+                count: today.count))
+        }
+    }
+
+    /// Tokens' lede: the watchlist's 24h at a glance — from the SAME cached
+    /// pulses the rows wear, so the summary can never disagree with the rows.
+    /// Two watched tokens minimum: one token's row already says everything.
+    @ViewBuilder
+    private var watchlistLedeSection: some View {
+        let pulses = visible.compactMap { TokenPulse.shared.pulse(for: $0) }
+        if pulses.count >= 2 {
+            // Flat (exactly 0) is neither up nor down — "2 up" for two
+            // stablecoins would claim a gain that didn't happen (honesty).
+            ledeSection(WatchlistLede(
+                up: pulses.filter { $0.change24h > 0 }.count,
+                down: pulses.filter { $0.change24h < 0 }.count))
+        }
+    }
+
+    /// A shape's one glanceable block, wearing the same card surface as the
+    /// rows below it — a lede is part of the feed, not a foreign panel.
+    private func ledeSection(_ content: some View) -> some View {
+        Section {
+            content
+                .listRowBackground(
+                    RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous)
+                        .fill(DS.surfaceSheet)
+                        .padding(.horizontal, DS.Space.s4)
+                        .padding(.vertical, DS.Space.s1)
+                        .shadow(color: DS.cardShadow, radius: 18, x: 0, y: 6)
+                )
+                .listRowInsets(.init(top: DS.Space.s2,
+                                     leading: DS.Space.s4 + DS.Space.s3,
+                                     bottom: DS.Space.s2,
+                                     trailing: DS.Space.s4 + DS.Space.s3))
+                .listRowSeparator(.hidden)
         }
     }
 
@@ -598,6 +700,38 @@ struct FeedScreen: View {
         return newSince.formatted(.dateTime.weekday(.wide))
     }
 
+    /// Per-source last-visit stamps. All keeps its original "feed.lastSeen"
+    /// key — an update never resets anyone's divider.
+    private func lastSeenKey(for source: String) -> String {
+        source == "All" ? "feed.lastSeen" : "feed.lastSeen.\(source)"
+    }
+
+    private func lastSeen(for source: String) -> Date? {
+        let stamp = UserDefaults.standard.double(forKey: lastSeenKey(for: source))
+        return stamp > 0 ? Date(timeIntervalSince1970: stamp) : nil
+    }
+
+    private func stampSeen(_ source: String) {
+        UserDefaults.standard.set(Date.now.timeIntervalSince1970,
+                                  forKey: lastSeenKey(for: source))
+    }
+
+    /// Lands on a room: its boundary freezes on FIRST arrival this visit and
+    /// re-reads from the frozen copy after — a bounce out to another chip and
+    /// back can't move the line. Pinned isn't a feed room (the board swaps
+    /// this screen out), so it never freezes or stamps.
+    private func freezeBoundary(for source: String) {
+        guard source != "Pinned" else { return }
+        visitedSources.insert(source)
+        if let frozen = visitFrozen[source] {
+            newSince = frozen
+        } else {
+            let stamp = lastSeen(for: source)
+            visitFrozen[source] = stamp
+            newSince = stamp
+        }
+    }
+
     /// A bundle in the list: same card treatment as a thing row; the tap
     /// opens the source's own shape (where volume is designed to live) —
     /// no swipes, nothing here is a single thing to pin or open.
@@ -628,9 +762,10 @@ struct FeedScreen: View {
     }
 
     @ViewBuilder
-    private func groupedSections(_ groups: [(String, [Thing])]) -> some View {
+    private func groupedSections(_ groups: [(String, [Thing])],
+                                 boundary: UUID? = nil) -> some View {
         ForEach(groups, id: \.0) { label, rows in
-            daySection(label, rows)
+            daySection(label, rows, boundary: boundary)
         }
     }
 
@@ -742,9 +877,13 @@ struct FeedScreen: View {
             && thing.sourceRef.map { TwitchIngest.liveRefs.contains($0) } ?? false
     }
 
-    /// Gmail: what's waiting on you, capped at two (mock G1).
+    /// Gmail: what's waiting on you, capped at two (mock G1). Doing-marked
+    /// only (honesty fix 2026-07-13): the old `content.contains("?")` sniff
+    /// promoted any newsletter with a question mark to "waiting on you" —
+    /// fake status. The section now shows only what the person marked
+    /// in motion, and earns back a smarter derivation later.
     private var waiting: [Thing] {
-        visible.filter { $0.mark == .doing || $0.content.contains("?") }.prefix(2).map { $0 }
+        visible.filter { $0.mark == .doing }.prefix(2).map { $0 }
     }
 
     @ViewBuilder
@@ -754,7 +893,10 @@ struct FeedScreen: View {
         }
     }
 
-    private var waitingIDs: Set<UUID> { Set(waiting.map(\.id)) }
+    // Waiting mails stay in their day groups too (unlike agent approvals,
+    // which ARE removed): a mail is a record, and excluding only the first
+    // two doing-marked mails (the lede's cap) would punch order-dependent
+    // holes in the day history. The lede highlights; the record stays whole.
 
     /// Reminders: state groups — Doing, To do (stale todos collapse), Done
     /// (same-day only).
@@ -920,6 +1062,14 @@ struct FeedScreen: View {
             case .music:     MusicRow(thing: thing)
             case .chat where thing.mark == .doing:
                 TakeawayCard(thing: thing)
+            // Native anatomies (2026-07-13): in its own room a note leads
+            // with its text, a conversation with its opening line, a post
+            // with its author and media, a link with where it's from. All
+            // keeps the band — these relax only inside the source's shape.
+            case .notes:  ExcerptRow(thing: thing, lines: 3)
+            case .chat:   ExcerptRow(thing: thing, lines: 2)
+            case .social: PostCard(thing: thing)
+            case .safari: ReadingRow(thing: thing)
             default:
                 // Perishables show their clock everywhere (ruling 2026-07-09):
                 // the next event's countdown and a stream's Live state ride
@@ -1013,10 +1163,39 @@ struct FeedScreen: View {
                     .background(DS.tintDim, in: Capsule(style: .continuous))
             }
             .buttonStyle(.plain)
+            // The empty room previews its own shape (2026-07-13) — the
+            // all-feed empty state already does this with skeleton rows;
+            // a shaped empty shows what ITS rows will look like: a grid
+            // for Photos, rows for everything else.
+            if filter.source != "All" {
+                emptyShapePreview
+                    .padding(.top, DS.Space.s6)
+            }
         }
         .frame(maxWidth: .infinity)
         .padding(.horizontal, DS.Space.s4)
         .padding(.vertical, DS.Space.s6)
+    }
+
+    @ViewBuilder private var emptyShapePreview: some View {
+        switch shape {
+        case .photos:
+            HStack(spacing: DS.Space.s3) {
+                ForEach(0..<3, id: \.self) { i in
+                    RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous)
+                        .fill(DS.gray100)
+                        .frame(height: 90)
+                        .staggerIn(index: i + 3)
+                }
+            }
+        default:
+            VStack(spacing: DS.Space.s2) {
+                ForEach(0..<3, id: \.self) { i in
+                    GenSkeletonRow()
+                        .staggerIn(index: i + 3)
+                }
+            }
+        }
     }
 
     private var emptyLine: String {
@@ -1043,17 +1222,22 @@ struct FeedScreen: View {
     /// A day group as a native section: rounded sheet card, native swipes
     /// (To do / Doing), native scroll — no gesture fights.
     @ViewBuilder
-    private func daySection(_ label: String, _ rows: [Thing]) -> some View {
+    private func daySection(_ label: String, _ rows: [Thing],
+                            boundary: UUID? = nil) -> some View {
         Section {
             // Rows dispatch by shape (shaped feeds); the swipe stays triage —
             // reads only, writes live in the sheet (ruling), Copy sheet-only.
             ForEach(Array(rows.enumerated()), id: \.element.id) { i, thing in
+                if thing.id == boundary { newSinceDivider }
                 shapedListRow(thing, index: i)
             }
         } header: {
             HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
                 Text(label).dsText(.heading17).foregroundStyle(DS.textPrimary)
-                Text("\(rows.count)").dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                // In a source's own room the count speaks the source's unit —
+                // "3 events", "5 screenshots" (2026-07-13). All keeps the
+                // bare number: mixed kinds have no one unit worth naming.
+                Text(countLabel(rows)).dsText(.subhead13).foregroundStyle(DS.textTertiary)
                     .contentTransition(.numericText())
             }
             .textCase(nil)
@@ -1064,6 +1248,41 @@ struct FeedScreen: View {
             .padding(.top, DS.Space.s6)
             .padding(.bottom, DS.Space.s1)
         }
+    }
+
+    /// The day header's count: a bare number in All, the source's own unit in
+    /// a shaped feed — "3 events", "1 screenshot", "4 things" when mixed.
+    /// The social room says "posts": its things are kind .chat (the ingest's
+    /// container), but nobody calls a Bluesky post a chat.
+    private func countLabel(_ rows: [Thing]) -> String {
+        guard filter.source != "All" else { return "\(rows.count)" }
+        if shape == .social {
+            return rows.count == 1 ? "1 post" : "\(rows.count) posts"
+        }
+        let kinds = Set(rows.map(\.kind))
+        guard kinds.count == 1, let kind = kinds.first else {
+            return rows.count == 1 ? "1 thing" : "\(rows.count) things"
+        }
+        let unit = rows.count == 1 ? kind.typeTag : kind.typeTagPlural
+        return "\(rows.count) \(unit.lowercased())"
+    }
+
+    /// The feed closes instead of trailing off (2026-07-13): one quiet line
+    /// naming what you just read to the end of. Doubles as an honest corpus
+    /// count — facts only, no streaks (§10). Speaks the same unit as the day
+    /// headers ("6 events", not "6 things") via the one countLabel rule.
+    private var caughtUpFooter: some View {
+        // One `visible` derivation for the whole line (the Feed-freeze rule).
+        let rows = visible
+        return Text(filter.source == "All"
+             ? "That's everything · \(rows.count == 1 ? "1 thing" : "\(rows.count) things")"
+             : "That's everything from \(filter.source) · \(countLabel(rows))")
+            .dsText(.subhead13)
+            .foregroundStyle(DS.textTertiary)
+            .frame(maxWidth: .infinity)
+            .padding(.top, DS.Space.s6)
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
     }
 
     // MARK: - Verbs from the swipe (reads pass, writes confirm)

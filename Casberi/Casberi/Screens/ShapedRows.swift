@@ -815,8 +815,316 @@ struct CheckRow: View {
     }
 }
 
-// MARK: - Safari / Notes / You / agents — the derived pattern
+// MARK: - Notes / chats — the excerpt row (shaped feeds, 2026-07-13)
+
+/// A note's point is its text; a saved conversation's is its opening line.
+/// In the notes and chat shapes the row carries an excerpt under the title —
+/// same band anatomy (26pt leading slot, time-over-project trailing), the
+/// body just breathes below the first line. All keeps the plain band.
+struct ExcerptRow: View {
+    let thing: Thing
+    /// How many excerpt lines this shape affords — notes read deeper (3),
+    /// a chat's first line is a snippet (2).
+    var lines: Int = 3
+
+    /// The body text worth excerpting — nil when the content is empty, repeats
+    /// the title, or is a bare URL (a link permalink is plumbing, not prose).
+    /// "Bare URL" = one whitespace-free token the detector recognizes —
+    /// comparing absoluteString to the raw text misses every scheme-less or
+    /// normalized link (NSDataDetector rewrites what it matches).
+    private var excerpt: String? {
+        let text = thing.content.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty, text != thing.title else { return nil }
+        if !text.contains(where: \.isWhitespace), Capture.detectURL(in: text) != nil {
+            return nil
+        }
+        return text
+    }
+
+    var body: some View {
+        HStack(alignment: .top, spacing: DS.Space.s3) {
+            BridgeIcon(name: thing.source, size: 26)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(thing.title)
+                    .dsText(.body17).foregroundStyle(DS.textPrimary)
+                    .lineLimit(2)
+                if let excerpt {
+                    Text(excerpt)
+                        .dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                        .lineLimit(lines)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            RowTrailingMeta(thing: thing)
+        }
+        .padding(.vertical, DS.Space.s2)
+    }
+}
 
 
+/// The trailing time-over-project stack the shaped rows share — one home for
+/// the anatomy instead of a per-row copy (the file already carried five; the
+/// new rows use this one).
+struct RowTrailingMeta: View {
+    let thing: Thing
+    @Environment(\.colorScheme) private var scheme
 
+    private var project: String? {
+        thing.tags.first { ThingKind.from(typeTag: $0) == nil }
+    }
+
+    private var projectInk: Color {
+        guard let project else { return DS.textTertiary }
+        let base = ProjectHue.color(for: project)
+        return scheme == .light ? base.mix(with: .black, by: 0.35) : base
+    }
+
+    var body: some View {
+        VStack(alignment: .trailing, spacing: 1) {
+            LiveTimeText(date: thing.capturedAt)
+            if let project {
+                Text(project)
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(projectInk)
+                    .lineLimit(1)
+            }
+        }
+    }
+}
+
+
+// MARK: - Bluesky / Farcaster — the post card (shaped feeds, 2026-07-13)
+
+/// In its own room a post reads as a post: the author leads (avatar + handle
+/// + time), the text sits unclamped (ingest stores one 80-char title line),
+/// and an attached image rides at card width — the 26pt thumb is All's
+/// rhythm, not the post's. Same card surface; no new colors.
+struct PostCard: View {
+    let thing: Thing
+
+    /// Empty-string handles exist (an unmigrated Farcaster row) — fall back
+    /// to the source name, same guard the avatar line already carries.
+    private var author: String {
+        if let handle = thing.authorHandle, !handle.isEmpty { return handle }
+        return thing.source
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+            HStack(spacing: DS.Space.s2) {
+                if let avatar = thing.authorAvatarURL, !avatar.isEmpty {
+                    RemoteThumb(urlString: avatar, size: 26, fallback: thing.source,
+                                circular: true)
+                } else {
+                    BridgeIcon(name: thing.source, size: 26)
+                }
+                Text(author)
+                    .dsText(.subhead13).fontWeight(.medium)
+                    .foregroundStyle(DS.textSecondary)
+                    .lineLimit(1)
+                Spacer()
+                // Rows carry status (principle 6): the mark survived the
+                // .chat → .social split as a header label — the takeaway
+                // card's content slot would show a post's permalink, so the
+                // card keeps its anatomy and wears the state instead.
+                if thing.mark == .doing {
+                    Text("Doing").dsText(.label12).foregroundStyle(DS.tint)
+                }
+                LiveTimeText(date: thing.capturedAt)
+            }
+            Text(thing.title)
+                .dsText(.body17).foregroundStyle(DS.textPrimary)
+                .fixedSize(horizontal: false, vertical: true)
+            if let media = thing.previewImageURL, !media.isEmpty {
+                PostMedia(urlString: media)
+            }
+        }
+        .padding(.vertical, DS.Space.s2)
+    }
+}
+
+/// A post's attached image at card width. Its own small loader, not
+/// RemoteThumb (that's a fixed-size thumb): a dead URL COLLAPSES the block —
+/// the card just becomes a text post, never a gray hole (the RemoteThumb
+/// honesty rule at a size where a placeholder would dominate the card).
+/// The `.task` stays attached in EVERY state (review 2026-07-13): parked
+/// inside the non-failed branch, a recycled row that once failed would drop
+/// its own retry path and stay text-only for the session. Same reason load()
+/// resets the previous URL's image/failure first — RemoteThumb's
+/// recycled-row rule, kept here too.
+struct PostMedia: View {
+    let urlString: String
+    var height: CGFloat = 160
+    @State private var image: UIImage?
+    @State private var failed = false
+
+    /// Card-width entries are ~30× a RemoteThumb's bytes — the cache is
+    /// bounded by COST (decoded bitmap bytes), not count, so a long media
+    /// feed can't pin ~100MB of bitmaps.
+    private static let cache: NSCache<NSString, UIImage> = {
+        let c = NSCache<NSString, UIImage>()
+        c.totalCostLimit = 48 * 1024 * 1024
+        return c
+    }()
+    @MainActor private static var dead: Set<String> = []
+
+    var body: some View {
+        Group {
+            if failed || Self.dead.contains(urlString) {
+                // Collapsed — the card reads as a text post.
+                Color.clear.frame(height: 0)
+            } else if let image {
+                // The known scaledToFill leak (CLAUDE.md): pin the image
+                // inside a GeometryReader so its intrinsic size never
+                // inflates the row.
+                GeometryReader { geo in
+                    Image(uiImage: image)
+                        .resizable().scaledToFill()
+                        .frame(width: geo.size.width, height: geo.size.height)
+                }
+                .frame(height: height)
+                .clipShape(RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+            } else {
+                DS.fillFaint
+                    .frame(height: height)
+                    .clipShape(RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+            }
+        }
+        .task(id: urlString) { await load() }
+    }
+
+    private func load() async {
+        // A recycled row: drop the previous post's state before the new URL
+        // resolves — a transient failure was an answer for THAT appearance.
+        image = nil
+        failed = false
+        if Self.dead.contains(urlString) { return }
+        if let hit = Self.cache.object(forKey: urlString as NSString) {
+            image = hit; return
+        }
+        guard let url = URL(string: urlString),
+              let (data, _) = try? await URLSession.shared.data(from: url) else {
+            failed = !Task.isCancelled
+            return
+        }
+        guard !Task.isCancelled else { return }
+        guard let full = UIImage(data: data) else {
+            // Non-image bytes — the URL itself is dead (RemoteThumb's rule;
+            // session-scoped, a redeploy can revive it).
+            failed = true
+            Self.dead.insert(urlString)
+            return
+        }
+        // Card width is ~1080px at 3×; 640 was soft at display size.
+        let thumb: UIImage = await withCheckedContinuation { cont in
+            full.prepareThumbnail(of: CGSize(width: 1080, height: 1080)) {
+                cont.resume(returning: $0 ?? full)
+            }
+        }
+        guard !Task.isCancelled else { return }
+        let cost = Int(thumb.size.width * thumb.size.height
+                       * thumb.scale * thumb.scale * 4)
+        Self.cache.setObject(thumb, forKey: urlString as NSString, cost: cost)
+        withAnimation(DS.Motion.standard) { image = thumb }
+    }
+}
+
+
+// MARK: - Safari — the reading row (shaped feeds, 2026-07-13)
+
+/// A saved link's native anatomy: the page's image leads at reading size when
+/// it has one, the title reads at two lines, and the DOMAIN sits where a note
+/// would put its excerpt — where it's from is what you scan a reading list by.
+struct ReadingRow: View {
+    let thing: Thing
+
+    /// "www." stripped — the domain is identity, the subdomain is plumbing.
+    private var domain: String? {
+        let text = thing.content.isEmpty ? thing.title : thing.content
+        guard let host = Capture.detectURL(in: text)?.host() else { return nil }
+        return host.hasPrefix("www.") ? String(host.dropFirst(4)) : host
+    }
+
+    var body: some View {
+        HStack(alignment: .top, spacing: DS.Space.s3) {
+            if let art = thing.previewImageURL, !art.isEmpty {
+                RemoteThumb(urlString: art, size: 56, fallback: thing.source)
+            } else {
+                BridgeIcon(name: thing.source, size: 26)
+            }
+            VStack(alignment: .leading, spacing: 2) {
+                Text(thing.title)
+                    .dsText(.body17).foregroundStyle(DS.textPrimary)
+                    .lineLimit(2)
+                if let domain {
+                    Text(domain)
+                        .dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                        .lineLimit(1)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            RowTrailingMeta(thing: thing)
+        }
+        .padding(.vertical, DS.Space.s2)
+    }
+}
+
+
+// MARK: - Shape ledes (2026-07-13: every shape earns one glanceable block)
+
+/// Music's lede: today's listening — the covers that landed today, lapped
+/// like a hand of cards, and the count. Facts only (analytics rule §10):
+/// no streaks, no goals.
+struct ListeningLede: View {
+    let covers: [String]
+    let count: Int
+
+    var body: some View {
+        HStack(spacing: DS.Space.s3) {
+            HStack(spacing: -10) {
+                ForEach(Array(covers.prefix(5).enumerated()), id: \.offset) { _, art in
+                    RemoteThumb(urlString: art, size: 32)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: DS.Radius.appIcon(32), style: .continuous)
+                                .strokeBorder(DS.surfaceSheet, lineWidth: 2)
+                        )
+                }
+            }
+            Text(count == 1 ? "1 song today" : "\(count) songs today")
+                .dsText(.body17).foregroundStyle(DS.textPrimary)
+            Spacer(minLength: 0)
+        }
+        .padding(.vertical, DS.Space.s2)
+    }
+}
+
+/// Tokens' lede: the watchlist's day at a glance — how many are up, how many
+/// down, over the same cached 24h pulses the rows themselves wear (honest by
+/// construction: one data source, two renders). Green/red is state, the color
+/// law's permitted job.
+struct WatchlistLede: View {
+    let up: Int
+    let down: Int
+
+    var body: some View {
+        HStack(spacing: DS.Space.s2) {
+            Text("Watchlist")
+                .dsText(.body17).foregroundStyle(DS.textPrimary)
+            Spacer(minLength: 0)
+            if up > 0 {
+                Text("\(up) up")
+                    .dsText(.subhead13).fontWeight(.semibold)
+                    .foregroundStyle(DS.confirm)
+            }
+            if down > 0 {
+                Text("\(down) down")
+                    .dsText(.subhead13).fontWeight(.semibold)
+                    .foregroundStyle(DS.destructive)
+            }
+            Text("24h")
+                .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+        }
+        .padding(.vertical, DS.Space.s2)
+    }
+}
 

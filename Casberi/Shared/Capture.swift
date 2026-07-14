@@ -50,11 +50,16 @@ enum Capture {
         return (kept.joined(separator: " "), tags)
     }
 
+    /// One shared detector — construction compiles the data-detector regex
+    /// (milliseconds), and the shaped feed rows call this per row per render.
+    /// NSDataDetector is immutable and thread-safe for matching.
+    private static let linkDetector = try? NSDataDetector(
+        types: NSTextCheckingResult.CheckingType.link.rawValue)
+
     /// First URL in the text, if any.
     static func detectURL(in text: String) -> URL? {
-        let detector = try? NSDataDetector(types: NSTextCheckingResult.CheckingType.link.rawValue)
         let range = NSRange(text.startIndex..., in: text)
-        return detector?.firstMatch(in: text, range: range)?.url
+        return linkDetector?.firstMatch(in: text, range: range)?.url
     }
 
     /// A link's title: the text minus the URL if there is prose, else the host.
