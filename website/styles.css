@@ -816,6 +816,8 @@ footer .tagline { font-size: 16px; font-weight: 600; color: var(--ink); margin-b
 .streamrow.lg img { width: 30px; height: 30px; }
 .streamrow.sm .sbar { height: 8px; } .streamrow.sm .sbar.thin { height: 6px; }
 .streamrow.lg .sbar { height: 12px; } .streamrow.lg .sbar.thin { height: 9px; }
+.streamrow.float { animation: rowfloat 5s ease-in-out infinite alternate; }
+@keyframes rowfloat { from { transform: translateY(-3px); } to { transform: translateY(4px); } }
 .streamrow.in { opacity: 1; transform: none; }
 .streamrow img { width: 24px; height: 24px; border-radius: 7px; }
 .streamrow .sbar { display: block; height: 9px; border-radius: 5px;

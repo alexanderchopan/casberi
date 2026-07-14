@@ -93,22 +93,47 @@
       var cardW  = [290, 220, 320, 250, 200, 270, 340, 230, 300, 310, 210, 260];
       var widths = [[46, 22], [38, 28], [52, 18], [40, 24], [34, 30], [48, 20],
                     [42, 26], [36, 22], [44, 26], [50, 22], [38, 24], [46, 24]];
-      picks.forEach(function (src, k) {
+      var rows = picks.map(function (src, k) {
         var row = document.createElement('div');
         row.className = 'streamrow ' + sizes[k];
         row.style.width = cardW[k] + 'px';
         row.innerHTML = '<img src="' + src + '" alt="">' +
           '<span class="sbar" style="width:0"></span><span class="sbar thin" style="width:0"></span>';
         panel.appendChild(row);
+        return row;
+      });
+      // never show a clipped card: drop trailing cards until every visible
+      // one sits fully inside the rain's box
+      var rr = rain.getBoundingClientRect();
+      function clipped() {
+        return rows.some(function (r) {
+          if (r.style.display === 'none') return false;
+          var b = r.getBoundingClientRect();
+          return b.top < rr.top + 2 || b.bottom > rr.bottom - 2;
+        });
+      }
+      for (var guard = 0; guard < rows.length && clipped(); guard++) {
+        for (var q = rows.length - 1; q >= 0; q--) {
+          if (rows[q].style.display !== 'none') { rows[q].style.display = 'none'; break; }
+        }
+      }
+      var shown = rows.filter(function (r) { return r.style.display !== 'none'; });
+      shown.forEach(function (row, k) {
         setTimeout(function () {
           row.classList.add('in');
           var bars = row.querySelectorAll('.sbar');
-          setTimeout(function () { bars[0].style.width = widths[k][0] + '%'; }, 130);
-          setTimeout(function () { bars[1].style.width = widths[k][1] + '%'; }, 280);
+          setTimeout(function () { bars[0].style.width = widths[k % widths.length][0] + '%'; }, 130);
+          setTimeout(function () { bars[1].style.width = widths[k % widths.length][1] + '%'; }, 280);
+          // once settled, the card floats — slow, out of phase with its neighbors
+          setTimeout(function () {
+            row.style.animationDuration = (4200 + (k * 337) % 1800) + 'ms';
+            row.style.animationDelay = ((k * 211) % 900) + 'ms';
+            row.classList.add('float');
+          }, 700);
         }, 110 * k);
       });
-      if (em) setTimeout(function () { em.classList.add('lit'); }, 110 * picks.length + 350);
-      setTimeout(function () { state = 'rested'; }, 110 * picks.length + 700);
+      if (em) setTimeout(function () { em.classList.add('lit'); }, 110 * shown.length + 350);
+      setTimeout(function () { state = 'rested'; }, 110 * shown.length + 700);
     }, 380);   // a beat at full size before the release
   }
 
