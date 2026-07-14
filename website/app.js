@@ -85,9 +85,9 @@
       rain.appendChild(panel);
       var srcs = Array.prototype.slice.call(rain.querySelectorAll('img'))
         .map(function (im) { return im.src; });
-      var picks = [srcs[2], srcs[6], srcs[9], srcs[13], srcs[17], srcs[21], srcs[25], srcs[29]]
+      var picks = [srcs[2], srcs[6], srcs[9], srcs[13], srcs[17], srcs[21], srcs[25], srcs[29], srcs[11]]
         .filter(Boolean);
-      var widths = [[46, 22], [38, 28], [52, 18], [40, 24], [34, 30], [48, 20], [42, 26], [36, 22]];
+      var widths = [[46, 22], [38, 28], [52, 18], [40, 24], [34, 30], [48, 20], [42, 26], [36, 22], [44, 26]];
       picks.forEach(function (src, k) {
         var row = document.createElement('div');
         row.className = 'streamrow';

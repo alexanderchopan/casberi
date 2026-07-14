@@ -801,16 +801,16 @@ footer .tagline { font-size: 16px; font-weight: 600; color: var(--ink); margin-b
 
 /* Hero act 3: the berry streams a feed into the space the rain left */
 .streamfeed { position: absolute; inset: 0; display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
-  align-content: center; gap: 12px; padding: 0 4px; pointer-events: none; }
-@media (max-width: 560px) { .streamfeed { grid-template-columns: 1fr; }
+  grid-template-columns: repeat(auto-fit, minmax(310px, 1fr));
+  align-content: center; gap: 16px; padding: 0 4px; pointer-events: none; }
+@media (max-width: 700px) { .streamfeed { grid-template-columns: 1fr; }
   .streamfeed .streamrow:nth-child(n+4) { display: none; } }
-.streamrow { display: flex; align-items: center; gap: 10px;
-  background: var(--surface); border-radius: 14px; padding: 12px 14px;
+.streamrow { display: flex; align-items: center; gap: 14px;
+  background: var(--surface); border-radius: 18px; padding: 20px 20px;
   opacity: 0; transform: translateY(10px) scale(.97);
   transition: opacity .35s ease, transform .45s cubic-bezier(.34,1.56,.64,1); }
 .streamrow.in { opacity: 1; transform: none; }
-.streamrow img { width: 22px; height: 22px; border-radius: 6px; }
-.streamrow .sbar { display: block; height: 9px; border-radius: 5px;
+.streamrow img { width: 32px; height: 32px; border-radius: 8px; }
+.streamrow .sbar { display: block; height: 12px; border-radius: 6px;
   background: rgba(255,255,255,.16); transition: width .5s cubic-bezier(.3,.6,.3,1); }
-.streamrow .sbar.thin { height: 7px; background: rgba(255,255,255,.09); }
+.streamrow .sbar.thin { height: 9px; background: rgba(255,255,255,.09); }
