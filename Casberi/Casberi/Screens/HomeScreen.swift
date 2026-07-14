@@ -71,19 +71,16 @@ struct HomeScreen: View {
     /// the packing itself now lives in the board's `MagazineLayout` (prd 58h,
     /// free drag), not a precomputed `[[String]]` of rows.
     @State private var boardSizeRevision = 0
-    /// Drag-to-reorder auto-scroll (prd 58d): the board can grow past one
-    /// screen, so a drag into the top/bottom edge nudges the ScrollView while
-    /// the card keeps tracking the finger. `probe` carries the live scroll
-    /// offset + viewport bounds to the board (a plain class — written every
-    /// scroll frame, must not repaint); `scrollPos` is the board's handle to
-    /// nudge the scroll. The board owns the loop (it also owns the drag and
-    /// the reorder that must re-run as content slides).
-    @State private var probe = BoardScrollProbe()
-    @State private var scrollPos = ScrollPosition(edge: .top)
     /// Board edit mode (2026-07-12) — the long-press-to-jiggle rearrange state.
     /// Home owns it so the Done button can live in the fixed toolbar; the board
     /// flips it on the first lift and clears it on leaving Home.
     @State private var boardEditing = false
+    /// A corpus change arrived while the board was being rearranged
+    /// (2026-07-13): recomposing then would REPLACE the board's modules under
+    /// the lifted card — the drag dies, edit mode tears down, the person's
+    /// grip just vanishes. Latch the recompose instead and run it when
+    /// editing ends.
+    @State private var recomposeDeferred = false
 
     struct ProjectRoute: Identifiable, Hashable {
         let name: String
@@ -131,21 +128,6 @@ struct HomeScreen: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
             .scrollIndicators(.hidden)
-            // Auto-scroll plumbing for drag-to-reorder on a tall board: a
-            // programmatic scroll handle, the live offset fed to the board's
-            // probe, and the viewport's global bounds (the edge bands a drag
-            // enters). All idle until a card is actually dragged to an edge.
-            .scrollPosition($scrollPos)
-            .onScrollGeometryChange(for: CGFloat.self) { $0.contentOffset.y } action: { _, y in
-                probe.y = y
-            }
-            .background {
-                GeometryReader { g in
-                    Color.clear
-                        .onAppear { setViewport(g.frame(in: .global)) }
-                        .onChange(of: g.frame(in: .global)) { _, f in setViewport(f) }
-                }
-            }
             .ignoresSafeArea(edges: .top)
             // Live modules re-fetch on pull (2026-07-10): holdings straight
             // from Alchemy, and the tick bump re-keys every token chart's
@@ -310,13 +292,23 @@ struct HomeScreen: View {
         }
         // The corpus changed under the composition (a capture, the demo
         // seeds, the dissolve) — repaint instantly, no replayed entrance.
+        // While the board is being rearranged the repaint DEFERS (see
+        // recomposeDeferred) so a bridge sync can't yank the modules out
+        // from under a drag in flight.
         .onChange(of: things.count) {
-            streamComposition(instant: true)
+            recomposeOrDefer()
             celebrateMilestone()
         }
         // A tag rename/retag leaves the count unchanged but changes what Home
         // composes from — repaint so the renamed tag shows immediately.
-        .onChange(of: CorpusSignal.shared.revision) { streamComposition(instant: true) }
+        .onChange(of: CorpusSignal.shared.revision) { recomposeOrDefer() }
+        // Edit mode ended — land any recompose that arrived mid-rearrange.
+        .onChange(of: boardEditing) { _, editing in
+            if !editing, recomposeDeferred {
+                recomposeDeferred = false
+                streamComposition(instant: true)
+            }
+        }
         // Pinning/unpinning a wallet (WalletScreen) re-fetches (or drops) its
         // holdings treemap — same "pin means keep this in view" rule as a
         // Thing pin, just without a Thing to observe via things.count. Pin is
@@ -363,7 +355,19 @@ struct HomeScreen: View {
         }
     }
 
+    /// Recompose now — unless the person is mid-rearrange, in which case
+    /// latch it for the moment they tap Done (or leave Home).
+    private func recomposeOrDefer() {
+        if boardEditing {
+            recomposeDeferred = true
+        } else {
+            streamComposition(instant: true)
+        }
+    }
+
     private func streamComposition(instant: Bool = false) {
+        // Any full recompose satisfies a deferral latched mid-edit.
+        recomposeDeferred = false
         // Home synthesizes the surfaced corpus — search-only sources (Contacts)
         // stay out of the treemap the same way they stay out of the feed.
         let surfaced = Corpus.surfaced(things)
@@ -465,7 +469,8 @@ struct HomeScreen: View {
     /// reorders freely — drag any card anywhere, it re-packs on drop. Small
     /// tiles pair 2-up; wide and big span the full width. The board linearizes
     /// while a drag is in flight so the drop is unambiguous, and auto-scrolls
-    /// when a drag reaches an edge of a tall board (prd 58d).
+    /// when a drag reaches an edge of a tall board (prd 58d) — the board's
+    /// UIKit drag driver finds the enclosing scroll view and owns all of it.
     @ViewBuilder private var boardSection: some View {
         // Read so a span change (which bumps this) re-runs this body and hands
         // the board fresh spans — the pin's grow/shrink re-packing.
@@ -480,12 +485,6 @@ struct HomeScreen: View {
                 // Same keying as syncBoard's apply(), suffixes and all — bare
                 // moduleKey here broke round-trip for two same-labeled modules.
                 HomeBoardOrder.shared.save(dedupedKeys(flat))
-            },
-            scrollProbe: probe,
-            scrollBy: { dy in
-                withAnimation(.linear(duration: 0.05)) {
-                    scrollPos.scrollTo(y: max(0, probe.y + dy))
-                }
             })
     }
 
@@ -513,22 +512,17 @@ struct HomeScreen: View {
         boardKeys[ref] ?? ref
     }
 
-    // MARK: - Drag-to-reorder auto-scroll
-
-    private func setViewport(_ frame: CGRect) {
-        probe.viewportTop = frame.minY
-        probe.viewportBottom = frame.maxY
-    }
-
     /// Composing is synchronous; the holdings fetch isn't — load in the
     /// background and repaint (instant, like any other corpus change) once
-    /// it lands. Unpinning drops the cells and repaints without them.
+    /// it lands. Unpinning drops the cells and repaints without them. Both
+    /// repaints ride the edit-mode deferral: these land asynchronously, so
+    /// they must not replace the board under an in-flight rearrange.
     private func loadWalletHoldings() {
         guard wallet.addresses.contains(where: \.pinnedToHome) else {
             walletHoldingsLoading = false
             if !walletHoldings.isEmpty {
                 walletHoldings = []
-                streamComposition(instant: true)
+                recomposeOrDefer()
             }
             return
         }
@@ -536,7 +530,7 @@ struct HomeScreen: View {
         Task { @MainActor in
             walletHoldings = await WalletIngest.topHoldingsByWallet(pinnedOnly: true)
             walletHoldingsLoading = false
-            streamComposition(instant: true)
+            recomposeOrDefer()
         }
     }
 
@@ -555,6 +549,10 @@ struct HomeScreen: View {
     /// Pull-to-refresh: awaited (the spinner shows real work), then one
     /// repaint. The tick bump re-fetches every token chart.
     private func refreshLive() async {
+        // A deliberate pull while the board is still jiggling reads as "I'm
+        // done arranging" — end edit mode so the re-stream doesn't rebuild
+        // the modules under a wobbling board.
+        boardEditing = false
         refreshTick += 1
         if wallet.addresses.contains(where: \.pinnedToHome) {
             walletHoldings = await WalletIngest.topHoldingsByWallet(pinnedOnly: true)

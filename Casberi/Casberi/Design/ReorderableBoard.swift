@@ -1,27 +1,13 @@
 import SwiftUI
 
-/// Live scroll state the board reads mid-drag, shared with the enclosing
-/// surface as a PLAIN class on purpose: it's written on every scroll frame,
-/// and an @Observable/@State here would repaint the whole board each tick.
-/// The board only reads `y` while a drag is in flight (reorder math) — no
-/// view depends on it, so no observation is wanted.
-final class BoardScrollProbe {
-    /// The ScrollView's current contentOffset.y (surface keeps it fresh).
-    var y: CGFloat = 0
-    /// The scroll viewport's global top/bottom — the bands the finger enters
-    /// to trigger auto-scroll (surface measures them).
-    var viewportTop: CGFloat = 0
-    var viewportBottom: CGFloat = 0
-}
-
 /// Arranges board modules in the magazine rhythm (prd 58f) — a compact media
 /// tile packs 2-up, everything else spans full width — OR a single linear
 /// column when a drag is in flight (prd 58h: linearize so the drop target is
 /// one unambiguous sequence, re-pack on release). The subviews are a FLAT
 /// list, one per module, so a module keeps the SAME view — and its in-flight
-/// drag gesture — as it moves between a pair and the column. A row-of-HStacks
+/// drag — as it moves between a pair and the column. A row-of-HStacks
 /// structure couldn't: pulling a tile out of a pair would restructure the
-/// tree and tear the lifted card (and its touch) down mid-drag.
+/// tree and tear the lifted card down mid-drag.
 struct MagazineLayout: Layout {
     /// Per subview, parallel to the board's `order`: true if this module is a
     /// compact media tile that packs 2-up and wears the magazine inset; false
@@ -126,15 +112,18 @@ struct MagazineLayout: Layout {
 @Observable final class DragMotion {
     var translation: CGSize = .zero
     var autoScrollDelta: CGFloat = 0
+    /// How far the dragged card's LAYOUT slot has moved since lift (each
+    /// live reorder re-slots it). Subtracted from the rendered offset so the
+    /// card stays glued under the finger instead of leading it by one slot
+    /// per swap — the layout moves the slot, the offset compensates.
+    var slotShift: CGFloat = 0
 }
 
-/// The per-frame drag values only the reorder MATH reads — never a view body.
-/// A plain class like BoardScrollProbe: writing them on every drag tick
-/// repaints nothing, which is exactly what the reorder loop wants.
+/// The card frames only the hit-test and reorder MATH read — never a view
+/// body. A plain class: writing them on every layout tick repaints nothing,
+/// which is exactly what the reorder loop wants.
 final class DragScratch<ID: Hashable> {
     var frames: [ID: CGRect] = [:]
-    var lastTranslation: CGSize = .zero
-    var lastFingerY: CGFloat = 0
 }
 
 /// A board of drag-reorderable module cards (prd 58 Goal 1, prd 58h free
@@ -144,6 +133,12 @@ final class DragScratch<ID: Hashable> {
 /// neighbors, and releasing settles it and re-packs the magazine. Nobody who
 /// never drags sees any of this: with no gesture in flight the board is the
 /// plain magazine `Layout`.
+///
+/// Input rides `BoardDragDriver` — ONE UIKit long-press on the enclosing
+/// UIScrollView (2026-07-13), not per-card SwiftUI gestures. See the driver's
+/// header for why: guaranteed cancellation (no leaked drags, no locked
+/// board), and the scroll pan dies for the duration of a drag (the card gets
+/// every point of finger travel).
 struct ReorderableBoard<ID: Hashable, Content: View>: View {
     /// The FLAT module order (prd 58h) — a single module is the drag unit, so
     /// a tile paired into a 2-up row can be pulled out and dropped anywhere.
@@ -163,52 +158,17 @@ struct ReorderableBoard<ID: Hashable, Content: View>: View {
     /// Fires once per drag that actually changes the order — the caller
     /// persists it (a drag that snaps back to its start fires nothing).
     let onReorder: ([ID]) -> Void
-    /// Shared scroll state so a drag near the viewport edge can auto-scroll a
-    /// board taller than the screen — nil keeps the old no-auto-scroll board.
-    var scrollProbe: BoardScrollProbe? = nil
-    /// Nudges the enclosing ScrollView by `dy` points — the board calls it on
-    /// its own loop while a drag sits in an edge band. nil disables auto-scroll.
-    var scrollBy: ((CGFloat) -> Void)? = nil
 
     @State private var draggingID: ID?
-    /// A dead-man's switch for the drag (fix 2026-07-12: "Home gets stuck /
-    /// can't scroll"). `draggingID` is imperative @State cleared only in the
-    /// gesture's `.onEnded` — but SwiftUI does NOT fire `.onEnded` when a drag
-    /// is CANCELLED (a scroll pan wins the touch, a system interruption), so an
-    /// interrupted lift left `draggingID` set: the board stayed linearized and
-    /// the edge auto-scroll loop (`while draggingID != nil`) kept yanking the
-    /// ScrollView — frozen, unscrollable. A `@GestureState` resets itself the
-    /// instant the gesture ends OR cancels; watching it force-settles the
-    /// orphaned drag so the board can never lock.
-    @GestureState private var dragActive = false
     @State private var orderAtDragStart: [ID] = []
     /// The per-frame drag values the lifted card renders from — held OUT of
     /// board @State on purpose (perf pass): only the dragged BoardCard reads
     /// `motion`, so a per-frame translation repaints that one card, not the
     /// whole board. See DragMotion.
     @State private var motion = DragMotion()
-    /// The per-frame values only the reorder math reads (frames, last sample)
-    /// — a plain holder, so writing them every tick repaints nothing.
+    /// The card frames the hit-test and reorder math read — a plain holder,
+    /// so per-layout writes repaint nothing.
     @State private var scratch = DragScratch<ID>()
-    /// The scroll offset when the drag lifted; auto-scroll deltas are measured
-    /// against it. Set once per lift — not a per-frame value.
-    @State private var scrollYAtLift: CGFloat = 0
-    @State private var autoScrollDir = 0
-    @State private var autoScrollTask: Task<Void, Never>?
-    /// The dragged card's frame at the moment the DRAG began (not the lift):
-    /// lifting linearizes the board, so a paired tile's frame moves out from
-    /// under the finger before the first drag sample. Captured on the first
-    /// `onChanged`, when the column has settled — the fixed origin the pure
-    /// translation moves it from. (Read once and held; never re-read live,
-    /// which would double-count the displacement.)
-    @State private var liftFrame: CGRect?
-    /// The board relinearizes on lift, so the START frame can't be read until
-    /// the first drag sample lands (below). `dragStarted` gates that one-time
-    /// capture; `dragBaseline` is the finger's translation at that instant, so
-    /// the card's own linear slot — not the paired one — is the zero point.
-    @State private var dragStarted = false
-    @State private var dragBaseline: CGSize = .zero
-
     var body: some View {
         MagazineLayout(magazine: order.map(isMagazine),
                        linear: draggingID != nil,
@@ -218,9 +178,9 @@ struct ReorderableBoard<ID: Hashable, Content: View>: View {
                 // offset live in BoardCard, which reads `motion` ONLY while it's
                 // the lifted card — so a per-frame translation repaints just
                 // that one card. Everything that must NOT rebuild per frame
-                // (zIndex, the frame probe, the gestures, a11y) stays out here
-                // on the board body, which re-evaluates only on a discrete
-                // lift / settle / reorder — never on a plain finger move.
+                // (zIndex, the frame probe, a11y) stays out here on the board
+                // body, which re-evaluates only on a discrete lift / settle /
+                // reorder — never on a plain finger move.
                 BoardCard(dragged: draggingID == id,
                           editing: editing,
                           phase: id.hashValue & 3,
@@ -230,37 +190,6 @@ struct ReorderableBoard<ID: Hashable, Content: View>: View {
                     .onGeometryChange(for: CGRect.self) { proxy in
                         proxy.frame(in: .named("homeBoard"))
                     } action: { scratch.frames[id] = $0 }
-                    // Detection only — onLongPressGesture is Apple's own
-                    // well-behaved recognizer, tuned to coexist with a
-                    // ScrollView's pan the way a hand-composed
-                    // LongPressGesture.sequenced(before: DragGesture) isn't
-                    // (device report, 2026-07-11: scrolling read as
-                    // "sticky", every card's own recognizer competing with
-                    // the scroll pan for the touch, all the time — not just
-                    // the one actually being dragged).
-                    // A full hold ENTERS edit mode from rest; once editing, a
-                    // light press grabs the next tile — you rearrange freely
-                    // without re-holding, the Home Screen feel. Still Apple's
-                    // own recognizer either way, so it yields to the scroll pan
-                    // (the sticky-scroll fix above holds in both modes).
-                    .onLongPressGesture(minimumDuration: editing ? 0.12 : 0.35,
-                                        maximumDistance: 24) {
-                        lift(id)
-                    }
-                    // The actual drag tracker — attached to EVERY card, all
-                    // the time (device report, 2026-07-12: gating this
-                    // behind `draggingID == id` meant the recognizer didn't
-                    // exist yet when the long-press fired mid-touch, so it
-                    // never caught the rest of that same finger-down — the
-                    // card visibly lifted but never tracked the drag).
-                    // `simultaneousGesture` (not `.gesture`) is what keeps
-                    // this from reopening the sticky-scroll bug above: it
-                    // coexists with the ScrollView's pan instead of
-                    // contesting it, so an idle card's ever-present
-                    // recognizer doesn't compete for the touch. The
-                    // `guard draggingID == id` inside dragGesture(for:)
-                    // keeps it inert everywhere except the lifted card.
-                    .simultaneousGesture(dragGesture(for: id))
                     // Drag is a pointer gesture VoiceOver can't perform, so
                     // reordering was unreachable without sight. Custom actions
                     // (in the rotor) move a card one slot either way — the
@@ -272,19 +201,31 @@ struct ReorderableBoard<ID: Hashable, Content: View>: View {
         }
         .coordinateSpace(name: "homeBoard")
         .animation(.spring(response: 0.35, dampingFraction: 0.8), value: order)
-        // The stuck-drag safety net: `dragActive` falls to false the instant
-        // the drag ends OR is cancelled. On a clean end `.onEnded` already
-        // settled (draggingID is nil, so this no-ops); on a CANCEL — the case
-        // that froze the board — `.onEnded` never ran, so settle the orphaned
-        // drag here. Guarded on draggingID so an ordinary touch that never
-        // lifted a card doesn't trigger a phantom settle.
-        .onChange(of: dragActive) { _, active in
-            if !active, let id = draggingID { settle(id) }
+        // The input layer: one UIKit long-press on the enclosing scroll view.
+        // The background view fills the layout's bounds, so its coordinate
+        // space IS "homeBoard" — card hit-testing reads `scratch.frames`
+        // directly. The driver guarantees exactly one end/cancel per lift.
+        .background {
+            BoardDragDriver<ID>(
+                editing: editing,
+                cardAt: { point in
+                    scratch.frames.first(where: { $0.value.contains(point) })?.key
+                },
+                onLift: { lift($0) },
+                onMove: { translation, autoScrollDelta, finger in
+                    guard let id = draggingID else { return }
+                    motion.translation = translation
+                    motion.autoScrollDelta = autoScrollDelta
+                    reorderIfNeeded(id: id, fingerY: finger.y)
+                },
+                onEnd: {
+                    if let id = draggingID { settle(id) }
+                })
         }
         // A board torn down mid-drag (leaving Home) never sends finger-up —
-        // cancel the loop so it can't scroll a gone view, and drop edit mode
-        // so returning to Home isn't stuck jiggling with no Done in reach.
-        .onDisappear { stopAutoScroll(); editing = false }
+        // drop edit mode so returning to Home isn't stuck jiggling with no
+        // Done in reach. (The driver's dismantle re-enables the scroll pan.)
+        .onDisappear { editing = false }
     }
 
     /// Moves a card one slot in `order` and persists — the accessible path to
@@ -309,60 +250,15 @@ struct ReorderableBoard<ID: Hashable, Content: View>: View {
         // the board keeps jiggling and the next tile takes only a light press.
         if !editing { editing = true }
         orderAtDragStart = order
-        // liftFrame is captured on the first drag sample, not here: setting
-        // draggingID linearizes the board, so a paired tile's frame is about
-        // to move. dragStarted gates that one-shot capture.
-        liftFrame = nil
-        dragStarted = false
         motion.translation = .zero
-        scrollYAtLift = scrollProbe?.y ?? 0
         motion.autoScrollDelta = 0
+        motion.slotShift = 0
         withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
             draggingID = id
         }
     }
 
-    private func dragGesture(for id: ID) -> some Gesture {
-        // Global space: translation is a DELTA (identical in any space, so the
-        // reorder math is unchanged), and `location.y` is the on-SCREEN finger
-        // position — what tells us when the finger has entered an edge band and
-        // auto-scroll should kick in.
-        DragGesture(minimumDistance: 0, coordinateSpace: .global)
-            // Stays true only while a finger is genuinely down on this card;
-            // SwiftUI resets it on end AND on cancel — the hook the stuck-drag
-            // safety net (`onChange(of: dragActive)`) watches.
-            .updating($dragActive) { _, state, _ in state = true }
-            .onChanged { drag in
-                guard draggingID == id else { return }
-                if !dragStarted {
-                    dragStarted = true
-                    // The board linearized when the card lifted (pairs →
-                    // column); its frame settled to a new slot. Capture the
-                    // START frame from THAT column, and treat this sample's
-                    // translation as the zero point, so the card tracks the
-                    // finger from where it now sits.
-                    liftFrame = scratch.frames[id]
-                    dragBaseline = drag.translation
-                }
-                let t = CGSize(width: drag.translation.width - dragBaseline.width,
-                               height: drag.translation.height - dragBaseline.height)
-                motion.translation = t
-                scratch.lastTranslation = t
-                scratch.lastFingerY = drag.location.y
-                // Keep the cumulative auto-scroll current (0 when disabled or
-                // un-scrolled) so offset and reorder read one consistent value.
-                motion.autoScrollDelta = (scrollProbe?.y ?? 0) - scrollYAtLift
-                refreshAutoScroll()
-                reorderIfNeeded(id: id, translation: t)
-            }
-            .onEnded { _ in
-                guard draggingID == id else { return }
-                settle(id)
-            }
-    }
-
     private func settle(_ id: ID) {
-        stopAutoScroll()
         // Clearing draggingID inside the animation flips this card to its
         // resting state (offset → .zero) and springs it home; the card stops
         // observing `motion` the same instant, so resetting motion after is
@@ -372,8 +268,7 @@ struct ReorderableBoard<ID: Hashable, Content: View>: View {
         }
         motion.translation = .zero
         motion.autoScrollDelta = 0
-        liftFrame = nil
-        dragStarted = false
+        motion.slotShift = 0
         // The drop lands — a soft tap every time a tile settles, reordered or
         // not (2026-07-12: the board only buzzed on a real move, so putting a
         // card back where it started felt dead).
@@ -383,62 +278,30 @@ struct ReorderableBoard<ID: Hashable, Content: View>: View {
         }
     }
 
-    // MARK: - Edge auto-scroll (a board taller than the screen)
-
-    /// The finger's band (−1 top, +1 bottom, 0 middle) from its screen Y and
-    /// the probe's viewport bounds. Off (0) unless auto-scroll is wired.
-    private func edgeDirection() -> Int {
-        guard let probe = scrollProbe, scrollBy != nil,
-              probe.viewportBottom > probe.viewportTop else { return 0 }
-        let band: CGFloat = 110
-        if scratch.lastFingerY < probe.viewportTop + band { return -1 }
-        if scratch.lastFingerY > probe.viewportBottom - band { return 1 }
-        return 0
-    }
-
-    /// Starts/stops the nudge loop as the finger enters or leaves an edge band.
-    private func refreshAutoScroll() {
-        let dir = edgeDirection()
-        guard dir != autoScrollDir else { return }
-        autoScrollDir = dir
-        autoScrollTask?.cancel()
-        guard dir != 0 else { autoScrollTask = nil; return }
-        autoScrollTask = Task { @MainActor in
-            while !Task.isCancelled, let id = draggingID {
-                scrollBy?(CGFloat(dir) * 22)
-                try? await Task.sleep(for: .milliseconds(50))
-                // The scroll landed — carry the new offset into the card's
-                // position and re-run reorder against the now-scrolled frames
-                // (a stationary finger sends no drag events of its own).
-                motion.autoScrollDelta = (scrollProbe?.y ?? 0) - scrollYAtLift
-                reorderIfNeeded(id: id, translation: scratch.lastTranslation)
-            }
-        }
-    }
-
-    private func stopAutoScroll() {
-        autoScrollDir = 0
-        autoScrollTask?.cancel()
-        autoScrollTask = nil
-    }
-
-    /// As the lifted card's center crosses a neighbor's frame, swap it into
+    /// As the FINGER enters a neighbor's frame, swap the dragged card into
     /// that slot — the classic drag-reorder feel (others slide, the lifted
-    /// card keeps following the finger via `dragTranslation`). The dragged
-    /// card's live position is `liftFrame` (its frame when the drag began, in
-    /// the linear column) plus the pure translation — not `frames[id]`, which
-    /// tracks the same offset view and would double-count it — plus however
-    /// far the board has auto-scrolled since lift (frames are in the fixed
-    /// content space, so a stationary finger over scrolling content still
-    /// crosses the right slots). During a drag the board is one full-width
-    /// column, so a single Y test resolves every slot unambiguously.
-    private func reorderIfNeeded(id: ID, translation: CGSize) {
-        guard let liftFrame, let fromIndex = order.firstIndex(of: id) else { return }
-        let draggedMidY = liftFrame.midY + translation.height + motion.autoScrollDelta
+    /// card keeps following the finger). The finger arrives in BOARD space
+    /// from the driver, so scroll and linearization are already baked in —
+    /// no captured frames, no timing assumptions about when the linearize
+    /// layout lands (the old liftFrame capture raced it). Keying reorder to
+    /// the finger, not the card's center, is also how the system Home Screen
+    /// reads a drag. During a drag the board is one full-width column, so a
+    /// single Y test resolves every slot unambiguously.
+    private func reorderIfNeeded(id: ID, fingerY: CGFloat) {
+        guard let fromIndex = order.firstIndex(of: id) else { return }
         for (i, otherID) in order.enumerated() where otherID != id {
             guard let otherFrame = scratch.frames[otherID], otherFrame.contains(
-                CGPoint(x: otherFrame.midX, y: draggedMidY)) else { continue }
+                CGPoint(x: otherFrame.midX, y: fingerY)) else { continue }
             guard i != fromIndex else { continue }
+            // The swap moves the dragged card's LAYOUT slot; fold the
+            // displacement into slotShift so the rendered offset keeps the
+            // card under the finger (see DragMotion.slotShift). The
+            // neighbor's midY approximates the new slot's — exact for
+            // same-height cards, bounded by their height difference
+            // otherwise, and trued up at the drop either way.
+            if let currentMid = scratch.frames[id]?.midY {
+                motion.slotShift += otherFrame.midY - currentMid
+            }
             order.move(fromOffsets: IndexSet(integer: fromIndex),
                        toOffset: i > fromIndex ? i + 1 : i)
             // A tick per slot crossed, not just at lift/drop — the native
@@ -500,16 +363,21 @@ private struct BoardCard<Content: View>: View {
                 // stops on the one at settle, nothing in between.
                 .modifier(JiggleEffect(active: editing && !dragged, phase: phase))
                 // The lifted card follows the finger AND compensates for any
-                // auto-scroll: its base moves with the scrolling content, so
+                // auto-scroll (its base moves with the scrolling content, so
                 // adding autoScrollDelta keeps it pinned under a stationary
-                // finger. Reading `motion` here — only when `dragged` — is what
-                // scopes the per-frame repaint to this one card. The offset is
-                // ALWAYS applied (value .zero when idle), never conditionally
+                // finger) AND for live reorders (each swap moves its layout
+                // slot; subtracting slotShift keeps the card glued to the
+                // finger instead of leading it by a slot per swap). Reading
+                // `motion` here — only when `dragged` — is what scopes the
+                // per-frame repaint to this one card. The offset is ALWAYS
+                // applied (value .zero when idle), never conditionally
                 // added/removed, so the settle springs it home instead of
                 // snapping.
                 .offset(dragged
                         ? CGSize(width: motion.translation.width,
-                                 height: motion.translation.height + motion.autoScrollDelta)
+                                 height: motion.translation.height
+                                         + motion.autoScrollDelta
+                                         - motion.slotShift)
                         : .zero)
         }
     }
