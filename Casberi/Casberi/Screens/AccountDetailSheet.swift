@@ -248,7 +248,7 @@ struct AccountDetailSheet: View {
                     .foregroundStyle(keyResultIsError ? DS.attention : DS.textSecondary)
                     .settleIn()
             }
-            Text("Get a key from \(keyProvider.company) at \(keyProvider.console). It stays in this iPhone's Keychain and goes only to \(keyProvider.company) itself.")
+            Text("Get a key from the agent's own console — console.anthropic.com (Claude), platform.openai.com (ChatGPT), aistudio.google.com (Gemini), or venice.ai (Venice). It stays in this iPhone's Keychain and goes only to the provider you chose.")
                 .dsText(.label12).foregroundStyle(DS.textTertiary)
                 .fixedSize(horizontal: false, vertical: true)
         }
