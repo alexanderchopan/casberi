@@ -85,52 +85,46 @@
       rain.appendChild(panel);
       var srcs = Array.prototype.slice.call(rain.querySelectorAll('img'))
         .map(function (im) { return im.src; });
-      // a calm notification-style stack: three large cards, one column,
-      // perfectly aligned — dealt out of the berry
-      var picks = [srcs[2], srcs[9], srcs[17]].filter(Boolean);
-      var widths = [[52, 30], [40, 22], [46, 26]];
-      var rows = picks.map(function (src, k) {
+      // a WALL of notifications: full screen width, complete rows only —
+      // the count is computed from the space, so nothing ever clips
+      var rr = rain.getBoundingClientRect();
+      var vw = Math.min(window.innerWidth, 1900);
+      var cardH = 56, gapY = 14;
+      var cols = Math.max(1, Math.min(6, Math.floor((vw - 48) / 300)));
+      var rowsN = Math.max(2, Math.floor((rr.height - 16) / (cardH + gapY)));
+      var count = Math.min(cols * rowsN, 42);
+      panel.style.width = vw + 'px';
+      panel.style.gridTemplateColumns = 'repeat(' + cols + ', minmax(0, 1fr))';
+      var widths = [[52, 30], [40, 22], [46, 26], [36, 28], [50, 20], [42, 24],
+                    [34, 30], [48, 22], [38, 26], [44, 20], [54, 24], [40, 28]];
+      var rows = [];
+      for (var k = 0; k < count; k++) {
         var row = document.createElement('div');
         row.className = 'streamrow';
-        row.innerHTML = '<img src="' + src + '" alt="">' +
+        row.innerHTML = '<img src="' + srcs[(k * 7) % srcs.length] + '" alt="">' +
           '<span class="slines"><span class="sbar" style="width:0"></span>' +
           '<span class="sbar thin" style="width:0"></span></span>';
         panel.appendChild(row);
-        return row;
-      });
+        rows.push(row);
+      }
       var tRect = target.getBoundingClientRect();
       var tcx = tRect.left + tRect.width / 2, tcy = tRect.top + tRect.height / 2;
-      function dealFrom(row) {
+      rows.forEach(function (row) {
         var b = row.getBoundingClientRect();
         var dx = tcx - (b.left + b.width / 2), dy = tcy - (b.top + b.height / 2);
-        row.style.transform = 'translate(' + dx + 'px,' + dy + 'px) scale(.3)';
-      }
-      function launch(row, k) {
-        row.classList.add('in');
-        row.style.transform = '';
-        var bars = row.querySelectorAll('.sbar');
-        setTimeout(function () { bars[0].style.width = widths[k % widths.length][0] + '%'; }, 180);
-        setTimeout(function () { bars[1].style.width = widths[k % widths.length][1] + '%'; }, 340);
-      }
-      rows.forEach(dealFrom);
-      rows.forEach(function (row, k) {
-        setTimeout(function () { launch(row, k); }, 170 * k);
+        row.style.transform = 'translate(' + dx + 'px,' + dy + 'px) scale(.2)';
       });
-      if (em) setTimeout(function () { em.classList.add('lit'); }, 170 * rows.length + 400);
-      // one late arrival — things keep landing (once, then calm)
-      setTimeout(function () {
-        if (!panel.parentElement) return;
-        var late = document.createElement('div');
-        late.className = 'streamrow';
-        late.innerHTML = '<img src="' + (srcs[25] || srcs[0]) + '" alt="">' +
-          '<span class="slines"><span class="sbar" style="width:0"></span>' +
-          '<span class="sbar thin" style="width:0"></span></span>';
-        panel.appendChild(late);
-        dealFrom(late);
-        void late.offsetWidth;
-        launch(late, 3);
-      }, 170 * rows.length + 2300);
-      setTimeout(function () { state = 'rested'; }, 170 * rows.length + 800);
+      rows.forEach(function (row, k) {
+        setTimeout(function () {
+          row.classList.add('in');
+          row.style.transform = '';
+          var bars = row.querySelectorAll('.sbar');
+          setTimeout(function () { bars[0].style.width = widths[k % widths.length][0] + '%'; }, 170);
+          setTimeout(function () { bars[1].style.width = widths[k % widths.length][1] + '%'; }, 320);
+        }, 45 * k);
+      });
+      if (em) setTimeout(function () { em.classList.add('lit'); }, 45 * count + 500);
+      setTimeout(function () { state = 'rested'; }, 45 * count + 900);
     }, 380);   // a beat at full size before the release
   }
 

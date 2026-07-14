@@ -803,17 +803,20 @@ footer .tagline { font-size: 16px; font-weight: 600; color: var(--ink); margin-b
 .hero h1 em { transition: filter 1.2s ease; }
 .hero h1 em.lit { filter: brightness(1.3) drop-shadow(0 0 26px rgba(59,140,240,.35)); }
 
-/* Hero act 3: the berry deals out a calm notification-style stack */
-.streamfeed { position: absolute; inset: 0; display: flex; flex-direction: column;
-  justify-content: center; align-items: center; gap: 14px; pointer-events: none; }
-.streamrow { display: flex; align-items: center; gap: 16px; width: min(560px, 88%);
-  background: var(--surface); border-radius: 18px; padding: 16px 20px;
-  box-shadow: 0 10px 30px rgba(0,0,0,.35);
+/* Hero act 3: the berry deals a wall of notifications across the screen */
+.streamfeed { position: absolute; top: 0; bottom: 0; left: 50%;
+  transform: translateX(-50%); display: grid; gap: 14px 14px;
+  align-content: center; padding: 0 24px; pointer-events: none;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 5%, #000 95%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 5%, #000 95%, transparent); }
+.streamrow { display: flex; align-items: center; gap: 12px;
+  background: var(--surface); border-radius: 15px; padding: 13px 15px;
+  box-shadow: 0 8px 22px rgba(0,0,0,.3);
   opacity: 0;
   transition: opacity .4s ease, transform .55s cubic-bezier(.34,1.4,.5,1); }
 .streamrow.in { opacity: 1; }
-.streamrow img { width: 34px; height: 34px; border-radius: 9px; flex: none; }
-.streamrow .slines { display: flex; flex-direction: column; gap: 7px; flex: 1; }
-.streamrow .sbar { display: block; height: 11px; border-radius: 6px;
+.streamrow img { width: 27px; height: 27px; border-radius: 8px; flex: none; }
+.streamrow .slines { display: flex; flex-direction: column; gap: 6px; flex: 1; }
+.streamrow .sbar { display: block; height: 9px; border-radius: 5px;
   background: rgba(255,255,255,.16); transition: width .55s cubic-bezier(.3,.6,.3,1); }
-.streamrow .sbar.thin { height: 8px; background: rgba(255,255,255,.09); }
+.streamrow .sbar.thin { height: 7px; background: rgba(255,255,255,.09); }
