@@ -324,20 +324,13 @@ struct HomeScreen: View {
             loadWalletHoldings()
             streamComposition()
             #if DEBUG
-            // Debug hooks: `-openSettings YES` pushes Settings;
-            // `-openProject "Work"` pushes a project — both for screenshots.
-            if UserDefaults.standard.bool(forKey: "openSettings") {
-                route.push = .settings
-            }
-            // `-openAppsDelay <s>` pushes the store after a delay — records
-            // "tapping the grid door" (the zoom plays on the real push path).
-            let appsDelay = UserDefaults.standard.double(forKey: "openAppsDelay")
-            if appsDelay > 0 {
-                Task { @MainActor in
-                    try? await Task.sleep(for: .seconds(appsDelay))
-                    withAnimation(DS.Motion.standard) { route.push = .apps }
-                }
-            }
+            // Debug hook: `-openProject "Work"` pushes a project — for
+            // screenshots. (`-openSettings`/`-openAppsDelay` moved to
+            // RootShell's onAppear, 2026-07-14: this screen only mounts when
+            // the landing chip is "Pinned", so on an unpinned install the
+            // hooks here never fired — and even when they did, a first-frame
+            // push could land before MainSurface's navigationDestination
+            // registered and get dropped. Audit finding 2026-07-13.)
             if let name = UserDefaults.standard.string(forKey: "openProject") {
                 // `-openProjectDelay <s>` shows Home first, then opens the tag
                 // (with the tile's zoom) — a recording of "tapping the tile".

@@ -145,7 +145,21 @@ struct MainSurface: View {
                         .transition(.opacity)
                 }
             }
-            .onAppear { seenIDs = Set(feedThings.map(\.id)) }
+            .onAppear {
+                seenIDs = Set(feedThings.map(\.id))
+                // A door push that raced launch — casberi://settings arriving
+                // before the first frame — was set before this stack
+                // registered its navigationDestination, and SwiftUI drops
+                // such a push: the app lands on Home with the route pointing
+                // at a room that never opened (audit 2026-07-13; .settings
+                // dropped on early sets while post-mount sets always land).
+                // Re-land it now that the stack is up: clear, then set one
+                // turn later so the destination sees a fresh value.
+                if let early = route.push {
+                    route.push = nil
+                    Task { @MainActor in route.push = early }
+                }
+            }
             .onChange(of: feedThings.count) { _, _ in
                 let ids = Set(feedThings.map(\.id))
                 defer { seenIDs = ids }

@@ -292,6 +292,25 @@ struct RootShell: View {
                 UserDefaults.standard.removeObject(forKey: "deeplink")
                 route(url)
             }
+            // `-openSettings YES` pushes Settings. Lives HERE (not
+            // HomeScreen's onAppear, where it was born): since the
+            // one-surface shell, HomeScreen only mounts when the landing
+            // chip is "Pinned", so on an unpinned install the hook never
+            // fired and the launch landed on Home (audit 2026-07-13). This
+            // onAppear runs after the whole tree mounts — same proven
+            // timing as the `-deeplink` hook above.
+            if UserDefaults.standard.bool(forKey: "openSettings") {
+                HomeRoute.shared.push = .settings
+            }
+            // `-openAppsDelay <s>` pushes the store after a delay — records
+            // "tapping the grid door" (the zoom plays on the real push path).
+            let appsDelay = UserDefaults.standard.double(forKey: "openAppsDelay")
+            if appsDelay > 0 {
+                Task { @MainActor in
+                    try? await Task.sleep(for: .seconds(appsDelay))
+                    withAnimation(DS.Motion.standard) { HomeRoute.shared.push = .apps }
+                }
+            }
             // Debug hook: `simctl launch ... -answerProbe "what did I save about work"`
             // runs the whole answer path (retrieve → on-device compose → doc)
             // and logs the composition + its latency, so it can be verified and
