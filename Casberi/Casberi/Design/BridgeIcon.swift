@@ -16,7 +16,6 @@ struct BridgeIcon: View {
     /// contexts, where a square asset inside a round chip read as a square
     /// floating in a circle (report 2026-07-10).
     var circular: Bool = false
-    @Environment(\.colorScheme) private var scheme
 
     private var assetName: String {
         "brand-" + name.lowercased()
@@ -38,21 +37,29 @@ struct BridgeIcon: View {
                 .clipShape(shape)
         } else {
             let brand = BridgeGlyph.color(for: name)
-            // Light mode pulls bright brand hues (Notes yellow, Reminders
-            // orange) toward black and deepens the fill so the glyph reads
-            // on light chips and cards.
-            let glyph = scheme == .light ? brand.mix(with: .black, by: 0.35) : brand
+            // SOLID, like an app icon — the tint fill has now died three
+            // times (composer v2 2026-07-12: "solid reads as an app, tint
+            // read as a stain"; the Apps shelf lights connected seats
+            // saturated; bold bleeds 2026-07-13: a translucent chip simply
+            // VANISHED on its own color field — Wallet/Reminders/Tokens/
+            // Photos were unreadable on a shaped feed). The composer tool
+            // tiles' exact recipe: brand fill, white glyph, a whisper of
+            // top sheen. Reads on any field, both themes, no per-scheme
+            // darkening needed.
             shape
-                .fill(brand.opacity(scheme == .light ? 0.24 : 0.18))
+                .fill(brand)
+                .overlay(
+                    shape.fill(LinearGradient(colors: [.white.opacity(0.16), .clear],
+                                              startPoint: .top, endPoint: .center))
+                )
                 .frame(width: size, height: size)
                 .overlay(
                     // 0.45 read as undersized for glyphs with more internal
                     // whitespace ("checklist", "photo") — several symbols
                     // looked lost in their badge (report 2026-07-09).
                     Image(systemName: BridgeGlyph.symbol(for: name))
-                        .font(.system(size: size * 0.54,
-                                      weight: scheme == .light ? .semibold : .medium))
-                        .foregroundStyle(glyph)
+                        .font(.system(size: size * 0.54, weight: .semibold))
+                        .foregroundStyle(.white)
                 )
         }
     }
