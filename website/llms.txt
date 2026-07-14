@@ -7,9 +7,9 @@ Key facts:
 - Native iOS app (iPhone), free on TestFlight while it heads to the App Store.
 - Everything becomes a "thing" in one feed; one search spans all of it.
 - Capture in one gesture: share sheet, screenshots, Siri, paste, voice. Typed text never saves silently.
-- Connect apps as bridges: Photos, Calendar, Reminders, Apple Health, Apple Music, RSS, Bluesky, Farcaster, Gmail, iCloud Mail, GitHub, Notion, Linear, Todoist, Readwise, Raindrop, Cal.com, Calendly, ChatGPT import, token watchlists, and more.
+- Connect apps as bridges: Photos, Calendar, Reminders, Apple Health, Strava, Apple Music, RSS, Bluesky, Farcaster, Gmail, iCloud Mail, GitHub, Notion, Linear, Todoist, Readwise, Raindrop, Cal.com, Calendly, ChatGPT / Claude / Gemini imports, token watchlists, and more.
 - Agents connect too: their output arrives in the feed with provenance, and any write waits for your tap (approvals). Casberi is also an MCP server — clients like Claude can search your things and propose saves you approve.
-- Answers are generated on-device (Apple Intelligence) from your own things; nothing is invented and nothing is billed.
+- Answers are generated on-device (Apple Intelligence) from your own things; nothing is invented and nothing is billed. Your own key — Anthropic, OpenAI, Google, or Venice — can re-run any answer on a bigger model, only when you tap.
 - No account, no analytics, no trackers. iCloud sync is opt-in and off by default. Export, import, and delete-everything are real controls.
 
 ## Docs

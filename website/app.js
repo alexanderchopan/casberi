@@ -68,9 +68,10 @@
     });
   }
 
-  // Act 3 — payoff. The berry settles, then STREAMS: feed rows materialize
-  // above it like generated UI, each led by one of the apps it just drank —
-  // scattered apps in, one feed out. The streamed feed IS the end state.
+  // Act 3 — payoff. The berry settles, then STREAMS: abstract feed cards
+  // materialize above it like generated UI — every size and shape, none
+  // wearing an app's badge. App logos here read as "this is the whole
+  // catalog"; shapes read as "your feed takes any shape" (2026-07-14).
   function finale() {
     setTimeout(function () {
       // the energy flows out: the berry springs back to size…
@@ -83,58 +84,77 @@
       var panel = document.createElement('div');
       panel.className = 'streamfeed';
       rain.appendChild(panel);
-      // clone the rain's TILES (glyph + brand-colored background) so every
-      // card's icon is colorful — a bare glyph is white-on-dark, and only
-      // apps with baked-in color (Kalshi) would stand out
-      var tiles = Array.prototype.slice.call(rain.children).filter(function (el) {
-        return el.classList.contains('ai');
-      });
-      // a WALL of notifications: full screen width, complete rows only —
-      // the count is computed from the space, so nothing ever clips
       var rr = rain.getBoundingClientRect();
       var vw = Math.min(window.innerWidth, 1900);
-      var cardH = 56, gapY = 14;
-      var cols = Math.max(1, Math.min(6, Math.floor((vw - 48) / 300)));
-      var rowsN = Math.max(2, Math.floor((rr.height - 16) / (cardH + gapY)));
-      var count = Math.min(cols * rowsN, 42);
       panel.style.width = vw + 'px';
-      panel.style.gridTemplateColumns = 'repeat(' + cols + ', minmax(0, 1fr))';
-      var widths = [[52, 30], [40, 22], [46, 26], [36, 28], [50, 20], [42, 24],
-                    [34, 30], [48, 22], [38, 26], [44, 20], [54, 24], [40, 28]];
-      var rows = [];
-      for (var k = 0; k < count; k++) {
+      // rows of uneven heights, each dealing 2–4 cards of uneven widths;
+      // per-card nudges knock everything off the row line so the wall reads
+      // scattered, not gridded. Rows fill the rain's height, never clipping.
+      var rowPatterns = [
+        { h: 62, w: [3, 2, 4], indent: 0 },
+        { h: 92, w: [2, 5], indent: 26 },
+        { h: 46, w: [4, 3, 2, 3], indent: 8 },
+        { h: 76, w: [5, 3], indent: 34 },
+        { h: 56, w: [2, 3, 2], indent: 14 },
+        { h: 86, w: [3, 4], indent: 4 }
+      ];
+      var inner = [
+        '<span class="sbar" style="width:0"></span><span class="sbar thin" style="width:0"></span>',
+        '<span class="sblock t1"></span><span class="sbar thin" style="width:0"></span>',
+        '<span class="sbar" style="width:0"></span>',
+        '<span class="sblock t2"></span>',
+        '<span class="sbar" style="width:0"></span><span class="sbar thin" style="width:0"></span><span class="sbar thin" style="width:0"></span>',
+        '<span class="sblock t3"></span><span class="sbar" style="width:0"></span>',
+        '<span class="sbar thin" style="width:0"></span><span class="sblock t4"></span>'
+      ];
+      var barWidths = [62, 38, 44, 70, 30, 52, 40, 58, 34, 66, 26, 48];
+      var nudge = [-8, 5, -3, 9, -6, 2, 7, -9, 4, -5];
+      var gapY = 16, cards = [], y = 8, ri = 0, ci = 0, bi = 0;
+      while (cards.length < 40) {
+        var pat = rowPatterns[ri % rowPatterns.length];
+        if (y + pat.h > rr.height - 8) break;
         var row = document.createElement('div');
-        row.className = 'streamrow';
-        var tile = tiles[(k * 7) % tiles.length].cloneNode(true);
-        tile.removeAttribute('style');
-        tile.classList.add('cardtile');
-        row.appendChild(tile);
-        var lines = document.createElement('span');
-        lines.className = 'slines';
-        lines.innerHTML = '<span class="sbar" style="width:0"></span>' +
-          '<span class="sbar thin" style="width:0"></span>';
-        row.appendChild(lines);
+        row.className = 'streamline';
+        row.style.height = pat.h + 'px';
+        row.style.paddingLeft = pat.indent + 'px';
+        row.style.paddingRight = (34 - pat.indent) + 'px';
+        // narrow screens: two cards a row is plenty
+        var flexes = vw < 520 ? pat.w.slice(0, 2) : pat.w;
+        flexes.forEach(function (flex) {
+          var card = document.createElement('div');
+          card.className = 'scard';
+          card.style.flex = flex + ' 1 0';
+          card.style.marginTop = nudge[ci % nudge.length] + 'px';
+          card.innerHTML = inner[ci % inner.length];
+          ci++;
+          row.appendChild(card);
+          cards.push(card);
+        });
         panel.appendChild(row);
-        rows.push(row);
+        y += pat.h + gapY;
+        ri++;
       }
       var tRect = target.getBoundingClientRect();
       var tcx = tRect.left + tRect.width / 2, tcy = tRect.top + tRect.height / 2;
-      rows.forEach(function (row) {
-        var b = row.getBoundingClientRect();
+      cards.forEach(function (card) {
+        var b = card.getBoundingClientRect();
         var dx = tcx - (b.left + b.width / 2), dy = tcy - (b.top + b.height / 2);
-        row.style.transform = 'translate(' + dx + 'px,' + dy + 'px) scale(.2)';
+        card.style.transform = 'translate(' + dx + 'px,' + dy + 'px) scale(.2)';
       });
-      rows.forEach(function (row, k) {
+      cards.forEach(function (card, k) {
         setTimeout(function () {
-          row.classList.add('in');
-          row.style.transform = '';
-          var bars = row.querySelectorAll('.sbar');
-          setTimeout(function () { bars[0].style.width = widths[k % widths.length][0] + '%'; }, 170);
-          setTimeout(function () { bars[1].style.width = widths[k % widths.length][1] + '%'; }, 320);
+          card.classList.add('in');
+          card.style.transform = '';
+          var bars = card.querySelectorAll('.sbar');
+          Array.prototype.forEach.call(bars, function (bar, j) {
+            var w = barWidths[bi % barWidths.length];
+            bi++;
+            setTimeout(function () { bar.style.width = w + '%'; }, 170 + j * 150);
+          });
         }, 45 * k);
       });
-      if (em) setTimeout(function () { em.classList.add('lit'); }, 45 * count + 500);
-      setTimeout(function () { state = 'rested'; }, 45 * count + 900);
+      if (em) setTimeout(function () { em.classList.add('lit'); }, 45 * cards.length + 500);
+      setTimeout(function () { state = 'rested'; }, 45 * cards.length + 900);
     }, 380);   // a beat at full size before the release
   }
 
