@@ -251,3 +251,13 @@
     }
   }, 2400);
 })();
+
+// Data tile: the sync toggle flips itself and the phone lights up with it.
+(function dataTile() {
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  var el = document.querySelector('.data-live');
+  if (!el) return;
+  setTimeout(function () {
+    setInterval(function () { el.classList.toggle('on'); }, 2400);
+  }, 1200);
+})();
