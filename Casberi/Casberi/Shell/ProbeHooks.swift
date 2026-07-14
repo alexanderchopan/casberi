@@ -211,12 +211,12 @@ enum ProbeHooks {
         // credential wipe + MCP pairing reset) and logs before/after state —
         // the tray's confirm is the same code with consent in front.
         Hook(key: "wipeAccessProbe") { _, _ in
-            let before = [TokenBridge.todoist.tokenKey, AIKey.vaultKey]
-                .filter { TokenVault.get($0) != nil }.count
+            let sampled = [TokenBridge.todoist.tokenKey]
+                + AIProvider.allCases.map(\.slotKey)
+            let before = sampled.filter { TokenVault.get($0) != nil }.count
             TokenVault.deleteAll()
             MCPPairing.reset()
-            let after = [TokenBridge.todoist.tokenKey, AIKey.vaultKey]
-                .filter { TokenVault.get($0) != nil }.count
+            let after = sampled.filter { TokenVault.get($0) != nil }.count
             NSLog("Wipe access probe: sampled credentials %d before → %d after", before, after)
         },
         // `-intentProbe "<query>"` runs the Shortcuts intents' shared corpus

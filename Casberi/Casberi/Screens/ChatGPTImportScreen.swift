@@ -29,6 +29,10 @@ struct ChatGPTImportScreen: View {
 
     var body: some View {
         List {
+            // The key comes first (prd §67, store entries 2026-07-14): powering
+            // answers is the live verb; the import is the one-time backfill.
+            AIKeySection(provider: .openai)
+                .listRowSeparator(.hidden)
             stepsSection.listRowSeparator(.hidden)
             importSection.listRowSeparator(.hidden)
             if !recent.isEmpty {

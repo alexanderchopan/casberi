@@ -2562,10 +2562,24 @@ where public-client flows exist, ③ write-back verbs in the sheet,
     a pasted key is recognized by its shape — `sk-ant-…` → Claude,
     `sk-…` → GPT, `AIza…` → Gemini — and validated against that provider
     before it saves (no dead key, honesty rule). One field, no menu; the
-    provider is stored beside the key and named in the saved-state line. The
     grounded contract is identical across providers (the key buys a stronger
     model, not a looser answer). Wire details live in `Model/AIProvider.swift`
     + `Model/AIAnswer.swift`; adding a provider is one case in each switch.
+  - **Keys are per-provider, and the store carries them (2026-07-14, same
+    session).** Four agents connect by key: Claude, ChatGPT (GPT), Gemini,
+    and Venice — several at once, one Keychain slot each (`token.ai.<id>`;
+    the pre-multi-key Anthropic slot migrates on first read). Each provider's
+    app page in Apps carries its own key connect (`AIKeySection` — Claude and
+    ChatGPT's import screens embed it above the import; Gemini and Venice's
+    setup screens ARE it), which is also how Venice's prefix-less keys
+    connect without guessing. Settings → "Your AI" stays as the overview:
+    every connected key, per-row remove, and the one smart paste field.
+    A connected key seats the app in BridgeStore like any bridge.
+  - **The composer verb is a chip PER provider (user ruling 2026-07-14).**
+    "Try with Claude" / "Try with Gemini" — the chip names exactly where the
+    question goes, connected providers sit side by side (comparable answers),
+    and the settled answer's badge names whose key produced it ("Answered
+    with GPT"). No "active provider" state; the tap picks the destination.
 - **OAuth only where the flow is genuinely public-client.** GitHub's device
   flow needs no secret and no server — build it. Providers whose token
   exchange demands a client secret (Notion, Todoist, Linear) stay

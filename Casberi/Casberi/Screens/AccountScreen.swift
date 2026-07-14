@@ -180,8 +180,8 @@ struct SettingsScreen: View {
 
     /// Group two — the app itself: housekeeping, rarely visited. A–Z.
     private var secondaryTiles: [TileSpec] {
-        // One Keychain read per render, not two (the tile needs it twice).
-        let keyed = AIKey.isConfigured
+        // One Keychain sweep per render, not several (the tile reads it thrice).
+        let connectedAI = AIKey.connected
         return [
             // A binary choice earns a tap, not a tray with one empty screen's
             // worth of nothing below two chips (report 2026-07-09) — the tile
@@ -209,16 +209,16 @@ struct SettingsScreen: View {
                      badge: ("globe", DS.textSecondary),
                      action: { languageOpen = true }),
             // Your AI (prd §67) — the BYO escape hatch: on-device by default,
-            // your own AI key adds a per-answer "Try with your key". Named for
-            // the capability, not "Claude": that collides with the Claude
-            // chat-import app, and the key powers every answer (across all your
-            // things), not just Claude-sourced ones. The key is Anthropic-
-            // specific today — the honest detail lives in the sheet, not here.
+            // each connected key adds a per-answer "Try with <name>". Named
+            // for the capability, not a provider: the keys power every answer
+            // (across all your things). The tile names what's connected; the
+            // sheet is the overview, and each provider's app page carries the
+            // same connect (store entries, 2026-07-14).
             TileSpec(title: "Your AI",
-                     value: keyed
-                        ? String(localized: "Your key powers answers")
-                        : String(localized: "Bring your own AI key"),
-                     badge: ("key.fill", keyed ? DS.confirm : DS.textSecondary),
+                     value: connectedAI.isEmpty
+                        ? String(localized: "Bring your own AI key")
+                        : connectedAI.map(\.label).joined(separator: " · "),
+                     badge: ("key.fill", connectedAI.isEmpty ? DS.textSecondary : DS.confirm),
                      action: { detail = .key }),
             // The one persistent explainer of the model (2026-07-11) — for
             // a new person after the coach lines retire. "How it works", not

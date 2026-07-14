@@ -29,15 +29,15 @@ struct AccountDetailSheet: View {
     @State private var importing = false
     @State private var importResult: String?
     @State private var deleteResult: String?
-    /// Your AI (prd §67) — draft, outcome line, and a mirrored configured
-    /// flag (AIKey isn't observable; actions refresh it by hand).
+    /// Your AI (prd §67) — draft, outcome line, and a mirrored connected list
+    /// (AIKey isn't observable; actions refresh it by hand).
     @State private var keyDraft = ""
     @State private var keyResult: String?
     /// A rejected key must READ as a failure — same muted gray as success
     /// would look like it saved (honesty rule).
     @State private var keyResultIsError = false
     @State private var keyChecking = false
-    @State private var keyConfigured = AIKey.isConfigured
+    @State private var connectedProviders = AIKey.connected
 
     var body: some View {
         DSTray(title: title, height: sheetHeight) {
@@ -143,7 +143,8 @@ struct AccountDetailSheet: View {
     private var sheetHeight: CGFloat {
         switch detail {
         case .data: 530   // two wipes now — things and access, one row each
-        case .key: 460
+        // One connected provider fits the base; each further one adds a row.
+        case .key: 460 + CGFloat(max(connectedProviders.count - 1, 0)) * 60
         }
     }
 
@@ -179,18 +180,44 @@ struct AccountDetailSheet: View {
         }
     }
 
-    /// Your AI (prd §67) — the BYO escape hatch, stated honestly: answers run
-    /// on this iPhone by default; your own key from Claude, GPT, or Gemini adds
-    /// a "Try with your key" you tap per answer. The paste picks the provider
-    /// by the key's shape (no menu). The key goes to the Keychain and to that
-    /// provider itself — never to us (there is no us to send it to).
+    /// Your AI (prd §67) — the overview of every connected key, stated
+    /// honestly: answers run on this iPhone by default; each connected
+    /// provider adds its own "Try with <name>" you tap per answer. One paste
+    /// field connects a detectable key from here (the shape picks the
+    /// provider, no menu); each provider's app page in Apps carries the same
+    /// connect. Keys go to the Keychain and each to its own provider — never
+    /// to us (there is no us to send them to).
     private var keyCard: some View {
         VStack(alignment: .leading, spacing: DS.Space.s4) {
-            aliveRow("key.fill", keyConfigured ? DS.confirm : DS.textSecondary,
-                     "Your AI key",
-                     keyConfigured ? "\(AIKey.provider.label) · in the Keychain \(AIKey.hint)"
-                                   : "Answers run on this iPhone until you add one")
-            Text("Bring a key from Claude, GPT, or Gemini and every answer offers \"Try with your key\" — the question and the few matched things go straight from this iPhone to that provider, only when you tap. They bill your key directly.")
+            if connectedProviders.isEmpty {
+                aliveRow("key.fill", DS.textSecondary,
+                         "Your AI keys",
+                         "Answers run on this iPhone until you add one")
+            } else {
+                ForEach(connectedProviders, id: \.rawValue) { provider in
+                    HStack(spacing: DS.Space.s3) {
+                        aliveRow("key.fill", DS.confirm,
+                                 provider.label,
+                                 "In the Keychain \(AIKey.hint(provider))")
+                        Spacer(minLength: 0)
+                        Button {
+                            DSHaptic.tap()
+                            AIKey.clear(provider)
+                            connectedProviders = AIKey.connected
+                            keyResultIsError = false
+                            keyResult = "\(provider.label) removed — answers stay on this iPhone."
+                        } label: {
+                            Image(systemName: "trash")
+                                .font(.system(size: 15, weight: .semibold))
+                                .foregroundStyle(DS.destructive)
+                                .frame(width: 44, height: 44)
+                                .background(DS.gray100, in: Circle())
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+            Text("Bring a key from Claude, GPT, Gemini, or Venice and every answer offers a \"Try with\" chip naming it — the question and the few matched things go straight from this iPhone to that provider, only when you tap. Each bills your key directly.")
                 .dsText(.subhead13).foregroundStyle(DS.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
             HStack(spacing: DS.Space.s3) {
@@ -212,41 +239,29 @@ struct AccountDetailSheet: View {
                 .buttonStyle(.plain)
                 .disabled(keyChecking || keyDraft.trimmingCharacters(in: .whitespaces).isEmpty)
             }
-            if keyConfigured {
-                Button {
-                    DSHaptic.tap()
-                    AIKey.clear()
-                    keyConfigured = false
-                    keyResultIsError = false
-                    keyResult = "Removed — answers stay on this iPhone."
-                } label: {
-                    actionLabel("Remove key", icon: "trash",
-                                fg: DS.destructive, bg: DS.gray100)
-                }
-                .buttonStyle(.plain)
-            }
             if let keyResult {
                 Text(keyResult)
                     .dsText(.callout15)
                     .foregroundStyle(keyResultIsError ? DS.attention : DS.textSecondary)
                     .settleIn()
             }
-            Text("Get a key from Anthropic, OpenAI, or Google. It stays in this iPhone's Keychain and goes only to the provider it belongs to.")
+            Text("Keys live in this iPhone's Keychain, each going only to its own provider. A Venice key has no tell-tale shape — connect it from Venice's page in Apps.")
                 .dsText(.label12).foregroundStyle(DS.textTertiary)
                 .fixedSize(horizontal: false, vertical: true)
         }
     }
 
-    /// Saves the key only after its provider accepts it — no dead key sitting
+    /// Saves a key only after its provider accepts it — no dead key sitting
     /// in the Keychain claiming a capability it can't deliver (honesty rule).
     /// The provider is read from the key's shape; a shape nobody claims is
-    /// rejected up front rather than guessed at.
+    /// rejected up front rather than guessed at (Venice's shapeless keys
+    /// connect from its app page, where the provider is known).
     private func saveKey() {
         let candidate = keyDraft.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !candidate.isEmpty else { return }
         guard let provider = AIProvider.detect(candidate) else {
             keyResultIsError = true
-            keyResult = "That doesn't look like a Claude, GPT, or Gemini key — check it and try again."
+            keyResult = "That doesn't look like a Claude, GPT, or Gemini key — check it, or connect Venice from its page in Apps."
             return
         }
         keyChecking = true
@@ -256,11 +271,11 @@ struct AccountDetailSheet: View {
             keyChecking = false
             if ok {
                 AIKey.set(candidate, provider: provider)
-                keyConfigured = true
+                connectedProviders = AIKey.connected
                 keyDraft = ""
                 DSHaptic.success()
                 keyResultIsError = false
-                keyResult = "Saved — \(provider.label) answers now offer \"Try with your key\"."
+                keyResult = "Saved — answers now offer \"Try with \(provider.label)\"."
             } else {
                 keyResultIsError = true
                 keyResult = "\(provider.label) didn't accept that key — check it and try again."

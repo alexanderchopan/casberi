@@ -28,10 +28,11 @@ struct Composer: View {
     /// never call it and just return the doc to reveal at once.
     var answer: (_ query: String, _ onProseDoc: @escaping ([String]) -> Void) async -> [String] = { _, _ in [] }
     /// The BYO-key retry (prd §67): answers the same question with the person's
-    /// own Anthropic key, device→API direct. nil when the key or the network
-    /// failed — the composer words that honestly. The verb only shows when a
-    /// key is configured; it never fires on its own.
-    var answerWithKey: (_ query: String) async -> [String]? = { _ in nil }
+    /// own key for ONE named provider (the chip they tapped), device→API
+    /// direct. nil when the key or the network failed — the composer words
+    /// that honestly. The verbs only show for connected providers; they never
+    /// fire on their own.
+    var answerWithKey: (_ query: String, _ provider: AIProvider) async -> [String]? = { _, _ in nil }
     /// Candidate project tags for the parse card, from the corpus.
     var tagCandidates: () -> [String] = { [] }
     /// The connected sources ("Gmail", "Steam") — navigation asks match them.
@@ -85,9 +86,10 @@ struct Composer: View {
         let id = UUID()
         let question: String
         let els: GenEls
-        /// True when the person's own key produced this answer — the settled
-        /// turn keeps its badge (honesty: a keyed answer says so, always).
-        var keyed = false
+        /// The provider whose key produced this answer, or nil for on-device —
+        /// the settled turn keeps its named badge (honesty: a keyed answer
+        /// says WHOSE key, always).
+        var keyedWith: AIProvider? = nil
     }
     @State private var turns: [ConvoTurn] = []
     /// The question currently being answered — shown above the live answer
@@ -103,18 +105,19 @@ struct Composer: View {
     /// True while an answer is actually being produced (model running) — the
     /// after-answer verbs (Keep, Try with your key) wait for the settle.
     @State private var inFlight = false
-    /// True when the current answer came from the person's own key — it wears
-    /// the badge, and the retry verb retires (one keyed try per ask).
-    @State private var keyedCurrent = false
+    /// The provider whose key produced the current answer, or nil for
+    /// on-device — it wears the named badge, and the retry verbs retire
+    /// (one keyed try per ask).
+    @State private var keyedCurrent: AIProvider? = nil
     /// Monotonic ask generation — every new ask (and close) bumps it, and an
     /// answer Task that finishes after a newer ask started must not paint
     /// over the live answer (review 2026-07-13: a slow first answer was
     /// clobbering the follow-up that overtook it).
     @State private var askGeneration = 0
-    /// Whether a key is configured, mirrored once per settled answer — the
-    /// chip gate can't afford a Keychain round-trip per render (typing a
-    /// follow-up re-renders per keystroke).
-    @State private var keyAvailable = false
+    /// The connected providers, mirrored once per settled answer — the chip
+    /// row can't afford Keychain round-trips per render (typing a follow-up
+    /// re-renders per keystroke). One "Try with <name>" chip each.
+    @State private var keyedProviders: [AIProvider] = []
 
     /// The keepable text of a synthesis answer — a synthesis is one Insight
     /// carrying the prose (RootShell's proseDoc). Only that shape is worth
@@ -409,7 +412,7 @@ struct Composer: View {
                                 convoTurn(question: turn.question) {
                                     VStack(alignment: .leading, spacing: DS.Space.s1) {
                                         GenRender(id: "root", els: turn.els)
-                                        if turn.keyed { keyedBadge }
+                                        if let p = turn.keyedWith { keyedBadge(p) }
                                     }
                                 }
                             }
@@ -438,8 +441,12 @@ struct Composer: View {
                                         // A keyed answer says so, always — the
                                         // badge is the honesty rule applied to
                                         // where the answer was made.
-                                        if keyedCurrent, !inFlight { keyedBadge }
+                                        if let p = keyedCurrent, !inFlight { keyedBadge(p) }
                                         if !proseStreaming, !inFlight {
+                                            // Horizontal scroll: four connected
+                                            // providers + Keep can outgrow the
+                                            // bubble; chips never wrap or clip.
+                                            ScrollView(.horizontal, showsIndicators: false) {
                                             HStack(spacing: DS.Space.s2) {
                                                 // Keep a settled synthesis (2026-07-12):
                                                 // lands the recap as a note so it isn't
@@ -457,20 +464,25 @@ struct Composer: View {
                                                     }
                                                     .buttonStyle(.plain)
                                                 }
-                                                // The BYO-key retry (prd §67) — a verb,
-                                                // never a fallback: the question and its
-                                                // matched things leave this iPhone only
-                                                // on this tap, straight to Anthropic.
-                                                if !keyedCurrent, keyAvailable,
+                                                // The BYO-key retries (prd §67, ruling
+                                                // 2026-07-14: one chip per connected
+                                                // provider) — verbs, never fallbacks:
+                                                // the question and its matched things
+                                                // leave this iPhone only on the tap, and
+                                                // the chip NAMES where they go.
+                                                if keyedCurrent == nil,
                                                    !currentQuestion.isEmpty {
-                                                    Button { askWithKey() } label: {
-                                                        Chip(text: "Try with your key",
-                                                             glyph: "key.fill")
+                                                    ForEach(keyedProviders, id: \.rawValue) { provider in
+                                                        Button { askWithKey(provider) } label: {
+                                                            Chip(text: "Try with \(provider.label)",
+                                                                 glyph: "key.fill")
+                                                        }
+                                                        .buttonStyle(.plain)
                                                     }
-                                                    .buttonStyle(.plain)
                                                 }
                                             }
                                             .padding(.horizontal, DS.Space.s4)
+                                            }
                                         }
                                     }
                                 }
@@ -684,17 +696,17 @@ struct Composer: View {
         turns = []
         currentQuestion = ""
         keptCurrent = false
-        keyedCurrent = false
+        keyedCurrent = nil
         inFlight = false
         askGeneration += 1   // any in-flight answer Task retires silently
     }
 
     /// The small honest mark a keyed answer wears — where it was made, stated
     /// plainly, on the answer itself and on its settled turn.
-    private var keyedBadge: some View {
+    private func keyedBadge(_ provider: AIProvider) -> some View {
         HStack(spacing: DS.Space.s1) {
             Image(systemName: "key.fill").font(.system(size: 10))
-            Text("Answered with your key")
+            Text("Answered with \(provider.label)")
         }
         .dsText(.label12)
         .foregroundStyle(DS.textTertiary)
@@ -702,40 +714,41 @@ struct Composer: View {
     }
 
     /// The BYO-key retry: the same question, re-answered by the person's own
-    /// Anthropic key. The on-device answer settles into the thread first, so
-    /// the two sit side by side — the tap is the consent, the badge is the
-    /// receipt, and a failure is worded plainly (never faked).
-    private func askWithKey() {
+    /// key for the provider whose chip they tapped. The on-device answer
+    /// settles into the thread first, so the two sit side by side — the tap
+    /// is the consent, the named badge is the receipt, and a failure is
+    /// worded plainly (never faked).
+    private func askWithKey(_ provider: AIProvider) {
         let q = currentQuestion
         guard !q.isEmpty, !inFlight else { return }
         DSHaptic.tap()
         withAnimation(DS.Motion.standard) {
             if answering {
                 turns.append(ConvoTurn(question: currentQuestion, els: answerStream.els,
-                                       keyed: keyedCurrent))
+                                       keyedWith: keyedCurrent))
             }
             answering = true
             inFlight = true
-            keyedCurrent = true
+            keyedCurrent = provider
             keptCurrent = false
             currentStreamed = false
         }
         askGeneration += 1
         let gen = askGeneration
-        answerStream.paint(["root = Stack([w])", "w = Insight(\"Asking with your key…\")"])
+        answerStream.paint(["root = Stack([w])", "w = Insight(\"Asking \(provider.label)…\")"])
         Task { @MainActor in
-            let doc = await answerWithKey(q)
+            let doc = await answerWithKey(q, provider)
             // Closed, or a newer ask overtook this one — retire silently.
             guard isOpen, gen == askGeneration else { return }
             inFlight = false
-            keyAvailable = AIKey.isConfigured
+            keyedProviders = AIKey.connected
             if let doc {
                 currentStreamed = true   // a keyed synthesis is keepable too
                 answerStream.stream(doc)
             } else {
-                keyedCurrent = false     // no keyed answer arrived — no badge
+                keyedCurrent = nil       // no keyed answer arrived — no badge
                 answerStream.stream(["root = Stack([w])",
-                                     "w = Insight(\"That didn't go through — check your key in Settings, or your connection.\")"])
+                                     "w = Insight(\"That didn't go through — check your \(provider.label) key, or your connection.\")"])
             }
         }
     }
@@ -1045,13 +1058,13 @@ struct Composer: View {
             // ask or close, so its typewriter reveal never gets cut.
             if answering {
                 turns.append(ConvoTurn(question: currentQuestion, els: answerStream.els,
-                                       keyed: keyedCurrent))
+                                       keyedWith: keyedCurrent))
             }
             answering = true
             currentQuestion = draft
             keptCurrent = false
             currentStreamed = false
-            keyedCurrent = false
+            keyedCurrent = nil
             inFlight = true
             askGeneration += 1
             let gen = askGeneration
@@ -1097,7 +1110,7 @@ struct Composer: View {
                 // the typewriter (unchanged behaviour).
                 proseStreaming = false
                 inFlight = false
-                keyAvailable = AIKey.isConfigured   // one read per settle
+                keyedProviders = AIKey.connected   // one read per settle
                 if streamed { answerStream.paint(finalDoc) }
                 else { answerStream.stream(finalDoc) }
                 fieldFocused = true     // ready for the next follow-up

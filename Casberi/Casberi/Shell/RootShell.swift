@@ -314,27 +314,35 @@ struct RootShell: View {
                 }
             }
             // Debug hooks for the BYO-key path: `-byokKey <key>` stores a key
-            // headlessly (or "clear" to remove it); `-byokProbe "<query>"` runs
-            // the keyed answer path and logs the doc — with a bogus key it
-            // verifies the honest failure path without spending anything.
+            // headlessly (provider detected from its shape; prefix a provider
+            // for shapeless keys, e.g. "venice:<key>"; "clear" removes every
+            // key). `-byokProbe "<query>"` runs the keyed answer path against
+            // the first connected provider (or prefix one: "venice:<query>")
+            // and logs the doc — with a bogus key it verifies the honest
+            // failure path without spending anything.
             if let raw = UserDefaults.standard.string(forKey: "byokKey") {
                 if raw == "clear" {
-                    AIKey.clear()
+                    AIProvider.allCases.forEach(AIKey.clear)
+                } else if let (provider, key) = providerPrefixed(raw) {
+                    AIKey.set(key, provider: provider)
                 } else if let provider = AIProvider.detect(raw) {
                     AIKey.set(raw, provider: provider)
                 } else {
-                    NSLog("[Casberi] byokKey: unrecognized key shape — not stored")
+                    NSLog("[Casberi] byokKey: unrecognized key shape — not stored (prefix a provider, e.g. venice:<key>)")
                 }
-                NSLog("[Casberi] byokKey: configured=%d provider=%@ hint=%@",
-                      AIKey.isConfigured ? 1 : 0, AIKey.provider.rawValue, AIKey.hint)
+                let connected = AIKey.connected.map(\.rawValue).joined(separator: ",")
+                NSLog("[Casberi] byokKey: connected=%@", connected.isEmpty ? "none" : connected)
             }
-            if let q = UserDefaults.standard.string(forKey: "byokProbe") {
+            if let raw = UserDefaults.standard.string(forKey: "byokProbe") {
+                let parsed = providerPrefixed(raw)
+                let q = parsed?.1 ?? raw
+                let provider = parsed?.0 ?? AIKey.connected.first ?? .anthropic
                 Task {
                     await EmbeddingIndex.indexPending(context: modelContext)
                     let start = Date()
-                    let doc = await keyedAnswerDocument(q)
+                    let doc = await keyedAnswerDocument(q, provider: provider)
                     let ms = Int(Date().timeIntervalSince(start) * 1000)
-                    NSLog("[Casberi] byokProbe(\"%@\") %dms →\n%@", q, ms,
+                    NSLog("[Casberi] byokProbe(%@, \"%@\") %dms →\n%@", provider.rawValue, q, ms,
                           doc?.joined(separator: "\n") ?? "nil (key/network failed — composer words it)")
                 }
             }
@@ -827,18 +835,29 @@ struct RootShell: View {
     }
 
     /// The BYO-key retry (prd §67) — the same question over the SAME evidence
-    /// the on-device answer saw (`lastAnswerHits`), synthesized by the person's
-    /// own AI key (Claude, GPT, or Gemini), device→API direct. nil means the
-    /// key or the network failed and the composer words that; an empty
-    /// grounding gets an honest line instead, because a stronger model can't
-    /// change what's here.
-    private func keyedAnswerDocument(_ query: String) async -> [String]? {
+    /// the on-device answer saw (`lastAnswerHits`), synthesized by the one
+    /// provider whose chip was tapped (Claude, GPT, Gemini, or Venice),
+    /// device→API direct. nil means the key or the network failed and the
+    /// composer words that; an empty grounding gets an honest line instead,
+    /// because a stronger model can't change what's here.
+    /// Splits a probe argument's optional provider prefix — "venice:sk123" →
+    /// (.venice, "sk123"). nil when the head names no provider (a bare key or
+    /// query, which may itself contain colons).
+    private func providerPrefixed(_ raw: String) -> (AIProvider, String)? {
+        guard let colon = raw.firstIndex(of: ":"),
+              let provider = AIProvider(rawValue: String(raw[..<colon])) else { return nil }
+        let rest = String(raw[raw.index(after: colon)...])
+        return rest.isEmpty ? nil : (provider, rest)
+    }
+
+    private func keyedAnswerDocument(_ query: String, provider: AIProvider) async -> [String]? {
         let hits = lastAnswerHits.isEmpty ? retrieve(query) : lastAnswerHits
         guard !hits.isEmpty else {
             return proseDoc("Nothing in your things matches that — a bigger model can't change what's here.")
         }
         guard let prose = await AIAnswer.synthesize(query: query,
-                                                    candidates: candidates(hits)) else {
+                                                    candidates: candidates(hits),
+                                                    provider: provider) else {
             return nil
         }
         return proseDoc(prose)
