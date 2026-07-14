@@ -118,21 +118,52 @@
         }
       }
       var shown = rows.filter(function (r) { return r.style.display !== 'none'; });
-      shown.forEach(function (row, k) {
+      // conservation of matter: every card DEALS OUT of the berry — it starts
+      // small at the tile and springs up into its slot
+      var tRect = target.getBoundingClientRect();
+      var tcx = tRect.left + tRect.width / 2, tcy = tRect.top + tRect.height / 2;
+      function dealFrom(row) {
+        var b = row.getBoundingClientRect();
+        var dx = tcx - (b.left + b.width / 2), dy = tcy - (b.top + b.height / 2);
+        row.style.transform = 'translate(' + dx + 'px,' + dy + 'px) scale(.25)';
+      }
+      function launch(row, k) {
+        row.classList.add('in');
+        row.style.transform = '';
+        var bars = row.querySelectorAll('.sbar');
+        setTimeout(function () { bars[0].style.width = widths[k % widths.length][0] + '%'; }, 160);
+        setTimeout(function () { bars[1].style.width = widths[k % widths.length][1] + '%'; }, 310);
+        // once settled, the card floats — slow, out of phase with its neighbors
         setTimeout(function () {
-          row.classList.add('in');
-          var bars = row.querySelectorAll('.sbar');
-          setTimeout(function () { bars[0].style.width = widths[k % widths.length][0] + '%'; }, 130);
-          setTimeout(function () { bars[1].style.width = widths[k % widths.length][1] + '%'; }, 280);
-          // once settled, the card floats — slow, out of phase with its neighbors
-          setTimeout(function () {
-            row.style.animationDuration = (4200 + (k * 337) % 1800) + 'ms';
-            row.style.animationDelay = ((k * 211) % 900) + 'ms';
-            row.classList.add('float');
-          }, 700);
-        }, 110 * k);
+          row.style.animationDuration = (4200 + (k * 337) % 1800) + 'ms';
+          row.style.animationDelay = ((k * 211) % 900) + 'ms';
+          row.classList.add('float');
+        }, 750);
+      }
+      shown.forEach(dealFrom);
+      shown.forEach(function (row, k) {
+        setTimeout(function () { launch(row, k); }, 110 * k);
       });
       if (em) setTimeout(function () { em.classList.add('lit'); }, 110 * shown.length + 350);
+      // one late arrival — things keep landing (once, then calm)
+      setTimeout(function () {
+        if (!panel.parentElement) return;
+        var rr2 = rain.getBoundingClientRect();
+        var last = shown[shown.length - 1];
+        if (!last) return;
+        var lb = last.getBoundingClientRect();
+        if (rr2.bottom - lb.bottom < 70) return;   // no slack, stay calm
+        var late = document.createElement('div');
+        late.className = 'streamrow md';
+        late.style.width = '240px';
+        var lateSrc = srcs[4] || srcs[0];
+        late.innerHTML = '<img src="' + lateSrc + '" alt="">' +
+          '<span class="sbar" style="width:0"></span><span class="sbar thin" style="width:0"></span>';
+        panel.appendChild(late);
+        dealFrom(late);
+        void late.offsetWidth;
+        launch(late, shown.length);
+      }, 110 * shown.length + 2100);
       setTimeout(function () { state = 'rested'; }, 110 * shown.length + 700);
     }, 380);   // a beat at full size before the release
   }
@@ -159,7 +190,7 @@
   target.title = 'Tap to replay';
   target.addEventListener('click', replay);
 
-  setTimeout(absorb, 4200);   // the story plays once, then rests
+  setTimeout(absorb, 3000);   // the story plays once, then rests
 })();
 
 (function scrollSpy() {

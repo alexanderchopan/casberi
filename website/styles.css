@@ -151,11 +151,15 @@ header.hero { text-align: center; padding: 12px 0 64px; }
 }
 .hero h1 em {
   font-style: normal;
-  background: linear-gradient(120deg, var(--blue-bright), var(--berry));
+  background: linear-gradient(120deg, var(--blue-bright), var(--berry), var(--blue-bright), var(--berry));
+  background-size: 300% 100%;
+  background-position: 100% 0;
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
 }
+.hero h1 em.lit { animation: emsweep 1.2s cubic-bezier(.3,.5,.3,1) 1; }
+@keyframes emsweep { from { background-position: 0% 0; } to { background-position: 100% 0; } }
 .hero p.sub {
   font-size: clamp(17px, 2.4vw, 21px);
   color: var(--muted);
@@ -823,3 +827,10 @@ footer .tagline { font-size: 16px; font-weight: 600; color: var(--ink); margin-b
 .streamrow .sbar { display: block; height: 9px; border-radius: 5px;
   background: rgba(255,255,255,.16); transition: width .5s cubic-bezier(.3,.6,.3,1); }
 .streamrow .sbar.thin { height: 7px; background: rgba(255,255,255,.09); }
+
+/* Hero act 1: the rested pile sits scattered, not gridded — chaos before order */
+.rain > *:nth-child(2n)  { rotate: 3deg;  translate: 2px -2px; }
+.rain > *:nth-child(3n)  { rotate: -4deg; translate: -3px 2px; }
+.rain > *:nth-child(5n)  { rotate: 6deg;  translate: 4px 3px; }
+.rain > *:nth-child(7n)  { rotate: -6deg; translate: -2px -3px; }
+.rain > *:nth-child(11n) { rotate: 2deg;  translate: 3px 0; }
