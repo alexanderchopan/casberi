@@ -63,11 +63,16 @@ enum ScreenshotIngest {
         return added
     }
 
-    /// The screenshot corpus heals itself (2026-07-10). Two passes over every
-    /// Photos screenshot thing:
+    /// The screenshot corpus heals itself (2026-07-10). Three passes over
+    /// every Photos screenshot thing:
     ///   1. THUMBNAIL — a thing whose asset still exists but carries no stored
     ///      picture gets a small JPEG saved into the corpus, so the row
     ///      survives the original later leaving Photos.
+    ///   1b. OCR (prd §67 ⑤) — a thing whose text was never read gets it read
+    ///      off the pixels into `content` (bounded per pass, `ocrAt` marks the
+    ///      attempt either way), so search, the semantic index, Spotlight, and
+    ///      answers see what the screenshot SAYS. The embedding clears so the
+    ///      foreground sweep re-embeds with the new words.
     ///   2. RECONCILE — a thing whose asset is CONFIRMED gone (full library
     ///      access, the fetch finds nothing, and no thumbnail was ever saved)
     ///      is removed: it could only ever render as its hue-field fallback
@@ -76,12 +81,12 @@ enum ScreenshotIngest {
     ///      indistinguishable from a deleted one, and re-granting would have
     ///      brought it back.
     @MainActor
-    static func heal(context: ModelContext) async -> (thumbed: Int, removed: Int) {
+    static func heal(context: ModelContext) async -> (thumbed: Int, ocred: Int, removed: Int) {
         let descriptor = FetchDescriptor<Thing>(predicate: #Predicate { $0.source == "Photos" })
         // Kind filters run in memory — #Predicate can't compare Codable enums.
         let things = ((try? context.fetch(descriptor)) ?? [])
             .filter { $0.kind == .screenshot && $0.sourceRef != nil }
-        guard !things.isEmpty else { return (0, 0) }
+        guard !things.isEmpty else { return (0, 0, 0) }
 
         let ids = things.map { $0.sourceRef!.replacingOccurrences(of: "phasset:", with: "") }
         var found: Set<String> = []
@@ -93,8 +98,9 @@ enum ScreenshotIngest {
             }
         let fullAccess = PHPhotoLibrary.authorizationStatus(for: .readWrite) == .authorized
 
-        var thumbed = 0, removed = 0
+        var thumbed = 0, ocred = 0, removed = 0
         var removedIDs: [UUID] = []
+        var reindex: [Thing] = []
         for (thing, id) in zip(things, ids) {
             if let asset = assets[id] {
                 // Bound the per-refresh work — the rest heal on later passes.
@@ -103,17 +109,29 @@ enum ScreenshotIngest {
                     thing.previewImageData = data
                     thumbed += 1
                 }
+                // OCR is heavier than a thumbnail — a tighter bound; `ocrAt`
+                // marks the attempt so a text-less photo is never re-read.
+                if thing.ocrAt == nil, ocred < 12 {
+                    if let text = await ScreenshotOCR.text(for: asset) {
+                        thing.content = text
+                        thing.embedding = nil   // re-embed with the new words
+                        reindex.append(thing)   // Spotlight learns them too
+                    }
+                    thing.ocrAt = .now
+                    ocred += 1
+                }
             } else if fullAccess, thing.previewImageData == nil, !found.contains(id) {
                 removedIDs.append(thing.id)
                 context.delete(thing)
                 removed += 1
             }
         }
-        if thumbed > 0 || removed > 0 {
+        if thumbed > 0 || ocred > 0 || removed > 0 {
             try? context.save()
             SpotlightIndex.remove(ids: removedIDs)
+            SpotlightIndex.index(reindex)
         }
-        return (thumbed, removed)
+        return (thumbed, ocred, removed)
     }
 
     /// One small JPEG for the corpus — 480pt longest side is retina-sharp at

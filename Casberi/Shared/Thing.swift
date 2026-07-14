@@ -151,6 +151,12 @@ final class Thing {
     /// not-yet-indexed; an empty `Data` means "indexed, but unembeddable".
     var embedding: Data? = nil
 
+    /// When a screenshot's text was last read off its pixels (Vision OCR,
+    /// prd §67 goal ⑤) — set even when no text was found, so text-less
+    /// screenshots aren't re-read on every heal pass. nil = not yet tried.
+    /// Optional + default nil keeps CloudKit mirroring happy.
+    var ocrAt: Date? = nil
+
     init(
         id: UUID = UUID(),
         kind: ThingKind,

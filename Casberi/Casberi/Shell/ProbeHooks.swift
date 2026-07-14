@@ -270,9 +270,10 @@ enum ProbeHooks {
                 let all = ((try? context.fetch(FetchDescriptor<Thing>(
                     predicate: #Predicate { $0.source == "Photos" }))) ?? [])
                     .filter { $0.kind == .screenshot }
-                NSLog("Photos heal probe: auth=%d, %d thumbed, %d removed, %d/%d have stored thumbs",
-                      auth.rawValue, r.thumbed, r.removed,
-                      all.filter { $0.previewImageData != nil }.count, all.count)
+                NSLog("Photos heal probe: auth=%d, %d thumbed, %d OCRed, %d removed, %d/%d have stored thumbs, %d carry text",
+                      auth.rawValue, r.thumbed, r.ocred, r.removed,
+                      all.filter { $0.previewImageData != nil }.count, all.count,
+                      all.filter { !$0.content.isEmpty }.count)
             }
         },
         // `-setHomeBanner <color-name|photo>` sets the Home cover
