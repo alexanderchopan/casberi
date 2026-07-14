@@ -68,24 +68,51 @@
     });
   }
 
-  // Act 3 — payoff. One slow breath, a ring ripple, and the glow bleeds into
-  // the headline. Then everything RESTS — grown. No loop; the end state is
-  // the message.
+  // Act 3 — payoff. The grown berry holds a beat, then POPS: its dots burst
+  // out and scatter with gravity, the tile springs back to size, a ring
+  // ripples, and the glow bleeds into the headline. Then everything RESTS.
+  // No loop; the end state is the message.
+  var BERRY_BLUES = ['#61a6f7', '#3b8cf0', '#2f8bf0', '#1673e6', '#0d4fa3'];
   function finale() {
-    target.animate(
-      [{ transform: 'scale(1)' }, { transform: 'scale(1.06)' }, { transform: 'scale(1)' }],
-      { duration: 950, easing: 'cubic-bezier(.4,0,.3,1)', composite: 'add' });
-    var host = target.parentElement;
-    host.style.position = 'relative';
-    var ring = document.createElement('div');
-    ring.style.cssText = 'position:absolute;inset:-4px;border:2px solid rgba(59,140,240,.55);' +
-      'border-radius:26px;pointer-events:none;';
-    host.appendChild(ring);
-    ring.animate(
-      [{ transform: 'scale(1)', opacity: .8 }, { transform: 'scale(2.1)', opacity: 0 }],
-      { duration: 1000, easing: 'cubic-bezier(.2,.6,.3,1)' }).onfinish = function () { ring.remove(); };
-    if (em) em.classList.add('lit');
-    setTimeout(function () { state = 'rested'; }, 1100);
+    setTimeout(function () {
+      var r = target.getBoundingClientRect();
+      var cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+      // the berry releases its dots
+      for (var k = 0; k < 16; k++) {
+        var dot = document.createElement('div');
+        var size = 7 + Math.round((k * 7919) % 11);            // 7–17px, deterministic
+        var color = BERRY_BLUES[k % BERRY_BLUES.length];
+        dot.style.cssText = 'position:fixed;left:' + (cx - size / 2) + 'px;top:' + (cy - size / 2) +
+          'px;width:' + size + 'px;height:' + size + 'px;border-radius:50%;background:' + color +
+          ';pointer-events:none;z-index:60;';
+        document.body.appendChild(dot);
+        var ang = (k / 16) * Math.PI * 2 + ((k * 2654435761) % 100) / 260;
+        var dist = 60 + ((k * 40503) % 90);
+        var dx = Math.cos(ang) * dist, dy = Math.sin(ang) * dist - 46;
+        dot.animate([
+          { transform: 'translate(0,0) scale(.5)', opacity: 1, easing: 'cubic-bezier(.15,.7,.4,1)' },
+          { transform: 'translate(' + dx + 'px,' + dy + 'px) scale(1)', opacity: .95, offset: .55 },
+          { transform: 'translate(' + (dx * 1.25) + 'px,' + (dy + 130) + 'px) scale(.7)', opacity: 0 }
+        ], { duration: 1050 + ((k * 613) % 350), easing: 'cubic-bezier(.35,0,.6,1)' });
+        (function (el) { setTimeout(function () { el.remove(); }, 1600); })(dot);
+      }
+      // the tile springs back to size — it let the energy out
+      target.style.transform = 'scale(1)';
+      target.animate(
+        [{ transform: 'scale(1.06)' }, { transform: 'scale(.95)' }, { transform: 'scale(1)' }],
+        { duration: 520, easing: 'cubic-bezier(.34,1.56,.64,1)', composite: 'add' });
+      var host = target.parentElement;
+      host.style.position = 'relative';
+      var ring = document.createElement('div');
+      ring.style.cssText = 'position:absolute;inset:-4px;border:2px solid rgba(59,140,240,.55);' +
+        'border-radius:26px;pointer-events:none;';
+      host.appendChild(ring);
+      ring.animate(
+        [{ transform: 'scale(1)', opacity: .8 }, { transform: 'scale(2.3)', opacity: 0 }],
+        { duration: 1000, easing: 'cubic-bezier(.2,.6,.3,1)' }).onfinish = function () { ring.remove(); };
+      if (em) em.classList.add('lit');
+      setTimeout(function () { state = 'rested'; }, 1200);
+    }, 420);   // hold the grown berry a beat before the pop
   }
 
   // Replay — tap the berry: everything scatters back out, then gathers again.
