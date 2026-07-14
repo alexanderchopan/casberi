@@ -117,10 +117,17 @@ extension DS {
     /// The brand hue as a CARD fill — a near-black brand mark (X's, #000000)
     /// would render its story card as an empty void, so a too-dark hue lifts
     /// toward the app tint instead of showing raw (design audit fix,
-    /// 2026-07-12). Icons and other identity uses keep the true `brandHue`;
-    /// only this fill-legibility path substitutes.
+    /// 2026-07-12). A near-WHITE mark (ChatGPT's #ffffff) is the mirror
+    /// failure — white card, white text, nothing visible (user report
+    /// 2026-07-14) — and a neutral mark has no honest hue to show, so it
+    /// takes the tint card outright, same ground the Pair card wears. Icons
+    /// and other identity uses keep the true `brandHue`; only this
+    /// fill-legibility path substitutes.
     static func legibleCardFill(for source: String) -> Color {
         let hue = brandHue(for: source) ?? DS.tint
-        return luminance(of: hue) < 0.12 ? hue.mix(with: DS.tint, by: 0.6) : hue
+        let lum = luminance(of: hue)
+        if lum < 0.12 { return hue.mix(with: DS.tint, by: 0.6) }
+        if lum > 0.90 { return DS.tint }
+        return hue
     }
 }
