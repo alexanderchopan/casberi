@@ -54,8 +54,14 @@ final class BridgeStore {
     @discardableResult
     func registerConnected(id: String, name: String, proof: String,
                            can: [String]) -> Bool {
-        if let existing = bridges.first(where: { $0.name == name }) {
-            reconnect(existing.id, proof: proof)
+        if let i = bridges.firstIndex(where: { $0.name == name }) {
+            reconnect(bridges[i].id, proof: proof)
+            // A seat can carry more than one verb now (an import AND a key,
+            // 2026-07-14) — a re-register merges its capability lines instead
+            // of dropping them, so the second verb lands on the tile.
+            for line in can where !bridges[i].can.contains(line) {
+                bridges[i].can.append(line)
+            }
             return false
         }
         bridges.append(BridgeApp(id: id, name: name, status: .connected,

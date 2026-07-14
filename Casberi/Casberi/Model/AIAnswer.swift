@@ -37,10 +37,54 @@ enum AIKey {
     static func isConnected(_ provider: AIProvider) -> Bool { key(for: provider) != nil }
 
     /// The providers with a key saved, in the fixed catalog order — the
-    /// composer's chip row and the settings overview both read this.
-    static var connected: [AIProvider] { AIProvider.allCases.filter(isConnected) }
+    /// composer's chip row and the settings overview both read this. ONE
+    /// batched Keychain read, not one per provider: callers sit on render
+    /// paths (the settings grid re-renders mid-animation).
+    static var connected: [AIProvider] {
+        _ = migrated
+        let stored = TokenVault.accounts(withPrefix: "token.ai.")
+        return AIProvider.allCases.filter { stored.contains($0.slotKey) }
+    }
 
     static var isConfigured: Bool { !connected.isEmpty }
+
+    /// The seat's proof line while a key powers answers — one constant so
+    /// disconnect can recognize a key-written proof and replace it honestly.
+    static var keyProof: String { String(localized: "Key connected — powers answers") }
+
+    /// The ONE connect path every key surface calls (the settings paste field
+    /// and each provider's app page): validates against the provider — no
+    /// dead key, honesty rule — saves, and seats the app in BridgeStore, so
+    /// the Apps tile and the composer never disagree about the same key.
+    /// The outcome distinguishes a rejection from an unreachable network:
+    /// blaming the key for airplane mode would be a fabricated "no".
+    @MainActor
+    static func connect(_ key: String, provider: AIProvider,
+                        store: BridgeStore) async -> AIAnswer.KeyCheck {
+        let trimmed = key.trimmingCharacters(in: .whitespacesAndNewlines)
+        let check = await AIAnswer.validate(trimmed, provider: provider)
+        guard check == .accepted else { return check }
+        set(trimmed, provider: provider)
+        store.registerConnected(id: provider.seatID, name: provider.offerName,
+                                proof: keyProof, can: [provider.keyCanLine])
+        return .accepted
+    }
+
+    /// The ONE disconnect path: clears the key and keeps the seat honest —
+    /// the key's capability line comes off the seat; a seat with nothing
+    /// left (Gemini, Venice, or an un-imported Claude/ChatGPT) unregisters
+    /// entirely, while one that also imported keeps its import fact.
+    @MainActor
+    static func disconnect(_ provider: AIProvider, store: BridgeStore) {
+        clear(provider)
+        guard let i = store.bridges.firstIndex(where: { $0.id == provider.seatID }) else { return }
+        store.bridges[i].can.removeAll { $0 == provider.keyCanLine }
+        if store.bridges[i].can.isEmpty {
+            store.remove(provider.seatID)
+        } else if store.bridges[i].statusLine == keyProof {
+            store.bridges[i].statusLine = String(localized: "Key removed — imports stay")
+        }
+    }
 
     static func set(_ key: String, provider: AIProvider) {
         _ = migrated
@@ -72,9 +116,14 @@ enum AIKey {
 /// here, so `synthesize` is one flow for all of them and adding a provider
 /// touches only these switches (plus `AIProvider`).
 enum AIAnswer {
+    /// A key check's honest outcome — the provider saying no and the network
+    /// never carrying the question are different facts, and the copy that
+    /// follows must not blame the key for a dead connection.
+    enum KeyCheck { case accepted, rejected, unreachable }
+
     /// Checks a key against its provider before it's saved — a cheap models
-    /// read, no tokens billed. True means the provider accepted the key.
-    static func validate(_ key: String, provider: AIProvider) async -> Bool {
+    /// read, no tokens billed.
+    static func validate(_ key: String, provider: AIProvider) async -> KeyCheck {
         let trimmed = key.trimmingCharacters(in: .whitespacesAndNewlines)
         var request: URLRequest
         switch provider {
@@ -93,8 +142,8 @@ enum AIAnswer {
             request.setValue("Bearer \(trimmed)", forHTTPHeaderField: "Authorization")
         }
         guard let (_, response) = try? await URLSession.shared.data(for: request),
-              let http = response as? HTTPURLResponse else { return false }
-        return http.statusCode == 200
+              let http = response as? HTTPURLResponse else { return .unreachable }
+        return http.statusCode == 200 ? .accepted : .rejected
     }
 
     /// Synthesizes a grounded answer over the retrieved candidates with the

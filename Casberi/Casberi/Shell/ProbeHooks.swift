@@ -211,7 +211,10 @@ enum ProbeHooks {
         // credential wipe + MCP pairing reset) and logs before/after state —
         // the tray's confirm is the same code with consent in front.
         Hook(key: "wipeAccessProbe") { _, _ in
-            let sampled = [TokenBridge.todoist.tokenKey]
+            // The legacy single-key slot rides along: an upgraded install may
+            // still hold it (probes can run before anything triggers AIKey's
+            // migration), and the wipe's evidence must not miss a real key.
+            let sampled = [TokenBridge.todoist.tokenKey, "token.anthropic-key"]
                 + AIProvider.allCases.map(\.slotKey)
             let before = sampled.filter { TokenVault.get($0) != nil }.count
             TokenVault.deleteAll()

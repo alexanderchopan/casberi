@@ -59,10 +59,11 @@ struct OnboardingView: View {
                                "Telegram", "Slack", "X", "Notion", "Reddit",
                                "YouTube", "Todoist", "RSS", "ChatGPT",
                                "Linear", "Raindrop", "Readwise", "Tokens",
-                               "Venice", "OpenClaw", "Cal.com", "Calendly",
+                               "Venice", "Gemini", "OpenClaw", "Cal.com",
+                               "Calendly",
                                "iCloud Mail", "Apple Music", "Apple Health",
                                "Reminders", "Calendar", "Photos"]
-    private static let appleRowStart = 25
+    private static let appleRowStart = 26
     /// False = above the screen · true = settled in the glass.
     @State private var cubesLanded = false
 

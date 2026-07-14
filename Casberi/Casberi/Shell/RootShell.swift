@@ -840,16 +840,6 @@ struct RootShell: View {
     /// device→API direct. nil means the key or the network failed and the
     /// composer words that; an empty grounding gets an honest line instead,
     /// because a stronger model can't change what's here.
-    /// Splits a probe argument's optional provider prefix — "venice:sk123" →
-    /// (.venice, "sk123"). nil when the head names no provider (a bare key or
-    /// query, which may itself contain colons).
-    private func providerPrefixed(_ raw: String) -> (AIProvider, String)? {
-        guard let colon = raw.firstIndex(of: ":"),
-              let provider = AIProvider(rawValue: String(raw[..<colon])) else { return nil }
-        let rest = String(raw[raw.index(after: colon)...])
-        return rest.isEmpty ? nil : (provider, rest)
-    }
-
     private func keyedAnswerDocument(_ query: String, provider: AIProvider) async -> [String]? {
         let hits = lastAnswerHits.isEmpty ? retrieve(query) : lastAnswerHits
         guard !hits.isEmpty else {
@@ -861,6 +851,23 @@ struct RootShell: View {
             return nil
         }
         return proseDoc(prose)
+    }
+
+    /// Splits a probe argument's optional provider prefix — "venice:sk123" →
+    /// (.venice, "sk123"). The head matches any of the provider's names
+    /// (rawValue "google", seat "gemini", label "Gemini", offer "ChatGPT"),
+    /// so the hook takes the name a person would actually type. A space
+    /// after the colon means prose, not a prefix ("venice: best trattoria"
+    /// stays a whole query about Venice, Italy). nil = no prefix.
+    private func providerPrefixed(_ raw: String) -> (AIProvider, String)? {
+        guard let colon = raw.firstIndex(of: ":") else { return nil }
+        let head = String(raw[..<colon]).lowercased()
+        guard let provider = AIProvider.allCases.first(where: {
+            [$0.rawValue, $0.seatID, $0.label.lowercased(), $0.offerName.lowercased()].contains(head)
+        }) else { return nil }
+        let rest = String(raw[raw.index(after: colon)...])
+        guard !rest.isEmpty, !rest.hasPrefix(" ") else { return nil }
+        return (provider, rest)
     }
 
     /// Retrieved things flattened for the model — the one place the mapping

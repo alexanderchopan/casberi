@@ -4,8 +4,9 @@ import SwiftUI
 /// List sections a provider's app page embeds: status, paste field, remove.
 /// Claude and ChatGPT's import screens append this under their import; Gemini
 /// and Venice's whole setup screen IS this (they have nothing to import).
-/// Validates against the provider before saving (no dead key, honesty rule)
-/// and seats the app in BridgeStore so the catalog tile wears its state.
+/// Connect/disconnect go through AIKey's one shared path, which validates
+/// before saving (no dead key, honesty rule) and seats/unseats the app in
+/// BridgeStore so the catalog tile always tells the truth.
 struct AIKeySection: View {
     let provider: AIProvider
     @Environment(BridgeStore.self) private var store
@@ -13,12 +14,13 @@ struct AIKeySection: View {
     @State private var checking = false
     @State private var result: String?
     @State private var resultIsError = false
-    @State private var connected: Bool
+    /// The saved key's hint ("…3kQA"), nil when no key — mirrored state, not
+    /// a per-render Keychain read (typing in the field re-renders per
+    /// keystroke). Refreshed on appear so a removal made in Settings while
+    /// this page sits in the nav stack can't leave stale connected copy.
+    @State private var hint: String?
 
-    init(provider: AIProvider) {
-        self.provider = provider
-        _connected = State(initialValue: AIKey.isConnected(provider))
-    }
+    private var connected: Bool { hint != nil }
 
     var body: some View {
         Section {
@@ -28,7 +30,7 @@ struct AIKeySection: View {
                         .font(.system(size: 13, weight: .semibold))
                         .foregroundStyle(connected ? DS.confirm : DS.textTertiary)
                     Text(connected
-                            ? "Key connected \(AIKey.hint(provider)) — answers offer \"Try with \(provider.label)\""
+                            ? "Key connected \(hint ?? "") — answers offer \"Try with \(provider.label)\""
                             : "Answers run on this iPhone until you add one")
                         .dsText(.subhead13)
                         .foregroundStyle(connected ? DS.textPrimary : DS.textSecondary)
@@ -48,11 +50,12 @@ struct AIKeySection: View {
             Text("Get a key at \(provider.console). Every answer then offers \"Try with \(provider.label)\" — the question and the few matched things go straight from this iPhone to \(provider.offerName)'s API, only when you tap, billed to your key. It stays in this iPhone's Keychain.")
                 .dsText(.callout15).foregroundStyle(DS.textTertiary)
         }
+        .onAppear { refresh() }
         if connected {
             Section {
                 Button("Remove key", role: .destructive) {
-                    AIKey.clear(provider)
-                    connected = false
+                    AIKey.disconnect(provider, store: store)
+                    refresh()
                     result = String(localized: "Removed — answers stay on this iPhone.")
                     resultIsError = false
                     DSHaptic.tap()
@@ -66,50 +69,48 @@ struct AIKeySection: View {
         }
     }
 
-    /// Saves only after the provider accepts the key — checked here, where the
-    /// provider is KNOWN from the page you're on (no shape-guessing needed, so
-    /// Venice's prefix-less keys work like anyone's).
+    private func refresh() {
+        hint = AIKey.isConnected(provider) ? AIKey.hint(provider) : nil
+    }
+
+    /// Connect through the one shared path — validated by the provider (the
+    /// page names it, so Venice's prefix-less keys need no shape-guessing),
+    /// saved, and seated in BridgeStore.
     private func connect() {
         let candidate = keyField.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !candidate.isEmpty, !checking else { return }
         checking = true
         result = nil
         Task { @MainActor in
-            let ok = await AIAnswer.validate(candidate, provider: provider)
+            let outcome = await AIKey.connect(candidate, provider: provider, store: store)
             checking = false
-            if ok {
-                AIKey.set(candidate, provider: provider)
+            switch outcome {
+            case .accepted:
                 keyField = ""
-                connected = true
+                refresh()
                 resultIsError = false
                 result = String(localized: "Connected — answers now offer \"Try with \(provider.label)\".")
                 DSHaptic.success()
-                store.registerConnected(
-                    id: provider.seatID, name: provider.offerName,
-                    proof: String(localized: "Key connected — powers answers"),
-                    can: ["Answers \"Try with \(provider.label)\" on your tap — device→\(provider.offerName) direct, billed to your key."])
-            } else {
+            case .rejected:
                 resultIsError = true
                 result = String(localized: "\(provider.offerName) didn't accept that key — check it and try again.")
+            case .unreachable:
+                resultIsError = true
+                result = String(localized: "Couldn't reach \(provider.offerName) — check your connection and try again.")
             }
         }
     }
 }
 
 /// The whole setup screen for a provider with nothing to import (Gemini,
-/// Venice) — the key section under a plain explainer, same List grammar as
-/// every other setup screen.
+/// Venice) — the shared product-page header (the catalog's own words) over
+/// the key section, same List grammar as every other setup screen.
 struct AIKeySetupScreen: View {
     let provider: AIProvider
 
     var body: some View {
         List {
-            Section {
-                Text(explainer)
-                    .dsText(.callout15).foregroundStyle(DS.textSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .dsListCardRow()
-            }
+            BridgeSetupHeader(name: provider.offerName)
             AIKeySection(provider: provider)
                 .listRowSeparator(.hidden)
         }
@@ -118,14 +119,5 @@ struct AIKeySetupScreen: View {
         .dsPageBackground()
         .navigationTitle(provider.offerName)
         .navigationBarTitleDisplayMode(.large)
-    }
-
-    private var explainer: String {
-        switch provider {
-        case .venice:
-            String(localized: "Venice keeps chats on your own device by design, so there's nothing to read in — instead, your Venice key can power Casberi's answers. Private by both sides' rules.")
-        default:
-            String(localized: "Your \(provider.offerName) account has nothing for Casberi to read in — instead, your key can power Casberi's answers with \(provider.label).")
-        }
     }
 }

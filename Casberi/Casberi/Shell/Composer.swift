@@ -118,6 +118,10 @@ struct Composer: View {
     /// row can't afford Keychain round-trips per render (typing a follow-up
     /// re-renders per keystroke). One "Try with <name>" chip each.
     @State private var keyedProviders: [AIProvider] = []
+    /// The providers that already answered THIS ask — each retires only its
+    /// own chip, so the others stay offered side by side (ruling 2026-07-14:
+    /// comparable answers). Resets per ask; a failed try un-retires.
+    @State private var triedProviders: Set<AIProvider> = []
 
     /// The keepable text of a synthesis answer — a synthesis is one Insight
     /// carrying the prose (RootShell's proseDoc). Only that shape is worth
@@ -469,10 +473,12 @@ struct Composer: View {
                                                 // provider) — verbs, never fallbacks:
                                                 // the question and its matched things
                                                 // leave this iPhone only on the tap, and
-                                                // the chip NAMES where they go.
-                                                if keyedCurrent == nil,
-                                                   !currentQuestion.isEmpty {
-                                                    ForEach(keyedProviders, id: \.rawValue) { provider in
+                                                // the chip NAMES where they go. A provider
+                                                // that answered retires only ITS chip —
+                                                // the rest stay comparable side by side.
+                                                if !currentQuestion.isEmpty {
+                                                    ForEach(keyedProviders.filter { !triedProviders.contains($0) },
+                                                            id: \.rawValue) { provider in
                                                         Button { askWithKey(provider) } label: {
                                                             Chip(text: "Try with \(provider.label)",
                                                                  glyph: "key.fill")
@@ -697,6 +703,7 @@ struct Composer: View {
         currentQuestion = ""
         keptCurrent = false
         keyedCurrent = nil
+        triedProviders = []
         inFlight = false
         askGeneration += 1   // any in-flight answer Task retires silently
     }
@@ -730,6 +737,7 @@ struct Composer: View {
             answering = true
             inFlight = true
             keyedCurrent = provider
+            triedProviders.insert(provider)
             keptCurrent = false
             currentStreamed = false
         }
@@ -746,7 +754,8 @@ struct Composer: View {
                 currentStreamed = true   // a keyed synthesis is keepable too
                 answerStream.stream(doc)
             } else {
-                keyedCurrent = nil       // no keyed answer arrived — no badge
+                keyedCurrent = nil            // no keyed answer arrived — no badge
+                triedProviders.remove(provider)   // and the chip returns for a retry
                 answerStream.stream(["root = Stack([w])",
                                      "w = Insight(\"That didn't go through — check your \(provider.label) key, or your connection.\")"])
             }
@@ -1065,6 +1074,7 @@ struct Composer: View {
             keptCurrent = false
             currentStreamed = false
             keyedCurrent = nil
+            triedProviders = []
             inFlight = true
             askGeneration += 1
             let gen = askGeneration

@@ -72,6 +72,13 @@ enum AIProvider: String, CaseIterable {
     /// coexist (TokenVault.deleteAll still sweeps them all).
     var slotKey: String { "token.ai.\(rawValue)" }
 
+    /// The capability sentence a connected key adds to the app's seat — one
+    /// constant, so connect can add it and disconnect can find and remove
+    /// exactly it (the seat stays honest in both directions).
+    var keyCanLine: String {
+        String(localized: "Answers \"Try with \(label)\" on your tap — device→\(offerName) direct, billed to your key.")
+    }
+
     /// Recognize a provider from the shape of a pasted key — the settings
     /// overview's one-field paste. Order matters: Anthropic's `sk-ant-` is a
     /// stricter case of OpenAI's `sk-`. Venice keys carry no distinctive

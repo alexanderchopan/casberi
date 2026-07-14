@@ -32,6 +32,24 @@ enum TokenVault {
         SecItemAdd(add as CFDictionary, nil)
     }
 
+    /// Every stored account name with the given prefix, in ONE Keychain
+    /// round-trip — for callers that check several slots per render
+    /// (AIKey.connected), where one read per slot would multiply securityd
+    /// IPCs on the render path.
+    static func accounts(withPrefix prefix: String) -> Set<String> {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecReturnAttributes as String: true,
+            kSecMatchLimit as String: kSecMatchLimitAll,
+        ]
+        var items: CFTypeRef?
+        guard SecItemCopyMatching(query as CFDictionary, &items) == errSecSuccess,
+              let attrs = items as? [[String: Any]] else { return [] }
+        return Set(attrs.compactMap { $0[kSecAttrAccount as String] as? String }
+            .filter { $0.hasPrefix(prefix) })
+    }
+
     static func delete(_ key: String) {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,

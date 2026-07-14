@@ -30,14 +30,16 @@ struct AccountDetailSheet: View {
     @State private var importResult: String?
     @State private var deleteResult: String?
     /// Your AI (prd §67) — draft, outcome line, and a mirrored connected list
-    /// (AIKey isn't observable; actions refresh it by hand).
+    /// with each key's hint (AIKey isn't observable, and the sheet re-renders
+    /// per keystroke in the paste field — Keychain reads can't sit in body).
     @State private var keyDraft = ""
     @State private var keyResult: String?
     /// A rejected key must READ as a failure — same muted gray as success
     /// would look like it saved (honesty rule).
     @State private var keyResultIsError = false
     @State private var keyChecking = false
-    @State private var connectedProviders = AIKey.connected
+    @State private var connectedKeys: [(provider: AIProvider, hint: String)] =
+        AIKey.connected.map { ($0, AIKey.hint($0)) }
 
     var body: some View {
         DSTray(title: title, height: sheetHeight) {
@@ -144,7 +146,7 @@ struct AccountDetailSheet: View {
         switch detail {
         case .data: 530   // two wipes now — things and access, one row each
         // One connected provider fits the base; each further one adds a row.
-        case .key: 460 + CGFloat(max(connectedProviders.count - 1, 0)) * 60
+        case .key: 460 + CGFloat(max(connectedKeys.count - 1, 0)) * 60
         }
     }
 
@@ -189,23 +191,25 @@ struct AccountDetailSheet: View {
     /// to us (there is no us to send them to).
     private var keyCard: some View {
         VStack(alignment: .leading, spacing: DS.Space.s4) {
-            if connectedProviders.isEmpty {
+            if connectedKeys.isEmpty {
                 aliveRow("key.fill", DS.textSecondary,
                          "Your AI keys",
                          "Answers run on this iPhone until you add one")
             } else {
-                ForEach(connectedProviders, id: \.rawValue) { provider in
+                ForEach(connectedKeys, id: \.provider.rawValue) { entry in
                     HStack(spacing: DS.Space.s3) {
                         aliveRow("key.fill", DS.confirm,
-                                 provider.label,
-                                 "In the Keychain \(AIKey.hint(provider))")
+                                 entry.provider.label,
+                                 "In the Keychain \(entry.hint)")
                         Spacer(minLength: 0)
                         Button {
                             DSHaptic.tap()
-                            AIKey.clear(provider)
-                            connectedProviders = AIKey.connected
+                            // The shared disconnect — the key goes AND the
+                            // app's seat stops claiming it (honesty rule).
+                            AIKey.disconnect(entry.provider, store: store)
+                            refreshKeys()
                             keyResultIsError = false
-                            keyResult = "\(provider.label) removed — answers stay on this iPhone."
+                            keyResult = "\(entry.provider.label) removed — answers stay on this iPhone."
                         } label: {
                             Image(systemName: "trash")
                                 .font(.system(size: 15, weight: .semibold))
@@ -251,11 +255,18 @@ struct AccountDetailSheet: View {
         }
     }
 
-    /// Saves a key only after its provider accepts it — no dead key sitting
-    /// in the Keychain claiming a capability it can't deliver (honesty rule).
-    /// The provider is read from the key's shape; a shape nobody claims is
-    /// rejected up front rather than guessed at (Venice's shapeless keys
-    /// connect from its app page, where the provider is known).
+    /// Re-reads the connected keys after any action — the one mirror the
+    /// whole card renders from.
+    private func refreshKeys() {
+        connectedKeys = AIKey.connected.map { ($0, AIKey.hint($0)) }
+    }
+
+    /// The settings paste path — detect the provider from the key's shape (a
+    /// shape nobody claims is rejected up front, never guessed at; Venice's
+    /// shapeless keys connect from its app page, where the provider is
+    /// known), then the SAME shared connect the app pages use: validated by
+    /// the provider, saved, and seated in BridgeStore — so the Apps tile and
+    /// this sheet never disagree about the same key.
     private func saveKey() {
         let candidate = keyDraft.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !candidate.isEmpty else { return }
@@ -267,18 +278,21 @@ struct AccountDetailSheet: View {
         keyChecking = true
         keyResult = nil
         Task { @MainActor in
-            let ok = await AIAnswer.validate(candidate, provider: provider)
+            let outcome = await AIKey.connect(candidate, provider: provider, store: store)
             keyChecking = false
-            if ok {
-                AIKey.set(candidate, provider: provider)
-                connectedProviders = AIKey.connected
+            switch outcome {
+            case .accepted:
+                refreshKeys()
                 keyDraft = ""
                 DSHaptic.success()
                 keyResultIsError = false
                 keyResult = "Saved — answers now offer \"Try with \(provider.label)\"."
-            } else {
+            case .rejected:
                 keyResultIsError = true
                 keyResult = "\(provider.label) didn't accept that key — check it and try again."
+            case .unreachable:
+                keyResultIsError = true
+                keyResult = "Couldn't reach \(provider.offerName) — check your connection and try again."
             }
         }
     }
@@ -530,8 +544,12 @@ struct AccountDetailSheet: View {
         let credentialBacked = Set(
             TokenBridge.allCases.map(\.bridgeID)
             + ["steam", "twitch", "gmail", "icloudmail"]
+            // The AI-key seats (2026-07-14) — their keys just left the vault,
+            // so their tiles stop claiming a connection they no longer have.
+            + AIProvider.allCases.map(\.seatID)
         )
         store.bridges.removeAll { credentialBacked.contains($0.id) }
+        refreshKeys()
         HandOffState.refresh(connected: Set(
             store.bridges.filter { $0.status == .connected }
                 .map { $0.name.lowercased() }))
