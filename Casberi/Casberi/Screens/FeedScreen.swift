@@ -294,7 +294,9 @@ struct FeedScreen: View {
     /// The per-row brand icon is gone too (it doubled the same icon in the
     /// source chip right above) — a status dot carries connection health
     /// instead, same grammar as the OpenClaw presence line below the chips.
-    private func sourceHeader(_ bridge: BridgeApp, showAddHint: Bool) -> some View {
+    private func sourceHeader(_ bridge: BridgeApp, showAddHint: Bool,
+                              headerCompose: SourceAction? = nil) -> some View {
+        HStack(spacing: DS.Space.s2) {
         Button {
             DSHaptic.selection()
             pushedBridge = BridgeRouter.destination(forID: bridge.id)
@@ -337,40 +339,36 @@ struct FeedScreen: View {
             .contentShape(Capsule())
         }
         .buttonStyle(.plain)
+        // Compose folds into this row as a trailing pill — "New event" /
+        // "New email" / "New task" — instead of a full-width bar below (user
+        // ruling 2026-07-14). It leaves for another app, so it stays a
+        // distinct control from the capsule; same neutral surface, tint on
+        // the label alone.
+        if let headerCompose {
+            Spacer(minLength: DS.Space.s2)
+            Button {
+                DSHaptic.selection()
+                if case .openURL(let url) = headerCompose.run { openURL(url) }
+            } label: {
+                HStack(spacing: DS.Space.s1) {
+                    Image(systemName: "plus").font(.system(size: 13, weight: .semibold))
+                    Text(LocalizedStringKey(headerCompose.label))
+                        .dsText(.subhead13).fontWeight(.medium)
+                }
+                .foregroundStyle(DS.tint)
+                .padding(.horizontal, DS.Space.s3)
+                .frame(height: 30)
+                .background(DS.surfaceSheet, in: Capsule(style: .continuous))
+                .contentShape(Capsule())
+            }
+            .buttonStyle(.plain)
+        }
+        }
         .padding(.horizontal, DS.Space.s4)
         // A generous gap above the capsule (2026-07-14, user: s3/12pt read as
         // still touching the chip row) — the chips are the strip, the capsule
         // is clearly its own thing below it.
         .padding(.top, DS.Space.s8)
-        .padding(.bottom, DS.Space.s2)
-    }
-
-    /// The compose row under the header — "New email / task / event", a hand-off
-    /// that leaves for another app, so it earns its own bar (expand actions fold
-    /// into the header's "+ Add" hint instead; user, 2026-07-12). Same neutral
-    /// surface as the header so the two bars read as one color (user,
-    /// 2026-07-13); the tint stays on the label/icon alone.
-    private func sourceActionRow(_ action: SourceAction) -> some View {
-        Button {
-            DSHaptic.selection()
-            if case .openURL(let url) = action.run { openURL(url) }
-        } label: {
-            HStack(spacing: DS.Space.s2) {
-                Image(systemName: action.icon)
-                    .font(.system(size: 15, weight: .semibold))
-                Text(LocalizedStringKey(action.label))
-                    .dsText(.body17).fontWeight(.medium)
-                Spacer(minLength: 0)
-            }
-            .foregroundStyle(DS.tint)
-            .padding(.horizontal, DS.Space.s4)
-            .padding(.vertical, DS.Space.s3)
-            .background(DS.surfaceSheet,
-                        in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .padding(.horizontal, DS.Space.s4)
         .padding(.bottom, DS.Space.s2)
     }
 
@@ -420,9 +418,14 @@ struct FeedScreen: View {
                 // inserts reliably on mount (a standalone conditional row won't).
                 if let bridge = activeSourceBridge {
                     let action = SourceActions.action(forSource: bridge.name)
-                    // Expand (add-another) folds into the header as a "+ Add"
-                    // hint — same destination, one bar. Compose keeps its own row
-                    // (it leaves for another app). Read-only sources get neither.
+                    // Both actions fold into the header row now (user ruling
+                    // 2026-07-14: the full-width compose bar read as an empty
+                    // stretch). Expand (add-another) is a "+" hint inside the
+                    // capsule — same setup screen the capsule already opens.
+                    // Compose is a trailing labeled pill — it leaves for another
+                    // app, a genuinely other place, so it stays a distinct
+                    // control beside the capsule, not folded into it. Read-only
+                    // sources get neither.
                     let composeAction: SourceAction? = {
                         if let action, case .openURL = action.run { return action }
                         return nil
@@ -431,10 +434,8 @@ struct FeedScreen: View {
                         if let action, case .route = action.run { return true }
                         return false
                     }()
-                    sourceHeader(bridge, showAddHint: showsAddHint)
-                    if let composeAction {
-                        sourceActionRow(composeAction)
-                    }
+                    sourceHeader(bridge, showAddHint: showsAddHint,
+                                 headerCompose: composeAction)
                 }
             }
             .listRowBackground(Color.clear)
