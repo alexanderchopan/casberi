@@ -85,7 +85,9 @@
       rain.appendChild(panel);
       var srcs = Array.prototype.slice.call(rain.querySelectorAll('img'))
         .map(function (im) { return im.src; });
-      var picks = [srcs[2], srcs[9], srcs[17], srcs[25]].filter(Boolean);
+      var picks = [srcs[2], srcs[6], srcs[9], srcs[13], srcs[17], srcs[21], srcs[25], srcs[29]]
+        .filter(Boolean);
+      var widths = [[46, 22], [38, 28], [52, 18], [40, 24], [34, 30], [48, 20], [42, 26], [36, 22]];
       picks.forEach(function (src, k) {
         var row = document.createElement('div');
         row.className = 'streamrow';
@@ -95,12 +97,12 @@
         setTimeout(function () {
           row.classList.add('in');
           var bars = row.querySelectorAll('.sbar');
-          setTimeout(function () { bars[0].style.width = '44%'; }, 140);
-          setTimeout(function () { bars[1].style.width = '24%'; }, 320);
-        }, 260 * k);
+          setTimeout(function () { bars[0].style.width = widths[k][0] + '%'; }, 140);
+          setTimeout(function () { bars[1].style.width = widths[k][1] + '%'; }, 300);
+        }, 150 * k);
       });
-      if (em) setTimeout(function () { em.classList.add('lit'); }, 260 * picks.length + 300);
-      setTimeout(function () { state = 'rested'; }, 260 * picks.length + 700);
+      if (em) setTimeout(function () { em.classList.add('lit'); }, 150 * picks.length + 350);
+      setTimeout(function () { state = 'rested'; }, 150 * picks.length + 700);
     }, 380);   // a beat at full size before the release
   }
 
