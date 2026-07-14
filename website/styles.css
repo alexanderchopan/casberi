@@ -798,3 +798,16 @@ footer .tagline { font-size: 16px; font-weight: 600; color: var(--ink); margin-b
 .rain-target .ai-casberi { transition: transform .3s cubic-bezier(.34,1.56,.64,1); transform-origin: 50% 60%; }
 .hero h1 em { transition: filter 1.2s ease; }
 .hero h1 em.lit { filter: brightness(1.3) drop-shadow(0 0 26px rgba(59,140,240,.35)); }
+
+/* Hero act 3: the berry streams a feed into the space the rain left */
+.streamfeed { position: absolute; inset: 0; display: flex; flex-direction: column;
+  justify-content: center; align-items: center; gap: 10px; pointer-events: none; }
+.streamrow { display: flex; align-items: center; gap: 10px; width: min(300px, 72%);
+  background: var(--surface); border-radius: 14px; padding: 10px 14px;
+  opacity: 0; transform: translateY(10px) scale(.97);
+  transition: opacity .35s ease, transform .45s cubic-bezier(.34,1.56,.64,1); }
+.streamrow.in { opacity: 1; transform: none; }
+.streamrow img { width: 22px; height: 22px; border-radius: 6px; }
+.streamrow .sbar { display: block; height: 9px; border-radius: 5px;
+  background: rgba(255,255,255,.16); transition: width .5s cubic-bezier(.3,.6,.3,1); }
+.streamrow .sbar.thin { height: 7px; background: rgba(255,255,255,.09); }
