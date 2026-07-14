@@ -39,7 +39,7 @@
   <p>Everything you capture or connect — notes, links, screenshots, events, chats, voice notes, and the things your connected apps bring in — is stored <strong>on your device</strong>, in Casberi's own local database. Casberi has no backend: your corpus is never uploaded to us, because there is no "us" server to upload it to.</p>
 
   <h2>iCloud sync (optional, off by default)</h2>
-  <p>If you turn on iCloud sync, your things are mirrored through <strong>your own private iCloud account</strong> using Apple's CloudKit, so they can appear on your other devices. This is Apple's infrastructure, tied to your Apple ID — only you can read it, and Casberi never sees it. Sync is off until you choose to enable it, and turning it off (or using Delete everything) removes the iCloud copy.</p>
+  <p>If you turn on iCloud sync, your things are mirrored through <strong>your own private iCloud account</strong> using Apple's CloudKit, so they can appear on your other devices. This is Apple's infrastructure, tied to your Apple ID — only you can read it, and Casberi never sees it. Sync is off until you choose to enable it, and turning it off (or using Delete things) removes the iCloud copy.</p>
 
   <h2>Connecting other apps</h2>
   <p>When you connect a service — a feed, a social handle, a token, a calendar — Casberi talks to that service <strong>directly from your iPhone</strong> to fetch your data. Nothing routes through a Casberi server.</p>
@@ -50,7 +50,10 @@
   </ul>
 
   <h2>On-device intelligence</h2>
-  <p>On iPhones that support Apple Intelligence, Casberi's answers are written by <strong>Apple's on-device model</strong>, from your things, on your device. Your data is not sent to Casberi, to Apple's servers, or to any third party to generate them.</p>
+  <p>On iPhones that support Apple Intelligence, Casberi's answers are written by <strong>Apple's on-device model</strong>, from your things, on your device. By default, your data is not sent to Casberi, to Apple's servers, or to any third party to generate them. The text inside your screenshots is read the same way — by Apple's Vision framework, on your device.</p>
+
+  <h2>Your own AI key (optional, off by default)</h2>
+  <p>If you add <strong>your own Anthropic API key</strong> in Settings, every answer gains a "Try with your key" button. Only when you tap it, your question and the few matched things are sent from your iPhone <strong>directly to Anthropic</strong> to write a stronger answer — never through a Casberi server, and never on their own. Answers written this way say so, right on the answer. The key lives in your iPhone's Keychain, goes only to Anthropic itself, and Anthropic bills you directly under <a href="https://www.anthropic.com/legal/privacy">Anthropic's privacy policy</a>. Remove the key and the button disappears.</p>
 
   <h2>Price charts</h2>
   <p>When you watch a token, Casberi fetches its public price data from public market APIs (such as GeckoTerminal, Alchemy, and Dexscreener) to draw the chart. These requests carry only the token you're viewing — nothing about you or your identity.</p>
