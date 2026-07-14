@@ -16,6 +16,7 @@ enum BridgeRouter {
         case wallet
         case tokens
         case kalshi
+        case openSea
         case icloudMail
         case gmail
         case rss
@@ -47,6 +48,7 @@ enum BridgeRouter {
             case .wallet:         "wallet"
             case .tokens:         "tokens"
             case .kalshi:         "kalshi"
+            case .openSea:        "opensea"
             case .icloudMail:     "icloudmail"
             case .gmail:          "gmail"
             case .rss:            "rss"
@@ -87,6 +89,7 @@ enum BridgeRouter {
         Row(offer: "Wallet",    id: "wallet", destination: .wallet),
         Row(offer: "Tokens",    id: "tokens", destination: .tokens),
         Row(offer: "Kalshi",     id: "kalshi",     destination: .kalshi),
+        Row(offer: "OpenSea",    id: "opensea",    destination: .openSea),
         Row(offer: "iCloud Mail", id: "icloudmail",  destination: .icloudMail),
         Row(offer: "Gmail",       id: "gmail",       destination: .gmail),
         Row(offer: "RSS",       id: "rss",    destination: .rss),
@@ -138,6 +141,7 @@ struct BridgeDestinationView: View {
         case .wallet:         WalletScreen()
         case .tokens:         TokenWatchScreen()
         case .kalshi:         KalshiScreen()
+        case .openSea:        OpenSeaScreen()
         case .icloudMail:     MailScreen(provider: .icloud)
         case .gmail:          MailScreen(provider: .gmail)
         case .rss:            RSSScreen()

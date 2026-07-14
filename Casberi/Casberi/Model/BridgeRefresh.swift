@@ -88,5 +88,8 @@ enum BridgeRefresh {
         if TwitchAuth.connected {
             Task { @MainActor in _ = await TwitchIngest.refresh(context: context) }
         }
+        if OpenSeaStore.shared.connected {
+            Task { @MainActor in _ = await OpenSeaIngest.refresh(context: context) }
+        }
     }
 }

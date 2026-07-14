@@ -100,6 +100,26 @@ enum ProbeHooks {
                 NSLog("Bluesky probe: %@ new things", n.map(String.init) ?? "FAILED")
             }
         },
+        // `-openSeaKey <key>` seeds a known-good OpenSea API key, so a headless
+        // run can verify the feed without waiting on the mint endpoint's
+        // 1-key-per-hour limit (the IP the sim shares is easily exhausted).
+        // Runs before `-openSeaFeed` (list order) so the key is in place.
+        Hook(key: "openSeaKey") { key, _ in
+            OpenSeaStore.shared.setKey(key.trimmingCharacters(in: .whitespaces), expiry: nil)
+            NSLog("OpenSea probe: key seeded (%d chars)", key.count)
+        },
+        // `-openSeaFeed <chains|YES>` connects OpenSea (a comma-separated chain
+        // list, or YES for the defaults) and syncs — headless bridge test.
+        Hook(key: "openSeaFeed") { spec, context in
+            let list = spec.split(separator: ",")
+                .compactMap { OpenSeaChain.from(String($0).trimmingCharacters(in: .whitespaces)) }
+            if list.isEmpty { OpenSeaStore.shared.connectDefaults() }
+            else { for c in list { OpenSeaStore.shared.add(c) } }
+            Task { @MainActor in
+                let n = await OpenSeaIngest.refresh(context: context)
+                NSLog("OpenSea probe: %@ new drops", n.map(String.init) ?? "FAILED")
+            }
+        },
         // `-watchToken <address|symbol|link>` watches a token headlessly.
         Hook(key: "watchToken") { query, context in
             Task { @MainActor in
