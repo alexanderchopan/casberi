@@ -11,11 +11,11 @@ import Foundation
 /// (`token.github`), so sync, proof, and removal are unchanged.
 enum GitHubDeviceFlow {
 
-    /// The Casberi OAuth app's public client id. Created at github.com →
-    /// Settings → Developer settings → OAuth Apps (enable Device Flow),
-    /// then pasted here. Empty = the setup screen shows the paste path only
-    /// (honesty rule: no dead sign-in button).
-    private static let shippedClientID = ""
+    /// The Casberi OAuth app's public client id (user-created 2026-07-14).
+    /// Created at github.com → Settings → Developer settings → OAuth Apps
+    /// (enable Device Flow), then pasted here. Empty = the setup screen
+    /// shows the paste path only (honesty rule: no dead sign-in button).
+    private static let shippedClientID = "Ov23liTnjAf9SSH0Pw9J"
 
     static var clientID: String {
         #if DEBUG
