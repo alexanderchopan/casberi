@@ -75,6 +75,91 @@ struct WeekSynthesisIntent: AppIntent {
     }
 }
 
+/// Search from anywhere (prd §67 goal ④) — the corpus as a Shortcuts value,
+/// pipeable into the rest of an automation. Matching is the plain kind
+/// (words in the title, tags, or text, newest first) — Spotlight-grade on
+/// purpose; the composer's full scorer stays in-app.
+struct SearchCasberiIntent: AppIntent {
+    static let title: LocalizedStringResource = "Search Casberi"
+    static let description = IntentDescription(
+        "Finds things by words in their title, tags, or text — newest first.")
+
+    @Parameter(title: "Search for")
+    var query: String
+
+    static var parameterSummary: some ParameterSummary {
+        Summary("Search Casberi for \(\.$query)")
+    }
+
+    func perform() async throws -> some IntentResult & ReturnsValue<String> & ProvidesDialog {
+        let hits = try IntentCorpus.match(query, limit: 5)
+        guard !hits.isEmpty else {
+            return .result(value: "", dialog: "Nothing in your things matches that.")
+        }
+        let lines = hits.map { "\($0.title) — \($0.source)" }
+        let joined = lines.joined(separator: "\n")
+        return .result(value: joined,
+                       dialog: IntentDialog(full: "\(hits.count) thing\(hits.count == 1 ? "" : "s"):\n\(joined)",
+                                            supporting: "From your things."))
+    }
+}
+
+/// Ask from anywhere — the same grounded on-device answer the composer
+/// gives, as a Shortcuts value. On devices without the model, the matched
+/// things answer plainly (zero regression, same as in-app).
+struct AskCasberiIntent: AppIntent {
+    static let title: LocalizedStringResource = "Ask Casberi"
+    static let description = IntentDescription(
+        "Answers a question from your things, on this device.")
+
+    @Parameter(title: "Question")
+    var question: String
+
+    static var parameterSummary: some ParameterSummary {
+        Summary("Ask Casberi \(\.$question)")
+    }
+
+    func perform() async throws -> some IntentResult & ReturnsValue<String> & ProvidesDialog {
+        let hits = try IntentCorpus.match(question, limit: 10)
+        guard !hits.isEmpty else {
+            return .result(value: "", dialog: "Nothing in your things matches that.")
+        }
+        let candidates = hits.map {
+            OnDeviceModel.Candidate(title: $0.title, kind: $0.kind.typeTag,
+                                    source: $0.source,
+                                    when: $0.capturedAt.formatted(.relative(presentation: .named)))
+        }
+        if let answer = await OnDeviceModel.compose(query: question, candidates: candidates) {
+            return .result(value: answer.insight, dialog: IntentDialog(stringLiteral: answer.insight))
+        }
+        // No model (or it declined) — the matched things ARE the answer.
+        let line = "Found: " + hits.prefix(3).map(\.title).joined(separator: " · ")
+        return .result(value: line, dialog: IntentDialog(stringLiteral: line))
+    }
+}
+
+/// The intents' shared corpus access — one plain matcher so Search and Ask
+/// agree on what a query reaches.
+enum IntentCorpus {
+    static func match(_ query: String, limit: Int) throws -> [Thing] {
+        let container = try SharedStore.container()
+        let context = ModelContext(container)
+        let things = (try? context.fetch(FetchDescriptor<Thing>(
+            sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]
+        ))) ?? []
+        let terms = query.lowercased()
+            .trimmingCharacters(in: CharacterSet(charactersIn: "? "))
+            .split(separator: " ").map(String.init)
+            .filter { $0.count > 2 }
+        guard !terms.isEmpty else { return Array(things.prefix(limit)) }
+        return Array(things.filter { thing in
+            let haystack = "\(thing.title) \(thing.tags.joined(separator: " ")) \(thing.content)"
+                .lowercased()
+            return terms.contains { haystack.contains($0) }
+        }.prefix(limit))
+    }
+}
+
 struct CasberiShortcuts: AppShortcutsProvider {
     static var appShortcuts: [AppShortcut] {
         AppShortcut(
@@ -94,6 +179,23 @@ struct CasberiShortcuts: AppShortcutsProvider {
             ],
             shortTitle: "My week",
             systemImageName: "sparkles"
+        )
+        AppShortcut(
+            intent: SearchCasberiIntent(),
+            phrases: [
+                "Search \(.applicationName)",
+                "Find in \(.applicationName)",
+            ],
+            shortTitle: "Search things",
+            systemImageName: "magnifyingglass"
+        )
+        AppShortcut(
+            intent: AskCasberiIntent(),
+            phrases: [
+                "Ask \(.applicationName)",
+            ],
+            shortTitle: "Ask",
+            systemImageName: "questionmark.bubble"
         )
     }
 }

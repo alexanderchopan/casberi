@@ -207,6 +207,16 @@ enum ProbeHooks {
                       code?.userCode ?? "nil (start failed)", code?.interval ?? 0)
             }
         },
+        // `-intentProbe "<query>"` runs the Shortcuts intents' shared corpus
+        // matcher (IntentCorpus.match — Search/Ask ground on it) and logs the
+        // hits, so the intent path verifies without driving the Shortcuts app.
+        Hook(key: "intentProbe") { query, _ in
+            Task { @MainActor in
+                let hits = (try? IntentCorpus.match(query, limit: 5)) ?? []
+                NSLog("Intent probe: %d hits — %@", hits.count,
+                      hits.map { "\($0.title) (\($0.source))" }.joined(separator: " · "))
+            }
+        },
         // `-writeProbe "todoist:<id>"` or `-writeProbe "<github issue/PR
         // url>"` performs the bridge write with the stored token and logs the
         // honest outcome — with no token it logs the not-connected line.
