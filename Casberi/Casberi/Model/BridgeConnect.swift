@@ -23,8 +23,16 @@ enum BridgeConnect {
                 result = await ScheduleIngest.connectReminders(context: context)
                     .map { ($0, "rem", "reminders", "Reads your lists; adds one when you ask.") }
             case "Apple Health":
-                result = await HealthIngest.connectAndIngest(context: context)
+                let stravaOn = store.bridges.contains { $0.id == "strava" && $0.status == .connected }
+                result = await HealthIngest.connectAndIngest(context: context, stravaOn: stravaOn)
                     .map { ($0, "hlt", "workouts", "Reads your workouts.") }
+            case "Strava":
+                // Strava's seat is the Health store filtered to workouts
+                // Strava wrote — no Strava account, no OAuth (2026-07-14).
+                let healthOn = store.bridges.contains { $0.id == "hlt" && $0.status == .connected }
+                result = await HealthIngest.connectAndIngest(context: context, healthOn: healthOn,
+                                                             stravaOn: true, counting: "Strava")
+                    .map { ($0, "strava", "activities", "Reads the workouts Strava saves to Apple Health.") }
             case "Apple Music":
                 result = await AppleMusicIngest.connectAndIngest(context: context)
                     .map { ($0, "music", "songs", "Reads what you've played.") }

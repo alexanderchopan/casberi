@@ -6,14 +6,24 @@ import SwiftData
 /// the first one Photos/Calendar/Reminders didn't ship with. HealthKit is
 /// on-device: workouts become things with no server anywhere. Read-only;
 /// the permission ask arrives in context, like every bridge.
+///
+/// Strava rides the same store (2026-07-14): Strava saves every activity to
+/// HealthKit, so the Strava seat is this same ingest filtered to workouts
+/// Strava wrote — labeled "Strava", no Strava account or OAuth anywhere.
 enum HealthIngest {
 
-    /// Asks for workout read access and ingests the recent history.
-    /// Returns the number of NEW things, or nil when Health isn't available
-    /// or the ask fails. Note: HealthKit hides read-denials by design — a
-    /// denied grant just returns zero workouts.
+    /// Asks for workout read access and ingests the recent history for the
+    /// active Health-backed seats. Each workout lands ONCE, labeled by the
+    /// app that wrote it (`sourceRevision`): Strava-written → "Strava" when
+    /// that seat is on, everything else → "Apple Health" when that seat is
+    /// on. Returns the number of NEW things for `seat` (so Connect proof
+    /// stays honest per bridge), or nil when Health isn't available or the
+    /// ask fails. Note: HealthKit hides read-denials by design — a denied
+    /// grant just returns zero workouts.
     @MainActor
-    static func connectAndIngest(context: ModelContext) async -> Int? {
+    static func connectAndIngest(context: ModelContext, healthOn: Bool = true,
+                                 stravaOn: Bool = false,
+                                 counting seat: String = "Apple Health") async -> Int? {
         guard HKHealthStore.isHealthDataAvailable() else { return nil }
         let store = HKHealthStore()
         do {
@@ -25,24 +35,31 @@ enum HealthIngest {
         let workouts = await fetchRecent(store: store)
 
         // Dedupe on the workout's UUID — reconnects and refreshes are cheap.
+        // One ref scheme for both seats, so a workout can never land twice
+        // (whichever seat connects first claims it).
         let existing = IngestSupport.existingSourceRefs(context)
-        var added = 0
+        var added = 0, inserted = 0
         for workout in workouts {
+            let isStrava = workout.sourceRevision.source.name
+                .localizedCaseInsensitiveContains("strava")
+            let source = isStrava && stravaOn ? "Strava" : "Apple Health"
+            guard source == "Strava" || healthOn else { continue }
             let ref = "hkworkout:\(workout.uuid.uuidString)"
             guard !existing.contains(ref) else { continue }
             let thing = Thing(
                 kind: .event,
                 title: title(for: workout),
                 content: detail(for: workout),
-                source: "Apple Health",
+                source: source,
                 capturedAt: workout.startDate,
                 sourceRef: ref
             )
             context.insert(thing)
             SpotlightIndex.index([thing])
-            added += 1
+            inserted += 1
+            if source == seat { added += 1 }
         }
-        if added > 0 { try? context.save() }
+        if inserted > 0 { try? context.save() }
         return added
     }
 
