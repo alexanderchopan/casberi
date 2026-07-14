@@ -193,6 +193,20 @@ enum ProbeHooks {
             let n = ScreenshotIngest.ingest(context: context)
             NSLog("Photos re-ingest probe: %d new", n)
         },
+        // `-ghDeviceProbe YES` runs the GitHub device-flow start request and
+        // logs the outcome — with no client id it logs the honest unavailable
+        // line (the setup screen shows paste-only in that state).
+        Hook(key: "ghDeviceProbe") { _, _ in
+            Task { @MainActor in
+                guard GitHubDeviceFlow.isAvailable else {
+                    NSLog("GitHub device probe: no client id — paste flow only")
+                    return
+                }
+                let code = await GitHubDeviceFlow.start()
+                NSLog("GitHub device probe: user_code=%@ interval=%d",
+                      code?.userCode ?? "nil (start failed)", code?.interval ?? 0)
+            }
+        },
         // `-seedThing "Source:delay"` lands a link thing for that source
         // after the delay — flips the chip's "new" ring mid-visit exactly
         // the way a foreground sync does (motion verification).

@@ -10,10 +10,21 @@ struct TokenSetupScreen: View {
 
     @Environment(\.modelContext) private var modelContext
     @Environment(BridgeStore.self) private var store
+    @Environment(\.openURL) private var openURL
     @State private var tokenField = ""
     @State private var syncing = false
     @State private var result: String?
     @State private var resultIsError = false
+
+    /// GitHub's device flow (prd §67 goal ②) — sign in on github.com instead
+    /// of hunting a token. Only GitHub has a public-client flow; the other
+    /// bridges stay paste-only, honestly.
+    private enum DevicePhase { case idle, requesting, waiting(GitHubDeviceFlow.Code) }
+    @State private var devicePhase: DevicePhase = .idle
+    @State private var pollTask: Task<Void, Never>?
+    private var deviceFlowOffered: Bool {
+        bridge == .github && GitHubDeviceFlow.isAvailable
+    }
 
     /// This bridge's things — cached per appearance and after each sync, rather
     /// than re-fetched twice on every body pass. The source is per-bridge, so
@@ -27,6 +38,7 @@ struct TokenSetupScreen: View {
     var body: some View {
         List {
             BridgeSetupHeader(name: bridge.rawValue)
+            if deviceFlowOffered { signInSection }
             stepsSection
             tokenSection
             if !recent.isEmpty {
@@ -45,6 +57,134 @@ struct TokenSetupScreen: View {
             if bridge.connected {
                 Task { await sync() }
             }
+        }
+        .onDisappear { cancelDeviceFlow() }
+    }
+
+    /// The sign-in path — GitHub shows a short code here, you approve it on
+    /// github.com, and the token arrives on its own. One row, three phases.
+    private var signInSection: some View {
+        Section {
+            VStack(alignment: .leading, spacing: DS.Space.s3) {
+                switch devicePhase {
+                case .idle:
+                    Button(action: startDeviceFlow) {
+                        HStack(spacing: DS.Space.s2) {
+                            Image(systemName: "person.badge.key")
+                                .font(.system(size: 15, weight: .semibold))
+                            Text("Sign in with GitHub")
+                                .dsText(.callout15).fontWeight(.semibold)
+                        }
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 44)
+                        .background(DS.tint, in: Capsule(style: .continuous))
+                        .contentShape(Capsule(style: .continuous))
+                    }
+                    .buttonStyle(.plain)
+                case .requesting:
+                    HStack(spacing: DS.Space.s2) {
+                        ProgressView()
+                        Text("Asking GitHub for a code…")
+                            .dsText(.callout15).foregroundStyle(DS.textSecondary)
+                    }
+                case .waiting(let code):
+                    // The code is the whole moment — big, spaced by GitHub's
+                    // own hyphen, one tap to copy in case Safari loses it.
+                    Text(code.userCode)
+                        .font(.system(size: 34, weight: .bold, design: .monospaced))
+                        .foregroundStyle(DS.textPrimary)
+                        .frame(maxWidth: .infinity)
+                        .onTapGesture {
+                            UIPasteboard.general.string = code.userCode
+                            DSHaptic.tap()
+                        }
+                    Text("Enter this code on GitHub — approval lands the token here by itself.")
+                        .dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Button {
+                        openURL(code.verificationURL)
+                    } label: {
+                        Text("Open github.com/login/device")
+                            .dsText(.callout15).fontWeight(.semibold)
+                            .foregroundStyle(.white)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 44)
+                            .background(DS.tint, in: Capsule(style: .continuous))
+                            .contentShape(Capsule(style: .continuous))
+                    }
+                    .buttonStyle(.plain)
+                    HStack(spacing: DS.Space.s2) {
+                        ProgressView()
+                        Text("Waiting for your approval…")
+                            .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                        Spacer()
+                        Button("Cancel") { cancelDeviceFlow() }
+                            .dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                            .buttonStyle(.plain)
+                    }
+                }
+            }
+            .dsListCardRow()
+        } header: {
+            Text("Sign in").dsText(.label12)
+                .foregroundStyle(DS.textTertiary)
+        } footer: {
+            Text("Sign-in grants GitHub's standard repo scope — the smallest that reaches private issues and pull requests. Casberi only reads; any future write will ask first, every time.")
+                .dsText(.callout15).foregroundStyle(DS.textTertiary)
+        }
+    }
+
+    private func startDeviceFlow() {
+        DSHaptic.tap()
+        devicePhase = .requesting
+        result = nil
+        pollTask = Task { @MainActor in
+            guard let code = await GitHubDeviceFlow.start() else {
+                finishDeviceFlow(error: String(localized: "GitHub didn't answer — try again, or paste a token below."))
+                return
+            }
+            withAnimation(DS.Motion.standard) { devicePhase = .waiting(code) }
+            var interval = code.interval
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(interval))
+                guard !Task.isCancelled else { return }
+                switch await GitHubDeviceFlow.poll(code) {
+                case .pending:
+                    continue
+                case .slowDown:
+                    interval += 5   // GitHub's own backoff nudge
+                case .token(let token):
+                    TokenVault.set(token, for: bridge.tokenKey)
+                    withAnimation(DS.Motion.standard) { devicePhase = .idle }
+                    DSHaptic.success()
+                    await sync(justConnected: true)
+                    return
+                case .denied:
+                    finishDeviceFlow(error: String(localized: "You declined on GitHub — nothing was connected."))
+                    return
+                case .expired:
+                    finishDeviceFlow(error: String(localized: "That code expired — sign in again for a fresh one."))
+                    return
+                case .failed:
+                    finishDeviceFlow(error: String(localized: "GitHub didn't answer — check your connection and try again."))
+                    return
+                }
+            }
+        }
+    }
+
+    private func finishDeviceFlow(error: String) {
+        withAnimation(DS.Motion.standard) { devicePhase = .idle }
+        result = error
+        resultIsError = true
+    }
+
+    private func cancelDeviceFlow() {
+        pollTask?.cancel()
+        pollTask = nil
+        if case .idle = devicePhase {} else {
+            withAnimation(DS.Motion.standard) { devicePhase = .idle }
         }
     }
 
@@ -72,7 +212,9 @@ struct TokenSetupScreen: View {
             }
             .dsListCardRow()
         } header: {
-            Text("Get your token").dsText(.label12)
+            // With sign-in above, the token hunt reads as the fallback it is.
+            Text(deviceFlowOffered ? "Or get a token by hand" : "Get your token")
+                .dsText(.label12)
                 .foregroundStyle(DS.textTertiary)
         }
     }
