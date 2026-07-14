@@ -181,7 +181,7 @@ struct SettingsScreen: View {
     /// Group two — the app itself: housekeeping, rarely visited. A–Z.
     private var secondaryTiles: [TileSpec] {
         // One Keychain read per render, not two (the tile needs it twice).
-        let keyed = ClaudeKey.isConfigured
+        let keyed = AIKey.isConfigured
         return [
             // A binary choice earns a tap, not a tray with one empty screen's
             // worth of nothing below two chips (report 2026-07-09) — the tile

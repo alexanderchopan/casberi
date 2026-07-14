@@ -29,15 +29,15 @@ struct AccountDetailSheet: View {
     @State private var importing = false
     @State private var importResult: String?
     @State private var deleteResult: String?
-    /// Your key (prd §67) — draft, outcome line, and a mirrored configured
-    /// flag (ClaudeKey isn't observable; actions refresh it by hand).
+    /// Your AI (prd §67) — draft, outcome line, and a mirrored configured
+    /// flag (AIKey isn't observable; actions refresh it by hand).
     @State private var keyDraft = ""
     @State private var keyResult: String?
     /// A rejected key must READ as a failure — same muted gray as success
     /// would look like it saved (honesty rule).
     @State private var keyResultIsError = false
     @State private var keyChecking = false
-    @State private var keyConfigured = ClaudeKey.isConfigured
+    @State private var keyConfigured = AIKey.isConfigured
 
     var body: some View {
         DSTray(title: title, height: sheetHeight) {
@@ -179,21 +179,22 @@ struct AccountDetailSheet: View {
         }
     }
 
-    /// Your key (prd §67) — the BYO escape hatch, stated honestly: answers run
-    /// on this iPhone by default; your own Anthropic key adds a "Try with your
-    /// key" you tap per answer. The key goes to the Keychain and to Anthropic
-    /// itself — never to us (there is no us to send it to).
+    /// Your AI (prd §67) — the BYO escape hatch, stated honestly: answers run
+    /// on this iPhone by default; your own key from Claude, GPT, or Gemini adds
+    /// a "Try with your key" you tap per answer. The paste picks the provider
+    /// by the key's shape (no menu). The key goes to the Keychain and to that
+    /// provider itself — never to us (there is no us to send it to).
     private var keyCard: some View {
         VStack(alignment: .leading, spacing: DS.Space.s4) {
             aliveRow("key.fill", keyConfigured ? DS.confirm : DS.textSecondary,
-                     "Anthropic API key",
-                     keyConfigured ? "Saved in the Keychain \(ClaudeKey.hint)"
+                     "Your AI key",
+                     keyConfigured ? "\(AIKey.provider.label) · in the Keychain \(AIKey.hint)"
                                    : "Answers run on this iPhone until you add one")
-            Text("With your key saved, every answer offers \"Try with your key\" — the question and the few matched things go straight from this iPhone to Anthropic, only when you tap. Anthropic bills your key directly.")
+            Text("Bring a key from Claude, GPT, or Gemini and every answer offers \"Try with your key\" — the question and the few matched things go straight from this iPhone to that provider, only when you tap. They bill your key directly.")
                 .dsText(.subhead13).foregroundStyle(DS.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
             HStack(spacing: DS.Space.s3) {
-                SecureField("sk-ant-…", text: $keyDraft)
+                SecureField("sk-ant-…, sk-…, or AIza…", text: $keyDraft)
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
                     .dsText(.callout15)
@@ -214,7 +215,7 @@ struct AccountDetailSheet: View {
             if keyConfigured {
                 Button {
                     DSHaptic.tap()
-                    ClaudeKey.clear()
+                    AIKey.clear()
                     keyConfigured = false
                     keyResultIsError = false
                     keyResult = "Removed — answers stay on this iPhone."
@@ -230,32 +231,39 @@ struct AccountDetailSheet: View {
                     .foregroundStyle(keyResultIsError ? DS.attention : DS.textSecondary)
                     .settleIn()
             }
-            Text("Get a key at console.anthropic.com. It stays in this iPhone's Keychain and goes only to Anthropic itself.")
+            Text("Get a key from Anthropic, OpenAI, or Google. It stays in this iPhone's Keychain and goes only to the provider it belongs to.")
                 .dsText(.label12).foregroundStyle(DS.textTertiary)
                 .fixedSize(horizontal: false, vertical: true)
         }
     }
 
-    /// Saves the key only after Anthropic accepts it — no dead key sitting in
-    /// the Keychain claiming a capability it can't deliver (honesty rule).
+    /// Saves the key only after its provider accepts it — no dead key sitting
+    /// in the Keychain claiming a capability it can't deliver (honesty rule).
+    /// The provider is read from the key's shape; a shape nobody claims is
+    /// rejected up front rather than guessed at.
     private func saveKey() {
         let candidate = keyDraft.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !candidate.isEmpty else { return }
+        guard let provider = AIProvider.detect(candidate) else {
+            keyResultIsError = true
+            keyResult = "That doesn't look like a Claude, GPT, or Gemini key — check it and try again."
+            return
+        }
         keyChecking = true
         keyResult = nil
         Task { @MainActor in
-            let ok = await ClaudeAnswer.validate(candidate)
+            let ok = await AIAnswer.validate(candidate, provider: provider)
             keyChecking = false
             if ok {
-                ClaudeKey.set(candidate)
+                AIKey.set(candidate, provider: provider)
                 keyConfigured = true
                 keyDraft = ""
                 DSHaptic.success()
                 keyResultIsError = false
-                keyResult = "Saved — answers now offer \"Try with your key\"."
+                keyResult = "Saved — \(provider.label) answers now offer \"Try with your key\"."
             } else {
                 keyResultIsError = true
-                keyResult = "Anthropic didn't accept that key — check it and try again."
+                keyResult = "\(provider.label) didn't accept that key — check it and try again."
             }
         }
     }

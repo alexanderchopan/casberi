@@ -728,7 +728,7 @@ struct Composer: View {
             // Closed, or a newer ask overtook this one — retire silently.
             guard isOpen, gen == askGeneration else { return }
             inFlight = false
-            keyAvailable = ClaudeKey.isConfigured
+            keyAvailable = AIKey.isConfigured
             if let doc {
                 currentStreamed = true   // a keyed synthesis is keepable too
                 answerStream.stream(doc)
@@ -1097,7 +1097,7 @@ struct Composer: View {
                 // the typewriter (unchanged behaviour).
                 proseStreaming = false
                 inFlight = false
-                keyAvailable = ClaudeKey.isConfigured   // one read per settle
+                keyAvailable = AIKey.isConfigured   // one read per settle
                 if streamed { answerStream.paint(finalDoc) }
                 else { answerStream.stream(finalDoc) }
                 fieldFocused = true     // ready for the next follow-up

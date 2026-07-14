@@ -2553,11 +2553,19 @@ where public-client flows exist, ③ write-back verbs in the sheet,
 
 **Rulings baked in:**
 
-- **BYO-key is a verb, never a fallback.** The person's own Anthropic key
-  (Keychain, device→api.anthropic.com direct) powers a "try harder" they
+- **BYO-key is a verb, never a fallback.** The person's own AI key
+  (Keychain, device→provider API direct) powers a "try harder" they
   tap per query. It never fires silently, and the answer wears a badge
   saying their key produced it. On-device by default; their key, their
   choice, per use.
+  - **Any provider, one paste (2026-07-14).** The key is not Anthropic-only:
+    a pasted key is recognized by its shape — `sk-ant-…` → Claude,
+    `sk-…` → GPT, `AIza…` → Gemini — and validated against that provider
+    before it saves (no dead key, honesty rule). One field, no menu; the
+    provider is stored beside the key and named in the saved-state line. The
+    grounded contract is identical across providers (the key buys a stronger
+    model, not a looser answer). Wire details live in `Model/AIProvider.swift`
+    + `Model/AIAnswer.swift`; adding a provider is one case in each switch.
 - **OAuth only where the flow is genuinely public-client.** GitHub's device
   flow needs no secret and no server — build it. Providers whose token
   exchange demands a client secret (Notion, Todoist, Linear) stay

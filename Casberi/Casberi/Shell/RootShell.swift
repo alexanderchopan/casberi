@@ -318,9 +318,15 @@ struct RootShell: View {
             // the keyed answer path and logs the doc — with a bogus key it
             // verifies the honest failure path without spending anything.
             if let raw = UserDefaults.standard.string(forKey: "byokKey") {
-                if raw == "clear" { ClaudeKey.clear() } else { ClaudeKey.set(raw) }
-                NSLog("[Casberi] byokKey: configured=%d hint=%@",
-                      ClaudeKey.isConfigured ? 1 : 0, ClaudeKey.hint)
+                if raw == "clear" {
+                    AIKey.clear()
+                } else if let provider = AIProvider.detect(raw) {
+                    AIKey.set(raw, provider: provider)
+                } else {
+                    NSLog("[Casberi] byokKey: unrecognized key shape — not stored")
+                }
+                NSLog("[Casberi] byokKey: configured=%d provider=%@ hint=%@",
+                      AIKey.isConfigured ? 1 : 0, AIKey.provider.rawValue, AIKey.hint)
             }
             if let q = UserDefaults.standard.string(forKey: "byokProbe") {
                 Task {
@@ -822,16 +828,17 @@ struct RootShell: View {
 
     /// The BYO-key retry (prd §67) — the same question over the SAME evidence
     /// the on-device answer saw (`lastAnswerHits`), synthesized by the person's
-    /// own Anthropic key, device→API direct. nil means the key or the network
-    /// failed and the composer words that; an empty grounding gets an honest
-    /// line instead, because a stronger model can't change what's here.
+    /// own AI key (Claude, GPT, or Gemini), device→API direct. nil means the
+    /// key or the network failed and the composer words that; an empty
+    /// grounding gets an honest line instead, because a stronger model can't
+    /// change what's here.
     private func keyedAnswerDocument(_ query: String) async -> [String]? {
         let hits = lastAnswerHits.isEmpty ? retrieve(query) : lastAnswerHits
         guard !hits.isEmpty else {
             return proseDoc("Nothing in your things matches that — a bigger model can't change what's here.")
         }
-        guard let prose = await ClaudeAnswer.synthesize(query: query,
-                                                        candidates: candidates(hits)) else {
+        guard let prose = await AIAnswer.synthesize(query: query,
+                                                    candidates: candidates(hits)) else {
             return nil
         }
         return proseDoc(prose)
