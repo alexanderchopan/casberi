@@ -208,11 +208,15 @@ struct SettingsScreen: View {
                      value: LanguageStore.shared.summary,
                      badge: ("globe", DS.textSecondary),
                      action: { languageOpen = true }),
-            // Your key (prd §67) — the BYO escape hatch: on-device by default,
-            // your own Anthropic key adds a per-answer "Try with your key".
-            TileSpec(title: "Your key",
+            // Your AI (prd §67) — the BYO escape hatch: on-device by default,
+            // your own AI key adds a per-answer "Try with your key". Named for
+            // the capability, not "Claude": that collides with the Claude
+            // chat-import app, and the key powers every answer (across all your
+            // things), not just Claude-sourced ones. The key is Anthropic-
+            // specific today — the honest detail lives in the sheet, not here.
+            TileSpec(title: "Your AI",
                      value: keyed
-                        ? String(localized: "Claude answers on tap")
+                        ? String(localized: "Your key powers answers")
                         : String(localized: "Bring your own AI key"),
                      badge: ("key.fill", keyed ? DS.confirm : DS.textSecondary),
                      action: { detail = .key }),

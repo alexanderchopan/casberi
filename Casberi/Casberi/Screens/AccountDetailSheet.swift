@@ -78,7 +78,7 @@ struct AccountDetailSheet: View {
     private var title: String {
         switch detail {
         case .data: "Data"
-        case .key: "Your key"
+        case .key: "Your AI"
         }
     }
 
