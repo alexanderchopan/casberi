@@ -226,11 +226,16 @@ enum TokenIngest {
 
     /// Todoist — open tasks, newest 30.
     private static func todoist(_ token: String) async -> [Thing]? {
-        guard let tasks = await IngestSupport.getJSON("https://api.todoist.com/rest/v2/tasks",
-                                    auth: "Bearer \(token)") as? [[String: Any]]
+        // The unified v1 API (2026-07-13: REST v2 answers 410 Gone for
+        // everything now — the write probe caught it). v1 wraps lists in
+        // `results`, renamed `created_at` → `added_at`, and dropped the
+        // task `url` field (built from the id instead).
+        guard let root = await IngestSupport.getJSON("https://api.todoist.com/api/v1/tasks",
+                                    auth: "Bearer \(token)") as? [String: Any],
+              let tasks = root["results"] as? [[String: Any]]
         else { return nil }
         let sorted = tasks.sorted {
-            (($0["created_at"] as? String) ?? "") > (($1["created_at"] as? String) ?? "")
+            (($0["added_at"] as? String) ?? "") > (($1["added_at"] as? String) ?? "")
         }
         return sorted.prefix(30).compactMap { task in
             guard let id = task["id"] as? String,
@@ -239,9 +244,9 @@ enum TokenIngest {
             return Thing(
                 kind: .reminder,
                 title: content,
-                content: (task["url"] as? String) ?? "",
+                content: "https://app.todoist.com/app/task/\(id)",
                 source: "Todoist",
-                capturedAt: IngestSupport.isoDate(task["created_at"]) ?? .now,
+                capturedAt: IngestSupport.isoDate(task["added_at"] ?? task["created_at"]) ?? .now,
                 sourceRef: "todoist:\(id)"
             )
         }

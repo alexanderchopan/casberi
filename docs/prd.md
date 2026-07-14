@@ -2578,6 +2578,14 @@ where public-client flows exist, ③ write-back verbs in the sheet,
   reply/like/repost, Calendar accept/decline. A verb appears only when its
   bridge is connected with a token that can actually perform it — the
   honesty rule's "no dead controls" applied to writes.
+  *(Amended same day, first build: the Telegram rule generalizes — Bluesky
+  reply/like/repost also wait, because today's Bluesky bridge is a
+  handle-only public follow with no session to write with. Respond
+  requires an authenticated read first, on every network. Shipped first:
+  Complete in Todoist and Close on GitHub — one-tap writes the tokens can
+  already carry; comment/reply composers come with the librarian's
+  draft-for-approval. The write verb LEADS the sheet's verb stack and
+  never reaches feed swipes.)*
 - **The librarian proposes; the person disposes.** Digest, tag proposals,
   resurfacing, dedup candidates — all through the proposal-card pattern
   `OrganizeLLM` already set. Nothing tags, merges, sends, or deletes

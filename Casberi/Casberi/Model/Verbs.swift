@@ -15,13 +15,14 @@ struct Verb: Identifiable {
         case markDone                 // rung 1 mark
         case approve                  // S10: the person's yes — IS the consent
         case deny                     // S10: the person's no
+        case bridgeWrite(BridgeWrite) // write BACK to the bridge (prd §67 ③)
     }
     let label: String
     let icon: String
     let action: Action
     var isWrite: Bool {
         switch action {
-        case .addToCalendar, .addToReminders: return true
+        case .addToCalendar, .addToReminders, .bridgeWrite: return true
         default: return false
         }
     }
@@ -35,6 +36,7 @@ struct Verb: Identifiable {
         case .markDone:       return "Done"
         case .approve:        return "Approve"
         case .deny:           return "Deny"
+        case .bridgeWrite:    return "Do it"
         }
     }
     var id: String { label }
@@ -55,6 +57,17 @@ enum VerbDerivation {
     /// one utility. Reads pass; writes confirm.
     static func verbs(for thing: Thing) -> [Verb] {
         var out: [Verb] = []
+
+        // 0 — the write-back, when the thing's own bridge can take one
+        // (prd §67 ③: Complete in Todoist, Close on GitHub). It LEADS: acting
+        // on the thing at its source is the strongest verb a thing can carry.
+        // Feed swipes never see it (they surface only the open hand-off);
+        // in the sheet it confirms first, like every write.
+        if let write = BridgeWrites.write(for: thing) {
+            let face = BridgeWrites.label(for: write)
+            out.append(Verb(label: face.label, icon: face.icon,
+                            action: .bridgeWrite(write)))
+        }
 
         // 1 — the kind's primary verb.
         switch thing.kind {

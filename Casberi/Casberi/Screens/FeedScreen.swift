@@ -1321,6 +1321,19 @@ struct FeedScreen: View {
         case .markDone:
             thing.mark = .done
             try? modelContext.save()
+        case .bridgeWrite(let write):
+            // Unreachable from swipes (they surface only the open hand-off —
+            // writes live in the sheet), but the confirm-then-perform shape
+            // holds if a future surface routes one here.
+            Task {
+                let outcome = await BridgeWrites.perform(write)
+                if outcome.ok {
+                    thing.mark = .done
+                    try? modelContext.save()
+                    DSHaptic.success()
+                }
+                chrome.flash(outcome.line)
+            }
         case .approve:
             // An MCP client asked to save a thing (PRD §34) — the approval
             // carries the payload; the tap is what commits it. Consent → write.

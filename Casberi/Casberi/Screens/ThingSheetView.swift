@@ -22,6 +22,9 @@ struct ThingSheetView: View {
     @State private var tagDraft = ""
     @State private var confirmingVerb: Verb?
     @State private var verbResult: String?
+    /// A bridge's no must READ as a no — green success styling on a failure
+    /// would claim a write that didn't happen (honesty rule).
+    @State private var verbResultIsError = false
     @State private var relatedStream = GenStream()
     @State private var renameTarget: String?
     @State private var renameDraft = ""
@@ -230,7 +233,8 @@ struct ThingSheetView: View {
             shareRow
             if let verbResult {
                 Text(verbResult)
-                    .dsText(.subhead13).foregroundStyle(DS.confirm)
+                    .dsText(.subhead13)
+                    .foregroundStyle(verbResultIsError ? DS.attention : DS.confirm)
                     .padding(.horizontal, DS.Space.s4)
                     .padding(.top, DS.Space.s2)
             }
@@ -458,6 +462,7 @@ struct ThingSheetView: View {
 
     private func perform(_ verb: Verb) async {
         confirmingVerb = nil
+        verbResultIsError = false
         switch verb.action {
         case .openURL(let url):
             openURL(url)
@@ -465,12 +470,12 @@ struct ThingSheetView: View {
             do {
                 try await HandOff.addToCalendar(thing)
                 verbResult = "On your calendar"
-            } catch { verbResult = error.localizedDescription }
+            } catch { verbResult = error.localizedDescription; verbResultIsError = true }
         case .addToReminders:
             do {
                 try await HandOff.addToReminders(thing)
                 verbResult = "On your list"
-            } catch { verbResult = error.localizedDescription }
+            } catch { verbResult = error.localizedDescription; verbResultIsError = true }
         case .copyText:
             UIPasteboard.general.string = thing.content.isEmpty ? thing.title : thing.content
             verbResult = "Copied"
@@ -491,6 +496,20 @@ struct ThingSheetView: View {
             try? modelContext.save()
             CorpusSignal.shared.bump()
             verbResult = "Denied — your gateway was told"
+        case .bridgeWrite(let write):
+            // The consent already happened (this runs from the confirm
+            // dialog); the API's answer is reported as it came.
+            let outcome = await BridgeWrites.perform(write)
+            verbResult = outcome.line
+            verbResultIsError = !outcome.ok
+            if outcome.ok {
+                // The write landed at the source — the mirror settles too,
+                // so the verb retires and the row reads done.
+                thing.mark = .done
+                try? modelContext.save()
+                CorpusSignal.shared.bump()
+                DSHaptic.success()
+            }
         }
     }
 
