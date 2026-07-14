@@ -40,4 +40,16 @@ enum TokenVault {
         ]
         SecItemDelete(query as CFDictionary)
     }
+
+    /// Every credential in the vault, gone — the "Delete access" wipe (user
+    /// ruling 2026-07-13: delete THINGS and delete ACCESS are two verbs).
+    /// One service-wide delete, so every current and future token, key, and
+    /// mail password is covered without an enumeration to forget.
+    static func deleteAll() {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+        ]
+        SecItemDelete(query as CFDictionary)
+    }
 }

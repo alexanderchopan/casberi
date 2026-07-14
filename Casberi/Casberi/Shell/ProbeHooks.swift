@@ -207,6 +207,18 @@ enum ProbeHooks {
                       code?.userCode ?? "nil (start failed)", code?.interval ?? 0)
             }
         },
+        // `-wipeAccessProbe YES` runs the Delete-access internals (vault-wide
+        // credential wipe + MCP pairing reset) and logs before/after state —
+        // the tray's confirm is the same code with consent in front.
+        Hook(key: "wipeAccessProbe") { _, _ in
+            let before = [TokenBridge.todoist.tokenKey, ClaudeKey.vaultKey]
+                .filter { TokenVault.get($0) != nil }.count
+            TokenVault.deleteAll()
+            MCPPairing.reset()
+            let after = [TokenBridge.todoist.tokenKey, ClaudeKey.vaultKey]
+                .filter { TokenVault.get($0) != nil }.count
+            NSLog("Wipe access probe: sampled credentials %d before → %d after", before, after)
+        },
         // `-intentProbe "<query>"` runs the Shortcuts intents' shared corpus
         // matcher (IntentCorpus.match — Search/Ask ground on it) and logs the
         // hits, so the intent path verifies without driving the Shortcuts app.

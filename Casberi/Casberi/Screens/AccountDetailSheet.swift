@@ -17,6 +17,7 @@ enum AccountDetail: String, Identifiable {
 struct AccountDetailSheet: View {
     let detail: AccountDetail
     @Environment(\.modelContext) private var modelContext
+    @Environment(BridgeStore.self) private var store
     @AppStorage("privacy.hidePreviews") private var hidePreviews = true
     /// The person's iCloud-sync choice. Off by default — things stay on this
     /// iPhone. This is the real setting the CloudKit engine reads at M1; it
@@ -24,6 +25,7 @@ struct AccountDetailSheet: View {
     @AppStorage("icloud.sync") private var icloudSync = false
     @State private var exportURL: URL?
     @State private var confirmDelete = false
+    @State private var confirmDeleteAccess = false
     @State private var importing = false
     @State private var importResult: String?
     @State private var deleteResult: String?
@@ -53,12 +55,23 @@ struct AccountDetailSheet: View {
                       allowedContentTypes: [.json]) { result in
             if case .success(let url) = result { importThings(from: url) }
         }
-        .confirmationDialog("Delete all your things?",
+        // Two wipes, two verbs (user ruling 2026-07-13): THINGS is your data;
+        // ACCESS is the credentials Casberi holds. Each confirm states exactly
+        // what goes and what stays — the old single "Delete everything"
+        // quietly left every token behind while claiming everything.
+        .confirmationDialog("Delete your things?",
                             isPresented: $confirmDelete, titleVisibility: .visible) {
             Button("Delete \(thingCount) things", role: .destructive) { deleteEverything() }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("Your things, voice recordings, and photo — all on this iPhone. No undo.")
+            Text("Your things, voice recordings, and photo — this iPhone and iCloud. Your app connections and keys stay. No undo.")
+        }
+        .confirmationDialog("Delete Casberi's access?",
+                            isPresented: $confirmDeleteAccess, titleVisibility: .visible) {
+            Button("Delete every token and key", role: .destructive) { deleteAccess() }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Every token, key, and mail password Casberi holds — connected apps stop syncing and paired clients disconnect. Your things stay. Photos and Calendar access is iOS's; revoke those in Settings. No undo.")
         }
     }
 
@@ -90,7 +103,12 @@ struct AccountDetailSheet: View {
                 .buttonStyle(.plain)
             }
             Button { confirmDelete = true } label: {
-                actionLabel("Delete everything", icon: "trash",
+                actionLabel("Delete things", icon: "trash",
+                            fg: DS.destructive, bg: DS.gray100)
+            }
+            .buttonStyle(.plain)
+            Button { confirmDeleteAccess = true } label: {
+                actionLabel("Delete access", icon: "key.slash",
                             fg: DS.destructive, bg: DS.gray100)
             }
             .buttonStyle(.plain)
@@ -124,7 +142,7 @@ struct AccountDetailSheet: View {
 
     private var sheetHeight: CGFloat {
         switch detail {
-        case .data: 470
+        case .data: 530   // two wipes now — things and access, one row each
         case .key: 460
         }
     }
@@ -467,13 +485,34 @@ struct AccountDetailSheet: View {
                     if let error, (error as? CKError)?.code != .zoneNotFound {
                         deleteResult = "Deleted here. The iCloud copy couldn't be cleared — check your connection and try again."
                     } else {
-                        deleteResult = "Deleted — this iPhone and iCloud."
+                        deleteResult = "Things deleted — this iPhone and iCloud. Your connections and keys stayed."
                     }
                 }
             }
         } else {
-            deleteResult = "Deleted from this iPhone."
+            deleteResult = "Things deleted from this iPhone. Your connections and keys stayed."
         }
         DSHaptic.success()
+    }
+
+    /// The other wipe (user ruling 2026-07-13): every credential Casberi
+    /// holds, gone in one move — the vault (bridge tokens, the Steam key,
+    /// Twitch tokens, mail passwords, the Anthropic key) and the MCP pairing
+    /// token (paired clients lose their way in). The bridges those
+    /// credentials powered unregister so nothing claims a connection it no
+    /// longer has. Things stay untouched.
+    private func deleteAccess() {
+        TokenVault.deleteAll()
+        MCPPairing.reset()
+        let credentialBacked = Set(
+            TokenBridge.allCases.map(\.bridgeID)
+            + ["steam", "twitch", "gmail", "icloudmail"]
+        )
+        store.bridges.removeAll { credentialBacked.contains($0.id) }
+        HandOffState.refresh(connected: Set(
+            store.bridges.filter { $0.status == .connected }
+                .map { $0.name.lowercased() }))
+        DSHaptic.success()
+        deleteResult = "Access removed — every token and key. Your things stayed."
     }
 }
