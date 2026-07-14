@@ -2595,3 +2595,29 @@ where public-client flows exist, ③ write-back verbs in the sheet,
 (`EmbeddingIndex`, 2026-07-12), Spotlight (`SpotlightIndex`), Save +
 synthesis App Intents (`CasberiIntents.swift`). The gaps are OCR, the
 search/ask intents, and everything in the list above.
+
+## 68. Delete things / Delete access — two wipes, two verbs (user, 2026-07-13)
+
+"Delete everything" was one button that wiped the corpus (SwiftData +
+sidecars + the CloudKit zone) and reported "Deleted — this iPhone and
+iCloud" while leaving every credential in the Keychain: eight bridge
+tokens, the Steam key, Twitch tokens, mail passwords, the MCP pairing
+token, and (since §67 ①) the person's Anthropic key. The copy overclaimed;
+the convenient behavior (wipe data, keep setup) was probably what most
+wipes actually want — but silently.
+
+**Ruled: data and access are different deletions.** The Data tray carries
+two destructive verbs, each stating what goes AND what stays:
+
+- **Delete things** — corpus, voice recordings, background photo, avatar,
+  CloudKit zone. The dialog and outcome line now say "your app
+  connections and keys stay" out loud.
+- **Delete access** — every credential Casberi holds, one move:
+  `TokenVault.deleteAll()` (a service-wide Keychain wipe, so future
+  credentials are covered without an enumeration to forget) plus the MCP
+  pairing reset (paired clients lose their way in). Credential-backed
+  bridges unregister so no shelf tile claims a connection it lost. Things
+  stay. Photos/Calendar access is iOS's own — the dialog points at
+  Settings rather than pretending to revoke it.
+
+A true scorched-earth exit is both verbs, and each one says so.
