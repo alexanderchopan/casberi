@@ -63,6 +63,11 @@ extension EnvironmentValues {
         get { self[GenProseStreamingKey.self] }
         set { self[GenProseStreamingKey.self] = newValue }
     }
+    /// True on a live answer's tree — cited rows glint once on mount.
+    var genCitationGlint: Bool {
+        get { self[GenCitationGlintKey.self] }
+        set { self[GenCitationGlintKey.self] = newValue }
+    }
     /// Bumped by Home's pull-to-refresh — live modules (token charts) key
     /// their fetch on it so a pull re-fetches what a recompose alone
     /// wouldn't (same doc line → same task id → no refetch).
@@ -128,6 +133,13 @@ private struct GenMediaCompactKey: EnvironmentKey {
 }
 
 private struct GenProseStreamingKey: EnvironmentKey {
+    static let defaultValue = false
+}
+
+/// Set true on a LIVE answer's render tree only: rows the answer cites glint
+/// once as they mount — "I went and found these" as a gesture, never
+/// replayed on scroll-back (delight 2026-07-13).
+private struct GenCitationGlintKey: EnvironmentKey {
     static let defaultValue = false
 }
 
@@ -1159,6 +1171,10 @@ private struct GenRow: View {
     @Environment(\.genThingOpen) private var thingOpen
     @Environment(\.genThingHandoff) private var thingHandoff
     @Environment(\.genAppRemove) private var appRemove
+    @Environment(\.genCitationGlint) private var glintOn
+    /// One glint per mount (delight 2026-07-13): a cited row flashes a
+    /// whisper of tint as it lands in a live answer, then settles.
+    @State private var glinted = false
 
     var body: some View {
         let row = HStack(spacing: DS.Space.s3) {
@@ -1172,6 +1188,16 @@ private struct GenRow: View {
         }
         .padding(.horizontal, DS.Space.s4)
         .padding(.vertical, DS.Space.s3)
+        .background {
+            if glintOn {
+                RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous)
+                    .fill(DS.tint.opacity(glinted ? 0 : 0.14))
+            }
+        }
+        .onAppear {
+            guard glintOn, !glinted else { return }
+            withAnimation(.easeOut(duration: 0.9).delay(0.2)) { glinted = true }
+        }
         return row.pinnedRowActions(id: el.str(4), openable: el.str(5) == "app",
                              open: thingOpen, unpin: nil, handoff: thingHandoff,
                              removeApp: appRemove)
@@ -1449,8 +1475,10 @@ private struct GenTagMap: View {
     /// The entrance plays once per screen appearance (§3); filter and theme
     /// re-renders never replay it.
     @State private var settled = false
-    /// The starter preview breathes slowly — "waiting to fill", the one
-    /// looping motion in the app, and it only exists before things do.
+    /// The starter preview breathes slowly — "waiting to fill". One of the
+    /// app's two sanctioned liveness loops (the other: the berry while an
+    /// answer is in flight, 2026-07-13) — each exists only while something
+    /// real is pending, never as decoration.
     @State private var breathe = false
 
     /// Grid areas (col, row, w, h) on a 4×3 unit grid, largest-first. One set
@@ -1599,6 +1627,18 @@ private struct GenTagMap: View {
                         .lineLimit(item.tag.contains(" ") ? 2 : 1)
                         .minimumScaleFactor(0.4)
                         .allowsTightening(true)
+                    // The count fills the tile's empty field with the fact it
+                    // already encodes as area (a name floating in a void read
+                    // as unfinished). Token cells skip it — their N is a
+                    // sizing value, not a thing count — and 1-unit-tall cells
+                    // skip it too (no vertical room; the line would draw past
+                    // the tile onto its neighbor).
+                    if !preview, iconMode != "token", f.3 >= 2 {
+                        Text(item.n == 1 ? "1 thing" : "\(item.n) things")
+                            .dsText(.subhead13)
+                            .foregroundStyle(DS.textSecondary)
+                            .lineLimit(1)
+                    }
                 }
                     .padding(DS.Space.s3)
                     .frame(width: w, height: h, alignment: .topLeading)
@@ -2057,7 +2097,7 @@ private struct GenCover: View {
             Color.clear.frame(height: topInset)
             // Reserve the dateline's band so the content can't crowd it.
             if !el.str(4).isEmpty {
-                Color.clear.frame(height: 36)
+                Color.clear.frame(height: 44)
             }
             textBlock
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -2070,9 +2110,12 @@ private struct GenCover: View {
         // label on the page starts at the leading edge.
         .overlay(alignment: .topLeading) {
             if !el.str(4).isEmpty {
+                // The date IS Home's header (2026-07-13 polish): Apps and
+                // Settings open on a heading, and Home opened on a whisper —
+                // the page's first words now carry heading weight.
                 Text(el.str(4))
-                    .dsText(.label12)
-                    .foregroundStyle(coverInk.opacity(0.92))
+                    .dsText(.heading22)
+                    .foregroundStyle(coverInk)
                     .padding(.top, topInset + DS.Space.s2)
                     .padding(.leading, DS.Space.s4)
                     .opacity(datelineFade)
@@ -2174,38 +2217,53 @@ private struct KindCountRow: View {
     @State private var settled = false
 
     var body: some View {
-        HStack(spacing: DS.Space.s2) {
-            ForEach(Array(items.enumerated()), id: \.offset) { i, item in
-                let kind = ThingKind.from(typeTag: item.tag)
-                let hue = kind?.hue ?? DS.tint
-                Button {
-                    DSHaptic.selection()
-                    FeedFilter.shared.tag = item.tag
-                    if let url = URL(string: "casberi://feed") { openURL(url) }
-                } label: {
-                    HStack(spacing: DS.Space.s1) {
-                        Image(systemName: kind?.symbol ?? "circle.dashed")
-                            .font(.system(size: 14, weight: .medium))
-                            .foregroundStyle(hue)
-                        Text("\(item.n)")
-                            .dsText(.label12)
-                            .foregroundStyle(ink)
-                            .contentTransition(.numericText())
-                            .animation(DS.Motion.standard, value: item.n)
+        // Scrolls when the labels outgrow the row — the words stay (2026-07-13
+        // polish: a bare icon + number was illegible to a new user; the chip
+        // says what it counts).
+        ScrollView(.horizontal) {
+            HStack(spacing: DS.Space.s2) {
+                ForEach(Array(items.enumerated()), id: \.offset) { i, item in
+                    let kind = ThingKind.from(typeTag: item.tag)
+                    let hue = kind?.hue ?? DS.tint
+                    let word = (item.n == 1 ? kind?.typeTag : kind?.typeTagPlural)
+                        ?? item.tag
+                    Button {
+                        DSHaptic.selection()
+                        FeedFilter.shared.tag = item.tag
+                        if let url = URL(string: "casberi://feed") { openURL(url) }
+                    } label: {
+                        HStack(spacing: DS.Space.s1) {
+                            Image(systemName: kind?.symbol ?? "circle.dashed")
+                                .font(.system(size: 14, weight: .medium))
+                                .foregroundStyle(hue)
+                            Text("\(item.n)")
+                                .dsText(.label12)
+                                .foregroundStyle(ink)
+                                .contentTransition(.numericText())
+                                .animation(DS.Motion.standard, value: item.n)
+                            Text(word.lowercased())
+                                .dsText(.label12)
+                                .foregroundStyle(ink.opacity(0.6))
+                        }
+                        .padding(.horizontal, DS.Space.s3)
+                        .frame(minHeight: 34)
+                        .background(hue.opacity(0.15), in: Capsule(style: .continuous))
+                        .contentShape(Capsule())
                     }
-                    .padding(.horizontal, DS.Space.s3)
-                    .frame(minHeight: 34)
-                    .background(hue.opacity(0.15), in: Capsule(style: .continuous))
-                    .contentShape(Capsule())
+                    .buttonStyle(PressSpring())
+                    .scaleEffect(settled ? 1 : 0.6)
+                    .opacity(settled ? 1 : 0)
+                    .animation(.spring(response: 0.35, dampingFraction: 0.6)
+                        .delay(Double(i) * 0.05), value: settled)
+                    .accessibilityLabel("\(item.n) \(word)")
                 }
-                .buttonStyle(PressSpring())
-                .scaleEffect(settled ? 1 : 0.6)
-                .opacity(settled ? 1 : 0)
-                .animation(.spring(response: 0.35, dampingFraction: 0.6)
-                    .delay(Double(i) * 0.05), value: settled)
-                .accessibilityLabel("\(item.n) \(kind?.typeTagPlural ?? item.tag)")
             }
         }
+        .scrollIndicators(.hidden)
+        // A horizontal ScrollView is greedy on the cross axis under a
+        // flexible proposal — pin it to its content height so the chip row
+        // never stretches apart the cover stack it sits in.
+        .fixedSize(horizontal: false, vertical: true)
         .onAppear { settled = true }
     }
 }

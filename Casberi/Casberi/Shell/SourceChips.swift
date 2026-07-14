@@ -79,8 +79,16 @@ struct SourceChips: View {
             // moment — the Feed source header dropped its own animated icon
             // in favor of this one, rather than two competing for the same
             // delight. Keyed to isActive: the chip you're leaving flips away,
-            // the one you're landing on flips in.
-            .coinFlip(trigger: isActive)
+            // the one you're landing on flips in. A first-ever thing from
+            // this source flips it too (the bloom's beat, same vocabulary).
+            .coinFlip(trigger: "\(isActive)-\(chrome.bloomTicks[label] ?? 0)")
+            // The catch bob — a thing landing from this source while the
+            // person watches bumps its chip once, the flight's landing
+            // generalized to bridge arrivals (delight 2026-07-13).
+            .modifier(ChipCatchBob(label: label,
+                                   arrivedChip: chrome.arrivedChip,
+                                   tick: chrome.arrivedTick,
+                                   reduceMotion: reduceMotion))
             .padding(2.5)
             .overlay {
                 // One ring, two exclusive states: tint = active (a single ring
@@ -126,5 +134,29 @@ struct SourceChips: View {
 
     private func chipAccessibilityLabel(_ label: String, broken: Bool) -> String {
         label + (broken ? ", needs reconnecting" : "")
+    }
+}
+
+/// One catch bob: the chip springs up a touch and settles when its source
+/// lands a thing while the person watches. Fires only for the arrived chip,
+/// never loops, and sits out under Reduce Motion.
+private struct ChipCatchBob: ViewModifier {
+    let label: String
+    let arrivedChip: String?
+    let tick: Int
+    let reduceMotion: Bool
+    @State private var bob = false
+
+    func body(content: Content) -> some View {
+        content
+            .scaleEffect(bob ? 1.12 : 1)
+            .onChange(of: tick) { _, _ in
+                guard arrivedChip == label, !reduceMotion else { return }
+                withAnimation(.spring(response: 0.28, dampingFraction: 0.5)) { bob = true }
+                Task { @MainActor in
+                    try? await Task.sleep(for: .milliseconds(220))
+                    withAnimation(.spring(response: 0.32, dampingFraction: 0.7)) { bob = false }
+                }
+            }
     }
 }

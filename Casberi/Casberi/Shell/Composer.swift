@@ -143,6 +143,9 @@ struct Composer: View {
     /// (re-ruling 2026-07-08: the dead GENERIC chips stay dead; these are
     /// asks the corpus can actually answer right now).
     @State private var suggestions: [String] = []
+    /// The away window's real count — the librarian chip rolls up to it
+    /// (delight 2026-07-13); set beside the gate that shows the chip.
+    @State private var awayLanded = 0
     /// The tag list, snapshotted once per open — tagCandidates() walks the
     /// whole store, and computed-per-keystroke it made typing pay a corpus
     /// fetch per character (review 2026-07-08).
@@ -251,6 +254,7 @@ struct Composer: View {
         // gap holds enough to say something. Gated on the same computation
         // that answers it, like every chip.
         let awayCount = StatusAsk.pulse("while i was away", things: all)?.pool.count ?? 0
+        awayLanded = awayCount
         if awayCount >= 3 {
             out.insert("While I was away?", at: 0)
         }
@@ -412,8 +416,25 @@ struct Composer: View {
                             if answering {
                                 convoTurn(question: currentQuestion) {
                                     VStack(alignment: .leading, spacing: DS.Space.s2) {
+                                        // The librarian at work: the berry
+                                        // breathes while the answer is in
+                                        // flight — alive, not a spinner
+                                        // (delight 2026-07-13).
+                                        if inFlight {
+                                            CasberiMark(size: 20)
+                                                .breathing()
+                                                .padding(.horizontal, DS.Space.s4)
+                                                .transition(.opacity)
+                                                .accessibilityLabel("Thinking")
+                                        }
                                         GenRender(id: "root", els: answerStream.els)
                                             .environment(\.genProseStreaming, proseStreaming)
+                                            // Cited rows glint once as they
+                                            // mount — "I went and found
+                                            // these", as a gesture. Live
+                                            // answer only, so a scroll-back
+                                            // never replays it.
+                                            .environment(\.genCitationGlint, true)
                                         // A keyed answer says so, always — the
                                         // badge is the honesty rule applied to
                                         // where the answer was made.
@@ -751,7 +772,15 @@ struct Composer: View {
                             draft = ask
                             commit()
                         } label: {
-                            Chip(text: ask, style: .neutral, glyph: "sparkle")
+                            // The librarian's chip rolls its real count up
+                            // as it appears — "14 things while I was away"
+                            // arriving digit by digit (delight 2026-07-13).
+                            // The tap still sends the canonical ask.
+                            if ask.hasPrefix("While I was away"), awayLanded >= 3 {
+                                AwayRollChip(count: awayLanded)
+                            } else {
+                                Chip(text: ask, style: .neutral, glyph: "sparkle")
+                            }
                         }
                         .buttonStyle(.plain)
                         .modifier(ChipEntrance(index: i + hintLead, shown: chipsAppeared, reduceMotion: reduceMotion))
@@ -1194,6 +1223,44 @@ struct Chip: View {
         .frame(height: 28)
         .background(style == .tint ? DS.tintDim : DS.gray100,
                     in: Capsule(style: .continuous))
+    }
+}
+
+/// The librarian chip with its count rolling in — the digits climb to the
+/// real away total right after the chip lands (numericText, once). Tapping
+/// it sends the canonical "While I was away?" via the enclosing button.
+struct AwayRollChip: View {
+    let count: Int
+    @State private var shown = 0
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        HStack(spacing: DS.Space.s1) {
+            Image(systemName: "sparkle").font(.system(size: 12))
+            Text("\(shown) things while I was away")
+                .dsText(.label12)
+                .contentTransition(.numericText(value: Double(shown)))
+        }
+        .foregroundStyle(DS.textPrimary)
+        .padding(.horizontal, DS.Space.s3)
+        .frame(height: 28)
+        .background(DS.gray100, in: Capsule(style: .continuous))
+        .onAppear {
+            if reduceMotion { shown = count } else {
+                withAnimation(.spring(response: 0.9, dampingFraction: 0.9).delay(0.35)) {
+                    shown = count
+                }
+            }
+        }
+        // The suggestions rebuild while the composer is open — a grown away
+        // pool re-rolls to the new count instead of going stale (review
+        // catch 2026-07-13).
+        .onChange(of: count) { _, new in
+            withAnimation(reduceMotion ? nil : .spring(response: 0.6, dampingFraction: 0.9)) {
+                shown = new
+            }
+        }
+        .accessibilityLabel("\(count) things while I was away")
     }
 }
 

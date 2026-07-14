@@ -30,9 +30,6 @@ final class ShellChrome {
     }
     var flight: Flight?
 
-    /// Bumped when a flight lands — the target chip pulses once on change.
-    var landedPulse = 0
-
     /// The "All" chip's frame in global space, reported by SourceChips so the
     /// flight knows where to land.
     var feedTabFrame: CGRect = .zero
@@ -47,6 +44,32 @@ final class ShellChrome {
     /// consumes the query and sends it through the real answer path.
     var askRequest: String?
     func ask(_ query: String) { askRequest = query }
+
+    /// The FAB lives on MainSurface's root now (it belongs to Home/Feed, not
+    /// to pushed rooms or forms) — bumping this asks RootShell, which still
+    /// owns the sheet, to open the composer.
+    var composerRequest = 0
+    func openComposer() { composerRequest += 1 }
+
+    /// A thing ARRIVED while the person watched (a bridge sync, a pull, a
+    /// share landing) — the source's chip does one catch bob: the capture
+    /// flight's landing beat, generalized to everything that lands (delight
+    /// pass 2026-07-13). First-ever thing from a source also blooms its hue
+    /// across the header — the moment a new pipe actually flows.
+    var arrivedChip: String?
+    var arrivedTick = 0
+    /// Per-label bloom counters — monotonic per chip, so one source's bloom
+    /// never reverts another's coin-flip trigger (review catch 2026-07-13:
+    /// a single shared bloomChip made chip X's trigger string change when
+    /// chip Y bloomed later).
+    var bloomTicks: [String: Int] = [:]
+    func chipCaught(_ label: String, firstEver: Bool = false) {
+        arrivedChip = label
+        arrivedTick += 1
+        if firstEver {
+            bloomTicks[label, default: 0] += 1
+        }
+    }
 
     func flash(_ text: String, action: ToastAction? = nil, seconds: Double = 2) {
         // Replacing an in-flight toast crossfades (id change), never stacks.

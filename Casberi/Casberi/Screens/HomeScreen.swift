@@ -113,9 +113,11 @@ struct HomeScreen: View {
                     // One retiring line (prd 58a) — shown until the first
                     // pin tap, forever, same grammar as the pin coach.
                     if !sizeCoachDone, !boardOrder.isEmpty {
+                        // Secondary ink, not tint — a coach line isn't a
+                        // control, and tint-colored prose reads as a link.
                         Text("Tap a pin to grow its card")
                             .dsText(.subhead13)
-                            .foregroundStyle(DS.tint)
+                            .foregroundStyle(DS.textSecondary)
                             .padding(.horizontal, DS.Space.s4)
                             .padding(.top, DS.Space.s4)
                     }
@@ -543,6 +545,15 @@ struct HomeScreen: View {
               crossed > milestoneReached else { return }
         milestoneReached = crossed
         DSHaptic.success()
+        // The corpus lives behind the All chip — a milestone gives it one
+        // proud catch bob alongside the toast. Deferred half a second: the
+        // capture that CROSSED the milestone is bobbing its own source chip
+        // in this same runloop, and chipCaught's shared slot would clobber
+        // one of the two beats (review catch 2026-07-13).
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(500))
+            chrome.chipCaught("All")
+        }
         chrome.flash("\(crossed.formatted()) things banked.")
     }
 

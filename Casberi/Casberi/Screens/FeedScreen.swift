@@ -682,9 +682,14 @@ struct FeedScreen: View {
     /// The boundary line — words only, no drawn rule (the no-hairlines law).
     /// Everything above it arrived since you last left this screen.
     private var newSinceDivider: some View {
+        // A quiet capsule, not tint-colored prose (which reads as a tappable
+        // link). The fill gives the boundary its line without drawing one.
         Text("New since \(sinceLabel)")
             .dsText(.label12)
-            .foregroundStyle(DS.tint)
+            .foregroundStyle(DS.textSecondary)
+            .padding(.horizontal, DS.Space.s3)
+            .padding(.vertical, DS.Space.s1)
+            .background(DS.fillFaint, in: Capsule(style: .continuous))
             .frame(maxWidth: .infinity)
             .padding(.vertical, DS.Space.s1)
             .listRowBackground(Color.clear)

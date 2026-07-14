@@ -10,6 +10,18 @@ import AVFoundation
 struct ThingContentView: View {
     let thing: Thing
 
+    /// True when the `.link` branch below resolves to the LinkPreviewCard,
+    /// whose footer already names the host — ThingSheetView's Site row keys
+    /// off this exact fact (not a lookalike condition) so the two views
+    /// can't drift: a token/Kalshi link renders a chart with no host line,
+    /// and its Site row must stay.
+    static func showsLinkPreview(_ thing: Thing) -> Bool {
+        thing.kind == .link
+            && TokenChart.route(from: thing.content) == nil
+            && KalshiMarket.route(from: thing.content) == nil
+            && Capture.detectURL(in: thing.content.isEmpty ? thing.title : thing.content) != nil
+    }
+
     var body: some View {
         switch thing.kind {
         case .screenshot:

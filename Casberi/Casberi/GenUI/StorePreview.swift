@@ -8,6 +8,33 @@ import Foundation
 /// honest and expected.
 enum StorePreview {
 
+    /// Up to two sample row titles for an offer — the story card's middle
+    /// band ghosts what lands, parsed from the same preview doc the product
+    /// page streams so the story and the page never disagree. Cached: the
+    /// carousel's interactive scroll re-evaluates card bodies every frame,
+    /// and the parse is constant per offer.
+    private static var sampleCache: [String: [String]] = [:]
+    static func sampleTitles(for name: String) -> [String] {
+        if let hit = sampleCache[name] { return hit }
+        var titles: [String] = []
+        for line in doc(for: name) ?? [] {
+            guard titles.count < 2 else { break }
+            let quotes = line.split(separator: "\"").enumerated()
+                .filter { $0.offset % 2 == 1 }.map { String($0.element) }
+            if line.contains("TxRow(\"") {
+                // TxRow(verb, body, context) — the verb alone ("Swapped")
+                // reads as a broken placeholder; the body is the story.
+                if quotes.count >= 2 { titles.append("\(quotes[0]) \(quotes[1])") }
+            } else if line.contains("Row(\"") {
+                if let t = quotes.first { titles.append(t) }
+            } else if line.contains("TakeawayCard(") || line.contains("ApprovalCard(") {
+                if quotes.count >= 2 { titles.append(quotes[1]) }
+            }
+        }
+        sampleCache[name] = titles
+        return titles
+    }
+
     /// The preview document for an offer, or nil when a preview would add
     /// nothing (connectable apps show real things instead; Venice is a
     /// brain candidate, not a feed source).

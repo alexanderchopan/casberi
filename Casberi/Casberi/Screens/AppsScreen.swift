@@ -35,11 +35,11 @@ struct AppsScreen: View {
         ("Mail",    "Gmail",       ["Mail"]),
         ("Work",    "GitHub",      ["Work"]),
         ("Reading", "Readwise",    ["Reading", "Saves"]),
-        // Markets rides near the bottom (user ruling 2026-07-13): Onchain
-        // leads the catalog; prediction markets are a tail interest, not
-        // the front door.
-        ("Markets", "Kalshi",      ["Markets"]),
         ("Media",   "Spotify",     ["Watching", "Listening", "Games"]),
+        // Markets rides LAST (user ruling 2026-07-13, tightened same day):
+        // Onchain leads the catalog; prediction markets are a tail interest,
+        // not the front door — the shelf closes the store.
+        ("Markets", "Kalshi",      ["Markets"]),
     ]
 
     private func category(of offer: BridgeCatalog.Offer) -> String {
@@ -233,6 +233,7 @@ struct AppsScreen: View {
     /// nothing absolutely positioned, no clipping. The padding is the edge.
     private func storyCardBody(eyebrow: String, headline: String, iconName: String,
                                name: String, brand: Color, verb: CapsuleVerb,
+                               previewName: String? = nil,
                                action: @escaping () -> Void) -> some View {
         VStack(alignment: .leading, spacing: DS.Space.s3) {
             Text(LocalizedStringKey(eyebrow))
@@ -245,8 +246,43 @@ struct AppsScreen: View {
                 .minimumScaleFactor(0.7)
                 .fixedSize(horizontal: false, vertical: true)
             // App-Store presence: the card breathes — the headline sits high,
-            // the footer sits low, air between them (minHeight, never fixed).
-            Spacer(minLength: DS.Space.s8)
+            // the footer sits low. The middle band ghosts what lands (the
+            // same sample rows the product page previews, 2026-07-13 polish:
+            // a flat color field between headline and footer read as
+            // unfinished, not as air). Offers without a preview keep the air.
+            // Only a real offer's card ghosts samples (the pair card's
+            // iconName is "Claude", whose import doc would leak an unrelated
+            // takeaway here — cross-file review catch, 2026-07-13).
+            let samples = previewName.map { StorePreview.sampleTitles(for: $0) } ?? []
+            if samples.isEmpty {
+                Spacer(minLength: DS.Space.s8)
+            } else {
+                Spacer(minLength: DS.Space.s2)
+                VStack(alignment: .leading, spacing: DS.Space.s2) {
+                    // Named a preview (honesty rule): fabricated sample rows
+                    // are licensed on store surfaces ONLY under explicit
+                    // preview framing — unlabeled, they read as real synced
+                    // content next to a live Connect verb.
+                    Text("Preview")
+                        .dsText(.label12)
+                        .foregroundStyle(.white.opacity(0.6))
+                    ForEach(Array(samples.enumerated()), id: \.offset) { _, title in
+                        HStack(spacing: DS.Space.s2) {
+                            Circle().fill(.white.opacity(0.4))
+                                .frame(width: 6, height: 6)
+                            Text(title)
+                                .dsText(.subhead13)
+                                .foregroundStyle(.white.opacity(0.92))
+                                .lineLimit(1)
+                        }
+                        .padding(.horizontal, DS.Space.s3)
+                        .frame(minHeight: 30)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(.white.opacity(0.14), in: Capsule(style: .continuous))
+                    }
+                }
+                Spacer(minLength: DS.Space.s2)
+            }
             HStack(spacing: DS.Space.s2) {
                 BridgeIcon(name: iconName, size: 32)
                 Text(name).dsText(.callout15).foregroundStyle(.white)

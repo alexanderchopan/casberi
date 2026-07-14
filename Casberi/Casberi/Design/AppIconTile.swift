@@ -88,7 +88,11 @@ extension DS {
     /// shifted yellows to olive and browns, and left the near-black marks
     /// (Steam, Venice) as colorless smudges (user, 2026-07-13). Still one
     /// formula, no per-hue tables — keep the hue angle, pin saturation into
-    /// a rich band, settle brightness into a wash band. Near-neutral marks
+    /// a vivid band, and let the brand's OWN brightness through (user ruling
+    /// 2026-07-13: the old 0.40–0.62 brightness band read as a deep muddy
+    /// wash — the bleed should pop like the theme backgrounds' bright
+    /// primaries and the app marks it inherits; only a floor for the darkest
+    /// saturated marks and a ceiling shy of neon). Near-neutral marks
     /// (X, Cal.com, ChatGPT) return nil: no honest hue, no wash — the same
     /// ruling as `brandHue`'s nil. Identity uses (icons, the connect bloom)
     /// keep the true `brandHue`.
@@ -97,8 +101,8 @@ extension DS {
         var h: CGFloat = 0, s: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
         UIColor(brand).getHue(&h, saturation: &s, brightness: &b, alpha: &a)
         guard s >= 0.15 else { return nil }
-        return Color(hue: h, saturation: max(s, 0.55),
-                     brightness: min(max(b * 0.65, 0.40), 0.62))
+        return Color(hue: h, saturation: max(s, 0.65),
+                     brightness: min(max(b, 0.60), 0.95))
     }
 
     /// A brand hue's perceptual luminance (ITU-R BT.709), 0 (black) to 1

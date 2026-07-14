@@ -161,6 +161,12 @@ struct ReorderableBoard<ID: Hashable, Content: View>: View {
 
     @State private var draggingID: ID?
     @State private var orderAtDragStart: [ID] = []
+    /// The settle wave (delight 2026-07-13): when a dragged card lands, its
+    /// neighbors dip a hair in order of distance — ice settling in the
+    /// glass, the onboarding pile's physics carried into daily use. Purely
+    /// visual, on the SwiftUI layer; the drag input path is untouched.
+    @State private var settleTick = 0
+    @State private var settledIndex: Int?
     /// The per-frame drag values the lifted card renders from — held OUT of
     /// board @State on purpose (perf pass): only the dragged BoardCard reads
     /// `motion`, so a per-frame translation repaints that one card, not the
@@ -186,6 +192,9 @@ struct ReorderableBoard<ID: Hashable, Content: View>: View {
                           phase: id.hashValue & 3,
                           motion: motion,
                           content: content(id))
+                    .modifier(SettleWave(
+                        tick: settleTick,
+                        distance: waveDistance(of: id)))
                     .zIndex(draggingID == id ? 1 : 0)
                     .onGeometryChange(for: CGRect.self) { proxy in
                         proxy.frame(in: .named("homeBoard"))
@@ -273,9 +282,21 @@ struct ReorderableBoard<ID: Hashable, Content: View>: View {
         // not (2026-07-12: the board only buzzed on a real move, so putting a
         // card back where it started felt dead).
         DSHaptic.tap()
+        // The neighbors take the landing: a distance-ordered dip ripples out
+        // from the settled card (delight 2026-07-13).
+        settledIndex = order.firstIndex(of: id)
+        settleTick += 1
         if order != orderAtDragStart {
             onReorder(order)
         }
+    }
+
+    /// Slot distance from the settled card — the wave's delay ladder. Zero
+    /// (the settled card itself) sits the wave out.
+    private func waveDistance(of id: ID) -> Int {
+        guard let settled = settledIndex,
+              let mine = order.firstIndex(of: id) else { return 0 }
+        return abs(mine - settled)
     }
 
     /// As the FINGER enters a neighbor's frame, swap the dragged card into
@@ -423,5 +444,31 @@ private struct JiggleEffect: ViewModifier {
                        value: swung)
             .onChange(of: on) { _, now in swung = now }
             .onAppear { if on { swung = true } }
+    }
+}
+
+/// The neighbors' dip when a dragged card lands — a hair of scale, delayed
+/// by slot distance, springing back. Visual only; still under Reduce Motion.
+private struct SettleWave: ViewModifier {
+    let tick: Int
+    let distance: Int
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var dip = false
+
+    func body(content: Content) -> some View {
+        content
+            .scaleEffect(dip ? 0.985 : 1)
+            .onChange(of: tick) { _, now in
+                guard distance > 0, !reduceMotion else { return }
+                let delay = Double(min(distance, 6)) * 0.045
+                withAnimation(.easeOut(duration: 0.12).delay(delay)) { dip = true }
+                Task { @MainActor in
+                    try? await Task.sleep(for: .milliseconds(140 + Int(delay * 1000)))
+                    // A newer wave owns the spring-back — an older timer
+                    // must not snap it flat mid-dip (review catch 2026-07-13).
+                    guard now == tick else { return }
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) { dip = false }
+                }
+            }
     }
 }

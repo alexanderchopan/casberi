@@ -106,6 +106,9 @@ struct HeroEntry: TimelineEntry {
     let eyebrow: String
     let title: String
     let subline: String
+    /// Things that landed since the app was last open — the widget wears the
+    /// new-ring when it's nonzero (delight 2026-07-13). Zero = no ring.
+    var newCount: Int = 0
 }
 
 struct HeroProvider: TimelineProvider {
@@ -139,6 +142,14 @@ struct HeroProvider: TimelineProvider {
                              subline: String(localized: "Save one in Casberi"))
         }
 
+        // The new-ring boundary the app stamps on background — things newer
+        // than it landed while the person was away, and the widget says so.
+        let lastSeen = UserDefaults(suiteName: SharedStore.appGroup)?
+            .double(forKey: "widget.lastSeen") ?? 0
+        let newCount = lastSeen > 0
+            ? things.count(where: { $0.capturedAt.timeIntervalSince1970 > lastSeen })
+            : 0
+
         let typeTags = Set(ThingKind.allCases.map(\.typeTag))
         var buckets: [String: Int] = [:]
         for thing in things {
@@ -154,12 +165,14 @@ struct HeroProvider: TimelineProvider {
             let sources = Set(things.filter { $0.tags.contains(top.key) }.map(\.source)).count
             return HeroEntry(date: .now, eyebrow: String(localized: "This week"),
                              title: "\(top.key) fills your week",
-                             subline: "\(top.value) things across \(sources) app\(sources == 1 ? "" : "s")")
+                             subline: "\(top.value) things across \(sources) app\(sources == 1 ? "" : "s")",
+                             newCount: newCount)
         }
         let count = things.count
         return HeroEntry(date: .now, eyebrow: String(localized: "Now"),
                          title: String(localized: "Your things are landing"),
-                         subline: count == 1 ? "1 thing so far" : "\(count) things so far")
+                         subline: count == 1 ? "1 thing so far" : "\(count) things so far",
+                         newCount: newCount)
     }
 }
 
@@ -229,6 +242,19 @@ struct HeroWidgetView: View {
                         .lineLimit(1)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                // The new-ring, carried to the home screen: things landed
+                // since you left, counted in the app's own chip grammar —
+                // an accent ring, never a red badge. Absent when nothing new.
+                .overlay(alignment: .topTrailing) {
+                    if entry.newCount > 0 {
+                        Text("\(min(entry.newCount, 99))")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(accent)
+                            .frame(minWidth: 22, minHeight: 22)
+                            .background(Circle().strokeBorder(accent, lineWidth: 2))
+                            .accessibilityLabel("\(entry.newCount) new")
+                    }
+                }
             }
         }
         .widgetURL(URL(string: "casberi://home"))

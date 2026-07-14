@@ -201,3 +201,30 @@ extension View {
         settleIn(delay: Double(index) * step)
     }
 }
+
+// MARK: - Breathing (the working state — alive, not spinning)
+
+/// The mark breathes while the librarian works: a slow scale-and-dim loop,
+/// the preview map's "waiting to fill" grammar reused for "thinking". The
+/// only other looping motion in the app, and like the first it exists only
+/// while something real is in flight. Still under Reduce Motion.
+private struct Breathe: ViewModifier {
+    @State private var up = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    func body(content: Content) -> some View {
+        content
+            .scaleEffect(reduceMotion ? 1 : (up ? 1.08 : 0.94))
+            .opacity(reduceMotion ? 1 : (up ? 1 : 0.7))
+            .onAppear {
+                guard !reduceMotion else { return }
+                withAnimation(.easeInOut(duration: 1.1).repeatForever(autoreverses: true)) {
+                    up = true
+                }
+            }
+    }
+}
+
+extension View {
+    func breathing() -> some View { modifier(Breathe()) }
+}

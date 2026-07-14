@@ -1,6 +1,7 @@
 import SwiftUI
 import SwiftData
 import CoreSpotlight
+import WidgetKit
 
 /// The shell (2026-07-13, drastic restructure: no tabs). `MainSurface` is the
 /// one destination — a fixed chip header over a body that swaps between the
@@ -64,26 +65,21 @@ struct RootShell: View {
             if let flight = chrome.flight {
                 CaptureFlight(flight: flight, target: chrome.feedTabFrame) {
                     chrome.flight = nil
-                    chrome.landedPulse += 1
+                    // The landing beat — the All chip catches the capture
+                    // (the old landedPulse reader died with the tab bar;
+                    // the catch bob is the same promise, kept again).
+                    chrome.chipCaught("All")
                 }
                 .zIndex(2)
             }
 
-            // The FAB (2026-07-13, drastic restructure: the tab bar is gone —
-            // this is the one floating control left). Tap opens the composer
-            // sheet; the chip header handles every other move now.
-            VStack {
-                Spacer()
-                HStack {
-                    Spacer()
-                    ComposerFAB {
-                        DSHaptic.tap()
-                        composerOpen = true
-                    }
-                }
-            }
-            .padding(.horizontal, DS.Space.s4)
-            .padding(.bottom, DS.Space.s2)
+        }
+        // The FAB moved onto MainSurface's root content (2026-07-13 polish):
+        // it belongs to Home/Feed, so pushed rooms (Apps, Settings, a setup
+        // form) slide over it instead of wearing a compose button that isn't
+        // theirs. The sheet stays here.
+        .onChange(of: chrome.composerRequest) { _, _ in
+            composerOpen = true
         }
         // Privacy as the default (goal 6): leaving the app redacts the
         // corpus — the app-switcher snapshot shows choreography, not content.
@@ -136,6 +132,12 @@ struct RootShell: View {
                 if phase == .background {
                     // The away clock starts — the next foreground reads it.
                     AppVisit.markClosed()
+                    // The widget's new-ring boundary: everything after this
+                    // stamp is "new since you left" on the home screen too
+                    // (delight 2026-07-13). Reload so the widget re-reads.
+                    UserDefaults(suiteName: SharedStore.appGroup)?
+                        .set(Date.now.timeIntervalSince1970, forKey: "widget.lastSeen")
+                    WidgetCenter.shared.reloadTimelines(ofKind: "casberi.hero")
                     // Give the model's memory back when we're not in use; the
                     // next foreground reloads it.
                     OnDeviceModel.teardown()

@@ -31,10 +31,25 @@ struct ThingSheetView: View {
     @State private var deleteTarget: String?
     /// The TAGS row opens the full editor (chips, rename, delete) in place.
     @State private var editingTags = false
-    /// Open FULL-height so the actions are never below the fold — a tall thing
-    /// (a long title + media + related) overflowed `.medium` and clipped its
-    /// verbs. `.medium` stays reachable by dragging down for a quick peek.
-    @State private var detent: PresentationDetent = .large
+    /// The hue wash pours in on open (delight 2026-07-13) — once per sheet.
+    @State private var washPoured = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// Seeded by the record's shape (2026-07-13 polish): a TALL thing (media
+    /// or a long body) still opens FULL-height so its verbs never start
+    /// below the fold — the original `.large` ruling, kept for the case that
+    /// earned it. A short record opens `.medium` instead of one card of
+    /// content over a screen of black. Both detents stay a drag away.
+    @State private var detent: PresentationDetent
+
+    init(thing: Thing, focusTags: Bool = false) {
+        self.thing = thing
+        self.focusTags = focusTags
+        let hasMedia = thing.kind == .screenshot
+            || !(thing.previewImageURL ?? "").isEmpty
+            || TokenChart.route(from: thing.content) != nil
+        _detent = State(initialValue:
+            hasMedia || thing.content.count > 280 ? .large : .medium)
+    }
 
     var body: some View {
         ScrollViewReader { proxy in
@@ -50,13 +65,14 @@ struct ThingSheetView: View {
                 // Events speak through WHEN below; and when the content is
                 // just the title again (a short note with no body beyond its
                 // own headline), showing it twice reads as a stutter.
-                if thing.kind != .event,
-                   thing.content.trimmingCharacters(in: .whitespacesAndNewlines)
-                        != thing.title.trimmingCharacters(in: .whitespacesAndNewlines) {
+                let contentShown = thing.kind != .event
+                    && thing.content.trimmingCharacters(in: .whitespacesAndNewlines)
+                        != thing.title.trimmingCharacters(in: .whitespacesAndNewlines)
+                if contentShown {
                     ThingContentView(thing: thing)
                         .padding(.top, DS.Space.s3)
                 }
-                specTable
+                specTable(contentShown: contentShown)
                     .padding(.horizontal, DS.Space.s4)
                     .padding(.top, DS.Space.s6)
                 if editingTags {
@@ -85,11 +101,23 @@ struct ThingSheetView: View {
                 LinearGradient(colors: [hue.opacity(0.45), .clear],
                                startPoint: .top, endPoint: .bottom)
                     .frame(height: 260)
+                    // The pour (delight 2026-07-13): the bleed slides down
+                    // into place as the sheet opens — a bleed that literally
+                    // bleeds in. Once per open; instant under Reduce Motion.
+                    .opacity(washPoured ? 1 : 0)
+                    .offset(y: washPoured ? 0 : -140)
                     .frame(maxHeight: .infinity, alignment: .top)
                     // TOP only: the wash bleeds under the notch, but ignoring
                     // the BOTTOM edge too let the scroll content run under the
                     // home indicator, clipping the last actions on hue'd sheets.
                     .ignoresSafeArea(edges: .top)
+                    .onAppear {
+                        if reduceMotion { washPoured = true } else {
+                            withAnimation(.easeOut(duration: 0.35).delay(0.05)) {
+                                washPoured = true
+                            }
+                        }
+                    }
             }
         }
         // Ink: the sheet is black in both modes, like a photo viewer — its
@@ -146,7 +174,7 @@ struct ThingSheetView: View {
 
     // MARK: - Spec table (Gallery's graft — labels change per kind)
 
-    private var specTable: some View {
+    private func specTable(contentShown: Bool) -> some View {
         VStack(alignment: .leading, spacing: DS.Space.s3) {
             if thing.kind == .event, !thing.content.isEmpty {
                 specRow("When", thing.content)
@@ -155,8 +183,13 @@ struct ThingSheetView: View {
             // dependency, not a site the person browsed to) — the native
             // TokenChartView above already carries the read; a "Site" row
             // would just leak that dependency's brand under the "Tokens"
-            // eyebrow (report 2026-07-13).
+            // eyebrow (report 2026-07-13). And when the link preview card is
+            // on screen its footer already names the host — repeating it here
+            // read as a stutter (2026-07-13 polish). Keyed to the content
+            // view's OWN branch fact (a token/Kalshi link renders a chart,
+            // no host footer — the Site row must stay for those).
             if thing.kind == .link, thing.source != "Tokens",
+               !(contentShown && ThingContentView.showsLinkPreview(thing)),
                let url = Capture.detectURL(in: thing.content.isEmpty ? thing.title : thing.content),
                let host = url.host() {
                 specRow("Site", host.replacingOccurrences(of: "www.", with: ""))
@@ -167,6 +200,13 @@ struct ThingSheetView: View {
             specRow("From", PlaceWords.line(for: thing))
             tagsRow
         }
+        // One quiet card (2026-07-13 polish): the bare rows floated in the
+        // sheet's field; the same faint fill the link preview wears gathers
+        // them into one readable spec block.
+        .padding(DS.Space.s4)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(DS.fillFaint,
+                    in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
     }
 
     private func specRow(_ label: String, _ value: String) -> some View {
@@ -175,8 +215,10 @@ struct ThingSheetView: View {
                 .dsText(.label12)
                 .foregroundStyle(DS.textTertiary)
                 .frame(width: 80, alignment: .leading)
+            // Callout, not body — the values were the loudest type on the
+            // sheet ("saved by you" outweighed the title's own facts).
             Text(LocalizedStringKey(value))
-                .dsText(.body17).foregroundStyle(DS.textPrimary)
+                .dsText(.callout15).foregroundStyle(DS.textPrimary)
                 .lineLimit(2)
             Spacer(minLength: 0)
         }
@@ -195,7 +237,7 @@ struct ThingSheetView: View {
                     .frame(width: 80, alignment: .leading)
                 tagsLine
                 Text(editingTags ? "  −" : "  +")
-                    .dsText(.body17).foregroundStyle(DS.textTertiary)
+                    .dsText(.callout15).foregroundStyle(DS.textTertiary)
                 Spacer(minLength: 0)
             }
             .contentShape(Rectangle())
@@ -211,7 +253,7 @@ struct ThingSheetView: View {
             line = line + Text(tag)
                 .foregroundStyle(isType ? DS.textSecondary : ProjectHue.color(for: tag))
         }
-        return line.font(.system(size: 17))
+        return line.font(.system(size: 15))
     }
 
     // MARK: - Actions (quiet text rows — verbs, then Pin, then Share)

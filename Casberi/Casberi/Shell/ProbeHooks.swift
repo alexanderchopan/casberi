@@ -263,6 +263,16 @@ enum ProbeHooks {
                 NSLog("Seed thing probe: landed for %@", src)
             }
         },
+        // `-clearSeedThings YES` deletes every thing a `-seedThing` probe
+        // planted (sourceRef "probe:ring-demo-…") — staging cleanup so demo
+        // recordings don't show "Ring demo" litter.
+        Hook(key: "clearSeedThings") { _, context in
+            let all = (try? context.fetch(FetchDescriptor<Thing>())) ?? []
+            let litter = all.filter { $0.sourceRef?.hasPrefix("probe:ring-demo") == true }
+            for t in litter { context.delete(t) }
+            try? context.save()
+            NSLog("Seed-thing cleanup probe: deleted %d", litter.count)
+        },
         // `-healPhotos YES` runs the screenshot heal sweep (thumbnails +
         // confirmed-gone removal) and logs both counts. `-healPhotos
         // seed-dangling` first plants a screenshot thing with a ref no

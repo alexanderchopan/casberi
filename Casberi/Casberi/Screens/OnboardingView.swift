@@ -214,13 +214,17 @@ struct OnboardingView: View {
     /// Where cube `i` rests: five columns stacking bottom-up, rows and
     /// columns overlapping like real ice. The six Apple tiles land last as
     /// a tighter six-across TOP ROW, touching the card they're kin to.
+    /// Row step and base tightened (2026-07-13 polish): at 62pt rows from a
+    /// −138 base the pile's TOP ROW crossed into the connect card and sat on
+    /// the Apple Music row's Connect button — the ice must fill the glass,
+    /// never the drink. The pile still packs bottom-up, just denser.
     private func cubeTarget(_ i: Int, in size: CGSize) -> CGPoint {
         if i >= Self.appleRowStart {
             let col = CGFloat(i - Self.appleRowStart)
             let cell = (size.width - DS.Space.s4 * 2) / 6
             let x = DS.Space.s4 + cell * col + cell / 2
                 + Self.jitter[i % Self.jitter.count] * 0.8
-            let y = size.height - 138 - 5 * 62
+            let y = size.height - 104 - 5 * 52
                 + Self.jitter[(i + 5) % Self.jitter.count]
             return CGPoint(x: x, y: y)
         }
@@ -228,7 +232,7 @@ struct OnboardingView: View {
         let cell = (size.width - DS.Space.s4 * 2) / 5
         let x = DS.Space.s4 + cell * col + cell / 2
             + Self.jitter[i % Self.jitter.count] * 0.8
-        let y = size.height - 138 - row * 62
+        let y = size.height - 104 - row * 52
             + Self.jitter[(i + 5) % Self.jitter.count]
         return CGPoint(x: x, y: y)
     }
@@ -237,7 +241,7 @@ struct OnboardingView: View {
         GeometryReader { geo in
             ForEach(Array(marqueeApps.enumerated()), id: \.element) { i, name in
                 let rest = cubeTarget(i, in: geo.size)
-                BridgeIcon(name: name, size: 84)
+                BridgeIcon(name: name, size: 74)
                     .rotationEffect(.degrees(cubesLanded
                         ? Double(Self.jitter[i % Self.jitter.count]) * 0.9 : 0))
                     .position(x: rest.x, y: cubesLanded ? rest.y : -120)

@@ -25,6 +25,19 @@ struct MainSurface: View {
     /// sources the feed shows.
     private var feedThings: [Thing] { Corpus.surfaced(things) }
 
+    /// First-ever thing from a source blooms its hue across the header once.
+    @State private var bloomHue: Color?
+    /// Generation token — a second bloom inside the first's 1.4s window must
+    /// not be cut short by the first's clear timer (review catch 2026-07-13).
+    @State private var bloomGen = 0
+    /// The ids seen at the last watcher pass — the arrival watcher diffs
+    /// against them, because "newest thing changed + captured recently" was
+    /// wrong twice over (review catches 2026-07-13): a DELETION resurfaces
+    /// the runner-up, and a bridge item lands with its PUBLISH date as
+    /// capturedAt, so an article published an hour ago never read as fresh
+    /// even though it just arrived. Set-diff on the real records instead.
+    @State private var seenIDs: Set<UUID>?
+
     /// Chip order: Pinned, All, then every source most-recent-first (the app you
     /// just heard from sits up front). `things` is newest-first, so first
     /// appearance IS the newest thing per source.
@@ -103,7 +116,78 @@ struct MainSurface: View {
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
+            // The themed page behind the chip header too — the header sits
+            // OUTSIDE the screens' own dsPageBackground, so in light mode the
+            // stack's white UIKit backing showed through here and drew a hard
+            // seam against the gray page below (the no-hairlines law, made of
+            // background). Just the color coat, not DSPageBackground: the
+            // screens already render the theme photo themselves, and a second
+            // full render here would be pure waste under an opaque layer.
+            .background(DS.themedPage.ignoresSafeArea())
             .overlay(alignment: .top) { shapeWash }
+            // The first-thing bloom — a new app's first landing washes its
+            // hue across the header for a beat, then fades. The one moment
+            // the connect promise visibly comes true (delight 2026-07-13).
+            .overlay(alignment: .top) {
+                if let bloomHue {
+                    LinearGradient(colors: [bloomHue.opacity(0.8), .clear],
+                                   startPoint: .top, endPoint: .bottom)
+                        .frame(height: 300)
+                        .ignoresSafeArea(edges: .top)
+                        .allowsHitTesting(false)
+                        .transition(.opacity)
+                }
+            }
+            .onAppear { seenIDs = Set(feedThings.map(\.id)) }
+            .onChange(of: feedThings.count) { _, _ in
+                let ids = Set(feedThings.map(\.id))
+                defer { seenIDs = ids }
+                // nil = the query hasn't been baselined yet (cold mount).
+                guard let seen = seenIDs else { return }
+                let fresh = ids.subtracting(seen)
+                // 1–12 fresh records is an arrival (one capture, one bridge
+                // sync burst); more is a backfill (an import, the initial
+                // populate) — a bob for a bulk import would be noise.
+                guard !fresh.isEmpty, fresh.count <= 12 else { return }
+                // The loudest voice of the batch: its newest member.
+                guard let lead = feedThings.first(where: { fresh.contains($0.id) })
+                else { return }
+                // First-ever = nothing OLDER from this source survives AND
+                // the source has never bloomed before (persistent — pruning
+                // old things must not replay the connect celebration).
+                let bloomedKey = "bloom.seen.\(lead.source)"
+                let hasOlder = feedThings.contains {
+                    $0.source == lead.source && !fresh.contains($0.id)
+                }
+                let firstEver = !hasOlder
+                    && !UserDefaults.standard.bool(forKey: bloomedKey)
+                chrome.chipCaught(lead.source, firstEver: firstEver)
+                if firstEver {
+                    UserDefaults.standard.set(true, forKey: bloomedKey)
+                    let hue = DS.washHue(for: lead.source) ?? DS.tint
+                    bloomGen += 1
+                    let gen = bloomGen
+                    withAnimation(.easeOut(duration: 0.45)) { bloomHue = hue }
+                    Task { @MainActor in
+                        try? await Task.sleep(for: .milliseconds(1400))
+                        // Only the LATEST bloom clears itself — an older
+                        // timer must not cut a newer bloom short.
+                        guard gen == bloomGen else { return }
+                        withAnimation(.easeOut(duration: 0.9)) { bloomHue = nil }
+                    }
+                }
+            }
+            // The FAB rides the ROOT surface only (2026-07-13 polish): pushed
+            // rooms (Apps, Settings, a token form) slide over it — a compose
+            // button isn't theirs. RootShell still owns the composer sheet.
+            .overlay(alignment: .bottomTrailing) {
+                ComposerFAB {
+                    DSHaptic.tap()
+                    chrome.openComposer()
+                }
+                .padding(.horizontal, DS.Space.s4)
+                .padding(.bottom, DS.Space.s2)
+            }
             .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackgroundVisibility(.hidden, for: .navigationBar)

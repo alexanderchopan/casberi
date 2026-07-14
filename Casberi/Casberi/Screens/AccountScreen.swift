@@ -314,13 +314,16 @@ struct AccountTile: View {
                 }
                 .padding(.top, DS.Space.s1)
             }
-            Spacer(minLength: 0)
+            // The fact sits right under the title (2026-07-13 polish) — the
+            // old bottom-anchored line left a dead middle band on every tile;
+            // one text block reads, air stays below it.
             if !value.isEmpty {
                 Text(value)
                     .dsText(.subhead13).foregroundStyle(valueColor)
                     .lineLimit(2)
                     .fixedSize(horizontal: false, vertical: true)
             }
+            Spacer(minLength: 0)
         }
         .padding(DS.Space.s4)
         .frame(maxWidth: .infinity, minHeight: 96, alignment: .topLeading)

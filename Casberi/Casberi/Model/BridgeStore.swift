@@ -114,7 +114,7 @@ struct BridgeApp: Identifiable, Codable {
     var askBeforeActing: Bool = true
 
     static let demo: [BridgeApp] = [
-        .init(id: "gmail", name: "Gmail",     status: .attention, statusLine: "Reconnect Gmail",
+        .init(id: "gmail", name: "Gmail",     status: .connected, statusLine: "Synced 5m ago",
               can: ["Reads your mail.", "Drafts replies when you ask."]),
         .init(id: "cal",   name: "Calendar",  status: .connected, statusLine: "Synced 2m ago",
               can: ["Reads your calendar.", "Adds events when you ask."]),
