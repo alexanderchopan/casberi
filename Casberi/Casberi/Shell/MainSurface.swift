@@ -209,15 +209,22 @@ struct MainSurface: View {
                 .padding(.horizontal, DS.Space.s4)
                 .padding(.bottom, DS.Space.s2)
             }
+            // Refresh delight (2026-07-14): every pull on this one surface
+            // bumps chrome.refreshPulse — the berry rain falls over the
+            // content and the avatar door spins (below). Decorative only;
+            // hit-testing is off inside BerryRain.
+            .overlay { BerryRain(trigger: chrome.refreshPulse) }
             .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackgroundVisibility(.hidden, for: .navigationBar)
             .toolbar {
                 // The shared doors — one place now, not duplicated onto two
-                // tab roots. Home's pull-to-refresh spins the avatar; the feed
-                // never spins, so no spin trigger flows here.
+                // tab roots. Any pull-to-refresh spins the avatar (the old
+                // Home-only rule died with the tabs; restored 2026-07-14
+                // after the tab-drop rewire orphaned the trigger).
                 TopDoors(onSettings: { route.push = .settings },
                          onApps: { route.push = .apps },
+                         refreshSpin: chrome.refreshPulse,
                          zoomNS: doorNS)
             }
             .navigationDestination(item: $route.push) { push in

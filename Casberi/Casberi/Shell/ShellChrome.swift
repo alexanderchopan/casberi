@@ -51,6 +51,13 @@ final class ShellChrome {
     var composerRequest = 0
     func openComposer() { composerRequest += 1 }
 
+    /// Bumped by every pull-to-refresh on the main surface (Home board or
+    /// feed alike — the per-tab distinction died with the tabs). MainSurface
+    /// hangs the refresh delight off it: the avatar door's spin (TopDoors,
+    /// restored 2026-07-14 — the tab-drop rewire had orphaned it) and the
+    /// berry rain (BerryRain, user ask same day).
+    var refreshPulse = 0
+
     /// A thing ARRIVED while the person watched (a bridge sync, a pull, a
     /// share landing) — the source's chip does one catch bob: the capture
     /// flight's landing beat, generalized to everything that lands (delight

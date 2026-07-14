@@ -73,6 +73,7 @@ All read via UserDefaults in `Shell/RootShell.swift` unless noted:
 - `-openDiagnostics YES` — open the Diagnostics sheet (pair with `-openSettings YES`); it runs the cover-photo and token-chart paths on-device and prints each step.
 - `-connectPhotos YES` — runs the real Photos connect+ingest headlessly; `-reingestPhotos YES` — calls the bare re-scan (no permission request) that `BridgeRefresh` now runs each foreground.
 - `-connectStrava YES` — runs the Strava connect: the Health-store read filtered to workouts whose `sourceRevision` names Strava (no Strava account/OAuth anywhere — its seat rides Apple Health, 2026-07-14). On the sim expect "connected, 0 in" (empty Health store; a Strava-written workout can't be seeded there — end-to-end needs a real device).
+- `-berryPulse <s>` — bumps `ShellChrome.refreshPulse` after a delay: plays the pull-to-refresh delight (avatar-door spin + `BerryRain`) without a gesture, for headless verification and recordings. NSLogs "berryPulse: dealt".
 - `-setHomeBanner <swatch-name|photo>` — sets the Home banner headlessly (e.g. `Teal`, or `photo` for a synthetic photo); `-openBanner YES` — open the Banner tray (pair with `-openSettings YES`).
 
 Deep links: `casberi://home`, `casberi://feed`, `casberi://feed/type/<Tag>`, `casberi://account` (→ apps; the tab bar is gone — this pushes the Apps door), `casberi://settings` (→ settings; the reliable route since `-openSettings` broke), `casberi://thing/<id>`.

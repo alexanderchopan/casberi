@@ -311,6 +311,17 @@ struct RootShell: View {
                     withAnimation(DS.Motion.standard) { HomeRoute.shared.push = .apps }
                 }
             }
+            // `-berryPulse <s>` bumps the refresh pulse after a delay — plays
+            // the pull-to-refresh delight (avatar spin + berry rain) without
+            // a gesture, for headless verification and screen recordings.
+            let berryDelay = UserDefaults.standard.double(forKey: "berryPulse")
+            if berryDelay > 0 {
+                Task { @MainActor in
+                    try? await Task.sleep(for: .seconds(berryDelay))
+                    chrome.refreshPulse += 1
+                    NSLog("[Casberi] berryPulse: dealt")
+                }
+            }
             // Debug hook: `simctl launch ... -answerProbe "what did I save about work"`
             // runs the whole answer path (retrieve → on-device compose → doc)
             // and logs the composition + its latency, so it can be verified and

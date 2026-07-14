@@ -492,6 +492,7 @@ struct FeedScreen: View {
         .dsSoftTopEdge()
         .refreshable {
             // Pull to refresh runs sync (M1 CloudKit half wires in here).
+            chrome.refreshPulse += 1   // spins the avatar door, deals the berry rain
             try? await Task.sleep(for: .milliseconds(600))
         }
         // The one synthesis block a shaped source earns streams through the
@@ -1394,6 +1395,7 @@ struct FeedScreen: View {
     /// beat lets the pull read before it lands with a soft thud.
     private func refreshFeed() async {
         BridgeRefresh.refreshAllConnected(context: modelContext, store: bridges)
+        chrome.refreshPulse += 1   // spins the avatar door, deals the berry rain
         shapeWave += 1
         streamBlock()
         try? await Task.sleep(for: .milliseconds(450))

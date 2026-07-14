@@ -558,6 +558,7 @@ struct HomeScreen: View {
         // the modules under a wobbling board.
         boardEditing = false
         refreshTick += 1
+        chrome.refreshPulse += 1   // spins the avatar door, deals the berry rain
         if wallet.addresses.contains(where: \.pinnedToHome) {
             walletHoldings = await WalletIngest.topHoldingsByWallet(pinnedOnly: true)
         }
