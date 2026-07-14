@@ -269,6 +269,12 @@ struct Composer: View {
         } else if all.contains(where: { $0.capturedAt >= dayStart }) {
             out.append("What landed today?")
         }
+        // The watchlist chip (2026-07-14): watched tokens are the corpus' one
+        // LIVE number — teach that the composer reads them. Gated on the same
+        // things TokensAsk answers from, so the chip always answers.
+        if all.contains(where: { $0.source == "Tokens" }) {
+            out.append("How's my watchlist?")
+        }
         // The chips teach what the composer can DO (2026-07-10) — counting
         // stayed a secret power until the chips showed it. Only asks the corpus
         // can honestly answer right now. (Pinning left the composer 2026-07-12:

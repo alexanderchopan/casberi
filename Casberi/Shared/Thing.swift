@@ -157,6 +157,14 @@ final class Thing {
     /// Optional + default nil keeps CloudKit mirroring happy.
     var ocrAt: Date? = nil
 
+    /// A watched token's USD price the moment it was watched (2026-07-14) —
+    /// the anchor for "since you watched": a number no market site can show,
+    /// known locally and never back-filled. Set only by TokenWatch.add;
+    /// `capturedAt` is the matching WHEN. Optional + default nil keeps
+    /// CloudKit mirroring happy; nil for everything else (and for tokens
+    /// watched before this field).
+    var watchPriceUsd: Double? = nil
+
     init(
         id: UUID = UUID(),
         kind: ThingKind,

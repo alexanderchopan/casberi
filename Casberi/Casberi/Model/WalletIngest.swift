@@ -59,25 +59,112 @@ enum WalletIngest {
             return (address, chain, received, await fetch(address: address, chain: chain, received: received))
         }
 
-        var added = 0
         var reachedAny = false
+        var fresh: [(t: [String: Any], chain: Chain, received: Bool,
+                     ref: String, address: String)] = []
+        var seenThisPass = Set<String>()
         for (address, chain, received, transfers) in results {
             guard let transfers else { continue }
             reachedAny = true
             for t in transfers {
                 guard let uid = t["uniqueId"] as? String else { continue }
                 let ref = "wallet:\(uid)"
-                guard !existing.contains(ref) else { continue }
-                guard let thing = thing(from: t, chain: chain, received: received,
-                                        ref: ref, address: address)
+                // A transfer between two watched addresses comes back from
+                // BOTH queries with the same uniqueId — land it once.
+                guard !existing.contains(ref), seenThisPass.insert(ref).inserted
                 else { continue }
-                context.insert(thing)
-                SpotlightIndex.index([thing])
-                added += 1
+                fresh.append((t, chain, received, ref, address))
             }
+        }
+        // Name the new transfers' counterparties BEFORE landing them — a
+        // title is written once, so the name has to be there at write time.
+        let names = await counterpartyNames(for: fresh)
+        var added = 0
+        for f in fresh {
+            guard let thing = thing(from: f.t, chain: f.chain, received: f.received,
+                                    ref: f.ref, address: f.address, names: names)
+            else { continue }
+            context.insert(thing)
+            SpotlightIndex.index([thing])
+            added += 1
         }
         if added > 0 { try? context.save() }
         return reachedAny ? added : nil
+    }
+
+    // MARK: - Counterparty naming (2026-07-14)
+
+    /// Contract addresses a counterparty slot actually meets, named — only
+    /// canonical, publicly verifiable deployments (honesty rule: a wrong name
+    /// is worse than no name). Keyed lowercased; several are deployed at the
+    /// same address across EVM chains, so the table is chain-agnostic.
+    private static let knownContracts: [String: String] = [
+        // Uniswap routers (V2, V3, V3-2, Universal — Universal shares its
+        // address across the chains we read).
+        "0x7a250d5630b4cf539739df2c5dacb4c659f2488d": "Uniswap",
+        "0xe592427a0aece92de3edee1f18e0157c05861564": "Uniswap",
+        "0x68b3465833fb72a70ecdf485e0e4c7bd8665fc45": "Uniswap",
+        "0x3fc91a3afd70395cd496c647d5a6cc9d4b2b7fad": "Uniswap",
+        // OpenSea's Seaport (1.1, 1.5, 1.6).
+        "0x00000000006c3852cbef3e08e8df289169ede581": "OpenSea",
+        "0x00000000000000adc04c56bf30ac9d3c0aaf14dc": "OpenSea",
+        "0x0000000000000068f116a894984e2db1123eb395": "OpenSea",
+        // Aggregators.
+        "0x1111111254eeb25477b68fb85ed929f73a960582": "1inch",
+        "0x111111125421ca6dc452d289314280a0f8842a65": "1inch",
+        "0xdef1c0ded9bec7f1a1670819833240f027b25eff": "0x Exchange",
+        // Wrapped natives — a wrap/unwrap's counterparty IS the contract.
+        "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2": "WETH",
+        "0x4200000000000000000000000000000000000006": "WETH",
+        "0x0d500b1d8e8ef31e21c99d1db9a6444d3adf1270": "WMATIC",
+        // ENS registrar controllers (name registrations/renewals).
+        "0x253553366da8546fc250f225fe3d25d0c782303b": "ENS",
+        "0x283af0b28c62c092c9727f1ee09c02ca627eb7f5": "ENS",
+    ]
+
+    /// The other side of a transfer, lowercased hex — who it came from when
+    /// received, where it went when sent.
+    private static func counterparty(of t: [String: Any], received: Bool) -> String? {
+        ((received ? t["from"] : t["to"]) as? String)?.lowercased()
+    }
+
+    /// Names for a batch of new transfers' counterparties: another watched
+    /// wallet's own label first (a move between your wallets says so), then
+    /// the known-contracts table, then reverse ENS — capped at 16 lookups per
+    /// pass (a first-ever sync can land dozens of transfers; the cache —
+    /// misses included — picks up the rest on later passes). An unnamed
+    /// address stays unnamed: the title never carries a raw hash.
+    @MainActor
+    private static func counterpartyNames(
+        for transfers: [(t: [String: Any], chain: Chain, received: Bool,
+                         ref: String, address: String)]) async -> [String: String] {
+        var addrs: [String] = []
+        var seen = Set<String>()
+        for f in transfers {
+            guard let a = counterparty(of: f.t, received: f.received) else { continue }
+            if seen.insert(a).inserted { addrs.append(a) }
+        }
+        guard !addrs.isEmpty else { return [:] }
+
+        var names: [String: String] = [:]
+        var unknown: [String] = []
+        for a in addrs {
+            if let watched = WalletStore.shared.addresses.first(where: {
+                $0.address.lowercased() == a
+            }) {
+                names[a] = watched.label.isEmpty ? watched.short : watched.label
+            } else if let known = knownContracts[a] {
+                names[a] = known
+            } else {
+                unknown.append(a)
+            }
+        }
+        let resolved = await IngestSupport.boundedGather(Array(unknown.prefix(16)),
+                                                         maxConcurrent: 4) { a in
+            (a, await ENS.reverseName(for: a))
+        }
+        for (a, n) in resolved where n != nil { names[a] = n }
+        return names
     }
 
     /// Resolves watched entries to hex, dropping any ENS name that won't
@@ -118,12 +205,20 @@ enum WalletIngest {
     }
 
     private static func thing(from t: [String: Any], chain: Chain,
-                              received: Bool, ref: String, address: String) -> Thing? {
+                              received: Bool, ref: String, address: String,
+                              names: [String: String] = [:]) -> Thing? {
         guard let hash = t["hash"] as? String else { return nil }
         let asset = (t["asset"] as? String) ?? chain.symbol
         let amount = (t["value"] as? Double).map(format) ?? ""
         let verb = received ? "Received" : "Sent"
-        let title = amount.isEmpty ? "\(verb) \(asset)" : "\(verb) \(amount) \(asset)"
+        var title = amount.isEmpty ? "\(verb) \(asset)" : "\(verb) \(amount) \(asset)"
+        // The counterparty, when it has a name (a watched wallet's label, a
+        // known contract, or reverse ENS) — "Sent 0.5 ETH to Uniswap" is a
+        // story where a bare receipt wasn't. Nameless stays plain: the title
+        // never wears a raw hash.
+        if let who = counterparty(of: t, received: received).flatMap({ names[$0] }) {
+            title += received ? " from \(who)" : " to \(who)"
+        }
         let when = IngestSupport.isoDate((t["metadata"] as? [String: Any])?["blockTimestamp"])
         let thing = Thing(
             kind: .transaction,
@@ -214,6 +309,11 @@ enum WalletIngest {
             for await result in group { collected.append(result) }
             return collected
         }
+        // Every real fetch feeds the wallet's value history (2026-07-14) —
+        // forward-only, throttled inside recordSample, never back-filled.
+        for (i, g) in results { if let g {
+            WalletStore.shared.recordSample(address: watched[i].address, totalUSD: g.totalUSD)
+        } }
         return results.sorted { $0.0 < $1.0 }.compactMap(\.1)
     }
 
@@ -229,6 +329,12 @@ enum WalletIngest {
         let url = "https://api.g.alchemy.com/data/v1/\(IngestSupport.alchemyKey)/assets/tokens/by-address"
 
         var bySymbol: [String: Double] = [:]
+        // Each symbol's biggest single position also remembers WHERE it is
+        // (chain slug + token address) so its treemap cell can open the same
+        // chart a watched token gets (2026-07-14). Native coins have no
+        // token address — their cells stay routeless and fall back to the
+        // Wallet screen.
+        var routeBySymbol: [String: (usd: Double, route: String)] = [:]
         var pageKey: String? = nil
         var reached = false
         // Up to 8 pages (≈800 tokens) — enough to surface a whale's real
@@ -255,7 +361,14 @@ enum WalletIngest {
                 let decimals = (md?["decimals"] as? Int) ?? 18   // native is always 18
                 let amount = hexToDouble(balHex) / pow(10, Double(decimals))
                 let usd = amount * price
-                if usd >= 1 { bySymbol[clean(symbol), default: 0] += usd }
+                guard usd >= 1 else { continue }
+                let sym = clean(symbol)
+                bySymbol[sym, default: 0] += usd
+                if let tokenAddr = t["tokenAddress"] as? String,
+                   let slug = chainSlug[t["network"] as? String ?? ""],
+                   usd > (routeBySymbol[sym]?.usd ?? 0) {
+                    routeBySymbol[sym] = (usd, "\(slug):\(tokenAddr.lowercased())")
+                }
             }
 
             guard let next = data["pageKey"] as? String, !next.isEmpty else { break }
@@ -267,10 +380,113 @@ enum WalletIngest {
         // to slivers. Icons for "token" mode are a bundled local set keyed
         // by symbol (TokenIcon) — Alchemy's own logo field turned out null
         // for nearly everything, including WETH and USDC (2026-07-09), so
-        // this cell string carries no icon data at all.
+        // this cell string carries no icon data at all. A routed cell trails
+        // "@t:chain:address" (stripped by KindCountRow.parse, never shown)
+        // so a tap can open that token's chart.
         let cells = bySymbol.sorted { $0.value > $1.value }.prefix(5)
-            .map { "\($0.key) \(max(1, Int($0.value.squareRoot() * 10)))" }
+            .map { sym, usd in
+                let route = routeBySymbol[sym].map { " @t:\($0.route)" } ?? ""
+                return "\(sym) \(max(1, Int(usd.squareRoot() * 10)))\(route)"
+            }
         return (cells, bySymbol.values.reduce(0, +), bySymbol.count)
+    }
+
+    /// Alchemy network ids → the Dexscreener chain slugs TokenChart routes
+    /// on (the inverse of TokenChart's own alchemyNetwork table).
+    private static let chainSlug: [String: String] = [
+        "eth-mainnet": "ethereum", "base-mainnet": "base", "arb-mainnet": "arbitrum",
+        "opt-mainnet": "optimism", "matic-mainnet": "polygon",
+    ]
+
+    // MARK: - NFTs (2026-07-14)
+
+    /// One NFT a watched wallet holds — enough for a shelf cell and its
+    /// OpenSea door. Read-only public data, like everything else here.
+    struct WalletNFT: Identifiable {
+        let contract: String
+        let tokenId: String
+        let name: String
+        let collection: String
+        let imageURL: String
+        /// OpenSea's chain path ("ethereum", "base").
+        let chainPath: String
+        var id: String { "\(chainPath):\(contract):\(tokenId)" }
+        var openseaURL: URL? {
+            URL(string: "https://opensea.io/assets/\(chainPath)/\(contract)/\(tokenId)")
+        }
+    }
+
+    struct NFTGroup {
+        /// The watched entry's own address string — the stable row identity
+        /// (labels are free text and can repeat).
+        let address: String
+        let label: String
+        let nfts: [WalletNFT]
+    }
+
+    /// NFT holdings change rarely; every Wallet-screen appearance re-hitting
+    /// 2 GETs per wallet for identical bytes wastes quota (the TokenPulse
+    /// 15-minute idiom). Keyed by the watched set, so add/remove refetches.
+    @MainActor private static var nftCache: (key: String, at: Date, groups: [NFTGroup])?
+
+    /// Every watched wallet's NFTs, one group per wallet that holds any —
+    /// the Wallet screen's shelf. A wallet with none simply contributes no
+    /// group (correct-but-empty, not a failure). Wallets fetch concurrently
+    /// (bounded — the same Alchemy key the transfer sync bursts on).
+    @MainActor
+    static func nftsByWallet() async -> [NFTGroup] {
+        let watched = WalletStore.shared.addresses
+        guard !watched.isEmpty else { return [] }
+        let key = watched.map { $0.address.lowercased() }.sorted().joined(separator: ",")
+        if let cached = nftCache, cached.key == key,
+           cached.at.timeIntervalSinceNow > -900 {
+            return cached.groups
+        }
+        let fetched = await IngestSupport.boundedGather(watched, maxConcurrent: 4) { entry in
+            guard let hex = await hexAddresses([entry.address]).first else {
+                return NFTGroup(address: entry.address, label: "", nfts: [])
+            }
+            return NFTGroup(address: entry.address,
+                            label: entry.label.isEmpty ? entry.short : entry.label,
+                            nfts: await nfts(addressHex: hex))
+        }
+        let groups = fetched.filter { !$0.nfts.isEmpty }
+        nftCache = (key, .now, groups)
+        return groups
+    }
+
+    /// A wallet's NFTs off Alchemy's NFT API — the image-bearing chains
+    /// (Ethereum + Base), spam filtered, first page only. Pieces without an
+    /// image are skipped: a shelf of gray squares says nothing.
+    static func nfts(addressHex: String, limit: Int = 12) async -> [WalletNFT] {
+        let sources: [(network: String, path: String)] =
+            [("eth-mainnet", "ethereum"), ("base-mainnet", "base")]
+        var out: [WalletNFT] = []
+        for source in sources {
+            let url = "https://\(source.network).g.alchemy.com/nft/v3/\(IngestSupport.alchemyKey)"
+                + "/getNFTsForOwner?owner=\(addressHex)&withMetadata=true"
+                + "&pageSize=\(limit)&excludeFilters%5B%5D=SPAM"
+            guard let root = await IngestSupport.getJSON(url) as? [String: Any],
+                  let owned = root["ownedNfts"] as? [[String: Any]] else { continue }
+            for n in owned {
+                guard let contract = n["contract"] as? [String: Any],
+                      let contractAddr = contract["address"] as? String,
+                      let tokenId = n["tokenId"] as? String,
+                      let image = n["image"] as? [String: Any],
+                      let imageURL = IngestSupport.imageURL(
+                        (image["thumbnailUrl"] as? String) ?? (image["cachedUrl"] as? String))
+                else { continue }
+                let collection = ((contract["openSeaMetadata"] as? [String: Any])?["collectionName"] as? String)
+                    ?? (contract["name"] as? String) ?? ""
+                let shortId = tokenId.count > 8 ? "\(tokenId.prefix(6))…" : tokenId
+                let name = (n["name"] as? String).flatMap { $0.isEmpty ? nil : $0 }
+                    ?? (collection.isEmpty ? "#\(shortId)" : "\(collection) #\(shortId)")
+                out.append(WalletNFT(contract: contractAddr, tokenId: tokenId,
+                                     name: name, collection: collection,
+                                     imageURL: imageURL, chainPath: source.path))
+            }
+        }
+        return Array(out.prefix(limit))
     }
 
     /// A step-by-step trace of the holdings path for DiagnosticsScreen — the

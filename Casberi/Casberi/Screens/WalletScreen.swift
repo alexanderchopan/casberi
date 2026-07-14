@@ -33,6 +33,17 @@ struct WalletScreen: View {
     @State private var holdings = GenStream()
     @State private var result: String?
     @State private var resultIsError = false
+    /// Per-wallet value history (2026-07-14) — the locally-sampled USD line,
+    /// forward-only from the day watching began.
+    @State private var valueLines: [(id: UUID, label: String, samples: [WalletStore.ValueSample])] = []
+    /// Per-wallet NFT shelves — Alchemy's NFT read, spam filtered.
+    @State private var nftGroups: [WalletIngest.NFTGroup] = []
+    /// A tapped holdings cell: the token's thing sheet when watched, the
+    /// quick chart sheet when not.
+    @State private var openTokenThing: Thing?
+    @State private var quickToken: TokenQuickRoute?
+    @Environment(\.colorScheme) private var scheme
+    @Environment(\.openURL) private var openURL
     /// The one swipe lesson, shared across every screen that pins by swipe
     /// (2026-07-11) — whichever screen a person meets the gesture on first
     /// retires it everywhere.
@@ -56,6 +67,12 @@ struct WalletScreen: View {
                         .listRowInsets(EdgeInsets())
                 }
                 .listRowSeparator(.hidden)
+            }
+            if !wallet.addresses.isEmpty, !valueLines.isEmpty {
+                valueSection.listRowSeparator(.hidden)
+            }
+            if !wallet.addresses.isEmpty, !nftGroups.isEmpty {
+                nftSection.listRowSeparator(.hidden)
             }
             if syncing || result != nil {
                 Section {
@@ -82,15 +99,156 @@ struct WalletScreen: View {
             // Reorder/remove live behind Edit — drag to sort, red-minus to drop.
             ToolbarItem(placement: .topBarTrailing) { EditButton().tint(DS.textPrimary) }
         }
-        .onAppear { if !wallet.addresses.isEmpty { sync() } }
+        .onAppear {
+            loadValueLines()
+            if !wallet.addresses.isEmpty { sync() }
+        }
+        // A dropped wallet's shelves leave with it, not on the next sync.
+        .onChange(of: wallet.addresses) {
+            let kept = Set(wallet.addresses.map(\.address))
+            nftGroups.removeAll { !kept.contains($0.address) }
+            loadValueLines()
+        }
+        // A tapped holdings cell (2026-07-14): the token's own chart — its
+        // thing sheet when watched, the quick sheet when it's just held.
+        // ("@wallet" — the native-coin fallback — is a no-op here: this IS
+        // the Wallet screen.)
+        .environment(\.genProjectTap) { name in
+            guard let route = TokenQuickRoute.from(sentinel: name) else { return }
+            if let thing = route.watchedThing(in: modelContext) {
+                openTokenThing = thing
+            } else {
+                quickToken = route
+            }
+        }
+        .sheet(item: $openTokenThing) { thing in
+            ThingSheetView(thing: thing)
+        }
+        .sheet(item: $quickToken) { route in
+            TokenQuickSheet(route: route)
+        }
+    }
+
+    // MARK: - Value history (2026-07-14)
+
+    private func loadValueLines() {
+        valueLines = wallet.addresses.compactMap { addr in
+            let samples = wallet.valueSamples(forAddress: addr.address)
+            guard samples.count >= 2 else { return nil }
+            return (addr.id, addr.label.isEmpty ? addr.short : addr.label, samples)
+        }
+    }
+
+    /// Each wallet's sampled USD line — drawn with the token plot idiom
+    /// (no pulse: samples land as you visit, nothing is live-streaming).
+    private var valueSection: some View {
+        Section {
+            ForEach(valueLines, id: \.id) { line in
+                let closes = line.samples.map(\.usd)
+                let first = closes.first ?? 0
+                let last = closes.last ?? 0
+                let change = first > 0 ? (last - first) / first : 0
+                HStack(spacing: DS.Space.s3) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(line.label)
+                            .dsText(.body17).foregroundStyle(DS.textPrimary)
+                            .lineLimit(1)
+                        Text(TokenStats.compact(last))
+                            .dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                            .monospacedDigit()
+                    }
+                    Spacer()
+                    TokenChartPlot(chart: TokenChart(closes: closes, price: last,
+                                                     change: change),
+                                   accent: TokenChartStyle.accent(up: change >= 0,
+                                                                  scheme: scheme),
+                                   height: 30, pulses: false)
+                        .frame(width: 84)
+                    TokenDeltaPill(
+                        change: change,
+                        label: "since \(line.samples.first!.at.formatted(.dateTime.month(.abbreviated).day()))",
+                        compact: true)
+                }
+                .dsListCardRow()
+            }
+        } header: {
+            Text("Value").dsText(.label12)
+                .foregroundStyle(DS.textSecondary)
+        } footer: {
+            Text("Sampled as you use Casberi — history builds from the day you started watching, never back-filled.")
+                .dsText(.callout15).foregroundStyle(DS.textSecondary)
+        }
+    }
+
+    // MARK: - NFTs (2026-07-14)
+
+    /// The wallet's pieces, one shelf per wallet that holds any — a tap
+    /// opens the piece on OpenSea (read-only browse, like every link out).
+    private var nftSection: some View {
+        Section {
+            ForEach(nftGroups, id: \.address) { group in
+                VStack(alignment: .leading, spacing: DS.Space.s2) {
+                    if nftGroups.count > 1 {
+                        Text(group.label)
+                            .dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                    }
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: DS.Space.s3) {
+                            ForEach(group.nfts) { nft in
+                                nftCell(nft)
+                            }
+                        }
+                    }
+                }
+                .listRowBackground(Color.clear)
+                .listRowInsets(EdgeInsets(top: DS.Space.s2, leading: DS.Space.s4,
+                                          bottom: DS.Space.s2, trailing: 0))
+            }
+        } header: {
+            Text("NFTs").dsText(.label12)
+                .foregroundStyle(DS.textSecondary)
+        }
+    }
+
+    private func nftCell(_ nft: WalletIngest.WalletNFT) -> some View {
+        Button {
+            guard let url = nft.openseaURL else { return }
+            DSHaptic.selection()
+            openURL(url)
+        } label: {
+            VStack(alignment: .leading, spacing: DS.Space.s1) {
+                AsyncImage(url: URL(string: nft.imageURL)) { phase in
+                    if let image = phase.image {
+                        image.resizable().scaledToFill()
+                    } else {
+                        DS.fillFaint
+                    }
+                }
+                .frame(width: 96, height: 96)
+                .clipShape(RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+                Text(nft.name)
+                    .dsText(.label12).foregroundStyle(DS.textSecondary)
+                    .lineLimit(1)
+                    .frame(width: 96, alignment: .leading)
+            }
+        }
+        .buttonStyle(.plain)
     }
 
     private func sync() {
         guard !syncing else { return }
         syncing = true
         Task {
-            let added = await WalletIngest.refresh(context: modelContext)
-            if let doc = await WalletIngest.holdingsChart() { holdings.paint(doc) }
+            // Three independent reads — overlapped, so the screen pays the
+            // slowest one, not the sum (transfers + holdings + NFTs each
+            // chain their own round-trips).
+            async let refreshed = WalletIngest.refresh(context: modelContext)
+            async let holdingsDoc = WalletIngest.holdingsChart()
+            async let nfts = WalletIngest.nftsByWallet()
+            let added = await refreshed
+            if let doc = await holdingsDoc { holdings.paint(doc) }
+            loadValueLines()   // the holdings fetch may have landed a sample
+            nftGroups = await nfts
             syncing = false
             // A bridge only registers "connected" once it actually reached
             // Alchemy — a bad key or offline device must never claim success
@@ -143,11 +301,23 @@ struct WalletScreen: View {
                         }
                     }
                     Spacer()
-                    if addr.pinnedToHome {
-                        Image(systemName: "pin.fill")
-                            .font(.system(size: 11))
-                            .foregroundStyle(DS.tint)
+                    // A visible pin control on every row (user, 2026-07-14):
+                    // wallets pin per-ADDRESS (you might watch three and pin
+                    // one), so the toggle lives on the row rather than as the
+                    // source-level PinToHomeButton every other app screen
+                    // carries above its list. Tap to pin/unpin; the trailing
+                    // swipe still does the same — one verb, two ways.
+                    Button {
+                        DSHaptic.tap()
+                        wallet.togglePin(addr.id)
+                    } label: {
+                        Image(systemName: addr.pinnedToHome ? "pin.fill" : "pin")
+                            .font(.system(size: 14))
+                            .foregroundStyle(addr.pinnedToHome ? DS.tint : DS.textTertiary)
+                            .frame(width: 32, height: 32)
+                            .contentShape(Rectangle())
                     }
+                    .buttonStyle(.plain)
                 }
                 .dsListCardRow()
                 .modifier(SwipeHintNudge(active: addr.id == hintAddressID) { swipeCoachDone = true })

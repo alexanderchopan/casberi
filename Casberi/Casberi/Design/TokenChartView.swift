@@ -187,6 +187,12 @@ private struct GhostShimmer: View {
 struct TokenChartView<Fallback: View>: View {
     let chain: String
     let address: String
+    /// The since-you-watched anchor (2026-07-14): the price and moment the
+    /// token joined the watchlist, kept on its thing. When present, a line
+    /// under the plot says "+41.2% · since Jul 2" against the live price —
+    /// a number known locally that no market site can show. nil (older
+    /// watches, non-watchlist charts) renders nothing.
+    var since: (price: Double, date: Date)? = nil
     @ViewBuilder let fallback: () -> Fallback
 
     private enum Phase { case loading, ready, dead }
@@ -202,9 +208,11 @@ struct TokenChartView<Fallback: View>: View {
     @Environment(\.colorScheme) private var scheme
 
     init(chain: String, address: String,
+         since: (price: Double, date: Date)? = nil,
          @ViewBuilder fallback: @escaping () -> Fallback) {
         self.chain = chain
         self.address = address
+        self.since = since
         self.fallback = fallback
         _range = State(initialValue: TokenChartStyle.rememberedRange(chain: chain,
                                                                      address: address))
@@ -248,6 +256,7 @@ struct TokenChartView<Fallback: View>: View {
             VStack(alignment: .leading, spacing: DS.Space.s3) {
                 header(chart)
                 plot(chart)
+                sinceWatchedLine(chart)
                 if let note {
                     Text(note)
                         .dsText(.subhead13).foregroundStyle(DS.textTertiary)
@@ -255,6 +264,22 @@ struct TokenChartView<Fallback: View>: View {
             }
         } else {
             TokenChartSkeleton()
+        }
+    }
+
+    /// "+41.2% · since Jul 2 — you watched at $0.0031". The change is the
+    /// LIVE price against the watch-time price; both numbers were really
+    /// true, so the line claims nothing the record doesn't hold.
+    @ViewBuilder private func sinceWatchedLine(_ chart: TokenChart) -> some View {
+        if let since, since.price > 0, chart.price > 0 {
+            let change = (chart.price - since.price) / since.price
+            HStack(spacing: DS.Space.s2) {
+                TokenDeltaPill(change: change,
+                               label: "since \(since.date.formatted(.dateTime.month(.abbreviated).day()))")
+                Text("you watched at \(TokenChartStyle.priceText(since.price))")
+                    .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                    .lineLimit(1)
+            }
         }
     }
 

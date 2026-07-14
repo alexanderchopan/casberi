@@ -25,6 +25,9 @@ struct FeedScreen: View {
 
     @State private var filter = FeedFilter.shared
     @State private var sheetThing: Thing?
+    /// A tapped holdings cell whose token isn't watched — its quick chart
+    /// (2026-07-14). Watched ones open their thing via sheetThing.
+    @State private var quickToken: TokenQuickRoute?
     @State private var confirming: (Verb, Thing)?
     @State private var staleExpanded = false
     @State private var blockStream = GenStream()
@@ -529,6 +532,9 @@ struct FeedScreen: View {
             ThingSheetView(thing: thing)
                 .navigationTransition(.zoom(sourceID: thing.id, in: zoomNS))
         }
+        .sheet(item: $quickToken) { route in
+            TokenQuickSheet(route: route)
+        }
         .confirmationDialog(
             confirming.map { "\($0.0.label): \($0.1.title)?" } ?? "",
             isPresented: Binding(get: { confirming != nil },
@@ -796,6 +802,23 @@ struct FeedScreen: View {
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
                     .listRowInsets(EdgeInsets())
+                    // A tapped holdings cell opens its token's chart
+                    // (2026-07-14): the thing sheet when watched, the quick
+                    // sheet when it's just held; a routeless native-coin
+                    // cell keeps its old door — the Wallet screen (no dead
+                    // controls). The Feed sets its own handler —
+                    // HomeScreen's doesn't reach this surface.
+                    .environment(\.genProjectTap) { name in
+                        if let route = TokenQuickRoute.from(sentinel: name) {
+                            if let thing = route.watchedThing(in: modelContext) {
+                                sheetThing = thing
+                            } else {
+                                quickToken = route
+                            }
+                        } else if name == "@wallet" {
+                            pushedBridge = .wallet
+                        }
+                    }
             }
         }
     }

@@ -1670,10 +1670,16 @@ private struct GenTagMap: View {
                     } else {
                         Button {
                             DSHaptic.selection()
-                            // A holdings cell has no project to open — the
-                            // whole map routes to the Wallet screen instead
-                            // of a dead-end empty tag view (2026-07-10).
-                            projectTap?(iconMode == "token" ? "@wallet" : item.tag)
+                            // A holdings cell with a route opens that token's
+                            // own chart (2026-07-14); routeless (a native
+                            // coin) — the whole map routes to the Wallet
+                            // screen instead of a dead-end empty tag view
+                            // (2026-07-10).
+                            if iconMode == "token" {
+                                projectTap?(item.route.map { "@token:\($0)" } ?? "@wallet")
+                            } else {
+                                projectTap?(item.tag)
+                            }
                         } label: { label }
                         // The Settings tiles' own press (settle + dim) — the
                         // cells ARE tiles now, so they press like tiles
@@ -2200,7 +2206,7 @@ private struct GenCover: View {
 /// are navigation, not decoration. Shared by the cover (white ink over a
 /// photo or the black field) and KindPills (page ink).
 private struct KindCountRow: View {
-    struct Item { let tag: String; let n: Int }
+    struct Item { let tag: String; let n: Int; var route: String? = nil }
     let items: [Item]
     var ink: Color = DS.textPrimary
     @Environment(\.openURL) private var openURL
@@ -2210,13 +2216,25 @@ private struct KindCountRow: View {
     /// refs with no trailing count: the cover uses it so a tag truncated by
     /// the stream never flashes a fallback chip (composed chips always carry
     /// counts, so nothing real is lost); bare tags elsewhere still count 1.
+    /// A trailing " @t:chain:address" (holdings cells, 2026-07-14) is a
+    /// route, never shown — it lets the cell's tap open that token's chart.
+    /// Sliced off the raw string (not re-tokenized) so every other ref keeps
+    /// the old invariant: a bare ref renders exactly as written.
     static func parse(_ raw: [String], cap: Int = 5, requireCount: Bool = false) -> [Item] {
         raw.prefix(cap).compactMap { r in
-            let parts = r.split(separator: " ")
-            if let last = parts.last, let n = Int(last) {
-                return Item(tag: parts.dropLast().joined(separator: " "), n: n)
+            var body = r
+            var route: String? = nil
+            if let at = r.range(of: " @t:", options: .backwards),
+               case let tail = r[at.upperBound...],
+               !tail.isEmpty, !tail.contains(" ") {
+                route = String(tail)
+                body = String(r[..<at.lowerBound])
             }
-            return requireCount ? nil : Item(tag: r, n: 1)
+            let parts = body.split(separator: " ")
+            if let last = parts.last, let n = Int(last) {
+                return Item(tag: parts.dropLast().joined(separator: " "), n: n, route: route)
+            }
+            return requireCount ? nil : Item(tag: body, n: 1, route: route)
         }
     }
 

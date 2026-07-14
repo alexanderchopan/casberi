@@ -30,7 +30,7 @@ struct ThingContentView: View {
             // A token link leads with its price chart (the token's "media",
             // like a screenshot leads with its image); everything else previews.
             if let route = TokenChart.route(from: thing.content) {
-                TokenChartContent(chain: route.chain, address: route.address)
+                TokenChartContent(thing: thing, chain: route.chain, address: route.address)
             } else if let route = KalshiMarket.route(from: thing.content) {
                 KalshiMarketContent(series: route.series, event: route.event)
             } else if let url = Capture.detectURL(in: thing.content.isEmpty ? thing.title : thing.content) {
@@ -490,22 +490,68 @@ private struct ScheduleCard: View {
 }
 
 /// A token's price, drawn natively — the full TokenChartView read (prd 51):
-/// price, the delta pill, range chips, the scrubbable line. Illiquid/dead
-/// tokens have no pool anywhere, so it falls back to the plain link, never
-/// an empty chart.
+/// price, the delta pill, range chips, the scrubbable line, and (2026-07-14)
+/// the since-you-watched anchor plus a market-structure strip (liquidity,
+/// 24h volume, FDV, market cap — the Dexscreener pair payload that resolved
+/// the token; a stat the pair doesn't report simply isn't shown).
+/// Illiquid/dead tokens have no pool anywhere, so it falls back to the
+/// plain link, never an empty chart.
 private struct TokenChartContent: View {
+    let thing: Thing
     let chain: String
     let address: String
+    @State private var stats: TokenStats?
+
+    /// The watch-time anchor — only when the record really carries one
+    /// (tokens watched before the field stay anchorless, honestly).
+    private var since: (price: Double, date: Date)? {
+        guard thing.source == "Tokens", let p = thing.watchPriceUsd, p > 0
+        else { return nil }
+        return (p, thing.capturedAt)
+    }
 
     var body: some View {
-        TokenChartView(chain: chain, address: address) {
-            // No pool (dead/illiquid) — the plain link, honestly.
-            if let url = URL(string: "https://dexscreener.com/\(chain)/\(address)") {
-                LinkPreviewCard(url: url)
+        VStack(alignment: .leading, spacing: DS.Space.s4) {
+            TokenChartView(chain: chain, address: address, since: since) {
+                // No pool (dead/illiquid) — the plain link, honestly.
+                if let url = URL(string: "https://dexscreener.com/\(chain)/\(address)") {
+                    LinkPreviewCard(url: url)
+                }
             }
+            statStrip
         }
         .padding(.horizontal, DS.Space.s4)
         .padding(.bottom, DS.Space.s3)
+        .task { stats = await TokenStats.fetch(chain: chain, address: address) }
+    }
+
+    /// The market's shape in four quiet numbers — cells only for stats the
+    /// pair actually reported.
+    @ViewBuilder private var statStrip: some View {
+        if let stats {
+            let cells: [(String, Double)] = [
+                ("Liquidity", stats.liquidityUsd), ("24h volume", stats.volume24h),
+                ("FDV", stats.fdv), ("Market cap", stats.marketCap),
+            ].compactMap { label, value in value.map { (label, $0) } }
+            HStack(alignment: .top, spacing: DS.Space.s3) {
+                ForEach(cells, id: \.0) { label, value in
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(LocalizedStringKey(label))
+                            .dsText(.label12).foregroundStyle(DS.textTertiary)
+                            .lineLimit(1)
+                        Text(TokenStats.compact(value))
+                            .dsText(.callout15).foregroundStyle(DS.textPrimary)
+                            .monospacedDigit()
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.7)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+            }
+            .padding(DS.Space.s3)
+            .background(DS.fillFaint,
+                        in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+        }
     }
 }
 

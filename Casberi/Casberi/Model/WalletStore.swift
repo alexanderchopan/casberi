@@ -43,14 +43,62 @@ final class WalletStore {
         }
 
         /// "0x1a2B…4f4f" — the row form.
-        var short: String {
-            guard address.count > 12 else { return address }
-            return "\(address.prefix(6))…\(address.suffix(4))"
-        }
+        var short: String { WalletStore.shortAddress(address) }
+    }
+
+    /// "0x1a2B…4f4f" — the one address-shortening rule, shared with every
+    /// surface that shows an address it has no label for.
+    static func shortAddress(_ address: String) -> String {
+        guard address.count > 12 else { return address }
+        return "\(address.prefix(6))…\(address.suffix(4))"
     }
 
     var addresses: [WatchedAddress] {
-        didSet { persist() }
+        didSet {
+            persist()
+            // A dropped wallet takes its value history with it — watching
+            // ended, so the record ends (and re-watching starts honest, at
+            // zero history, not a resurrected line with a hole in it).
+            let kept = Set(addresses.map { $0.address.lowercased() })
+            for old in oldValue where !kept.contains(old.address.lowercased()) {
+                UserDefaults.standard.removeObject(forKey: Self.historyKey(old.address))
+            }
+        }
+    }
+
+    // MARK: - Value history (2026-07-14)
+
+    /// One point of a wallet's USD value line — sampled whenever holdings are
+    /// really fetched (WalletIngest), at most one per 4 hours, capped at 240
+    /// points. Forward-only and honest: history exists from the moment
+    /// watching began, sampled as the app is used — never back-filled.
+    struct ValueSample: Codable {
+        let at: Date
+        let usd: Double
+    }
+
+    private static func historyKey(_ address: String) -> String {
+        "wallet.history.\(address.lowercased())"
+    }
+
+    func valueSamples(forAddress address: String) -> [ValueSample] {
+        guard let data = UserDefaults.standard.data(forKey: Self.historyKey(address)),
+              let samples = try? JSONDecoder().decode([ValueSample].self, from: data)
+        else { return [] }
+        return samples
+    }
+
+    /// Appends a sample unless one landed in the last 4 hours — holdings
+    /// refresh every foreground, and a line of near-identical minutes-apart
+    /// points is noise, not history.
+    func recordSample(address: String, totalUSD: Double) {
+        var samples = valueSamples(forAddress: address)
+        if let last = samples.last, Date.now.timeIntervalSince(last.at) < 4 * 3600 { return }
+        samples.append(ValueSample(at: .now, usd: totalUSD))
+        if samples.count > 240 { samples.removeFirst(samples.count - 240) }
+        if let data = try? JSONEncoder().encode(samples) {
+            UserDefaults.standard.set(data, forKey: Self.historyKey(address))
+        }
     }
 
     /// The name a Wallet transaction's row shows when more than one address

@@ -30,12 +30,15 @@ struct HomeScreen: View {
     @Environment(ShellChrome.self) private var chrome
     @Environment(BridgeStore.self) private var bridges
     @Environment(\.openURL) private var openURL
+    @Environment(\.modelContext) private var modelContext
     @Bindable private var route = HomeRoute.shared
     @Bindable private var wallet = WalletStore.shared
     @State private var stream = GenStream()
     @State private var openProject: ProjectRoute?
     @State private var pinnedThing: Thing?
     @State private var walletOpen = false
+    /// A tapped holdings cell whose token isn't watched — its quick chart.
+    @State private var quickToken: TokenQuickRoute?
     /// Bumped by pull-to-refresh — token charts key their fetch on it.
     @State private var refreshTick = 0
     /// One retiring lesson for the size control (prd 58a): tap a pin, the
@@ -91,6 +94,50 @@ struct HomeScreen: View {
     /// per render so each tile is an O(1) read, not a full corpus scan.
     private var thingsByID: [String: Thing] {
         Dictionary(things.map { ($0.id.uuidString, $0) }, uniquingKeysWith: { first, _ in first })
+    }
+
+    /// Topic blocks open project detail, not a Feed filter (gap §9.1). The
+    /// source-fallback map's cells name APPS, not tags — those open the
+    /// source's feed (a tag view for a nonexistent tag is a dead end).
+    /// Extracted from the body (2026-07-14): inline, the closure tipped the
+    /// board's already-deep expression over the type-checker's budget.
+    private func handleProjectTap(_ name: String) {
+        // A routed holdings cell opens its token's chart (2026-07-14):
+        // the thing sheet when the token is watched, the quick sheet
+        // when it isn't.
+        if let tokenRoute = TokenQuickRoute.from(sentinel: name) {
+            if let thing = tokenRoute.watchedThing(in: modelContext) {
+                pinnedThing = thing
+            } else {
+                quickToken = tokenRoute
+            }
+            return
+        }
+        // A routeless holdings cell (a native coin) routes to the
+        // Wallet screen — no per-token view to open (2026-07-10).
+        if name == "@wallet" { walletOpen = true; return }
+        // The quiet day's invite opens the Apps page.
+        if name == "@apps" { route.push = .apps; return }
+        // (The weekend recap's "@week" door is gone with the weekend
+        // layout — prd 58j; the week ask lives in the composer now.)
+        // Any OTHER @-name is a sentinel we don't know — including a
+        // mid-stream partial ("@we") tapped during the typewriter
+        // entrance, which GenParser fills before the line completes.
+        // Falling through opened a bogus empty project (review
+        // 2026-07-11); an unknown sentinel does nothing.
+        if name.hasPrefix("@") { return }
+        let isTag = things.contains { $0.tags.contains(name) }
+        if !isTag, things.contains(where: { $0.source == name }) {
+            // Selecting the source in the shared header swaps the board
+            // for that source's shaped feed — no separate destination,
+            // no back arrow (the chip strip is the way back now).
+            withAnimation(DS.Motion.standard) {
+                FeedFilter.shared.source = name
+                FeedFilter.shared.tag = "All"
+            }
+        } else {
+            openProject = ProjectRoute(name: name)
+        }
     }
 
     var body: some View {
@@ -161,33 +208,7 @@ struct HomeScreen: View {
             // Topic blocks open project detail, not a Feed filter (gap §9.1).
             // The source-fallback map's cells name APPS, not tags — those open
             // the source's feed (a tag view for a nonexistent tag is a dead end).
-            .environment(\.genProjectTap) { name in
-                // A holdings cell routes to the Wallet screen — there's no
-                // per-token view to open (2026-07-10).
-                if name == "@wallet" { walletOpen = true; return }
-                // The quiet day's invite opens the Apps page.
-                if name == "@apps" { route.push = .apps; return }
-                // (The weekend recap's "@week" door is gone with the weekend
-                // layout — prd 58j; the week ask lives in the composer now.)
-                // Any OTHER @-name is a sentinel we don't know — including a
-                // mid-stream partial ("@we") tapped during the typewriter
-                // entrance, which GenParser fills before the line completes.
-                // Falling through opened a bogus empty project (review
-                // 2026-07-11); an unknown sentinel does nothing.
-                if name.hasPrefix("@") { return }
-                let isTag = things.contains { $0.tags.contains(name) }
-                if !isTag, things.contains(where: { $0.source == name }) {
-                    // Selecting the source in the shared header swaps the board
-                    // for that source's shaped feed — no separate destination,
-                    // no back arrow (the chip strip is the way back now).
-                    withAnimation(DS.Motion.standard) {
-                        FeedFilter.shared.source = name
-                        FeedFilter.shared.tag = "All"
-                    }
-                } else {
-                    openProject = ProjectRoute(name: name)
-                }
-            }
+            .environment(\.genProjectTap) { handleProjectTap($0) }
             // A pinned app tile's rows are interactive: tap opens the thing;
             // long-press offers Open / Open in app. Removal is the whole app's
             // (the card's long-press "Remove from Home"), so a row carries no
@@ -262,6 +283,9 @@ struct HomeScreen: View {
             .sheet(item: $pinnedThing) { thing in
                 ThingSheetView(thing: thing)
             }
+            .sheet(item: $quickToken) { route in
+                TokenQuickSheet(route: route)
+            }
             .environment(\.genZoomNS, zoomNS)
             .navigationDestination(item: $openProject) { route in
                 ProjectDetailScreen(projectName: route.name)
@@ -291,6 +315,7 @@ struct HomeScreen: View {
             openProject = nil
             pinnedThing = nil
             walletOpen = false
+            quickToken = nil
         }
         // The corpus changed under the composition (a capture, the demo
         // seeds, the dissolve) — repaint instantly, no replayed entrance.

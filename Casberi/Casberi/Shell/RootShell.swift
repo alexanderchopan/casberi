@@ -525,6 +525,11 @@ struct RootShell: View {
                  onKeepAnswer: keepAnswer,
                  glassNamespace: nil)
             .environment(\.genProjectTap) { name in
+                // Sentinels ("@wallet", "@token:…") are surface routes, not
+                // tags — from the composer they'd open a bogus tag view
+                // literally named "@token:…"; an unknown sentinel does
+                // nothing (HomeScreen's own rule).
+                guard !name.hasPrefix("@") else { return }
                 HomeRoute.shared.push = nil
                 composerOpen = false
                 FeedFilter.shared.source = "Pinned"
@@ -820,6 +825,37 @@ struct RootShell: View {
             let line = AggregateAsk.answer(agg, things: allThings)
             return ["root = Stack([ins])", "ins = Insight(\"\(genSafe(line))\")"]
         }
+        // A watchlist ask ("how's my watchlist") is answered from the same
+        // 24h curves the feed pulse draws — computed, current, no model
+        // (2026-07-14). Before StatusAsk on purpose: the words name the
+        // watchlist, not the feeds.
+        if TokensAsk.matches(query) {
+            lastAnswerHits = []
+            let moves = await TokensAsk.moves(context: modelContext)
+            guard !moves.isEmpty else {
+                // Empty MOVES isn't an empty WATCHLIST — offline, every pulse
+                // fetch fails and a "nothing watched" line would be a fake
+                // status (honesty rule). Say which nothing this is.
+                return proseDoc(TokensAsk.watched(modelContext).isEmpty
+                    ? "Nothing on your watchlist yet — watch a token from Apps → Tokens."
+                    : "Couldn't read your watchlist's prices right now — check your connection.")
+            }
+            // Rows only for moves whose thing still routes to a chart — a
+            // dangling ref under a bigger count would overstate what's shown.
+            let shown = moves.prefix(6).compactMap { m in
+                TokenChart.route(from: m.thing.content).map { (move: m, route: $0) }
+            }
+            var doc = ["root = Stack([ins\(shown.isEmpty ? "" : ", res")])",
+                       "ins = Insight(\"\(genSafe(TokensAsk.line(moves)))\")"]
+            if !shown.isEmpty {
+                let ids = shown.indices.map { "t\($0)" }
+                doc.append("res = Widget(\"\(String(localized: "Watchlist"))\", \"\(shown.count)\", [\(ids.joined(separator: ", "))])")
+                for (i, s) in shown.enumerated() {
+                    doc.append("t\(i) = TokenChip(\"\(genSafe(s.move.symbol))\", \"\(s.route.chain)\", \"\(s.route.address)\", \"\(s.move.thing.id.uuidString)\", \"\")")
+                }
+            }
+            return doc
+        }
         // A status ask ("tell me what's going on") names no content to score,
         // so it grounds on recency itself: the newest things from every source
         // in a recent window — the feeds' pulse. The model synthesizes over
@@ -827,12 +863,30 @@ struct RootShell: View {
         // (2026-07-11).
         if let pulse = StatusAsk.pulse(query, things: allThings) {
             lastAnswerHits = pulse.sample
-            guard !pulse.pool.isEmpty else { return proseDoc(StatusAsk.line(pulse)) }
+            // The away recap's watchlist line (2026-07-14): watched tokens'
+            // moves over the frozen away window, from real candles — the one
+            // fact of the absence the corpus' things can't carry themselves.
+            // Started here, awaited only when the doc is assembled, so the
+            // candle fetches ride under the model's own synthesis time.
+            let context = modelContext
+            let tokenLineTask: Task<String?, Never>? =
+                (pulse.windowWords == "while you were away")
+                ? AppVisit.away.map { away in
+                    Task { await TokensAsk.awayLine(window: away, context: context) }
+                }
+                : nil
+            func tokenLine() async -> String? {
+                guard let tokenLineTask else { return nil }
+                return await tokenLineTask.value
+            }
+            guard !pulse.pool.isEmpty else {
+                return appendingInsight(await tokenLine(), to: proseDoc(StatusAsk.line(pulse)))
+            }
             if let prose = await streamSynthesis(query, over: candidates(pulse.sample),
                                                  onProseDoc: onProseDoc) {
-                return proseDoc(prose)
+                return appendingInsight(await tokenLine(), to: proseDoc(prose))
             }
-            return pulseDoc(pulse)
+            return appendingInsight(await tokenLine(), to: pulseDoc(pulse))
         }
         // A follow-up ("which ones were from sam") searches the LAST
         // answer's grounding, not the whole corpus (2026-07-10).
@@ -929,6 +983,22 @@ struct RootShell: View {
     private func proseDoc(_ text: String) -> [String] {
         ["root = Stack([ins])",
          "ins = Insight(\"\(genSafe(text))\")"]
+    }
+
+    /// Tacks a computed line under an answer doc as its own Insight — the
+    /// away recap's watchlist line rides whatever the answer path produced
+    /// (prose, the counted pulse, or the honest empty). nil passes through.
+    private func appendingInsight(_ line: String?, to doc: [String]) -> [String] {
+        guard let line,
+              let i = doc.firstIndex(where: { $0.hasPrefix("root = Stack([") }),
+              doc[i].hasSuffix("])")
+        else { return doc }
+        var out = doc
+        // Splice before the closing "])" — suffix surgery, so a root whose
+        // ref list ever nests its own brackets can't be corrupted mid-line.
+        out[i] = String(out[i].dropLast(2)) + ", extraIns])"
+        out.append("extraIns = Insight(\"\(genSafe(line))\")")
+        return out
     }
 
     /// The grounding list as doc lines — `res = Widget(title, count, rows)`

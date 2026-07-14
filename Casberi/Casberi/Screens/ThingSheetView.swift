@@ -26,6 +26,9 @@ struct ThingSheetView: View {
     /// would claim a write that didn't happen (honesty rule).
     @State private var verbResultIsError = false
     @State private var relatedStream = GenStream()
+    /// "Related" for tag overlap; "In your things" when a watched token's
+    /// shelf holds the corpus things that mention it (2026-07-14).
+    @State private var relatedTitle = "Related"
     @State private var renameTarget: String?
     @State private var renameDraft = ""
     @State private var deleteTarget: String?
@@ -474,7 +477,7 @@ struct ThingSheetView: View {
     private var relatedShelf: some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
             if !relatedStream.els.isEmpty {
-                Text("Related")
+                Text(LocalizedStringKey(relatedTitle))
                     .dsText(.label12)
                     .foregroundStyle(DS.textTertiary)
                     .padding(.horizontal, DS.Space.s4)
@@ -484,17 +487,36 @@ struct ThingSheetView: View {
     }
 
     private func streamRelated() {
+        // A thing that can't have related items costs no fetch — the old
+        // invariant, kept: only a watched token (mentions) or a tagged thing
+        // (overlap) has anything to look for.
         let typeTags = Set(ThingKind.allCases.map(\.typeTag))
         let myTags = Set(thing.tags).subtracting(typeTags)
-        guard !myTags.isEmpty else { return }
+        let isToken = thing.source == "Tokens"
+        guard isToken || !myTags.isEmpty else { return }
+
         var descriptor = FetchDescriptor<Thing>(
             sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]
         )
         descriptor.fetchLimit = 300   // relatedness lives in the recent past
         let all = (try? modelContext.fetch(descriptor)) ?? []
-        let related = all.filter { other in
-            other.id != thing.id && !myTags.isDisjoint(with: other.tags)
-        }.prefix(6)
+
+        // A watched token's relatedness is MENTION, not tags (2026-07-14) —
+        // every watchlist thing shares the Watchlist tag, so tag overlap only
+        // ever surfaced the other watched tokens. The saves, chats, and
+        // screenshots that name this token answer the question a watchlist
+        // can't: why am I watching this? Tag overlap stays as the fallback.
+        let mentions = isToken ? tokenMentions(in: all) : []
+        let related: [Thing]
+        if !mentions.isEmpty {
+            relatedTitle = "In your things"
+            related = mentions
+        } else {
+            guard !myTags.isEmpty else { return }
+            related = Array(all.filter { other in
+                other.id != thing.id && !myTags.isDisjoint(with: other.tags)
+            }.prefix(6))
+        }
         guard !related.isEmpty else { return }
 
         var doc = ["root = Shelf([\(related.indices.map { "c\($0)" }.joined(separator: ", "))])"]
@@ -503,6 +525,34 @@ struct ThingSheetView: View {
             doc.append("c\(i) = Chip(\"\(t.source)\", \"\(title)\")")
         }
         relatedStream.stream(doc)
+    }
+
+    /// Corpus things that MENTION this watched token — a cashtag ($PEPE,
+    /// boundary-checked so $PEPE never claims $PEPEX) or the token's full
+    /// name as a whole word when it's distinctive (4+ characters — "Pepe"
+    /// matches, a name like "Sol" would false-hit half the corpus). Other
+    /// watchlist rows are excluded: they're the watchlist, not context.
+    private func tokenMentions(in all: [Thing]) -> [Thing] {
+        guard thing.source == "Tokens" else { return [] }
+        let symbol = TokensAsk.symbol(of: thing.title)
+        let name = thing.title.components(separatedBy: " · $").first ?? ""
+        var patterns: [String] = []
+        if !symbol.isEmpty {
+            patterns.append("\\$\(NSRegularExpression.escapedPattern(for: symbol))\\b")
+        }
+        if name.count >= 4 {
+            patterns.append("\\b\(NSRegularExpression.escapedPattern(for: name))\\b")
+        }
+        guard !patterns.isEmpty,
+              let regex = try? NSRegularExpression(pattern: patterns.joined(separator: "|"),
+                                                   options: [.caseInsensitive])
+        else { return [] }
+        return Array(all.filter { other in
+            guard other.id != thing.id, other.source != "Tokens" else { return false }
+            let text = "\(other.title) \(other.content)"
+            return regex.firstMatch(in: text, options: [],
+                                    range: NSRange(text.startIndex..., in: text)) != nil
+        }.prefix(6))
     }
 
     // MARK: - Verb execution

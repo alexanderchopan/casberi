@@ -1,0 +1,171 @@
+import SwiftUI
+import SwiftData
+
+/// A tapped holdings cell (2026-07-14). Cells whose token is already on the
+/// watchlist open their thing sheet — this route covers the rest: the same
+/// native chart, its identity resolved live, and one real verb (Watch) so a
+/// holding you keep tapping is one tap from joining the watchlist. Ink like
+/// the thing sheet — it IS a token read, just for a token that isn't a
+/// thing yet.
+struct TokenQuickRoute: Identifiable, Equatable {
+    let chain: String
+    let address: String
+    var id: String { "\(chain):\(address.lowercased())" }
+
+    /// Parses a GenTagMap cell's "@token:chain:address" sentinel, or nil.
+    static func from(sentinel name: String) -> TokenQuickRoute? {
+        guard name.hasPrefix("@token:") else { return nil }
+        let parts = name.dropFirst("@token:".count)
+            .split(separator: ":", maxSplits: 1).map(String.init)
+        guard parts.count == 2 else { return nil }
+        return TokenQuickRoute(chain: parts[0], address: parts[1])
+    }
+
+    /// The watched thing this route points at, when the token is on the
+    /// watchlist — the shared half of every holdings-cell tap handler
+    /// (Home, Feed, Wallet), so the watched-vs-held decision and the
+    /// "tokens:" ref format live in exactly one place.
+    @MainActor
+    func watchedThing(in context: ModelContext) -> Thing? {
+        let ref = "tokens:\(id)"
+        var d = FetchDescriptor<Thing>(predicate: #Predicate { $0.sourceRef == ref })
+        d.fetchLimit = 1
+        return ((try? context.fetch(d)) ?? []).first
+    }
+}
+
+struct TokenQuickSheet: View {
+    let route: TokenQuickRoute
+    @Environment(\.modelContext) private var modelContext
+    @Environment(BridgeStore.self) private var store
+    /// Resolved identity, live from the same search that powers watching.
+    @State private var resolved: TokenWatch.Resolved?
+    @State private var watchedTitle: String?
+    @State private var washPoured = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 0) {
+                HStack(spacing: DS.Space.s2) {
+                    BridgeIcon(name: "Tokens", size: 18, circular: true)
+                    Text("Token · held in a watched wallet")
+                        .dsText(.label12).foregroundStyle(DS.textTertiary)
+                }
+                .padding(.horizontal, DS.Space.s4)
+                .padding(.top, DS.Space.s6)
+                Text(resolved.map { "\($0.name) · $\($0.symbol)" } ?? shortAddress)
+                    .dsText(.heading34).foregroundStyle(DS.textPrimary)
+                    .padding(.horizontal, DS.Space.s4)
+                    .padding(.top, DS.Space.s3)
+                TokenChartView(chain: route.chain, address: route.address) {
+                    // No pool anywhere (dead/illiquid) — say so; the door out
+                    // is the explorer link, honestly labeled.
+                    if let url = URL(string: "https://dexscreener.com/\(route.chain)/\(route.address)") {
+                        Link(destination: url) {
+                            HStack(spacing: DS.Space.s2) {
+                                Text("No live price for this token — view on Dexscreener")
+                                    .dsText(.callout15).foregroundStyle(DS.textSecondary)
+                                Image(systemName: "arrow.up.right")
+                                    .font(.system(size: 12, weight: .medium))
+                                    .foregroundStyle(DS.textTertiary)
+                            }
+                            .padding(DS.Space.s3)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(DS.fillFaint,
+                                        in: RoundedRectangle(cornerRadius: DS.Radius.card,
+                                                             style: .continuous))
+                        }
+                    }
+                }
+                .padding(.horizontal, DS.Space.s4)
+                .padding(.top, DS.Space.s3)
+                watchRow
+                    .padding(.top, DS.Space.s6)
+            }
+            .padding(.bottom, DS.Space.s6)
+        }
+        .scrollIndicators(.hidden)
+        .background(alignment: .top) {
+            // The thing sheet's own wash, in Tokens' hue — same recipe.
+            if let hue = DS.washHue(for: "Tokens") {
+                LinearGradient(stops: [
+                    .init(color: hue, location: 0),
+                    .init(color: hue, location: 0.3),
+                    .init(color: hue.opacity(0), location: 1),
+                ], startPoint: .top, endPoint: .bottom)
+                    .frame(height: 300)
+                    .opacity(washPoured ? 1 : 0)
+                    .offset(y: washPoured ? 0 : -140)
+                    .frame(maxHeight: .infinity, alignment: .top)
+                    .ignoresSafeArea(edges: .top)
+                    .onAppear {
+                        if reduceMotion { washPoured = true } else {
+                            withAnimation(.easeOut(duration: 0.35).delay(0.05)) {
+                                washPoured = true
+                            }
+                        }
+                    }
+            }
+        }
+        .presentationBackground(Color.black)
+        .colorScheme(.dark)
+        .presentationDetents([.medium, .large])
+        .presentationDragIndicator(.visible)
+        .presentationCornerRadius(DS.Radius.sheet)
+        .task {
+            // The address IS the query — but the SAME address can be a
+            // different token on another chain (the OP-stack WETH predeploy,
+            // bridged deployments), so only the hit on this cell's own chain
+            // counts. No chain match → no identity and no Watch verb; the
+            // chart still draws (honest: we know the route, not the name).
+            resolved = await TokenWatch.search(route.address)
+                .first { $0.id == route.id }
+        }
+    }
+
+    private var shortAddress: String { WalletStore.shortAddress(route.address) }
+
+    /// One real verb: Watch. Once it lands (or the token was already
+    /// watched), the row states the fact instead — never a dead control.
+    @ViewBuilder private var watchRow: some View {
+        if let watchedTitle {
+            HStack(spacing: DS.Space.s4) {
+                Image(systemName: "checkmark")
+                    .font(.system(size: 18))
+                    .foregroundStyle(DS.confirm)
+                    .frame(width: 26, alignment: .center)
+                Text("Watching \(watchedTitle)")
+                    .dsText(.heading17).foregroundStyle(DS.textPrimary)
+                Spacer()
+            }
+            .padding(.horizontal, DS.Space.s4)
+            .padding(.vertical, DS.Space.s4)
+        } else if let resolved {
+            Button {
+                DSHaptic.tap()
+                if let thing = TokenWatch.add(resolved, context: modelContext) {
+                    DSHaptic.success()
+                    watchedTitle = thing.title
+                    TokenWatch.registerBridge(store: store, context: modelContext)
+                } else {
+                    watchedTitle = "\(resolved.name) · $\(resolved.symbol)"
+                }
+            } label: {
+                HStack(spacing: DS.Space.s4) {
+                    Image(systemName: "eye")
+                        .font(.system(size: 18))
+                        .foregroundStyle(DS.textSecondary)
+                        .frame(width: 26, alignment: .center)
+                    Text("Watch this token")
+                        .dsText(.heading17).foregroundStyle(DS.textPrimary)
+                    Spacer()
+                }
+                .padding(.horizontal, DS.Space.s4)
+                .padding(.vertical, DS.Space.s4)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+        }
+    }
+}

@@ -367,10 +367,9 @@ enum HomeComposition {
     /// (`TokenWatch`'s format) — TokenChip's symbol shares its line with the
     /// plot and price, so the FULL title truncated there (2026-07-14: even a
     /// short ticker like ETH scrolled past its slot inside "Ethereum · $ETH").
-    /// Falls back to the whole title when the format doesn't match.
+    /// One parser for the format — TokensAsk.symbol.
     private static func tickerSymbol(_ title: String) -> String {
-        guard let dollar = title.range(of: "$", options: .backwards) else { return title }
-        return String(title[dollar.upperBound...])
+        TokensAsk.symbol(of: title)
     }
 
     /// Wallet holdings on Home (ruling 2026-07-08): pinning the wallet shows

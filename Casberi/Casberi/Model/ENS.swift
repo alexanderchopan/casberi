@@ -35,4 +35,28 @@ enum ENS {
         else { return nil }
         return address
     }
+
+    /// The primary name an address goes by, when it set one — reverse
+    /// resolution through the same resolver (counterparty naming on wallet
+    /// transfers, 2026-07-14: "Received 0.2 ETH from vitalik.eth" is a story;
+    /// a bare hash is a receipt). Cached per launch INCLUDING misses — a
+    /// wallet's counterparties repeat, and a nameless address must not cost
+    /// a lookup on every refresh forever. Main-actor because WalletIngest
+    /// (the only caller) already is.
+    @MainActor private static var reverseCache: [String: String?] = [:]
+
+    @MainActor
+    static func reverseName(for hexAddress: String) async -> String? {
+        let addr = hexAddress.lowercased()
+        guard isHexAddress(addr) else { return nil }
+        if let cached = reverseCache[addr] { return cached }
+        var name: String?
+        if let root = await IngestSupport.getJSON(
+            "https://api.ensideas.com/ens/resolve/\(addr)") as? [String: Any],
+           let n = root["name"] as? String, !n.isEmpty {
+            name = n
+        }
+        reverseCache[addr] = name
+        return name
+    }
 }

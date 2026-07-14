@@ -172,17 +172,7 @@ struct TokenChart {
     /// resolved through Dexscreener, so this has a price when GeckoTerminal —
     /// which only indexes pools it has crawled — does not.
     private static func dexscreener(chain: String, address: String) async -> TokenChart? {
-        guard let root = await IngestSupport.getJSON(
-            "https://api.dexscreener.com/latest/dex/tokens/\(address)") as? [String: Any],
-              let pairs = root["pairs"] as? [[String: Any]], !pairs.isEmpty else { return nil }
-
-        func liquidity(_ p: [String: Any]) -> Double {
-            (p["liquidity"] as? [String: Any])?["usd"] as? Double ?? 0
-        }
-        // Prefer a pair on the token's own chain; otherwise the deepest pool.
-        let onChain = pairs.filter { ($0["chainId"] as? String) == chain }
-        guard let pair = (onChain.isEmpty ? pairs : onChain)
-                .max(by: { liquidity($0) < liquidity($1) }),
+        guard let pair = await bestPair(chain: chain, address: address),
               let priceStr = pair["priceUsd"] as? String,
               let price = Double(priceStr), price > 0 else { return nil }
 
@@ -198,11 +188,64 @@ struct TokenChart {
                           coarse: true)
     }
 
+    /// The token's most-liquid Dexscreener pair, preferring its own chain —
+    /// the one selection rule for everything read off the pair payload (the
+    /// coarse fallback curve above, and TokenStats below), so the two can't
+    /// pick different pools and disagree.
+    static func bestPair(chain: String, address: String) async -> [String: Any]? {
+        guard let root = await IngestSupport.getJSON(
+            "https://api.dexscreener.com/latest/dex/tokens/\(address)") as? [String: Any],
+              let pairs = root["pairs"] as? [[String: Any]], !pairs.isEmpty else { return nil }
+        func liquidity(_ p: [String: Any]) -> Double {
+            (p["liquidity"] as? [String: Any])?["usd"] as? Double ?? 0
+        }
+        let onChain = pairs.filter { ($0["chainId"] as? String) == chain }
+        return (onChain.isEmpty ? pairs : onChain)
+            .max(by: { liquidity($0) < liquidity($1) })
+    }
+
     /// A JSON number that may arrive as Double, Int, or String.
-    private static func num(_ any: Any?) -> Double? {
+    fileprivate static func num(_ any: Any?) -> Double? {
         if let d = any as? Double { return d }
         if let i = any as? Int { return Double(i) }
         if let s = any as? String { return Double(s) }
         return nil
+    }
+}
+
+/// The market-structure numbers around a watched token (2026-07-14) —
+/// liquidity, 24h volume, FDV, market cap. These ride the SAME Dexscreener
+/// pair payload that resolved the token in the first place (search and this
+/// endpoint are the one piece Alchemy/GeckoTerminal don't replace — neither
+/// carries liquidity or FDV). A stat the pair doesn't report simply isn't
+/// shown; nothing is derived or estimated.
+struct TokenStats {
+    let liquidityUsd: Double?
+    let volume24h: Double?
+    let fdv: Double?
+    let marketCap: Double?
+
+    var isEmpty: Bool {
+        liquidityUsd == nil && volume24h == nil && fdv == nil && marketCap == nil
+    }
+
+    static func fetch(chain: String, address: String) async -> TokenStats? {
+        guard let pair = await TokenChart.bestPair(chain: chain, address: address) else {
+            return nil
+        }
+        let stats = TokenStats(
+            liquidityUsd: TokenChart.num((pair["liquidity"] as? [String: Any])?["usd"]),
+            volume24h: TokenChart.num((pair["volume"] as? [String: Any])?["h24"]),
+            fdv: TokenChart.num(pair["fdv"]),
+            marketCap: TokenChart.num(pair["marketCap"]))
+        return stats.isEmpty ? nil : stats
+    }
+
+    /// "$1.2M" / "$340K" / "$980" — the strip's compact voice, no cents.
+    static func compact(_ v: Double) -> String {
+        if v >= 1_000_000_000 { return String(format: "$%.1fB", v / 1_000_000_000) }
+        if v >= 1_000_000 { return String(format: "$%.1fM", v / 1_000_000) }
+        if v >= 1_000 { return String(format: "$%.0fK", v / 1_000) }
+        return String(format: "$%.0f", v)
     }
 }

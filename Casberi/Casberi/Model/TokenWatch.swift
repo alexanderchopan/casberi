@@ -86,9 +86,33 @@ enum TokenWatch {
             tags: ["Watchlist"],
             sourceRef: ref
         )
+        // The since-you-watched anchor (2026-07-14): the resolve already
+        // carried the live price — keep it, so the sheet can say "+41% since
+        // you watched" against a number that was really true at this moment.
+        thing.watchPriceUsd = token.priceUsd.flatMap(Double.init)
         context.insert(thing)
         try? context.save()
         SpotlightIndex.index([thing])
         return thing
+    }
+
+    /// Registers (or refreshes) the Tokens bridge with the live watched
+    /// count — one registrar for every door that can watch a token (the
+    /// setup screen, and a tapped holdings cell's quick sheet).
+    @MainActor
+    static func registerBridge(store: BridgeStore, context: ModelContext) {
+        let count = (try? context.fetchCount(FetchDescriptor<Thing>(
+            predicate: #Predicate { $0.source == "Tokens" }))) ?? 0
+        let proof = "\(count) token\(count == 1 ? "" : "s") watched"
+        if let existing = store.bridges.first(where: { $0.name == "Tokens" }) {
+            store.reconnect(existing.id, proof: proof)
+        } else {
+            store.bridges.append(BridgeApp(
+                id: "tokens", name: "Tokens", status: .connected,
+                statusLine: proof,
+                can: ["Watches the tokens you add.", "Read-only — public price data only."]
+            ))
+            DSHaptic.success()
+        }
     }
 }

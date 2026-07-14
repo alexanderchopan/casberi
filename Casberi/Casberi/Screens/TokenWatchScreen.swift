@@ -53,11 +53,12 @@ struct TokenWatchScreen: View {
             BridgeSetupHeader(name: "Tokens")
             addSection.listRowSeparator(.hidden)
             if !watched.isEmpty {
-                watchlistSection.listRowSeparator(.hidden)
                 // Pin the whole watchlist to Home as one tile (ruling
-                // 2026-07-12) — no longer one token at a time.
+                // 2026-07-12) — no longer one token at a time. Sits above the
+                // list so it's in the same spot as every app (user, 2026-07-14).
                 PinToHomeButton(source: "Tokens", inSection: true)
                     .listRowSeparator(.hidden)
+                watchlistSection.listRowSeparator(.hidden)
             }
             if !watched.isEmpty {
                 // A watched token IS its thing, so there's no separate store to
@@ -218,16 +219,6 @@ struct TokenWatchScreen: View {
     }
 
     private func register() {
-        let proof = "\(watched.count) token\(watched.count == 1 ? "" : "s") watched"
-        if let existing = store.bridges.first(where: { $0.name == "Tokens" }) {
-            store.reconnect(existing.id, proof: proof)
-        } else {
-            store.bridges.append(BridgeApp(
-                id: "tokens", name: "Tokens", status: .connected,
-                statusLine: proof,
-                can: ["Watches the tokens you add.", "Read-only — public price data only."]
-            ))
-            DSHaptic.success()
-        }
+        TokenWatch.registerBridge(store: store, context: modelContext)
     }
 }

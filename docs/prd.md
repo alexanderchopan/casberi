@@ -2663,3 +2663,44 @@ app can't connect simply isn't on the site. X, Telegram, Slack, Spotify,
 and OpenClaw left the web catalog (they stay in-app as Soon); Farcaster
 shelves under Onchain on the web; the catalog is packed shelf cards
 (`#catalog`) mirroring `AppsScreen.categories`, Markets last.
+
+## 71. Tokens and Wallet grow features around the corpus, not a
+## portfolio app (user, 2026-07-14)
+
+The token/wallet enrichment set — the frame is Casberi's own: your
+HISTORY with the assets, not a market terminal.
+
+- **Since-you-watched anchor** — `TokenWatch.add` keeps the resolve's
+  live price on the thing (`Thing.watchPriceUsd`); the token sheet says
+  "+41% · since Jul 2 — you watched at $0.0031". Locally known, never
+  back-filled; tokens watched before the field stay anchorless.
+- **Stat strip** — liquidity / 24h volume / FDV / market cap under the
+  sheet's chart, from the same Dexscreener pair payload that resolved
+  the token (`TokenStats`); a stat the pair doesn't report isn't shown.
+- **"In your things"** — a watched token's Related shelf is MENTION, not
+  tags (every watch shares the Watchlist tag, so tag overlap only ever
+  showed the other tokens): corpus things carrying the cashtag ($PEPE,
+  boundary-checked) or the distinctive full name (4+ chars). Tag overlap
+  stays as the fallback; the shelf renames to "In your things".
+- **Counterparty naming** — a landed transfer's title names the other
+  side when it has a name: another watched wallet's label, a canonical
+  contract (Uniswap/OpenSea/1inch/0x/WETH/ENS — table in WalletIngest),
+  or reverse ENS (capped 16 lookups/pass, cached with misses). Nameless
+  stays plain — the title never wears a raw hash.
+- **Value history, forward-only** — each real holdings fetch samples the
+  wallet's USD total (4h throttle, 240 cap, per address, dropped with
+  the watch); the Wallet screen draws the line "since the day you
+  started watching", footer says it's sampled as you use the app.
+- **NFT shelf** — Alchemy NFT API (Ethereum + Base, spam filtered,
+  imageless skipped); tap opens the piece on OpenSea. Read-only.
+- **Holdings cells open charts** — a treemap cell carries its token's
+  route ("@t:chain:address", stripped by the parser, never shown); tap
+  opens the thing sheet when watched, else a quick chart sheet
+  (`TokenQuickSheet`) with one real verb: Watch. Native coins stay
+  routeless and fall back to the Wallet screen.
+- **Watchlist ask + away line** — "How's my watchlist?" is a computed
+  answer off TokenPulse's own curves (chip gated on watched tokens
+  existing); the "While I was away?" answer appends the watchlist's
+  moves over the frozen away window, from real candles at the window's
+  resolution — a gap past the 30-day candles says "over the last 30
+  days" instead, and coarse-fallback tokens are left out, never guessed.
