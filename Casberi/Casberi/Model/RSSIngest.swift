@@ -125,6 +125,18 @@ enum RSSIngest {
         return Fetched(feed: feed, parsed: parsed, resolvedURL: resolvedURL)
     }
 
+    /// The mark a landed row leads with: the feed's own logo when it
+    /// advertises one, else the publisher's favicon derived from the article
+    /// host (the feed host as a last resort). First-party only — the bridge's
+    /// whole promise is "no server in between", so no third-party favicon
+    /// service. A dead URL is fine: `RemoteThumb` degrades to the RSS glyph.
+    private static func publisherIcon(feedIcon: String?, link: String, feedURL: String) -> String? {
+        if let feedIcon, !feedIcon.isEmpty { return feedIcon }
+        let host = URL(string: link)?.host() ?? URL(string: feedURL)?.host()
+        guard let host, !host.isEmpty else { return nil }
+        return "https://\(host)/favicon.ico"
+    }
+
     @MainActor
     static func refresh(context: ModelContext) async -> Int? {
         let store = RSSStore.shared
@@ -158,9 +170,19 @@ enum RSSIngest {
             if !parsed.title.isEmpty {
                 store.setTitle(parsed.title, for: feed.id)
             }
+            // The feed's own logo, resolved once — the same mark rides every
+            // item this feed lands (per-item favicon still varies by article
+            // host in the fallback path).
+            let feedIcon = IngestSupport.imageURL(parsed.iconURL)
+            // The publisher's NAME for the row's trailing label — the feed's
+            // learned title (BBC News, TechCrunch), the host as a last resort.
+            // Rides authorHandle, the same identity slot a Bluesky/Farcaster
+            // row names its account in.
+            let feedName = parsed.title.isEmpty ? feed.displayName : parsed.title
             // Newest 15 per feed — the feed is a firehose; the corpus isn't.
             for item in parsed.items.prefix(15) {
                 let ref = "rss:\(item.guid.isEmpty ? item.link : item.guid)"
+                let icon = Self.publisherIcon(feedIcon: feedIcon, link: item.link, feedURL: feed.url)
                 if existing.contains(ref) {
                     // An already-landed item still in the feed's window can
                     // hand its lead image to the artless row it became.
@@ -172,6 +194,16 @@ enum RSSIngest {
                         if decoded != thing.title {
                             thing.title = decoded; touched = true
                             thing.embedding = nil   // title changed — re-embed on the next sweep
+                        }
+                        // Rows that landed before publisher icons existed heal
+                        // in place (icon isn't part of the embedding text, so
+                        // no re-embed). Only within the feed's window — older
+                        // rows keep the RSS glyph, same as image backfill.
+                        if (thing.authorAvatarURL ?? "").isEmpty, let icon {
+                            thing.authorAvatarURL = icon; touched = true
+                        }
+                        if (thing.authorHandle ?? "").isEmpty, !feedName.isEmpty {
+                            thing.authorHandle = feedName; touched = true
                         }
                     }
                     continue
@@ -189,6 +221,12 @@ enum RSSIngest {
                 // thumbnails, enclosures, and the first inline <img>; only
                 // PinterestIngest was using it (fixed 2026-07-10).
                 thing.previewImageURL = IngestSupport.imageURL(item.imageURL)
+                // The publisher's mark leads the row (like a post's author
+                // avatar) — the article image, when there is one, rides after
+                // the title instead of the leading slot — and its NAME rides
+                // the trailing label.
+                thing.authorAvatarURL = icon
+                if !feedName.isEmpty { thing.authorHandle = feedName }
                 context.insert(thing)
                 existing.insert(ref)
                 SpotlightIndex.index([thing])
@@ -308,6 +346,12 @@ enum FeedParser {
 
     struct Parsed {
         var title = ""
+        /// The feed's OWN mark — the publisher's logo (Reuters, a blog), from
+        /// the RSS `<channel><image><url>`, an `<itunes:image>`, or an Atom
+        /// `<icon>`/`<logo>`. Empty when the feed advertises none; the ingest
+        /// then falls back to the site's favicon. This is publisher identity,
+        /// distinct from a per-item lead image (`Item.imageURL`).
+        var iconURL = ""
         var items: [Item] = []
     }
 
@@ -362,6 +406,14 @@ enum FeedParser {
                         || (name == "media:content" && type.isEmpty && medium.isEmpty)
                     if isImage { current?.imageURL = Self.normalizeImage(u) }
                 }
+            // The feed's OWN mark rides an href attribute in the iTunes and
+            // (rarely) Media namespaces — captured only at channel level
+            // (current == nil), so per-EPISODE art never becomes the
+            // publisher icon.
+            case "itunes:image", "media:image":
+                if current == nil, result.iconURL.isEmpty, let href = attributes["href"] {
+                    result.iconURL = Self.normalizeImage(href)
+                }
             default:
                 break
             }
@@ -388,6 +440,17 @@ enum FeedParser {
                 if name == "title", result.title.isEmpty,
                    elementPath.count <= 3 {
                     result.title = value
+                }
+                // The publisher's mark: RSS nests it as <channel><image><url>
+                // (a plain <url> element, guarded by the enclosing <image> so
+                // an item enclosure can't stand in); Atom carries it as a
+                // top-level <icon> or <logo>. Channel context only.
+                if result.iconURL.isEmpty {
+                    if name == "url", elementPath.contains("image") {
+                        result.iconURL = Self.normalizeImage(value)
+                    } else if name == "icon" || name == "logo" {
+                        result.iconURL = Self.normalizeImage(value)
+                    }
                 }
                 return
             }

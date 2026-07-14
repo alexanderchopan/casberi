@@ -44,6 +44,10 @@ struct BandRow: View {
         case "Wallet":    return WalletStore.shared.label(forAddress: thing.walletAddress)
         case "Bluesky":   return BlueskyStore.shared.rowLabel(for: thing.authorHandle)
         case "Farcaster": return FarcasterStore.shared.rowLabel(for: thing.authorHandle)
+        // The publisher names itself in the trailing slot — BBC News,
+        // TechCrunch — the icon's word twin, the way a social row names its
+        // account. Empty on rows that landed before the name was captured.
+        case "RSS":       let name = thing.authorHandle ?? ""; return name.isEmpty ? nil : name
         default:          return nil
         }
     }
@@ -56,6 +60,20 @@ struct BandRow: View {
     private var identityAvatarURL: String? {
         guard let avatar = thing.authorAvatarURL, !avatar.isEmpty else { return nil }
         return (thing.source == "Bluesky" || thing.source == "Farcaster") ? avatar : nil
+    }
+
+    /// An RSS row leads with its PUBLISHER's mark — Reuters, a blog — the way
+    /// a social post leads with a face: where it came from, always shown, so
+    /// one glance separates the sources in a mixed feed. The article's own
+    /// image (previewImageURL) then rides AFTER the title, the "both" pattern
+    /// posts already use. The icon URL is stamped onto authorAvatarURL at
+    /// ingest (the feed's channel logo, else the site's favicon); a squircle,
+    /// not a circle — a logo, not a face. nil (or a dead URL) keeps the RSS
+    /// glyph.
+    private var publisherIconURL: String? {
+        guard thing.source == "RSS", let icon = thing.authorAvatarURL,
+              !icon.isEmpty else { return nil }
+        return icon
     }
 
     /// The address a Wallet row draws an identicon for — the visual twin of
@@ -127,6 +145,10 @@ struct BandRow: View {
                 WalletBlockie(address: addr, size: 26)
             } else if let sender = mailSender, SenderInitial.letter(of: sender) != nil {
                 SenderInitial(sender: sender, size: 26)
+            } else if let publisher = publisherIconURL {
+                // Where the story is FROM leads the row; its picture rides
+                // after the title (below), like a post's attached image.
+                RemoteThumb(urlString: publisher, size: 26, fallback: thing.source)
             } else if let image = thing.previewImageURL, !image.isEmpty,
                       thing.source != "Twitch" || live {
                 RemoteThumb(urlString: image, size: 26, fallback: thing.source,
@@ -150,8 +172,10 @@ struct BandRow: View {
             // A post with a photo shows BOTH (ruling 2026-07-10: "keep faces
             // always but show pictures too"): the avatar keeps the leading
             // slot — who — and the attached image rides here before the
-            // time — what. Same 26pt scale, so the band's rhythm holds.
-            if identityAvatarURL != nil,
+            // time — what. Same 26pt scale, so the band's rhythm holds. An
+            // RSS row does the same: publisher mark leads, the story's own
+            // image rides here.
+            if identityAvatarURL != nil || publisherIconURL != nil,
                let art = thing.previewImageURL, !art.isEmpty {
                 RemoteThumb(urlString: art, size: 26, fallback: thing.source)
             }
