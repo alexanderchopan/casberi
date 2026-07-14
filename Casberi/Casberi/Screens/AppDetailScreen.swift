@@ -30,8 +30,14 @@ struct AppDetailScreen: View {
     /// thing-sheet wash follows), so those pages stay pure page.
     @ViewBuilder private var brandWash: some View {
         if let hue = DS.washHue(for: offer.name) {
-            LinearGradient(colors: [hue.opacity(0.42), .clear], startPoint: .top, endPoint: .bottom)
-                .frame(height: 320)
+            // Bold, not a film (user ruling 2026-07-13): the app's page
+            // opens on its color, flowing into the page.
+            LinearGradient(stops: [
+                .init(color: hue, location: 0),
+                .init(color: hue, location: 0.3),
+                .init(color: hue.opacity(0), location: 1),
+            ], startPoint: .top, endPoint: .bottom)
+                .frame(height: 360)
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                 .ignoresSafeArea(edges: .top)
         }

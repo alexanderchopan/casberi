@@ -477,7 +477,15 @@ struct FeedScreen: View {
         .animation(DS.Motion.standard, value: things.count)   // new things rise in
         .scrollContentBackground(.hidden)
         .overlay(alignment: .top) { switchFlood }
-        .dsPageBackground()
+        // A SHAPED feed sits directly on MainSurface's bold hue field (user
+        // ruling 2026-07-13, Cash-App bold): painting the opaque page here
+        // would hide it — the very bug that once forced the wash to be an
+        // overlay. Pinned/All/hueless keep the normal page coat.
+        .background {
+            if DS.washHue(for: filter.source) == nil {
+                DSPageBackground()
+            }
+        }
         .environment(\.defaultMinListHeaderHeight, 0)
         .scrollIndicators(.hidden)
         .minimizesChrome(chrome)

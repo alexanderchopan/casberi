@@ -63,21 +63,23 @@ struct MainSurface: View {
     /// mix-toward-black turned yellows olive and near-black marks to smudge)
     /// — and nil (no wash) for Pinned/All/a hueless source, honestly.
     ///
-    /// Rendered as an OVERLAY, not a background: FeedScreen's own
-    /// `.dsPageBackground()` is opaque and painted behind its entire List, so
-    /// as a background this wash was fully hidden the instant the List began
-    /// — a hard cut right under the chip row, not the fade the gradient
-    /// itself describes (user, 2026-07-13). Sitting on top lets the same
-    /// gradient tint the List's own background through to wherever it
-    /// actually reaches `.clear`, instead of being clipped by whatever
-    /// happens to render underneath it.
+    /// Rendered as a BACKGROUND now, and BOLD (user ruling 2026-07-13,
+    /// "bold like Cash App"): the hue is the solid field the content sits
+    /// ON — full-strength at the crown, flowing into the page color — not a
+    /// translucent film laid over the rows. The old overlay approach (which
+    /// existed because FeedScreen's opaque page paint hid a background wash)
+    /// is retired the right way: a SHAPED feed skips its own opaque coat
+    /// (`FeedScreen` checks the same `washHue`), so this field genuinely
+    /// shows through behind the rows instead of tinting them from above.
     @ViewBuilder private var shapeWash: some View {
         if let hue = DS.washHue(for: filter.source) {
-            LinearGradient(colors: [hue.opacity(0.9), .clear],
-                           startPoint: .top, endPoint: .bottom)
-                .frame(height: 420)
-                .ignoresSafeArea(edges: .top)
-                .allowsHitTesting(false)
+            LinearGradient(stops: [
+                .init(color: hue, location: 0),
+                .init(color: hue, location: 0.4),
+                .init(color: hue.opacity(0), location: 1),
+            ], startPoint: .top, endPoint: .bottom)
+                .frame(height: 620)
+                .frame(maxHeight: .infinity, alignment: .top)
                 .transition(.opacity)
                 .id(filter.source)   // crossfade between hues, not a smear
         }
@@ -123,8 +125,13 @@ struct MainSurface: View {
             // background). Just the color coat, not DSPageBackground: the
             // screens already render the theme photo themselves, and a second
             // full render here would be pure waste under an opaque layer.
-            .background(DS.themedPage.ignoresSafeArea())
-            .overlay(alignment: .top) { shapeWash }
+            .background {
+                ZStack(alignment: .top) {
+                    DS.themedPage
+                    shapeWash
+                }
+                .ignoresSafeArea()
+            }
             // The first-thing bloom — a new app's first landing washes its
             // hue across the header for a beat, then fades. The one moment
             // the connect promise visibly comes true (delight 2026-07-13).

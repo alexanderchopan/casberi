@@ -98,9 +98,14 @@ struct ThingSheetView: View {
             // notes, unknown apps) stay pure ink: the gray fallback is a
             // fill, not an identity.
             if let hue = DS.washHue(for: thing.source) {
-                LinearGradient(colors: [hue.opacity(0.45), .clear],
-                               startPoint: .top, endPoint: .bottom)
-                    .frame(height: 260)
+                // Bold, not a film (user ruling 2026-07-13): the crown IS
+                // the source's color, flowing into the sheet's ink.
+                LinearGradient(stops: [
+                    .init(color: hue, location: 0),
+                    .init(color: hue, location: 0.3),
+                    .init(color: hue.opacity(0), location: 1),
+                ], startPoint: .top, endPoint: .bottom)
+                    .frame(height: 300)
                     // The pour (delight 2026-07-13): the bleed slides down
                     // into place as the sheet opens — a bleed that literally
                     // bleeds in. Once per open; instant under Reduce Motion.
