@@ -288,21 +288,24 @@ struct HandleSetupScreen: View {
             if bridge.supportsMultiple, !accountNames.isEmpty {
                 accountsSection.listRowSeparator(.hidden)
             }
-            if !recent.isEmpty {
-                RecentThingsSection(header: bridge.recentHeader, things: recent)
-                    .listRowSeparator(.hidden)
-            }
-            // Every connected account is pinnable (ruling 2026-07-12) — except
-            // the auto-social ones (Bluesky/Farcaster), which show by default
-            // and carry the inverse "Show on Home" toggle instead. Shown once
-            // the account has landed a thing — an empty source composes no tile,
-            // so its pin would be a dead control.
+            // Pin to Home (and its auto-social inverse) sits above the recent
+            // list — the same spot every app screen puts it (user, 2026-07-14),
+            // so it's never a long scroll away. Every connected account is
+            // pinnable (ruling 2026-07-12) — except the auto-social ones
+            // (Bluesky/Farcaster), which show by default and carry the inverse
+            // "Show on Home" toggle instead. Shown once the account has landed
+            // a thing — an empty source composes no tile, so its pin would be a
+            // dead control.
             if !bridge.currentName.isEmpty, !recent.isEmpty,
                !HomePinnedSources.autoSocial.contains(bridge.rawValue) {
                 pinToHomeSection.listRowSeparator(.hidden)
             }
             if !bridge.currentName.isEmpty, HomePinnedSources.autoSocial.contains(bridge.rawValue) {
                 showOnHomeSection.listRowSeparator(.hidden)
+            }
+            if !recent.isEmpty {
+                RecentThingsSection(header: bridge.recentHeader, things: recent)
+                    .listRowSeparator(.hidden)
             }
             if !bridge.currentName.isEmpty {
                 BridgeDisconnectSection(

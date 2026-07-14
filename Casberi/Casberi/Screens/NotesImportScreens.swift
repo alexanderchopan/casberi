@@ -35,9 +35,9 @@ struct DayOneImportScreen: View {
             }
             .listRowSeparator(.hidden)
             if !recent.isEmpty {
-                RecentThingsSection(header: "Imported", things: Array(recent))
-                    .listRowSeparator(.hidden)
                 PinToHomeButton(source: "Day One", inSection: true)
+                    .listRowSeparator(.hidden)
+                RecentThingsSection(header: "Imported", things: Array(recent))
                     .listRowSeparator(.hidden)
             }
         }
@@ -112,9 +112,9 @@ struct JournalImportScreen: View {
             }
             .listRowSeparator(.hidden)
             if !recent.isEmpty {
-                RecentThingsSection(header: "Imported", things: Array(recent))
-                    .listRowSeparator(.hidden)
                 PinToHomeButton(source: "Apple Journal", inSection: true)
+                    .listRowSeparator(.hidden)
+                RecentThingsSection(header: "Imported", things: Array(recent))
                     .listRowSeparator(.hidden)
             }
         }

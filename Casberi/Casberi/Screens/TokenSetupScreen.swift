@@ -42,8 +42,8 @@ struct TokenSetupScreen: View {
             stepsSection
             tokenSection
             if !recent.isEmpty {
-                RecentThingsSection(header: "Landed", things: recent)
                 PinToHomeButton(source: bridge.rawValue, inSection: true)
+                RecentThingsSection(header: "Landed", things: recent)
             }
             if bridge.connected { removeSection }
         }

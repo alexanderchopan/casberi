@@ -32,9 +32,9 @@ struct ChatGPTImportScreen: View {
             stepsSection.listRowSeparator(.hidden)
             importSection.listRowSeparator(.hidden)
             if !recent.isEmpty {
-                recentSection.listRowSeparator(.hidden)
                 PinToHomeButton(source: "ChatGPT", inSection: true)
                     .listRowSeparator(.hidden)
+                recentSection.listRowSeparator(.hidden)
             }
         }
         .listStyle(.insetGrouped)

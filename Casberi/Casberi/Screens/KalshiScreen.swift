@@ -43,9 +43,9 @@ struct KalshiScreen: View {
             BridgeSetupHeader(name: "Kalshi")
             addSection.listRowSeparator(.hidden)
             if !watched.isEmpty {
-                watchlistSection.listRowSeparator(.hidden)
                 PinToHomeButton(source: "Kalshi", inSection: true)
                     .listRowSeparator(.hidden)
+                watchlistSection.listRowSeparator(.hidden)
             }
             if !watched.isEmpty {
                 // A watched market IS its thing, so there's no separate store

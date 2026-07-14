@@ -24,9 +24,9 @@ struct SteamScreen: View {
             stepsSection.listRowSeparator(.hidden)
             fieldsSection.listRowSeparator(.hidden)
             if !recent.isEmpty {
-                RecentThingsSection(header: "Games", things: recent)
-                    .listRowSeparator(.hidden)
                 PinToHomeButton(source: "Steam", inSection: true)
+                    .listRowSeparator(.hidden)
+                RecentThingsSection(header: "Games", things: recent)
                     .listRowSeparator(.hidden)
             }
             if SteamBridge.connected { removeSection.listRowSeparator(.hidden) }

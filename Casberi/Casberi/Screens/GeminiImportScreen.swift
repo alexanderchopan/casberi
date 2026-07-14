@@ -33,9 +33,9 @@ struct GeminiImportScreen: View {
             stepsSection.listRowSeparator(.hidden)
             importSection.listRowSeparator(.hidden)
             if !recent.isEmpty {
-                recentSection.listRowSeparator(.hidden)
                 PinToHomeButton(source: "Gemini", inSection: true)
                     .listRowSeparator(.hidden)
+                recentSection.listRowSeparator(.hidden)
             }
         }
         .listStyle(.insetGrouped)

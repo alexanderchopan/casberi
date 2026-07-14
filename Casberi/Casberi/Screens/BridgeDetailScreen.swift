@@ -68,6 +68,14 @@ struct BridgeDetailScreen: View {
                         }
                     }
 
+                    // Pin to Home sits right after the capabilities and before
+                    // the evidence list — the same spot every app screen puts
+                    // it (user, 2026-07-14). Shown only once the app has landed
+                    // a thing; pinning an empty source composes no tile.
+                    if !recent.isEmpty {
+                        PinToHomeButton(source: bridge.name)
+                    }
+
                     // Recent = EVIDENCE, not content: three receipts that the
                     // bridge delivers (connect ends in proof). The rows open;
                     // the full record is one hop away in Feed.
