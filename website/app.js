@@ -226,3 +226,28 @@
     });
   });
 })();
+
+// Make-it-yours live cards: the Avatar card cycles through cartoon faces
+// (mixed styles), the Background card cycles the app's banner colors and
+// lands on a photo — the two settings, demonstrating themselves.
+(function liveCards() {
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  var faces = Array.prototype.slice.call(document.querySelectorAll('.avatar-stack img'));
+  var fill = document.querySelector('.bg-cycle .bg-fill');
+  var photo = document.querySelector('.bg-cycle .bg-photo');
+  if (!faces.length && !fill) return;
+  var grads = ["linear-gradient(160deg, #55279c, #31165a)", "linear-gradient(160deg, #9e1b4a, #5b102b)", "linear-gradient(160deg, #9e241d, #5b1511)", "linear-gradient(160deg, #9e4b00, #5b2b00)", "linear-gradient(160deg, #006e76, #004044)", "linear-gradient(160deg, #0e722d, #08421a)"];
+  var fi = 0, bi = 0;
+  setInterval(function () {
+    if (faces.length) {
+      faces[fi].classList.remove('on');
+      fi = (fi + 1) % faces.length;
+      faces[fi].classList.add('on');
+    }
+    if (fill) {
+      bi = (bi + 1) % (grads.length + 1);
+      if (bi === grads.length) { photo.classList.add('on'); }
+      else { photo.classList.remove('on'); fill.style.background = grads[bi]; }
+    }
+  }, 2400);
+})();
