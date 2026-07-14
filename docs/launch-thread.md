@@ -26,7 +26,7 @@ Coming next: Claude, Venice, OpenClaw, X, Reddit, YouTube, Spotify, Telegram, Sl
 *[attach: catalog screenshot]*
 
 **4/**
-The model that reads your things and builds your screens runs on the phone — Apple's on-device model, iOS 26. Sync is your own iCloud. "Delete everything" deletes everything, including the iCloud copy.
+The model that reads your things and builds your screens runs on the phone — Apple's on-device model, iOS 26. Sync is your own iCloud. "Delete things" deletes them everywhere, including the iCloud copy; "Delete access" wipes every key Casberi holds.
 
 **5/**
 Built alone, because I kept losing my own stuff and wanted one place that answers instead of making me search.
