@@ -85,86 +85,52 @@
       rain.appendChild(panel);
       var srcs = Array.prototype.slice.call(rain.querySelectorAll('img'))
         .map(function (im) { return im.src; });
-      var picks = [srcs[2], srcs[6], srcs[9], srcs[11], srcs[13], srcs[15], srcs[17], srcs[19],
-                   srcs[21], srcs[23], srcs[25], srcs[29]].filter(Boolean);
-      // a mosaic, not a grid: three size classes and varied widths so the
-      // streamed feed reads organic
-      var sizes  = ['md', 'sm', 'lg', 'md', 'sm', 'md', 'lg', 'sm', 'md', 'lg', 'sm', 'md'];
-      var cardW  = [290, 220, 320, 250, 200, 270, 340, 230, 300, 310, 210, 260];
-      var widths = [[46, 22], [38, 28], [52, 18], [40, 24], [34, 30], [48, 20],
-                    [42, 26], [36, 22], [44, 26], [50, 22], [38, 24], [46, 24]];
+      // a calm notification-style stack: three large cards, one column,
+      // perfectly aligned — dealt out of the berry
+      var picks = [srcs[2], srcs[9], srcs[17]].filter(Boolean);
+      var widths = [[52, 30], [40, 22], [46, 26]];
       var rows = picks.map(function (src, k) {
         var row = document.createElement('div');
-        row.className = 'streamrow ' + sizes[k];
-        row.style.width = cardW[k] + 'px';
+        row.className = 'streamrow';
         row.innerHTML = '<img src="' + src + '" alt="">' +
-          '<span class="sbar" style="width:0"></span><span class="sbar thin" style="width:0"></span>';
+          '<span class="slines"><span class="sbar" style="width:0"></span>' +
+          '<span class="sbar thin" style="width:0"></span></span>';
         panel.appendChild(row);
         return row;
       });
-      // never show a clipped card: drop trailing cards until every visible
-      // one sits fully inside the rain's box
-      var rr = rain.getBoundingClientRect();
-      function clipped() {
-        return rows.some(function (r) {
-          if (r.style.display === 'none') return false;
-          var b = r.getBoundingClientRect();
-          return b.top < rr.top + 2 || b.bottom > rr.bottom - 2;
-        });
-      }
-      for (var guard = 0; guard < rows.length && clipped(); guard++) {
-        for (var q = rows.length - 1; q >= 0; q--) {
-          if (rows[q].style.display !== 'none') { rows[q].style.display = 'none'; break; }
-        }
-      }
-      var shown = rows.filter(function (r) { return r.style.display !== 'none'; });
-      // conservation of matter: every card DEALS OUT of the berry — it starts
-      // small at the tile and springs up into its slot
       var tRect = target.getBoundingClientRect();
       var tcx = tRect.left + tRect.width / 2, tcy = tRect.top + tRect.height / 2;
       function dealFrom(row) {
         var b = row.getBoundingClientRect();
         var dx = tcx - (b.left + b.width / 2), dy = tcy - (b.top + b.height / 2);
-        row.style.transform = 'translate(' + dx + 'px,' + dy + 'px) scale(.25)';
+        row.style.transform = 'translate(' + dx + 'px,' + dy + 'px) scale(.3)';
       }
       function launch(row, k) {
         row.classList.add('in');
         row.style.transform = '';
         var bars = row.querySelectorAll('.sbar');
-        setTimeout(function () { bars[0].style.width = widths[k % widths.length][0] + '%'; }, 160);
-        setTimeout(function () { bars[1].style.width = widths[k % widths.length][1] + '%'; }, 310);
-        // once settled, the card floats — slow, out of phase with its neighbors
-        setTimeout(function () {
-          row.style.animationDuration = (4200 + (k * 337) % 1800) + 'ms';
-          row.style.animationDelay = ((k * 211) % 900) + 'ms';
-          row.classList.add('float');
-        }, 750);
+        setTimeout(function () { bars[0].style.width = widths[k % widths.length][0] + '%'; }, 180);
+        setTimeout(function () { bars[1].style.width = widths[k % widths.length][1] + '%'; }, 340);
       }
-      shown.forEach(dealFrom);
-      shown.forEach(function (row, k) {
-        setTimeout(function () { launch(row, k); }, 110 * k);
+      rows.forEach(dealFrom);
+      rows.forEach(function (row, k) {
+        setTimeout(function () { launch(row, k); }, 170 * k);
       });
-      if (em) setTimeout(function () { em.classList.add('lit'); }, 110 * shown.length + 350);
+      if (em) setTimeout(function () { em.classList.add('lit'); }, 170 * rows.length + 400);
       // one late arrival — things keep landing (once, then calm)
       setTimeout(function () {
         if (!panel.parentElement) return;
-        var rr2 = rain.getBoundingClientRect();
-        var last = shown[shown.length - 1];
-        if (!last) return;
-        var lb = last.getBoundingClientRect();
-        if (rr2.bottom - lb.bottom < 70) return;   // no slack, stay calm
         var late = document.createElement('div');
-        late.className = 'streamrow md';
-        late.style.width = '240px';
-        var lateSrc = srcs[4] || srcs[0];
-        late.innerHTML = '<img src="' + lateSrc + '" alt="">' +
-          '<span class="sbar" style="width:0"></span><span class="sbar thin" style="width:0"></span>';
+        late.className = 'streamrow';
+        late.innerHTML = '<img src="' + (srcs[25] || srcs[0]) + '" alt="">' +
+          '<span class="slines"><span class="sbar" style="width:0"></span>' +
+          '<span class="sbar thin" style="width:0"></span></span>';
         panel.appendChild(late);
         dealFrom(late);
         void late.offsetWidth;
-        launch(late, shown.length);
-      }, 110 * shown.length + 2100);
-      setTimeout(function () { state = 'rested'; }, 110 * shown.length + 700);
+        launch(late, 3);
+      }, 170 * rows.length + 2300);
+      setTimeout(function () { state = 'rested'; }, 170 * rows.length + 800);
     }, 380);   // a beat at full size before the release
   }
 
