@@ -247,9 +247,20 @@ struct Composer: View {
         // teaches — and it needs two things to say anything. When it shows,
         // "What landed today?" sits out (near-duplicate recency asks would
         // crowd out the chips that teach counting and pinning).
+        // The librarian's chip (prd §67 ⑥) — LEADS, and only when a real away
+        // gap holds enough to say something. Gated on the same computation
+        // that answers it, like every chip.
+        let awayCount = StatusAsk.pulse("while i was away", things: all)?.pool.count ?? 0
+        if awayCount >= 3 {
+            out.insert("While I was away?", at: 0)
+        }
         let pulseChip = StatusAsk.pulse("what's going on", things: all)
             .map { $0.pool.count >= 2 } ?? false
-        if pulseChip {
+        // The away chip suppresses its near-duplicates — two catch-up chips
+        // would crowd out the ones that teach counting and showing.
+        if awayCount >= 3 {
+            // covered by "While I was away?"
+        } else if pulseChip {
             out.append("What's going on?")
         } else if all.contains(where: { $0.capturedAt >= dayStart }) {
             out.append("What landed today?")

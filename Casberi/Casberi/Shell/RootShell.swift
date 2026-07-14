@@ -94,6 +94,10 @@ struct RootShell: View {
         .onChange(of: scenePhase) { _, phase in
             if phase == .active {
                 hasBeenActive = true
+                // Freeze the away window (librarian, prd §67 ⑥) — "while you
+                // were away" grounds on it; things landing from here on are
+                // arriving while you're present.
+                AppVisit.markOpened()
                 // Returning crossfades from placeholder to content (§14);
                 // leaving redacts instantly — the snapshot must already hide.
                 withAnimation(.easeOut(duration: 0.2)) { redactNow = false }
@@ -130,6 +134,8 @@ struct RootShell: View {
             } else {
                 if hasBeenActive && hidePreviews { redactNow = true }
                 if phase == .background {
+                    // The away clock starts — the next foreground reads it.
+                    AppVisit.markClosed()
                     // Give the model's memory back when we're not in use; the
                     // next foreground reloads it.
                     OnDeviceModel.teardown()

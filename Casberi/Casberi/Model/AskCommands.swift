@@ -151,7 +151,8 @@ enum StatusAsk {
 
     private static let cues = ["going on", "happening", "what's new", "whats new",
                                "anything new", "catch me up", "did i miss",
-                               "what's up", "whats up", "fill me in", "the latest"]
+                               "what's up", "whats up", "fill me in", "the latest",
+                               "while i was away", "since i was away", "since i left"]
 
     /// The words a status ask may be made of — anything else is CONTENT, and
     /// content means the scored retriever should run instead ("what's going
@@ -163,7 +164,8 @@ enum StatusAsk {
         "happened", "anything", "any", "news", "catch", "fill", "in", "did",
         "i", "miss", "missed", "the", "my", "with", "everything", "all",
         "stuff", "things", "thing", "feeds", "feed", "apps", "app", "sources",
-        "around", "here", "right", "now", "recently", "please", "really"
+        "around", "here", "right", "now", "recently", "please", "really",
+        "while", "away", "since", "left", "gone", "back"
     ]
 
     /// The parsed pulse, or nil when the query isn't a status ask.
@@ -179,6 +181,20 @@ enum StatusAsk {
         if let dateWords = date?.words { words.removeAll { dateWords.contains($0) } }
         words.removeAll { filler.contains($0) }
         guard words.isEmpty else { return nil }
+
+        // The librarian's window (prd §67 ⑥): an away-shaped ask grounds on
+        // the FROZEN gap between last background and this foreground — not a
+        // calendar window — so the answer is exactly what arrived while you
+        // were gone. Never really away (gap under an hour, or a first visit):
+        // the honest empty pulse; the counted line words it plainly.
+        if q.contains("away") || q.contains("i left") {
+            guard let away = AppVisit.away else {
+                return Pulse(windowWords: "while you were away", pool: [], sample: [])
+            }
+            let pool = things.filter { away.contains($0.capturedAt) }
+            return Pulse(windowWords: "while you were away", pool: pool,
+                         sample: sample(of: pool))
+        }
 
         if let date {
             // rangePhrase covers every DateQuery phrase today; "recently" is
