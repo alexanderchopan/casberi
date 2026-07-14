@@ -815,7 +815,11 @@ footer .tagline { font-size: 16px; font-weight: 600; color: var(--ink); margin-b
   opacity: 0;
   transition: opacity .4s ease, transform .55s cubic-bezier(.34,1.4,.5,1); }
 .streamrow.in { opacity: 1; }
-.streamrow img { width: 27px; height: 27px; border-radius: 8px; flex: none; }
+.streamrow .cardtile { width: 30px; height: 30px; border-radius: 8px;
+  animation: none !important; opacity: 1 !important; transform: none !important;
+  font-size: 12px; }
+.streamrow .cardtile img { width: 52%; height: 52%; }
+.streamrow .cardtile.tilefull img { width: 100%; height: 100%; }
 .streamrow .slines { display: flex; flex-direction: column; gap: 6px; flex: 1; }
 .streamrow .sbar { display: block; height: 9px; border-radius: 5px;
   background: rgba(255,255,255,.16); transition: width .55s cubic-bezier(.3,.6,.3,1); }

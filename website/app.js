@@ -83,8 +83,12 @@
       var panel = document.createElement('div');
       panel.className = 'streamfeed';
       rain.appendChild(panel);
-      var srcs = Array.prototype.slice.call(rain.querySelectorAll('img'))
-        .map(function (im) { return im.src; });
+      // clone the rain's TILES (glyph + brand-colored background) so every
+      // card's icon is colorful — a bare glyph is white-on-dark, and only
+      // apps with baked-in color (Kalshi) would stand out
+      var tiles = Array.prototype.slice.call(rain.children).filter(function (el) {
+        return el.classList.contains('ai');
+      });
       // a WALL of notifications: full screen width, complete rows only —
       // the count is computed from the space, so nothing ever clips
       var rr = rain.getBoundingClientRect();
@@ -101,9 +105,15 @@
       for (var k = 0; k < count; k++) {
         var row = document.createElement('div');
         row.className = 'streamrow';
-        row.innerHTML = '<img src="' + srcs[(k * 7) % srcs.length] + '" alt="">' +
-          '<span class="slines"><span class="sbar" style="width:0"></span>' +
-          '<span class="sbar thin" style="width:0"></span></span>';
+        var tile = tiles[(k * 7) % tiles.length].cloneNode(true);
+        tile.removeAttribute('style');
+        tile.classList.add('cardtile');
+        row.appendChild(tile);
+        var lines = document.createElement('span');
+        lines.className = 'slines';
+        lines.innerHTML = '<span class="sbar" style="width:0"></span>' +
+          '<span class="sbar thin" style="width:0"></span>';
+        row.appendChild(lines);
         panel.appendChild(row);
         rows.push(row);
       }
