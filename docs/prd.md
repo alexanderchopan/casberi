@@ -2526,3 +2526,64 @@ Historical `docs/prd.md` entries before this one that say "Dexscreener" are
 NOT retroactively renamed — they're an append-only record of what was true
 when written. Read them as: "Dexscreener" there means what "Tokens" means
 now.
+
+## 67. The power-user ring stays server-free (user, 2026-07-13)
+
+The next ring of capability — everything a power user reaches for after the
+corpus is flowing — was scoped in one sitting, and one constraint rules all
+of it: **Casberi runs no server.** Every planned feature must be one of:
+
+- **Tier 1, fully on-device** — Vision OCR, embeddings, App Intents, the
+  on-device model. No tension with the promise.
+- **Tier 2, device→third-party** — the phone talks directly to an API the
+  person already trusts with that data (their GitHub token, their Anthropic
+  key, their Todoist account). Casberi never becomes a data custodian; no
+  Casberi-operated machine ever sees a byte.
+
+Anything requiring a Casberi-operated server — instant push from webhooks,
+always-on monitoring while the phone is pocketed, an email-in address,
+cross-user sharing — is **deferred, not designed around**. The positioning
+consequence is embraced rather than apologized for: *Casberi catches you up;
+it doesn't interrupt you.* Immediacy is the one honest casualty of
+on-device, and calm is the product's temperament anyway.
+
+**The order** (user's ranking): ① BYO-key model escape hatch, ② OAuth
+where public-client flows exist, ③ write-back verbs in the sheet,
+④ round out App Intents, ⑤ screenshot OCR, ⑥ the librarian digest.
+
+**Rulings baked in:**
+
+- **BYO-key is a verb, never a fallback.** The person's own Anthropic key
+  (Keychain, device→api.anthropic.com direct) powers a "try harder" they
+  tap per query. It never fires silently, and the answer wears a badge
+  saying their key produced it. On-device by default; their key, their
+  choice, per use.
+- **OAuth only where the flow is genuinely public-client.** GitHub's device
+  flow needs no secret and no server — build it. Providers whose token
+  exchange demands a client secret (Notion, Todoist, Linear) stay
+  token-paste, and the setup copy says why, plainly. An embedded "secret"
+  in an app binary is not a secret; shipping one would be dishonest, and a
+  relay to hold it would be a server.
+- **Telegram write-back is excluded until Telegram read exists.** Respond
+  requires read, and today Telegram is `connectable: false` — a shelf
+  offer, not a bridge. The Bot API cannot be that bridge: a bot sees only
+  what is explicitly sent or forwarded to it (capture, not sync), and it
+  can never send *as the person* — a "reply" would arrive from a bot. The
+  only honest read path is TDLib, logging in as the person — fully
+  on-device, but a heavy client-grade dependency that is its own future
+  decision. Until that day, no Telegram verbs.
+- **Write-backs live in the sheet, consent-gated, capability-gated.** Per
+  the standing law (writes in the sheet, with consent): Todoist
+  complete/snooze, GitHub comment/close, Linear status/comment, Bluesky
+  reply/like/repost, Calendar accept/decline. A verb appears only when its
+  bridge is connected with a token that can actually perform it — the
+  honesty rule's "no dead controls" applied to writes.
+- **The librarian proposes; the person disposes.** Digest, tag proposals,
+  resurfacing, dedup candidates — all through the proposal-card pattern
+  `OrganizeLLM` already set. Nothing tags, merges, sends, or deletes
+  without a tap.
+
+**Already built, so not re-planned:** semantic retrieval
+(`EmbeddingIndex`, 2026-07-12), Spotlight (`SpotlightIndex`), Save +
+synthesis App Intents (`CasberiIntents.swift`). The gaps are OCR, the
+search/ask intents, and everything in the list above.
