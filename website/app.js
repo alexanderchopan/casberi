@@ -85,24 +85,30 @@
       rain.appendChild(panel);
       var srcs = Array.prototype.slice.call(rain.querySelectorAll('img'))
         .map(function (im) { return im.src; });
-      var picks = [srcs[2], srcs[6], srcs[9], srcs[13], srcs[17], srcs[21], srcs[25], srcs[29], srcs[11]]
-        .filter(Boolean);
-      var widths = [[46, 22], [38, 28], [52, 18], [40, 24], [34, 30], [48, 20], [42, 26], [36, 22], [44, 26]];
+      var picks = [srcs[2], srcs[6], srcs[9], srcs[11], srcs[13], srcs[15], srcs[17], srcs[19],
+                   srcs[21], srcs[23], srcs[25], srcs[29]].filter(Boolean);
+      // a mosaic, not a grid: three size classes and varied widths so the
+      // streamed feed reads organic
+      var sizes  = ['md', 'sm', 'lg', 'md', 'sm', 'md', 'lg', 'sm', 'md', 'lg', 'sm', 'md'];
+      var cardW  = [290, 220, 320, 250, 200, 270, 340, 230, 300, 310, 210, 260];
+      var widths = [[46, 22], [38, 28], [52, 18], [40, 24], [34, 30], [48, 20],
+                    [42, 26], [36, 22], [44, 26], [50, 22], [38, 24], [46, 24]];
       picks.forEach(function (src, k) {
         var row = document.createElement('div');
-        row.className = 'streamrow';
+        row.className = 'streamrow ' + sizes[k];
+        row.style.width = cardW[k] + 'px';
         row.innerHTML = '<img src="' + src + '" alt="">' +
           '<span class="sbar" style="width:0"></span><span class="sbar thin" style="width:0"></span>';
         panel.appendChild(row);
         setTimeout(function () {
           row.classList.add('in');
           var bars = row.querySelectorAll('.sbar');
-          setTimeout(function () { bars[0].style.width = widths[k][0] + '%'; }, 140);
-          setTimeout(function () { bars[1].style.width = widths[k][1] + '%'; }, 300);
-        }, 150 * k);
+          setTimeout(function () { bars[0].style.width = widths[k][0] + '%'; }, 130);
+          setTimeout(function () { bars[1].style.width = widths[k][1] + '%'; }, 280);
+        }, 110 * k);
       });
-      if (em) setTimeout(function () { em.classList.add('lit'); }, 150 * picks.length + 350);
-      setTimeout(function () { state = 'rested'; }, 150 * picks.length + 700);
+      if (em) setTimeout(function () { em.classList.add('lit'); }, 110 * picks.length + 350);
+      setTimeout(function () { state = 'rested'; }, 110 * picks.length + 700);
     }, 380);   // a beat at full size before the release
   }
 

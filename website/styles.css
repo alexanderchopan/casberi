@@ -800,17 +800,24 @@ footer .tagline { font-size: 16px; font-weight: 600; color: var(--ink); margin-b
 .hero h1 em.lit { filter: brightness(1.3) drop-shadow(0 0 26px rgba(59,140,240,.35)); }
 
 /* Hero act 3: the berry streams a feed into the space the rain left */
-.streamfeed { position: absolute; inset: 0; display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(310px, 1fr));
-  align-content: center; gap: 16px; padding: 0 4px; pointer-events: none; }
-@media (max-width: 700px) { .streamfeed { grid-template-columns: 1fr; }
-  .streamfeed .streamrow:nth-child(n+4) { display: none; } }
-.streamrow { display: flex; align-items: center; gap: 14px;
-  background: var(--surface); border-radius: 18px; padding: 20px 20px;
+.streamfeed { position: absolute; inset: 0; overflow: hidden;
+  display: flex; flex-wrap: wrap; justify-content: center; align-content: center;
+  gap: 12px 14px; padding: 0 8px; pointer-events: none; }
+@media (max-width: 1150px) { .streamfeed .streamrow:nth-child(n+9) { display: none; } }
+@media (max-width: 900px)  { .streamfeed .streamrow:nth-child(n+7) { display: none; } }
+@media (max-width: 700px)  { .streamfeed .streamrow:nth-child(n+5) { display: none; } }
+.streamrow { display: flex; align-items: center; gap: 10px; max-width: 86%;
+  background: var(--surface); border-radius: 14px; padding: 12px 14px;
   opacity: 0; transform: translateY(10px) scale(.97);
   transition: opacity .35s ease, transform .45s cubic-bezier(.34,1.56,.64,1); }
+.streamrow.sm { padding: 9px 12px; border-radius: 12px; }
+.streamrow.lg { padding: 15px 16px; border-radius: 16px; }
+.streamrow.sm img { width: 20px; height: 20px; }
+.streamrow.lg img { width: 30px; height: 30px; }
+.streamrow.sm .sbar { height: 8px; } .streamrow.sm .sbar.thin { height: 6px; }
+.streamrow.lg .sbar { height: 12px; } .streamrow.lg .sbar.thin { height: 9px; }
 .streamrow.in { opacity: 1; transform: none; }
-.streamrow img { width: 32px; height: 32px; border-radius: 8px; }
-.streamrow .sbar { display: block; height: 12px; border-radius: 6px;
+.streamrow img { width: 24px; height: 24px; border-radius: 7px; }
+.streamrow .sbar { display: block; height: 9px; border-radius: 5px;
   background: rgba(255,255,255,.16); transition: width .5s cubic-bezier(.3,.6,.3,1); }
-.streamrow .sbar.thin { height: 9px; background: rgba(255,255,255,.09); }
+.streamrow .sbar.thin { height: 7px; background: rgba(255,255,255,.09); }
