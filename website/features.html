@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Casberi — Features</title>
+<meta name="description" content="Everything Casberi does, in one place — connect, keep tabs, take action, make it yours.">
+<meta property="og:title" content="Casberi — Features">
+<meta property="og:description" content="Everything Casberi does, in one place.">
+<meta property="og:type" content="website">
+<link rel="icon" href="icons/casberi-logo.png">
+<link rel="stylesheet" href="styles.css?v=20260713e">
+<style>
+  .feat-head { padding: 46px 0 18px; }
+  .feat-head h1 { font-family: ui-rounded, -apple-system, sans-serif; font-size: clamp(30px, 4.4vw, 44px);
+    font-weight: 800; letter-spacing: -0.02em; margin: 0 0 8px; }
+  .feat-head p { color: var(--muted); font-size: 16px; margin: 0; }
+
+  .feat-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 34px; padding: 26px 0 70px; }
+  @media (max-width: 1080px) { .feat-grid { grid-template-columns: repeat(3, 1fr); } }
+  @media (max-width: 720px)  { .feat-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 460px)  { .feat-grid { grid-template-columns: 1fr; } }
+
+  .feat-col h2 { font-size: 16px; font-weight: 700; color: var(--ink); margin: 0 0 8px;
+    padding-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,.12); }
+  .feat-col a.item { display: block; text-decoration: none; margin-top: 18px; }
+  .feat-col a.item b { display: block; font-size: 15px; font-weight: 650; color: var(--blue-bright); }
+  .feat-col a.item:hover b { text-decoration: underline; }
+  .feat-col a.item span { display: block; font-size: 13.5px; color: var(--muted); line-height: 1.45; margin-top: 2px; }
+
+  .feat-promo { margin-top: 18px; border-radius: 14px; overflow: hidden; background: var(--surface);
+    display: block; text-decoration: none; transition: transform .22s cubic-bezier(.34,1.56,.64,1); }
+  .feat-promo:hover { transform: translateY(-3px); text-decoration: none; }
+  .feat-promo img { width: 100%; aspect-ratio: 16/10; object-fit: cover; object-position: top; display: block; }
+  .feat-promo div { padding: 14px 16px 16px; }
+  .feat-promo b { display: block; font-size: 14.5px; color: var(--ink); margin-bottom: 4px; }
+  .feat-promo span { font-size: 13px; color: var(--muted); line-height: 1.45; }
+  .feat-promo em { display: block; font-style: normal; color: var(--blue-bright); font-weight: 650; font-size: 13.5px; margin-top: 10px; }
+  @media (prefers-reduced-motion: reduce) { .feat-promo { transition: none; } .feat-promo:hover { transform: none; } }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <nav>
+    <a class="brand" href="/">
+      <img class="brandmark" src="icons/casberi-logo.png" alt="">
+      Casberi
+    </a>
+    <div class="nav-links">
+      <a href="/">Home</a>
+      <a class="on" href="features.html">Features</a>
+      <a href="docs.html">Docs</a>
+      <a href="privacy.html">Privacy</a>
+    </div>
+  </nav>
+</div>
+
+<div class="wrap">
+  <header class="feat-head">
+    <h1>Everything Casberi does</h1>
+    <p>Every feature, one line each. Tap any of them for how it works.</p>
+  </header>
+
+  <div class="feat-grid">
+    <div class="feat-col">
+      <h2>Just connect</h2>
+      <a class="item" href="docs.html#settings"><b>Own your data</b><span>No account, no sign-in. It&rsquo;s all on your phone.</span></a>
+      <a class="item" href="docs.html#apps"><b>Connect your apps</b><span>Mail, photos, wallets, calendars, and dozens more.</span></a>
+      <a class="item" href="docs.html#feed"><b>Watch one feed</b><span>One screen, no tabs. Everything together, or one app at a time.</span></a>
+      <a class="item" href="docs.html#one-screen"><b>One screen</b><span>Chips up top, one button below. That&rsquo;s the app.</span></a>
+    </div>
+
+    <div class="feat-col">
+      <h2>Keep tabs</h2>
+      <a class="item" href="docs.html#pinned"><b>Pin your favorites</b><span>Build a board, arranged your way.</span></a>
+      <a class="item" href="docs.html#open"><b>Act on items</b><span>From your feed: open, pin, or share, in the app it came from.</span></a>
+      <a class="item" href="docs.html#open"><b>Tag your things</b><span>Group without folders. One thing, many tags.</span></a>
+      <a class="item" href="docs.html#feed"><b>Apps take shape</b><span>Calendar reads like an agenda, Photos becomes a grid, a wallet leads with its balance.</span></a>
+    </div>
+
+    <div class="feat-col">
+      <h2>Take action</h2>
+      <a class="item" href="docs.html#action-button"><b>Ask anything</b><span>A question, answered from your own things — on your phone.</span></a>
+      <a class="item" href="docs.html#action-button"><b>Organize everything</b><span>Tell it to tag or rename across the lot. It shows the change before Apply.</span></a>
+      <a class="item" href="docs.html#action-button"><b>Jump to tools</b><span>Note, message, email, event, reminder, search, ChatGPT, or Claude.</span></a>
+      <a class="item" href="docs.html#action-button"><b>Capture fast</b><span>Paste something to save it, or tap the mic and talk.</span></a>
+    </div>
+
+    <div class="feat-col">
+      <h2>Make it yours</h2>
+      <a class="item" href="docs.html#settings"><b>Avatar</b><span>Your photo, up top.</span></a>
+      <a class="item" href="docs.html#settings"><b>Background</b><span>A color or a picture of yours, behind your board.</span></a>
+      <a class="item" href="docs.html#settings"><b>Language</b><span>English, Espa&ntilde;ol, &#20013;&#25991;, &#26085;&#26412;&#35486;, &#54620;&#44397;&#50612;.</span></a>
+      <a class="item" href="docs.html#settings"><b>Data</b><span>Lives on your phone, syncs only if you turn it on. Export, import, or delete everything.</span></a>
+    </div>
+
+    <div class="feat-col">
+      <h2>More</h2>
+      <a class="item" href="docs.html"><b>Docs</b><span>Why Casberi exists, and how to use all of it.</span></a>
+      <a class="item" href="docs.html#faq"><b>Questions, answered</b><span>Account, data, cost, and consent — the short answers.</span></a>
+      <a class="item" href="privacy.html"><b>Privacy</b><span>What is stored, where, and what Casberi never does.</span></a>
+      <a class="item" href="llms-full.txt"><b>For AI agents</b><span>The full docs as plain text — llms.txt inside.</span></a>
+      <a class="feat-promo" href="docs.html#how-to-use">
+        <img src="videos/clip2-keep-tabs-poster.jpg" alt="">
+        <div>
+          <b>See it for yourself</b>
+          <span>The whole app in three short clips, straight from the simulator.</span>
+          <em>Watch now &rarr;</em>
+        </div>
+      </a>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <div class="wrap">
+    <p class="tagline">Your apps, one feed. Ask anything, organize everything. No account required.</p>
+    <p>&copy; 2026 Casberi &middot; <a href="/">Home</a> &middot; <a href="docs.html">Docs</a> &middot; <a href="privacy.html">Privacy</a></p>
+  </div>
+</footer>
+
+</body>
+</html>
