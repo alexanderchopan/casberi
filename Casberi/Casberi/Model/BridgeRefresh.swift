@@ -33,8 +33,12 @@ enum BridgeRefresh {
         if connected("rem") {
             Task { @MainActor in _ = await ScheduleIngest.connectReminders(context: context) }
         }
-        if connected("hlt") {
-            Task { @MainActor in _ = await HealthIngest.connectAndIngest(context: context) }
+        let healthOn = connected("hlt"), stravaOn = connected("strava")
+        if healthOn || stravaOn {
+            Task { @MainActor in
+                _ = await HealthIngest.connectAndIngest(context: context,
+                                                        healthOn: healthOn, stravaOn: stravaOn)
+            }
         }
         if connected("music") {
             // The bare re-scan — refresh must never re-present the

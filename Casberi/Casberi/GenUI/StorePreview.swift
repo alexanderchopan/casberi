@@ -36,8 +36,8 @@ enum StorePreview {
     }
 
     /// The preview document for an offer, or nil when a preview would add
-    /// nothing (connectable apps show real things instead; Venice is a
-    /// brain candidate, not a feed source).
+    /// nothing (connectable apps show real things instead; Venice lands no
+    /// things — its key powers answers, so the tagline row speaks for it).
     static func doc(for name: String) -> [String]? {
         switch name {
         case "Wallet": [
@@ -77,6 +77,10 @@ enum StorePreview {
         case "Claude": [
             "root = Stack([c])",
             "c = TakeawayCard(\"IMPORTED\", \"Refactor plan: sync layer\", \"CloudKit zones, conflict rules, and the migration order.\")",
+        ]
+        case "Gemini": [
+            "root = Stack([c])",
+            "c = TakeawayCard(\"IMPORTED\", \"Compare mirrorless cameras\", \"Sensor size first, then lenses — the body is the cheap part.\")",
         ]
         case "GitHub": [
             "root = Stack([w])",

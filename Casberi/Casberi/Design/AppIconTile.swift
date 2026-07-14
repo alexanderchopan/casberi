@@ -44,6 +44,7 @@ extension DS {
         case "icloud mail":         return Color.fixed("#3693f3")
         case "chatgpt":             return Color.fixed("#ffffff")
         case "claude":              return Color.fixed("#d97757")
+        case "gemini":              return Color.fixed("#4285f4")   // the sparkle's blue end
         case "reminders":           return Color.fixed("#ff9500")
         case "photos":              return Color.fixed("#5e9ee6")
         case "x", "twitter":        return Color.fixed("#000000")

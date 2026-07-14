@@ -460,7 +460,8 @@ struct Composer: View {
                                                 // The BYO-key retry (prd §67) — a verb,
                                                 // never a fallback: the question and its
                                                 // matched things leave this iPhone only
-                                                // on this tap, straight to Anthropic.
+                                                // on this tap, straight to the agent's
+                                                // provider (Claude/ChatGPT/Gemini/Venice).
                                                 if !keyedCurrent, keyAvailable,
                                                    !currentQuestion.isEmpty {
                                                     Button { askWithKey() } label: {
@@ -702,9 +703,10 @@ struct Composer: View {
     }
 
     /// The BYO-key retry: the same question, re-answered by the person's own
-    /// Anthropic key. The on-device answer settles into the thread first, so
-    /// the two sit side by side — the tap is the consent, the badge is the
-    /// receipt, and a failure is worded plainly (never faked).
+    /// agent key (Claude, ChatGPT, Gemini, or Venice). The on-device answer
+    /// settles into the thread first, so the two sit side by side — the tap
+    /// is the consent, the badge is the receipt, and a failure is worded
+    /// plainly (never faked).
     private func askWithKey() {
         let q = currentQuestion
         guard !q.isEmpty, !inFlight else { return }
@@ -728,7 +730,7 @@ struct Composer: View {
             // Closed, or a newer ask overtook this one — retire silently.
             guard isOpen, gen == askGeneration else { return }
             inFlight = false
-            keyAvailable = ClaudeKey.isConfigured
+            keyAvailable = AgentKey.isConfigured
             if let doc {
                 currentStreamed = true   // a keyed synthesis is keepable too
                 answerStream.stream(doc)
@@ -1097,7 +1099,7 @@ struct Composer: View {
                 // the typewriter (unchanged behaviour).
                 proseStreaming = false
                 inFlight = false
-                keyAvailable = ClaudeKey.isConfigured   // one read per settle
+                keyAvailable = AgentKey.isConfigured   // one read per settle
                 if streamed { answerStream.paint(finalDoc) }
                 else { answerStream.stream(finalDoc) }
                 fieldFocused = true     // ready for the next follow-up

@@ -2621,3 +2621,45 @@ two destructive verbs, each stating what goes AND what stays:
   Settings rather than pretending to revoke it.
 
 A true scorched-earth exit is both verbs, and each one says so.
+
+## 69. The key is an agent key — four providers, one contract (user, 2026-07-14)
+
+§67's "Try with your key" launched Anthropic-only, and every surface said
+so ("Anthropic API key", "a bigger Claude"). Ruled: the key is an AGENT
+key — the person names the agent they know (Claude, ChatGPT, Gemini,
+Venice), never the vendor alone. `Model/AgentAnswer.swift` carries all
+four providers (Anthropic / OpenAI / Google / Venice — one request shape
+each), per-provider Keychain keys (Anthropic keeps its original vault key
+so existing keys survive), validate-before-save against each provider's
+own API, and one ACTIVE provider — the last saved — that keyed answers
+run on. The settings card is a segmented agent picker; the Settings tile
+names the active agent ("Gemini answers on tap") or lists all four. The
+contract is unchanged from §67: same grounding, same consent tap, same
+honest nil on failure — the key buys a stronger model, not a different
+contract.
+
+## 70. Venice connects as a key seat; Strava rides Apple Health;
+## Gemini imports via Takeout (user, 2026-07-14)
+
+Three offers went live, each by its honest path:
+
+- **Venice** — nothing reads IN (Venice keeps chats on-device by design);
+  its seat powers answers OUT. Connect = paste a Venice key, checked
+  against api.venice.ai before it saves (`VeniceSetupScreen`), same vault
+  entry the agent-key picker shows. No feed preview — the tagline speaks.
+- **Strava** — no OAuth, no Strava account: Strava saves every activity
+  to HealthKit, so the Strava seat is `HealthIngest` filtered to workouts
+  whose `sourceRevision` names Strava, labeled "Strava". One ref scheme
+  (`hkworkout:<uuid>`) across both Health-backed seats so a workout never
+  lands twice; each seat's Connect proof counts only its own. Holds back
+  from onboarding with Health (same sensitive-before-trust ruling).
+- **Gemini** — the ChatGPT/Claude import grade: Google Takeout's
+  `MyActivity.json` (no live read exists), one chat thing per PROMPT
+  (Google exports no thread structure), "Used Gemini" records skipped,
+  dedup on timestamp + a stable FNV-1a of the ask.
+
+Website ruling, same date: the site lists NO "Soon" apps — an offer the
+app can't connect simply isn't on the site. X, Telegram, Slack, Spotify,
+and OpenClaw left the web catalog (they stay in-app as Soon); Farcaster
+shelves under Onchain on the web; the catalog is packed shelf cards
+(`#catalog`) mirroring `AppsScreen.categories`, Markets last.

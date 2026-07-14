@@ -333,13 +333,24 @@ struct RootShell: View {
                 }
             }
             // Debug hooks for the BYO-key path: `-byokKey <key>` stores a key
-            // headlessly (or "clear" to remove it); `-byokProbe "<query>"` runs
-            // the keyed answer path and logs the doc — with a bogus key it
-            // verifies the honest failure path without spending anything.
+            // headlessly — an optional "provider:" prefix picks the agent
+            // ("venice:vk-…"; bare keys stay Anthropic), "clear" removes every
+            // provider's key. `-byokProbe "<query>"` runs the keyed answer
+            // path and logs the doc — with a bogus key it verifies the honest
+            // failure path without spending anything.
             if let raw = UserDefaults.standard.string(forKey: "byokKey") {
-                if raw == "clear" { ClaudeKey.clear() } else { ClaudeKey.set(raw) }
-                NSLog("[Casberi] byokKey: configured=%d hint=%@",
-                      ClaudeKey.isConfigured ? 1 : 0, ClaudeKey.hint)
+                if raw == "clear" {
+                    AgentProvider.allCases.forEach { AgentKey.clear($0) }
+                } else if let colon = raw.firstIndex(of: ":"),
+                          let provider = AgentProvider(rawValue: String(raw[..<colon])) {
+                    AgentKey.set(String(raw[raw.index(after: colon)...]), for: provider)
+                } else {
+                    AgentKey.set(raw, for: .anthropic)
+                }
+                let active = AgentKey.active
+                NSLog("[Casberi] byokKey: configured=%d provider=%@ hint=%@",
+                      AgentKey.isConfigured ? 1 : 0, active?.rawValue ?? "none",
+                      active.map { AgentKey.hint($0) } ?? "")
             }
             if let q = UserDefaults.standard.string(forKey: "byokProbe") {
                 Task {
@@ -841,16 +852,17 @@ struct RootShell: View {
 
     /// The BYO-key retry (prd §67) — the same question over the SAME evidence
     /// the on-device answer saw (`lastAnswerHits`), synthesized by the person's
-    /// own Anthropic key, device→API direct. nil means the key or the network
-    /// failed and the composer words that; an empty grounding gets an honest
-    /// line instead, because a stronger model can't change what's here.
+    /// own agent key (Claude, ChatGPT, Gemini, or Venice), device→API direct.
+    /// nil means the key or the network failed and the composer words that; an
+    /// empty grounding gets an honest line instead, because a stronger model
+    /// can't change what's here.
     private func keyedAnswerDocument(_ query: String) async -> [String]? {
         let hits = lastAnswerHits.isEmpty ? retrieve(query) : lastAnswerHits
         guard !hits.isEmpty else {
             return proseDoc("Nothing in your things matches that — a bigger model can't change what's here.")
         }
-        guard let prose = await ClaudeAnswer.synthesize(query: query,
-                                                        candidates: candidates(hits)) else {
+        guard let prose = await AgentAnswer.synthesize(query: query,
+                                                       candidates: candidates(hits)) else {
             return nil
         }
         return proseDoc(prose)

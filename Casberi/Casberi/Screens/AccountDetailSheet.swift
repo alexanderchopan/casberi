@@ -30,14 +30,17 @@ struct AccountDetailSheet: View {
     @State private var importResult: String?
     @State private var deleteResult: String?
     /// Your key (prd §67) — draft, outcome line, and a mirrored configured
-    /// flag (ClaudeKey isn't observable; actions refresh it by hand).
+    /// flag (AgentKey isn't observable; actions refresh it by hand). The
+    /// picker chooses which agent the key belongs to (ruling 2026-07-14:
+    /// it's an agent key — Claude, ChatGPT, Gemini, or Venice).
     @State private var keyDraft = ""
     @State private var keyResult: String?
     /// A rejected key must READ as a failure — same muted gray as success
     /// would look like it saved (honesty rule).
     @State private var keyResultIsError = false
     @State private var keyChecking = false
-    @State private var keyConfigured = ClaudeKey.isConfigured
+    @State private var keyProvider: AgentProvider = AgentKey.active ?? .anthropic
+    @State private var keyConfigured = AgentKey.isConfigured(AgentKey.active ?? .anthropic)
 
     var body: some View {
         DSTray(title: title, height: sheetHeight) {
@@ -180,20 +183,33 @@ struct AccountDetailSheet: View {
     }
 
     /// Your key (prd §67) — the BYO escape hatch, stated honestly: answers run
-    /// on this iPhone by default; your own Anthropic key adds a "Try with your
-    /// key" you tap per answer. The key goes to the Keychain and to Anthropic
-    /// itself — never to us (there is no us to send it to).
+    /// on this iPhone by default; your own agent key adds a "Try with your
+    /// key" you tap per answer. The key goes to the Keychain and to the
+    /// provider itself — never to us (there is no us to send it to). It's an
+    /// AGENT key (ruling 2026-07-14): Claude, ChatGPT, Gemini, or Venice —
+    /// the picker names the agent, the small print names the company.
     private var keyCard: some View {
         VStack(alignment: .leading, spacing: DS.Space.s4) {
             aliveRow("key.fill", keyConfigured ? DS.confirm : DS.textSecondary,
-                     "Anthropic API key",
-                     keyConfigured ? "Saved in the Keychain \(ClaudeKey.hint)"
+                     "Agent API key",
+                     keyConfigured ? "\(keyProvider.agent) saved in the Keychain \(AgentKey.hint(keyProvider))"
                                    : "Answers run on this iPhone until you add one")
-            Text("With your key saved, every answer offers \"Try with your key\" — the question and the few matched things go straight from this iPhone to Anthropic, only when you tap. Anthropic bills your key directly.")
+            Text("With your key saved, every answer offers \"Try with your key\" — the question and the few matched things go straight from this iPhone to the agent's provider, only when you tap. They bill your key directly.")
                 .dsText(.subhead13).foregroundStyle(DS.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
+            Picker("Agent", selection: $keyProvider) {
+                ForEach(AgentProvider.allCases) { provider in
+                    Text(provider.agent).tag(provider)
+                }
+            }
+            .pickerStyle(.segmented)
+            .onChange(of: keyProvider) {
+                keyConfigured = AgentKey.isConfigured(keyProvider)
+                keyResult = nil
+                keyDraft = ""
+            }
             HStack(spacing: DS.Space.s3) {
-                SecureField("sk-ant-…", text: $keyDraft)
+                SecureField(keyProvider.placeholder, text: $keyDraft)
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
                     .dsText(.callout15)
@@ -214,10 +230,12 @@ struct AccountDetailSheet: View {
             if keyConfigured {
                 Button {
                     DSHaptic.tap()
-                    ClaudeKey.clear()
+                    AgentKey.clear(keyProvider)
                     keyConfigured = false
                     keyResultIsError = false
-                    keyResult = "Removed — answers stay on this iPhone."
+                    keyResult = AgentKey.isConfigured
+                        ? "Removed — answers run on \(AgentKey.active?.agent ?? "") now."
+                        : "Removed — answers stay on this iPhone."
                 } label: {
                     actionLabel("Remove key", icon: "trash",
                                 fg: DS.destructive, bg: DS.gray100)
@@ -230,32 +248,32 @@ struct AccountDetailSheet: View {
                     .foregroundStyle(keyResultIsError ? DS.attention : DS.textSecondary)
                     .settleIn()
             }
-            Text("Get a key at console.anthropic.com. It stays in this iPhone's Keychain and goes only to Anthropic itself.")
+            Text("Get a key from \(keyProvider.company) at \(keyProvider.console). It stays in this iPhone's Keychain and goes only to \(keyProvider.company) itself.")
                 .dsText(.label12).foregroundStyle(DS.textTertiary)
                 .fixedSize(horizontal: false, vertical: true)
         }
     }
 
-    /// Saves the key only after Anthropic accepts it — no dead key sitting in
-    /// the Keychain claiming a capability it can't deliver (honesty rule).
+    /// Saves the key only after its provider accepts it — no dead key sitting
+    /// in the Keychain claiming a capability it can't deliver (honesty rule).
     private func saveKey() {
         let candidate = keyDraft.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !candidate.isEmpty else { return }
         keyChecking = true
         keyResult = nil
         Task { @MainActor in
-            let ok = await ClaudeAnswer.validate(candidate)
+            let ok = await AgentAnswer.validate(candidate, provider: keyProvider)
             keyChecking = false
             if ok {
-                ClaudeKey.set(candidate)
+                AgentKey.set(candidate, for: keyProvider)
                 keyConfigured = true
                 keyDraft = ""
                 DSHaptic.success()
                 keyResultIsError = false
-                keyResult = "Saved — answers now offer \"Try with your key\"."
+                keyResult = "Saved — answers now offer \"Try with your key\" on \(keyProvider.agent)."
             } else {
                 keyResultIsError = true
-                keyResult = "Anthropic didn't accept that key — check it and try again."
+                keyResult = "\(keyProvider.company) didn't accept that key — check it and try again."
             }
         }
     }

@@ -104,7 +104,7 @@ enum OnDeviceModel {
     /// The one serialization every model path shares: a numbered line per
     /// thing, with the thing's own text (when it has any) quoted on an
     /// indented line under it. Lives on the ungated enum so the BYO-key path
-    /// (ClaudeAnswer) hands Anthropic the SAME evidence shape the on-device
+    /// (AgentAnswer) hands the provider the SAME evidence shape the on-device
     /// model saw — prd §67: the key buys a stronger model, not a different
     /// contract.
     static func numberedCandidates(_ candidates: [Candidate]) -> String {

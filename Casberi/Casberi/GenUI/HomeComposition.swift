@@ -330,7 +330,7 @@ enum HomeComposition {
         case "Tokens":                                      return String(localized: "Watchlist")
         case "Kalshi":                                     return String(localized: "Markets")
         case "Bluesky", "Farcaster":                       return String(localized: "Recent posts")
-        case "ChatGPT", "Claude":                          return String(localized: "Recent chats")
+        case "ChatGPT", "Claude", "Gemini":                return String(localized: "Recent chats")
         case "Substack", "Podcasts":                       return String(localized: "New")
         case "Steam":                                      return String(localized: "Recently played")
         case "Apple Notes", "Day One", "Apple Journal", "Obsidian":

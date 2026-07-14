@@ -23,12 +23,13 @@ struct OnboardingView: View {
 
     /// The mini store: exactly the bridges that connect for real today.
     private var offers: [BridgeCatalog.Offer] {
-        // Two bridges sit out of minute zero — both read as "this app wants my
-        // sensitive data" before any trust exists. Apple Health (ruling
+        // Three bridges sit out of minute zero — each reads as "this app wants
+        // my sensitive data" before any trust exists. Apple Health (ruling
         // 2026-07-07: health is sensitive before trust). Contacts (ruling
         // 2026-07-12: an address-book ask on onboarding reads as harvesting
-        // your info). Both wait in the store.
-        let heldBack: Set<String> = ["Apple Health", "Contacts"]
+        // your info). Strava rides the same Health permission (2026-07-14),
+        // so it waits with Health. All wait in the store.
+        let heldBack: Set<String> = ["Apple Health", "Contacts", "Strava"]
         return BridgeCatalog.offers.filter {
             $0.connectable && !$0.needsSetup && !heldBack.contains($0.name)
         }
@@ -58,11 +59,12 @@ struct OnboardingView: View {
                                "Claude", "Spotify", "Strava", "Bluesky",
                                "Telegram", "Slack", "X", "Notion", "Reddit",
                                "YouTube", "Todoist", "RSS", "ChatGPT",
-                               "Linear", "Raindrop", "Readwise", "Tokens",
-                               "Venice", "OpenClaw", "Cal.com", "Calendly",
+                               "Gemini", "Linear", "Raindrop", "Readwise",
+                               "Tokens", "Venice", "OpenClaw", "Cal.com",
+                               "Calendly",
                                "iCloud Mail", "Apple Music", "Apple Health",
                                "Reminders", "Calendar", "Photos"]
-    private static let appleRowStart = 25
+    private static let appleRowStart = 26
     /// False = above the screen · true = settled in the glass.
     @State private var cubesLanded = false
 

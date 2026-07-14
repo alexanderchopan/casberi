@@ -14,6 +14,8 @@ import UIKit
 @MainActor
 enum ProbeHooks {
     static func runAll(context: ModelContext) {
+        NSLog("[Casberi] probeArgs: %@",
+              ProcessInfo.processInfo.arguments.dropFirst().joined(separator: " "))
         for hook in hooks {
             guard let value = UserDefaults.standard.string(forKey: hook.key) else { continue }
             hook.run(value, context)
@@ -38,6 +40,14 @@ enum ProbeHooks {
             guard let data = FileManager.default.contents(atPath: path) else { return }
             let summary = ClaudeImport.run(data: data, context: context)
             NSLog("Claude probe: %d imported, %d skipped, failed=%d",
+                  summary.imported, summary.skipped, summary.failed ? 1 : 0)
+        },
+        // `-geminiImport <path>` imports a Google Takeout MyActivity.json
+        // (Gemini Apps) from disk.
+        Hook(key: "geminiImport") { path, context in
+            guard let data = FileManager.default.contents(atPath: path) else { return }
+            let summary = GeminiImport.run(data: data, context: context)
+            NSLog("Gemini probe: %d imported, %d skipped, failed=%d",
                   summary.imported, summary.skipped, summary.failed ? 1 : 0)
         },
         // `-dayoneImport <path>` imports a Day One export .json from disk.
@@ -193,6 +203,19 @@ enum ProbeHooks {
             let n = ScreenshotIngest.ingest(context: context)
             NSLog("Photos re-ingest probe: %d new", n)
         },
+        // `-connectStrava YES` runs the Strava connect — the Health-store
+        // read filtered to workouts Strava wrote (no Strava account
+        // anywhere). On the sim the store is empty: expect "0 in".
+        Hook(key: "connectStrava") { _, context in
+            Task { @MainActor in
+                guard let n = await HealthIngest.connectAndIngest(
+                    context: context, healthOn: false, stravaOn: true,
+                    counting: "Strava") else {
+                    NSLog("Strava probe: FAILED (Health unavailable)"); return
+                }
+                NSLog("Strava probe: connected, %d in", n)
+            }
+        },
         // `-ghDeviceProbe YES` runs the GitHub device-flow start request and
         // logs the outcome — with no client id it logs the honest unavailable
         // line (the setup screen shows paste-only in that state).
@@ -211,12 +234,11 @@ enum ProbeHooks {
         // credential wipe + MCP pairing reset) and logs before/after state —
         // the tray's confirm is the same code with consent in front.
         Hook(key: "wipeAccessProbe") { _, _ in
-            let before = [TokenBridge.todoist.tokenKey, ClaudeKey.vaultKey]
-                .filter { TokenVault.get($0) != nil }.count
+            let sampled = [TokenBridge.todoist.tokenKey, AgentProvider.anthropic.vaultKey]
+            let before = sampled.filter { TokenVault.get($0) != nil }.count
             TokenVault.deleteAll()
             MCPPairing.reset()
-            let after = [TokenBridge.todoist.tokenKey, ClaudeKey.vaultKey]
-                .filter { TokenVault.get($0) != nil }.count
+            let after = sampled.filter { TokenVault.get($0) != nil }.count
             NSLog("Wipe access probe: sampled credentials %d before → %d after", before, after)
         },
         // `-intentProbe "<query>"` runs the Shortcuts intents' shared corpus
