@@ -52,20 +52,20 @@ struct OnboardingView: View {
     /// a glass — and they STAY there, full size, while the feed card lives
     /// in the top half. Wallet and Farcaster lead the fall.
     /// Every connectable catalog app joins the pile (showcase-only apps like
-    /// Spotify and X sit it out). The first 25 carry brand art or a brand
+    /// Spotify and X sit it out). The first 24 carry brand art or a brand
     /// squircle; the LAST SIX are Apple's bridges as their symbol tiles (their icons
     /// are legally unbundlable) — they land last, as the pile's TOP ROW,
     /// right under the three Connect rows they're kin to.
     private let marqueeApps = ["Wallet", "Farcaster", "Gmail", "GitHub",
                                "Claude", "GeckoTerminal", "Strava", "Bluesky",
-                               "Slack", "Shopify", "Notion", "Reddit",
+                               "Shopify", "Notion", "Reddit",
                                "YouTube", "Todoist", "RSS", "ChatGPT",
                                "Gemini", "Linear", "Raindrop", "Readwise",
                                "Tokens", "Venice", "OpenClaw", "Cal.com",
                                "Calendly",
                                "iCloud Mail", "Apple Music", "Apple Health",
                                "Reminders", "Calendar", "Photos"]
-    private static let appleRowStart = 25
+    private static let appleRowStart = 24
     /// False = above the screen · true = settled in the glass.
     @State private var cubesLanded = false
 
