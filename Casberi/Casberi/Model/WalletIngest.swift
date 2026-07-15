@@ -406,44 +406,55 @@ enum WalletIngest {
         // token address — their cells stay routeless and fall back to the
         // Wallet screen.
         var routeBySymbol: [String: (usd: Double, route: String)] = [:]
-        var pageKey: String? = nil
         var reached = false
-        // Up to 8 pages (≈800 tokens) — enough to surface a whale's real
-        // holdings without unbounded paging; a normal wallet stops after one.
-        for _ in 0..<8 {
-            var body: [String: Any] = [
-                "addresses": addresses.map { ["address": $0, "networks": networks] },
-                "withMetadata": true, "withPrices": true,
-            ]
-            if let pageKey { body["pageKey"] = pageKey }
-            guard let root = await IngestSupport.postJSON(url, body: body) as? [String: Any],
-                  let data = root["data"] as? [String: Any],
-                  let tokens = data["tokens"] as? [[String: Any]] else { break }
-            reached = true
+        // Alchemy's `by-address` endpoint caps at 3 addresses per request
+        // ("Maximum allowed addresses is 3", measured 2026-07-15) — a 4th
+        // 400s the whole call, which used to blank the combined "All wallets"
+        // treemap for anyone watching 4+ wallets. Fetch in chunks of 3 and
+        // keep accumulating into the same by-symbol sums, so the combined view
+        // is the true portfolio no matter how many wallets are watched.
+        for chunk in stride(from: 0, to: addresses.count, by: 3).map({
+            Array(addresses[$0..<min($0 + 3, addresses.count)])
+        }) {
+            var pageKey: String? = nil
+            // Up to 8 pages (≈800 tokens) per chunk — enough to surface a
+            // whale's real holdings without unbounded paging; a normal wallet
+            // stops after one.
+            for _ in 0..<8 {
+                var body: [String: Any] = [
+                    "addresses": chunk.map { ["address": $0, "networks": networks] },
+                    "withMetadata": true, "withPrices": true,
+                ]
+                if let pageKey { body["pageKey"] = pageKey }
+                guard let root = await IngestSupport.postJSON(url, body: body) as? [String: Any],
+                      let data = root["data"] as? [String: Any],
+                      let tokens = data["tokens"] as? [[String: Any]] else { break }
+                reached = true
 
-            for t in tokens {
-                let md = t["tokenMetadata"] as? [String: Any]
-                let mdSymbol = (md?["symbol"] as? String).flatMap { $0.isEmpty ? nil : $0 }
-                // Native coin has no tokenAddress and no symbol — name it by chain.
-                let isNative = (t["tokenAddress"] as? String) == nil
-                guard let symbol = mdSymbol ?? (isNative ? native[t["network"] as? String ?? ""] : nil),
-                      let balHex = t["tokenBalance"] as? String,
-                      let price = firstPrice(t["tokenPrices"]), price > 0 else { continue }
-                let decimals = (md?["decimals"] as? Int) ?? 18   // native is always 18
-                let amount = hexToDouble(balHex) / pow(10, Double(decimals))
-                let usd = amount * price
-                guard usd >= 1 else { continue }
-                let sym = clean(symbol)
-                bySymbol[sym, default: 0] += usd
-                if let tokenAddr = t["tokenAddress"] as? String,
-                   let slug = chainSlug[t["network"] as? String ?? ""],
-                   usd > (routeBySymbol[sym]?.usd ?? 0) {
-                    routeBySymbol[sym] = (usd, "\(slug):\(tokenAddr.lowercased())")
+                for t in tokens {
+                    let md = t["tokenMetadata"] as? [String: Any]
+                    let mdSymbol = (md?["symbol"] as? String).flatMap { $0.isEmpty ? nil : $0 }
+                    // Native coin has no tokenAddress and no symbol — name it by chain.
+                    let isNative = (t["tokenAddress"] as? String) == nil
+                    guard let symbol = mdSymbol ?? (isNative ? native[t["network"] as? String ?? ""] : nil),
+                          let balHex = t["tokenBalance"] as? String,
+                          let price = firstPrice(t["tokenPrices"]), price > 0 else { continue }
+                    let decimals = (md?["decimals"] as? Int) ?? 18   // native is always 18
+                    let amount = hexToDouble(balHex) / pow(10, Double(decimals))
+                    let usd = amount * price
+                    guard usd >= 1 else { continue }
+                    let sym = clean(symbol)
+                    bySymbol[sym, default: 0] += usd
+                    if let tokenAddr = t["tokenAddress"] as? String,
+                       let slug = chainSlug[t["network"] as? String ?? ""],
+                       usd > (routeBySymbol[sym]?.usd ?? 0) {
+                        routeBySymbol[sym] = (usd, "\(slug):\(tokenAddr.lowercased())")
+                    }
                 }
-            }
 
-            guard let next = data["pageKey"] as? String, !next.isEmpty else { break }
-            pageKey = next
+                guard let next = data["pageKey"] as? String, !next.isEmpty else { break }
+                pageKey = next
+            }
         }
         guard reached, !bySymbol.isEmpty else { return nil }
 
