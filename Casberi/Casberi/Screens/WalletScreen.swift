@@ -199,6 +199,7 @@ struct WalletScreen: View {
                             }
                         }
                     }
+                    nftHomeControl(for: group)
                 }
                 .listRowBackground(Color.clear)
                 .listRowInsets(EdgeInsets(top: DS.Space.s2, leading: DS.Space.s4,
@@ -207,6 +208,32 @@ struct WalletScreen: View {
         } header: {
             Text("NFTs").dsText(.label12)
                 .foregroundStyle(DS.textSecondary)
+        }
+    }
+
+    /// The strip's Home control (ruling 2026-07-14): a pinned wallet's NFTs
+    /// ride Home by default — this row removes/restores them, HERE, on the
+    /// wallet's own screen (where every Home-presence verb lives). Unpinned
+    /// wallets show no control: their strip isn't on Home to begin with.
+    @ViewBuilder
+    private func nftHomeControl(for group: WalletIngest.NFTGroup) -> some View {
+        if let entry = wallet.addresses.first(where: {
+            $0.address.lowercased() == group.address.lowercased()
+        }), entry.pinnedToHome {
+            Button {
+                DSHaptic.tap()
+                wallet.setNFTStrip(hidden: !entry.nftStripHidden, address: entry.address)
+            } label: {
+                HStack(spacing: DS.Space.s1) {
+                    Image(systemName: entry.nftStripHidden ? "pin" : "pin.slash")
+                        .font(.system(size: 11, weight: .medium))
+                    Text(entry.nftStripHidden ? "Show on Home" : "On Home · remove")
+                        .dsText(.subhead13)
+                }
+                .foregroundStyle(DS.textSecondary)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
         }
     }
 

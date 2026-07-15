@@ -47,6 +47,9 @@ struct HomeScreen: View {
     /// The last celebrated corpus milestone — each fires exactly once, ever.
     @AppStorage("milestone.reached") private var milestoneReached = 0
     @State private var walletHoldings: [WalletIngest.HoldingsGroup] = []
+    /// Pinned wallets' NFT strips (ruling 2026-07-14) — ride the wallet pin
+    /// by default, removable per wallet via long-press.
+    @State private var walletNFTs: [WalletIngest.NFTGroup] = []
     /// True from the moment a pinned wallet's balance fetch starts until it
     /// resolves — lets the composer show an honest loading placeholder in
     /// the wallet's slot instead of leaving it blank (device report,
@@ -255,6 +258,18 @@ struct HomeScreen: View {
             // "Show on Home" can bring it back. Either way, recompose so the
             // module leaves the board.
             .environment(\.genSourceUnpin) { ref in
+                // A wallet's NFT strip removes per WALLET (ruling 2026-07-14):
+                // arg 6 of its MediaShelf carries the address the removal is
+                // scoped to — the treemap and the wallet pin stay untouched.
+                if ref.hasPrefix("nftShelf"), let address = stream.els[ref]?.str(5),
+                   !address.isEmpty {
+                    DSHaptic.tap()
+                    wallet.setNFTStrip(hidden: true, address: address)
+                    walletNFTs.removeAll { $0.address.lowercased() == address.lowercased() }
+                    recomposeOrDefer()
+                    chrome.flash("Removed from Home")
+                    return
+                }
                 let source = HomePinnedSources.source(forModuleRef: ref)
                     ?? (ref.hasPrefix("appTile") ? stream.els[ref]?.str(3) : nil)
                 guard let source else { return }
@@ -394,6 +409,7 @@ struct HomeScreen: View {
         let doc = surfaced.isEmpty
             ? HomeComposition.empty
             : HomeComposition.compose(things: surfaced, walletHoldings: walletHoldings,
+                                      walletNFTs: walletNFTs,
                                       walletPending: walletHoldingsLoading)
         if instant {
             stream.paint(doc.lines)   // an update, not an entrance — no typewriter
@@ -540,15 +556,21 @@ struct HomeScreen: View {
     private func loadWalletHoldings() {
         guard wallet.addresses.contains(where: \.pinnedToHome) else {
             walletHoldingsLoading = false
-            if !walletHoldings.isEmpty {
+            if !walletHoldings.isEmpty || !walletNFTs.isEmpty {
                 walletHoldings = []
+                walletNFTs = []
                 recomposeOrDefer()
             }
             return
         }
         walletHoldingsLoading = true
         Task { @MainActor in
-            walletHoldings = await WalletIngest.topHoldingsByWallet(pinnedOnly: true)
+            // Holdings and NFTs are independent reads — overlapped, and the
+            // NFT half rides its 15-minute cache after the first fetch.
+            async let holdings = WalletIngest.topHoldingsByWallet(pinnedOnly: true)
+            async let nfts = WalletIngest.pinnedNFTGroups()
+            walletHoldings = await holdings
+            walletNFTs = await nfts
             walletHoldingsLoading = false
             recomposeOrDefer()
         }
@@ -585,7 +607,10 @@ struct HomeScreen: View {
         refreshTick += 1
         chrome.refreshPulse += 1   // spins the avatar door, deals the berry rain
         if wallet.addresses.contains(where: \.pinnedToHome) {
-            walletHoldings = await WalletIngest.topHoldingsByWallet(pinnedOnly: true)
+            async let holdings = WalletIngest.topHoldingsByWallet(pinnedOnly: true)
+            async let nfts = WalletIngest.pinnedNFTGroups()
+            walletHoldings = await holdings
+            walletNFTs = await nfts
         }
         // Pull RE-STREAMS the composition, it doesn't just repaint (A, ruling
         // 2026-07-12): the modules dissolve to their skeletons and stream back

@@ -2704,3 +2704,19 @@ HISTORY with the assets, not a market terminal.
   moves over the frozen away window, from real candles at the window's
   resolution — a gap past the 30-day candles says "over the last 30
   days" instead, and coarse-fallback tokens are left out, never guessed.
+
+## 72. A pinned wallet's NFTs ride Home by default (user, 2026-07-14)
+
+Pinning a wallet brings TWO cards: its holdings treemap and — when it
+holds any — an NFT strip as its own sibling board module (MediaShelf,
+kind "nft"), removable/resizable/reorderable independently. Cells tap
+out to the piece on OpenSea (a URL-shaped MediaItem id is a door, not a
+thing). For people who don't want it: default-on with a persistent
+per-wallet opt-out — the working control lives on the Wallet screen
+under each pinned wallet's shelf ("On Home · remove" / "Show on Home"),
+because the board's drag driver lifts cards at 0.35s and pre-empts
+long-press context menus (the strip carries the contextMenu anyway, for
+whenever that arbitration is revisited — a KNOWN pre-existing gap that
+affects every board module's long-press "Remove from Home").
+Re-pinning a wallet resets its strip to the default (fresh pin, fresh
+presence). Wallets with no NFTs contribute nothing.

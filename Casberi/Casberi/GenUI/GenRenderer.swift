@@ -1004,6 +1004,7 @@ private struct GenMediaTile: View {
     @Environment(\.genThingHandoff) private var thingHandoff
     @Environment(\.genThumbnailData) private var thumbnailData
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.openURL) private var openURL
 
     private var title: String { el.str(0) }
     private var imageURL: String { el.str(1) }
@@ -1092,8 +1093,19 @@ private struct GenMediaTile: View {
             }
         }
         .contentShape(RoundedRectangle(cornerRadius: DS.Radius.control, style: .continuous))
-        frame.pinnedRowActions(id: thingId, openable: openable,
-                               open: thingOpen, unpin: nil, handoff: thingHandoff)
+        // A URL-shaped id is a door, not a thing (a wallet's NFT strip,
+        // 2026-07-14: the piece lives on OpenSea, not in the corpus) — the
+        // tap opens it directly instead of the thing-id vocabulary.
+        if thingId.hasPrefix("http"), let url = URL(string: thingId) {
+            Button {
+                DSHaptic.selection()
+                openURL(url)
+            } label: { frame }
+            .buttonStyle(.plain)
+        } else {
+            frame.pinnedRowActions(id: thingId, openable: openable,
+                                   open: thingOpen, unpin: nil, handoff: thingHandoff)
+        }
     }
 }
 

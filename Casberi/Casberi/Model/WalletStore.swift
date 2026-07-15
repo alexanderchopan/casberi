@@ -22,8 +22,15 @@ final class WalletStore {
         /// showing. Same idea as a Feed pin ("keep this in view"), scoped to
         /// the address it's swiped on.
         var pinnedToHome: Bool = false
+        /// A pinned wallet's NFT strip rides Home by default (ruling
+        /// 2026-07-14); long-press → "Remove from Home" sets this, per
+        /// wallet, and re-pinning the wallet resets it (fresh pin, fresh
+        /// default).
+        var nftStripHidden: Bool = false
 
-        enum CodingKeys: String, CodingKey { case id, label, address, pinnedToHome }
+        enum CodingKeys: String, CodingKey {
+            case id, label, address, pinnedToHome, nftStripHidden
+        }
 
         init(id: UUID = UUID(), label: String, address: String, pinnedToHome: Bool = false) {
             self.id = id
@@ -32,14 +39,15 @@ final class WalletStore {
             self.pinnedToHome = pinnedToHome
         }
 
-        /// Custom decode: older persisted data has no `pinnedToHome` key —
-        /// defaults to false rather than failing to decode at all.
+        /// Custom decode: older persisted data has no `pinnedToHome` /
+        /// `nftStripHidden` keys — they default rather than failing to decode.
         init(from decoder: Decoder) throws {
             let c = try decoder.container(keyedBy: CodingKeys.self)
             id = try c.decode(UUID.self, forKey: .id)
             label = try c.decode(String.self, forKey: .label)
             address = try c.decode(String.self, forKey: .address)
             pinnedToHome = try c.decodeIfPresent(Bool.self, forKey: .pinnedToHome) ?? false
+            nftStripHidden = try c.decodeIfPresent(Bool.self, forKey: .nftStripHidden) ?? false
         }
 
         /// "0x1a2B…4f4f" — the row form.
@@ -145,9 +153,23 @@ final class WalletStore {
     }
 
     /// Flips one address's pin — scoped to that wallet, never the whole list.
+    /// Pinning ON resets the NFT strip to its default (a fresh pin brings the
+    /// full presence back; removal was scoped to the previous pin).
     func togglePin(_ id: WatchedAddress.ID) {
         guard let i = addresses.firstIndex(where: { $0.id == id }) else { return }
         addresses[i].pinnedToHome.toggle()
+        if addresses[i].pinnedToHome { addresses[i].nftStripHidden = false }
+    }
+
+    /// Shows/hides a pinned wallet's NFT strip on Home — the Wallet screen's
+    /// own control (the reachable verb: the board's drag driver pre-empts
+    /// long-press menus there), plus the strip's long-press remove for
+    /// whenever that arbitration is fixed.
+    func setNFTStrip(hidden: Bool, address: String) {
+        guard let i = addresses.firstIndex(where: {
+            $0.address.lowercased() == address.lowercased()
+        }) else { return }
+        addresses[i].nftStripHidden = hidden
     }
 
     private func persist() {

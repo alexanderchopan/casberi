@@ -455,6 +455,18 @@ enum WalletIngest {
         return groups
     }
 
+    /// The NFT strips Home shows (ruling 2026-07-14): pinned wallets only,
+    /// minus any whose strip was long-press removed. Rides the same cache as
+    /// the Wallet screen's shelves.
+    @MainActor
+    static func pinnedNFTGroups() async -> [NFTGroup] {
+        let showing = WalletStore.shared.addresses
+            .filter { $0.pinnedToHome && !$0.nftStripHidden }
+            .map { $0.address.lowercased() }
+        guard !showing.isEmpty else { return [] }
+        return await nftsByWallet().filter { showing.contains($0.address.lowercased()) }
+    }
+
     /// A wallet's NFTs off Alchemy's NFT API — the image-bearing chains
     /// (Ethereum + Base), spam filtered, first page only. Pieces without an
     /// image are skipped: a shelf of gray squares says nothing.

@@ -36,10 +36,11 @@ enum HomeComposition {
 
     static func compose(things: [Thing],
                         walletHoldings: [WalletIngest.HoldingsGroup] = [],
+                        walletNFTs: [WalletIngest.NFTGroup] = [],
                         walletPending: Bool = false) -> Document {
         let projects = projectClusters(things: things)
         return daily(things: things, projects: projects, walletHoldings: walletHoldings,
-                     walletPending: walletPending)
+                     walletNFTs: walletNFTs, walletPending: walletPending)
     }
 
     /// True when nothing has landed today — the composition acknowledges the
@@ -51,6 +52,7 @@ enum HomeComposition {
     // MARK: - Documents
 
     private static func daily(things: [Thing], projects: [Cluster], walletHoldings: [WalletIngest.HoldingsGroup] = [],
+                                     walletNFTs: [WalletIngest.NFTGroup] = [],
                                      walletPending: Bool = false) -> Document {
         var doc: [String] = []
         var rootRefs: [String] = []
@@ -80,6 +82,7 @@ enum HomeComposition {
         // (appendMediaModules), everyone else composes as a Widget of rows.
         appendPinnedApps(things, to: &doc, rootRefs: &rootRefs, boardRefs: &boardRefs, boardKeys: &boardKeys)
         appendWalletHoldings(walletHoldings, pending: walletPending, to: &doc, rootRefs: &rootRefs, boardRefs: &boardRefs, boardKeys: &boardKeys)
+        appendWalletNFTs(walletNFTs, to: &doc, rootRefs: &rootRefs, boardRefs: &boardRefs, boardKeys: &boardKeys)
         appendMediaModules(things, to: &doc, rootRefs: &rootRefs, boardRefs: &boardRefs)
 
         // Where the map belongs even when it didn't compose yet — the starter
@@ -470,6 +473,35 @@ enum HomeComposition {
         // card — through `appendPinnedApps`. It still shows unless hidden
         // ("Show on Home"), so nothing is lost; the tile just grew from one
         // post to a feed of them.
+    }
+
+    /// A pinned wallet's NFT strip (ruling 2026-07-14) — rides the wallet
+    /// pin by default as its OWN board card (removable, resizable, and
+    /// reorderable independently of the treemap), through the MediaShelf
+    /// idiom the image sources already wear. Wallets holding no NFTs
+    /// contribute nothing; a long-press "Remove from Home" hides the strip
+    /// per wallet (MediaShelf's pinned verb — arg 6 carries the address the
+    /// removal is scoped to). Cells tap out to the piece on OpenSea.
+    private static func appendWalletNFTs(_ groups: [WalletIngest.NFTGroup],
+                                         to doc: inout [String], rootRefs: inout [String],
+                                         boardRefs: inout [String],
+                                         boardKeys: inout [String: String]) {
+        for (i, g) in groups.enumerated() {
+            let id = "nftShelf\(i)"
+            // Keyed by address so the strip keeps its slot/size as other
+            // wallets are pinned/unpinned (the walletMap precedent).
+            boardKeys[id] = "walletNFTs:\(g.address.lowercased())"
+            let capped = Array(g.nfts.prefix(12))
+            let itemIds = capped.indices.map { "\(id)i\($0)" }
+            doc.append("\(id) = MediaShelf(\(q("NFTs · \(g.label)")), \(q("")), [\(itemIds.joined(separator: ", "))], \(q("nft")), \(q("pin")), \(q(g.address)))")
+            for (j, nft) in capped.enumerated() {
+                // The thing-id slot carries the OpenSea URL — GenMediaTile
+                // opens URL-shaped ids directly (an NFT is not a thing).
+                doc.append("\(id)i\(j) = MediaItem(\(q(nft.name)), \(q(nft.imageURL)), \(q(nft.openseaURL?.absoluteString ?? "")), \(q("")))")
+            }
+            rootRefs.append(id)
+            boardRefs.append(id)
+        }
     }
 
     /// A source's image strip — newest first, capped at 12 (regular shows
