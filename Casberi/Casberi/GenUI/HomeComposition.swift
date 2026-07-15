@@ -297,19 +297,29 @@ enum HomeComposition {
     /// person's own arrangement rides `HomeBoardOrder` on top).
     /// The "Coming up" card (2026-07-14) — upcoming events and due reminders,
     /// soonest first, an overdue reminder leading. A plain leading card, NOT a
-    /// board module: no trailing source arg on the Widget, so it wears no size
-    /// pin and no "Remove from Home" (there's no pin behind it) — it's automatic
-    /// synthesis like the map, not a thing the person pinned. Emitted only when
-    /// something is due (honesty: no empty card, no dead controls). Each row's
-    /// time slot carries the WHEN as words ("Tomorrow", "Overdue"), not the
-    /// ago-time every other Home row shows.
+    /// board module: no size pin and no "Remove from Home" (there's no pin
+    /// behind it) — it's automatic synthesis like the map, not a thing the
+    /// person pinned. Emitted only when something is due (honesty: no empty
+    /// card, no dead controls). Each row's time slot carries the WHEN as words
+    /// ("Tomorrow", "Overdue"), not the ago-time every other Home row shows.
+    ///
+    /// Rendered by the dedicated FLAT `ComingUp` component, NOT the generic
+    /// `Widget` (crash fix 2026-07-15): a `Widget` of `Row`s nests each row
+    /// through GenRender → AnyView → GenRow → MountIn → pinnedRowActions, ~12
+    /// view levels deep. Five of those at the top of the EAGER Home head pushed
+    /// the first-frame SwiftUI tree past the 8MB main-stack margin — the
+    /// recurring deep-tree overflow (CLAUDE.md: "flatten the composition tree,
+    /// not more stack"). `GenComingUp` builds header + all rows in ONE body,
+    /// one shallow HStack per row, no per-row erasure/mount. Same 5-row list,
+    /// tap-to-open, and long-press Open / Open in app. The child `Row(...)`
+    /// lines are unchanged — GenComingUp reads them straight from `els`.
     private static func appendComingUp(_ things: [Thing],
                                        to doc: inout [String],
                                        rootRefs: inout [String]) {
         let items = Array(ComingUp.items(from: things).prefix(5))
         guard !items.isEmpty else { return }
         let childIds = items.indices.map { "comingUpC\($0)" }
-        doc.append("comingUp = Widget(\(q(String(localized: "Coming up"))), \(q("")), [\(childIds.joined(separator: ", "))])")
+        doc.append("comingUp = ComingUp(\(q(String(localized: "Coming up"))), [\(childIds.joined(separator: ", "))])")
         for (i, item) in items.enumerated() {
             let t = item.thing
             let openable = VerbDerivation.verbs(for: t).contains {
