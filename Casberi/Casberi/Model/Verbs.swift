@@ -331,6 +331,12 @@ enum HandOff {
 /// The verb line in the sheet header — place words, not system activity.
 enum PlaceWords {
     static func line(for thing: Thing) -> String {
+        // A public post names its network, not "your session" — the chat-kind
+        // default is for actual chat sessions (ChatGPT/Claude imports), and a
+        // cast or skeet pulled from a feed is neither yours nor a session.
+        if thing.kind == .chat, ["Bluesky", "Farcaster"].contains(thing.source) {
+            return "on \(thing.source)"
+        }
         switch thing.kind {
         case .mail, .file: return "in your inbox"
         case .event:       return "on your calendar"
