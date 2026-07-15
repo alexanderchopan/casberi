@@ -23,6 +23,13 @@ struct BridgeSetupHeader: View {
     let name: String
     /// Override when a screen wants different words than the catalog offer.
     var blurb: String? = nil
+    /// Once connected, the header wears the source's hue as a soft wash — the
+    /// same crown the thing sheet uses — so a live connection reads different
+    /// from a catalog page at a glance (delight 2026-07-14).
+    var connected: Bool = false
+    /// Bumped on the first successful connect: the icon coin-flips to
+    /// acknowledge the handshake, synced with the success haptic.
+    var flipTrigger: Int = 0
 
     var body: some View {
         Section {
@@ -31,6 +38,7 @@ struct BridgeSetupHeader: View {
             HStack(alignment: .top, spacing: DS.Space.s3) {
                 BridgeIcon(name: name, size: 60)
                     .settleIn()
+                    .coinFlip(trigger: flipTrigger)
                 if let line = blurb ?? BridgeCatalog.offers.first(where: { $0.name == name })?.summary {
                     // The catalog copy is stored as English key strings; treat
                     // each as a LocalizedStringKey so it resolves from the
@@ -42,11 +50,39 @@ struct BridgeSetupHeader: View {
                 }
                 Spacer(minLength: 0)
             }
+            .padding(DS.Space.s3)
+            .background {
+                if connected, let hue = DS.washHue(for: name) {
+                    RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous)
+                        .fill(LinearGradient(
+                            colors: [hue.opacity(0.18), hue.opacity(0.02)],
+                            startPoint: .topLeading, endPoint: .bottomTrailing))
+                        .transition(.opacity)
+                }
+            }
+            .animation(DS.Motion.standard, value: connected)
             .listRowBackground(Color.clear)
             .listRowInsets(EdgeInsets(top: 0, leading: DS.Space.s1,
                                       bottom: DS.Space.s2, trailing: DS.Space.s1))
         }
         .listRowSeparator(.hidden)
+    }
+}
+
+/// A small overlapping row of faces — the proof line's "who just arrived"
+/// (delight 2026-07-14). Up to three, each ringed so the overlap reads.
+struct FacePile: View {
+    let urls: [String]
+    let fallback: String
+    var size: CGFloat = 22
+
+    var body: some View {
+        HStack(spacing: -size * 0.34) {
+            ForEach(Array(urls.prefix(3).enumerated()), id: \.offset) { _, url in
+                RemoteThumb(urlString: url, size: size, fallback: fallback, circular: true)
+                    .overlay(Circle().strokeBorder(DS.gray100, lineWidth: 1.5))
+            }
+        }
     }
 }
 
@@ -127,6 +163,10 @@ struct BridgeSyncStatusRows: View {
     var syncingLine = ""
     let result: String?
     let resultIsError: Bool
+    /// Avatars of who just landed — a facepile leads the proof so it reads
+    /// "these people arrived," not "a number arrived" (delight 2026-07-14).
+    var faces: [String] = []
+    var faceFallback: String = ""
     @State private var shakes = 0
 
     var body: some View {
@@ -138,18 +178,24 @@ struct BridgeSyncStatusRows: View {
             }
             .dsListCardRow()
         } else if let result {
-            Group {
-                if resultIsError {
-                    Text(result)
-                        .shake(on: shakes)
-                        .onAppear { shakes += 1 }
-                        .onChange(of: result) { if resultIsError { shakes += 1 } }
-                } else {
-                    CountUpText(text: result)
+            HStack(spacing: DS.Space.s2) {
+                if !resultIsError, !faces.isEmpty {
+                    FacePile(urls: faces, fallback: faceFallback)
+                        .settleIn()
                 }
+                Group {
+                    if resultIsError {
+                        Text(result)
+                            .shake(on: shakes)
+                            .onAppear { shakes += 1 }
+                            .onChange(of: result) { if resultIsError { shakes += 1 } }
+                    } else {
+                        CountUpText(text: result)
+                    }
+                }
+                .dsText(.callout15)
+                .foregroundStyle(resultIsError ? DS.attention : DS.confirm)
             }
-            .dsText(.callout15)
-            .foregroundStyle(resultIsError ? DS.attention : DS.confirm)
             .dsListCardRow()
         }
     }
@@ -209,6 +255,11 @@ struct RecentThingsSection: View {
     let header: String
     let things: [Thing]
     var titleLines = 2
+    /// The source's TRUE thing count — the section shows the newest handful,
+    /// but the header names the whole ("Posts · 148"). nil hides the count
+    /// (the honest choice when the caller can't supply a real total, since
+    /// `things` here is a capped preview, not the total).
+    var total: Int? = nil
     /// The entrance plays once per screen — after it, recycled rows render
     /// plainly instead of re-fading on every scroll-back (review 2026-07-08).
     @State private var entered = false
@@ -242,8 +293,18 @@ struct RecentThingsSection: View {
                 }
             }
         } header: {
-            Text(LocalizedStringKey(header)).dsText(.label12)
-                .foregroundStyle(DS.textTertiary)
+            // The header names its size — "Posts · 148" — so the section says
+            // how much is there, not just what (delight 2026-07-14). The count
+            // is the TRUE total the caller supplies, never the capped preview.
+            Group {
+                if let total {
+                    Text(LocalizedStringKey(header)) + Text(" · \(total)")
+                } else {
+                    Text(LocalizedStringKey(header))
+                }
+            }
+            .dsText(.label12)
+            .foregroundStyle(DS.textTertiary)
         }
     }
 }

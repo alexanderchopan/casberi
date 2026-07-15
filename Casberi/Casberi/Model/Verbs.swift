@@ -114,6 +114,15 @@ enum VerbDerivation {
             if let v = externalVerb(for: thing, apps: [.todoist]) { out.append(v) }
             out.append(Verb(label: "Copy text", icon: "doc.on.doc", action: .copyText))
         case .chat, .mail, .file, .voice:
+            // A social post opens its own thread on the network — the specific
+            // permalink (thing.content), so it lands on the cast, not the
+            // network's front door. Prepended, so it survives the cap and the
+            // generic "Open in <source>" hand-off below stands down.
+            if thing.kind == .chat, SocialThread.isSocial(thing.source),
+               let url = URL(string: thing.content), url.scheme?.hasPrefix("http") == true {
+                out.append(Verb(label: "Open thread", icon: "bubble.left.and.bubble.right",
+                                action: .openURL(url)))
+            }
             out.append(Verb(label: "Copy text", icon: "doc.on.doc", action: .copyText))
         default:
             break

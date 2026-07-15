@@ -334,10 +334,12 @@ enum BlueskyIngest {
                   let handle = author["handle"] as? String, !handle.isEmpty,
                   let record = post["record"] as? [String: Any],
                   let text = record["text"] as? String, !text.isEmpty else { continue }
+            let rkey = replyURI.split(separator: "/").last.map(String.init) ?? ""
             replies.append(SocialReply(
                 id: replyURI, handle: handle,
                 avatarURL: IngestSupport.imageURL(author["avatar"] as? String),
-                text: text, when: IngestSupport.isoDate(record["createdAt"])))
+                text: text, when: IngestSupport.isoDate(record["createdAt"]),
+                url: "https://bsky.app/profile/\(handle)/post/\(rkey)"))
             if replies.count == limit { break }
         }
         threads[uri] = replies   // a node miss returned [] above, uncached — it retries

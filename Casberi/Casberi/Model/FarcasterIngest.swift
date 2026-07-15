@@ -549,7 +549,8 @@ enum FarcasterIngest {
             replies.append(SocialReply(
                 id: replyHash, handle: username, avatarURL: author.avatarURL,
                 text: await splicingMentions(into: text, body: body),
-                when: (data["timestamp"] as? Double).map { epoch.addingTimeInterval($0) }))
+                when: (data["timestamp"] as? Double).map { epoch.addingTimeInterval($0) },
+                url: "https://farcaster.xyz/\(username)/\(String(replyHash.prefix(10)))"))
             if replies.count == limit { break }   // the node serves 2× the asked page
         }
         threads[key] = replies   // a node miss returned [] above, uncached — it retries

@@ -315,11 +315,20 @@ struct HandleSetupScreen: View {
     @State private var syncing = false
     @State private var result: String?
     @State private var resultIsError = false
+    /// Bumped once when this screen first turns a connection live — the header
+    /// icon coin-flips to acknowledge the handshake.
+    @State private var connectFlip = 0
+    /// Shown after a first connect, once: a one-tap way to the board where the
+    /// new card just landed. Cleared on tap.
+    @State private var showHomeHint = false
 
     /// This bridge's things — cached per appearance and after each sync, rather
     /// than re-fetched twice on every body pass. The source is per-bridge, so
     /// this is the cache path rather than a static @Query.
     @State private var recent: [Thing] = []
+    /// The source's true thing count (not the capped preview) — names the
+    /// recent section's header honestly.
+    @State private var recentTotal = 0
 
     /// The watched accounts (multi bridges) — a local snapshot refreshed on
     /// each add/remove, since the screen doesn't observe the store directly.
@@ -340,11 +349,17 @@ struct HandleSetupScreen: View {
 
     private func loadRecent() {
         recent = recentBridgeThings(source: bridge.rawValue, context: modelContext)
+        // The TRUE total (a cheap COUNT), so the recent header names the whole
+        // corpus for this source, not the 12-row preview it shows.
+        let source = bridge.rawValue
+        recentTotal = (try? modelContext.fetchCount(
+            FetchDescriptor<Thing>(predicate: #Predicate { $0.source == source }))) ?? recent.count
     }
 
     var body: some View {
         List {
-            BridgeSetupHeader(name: bridge.rawValue)
+            BridgeSetupHeader(name: bridge.rawValue,
+                              connected: bridge.isConnected, flipTrigger: connectFlip)
             nameSection.listRowSeparator(.hidden)
             if bridge.supportsMultiple, !accountNames.isEmpty {
                 accountsSection.listRowSeparator(.hidden)
@@ -368,8 +383,12 @@ struct HandleSetupScreen: View {
                 showOnHomeSection.listRowSeparator(.hidden)
             }
             if !recent.isEmpty {
-                RecentThingsSection(header: bridge.recentHeader, things: recent)
+                RecentThingsSection(header: bridge.recentHeader, things: recent,
+                                    total: recentTotal)
                     .listRowSeparator(.hidden)
+            }
+            if showHomeHint {
+                seeOnHomeSection.listRowSeparator(.hidden)
             }
             if bridge.isConnected {
                 BridgeDisconnectSection(
@@ -463,6 +482,35 @@ struct HandleSetupScreen: View {
                  ? "Your latest \(bridge.rawValue) post shows on Home. Turn this off — or long-press the card — to remove it."
                  : "Removed from Home. Turn this on to show your latest \(bridge.rawValue) post again.")
                 .dsText(.callout15).foregroundStyle(DS.textTertiary)
+        }
+    }
+
+    /// Close the loop (delight 2026-07-14): the first connect ends with a
+    /// one-tap way to the board where the new card just landed — so a person
+    /// sees where their connection went, instead of guessing. Pops the Apps
+    /// stack and lands the feed on Pinned, exactly like casberi://home.
+    private var seeOnHomeSection: some View {
+        Section {
+            Button {
+                showHomeHint = false
+                FeedFilter.shared.source = "Pinned"
+                FeedFilter.shared.tag = "All"
+                HomeRoute.shared.push = nil
+                DSHaptic.tap()
+            } label: {
+                HStack(spacing: DS.Space.s2) {
+                    Image(systemName: "house")
+                    Text("See it on Home")
+                    Spacer()
+                    Image(systemName: "arrow.right")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(DS.textTertiary)
+                }
+                .dsText(.body17).foregroundStyle(DS.tint)
+                .contentShape(Rectangle())   // the whole row taps, not just the text
+            }
+            .buttonStyle(.plain)
+            .dsListCardRow()
         }
     }
 
@@ -647,7 +695,8 @@ struct HandleSetupScreen: View {
                 }
                 BridgeSyncStatusRows(syncing: syncing,
                                      syncingLine: String(localized: "Fetching \(bridge.noun)…"),
-                                     result: result, resultIsError: resultIsError)
+                                     result: result, resultIsError: resultIsError,
+                                     faces: proofFaces, faceFallback: bridge.rawValue)
             }
             .dsListCardRow()
         } header: {
@@ -736,7 +785,35 @@ struct HandleSetupScreen: View {
         let proof = added > 0 ? "\(added) \(bridge.noun) in" : "Synced just now"
         if store.registerConnected(id: bridge.bridgeID, name: bridge.rawValue,
                                    proof: proof, can: [bridge.canLine]) {
+            // The first moment this connection goes live: the icon flips, the
+            // haptic fires, and the loop-to-Home hint appears once.
             DSHaptic.success()
+            withAnimation(DS.Motion.standard) {
+                connectFlip += 1
+                if landsOnHome { showHomeHint = true }
+            }
         }
+    }
+
+    /// Faces from what just landed — distinct authors, newest first, up to
+    /// three — so the proof line shows who arrived, not only how many. Only
+    /// the social bridges carry author avatars; the rest get an empty pile.
+    private var proofFaces: [String] {
+        guard bridge.isRichSocial else { return [] }
+        var seen = Set<String>(), faces: [String] = []
+        for t in recent {
+            guard let a = t.authorAvatarURL, !a.isEmpty, seen.insert(a).inserted else { continue }
+            faces.append(a)
+            if faces.count == 3 { break }
+        }
+        return faces
+    }
+
+    /// Whether landing on Home would actually show this source — the auto
+    /// socials show by default, others only once pinned. Keeps the "See it on
+    /// Home" hint from pointing at a board that wouldn't show the new card.
+    private var landsOnHome: Bool {
+        HomePinnedSources.autoSocial.contains(bridge.rawValue)
+            || HomePinnedSources.shared.isPinned(bridge.rawValue)
     }
 }

@@ -63,13 +63,18 @@ struct ThingSheetView: View {
         ScrollViewReader { proxy in
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
+                // Sequenced entrance (delight 2026-07-14): the sheet composes
+                // itself over the pouring wash — eyebrow, then title, then
+                // media, then spec — each a beat behind the last, one-shot.
                 eyebrow
                     .padding(.horizontal, DS.Space.s4)
                     .padding(.top, DS.Space.s6)
+                    .settleIn()
                 Text(thing.title)
                     .dsText(.heading34).foregroundStyle(DS.textPrimary)
                     .padding(.horizontal, DS.Space.s4)
                     .padding(.top, DS.Space.s3)
+                    .settleIn(delay: 0.06)
                 // Events speak through WHEN below; and when the content is
                 // just the title again (a short note with no body beyond its
                 // own headline), showing it twice reads as a stutter.
@@ -79,10 +84,12 @@ struct ThingSheetView: View {
                 if contentShown {
                     ThingContentView(thing: thing)
                         .padding(.top, DS.Space.s3)
+                        .settleIn(delay: 0.12)
                 }
                 specTable(contentShown: contentShown)
                     .padding(.horizontal, DS.Space.s4)
                     .padding(.top, DS.Space.s6)
+                    .settleIn(delay: 0.18)
                 if editingTags {
                     tagsField
                         .padding(.top, DS.Space.s3)
@@ -178,17 +185,42 @@ struct ThingSheetView: View {
 
     private var eyebrow: some View {
         HStack(spacing: DS.Space.s2) {
-            // The source's own mark names the wash above it — the 6px dot
-            // died with the hue ruling (2026-07-10). BridgeIcon falls back
-            // to the glyph-on-hue circle for sources without a bundled
-            // asset, so the seat is never empty.
-            BridgeIcon(name: thing.source, size: 18, circular: true)
-                // The mark coin-flips as the sheet opens (delight, 2026-07-12).
-                .coinFlip(trigger: thing.id)
-            Text("\(thing.kind.typeTag) · \(shortTime(thing.capturedAt)) ago")
-                .dsText(.label12)
-                .foregroundStyle(DS.textTertiary)
+            // A social post leads with the PERSON who said it — their face and
+            // handle, not the network's mark (the hue wash already names the
+            // network). The feed rows lead with faces; the sheet should too
+            // (2026-07-14). Everything else keeps the source mark + kind tag.
+            if isSocialPost, let avatar = thing.authorAvatarURL, !avatar.isEmpty {
+                RemoteThumb(urlString: avatar, size: 18, fallback: thing.source, circular: true)
+                    .coinFlip(trigger: thing.id)
+                Text("@\(authorShortHandle) · \(shortTime(thing.capturedAt)) ago")
+                    .dsText(.label12)
+                    .foregroundStyle(DS.textTertiary)
+            } else {
+                // The source's own mark names the wash above it — the 6px dot
+                // died with the hue ruling (2026-07-10). BridgeIcon falls back
+                // to the glyph-on-hue circle for sources without a bundled
+                // asset, so the seat is never empty.
+                BridgeIcon(name: thing.source, size: 18, circular: true)
+                    // The mark coin-flips as the sheet opens (delight, 2026-07-12).
+                    .coinFlip(trigger: thing.id)
+                Text("\(thing.kind.typeTag) · \(shortTime(thing.capturedAt)) ago")
+                    .dsText(.label12)
+                    .foregroundStyle(DS.textTertiary)
+            }
         }
+    }
+
+    /// A social post with a known author — the eyebrow and thread treatment
+    /// key off this, never a hardcoded source name.
+    private var isSocialPost: Bool {
+        SocialThread.isSocial(thing.source)
+            && !(thing.authorHandle ?? "").isEmpty
+    }
+
+    /// The author's handle without Bluesky's ".bsky.social" tail — the name
+    /// the person knows.
+    private var authorShortHandle: String {
+        SocialThread.shortHandle(thing.authorHandle ?? "")
     }
 
     // MARK: - Spec table (Gallery's graft — labels change per kind)
@@ -483,37 +515,57 @@ struct ThingSheetView: View {
         CorpusSignal.shared.bump()
     }
 
-    // MARK: - Replies (a cast's thread, 2026-07-14)
+    // MARK: - Replies (a post's thread, 2026-07-14)
 
-    /// The conversation under a Farcaster cast — read-only context in the
-    /// spec table's quiet-card clothes: a face, the handle, the words.
+    /// The conversation under a post/cast — read-only context in the spec
+    /// table's quiet-card clothes: a face, the handle, the words. The header
+    /// counts the thread ("Replies · 8"), the rows arrive one after another
+    /// (the feed's stagger), and a tap opens that reply on the network.
     private var repliesSection: some View {
         VStack(alignment: .leading, spacing: DS.Space.s3) {
-            Text("Replies")
+            // Honest count: the fetch caps at replyCap, so a thread AT the cap
+            // may hold more — say "8+", never a false total (honesty rule).
+            Text(replies.count < SocialThread.replyCap
+                 ? "Replies · \(replies.count)"
+                 : "Replies · \(replies.count)+")
                 .dsText(.label12).foregroundStyle(DS.textTertiary)
-            ForEach(replies) { reply in
-                HStack(alignment: .top, spacing: DS.Space.s2) {
-                    if let avatar = reply.avatarURL {
-                        RemoteThumb(urlString: avatar, size: 20,
-                                    fallback: thing.source, circular: true)
-                    } else {
-                        BridgeIcon(name: thing.source, size: 20, circular: true)
-                    }
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("@\(reply.handle)")
-                            .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-                        Text(reply.text)
-                            .dsText(.callout15).foregroundStyle(DS.textPrimary)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                    Spacer(minLength: 0)
-                }
+            ForEach(Array(replies.enumerated()), id: \.element.id) { i, reply in
+                replyRow(reply).staggerIn(index: min(i, 8))
             }
         }
         .padding(DS.Space.s4)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(DS.fillFaint,
                     in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+    }
+
+    @ViewBuilder
+    private func replyRow(_ reply: SocialReply) -> some View {
+        let row = HStack(alignment: .top, spacing: DS.Space.s2) {
+            if let avatar = reply.avatarURL {
+                RemoteThumb(urlString: avatar, size: 20,
+                            fallback: thing.source, circular: true)
+            } else {
+                BridgeIcon(name: thing.source, size: 20, circular: true)
+            }
+            VStack(alignment: .leading, spacing: 2) {
+                Text("@\(reply.handle)")
+                    .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                Text(reply.text)
+                    .dsText(.callout15).foregroundStyle(DS.textPrimary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer(minLength: 0)
+        }
+        .contentShape(Rectangle())
+        // A tap opens that reply on the network — a read, so it passes
+        // without the write-confirm (swipe-verbs-are-reads rule).
+        if let url = reply.url.flatMap(URL.init) {
+            Button { openURL(url) } label: { row }
+                .buttonStyle(.plain)
+        } else {
+            row
+        }
     }
 
     // MARK: - Related shelf (streams last)
