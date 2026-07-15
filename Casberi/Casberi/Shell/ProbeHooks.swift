@@ -206,6 +206,38 @@ enum ProbeHooks {
                 NSLog("GeckoTerminal probe: %@ trending in", n.map(String.init) ?? "FAILED")
             }
         },
+        // `-stockWatch "<query[,query]>"` — resolve each on Stocktwits, watch
+        // it, then sync the streams; NSLogs tickers + new posts (headless
+        // bridge test).
+        Hook(key: "stockWatch") { spec, context in
+            Task { @MainActor in
+                var symbols: [String] = []
+                for raw in spec.split(separator: ",") {
+                    let q = String(raw).trimmingCharacters(in: .whitespaces)
+                    guard let hit = await StockWatch.resolve(q) else { continue }
+                    _ = StockWatch.add(hit, context: context)
+                    symbols.append(hit.symbol)
+                }
+                let n = await StocktwitsIngest.refresh(context: context)
+                NSLog("Stocktwits probe: watching %@ — %@ new posts",
+                      symbols.isEmpty ? "NOTHING (resolve failed)" : symbols.joined(separator: ","),
+                      n.map(String.init) ?? "FAILED")
+            }
+        },
+        // `-stockChartProbe <ticker>` — fetch the Yahoo v8 curve on-device and
+        // NSLog points/price/change (verifies the UA quirk holds from the
+        // app's URLSession, not just curl).
+        Hook(key: "stockChartProbe") { ticker, _ in
+            Task { @MainActor in
+                let t = ticker.trimmingCharacters(in: .whitespaces).uppercased()
+                if let c = await StockChart.fetch(ticker: t, range: .day) {
+                    NSLog("Stock chart probe: %@ — %d points, $%.2f, %+.1f%%",
+                          t, c.closes.count, c.price, c.change * 100)
+                } else {
+                    NSLog("Stock chart probe: %@ — FAILED", t)
+                }
+            }
+        },
         // `-shopifyStore <url[,url]>` follows one or more Shopify stores and
         // syncs — headless bridge test. A blocked store logs FAILED honestly.
         Hook(key: "shopifyStore") { spec, context in

@@ -62,10 +62,12 @@ struct OnboardingView: View {
                                "YouTube", "Todoist", "RSS", "ChatGPT",
                                "Gemini", "Linear", "Raindrop", "Readwise",
                                "Tokens", "Venice", "OpenClaw", "Cal.com",
-                               "Calendly",
+                               "Calendly", "Stocktwits",
                                "iCloud Mail", "Apple Music", "Apple Health",
                                "Reminders", "Calendar", "Photos"]
-    private static let appleRowStart = 24
+    // 25 non-Apple cubes (a full 5×5 grid) then the six Apple tiles as the
+    // top row — Stocktwits (2026-07-15) completed the bottom grid's last row.
+    private static let appleRowStart = 25
     /// False = above the screen · true = settled in the glass.
     @State private var cubesLanded = false
 

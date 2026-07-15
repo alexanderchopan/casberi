@@ -3101,3 +3101,34 @@ Verified live across two real wallets (vitalik.eth + Binance 14): vitalik's
 ENS avatar and Binance's identicon both render, the row sparkline draws, the
 combined sheet decomposes correctly with §77's alignment (combined "since Jul
 14", Binance's own line its true earlier start).
+
+## 80. Stocktwits — stocks the keyless way: ticker streams + a Yahoo-drawn chart (user, 2026-07-15)
+
+The user asked for stock tracking ("does Stocktwits or anything like that
+have a public feed?"); research confirmed two keyless halves and the ruling
+is to ship them as ONE seat, not two:
+
+- **Stocktwits is the bridge** (Markets group, beside Kalshi). Watch a
+  TICKER: the watch is a thing (`stocktwits:sym:<T>`, the TokenWatch shape —
+  deleting the row is unwatching), and the takes traders post about it land
+  as chat things from Stocktwits' public symbol streams — the same keyless
+  REST its own website reads (~200 req/hr/IP unauthenticated). Top 3 per
+  ticker per pass, ranked by author followers (public messages carry no like
+  counts; author reach is the one honest quality signal, and it keeps the
+  0DTE spam out). Each post wears its author's OWN Bullish/Bearish call as a
+  tag — Stocktwits' sentiment toggle, never a rating of ours.
+- **Yahoo v8 is plumbing, not a seat.** The watchlist row's sheet draws the
+  live chart natively via the SAME TokenChartView anatomy (now generic over
+  a `PriceRange` protocol; tokens unchanged, keys preserved). Yahoo is
+  unofficial: fetch fails → the plain Stocktwits link, never a broken or
+  faked chart. Honest labels: chips read 1D/5D/1M — "5D" is five TRADING
+  days, deliberately not rounded to "7D"; the scrub shows NO "ago" label for
+  stocks (candles skip closed-market hours, index×step would lie).
+- **Honest boundaries:** watches tickers, never portfolios (holdings aren't
+  public anywhere; copy never says "track your portfolio"). Read-only —
+  nothing trades. Posts land "on each visit", not "as they're posted" (no
+  push; the copy says what the refresh does).
+- **Disconnect teardown deletes the WATCHLIST rows** (the watch is access —
+  ruling 2026-07-13's two verbs; a kept watch row would re-register the seat
+  and keep the foreground poll landing). Landed posts are history and follow
+  the person's own "remove its things too" choice.

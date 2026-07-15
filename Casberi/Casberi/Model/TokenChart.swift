@@ -1,9 +1,39 @@
 import Foundation
 
+/// What a price chart's range set must answer (2026-07-15) — the seam that
+/// lets TokenChartView draw stocks (StockRange) with the same anatomy tokens
+/// wear. rawValue is the chip label; honesty rule: the label says what the
+/// window IS ("5D" for five trading days, never rounded to "7D").
+protocol PriceRange: RawRepresentable<String>, CaseIterable, Hashable
+    where AllCases: RandomAccessCollection {
+    /// Seconds per candle — the scrub's "9h ago" math.
+    var step: TimeInterval { get }
+    /// The range every live symbol answers at. Failing HERE means the chart
+    /// is dead (the caller's fallback renders); failing elsewhere means an
+    /// honest note and a step back to a range that worked.
+    static var base: Self { get }
+    /// The scrub cursor's "when" label for a candle N steps from the live
+    /// end — nil when the range set can't state it truthfully (stock
+    /// candles skip closed-market hours, so index × step would understate
+    /// the age; no label beats a wrong one).
+    func agoLabel(indexFromEnd: Int) -> String?
+}
+
+extension PriceRange {
+    /// "9h ago" / "3d ago" / "now" — right whenever candles are wall-clock
+    /// contiguous (tokens trade 24/7).
+    func agoLabel(indexFromEnd: Int) -> String? {
+        let ago = Double(indexFromEnd) * step
+        if ago < 1 { return "now" }
+        if ago < 86_400 { return "\(Int(ago / 3600))h ago" }
+        return "\(Int(ago / 86_400))d ago"
+    }
+}
+
 /// A chart's time window (prd 51) — 24h stays the default everywhere the
 /// range picker doesn't show (feed pulse, Home row). GeckoTerminal serves
 /// all three for free: hourly candles carry 24h and 7d, daily carry 30d.
-enum TokenRange: String, CaseIterable {
+enum TokenRange: String, CaseIterable, PriceRange {
     case day = "1D", week = "7D", month = "30D"
 
     /// GeckoTerminal OHLCV path piece + candle count.
@@ -21,6 +51,10 @@ enum TokenRange: String, CaseIterable {
         case .month:      86_400
         }
     }
+
+    /// 24h has the Dexscreener fallback behind it — nothing at all there
+    /// means the token is dead/illiquid.
+    static var base: TokenRange { .day }
 }
 
 /// A token's recent price, drawn natively (2026-07-07). The curve comes from

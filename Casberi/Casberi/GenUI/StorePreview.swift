@@ -208,6 +208,12 @@ enum StorePreview {
             "r1 = Row(\"Fed holds rates in March · 68%\", \"Link\", \"Kalshi\", \"now\")",
             "r2 = Row(\"Lakers make the playoffs · 74%\", \"Link\", \"Kalshi\", \"2h\")",
         ]
+        case "Stocktwits": [
+            "root = Stack([w])",
+            "w = Widget(\"Watching\", null, [r1, r2])",
+            "r1 = Row(\"Apple Inc · $AAPL\", \"Link\", \"Stocktwits\", \"now\")",
+            "r2 = Row(\"NVDA holding the 200-day — adding here\", \"Chat\", \"Stocktwits\", \"1h\")",
+        ]
         // The rest of the connectable catalog (2026-07-14): every card in the
         // discover carousel now ghosts what lands instead of empty air. Each
         // row's tag is the kind it becomes; the source is the app it comes from.

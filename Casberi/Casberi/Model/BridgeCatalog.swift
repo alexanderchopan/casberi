@@ -34,7 +34,7 @@ enum BridgeCatalog {
             let keyless: Set<String> = ["Wallet", "Tokens", "Reddit", "YouTube",
                 "RSS", "Substack", "Podcasts", "Pinterest", "Farcaster",
                 "Bluesky", "OpenSea", "Kalshi", "Shopify", "GeckoTerminal", "Deals",
-                "Open Food Facts"]
+                "Open Food Facts", "Stocktwits"]
             if keyless.contains(name) { return "No account" }
             let imports: Set<String> = ["ChatGPT", "Claude", "Gemini",
                 "Day One", "Apple Journal", "Kindle"]
@@ -74,6 +74,9 @@ enum BridgeCatalog {
               needsSetup: true),
         Offer(name: "Kalshi",      tagline: "Watch real-event odds",                 group: "Markets",   connectable: true,
               summary: "Watch any market on Kalshi, the CFTC-regulated event exchange — search a team or event and its live odds land in your feed. Public price data only, read-only: nothing here places a trade.",
+              needsSetup: true),
+        Offer(name: "Stocktwits",  tagline: "Watch any stock",                      group: "Markets",   connectable: true,
+              summary: "Watch any stock — search a ticker and the takes traders post about it on Stocktwits land in your feed, each wearing its author's own bullish or bearish call. The stock's live price chart draws on this iPhone from public market data. No account, no key, read-only: nothing here trades, and a watched ticker can never see your portfolio.",
               needsSetup: true),
         Offer(name: "GeckoTerminal", tagline: "Trending tokens, per chain",          group: "Onchain",   connectable: true,
               summary: "Pick the chains you care about and the tokens trending on each — GeckoTerminal's own ranking, by 24-hour volume and price move — land in your feed as links. No account, no key: fetched straight from GeckoTerminal's public API by this iPhone. Read-only public price data; nothing here buys, sells, or trades. Each trending row opens to its live on-device chart.",

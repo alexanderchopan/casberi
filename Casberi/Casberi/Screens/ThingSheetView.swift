@@ -55,6 +55,7 @@ struct ThingSheetView: View {
         let hasMedia = thing.kind == .screenshot
             || !(thing.previewImageURL ?? "").isEmpty
             || TokenChart.route(from: thing.content) != nil
+            || StockChart.route(from: thing.content) != nil
         _detent = State(initialValue:
             hasMedia || thing.content.count > 280 ? .large : .medium)
     }

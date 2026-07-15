@@ -21,6 +21,7 @@ struct ThingContentView: View {
         (thing.kind == .link || thing.kind == .product)
             && TokenChart.route(from: thing.content) == nil
             && KalshiMarket.route(from: thing.content) == nil
+            && StockChart.route(from: thing.content) == nil
             && Capture.detectURL(in: thing.content.isEmpty ? thing.title : thing.content) != nil
     }
 
@@ -35,6 +36,8 @@ struct ThingContentView: View {
                 TokenChartContent(thing: thing, chain: route.chain, address: route.address)
             } else if let route = KalshiMarket.route(from: thing.content) {
                 KalshiMarketContent(series: route.series, event: route.event)
+            } else if let ticker = StockChart.route(from: thing.content) {
+                StockChartContent(thing: thing, ticker: ticker)
             } else if thing.source == "GitHub", thing.starCount != nil || thing.repoLanguage != nil {
                 // A starred / watched repo leads with its preview, then the
                 // language dot and the "since you starred" line.
@@ -567,6 +570,37 @@ private struct TokenChartContent: View {
             .background(DS.fillFaint,
                         in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
         }
+    }
+}
+
+/// A watched stock's price, drawn natively — the equity dose of the same
+/// anatomy (StockChart/Yahoo behind the shared TokenChartView). No
+/// market-structure strip: those stats ride the Dexscreener pair payload,
+/// a token fact — Yahoo's chart JSON carries none we'd stand behind.
+/// Yahoo unreachable → the plain Stocktwits link, never a broken chart.
+private struct StockChartContent: View {
+    let thing: Thing
+    let ticker: String
+
+    /// The watch-time anchor — only when the record really carries one.
+    private var since: (price: Double, date: Date)? {
+        guard thing.source == "Stocktwits", let p = thing.watchPriceUsd, p > 0
+        else { return nil }
+        return (p, thing.capturedAt)
+    }
+
+    var body: some View {
+        TokenChartView(memoryKey: "stock.range.\(ticker)",
+                       fetch: { (range: StockRange) in
+                           await StockChart.fetch(ticker: ticker, range: range)
+                       },
+                       since: since) {
+            if let url = URL(string: thing.content) {
+                LinkPreviewCard(url: url)
+            }
+        }
+        .padding(.horizontal, DS.Space.s4)
+        .padding(.bottom, DS.Space.s3)
     }
 }
 

@@ -107,6 +107,13 @@ enum BridgeRefresh {
         if TrendingStore.shared.connected {
             Task { @MainActor in _ = await TrendingIngest.refresh(context: context) }
         }
+        // Stocktwits — the watch lives in the corpus (the thing IS the
+        // watch); the seat gates the foreground poll so a person who never
+        // connected it doesn't pay the watched-tickers fetch every
+        // foreground, and a disconnected seat stays disconnected.
+        if connected("stocktwits") {
+            Task { @MainActor in _ = await StocktwitsIngest.refresh(context: context) }
+        }
         if ShopifyStore.shared.connected {
             Task { @MainActor in _ = await ShopifyIngest.refresh(context: context) }
         }

@@ -28,14 +28,15 @@ enum TokenChartStyle {
         String(format: "%@%.1f%%", c >= 0 ? "+" : "", c * 100)
     }
 
-    /// The chosen range persists per token (prd 51) — a 7d watcher isn't
-    /// reset to 24h on every open.
-    static func rememberedRange(chain: String, address: String) -> TokenRange {
-        UserDefaults.standard.string(forKey: "token.range.\(chain).\(address)")
-            .flatMap(TokenRange.init(rawValue:)) ?? .day
+    /// The chosen range persists per symbol (prd 51) — a 7d watcher isn't
+    /// reset to 24h on every open. Key-based since the stock chart joined
+    /// (2026-07-15): tokens keep their historical "token.range.…" keys.
+    static func rememberedRange<R: PriceRange>(key: String) -> R {
+        UserDefaults.standard.string(forKey: key)
+            .flatMap(R.init(rawValue:)) ?? R.base
     }
-    static func remember(_ range: TokenRange, chain: String, address: String) {
-        UserDefaults.standard.set(range.rawValue, forKey: "token.range.\(chain).\(address)")
+    static func remember<R: PriceRange>(_ range: R, key: String) {
+        UserDefaults.standard.set(range.rawValue, forKey: key)
     }
 }
 
@@ -177,18 +178,22 @@ private struct GhostShimmer: View {
     }
 }
 
-/// The sheet's full chart — the token's "media" (ThingContent rule). Owns
+/// The sheet's full chart — the symbol's "media" (ThingContent rule). Owns
 /// its fetches (one per range, cached per visit), the draw-on reveal (a
 /// range switch is a data arrival — the one moment animation belongs to),
 /// touch scrubbing (press, then drag; the header rolls to the scrubbed
-/// value, the finger carries only the when), and per-token range memory.
-/// The dead-token case (no price anywhere) renders the caller's fallback —
-/// the plain link, honestly.
-struct TokenChartView<Fallback: View>: View {
-    let chain: String
-    let address: String
+/// value, the finger carries only the when), and per-symbol range memory.
+/// The dead case (no price anywhere) renders the caller's fallback — the
+/// plain link, honestly. Generic over the range set (2026-07-15) so a
+/// watched stock (StockRange/Yahoo) wears the exact anatomy a token does;
+/// the token init below keeps every existing call site unchanged.
+struct TokenChartView<R: PriceRange, Fallback: View>: View {
+    /// The UserDefaults key the chosen range persists under.
+    let memoryKey: String
+    /// One range's curve — nil means this range can't be answered.
+    let fetch: (R) async -> TokenChart?
     /// The since-you-watched anchor (2026-07-14): the price and moment the
-    /// token joined the watchlist, kept on its thing. When present, a line
+    /// symbol joined the watchlist, kept on its thing. When present, a line
     /// under the plot says "+41.2% · since Jul 2" against the live price —
     /// a number known locally that no market site can show. nil (older
     /// watches, non-watchlist charts) renders nothing.
@@ -197,8 +202,8 @@ struct TokenChartView<Fallback: View>: View {
 
     private enum Phase { case loading, ready, dead }
 
-    @State private var range: TokenRange
-    @State private var charts: [TokenRange: TokenChart] = [:]
+    @State private var range: R
+    @State private var charts: [R: TokenChart] = [:]
     @State private var phase: Phase = .loading
     /// One honest line when a range has no candles ("No 7d prices…") —
     /// the selection reverts rather than faking a curve or blanking.
@@ -207,15 +212,14 @@ struct TokenChartView<Fallback: View>: View {
     @State private var scrubIndex: Int?
     @Environment(\.colorScheme) private var scheme
 
-    init(chain: String, address: String,
+    init(memoryKey: String, fetch: @escaping (R) async -> TokenChart?,
          since: (price: Double, date: Date)? = nil,
          @ViewBuilder fallback: @escaping () -> Fallback) {
-        self.chain = chain
-        self.address = address
+        self.memoryKey = memoryKey
+        self.fetch = fetch
         self.since = since
         self.fallback = fallback
-        _range = State(initialValue: TokenChartStyle.rememberedRange(chain: chain,
-                                                                     address: address))
+        _range = State(initialValue: TokenChartStyle.rememberedRange(key: memoryKey))
     }
 
     private var chart: TokenChart? { charts[range] }
@@ -305,13 +309,13 @@ struct TokenChartView<Fallback: View>: View {
 
     private var rangeChips: some View {
         HStack(spacing: DS.Space.s1) {
-            ForEach(TokenRange.allCases, id: \.self) { r in
+            ForEach(R.allCases, id: \.self) { r in
                 Button {
                     guard r != range else { return }
                     DSHaptic.tap()
                     scrubIndex = nil
                     range = r
-                    TokenChartStyle.remember(r, chain: chain, address: address)
+                    TokenChartStyle.remember(r, key: memoryKey)
                 } label: {
                     Text(r.rawValue)
                         .dsText(.label12)
@@ -386,11 +390,13 @@ struct TokenChartView<Fallback: View>: View {
                     .fill(accent)
                     .frame(width: 9, height: 9)
                     .position(x: plot.minX + x, y: plot.minY + y)
-                Text(agoText(index: i, of: closes.count))
-                    .dsText(.label12).foregroundStyle(DS.textSecondary)
-                    .monospacedDigit()
-                    .position(x: min(max(plot.minX + x, plot.minX + 28), plot.maxX - 28),
-                              y: plot.minY - 9)
+                if let ago = range.agoLabel(indexFromEnd: closes.count - 1 - i) {
+                    Text(ago)
+                        .dsText(.label12).foregroundStyle(DS.textSecondary)
+                        .monospacedDigit()
+                        .position(x: min(max(plot.minX + x, plot.minX + 28), plot.maxX - 28),
+                                  y: plot.minY - 9)
+                }
             }
 
             // Press, then drag — sequenced so the sheet's scroll still wins
@@ -434,17 +440,9 @@ struct TokenChartView<Fallback: View>: View {
         }
     }
 
-    /// "9h ago" / "3d ago" / "now" — the scrubbed candle's distance.
-    private func agoText(index: Int, of count: Int) -> String {
-        let ago = Double(count - 1 - index) * range.step
-        if ago < 1 { return "now" }
-        if ago < 86_400 { return "\(Int(ago / 3600))h ago" }
-        return "\(Int(ago / 86_400))d ago"
-    }
-
     /// The range whose failure produced the current note — lets the note
     /// survive exactly one revert fetch (see load()'s success path).
-    @State private var noteRange: TokenRange?
+    @State private var noteRange: R?
 
     private func load() async {
         if charts[range] != nil {
@@ -453,7 +451,7 @@ struct TokenChartView<Fallback: View>: View {
             return
         }
         if charts.isEmpty { phase = .loading }
-        let fetched = await TokenChart.fetch(chain: chain, address: address, range: range)
+        let fetched = await fetch(range)
         if let fetched {
             charts[range] = fetched
             phase = .ready
@@ -465,26 +463,40 @@ struct TokenChartView<Fallback: View>: View {
             replayReveal()
             return
         }
-        if range == .day {
-            // 24h has the Dexscreener fallback behind it — nothing at all
-            // means the token is dead/illiquid: the plain link, honestly.
+        if range == R.base {
+            // The base range is the one every live symbol answers —
+            // nothing at all means dead/unreachable: the caller's
+            // fallback (the plain link), honestly.
             phase = .dead
             return
         }
-        // The token charts 24h but GeckoTerminal has no candles at this
-        // window — say so and step back rather than fake a curve or
-        // strand the card on an empty selection.
-        note = "No \(range.rawValue) prices for this token yet."
+        // The symbol charts at base but this window has no candles — say
+        // so and step back rather than fake a curve or strand the card on
+        // an empty selection.
+        note = "No \(range.rawValue) prices here yet."
         noteRange = range
         // The DISPLAY steps back but the remembered preference stays — a
         // transient network failure at 7d must not permanently downgrade a
         // 7d watcher to 24h (the prd-51 invariant; review 2026-07-11).
-        let back: TokenRange = charts[.day] != nil ? .day : (charts.keys.first ?? .day)
+        let back: R = charts[R.base] != nil ? R.base : (charts.keys.first ?? R.base)
         range = back   // task(id: range) refires and shows (or fetches) it
     }
 
     private func replayReveal() {
         revealed = false
         withAnimation(.easeOut(duration: 0.7)) { revealed = true }
+    }
+}
+
+extension TokenChartView {
+    /// The token call — the original signature, so a watched token's call
+    /// sites read exactly as before the view went generic. The memory key
+    /// keeps its historical spelling: remembered ranges survive the change.
+    init(chain: String, address: String,
+         since: (price: Double, date: Date)? = nil,
+         @ViewBuilder fallback: @escaping () -> Fallback) where R == TokenRange {
+        self.init(memoryKey: "token.range.\(chain).\(address)",
+                  fetch: { await TokenChart.fetch(chain: chain, address: address, range: $0) },
+                  since: since, fallback: fallback)
     }
 }

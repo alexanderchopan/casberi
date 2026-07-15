@@ -16,6 +16,7 @@ enum BridgeRouter {
         case wallet
         case tokens
         case kalshi
+        case stocktwits
         case openSea
         case geckoTerminal
         case shopify
@@ -52,6 +53,7 @@ enum BridgeRouter {
             case .wallet:         "wallet"
             case .tokens:         "tokens"
             case .kalshi:         "kalshi"
+            case .stocktwits:     "stocktwits"
             case .openSea:        "opensea"
             case .geckoTerminal:  "geckoterminal"
             case .shopify:        "shopify"
@@ -97,6 +99,7 @@ enum BridgeRouter {
         Row(offer: "Wallet",    id: "wallet", destination: .wallet),
         Row(offer: "Tokens",    id: "tokens", destination: .tokens),
         Row(offer: "Kalshi",     id: "kalshi",     destination: .kalshi),
+        Row(offer: "Stocktwits", id: "stocktwits", destination: .stocktwits),
         Row(offer: "OpenSea",    id: "opensea",    destination: .openSea),
         Row(offer: "GeckoTerminal", id: "geckoterminal", destination: .geckoTerminal),
         Row(offer: "Shopify",    id: "shopify",    destination: .shopify),
@@ -153,6 +156,7 @@ struct BridgeDestinationView: View {
         case .wallet:         WalletScreen()
         case .tokens:         TokenWatchScreen()
         case .kalshi:         KalshiScreen()
+        case .stocktwits:     StocktwitsScreen()
         case .openSea:        OpenSeaScreen()
         case .geckoTerminal:  GeckoTerminalScreen()
         case .shopify:        ShopifyScreen()
