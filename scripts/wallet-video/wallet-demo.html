@@ -38,15 +38,44 @@
     filter:saturate(1.05);}
 
   /* ---- Brand header ---- */
-  .brand{position:absolute;top:96px;left:0;right:0;text-align:center;
+  .brand{position:absolute;top:92px;left:0;right:0;text-align:center;
     opacity:0;transform:translateY(14px);transition:all .8s var(--ease);}
   .brand.in{opacity:1;transform:none;}
-  .brand .mark{display:inline-flex;align-items:center;gap:18px;}
-  .brand .dot{width:42px;height:42px;border-radius:13px;
-    background:conic-gradient(from 210deg, #1673e6, #8a3ffc, #ff2d78, #1673e6);
-    box-shadow:0 6px 26px rgba(22,115,230,.5);}
-  .brand h1{color:var(--txt1);font-size:46px;font-weight:600;letter-spacing:-.5px;}
+  .brand .mark{display:inline-flex;align-items:center;gap:20px;}
+  .brand h1{color:var(--txt1);font-size:48px;font-weight:600;letter-spacing:-.5px;}
   .brand .sub{margin-top:14px;color:var(--txt2);font-size:26px;font-weight:400;}
+
+  /* The real Casberi app icon — the berry, on its black squircle. iOS applies
+     a superellipse mask; 22.37% rounded-rect is the design-token approximation
+     (DS.Radius.appIconRatio). The mark itself is never recolored or gradiented. */
+  .appicon{border-radius:22.37%;overflow:hidden;flex:none;
+    box-shadow:0 8px 30px rgba(0,0,0,.5), 0 0 0 1px rgba(255,255,255,.06) inset;}
+  .appicon svg{display:block;width:100%;height:100%;}
+  .brand .appicon{width:56px;height:56px;}
+
+  /* ---- Marketing end card ---- */
+  .endcard{position:absolute;inset:0;z-index:80;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;text-align:center;gap:0;
+    background:radial-gradient(120% 90% at 50% 38%, #0f1a30 0%, #0a0c14 52%, #05060a 100%);
+    opacity:0;pointer-events:none;transition:opacity .8s var(--ease);}
+  .endcard.in{opacity:1;}
+  .endcard .halo{position:absolute;top:34%;left:50%;transform:translate(-50%,-50%);
+    width:520px;height:520px;border-radius:50%;pointer-events:none;
+    background:radial-gradient(circle, rgba(10,132,255,.34), transparent 66%);}
+  .endcard .bigicon{width:240px;height:240px;position:relative;
+    transform:scale(.86);transition:transform .9s var(--ease);}
+  .endcard.in .bigicon{transform:scale(1);}
+  .endcard .word{margin-top:52px;color:#fff;font-size:82px;font-weight:600;letter-spacing:-1.5px;}
+  .endcard .line{margin-top:14px;color:#fff;font-size:40px;font-weight:500;}
+  .endcard .line em{font-style:normal;color:var(--tint);}
+  .endcard .wallet{margin-top:26px;color:var(--txt2);font-size:28px;font-weight:400;max-width:760px;}
+  .endcard .chips{margin-top:44px;display:flex;gap:14px;}
+  .endcard .chip{color:var(--txt2);font-size:24px;font-weight:500;
+    padding:11px 22px;border-radius:999px;background:rgba(255,255,255,.06);}
+  .endcard .cta{margin-top:40px;color:#fff;font-size:30px;font-weight:600;
+    padding:16px 36px;border-radius:999px;
+    background:linear-gradient(180deg,#1f86ff,#0a6ae0);
+    box-shadow:0 12px 34px rgba(10,106,224,.5);}
 
   /* ---- Phone ---- */
   .phone{position:absolute;left:50%;top:236px;transform:translateX(-50%) translateY(40px);
@@ -213,7 +242,7 @@
   @keyframes ripple{from{opacity:.7;width:20px;height:20px;}to{opacity:0;width:90px;height:90px;}}
 
   /* caption */
-  .caption{position:absolute;left:80px;right:80px;bottom:120px;text-align:center;}
+  .caption{position:absolute;left:80px;right:80px;bottom:150px;text-align:center;}
   .caption .line{color:var(--txt1);font-size:36px;font-weight:600;line-height:1.28;
     letter-spacing:-.3px;opacity:0;transform:translateY(12px);
     transition:opacity .55s var(--ease), transform .55s var(--ease);}
@@ -232,7 +261,7 @@
   <div class="glow"></div>
 
   <div class="brand" id="brand">
-    <div class="mark"><span class="dot"></span><h1>Casberi</h1></div>
+    <div class="mark"><span class="appicon"></span><h1>Casberi</h1></div>
     <div class="sub">Watch any wallet — read-only, on your iPhone</div>
   </div>
 
@@ -382,6 +411,21 @@
     <div class="sub" id="capSub"></div>
   </div>
 
+  <!-- Marketing end card -->
+  <div class="endcard" id="endcard">
+    <div class="halo"></div>
+    <div class="bigicon appicon"></div>
+    <div class="word">Casberi</div>
+    <div class="line">Your apps, <em>one feed.</em></div>
+    <div class="wallet">Watch any wallet — read-only, on your iPhone.</div>
+    <div class="chips">
+      <span class="chip">No account</span>
+      <span class="chip">On-device</span>
+      <span class="chip">Free</span>
+    </div>
+    <div class="cta">casberi.app</div>
+  </div>
+
   <div class="track"><div class="bar" id="bar"></div></div>
 </div>
 
@@ -389,6 +433,21 @@
 const $ = id => document.getElementById(id);
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const list = $('list');
+
+// The real Casberi mark — the berry, exact geometry from
+// design/app-icon/casberi-final-berry-opaque-dark.svg (7 opaque drupelets,
+// one hue #0A84FF, dimmest drawn first). Never recolored or gradiented.
+const BERRY = `<svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1024" height="1024" fill="#000000"></rect>
+  <circle cx="598" cy="708" r="108" fill="rgb(2,26,51)"></circle>
+  <circle cx="684" cy="548" r="108" fill="rgb(3,42,82)"></circle>
+  <circle cx="426" cy="708" r="108" fill="rgb(3,42,82)"></circle>
+  <circle cx="512" cy="548" r="108" fill="rgb(5,59,115)"></circle>
+  <circle cx="598" cy="388" r="108" fill="rgb(6,79,153)"></circle>
+  <circle cx="340" cy="548" r="108" fill="rgb(6,79,153)"></circle>
+  <circle cx="426" cy="388" r="108" fill="rgb(10,132,255)"></circle>
+</svg>`;
+document.querySelectorAll('.appicon').forEach(e => e.innerHTML = BERRY);
 
 // ---- sparkline / plot drawing (green up / red down, gradient fade) ----
 function pts(seed, n, up){
@@ -477,7 +536,7 @@ function scrollToSec(id, targetTopY=118){
   const sec = $(id); scrollList(sec.offsetTop - targetTopY);
 }
 
-let elapsed=0, TOTAL=39000;
+let elapsed=0, TOTAL=37000;
 function progress(){ $('bar').style.width = Math.min(100, elapsed/TOTAL*100)+'%'; }
 async function step(ms){ elapsed+=ms; progress(); await sleep(ms); }
 
@@ -556,9 +615,14 @@ async function run(){
   await caption('Watch several at once', 'See them combined — one value, one treemap.');
   await step(3000);
 
-  // Outro
-  await caption('Watch-only. On-device.', 'Casberi · Wallet');
-  await step(2600);
+  // Outro — marketing end card
+  $('capLine').classList.remove('in'); $('capSub').classList.remove('in');
+  $('brand').classList.remove('in');
+  $('phone').style.transition='opacity .7s var(--ease), transform .8s var(--ease)';
+  $('phone').classList.remove('in');
+  await step(300);
+  $('endcard').classList.add('in');
+  await step(4200);
 
   progress();
   window.__done = true;
