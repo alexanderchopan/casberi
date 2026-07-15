@@ -14,6 +14,14 @@ OUT="$ROOT/scripts/output/$(date +%Y%m%d-%H%M%S)"
 step() { print -P "%F{cyan}▶ $1%f"; }
 fail() { print -P "%F{red}✗ $1%f"; exit 1; }
 
+# ── 0. Catalog sync (static, fast — fails before the slow build) ────
+# Enforces BridgeCatalog.offers as the single source of truth for the app
+# catalog, the website #catalog shelf, and the onboarding tiles. See the
+# catalog-sync RULE in CLAUDE.md.
+step "Catalog sync"
+"$ROOT/scripts/catalog-sync.sh" || fail "catalog surfaces drifted — run scripts/catalog-sync.sh"
+print -P "%F{green}✓ catalog sync%f"
+
 # ── 1. Build ────────────────────────────────────────────────────────
 step "Building Casberi (derivedData: $DD)"
 xcodebuild -project "$ROOT/Casberi/Casberi.xcodeproj" -scheme Casberi \
