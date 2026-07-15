@@ -6,6 +6,13 @@ import SwiftData
 /// seconds, the one-line title clamp, and the JSON calls.
 enum IngestSupport {
 
+    /// A Safari-shaped User-Agent, shared by the callers that reach store
+    /// pages behind a bot-WAF (Shopify catalogs, product-page price parsing) —
+    /// a phone fetch that looks like the phone's own browser gets through more
+    /// often. One copy so a version bump can't drift between callers.
+    static let safariUserAgent =
+        "Mozilla/5.0 (iPhone; CPU iPhone OS 26_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Mobile/15E148 Safari/604.1"
+
     /// Alchemy read-only key, restricted to reads, shared by every caller
     /// (wallet transfers, token charts) so a rotation touches one line — not
     /// one per file. If it ever leaks, the worst case is quota use on public

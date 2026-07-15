@@ -18,6 +18,9 @@ enum BridgeRouter {
         case kalshi
         case openSea
         case geckoTerminal
+        case shopify
+        case deals
+        case openFoodFacts
         case icloudMail
         case gmail
         case rss
@@ -51,6 +54,9 @@ enum BridgeRouter {
             case .kalshi:         "kalshi"
             case .openSea:        "opensea"
             case .geckoTerminal:  "geckoterminal"
+            case .shopify:        "shopify"
+            case .deals:          "deals"
+            case .openFoodFacts:  "off"
             case .icloudMail:     "icloudmail"
             case .gmail:          "gmail"
             case .rss:            "rss"
@@ -93,6 +99,9 @@ enum BridgeRouter {
         Row(offer: "Kalshi",     id: "kalshi",     destination: .kalshi),
         Row(offer: "OpenSea",    id: "opensea",    destination: .openSea),
         Row(offer: "GeckoTerminal", id: "geckoterminal", destination: .geckoTerminal),
+        Row(offer: "Shopify",    id: "shopify",    destination: .shopify),
+        Row(offer: "Deals",      id: "deals",      destination: .deals),
+        Row(offer: "Open Food Facts", id: "off",   destination: .openFoodFacts),
         Row(offer: "iCloud Mail", id: "icloudmail",  destination: .icloudMail),
         Row(offer: "Gmail",       id: "gmail",       destination: .gmail),
         Row(offer: "RSS",       id: "rss",    destination: .rss),
@@ -146,6 +155,9 @@ struct BridgeDestinationView: View {
         case .kalshi:         KalshiScreen()
         case .openSea:        OpenSeaScreen()
         case .geckoTerminal:  GeckoTerminalScreen()
+        case .shopify:        ShopifyScreen()
+        case .deals:          DealsScreen()
+        case .openFoodFacts:  OpenFoodFactsScreen()
         case .icloudMail:     MailScreen(provider: .icloud)
         case .gmail:          MailScreen(provider: .gmail)
         case .rss:            RSSScreen()

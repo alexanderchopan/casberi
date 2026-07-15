@@ -31,7 +31,9 @@ enum LinkTitle {
 
     /// Renames a just-saved link thing once the title arrives — only when the
     /// person hasn't already given it a better face (the title still LOOKS
-    /// like the URL it was born with).
+    /// like the URL it was born with). A pasted PRODUCT page goes further: it
+    /// becomes a `.product`, its price captured so a re-check can catch a drop
+    /// (2026-07-14).
     @MainActor
     static func enrich(_ thing: Thing, context: ModelContext) async {
         guard thing.kind == .link,
@@ -39,6 +41,24 @@ enum LinkTitle {
                 ?? firstURL(in: thing.content),
               thing.title.contains(url.host() ?? "") || thing.title == thing.content
         else { return }
+        // A product page (one with a machine-readable price) upgrades the link
+        // to a watched product — priced in the title, ready for a drop check.
+        if let meta = await ProductMeta.fetch(url) {
+            if meta.isProduct {
+                upgradeToProduct(thing, meta: meta)
+                thing.embedding = nil
+                try? context.save()
+                SpotlightIndex.index([thing])
+                return
+            }
+            if let title = meta.title, title != thing.title, !title.isEmpty {
+                thing.title = title
+                thing.embedding = nil
+                try? context.save()
+                SpotlightIndex.index([thing])
+                return
+            }
+        }
         guard let title = await fetch(url), title != thing.title else { return }
         thing.title = title
         // The title just changed — drop the stale vector so the next semantic
@@ -47,6 +67,25 @@ enum LinkTitle {
         thing.embedding = nil
         try? context.save()
         SpotlightIndex.index([thing])
+    }
+
+    /// Turns a link thing into a priced product thing from its parsed page.
+    @MainActor
+    private static func upgradeToProduct(_ thing: Thing, meta: ProductMeta) {
+        let name = (meta.title?.isEmpty == false ? meta.title! : thing.title)
+        if let price = meta.priceValue,
+           let money = PriceFormat.string(price, currency: meta.priceCurrency) {
+            thing.title = IngestSupport.titleLine("\(name) · \(money)")
+            thing.priceValue = price
+            thing.priceCurrency = meta.priceCurrency
+        } else {
+            thing.title = IngestSupport.titleLine(name)
+        }
+        thing.kind = .product
+        // The type tag rode `.link` ("Link"); re-tag it as a product so the
+        // pill matches the new kind.
+        thing.tags = ([ThingKind.product.typeTag] + thing.tags.filter { $0 != ThingKind.link.typeTag }).reduced()
+        if let image = meta.image { thing.previewImageURL = image }
     }
 
     private static func firstURL(in text: String) -> URL? {

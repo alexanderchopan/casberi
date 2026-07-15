@@ -94,5 +94,11 @@ enum BridgeRefresh {
         if TrendingStore.shared.connected {
             Task { @MainActor in _ = await TrendingIngest.refresh(context: context) }
         }
+        if ShopifyStore.shared.connected {
+            Task { @MainActor in _ = await ShopifyIngest.refresh(context: context) }
+        }
+        if DealsStore.shared.connected {
+            Task { @MainActor in _ = await DealsIngest.refresh(context: context) }
+        }
     }
 }

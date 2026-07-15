@@ -49,6 +49,7 @@ extension ThingKind {
         case .approval:   return "hand.raised"
         case .transaction: return "arrow.left.arrow.right"
         case .contact:    return "person.crop.circle"
+        case .product:    return "bag"
         }
     }
 
@@ -105,7 +106,6 @@ enum BridgeGlyph {
         case "linear":    return "list.bullet.rectangle"
         case "notion":    return "doc.richtext"
         case "x", "twitter": return "bookmark"
-        case "telegram":  return "paperplane"
         case "reddit":    return "text.bubble"
         case "youtube":   return "play.rectangle"
         case "substack":  return "doc.text.image"
@@ -136,6 +136,9 @@ enum BridgeGlyph {
         case "steam":     return "gamecontroller"
         case "obsidian":  return "text.book.closed"
         case "twitch":    return "tv"
+        case "shopify":   return "bag"
+        case "deals":     return "tag.fill"
+        case "open food facts": return "barcode.viewfinder"
         default:          return "app"
         }
     }
@@ -166,6 +169,7 @@ extension ThingKind {
         case .approval:   return Color(hex: "#ff375f")   // crimson — needs your call
         case .transaction: return Color(hex: "#f7931a")  // amber — onchain (a vertical kind, may share the warm family)
         case .contact:    return Color(hex: "#34c759")   // green — people
+        case .product:    return Color(hex: "#30b0c7")   // teal — shopping
         }
     }
 }

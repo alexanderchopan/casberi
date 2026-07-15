@@ -206,6 +206,57 @@ enum ProbeHooks {
                 NSLog("GeckoTerminal probe: %@ trending in", n.map(String.init) ?? "FAILED")
             }
         },
+        // `-shopifyStore <url[,url]>` follows one or more Shopify stores and
+        // syncs — headless bridge test. A blocked store logs FAILED honestly.
+        Hook(key: "shopifyStore") { spec, context in
+            for raw in spec.split(separator: ",") {
+                ShopifyStore.shared.add(String(raw).trimmingCharacters(in: .whitespaces))
+            }
+            Task { @MainActor in
+                let n = await ShopifyIngest.refresh(context: context)
+                NSLog("Shopify probe: %@ new products", n.map(String.init) ?? "FAILED")
+            }
+        },
+        // `-dealsFeed <sources|YES>` connects the Deals bridge (a comma list of
+        // source ids, or YES for the defaults) and syncs — headless test.
+        Hook(key: "dealsFeed") { spec, context in
+            let list = spec.split(separator: ",")
+                .compactMap { DealSource.from(String($0).trimmingCharacters(in: .whitespaces)) }
+            if list.isEmpty { DealsStore.shared.connectDefaults() }
+            else { for s in list { DealsStore.shared.add(s) } }
+            Task { @MainActor in
+                let n = await DealsIngest.refresh(context: context)
+                NSLog("Deals probe: %@ new deals", n.map(String.init) ?? "FAILED")
+            }
+        },
+        // `-barcodeProbe <code>` looks up a grocery barcode in Open Food Facts
+        // and lands it — headless test of the keyless lookup.
+        Hook(key: "barcodeProbe") { code, context in
+            Task { @MainActor in
+                guard let food = await OpenFoodFacts.lookup(code) else {
+                    NSLog("Barcode probe: FAILED (not found)"); return
+                }
+                let landed = OpenFoodFacts.land(food, context: context) != nil
+                NSLog("Barcode probe: %@ — %@ (%@)", food.name,
+                      landed ? "landed" : "already saved", food.nutriscore ?? "no score")
+            }
+        },
+        // `-priceProbe <url>` parses a product page's price/identity and NSLogs
+        // it — the price-watch parser, headless (no thing landed).
+        Hook(key: "priceProbe") { raw, _ in
+            guard let url = URL(string: raw.trimmingCharacters(in: .whitespaces)) else { return }
+            Task { @MainActor in
+                if let meta = await ProductMeta.fetch(url) {
+                    NSLog("Price probe: title=%@ price=%@ %@ image=%@",
+                          meta.title ?? "-",
+                          meta.priceValue.map { String($0) } ?? "nil",
+                          meta.priceCurrency ?? "-",
+                          (meta.image?.isEmpty == false) ? "yes" : "no")
+                } else {
+                    NSLog("Price probe: FAILED (no price or identity found)")
+                }
+            }
+        },
         // `-watchToken <address|symbol|link>` watches a token headlessly.
         Hook(key: "watchToken") { query, context in
             Task { @MainActor in

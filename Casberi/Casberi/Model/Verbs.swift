@@ -103,6 +103,12 @@ enum VerbDerivation {
             } else if let url = Capture.detectURL(in: thing.content.isEmpty ? thing.title : thing.content) {
                 out.append(Verb(label: "Open link", icon: "safari", action: .openURL(url)))
             }
+        case .product:
+            // A product opens on the store's own page — the permalink stored in
+            // content. Read-only hand-off: Casberi never checks out.
+            if let url = Capture.detectURL(in: thing.content.isEmpty ? thing.title : thing.content) {
+                out.append(Verb(label: "Open in store", icon: "bag", action: .openURL(url)))
+            }
         case .screenshot:
             out.append(Verb(label: "Open in Photos", icon: "photo",
                             action: .openURL(URL(string: "photos-redirect://")!)))
@@ -360,6 +366,7 @@ enum PlaceWords {
         case .skill:       return "banked by you"
         case .transaction: return "in your wallet"
         case .contact:     return "in your contacts"
+        case .product:     return "from a store you follow"
         default:           return "in your things"
         }
     }

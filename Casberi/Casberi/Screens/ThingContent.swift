@@ -16,7 +16,9 @@ struct ThingContentView: View {
     /// can't drift: a token/Kalshi link renders a chart with no host line,
     /// and its Site row must stay.
     static func showsLinkPreview(_ thing: Thing) -> Bool {
-        thing.kind == .link
+        // A product previews its page the same way a link does, so it dedups
+        // the Site row identically — else the host shows twice.
+        (thing.kind == .link || thing.kind == .product)
             && TokenChart.route(from: thing.content) == nil
             && KalshiMarket.route(from: thing.content) == nil
             && Capture.detectURL(in: thing.content.isEmpty ? thing.title : thing.content) != nil
@@ -46,6 +48,15 @@ struct ThingContentView: View {
                 // yet the record still carries its mzstatic cover. Lead with
                 // that art instead of a blank sheet (fix 2026-07-12: every
                 // music item opened to an empty sheet).
+                StoredArtContent(urlString: art)
+            }
+        case .product:
+            // A product leads with its page preview and photo — the store/deal
+            // page in `content`, the product image in `previewImageURL` — the
+            // same treatment a link gets, so a product never renders as a bare URL.
+            if let url = Capture.detectURL(in: thing.content.isEmpty ? thing.title : thing.content) {
+                LinkPreviewCard(url: url, storedImageURL: thing.previewImageURL)
+            } else if let art = thing.previewImageURL, !art.isEmpty {
                 StoredArtContent(urlString: art)
             }
         case .chat:

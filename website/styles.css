@@ -108,6 +108,9 @@ nav { display: flex; align-items: center; justify-content: space-between; paddin
 .ai-podcasts  { background: linear-gradient(160deg, #d669ff, #822cbf); }
 .ai-contacts  { background: #34c759; }
 .ai-kindle    { background: linear-gradient(160deg, #4a4f57, #23272e); }
+.ai-shopify   { background: #5e8e3e; }
+.ai-deals     { background: #e0245e; }
+.ai-openfoodfacts { background: #7cb342; }
 .ai-more      { background: var(--surface-2); color: var(--muted); }
 .ai-more span { font-size: 20px; font-weight: 800; letter-spacing: -1px; line-height: 1; }
 

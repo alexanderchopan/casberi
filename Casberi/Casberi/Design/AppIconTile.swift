@@ -81,6 +81,9 @@ extension DS {
         case "podcasts":            return Color.fixed("#8a2be2")   // Apple Podcasts purple
         case "contacts":            return Color.fixed("#34c759")   // Contacts green
         case "kindle":              return Color.fixed("#f2a900")   // Amazon/Kindle amber
+        case "shopify":             return Color.fixed("#5e8e3e")   // Shopify's green
+        case "deals":               return Color.fixed("#e0245e")   // a sale-tag crimson
+        case "open food facts":     return Color.fixed("#7cb342")   // a fresh grocery green
         default:                    return nil
         }
     }

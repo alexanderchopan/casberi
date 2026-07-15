@@ -294,6 +294,12 @@ enum StorePreview {
             "r1 = Row(\"Sony WH-1000XM5 · $278 (was $399)\", \"Product\", \"Deals\", \"1h\")",
             "r2 = Row(\"Anker power bank · $34\", \"Product\", \"Deals\", \"3h\")",
         ]
+        case "Open Food Facts": [
+            "root = Stack([w])",
+            "w = Widget(\"Scanned in\", null, [r1, r2])",
+            "r1 = Row(\"Oatly Barista Edition · Nutri-Score C\", \"Product\", \"Open Food Facts\", \"now\")",
+            "r2 = Row(\"Clif Bar, Chocolate Chip · Nutri-Score D\", \"Product\", \"Open Food Facts\", \"1d\")",
+        ]
         default:
             nil
         }

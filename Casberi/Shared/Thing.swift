@@ -19,6 +19,11 @@ enum ThingKind: String, Codable, CaseIterable {
     // swap, send, or receive is a discrete event, so it fits the feed; holdings
     // and portfolio value are synthesis, not things.
     case transaction
+    // Shopping (2026-07-14) — a product you follow or watch: a Shopify store's
+    // new drop, a barcode you scanned, a page you're watching for a price drop.
+    // A discrete item with a price and a store, so it fits the feed like a link
+    // does; its own kind gives shopping a bag glyph and a "Products" pile.
+    case product
 
     /// Set form for treemap cells ("Events" is the pile; "Event" is the thing).
     var typeTagPlural: String {
@@ -47,6 +52,7 @@ enum ThingKind: String, Codable, CaseIterable {
         case .approval:   return "Approval"
         case .transaction: return "Transaction"
         case .contact:    return "Contact"
+        case .product:    return "Product"
         }
     }
 }
@@ -188,6 +194,16 @@ final class Thing {
     /// everything else.
     var repoLanguage: String? = nil
 
+    /// A product's current price as a number (2026-07-14), in `priceCurrency` —
+    /// the anchor that lets a re-check say "dropped $40". The row shows the
+    /// formatted price in its title; this is the comparable value, set by the
+    /// Shopify/Deals ingest and the pasted-product parser. Optional + default
+    /// nil keeps CloudKit mirroring happy; nil for every non-product thing.
+    var priceValue: Double? = nil
+    /// The ISO 4217 code (`USD`, `GBP`) `priceValue` is denominated in — so a
+    /// re-formatted price never guesses the currency. nil when unknown.
+    var priceCurrency: String? = nil
+
     init(
         id: UUID = UUID(),
         kind: ThingKind,
@@ -216,7 +232,7 @@ final class Thing {
     }
 }
 
-private extension Array where Element == String {
+extension Array where Element == String {
     /// De-dupes case-insensitively while preserving first-seen order.
     func reduced() -> [String] {
         var seen = Set<String>()

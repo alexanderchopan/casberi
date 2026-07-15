@@ -33,7 +33,8 @@ enum BridgeCatalog {
             if connectable && !needsSetup { return "One tap" }
             let keyless: Set<String> = ["Wallet", "Tokens", "Reddit", "YouTube",
                 "RSS", "Substack", "Podcasts", "Pinterest", "Farcaster",
-                "Bluesky", "OpenSea", "Kalshi", "Shopify", "GeckoTerminal", "Deals"]
+                "Bluesky", "OpenSea", "Kalshi", "Shopify", "GeckoTerminal", "Deals",
+                "Open Food Facts"]
             if keyless.contains(name) { return "No account" }
             let imports: Set<String> = ["ChatGPT", "Claude", "Gemini",
                 "Day One", "Apple Journal", "Kindle"]
@@ -85,6 +86,9 @@ enum BridgeCatalog {
               needsSetup: true),
         Offer(name: "Deals",       tagline: "The best deals, as they drop",          group: "Shopping",  connectable: true,
               summary: "Follow the deal aggregators — Slickdeals, DealNews — and their newest deals land in your feed as products, each already priced in the headline and opening back on the deal's own page. Fetched straight from each source's public feed by this iPhone: no account, read-only — nothing here buys anything.",
+              needsSetup: true),
+        Offer(name: "Open Food Facts", tagline: "Scan a grocery barcode",           group: "Shopping",  connectable: true,
+              summary: "Scan or enter a grocery item's barcode and the product lands in your feed — its name, picture, and Nutri-Score, from the open food database. Keyless and free: Open Food Facts is a public, collaborative catalog, so no account, and nothing about you leaves this iPhone but the barcode. Read-only.",
               needsSetup: true),
         Offer(name: "Venice",      tagline: "Private answers with your key",         group: "Agent",     connectable: true,
               summary: "Venice keeps chats on your own device by design, so there's nothing to read in — instead, your Venice key powers \"Try with your key\": any answer re-runs on Venice's private API, straight from this iPhone, only when you tap.",
