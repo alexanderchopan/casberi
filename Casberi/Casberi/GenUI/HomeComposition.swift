@@ -300,8 +300,11 @@ enum HomeComposition {
     /// board module: no size pin and no "Remove from Home" (there's no pin
     /// behind it) — it's automatic synthesis like the map, not a thing the
     /// person pinned. Emitted only when something is due (honesty: no empty
-    /// card, no dead controls). Each row's time slot carries the WHEN as words
-    /// ("Tomorrow", "Overdue"), not the ago-time every other Home row shows.
+    /// card, no dead controls). Grouped into day SECTIONS (2026-07-15) — a
+    /// `ComingHead` day divider then that day's rows — always led by Today (even
+    /// empty, a "Nothing scheduled" line) so the card reads as a calendar that
+    /// starts on today rather than jumping to the next event. The WHEN now lives
+    /// in the section header, not each row's trailing slot.
     ///
     /// Rendered by the dedicated FLAT `ComingUp` component, NOT the generic
     /// `Widget` (crash fix 2026-07-15): a `Widget` of `Row`s nests each row
@@ -309,24 +312,44 @@ enum HomeComposition {
     /// view levels deep. Five of those at the top of the EAGER Home head pushed
     /// the first-frame SwiftUI tree past the 8MB main-stack margin — the
     /// recurring deep-tree overflow (CLAUDE.md: "flatten the composition tree,
-    /// not more stack"). `GenComingUp` builds header + all rows in ONE body,
-    /// one shallow HStack per row, no per-row erasure/mount. Same 5-row list,
-    /// tap-to-open, and long-press Open / Open in app. The child `Row(...)`
-    /// lines are unchanged — GenComingUp reads them straight from `els`.
+    /// not more stack"). `GenComingUp` builds header + all headers/rows in ONE
+    /// body, one shallow HStack/VStack per line, no per-line erasure/mount. Both
+    /// `ComingHead(...)` and `Row(...)` children are read straight from `els`.
     private static func appendComingUp(_ things: [Thing],
                                        to doc: inout [String],
                                        rootRefs: inout [String]) {
-        let items = Array(ComingUp.items(from: things).prefix(5))
-        guard !items.isEmpty else { return }
-        let childIds = items.indices.map { "comingUpC\($0)" }
-        doc.append("comingUp = ComingUp(\(q(String(localized: "Coming up"))), [\(childIds.joined(separator: ", "))])")
-        for (i, item) in items.enumerated() {
-            let t = item.thing
-            let openable = VerbDerivation.verbs(for: t).contains {
-                if case .openURL = $0.action { return true } else { return false }
-            } ? "app" : ""
-            doc.append("comingUpC\(i) = Row(\(q(t.title)), \(q(t.kind.typeTag)), \(q(t.source)), \(q(ComingUp.label(for: item))), \(q(t.id.uuidString)), \(q(openable)))")
+        // The card only appears when something's actually coming up (honesty:
+        // no empty card). When it does, it's grouped into day SECTIONS that
+        // always lead with Today — so a person with nothing today sees "Today ·
+        // Nothing scheduled" instead of the card jumping to tomorrow's meeting
+        // (ruling 2026-07-15). `sections` always carries a Today section, so
+        // "coming up" means at least one section actually has a row.
+        let sections = ComingUp.sections(from: things)
+        guard sections.contains(where: { !$0.isEmpty }) else { return }
+
+        // Children are a flat, heterogeneous list of `ComingHead` (a day header,
+        // arg1 "1" when the section is empty) and `Row` lines — GenComingUp
+        // renders them inline in one shallow body, the flat-render law the crash
+        // fix set (CLAUDE.md: any card in the eager Home head must render flat).
+        var childIds: [String] = []
+        var lines: [String] = []
+        var rowN = 0
+        for (s, section) in sections.enumerated() {
+            let headID = "comingUpH\(s)"
+            childIds.append(headID)
+            lines.append("\(headID) = ComingHead(\(q(section.label)), \(q(section.isEmpty ? "1" : "")))")
+            for item in section.items {
+                let t = item.thing
+                let openable = VerbDerivation.verbs(for: t).contains {
+                    if case .openURL = $0.action { return true } else { return false }
+                } ? "app" : ""
+                let rowID = "comingUpC\(rowN)"; rowN += 1
+                childIds.append(rowID)
+                lines.append("\(rowID) = Row(\(q(t.title)), \(q(t.kind.typeTag)), \(q(t.source)), \(q("")), \(q(t.id.uuidString)), \(q(openable)))")
+            }
         }
+        doc.append("comingUp = ComingUp(\(q(String(localized: "Coming up"))), [\(childIds.joined(separator: ", "))])")
+        doc.append(contentsOf: lines)
         rootRefs.append("comingUp")
     }
 

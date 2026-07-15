@@ -562,10 +562,15 @@ private struct GenComingUp: View {
                 .foregroundStyle(DS.textPrimary)
                 .padding(.init(top: DS.Space.s4, leading: DS.Space.s4,
                                bottom: DS.Space.s1, trailing: DS.Space.s4))
-            // Rows inline — resolved refs draw, unresolved ones (still
-            // streaming) simply drop, the mount law without a skeleton nest.
+            // Headers and rows inline — resolved refs draw, unresolved ones
+            // (still streaming) simply drop, the mount law without a skeleton
+            // nest. A `ComingHead` is a day divider (Today / Tomorrow / Overdue
+            // / weekday); everything else is a `Row`.
             ForEach(el.refs(1), id: \.self) { ref in
-                if let row = els[ref] { rowLine(row) }
+                if let child = els[ref] {
+                    if child.comp == "ComingHead" { headLine(child) }
+                    else { rowLine(child) }
+                }
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -573,6 +578,27 @@ private struct GenComingUp: View {
         .dsWidgetSurface()
         .padding(.horizontal, DS.Space.s4)
         .padding(.top, DS.Space.s4)
+    }
+
+    /// A day-section header — the WHEN as words, sentence case (§8: no
+    /// letter-spacing, no all-caps). An empty section (arg1 "1", only ever
+    /// Today) trades its rows for a muted "Nothing scheduled" line so the card
+    /// still visibly starts on today.
+    private func headLine(_ head: GenEl) -> some View {
+        VStack(alignment: .leading, spacing: DS.Space.s1) {
+            Text(head.str(0))
+                .dsText(.heading17)
+                .foregroundStyle(DS.textSecondary)
+            if head.str(1) == "1" {
+                Text(String(localized: "Nothing scheduled"))
+                    .dsText(.body17)
+                    .foregroundStyle(DS.textTertiary)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, DS.Space.s4)
+        .padding(.top, DS.Space.s3)
+        .padding(.bottom, head.str(1) == "1" ? DS.Space.s2 : DS.Space.s1)
     }
 
     /// One line — the same geometry GenRow draws (tag glyph · title · trailing
@@ -587,7 +613,12 @@ private struct GenComingUp: View {
                 .foregroundStyle(DS.textPrimary)
                 .lineLimit(1)
                 .frame(maxWidth: .infinity, alignment: .leading)
-            Text(row.str(3)).dsText(.subhead13).foregroundStyle(DS.textTertiary)
+            // Trailing slot — empty now that the day lives in the section
+            // header (only a non-empty WHEN, e.g. a future bespoke time, draws).
+            let trailing = row.str(3)
+            if !trailing.isEmpty {
+                Text(trailing).dsText(.subhead13).foregroundStyle(DS.textTertiary)
+            }
         }
         .padding(.horizontal, DS.Space.s4)
         .padding(.vertical, DS.Space.s3)

@@ -72,6 +72,56 @@ enum ComingUp {
         return out.sorted { $0.date < $1.date }
     }
 
+    /// A day's slice of the lane — a header ("Today", "Tomorrow", "Overdue", a
+    /// weekday) and the items due that day. Today is ALWAYS present, even when
+    /// it has nothing, so the card reads as a calendar that STARTS on today
+    /// rather than jumping to the next event (ruling 2026-07-15: a person with
+    /// nothing today was confused the card led with tomorrow's meeting). An
+    /// empty section renders a muted placeholder instead of rows.
+    struct Section: Identifiable {
+        let label: String
+        let items: [Item]
+        var isEmpty: Bool { items.isEmpty }
+        var id: String { label }
+    }
+
+    /// The lane grouped into day sections, in display order: overdue reminders
+    /// first (their own section), then Today (always, even empty), then each
+    /// following day that has something. `limit` caps the ITEM rows across
+    /// sections (headers and the empty-Today placeholder don't count) so the
+    /// card stays compact — the same budget the flat list used to prefix.
+    static func sections(from things: [Thing], now: Date = .now,
+                         calendar: Calendar = .current, limit: Int = 5) -> [Section] {
+        let capped = Array(items(from: things, now: now, calendar: calendar).prefix(limit))
+        let todayStart = calendar.startOfDay(for: now)
+
+        // Overdue reminders lead as one section, the way an expired credit does.
+        let overdue = capped.filter { $0.overdue }
+
+        // The rest group by calendar day.
+        var byDay: [Date: [Item]] = [:]
+        for item in capped where !item.overdue {
+            byDay[calendar.startOfDay(for: item.date), default: []].append(item)
+        }
+        // Today is a section no matter what — the whole point of the ruling.
+        if byDay[todayStart] == nil { byDay[todayStart] = [] }
+
+        var out: [Section] = []
+        if !overdue.isEmpty {
+            out.append(Section(label: String(localized: "Overdue"), items: overdue))
+        }
+        for day in byDay.keys.sorted() {
+            let dayItems = byDay[day] ?? []
+            let label: String
+            if day == todayStart { label = String(localized: "Today") }
+            else if let first = dayItems.first {
+                label = self.label(for: first, now: now, calendar: calendar)
+            } else { continue }   // a non-today day never lands empty; guard anyway
+            out.append(Section(label: label, items: dayItems))
+        }
+        return out
+    }
+
     /// The short right-aligned label a row wears — the WHEN, in the fewest
     /// words: "Overdue", "Today", "Tomorrow", else the weekday ("Thursday").
     static func label(for item: Item, now: Date = .now,
