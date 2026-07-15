@@ -557,9 +557,17 @@ struct ThingSheetView: View {
             related = mentions
         } else {
             guard !myTags.isEmpty else { return }
-            related = Array(all.filter { other in
-                other.id != thing.id && !myTags.isDisjoint(with: other.tags)
-            }.prefix(6))
+            // Meaning first (2026-07-14): rank the recent corpus by semantic
+            // similarity to this thing, so a GitHub PR reaches the Linear
+            // ticket, the chat, the note that share NO tag — the cross-source
+            // weaving tag overlap can't find (a feed tag like "Stars" only ever
+            // reaches other GitHub things). Tag overlap stays the fallback when
+            // the on-device embedding is unavailable or this thing isn't
+            // embedded yet.
+            related = semanticRelated(in: all)
+                ?? Array(all.filter { other in
+                    other.id != thing.id && !myTags.isDisjoint(with: other.tags)
+                }.prefix(6))
         }
         guard !related.isEmpty else { return }
 
@@ -569,6 +577,30 @@ struct ThingSheetView: View {
             doc.append("c\(i) = Chip(\"\(t.source)\", \"\(title)\")")
         }
         relatedStream.stream(doc)
+    }
+
+    /// The recent corpus ranked by on-device semantic similarity to this thing
+    /// — the meaning-based Related set (EmbeddingIndex, the same vectors the
+    /// answer path scores). Cross-source by nature: it scores by meaning, not
+    /// source or tag. nil when the model is unavailable, this thing can't be
+    /// embedded, or nothing clears the floor — the caller then falls back to
+    /// tag overlap. The 0.5 cosine floor keeps it to genuine relations (looser
+    /// than the answer path's 0.62 qualify floor — "related", not "answers").
+    private func semanticRelated(in all: [Thing]) -> [Thing]? {
+        guard EmbeddingIndex.isAvailable,
+              let query = EmbeddingIndex.vector(for: EmbeddingIndex.indexText(for: thing))
+        else { return nil }
+        let qNorm = EmbeddingIndex.norm(query)
+        guard qNorm > 0 else { return nil }
+        let scored = all.compactMap { other -> (Thing, Double)? in
+            guard other.id != thing.id, let data = other.embedding, !data.isEmpty else { return nil }
+            let sim = EmbeddingIndex.similarity(query: query, queryNorm: qNorm, packed: data)
+            return sim >= 0.5 ? (other, sim) : nil
+        }
+        .sorted { $0.1 > $1.1 }
+        .prefix(6)
+        .map(\.0)
+        return scored.isEmpty ? nil : Array(scored)
     }
 
     /// Corpus things that MENTION this watched token — a cashtag ($PEPE,
