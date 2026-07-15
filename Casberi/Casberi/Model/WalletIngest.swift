@@ -22,6 +22,12 @@ enum WalletIngest {
 
     @MainActor private static var running = false
 
+    /// The USD floor a holding must clear to count (ruling 2026-07-15, up from
+    /// $1). Airdrop-spam tokens that carry a fake price were sneaking past the
+    /// old $1 line and inflating the "across N tokens" count / treemap; $1.99
+    /// drops the dust while keeping genuine small positions.
+    static let holdingFloor: Double = 1.99
+
     /// Reads recent transfers for every watched address, across chains, and
     /// lands new ones. Returns the new count, or nil when nothing could be
     /// reached at all (offline / bad key).
@@ -442,7 +448,7 @@ enum WalletIngest {
                     let decimals = (md?["decimals"] as? Int) ?? 18   // native is always 18
                     let amount = hexToDouble(balHex) / pow(10, Double(decimals))
                     let usd = amount * price
-                    guard usd >= 1 else { continue }
+                    guard usd >= holdingFloor else { continue }
                     let sym = clean(symbol)
                     bySymbol[sym, default: 0] += usd
                     if let tokenAddr = t["tokenAddress"] as? String,
@@ -634,7 +640,7 @@ enum WalletIngest {
         } else if priced == 0 {
             out.append("Empty (correct): nothing priced held — only unpriced/airdrop tokens")
         } else {
-            out.append("FAIL: \(priced) priced token(s) but all under the $1 floor")
+            out.append(String(format: "Empty: %d priced token(s), all under the $%.2f floor (dust/spam)", priced, holdingFloor))
         }
         return out
     }
