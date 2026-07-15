@@ -114,6 +114,7 @@ struct OnboardingView: View {
                         .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
                 cta
+                skipLink
             }
             .padding(.horizontal, DS.Space.s4)
             .padding(.bottom, DS.Space.s4)
@@ -333,6 +334,34 @@ struct OnboardingView: View {
         .dsGlassProminent(tint: connected.isEmpty ? DS.gray200 : DS.tint,
                           cornerRadius: DS.Radius.pill)
         .disabled(connected.isEmpty)
+    }
+
+    /// The escape hatch (2026-07-15): the three Connect rows each run a real
+    /// iOS permission ask, and once a person taps Deny the OS never re-presents
+    /// that dialog — so without this a declined permission left the CTA gated
+    /// forever ("try again anytime" was a promise iOS wouldn't keep), trapping
+    /// anyone who wanted in without granting anything at minute zero. "Not now"
+    /// always advances into the app with nothing connected; every app still
+    /// waits, connectable later, in the store.
+    private var skipLink: some View {
+        Button {
+            guard connected.isEmpty else { return }
+            DSHaptic.tap()
+            onContinue([])
+        } label: {
+            Text("Not now")
+                .dsText(.subhead13)
+                .foregroundStyle(DS.textTertiary)
+                .frame(maxWidth: .infinity)
+                .frame(height: 36)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        // Once anything's connected the CTA reads "Continue" — the skip would
+        // be a second, weaker door to the same place, so it steps aside.
+        .opacity(connected.isEmpty ? 1 : 0)
+        .allowsHitTesting(connected.isEmpty)
+        .animation(DS.Motion.standard, value: connected.isEmpty)
     }
 }
 
