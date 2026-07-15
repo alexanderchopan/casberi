@@ -34,6 +34,15 @@ struct HomeScreen: View {
     @Bindable private var route = HomeRoute.shared
     @Bindable private var wallet = WalletStore.shared
     @State private var stream = GenStream()
+    /// The typewriter entrance plays ONCE per app session. MainSurface swaps
+    /// HomeScreen in and out with an `if showingBoard` (board vs feed), so
+    /// re-selecting the "Pinned" chip REBUILDS HomeScreen from scratch —
+    /// resetting @State (including `stream`) and replaying the whole reveal on
+    /// every visit, which read as "Home loads slowly" (report 2026-07-15). This
+    /// process-lifetime flag keeps the cold-launch reveal but makes every later
+    /// return an instant paint. Pull-to-refresh still re-streams deliberately
+    /// (it passes `instant: false` itself).
+    @MainActor private static var didPlayEntrance = false
     @State private var openProject: ProjectRoute?
     @State private var pinnedThing: Thing?
     @State private var walletOpen = false
@@ -337,7 +346,9 @@ struct HomeScreen: View {
             // compose already knows to show the wallet slot's placeholder
             // rather than nothing.
             loadWalletHoldings()
-            streamComposition()
+            // Stream the reveal on the session's first Home compose; every later
+            // board rebuild (chip re-tap) paints instantly (see didPlayEntrance).
+            streamComposition(instant: HomeScreen.didPlayEntrance)
             #if DEBUG
             // Debug hook: `-openProject "Work"` pushes a project — for
             // screenshots. (`-openSettings`/`-openAppsDelay` moved to
@@ -391,6 +402,9 @@ struct HomeScreen: View {
             stream.paint(doc.lines)   // an update, not an entrance — no typewriter
         } else {
             stream.stream(doc.lines)
+            // The one entrance for this session has now played — later board
+            // rebuilds (a "Pinned" re-tap) paint instantly instead of replaying.
+            HomeScreen.didPlayEntrance = true
         }
         // Capture the stable keys BEFORE syncBoard reads them — the streamed
         // doc's elements aren't parsed yet, so moduleKey can't derive them from
