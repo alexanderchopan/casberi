@@ -13,8 +13,16 @@ struct TokenSetupScreen: View {
     @Environment(\.openURL) private var openURL
     @State private var tokenField = ""
     @State private var syncing = false
+    /// A feed toggle (or paste) during an in-flight sync sets this so the
+    /// running pass loops once more instead of dropping the request.
+    @State private var syncPending = false
     @State private var result: String?
     @State private var resultIsError = false
+
+    /// GitHub's feed selection — one connection, several streams the person
+    /// turns on (the wallet's holdings/NFTs idea, generalized). Only read on
+    /// the GitHub branch; harmless to bind for every bridge.
+    @Bindable private var githubFeeds = GitHubFeeds.shared
 
     /// GitHub's device flow (prd §67 goal ②) — sign in on github.com instead
     /// of hunting a token. Only GitHub has a public-client flow; the other
@@ -41,6 +49,7 @@ struct TokenSetupScreen: View {
             if deviceFlowOffered { signInSection }
             stepsSection
             tokenSection
+            if bridge == .github && bridge.connected { feedsSection }
             if !recent.isEmpty {
                 PinToHomeButton(source: bridge.rawValue, inSection: true)
                 RecentThingsSection(header: "Landed", things: recent)
@@ -130,7 +139,7 @@ struct TokenSetupScreen: View {
             Text("Sign in").dsText(.label12)
                 .foregroundStyle(DS.textTertiary)
         } footer: {
-            Text("Sign-in grants GitHub's standard repo scope — the smallest that reaches private issues and pull requests. Casberi only reads; any future write will ask first, every time.")
+            Text("Sign-in grants repo, profile, and gist access — enough for every feed you pick. Casberi only reads on its own; any write — like closing an issue — asks first, every time.")
                 .dsText(.callout15).foregroundStyle(DS.textTertiary)
         }
     }
@@ -243,6 +252,44 @@ struct TokenSetupScreen: View {
         }
     }
 
+    /// GitHub only — the feed picker. One connection, several streams the
+    /// person each turns on; toggling re-syncs so a newly-chosen feed lands
+    /// now, not next foreground.
+    private var feedsSection: some View {
+        Section {
+            ForEach(GitHubFeed.allCases) { feed in
+                Button {
+                    githubFeeds.toggle(feed)
+                    DSHaptic.tap()
+                    Task { await sync() }
+                } label: {
+                    HStack(alignment: .firstTextBaseline, spacing: DS.Space.s3) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(feed.title)
+                                .dsText(.body17).foregroundStyle(DS.textPrimary)
+                            Text(feed.blurb)
+                                .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        Spacer(minLength: DS.Space.s2)
+                        if githubFeeds.isOn(feed) {
+                            Image(systemName: "checkmark")
+                                .dsText(.body17).foregroundStyle(DS.tint)
+                        }
+                    }
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .dsListCardRow()
+            }
+        } header: {
+            Text("Feeds").dsText(.label12).foregroundStyle(DS.textTertiary)
+        } footer: {
+            Text("Pick what to watch. Stars and watched repos are what you saved; releases and contributions are what happened. Everything lands under GitHub.")
+                .dsText(.callout15).foregroundStyle(DS.textTertiary)
+        }
+    }
+
     private var removeSection: some View {
         Section {
             Button("Remove token", role: .destructive) {
@@ -270,33 +317,45 @@ struct TokenSetupScreen: View {
     }
 
     private func sync(justConnected: Bool = false) async {
-        guard !syncing else { return }
+        // A feed toggled (or a paste) while a sync is mid-flight requeues rather
+        // than being dropped — the running pass loops once more, re-reading the
+        // selection, so a newly-chosen GitHub feed lands now, not next
+        // foreground (the OpenSea pattern).
+        if syncing { syncPending = true; return }
         syncing = true
-        let added = await TokenIngest.refresh(bridge, context: modelContext)
-        syncing = false
-        loadRecent()
-        guard let added else {
-            if justConnected {
-                // A fresh paste that fails doesn't stay: keeping it would show
-                // "Update"/"Remove token" for a connection that never worked and
-                // retry a dead token on every foreground.
-                TokenVault.delete(bridge.tokenKey)
-                result = String(localized: "That token didn't work — check it (and your connection) and paste again.")
-            } else {
-                // A background re-sync of an already-connected bridge failed. The
-                // user didn't just paste anything, so don't accuse the empty field
-                // — say what actually happened: the saved token or the network.
-                result = String(localized: "Couldn't refresh \(bridge.rawValue) just now — your saved token may need renewing.")
+        defer { syncing = false }
+        // Only the FIRST attempt of a fresh paste may retire the token; once a
+        // pass has succeeded, a requeued pass that hits a network blip must not
+        // discard a token we just proved works.
+        var connecting = justConnected
+        repeat {
+            syncPending = false
+            let added = await TokenIngest.refresh(bridge, context: modelContext)
+            loadRecent()
+            guard let added else {
+                if connecting {
+                    // A fresh paste that fails doesn't stay: keeping it would show
+                    // "Update"/"Remove token" for a connection that never worked and
+                    // retry a dead token on every foreground.
+                    TokenVault.delete(bridge.tokenKey)
+                    result = String(localized: "That token didn't work — check it (and your connection) and paste again.")
+                } else {
+                    // A background re-sync of an already-connected bridge failed. The
+                    // user didn't just paste anything, so don't accuse the empty field
+                    // — say what actually happened: the saved token or the network.
+                    result = String(localized: "Couldn't refresh \(bridge.rawValue) just now — your saved token may need renewing.")
+                }
+                resultIsError = true
+                return
             }
-            resultIsError = true
-            return
-        }
-        resultIsError = false
-        result = added > 0 ? String(localized: "\(added) \(bridge.noun) in") : String(localized: "Up to date")
-        let proof = added > 0 ? "\(added) \(bridge.noun) in" : "Synced just now"
-        if store.registerConnected(id: bridge.bridgeID, name: bridge.rawValue,
-                                   proof: proof, can: [bridge.canLine]) {
-            DSHaptic.success()
-        }
+            connecting = false
+            resultIsError = false
+            result = added > 0 ? String(localized: "\(added) \(bridge.noun) in") : String(localized: "Up to date")
+            let proof = added > 0 ? "\(added) \(bridge.noun) in" : "Synced just now"
+            if store.registerConnected(id: bridge.bridgeID, name: bridge.rawValue,
+                                       proof: proof, can: [bridge.canLine]) {
+                DSHaptic.success()
+            }
+        } while syncPending
     }
 }

@@ -44,7 +44,7 @@ enum TokenBridge: String, CaseIterable, Identifiable {
             "Copy it and paste it below."]
         case .github: [
             "Open github.com → Settings → Developer settings → Personal access tokens.",
-            "Generate a fine-grained token — read-only access to issues and pull requests is enough.",
+            "Generate a token with read-only access to your repositories, gists, and profile — enough for every feed.",
             "Copy it and paste it below."]
         case .todoist: [
             "Open Todoist → Settings → Integrations → Developer.",
@@ -90,7 +90,7 @@ enum TokenBridge: String, CaseIterable, Identifiable {
     var noun: String {
         switch self {
         case .readwise: "highlights"
-        case .github:   "issues and PRs"
+        case .github:   "items"
         case .todoist:  "tasks"
         case .raindrop: "bookmarks"
         case .calcom:   "bookings"
@@ -103,7 +103,7 @@ enum TokenBridge: String, CaseIterable, Identifiable {
     var canLine: String {
         switch self {
         case .readwise: "Reads your highlights."
-        case .github:   "Reads issues and PRs that involve you."
+        case .github:   "Reads the GitHub feeds you pick — issues, stars, releases, gists, contributions, watched repos."
         case .todoist:  "Reads your open tasks."
         case .raindrop: "Reads your bookmarks."
         case .calcom:   "Reads your bookings."
@@ -201,27 +201,11 @@ enum TokenIngest {
         return all.sorted { $0.0 > $1.0 }.prefix(30).map(\.1)
     }
 
-    /// GitHub — issues and PRs that involve you, via the search API.
+    /// GitHub — the feeds the person turned on (Stars, New releases, Gists,
+    /// Contributions, Watched repos, and the original Issues & PRs). Each is a
+    /// GET or two against GitHub's own API; `GitHubFeedFetch` builds the things.
     private static func github(_ token: String) async -> [Thing]? {
-        guard let user = await IngestSupport.getJSON("https://api.github.com/user",
-                                   auth: "Bearer \(token)") as? [String: Any],
-              let login = user["login"] as? String else { return nil }
-        guard let root = await IngestSupport.getJSON(
-            "https://api.github.com/search/issues?q=involves:\(login)&sort=updated&per_page=30",
-            auth: "Bearer \(token)") as? [String: Any],
-              let items = root["items"] as? [[String: Any]] else { return nil }
-        return items.compactMap { item in
-            guard let id = item["id"], let title = item["title"] as? String,
-                  let link = item["html_url"] as? String else { return nil }
-            return Thing(
-                kind: .link,
-                title: title,
-                content: link,
-                source: "GitHub",
-                capturedAt: IngestSupport.isoDate(item["updated_at"]) ?? .now,
-                sourceRef: "gh:\(id)"
-            )
-        }
+        await GitHubFeedFetch.all(token: token)
     }
 
     /// Todoist — open tasks, newest 30.

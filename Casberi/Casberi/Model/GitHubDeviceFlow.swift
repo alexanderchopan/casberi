@@ -31,8 +31,10 @@ enum GitHubDeviceFlow {
     /// `repo` because GitHub's classic OAuth has no read-only repo scope —
     /// it's the smallest scope that reaches private issues/PRs (and the one
     /// the write-back verbs of prd §67 goal ③ will need, each still gated
-    /// behind its own consent tap). The setup copy states this plainly.
-    static let scope = "repo read:user"
+    /// behind its own consent tap). `gist` reaches your secret gists (the
+    /// Gists feed), `read:user` your profile and events. The setup copy states
+    /// this plainly.
+    static let scope = "repo read:user gist"
 
     struct Code {
         let userCode: String

@@ -236,6 +236,38 @@ enum ProbeHooks {
                 NSLog("Strava probe: connected, %d in", n)
             }
         },
+        // `-ghFeeds "stars,releases,gists"` sets which GitHub feeds are on
+        // (comma list of feed keys or titles) — headless staging of the picker.
+        Hook(key: "ghFeeds") { spec, _ in
+            let names = spec.split(separator: ",")
+                .map { $0.trimmingCharacters(in: .whitespaces).lowercased() }
+            let feeds = Set(GitHubFeed.allCases.filter {
+                names.contains($0.rawValue.lowercased()) || names.contains($0.title.lowercased())
+            })
+            GitHubFeeds.shared.set(feeds)
+            NSLog("GitHub feeds probe: enabled %@",
+                  feeds.map(\.rawValue).sorted().joined(separator: ", "))
+        },
+        // `-ghFeedProbe "<feed>"` fetches one GitHub feed with the stored token
+        // and logs the count — a bogus token logs FAILED (the honest 401 path),
+        // no real token needed to verify the plumbing.
+        Hook(key: "ghFeedProbe") { name, _ in
+            let key = name.trimmingCharacters(in: .whitespaces).lowercased()
+            guard let feed = GitHubFeed.allCases.first(where: {
+                $0.rawValue.lowercased() == key || $0.title.lowercased() == key
+            }) else { NSLog("GitHub feed probe: unknown feed %@", name); return }
+            guard let token = TokenVault.get(TokenBridge.github.tokenKey) else {
+                NSLog("GitHub feed probe: no token — connect GitHub first"); return
+            }
+            Task { @MainActor in
+                guard let login = await GitHubFeedFetch.login(token: token) else {
+                    NSLog("GitHub feed probe (%@): FAILED — token rejected", feed.rawValue); return
+                }
+                let things = await GitHubFeedFetch.fetch(feed, login: login, token: token)
+                NSLog("GitHub feed probe (%@): %@", feed.rawValue,
+                      things.map { "\($0.count) things" } ?? "FAILED")
+            }
+        },
         // `-ghDeviceProbe YES` runs the GitHub device-flow start request and
         // logs the outcome — with no client id it logs the honest unavailable
         // line (the setup screen shows paste-only in that state).
