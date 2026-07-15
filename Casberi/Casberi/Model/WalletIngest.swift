@@ -210,14 +210,35 @@ enum WalletIngest {
         guard let hash = t["hash"] as? String else { return nil }
         let asset = (t["asset"] as? String) ?? chain.symbol
         let amount = (t["value"] as? Double).map(format) ?? ""
-        let verb = received ? "Received" : "Sent"
-        var title = amount.isEmpty ? "\(verb) \(asset)" : "\(verb) \(amount) \(asset)"
-        // The counterparty, when it has a name (a watched wallet's label, a
-        // known contract, or reverse ENS) — "Sent 0.5 ETH to Uniswap" is a
-        // story where a bare receipt wasn't. Nameless stays plain: the title
-        // never wears a raw hash.
-        if let who = counterparty(of: t, received: received).flatMap({ names[$0] }) {
-            title += received ? " from \(who)" : " to \(who)"
+        let cp = counterparty(of: t, received: received)
+        // A move between two of YOUR OWN watched wallets is housekeeping, not
+        // news (delight 2026-07-15): the app understands your setup, so it
+        // says "Main → Cold" instead of a one-sided "Sent … to Cold". Only
+        // when more than one wallet is watched (labels are meaningful) and the
+        // counterparty is itself watched. The amount leads so the row still
+        // reads at a glance; "Moved" replaces the directional verb.
+        let watched = WalletStore.shared.addresses
+        let title: String
+        if watched.count > 1,
+           let cp, let other = watched.first(where: { $0.address.lowercased() == cp }),
+           let mine = watched.first(where: { $0.address.lowercased() == address.lowercased() }) {
+            let otherLabel = other.label.isEmpty ? other.short : other.label
+            let myLabel = mine.label.isEmpty ? mine.short : mine.label
+            let from = received ? otherLabel : myLabel
+            let to = received ? myLabel : otherLabel
+            let head = amount.isEmpty ? "Moved \(asset)" : "Moved \(amount) \(asset)"
+            title = "\(head) · \(from) → \(to)"
+        } else {
+            let verb = received ? "Received" : "Sent"
+            var t2 = amount.isEmpty ? "\(verb) \(asset)" : "\(verb) \(amount) \(asset)"
+            // The counterparty, when it has a name (a watched wallet's label, a
+            // known contract, or reverse ENS) — "Sent 0.5 ETH to Uniswap" is a
+            // story where a bare receipt wasn't. Nameless stays plain: the
+            // title never wears a raw hash.
+            if let who = cp.flatMap({ names[$0] }) {
+                t2 += received ? " from \(who)" : " to \(who)"
+            }
+            title = t2
         }
         let when = IngestSupport.isoDate((t["metadata"] as? [String: Any])?["blockTimestamp"])
         let thing = Thing(
@@ -342,7 +363,29 @@ enum WalletIngest {
         for (i, g) in results { if let g {
             WalletStore.shared.recordSample(address: watched[i].address, totalUSD: g.totalUSD)
         } }
-        return results.sorted { $0.0 < $1.0 }.compactMap(\.1)
+        let groups = results.sorted { $0.0 < $1.0 }.compactMap(\.1)
+        // The combined "Across your wallets" total hitting a new high is a
+        // moment (delight 2026-07-15) — fired only over the FULL watched set
+        // (`!pinnedOnly`, so Home's pinned pass and the Wallet screen's full
+        // pass can't disagree on the mark) and only with more than one wallet
+        // (a lone wallet's own high rides its per-address mark in recordSample).
+        //
+        // TWO honesty guards, both mirroring §77's combined-line rules:
+        // (1) The mark is scoped to the WATCHED SET's signature, so adding or
+        //     removing a wallet starts a fresh mark (seeded silently) — a
+        //     composition change can never masquerade as a new high (the exact
+        //     +millions-% artifact §77 fixed for the line). (2) Only when every
+        //     watched wallet priced this pass (`groups.count == watched.count`),
+        //     so a wallet intermittently failing to fetch — then recovering —
+        //     doesn't read as a gain either.
+        if !pinnedOnly, watched.count > 1, groups.count == watched.count {
+            let combined = groups.reduce(0.0) { $0 + $1.totalUSD }
+            let signature = watched.map { $0.address.lowercased() }.sorted().joined(separator: ",")
+            if WalletMoments.shared.notedNewHigh(scope: "combined:\(signature)", value: combined) {
+                WalletMoments.shared.fire(String(localized: "Across your wallets: a new high, \(TokenStats.compact(combined)) 📈"))
+            }
+        }
+        return groups
     }
 
     /// The top-5-by-value cells for one or more hex addresses, combined —
@@ -480,6 +523,15 @@ enum WalletIngest {
         }
         let groups = fetched.filter { !$0.nfts.isEmpty }
         nftCache = (key, .now, groups)
+        // A watched wallet receiving a new piece is a moment (delight
+        // 2026-07-15) — the berry rain falls and the toast names it, sibling
+        // to the starred-repo release rain. Silent on the first-ever read
+        // (seeds the baseline; no "received 40 NFTs" on connect).
+        let arrivals = WalletMoments.shared.newlyArrived(from: groups)
+        if let first = arrivals.first {
+            let more = arrivals.count > 1 ? " +\(arrivals.count - 1) more" : ""
+            WalletMoments.shared.fire(String(localized: "\(first.label) received \(first.nft.name)\(more) 🖼️"))
+        }
         return groups
     }
 

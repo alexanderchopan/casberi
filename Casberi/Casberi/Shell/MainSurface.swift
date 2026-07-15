@@ -17,6 +17,11 @@ struct MainSurface: View {
     @Environment(ShellChrome.self) private var chrome
     @Bindable private var filter = FeedFilter.shared
     @Bindable private var route = HomeRoute.shared
+    /// Wallet moments (NFT arrivals, new highs) — the data paths can't reach
+    /// the corpus-arrival watcher that fires the release rain (NFTs/holdings
+    /// aren't things), so they enqueue here and this surface deals the same
+    /// berry rain + toast (delight 2026-07-15).
+    private let walletMoments = WalletMoments.shared
     /// Anchors the doors' zoom transitions (each room grows from its door).
     @Namespace private var doorNS
 
@@ -208,6 +213,18 @@ struct MainSurface: View {
                         withAnimation(.easeOut(duration: 0.9)) { bloomHue = nil }
                     }
                 }
+            }
+            // A wallet moment landed (an NFT arrived, a new high) — deal the
+            // same berry rain + toast the starred-repo release uses, so every
+            // wallet celebration reads the same. The line names the moment.
+            .onChange(of: walletMoments.pulse) {
+                let lines = walletMoments.drain()
+                guard let latest = lines.last else { return }
+                // Rain once for the batch; name the most recent moment. A queue
+                // (not a single slot) means a moment fired while backgrounded
+                // survives here until this drain runs on foreground.
+                chrome.refreshPulse += 1
+                chrome.flash(latest)
             }
             // The FAB rides the ROOT surface only (2026-07-13 polish): pushed
             // rooms (Apps, Settings, a token form) slide over it — a compose

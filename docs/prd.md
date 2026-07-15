@@ -3035,3 +3035,69 @@ hand-authored catalog shelves mirror the app — GeckoTerminal's mini-cell
 sits under Onchain, Pinterest's under Media (index.html; hero marquee
 tiles carry no category and stay put). Verified: app Onchain shelf leads
 with GeckoTerminal; deploy zip's index.html shelves both correct.
+
+## 79. Wallet — faces, glances, and moments (surprise & delight pass, user, 2026-07-15)
+
+A delight + polish pass over the Wallet experience, prompted by "how would
+you improve the wallet and add surprise and delight." Everything stays
+inside §71's frame (your history with what you watch, not a market
+terminal) and §77's honesty (watched wallets' onchain value, read on this
+iPhone, watch-only). Ships:
+
+- **Faces (`WalletFace`).** Watching three wallets was three identical blue
+  glyphs. Now each wears its ENS **avatar** when the address published one
+  (resolved via the same ensideas call counterparty naming uses, `avatar`
+  field, http(s) only — an `eip155:` NFT avatar falls through), else a
+  **deterministic identicon** seeded from the address (soft gradient +
+  berry blobs, same seed→same face rule as BerryRain). Avatars cache in
+  WalletStore (in-memory; the identicon is always a correct meanwhile);
+  resolved on the Wallet screen and each foreground (BridgeRefresh). Shown
+  on the Watching rows, the combined sheet, and the value lines.
+- **Row sparklines.** Each watched row wears a bare value-line sparkline
+  (the Tokens split: a glance on the row, the numbers in the Value section
+  below). Only with ≥2 sampled points.
+- **Combined sheet (`CombinedWalletsSheet`).** The "Across your wallets"
+  headline now opens a full read — the combined net-worth line
+  (state-colored) decomposed into each wallet's own line in its **face's
+  color**, so a move up top reads back to the wallet that drove it. The
+  Casberi frame (history, decomposed), not Zapper's single figure.
+- **NFT-arrival delight.** A watched wallet receiving a new piece deals the
+  berry rain + a toast naming it ("Main received Chromie Squiggle #4021
+  🖼️"), sibling to the starred-repo major-release rain. NFTs/holdings
+  aren't things (§72), so they can't ride MainSurface's corpus-arrival
+  watcher — instead the data paths enqueue on **`WalletMoments`** and
+  MainSurface drains it into the same rain+toast. Silent on the first-ever
+  read (seeds the baseline; no "received 40 NFTs" on connect), backfill-
+  guarded exactly like the release rain.
+- **New-high delight.** The combined value hitting a new high fires the
+  same rain+toast (multi-wallet: scope "combined", over the FULL set so
+  Home's pinned pass and the Wallet screen can't disagree on the mark;
+  single wallet: its own per-address mark, in recordSample). Honest and
+  asymmetric: a new high over the forward-only samples earns a moment, a
+  drawdown earns only the truthful red pill — never a back-fill, never a
+  sad-theater toast. First value seeds the mark silently. (This is the one
+  item that brushes §71's "not a terminal"; it survives because it marks
+  YOUR forward-only record, not market data — approved this pass.)
+- **Self-transfer recognition.** A move between two of your own watched
+  wallets titles as "Moved 0.5 ETH · Main → Cold" (housekeeping, not news)
+  instead of a one-sided "Sent … to Cold". Only with >1 wallet watched and
+  the counterparty itself watched — the app understanding your setup.
+- **Try-it chip.** The empty state offers "Peek at vitalik.eth" — one tap
+  watches a famous public wallet so the whole feature demos in three
+  seconds (watch-only makes peeking legitimate). Retires once anything is
+  watched.
+- **Background densifying (`WalletBackgroundRefresh`).** A BGAppRefreshTask
+  samples holdings while away, so the value line fills between opens —
+  still forward-only, still real reads, just more of them (footer softens
+  to "sampled as you use Casberi, and quietly in the background"). iOS
+  decides if/when it runs (never on the Simulator); registered at launch,
+  scheduled on background. Info.plist gains `fetch` +
+  `BGTaskSchedulerPermittedIdentifiers`.
+
+Treemap touch feel (the 10th proposal) was already shipped — cells carry
+`DSHaptic.selection()` + the tile press-settle (GenRenderer). No new catalog
+offer, no website change — synthesis over connected wallets, not a bridge.
+Verified live across two real wallets (vitalik.eth + Binance 14): vitalik's
+ENS avatar and Binance's identicon both render, the row sparkline draws, the
+combined sheet decomposes correctly with §77's alignment (combined "since Jul
+14", Binance's own line its true earlier start).

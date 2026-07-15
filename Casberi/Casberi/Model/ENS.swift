@@ -59,4 +59,33 @@ enum ENS {
         reverseCache[addr] = name
         return name
     }
+
+    /// The avatar an address (or name) set on its ENS profile — the same
+    /// public resolve the counterparty naming uses, reading the `avatar`
+    /// field the resolver already returns alongside the name (2026-07-15,
+    /// wallet faces). Only a plain http(s) URL is handed back: ENS also
+    /// allows `eip155:` NFT-token avatars, which need a token-metadata
+    /// gateway to become an image — those fall through to nil so the caller
+    /// draws the deterministic identicon instead of a broken image. Cached
+    /// per launch INCLUDING misses (a faceless address must not cost a
+    /// lookup every foreground). Main-actor because WalletStore, the only
+    /// caller, already is.
+    @MainActor private static var avatarCache: [String: String?] = [:]
+
+    @MainActor
+    static func avatar(for hexOrName: String) async -> String? {
+        let key = hexOrName.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard !key.isEmpty else { return nil }
+        if let cached = avatarCache[key] { return cached }
+        var avatar: String?
+        if let encoded = key.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed),
+           let root = await IngestSupport.getJSON(
+            "https://api.ensideas.com/ens/resolve/\(encoded)") as? [String: Any],
+           let a = root["avatar"] as? String,
+           a.hasPrefix("http") {
+            avatar = a
+        }
+        avatarCache[key] = avatar
+        return avatar
+    }
 }

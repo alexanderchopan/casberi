@@ -43,6 +43,10 @@ struct CasberiApp: App {
             UserDefaults.standard.removeObject(forKey: "onboarded")
         }
         #endif
+        // Register the wallet background-refresh handler before launch
+        // finishes (BGTaskScheduler's requirement). One call, no work — the
+        // OS decides if it ever runs; scheduling happens when we background.
+        WalletBackgroundRefresh.register()
     }
 
     var body: some Scene {

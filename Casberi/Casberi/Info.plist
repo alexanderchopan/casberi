@@ -20,6 +20,14 @@
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>remote-notification</string>
+		<!-- BGAppRefreshTask: opportunistic wallet holdings sampling so the
+		     value line densifies between app opens (still forward-only, still
+		     real reads — just more of them). WalletBackgroundRefresh. -->
+		<string>fetch</string>
+	</array>
+	<key>BGTaskSchedulerPermittedIdentifiers</key>
+	<array>
+		<string>com.casberi.app.walletsample</string>
 	</array>
 	<!-- Query-only: lets a hand-off/launcher tile show ONLY when that app is
 	     installed (canOpenURL). Without the scheme here the check always returns

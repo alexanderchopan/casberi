@@ -70,6 +70,11 @@ final class WalletStore {
             let kept = Set(addresses.map { $0.address.lowercased() })
             for old in oldValue where !kept.contains(old.address.lowercased()) {
                 UserDefaults.standard.removeObject(forKey: Self.historyKey(old.address))
+                // The high-water mark leaves with the watch too — else a
+                // re-watch would judge its "new high" against a peak from a
+                // prior watch period whose history was already wiped (the same
+                // "re-watching starts honest, at zero" rule the history obeys).
+                UserDefaults.standard.removeObject(forKey: "wallet.high.\(old.address.lowercased())")
             }
         }
     }
@@ -87,6 +92,39 @@ final class WalletStore {
 
     private static func historyKey(_ address: String) -> String {
         "wallet.history.\(address.lowercased())"
+    }
+
+    // MARK: - Faces (ENS avatars, 2026-07-15)
+
+    /// Resolved ENS avatar URLs, keyed by lowercased hex address — read by
+    /// WalletFace, populated by loadAvatars(). Observed, so a face swaps from
+    /// its identicon to the real avatar the moment resolution lands. In-memory
+    /// only: avatars are cheap to re-resolve and can change, so nothing
+    /// persists (the identicon is always a correct answer meanwhile).
+    private(set) var avatarURLs: [String: String] = [:]
+
+    /// The avatar for a hex address, if one resolved — nil means "draw the
+    /// identicon", never a broken image.
+    func avatarURL(for address: String) -> String? {
+        avatarURLs[address.lowercased()]
+    }
+
+    /// Resolves each watched address's ENS avatar once, filling `avatarURLs`.
+    /// Tries the hex first (reverse resolve), then the label when it's an ENS
+    /// name (a name resolve carries the avatar even when reverse doesn't).
+    /// Skips any address already resolved this launch — ENS.avatar caches
+    /// misses too, so a faceless wallet costs one lookup, not one per visit.
+    @MainActor
+    func loadAvatars() async {
+        for entry in addresses {
+            let key = entry.address.lowercased()
+            guard avatarURLs[key] == nil else { continue }
+            var found = await ENS.avatar(for: entry.address)
+            if found == nil, ENS.looksLikeName(entry.label) {
+                found = await ENS.avatar(for: entry.label)
+            }
+            if let found { avatarURLs[key] = found }
+        }
     }
 
     func valueSamples(forAddress address: String) -> [ValueSample] {
@@ -131,8 +169,20 @@ final class WalletStore {
 
     /// Appends a sample unless one landed in the last 4 hours — holdings
     /// refresh every foreground, and a line of near-identical minutes-apart
-    /// points is noise, not history.
+    /// points is noise, not history. Main-actor: it fires wallet moments
+    /// (WalletMoments), and its only caller (WalletIngest) already is.
+    @MainActor
     func recordSample(address: String, totalUSD: Double) {
+        // A single watched wallet's own value hitting a new high is its
+        // moment (delight 2026-07-15; the combined high covers the multi-
+        // wallet case — WalletIngest). The mark is checked every fetch, not
+        // just every 4h, so a fast climb isn't missed by the sample throttle;
+        // it fires only with exactly one wallet watched, so several wallets
+        // never stack toasts. First value seeds the mark silently.
+        if addresses.count == 1,
+           WalletMoments.shared.notedNewHigh(scope: address.lowercased(), value: totalUSD) {
+            WalletMoments.shared.fire(String(localized: "Your wallet hit a new high 📈"))
+        }
         var samples = valueSamples(forAddress: address)
         if let last = samples.last, Date.now.timeIntervalSince(last.at) < 4 * 3600 { return }
         samples.append(ValueSample(at: .now, usd: totalUSD))

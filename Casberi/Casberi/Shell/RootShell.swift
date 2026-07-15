@@ -132,6 +132,10 @@ struct RootShell: View {
                 if phase == .background {
                     // The away clock starts — the next foreground reads it.
                     AppVisit.markClosed()
+                    // Ask iOS to sample wallet holdings while we're away, so
+                    // the value line densifies between opens (no-op without a
+                    // watched wallet; the OS decides if it ever runs).
+                    WalletBackgroundRefresh.schedule()
                     // The widget's new-ring boundary: everything after this
                     // stamp is "new since you left" on the home screen too
                     // (delight 2026-07-13). Reload so the widget re-reads.
