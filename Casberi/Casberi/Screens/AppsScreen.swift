@@ -398,7 +398,7 @@ struct AppsScreen: View {
             // Only a real offer's card ghosts samples (the pair card's
             // iconName is "Claude", whose import doc would leak an unrelated
             // takeaway here — cross-file review catch, 2026-07-13).
-            let samples = previewName.map { StorePreview.sampleTitles(for: $0) } ?? []
+            let samples = previewName.map { StorePreview.samples(for: $0) } ?? []
             if samples.isEmpty {
                 Spacer(minLength: DS.Space.s8)
             } else {
@@ -411,11 +411,18 @@ struct AppsScreen: View {
                     Text("Preview")
                         .dsText(.label12)
                         .foregroundStyle(.white.opacity(0.6))
-                    ForEach(Array(samples.enumerated()), id: \.offset) { idx, title in
+                    ForEach(Array(samples.enumerated()), id: \.offset) { idx, sample in
                         HStack(spacing: DS.Space.s2) {
-                            Circle().fill(.white.opacity(0.4))
-                                .frame(width: 6, height: 6)
-                            Text(title)
+                            // A social sample leads with its author's real
+                            // avatar (the face is the identity, same as the
+                            // feed row); every other kind keeps the dot.
+                            if let avatar = sample.avatarURL {
+                                RemoteThumb(urlString: avatar, size: 22, circular: true)
+                            } else {
+                                Circle().fill(.white.opacity(0.4))
+                                    .frame(width: 6, height: 6)
+                            }
+                            Text(sample.title)
                                 .dsText(.subhead13)
                                 .foregroundStyle(.white.opacity(0.92))
                                 .lineLimit(1)

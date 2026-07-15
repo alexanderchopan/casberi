@@ -8,31 +8,48 @@ import Foundation
 /// honest and expected.
 enum StorePreview {
 
-    /// Up to two sample row titles for an offer — the story card's middle
-    /// band ghosts what lands, parsed from the same preview doc the product
-    /// page streams so the story and the page never disagree. Cached: the
+    /// One ghosted sample line for the story card's middle band — the title
+    /// text, plus a social account's avatar URL when the row is a `PostRow`
+    /// (Bluesky/Farcaster), so the pill can lead with a face the way the real
+    /// feed row does.
+    struct Sample: Hashable {
+        let title: String
+        let avatarURL: String?
+    }
+
+    /// Up to two sample rows for an offer — the story card's middle band
+    /// ghosts what lands, parsed from the same preview doc the product page
+    /// streams so the story and the page never disagree. Cached: the
     /// carousel's interactive scroll re-evaluates card bodies every frame,
     /// and the parse is constant per offer.
-    private static var sampleCache: [String: [String]] = [:]
-    static func sampleTitles(for name: String) -> [String] {
+    private static var sampleCache: [String: [Sample]] = [:]
+    static func samples(for name: String) -> [Sample] {
         if let hit = sampleCache[name] { return hit }
-        var titles: [String] = []
+        var rows: [Sample] = []
         for line in doc(for: name) ?? [] {
-            guard titles.count < 2 else { break }
+            guard rows.count < 2 else { break }
             let quotes = line.split(separator: "\"").enumerated()
                 .filter { $0.offset % 2 == 1 }.map { String($0.element) }
-            if line.contains("TxRow(\"") {
+            if line.contains("PostRow(\"") {
+                // PostRow(handle, text, avatarURL, …) — the same "handle: text"
+                // the Row form ghosted, now with the author's real avatar
+                // leading (the URL is arg 3; empty falls through to no face).
+                if quotes.count >= 2 {
+                    let url = quotes.count >= 3 && !quotes[2].isEmpty ? quotes[2] : nil
+                    rows.append(Sample(title: "\(quotes[0]): \(quotes[1])", avatarURL: url))
+                }
+            } else if line.contains("TxRow(\"") {
                 // TxRow(verb, body, context) — the verb alone ("Swapped")
                 // reads as a broken placeholder; the body is the story.
-                if quotes.count >= 2 { titles.append("\(quotes[0]) \(quotes[1])") }
+                if quotes.count >= 2 { rows.append(Sample(title: "\(quotes[0]) \(quotes[1])", avatarURL: nil)) }
             } else if line.contains("Row(\"") {
-                if let t = quotes.first { titles.append(t) }
+                if let t = quotes.first { rows.append(Sample(title: t, avatarURL: nil)) }
             } else if line.contains("TakeawayCard(") || line.contains("ApprovalCard(") {
-                if quotes.count >= 2 { titles.append(quotes[1]) }
+                if quotes.count >= 2 { rows.append(Sample(title: quotes[1], avatarURL: nil)) }
             }
         }
-        sampleCache[name] = titles
-        return titles
+        sampleCache[name] = rows
+        return rows
     }
 
     /// The preview document for an offer, or nil when a preview would add
@@ -179,16 +196,16 @@ enum StorePreview {
         case "Bluesky": [
             "root = Stack([w])",
             "w = Widget(\"Accounts you watch\", null, [r1, r2])",
-            "r1 = Row(\"jay: the feed you own beats the feed you rent\", \"Chat\", \"Bluesky\", \"2h\")",
-            "r2 = Row(\"pfrazee: at-proto federation is live\", \"Chat\", \"Bluesky\", \"5h\")",
+            "r1 = PostRow(\"jay\", \"the feed you own beats the feed you rent\", \"https://cdn.bsky.app/img/avatar/plain/did:plc:oky5czdrnfjpqslsw2a5iclo/bafkreihxtnc37g7jqdcgidtkknwuswtjiijcdnc6cx4imc4oq33cnsc5da\", \"\", \"\")",
+            "r2 = PostRow(\"pfrazee\", \"at-proto federation is live\", \"https://cdn.bsky.app/img/avatar/plain/did:plc:ragtjsm2j2vknwkz3zp4oxrd/bafkreihhpqdyntku66himwor5wlhtdo44hllmngj2ofmbqnm25bdm454wq\", \"\", \"\")",
         ]
         // Farcaster grew likes, mentions, and /channels (2026-07-14) — the
         // preview shows a watched account and a channel cast, not a save pile.
         case "Farcaster": [
             "root = Stack([w])",
             "w = Widget(\"Accounts and channels\", null, [r1, r2])",
-            "r1 = Row(\"dwr: base fees at all-time low\", \"Chat\", \"Farcaster\", \"4h\")",
-            "r2 = Row(\"v: shipping in /dev today\", \"Chat\", \"Farcaster\", \"1h\")",
+            "r1 = PostRow(\"dwr\", \"base fees at all-time low\", \"https://imagedelivery.net/BXluQx4ige9GuW0Ia56BHw/bc698287-5adc-4cc5-a503-de16963ed900/original\", \"\", \"\")",
+            "r2 = PostRow(\"v\", \"shipping in /dev today\", \"https://imagedelivery.net/BXluQx4ige9GuW0Ia56BHw/e3d80f99-f7c0-4b04-dcad-557593d85500/original\", \"\", \"\")",
         ]
         case "OpenSea": [
             "root = Stack([w])",
