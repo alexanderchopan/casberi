@@ -218,6 +218,12 @@ struct GenRender: View {
         case "KindPills":   GenKindPills(el: el).mountIn()
         case "Insight":     GenInsight(el: el).mountIn()
         case "Widget":      GenWidget(id: id, el: el, els: els).mountIn()
+        // The "Coming up" card — a deliberately FLAT renderer (crash fix
+        // 2026-07-15). Builds header + all rows in one shallow body so the
+        // eager Home head doesn't nest five Widget→Row→pinnedRowActions
+        // subtrees and overflow the main stack. mountIn() once for the card,
+        // not per row.
+        case "ComingUp":    GenComingUp(el: el, els: els).mountIn()
         case "Row":         GenRow(id: id, el: el).mountIn()
         case "TokenChip":   GenTokenChip(el: el).mountIn()
         case "Suggest":     GenSuggest().mountIn()
@@ -525,6 +531,69 @@ private struct GenWidget: View {
         } else {
             GenSkeletonTile()
         }
+    }
+}
+
+/// ComingUp(title, [rowRefs]) — the "Coming up" leading card, rendered FLAT
+/// (crash fix 2026-07-15). The generic `Widget` path nests every row through
+/// GenRender → AnyView → GenRow → MountIn → 2×environment → pinnedRowActions,
+/// ~12 view levels deep; five of those at the top of the EAGER Home head
+/// (a plain VStack in a ScrollView — nothing deferred) pushed the first-frame
+/// SwiftUI tree past the 8MB main-stack margin, re-triggering the recurring
+/// deep-tree overflow ("crashes loading Home"; CLAUDE.md — "flatten the
+/// composition tree, not more stack"). This draws the header and ALL rows in
+/// one body: one shallow HStack per row, read straight from `els`, no
+/// per-row GenRender/AnyView/GenRow/MountIn. Behavior is unchanged — tap opens
+/// the thing, long-press offers Open / Open in app (the shared, already-flat
+/// `pinnedRowActions`), each row wears its tag glyph, title, and WHEN label.
+private struct GenComingUp: View {
+    let el: GenEl
+    let els: GenEls
+    @Environment(\.genThingOpen) private var thingOpen
+    @Environment(\.genThingHandoff) private var thingHandoff
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            // Sentence-case header, same type ramp as every board card's title
+            // (§8) — plain Text (the title is a fixed literal, never a thing's
+            // text, so it never rides the LocalizedStringKey format path).
+            Text(el.str(0))
+                .dsText(.heading22)
+                .foregroundStyle(DS.textPrimary)
+                .padding(.init(top: DS.Space.s4, leading: DS.Space.s4,
+                               bottom: DS.Space.s1, trailing: DS.Space.s4))
+            // Rows inline — resolved refs draw, unresolved ones (still
+            // streaming) simply drop, the mount law without a skeleton nest.
+            ForEach(el.refs(1), id: \.self) { ref in
+                if let row = els[ref] { rowLine(row) }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.bottom, DS.Space.s2)
+        .dsWidgetSurface()
+        .padding(.horizontal, DS.Space.s4)
+        .padding(.top, DS.Space.s4)
+    }
+
+    /// One line — the same geometry GenRow draws (tag glyph · title · trailing
+    /// WHEN), built here as a leaf so the card stays shallow. Tap + long-press
+    /// ride the shared `pinnedRowActions`; no glint (that's answer-only) and no
+    /// per-row mount animation (the card mounts as one).
+    private func rowLine(_ row: GenEl) -> some View {
+        HStack(spacing: DS.Space.s3) {
+            TagGlyph(tag: row.str(1), size: 24)
+            Text(row.str(0))
+                .dsText(.body17)
+                .foregroundStyle(DS.textPrimary)
+                .lineLimit(1)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            Text(row.str(3)).dsText(.subhead13).foregroundStyle(DS.textTertiary)
+        }
+        .padding(.horizontal, DS.Space.s4)
+        .padding(.vertical, DS.Space.s3)
+        .pinnedRowActions(id: row.str(4), openable: row.str(5) == "app",
+                          open: thingOpen, unpin: nil, handoff: thingHandoff,
+                          removeApp: nil)
     }
 }
 
