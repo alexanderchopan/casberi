@@ -2809,3 +2809,61 @@ guard serializes). Verified live against dwr/@six//design: 10 casts,
 Node quirk paid for: castsByParent serves DOUBLE the asked pageSize
 (25 → 50, verified live) — the channel sync and the sheet's replies
 both cap client-side.
+
+## 75. Bluesky mirrors Farcaster's keyless parity set; the two share one renderer (user, 2026-07-14)
+
+User, after the Farcaster batch (§74): "can we do all the same with
+Bluesky and make both experiences similar?" Assessed the AT Protocol's
+public AppView keyless — then built the three that port cleanly and
+generalized the shared surfaces so the two social bridges render from
+ONE path, not a per-bridge fork (the altitude finding the §74 review
+had flagged).
+
+Built for Bluesky (all keyless):
+- **Profiles** (getProfile) — the account row wears the face, display
+  name, and "@handle · bio", refreshed each sync, persisted on the
+  Account. A failed fetch NEVER clobbers stored facts (the §74 rule).
+- **Replies** (getPostThread depth 1) — the thing sheet's Replies card,
+  cached per launch. Each reply's author is hydrated by the AppView, so
+  no per-reply lookups (cheaper than Farcaster's per-fid path).
+- **Mentions** (searchPosts `mentions:handle`) — a per-account Mentions
+  chip; posts naming the account land, replies and quotes included,
+  riding "while I was away". Search results hydrate the mentioner, so
+  again no extra lookups.
+
+REFUSED / HELD, honestly:
+- **Likes** — getActorLikes is AUTH-ONLY (returns "Profile not found"
+  unauthenticated). Bluesky likes need an app-password sign-in, a
+  different tier than "a handle alone" — and the catalog copy already
+  promised "Likes arrive with sign-in, later." So the Bluesky row shows
+  a Mentions chip only; no Likes chip. Parity is keyless-parity-minus-likes.
+- **Channels** — Bluesky has no global channel names; its analog is
+  custom feeds and lists, each an at:// URI under a creator DID,
+  discovered by search (getPopularFeedGenerators). That's a different
+  entry gesture than Farcaster's "type /design", so channels were held
+  for Bluesky pending a decision on the discovery-search UX.
+
+Generalization (the "make both similar" half) — `Model/SocialBridge.swift`:
+- `SocialReply` + `SocialThread.replies(for: thing)` dispatch the sheet's
+  thread by `thing.source`; `ThingSheetView` holds `[SocialReply]` and
+  calls the neutral dispatcher — no bridge name in the sheet anymore.
+- `SocialAccount` + `SocialWatch` are the shape the shared setup row
+  renders; `HandleBridge` answers `isRichSocial`, `socialAccounts`,
+  `setWatch(_:_:for:)`, and `watchFooter`, each store building its own
+  `socialAccounts` (Farcaster: Likes+Mentions; Bluesky: Mentions).
+  `HandleSetupScreen.socialAccountRow` + `watchChip` replaced the
+  `farcasterAccountRow` fork — one renderer, both bridges, read straight
+  off each @Observable store.
+- Bluesky's rowLabel joined Farcaster's rule: your one watched mirror
+  stays unlabeled, everything else (a mentioner not in your list) names
+  itself, so attribution never gets lost.
+
+Host quirk paid for: the AppView's searchPosts 403s on
+public.api.bsky.app but is served keyless on api.bsky.app (the official
+client's host); the mentions call, and only it, uses that host.
+
+Verified live against jay.bsky.team: 16 posts, 25 mentions (attributed
+to the mentioners), 8 replies rendering in the sheet, the rich row
+showing "Jay 🦋 · Founder & Chief Innovation Officer…" with the Mentions
+chip lit; zero duplicate refs. The sheet's replies section and the
+setup row are the exact same views Farcaster uses.

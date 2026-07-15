@@ -132,12 +132,15 @@ final class FarcasterStore {
     }
 
     /// Sync's write-back of the node's profile facts — the account row wears
-    /// the face and the words.
+    /// the face and the words. One assignment, so the array's didSet
+    /// (→ persist) fires once, not once per field.
     func setProfile(_ profile: FarcasterIngest.Profile, for username: String) {
         guard let i = accounts.firstIndex(where: { $0.username == username }) else { return }
-        accounts[i].displayName = profile.displayName
-        accounts[i].bio = profile.bio
-        accounts[i].avatarURL = profile.avatarURL
+        var a = accounts[i]
+        a.displayName = profile.displayName
+        a.bio = profile.bio
+        a.avatarURL = profile.avatarURL
+        accounts[i] = a
     }
 
     func setLikes(_ on: Bool, for username: String) {
@@ -166,6 +169,20 @@ final class FarcasterStore {
         guard let username, !username.isEmpty else { return nil }
         if accounts.count == 1, accounts[0].username == username { return nil }
         return "@\(username)"
+    }
+
+    /// The watched accounts as the shared setup row renders them — face,
+    /// name, bio, and the Likes/Mentions toggles Farcaster offers.
+    var socialAccounts: [SocialAccount] {
+        accounts.map { a in
+            SocialAccount(
+                key: a.username,
+                title: a.displayName ?? a.username,
+                subtitle: SocialAccount.subtitle(handle: "@\(a.username)", bio: a.bio),
+                avatarURL: a.avatarURL,
+                watches: [SocialWatch(kind: .likes, on: a.likes),
+                          SocialWatch(kind: .mentions, on: a.mentions)])
+        }
     }
 
     private func persist() {
@@ -222,15 +239,6 @@ enum FarcasterIngest {
         var avatarURL: String?
     }
     @MainActor private static var profiles: [Int: Profile] = [:]
-
-    /// One reply on a cast's thread — the sheet's context rows.
-    struct Reply: Identifiable {
-        let id: String
-        let handle: String
-        let avatarURL: String?
-        let text: String
-        let when: Date?
-    }
 
     /// Resolves each username (once), fetches recent casts — plus likes and
     /// mentions where those are watched, and every followed channel's feed —
@@ -501,7 +509,7 @@ enum FarcasterIngest {
     /// A Farcaster thing's replies — fetched live when the sheet opens,
     /// shown only when there are any.
     @MainActor
-    static func replies(for thing: Thing, limit: Int = 8) async -> [Reply] {
+    static func replies(for thing: Thing, limit: Int = 8) async -> [SocialReply] {
         guard thing.source == "Farcaster", let ref = thing.sourceRef, ref.hasPrefix("fc:"),
               let handle = thing.authorHandle, !handle.isEmpty else { return [] }
         return await replies(handle: handle, hash: String(ref.dropFirst(3)), limit: limit)
@@ -511,7 +519,7 @@ enum FarcasterIngest {
     /// comes from the store when watched, else one name lookup. Threads
     /// fetched this launch are cached — reopening a sheet costs nothing.
     @MainActor
-    static func replies(handle: String, hash: String, limit: Int = 8) async -> [Reply] {
+    static func replies(handle: String, hash: String, limit: Int = 8) async -> [SocialReply] {
         let key = "\(handle):\(hash)"
         if let cached = threads[key] { return cached }
         var fid = FarcasterStore.shared.accounts
@@ -529,7 +537,7 @@ enum FarcasterIngest {
         await prefetchProfiles(messages.compactMap {
             ($0["data"] as? [String: Any])?["fid"] as? Int
         })
-        var replies: [Reply] = []
+        var replies: [SocialReply] = []
         for message in messages {
             guard let replyHash = message["hash"] as? String,
                   let data = message["data"] as? [String: Any],
@@ -538,7 +546,7 @@ enum FarcasterIngest {
                   let text = body["text"] as? String, !text.isEmpty else { continue }
             guard let author = await profile(fid: casterFid),
                   let username = author.username, !username.isEmpty else { continue }
-            replies.append(Reply(
+            replies.append(SocialReply(
                 id: replyHash, handle: username, avatarURL: author.avatarURL,
                 text: await splicingMentions(into: text, body: body),
                 when: (data["timestamp"] as? Double).map { epoch.addingTimeInterval($0) }))
@@ -549,7 +557,7 @@ enum FarcasterIngest {
     }
 
     /// Threads fetched this launch, keyed by "handle:hash".
-    @MainActor private static var threads: [String: [Reply]] = [:]
+    @MainActor private static var threads: [String: [SocialReply]] = [:]
 
     // MARK: - Profiles
 

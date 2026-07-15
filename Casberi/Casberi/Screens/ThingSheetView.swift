@@ -36,10 +36,11 @@ struct ThingSheetView: View {
     @State private var editingTags = false
     /// The hue wash pours in on open (delight 2026-07-13) — once per sheet.
     @State private var washPoured = false
-    /// A cast's thread (2026-07-14) — fetched live from the public node when
-    /// the sheet opens a Farcaster thing; the section renders only when
-    /// replies exist (no dead section, no spinner theater).
-    @State private var replies: [FarcasterIngest.Reply] = []
+    /// A post/cast's thread (2026-07-14) — fetched live from the source's
+    /// public API when the sheet opens a social thing (Bluesky or Farcaster);
+    /// the section renders only when replies exist (no dead section, no
+    /// spinner theater).
+    @State private var replies: [SocialReply] = []
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// Seeded by the record's shape (2026-07-13 polish): a TALL thing (media
     /// or a long body) still opens FULL-height so its verbs never start
@@ -146,7 +147,7 @@ struct ThingSheetView: View {
         .presentationCornerRadius(DS.Radius.sheet)
         .onAppear {
             streamRelated()
-            Task { replies = await FarcasterIngest.replies(for: thing) }
+            Task { replies = await SocialThread.replies(for: thing) }
             if focusTags {
                 // Land in the tag editor — the swipe's whole point.
                 editingTags = true

@@ -205,10 +205,55 @@ enum HandleBridge: String {
 
     var canLine: String {
         switch self {
-        case .bluesky:   "Reads your public posts."
+        case .bluesky:   "Reads public posts and mentions."
         case .farcaster: "Reads public casts — accounts, channels, likes."
         case .pinterest: "Reads your public pins."
         default:         feedKind!.canLine
+        }
+    }
+
+    /// The social bridges (Bluesky, Farcaster) whose account rows carry a
+    /// face, a bio, and watch toggles — the rich shared row. Others show the
+    /// plain name row.
+    var isRichSocial: Bool {
+        switch self {
+        case .bluesky, .farcaster: true
+        default: false
+        }
+    }
+
+    /// The watched accounts as the shared row renders them — read straight
+    /// off each @Observable store, so a toggle or a landed profile updates
+    /// the rows with nothing to snapshot.
+    var socialAccounts: [SocialAccount] {
+        switch self {
+        case .bluesky:   BlueskyStore.shared.socialAccounts
+        case .farcaster: FarcasterStore.shared.socialAccounts
+        default:         []
+        }
+    }
+
+    /// Flip a per-account watch toggle. A bridge ignores a kind it doesn't
+    /// offer (Bluesky has no keyless likes), so the call is always safe.
+    func setWatch(_ kind: SocialWatch.Kind, _ on: Bool, for name: String) {
+        switch self {
+        case .farcaster:
+            switch kind {
+            case .likes:    FarcasterStore.shared.setLikes(on, for: name)
+            case .mentions: FarcasterStore.shared.setMentions(on, for: name)
+            }
+        case .bluesky:
+            if kind == .mentions { BlueskyStore.shared.setMentions(on, for: name) }
+        default: break
+        }
+    }
+
+    /// The line under the watched-accounts list, explaining its toggles.
+    var watchFooter: String? {
+        switch self {
+        case .farcaster: "Likes lands casts an account likes — like it there, it's saved here. Mentions lands casts naming them."
+        case .bluesky:   "Mentions lands posts that name them — replies and quotes included."
+        default:         nil
         }
     }
 
@@ -421,18 +466,17 @@ struct HandleSetupScreen: View {
         }
     }
 
-    /// The watched-accounts list (Bluesky/Farcaster) — each removable, the
-    /// way the wallet manager lists watched addresses. Farcaster rows are
-    /// richer (2026-07-14): the profile the node already serves (face,
-    /// display name, bio) plus the per-account Likes/Mentions switches.
+    /// The watched-accounts list. The rich social bridges (Bluesky,
+    /// Farcaster) render `socialAccountRow` from the store's @Observable
+    /// snapshot — face, display name, @handle · bio, and the watch toggles
+    /// that bridge offers; every other multi bridge shows the plain name row.
     private var accountsSection: some View {
         Section {
-            if bridge == .farcaster {
-                // The store is @Observable — body reads it directly, so a
-                // toggle or a profile landing re-renders with nothing to
-                // keep in step by hand.
-                ForEach(FarcasterStore.shared.accounts) { account in
-                    farcasterAccountRow(account)
+            if bridge.isRichSocial {
+                // Read straight off the @Observable store, so a toggle or a
+                // landed profile re-renders with nothing to keep in step.
+                ForEach(bridge.socialAccounts) { account in
+                    socialAccountRow(account)
                 }
             } else {
                 ForEach(accountNames, id: \.self) { name in
@@ -457,16 +501,17 @@ struct HandleSetupScreen: View {
             Text(accountNames.count == 1 ? "Watching" : "Watching \(accountNames.count)")
                 .dsText(.label12).foregroundStyle(DS.textTertiary)
         } footer: {
-            if bridge == .farcaster {
-                Text("Likes lands casts an account likes — like it there, it's saved here. Mentions lands casts naming them.")
+            if let line = bridge.watchFooter {
+                Text(LocalizedStringKey(line))
                     .dsText(.callout15).foregroundStyle(DS.textTertiary)
             }
         }
     }
 
-    /// One watched Farcaster account: face, display name, @username · bio,
-    /// and the two watch-more chips. Swipe to remove, unchanged.
-    private func farcasterAccountRow(_ account: FarcasterStore.Account) -> some View {
+    /// One watched social account: face, display name, @handle · bio, and
+    /// the watch-more chips the bridge offers. Swipe to remove. Shared by
+    /// Bluesky and Farcaster — the bridge answers what to show.
+    private func socialAccountRow(_ account: SocialAccount) -> some View {
         HStack(alignment: .top, spacing: DS.Space.s3) {
             if let avatar = account.avatarURL {
                 RemoteThumb(urlString: avatar, size: 36,
@@ -475,27 +520,26 @@ struct HandleSetupScreen: View {
                 BridgeIcon(name: bridge.rawValue, size: 36, circular: true)
             }
             VStack(alignment: .leading, spacing: DS.Space.s1) {
-                Text(account.displayName ?? account.username)
+                Text(account.title)
                     .dsText(.body17).foregroundStyle(DS.textPrimary)
                     .lineLimit(1)
-                Text(farcasterSubtitle(account))
+                Text(account.subtitle)
                     .dsText(.subhead13).foregroundStyle(DS.textTertiary)
                     .lineLimit(1)
-                HStack(spacing: DS.Space.s2) {
-                    watchChip("Likes", on: account.likes) {
-                        FarcasterStore.shared.setLikes($0, for: account.username)
+                if !account.watches.isEmpty {
+                    HStack(spacing: DS.Space.s2) {
+                        ForEach(account.watches) { watch in
+                            watchChip(watch, for: account.key)
+                        }
                     }
-                    watchChip("Mentions", on: account.mentions) {
-                        FarcasterStore.shared.setMentions($0, for: account.username)
-                    }
+                    .padding(.top, DS.Space.s1)
                 }
-                .padding(.top, DS.Space.s1)
             }
             Spacer()
         }
         .swipeActions(edge: .trailing) {
             Button(role: .destructive) {
-                bridge.removeName(account.username)
+                bridge.removeName(account.key)
                 accountNames = bridge.names
                 DSHaptic.tap()
             } label: { Label("Remove", systemImage: "minus.circle") }
@@ -504,27 +548,21 @@ struct HandleSetupScreen: View {
         .listRowSeparator(.hidden)
     }
 
-    private func farcasterSubtitle(_ account: FarcasterStore.Account) -> String {
-        let bio = (account.bio ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-        return bio.isEmpty ? "@\(account.username)" : "@\(account.username) · \(bio)"
-    }
-
     /// A lit-or-quiet capsule: on wears the tint, off stays gray — a switch
     /// that reads as one, in chip clothes (the tag-chip anatomy). The tap
-    /// flips the setter and, when turning ON, fetches right away.
-    private func watchChip(_ label: String, on: Bool,
-                           set: @escaping (Bool) -> Void) -> some View {
+    /// flips the bridge's setter and, when turning ON, fetches right away.
+    private func watchChip(_ watch: SocialWatch, for key: String) -> some View {
         Button {
-            set(!on)
+            bridge.setWatch(watch.kind, !watch.on, for: key)
             DSHaptic.tap()
-            if !on { Task { await sync() } }
+            if !watch.on { Task { await sync() } }
         } label: {
-            Text(LocalizedStringKey(label))
+            Text(LocalizedStringKey(watch.label))
                 .dsText(.label12)
-                .foregroundStyle(on ? DS.tint : DS.textTertiary)
+                .foregroundStyle(watch.on ? DS.tint : DS.textTertiary)
                 .padding(.horizontal, DS.Space.s3)
                 .frame(height: 28)
-                .background(on ? DS.tintDim : DS.gray100, in: Capsule(style: .continuous))
+                .background(watch.on ? DS.tintDim : DS.gray100, in: Capsule(style: .continuous))
         }
         .buttonStyle(.plain)
     }

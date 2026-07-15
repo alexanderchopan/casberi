@@ -126,7 +126,7 @@ enum BridgeCatalog {
               summary: "An open social protocol — casts are public, so this connects with just a username: your own or anyone's, plus /channels by name. An account's likes and mentions can land too. No password, nothing stored but the name.",
               needsSetup: true),
         Offer(name: "Bluesky",     tagline: "Your posts, in your feed",              group: "Network",   connectable: true,
-              summary: "Built on an open protocol — your posts are public, so this connects with just your handle. No password, nothing stored but the name. Likes arrive with sign-in, later.",
+              summary: "Built on an open protocol — posts are public, so this connects with just a handle: your own or anyone's, and mentions of them can land too. No password, nothing stored but the name. Likes arrive with sign-in, later.",
               needsSetup: true),
         Offer(name: "X",           tagline: "Bookmarks become findable",             group: "Network",   connectable: false,
               summary: "The posts you bookmarked stop disappearing — they land in your feed, findable later."),

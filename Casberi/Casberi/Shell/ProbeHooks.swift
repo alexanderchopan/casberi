@@ -151,6 +151,28 @@ enum ProbeHooks {
                 NSLog("Bluesky probe: %@ new things", n.map(String.init) ?? "FAILED")
             }
         },
+        // `-bskyMentions <handle>` watches MENTIONS of a Bluesky account
+        // (adding it if new) and syncs — posts naming them land as things.
+        Hook(key: "bskyMentions") { name, context in
+            let h = BlueskyStore.normalize(name)
+            BlueskyStore.shared.add(h)
+            BlueskyStore.shared.setMentions(true, for: h)
+            Task { @MainActor in
+                let added = await BlueskyIngest.refresh(context: context)
+                NSLog("Bluesky mentions probe: %@ new things",
+                      added.map(String.init) ?? "FAILED")
+            }
+        },
+        // `-bskyReplies "at://…"` fetches a post's thread by its at-uri (a
+        // Bluesky thing's sourceRef is "bsky:<at-uri>") and NSLogs the count
+        // + first line (the sheet's replies section, headless).
+        Hook(key: "bskyReplies") { uri, _ in
+            Task { @MainActor in
+                let replies = await BlueskyIngest.replies(uri: uri)
+                NSLog("Bluesky replies probe: %d replies%@", replies.count,
+                      replies.first.map { " — @\($0.handle): \(String($0.text.prefix(60)))" } ?? "")
+            }
+        },
         // `-openSeaKey <key>` seeds a known-good OpenSea API key, so a headless
         // run can verify the feed without waiting on the mint endpoint's
         // 1-key-per-hour limit (the IP the sim shares is easily exhausted).
