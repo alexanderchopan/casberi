@@ -5,8 +5,8 @@ import Foundation
 /// holds. The law (brief + prd §67): writes live in the SHEET, behind the
 /// ask-before-acting confirm; a verb appears only when its bridge is
 /// connected AND the thing carries the reference the API needs — never a
-/// dead control. Bluesky and Telegram writes wait on authenticated read
-/// bridges (a handle-only follow can't like; a bot can't speak as you).
+/// dead control. Bluesky writes wait on an authenticated read bridge
+/// (a handle-only follow can't like).
 enum BridgeWrite {
     /// Todoist: close the task the thing mirrors (`sourceRef` "todoist:<id>").
     case todoistComplete(taskID: String)
