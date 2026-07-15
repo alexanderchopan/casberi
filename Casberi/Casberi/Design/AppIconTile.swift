@@ -55,6 +55,7 @@ extension DS {
         case "wallet":              return Color.fixed("#2461ff")
         case "kalshi":              return Color.fixed("#4fae7b")   // their green (matches the bundled logo)
         case "opensea":             return Color.fixed("#2081e2")   // OpenSea's marine blue
+        case "geckoterminal":       return Color.fixed("#7556f6")   // the gecko's purple (sampled from the bundled icon)
         case "tokens":              return Color.fixed("#f5a623")   // coin gold — this app's own mark, not a vendor's (2026-07-13 rename)
         case "venice":              return Color.fixed("#0e2942")   // sampled from their deep-blue mark
         case "openclaw":            return Color.fixed("#e5342e")   // the agents' red (user, 2026-07-12)

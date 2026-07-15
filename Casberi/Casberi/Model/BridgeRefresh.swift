@@ -91,5 +91,8 @@ enum BridgeRefresh {
         if OpenSeaStore.shared.connected {
             Task { @MainActor in _ = await OpenSeaIngest.refresh(context: context) }
         }
+        if TrendingStore.shared.connected {
+            Task { @MainActor in _ = await TrendingIngest.refresh(context: context) }
+        }
     }
 }

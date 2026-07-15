@@ -2867,3 +2867,49 @@ to the mentioners), 8 replies rendering in the sheet, the rich row
 showing "Jay 🦋 · Founder & Chief Innovation Officer…" with the Mentions
 chip lit; zero duplicate refs. The sheet's replies section and the
 setup row are the exact same views Farcaster uses.
+
+## 76. GeckoTerminal — trending tokens per chain, an OpenSea-shaped discovery bridge (user, 2026-07-14)
+
+User: "how could we offer something that surfaces trending tokens as a
+feed and select per chain?" — then "yes lets do that and add gecko
+terminal to app catalogue, website hero icon rain, and website app
+catalogue." Ruling on the landing shape after weighing both: **land as
+things, cloning the OpenSea bridge** (not an ephemeral discovery tile).
+
+- **Same consent model as OpenSea.** You pick the CHAINS; a curated feed
+  lands. OpenSea already lands un-chosen filtered items (newest
+  collections) off a chain watch — trending tokens are the same
+  contract, so no new honesty question. The earlier worry (corpus
+  pollution) was overweighted: GeckoTerminal's `trending_pools` is a
+  bounded ~20/chain ranked list, not a firehose, and a $5k reserve floor
+  drops the wash-volume dust.
+- **Name the ranker.** "Trending" is someone's algorithm, so the screen,
+  the catalog copy, and the feed all say WHOSE — GeckoTerminal's own, by
+  24h volume and price move. No neutral-truth laundering (honesty rule).
+- **Keyless — simpler than OpenSea.** GeckoTerminal's trending endpoint
+  needs no account and no key, so there's nothing to mint or store
+  (`TrendingStore` is just the watched chains in UserDefaults). This is
+  the one place the clone is lighter than its model.
+- **The chart comes for free.** Each landed thing's `content` is the base
+  token's Dexscreener URL — which `TokenChart.route` already parses — so
+  a trending row's sheet draws the same live on-device chart a watched
+  token's does, with zero sheet changes. Watching a token stays the
+  Tokens bridge's explicit tap: trending is DISCOVERY, the watchlist is
+  keeping.
+- **Dedupe by token, not pool.** A token trends in several pools at once
+  (WBTC landed three times on the pool key in verification); the person
+  reading the feed wants "WBTC is trending" once. `sourceRef` is
+  `gecko:<network>:<tokenAddress>`.
+- **Nine chains, three defaults.** Ethereum/Base/Solana lead (the
+  trending-token cultures); BNB/Arbitrum/Polygon/Optimism/Avalanche/Blast
+  are a tap. Each chain carries two slugs — GeckoTerminal's network id
+  for the API, Dexscreener's for the chart URL — because the two APIs
+  spell chains differently.
+
+Model `Model/GeckoTrending.swift`, screen `Screens/GeckoTerminalScreen.swift`
+(clones `OpenSeaScreen`), catalog Markets group, headless probe
+`-geckoTrending <chains|YES>`. Verified live: 9 distinct Ethereum
+trending tokens landed (Synapse, Manyu, WBTC, PYUSD, Pepe, …), zero
+duplicates, each carrying a Dexscreener URL the sheet reads for its
+chart. Website: hero rain tile + Markets mini-cell + `.ai-geckoterminal`
+green, per the same-session parity rule.

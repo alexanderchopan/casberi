@@ -193,6 +193,19 @@ enum ProbeHooks {
                 NSLog("OpenSea probe: %@ new drops", n.map(String.init) ?? "FAILED")
             }
         },
+        // `-geckoTrending <chains|YES>` connects GeckoTerminal (a comma-separated
+        // chain list like `ethereum,base,solana`, or YES for the defaults) and
+        // syncs the current trending tokens — headless bridge test.
+        Hook(key: "geckoTrending") { spec, context in
+            let list = spec.split(separator: ",")
+                .compactMap { TrendingChain.from(String($0).trimmingCharacters(in: .whitespaces)) }
+            if list.isEmpty { TrendingStore.shared.connectDefaults() }
+            else { for c in list { TrendingStore.shared.add(c) } }
+            Task { @MainActor in
+                let n = await TrendingIngest.refresh(context: context)
+                NSLog("GeckoTerminal probe: %@ trending in", n.map(String.init) ?? "FAILED")
+            }
+        },
         // `-watchToken <address|symbol|link>` watches a token headlessly.
         Hook(key: "watchToken") { query, context in
             Task { @MainActor in
