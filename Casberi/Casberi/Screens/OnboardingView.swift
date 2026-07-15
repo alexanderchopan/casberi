@@ -50,21 +50,22 @@ struct OnboardingView: View {
     /// BIG cubes fall the full height one after another, bounce, and stack
     /// bottom-up until they fill the BOTTOM HALF of the screen — ice filling
     /// a glass — and they STAY there, full size, while the feed card lives
-    /// in the top half. Zerion and Farcaster lead the fall.
-    /// Every catalog app joins the pile. The first 25 carry real brand art;
-    /// the LAST SIX are Apple's bridges as their symbol tiles (their icons
+    /// in the top half. Wallet and Farcaster lead the fall.
+    /// Every connectable catalog app joins the pile (showcase-only apps like
+    /// Spotify and X sit it out). The first 25 carry brand art or a brand
+    /// squircle; the LAST SIX are Apple's bridges as their symbol tiles (their icons
     /// are legally unbundlable) — they land last, as the pile's TOP ROW,
     /// right under the three Connect rows they're kin to.
     private let marqueeApps = ["Wallet", "Farcaster", "Gmail", "GitHub",
-                               "Claude", "Spotify", "Strava", "Bluesky",
-                               "Telegram", "Slack", "X", "Notion", "Reddit",
+                               "Claude", "GeckoTerminal", "Strava", "Bluesky",
+                               "Slack", "Shopify", "Notion", "Reddit",
                                "YouTube", "Todoist", "RSS", "ChatGPT",
                                "Gemini", "Linear", "Raindrop", "Readwise",
                                "Tokens", "Venice", "OpenClaw", "Cal.com",
                                "Calendly",
                                "iCloud Mail", "Apple Music", "Apple Health",
                                "Reminders", "Calendar", "Photos"]
-    private static let appleRowStart = 26
+    private static let appleRowStart = 25
     /// False = above the screen · true = settled in the glass.
     @State private var cubesLanded = false
 
