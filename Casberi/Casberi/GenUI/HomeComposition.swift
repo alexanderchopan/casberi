@@ -81,6 +81,7 @@ enum HomeComposition {
         // things, not a single item; image sources keep their bespoke shelf
         // (appendMediaModules), everyone else composes as a Widget of rows.
         appendPinnedApps(things, to: &doc, rootRefs: &rootRefs, boardRefs: &boardRefs, boardKeys: &boardKeys)
+        appendGitHubGraph(to: &doc, rootRefs: &rootRefs, boardRefs: &boardRefs)
         appendWalletHoldings(walletHoldings, pending: walletPending, to: &doc, rootRefs: &rootRefs, boardRefs: &boardRefs, boardKeys: &boardKeys)
         appendWalletNFTs(walletNFTs, to: &doc, rootRefs: &rootRefs, boardRefs: &boardRefs, boardKeys: &boardKeys)
         appendMediaModules(things, to: &doc, rootRefs: &rootRefs, boardRefs: &boardRefs)
@@ -254,6 +255,11 @@ enum HomeComposition {
     /// content IS pictures, so a strip/grid beats a list of titled rows.
     static let mediaSources: Set<String> = ["Apple Music", "Pinterest", "Photos", "RSS"]
 
+    /// Sources whose pin composes as a bespoke tile that is NOT a list of recent
+    /// rows — GitHub's is its contribution graph (`appendGitHubGraph`). Skipped
+    /// by the generic pinned-app path like the media shelves are.
+    static let graphSources: Set<String> = ["GitHub"]
+
     /// A pinned app is one board tile of its recent things (ruling 2026-07-12):
     /// pinning is per-APP now, not per-item — you keep "your reminders" in
     /// view, not one reminder. Each non-image pinned source composes as a
@@ -278,6 +284,7 @@ enum HomeComposition {
         let onBoard = store.sources
             .union(HomePinnedSources.autoSocial.filter { !store.isHidden($0) })
             .subtracting(mediaSources)
+            .subtracting(graphSources)
             .sorted()
         var emitted = 0
         for source in onBoard {
@@ -306,6 +313,21 @@ enum HomeComposition {
         }
     }
 
+    /// GitHub's pinned tile is its contribution graph — the green-squares year,
+    /// not a list of recent rows. Emitted when GitHub is pinned AND connected
+    /// (the graph needs the token's GraphQL); the tile self-fetches its data
+    /// (`GitHubGraphStore`), so the doc only names the module. The board key is
+    /// the ref itself (`HomePinnedSources.moduleRef`), so no `boardKeys` entry.
+    private static func appendGitHubGraph(to doc: inout [String],
+                                          rootRefs: inout [String],
+                                          boardRefs: inout [String]) {
+        guard HomePinnedSources.shared.isPinned("GitHub"),
+              TokenBridge.github.connected else { return }
+        doc.append("githubGraphShelf = GithubGraph(\(q(String(localized: "Your year in code"))), \(q("")))")
+        rootRefs.append("githubGraphShelf")
+        boardRefs.append("githubGraphShelf")
+    }
+
     /// A pinned app tile's header — a bespoke phrase where the app has one
     /// (its store preview's voice), else the app's own name. Sentence case,
     /// no eyebrow caps (design law): the words carry it.
@@ -319,7 +341,7 @@ enum HomeComposition {
         case "X":                                          return String(localized: "Bookmarked")
         case "YouTube":                                    return String(localized: "Liked and saved")
         case "Twitch":                                     return String(localized: "Live now")
-        case "Telegram", "Slack":                          return String(localized: "Worth keeping")
+        case "Slack":                                      return String(localized: "Worth keeping")
         // Twitch keeps its plain name (default) — a fixed "Live now" header
         // would assert real-time state the recency-ordered rows can't verify
         // (honesty rule; TwitchBridge gates its own live indicator on liveRefs).

@@ -319,6 +319,20 @@ enum ProbeHooks {
                       things.map { "\($0.count) things" } ?? "FAILED")
             }
         },
+        // `-ghGraphDemo YES` seeds a synthetic contribution year and pins +
+        // fake-connects GitHub so the Home contribution-graph tile renders on
+        // the simulator (no real account needed). Screenshot/staging only.
+        Hook(key: "ghGraphDemo") { _, _ in
+            UserDefaults.standard.set(true, forKey: "ghGraphDemo")
+            if TokenVault.get(TokenBridge.github.tokenKey) == nil {
+                TokenVault.set("demo", for: TokenBridge.github.tokenKey)
+            }
+            if !HomePinnedSources.shared.isPinned("GitHub") {
+                HomePinnedSources.shared.toggle("GitHub")
+            }
+            CorpusSignal.shared.bump()
+            NSLog("GitHub graph demo: seeded + pinned GitHub")
+        },
         // `-ghDeviceProbe YES` runs the GitHub device-flow start request and
         // logs the outcome — with no client id it logs the honest unavailable
         // line (the setup screen shows paste-only in that state).

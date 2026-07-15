@@ -463,6 +463,9 @@ struct HomeScreen: View {
     /// proper card. Everything else can shrink to a small square too.
     private func allowedSpans(_ ref: String) -> [ModuleSpan] {
         if ref.hasPrefix("walletMap") || ref == "map" { return [.small, .big] }
+        // The contribution graph is a 53-wide grid — it needs full width, so it
+        // skips the 1×1 small (which would crush it) and never pairs 2-up.
+        if ref == "githubGraphShelf" { return [.wide, .big] }
         return [.small, .wide, .big]
     }
 

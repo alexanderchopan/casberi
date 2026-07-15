@@ -253,6 +253,9 @@ struct GenRender: View {
         // single latest post. Board members exactly like pinned/wallet/map:
         // draggable (Goal 1), sizable via the same pin (Goal 2).
         case "MediaShelf":  GenMediaShelf(id: id, el: el, els: els).mountIn()
+        // GitHub's contribution graph — a bespoke wide board module, its own
+        // green-squares year drawn on device (self-fetching, like the token tile).
+        case "GithubGraph": GenGithubGraph(widgetID: id, el: el).mountIn()
         // One retiring teaching line (Feed's coach grammar) — plain tinted
         // words, no overlays, no arrows.
         case "Coach":       GenCoach(el: el).mountIn()
@@ -719,6 +722,88 @@ private struct SoloTokenTile: View {
             RoundedRectangle(cornerRadius: 6, style: .continuous)
                 .fill(DS.surfaceWell).frame(height: 40)
         }
+    }
+}
+
+/// The GitHub contribution graph as a board module (2026-07-14): the
+/// green-squares year, drawn on device from GitHub's GraphQL calendar and
+/// cached in `GitHubGraphStore`. A wide/big tile — the grid wants width, so it
+/// never pairs 2-up (`allowedSpans`). Removable via the wobble minus like any
+/// pinned app; it opens nothing (the graph IS the content).
+private struct GenGithubGraph: View {
+    let widgetID: String
+    let el: GenEl
+    @Environment(\.genThingOpen) private var thingOpen
+    @Environment(\.genThingHandoff) private var thingHandoff
+    @Environment(\.genSizeToggle) private var sizeToggle
+    @Environment(\.genAppRemove) private var appRemove
+    @Environment(\.colorScheme) private var scheme
+    @State private var store = GitHubGraphStore.shared
+
+    var body: some View {
+        let content = VStack(alignment: .leading, spacing: DS.Space.s3) {
+            HStack(alignment: .top, spacing: 0) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(el.str(0)).dsText(.callout15).foregroundStyle(DS.textPrimary)
+                    if let total = store.year?.total {
+                        Text("\(total.formatted()) contributions")
+                            .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                    }
+                }
+                Spacer(minLength: 0)
+                if let sizeToggle {
+                    ShelfSizePin(large: false) { sizeToggle(widgetID) }
+                        .padding(.top, -12).padding(.trailing, -12)
+                }
+            }
+            ContributionGraph(year: store.year)
+        }
+        .soloTileChrome()
+        .task { await store.refreshIfStale() }
+        return content.pinnedRowActions(id: "", openable: false,
+                                        open: thingOpen, unpin: nil, handoff: thingHandoff,
+                                        removeApp: appRemove)
+    }
+}
+
+/// The green-squares grid — a Canvas of rounded cells (imperative draw, so
+/// 53×7 cells add ZERO depth to the Home view tree; a LazyVGrid of 371 shapes
+/// would deepen the tree the launch-stack budget guards). GitHub green ramped
+/// by the day's quartile; empty days wear the surface well. A nil year is the
+/// muted skeleton (loading / unreachable) — never fake counts.
+struct ContributionGraph: View {
+    let year: ContributionYear?
+
+    private static let gap: CGFloat = 3
+
+    var body: some View {
+        let weeks = year?.weeks ?? []
+        let cols = max(weeks.count, 53)
+        Canvas { ctx, size in
+            let gap = Self.gap
+            let cell = min((size.width - gap * CGFloat(cols - 1)) / CGFloat(cols),
+                           (size.height - gap * 6) / 7)
+            guard cell > 0 else { return }
+            for c in 0..<cols {
+                let week = c < weeks.count ? weeks[c] : nil
+                for r in 0..<7 {
+                    let day = (week.map { $0.days.count > r ? $0.days[r] : nil }) ?? nil
+                    let rect = CGRect(x: CGFloat(c) * (cell + gap),
+                                      y: CGFloat(r) * (cell + gap),
+                                      width: cell, height: cell)
+                    ctx.fill(Path(roundedRect: rect, cornerRadius: 2, style: .continuous),
+                             with: .color(Self.color(for: day)))
+                }
+            }
+        }
+        .aspectRatio(CGFloat(cols) / 7.0, contentMode: .fit)
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// GitHub green, ramped by quartile; the well for empty days.
+    static func color(for day: ContributionDay?) -> Color {
+        guard let day, day.level > 0 else { return DS.surfaceWell }
+        return DS.confirm.opacity(0.30 + 0.22 * Double(day.level - 1))
     }
 }
 

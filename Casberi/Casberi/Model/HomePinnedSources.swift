@@ -104,6 +104,7 @@ final class HomePinnedSources {
         case "Pinterest":   return "pinShelf"
         case "Photos":      return "shotShelf"
         case "RSS":         return "rssShelf"
+        case "GitHub":      return "githubGraphShelf"
         default:            return nil
         }
     }
@@ -118,6 +119,7 @@ final class HomePinnedSources {
         case "pinShelf":   return "Pinterest"
         case "shotShelf":  return "Photos"
         case "rssShelf":   return "RSS"
+        case "githubGraphShelf": return "GitHub"
         default:           return nil
         }
     }
