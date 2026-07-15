@@ -1,0 +1,569 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Casberi · Wallet</title>
+<style>
+  /* ---- Design tokens, ported from Casberi/Casberi/Design/DesignTokens.swift ---- */
+  :root{
+    --page:#000000;            /* DS.page (Default dark) */
+    --sheet:#111113;           /* DS.surfaceSheet */
+    --well:#080809;            /* DS.surfaceWell */
+    --bg100:#1c1c1e;           /* DS.background100 */
+    --gray100:#2c2c2e;
+    --tint:#1673e6;            /* ThemeStore.accentHex */
+    --confirm:#30d158;         /* DS.confirm */
+    --destructive:#ff453a;     /* DS.destructive */
+    --txt1:#ffffff;            /* text primary */
+    --txt2:rgba(235,235,245,.60); /* text secondary */
+    --txt3:rgba(235,235,245,.30); /* text tertiary */
+    --fillFaint:rgba(255,255,255,.04);
+    --fillLine:rgba(255,255,255,.10);
+    --rCard:10px; --rSheet:16px; --rCtrl:12px;
+    --ease:cubic-bezier(.32,.72,0,1);
+    --font: -apple-system, system-ui, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono: ui-monospace, "SF Mono", "Menlo", "Roboto Mono", monospace;
+  }
+  *{box-sizing:border-box; margin:0; padding:0; -webkit-font-smoothing:antialiased;}
+  html,body{width:1080px;height:1920px;overflow:hidden;background:#05060a;font-family:var(--font);}
+
+  /* ---- Stage / promo composition ---- */
+  .stage{position:relative;width:1080px;height:1920px;overflow:hidden;
+    background:radial-gradient(120% 90% at 50% -10%, #101a33 0%, #0a0c14 45%, #05060a 100%);}
+  .glow{position:absolute;inset:0;pointer-events:none;
+    background:
+      radial-gradient(40% 30% at 22% 26%, rgba(22,115,230,.28), transparent 70%),
+      radial-gradient(38% 28% at 82% 74%, rgba(138,63,252,.22), transparent 70%);
+    filter:saturate(1.05);}
+
+  /* ---- Brand header ---- */
+  .brand{position:absolute;top:96px;left:0;right:0;text-align:center;
+    opacity:0;transform:translateY(14px);transition:all .8s var(--ease);}
+  .brand.in{opacity:1;transform:none;}
+  .brand .mark{display:inline-flex;align-items:center;gap:18px;}
+  .brand .dot{width:42px;height:42px;border-radius:13px;
+    background:conic-gradient(from 210deg, #1673e6, #8a3ffc, #ff2d78, #1673e6);
+    box-shadow:0 6px 26px rgba(22,115,230,.5);}
+  .brand h1{color:var(--txt1);font-size:46px;font-weight:600;letter-spacing:-.5px;}
+  .brand .sub{margin-top:14px;color:var(--txt2);font-size:26px;font-weight:400;}
+
+  /* ---- Phone ---- */
+  .phone{position:absolute;left:50%;top:236px;transform:translateX(-50%) translateY(40px);
+    width:620px;opacity:0;transition:opacity .7s var(--ease), transform .9s var(--ease);}
+  .phone.in{opacity:1;transform:translateX(-50%) translateY(0);}
+  .device{position:relative;width:620px;height:1300px;border-radius:78px;
+    background:linear-gradient(160deg,#2a2c34,#0e0f14);
+    padding:16px;
+    box-shadow:0 50px 120px rgba(0,0,0,.65), 0 0 0 2px rgba(255,255,255,.05) inset;}
+  .bezel{position:relative;width:100%;height:100%;border-radius:64px;background:#000;
+    overflow:hidden;box-shadow:0 0 0 3px #000;}
+  .notch{position:absolute;top:20px;left:50%;transform:translateX(-50%);
+    width:150px;height:36px;background:#000;border-radius:20px;z-index:40;}
+
+  /* ---- App screen (393x852 logical, scaled into bezel) ---- */
+  .screen{position:absolute;inset:0;background:var(--page);color:var(--txt1);
+    transform-origin:top left;transform:scale(1.497);
+    width:392px;height:857px;}
+  .statusbar{height:54px;display:flex;align-items:flex-end;justify-content:space-between;
+    padding:0 30px 6px;font-size:15px;font-weight:600;color:var(--txt1);}
+  .statusbar .r{display:flex;gap:7px;align-items:center;}
+
+  .nav{padding:6px 20px 8px;display:flex;align-items:center;justify-content:space-between;}
+  .nav .title{font-size:34px;font-weight:700;letter-spacing:-.4px;}
+  .nav .edit{font-size:17px;color:var(--txt1);opacity:.9;}
+
+  /* scrolling list viewport */
+  .listwrap{position:absolute;top:114px;left:0;right:0;bottom:0;overflow:hidden;}
+  .list{position:absolute;left:0;right:0;top:0;padding:0 16px 60px;
+    transition:transform 1.0s var(--ease);}
+
+  .sechead{font-size:13px;font-weight:600;color:var(--txt2);
+    padding:18px 6px 8px;text-transform:none;letter-spacing:0;}
+  .secfoot{font-size:13px;color:var(--txt2);padding:8px 6px 4px;line-height:1.35;}
+  .card{background:var(--sheet);border-radius:var(--rCard);padding:14px 14px;
+    box-shadow:0 8px 22px rgba(0,0,0,.35);}
+  .card + .card{margin-top:10px;}
+
+  /* A section is absent from layout until shown (no phantom height); on show
+     it fades + rises into place while the list scrolls it into view. */
+  .sec{display:none;}
+  .sec.show{display:block;}
+  .reveal{opacity:0;transform:translateY(16px);
+    transition:opacity .6s var(--ease), transform .6s var(--ease);}
+  .reveal.in{opacity:1;transform:none;}
+
+  /* add-address field */
+  .field{display:flex;align-items:center;gap:10px;background:var(--sheet);
+    border-radius:var(--rCtrl);padding:13px 14px;}
+  .field .ph{flex:1;font-size:16px;color:var(--txt3);}
+  .field .ph.typed{color:var(--txt1);}
+  .field .watchbtn{font-size:15px;font-weight:600;color:#fff;background:var(--tint);
+    padding:8px 15px;border-radius:9px;}
+  .peek{display:inline-flex;align-items:center;gap:7px;margin:12px 4px 0;
+    color:var(--tint);background:rgba(22,115,230,.12);
+    padding:8px 14px;border-radius:999px;font-size:14px;font-weight:600;}
+  .peek svg{width:14px;height:14px;}
+
+  /* watching row */
+  .wrow{display:flex;align-items:center;gap:12px;}
+  .wrow + .wrow{margin-top:12px;padding-top:12px;border-top:0;}
+  .face{width:44px;height:44px;border-radius:11px;flex:none;position:relative;overflow:hidden;
+    background:linear-gradient(140deg, hsl(255 62% 62%), hsl(212 70% 55%));}
+  .face .b1{position:absolute;width:55%;height:55%;border-radius:50%;
+    background:rgba(255,255,255,.24);left:6%;top:-6%;filter:blur(3px);}
+  .face .b2{position:absolute;width:46%;height:46%;border-radius:50%;
+    background:rgba(0,0,0,.16);right:0%;bottom:-8%;filter:blur(3px);}
+  .face.f2{background:linear-gradient(140deg, hsl(150 62% 55%), hsl(120 66% 48%));}
+  .wmeta{flex:1;min-width:0;}
+  .wmeta .n{font-size:17px;font-weight:500;color:var(--txt1);}
+  .wmeta .s{font-size:13px;color:var(--txt2);margin-top:2px;font-family:var(--mono);}
+  .rowspark{width:56px;height:24px;flex:none;}
+  .pin{width:34px;height:34px;flex:none;display:flex;align-items:center;justify-content:center;
+    color:var(--txt3);transition:color .3s var(--ease), transform .3s var(--ease);}
+  .pin svg{width:17px;height:17px;}
+  .pin.on{color:var(--tint);transform:scale(1.08);}
+
+  /* sync row */
+  .syncrow{display:flex;align-items:center;gap:10px;color:var(--txt2);font-size:15px;padding:2px 2px;}
+  .spinner{width:18px;height:18px;border-radius:50%;border:2px solid var(--fillLine);
+    border-top-color:var(--tint);animation:spin .8s linear infinite;}
+  .syncrow.done .spinner{border:2px solid transparent;border-top-color:transparent;
+    background:var(--confirm);position:relative;animation:none;}
+  .syncrow.done .spinner::after{content:"";position:absolute;left:5px;top:2px;width:5px;height:9px;
+    border:2px solid #04150a;border-top:0;border-left:0;transform:rotate(45deg);}
+  @keyframes spin{to{transform:rotate(360deg);}}
+
+  /* treemap */
+  .treemap{display:grid;gap:6px;height:196px;
+    grid-template-columns:2.5fr 1.15fr 1fr;grid-template-rows:1fr 1fr 0.82fr;
+    grid-template-areas:"eth eth usdc" "eth eth usdc" "link wbtc ens";}
+  .tile{border-radius:var(--rCard);padding:11px 12px;display:flex;flex-direction:column;
+    justify-content:space-between;color:#fff;position:relative;overflow:hidden;
+    transform:scale(.72);opacity:0;transition:transform .5s var(--ease), opacity .5s var(--ease);}
+  .tile.in{transform:scale(1);opacity:1;}
+  .tile .sym{font-size:17px;font-weight:600;}
+  .tile .val{font-size:13px;color:rgba(255,255,255,.82);font-family:var(--mono);}
+  .tile .pct{font-size:12px;color:rgba(255,255,255,.62);}
+  .t-eth{grid-area:eth;background:rgba(22,115,230,.28);}
+  .t-usdc{grid-area:usdc;background:rgba(22,115,230,.19);}
+  .t-link{grid-area:link;background:rgba(22,115,230,.13);}
+  .t-wbtc{grid-area:wbtc;background:rgba(22,115,230,.11);}
+  .t-ens{grid-area:ens;background:rgba(22,115,230,.09);}
+  .tile.small .sym{font-size:14px;} .tile.small .val{font-size:11px;}
+
+  /* value row */
+  .vrow{display:flex;align-items:center;gap:12px;}
+  .vmeta .n{font-size:17px;color:var(--txt1);}
+  .vmeta .s{font-size:13px;color:var(--txt2);font-family:var(--mono);margin-top:2px;}
+  .plot{width:92px;height:32px;flex:none;}
+  .pill{font-size:12px;font-family:var(--mono);padding:3px 8px;border-radius:999px;white-space:nowrap;}
+  .pill.up{color:var(--confirm);background:rgba(48,209,88,.14);}
+  .pill.down{color:var(--destructive);background:rgba(255,69,58,.14);}
+
+  /* combined header */
+  .combhdr{display:flex;align-items:center;gap:12px;}
+  .combhdr .cv{flex:1;}
+  .combhdr .lbl{font-size:13px;color:var(--txt2);}
+  .combhdr .big{font-size:24px;font-weight:700;font-family:var(--mono);margin-top:2px;}
+  .chev{color:var(--txt3);font-size:15px;}
+
+  /* nft shelf — explicit heights so the horizontal track can't collapse;
+     contain:paint forces the transformed wide track to clip to this box
+     (plain overflow:hidden leaks a composited transform layer in Chromium). */
+  .shelf{overflow:hidden;height:134px;position:relative;contain:paint;}
+  .shelf .track{display:flex;gap:12px;height:134px;align-items:flex-start;
+    width:max-content;transition:transform 3.4s linear;}
+  .nft{flex:0 0 104px;width:104px;}
+  .nft .art{width:104px;height:104px;border-radius:var(--rCard);position:relative;overflow:hidden;}
+  .nft .cap{font-size:12px;color:var(--txt2);margin-top:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+
+  /* recent */
+  .rrow{display:flex;align-items:center;gap:12px;}
+  .rrow + .rrow{margin-top:12px;}
+  .glyph{width:30px;height:30px;border-radius:9px;background:var(--fillFaint);flex:none;
+    display:flex;align-items:center;justify-content:center;color:var(--txt2);}
+  .glyph svg{width:16px;height:16px;}
+  .rmeta{flex:1;min-width:0;}
+  .rmeta .t{font-size:16px;color:var(--txt1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .rmeta .d{font-size:13px;color:var(--txt2);margin-top:2px;}
+  .rtime{font-size:13px;color:var(--txt2);}
+
+  /* toast */
+  .toast{position:absolute;left:50%;bottom:44px;transform:translateX(-50%) translateY(20px) scale(.96);
+    background:rgba(28,28,30,.82);backdrop-filter:blur(18px);
+    -webkit-backdrop-filter:blur(18px);border:1px solid var(--fillLine);
+    color:var(--txt1);font-size:15px;font-weight:500;padding:12px 18px;border-radius:999px;
+    display:flex;align-items:center;gap:9px;opacity:0;transition:all .45s var(--ease);z-index:30;}
+  .toast.in{opacity:1;transform:translateX(-50%) translateY(0) scale(1);}
+  .toast .k{width:20px;height:20px;border-radius:50%;background:var(--confirm);position:relative;flex:none;}
+  .toast .k::after{content:"";position:absolute;left:6px;top:3px;width:5px;height:10px;
+    border:2px solid #04150a;border-top:0;border-left:0;transform:rotate(45deg);}
+
+  /* cursor / tap */
+  .cursor{position:absolute;width:46px;height:46px;border-radius:50%;z-index:60;
+    background:radial-gradient(circle at 40% 35%, rgba(255,255,255,.55), rgba(255,255,255,.14) 60%, transparent 72%);
+    border:2px solid rgba(255,255,255,.55);left:0;top:0;opacity:0;
+    transition:left .6s var(--ease), top .6s var(--ease), opacity .3s var(--ease), transform .18s var(--ease);
+    pointer-events:none;transform:translate(-50%,-50%);}
+  .cursor.tap{transform:translate(-50%,-50%) scale(.78);}
+  .ripple{position:absolute;z-index:59;border-radius:50%;border:2px solid rgba(22,115,230,.6);
+    width:20px;height:20px;opacity:0;transform:translate(-50%,-50%);pointer-events:none;}
+  .ripple.go{animation:ripple .5s var(--ease) forwards;}
+  @keyframes ripple{from{opacity:.7;width:20px;height:20px;}to{opacity:0;width:90px;height:90px;}}
+
+  /* caption */
+  .caption{position:absolute;left:80px;right:80px;bottom:120px;text-align:center;}
+  .caption .line{color:var(--txt1);font-size:36px;font-weight:600;line-height:1.28;
+    letter-spacing:-.3px;opacity:0;transform:translateY(12px);
+    transition:opacity .55s var(--ease), transform .55s var(--ease);}
+  .caption .line.in{opacity:1;transform:none;}
+  .caption .sub{color:var(--txt2);font-size:25px;font-weight:400;margin-top:14px;
+    opacity:0;transform:translateY(12px);transition:all .55s var(--ease) .08s;}
+  .caption .sub.in{opacity:1;transform:none;}
+
+  /* progress */
+  .track{position:absolute;left:0;right:0;bottom:0;height:6px;background:rgba(255,255,255,.06);}
+  .bar{height:100%;width:0;background:linear-gradient(90deg,var(--tint),#8a3ffc);transition:width .4s linear;}
+</style>
+</head>
+<body>
+<div class="stage" id="stage">
+  <div class="glow"></div>
+
+  <div class="brand" id="brand">
+    <div class="mark"><span class="dot"></span><h1>Casberi</h1></div>
+    <div class="sub">Watch any wallet — read-only, on your iPhone</div>
+  </div>
+
+  <div class="phone" id="phone">
+    <div class="device"><div class="bezel">
+      <div class="notch"></div>
+      <div class="screen">
+        <div class="statusbar"><span>9:41</span><span class="r">
+          <svg width="18" height="12" viewBox="0 0 18 12"><rect x="0" y="7" width="3" height="5" rx="1" fill="#fff"/><rect x="4" y="4" width="3" height="8" rx="1" fill="#fff"/><rect x="8" y="1" width="3" height="11" rx="1" fill="#fff"/><rect x="12" y="1" width="3" height="11" rx="1" fill="#fff" opacity=".35"/></svg>
+          <svg width="24" height="12" viewBox="0 0 24 12"><rect x="1" y="1" width="20" height="10" rx="3" fill="none" stroke="#fff" opacity=".5"/><rect x="3" y="3" width="14" height="6" rx="1.5" fill="#fff"/><rect x="22" y="4" width="1.6" height="4" rx=".8" fill="#fff" opacity=".5"/></svg>
+        </span></div>
+        <div class="nav">
+          <span class="title">Wallet</span>
+          <span class="edit">Edit</span>
+        </div>
+
+        <div class="listwrap">
+          <div class="list" id="list">
+
+            <!-- Watch an address -->
+            <div class="sechead">Watch an address</div>
+            <div class="field">
+              <span class="ph" id="addr">Address (0x… or ENS)</span>
+              <span class="watchbtn">Watch</span>
+            </div>
+            <div id="peekwrap">
+              <span class="peek"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l1.6 4.9L18 8.5l-4.4 1.6L12 15l-1.6-4.9L6 8.5l4.4-1.6z"/></svg>Peek at vitalik.eth</span>
+            </div>
+
+            <!-- Watching -->
+            <div class="sec" id="sec-watch">
+              <div class="sechead reveal">Watching</div>
+              <div class="card reveal">
+                <div class="wrow" id="wrow1">
+                  <div class="face"><div class="b1"></div><div class="b2"></div></div>
+                  <div class="wmeta"><div class="n">vitalik.eth</div><div class="s">0xd8dA…6045</div></div>
+                  <svg class="rowspark" id="rspark1" viewBox="0 0 56 24" preserveAspectRatio="none"></svg>
+                  <div class="pin" id="pin1"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M14 4V2H10v2H8v2l2 2v5l-3 2v2h4v3h2v-3h4v-2l-3-2V8l2-2V4z"/></svg></div>
+                </div>
+                <div class="wrow reveal" id="wrow2" style="margin-top:14px;display:none;">
+                  <div class="face f2"><div class="b1"></div><div class="b2"></div></div>
+                  <div class="wmeta"><div class="n">cold storage</div><div class="s">0x7a25…9b12</div></div>
+                  <svg class="rowspark" id="rspark2" viewBox="0 0 56 24" preserveAspectRatio="none"></svg>
+                  <div class="pin"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M14 4V2H10v2H8v2l2 2v5l-3 2v2h4v3h2v-3h4v-2l-3-2V8l2-2V4z"/></svg></div>
+                </div>
+              </div>
+              <div class="secfoot reveal">Swipe a wallet to pin its holdings to Home and Feed.</div>
+            </div>
+
+            <!-- Sync -->
+            <div class="sec" id="sec-sync">
+              <div class="card reveal" style="margin-top:10px;">
+                <div class="syncrow" id="syncrow"><span class="spinner"></span><span id="synctxt">Reading onchain activity…</span></div>
+              </div>
+            </div>
+
+            <!-- Holdings -->
+            <div class="sec" id="sec-hold">
+              <div class="sechead reveal">Holdings · vitalik.eth</div>
+              <div class="card reveal">
+                <div class="treemap" id="treemap">
+                  <div class="tile t-eth"  data-i="0"><div class="sym">ETH</div><div><div class="val">$318,402</div><div class="pct">58% · 4,120 ETH</div></div></div>
+                  <div class="tile t-usdc" data-i="1"><div class="sym">USDC</div><div><div class="val">$96,240</div><div class="pct">18%</div></div></div>
+                  <div class="tile t-link small" data-i="2"><div class="sym">LINK</div><div class="pct">11%</div></div>
+                  <div class="tile t-wbtc small" data-i="3"><div class="sym">WBTC</div><div class="pct">8%</div></div>
+                  <div class="tile t-ens small"  data-i="4"><div class="sym">ENS</div><div class="pct">5%</div></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Value -->
+            <div class="sec" id="sec-val">
+              <div class="sechead reveal">Value</div>
+              <div class="card reveal">
+                <div class="vrow">
+                  <div class="vmeta" style="flex:1;"><div class="n">vitalik.eth</div><div class="s">$548,910</div></div>
+                  <svg class="plot" id="valplot" viewBox="0 0 92 32" preserveAspectRatio="none"></svg>
+                  <div class="pill up">+4.2% · since Jul 8</div>
+                </div>
+              </div>
+              <div class="secfoot reveal">Sampled as you use Casberi — history builds from the day you started watching, never back-filled.</div>
+            </div>
+
+            <!-- NFTs -->
+            <div class="sec" id="sec-nft">
+              <div class="sechead reveal">NFTs</div>
+              <div class="card reveal">
+                <div class="shelf"><div class="track" id="nfttrack"></div></div>
+              </div>
+            </div>
+
+            <!-- Recent -->
+            <div class="sec" id="sec-rec">
+              <div class="sechead reveal">Recent</div>
+              <div class="card reveal">
+                <div class="rrow" id="rec1">
+                  <div class="glyph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12h16M14 6l6 6-6 6"/></svg></div>
+                  <div class="rmeta"><div class="t">Sent 12 ETH → gitcoin.eth</div><div class="d">vitalik.eth · Ethereum</div></div>
+                  <div class="rtime">2m</div>
+                </div>
+                <div class="rrow" id="rec2">
+                  <div class="glyph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 12H4M10 6L4 12l6 6"/></svg></div>
+                  <div class="rmeta"><div class="t">Received 25,000 USDC</div><div class="d">vitalik.eth · Base</div></div>
+                  <div class="rtime">1h</div>
+                </div>
+                <div class="rrow" id="rec3">
+                  <div class="glyph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="8"/><path d="M12 8v8M8 12h8"/></svg></div>
+                  <div class="rmeta"><div class="t">Minted “Checks — VV”</div><div class="d">vitalik.eth · Ethereum</div></div>
+                  <div class="rtime">3h</div>
+                </div>
+              </div>
+              <div class="secfoot reveal" style="padding-bottom:40px;">Read-only — watching can never trade or move funds. Activity is public, read across chains directly on this iPhone.</div>
+            </div>
+
+            <!-- Across your wallets (combined) -->
+            <div class="sec" id="sec-comb">
+              <div class="sechead reveal">Across your wallets</div>
+              <div class="card reveal">
+                <div class="combhdr">
+                  <div class="cv"><div class="lbl">Combined value</div><div class="big">$1.42M</div></div>
+                  <svg class="plot" id="combplot" viewBox="0 0 92 32" preserveAspectRatio="none"></svg>
+                  <div class="pill up">+6.4% · since Jul 8</div>
+                  <span class="chev">›</span>
+                </div>
+                <div class="treemap" style="margin-top:12px;height:120px;grid-template-rows:1fr 1fr;grid-template-areas:'eth eth usdc' 'link wbtc usdc';">
+                  <div class="tile t-eth in"><div class="sym">ETH</div><div class="pct">64%</div></div>
+                  <div class="tile t-usdc in"><div class="sym small">USDC</div><div class="pct">18%</div></div>
+                  <div class="tile t-link in small"><div class="sym">LINK</div></div>
+                  <div class="tile t-wbtc in small"><div class="sym">WBTC</div></div>
+                </div>
+              </div>
+              <div class="secfoot reveal">Everything you watch, together — read on this iPhone, no account, watch-only.</div>
+            </div>
+
+          </div>
+        </div>
+
+        <div class="toast" id="toast"><span class="k"></span><span id="toasttxt">Pinned to Home</span></div>
+      </div>
+    </div></div>
+    <div class="cursor" id="cursor"></div>
+    <div class="ripple" id="ripple"></div>
+  </div>
+
+  <div class="caption" id="caption">
+    <div class="line" id="capLine"></div>
+    <div class="sub" id="capSub"></div>
+  </div>
+
+  <div class="track"><div class="bar" id="bar"></div></div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const list = $('list');
+
+// ---- sparkline / plot drawing (green up / red down, gradient fade) ----
+function pts(seed, n, up){
+  let s = seed, out=[];
+  for(let i=0;i<n;i++){ s = (s*1103515245+12345)&0x7fffffff; out.push(s/0x7fffffff); }
+  // impose a gentle trend
+  return out.map((v,i)=> v*0.5 + (up? i/n : 1-i/n)*0.5);
+}
+function drawPlot(svg, w, h, seed, up, fill){
+  const n=26, ys=pts(seed,n,up), min=Math.min(...ys), max=Math.max(...ys);
+  const nx=i=> i/(n-1)*w, ny=v=> h-4-((v-min)/((max-min)||1))*(h-8);
+  let d=`M ${nx(0)} ${ny(ys[0])}`;
+  for(let i=1;i<n;i++) d+=` L ${nx(i)} ${ny(ys[i])}`;
+  const col = up ? getcss('--confirm') : getcss('--destructive');
+  const gid = 'g'+Math.floor(seed%99999);
+  let inner = '';
+  if(fill){
+    inner += `<defs><linearGradient id="${gid}" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0" stop-color="${col}" stop-opacity=".28"/>
+      <stop offset="1" stop-color="${col}" stop-opacity="0"/></linearGradient></defs>`;
+    inner += `<path d="${d} L ${w} ${h} L 0 ${h} Z" fill="url(#${gid})"/>`;
+  }
+  inner += `<path d="${d}" fill="none" stroke="${col}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>`;
+  inner += `<circle cx="${nx(n-1)}" cy="${ny(ys[n-1])}" r="2.6" fill="${col}"/>`;
+  svg.innerHTML = inner;
+}
+function getcss(v){ return getComputedStyle(document.documentElement).getPropertyValue(v).trim(); }
+
+// ---- NFT tiles ----
+const nftHues = [[276,68],[212,70],[150,62],[24,80],[330,66],[190,64]];
+const nftNames = ['Checks — VV','Nouns #443','Rings','CryptoPunk','Autoglyph','Terraforms'];
+(function buildNFTs(){
+  const t = $('nfttrack');
+  const all = nftNames.concat(nftNames);
+  t.innerHTML = all.map((nm,i)=>{
+    const h = nftHues[i%nftHues.length];
+    return `<div class="nft"><div class="art" style="background:
+      radial-gradient(120% 120% at 20% 15%, hsl(${h[0]} ${h[1]}% 62%), hsl(${(h[0]+40)%360} ${h[1]}% 40%))">
+      </div><div class="cap">${nm}</div></div>`;
+  }).join('');
+})();
+
+// ---- cursor helpers ----
+const cursor=$('cursor'), ripple=$('ripple'), phone=$('phone');
+function elCenterInPhone(el){
+  const pr = phone.getBoundingClientRect(), r = el.getBoundingClientRect();
+  return { x: r.left - pr.left + r.width/2, y: r.top - pr.top + r.height/2 };
+}
+async function moveTo(el){
+  const c = elCenterInPhone(el);
+  cursor.style.opacity=1; cursor.style.left=c.x+'px'; cursor.style.top=c.y+'px';
+  await sleep(650);
+}
+async function tap(el){
+  const c = elCenterInPhone(el);
+  cursor.classList.add('tap');
+  ripple.style.left=c.x+'px'; ripple.style.top=c.y+'px';
+  ripple.classList.remove('go'); void ripple.offsetWidth; ripple.classList.add('go');
+  await sleep(200); cursor.classList.remove('tap'); await sleep(180);
+}
+
+// ---- caption ----
+let capBusy;
+async function caption(line, sub){
+  const L=$('capLine'), S=$('capSub');
+  L.classList.remove('in'); S.classList.remove('in');
+  await sleep(340);
+  L.textContent=line; S.textContent=sub||'';
+  L.classList.add('in'); if(sub) S.classList.add('in');
+}
+// Reveal every .reveal inside a section, fading + rising them in.
+function revealInside(sec){ sec.querySelectorAll('.reveal').forEach(r=>r.classList.add('in')); }
+function scrollList(px){ list.style.transform = `translateY(${-Math.max(0,px)}px)`; }
+// Show a section (adds it to layout), scroll it into view near the top of the
+// viewport, and fade its contents in — all at once, so content appears as the
+// list scrolls. targetTopY: where the section's top should land in the viewport.
+function showSec(id, targetTopY=118){
+  const sec = $(id);
+  sec.classList.add('show');
+  // force layout so offsetTop is correct, then animate
+  const top = sec.offsetTop;
+  requestAnimationFrame(()=>{ revealInside(sec); scrollList(top - targetTopY); });
+  return sec;
+}
+function scrollToSec(id, targetTopY=118){
+  const sec = $(id); scrollList(sec.offsetTop - targetTopY);
+}
+
+let elapsed=0, TOTAL=39000;
+function progress(){ $('bar').style.width = Math.min(100, elapsed/TOTAL*100)+'%'; }
+async function step(ms){ elapsed+=ms; progress(); await sleep(ms); }
+
+// ---- director ----
+async function run(){
+  // draw plots + sparks
+  drawPlot($('rspark1'),56,24,7,true,false);
+  drawPlot($('rspark2'),56,24,31,false,false);
+  drawPlot($('valplot'),92,32,13,true,true);
+  drawPlot($('combplot'),92,32,21,true,true);
+
+  await step(500);
+  $('brand').classList.add('in');
+  await step(700);
+  $('phone').classList.add('in');
+  await step(700);
+  await caption('Watch any wallet', 'Paste an address or an ENS name.');
+  await step(1700);
+
+  // Scene 1 — peek at vitalik.eth
+  await moveTo($('peekwrap').querySelector('.peek'));
+  await tap($('peekwrap').querySelector('.peek'));
+  const pw=$('peekwrap'); pw.style.overflow='hidden'; pw.style.transition='opacity .35s, max-height .45s, margin .45s';
+  pw.style.opacity='0'; pw.style.maxHeight='0'; pw.style.marginTop='0';
+  showSec('sec-watch');
+  cursor.style.opacity=0;
+  await step(500);
+  showSec('sec-sync', 260);
+  await caption('One tap watches vitalik.eth', 'Read-only — it can never trade or move funds.');
+  await step(2400);
+
+  // Scene 2 — holdings paint in
+  $('syncrow').classList.add('done'); $('synctxt').textContent='Connected — 3 new';
+  showSec('sec-hold', 150);
+  await step(400);
+  const tiles = document.querySelectorAll('#treemap .tile');
+  for(const t of tiles){ t.classList.add('in'); await sleep(140); }
+  await caption('Live holdings', 'A treemap read on your iPhone — no account, no server.');
+  await step(2400);
+
+  // Scene 3 — value line
+  showSec('sec-val', 150);
+  await caption('Your value over time', 'History builds from the day you start watching.');
+  await step(2500);
+
+  // Scene 4 — NFTs
+  showSec('sec-nft', 150);
+  await step(600);
+  $('nfttrack').style.transform='translateX(-640px)';
+  await caption('The wallet’s NFTs', 'Spam filtered — tap a piece to open it on OpenSea.');
+  await step(3200);
+
+  // Scene 5 — recent activity
+  showSec('sec-rec', 150);
+  await caption('Onchain activity', 'Every transfer and mint lands in your feed.');
+  await step(2900);
+
+  // Scene 6 — pin to home
+  scrollToSec('sec-watch', 130);
+  await step(800);
+  await moveTo($('pin1'));
+  await tap($('pin1'));
+  $('pin1').classList.add('on');
+  $('toasttxt').textContent='vitalik.eth pinned to Home';
+  $('toast').classList.add('in');
+  cursor.style.opacity=0;
+  await caption('Pin a wallet', 'Its holdings ride Home and Feed at a glance.');
+  await step(2500);
+  $('toast').classList.remove('in');
+
+  // Scene 7 — add a second wallet, combined view
+  $('wrow2').style.display='flex';
+  requestAnimationFrame(()=>$('wrow2').classList.add('in'));
+  await step(700);
+  showSec('sec-comb', 150);
+  await caption('Watch several at once', 'See them combined — one value, one treemap.');
+  await step(3000);
+
+  // Outro
+  await caption('Watch-only. On-device.', 'Casberi · Wallet');
+  await step(2600);
+
+  progress();
+  window.__done = true;
+}
+run();
+</script>
+</body>
+</html>
