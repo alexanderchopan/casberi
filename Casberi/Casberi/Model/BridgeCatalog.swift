@@ -119,7 +119,10 @@ enum BridgeCatalog {
         Offer(name: "RSS",         tagline: "Any site with a feed",                  group: "Reading",   connectable: true,
               summary: "Follow any site that publishes a feed — new posts land in your feed as links, fetched by this iPhone directly. No account, no algorithm in between.",
               needsSetup: true),
-        Offer(name: "Farcaster",   tagline: "Track any Farcaster account",           group: "Network",   connectable: true,
+        // Onchain, not Social (user ruling 2026-07-14, matching the website's
+        // shelving): Farcaster is the onchain network — it browses with
+        // Wallet/Tokens/OpenSea, and its detail eyebrow says so.
+        Offer(name: "Farcaster",   tagline: "Track any Farcaster account",           group: "Onchain",   connectable: true,
               summary: "An open social protocol — casts are public, so this connects with just a username: your own or anyone's. No password, nothing stored but the name.",
               needsSetup: true),
         Offer(name: "Bluesky",     tagline: "Your posts, in your feed",              group: "Network",   connectable: true,
