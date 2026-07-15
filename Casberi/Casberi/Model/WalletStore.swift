@@ -96,6 +96,39 @@ final class WalletStore {
         return samples
     }
 
+    /// Every watched wallet's value line merged into ONE portfolio net-worth
+    /// series (2026-07-15) — the combined "bundle" line. At each sampled moment
+    /// it sums the most recent known value of every wallet (forward-filled from
+    /// that wallet's last sample at or before the moment). Forward-only and
+    /// honest, exactly like the per-wallet samples it's built from — nothing is
+    /// back-filled.
+    ///
+    /// The series starts only once EVERY watched wallet has a sample (the
+    /// latest of the wallets' first-sample times). Before that, a just-added
+    /// wallet would contribute nothing and the total would jump the moment it
+    /// first prices — a real +millions-% artifact when wallets are watched at
+    /// different times (paid for 2026-07-15). Starting at the aligned point
+    /// means the line only ever shows the true combined net worth, never a
+    /// composition change masquerading as a gain. Empty until at least two such
+    /// aligned points exist, so a single-point line never draws.
+    func combinedValueSamples() -> [ValueSample] {
+        let lines = addresses
+            .map { valueSamples(forAddress: $0.address) }
+            .filter { !$0.isEmpty }
+        guard !lines.isEmpty, let start = lines.compactMap({ $0.first?.at }).max()
+        else { return [] }
+        let moments = Set(lines.flatMap { $0.map(\.at) })
+            .filter { $0 >= start }
+            .sorted()
+        guard moments.count >= 2 else { return [] }
+        return moments.map { moment in
+            let total = lines.reduce(0.0) { sum, samples in
+                sum + (samples.last(where: { $0.at <= moment })?.usd ?? 0)
+            }
+            return ValueSample(at: moment, usd: total)
+        }
+    }
+
     /// Appends a sample unless one landed in the last 4 hours — holdings
     /// refresh every foreground, and a line of near-identical minutes-apart
     /// points is noise, not history.

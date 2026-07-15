@@ -47,6 +47,10 @@ struct HomeScreen: View {
     /// The last celebrated corpus milestone — each fires exactly once, ever.
     @AppStorage("milestone.reached") private var milestoneReached = 0
     @State private var walletHoldings: [WalletIngest.HoldingsGroup] = []
+    /// The combined "Across your wallets" bundle across PINNED wallets — nil
+    /// with one or zero pinned (2026-07-15). Leads the per-wallet maps on the
+    /// board, matching the Wallet screen's combined view.
+    @State private var walletCombined: WalletIngest.HoldingsGroup?
     /// Pinned wallets' NFT strips (ruling 2026-07-14) — ride the wallet pin
     /// by default, removable per wallet via long-press.
     @State private var walletNFTs: [WalletIngest.NFTGroup] = []
@@ -380,6 +384,7 @@ struct HomeScreen: View {
         let doc = surfaced.isEmpty
             ? HomeComposition.empty
             : HomeComposition.compose(things: surfaced, walletHoldings: walletHoldings,
+                                      walletCombined: walletCombined,
                                       walletNFTs: walletNFTs,
                                       walletPending: walletHoldingsLoading)
         if instant {
@@ -462,7 +467,7 @@ struct HomeScreen: View {
     /// wide shows one item as a line beneath the header; big shows three, a
     /// proper card. Everything else can shrink to a small square too.
     private func allowedSpans(_ ref: String) -> [ModuleSpan] {
-        if ref.hasPrefix("walletMap") || ref == "map" { return [.small, .big] }
+        if ref.hasPrefix("walletMap") || ref == "walletCombined" || ref == "map" { return [.small, .big] }
         // The contribution graph is a 53-wide grid — it needs full width, so it
         // skips the 1×1 small (which would crush it) and never pairs 2-up.
         if ref == "githubGraphShelf" { return [.wide, .big] }
@@ -605,8 +610,9 @@ struct HomeScreen: View {
     private func loadWalletHoldings() {
         guard wallet.addresses.contains(where: \.pinnedToHome) else {
             walletHoldingsLoading = false
-            if !walletHoldings.isEmpty || !walletNFTs.isEmpty {
+            if !walletHoldings.isEmpty || !walletNFTs.isEmpty || walletCombined != nil {
                 walletHoldings = []
+                walletCombined = nil
                 walletNFTs = []
                 recomposeOrDefer()
             }
@@ -614,11 +620,15 @@ struct HomeScreen: View {
         }
         walletHoldingsLoading = true
         Task { @MainActor in
-            // Holdings and NFTs are independent reads — overlapped, and the
-            // NFT half rides its 15-minute cache after the first fetch.
+            // Holdings, the combined bundle, and NFTs are independent reads —
+            // overlapped, and the NFT half rides its 15-minute cache after the
+            // first fetch. The combined fetch returns nil with one pinned
+            // wallet, so it costs nothing then.
             async let holdings = WalletIngest.topHoldingsByWallet(pinnedOnly: true)
+            async let combined = WalletIngest.combinedHoldings(pinnedOnly: true)
             async let nfts = WalletIngest.pinnedNFTGroups()
             walletHoldings = await holdings
+            walletCombined = await combined
             walletNFTs = await nfts
             walletHoldingsLoading = false
             recomposeOrDefer()
@@ -657,8 +667,10 @@ struct HomeScreen: View {
         chrome.refreshPulse += 1   // spins the avatar door, deals the berry rain
         if wallet.addresses.contains(where: \.pinnedToHome) {
             async let holdings = WalletIngest.topHoldingsByWallet(pinnedOnly: true)
+            async let combined = WalletIngest.combinedHoldings(pinnedOnly: true)
             async let nfts = WalletIngest.pinnedNFTGroups()
             walletHoldings = await holdings
+            walletCombined = await combined
             walletNFTs = await nfts
         }
         // Pull RE-STREAMS the composition, it doesn't just repaint (A, ruling

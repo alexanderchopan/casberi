@@ -31,6 +31,11 @@ struct WalletScreen: View {
     @Environment(BridgeStore.self) private var store
     @State private var syncing = false
     @State private var holdings = GenStream()
+    /// The combined "bundle" treemap across every watched wallet (2026-07-15) —
+    /// shown alongside the per-wallet charts when more than one is watched.
+    @State private var portfolioHoldings = GenStream()
+    @State private var portfolioTotal: Double = 0
+    @State private var portfolioSamples: [WalletStore.ValueSample] = []
     @State private var result: String?
     @State private var resultIsError = false
     /// Per-wallet value history (2026-07-14) — the locally-sampled USD line,
@@ -59,6 +64,13 @@ struct WalletScreen: View {
             // a single toggle below that couldn't say WHICH wallet it meant
             // once more than one was watched.
             if !wallet.addresses.isEmpty { watchingSection.listRowSeparator(.hidden) }
+            // The combined "bundle" leads the holdings — total net worth and one
+            // merged treemap — with the per-wallet charts below it. Only when
+            // more than one wallet is watched (one wallet's own view IS its
+            // portfolio); ruling 2026-07-15, alongside the per-wallet views.
+            if wallet.addresses.count > 1, !portfolioHoldings.els.isEmpty {
+                portfolioSection.listRowSeparator(.hidden)
+            }
             if !wallet.addresses.isEmpty, !holdings.els.isEmpty {
                 Section {
                     GenRender(id: "root", els: holdings.els)
@@ -129,6 +141,64 @@ struct WalletScreen: View {
         }
     }
 
+    // MARK: - Portfolio (combined bundle, 2026-07-15)
+
+    /// The combined view across every watched wallet: net-worth headline,
+    /// combined net-worth line (when history exists), and one merged treemap.
+    /// Additive — the per-wallet charts still follow below, so which wallet
+    /// holds what is never lost (ruling 2026-07-15, revising 2026-07-09's
+    /// separate-only holdings).
+    private var portfolioSection: some View {
+        Section {
+            HStack(alignment: .center, spacing: DS.Space.s3) {
+                VStack(alignment: .leading, spacing: 2) {
+                    // "Combined value", not "Net worth" (ruling 2026-07-15,
+                    // softening §71): the frame is your history with what you
+                    // watch, not a terminal — and it's only these watched
+                    // wallets' onchain value, never a claim about your whole
+                    // net worth.
+                    Text("Combined value")
+                        .dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                    Text(TokenStats.compact(portfolioTotal))
+                        .dsText(.heading22).foregroundStyle(DS.textPrimary)
+                        .monospacedDigit()
+                }
+                Spacer()
+                if portfolioSamples.count >= 2 {
+                    let closes = portfolioSamples.map(\.usd)
+                    let first = closes.first ?? 0
+                    let last = closes.last ?? 0
+                    let change = first > 0 ? (last - first) / first : 0
+                    VStack(alignment: .trailing, spacing: 4) {
+                        TokenChartPlot(chart: TokenChart(closes: closes, price: last,
+                                                         change: change),
+                                       accent: TokenChartStyle.accent(up: change >= 0,
+                                                                      scheme: scheme),
+                                       height: 30, pulses: false)
+                            .frame(width: 84)
+                        TokenDeltaPill(
+                            change: change,
+                            label: "since \(portfolioSamples.first!.at.formatted(.dateTime.month(.abbreviated).day()))",
+                            compact: true)
+                    }
+                }
+            }
+            .dsListCardRow()
+            if !portfolioHoldings.els.isEmpty {
+                GenRender(id: "root", els: portfolioHoldings.els)
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+                    .listRowInsets(EdgeInsets())
+            }
+        } header: {
+            Text("Across your wallets").dsText(.label12)
+                .foregroundStyle(DS.textSecondary)
+        } footer: {
+            Text("Everything you watch, together — read on this iPhone, no account, watch-only.")
+                .dsText(.callout15).foregroundStyle(DS.textSecondary)
+        }
+    }
+
     // MARK: - Value history (2026-07-14)
 
     private func loadValueLines() {
@@ -137,6 +207,9 @@ struct WalletScreen: View {
             guard samples.count >= 2 else { return nil }
             return (addr.id, addr.label.isEmpty ? addr.short : addr.label, samples)
         }
+        // The combined net-worth line only exists with more than one wallet;
+        // with one, the per-wallet line above already IS the portfolio.
+        portfolioSamples = wallet.addresses.count > 1 ? wallet.combinedValueSamples() : []
     }
 
     /// Each wallet's sampled USD line — drawn with the token plot idiom
@@ -271,9 +344,19 @@ struct WalletScreen: View {
             // chain their own round-trips).
             async let refreshed = WalletIngest.refresh(context: modelContext)
             async let holdingsDoc = WalletIngest.holdingsChart()
+            async let portfolioDoc = WalletIngest.combinedHoldings()
             async let nfts = WalletIngest.nftsByWallet()
             let added = await refreshed
             if let doc = await holdingsDoc { holdings.paint(doc) }
+            // The combined bundle — total + one merged treemap (nil unless
+            // more than one wallet is watched).
+            if let group = await portfolioDoc {
+                portfolioTotal = group.totalUSD
+                portfolioHoldings.paint(WalletIngest.groupDocument(group))
+            } else {
+                portfolioTotal = 0
+                portfolioHoldings.paint([])
+            }
             loadValueLines()   // the holdings fetch may have landed a sample
             nftGroups = await nfts
             syncing = false

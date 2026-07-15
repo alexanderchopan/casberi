@@ -2969,3 +2969,48 @@ trending tokens landed (Synapse, Manyu, WBTC, PYUSD, Pepe, …), zero
 duplicates, each carrying a Dexscreener URL the sheet reads for its
 chart. Website: hero rain tile + Markets mini-cell + `.ai-geckoterminal`
 green, per the same-session parity rule.
+
+## 77. Across your wallets — a combined view, additive to the per-wallet ones (user, 2026-07-15)
+
+Watching more than one wallet earns ONE combined read — the value across
+them, and one treemap summing the same holdings the per-wallet charts show
+separately. Prompted by looking at Zapper (its "bundle") and rotki (net
+worth over time, local-first); the frame stays Casberi's, not either app's.
+
+- **Additive, never replacing (revises the 2026-07-09 separate-holdings
+  ruling).** That ruling held holdings apart because summing them "hid
+  which wallet actually held what." Still true — so the per-wallet
+  treemaps stay exactly as they were, and the combined view leads ABOVE
+  them, not instead. Nothing is lost; there's simply one more read for
+  "everything together." Shown only with more than one wallet watched —
+  one wallet's own screen already is its combined view.
+- **Softened framing, not a portfolio app (softens §71).** §71 kept
+  Tokens/Wallet as "your history with the assets, not a market terminal."
+  So the section is "Across your wallets", the number is "Combined
+  value" — never "Net worth" or "Portfolio". "Net worth" would also
+  OVERCLAIM: it's these watched wallets' onchain value, not the person's
+  actual net worth (no CEX, no chains we don't read). The honest label
+  says exactly what it sums.
+- **The combined line starts only when every wallet has a sample.** The
+  net-worth-over-time line reuses §71's forward-only per-wallet samples,
+  merged. But a wallet added later would contribute zero to the early
+  total and then jump when it first prices — a real +2,000,000% artifact
+  in verification (Binance watched after Vitalik). The series now starts
+  at the latest of the wallets' first-sample times, so every wallet
+  contributes a real value from the first point; a composition change
+  never masquerades as a gain (honesty rule). Empty until two aligned
+  points exist.
+- **Private by nature (the rotki angle, honestly).** Read on this iPhone,
+  no account, watch-only — the footer says so. The differentiator vs
+  cloud trackers (Zapper/Zerion) that harvest addresses server-side. The
+  honest bound: addresses still reach Alchemy (the indexer), just never a
+  Casberi server — the copy claims "no account, read on this iPhone",
+  never "never leaves your phone".
+
+Combined fetch reuses `WalletIngest.holdings(addresses:)` (already
+aggregates any number of addresses) via `combinedHoldings()`; the merged
+line is `WalletStore.combinedValueSamples()`. Section lives atop
+`WalletScreen`. Verified live across two real wallets (Vitalik + Binance
+14): one $393M "Combined value", one 22-token treemap, a sane +3.3%
+combined line after the alignment fix. No new catalog offer, no website
+catalog change — it's synthesis over connected wallets, not a bridge.

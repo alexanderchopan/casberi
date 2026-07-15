@@ -39,10 +39,12 @@ enum HomeComposition {
 
     static func compose(things: [Thing],
                         walletHoldings: [WalletIngest.HoldingsGroup] = [],
+                        walletCombined: WalletIngest.HoldingsGroup? = nil,
                         walletNFTs: [WalletIngest.NFTGroup] = [],
                         walletPending: Bool = false) -> Document {
         let projects = projectClusters(things: things)
         return daily(things: things, projects: projects, walletHoldings: walletHoldings,
+                     walletCombined: walletCombined,
                      walletNFTs: walletNFTs, walletPending: walletPending)
     }
 
@@ -55,6 +57,7 @@ enum HomeComposition {
     // MARK: - Documents
 
     private static func daily(things: [Thing], projects: [Cluster], walletHoldings: [WalletIngest.HoldingsGroup] = [],
+                                     walletCombined: WalletIngest.HoldingsGroup? = nil,
                                      walletNFTs: [WalletIngest.NFTGroup] = [],
                                      walletPending: Bool = false) -> Document {
         var doc: [String] = []
@@ -93,7 +96,7 @@ enum HomeComposition {
         // (appendMediaModules), everyone else composes as a Widget of rows.
         appendPinnedApps(things, to: &doc, rootRefs: &rootRefs, boardRefs: &boardRefs, boardKeys: &boardKeys)
         appendGitHubGraph(to: &doc, rootRefs: &rootRefs, boardRefs: &boardRefs)
-        appendWalletHoldings(walletHoldings, pending: walletPending, to: &doc, rootRefs: &rootRefs, boardRefs: &boardRefs, boardKeys: &boardKeys)
+        appendWalletHoldings(walletHoldings, combined: walletCombined, pending: walletPending, to: &doc, rootRefs: &rootRefs, boardRefs: &boardRefs, boardKeys: &boardKeys)
         appendWalletNFTs(walletNFTs, to: &doc, rootRefs: &rootRefs, boardRefs: &boardRefs, boardKeys: &boardKeys)
         appendMediaModules(things, to: &doc, rootRefs: &rootRefs, boardRefs: &boardRefs)
 
@@ -448,11 +451,26 @@ enum HomeComposition {
     /// Groups arrive pre-computed (WalletIngest.topHoldingsByWallet()) since
     /// composing the doc is synchronous and the fetch is not.
     private static func appendWalletHoldings(_ groups: [WalletIngest.HoldingsGroup],
+                                             combined: WalletIngest.HoldingsGroup? = nil,
                                              pending: Bool = false,
                                              to doc: inout [String],
                                              rootRefs: inout [String],
                                              boardRefs: inout [String],
                                              boardKeys: inout [String: String]) {
+        // The combined "Across your wallets" map LEADS the per-wallet ones
+        // when more than one wallet is pinned (ruling 2026-07-15, softening
+        // §71): the same additive bundle the Wallet screen shows, so Home's
+        // total matches its per-wallet tiles. `combined` is nil with one or
+        // zero pinned wallets — a single wallet's own map already is its
+        // combined view. Softened voice: "Across your wallets", never "Net
+        // worth" or "Portfolio".
+        if let c = combined {
+            let id = "walletCombined"
+            boardKeys[id] = "wallet:__all__"
+            doc.append("\(id) = TagMap(\(q("@pin " + String(localized: "Across your wallets"))), \(q(c.subline)), [\(c.cells.joined(separator: ", "))], \(q("token")))")
+            rootRefs.append(id)
+            boardRefs.append(id)
+        }
         for (i, g) in groups.enumerated() {
             let id = "walletMap\(i)"
             // Key by the wallet's label so its treemap keeps its slot/size as

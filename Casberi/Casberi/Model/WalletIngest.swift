@@ -276,6 +276,34 @@ enum WalletIngest {
         "\"\(s.replacingOccurrences(of: "\"", with: "'"))\""
     }
 
+    /// The COMBINED holdings across every watched wallet (2026-07-15) — the
+    /// "bundle" view. `holdings(addresses:)` already aggregates any number of
+    /// addresses by symbol, so this passes them all at once: one total, one
+    /// top-5 treemap summing the same >= $1 positions the per-wallet view
+    /// shows separately. Added ALONGSIDE the per-wallet treemaps, not instead
+    /// of them (ruling 2026-07-15, revising 2026-07-09): the separate views
+    /// stay the default so you never lose which wallet holds what — this is an
+    /// extra overview answering "what am I worth in total." Nil with one or
+    /// zero wallets (one wallet's own view already IS its portfolio).
+    @MainActor
+    static func combinedHoldings(pinnedOnly: Bool = false) async -> HoldingsGroup? {
+        let watched = pinnedOnly
+            ? WalletStore.shared.addresses.filter(\.pinnedToHome)
+            : WalletStore.shared.addresses
+        guard watched.count > 1 else { return nil }
+        let hexes = await hexAddresses(watched.map(\.address))
+        guard !hexes.isEmpty, let h = await holdings(addresses: hexes) else { return nil }
+        return HoldingsGroup(label: String(localized: "All wallets"), cells: h.cells,
+                             totalUSD: h.total, tokenCount: h.count)
+    }
+
+    /// Builds a single-group treemap document (label + subline + cells) — the
+    /// `q`-escaped form the combined "bundle" view paints. Kept here so the
+    /// escaping matches `holdingsChart`'s and callers don't rebuild the string.
+    static func groupDocument(_ g: HoldingsGroup) -> [String] {
+        ["root = TagMap(\(q(g.label)), \(q(g.subline)), [\(g.cells.joined(separator: ", "))], \(q("token")))"]
+    }
+
     /// Every watched wallet's holdings, one group per address — for a caller
     /// composing its own document (Home's and Feed's pinned-wallet module)
     /// rather than rendering the Wallet screen's standalone one. A wallet
