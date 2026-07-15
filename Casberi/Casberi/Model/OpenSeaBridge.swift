@@ -28,7 +28,7 @@ import SwiftData
 /// list is curated, not exhaustive: a chain with no NFT culture would only
 /// pad the picker.
 enum OpenSeaChain: String, CaseIterable, Identifiable {
-    case ethereum, base, polygon, arbitrum, optimism, zora, avalanche, blast
+    case ethereum, base, polygon, arbitrum, optimism, avalanche, blast
 
     var id: String { rawValue }
 
@@ -40,7 +40,6 @@ enum OpenSeaChain: String, CaseIterable, Identifiable {
         case .polygon:   "Polygon"
         case .arbitrum:  "Arbitrum"
         case .optimism:  "Optimism"
-        case .zora:      "Zora"
         case .avalanche: "Avalanche"
         case .blast:     "Blast"
         }
