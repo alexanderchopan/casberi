@@ -107,6 +107,19 @@ final class GitHubFeeds {
 enum GitHubFeedFetch {
     private static let api = "https://api.github.com"
 
+    /// Stamped on a stable major release (a clean x.0.0) so the arrival
+    /// celebration in the shell can key on it — a repo you star hitting v16 is
+    /// a moment worth a berry shower, a point release isn't.
+    static let majorReleaseTag = "Major release"
+
+    /// A clean x.0.0 (minor and patch both zero, major ≥ 1) — tolerant of a
+    /// leading `v` and monorepo `pkg@`/`@scope/pkg@` prefixes.
+    static func isMajorRelease(_ tag: String) -> Bool {
+        guard let r = tag.range(of: #"(\d+)\.0\.0(?:\D|$)"#, options: .regularExpression)
+        else { return false }
+        return (Int(tag[r].prefix { $0.isNumber }) ?? 0) >= 1
+    }
+
     /// Who the token belongs to — the identity every activity feed needs, and
     /// the one call that tells a bad token from an empty feed (a rejected token
     /// answers 401 here, so the caller can retire it).
@@ -206,8 +219,13 @@ enum GitHubFeedFetch {
                   published >= cutoff else { return nil }
             let tag = (rel["tag_name"] as? String) ?? (rel["name"] as? String) ?? ""
             let short = full.split(separator: "/").last.map(String.init) ?? full
-            return thing(.link, title: tag.isEmpty ? short : "\(short) \(tag)",
-                         content: url, ref: "gh:release:\(id)", feed: .releases, at: published)
+            let t = thing(.link, title: tag.isEmpty ? short : "\(short) \(tag)",
+                          content: url, ref: "gh:release:\(id)", feed: .releases, at: published)
+            // A stable major (not a prerelease) earns the celebration marker.
+            if !((rel["prerelease"] as? Bool) ?? false), isMajorRelease(tag) {
+                t.tags.append(majorReleaseTag)
+            }
+            return t
         }
         return found.compactMap { $0 }
     }

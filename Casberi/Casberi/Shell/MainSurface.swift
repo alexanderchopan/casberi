@@ -183,6 +183,17 @@ struct MainSurface: View {
                 let firstEver = !hasOlder
                     && !UserDefaults.standard.bool(forKey: bloomedKey)
                 chrome.chipCaught(lead.source, firstEver: firstEver)
+                // A repo you star shipping a MAJOR release (a clean x.0.0) is a
+                // moment worth marking: the berry rain falls and a toast names
+                // it. One celebration per arrival batch — the marker is stamped
+                // at ingest (GitHubFeedFetch.isMajorRelease).
+                if let major = feedThings.first(where: {
+                    fresh.contains($0.id) && $0.source == "GitHub"
+                        && $0.tags.contains(GitHubFeedFetch.majorReleaseTag)
+                }) {
+                    chrome.refreshPulse += 1
+                    chrome.flash(String(localized: "\(major.title) is out 🎉"))
+                }
                 if firstEver {
                     UserDefaults.standard.set(true, forKey: bloomedKey)
                     let hue = DS.washHue(for: lead.source) ?? DS.tint
