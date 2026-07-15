@@ -33,6 +33,10 @@ struct ThingContentView: View {
                 TokenChartContent(thing: thing, chain: route.chain, address: route.address)
             } else if let route = KalshiMarket.route(from: thing.content) {
                 KalshiMarketContent(series: route.series, event: route.event)
+            } else if thing.source == "GitHub", thing.starCount != nil || thing.repoLanguage != nil {
+                // A starred / watched repo leads with its preview, then the
+                // language dot and the "since you starred" line.
+                GitHubStarContent(thing: thing)
             } else if let url = Capture.detectURL(in: thing.content.isEmpty ? thing.title : thing.content) {
                 LinkPreviewCard(url: url, storedImageURL: thing.previewImageURL)
             } else if let art = thing.previewImageURL, !art.isEmpty {
@@ -553,6 +557,116 @@ private struct TokenChartContent: View {
                         in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
         }
     }
+}
+
+/// A starred (or watched) repo: its link preview, then the language dot and —
+/// for stars — "since you starred", the stargazer count the day you saved it
+/// against where it is now. The anchor is stored at ingest; the current count
+/// is fetched live (and simply omitted if the fetch can't reach it).
+private struct GitHubStarContent: View {
+    let thing: Thing
+    @State private var currentStars: Int?
+
+    /// The star-time anchor — only when the record really carries one.
+    private var since: (stars: Int, date: Date)? {
+        guard let c = thing.starCount, c > 0 else { return nil }
+        return (c, thing.capturedAt)
+    }
+
+    /// "owner/repo" parsed from the repo's html_url.
+    private var repoPath: String? {
+        guard let url = URL(string: thing.content),
+              (url.host ?? "").contains("github.com") else { return nil }
+        let parts = url.pathComponents.filter { $0 != "/" }
+        guard parts.count >= 2 else { return nil }
+        return "\(parts[0])/\(parts[1])"
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s3) {
+            if let url = URL(string: thing.content) {
+                LinkPreviewCard(url: url, storedImageURL: thing.previewImageURL)
+            }
+            metaRow
+        }
+        .padding(.horizontal, DS.Space.s4)
+        .padding(.bottom, DS.Space.s3)
+        .task { await loadCurrent() }
+    }
+
+    @ViewBuilder private var metaRow: some View {
+        let language = thing.repoLanguage
+        if (language?.isEmpty == false) || since != nil {
+            HStack(spacing: DS.Space.s3) {
+                if let language, !language.isEmpty {
+                    HStack(spacing: 5) {
+                        Circle().fill(Self.languageColor(language))
+                            .frame(width: 9, height: 9)
+                        Text(language)
+                            .dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                    }
+                }
+                Spacer(minLength: 0)
+                sinceLine
+            }
+        }
+    }
+
+    @ViewBuilder private var sinceLine: some View {
+        if let since {
+            HStack(spacing: 5) {
+                Image(systemName: "star.fill")
+                    .dsText(.label12).foregroundStyle(DS.textTertiary)
+                if let now = currentStars, now != since.stars {
+                    let delta = now - since.stars
+                    Text("\(Self.compact(since.stars)) → \(Self.compact(now))")
+                        .dsText(.subhead13).foregroundStyle(DS.textPrimary).monospacedDigit()
+                    Text(delta > 0 ? "+\(Self.compact(delta)) since you starred"
+                                   : "since you starred")
+                        .dsText(.label12)
+                        .foregroundStyle(delta > 0 ? DS.confirm : DS.textTertiary)
+                } else {
+                    Text("\(Self.compact(since.stars)) when you starred")
+                        .dsText(.subhead13).foregroundStyle(DS.textTertiary).monospacedDigit()
+                }
+            }
+        }
+    }
+
+    private func loadCurrent() async {
+        guard since != nil, let path = repoPath,
+              let token = TokenVault.get(TokenBridge.github.tokenKey) else { return }
+        currentStars = await GitHubFeedFetch.repoStars(path: path, token: token)
+    }
+
+    /// "8.4k", "1.2M" — GitHub's own compact star form.
+    static func compact(_ n: Int) -> String {
+        switch n {
+        case 1_000_000...: return String(format: "%.1fM", Double(n) / 1_000_000)
+        case 1_000...:     return String(format: "%.1fk", Double(n) / 1_000)
+        default:           return "\(n)"
+        }
+    }
+
+    /// GitHub Linguist's canonical language colors; a neutral dot for the rest.
+    static func languageColor(_ language: String) -> Color {
+        colors[language] ?? DS.textTertiary
+    }
+    private static let colors: [String: Color] = [
+        "Swift": Color(hex: "#F05138"),       "JavaScript": Color(hex: "#F1E05A"),
+        "TypeScript": Color(hex: "#3178C6"),  "Python": Color(hex: "#3572A5"),
+        "Rust": Color(hex: "#DEA584"),        "Go": Color(hex: "#00ADD8"),
+        "Ruby": Color(hex: "#701516"),        "Java": Color(hex: "#B07219"),
+        "Kotlin": Color(hex: "#A97BFF"),      "C": Color(hex: "#555555"),
+        "C++": Color(hex: "#F34B7D"),         "C#": Color(hex: "#178600"),
+        "Objective-C": Color(hex: "#438EFF"), "Shell": Color(hex: "#89E051"),
+        "HTML": Color(hex: "#E34C26"),        "CSS": Color(hex: "#563D7C"),
+        "PHP": Color(hex: "#4F5D95"),         "Dart": Color(hex: "#00B4AB"),
+        "Scala": Color(hex: "#C22D40"),       "Elixir": Color(hex: "#6E4A7E"),
+        "Haskell": Color(hex: "#5E5086"),     "Lua": Color(hex: "#000080"),
+        "Vue": Color(hex: "#41B883"),         "Zig": Color(hex: "#EC915C"),
+        "Solidity": Color(hex: "#AA6746"),    "Nix": Color(hex: "#7E7EFF"),
+    ]
 }
 
 /// A Kalshi market's odds, drawn natively — the KalshiMarketView read: a

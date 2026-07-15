@@ -165,6 +165,20 @@ final class Thing {
     /// watched before this field).
     var watchPriceUsd: Double? = nil
 
+    /// A starred repo's stargazer count the moment it was starred (2026-07-14)
+    /// — the anchor for "since you starred": a number GitHub itself won't show
+    /// you, known locally and never back-filled. Set only by the GitHub Stars
+    /// ingest; `capturedAt` is the matching WHEN. Optional + default nil keeps
+    /// CloudKit mirroring happy; nil for everything else (and for stars saved
+    /// before this field).
+    var starCount: Int? = nil
+
+    /// A repo's primary language ("Swift", "Rust") — carried on GitHub star and
+    /// watched-repo things so the row can wear the language's canonical color.
+    /// Optional + default nil keeps CloudKit mirroring happy; nil for
+    /// everything else.
+    var repoLanguage: String? = nil
+
     init(
         id: UUID = UUID(),
         kind: ThingKind,

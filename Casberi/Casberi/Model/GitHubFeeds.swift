@@ -174,8 +174,13 @@ enum GitHubFeedFetch {
             let avatar = (repo["owner"] as? [String: Any])?["avatar_url"] as? String
             let at = IngestSupport.isoDate(item["starred_at"])
                 ?? IngestSupport.isoDate(repo["updated_at"])
-            return thing(.link, title: full, content: link, ref: "gh:star:\(id)",
-                         feed: .stars, at: at, image: IngestSupport.imageURL(avatar))
+            let t = thing(.link, title: full, content: link, ref: "gh:star:\(id)",
+                          feed: .stars, at: at, image: IngestSupport.imageURL(avatar))
+            // The stargazer count at star time is the "since you starred"
+            // anchor — captured once (dedupe on ref), never back-filled.
+            t.starCount = repo["stargazers_count"] as? Int
+            t.repoLanguage = repo["language"] as? String
+            return t
         }
     }
 
@@ -272,10 +277,22 @@ enum GitHubFeedFetch {
             guard let id = repo["id"], let full = repo["full_name"] as? String,
                   let link = repo["html_url"] as? String else { return nil }
             let avatar = (repo["owner"] as? [String: Any])?["avatar_url"] as? String
-            return thing(.link, title: full, content: link, ref: "gh:watch:\(id)",
-                         feed: .following, at: IngestSupport.isoDate(repo["updated_at"]),
-                         image: IngestSupport.imageURL(avatar))
+            let t = thing(.link, title: full, content: link, ref: "gh:watch:\(id)",
+                          feed: .following, at: IngestSupport.isoDate(repo["updated_at"]),
+                          image: IngestSupport.imageURL(avatar))
+            t.repoLanguage = repo["language"] as? String
+            return t
         }
+    }
+
+    /// The repo's live stargazer count — the "→ now" half of "since you
+    /// starred". A public repo answers without auth, but the stored token
+    /// lifts the rate limit and reaches private repos. nil on any failure
+    /// (the line just doesn't show).
+    static func repoStars(path: String, token: String) async -> Int? {
+        guard let repo = await IngestSupport.getJSON("\(api)/repos/\(path)",
+                                   auth: "Bearer \(token)") as? [String: Any] else { return nil }
+        return repo["stargazers_count"] as? Int
     }
 
     // MARK: - Shared
