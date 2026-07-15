@@ -97,7 +97,14 @@ struct OnboardingView: View {
                 feedPreviewCard
                     .arrive(arrived, delay: 0.5)
 
-                Spacer(minLength: 430)   // the bottom half belongs to the pile
+                // The pile owns the bottom as a self-scaling overlay, so this
+                // column just pins its content to the top and lets the rest
+                // breathe. A fixed 430pt MINIMUM used to force the column taller
+                // than an iPhone SE screen (667pt) — shoving the heading off the
+                // top and crowding the CTA against the pile. minLength 0 lets
+                // short screens use only the height they have; tall phones are
+                // unchanged (their spacer was already well over 430).
+                Spacer(minLength: 0)
             }
             .padding(.top, DS.Space.s4)
 
@@ -224,13 +231,25 @@ struct OnboardingView: View {
     /// −138 base the pile's TOP ROW crossed into the connect card and sat on
     /// the Apple Music row's Connect button — the ice must fill the glass,
     /// never the drink. The pile still packs bottom-up, just denser.
+    /// The row step is tuned for tall phones. On short screens (iPhone SE,
+    /// 667pt) the fixed 52pt step let the pile's TOP ROW rise into the connect
+    /// card once the layout stopped overflowing — the "ice must fill the glass,
+    /// never the drink" line above. Compress the step proportionally so the pile
+    /// tucks under the card. 812pt (iPhone 12/13 mini) and up keep the full 52pt
+    /// step, so every current non-SE phone renders the moment unchanged; the
+    /// base (bottom margin) stays fixed so the pile still bottoms out the same.
+    private static func rowStep(for height: CGFloat) -> CGFloat {
+        52 * min(1, max(0.6, (height - 200) / 612))
+    }
+
     private func cubeTarget(_ i: Int, in size: CGSize) -> CGPoint {
+        let step = Self.rowStep(for: size.height)
         if i >= Self.appleRowStart {
             let col = CGFloat(i - Self.appleRowStart)
             let cell = (size.width - DS.Space.s4 * 2) / 6
             let x = DS.Space.s4 + cell * col + cell / 2
                 + Self.jitter[i % Self.jitter.count] * 0.8
-            let y = size.height - 104 - 5 * 52
+            let y = size.height - 104 - 5 * step
                 + Self.jitter[(i + 5) % Self.jitter.count]
             return CGPoint(x: x, y: y)
         }
@@ -238,7 +257,7 @@ struct OnboardingView: View {
         let cell = (size.width - DS.Space.s4 * 2) / 5
         let x = DS.Space.s4 + cell * col + cell / 2
             + Self.jitter[i % Self.jitter.count] * 0.8
-        let y = size.height - 104 - row * 52
+        let y = size.height - 104 - row * step
             + Self.jitter[(i + 5) % Self.jitter.count]
         return CGPoint(x: x, y: y)
     }
