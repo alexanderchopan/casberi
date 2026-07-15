@@ -8,29 +8,77 @@ import SwiftData
 /// ends in proof — things land. Dedupe rides sourceRef.
 enum ScheduleIngest {
 
-    /// Events from the last week through the end of today — the feed shows
-    /// what happened and what's happening, not next week's agenda.
+    /// How far ahead calendar events are pulled — the "Coming up" lane's
+    /// horizon (ComingUp.window). Re-ruling 2026-07-14: the feed used to stop
+    /// at the end of today ("the calendar owns the future"); it now reaches a
+    /// week ahead so imminent events can surface on Home as things. Past events
+    /// still start a week back, so the window is a rolling ±7 days.
+    static let forwardWindow: TimeInterval = 7 * 86_400
+
+    /// Events from a week back through a week ahead — the past feeds the record,
+    /// the next seven days feed the "Coming up" card (re-ruling 2026-07-14).
+    /// BridgeRefresh re-runs this each foreground, so the forward window rolls.
+    ///
+    /// Recurring events (2026-07-14): EventKit hands every occurrence of a
+    /// recurring event the SAME `eventIdentifier`, so a daily meeting arrives as
+    /// N EKEvents sharing one id. We represent each series by ONE thing, keyed
+    /// on that id, whose date is the series' NEXT upcoming occurrence (or, when
+    /// the whole series is behind, its most recent past one, so it still shows
+    /// in the record). Each foreground refreshes that thing forward as
+    /// occurrences pass. A one-off event is just a series of one, handled the
+    /// same way. Before this, dedupe on the shared id kept only the first
+    /// occurrence seen — usually already past — so recurring meetings never
+    /// reached "Coming up".
     static func connectCalendar(context: ModelContext) async -> Int? {
         let store = EKEventStore()
         guard (try? await store.requestFullAccessToEvents()) == true else { return nil }
 
-        let cal = Calendar.current
         let start = Date.now.addingTimeInterval(-7 * 86_400)
-        let end = cal.date(byAdding: .day, value: 1, to: cal.startOfDay(for: .now)) ?? .now
+        let end = Date.now.addingTimeInterval(forwardWindow)
         let predicate = store.predicateForEvents(withStart: start, end: end, calendars: nil)
         let events = store.events(matching: predicate)
 
-        let existing = IngestSupport.existingSourceRefs(context)
-        var added = 0
+        // Collapse each series to the occurrence that best represents it. The
+        // series key is the event id, falling back to `calendarItemIdentifier`
+        // — a Birthdays/holidays/subscribed-calendar event often has a nil
+        // `eventIdentifier`, and the old `?? UUID()` minted a fresh ref every
+        // refresh, re-inserting it as a duplicate each foreground; the stable
+        // fallback lets those dedupe (and reach "Coming up" — a birthday is
+        // exactly the kind of thing that belongs there). An event with no start
+        // can't be placed on the timeline, so skip it.
+        let now = Date.now
+        var representative: [String: EKEvent] = [:]
         for event in events {
-            let ref = "ekevent:\(event.eventIdentifier ?? UUID().uuidString)"
-            guard !existing.contains(ref) else { continue }
+            let id = event.eventIdentifier ?? event.calendarItemIdentifier
+            guard !id.isEmpty, event.startDate != nil else { continue }
+            if let chosen = representative[id] {
+                representative[id] = betterOccurrence(chosen, event, now: now)
+            } else {
+                representative[id] = event
+            }
+        }
+
+        let existing = IngestSupport.thingsByRef(context, source: "Calendar")
+        var added = 0
+        for (id, event) in representative {
+            let ref = "ekevent:\(id)"
+            let when = event.startDate ?? now
+            if let thing = existing[ref] {
+                // Refresh the stored row forward as the series' representative
+                // moves to the next occurrence (or the time/title was edited).
+                if thing.capturedAt != when {
+                    thing.capturedAt = when
+                    thing.title = event.title ?? thing.title
+                    thing.content = eventLine(event)
+                }
+                continue
+            }
             let thing = Thing(
                 kind: .event,
                 title: event.title ?? "Event",
                 content: eventLine(event),
                 source: "Calendar",
-                capturedAt: event.startDate ?? .now,
+                capturedAt: when,
                 sourceRef: ref
             )
             context.insert(thing)
@@ -38,6 +86,35 @@ enum ScheduleIngest {
         }
         try? context.save()
         return added
+    }
+
+    /// The occurrence that best stands for a series: the soonest one still ahead
+    /// (the next upcoming), else — when the whole series is behind — the most
+    /// recent past one. A consistent total order, so reducing the occurrences
+    /// pairwise lands on the global best.
+    private static func betterOccurrence(_ a: EKEvent, _ b: EKEvent, now: Date) -> EKEvent {
+        let sa = a.startDate ?? .distantPast
+        let sb = b.startDate ?? .distantPast
+        switch (isAhead(a, now: now), isAhead(b, now: now)) {
+        case (true, true):   return sa <= sb ? a : b   // both ahead → soonest
+        case (true, false):  return a                  // ahead beats behind
+        case (false, true):  return b
+        case (false, false): return sa >= sb ? a : b   // both behind → most recent
+        }
+    }
+
+    /// Whether an occurrence still counts as "ahead" for representing its
+    /// series. A timed event is ahead until its start passes; an ALL-DAY event
+    /// starts at 00:00, so it counts as ahead for the whole of its day — else
+    /// today's all-day occurrence of a recurring series (a birthday, a daily
+    /// all-day block) would read as past by mid-afternoon and the row would jump
+    /// to tomorrow's instance, hiding the one happening today. Uses EKEvent's
+    /// authoritative `isAllDay` flag (not a midnight guess).
+    private static func isAhead(_ event: EKEvent, now: Date) -> Bool {
+        guard let start = event.startDate else { return false }
+        return event.isAllDay
+            ? start >= Calendar.current.startOfDay(for: now)
+            : start >= now
     }
 
     /// Completes (or un-completes) the real reminder behind a thing — the
@@ -78,6 +155,9 @@ enum ScheduleIngest {
                 capturedAt: reminder.creationDate ?? .now,
                 sourceRef: ref
             )
+            // The structured deadline for the "Coming up" lane — capturedAt is
+            // the creation time, so the due date rides its own field.
+            thing.dueAt = reminder.dueDateComponents?.date
             context.insert(thing)
             added += 1
         }

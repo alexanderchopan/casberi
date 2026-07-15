@@ -11,8 +11,38 @@ enum DemoCorpus {
     static func seedIfNeeded(_ context: ModelContext) {
         let count = (try? context.fetchCount(FetchDescriptor<Thing>())) ?? 0
         guard count == 0 else { return }
-        for thing in things() { context.insert(thing) }
+        let seeds = things()
+        stampDeadlines(seeds)
+        for thing in seeds { context.insert(thing) }
         try? context.save()
+    }
+
+    /// Gives a few seeds real deadlines so the "Coming up" card has something to
+    /// show off the demo corpus (the sim's EventKit store is empty, so the card
+    /// can't otherwise appear). Reminders get a `dueAt` — one overdue, one due
+    /// today, two ahead — and two events move into the future so the lane spans
+    /// Overdue → Today → Tomorrow. Anchored to DAY boundaries (not raw hour
+    /// offsets), so the labels the card computes are the same no matter what
+    /// time the demo is composed — a screen audit runs at arbitrary hours, and
+    /// `ago(hours: -20)` drifts across midnight into the wrong bucket. Mutates
+    /// in place (a Thing is a reference).
+    private static func stampDeadlines(_ seeds: [Thing]) {
+        func find(_ title: String) -> Thing? { seeds.first { $0.title == title } }
+        find("Book dentist")?.dueAt = atDay(-1, hour: 12)          // Overdue (yesterday)
+        find("Gym — legs day")?.dueAt = atDay(0, hour: 21)         // Today
+        find("Send Lisbon dates to Sam")?.dueAt = atDay(1, hour: 11)  // Tomorrow
+        find("Measure the hallway")?.dueAt = atDay(4, hour: 12)   // a weekday out
+        find("Design review")?.capturedAt = atDay(1, hour: 14)    // Tomorrow (event)
+        find("Dinner with Sam")?.capturedAt = atDay(1, hour: 19)  // Tomorrow evening (event)
+    }
+
+    /// `dayOffset` days from today's start, at `hour` — a wall-clock-stable
+    /// anchor so a due date lands in its intended relative bucket regardless of
+    /// the compose time.
+    private static func atDay(_ dayOffset: Int, hour: Int) -> Date {
+        let cal = Calendar.current
+        let day = cal.date(byAdding: .day, value: dayOffset, to: cal.startOfDay(for: .now)) ?? .now
+        return cal.date(byAdding: .hour, value: hour, to: day) ?? day
     }
 
     /// `d(h)` = `h` hours before now — keeps the corpus reading as "today back".

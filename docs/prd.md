@@ -2868,6 +2868,62 @@ showing "Jay 🦋 · Founder & Chief Innovation Officer…" with the Mentions
 chip lit; zero duplicate refs. The sheet's replies section and the
 setup row are the exact same views Farcaster uses.
 
+## Coming up — deadline surfacing on Home (user, 2026-07-14)
+
+The Home board leads (right under the cover) with a **"Coming up"** card: the
+person's own dated things resurfaced because a deadline is near — the pattern
+CardPointers uses to surface an expiring statement credit. Two corpus sources,
+soonest first, an overdue reminder leading:
+
+- **Upcoming events** (Calendar/Cal.com/Calendly) — their start rides
+  `capturedAt`. Cal.com/Calendly already carried future starts; the EventKit
+  calendar ingest, which used to stop at the end of today, now reaches a week
+  ahead (`ScheduleIngest.forwardWindow`, re-run each foreground so the window
+  rolls). A timed event that already passed today drops off; an all-day event
+  today stays (its midnight start is inferred as all-day).
+- **Due reminders** — a reminder's `capturedAt` is its CREATION time, so its
+  deadline rides a new structured field `Thing.dueAt` (CloudKit-safe optional,
+  set from `dueDateComponents` at ingest). A reminder past due leads as
+  "Overdue"; the rest read "Today" / "Tomorrow" / the weekday.
+
+**Two stances this re-opens, deliberately:**
+1. **§18 "the calendar owns the future."** Narrowed, not dropped: the record is
+   still the past, but the next seven days now surface on Home so an imminent
+   thing isn't invisible until it's history. The horizon is a week — not "next
+   month's agenda."
+2. **Home voice, "themes and content, no obligations."** A deadline IS an
+   obligation, so this card is a conscious exception to that rule — the whole
+   point is the nudge. Scoped to this one card; the rest of the board keeps the
+   no-obligations voice. Shown only when something is actually due (no empty
+   card, no dead control — honesty rule holds).
+
+Not a pinned board module: no size pin, no "Remove from Home" (there's no pin
+behind it) — automatic synthesis like the map. `HomeComposition.appendComingUp`
+emits a plain `Widget` of `Row`s (each row's time slot carries the WHEN as
+words); `Model/ComingUp.swift` is the query. Headless check: `-comingUpProbe YES`
+logs the lane over the current corpus.
+
+Record surfaces stay the past (honesty): because upcoming events now carry a
+future `capturedAt`, the Home cover's "Just landed" picks the newest thing with
+`capturedAt <= now` — never a future event announced as if it arrived. Overdue
+reminders are bounded to the last week (symmetric with the forward window) so a
+pile of stale open reminders can't bury today.
+
+**Recurring events (handled — needs device verification).** EventKit gives every
+occurrence of a recurring event the SAME `eventIdentifier`, so a daily meeting
+arrives as N EKEvents sharing one id. `ScheduleIngest.connectCalendar` collapses
+each series to ONE thing (keyed on that id) whose date is the series' NEXT
+upcoming occurrence — or its most recent past one when the whole series is
+behind, so it stays in the record — and refreshes that thing forward each
+foreground as occurrences pass (`betterOccurrence` picks the representative). One
+row per meeting, always pointing at the one that matters; a one-off is a series
+of one. This avoids both the old bug (only the first, usually-past occurrence
+landed, so recurring meetings never reached "Coming up") and the flood a
+per-occurrence ref would cause (14 rows for a daily meeting across ±7 days). The
+sim's EventKit store can't be granted full access headlessly (iOS 26), so the
+collapse/refresh path is **verified by reasoning + compile only** — confirm on a
+real device with a recurring meeting.
+
 ## 76. GeckoTerminal — trending tokens per chain, an OpenSea-shaped discovery bridge (user, 2026-07-14)
 
 User: "how could we offer something that surfaces trending tokens as a

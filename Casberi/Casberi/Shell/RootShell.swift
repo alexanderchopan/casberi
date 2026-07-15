@@ -343,6 +343,16 @@ struct RootShell: View {
                     NSLog("[Casberi] answerProbe(\"%@\") %dms →\n%@", q, ms, doc.joined(separator: "\n"))
                 }
             }
+            // Debug hook: `-comingUpProbe YES` logs the "Coming up" lane over
+            // the current corpus (upcoming events + due reminders, soonest
+            // first) so the Home card's contents verify headlessly.
+            if UserDefaults.standard.bool(forKey: "comingUpProbe") {
+                let things = (try? modelContext.fetch(FetchDescriptor<Thing>())) ?? []
+                let items = ComingUp.items(from: things)
+                NSLog("[Casberi] comingUpProbe → %d:\n%@", items.count,
+                      items.map { "\($0.thing.kind.typeTag) · \($0.thing.title) — \(ComingUp.label(for: $0))" }
+                          .joined(separator: "\n"))
+            }
             // Debug hooks for the BYO-key path: `-byokKey <key>` stores a key
             // headlessly — an optional "provider:" prefix picks the agent
             // ("venice:vk-…"; bare keys stay Anthropic), "clear" removes every

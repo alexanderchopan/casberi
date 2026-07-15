@@ -6,8 +6,11 @@ import SwiftData
 /// local author produces the same document shape from the same facts, and the
 /// engine streams it identically — swapping the source later changes no visuals.
 ///
-/// Voice constraints (Home spec): themes and content, no obligations. Tile
-/// sublines read content, not status. Hero: one synthesis statement, facts
+/// Voice constraints (Home spec): themes and content, no obligations — with one
+/// deliberate exception, the "Coming up" card (`appendComingUp`, user ruling
+/// 2026-07-14): a deadline IS an obligation, and surfacing it is that card's
+/// whole point. Everything else on the board keeps the no-obligations voice.
+/// Tile sublines read content, not status. Hero: one synthesis statement, facts
 /// only, priority project movement > pending decision > imminent event >
 /// bridge arrival. One layout every day (2026-07-12): the weekday-triggered
 /// "Your week, banked" recap and the morning/evening split were removed — the
@@ -65,6 +68,14 @@ enum HomeComposition {
         // The doc only names facts; the renderer owns image, bleed, fallbacks.
         doc.append(cover(things: things))
         rootRefs.append("cover")
+
+        // "Coming up" — the person's own dated things (upcoming events, due
+        // reminders) resurfaced because a deadline is near, leading the board
+        // right under the cover (user ruling 2026-07-14). A deliberate
+        // exception to the Home "no obligations" voice: a deadline IS an
+        // obligation, and surfacing it is the whole point of this card. Shows
+        // only when something is actually due — never an empty card.
+        appendComingUp(things, to: &doc, rootRefs: &rootRefs)
 
         // A quiet day's slot invites more apps (2026-07-10, user — the
         // berry said quiet twice under the quiet cover and did nothing).
@@ -221,7 +232,13 @@ enum HomeComposition {
         if isQuietDay(things) {
             return "cover = Cover(\(q(String(localized: "Today"))), \(q(String(localized: "A quiet day"))), \(q(String(localized: "Nothing new yet — your things keep."))), \(q("")), \(q(date)), \(q("quiet"))\(chipsSeat), \(q("")))"
         }
-        if let latest = things.first(where: { $0.kind != .approval }) {
+        // "Just landed" must name a thing that ACTUALLY landed — the newest
+        // thing whose capturedAt is at or before now. Since the calendar ingest
+        // now reaches a week ahead (and Cal.com/Calendly always did), a future
+        // event carries a future capturedAt and would otherwise sort to the top
+        // and get announced as "Just landed" — a fake status for a dinner three
+        // days out (honesty rule). The future belongs to "Coming up", not here.
+        if let latest = things.first(where: { $0.kind != .approval && $0.capturedAt <= .now }) {
             // Arg 5 marks the stream complete so the renderer's black field
             // doesn't flash in before the doc settles. Arg 4 (the old banner
             // slot) carries the SOURCE — the card leads with its app icon
@@ -275,6 +292,31 @@ enum HomeComposition {
     /// same "on the board" set the old single-post card used, now plural.
     /// Sorted by name so the natural order is stable across composes (the
     /// person's own arrangement rides `HomeBoardOrder` on top).
+    /// The "Coming up" card (2026-07-14) — upcoming events and due reminders,
+    /// soonest first, an overdue reminder leading. A plain leading card, NOT a
+    /// board module: no trailing source arg on the Widget, so it wears no size
+    /// pin and no "Remove from Home" (there's no pin behind it) — it's automatic
+    /// synthesis like the map, not a thing the person pinned. Emitted only when
+    /// something is due (honesty: no empty card, no dead controls). Each row's
+    /// time slot carries the WHEN as words ("Tomorrow", "Overdue"), not the
+    /// ago-time every other Home row shows.
+    private static func appendComingUp(_ things: [Thing],
+                                       to doc: inout [String],
+                                       rootRefs: inout [String]) {
+        let items = Array(ComingUp.items(from: things).prefix(5))
+        guard !items.isEmpty else { return }
+        let childIds = items.indices.map { "comingUpC\($0)" }
+        doc.append("comingUp = Widget(\(q(String(localized: "Coming up"))), \(q("")), [\(childIds.joined(separator: ", "))])")
+        for (i, item) in items.enumerated() {
+            let t = item.thing
+            let openable = VerbDerivation.verbs(for: t).contains {
+                if case .openURL = $0.action { return true } else { return false }
+            } ? "app" : ""
+            doc.append("comingUpC\(i) = Row(\(q(t.title)), \(q(t.kind.typeTag)), \(q(t.source)), \(q(ComingUp.label(for: item))), \(q(t.id.uuidString)), \(q(openable)))")
+        }
+        rootRefs.append("comingUp")
+    }
+
     private static func appendPinnedApps(_ things: [Thing],
                                          to doc: inout [String],
                                          rootRefs: inout [String],
