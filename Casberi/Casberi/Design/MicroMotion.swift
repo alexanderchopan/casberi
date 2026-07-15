@@ -192,6 +192,94 @@ struct SwipeHintNudge: ViewModifier {
     }
 }
 
+// MARK: - Connect bloom (an app's hue floods a store surface as a connect lands)
+
+/// The connect payoff, shared by the Apps store and the product page so the
+/// beat can't drift between them. Bump `token` to fire; the modifier commits
+/// full opacity in ONE frame, then eases it out. (A `pulse = 1` immediately
+/// followed by `withAnimation { pulse = 0 }` in the same synchronous call
+/// coalesces — SwiftUI never renders the 1, so nothing blooms. The commit must
+/// land a frame before the ease-out, which the follow-up hop guarantees.)
+struct ConnectBloom: ViewModifier {
+    /// The app's identity hue (a hueless app passes the tint).
+    let hue: Color
+    /// Bump to play one bloom.
+    let token: Int
+    @State private var pulse: CGFloat = 0
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    func body(content: Content) -> some View {
+        content
+            .overlay(alignment: .top) {
+                if pulse > 0.001 {
+                    LinearGradient(colors: [hue.opacity(0.5), hue.opacity(0.12), .clear],
+                                   startPoint: .top, endPoint: .bottom)
+                        .opacity(pulse)
+                        .ignoresSafeArea()
+                        .allowsHitTesting(false)
+                }
+            }
+            .onChange(of: token) {
+                guard token > 0 else { return }
+                pulse = 1
+                if reduceMotion { pulse = 0; return }
+                // A follow-up main-actor hop so the `= 1` renders before the
+                // ease-out reads from it (see the note above).
+                Task { @MainActor in
+                    withAnimation(.easeOut(duration: 0.75)) { pulse = 0 }
+                }
+            }
+    }
+}
+
+extension View {
+    /// The connect-payoff bloom — the app's hue washing over the surface as a
+    /// connection lands, then receding. `token` is a counter you bump on success.
+    func connectBloom(hue: Color, token: Int) -> some View {
+        modifier(ConnectBloom(hue: hue, token: token))
+    }
+}
+
+// MARK: - Land flash (a jump lands on a section: its header glows once)
+
+/// A one-shot highlight the moment a jump lands on a shelf — the header's tint
+/// glows up behind the words, then fades. A temporary fill, not a line (no
+/// hairlines); nothing when idle. Off under Reduce Motion. Overlapping lands
+/// cancel the prior clear so a second tap can't blink the glow off early.
+struct LandFlash: ViewModifier {
+    let trigger: Int
+    @State private var on = false
+    @State private var clear: Task<Void, Never>?
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    func body(content: Content) -> some View {
+        content
+            .background(alignment: .leading) {
+                RoundedRectangle(cornerRadius: DS.Radius.control, style: .continuous)
+                    .fill(DS.tint.opacity(on ? 0.14 : 0))
+                    .padding(.horizontal, DS.Space.s2)
+                    .padding(.vertical, -DS.Space.s1)
+                    .allowsHitTesting(false)
+            }
+            .onChange(of: trigger) {
+                guard !reduceMotion, trigger > 0 else { return }
+                clear?.cancel()
+                withAnimation(.easeOut(duration: 0.2)) { on = true }
+                clear = Task { @MainActor in
+                    try? await Task.sleep(for: .milliseconds(450))
+                    guard !Task.isCancelled else { return }
+                    withAnimation(.easeOut(duration: 0.5)) { on = false }
+                }
+            }
+    }
+}
+
+extension View {
+    /// One tint glow behind this view each time `trigger` bumps — a jump's
+    /// arrival, so a scroll-to doesn't land in silence.
+    func landFlash(_ trigger: Int) -> some View { modifier(LandFlash(trigger: trigger)) }
+}
+
 // MARK: - Staggered arrival (list rows land one after another)
 
 extension View {

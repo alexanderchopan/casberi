@@ -19,6 +19,22 @@ struct AppsScreen: View {
     @State private var pairing = false
     @State private var storyID: String?
     @State private var setupRoute: BridgeRouter.Destination?
+    @State private var query = ""
+    /// The connect payoff (delight): every Connect on this screen — story
+    /// card OR shelf capsule — ends the same way the product page's does,
+    /// the app's hue blooming over the page (the shared `.connectBloom`).
+    /// `connectHue` is the app that just landed; bumping `connectToken` fires
+    /// one bloom.
+    @State private var connectHue: Color = DS.tint
+    @State private var connectToken = 0
+    /// The store's first-ever connect rains the app's berries once — the
+    /// milestone the app noticed (sibling to "Your first thing"). Guarded so
+    /// it plays a single time, forever.
+    @AppStorage("apps.storeFirstConnect.done") private var storeFirstConnectDone = false
+    @State private var firstConnectPulse = 0
+    /// Bumped when a jump chip lands on a shelf — the header flashes once so
+    /// the tap has an arrival, not just a silent scroll.
+    @State private var shelfLand: [String: Int] = [:]
     #if DEBUG
     @State private var probe: AppsProbe?
     #endif
@@ -30,12 +46,13 @@ struct AppsScreen: View {
         ("Onchain", "Wallet",      ["Wallet", "NFTs", "Onchain"]),
         ("Life",    "Photos",      ["Photos", "Schedule", "Fitness"]),
         ("Notes",   "Apple Notes", ["Notes"]),
-        ("Social",  "Bluesky",     ["Network", "Messages"]),
+        ("Social",  "Bluesky",     ["Network"]),
         ("Agents",  "Claude",      ["Agent", "Machines"]),
         ("Mail",    "Gmail",       ["Mail"]),
         ("Work",    "GitHub",      ["Work"]),
         ("Reading", "Readwise",    ["Reading", "Saves"]),
         ("Media",   "Spotify",     ["Watching", "Listening", "Games"]),
+        ("Shopping", "Shopify",    ["Shopping"]),
         // Markets rides LAST (user ruling 2026-07-13, tightened same day):
         // Onchain leads the catalog; prediction markets are a tail interest,
         // not the front door — the shelf closes the store.
@@ -45,6 +62,27 @@ struct AppsScreen: View {
     private func category(of offer: BridgeCatalog.Offer) -> String {
         Self.categories.first { $0.groups.contains(offer.group) }?.name ?? "Life"
     }
+
+    /// "Because you connected" — connecting one app suggests its natural
+    /// neighbours in the story carousel, eyebrowed with the reason. Cheap
+    /// adjacency, but it reads as the store knowing you: connect GitHub and
+    /// Linear surfaces; connect a Wallet and Tokens/OpenSea/Farcaster do.
+    private static let adjacency: [String: [String]] = [
+        "GitHub":       ["Linear", "Notion"],
+        "Linear":       ["GitHub", "Notion"],
+        "Notion":       ["GitHub", "Linear"],
+        "Wallet":       ["Tokens", "OpenSea", "Farcaster"],
+        "Tokens":       ["Wallet", "OpenSea"],
+        "OpenSea":      ["Wallet", "Tokens"],
+        "Farcaster":    ["Bluesky", "Wallet"],
+        "Bluesky":      ["Farcaster"],
+        "Apple Health": ["Strava"],
+        "Strava":       ["Apple Health"],
+        "Readwise":     ["Kindle", "RSS"],
+        "Reddit":       ["YouTube"],
+        "Gmail":        ["Calendar"],
+        "Photos":       ["Apple Notes"],
+    ]
 
     // MARK: - Ranking (the For-you chart's one order)
 
@@ -80,6 +118,9 @@ struct AppsScreen: View {
     private struct Story: Identifiable {
         enum Kind { case bridge(BridgeCatalog.Offer), pair }
         let kind: Kind
+        /// An eyebrow override — the adjacency reason ("Goes with GitHub").
+        /// Nil falls back to the offer's own hook (its qualifier, else "New").
+        var eyebrow: String? = nil
         var id: String {
             switch kind { case .bridge(let o): o.name; case .pair: "pair" }
         }
@@ -94,22 +135,35 @@ struct AppsScreen: View {
     private var stories: [Story] {
         let active = Set(store.bridges.filter { $0.status != .paused }.map(\.name))
         var out: [Story] = []
+        var seen = Set<String>()
+        func add(_ offer: BridgeCatalog.Offer, eyebrow: String? = nil) {
+            guard !seen.contains(offer.name), !active.contains(offer.name),
+                  offer.connectable else { return }
+            seen.insert(offer.name)
+            out.append(Story(kind: .bridge(offer), eyebrow: eyebrow))
+        }
         // (1) Featured tracking bridges lead, in the order listed — unless
         // already connected (then they're in the strip, not the store).
-        for name in Self.featuredStories where !active.contains(name) {
-            guard let offer = BridgeCatalog.offers.first(where: { $0.name == name }),
-                  offer.connectable else { continue }
-            out.append(Story(kind: .bridge(offer)))
+        for name in Self.featuredStories {
+            if let offer = BridgeCatalog.offers.first(where: { $0.name == name }) { add(offer) }
         }
-        // (2) Pair-a-client when no client is paired (replaces pairEntryRow).
+        // (2) Because you connected — a connected app's neighbours surface
+        // next, eyebrowed with the reason.
+        for bridge in store.bridges where bridge.status != .paused {
+            for suggestion in Self.adjacency[bridge.name] ?? [] {
+                if let offer = BridgeCatalog.offers.first(where: { $0.name == suggestion }) {
+                    add(offer, eyebrow: "Goes with \(bridge.name)")
+                }
+            }
+        }
+        // (3) Pair-a-client when no client is paired (replaces pairEntryRow).
         if MCPPairing.transportReady {
             let clientPaired = store.bridges.contains { $0.name == "Claude" && $0.status == .connected }
             if !clientPaired { out.append(Story(kind: .pair)) }
         }
-        // (3) Backfill with other connectable bridges not yet connected.
-        for entry in ranked where entry.tier <= 1 && entry.offer.connectable
-            && !Self.featuredStories.contains(entry.offer.name) {
-            out.append(Story(kind: .bridge(entry.offer)))
+        // (4) Backfill with other connectable bridges not yet connected.
+        for entry in ranked where entry.tier <= 1 && entry.offer.connectable {
+            add(entry.offer)
         }
         return Array(out.prefix(4))
     }
@@ -120,18 +174,41 @@ struct AppsScreen: View {
         ScrollViewReader { proxy in
             ScrollView {
                 VStack(alignment: .leading, spacing: DS.Space.s6) {
-                    if !stories.isEmpty {
-                        storyCarousel
-                        pageDots
+                    if query.isEmpty {
+                        if !stories.isEmpty {
+                            storyCarousel
+                            pageDots
+                        }
+                        jumpChips(proxy)
+                        categoryShelves
+                    } else {
+                        searchResults
                     }
-                    jumpChips(proxy)
-                    categoryShelves
                 }
                 .padding(.vertical, DS.Space.s4)
                 .padding(.bottom, ShellMetrics.bottomInset)
             }
         }
         .scrollIndicators(.hidden)
+        .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .automatic),
+                    prompt: "Search apps")
+        // The connect payoff blooms the app's hue over the whole store, then
+        // recedes — the same beat the product page gives, now on every Connect.
+        .connectBloom(hue: connectHue, token: connectToken)
+        // The store's first-ever connect rains the app's berries, once.
+        .overlay { BerryRain(trigger: firstConnectPulse) }
+        // The milestone fires on the first connection by ANY path — the
+        // featured hooks (Wallet/Tokens/Farcaster) connect on their setup
+        // screen, never through `celebrateConnect`, so watch the store itself:
+        // 0 → first connected bridge deals the rain. A user who already has
+        // connections has passed the milestone; mark it done on appear so it
+        // never fires late.
+        .onAppear { if connectedCount > 0 { storeFirstConnectDone = true } }
+        .onChange(of: connectedCount) { old, new in
+            guard !storeFirstConnectDone, old == 0, new > 0 else { return }
+            storeFirstConnectDone = true
+            firstConnectPulse += 1
+        }
         .dsPageBackground()
         .navigationTitle("Apps")
         .navigationBarTitleDisplayMode(.large)
@@ -162,6 +239,71 @@ struct AppsScreen: View {
             }
             #endif
         }
+    }
+
+    // MARK: - Search (App Store grammar — 40+ apps is past what chips can hold)
+
+    /// Every offer whose name, tagline, or category matches the query — a flat
+    /// list you scan, in the same ranked tier order the shelves use.
+    private var searchHits: [Ranked] {
+        let q = query.trimmingCharacters(in: .whitespaces).lowercased()
+        guard !q.isEmpty else { return [] }
+        return ranked.filter { entry in
+            entry.offer.name.lowercased().contains(q)
+                || entry.offer.tagline.lowercased().contains(q)
+                || category(of: entry.offer).lowercased().contains(q)
+        }
+    }
+
+    @ViewBuilder
+    private var searchResults: some View {
+        let hits = searchHits
+        if hits.isEmpty {
+            Text("No apps match \(Text(query).fontWeight(.semibold)).")
+                .dsText(.body17).foregroundStyle(DS.textSecondary)
+                .frame(maxWidth: .infinity, alignment: .center)
+                .padding(.top, DS.Space.s8)
+                .padding(.horizontal, DS.Space.s4)
+        } else {
+            VStack(spacing: DS.Space.s1) {
+                ForEach(Array(hits.enumerated()), id: \.element.id) { i, entry in
+                    appRow(entry).modifier(StockEntrance(index: i))
+                }
+            }
+            .padding(.vertical, DS.Space.s1)
+            .dsCard()
+            .padding(.horizontal, DS.Space.s4)
+        }
+    }
+
+    // MARK: - Connect payoff (delight parity across every Connect on this screen)
+
+    /// One-tap connect (a system-permission bridge) fired from the store, with
+    /// the shared payoff on success. Setup bridges never reach here — Connect
+    /// opens their setup screen, where the connect (and its proof) happens.
+    private func attemptConnect(_ offer: BridgeCatalog.Offer) {
+        BridgeConnect.connect(offer, store: store, context: modelContext) { ok in
+            if ok { celebrateConnect(offer) }
+            else { chrome.flash("Couldn't connect \(offer.name).") }
+        }
+    }
+
+    /// The moment a one-tap connect lands: a success haptic, the app's hue
+    /// blooming over the store, the toast naming what's now happening. Shared
+    /// by the story card and the shelf capsule so no Connect ends silently.
+    /// (The first-connect berry rain is dealt by `connectedCount`'s watcher,
+    /// not here — it must fire for setup-screen connects too.)
+    private func celebrateConnect(_ offer: BridgeCatalog.Offer) {
+        DSHaptic.success()
+        connectHue = DS.brandHue(for: offer.name) ?? DS.tint
+        connectToken += 1
+        chrome.flash(BridgeConnect.landingMessage(offer.name))
+    }
+
+    /// Connected, healthy bridges — the count whose 0 → 1 transition is the
+    /// store's first-connect milestone.
+    private var connectedCount: Int {
+        store.bridges.filter { $0.status != .paused }.count
     }
 
     // MARK: - Story carousel (the ONE brand-gradient license)
@@ -198,13 +340,18 @@ struct AppsScreen: View {
     private func storyCard(_ story: Story) -> some View {
         switch story.kind {
         case .bridge(let offer):
+            // The eyebrow rotates off the offer's own hook — the adjacency
+            // reason if it has one, else its honest qualifier ("No account" /
+            // "One tap" / "Import"), else "New". A card that says "New"
+            // forever stops being read; a card that says why it's here sells.
             storyCardBody(
-                eyebrow: "New",
+                eyebrow: story.eyebrow ?? offer.qualifier ?? "New",
                 headline: offer.tagline,
                 iconName: offer.name,
                 name: offer.name,
                 brand: DS.legibleCardFill(for: offer.name),
-                verb: .connect
+                verb: .connect,
+                previewName: offer.name
             ) {
                 // Setup bridges (paste an address/token/handle) route to their
                 // setup screen; only the system-permission bridges connect in
@@ -212,9 +359,7 @@ struct AppsScreen: View {
                 if offer.needsSetup {
                     setupRoute = BridgeRouter.destination(forOffer: offer.name)
                 } else {
-                    BridgeConnect.connect(offer, store: store, context: modelContext) { ok in
-                        if !ok { chrome.flash("Couldn't connect \(offer.name).") }
-                    }
+                    attemptConnect(offer)
                 }
             }
         case .pair:
@@ -266,7 +411,7 @@ struct AppsScreen: View {
                     Text("Preview")
                         .dsText(.label12)
                         .foregroundStyle(.white.opacity(0.6))
-                    ForEach(Array(samples.enumerated()), id: \.offset) { _, title in
+                    ForEach(Array(samples.enumerated()), id: \.offset) { idx, title in
                         HStack(spacing: DS.Space.s2) {
                             Circle().fill(.white.opacity(0.4))
                                 .frame(width: 6, height: 6)
@@ -279,6 +424,10 @@ struct AppsScreen: View {
                         .frame(minHeight: 30)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .background(.white.opacity(0.14), in: Capsule(style: .continuous))
+                        // The sample rows assemble one after another the first
+                        // time the card appears — the store demoing the
+                        // product's own "things landing" cadence, played once.
+                        .staggerIn(index: idx + 1, step: 0.08)
                     }
                 }
                 Spacer(minLength: DS.Space.s2)
@@ -299,21 +448,41 @@ struct AppsScreen: View {
         }
         .padding(DS.Space.s4)
         .frame(maxWidth: .infinity, minHeight: 220, alignment: .topLeading)
-        .background(
-            LinearGradient(colors: [brand, brand.opacity(0.65)],
-                           startPoint: .topLeading, endPoint: .bottomTrailing),
-            in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous)
-        )
+        .background {
+            // The one brand-gradient license, now with depth: the app's own
+            // glyph ghosts huge across the bottom-trailing corner, bleeding
+            // off the edge, so a feature card reads as inhabited instead of a
+            // flat color field. White-on-hue keeps the single-gradient rule.
+            ZStack(alignment: .bottomTrailing) {
+                LinearGradient(colors: [brand, brand.opacity(0.65)],
+                               startPoint: .topLeading, endPoint: .bottomTrailing)
+                Image(systemName: BridgeGlyph.symbol(for: iconName))
+                    .font(.system(size: 150, weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.10))
+                    .rotationEffect(.degrees(-12))
+                    .offset(x: 44, y: 40)
+            }
+            .clipShape(RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+        }
     }
 
     private var pageDots: some View {
-        HStack(spacing: DS.Space.s2) {
+        // Clamp to a live story: connecting the centered card drops it from
+        // `stories` while `storyID` still holds its id, which would leave every
+        // dot inactive until the next scroll. Fall back to the first card.
+        let ids = stories.map(\.id)
+        let current = storyID.flatMap { ids.contains($0) ? $0 : nil } ?? stories.first?.id
+        return HStack(spacing: DS.Space.s2) {
             ForEach(stories) { story in
-                Circle()
-                    .fill(story.id == (storyID ?? stories.first?.id) ? DS.tint : DS.gray300)
-                    .frame(width: 7, height: 7)
+                let active = story.id == current
+                // The active dot stretches into a short pill (the iOS idiom) —
+                // the carousel reads as inhabited, not a row of equal dots.
+                Capsule(style: .continuous)
+                    .fill(active ? DS.tint : DS.gray300)
+                    .frame(width: active ? 18 : 7, height: 7)
             }
         }
+        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: current)
         .frame(maxWidth: .infinity)
     }
 
@@ -342,6 +511,10 @@ struct AppsScreen: View {
                             withAnimation(DS.Motion.standard) {
                                 proxy.scrollTo("shelf-" + cat.name, anchor: .top)
                             }
+                            // Close the loop: the shelf you landed on flashes
+                            // once, so the tap arrives instead of scrolling in
+                            // silence.
+                            shelfLand[cat.name, default: 0] += 1
                         } label: {
                             HStack(spacing: DS.Space.s2) {
                                 Image(systemName: BridgeGlyph.symbol(for: cat.exemplar))
@@ -412,10 +585,12 @@ struct AppsScreen: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
+            .landFlash(shelfLand[name] ?? 0)
         } else {
             Text(LocalizedStringKey(name))
                 .dsText(.heading22).foregroundStyle(DS.textPrimary)
                 .padding(.horizontal, DS.Space.s4)
+                .landFlash(shelfLand[name] ?? 0)
         }
     }
 
@@ -507,10 +682,24 @@ struct AppsScreen: View {
                             .dsText(.body17).fontWeight(.semibold)
                             .foregroundStyle(soon ? DS.textSecondary : DS.textPrimary)
                             .lineLimit(1)
-                        Text(LocalizedStringKey(subline(entry)))
-                            .dsText(.subhead13)
-                            .foregroundStyle(entry.tier == 0 ? DS.attention : DS.textTertiary)
-                            .lineLimit(1)
+                        HStack(spacing: DS.Space.s2) {
+                            // The honest hook the taglines can't carry — a fact
+                            // the app already ships (a keyless connect, a single
+                            // permission, a one-time import), badged only on a
+                            // row you can still add. Connected rows keep their
+                            // live status subline instead.
+                            if entry.tier == 1, let q = entry.offer.qualifier {
+                                Text(LocalizedStringKey(q))
+                                    .dsText(.label12).foregroundStyle(DS.textSecondary)
+                                    .padding(.horizontal, DS.Space.s2)
+                                    .frame(minHeight: 20)
+                                    .background(DS.fillFaint, in: Capsule(style: .continuous))
+                            }
+                            Text(LocalizedStringKey(subline(entry)))
+                                .dsText(.subhead13)
+                                .foregroundStyle(entry.tier == 0 ? DS.attention : DS.textTertiary)
+                                .lineLimit(1)
+                        }
                     }
                     Spacer(minLength: 0)
                 }
@@ -520,6 +709,21 @@ struct AppsScreen: View {
             // — the row springs slightly under the finger instead of a flat
             // .plain tap. Keeps the plain look, adds the give.
             .buttonStyle(PressSpring())
+            // Long-press peek — the App Store's own gesture: the app's shape,
+            // painted through the real gen-UI engine, with a Connect action,
+            // before you commit. Only on an addable row (tier 1) with a preview
+            // — a connected app shows real things, a Soon app can't be added,
+            // and an actionless menu can suppress the peek entirely.
+            .modifier(PeekPreview(
+                offer: entry.offer,
+                enabled: entry.tier == 1 && StorePreview.doc(for: entry.offer.name) != nil,
+                onConnect: {
+                    if entry.offer.needsSetup {
+                        setupRoute = BridgeRouter.destination(forOffer: entry.offer.name)
+                    } else {
+                        attemptConnect(entry.offer)
+                    }
+                }))
             capsule(entry)
         }
         .padding(.horizontal, DS.Space.s4)
@@ -559,21 +763,11 @@ struct AppsScreen: View {
                     setupRoute = BridgeRouter.destination(forOffer: entry.offer.name)
                 }
             } else {
-                VerbCapsule(verb: .connect) {
-                    BridgeConnect.connect(entry.offer, store: store, context: modelContext) { ok in
-                        if !ok { chrome.flash("Couldn't connect \(entry.offer.name).") }
-                    }
-                }
+                VerbCapsule(verb: .connect) { attemptConnect(entry.offer) }
             }
         default:
             VerbCapsule(verb: .soon)
         }
-    }
-
-    private func sectionHeader(_ text: String) -> some View {
-        Text(LocalizedStringKey(text))
-            .dsText(.label12)
-            .foregroundStyle(DS.textSecondary)
     }
 
     #if DEBUG
@@ -584,6 +778,66 @@ struct AppsScreen: View {
         }
     }
     #endif
+}
+
+
+// MARK: - Long-press peek
+
+/// The App Store's peek gesture, in Casberi's grammar: long-press a shelf row
+/// and the app's shape rises in a preview — painted through the real gen-UI
+/// engine from the same document its product page streams, so the peek never
+/// disagrees with the page. Inert; the real thing arrives when the bridge does.
+private struct PeekPreview: ViewModifier {
+    let offer: BridgeCatalog.Offer
+    let enabled: Bool
+    let onConnect: () -> Void
+
+    func body(content: Content) -> some View {
+        if enabled {
+            content.contextMenu {
+                // A real action — an empty menu can suppress the peek, and
+                // Connect is the honest verb for an addable row (no dead
+                // control: it does exactly what the row's capsule does).
+                Button(action: onConnect) {
+                    Label("Connect", systemImage: "plus.circle")
+                }
+            } preview: {
+                AppPeek(offer: offer)
+            }
+        } else {
+            content
+        }
+    }
+}
+
+/// The peek card — icon, name, tagline, and the preview shape painted whole
+/// (a peek is a glance, not a stream). Preview framing is explicit: fabricated
+/// rows are honest on a store surface only when labelled.
+private struct AppPeek: View {
+    let offer: BridgeCatalog.Offer
+    @State private var stream = GenStream()
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s3) {
+            HStack(spacing: DS.Space.s3) {
+                BridgeIcon(name: offer.name, size: 44)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(offer.name).dsText(.body17).fontWeight(.semibold)
+                        .foregroundStyle(DS.textPrimary)
+                    Text(LocalizedStringKey(offer.tagline)).dsText(.subhead13)
+                        .foregroundStyle(DS.textSecondary)
+                }
+                Spacer(minLength: 0)
+            }
+            Text("Preview").dsText(.label12).foregroundStyle(DS.textTertiary)
+            GenRender(id: "root", els: stream.els)
+                .allowsHitTesting(false)
+        }
+        .padding(DS.Space.s4)
+        .frame(width: 320, alignment: .leading)
+        .background(DS.surfaceSheet)
+        .onAppear { if let doc = StorePreview.doc(for: offer.name) { stream.paint(doc) } }
+    }
 }
 
 

@@ -20,6 +20,26 @@ enum BridgeCatalog {
         /// of firing a permission ask. Setup bridges skip onboarding's
         /// mini store: that screen is one-tap connects only.
         var needsSetup: Bool = false
+
+        /// A one-word honest hook for the row badge and the story eyebrow —
+        /// derived from HOW the bridge connects, never marketing. "One tap"
+        /// (a system-permission bridge — a single grant, no fields), "No
+        /// account" (keyless — a handle or address, no sign-in, public
+        /// feeds), or "Import" (a one-time export you point at). Everything
+        /// else stays unbadged: a row earns a badge only when the fact
+        /// differentiates it. Never applied to a connected row (its subline
+        /// already carries live status).
+        var qualifier: String? {
+            if connectable && !needsSetup { return "One tap" }
+            let keyless: Set<String> = ["Wallet", "Tokens", "Reddit", "YouTube",
+                "RSS", "Substack", "Podcasts", "Pinterest", "Farcaster",
+                "Bluesky", "OpenSea", "Kalshi", "Shopify", "GeckoTerminal", "Deals"]
+            if keyless.contains(name) { return "No account" }
+            let imports: Set<String> = ["ChatGPT", "Claude", "Gemini",
+                "Day One", "Apple Journal", "Kindle"]
+            if imports.contains(name) { return "Import" }
+            return nil
+        }
     }
 
     /// Grouped by what they're worth, verb taglines (S25).
@@ -54,8 +74,17 @@ enum BridgeCatalog {
         Offer(name: "Kalshi",      tagline: "Watch real-event odds",                 group: "Markets",   connectable: true,
               summary: "Watch any market on Kalshi, the CFTC-regulated event exchange — search a team or event and its live odds land in your feed. Public price data only, read-only: nothing here places a trade.",
               needsSetup: true),
+        Offer(name: "GeckoTerminal", tagline: "Trending tokens, per chain",          group: "Markets",   connectable: true,
+              summary: "Pick the chains you care about and the tokens trending on each — GeckoTerminal's own ranking, by 24-hour volume and price move — land in your feed as links. No account, no key: fetched straight from GeckoTerminal's public API by this iPhone. Read-only public price data; nothing here buys, sells, or trades. Each trending row opens to its live on-device chart.",
+              needsSetup: true),
         Offer(name: "OpenSea",     tagline: "New NFT drops in your feed",            group: "NFTs",      connectable: true,
               summary: "Watch the chains you care about and their newest NFT collections land in your feed as links — the ones with real artwork, not the empty test contracts. Fetched straight from OpenSea's public API, read-only: nothing here buys, sells, or bids.",
+              needsSetup: true),
+        Offer(name: "Shopify",     tagline: "Follow any store's new drops",          group: "Shopping",  connectable: true,
+              summary: "Follow any Shopify store — paste its web address and its newest products, restocks, and sale prices land in your feed as things, opening back on the store's own page. Fetched straight from the store's public catalog by this iPhone: no account, no sign-in, read-only — nothing here checks out or pays. Some big stores block automated reads; those it can't follow, it says so.",
+              needsSetup: true),
+        Offer(name: "Deals",       tagline: "The best deals, as they drop",          group: "Shopping",  connectable: true,
+              summary: "Follow the deal aggregators — Slickdeals, DealNews — and their newest deals land in your feed as products, each already priced in the headline and opening back on the deal's own page. Fetched straight from each source's public feed by this iPhone: no account, read-only — nothing here buys anything.",
               needsSetup: true),
         Offer(name: "Venice",      tagline: "Private answers with your key",         group: "Agent",     connectable: true,
               summary: "Venice keeps chats on your own device by design, so there's nothing to read in — instead, your Venice key powers \"Try with your key\": any answer re-runs on Venice's private API, straight from this iPhone, only when you tap.",
@@ -81,8 +110,6 @@ enum BridgeCatalog {
               summary: "What you've recently played lands in your feed, opening back in Apple Music. Uses Apple's own MusicKit with your permission — read-only, nothing added to your library. Everything stays on this iPhone."),
         Offer(name: "Spotify",     tagline: "Liked songs join your things",          group: "Listening", connectable: false,
               summary: "Your liked songs become things you can find and revisit alongside everything else."),
-        Offer(name: "Telegram",    tagline: "Chats join your things",                group: "Messages",  connectable: false,
-              summary: "The messages worth keeping become findable things — the one messenger with a sanctioned way in."),
         Offer(name: "Apple Health", tagline: "Workouts land in your feed",           group: "Fitness",   connectable: true,
               summary: "Your workouts join your things — a run shows up next to the plan that inspired it. Everything stays on this iPhone: HealthKit never touches a server."),
         Offer(name: "Strava",      tagline: "Every activity, one record",            group: "Fitness",   connectable: true,

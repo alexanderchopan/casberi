@@ -12,10 +12,10 @@ struct AppDetailScreen: View {
     @Environment(\.modelContext) private var modelContext
     @State private var openBridge: BridgeRouter.Destination?
     @State private var previewStream = GenStream()
-    /// The connect payoff (delight, 2026-07-12): eases 1 → 0 when a connect
-    /// lands, blooming the app's hue over the page — "connect ends in proof",
-    /// the ruling turned into a moment.
-    @State private var connectPulse: CGFloat = 0
+    /// The connect payoff (delight, 2026-07-12): bumping this blooms the app's
+    /// hue over the page via the shared `.connectBloom` — "connect ends in
+    /// proof", the ruling turned into a moment.
+    @State private var connectToken = 0
 
     private var bridge: BridgeApp? {
         store.bridges.first { $0.name == offer.name }
@@ -60,7 +60,7 @@ struct AppDetailScreen: View {
         // recipe, under the content; hueless apps stay pure page, honestly.
         .background(alignment: .top) { brandWash }
         // The connect payoff blooms over the content, then recedes.
-        .overlay(alignment: .top) { connectBloom }
+        .connectBloom(hue: DS.brandHue(for: offer.name) ?? DS.tint, token: connectToken)
         .dsPageBackground()
         .navigationTitle(offer.name)
         .navigationBarTitleDisplayMode(.inline)
@@ -134,25 +134,8 @@ struct AppDetailScreen: View {
         BridgeConnect.connect(offer, store: store, context: modelContext) { ok in
             guard ok else { chrome.flash("Couldn't connect \(offer.name)."); return }
             DSHaptic.success()
-            connectPulse = 1
-            withAnimation(.easeOut(duration: 0.75)) { connectPulse = 0 }
-            chrome.flash("Connected — your \(offer.name) things are landing.")
-        }
-    }
-
-    /// The connect bloom — the app's hue flooding the page as the connection
-    /// lands, then receding. The proof itself arrives in the feed; this is the
-    /// beat that says it worked. A hueless app blooms on the tint so it still
-    /// gets a payoff.
-    @ViewBuilder private var connectBloom: some View {
-        if connectPulse > 0.001 {
-            let hue = DS.brandHue(for: offer.name) ?? DS.tint
-            LinearGradient(colors: [hue.opacity(0.5), hue.opacity(0.12), .clear],
-                           startPoint: .top, endPoint: .bottom)
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-                .opacity(connectPulse)
-                .ignoresSafeArea()
-                .allowsHitTesting(false)
+            connectToken += 1
+            chrome.flash(BridgeConnect.landingMessage(offer.name))
         }
     }
 

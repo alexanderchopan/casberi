@@ -123,11 +123,6 @@ enum StorePreview {
             "w = Widget(\"Listening\", null, [r1])",
             "r1 = Row(\"Liked: Verano porteño\", \"Link\", \"\(name)\", \"1d\")",
         ]
-        case "Telegram": [
-            "root = Stack([w])",
-            "w = Widget(\"Worth keeping\", null, [r1])",
-            "r1 = Row(\"Address for Saturday\", \"Chat\", \"Telegram\", \"4h\")",
-        ]
         case "Apple Health": [
             "root = Stack([w])",
             "w = Widget(\"Training\", null, [r1, r2])",
@@ -187,6 +182,24 @@ enum StorePreview {
             "root = Stack([w])",
             "w = Widget(\"Casts you saved\", null, [r1])",
             "r1 = Row(\"dwr: base fees at all-time low\", \"Chat\", \"Farcaster\", \"4h\")",
+        ]
+        case "OpenSea": [
+            "root = Stack([w])",
+            "w = Widget(\"New drops\", null, [r1, r2])",
+            "r1 = Row(\"Fidenza · new collection\", \"Link\", \"OpenSea\", \"now\")",
+            "r2 = Row(\"Base Punks · minting now\", \"Link\", \"OpenSea\", \"1h\")",
+        ]
+        case "GeckoTerminal": [
+            "root = Stack([w])",
+            "w = Widget(\"Trending on Base\", null, [r1, r2])",
+            "r1 = Row(\"Higher · $HIGHER\", \"Link\", \"GeckoTerminal\", \"now\")",
+            "r2 = Row(\"Brett · $BRETT\", \"Link\", \"GeckoTerminal\", \"now\")",
+        ]
+        case "Kalshi": [
+            "root = Stack([w])",
+            "w = Widget(\"Live odds\", null, [r1, r2])",
+            "r1 = Row(\"Fed holds rates in March · 68%\", \"Link\", \"Kalshi\", \"now\")",
+            "r2 = Row(\"Lakers make the playoffs · 74%\", \"Link\", \"Kalshi\", \"2h\")",
         ]
         default:
             nil

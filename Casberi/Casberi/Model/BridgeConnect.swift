@@ -7,6 +7,13 @@ import SwiftData
 /// context; everything else isn't wired yet and says so.
 @MainActor
 enum BridgeConnect {
+    /// The one connect-success toast, shared by the Apps store and the product
+    /// page so the copy can't drift — the proof itself arrives in the feed;
+    /// this names what's now happening.
+    static func landingMessage(_ name: String) -> String {
+        String(localized: "Connected — your \(name) things are landing.")
+    }
+
     static func connect(_ offer: BridgeCatalog.Offer, store: BridgeStore,
                         context: ModelContext,
                         completion: ((Bool) -> Void)? = nil) {
