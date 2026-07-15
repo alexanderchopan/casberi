@@ -257,36 +257,7 @@ struct HomeScreen: View {
             // saved size/order); an auto-social account is hidden instead, so
             // "Show on Home" can bring it back. Either way, recompose so the
             // module leaves the board.
-            .environment(\.genSourceUnpin) { ref in
-                // A wallet's NFT strip removes per WALLET (ruling 2026-07-14):
-                // arg 6 of its MediaShelf carries the address the removal is
-                // scoped to — the treemap and the wallet pin stay untouched.
-                if ref.hasPrefix("nftShelf"), let address = stream.els[ref]?.str(5),
-                   !address.isEmpty {
-                    DSHaptic.tap()
-                    wallet.setNFTStrip(hidden: true, address: address)
-                    walletNFTs.removeAll { $0.address.lowercased() == address.lowercased() }
-                    recomposeOrDefer()
-                    chrome.flash("Removed from Home")
-                    return
-                }
-                let source = HomePinnedSources.source(forModuleRef: ref)
-                    ?? (ref.hasPrefix("appTile") ? stream.els[ref]?.str(3) : nil)
-                guard let source else { return }
-                DSHaptic.tap()
-                // Drop any explicit pin first (also forgets the tile's saved
-                // size/order). An auto-social account can be BOTH explicitly
-                // pinned AND auto-shown, so also suppress the auto-show — else
-                // its `sources` membership would resurrect the tile on the next
-                // compose (setHidden alone left the explicit pin standing).
-                HomePinnedSources.shared.clear(source)
-                if HomePinnedSources.autoSocial.contains(source) {
-                    HomePinnedSources.shared.setHidden(source, true)
-                }
-                CorpusSignal.shared.bump()
-                streamComposition(instant: true)
-                chrome.flash("Removed from Home")
-            }
+            .environment(\.genSourceUnpin) { ref in moduleRemoval(ref)?() }
             // A screenshot's own stored thumbnail (prd 48) — local bytes,
             // not a URL, so the media tile resolves it by thing id. One O(1)
             // dict lookup per tile — the old `things.first(where:)` was a full
@@ -528,6 +499,10 @@ struct HomeScreen: View {
     /// small (1×1) forms; `genModuleLarge` / `genMediaCompact` are derived from
     /// it so the existing two-state renderers (media strip/hero, moodboard)
     /// keep working. A small media shelf renders as its compact art tile.
+    /// While the board wobbles, removable modules wear the minus badge —
+    /// removal's reachable home (ruling 2026-07-14): the board's long-press
+    /// belongs to lift/reorder (the drag driver pre-empts context menus), so
+    /// removal lives where iOS taught it: hold → wobble → tap the minus.
     @ViewBuilder private func moduleView(_ ref: String) -> some View {
         let span = spanOf(ref)
         GenRender(id: ref, els: stream.els)
@@ -535,6 +510,77 @@ struct HomeScreen: View {
             .environment(\.genModuleLarge, span == .big)
             .environment(\.genMediaCompact, span == .small && isPairable(ref))
             .frame(maxWidth: .infinity)
+            .overlay(alignment: .topLeading) {
+                if boardEditing, let remove = moduleRemoval(ref) {
+                    BoardRemoveBadge(action: remove)
+                        // Overhangs the corner, the system's own grammar —
+                        // the size pin keeps the opposite corner.
+                        .offset(x: -6, y: -6)
+                }
+            }
+    }
+
+    /// The board's remove verb for a module, when it has one — the edit-mode
+    /// badge and the (currently driver-shadowed) context menus share this
+    /// single derivation, so the two paths can't drift. nil for modules with
+    /// nothing to remove (auto-earned shelves, the map, the cover) — those
+    /// wear no badge (honesty rule: no dead controls).
+    private func moduleRemoval(_ ref: String) -> (() -> Void)? {
+        // A wallet's NFT strip removes per WALLET (ruling 2026-07-14): arg 6
+        // of its MediaShelf carries the address the removal is scoped to —
+        // the treemap and the wallet pin stay untouched.
+        if ref.hasPrefix("nftShelf"), let address = stream.els[ref]?.str(5),
+           !address.isEmpty {
+            return {
+                DSHaptic.tap()
+                wallet.setNFTStrip(hidden: true, address: address)
+                walletNFTs.removeAll { $0.address.lowercased() == address.lowercased() }
+                recomposeOrDefer()
+                chrome.flash("Removed from Home")
+            }
+        }
+        // A pinned wallet's treemap — removing it IS the unpin (the same
+        // verb the Wallet screen's swipe carries; the wallet stays watched,
+        // and its NFT strip leaves with the pin).
+        if ref.hasPrefix("walletMap"), let eyebrow = stream.els[ref]?.str(0) {
+            let label = eyebrow.hasPrefix("@pin ")
+                ? String(eyebrow.dropFirst("@pin ".count)) : eyebrow
+            guard let entry = wallet.addresses.first(where: {
+                ($0.label.isEmpty ? $0.short : $0.label) == label && $0.pinnedToHome
+            }) else { return nil }
+            let id = entry.id
+            return {
+                DSHaptic.tap()
+                if let i = wallet.addresses.firstIndex(where: { $0.id == id }) {
+                    wallet.addresses[i].pinnedToHome = false
+                }
+                loadWalletHoldings()
+                chrome.flash("Removed from Home")
+            }
+        }
+        let source = HomePinnedSources.source(forModuleRef: ref)
+            ?? (ref.hasPrefix("appTile") ? stream.els[ref]?.str(3) : nil)
+        guard let source, !source.isEmpty else { return nil }
+        // An auto-earned media shelf has no pin to drop (its context menu
+        // hides for the same reason) — no badge.
+        if let el = stream.els[ref], el.comp == "MediaShelf", el.str(4) != "pin" {
+            return nil
+        }
+        return {
+            DSHaptic.tap()
+            // Drop any explicit pin first (also forgets the tile's saved
+            // size/order). An auto-social account can be BOTH explicitly
+            // pinned AND auto-shown, so also suppress the auto-show — else
+            // its `sources` membership would resurrect the tile on the next
+            // compose (setHidden alone left the explicit pin standing).
+            HomePinnedSources.shared.clear(source)
+            if HomePinnedSources.autoSocial.contains(source) {
+                HomePinnedSources.shared.setHidden(source, true)
+            }
+            CorpusSignal.shared.bump()
+            streamComposition(instant: true)
+            chrome.flash("Removed from Home")
+        }
     }
 
     /// A stable identity for a board ref, independent of its slot index — a
@@ -622,5 +668,27 @@ struct HomeScreen: View {
         // The refresh LANDS — a soft thud as the fresh document starts landing
         // (2026-07-10 haptics pass: motion that completes gets felt).
         DSHaptic.success()
+    }
+}
+
+/// The edit-mode remove badge (ruling 2026-07-14) — a minus in a filled
+/// circle on a removable module's top-left corner while the board wobbles.
+/// Removal means "off the board", never delete, but the minus is the glyph
+/// every thumb already knows for this exact gesture.
+private struct BoardRemoveBadge: View {
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: "minus")
+                .font(.system(size: 12, weight: .bold))
+                .foregroundStyle(DS.textPrimary)
+                .frame(width: 24, height: 24)
+                .background(DS.gray200, in: Circle())
+                // The visual stays a quiet 24pt; the target is a finger's.
+                .contentShape(Circle().inset(by: -10))
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Remove from Home")
     }
 }

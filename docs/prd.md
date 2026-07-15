@@ -1839,6 +1839,22 @@ MTProto — a server and a platform wall — so it sits as a Soon card
 ("Chats join your things", not connectable) alongside X and YouTube
 until the server question is answered deliberately.
 
+**Amended — Telegram REMOVED from the catalog (user, 2026-07-14).** With
+no server on the table, the three ways in were weighed and all rejected:
+the Bot API is server-free but capture-only (a bot sees only what's
+forwarded to it and can never speak as the person); TDLib reads real
+chats on-device but is a client-grade dependency behind a platform wall;
+a Desktop-export import bridge would work with no server — but the user
+doesn't believe anyone wants to import their chats. So rather than keep
+shipping a Soon card promising a sync only a server/TDLib future could
+honestly deliver, the offer is cut entirely. Gone: the `BridgeCatalog`
+offer, its `brand-telegram` asset, KindGlyph/StorePreview/HomeComposition
+cases, the onboarding marquee tile (Apple-row boundary re-indexed), and
+the "Messages" browse group (Telegram was its only member — Social now
+browses just "Network"). Slack remains its own offer. Not on the website
+(Soon apps were never listed), so this is app-only. If Telegram ever
+returns it re-enters this decision from scratch.
+
 ## 51a. Ranges speak finance: 1D / 7D / 30D (2026-07-11)
 
 Two fixes from a device report: (1) the range chips read 1D/7D/30D
@@ -2720,3 +2736,23 @@ whenever that arbitration is revisited — a KNOWN pre-existing gap that
 affects every board module's long-press "Remove from Home").
 Re-pinning a wallet resets its strip to the default (fresh pin, fresh
 presence). Wallets with no NFTs contribute nothing.
+
+## 73. Board removal is the minus badge in edit mode (user, 2026-07-14)
+
+The board's long-press belongs to lift/reorder — the drag driver begins
+at 0.35s and pre-empts long-press context menus, so "Remove from Home"
+via contextMenu was unreachable on every board module. The fix stays
+out of the gesture arbitration entirely (four failed commits' worth of
+warnings): while the board wobbles, every REMOVABLE module wears a
+minus-in-circle badge on its top-left corner (the size pin keeps the
+top-right) — hold → wobble → tap the minus, the gesture every thumb
+knows. Glyph ruling: minus, not pin.slash (user: the slash didn't read
+as "remove from home"). One derivation (`moduleRemoval`) feeds both the
+badge and the still-present context menus so the paths can't drift; it
+returns nothing for modules with nothing to remove (auto-earned
+shelves, the map, the cover — no badge, honesty rule). New with this:
+a pinned wallet's treemap is removable ON the board (the unpin verb the
+Wallet screen's swipe carries; the wallet stays watched). A removed
+card's badge vanishes and the flash confirms instantly; the card itself
+leaves when editing ends (recompose stays deferred through the wobble
+so modules never shift under an in-flight drag).
