@@ -3014,3 +3014,24 @@ line is `WalletStore.combinedValueSamples()`. Section lives atop
 14): one $393M "Combined value", one 22-token treemap, a sane +3.3%
 combined line after the alignment fix. No new catalog offer, no website
 catalog change — it's synthesis over connected wallets, not a bridge.
+
+## 78. Two catalog re-shelvings: GeckoTerminal to Onchain, Pinterest to Media (user, 2026-07-15)
+
+- **GeckoTerminal moves Markets to Onchain** (revises §76's Markets
+  placement). Trending crypto tokens per chain are an ONCHAIN interest,
+  next to Wallet/Tokens/OpenSea/Farcaster — not a prediction-market tail.
+  Markets now holds Kalshi alone (real-event odds, genuinely not onchain),
+  and still rides last.
+- **Pinterest moves Reading (Saves) to Media.** Pins are visual media, not
+  reading — it belongs with YouTube/Twitch/Spotify/Podcasts/Steam, not with
+  Readwise/RSS/Substack. Reddit and Raindrop keep the "Saves" group (they
+  stay in Reading), so Pinterest gets its own group, "Images", added to the
+  Media category's set.
+
+App: `Offer.group` is "Onchain" / "Images" now (BridgeCatalog), and the
+Media category maps "Images" (AppsScreen.categories). `group` is Browse +
+chart-filter display only, so nothing behaves differently. Website: the
+hand-authored catalog shelves mirror the app — GeckoTerminal's mini-cell
+sits under Onchain, Pinterest's under Media (index.html; hero marquee
+tiles carry no category and stay put). Verified: app Onchain shelf leads
+with GeckoTerminal; deploy zip's index.html shelves both correct.

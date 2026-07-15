@@ -51,7 +51,7 @@ struct AppsScreen: View {
         ("Mail",    "Gmail",       ["Mail"]),
         ("Work",    "GitHub",      ["Work"]),
         ("Reading", "Readwise",    ["Reading", "Saves"]),
-        ("Media",   "Spotify",     ["Watching", "Listening", "Games"]),
+        ("Media",   "Spotify",     ["Watching", "Listening", "Games", "Images"]),
         ("Shopping", "Shopify",    ["Shopping"]),
         // Markets rides LAST (user ruling 2026-07-13, tightened same day):
         // Onchain leads the catalog; prediction markets are a tail interest,
