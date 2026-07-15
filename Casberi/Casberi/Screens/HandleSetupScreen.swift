@@ -206,7 +206,7 @@ enum HandleBridge: String {
     var canLine: String {
         switch self {
         case .bluesky:   "Reads your public posts."
-        case .farcaster: "Reads your public casts."
+        case .farcaster: "Reads public casts — accounts, channels, likes."
         case .pinterest: "Reads your public pins."
         default:         feedKind!.canLine
         }
@@ -215,6 +215,13 @@ enum HandleBridge: String {
     /// Whether anything is connected — drives the "connected" chrome. For the
     /// multi bridges, the first watched account stands in.
     var currentName: String { names.first ?? "" }
+
+    /// Connected at all — for Farcaster a followed CHANNEL with no account
+    /// still counts (it syncs, it can disconnect); everywhere else the
+    /// account list is the whole story.
+    var isConnected: Bool {
+        self == .farcaster ? FarcasterStore.shared.connected : !names.isEmpty
+    }
 
     /// Teardown only (the single Pinterest path + Disconnect): an empty name
     /// clears the connection. Multi-account adds go through `addName`.
@@ -273,6 +280,15 @@ struct HandleSetupScreen: View {
     /// each add/remove, since the screen doesn't observe the store directly.
     @State private var accountNames: [String] = []
 
+    /// Farcaster's channel field (the account rows and channel list read
+    /// the @Observable store directly — no snapshot to keep in step).
+    @State private var channelField = ""
+    @State private var channelSyncing = false
+    @State private var channelError: String?
+    /// A chip toggled (or channel followed) while a sync is in flight —
+    /// the finished sync runs once more instead of silently dropping it.
+    @State private var resyncQueued = false
+
     /// People matching what's typed so far — the field doubles as a finder
     /// on the bridges with public search. Cleared on add and on emptying.
     @State private var hits: [UserSearch.Hit] = []
@@ -288,6 +304,9 @@ struct HandleSetupScreen: View {
             if bridge.supportsMultiple, !accountNames.isEmpty {
                 accountsSection.listRowSeparator(.hidden)
             }
+            if bridge == .farcaster {
+                channelsSection.listRowSeparator(.hidden)
+            }
             // Pin to Home (and its auto-social inverse) sits above the recent
             // list — the same spot every app screen puts it (user, 2026-07-14),
             // so it's never a long scroll away. Every connected account is
@@ -300,14 +319,14 @@ struct HandleSetupScreen: View {
                !HomePinnedSources.autoSocial.contains(bridge.rawValue) {
                 pinToHomeSection.listRowSeparator(.hidden)
             }
-            if !bridge.currentName.isEmpty, HomePinnedSources.autoSocial.contains(bridge.rawValue) {
+            if bridge.isConnected, HomePinnedSources.autoSocial.contains(bridge.rawValue) {
                 showOnHomeSection.listRowSeparator(.hidden)
             }
             if !recent.isEmpty {
                 RecentThingsSection(header: bridge.recentHeader, things: recent)
                     .listRowSeparator(.hidden)
             }
-            if !bridge.currentName.isEmpty {
+            if bridge.isConnected {
                 BridgeDisconnectSection(
                     bridgeID: bridge.bridgeID, name: bridge.rawValue,
                     teardown: {
@@ -328,7 +347,7 @@ struct HandleSetupScreen: View {
             loadRecent()
             accountNames = bridge.names
             nameField = bridge.displayName
-            if !bridge.currentName.isEmpty {
+            if bridge.isConnected {
                 Task { await sync() }
             }
         }
@@ -403,20 +422,142 @@ struct HandleSetupScreen: View {
     }
 
     /// The watched-accounts list (Bluesky/Farcaster) — each removable, the
-    /// way the wallet manager lists watched addresses.
+    /// way the wallet manager lists watched addresses. Farcaster rows are
+    /// richer (2026-07-14): the profile the node already serves (face,
+    /// display name, bio) plus the per-account Likes/Mentions switches.
     private var accountsSection: some View {
         Section {
-            ForEach(accountNames, id: \.self) { name in
+            if bridge == .farcaster {
+                // The store is @Observable — body reads it directly, so a
+                // toggle or a profile landing re-renders with nothing to
+                // keep in step by hand.
+                ForEach(FarcasterStore.shared.accounts) { account in
+                    farcasterAccountRow(account)
+                }
+            } else {
+                ForEach(accountNames, id: \.self) { name in
+                    HStack(spacing: DS.Space.s3) {
+                        BridgeIcon(name: bridge.rawValue, size: 28, circular: true)
+                        Text(bridge.shortName(name)).dsText(.body17)
+                            .foregroundStyle(DS.textPrimary)
+                        Spacer()
+                    }
+                    .swipeActions(edge: .trailing) {
+                        Button(role: .destructive) {
+                            bridge.removeName(name)
+                            accountNames = bridge.names
+                            DSHaptic.tap()
+                        } label: { Label("Remove", systemImage: "minus.circle") }
+                    }
+                    .dsListCardRow()
+                    .listRowSeparator(.hidden)
+                }
+            }
+        } header: {
+            Text(accountNames.count == 1 ? "Watching" : "Watching \(accountNames.count)")
+                .dsText(.label12).foregroundStyle(DS.textTertiary)
+        } footer: {
+            if bridge == .farcaster {
+                Text("Likes lands casts an account likes — like it there, it's saved here. Mentions lands casts naming them.")
+                    .dsText(.callout15).foregroundStyle(DS.textTertiary)
+            }
+        }
+    }
+
+    /// One watched Farcaster account: face, display name, @username · bio,
+    /// and the two watch-more chips. Swipe to remove, unchanged.
+    private func farcasterAccountRow(_ account: FarcasterStore.Account) -> some View {
+        HStack(alignment: .top, spacing: DS.Space.s3) {
+            if let avatar = account.avatarURL {
+                RemoteThumb(urlString: avatar, size: 36,
+                            fallback: bridge.rawValue, circular: true)
+            } else {
+                BridgeIcon(name: bridge.rawValue, size: 36, circular: true)
+            }
+            VStack(alignment: .leading, spacing: DS.Space.s1) {
+                Text(account.displayName ?? account.username)
+                    .dsText(.body17).foregroundStyle(DS.textPrimary)
+                    .lineLimit(1)
+                Text(farcasterSubtitle(account))
+                    .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                    .lineLimit(1)
+                HStack(spacing: DS.Space.s2) {
+                    watchChip("Likes", on: account.likes) {
+                        FarcasterStore.shared.setLikes($0, for: account.username)
+                    }
+                    watchChip("Mentions", on: account.mentions) {
+                        FarcasterStore.shared.setMentions($0, for: account.username)
+                    }
+                }
+                .padding(.top, DS.Space.s1)
+            }
+            Spacer()
+        }
+        .swipeActions(edge: .trailing) {
+            Button(role: .destructive) {
+                bridge.removeName(account.username)
+                accountNames = bridge.names
+                DSHaptic.tap()
+            } label: { Label("Remove", systemImage: "minus.circle") }
+        }
+        .dsListCardRow()
+        .listRowSeparator(.hidden)
+    }
+
+    private func farcasterSubtitle(_ account: FarcasterStore.Account) -> String {
+        let bio = (account.bio ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        return bio.isEmpty ? "@\(account.username)" : "@\(account.username) · \(bio)"
+    }
+
+    /// A lit-or-quiet capsule: on wears the tint, off stays gray — a switch
+    /// that reads as one, in chip clothes (the tag-chip anatomy). The tap
+    /// flips the setter and, when turning ON, fetches right away.
+    private func watchChip(_ label: String, on: Bool,
+                           set: @escaping (Bool) -> Void) -> some View {
+        Button {
+            set(!on)
+            DSHaptic.tap()
+            if !on { Task { await sync() } }
+        } label: {
+            Text(LocalizedStringKey(label))
+                .dsText(.label12)
+                .foregroundStyle(on ? DS.tint : DS.textTertiary)
+                .padding(.horizontal, DS.Space.s3)
+                .frame(height: 28)
+                .background(on ? DS.tintDim : DS.gray100, in: Capsule(style: .continuous))
+        }
+        .buttonStyle(.plain)
+    }
+
+    /// Followed channels (Farcaster only, 2026-07-14) — topic feeds beside
+    /// the people. A name resolves against the channel directory; casts land
+    /// the way an account's do.
+    private var channelsSection: some View {
+        Section {
+            VStack(alignment: .leading, spacing: DS.Space.s2) {
+                BridgeFieldRow(placeholder: "design", text: $channelField,
+                               buttonLabel: "Follow", prefix: "/",
+                               action: followChannel)
+                BridgeSyncStatusRows(syncing: channelSyncing,
+                                     syncingLine: String(localized: "Finding the channel…"),
+                                     result: channelError, resultIsError: true)
+            }
+            .dsListCardRow()
+            ForEach(FarcasterStore.shared.channels) { channel in
                 HStack(spacing: DS.Space.s3) {
-                    BridgeIcon(name: bridge.rawValue, size: 28, circular: true)
-                    Text(bridge.shortName(name)).dsText(.body17)
+                    if let image = channel.imageURL {
+                        RemoteThumb(urlString: image, size: 28,
+                                    fallback: bridge.rawValue, circular: true)
+                    } else {
+                        BridgeIcon(name: bridge.rawValue, size: 28, circular: true)
+                    }
+                    Text("/\(channel.name)").dsText(.body17)
                         .foregroundStyle(DS.textPrimary)
                     Spacer()
                 }
                 .swipeActions(edge: .trailing) {
                     Button(role: .destructive) {
-                        bridge.removeName(name)
-                        accountNames = bridge.names
+                        FarcasterStore.shared.removeChannel(channel.name)
                         DSHaptic.tap()
                     } label: { Label("Remove", systemImage: "minus.circle") }
                 }
@@ -424,8 +565,28 @@ struct HandleSetupScreen: View {
                 .listRowSeparator(.hidden)
             }
         } header: {
-            Text(accountNames.count == 1 ? "Watching" : "Watching \(accountNames.count)")
-                .dsText(.label12).foregroundStyle(DS.textTertiary)
+            Text("Channels").dsText(.label12).foregroundStyle(DS.textTertiary)
+        } footer: {
+            Text("A channel is a topic feed — /design, /base — followed by name, same as a person.")
+                .dsText(.callout15).foregroundStyle(DS.textTertiary)
+        }
+    }
+
+    private func followChannel() {
+        let name = FarcasterStore.normalizeChannel(channelField)
+        guard !name.isEmpty, !channelSyncing else { return }
+        channelSyncing = true
+        channelError = nil
+        Task {
+            if await FarcasterIngest.followChannel(name) != nil {
+                channelField = ""
+                channelSyncing = false
+                DSHaptic.tap()
+                await sync()
+            } else {
+                channelSyncing = false
+                channelError = String(localized: "Couldn't find that channel — check the name.")
+            }
         }
     }
 
@@ -467,7 +628,9 @@ struct HandleSetupScreen: View {
     }
 
     private var anArticle: String {
-        bridge.nameNoun.first.map { "aeiou".contains($0) ? "an" : "a" } ?? "a"
+        // By SOUND, not spelling — "a username" (yoo), like "a unicorn";
+        // "u" in the vowel set printed "Add an username" (caught 2026-07-14).
+        bridge.nameNoun.first.map { "aeio".contains($0) ? "an" : "a" } ?? "a"
     }
 
     private var footerSection: some View {
@@ -508,13 +671,25 @@ struct HandleSetupScreen: View {
     }
 
     private func sync() async {
-        guard !syncing else { return }
+        // A tap mid-sync (a chip, a channel follow) queues one more pass
+        // instead of silently fetching nothing — the running sync took its
+        // account snapshot before the toggle.
+        guard !syncing else { resyncQueued = true; return }
         syncing = true
         let added = await bridge.refresh(context: modelContext)
         syncing = false
         loadRecent()
+        if resyncQueued {
+            resyncQueued = false
+            await sync()
+            return
+        }
         guard let added else {
-            result = String(localized: "Couldn't find that \(bridge.nameNoun) — check the spelling.")
+            // A channels-only Farcaster connection has no username to blame —
+            // nil there is the node not answering, not a spelling.
+            result = bridge == .farcaster && accountNames.isEmpty
+                ? String(localized: "Couldn't reach Farcaster — try again.")
+                : String(localized: "Couldn't find that \(bridge.nameNoun) — check the spelling.")
             resultIsError = true
             return
         }

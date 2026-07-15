@@ -83,6 +83,57 @@ enum ProbeHooks {
                 NSLog("Farcaster probe: %@ new things", n.map(String.init) ?? "FAILED")
             }
         },
+        // `-fcChannel <name[,name]>` follows Farcaster channels headlessly
+        // (each name resolves via the channel directory, the way a username
+        // resolves its fid) and syncs. Fire Farcaster probes one at a time —
+        // the refresh's running guard makes a concurrent one report 0.
+        Hook(key: "fcChannel") { names, context in
+            Task { @MainActor in
+                var followed = 0
+                for n in names.split(separator: ",") {
+                    if await FarcasterIngest.followChannel(String(n)) != nil { followed += 1 }
+                }
+                let n = await FarcasterIngest.refresh(context: context)
+                NSLog("Farcaster channel probe: %d followed, %@ new things",
+                      followed, n.map(String.init) ?? "FAILED")
+            }
+        },
+        // `-fcLikes <username>` watches an account's LIKES (adding the
+        // account if new) and syncs — liked casts land as things.
+        Hook(key: "fcLikes") { name, context in
+            let n = FarcasterStore.normalize(name)
+            FarcasterStore.shared.add(n)
+            FarcasterStore.shared.setLikes(true, for: n)
+            Task { @MainActor in
+                let added = await FarcasterIngest.refresh(context: context)
+                NSLog("Farcaster likes probe: %@ new things",
+                      added.map(String.init) ?? "FAILED")
+            }
+        },
+        // `-fcMentions <username>` watches MENTIONS of an account and syncs.
+        Hook(key: "fcMentions") { name, context in
+            let n = FarcasterStore.normalize(name)
+            FarcasterStore.shared.add(n)
+            FarcasterStore.shared.setMentions(true, for: n)
+            Task { @MainActor in
+                let added = await FarcasterIngest.refresh(context: context)
+                NSLog("Farcaster mentions probe: %@ new things",
+                      added.map(String.init) ?? "FAILED")
+            }
+        },
+        // `-fcReplies "<username>:<0xhash>"` fetches a cast's thread and
+        // NSLogs the count + first line (the sheet's replies section,
+        // headless — just the author's name and the full hash, no thing).
+        Hook(key: "fcReplies") { spec, _ in
+            guard let colon = spec.firstIndex(of: ":") else { return }
+            let handle = FarcasterStore.normalize(String(spec[..<colon]))
+            let hash = String(spec[spec.index(after: colon)...])
+            Task { @MainActor in
+                let replies = await FarcasterIngest.replies(handle: handle, hash: hash)
+                NSLog("Farcaster replies probe: %d replies%@", replies.count,
+                      replies.first.map { " — @\($0.handle): \(String($0.text.prefix(60)))" } ?? "")
+            }
+        },
         // `-pinterestUser <username>` connects Pinterest headlessly.
         Hook(key: "pinterestUser") { name, context in
             PinterestStore.shared.username = PinterestStore.normalize(name)

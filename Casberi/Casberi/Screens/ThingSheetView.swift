@@ -36,6 +36,10 @@ struct ThingSheetView: View {
     @State private var editingTags = false
     /// The hue wash pours in on open (delight 2026-07-13) — once per sheet.
     @State private var washPoured = false
+    /// A cast's thread (2026-07-14) — fetched live from the public node when
+    /// the sheet opens a Farcaster thing; the section renders only when
+    /// replies exist (no dead section, no spinner theater).
+    @State private var replies: [FarcasterIngest.Reply] = []
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// Seeded by the record's shape (2026-07-13 polish): a TALL thing (media
     /// or a long body) still opens FULL-height so its verbs never start
@@ -85,6 +89,11 @@ struct ThingSheetView: View {
                 }
                 actionRows
                     .padding(.top, DS.Space.s6)
+                if !replies.isEmpty {
+                    repliesSection
+                        .padding(.horizontal, DS.Space.s4)
+                        .padding(.top, DS.Space.s4)
+                }
                 relatedShelf
                     .padding(.top, DS.Space.s4)
             }
@@ -137,6 +146,7 @@ struct ThingSheetView: View {
         .presentationCornerRadius(DS.Radius.sheet)
         .onAppear {
             streamRelated()
+            Task { replies = await FarcasterIngest.replies(for: thing) }
             if focusTags {
                 // Land in the tag editor — the swipe's whole point.
                 editingTags = true
@@ -470,6 +480,39 @@ struct ThingSheetView: View {
         thing.tags.removeAll { $0 == tag }
         try? modelContext.save()
         CorpusSignal.shared.bump()
+    }
+
+    // MARK: - Replies (a cast's thread, 2026-07-14)
+
+    /// The conversation under a Farcaster cast — read-only context in the
+    /// spec table's quiet-card clothes: a face, the handle, the words.
+    private var repliesSection: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s3) {
+            Text("Replies")
+                .dsText(.label12).foregroundStyle(DS.textTertiary)
+            ForEach(replies) { reply in
+                HStack(alignment: .top, spacing: DS.Space.s2) {
+                    if let avatar = reply.avatarURL {
+                        RemoteThumb(urlString: avatar, size: 20,
+                                    fallback: thing.source, circular: true)
+                    } else {
+                        BridgeIcon(name: thing.source, size: 20, circular: true)
+                    }
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("@\(reply.handle)")
+                            .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                        Text(reply.text)
+                            .dsText(.callout15).foregroundStyle(DS.textPrimary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    Spacer(minLength: 0)
+                }
+            }
+        }
+        .padding(DS.Space.s4)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(DS.fillFaint,
+                    in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
     }
 
     // MARK: - Related shelf (streams last)

@@ -123,7 +123,7 @@ enum BridgeCatalog {
         // shelving): Farcaster is the onchain network — it browses with
         // Wallet/Tokens/OpenSea, and its detail eyebrow says so.
         Offer(name: "Farcaster",   tagline: "Track any Farcaster account",           group: "Onchain",   connectable: true,
-              summary: "An open social protocol — casts are public, so this connects with just a username: your own or anyone's. No password, nothing stored but the name.",
+              summary: "An open social protocol — casts are public, so this connects with just a username: your own or anyone's, plus /channels by name. An account's likes and mentions can land too. No password, nothing stored but the name.",
               needsSetup: true),
         Offer(name: "Bluesky",     tagline: "Your posts, in your feed",              group: "Network",   connectable: true,
               summary: "Built on an open protocol — your posts are public, so this connects with just your handle. No password, nothing stored but the name. Likes arrive with sign-in, later.",

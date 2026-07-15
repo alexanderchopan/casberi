@@ -2756,3 +2756,56 @@ Wallet screen's swipe carries; the wallet stays watched). A removed
 card's badge vanishes and the flash confirms instantly; the card itself
 leaves when editing ends (recompose stays deferred through the wobble
 so modules never shift under an in-flight drag).
+
+## 74. Farcaster grows likes, mentions, channels, replies, faces (user, 2026-07-14)
+
+User picked five features from the "what else can the keyless node
+serve" shortlist (1, 2, 3, 6, 7 — the follow-graph import and the
+verified-wallet tie-in stayed on the shelf; write-backs REFUSED: casting
+needs an on-chain signer per user, breaking "a username alone connects
+it," so the bridge stays honestly read-only). All five ride the same
+public Snapchain node (`snap.farcaster.xyz:3381`) — no key, no account:
+
+- **Likes land as saves** (`reactionsByFid?reaction_type=Like`): a
+  per-account "Likes" chip on the watched-accounts list — like it on
+  Farcaster, it lands here. The thing wears the LIKED CAST's author
+  (face + handle) and the LIKE's timestamp (when it entered your
+  attention, not when it was cast). No "which account is you" concept:
+  likes/mentions are per-account switches that work for anyone watched
+  (watching a curator's likes is legitimate too).
+- **Mentions ride the away answer** (`castsByMention`): a per-account
+  "Mentions" chip — casts by others naming the account land as things,
+  replies included (a mention usually is one), so "while I was away"
+  can answer with who talked to you (the pulse pools everything in the
+  frozen window; no special-casing needed).
+- **Channels are followable** (`castsByParent?url=`): a Channels
+  section on the Farcaster screen — "/design" by name, with the same
+  field anatomy as the username field ("/" prefix). The name resolves
+  once against the channel directory (api.farcaster.xyz/v1/channel,
+  warpcast.com twin as fallback) and the parent URL is cached like an
+  fid. A channels-only connection still counts as connected (syncs,
+  disconnects).
+- **The thing sheet shows the thread** (`castsByParent?fid=&hash=`):
+  a quiet "Replies" card (spec-table clothes) under the actions, up to
+  8 replies — face, @handle, words — fetched live on open, rendered
+  only when replies exist (no dead section, no spinner theater).
+- **Account rows wear the profile** (`userDataByFid`, the same call
+  the avatar already cost): face, display name, "@username · bio",
+  refreshed each sync and persisted on the Account.
+
+Shared plumbing that came with it: a per-launch fid→profile cache (one
+userDataByFid per unique author, ever); mention SPLICING (casts store
+@names out-of-band as fids + UTF-8 byte offsets — the raw text reads
+"hey  look"; every landed cast now splices the @names back in,
+end-first so offsets hold); one `land(cast:)` tail shared by the
+likes/mentions/channel flows (dedupe by "fc:<hash>" whichever flow
+arrives first); and rowLabel extended — your ONE watched mirror stays
+unlabeled, everything else (several accounts, a liked cast's author, a
+channel's caster) names itself. Probes: `-fcLikes`, `-fcMentions`,
+`-fcChannel`, `-fcReplies "user:0xhash"` (one per launch — the refresh
+guard serializes). Verified live against dwr/@six//design: 10 casts,
+24 likes, 25+ mentions, /design casts landed with the right authors,
+8 replies (the cap) on @six's mosaics cast, zero duplicate refs.
+Node quirk paid for: castsByParent serves DOUBLE the asked pageSize
+(25 → 50, verified live) — the channel sync and the sheet's replies
+both cap client-side.
