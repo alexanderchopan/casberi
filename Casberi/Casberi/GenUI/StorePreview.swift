@@ -173,15 +173,22 @@ enum StorePreview {
             "r1 = Row(\"Daring Fireball: On the new iPad\", \"Link\", \"RSS\", \"3h\")",
             "r2 = Row(\"Stratechery: Aggregation, again\", \"Link\", \"RSS\", \"6h\")",
         ]
+        // Broad, not "your posts": the bridge watches ANY account — your own
+        // or anyone's — plus mentions, so the preview shows the accounts you
+        // follow, not a personal timeline (user, 2026-07-14).
         case "Bluesky": [
             "root = Stack([w])",
-            "w = Widget(\"Saved posts\", null, [r1])",
+            "w = Widget(\"Accounts you watch\", null, [r1, r2])",
             "r1 = Row(\"jay: the feed you own beats the feed you rent\", \"Chat\", \"Bluesky\", \"2h\")",
+            "r2 = Row(\"pfrazee: at-proto federation is live\", \"Chat\", \"Bluesky\", \"5h\")",
         ]
+        // Farcaster grew likes, mentions, and /channels (2026-07-14) — the
+        // preview shows a watched account and a channel cast, not a save pile.
         case "Farcaster": [
             "root = Stack([w])",
-            "w = Widget(\"Casts you saved\", null, [r1])",
+            "w = Widget(\"Accounts and channels\", null, [r1, r2])",
             "r1 = Row(\"dwr: base fees at all-time low\", \"Chat\", \"Farcaster\", \"4h\")",
+            "r2 = Row(\"v: shipping in /dev today\", \"Chat\", \"Farcaster\", \"1h\")",
         ]
         case "OpenSea": [
             "root = Stack([w])",
@@ -200,6 +207,92 @@ enum StorePreview {
             "w = Widget(\"Live odds\", null, [r1, r2])",
             "r1 = Row(\"Fed holds rates in March · 68%\", \"Link\", \"Kalshi\", \"now\")",
             "r2 = Row(\"Lakers make the playoffs · 74%\", \"Link\", \"Kalshi\", \"2h\")",
+        ]
+        // The rest of the connectable catalog (2026-07-14): every card in the
+        // discover carousel now ghosts what lands instead of empty air. Each
+        // row's tag is the kind it becomes; the source is the app it comes from.
+        case "Photos": [
+            "root = Stack([w])",
+            "w = Widget(\"From your screenshots\", null, [r1, r2])",
+            "r1 = Row(\"Recipe: miso-glazed salmon\", \"Screenshot\", \"Photos\", \"2h\")",
+            "r2 = Row(\"Lisbon flight — confirmation\", \"Screenshot\", \"Photos\", \"Yesterday\")",
+        ]
+        case "Calendar": [
+            "root = Stack([w])",
+            "w = Widget(\"On your calendar\", null, [r1, r2])",
+            "r1 = Row(\"Dentist\", \"Event\", \"Calendar\", \"9:00 AM\")",
+            "r2 = Row(\"Team sync\", \"Event\", \"Calendar\", \"Wed\")",
+        ]
+        case "Reminders": [
+            "root = Stack([w])",
+            "w = Widget(\"Your lists\", null, [r1, r2])",
+            "r1 = Row(\"Book the flights\", \"Reminder\", \"Reminders\", \"today\")",
+            "r2 = Row(\"Call the landlord\", \"Reminder\", \"Reminders\", \"Fri\")",
+        ]
+        case "Pinterest": [
+            "root = Stack([w])",
+            "w = Widget(\"Your pins\", null, [r1, r2])",
+            "r1 = Row(\"Kitchen shelving ideas\", \"Link\", \"Pinterest\", \"1d\")",
+            "r2 = Row(\"Weeknight pasta board\", \"Link\", \"Pinterest\", \"2d\")",
+        ]
+        case "Substack": [
+            "root = Stack([w])",
+            "w = Widget(\"New posts\", null, [r1, r2])",
+            "r1 = Row(\"Slow Boring: the housing fix\", \"Link\", \"Substack\", \"3h\")",
+            "r2 = Row(\"Lenny: onboarding that sticks\", \"Link\", \"Substack\", \"1d\")",
+        ]
+        case "Podcasts": [
+            "root = Stack([w])",
+            "w = Widget(\"New episodes\", null, [r1, r2])",
+            "r1 = Row(\"Acquired: the Nvidia episode\", \"Link\", \"Podcasts\", \"6h\")",
+            "r2 = Row(\"The Daily: this morning\", \"Link\", \"Podcasts\", \"1d\")",
+        ]
+        case "Steam": [
+            "root = Stack([w])",
+            "w = Widget(\"Recently played\", null, [r1, r2])",
+            "r1 = Row(\"Balatro · 2.1 hrs\", \"Link\", \"Steam\", \"today\")",
+            "r2 = Row(\"Hades II · 40 min\", \"Link\", \"Steam\", \"Yesterday\")",
+        ]
+        case "Kindle": [
+            "root = Stack([w])",
+            "w = Widget(\"Highlights\", null, [r1, r2])",
+            "r1 = Row(\"Atomic Habits — you get what you repeat\", \"Note\", \"Kindle\", \"1d\")",
+            "r2 = Row(\"Dune — fear is the mind-killer\", \"Note\", \"Kindle\", \"3d\")",
+        ]
+        case "Apple Notes": [
+            "root = Stack([w])",
+            "w = Widget(\"Shared in\", null, [r1])",
+            "r1 = Row(\"Apartment move — checklist\", \"Note\", \"Apple Notes\", \"2h\")",
+        ]
+        case "Apple Journal": [
+            "root = Stack([w])",
+            "w = Widget(\"Your entries\", null, [r1, r2])",
+            "r1 = Row(\"A good day on the coast\", \"Note\", \"Apple Journal\", \"Sun\")",
+            "r2 = Row(\"First run in weeks\", \"Note\", \"Apple Journal\", \"Mar 3\")",
+        ]
+        case "Day One": [
+            "root = Stack([w])",
+            "w = Widget(\"Your journal\", null, [r1, r2])",
+            "r1 = Row(\"Lisbon, day two\", \"Note\", \"Day One\", \"May 14\")",
+            "r2 = Row(\"On finishing the draft\", \"Note\", \"Day One\", \"Apr 2\")",
+        ]
+        case "Obsidian": [
+            "root = Stack([w])",
+            "w = Widget(\"From your vault\", null, [r1, r2])",
+            "r1 = Row(\"Sync layer — design notes\", \"Note\", \"Obsidian\", \"1d\")",
+            "r2 = Row(\"Books to read in 2026\", \"Note\", \"Obsidian\", \"4d\")",
+        ]
+        case "Shopify": [
+            "root = Stack([w])",
+            "w = Widget(\"New drops\", null, [r1, r2])",
+            "r1 = Row(\"Aer Travel Pack 3 · $230\", \"Product\", \"Shopify\", \"2h\")",
+            "r2 = Row(\"Restock: the merino tee\", \"Product\", \"Shopify\", \"1d\")",
+        ]
+        case "Deals": [
+            "root = Stack([w])",
+            "w = Widget(\"Fresh deals\", null, [r1, r2])",
+            "r1 = Row(\"Sony WH-1000XM5 · $278 (was $399)\", \"Product\", \"Deals\", \"1h\")",
+            "r2 = Row(\"Anker power bank · $34\", \"Product\", \"Deals\", \"3h\")",
         ]
         default:
             nil
