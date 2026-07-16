@@ -173,6 +173,18 @@ enum OnDeviceModel {
         }
         #endif
     }
+
+    /// Starts a fresh answer CONVERSATION (2026-07-15) — drops the persistent
+    /// session so the next Ask begins with no transcript. Called when the
+    /// composer opens, so one conversation's turns never bleed into the next.
+    /// A no-op where the model isn't available.
+    static func resetConversation() {
+        #if canImport(FoundationModels)
+        if #available(iOS 26.0, *) {
+            Task { @MainActor in ConversationModel.reset() }
+        }
+        #endif
+    }
 }
 
 #if canImport(FoundationModels)
@@ -198,6 +210,42 @@ enum WarmModel {
     static func teardown() { session = nil }
 }
 
+/// The persistent per-conversation session (2026-07-15) — what turns the
+/// composer from a series of independent one-shots into a real conversation, so
+/// a follow-up ("which of those were from Sam?") is carried by the transcript,
+/// not a pronoun heuristic. Reset when the composer opens, so one conversation
+/// never bleeds into the next; a shape change (lookup ↔ synthesis) also starts
+/// fresh, since their instructions differ. MainActor-isolated so the single
+/// session is never touched from two threads (the same rule `WarmModel` keeps).
+///
+/// Bounded on purpose — a transcript can only grow within ONE conversation, and
+/// any turn that overflows the context window (or otherwise errors) drops the
+/// session and retries once fresh (see `compose` / `synthesisStream`), so a
+/// long conversation degrades to a stateless answer rather than a broken one.
+@available(iOS 26.0, *)
+@MainActor
+enum ConversationModel {
+    private static var session: LanguageModelSession?
+    /// The instructions the live session was built with — a turn whose
+    /// instructions differ (the other answer shape) starts a fresh session.
+    private static var key: String?
+
+    /// The session for a turn under `instructions`, and whether it was REUSED
+    /// (a continuing conversation) — the caller retries fresh on a reused
+    /// session's failure, but not on a brand-new one's (nothing to blame on
+    /// history there).
+    static func acquire(instructions: String) -> (session: LanguageModelSession, reused: Bool) {
+        if let s = session, key == instructions { return (s, true) }
+        let s = LanguageModelSession(instructions: instructions)
+        session = s; key = instructions
+        return (s, false)
+    }
+
+    /// Drop the session so the next `acquire` builds fresh — on a new
+    /// conversation (`reset`) or after a turn failed on a reused session.
+    static func reset() { session = nil; key = nil }
+}
+
 /// What the model returns. It writes ONE sentence and lists which things answer,
 /// by their number — it cannot return a thing, only point at the ones it was
 /// given, so the record stays honest. File-scope (not nested) so the @Generable
@@ -216,6 +264,7 @@ struct GroundedAnswerLayout {
 @available(iOS 26.0, *)
 enum FoundationAnswer {
 
+    @MainActor
     static func compose(query: String, candidates: [OnDeviceModel.Candidate]) async -> OnDeviceModel.GroundedAnswer? {
         guard OnDeviceModel.isAvailable, !candidates.isEmpty else { return nil }
 
@@ -240,18 +289,29 @@ enum FoundationAnswer {
         numbers of the things that answer it, most relevant first.
         """
 
-        do {
-            let session = LanguageModelSession(instructions: instructions)
+        // Map the model's 1-based numbers to valid 0-based indices, dropping any
+        // it hallucinated out of range.
+        func run(_ session: LanguageModelSession) async throws -> OnDeviceModel.GroundedAnswer {
             let response = try await session.respond(to: prompt, generating: GroundedAnswerLayout.self)
-            // Map the model's 1-based numbers to valid 0-based indices, dropping
-            // any it hallucinated out of range.
             let picks = response.content.picks.compactMap { n -> Int? in
                 let idx = n - 1
                 return candidates.indices.contains(idx) ? idx : nil
             }
             return OnDeviceModel.GroundedAnswer(insight: response.content.insight, picks: picks)
+        }
+
+        // The persistent conversation session carries prior turns so a follow-up
+        // is understood in context. A failure on a REUSED session (an overflowed
+        // transcript, most likely) drops it and retries once fresh — so a long
+        // conversation degrades to a stateless answer, never a broken one.
+        let (session, reused) = ConversationModel.acquire(instructions: instructions)
+        do {
+            return try await run(session)
         } catch {
-            return nil
+            guard reused else { return nil }
+            ConversationModel.reset()
+            let (fresh, _) = ConversationModel.acquire(instructions: instructions)
+            return try? await run(fresh)
         }
     }
 
@@ -265,15 +325,31 @@ enum FoundationAnswer {
         let prompt = OnDeviceModel.synthesisPrompt(query: query, candidates: candidates)
 
         return AsyncStream { continuation in
-            let task = Task {
+            // MainActor so the persistent conversation session is touched from
+            // one thread only (the `WarmModel`/`ConversationModel` rule).
+            let task = Task { @MainActor in
+                let (session, reused) = ConversationModel.acquire(instructions: instructions)
+                var yielded = false
                 do {
-                    let session = LanguageModelSession(instructions: instructions)
                     for try await partial in session.streamResponse(to: prompt) {
+                        yielded = true
                         continuation.yield(partial.content)
                     }
                 } catch {
-                    // A refusal or error just ends the stream; the caller falls
-                    // back to the scoring doc if nothing arrived.
+                    // A failure on a REUSED session before anything streamed is
+                    // most likely an overflowed transcript — drop it and stream
+                    // once fresh, so a long conversation still answers. A refusal
+                    // or a mid-stream error just ends the stream; the caller
+                    // falls back to the scoring doc if nothing arrived.
+                    if reused && !yielded {
+                        ConversationModel.reset()
+                        let (fresh, _) = ConversationModel.acquire(instructions: instructions)
+                        do {
+                            for try await partial in fresh.streamResponse(to: prompt) {
+                                continuation.yield(partial.content)
+                            }
+                        } catch { }
+                    }
                 }
                 continuation.finish()
             }

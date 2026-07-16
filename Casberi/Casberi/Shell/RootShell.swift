@@ -153,6 +153,12 @@ struct RootShell: View {
         .sheet(isPresented: $composerOpen) {
             actionsSheet
         }
+        // A fresh composer open is a fresh answer conversation — drop the prior
+        // transcript so one conversation's turns never bleed into the next
+        // (ConversationModel). Follow-ups WITHIN this open carry context.
+        .onChange(of: composerOpen) { _, open in
+            if open { OnDeviceModel.resetConversation() }
+        }
         // A surface requested an ask (the weekend cover) — open the composer;
         // it consumes the query once it mounts (prd 54).
         .onChange(of: chrome.askRequest) { _, request in
@@ -410,6 +416,33 @@ struct RootShell: View {
                 Task { @MainActor in
                     let title = await LinkTitle.fetch(url)
                     NSLog("LinkTitle probe: %@", title ?? "FAILED")
+                }
+            }
+            // Debug hook: `-linkBodyProbe <url>` exercises the readable-body
+            // fetch headlessly — NSLogs the lede that would land in a saved
+            // link's `enrichedText` for the answer path to reach.
+            if let raw = UserDefaults.standard.string(forKey: "linkBodyProbe"),
+               let url = URL(string: raw) {
+                Task { @MainActor in
+                    let body = await LinkTitle.fetchReadable(url)
+                    NSLog("[Casberi] linkBodyProbe(%@) → %@", raw,
+                          body ?? "FAILED (nothing readable)")
+                }
+            }
+            // Debug hook: `-toolAnswer "<query>"` runs the tool-calling agent
+            // path (AnswerTools) in isolation — the model searches the corpus
+            // via tools and answers, logging the prose and the ids it grounded
+            // on. nil where the model is unavailable (the honest fallback the
+            // default lookup path takes to the scoring doc).
+            if let q = UserDefaults.standard.string(forKey: "toolAnswer") {
+                Task { @MainActor in
+                    let snap = toolSnapshot()
+                    if let r = await AnswerTools.answer(query: q, corpus: snap) {
+                        NSLog("[Casberi] toolAnswer(\"%@\") → %@\n  grounded on %d things: %@",
+                              q, r.prose, r.hitIDs.count, r.hitIDs.joined(separator: ", "))
+                    } else {
+                        NSLog("[Casberi] toolAnswer(\"%@\") → nil (model unavailable/declined — expected on sim)", q)
+                    }
                 }
             }
             // Debug hook: `-mcpProbe "<query>"` exercises the MCP tool layer
@@ -780,15 +813,22 @@ struct RootShell: View {
     /// is the safer default.
     private enum AnswerMode { case lookup, synthesis }
 
+    /// True when the ask carries an explicit retrieval verb — an unambiguous
+    /// lookup signal, so routing can take the fast heuristic and skip the
+    /// model round-trip (`resolvedMode`). These win outright, even over a
+    /// temporal cue ("what did I save this week" is still a lookup).
+    private func hasLookupVerb(_ query: String) -> Bool {
+        let q = query.lowercased().replacingOccurrences(of: "\u{2019}", with: "'")
+        let lookupVerbs = ["find", "search", "show", "save", "saved",
+                           "where", "which", "list", "look up"]
+        return lookupVerbs.contains(where: q.contains)
+    }
+
     private func answerMode(_ query: String) -> AnswerMode {
         // Smart punctuation types U+2019 — "what's my week" must match the
         // "what's my" cue whichever apostrophe the keyboard chose.
         let q = query.lowercased().replacingOccurrences(of: "\u{2019}", with: "'")
-        // A retrieval verb is a strong lookup signal — it wins outright, even
-        // over a temporal cue ("what did I save this week" is still a lookup).
-        let lookupVerbs = ["find", "search", "show", "save", "saved",
-                           "where", "which", "list", "look up"]
-        if lookupVerbs.contains(where: q.contains) { return .lookup }
+        if hasLookupVerb(query) { return .lookup }
         // Otherwise a reflection/summary cue routes to prose. The status
         // cues ride along so a content-qualified status ask ("what's
         // happening with bitcoin") streams prose like its bare form would —
@@ -803,6 +843,19 @@ struct RootShell: View {
                              "did i miss"]
         if synthesisCues.contains(where: q.contains) { return .synthesis }
         return .lookup
+    }
+
+    /// The routing decision, model-refined (2026-07-15). An explicit retrieval
+    /// verb is unambiguous — take the fast heuristic, no model call. Otherwise
+    /// the on-device model routes (its read beats any hand-enumerated cue list);
+    /// when it's unavailable or declines, the keyword heuristic stands in —
+    /// zero regression on non-Apple-Intelligence devices.
+    private func resolvedMode(_ query: String) async -> AnswerMode {
+        if hasLookupVerb(query) { return .lookup }
+        if let plan = await QueryPlan.make(query) {
+            return plan.synthesis ? .synthesis : .lookup
+        }
+        return answerMode(query)
     }
 
     /// The answer path. The scoring engine always runs first and grounds the
@@ -914,8 +967,26 @@ struct RootShell: View {
         guard OnDeviceModel.isAvailable, !hits.isEmpty else {
             return retrievalDoc(hits, tag: tag)
         }
-        switch answerMode(query) {
+        switch await resolvedMode(query) {
         case .lookup:
+            // A FRESH lookup runs the tool-calling agent: the model searches the
+            // whole corpus itself (multi-hop), so it reaches things one keyword
+            // pass would miss. A FOLLOW-UP ("which of those…") stays on the
+            // pre-retrieved, pool-refined compose so "those"/"them" keep meaning
+            // the last answer's things — the tool path searches everything and
+            // has no such anchor. Both ground on real things (honesty rail): the
+            // tool hits map back to real rows; the model never invents one.
+            let followUp = isFollowUp(query) && !lastAnswerHits.isEmpty
+            if !followUp, let result = await AnswerTools.answer(query: query, corpus: toolSnapshot()) {
+                let grounded = things(forIDs: result.hitIDs)
+                if !grounded.isEmpty {
+                    lastAnswerHits = grounded
+                    return modelDoc(insight: result.prose, hits: grounded,
+                                    picks: Array(grounded.prefix(6).indices), tag: tag)
+                }
+                // Tools found nothing the pre-retrieval didn't — fall through to
+                // compose over `hits` (the stronger semantic retriever's set).
+            }
             guard let answer = await OnDeviceModel.compose(query: query, candidates: candidates(hits)) else {
                 return retrievalDoc(hits, tag: tag)   // model declined or errored — fall back
             }
@@ -947,6 +1018,36 @@ struct RootShell: View {
         return proseDoc(prose)
     }
 
+    /// The corpus flattened to a plain `Sendable` snapshot for the tool-calling
+    /// agent (AnswerTools) — the newest 2000 things, so a tool's `call` never
+    /// reaches SwiftData off its actor. Same evidence shape (title/kind/source/
+    /// when + excerpt) the single-shot candidates use.
+    private func toolSnapshot() -> [AnswerTools.Snapshot] {
+        var descriptor = FetchDescriptor<Thing>(
+            sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
+        descriptor.fetchLimit = 2000
+        let all = (try? modelContext.fetch(descriptor)) ?? []
+        return all.map { t in
+            AnswerTools.Snapshot(id: t.id.uuidString, title: t.title,
+                                 kind: t.kind.typeTag, source: t.source,
+                                 when: shortTime(t.capturedAt), text: answerSnippet(t))
+        }
+    }
+
+    /// Real things for the ids the tool-calling agent surfaced, in the tool's
+    /// SURFACED order (relevance, most relevant first) — the honesty rail: an
+    /// agent answer's grounding rows are the real things its tools returned,
+    /// never invented. Ids that no longer resolve (a thing deleted mid-answer)
+    /// are dropped.
+    private func things(forIDs ids: [String]) -> [Thing] {
+        let wanted = ids.compactMap { UUID(uuidString: $0) }
+        guard !wanted.isEmpty else { return [] }
+        let fetched = (try? modelContext.fetch(
+            FetchDescriptor<Thing>(predicate: #Predicate { wanted.contains($0.id) }))) ?? []
+        let byID = Dictionary(fetched.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
+        return wanted.compactMap { byID[$0] }
+    }
+
     /// Retrieved things flattened for the model — the one place the mapping
     /// lives, so every answer path hands the model the same shape.
     private func candidates(_ things: [Thing]) -> [OnDeviceModel.Candidate] {
@@ -958,19 +1059,25 @@ struct RootShell: View {
     }
 
     /// A short, single-line excerpt of a thing's body for the model — the
-    /// substance the title alone can't carry (a note's text, a chat's gist).
-    /// Empty when the body adds nothing over the title: missing, a duplicate
-    /// of the title, or a bare URL (source + title already stand for a link).
-    /// Capped so 16 candidates still fit the on-device context window.
+    /// substance the title alone can't carry (a note's text, a chat's gist, a
+    /// saved link's fetched article). Empty when nothing adds over the title.
+    /// For a bare-URL link the body IS the URL (no prose), so it falls through
+    /// to `enrichedText` — the page's own lede — when the fetch landed one.
+    /// Capped at 300 so 16 candidates still fit the on-device context window.
     private func answerSnippet(_ thing: Thing) -> String {
-        let body = thing.content.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !body.isEmpty, body != thing.title else { return "" }
-        // A bare link carries no prose the title doesn't already imply.
-        if body.lowercased().hasPrefix("http"), !body.contains(" ") { return "" }
+        let rawBody = thing.content.trimmingCharacters(in: .whitespacesAndNewlines)
+        // A bare link carries no prose the title doesn't already imply — reach
+        // for the fetched article text instead.
+        let bodyIsBareURL = rawBody.lowercased().hasPrefix("http") && !rawBody.contains(" ")
+        var body = (rawBody.isEmpty || rawBody == thing.title || bodyIsBareURL) ? "" : rawBody
+        if body.isEmpty, let extra = thing.enrichedText?.trimmingCharacters(in: .whitespacesAndNewlines) {
+            body = extra
+        }
+        guard !body.isEmpty else { return "" }
         let flat = body.replacingOccurrences(of: "\n", with: " ")
             .replacingOccurrences(of: "\t", with: " ")
         let squeezed = flat.replacingOccurrences(of: "  ", with: " ")
-        return squeezed.count > 180 ? String(squeezed.prefix(180)) + "…" : squeezed
+        return squeezed.count > 300 ? String(squeezed.prefix(300)) + "…" : squeezed
     }
 
     /// Streams the model's grounded synthesis, painting each snapshot through
@@ -1057,7 +1164,8 @@ struct RootShell: View {
     /// title hits outweigh tag hits outweigh content hits, fresh things float,
     /// and kind words in the person's own words filter ("screenshots about
     /// work" searches screenshots for work). Returns the ranked grounding set
-    /// (top 10 — a wider net for the model than the 4 the fallback paints).
+    /// (top 16 — a wide net for the model to rerank, well past the 4 the
+    /// fallback paints; raised from 10, 2026-07-15).
     /// Pronoun-shaped questions lean on what was just answered.
     private func isFollowUp(_ query: String) -> Bool {
         let q = " \(query.lowercased()) "
@@ -1102,7 +1210,12 @@ struct RootShell: View {
             var descriptor = FetchDescriptor<Thing>(
                 sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]
             )
-            descriptor.fetchLimit = 500
+            // The newest 2000 things (raised from 500, 2026-07-15): the older
+            // cap made anything past the recent 500 invisible to answers even
+            // though it carried an embedding. Scoring is linear over this set
+            // and runs on the Ask path, so it stays bounded — but 2000 covers a
+            // heavy corpus without a felt cost.
+            descriptor.fetchLimit = 2000
             all = (try? modelContext.fetch(descriptor)) ?? []
         }
         // Semantic widening: near-synonyms of the query's words, scored
@@ -1144,7 +1257,10 @@ struct RootShell: View {
             if let dateMatch, !dateMatch.range.contains(thing.capturedAt) { return nil }
             let title = words(thing.title)
             let tags = words(thing.tags.joined(separator: " "))
-            let content = words(thing.content)
+            // The content scan reaches the thing's own body AND its enriched
+            // text (a link's fetched article, 2026-07-15) — so a keyword the
+            // title never says can still match a saved page.
+            let content = words(thing.content + " " + (thing.enrichedText ?? ""))
             var score = 0.0
             for term in terms {
                 if title.contains(term) { score += 3 }
@@ -1174,7 +1290,7 @@ struct RootShell: View {
             return (thing, score)
         }
         .sorted { $0.1 > $1.1 }
-        .prefix(10)
+        .prefix(16)
         .map(\.0)
     }
 

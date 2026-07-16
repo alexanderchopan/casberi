@@ -157,6 +157,18 @@ final class Thing {
     /// not-yet-indexed; an empty `Data` means "indexed, but unembeddable".
     var embedding: Data? = nil
 
+    /// Extracted supplementary text for RETRIEVAL ONLY (2026-07-15) — a saved
+    /// link's readable article body, or the substance a thin title can't carry.
+    /// Never shown as a tag, a title, or a feed row; read only by
+    /// `EmbeddingIndex.indexText` (so the vector reflects what a thing is
+    /// ABOUT), the retriever's content scan, and `answerSnippet` (so the model
+    /// sees the substance, not just the title). `content` still holds the
+    /// thing's own bytes — a link's URL, a note's text — so open/route logic is
+    /// untouched. Setting this clears `embedding` so the sweep re-indexes on the
+    /// richer text. Optional + default nil keeps CloudKit mirroring happy; nil
+    /// until an enrichment pass reaches the thing.
+    var enrichedText: String? = nil
+
     /// A reminder's own due date, structured (2026-07-14) — the deadline the
     /// "Coming up" lane sorts on. A reminder's `capturedAt` is its CREATION
     /// time, so its deadline can't ride that field; events carry their deadline
