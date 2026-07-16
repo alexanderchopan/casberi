@@ -13,9 +13,59 @@ import UIKit
 /// `runAll` once on launch.
 @MainActor
 enum ProbeHooks {
+    /// Launch args whose VALUE is a credential. `probeArgs:` prints the args
+    /// verbatim so a stale/missing binary is obvious — but that printed the
+    /// real Venice/Anthropic/GitHub keys straight into the sim log, defeating
+    /// the whole point of keeping them in the Keychain and inlining them at
+    /// use-time (scripts/dev-keys.sh). The flag still prints; the value doesn't.
+    ///
+    /// This is a denylist, so it FAILS OPEN: a new keyed probe leaks until its
+    /// flag lands here. Add the flag in the same commit as the probe.
+    private static let secretArgKeys: Set<String> = [
+        "-byokKey", "-openSeaKey", "-tokenBridge", "-ghClientID",
+    ]
+
+    /// `-byokKey venice:vk-abc` → `-byokKey venice:‹redacted›`, but
+    /// `-byokKey sk-ant-x:y` → `-byokKey ‹redacted›`.
+    ///
+    /// A prefix survives ONLY when it's a name we can VERIFY isn't a secret —
+    /// a real `AgentProvider` case, a real `BridgeCatalog` offer. Trusting the
+    /// first colon instead would leak: `-byokKey` also takes a bare key (bare =
+    /// anthropic), `-openSeaKey` has no prefix grammar at all, and either value
+    /// containing a colon would print everything before it — half the
+    /// credential this function exists to hide.
+    private static func redactedValue(for flag: String, _ value: String) -> String {
+        let redacted = "‹redacted›"
+        guard let colon = value.firstIndex(of: ":") else { return redacted }
+        let prefix = String(value[value.startIndex..<colon])
+        let prefixIsKnownName: Bool
+        switch flag {
+        case "-byokKey":     prefixIsKnownName = AgentProvider(rawValue: prefix) != nil
+        case "-tokenBridge": prefixIsKnownName = BridgeCatalog.offers.contains { $0.name == prefix }
+        default:             prefixIsKnownName = false
+        }
+        return prefixIsKnownName ? "\(prefix):\(redacted)" : redacted
+    }
+
+    static func redactedArgs(_ args: [String]) -> [String] {
+        var out: [String] = []
+        var flagAwaitingSecret: String?
+        for arg in args {
+            if let flag = flagAwaitingSecret {
+                flagAwaitingSecret = nil
+                out.append(redactedValue(for: flag, arg))
+                continue
+            }
+            out.append(arg)
+            if secretArgKeys.contains(arg) { flagAwaitingSecret = arg }
+        }
+        return out
+    }
+
     static func runAll(context: ModelContext) {
         NSLog("[Casberi] probeArgs: %@",
-              ProcessInfo.processInfo.arguments.dropFirst().joined(separator: " "))
+              redactedArgs(Array(ProcessInfo.processInfo.arguments.dropFirst()))
+                .joined(separator: " "))
         for hook in hooks {
             guard let value = UserDefaults.standard.string(forKey: hook.key) else { continue }
             hook.run(value, context)
