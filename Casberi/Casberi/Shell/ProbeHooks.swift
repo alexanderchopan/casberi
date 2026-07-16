@@ -22,7 +22,7 @@ enum ProbeHooks {
     /// This is a denylist, so it FAILS OPEN: a new keyed probe leaks until its
     /// flag lands here. Add the flag in the same commit as the probe.
     private static let secretArgKeys: Set<String> = [
-        "-byokKey", "-openSeaKey", "-tokenBridge", "-ghClientID",
+        "-byokKey", "-openSeaKey", "-tokenBridge", "-wcProjectID", "-ghClientID",
     ]
 
     /// `-byokKey venice:vk-abc` → `-byokKey venice:‹redacted›`, but
@@ -31,9 +31,9 @@ enum ProbeHooks {
     /// A prefix survives ONLY when it's a name we can VERIFY isn't a secret —
     /// a real `AgentProvider` case, a real `BridgeCatalog` offer. Trusting the
     /// first colon instead would leak: `-byokKey` also takes a bare key (bare =
-    /// anthropic), `-openSeaKey` has no prefix grammar at all, and either value
-    /// containing a colon would print everything before it — half the
-    /// credential this function exists to hide.
+    /// anthropic), `-openSeaKey` and `-wcProjectID` have no prefix grammar at
+    /// all, and any of those values containing a colon would print everything
+    /// before it — half the credential this function exists to hide.
     private static func redactedValue(for flag: String, _ value: String) -> String {
         let redacted = "‹redacted›"
         guard let colon = value.firstIndex(of: ":") else { return redacted }
@@ -546,6 +546,37 @@ enum ProbeHooks {
             Task { @MainActor in
                 for line in await WalletIngest.holdingsDiagnostic() {
                     NSLog("Holdings probe: %@", line)
+                }
+            }
+        },
+        // `-wcConnectProbe YES` proposes a read-only WalletConnect session and
+        // NSLogs the EXACT namespaces payload plus the `wc:` URI. The payload
+        // line is the point: it's the proof that "we ask for nothing" is real
+        // rather than intended — if `methods` is ever non-empty there, the
+        // Wallet screen's promise is broken and this probe is how we find out.
+        // Pair with `-wcProjectID <id>`; with no id it logs the honest
+        // unavailable line (the paste-only degrade).
+        Hook(key: "wcConnectProbe") { _, _ in
+            guard WalletConnectBridge.isAvailable else {
+                NSLog("WalletConnect probe: unavailable (no project id) — paste-only")
+                return
+            }
+            let namespaces = WalletConnectBridge.readOnlyNamespaces()
+            let encoder = JSONEncoder()
+            encoder.outputFormatting = [.sortedKeys]
+            if let json = try? encoder.encode(namespaces) {
+                NSLog("WalletConnect probe: proposing %@", String(decoding: json, as: UTF8.self))
+            }
+            let methodCount = namespaces.values.reduce(0) { $0 + $1.methods.count }
+            let eventCount = namespaces.values.reduce(0) { $0 + $1.events.count }
+            NSLog("WalletConnect probe: methods=%d events=%d (both MUST be 0)",
+                  methodCount, eventCount)
+            Task { @MainActor in
+                do {
+                    let uri = try await WalletConnectBridge.connectURI()
+                    NSLog("WalletConnect probe: uri=%@", uri.absoluteString)
+                } catch {
+                    NSLog("WalletConnect probe: FAILED %@", String(describing: error))
                 }
             }
         },
