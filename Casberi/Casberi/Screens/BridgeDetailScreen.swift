@@ -204,6 +204,6 @@ struct BridgeDetailScreen: View {
         for thing in purged {
             modelContext.delete(thing)
         }
-        try? modelContext.save()
+        modelContext.saveHonestly()
     }
 }

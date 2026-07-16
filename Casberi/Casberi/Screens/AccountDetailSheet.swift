@@ -470,7 +470,7 @@ struct AccountDetailSheet: View {
             modelContext.insert(thing)
             added.append(thing)
         }
-        try? modelContext.save()
+        modelContext.saveHonestly()
         SpotlightIndex.index(added)
         DSHaptic.success()
         importResult = added.isEmpty
@@ -481,7 +481,7 @@ struct AccountDetailSheet: View {
     private func deleteEverything() {
         let things = (try? modelContext.fetch(FetchDescriptor<Thing>())) ?? []
         for thing in things { modelContext.delete(thing) }
-        try? modelContext.save()
+        modelContext.saveHonestly()
         SpotlightIndex.removeAll()
         // The store doesn't own the sidecars — clear them by hand so
         // "everything" is literally true: voice audio, the background photo,

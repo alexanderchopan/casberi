@@ -32,6 +32,7 @@ Or just run `scripts/verify.sh` (build + install + screen sweep + answer probe).
 - Test device: **iPhone 17 Pro** simulator, iOS 26 runtime.
 - FoundationModels (on-device LLM) is iOS 26-only at **runtime** — `#if canImport` is not enough, use `if #available(iOS 26.0, *)`. `@Generable` schema types MUST be file-scope (nesting one in a private enum emits broken keypaths → heap corruption crashing on unrelated threads).
 - There is currently **no test target** — the GenParser tests from early sessions were never persisted. If adding tests, create a proper unit-test target.
+- **Schema versioning (RULE, 2026-07-15):** `Casberi/Shared/ThingSchemaVersioning.swift` holds `ThingSchemaV1`/`ThingMigrationPlan`. A purely additive `Thing` change (new optional property, a new `@Attribute` on an existing property) needs nothing — SwiftData infers it. A BREAKING change (rename, type change, a removed property) needs a new `ThingSchemaVN` + a `.lightweight` migration stage there — CloudKit mirroring supports lightweight migration only, so a change that can't be expressed that way isn't a migration-plan problem, it's a new-field-plus-backfill problem. Skipping this on a breaking change no longer crash-loops installs (`SharedStore.containerWithFallback()` degrades to CloudKit-off, then in-memory, instead of `CasberiApp`'s old `fatalError`) — but a real migration is still the right fix; the fallback is a safety net, not a substitute.
 
 ## Simulator gotchas
 

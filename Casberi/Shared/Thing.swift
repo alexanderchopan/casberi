@@ -161,11 +161,17 @@ final class Thing {
     /// retrieve by MEANING, not just shared words. Derived by a lazy foreground
     /// sweep (`EmbeddingIndex`), never at the capture sites, so every bridge,
     /// CloudKit-synced thing, and the pre-existing corpus gets embedded alike.
-    /// Kept INLINE (not externalStorage): ~2KB, and retrieval reads every
-    /// vector each query — a per-thing file read would be far slower. Optional +
-    /// default nil keeps CloudKit mirroring happy and marks a thing as
-    /// not-yet-indexed; an empty `Data` means "indexed, but unembeddable".
-    var embedding: Data? = nil
+    /// externalStorage (2026-07-15, reversed from the original inline choice):
+    /// every `@Query` on `Thing` — including Home/Feed, which never read this
+    /// field — was hydrating this ~2KB blob on EVERY row, because SwiftData
+    /// eagerly loads inline attributes. That made it the single biggest
+    /// amplifier of launch/recompose cost as the corpus grows. Retrieval
+    /// (`EmbeddingIndex`, capped at 2000 things) now pays a per-thing file
+    /// read instead — worse in isolation, but it only runs on an Ask, not on
+    /// every Home/Feed paint. Optional + default nil keeps CloudKit mirroring
+    /// happy and marks a thing as not-yet-indexed; an empty `Data` means
+    /// "indexed, but unembeddable".
+    @Attribute(.externalStorage) var embedding: Data? = nil
 
     /// Extracted supplementary text for RETRIEVAL ONLY (2026-07-15) — a saved
     /// link's readable article body, or the substance a thin title can't carry.

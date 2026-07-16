@@ -275,16 +275,22 @@ private struct LinkPreviewCard: View {
         if let stored = storedImageURL, let storedURL = URL(string: stored),
            let (data, _) = try? await URLSession.shared.data(from: storedURL),
            let art = UIImage(data: data) {
-            image = art
+            // The card only ever paints this into a 140pt banner — downsample
+            // off-main so a full-resolution CDN image doesn't sit decoded in
+            // memory for a fraction of its rendered size.
+            image = await art.dsDownsampled(maxSide: 280)
         }
         let provider = LPMetadataProvider()
         guard let metadata = try? await provider.startFetchingMetadata(for: url) else { return }
         title = metadata.title
         guard image == nil, let imageProvider = metadata.imageProvider else { return }
-        image = await withCheckedContinuation { continuation in
+        let fetched: UIImage? = await withCheckedContinuation { continuation in
             _ = imageProvider.loadObject(ofClass: UIImage.self) { object, _ in
                 continuation.resume(returning: object as? UIImage)
             }
+        }
+        if let fetched {
+            image = await fetched.dsDownsampled(maxSide: 280)
         }
     }
 }
@@ -326,7 +332,24 @@ private struct StoredArtContent: View {
         guard let url = URL(string: urlString),
               let (data, _) = try? await URLSession.shared.data(from: url),
               let ui = UIImage(data: data) else { return }
-        image = ui
+        // Rendered at most 280pt tall (`frame(maxHeight: 280)` above); no
+        // reason to hold a full-resolution decode for that.
+        image = await ui.dsDownsampled(maxSide: 560)
+    }
+}
+
+private extension UIImage {
+    /// Off-main downsample to fit within `maxSide` pixels — the same
+    /// technique `RemoteImageLoader` uses for remote images (ShapedRows.swift),
+    /// applied here to locally-decoded bytes so a detail sheet doesn't hold a
+    /// full-resolution bitmap just to paint a small fixed-size banner/card.
+    func dsDownsampled(maxSide: CGFloat) async -> UIImage {
+        guard size.width > maxSide || size.height > maxSide else { return self }
+        return await withCheckedContinuation { cont in
+            prepareThumbnail(of: CGSize(width: maxSide, height: maxSide)) {
+                cont.resume(returning: $0 ?? self)
+            }
+        }
     }
 }
 

@@ -100,6 +100,17 @@ struct HomeScreen: View {
     /// grip just vanishes. Latch the recompose instead and run it when
     /// editing ends.
     @State private var recomposeDeferred = false
+    /// Recompose storm guard (2026-07-15): a foreground triggers ~25
+    /// concurrent bridge refreshes, each a separate `things.count` change —
+    /// without this, each one ran a full synchronous `HomeComposition.compose`
+    /// (O(corpus): project/source clustering plus a `things.filter` per pinned
+    /// app and media shelf) back to back. The FIRST change in a burst still
+    /// recomposes immediately (a solo capture must feel instant, unchanged);
+    /// changes arriving during the cooldown window that follows are coalesced
+    /// into exactly one trailing recompose instead of one each.
+    @State private var recomposeCooldownActive = false
+    @State private var recomposePendingDuringCooldown = false
+    private static let recomposeCooldown: Duration = .milliseconds(400)
 
     struct ProjectRoute: Identifiable, Hashable {
         let name: String
@@ -377,12 +388,28 @@ struct HomeScreen: View {
     }
 
     /// Recompose now — unless the person is mid-rearrange, in which case
-    /// latch it for the moment they tap Done (or leave Home).
+    /// latch it for the moment they tap Done (or leave Home). Otherwise runs
+    /// through the recompose-storm cooldown: the first call in a burst fires
+    /// immediately, later calls during the cooldown window coalesce into one
+    /// trailing recompose (see `recomposeCooldownActive`'s doc).
     private func recomposeOrDefer() {
         if boardEditing {
             recomposeDeferred = true
-        } else {
-            streamComposition(instant: true)
+            return
+        }
+        guard !recomposeCooldownActive else {
+            recomposePendingDuringCooldown = true
+            return
+        }
+        streamComposition(instant: true)
+        recomposeCooldownActive = true
+        Task { @MainActor in
+            try? await Task.sleep(for: Self.recomposeCooldown)
+            recomposeCooldownActive = false
+            if recomposePendingDuringCooldown {
+                recomposePendingDuringCooldown = false
+                recomposeOrDefer()
+            }
         }
     }
 

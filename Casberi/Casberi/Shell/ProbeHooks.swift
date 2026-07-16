@@ -516,7 +516,7 @@ enum ProbeHooks {
                 let t = Thing(kind: .link, title: "Ring demo", source: src,
                               sourceRef: "probe:ring-demo-\(UUID().uuidString)")
                 context.insert(t)
-                try? context.save()
+                context.saveHonestly()
                 NSLog("Seed thing probe: landed for %@", src)
             }
         },
@@ -527,7 +527,7 @@ enum ProbeHooks {
             let all = (try? context.fetch(FetchDescriptor<Thing>())) ?? []
             let litter = all.filter { $0.sourceRef?.hasPrefix("probe:ring-demo") == true }
             for t in litter { context.delete(t) }
-            try? context.save()
+            context.saveHonestly()
             NSLog("Seed-thing cleanup probe: deleted %d", litter.count)
         },
         // `-healPhotos YES` runs the screenshot heal sweep (thumbnails +
@@ -541,7 +541,7 @@ enum ProbeHooks {
                                       source: "Photos",
                                       sourceRef: "phasset:DEAD-BEEF-PROBE/L0/001")
                     context.insert(ghost)
-                    try? context.save()
+                    context.saveHonestly()
                     NSLog("Photos heal probe: dangling thing seeded")
                 }
                 let auth = PHPhotoLibrary.authorizationStatus(for: .readWrite)

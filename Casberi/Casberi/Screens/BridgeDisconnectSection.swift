@@ -59,7 +59,7 @@ struct BridgeDisconnectSection: View {
             let doomed = all.filter { $0.source == name }
             SpotlightIndex.remove(ids: doomed.map(\.id))
             for thing in doomed { modelContext.delete(thing) }
-            try? modelContext.save()
+            modelContext.saveHonestly()
         }
         // Clear the store first so a refresh racing the dismiss can't re-add
         // the seat, then drop the seat itself.

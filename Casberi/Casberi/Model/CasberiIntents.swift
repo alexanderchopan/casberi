@@ -31,7 +31,13 @@ struct SaveThingIntent: AppIntent {
                                         source: from.isEmpty ? "Shortcuts" : from) else {
             return .result(dialog: "There was nothing to save.")
         }
-        let container = try SharedStore.container()
+        // extensionContainer(), not container(): Siri/Shortcuts can run an
+        // intent's perform() out-of-process while the app is also open, and
+        // a fresh CloudKit-mirroring container here would fight the app's
+        // own mirror on the same store file (SharedStore's own warning). A
+        // write made through the local-only container still reaches iCloud
+        // next time the app opens, same as the share extension.
+        let container = try SharedStore.extensionContainer()
         let context = ModelContext(container)
         context.insert(thing)
         try context.save()
@@ -47,7 +53,7 @@ struct WeekSynthesisIntent: AppIntent {
         "One line about what your things are up to.")
 
     func perform() async throws -> some IntentResult & ProvidesDialog {
-        let container = try SharedStore.container()
+        let container = try SharedStore.extensionContainer()
         let context = ModelContext(container)
         let things = (try? context.fetch(FetchDescriptor<Thing>())) ?? []
         guard !things.isEmpty else {
@@ -142,7 +148,7 @@ struct AskCasberiIntent: AppIntent {
 /// agree on what a query reaches.
 enum IntentCorpus {
     static func match(_ query: String, limit: Int) throws -> [Thing] {
-        let container = try SharedStore.container()
+        let container = try SharedStore.extensionContainer()
         let context = ModelContext(container)
         let things = (try? context.fetch(FetchDescriptor<Thing>(
             sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]

@@ -59,7 +59,7 @@ enum HealthIngest {
             inserted += 1
             if source == seat { added += 1 }
         }
-        if inserted > 0 { try? context.save() }
+        if inserted > 0 { context.saveHonestly() }
         return added
     }
 

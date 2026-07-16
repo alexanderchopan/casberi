@@ -84,7 +84,7 @@ enum ScheduleIngest {
             context.insert(thing)
             added += 1
         }
-        try? context.save()
+        context.saveHonestly()
         return added
     }
 
@@ -119,17 +119,27 @@ enum ScheduleIngest {
 
     /// Completes (or un-completes) the real reminder behind a thing — the
     /// lightest write (shaped-feeds ruling): the check circle is the consent,
-    /// tapping again is the undo. No-op for things that aren't EK-backed
-    /// (demo corpus) — those just mark locally.
-    static func setCompleted(_ sourceRef: String?, _ done: Bool) async {
-        guard let ref = sourceRef, ref.hasPrefix("ekreminder:") else { return }
+    /// tapping again is the undo. No-op (returns `true`, nothing to fail) for
+    /// things that aren't EK-backed (demo corpus) — those just mark locally.
+    /// Returns whether the real reminder actually changed, so the caller can
+    /// tell the truth instead of an optimistic toast that outlives a failed
+    /// write (honesty rule — a check mark that silently doesn't stick is
+    /// exactly the "fake status" the design law bans).
+    @discardableResult
+    static func setCompleted(_ sourceRef: String?, _ done: Bool) async -> Bool {
+        guard let ref = sourceRef, ref.hasPrefix("ekreminder:") else { return true }
         let id = String(ref.dropFirst("ekreminder:".count))
         let store = EKEventStore()
         guard (try? await store.requestFullAccessToReminders()) == true,
               let reminder = store.calendarItem(withIdentifier: id) as? EKReminder
-        else { return }
+        else { return false }
         reminder.isCompleted = done
-        try? store.save(reminder, commit: true)
+        do {
+            try store.save(reminder, commit: true)
+            return true
+        } catch {
+            return false
+        }
     }
 
     /// Open reminders — the list as it stands.
@@ -161,7 +171,7 @@ enum ScheduleIngest {
             context.insert(thing)
             added += 1
         }
-        try? context.save()
+        context.saveHonestly()
         return added
     }
 

@@ -123,7 +123,7 @@ enum KalshiWatch {
             sourceRef: ref
         )
         context.insert(thing)
-        try? context.save()
+        context.saveHonestly()
         SpotlightIndex.index([thing])
         return thing
     }

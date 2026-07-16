@@ -140,13 +140,15 @@ struct FeedScreen: View {
 
     /// The one row that teaches the swipe (demo only, once): it nudges left,
     /// a pin peeks out, it settles back. Motion, not a tooltip.
-    private var hintThingID: UUID? {
+    /// Takes the already-computed `visible` so the caller derives it ONCE per
+    /// render and shares it, same convention as `bundle`/`boundaryID` below.
+    private func hintThingID(_ visible: [Thing]) -> UUID? {
         guard !swipeCoachDone else { return nil }
         return visible.first(where: { $0.kind != .approval })?.id
     }
 
     /// Day groups, newest day first ("Today", "Yesterday", then dated).
-    private var dayGroups: [(String, [Thing])] {
+    private func dayGroups(_ visible: [Thing]) -> [(String, [Thing])] {
         var order: [String] = []
         var groups: [String: [Thing]] = [:]
         for thing in visible {
@@ -320,20 +322,24 @@ struct FeedScreen: View {
                 // opens the same setup screen) rather than a second stacked row
                 // (user, 2026-07-12). Compose sources keep their own row instead
                 // — that action leaves for another app, a genuinely other place.
+                Rectangle()
+                    .fill(DS.textTertiary.opacity(0.3))
+                    .frame(width: 1, height: 12)
                 if showAddHint {
-                    Rectangle()
-                        .fill(DS.textTertiary.opacity(0.3))
-                        .frame(width: 1, height: 12)
                     Image(systemName: "plus")
                         .font(.system(size: 12, weight: .semibold))
                         .foregroundStyle(DS.tint)
                 } else {
-                    // Quieted, not gone (2026-07-14): a light hint that this
-                    // capsule leads somewhere, without the bold
-                    // settings-navigation weight of a chevron-only row.
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 11, weight: .regular))
-                        .foregroundStyle(DS.textTertiary)
+                    // Names the destination (2026-07-15, user: the quiet
+                    // chevron read as pure status, not a control — this
+                    // capsule already says "connected", so tapping it felt
+                    // unclear). "Manage" not "Settings": that word is
+                    // already claimed by the global Settings screen, and
+                    // these panels are add/remove/disconnect surfaces, not
+                    // toggle panes.
+                    Text("Manage")
+                        .dsText(.subhead13).fontWeight(.medium)
+                        .foregroundStyle(DS.tint)
                 }
             }
             .padding(.horizontal, DS.Space.s3)
@@ -450,24 +456,34 @@ struct FeedScreen: View {
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
                     .listRowInsets(EdgeInsets())
-            } else if visible.isEmpty {
-                Group { filteredEmptyState }
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
-                    .listRowInsets(EdgeInsets())
             } else {
-                // A pin is a HOME pin only (ruling 2026-07-10): the Feed's
-                // own Pinned section doubled what Home already shows and
-                // cluttered the record — pinned things now ride the feed in
-                // their natural chronological place. The holdings module
-                // lives on Home too (same-day amendment) — in Feed it shows
-                // only in the Wallet chip's own shape, never leading All.
-                shapedSections
-                // No closing line in the Reminders shape: its state groups
-                // deliberately render a subset (Done shows same-day only), so
-                // a `visible`-count claim would disagree with the rows above.
-                if shape != .reminders {
-                    caughtUpFooter
+                // Derived ONCE per render and threaded into everything below
+                // — the day groups, ledes, and per-row hint/next-event ids
+                // all share this one filter pass instead of each re-deriving
+                // it from `feedThings` (the Feed-freeze rule, perf pass
+                // 2026-07-13, extended to `visible` itself).
+                let visible = self.visible
+                if visible.isEmpty {
+                    Group { filteredEmptyState }
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
+                        .listRowInsets(EdgeInsets())
+                } else {
+                    let hintID = hintThingID(visible)
+                    let nextID = nextEventID(visible)
+                    // A pin is a HOME pin only (ruling 2026-07-10): the Feed's
+                    // own Pinned section doubled what Home already shows and
+                    // cluttered the record — pinned things now ride the feed in
+                    // their natural chronological place. The holdings module
+                    // lives on Home too (same-day amendment) — in Feed it shows
+                    // only in the Wallet chip's own shape, never leading All.
+                    shapedSections(visible, hintID: hintID, nextEventID: nextID)
+                    // No closing line in the Reminders shape: its state groups
+                    // deliberately render a subset (Done shows same-day only), so
+                    // a `visible`-count claim would disagree with the rows above.
+                    if shape != .reminders {
+                        caughtUpFooter(visible)
+                    }
                 }
             }
 
@@ -550,50 +566,54 @@ struct FeedScreen: View {
 
     // MARK: - Shaped sections (one source in force = its native shape)
 
+    /// Takes the render's one `visible` derivation (and the hint/next-event
+    /// ids computed alongside it) and threads them into every shape branch —
+    /// none of the branches below re-derive `visible` themselves.
     @ViewBuilder
-    private var shapedSections: some View {
+    private func shapedSections(_ visible: [Thing], hintID: UUID?, nextEventID: UUID?) -> some View {
         // The new-since divider rides every chronological shape now
         // (2026-07-13) — each source's feed keeps its own last-visit stamp.
         // Photos (a grid), Calendar (future-first) and Reminders (state
         // groups) aren't chronological top-to-bottom, so no line there.
         switch shape {
         case .photos:
-            photoGridSection
+            photoGridSection(visible)
         case .wallet:
             holdingsBlockSection
-            let days = dayGroups
-            groupedSections(days, boundary: boundaryThingID(in: days))
+            let days = dayGroups(visible)
+            groupedSections(days, hintID: hintID, nextEventID: nextEventID, boundary: boundaryThingID(in: days))
         case .calendar:
-            groupedSections(agendaGroups)
+            groupedSections(agendaGroups(visible), hintID: hintID, nextEventID: nextEventID)
         case .gmail:
-            waitingSection
-            let days = dayGroups
-            groupedSections(days, boundary: boundaryThingID(in: days))
+            waitingSection(visible, hintID: hintID, nextEventID: nextEventID)
+            let days = dayGroups(visible)
+            groupedSections(days, hintID: hintID, nextEventID: nextEventID, boundary: boundaryThingID(in: days))
         case .reminders:
-            reminderSections
+            reminderSections(visible, hintID: hintID, nextEventID: nextEventID)
         case .agent:
-            needsYouSection
-            let days = agentDayGroups
-            groupedSections(days, boundary: boundaryThingID(in: days))
+            let approvals = pendingApprovals(visible)
+            needsYouSection(approvals, hintID: hintID, nextEventID: nextEventID)
+            let days = agentDayGroups(visible, excluding: approvals)
+            groupedSections(days, hintID: hintID, nextEventID: nextEventID, boundary: boundaryThingID(in: days))
         case .music:
-            listeningLedeSection
-            let days = dayGroups
-            groupedSections(days, boundary: boundaryThingID(in: days))
+            listeningLedeSection(visible)
+            let days = dayGroups(visible)
+            groupedSections(days, hintID: hintID, nextEventID: nextEventID, boundary: boundaryThingID(in: days))
         case .tokens:
-            watchlistLedeSection
-            let days = dayGroups
-            groupedSections(days, boundary: boundaryThingID(in: days))
+            watchlistLedeSection(visible)
+            let days = dayGroups(visible)
+            groupedSections(days, hintID: hintID, nextEventID: nextEventID, boundary: boundaryThingID(in: days))
         default:
             if filter.tag != "All" && shape == .all {
-                daySection(filterLabel, visible)
+                daySection(filterLabel, visible, hintID: hintID, nextEventID: nextEventID)
             } else if shape == .all {
                 // All is where volume floods — bundles + the new-since
                 // divider live here. A single source's shape IS that source;
                 // bundling there would collapse the whole screen into one row.
-                bundledSections
+                bundledSections(visible, hintID: hintID, nextEventID: nextEventID)
             } else {
-                let days = dayGroups
-                groupedSections(days, boundary: boundaryThingID(in: days))
+                let days = dayGroups(visible)
+                groupedSections(days, hintID: hintID, nextEventID: nextEventID, boundary: boundaryThingID(in: days))
             }
         }
     }
@@ -612,7 +632,7 @@ struct FeedScreen: View {
     /// Music's lede: today's listening, covers lapped, count honest (the
     /// distinct songs that landed today — recently-played dedupes per song).
     @ViewBuilder
-    private var listeningLedeSection: some View {
+    private func listeningLedeSection(_ visible: [Thing]) -> some View {
         let today = visible.filter { Self.groupingCalendar.isDateInToday($0.capturedAt) }
         if !today.isEmpty {
             ledeSection(ListeningLede(
@@ -625,7 +645,7 @@ struct FeedScreen: View {
     /// pulses the rows wear, so the summary can never disagree with the rows.
     /// Two watched tokens minimum: one token's row already says everything.
     @ViewBuilder
-    private var watchlistLedeSection: some View {
+    private func watchlistLedeSection(_ visible: [Thing]) -> some View {
         let pulses = visible.compactMap { TokenPulse.shared.pulse(for: $0) }
         if pulses.count >= 2 {
             // Flat (exactly 0) is neither up nor down — "2 up" for two
@@ -656,13 +676,13 @@ struct FeedScreen: View {
         }
     }
 
-    private var bundledSections: some View {
+    private func bundledSections(_ visible: [Thing], hintID: UUID?, nextEventID: UUID?) -> some View {
         // Derive ONCE per render, then share — the day bundles, each day's true
         // total, and the new-since boundary. Read inside the row/header loops
         // (as `newBoundaryID` and `dayGroups.first(where:)` were) they rebuilt
         // the whole chain per row/section — the Feed freeze (perf pass
         // 2026-07-13).
-        let days = dayGroups
+        let days = dayGroups(visible)
         let groups = bundle(days)
         let boundary = boundaryID(in: groups)
         let dayTotals = Dictionary(days.map { ($0.0, $0.1.count) },
@@ -673,7 +693,7 @@ struct FeedScreen: View {
                     if row.id == boundary { newSinceDivider }
                     switch row {
                     case .single(let thing):
-                        shapedListRow(thing, index: i)
+                        shapedListRow(thing, index: i, hintID: hintID, nextEventID: nextEventID)
                     case .bundle(let source, let word, let count, let newest):
                         bundleListRow(source: source, word: word, count: count,
                                       newest: newest, index: i)
@@ -784,9 +804,10 @@ struct FeedScreen: View {
 
     @ViewBuilder
     private func groupedSections(_ groups: [(String, [Thing])],
+                                 hintID: UUID?, nextEventID: UUID?,
                                  boundary: UUID? = nil) -> some View {
         ForEach(groups, id: \.0) { label, rows in
-            daySection(label, rows, boundary: boundary)
+            daySection(label, rows, hintID: hintID, nextEventID: nextEventID, boundary: boundary)
         }
     }
 
@@ -825,7 +846,7 @@ struct FeedScreen: View {
 
     /// Photos: one continuous grid — day labels are overlay pills on the first
     /// photo of each day, never section breaks (mock P1).
-    private var photoGridSection: some View {
+    private func photoGridSection(_ visible: [Thing]) -> some View {
         Section {
             let items = visible
             // Hand-rolled row-chunking, NOT LazyVGrid: on iOS 26,
@@ -886,7 +907,7 @@ struct FeedScreen: View {
 
     /// Calendar reads forward: Today and upcoming days ascending, then the
     /// past, event-time order within each day (mock C2).
-    private var agendaGroups: [(String, [Thing])] {
+    private func agendaGroups(_ visible: [Thing]) -> [(String, [Thing])] {
         let cal = Calendar.current
         let today = cal.startOfDay(for: .now)
         var buckets: [Date: [Thing]] = [:]
@@ -903,7 +924,7 @@ struct FeedScreen: View {
     /// The next upcoming event — its ROW carries the emphasis (no hero).
     /// Events only: in the All shape other kinds share the list, and only
     /// an event's capture time means "starts at".
-    private var nextEventID: UUID? {
+    private func nextEventID(_ visible: [Thing]) -> UUID? {
         visible.filter { $0.kind == .event && $0.capturedAt > .now }
             .min { $0.capturedAt < $1.capturedAt }?.id
     }
@@ -920,14 +941,11 @@ struct FeedScreen: View {
     /// promoted any newsletter with a question mark to "waiting on you" —
     /// fake status. The section now shows only what the person marked
     /// in motion, and earns back a smarter derivation later.
-    private var waiting: [Thing] {
-        visible.filter { $0.mark == .doing }.prefix(2).map { $0 }
-    }
-
     @ViewBuilder
-    private var waitingSection: some View {
+    private func waitingSection(_ visible: [Thing], hintID: UUID?, nextEventID: UUID?) -> some View {
+        let waiting = visible.filter { $0.mark == .doing }.prefix(2).map { $0 }
         if !waiting.isEmpty {
-            daySection("Waiting on you", waiting)
+            daySection("Waiting on you", waiting, hintID: hintID, nextEventID: nextEventID)
         }
     }
 
@@ -939,7 +957,7 @@ struct FeedScreen: View {
     /// Reminders: state groups — Doing, To do (stale todos collapse), Done
     /// (same-day only).
     @ViewBuilder
-    private var reminderSections: some View {
+    private func reminderSections(_ visible: [Thing], hintID: UUID?, nextEventID: UUID?) -> some View {
         let doing = visible.filter { $0.mark == .doing }
         let todos = visible.filter { $0.mark == .todo || $0.mark == .none }
         let weekAgo = Date.now.addingTimeInterval(-7 * 86_400)
@@ -948,13 +966,13 @@ struct FeedScreen: View {
         let doneToday = visible.filter {
             $0.mark == .done && Calendar.current.isDateInToday($0.capturedAt)
         }
-        if !doing.isEmpty { daySection("Doing", doing) }
+        if !doing.isEmpty { daySection("Doing", doing, hintID: hintID, nextEventID: nextEventID) }
         if !fresh.isEmpty || !stale.isEmpty {
             Section {
-                ForEach(Array(fresh.enumerated()), id: \.element.id) { i, thing in shapedListRow(thing, index: i) }
+                ForEach(Array(fresh.enumerated()), id: \.element.id) { i, thing in shapedListRow(thing, index: i, hintID: hintID, nextEventID: nextEventID) }
                 if !stale.isEmpty {
                     if staleExpanded {
-                        ForEach(Array(stale.enumerated()), id: \.element.id) { i, thing in shapedListRow(thing, index: i) }
+                        ForEach(Array(stale.enumerated()), id: \.element.id) { i, thing in shapedListRow(thing, index: i, hintID: hintID, nextEventID: nextEventID) }
                     } else {
                         HStack {
                             Text("Older").dsText(.body17).foregroundStyle(DS.textSecondary)
@@ -974,25 +992,27 @@ struct FeedScreen: View {
                 Text("To do").dsText(.heading17).foregroundStyle(DS.textPrimary).textCase(nil)
             }
         }
-        if !doneToday.isEmpty { daySection("Done", doneToday) }
+        if !doneToday.isEmpty { daySection("Done", doneToday, hintID: hintID, nextEventID: nextEventID) }
     }
 
     /// OpenClaw: pending asks lead as consent cards; the groups below
     /// carry runs and jobs with their status ticks.
-    private var pendingApprovals: [Thing] {
+    private func pendingApprovals(_ visible: [Thing]) -> [Thing] {
         visible.filter { $0.kind == .approval && $0.mark != .done }
     }
 
     @ViewBuilder
-    private var needsYouSection: some View {
-        if !pendingApprovals.isEmpty {
-            daySection("Needs you", pendingApprovals)
+    private func needsYouSection(_ approvals: [Thing], hintID: UUID?, nextEventID: UUID?) -> some View {
+        if !approvals.isEmpty {
+            daySection("Needs you", approvals, hintID: hintID, nextEventID: nextEventID)
         }
     }
 
-    /// Day groups minus the approvals already shown above.
-    private var agentDayGroups: [(String, [Thing])] {
-        let shown = Set(pendingApprovals.map(\.id))
+    /// Day groups minus the approvals already shown above. Takes the
+    /// approvals the caller already derived (`pendingApprovals`) instead of
+    /// recomputing them a second time in the same render.
+    private func agentDayGroups(_ visible: [Thing], excluding approvals: [Thing]) -> [(String, [Thing])] {
+        let shown = Set(approvals.map(\.id))
         var order: [String] = []
         var groups: [String: [Thing]] = [:]
         for thing in visible where !shown.contains(thing.id) {
@@ -1014,11 +1034,11 @@ struct FeedScreen: View {
     }
 
     /// The row inside a list section, with the standard list plumbing attached.
-    private func shapedListRow(_ thing: Thing, index: Int = 0) -> some View {
+    private func shapedListRow(_ thing: Thing, index: Int = 0, hintID: UUID?, nextEventID: UUID?) -> some View {
         // AnyView: same metadata-depth insurance as GenRender (crash fix).
-        return AnyView(shapedRow(thing))
+        return AnyView(shapedRow(thing, nextEventID: nextEventID))
             .modifier(RowEntrance(index: index, wave: shapeWave, style: entranceStyle))
-            .modifier(SwipeHintNudge(active: thing.id == hintThingID) {
+            .modifier(SwipeHintNudge(active: thing.id == hintID) {
                 swipeCoachDone = true
             })
             .contentShape(Rectangle())
@@ -1083,7 +1103,7 @@ struct FeedScreen: View {
     }
 
     @ViewBuilder
-    private func shapedRow(_ thing: Thing) -> some View {
+    private func shapedRow(_ thing: Thing, nextEventID: UUID?) -> some View {
         // Approval is the one rhythm-breaker everywhere: the consent card.
         if thing.kind == .approval, thing.mark != .done {
             ApprovalCard(thing: thing,
@@ -1122,14 +1142,27 @@ struct FeedScreen: View {
     }
 
     /// The check circle IS the consent for the lightest write; tapping again
-    /// is the undo (shaped-feeds ruling).
+    /// is the undo (shaped-feeds ruling). The local mark flips optimistically
+    /// (the tap needs to feel instant), but if the real reminder's write
+    /// fails, it's reverted and the toast corrects itself — a check mark
+    /// that silently doesn't stick is the "fake status" the design law bans.
     private func toggleReminder(_ thing: Thing) {
         let nowDone = thing.mark != .done
+        let wasMark = thing.mark
         thing.mark = nowDone ? .done : .todo
-        try? modelContext.save()
+        modelContext.saveHonestly()
         DSHaptic.success()
         chrome.flash(nowDone ? "Done — tap again to undo" : "Back on the list")
-        Task { await ScheduleIngest.setCompleted(thing.sourceRef, nowDone) }
+        let sourceRef = thing.sourceRef
+        Task {
+            let ok = await ScheduleIngest.setCompleted(sourceRef, nowDone)
+            guard !ok else { return }
+            await MainActor.run {
+                thing.mark = wasMark
+                modelContext.saveHonestly()
+                chrome.flash("Couldn't reach Reminders — not marked")
+            }
+        }
     }
 
     // MARK: - Pieces
@@ -1261,13 +1294,14 @@ struct FeedScreen: View {
     /// (To do / Doing), native scroll — no gesture fights.
     @ViewBuilder
     private func daySection(_ label: String, _ rows: [Thing],
+                            hintID: UUID?, nextEventID: UUID?,
                             boundary: UUID? = nil) -> some View {
         Section {
             // Rows dispatch by shape (shaped feeds); the swipe stays triage —
             // reads only, writes live in the sheet (ruling), Copy sheet-only.
             ForEach(Array(rows.enumerated()), id: \.element.id) { i, thing in
                 if thing.id == boundary { newSinceDivider }
-                shapedListRow(thing, index: i)
+                shapedListRow(thing, index: i, hintID: hintID, nextEventID: nextEventID)
             }
         } header: {
             HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
@@ -1309,10 +1343,10 @@ struct FeedScreen: View {
     /// naming what you just read to the end of. Doubles as an honest corpus
     /// count — facts only, no streaks (§10). Speaks the same unit as the day
     /// headers ("6 events", not "6 things") via the one countLabel rule.
-    private var caughtUpFooter: some View {
-        // One `visible` derivation for the whole line (the Feed-freeze rule).
-        let rows = visible
-        return Text(filter.source == "All"
+    /// Takes the render's `visible` (the Feed-freeze rule) instead of
+    /// re-deriving it.
+    private func caughtUpFooter(_ rows: [Thing]) -> some View {
+        Text(filter.source == "All"
              ? "That's everything · \(rows.count == 1 ? "1 thing" : "\(rows.count) things")"
              : "That's everything from \(filter.source) · \(countLabel(rows))")
             .dsText(.subhead13)
@@ -1358,7 +1392,7 @@ struct FeedScreen: View {
             chrome.flash("Copied")
         case .markDone:
             thing.mark = .done
-            try? modelContext.save()
+            modelContext.saveHonestly()
         case .bridgeWrite(let write):
             // Unreachable from swipes (they surface only the open hand-off —
             // writes live in the sheet), but the confirm-then-perform shape
@@ -1367,7 +1401,7 @@ struct FeedScreen: View {
                 let outcome = await BridgeWrites.perform(write)
                 if outcome.ok {
                     thing.mark = .done
-                    try? modelContext.save()
+                    modelContext.saveHonestly()
                     DSHaptic.success()
                 }
                 chrome.flash(outcome.line)
@@ -1379,14 +1413,14 @@ struct FeedScreen: View {
                let real = Capture.thing(from: thing.content, source: thing.source) {
                 modelContext.insert(real)
                 thing.mark = .done
-                try? modelContext.save()
+                modelContext.saveHonestly()
                 SpotlightIndex.index([real])
                 DSHaptic.success()
                 chrome.flash("Saved")
             } else {
                 withAnimation(DS.Motion.standard) {
                     thing.mark = .done
-                    try? modelContext.save()
+                    modelContext.saveHonestly()
                 }
                 DSHaptic.success()
                 // Honesty: the answer is recorded on the thing. Nothing is
@@ -1397,7 +1431,7 @@ struct FeedScreen: View {
         case .deny:
             withAnimation(DS.Motion.standard) {
                 thing.mark = .done
-                try? modelContext.save()
+                modelContext.saveHonestly()
             }
             chrome.flash("Denied")
         }

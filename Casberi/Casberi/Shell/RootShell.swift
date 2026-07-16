@@ -189,6 +189,12 @@ struct RootShell: View {
             let hasPins = !HomePinnedSources.shared.sources.isEmpty
                 || WalletStore.shared.addresses.contains(where: \.pinnedToHome)
             FeedFilter.shared.source = hasPins ? "Pinned" : "All"
+            // Honesty rule: if CasberiApp had to degrade the store open this
+            // launch (SharedStore.containerWithFallback), say so once instead
+            // of silently showing an empty/unsynced corpus.
+            if let reason = SharedStore.degradeReason {
+                chrome.flash(reason, seconds: 4)
+            }
             #if DEBUG
             // Perf pass: log init→ready (first content appearance) once per
             // process. `ready` = this onAppear, i.e. the first frame's view tree
@@ -279,7 +285,7 @@ struct RootShell: View {
                         }
                         HomePinnedSources.shared.rename("Dexscreener", to: "Tokens")
                     }
-                    try? modelContext.save()
+                    modelContext.saveHonestly()
                     UserDefaults.standard.set(migrationsCurrent, forKey: migrationsKey)
                 }
             }
@@ -619,7 +625,7 @@ struct RootShell: View {
         guard let thing = Capture.thing(from: draft) else { return }
         thing.tags.append(contentsOf: tags)   // parse-card candidates ride in
         modelContext.insert(thing)
-        try? modelContext.save()
+        modelContext.saveHonestly()
         SpotlightIndex.index([thing])
         DSHaptic.success()
         land(thing)
@@ -634,7 +640,7 @@ struct RootShell: View {
     private func saveDropped(_ text: String) {
         guard let thing = Capture.thing(from: text) else { return }
         modelContext.insert(thing)
-        try? modelContext.save()
+        modelContext.saveHonestly()
         SpotlightIndex.index([thing])
         DSHaptic.success()
         land(thing, undoable: true)
@@ -653,7 +659,7 @@ struct RootShell: View {
         descriptor.fetchLimit = 1
         guard let newest = try? modelContext.fetch(descriptor).first else { return }
         newest.tags = newest.tags
-        try? modelContext.save()
+        modelContext.saveHonestly()
         SpotlightIndex.index([newest])
         CorpusSignal.shared.bump()
     }
@@ -677,7 +683,7 @@ struct RootShell: View {
             try? FileManager.default.removeItem(at: url)
         }
         modelContext.insert(thing)
-        try? modelContext.save()
+        modelContext.saveHonestly()
         SpotlightIndex.index([thing])
         DSHaptic.success()
         land(thing)
@@ -692,7 +698,7 @@ struct RootShell: View {
         let title = firstLine.count > 80 ? String(firstLine.prefix(80)) + "…" : firstLine
         let thing = Thing(kind: .note, title: title, content: text, source: "You")
         modelContext.insert(thing)
-        try? modelContext.save()
+        modelContext.saveHonestly()
         SpotlightIndex.index([thing])
         DSHaptic.success()
         chrome.flash("Kept — it's in your things")
@@ -728,7 +734,7 @@ struct RootShell: View {
         ))) ?? []
         guard let thing = all.first else { return }
         modelContext.delete(thing)
-        try? modelContext.save()
+        modelContext.saveHonestly()
         SpotlightIndex.remove(ids: [id])
         withAnimation(DS.Motion.standard) {
             chrome.toast = nil

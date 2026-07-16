@@ -26,6 +26,13 @@
 			remoteGlobalIDString = CC0000000000000000000023;
 			remoteInfo = CasberiWidgets;
 		};
+		CD000000000000000000003C /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = CA0000000000000000000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = CA0000000000000000000005;
+			remoteInfo = Casberi;
+		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -47,6 +54,7 @@
 		CA0000000000000000000004 /* Casberi.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Casberi.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		CB0000000000000000000012 /* ShareExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ShareExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		CC0000000000000000000022 /* CasberiWidgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = CasberiWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		CD0000000000000000000032 /* CasberiTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CasberiTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -103,6 +111,11 @@
 			path = CasberiWidgets;
 			sourceTree = "<group>";
 		};
+		CD0000000000000000000031 /* CasberiTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = CasberiTests;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -127,6 +140,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		CD0000000000000000000038 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -137,6 +157,7 @@
 				CB0000000000000000000010 /* Shared */,
 				CB0000000000000000000011 /* ShareExtension */,
 				CC0000000000000000000021 /* CasberiWidgets */,
+				CD0000000000000000000031 /* CasberiTests */,
 				CA0000000000000000000003 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -147,6 +168,7 @@
 				CA0000000000000000000004 /* Casberi.app */,
 				CB0000000000000000000012 /* ShareExtension.appex */,
 				CC0000000000000000000022 /* CasberiWidgets.appex */,
+				CD0000000000000000000032 /* CasberiTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -220,6 +242,27 @@
 			productReference = CC0000000000000000000022 /* CasberiWidgets.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
+		CD0000000000000000000033 /* CasberiTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = CD0000000000000000000034 /* Build configuration list for PBXNativeTarget "CasberiTests" */;
+			buildPhases = (
+				CD0000000000000000000037 /* Sources */,
+				CD0000000000000000000038 /* Frameworks */,
+				CD0000000000000000000039 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				CD000000000000000000003D /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				CD0000000000000000000031 /* CasberiTests */,
+			);
+			name = CasberiTests;
+			productName = CasberiTests;
+			productReference = CD0000000000000000000032 /* CasberiTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -238,6 +281,10 @@
 					};
 					CC0000000000000000000023 = {
 						CreatedOnToolsVersion = 26.5;
+					};
+					CD0000000000000000000033 = {
+						CreatedOnToolsVersion = 26.5;
+						TestTargetID = CA0000000000000000000005;
 					};
 				};
 			};
@@ -262,6 +309,7 @@
 				CA0000000000000000000005 /* Casberi */,
 				CB0000000000000000000013 /* ShareExtension */,
 				CC0000000000000000000023 /* CasberiWidgets */,
+				CD0000000000000000000033 /* CasberiTests */,
 			);
 		};
 /* End PBXProject section */
@@ -282,6 +330,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		CC0000000000000000000029 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		CD0000000000000000000039 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -312,6 +367,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		CD0000000000000000000037 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -324,6 +386,11 @@
 			isa = PBXTargetDependency;
 			target = CC0000000000000000000023 /* CasberiWidgets */;
 			targetProxy = CC000000000000000000002C /* PBXContainerItemProxy */;
+		};
+		CD000000000000000000003D /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = CA0000000000000000000005 /* Casberi */;
+			targetProxy = CD000000000000000000003C /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -649,6 +716,42 @@
 			};
 			name = Release;
 		};
+		CD0000000000000000000035 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 74;
+				DEVELOPMENT_TEAM = 35428TQK3S;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 0.1;
+				PRODUCT_BUNDLE_IDENTIFIER = com.casberi.app.CasberiTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Casberi.app/Casberi";
+			};
+			name = Debug;
+		};
+		CD0000000000000000000036 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 74;
+				DEVELOPMENT_TEAM = 35428TQK3S;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 0.1;
+				PRODUCT_BUNDLE_IDENTIFIER = com.casberi.app.CasberiTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Casberi.app/Casberi";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -684,6 +787,15 @@
 			buildConfigurations = (
 				CC0000000000000000000025 /* Debug */,
 				CC0000000000000000000026 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		CD0000000000000000000034 /* Build configuration list for PBXNativeTarget "CasberiTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				CD0000000000000000000035 /* Debug */,
+				CD0000000000000000000036 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

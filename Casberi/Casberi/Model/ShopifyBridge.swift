@@ -293,7 +293,7 @@ enum ShopifyIngest {
                 landedThisStore += 1
             }
         }
-        if added > 0 || backfill.any || touched { try? context.save() }
+        if added > 0 || backfill.any || touched { context.saveHonestly() }
         return reachedAny ? added : nil
     }
 }

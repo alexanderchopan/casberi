@@ -14,7 +14,7 @@ enum DemoCorpus {
         let seeds = things()
         stampDeadlines(seeds)
         for thing in seeds { context.insert(thing) }
-        try? context.save()
+        context.saveHonestly()
     }
 
     /// Gives a few seeds real deadlines so the "Coming up" card has something to

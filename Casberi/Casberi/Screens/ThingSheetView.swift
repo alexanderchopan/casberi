@@ -227,7 +227,7 @@ struct ThingSheetView: View {
             }
         }
         if changed {
-            try? modelContext.save()
+            modelContext.saveHonestly()
             CorpusSignal.shared.bump()   // Home/Feed compose a doc, not a live @Query
         }
     }
@@ -582,7 +582,7 @@ struct ThingSheetView: View {
         for t in all where t.tags.contains(old) {
             t.tags = t.tags.map { $0 == old ? new : $0 }
         }
-        try? modelContext.save()
+        modelContext.saveHonestly()
         // A retag changes projectClusters but not things.count — Home composes
         // a doc, not a live @Query, so nudge it to recompose (the same signal
         // HomeScreen already listens on).
@@ -596,7 +596,7 @@ struct ThingSheetView: View {
         for t in all where t.tags.contains(tag) {
             t.tags.removeAll { $0 == tag }
         }
-        try? modelContext.save()
+        modelContext.saveHonestly()
         CorpusSignal.shared.bump()
         DSHaptic.success()
     }
@@ -605,7 +605,7 @@ struct ThingSheetView: View {
         let t = tag.trimmingCharacters(in: .whitespaces)
         guard !t.isEmpty, !thing.tags.contains(where: { $0.lowercased() == t.lowercased() }) else { return }
         thing.tags.append(t)
-        try? modelContext.save()
+        modelContext.saveHonestly()
         CorpusSignal.shared.bump()
     }
 
@@ -613,7 +613,7 @@ struct ThingSheetView: View {
         // The type tag stays — it's assigned at ingestion, not user-managed.
         guard tag != thing.kind.typeTag else { return }
         thing.tags.removeAll { $0 == tag }
-        try? modelContext.save()
+        modelContext.saveHonestly()
         CorpusSignal.shared.bump()
     }
 
@@ -808,19 +808,19 @@ struct ThingSheetView: View {
             verbResult = "Copied"
         case .markDone:
             thing.mark = .done
-            try? modelContext.save()
+            modelContext.saveHonestly()
             CorpusSignal.shared.bump()
             verbResult = "Done"
         case .approve:
             // Demo bridge: the decision lands locally; the gateway wire is M5.
             thing.mark = .done
-            try? modelContext.save()
+            modelContext.saveHonestly()
             CorpusSignal.shared.bump()
             DSHaptic.success()
             verbResult = "Approved — sent to your gateway"
         case .deny:
             thing.mark = .done
-            try? modelContext.save()
+            modelContext.saveHonestly()
             CorpusSignal.shared.bump()
             verbResult = "Denied — your gateway was told"
         case .bridgeWrite(let write):
@@ -833,7 +833,7 @@ struct ThingSheetView: View {
                 // The write landed at the source — the mirror settles too,
                 // so the verb retires and the row reads done.
                 thing.mark = .done
-                try? modelContext.save()
+                modelContext.saveHonestly()
                 CorpusSignal.shared.bump()
                 DSHaptic.success()
             }

@@ -127,7 +127,7 @@ enum EmbeddingIndex {
                 // can't hold the main thread long enough to drop a frame.
                 if i % 8 == 7 { await Task.yield() }
             }
-            try? context.save()
+            context.saveHonestly()
             total += batch.count
             await Task.yield()
         }

@@ -230,7 +230,7 @@ enum BlueskyIngest {
         // Nothing resolving is the "couldn't find that" signal; one landing
         // means the connection is good.
         guard anyResolved else { return nil }
-        if added > 0 || backfill.any || touched { try? context.save() }
+        if added > 0 || backfill.any || touched { context.saveHonestly() }
         return added
     }
 

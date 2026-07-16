@@ -75,7 +75,7 @@ enum OpenFoodFacts {
         thing.previewImageURL = food.image
         if let brand = food.brand { thing.authorHandle = brand }
         context.insert(thing)
-        try? context.save()
+        context.saveHonestly()
         SpotlightIndex.index([thing])
         return thing
     }

@@ -151,7 +151,7 @@ enum TokenIngest {
             SpotlightIndex.index([item])
             added += 1
         }
-        if added > 0 || backfills.values.contains(where: \.any) { try? context.save() }
+        if added > 0 || backfills.values.contains(where: \.any) { context.saveHonestly() }
         return added
     }
 

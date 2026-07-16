@@ -210,7 +210,7 @@ enum TwitchIngest {
             added += 1
         }
         UserDefaults.standard.set(liveNow, forKey: liveKey)
-        if added > 0 || backfill.any { try? context.save() }
+        if added > 0 || backfill.any { context.saveHonestly() }
         return added
     }
 }

@@ -152,7 +152,7 @@ struct KalshiScreen: View {
         let dropped = offsets.map { watched[$0] }
         SpotlightIndex.remove(ids: dropped.map(\.id))
         for thing in dropped { modelContext.delete(thing) }
-        try? modelContext.save()
+        modelContext.saveHonestly()
         DSHaptic.tap()
         loadWatched()
         register()

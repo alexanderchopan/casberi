@@ -91,7 +91,7 @@ enum TokenWatch {
         // you watched" against a number that was really true at this moment.
         thing.watchPriceUsd = token.priceUsd.flatMap(Double.init)
         context.insert(thing)
-        try? context.save()
+        context.saveHonestly()
         SpotlightIndex.index([thing])
         return thing
     }

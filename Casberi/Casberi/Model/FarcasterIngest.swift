@@ -398,7 +398,7 @@ enum FarcasterIngest {
         }
 
         guard anyResolved else { return nil }
-        if added > 0 || backfill.any || touched { try? context.save() }
+        if added > 0 || backfill.any || touched { context.saveHonestly() }
         return added
     }
 

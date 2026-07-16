@@ -106,7 +106,7 @@ struct ProjectDetailScreen: View {
                 .map { $0 == projectName ? name : $0 }
                 .filter { seen.insert($0.lowercased()).inserted }
         }
-        try? modelContext.save()
+        modelContext.saveHonestly()
         DSHaptic.success()
         dismiss()
     }

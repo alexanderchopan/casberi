@@ -104,7 +104,7 @@ enum MCPTools {
             sourceRef: saveMarker
         )
         context.insert(approval)
-        try? context.save()
+        context.saveHonestly()
         return approval
     }
 }

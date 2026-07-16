@@ -181,7 +181,7 @@ enum LinkTitle {
             if meta.isProduct {
                 upgradeToProduct(thing, meta: meta)
                 thing.embedding = nil
-                try? context.save()
+                context.saveHonestly()
                 SpotlightIndex.index([thing])
                 return
             }
@@ -210,7 +210,7 @@ enum LinkTitle {
         // save + reindex. A no-change fetch leaves the good vector alone.
         guard changed else { return }
         thing.embedding = nil
-        try? context.save()
+        context.saveHonestly()
         SpotlightIndex.index([thing])
     }
 

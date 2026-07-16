@@ -47,6 +47,12 @@ private final class Session {
     private let conn: NWConnection
     private var buffer = Data()
     private var tag = 0
+    /// Consecutive `receiveMore()` calls that returned no data with no error
+    /// and no EOF — a server that keeps handing back empty, non-final chunks
+    /// (misbehaving or actively hostile) would otherwise loop `readLine()`
+    /// forever with no bound. Reset the moment real bytes arrive.
+    private var consecutiveEmptyReceives = 0
+    private static let maxConsecutiveEmptyReceives = 50
 
     private init(_ conn: NWConnection) { self.conn = conn }
 
@@ -173,6 +179,14 @@ private final class Session {
                 else if isDone { cont.resume(throwing: IMAPClient.IMAPError.timeout) }
                 else { cont.resume(returning: Data()) }
             }
+        }
+        if chunk.isEmpty {
+            consecutiveEmptyReceives += 1
+            guard consecutiveEmptyReceives < Self.maxConsecutiveEmptyReceives else {
+                throw IMAPClient.IMAPError.timeout
+            }
+        } else {
+            consecutiveEmptyReceives = 0
         }
         buffer.append(chunk)
     }

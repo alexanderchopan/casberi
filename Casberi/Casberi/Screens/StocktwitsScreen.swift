@@ -211,7 +211,7 @@ struct StocktwitsScreen: View {
         let dropped = offsets.map { watched[$0] }
         SpotlightIndex.remove(ids: dropped.map(\.id))
         for thing in dropped { modelContext.delete(thing) }
-        try? modelContext.save()
+        modelContext.saveHonestly()
         DSHaptic.tap()
         load()
         StockWatch.registerBridge(store: store, context: modelContext)
