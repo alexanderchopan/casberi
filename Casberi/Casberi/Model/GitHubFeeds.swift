@@ -269,8 +269,17 @@ enum GitHubFeedFetch {
                                          payload: [String: Any]) -> String? {
         switch type {
         case "PushEvent":
-            let n = (payload["size"] as? Int) ?? (payload["commits"] as? [Any])?.count ?? 0
-            return "Pushed \(n) commit\(n == 1 ? "" : "s") to \(repo)"
+            // GitHub's events feed slimmed the PushEvent payload — it no longer
+            // carries `size`/`commits`, only ref/head/before — so a count is
+            // usually absent. Name the branch rather than claim "0 commits"
+            // (honesty rule); keep the count path for the rare feed that has it.
+            let n = (payload["size"] as? Int) ?? (payload["commits"] as? [Any])?.count
+            if let n, n > 0 {
+                return "Pushed \(n) commit\(n == 1 ? "" : "s") to \(repo)"
+            }
+            let branch = (payload["ref"] as? String)?
+                .replacingOccurrences(of: "refs/heads/", with: "") ?? ""
+            return branch.isEmpty ? "Pushed to \(repo)" : "Pushed to \(branch) in \(repo)"
         case "PullRequestEvent":
             return "\((payload["action"] as? String ?? "updated").capitalized) a pull request in \(repo)"
         case "IssuesEvent":
