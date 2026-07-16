@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		CB000000000000000000001B /* ShareExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = CB0000000000000000000012 /* ShareExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		CC000000000000000000002B /* CasberiWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = CC0000000000000000000022 /* CasberiWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		CE0000000000000000000001 /* WalletConnect in Frameworks */ = {isa = PBXBuildFile; productRef = CE0000000000000000000002 /* WalletConnect */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -123,6 +124,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				CE0000000000000000000001 /* WalletConnect in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -196,6 +198,9 @@
 				CB0000000000000000000010 /* Shared */,
 			);
 			name = Casberi;
+			packageProductDependencies = (
+				CE0000000000000000000002 /* WalletConnect */,
+			);
 			productName = Casberi;
 			productReference = CA0000000000000000000004 /* Casberi.app */;
 			productType = "com.apple.product-type.application";
@@ -301,6 +306,9 @@
 			);
 			mainGroup = CA0000000000000000000002;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				CE0000000000000000000003 /* XCRemoteSwiftPackageReference "reown-swift" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = CA0000000000000000000003 /* Products */;
 			projectDirPath = "";
@@ -801,6 +809,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		CE0000000000000000000003 /* XCRemoteSwiftPackageReference "reown-swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/reown-com/reown-swift";
+			requirement = {
+				kind = exactVersion;
+				version = 2.3.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		CE0000000000000000000002 /* WalletConnect */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = CE0000000000000000000003 /* XCRemoteSwiftPackageReference "reown-swift" */;
+			productName = WalletConnect;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = CA0000000000000000000001 /* Project object */;
 }

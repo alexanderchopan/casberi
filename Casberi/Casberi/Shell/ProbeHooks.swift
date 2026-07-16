@@ -13,9 +13,56 @@ import UIKit
 /// `runAll` once on launch.
 @MainActor
 enum ProbeHooks {
+    /// Launch args whose VALUE is a credential. `probeArgs:` prints the args
+    /// verbatim so a stale/missing binary is obvious — but that printed the
+    /// real Venice/Anthropic/GitHub keys straight into the sim log, defeating
+    /// the whole point of keeping them in the Keychain and inlining them at
+    /// use-time (scripts/dev-keys.sh). The flag still prints; the value doesn't.
+    private static let secretArgKeys: Set<String> = [
+        "-byokKey", "-openSeaKey", "-tokenBridge", "-wcProjectID", "-ghClientID",
+    ]
+
+    /// `-byokKey venice:vk-abc` → `-byokKey venice:‹redacted›`, but
+    /// `-byokKey sk-ant-x:y` → `-byokKey ‹redacted›`.
+    ///
+    /// A prefix survives ONLY when it's a name we can VERIFY isn't a secret —
+    /// a real `AgentProvider` case, a real `BridgeCatalog` offer. Trusting the
+    /// first colon instead would leak: `-byokKey` also takes a bare key (bare =
+    /// anthropic), `-openSeaKey` and `-wcProjectID` have no prefix grammar at
+    /// all, and any of those values containing a colon would print everything
+    /// before it — half the credential this function exists to hide.
+    private static func redactedValue(for flag: String, _ value: String) -> String {
+        let redacted = "‹redacted›"
+        guard let colon = value.firstIndex(of: ":") else { return redacted }
+        let prefix = String(value[value.startIndex..<colon])
+        let prefixIsKnownName: Bool
+        switch flag {
+        case "-byokKey":     prefixIsKnownName = AgentProvider(rawValue: prefix) != nil
+        case "-tokenBridge": prefixIsKnownName = BridgeCatalog.offers.contains { $0.name == prefix }
+        default:             prefixIsKnownName = false
+        }
+        return prefixIsKnownName ? "\(prefix):\(redacted)" : redacted
+    }
+
+    static func redactedArgs(_ args: [String]) -> [String] {
+        var out: [String] = []
+        var flagAwaitingSecret: String?
+        for arg in args {
+            if let flag = flagAwaitingSecret {
+                flagAwaitingSecret = nil
+                out.append(redactedValue(for: flag, arg))
+                continue
+            }
+            out.append(arg)
+            if secretArgKeys.contains(arg) { flagAwaitingSecret = arg }
+        }
+        return out
+    }
+
     static func runAll(context: ModelContext) {
         NSLog("[Casberi] probeArgs: %@",
-              ProcessInfo.processInfo.arguments.dropFirst().joined(separator: " "))
+              redactedArgs(Array(ProcessInfo.processInfo.arguments.dropFirst()))
+                .joined(separator: " "))
         for hook in hooks {
             guard let value = UserDefaults.standard.string(forKey: hook.key) else { continue }
             hook.run(value, context)
@@ -405,6 +452,37 @@ enum ProbeHooks {
             Task { @MainActor in
                 let n = await WalletIngest.refresh(context: context)
                 NSLog("Wallet probe: %@ new", n.map(String.init) ?? "FAILED")
+            }
+        },
+        // `-wcConnectProbe YES` proposes a read-only WalletConnect session and
+        // NSLogs the EXACT namespaces payload plus the `wc:` URI. The payload
+        // line is the point: it's the proof that "we ask for nothing" is real
+        // rather than intended — if `methods` is ever non-empty there, the
+        // Wallet screen's promise is broken and this probe is how we find out.
+        // Pair with `-wcProjectID <id>`; with no id it logs the honest
+        // unavailable line (the paste-only degrade).
+        Hook(key: "wcConnectProbe") { _, _ in
+            guard WalletConnectBridge.isAvailable else {
+                NSLog("WalletConnect probe: unavailable (no project id) — paste-only")
+                return
+            }
+            let namespaces = WalletConnectBridge.readOnlyNamespaces()
+            let encoder = JSONEncoder()
+            encoder.outputFormatting = [.sortedKeys]
+            if let json = try? encoder.encode(namespaces) {
+                NSLog("WalletConnect probe: proposing %@", String(decoding: json, as: UTF8.self))
+            }
+            let methodCount = namespaces.values.reduce(0) { $0 + $1.methods.count }
+            let eventCount = namespaces.values.reduce(0) { $0 + $1.events.count }
+            NSLog("WalletConnect probe: methods=%d events=%d (both MUST be 0)",
+                  methodCount, eventCount)
+            Task { @MainActor in
+                do {
+                    let uri = try await WalletConnectBridge.connectURI()
+                    NSLog("WalletConnect probe: uri=%@", uri.absoluteString)
+                } catch {
+                    NSLog("WalletConnect probe: FAILED %@", String(describing: error))
+                }
             }
         },
         // `-pinWallet YES` pins every currently-watched wallet's holdings
