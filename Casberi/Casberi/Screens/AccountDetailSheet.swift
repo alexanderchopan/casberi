@@ -186,8 +186,11 @@ struct AccountDetailSheet: View {
     /// on this iPhone by default; your own agent key adds a "Try with your
     /// key" you tap per answer. The key goes to the Keychain and to the
     /// provider itself — never to us (there is no us to send it to). It's an
-    /// AGENT key (ruling 2026-07-14): Claude, ChatGPT, Gemini, or Venice —
-    /// the picker names the agent, the small print names the company.
+    /// AGENT key (ruling 2026-07-14): Claude, ChatGPT, Gemini, Venice, or
+    /// Bankr — the picker names the agent, the small print names the company.
+    /// Bankr's key could also trade (it's a wallet agent) — the small print
+    /// says to mint it read-only, and the answer path prompts "answer only"
+    /// regardless (2026-07-16).
     private var keyCard: some View {
         VStack(alignment: .leading, spacing: DS.Space.s4) {
             aliveRow("key.fill", keyConfigured ? DS.confirm : DS.textSecondary,
@@ -248,7 +251,7 @@ struct AccountDetailSheet: View {
                     .foregroundStyle(keyResultIsError ? DS.attention : DS.textSecondary)
                     .settleIn()
             }
-            Text("Get a key from the agent's own console — console.anthropic.com (Claude), platform.openai.com (ChatGPT), aistudio.google.com (Gemini), or venice.ai (Venice). It stays in this iPhone's Keychain and goes only to the provider you chose.")
+            Text("Get a key from the agent's own console — console.anthropic.com (Claude), platform.openai.com (ChatGPT), aistudio.google.com (Gemini), venice.ai (Venice), or bankr.bot/api-keys (Bankr — make it a read-only key; answers never trade). It stays in this iPhone's Keychain and goes only to the provider you chose.")
                 .dsText(.label12).foregroundStyle(DS.textTertiary)
                 .fixedSize(horizontal: false, vertical: true)
         }

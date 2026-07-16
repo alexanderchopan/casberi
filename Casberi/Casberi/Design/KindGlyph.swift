@@ -120,6 +120,7 @@ enum BridgeGlyph {
         case "geckoterminal": return "flame.fill"
         case "tokens":    return "chart.line.uptrend.xyaxis"
         case "venice":    return "wand.and.stars"
+        case "bankr":     return "brain.head.profile"
         case "voice":     return "waveform"
         case "you":       return "person"
         case "apple health": return "heart"

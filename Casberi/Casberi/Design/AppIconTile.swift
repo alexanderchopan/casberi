@@ -58,6 +58,7 @@ extension DS {
         case "geckoterminal":       return Color.fixed("#7556f6")   // the gecko's purple (sampled from the bundled icon)
         case "tokens":              return Color.fixed("#f5a623")   // coin gold — this app's own mark, not a vendor's (2026-07-13 rename)
         case "venice":              return Color.fixed("#0e2942")   // sampled from their deep-blue mark
+        case "bankr":               return Color.fixed("#a78bfa")   // the terminal's lavender field (sampled from the bundled icon)
         case "openclaw":            return Color.fixed("#e5342e")   // the agents' red (user, 2026-07-12)
         case "voice":               return Color.fixed("#ff375f")   // the voice kind's own pink
         case "apple health":        return Color.fixed("#ff2d55")

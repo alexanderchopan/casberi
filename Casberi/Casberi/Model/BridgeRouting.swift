@@ -29,6 +29,7 @@ enum BridgeRouter {
         case claude
         case gemini
         case venice
+        case bankr
         case bluesky
         case farcaster
         case pinterest
@@ -66,6 +67,7 @@ enum BridgeRouter {
             case .claude:         "claude"
             case .gemini:         "gemini"
             case .venice:         "venice"
+            case .bankr:          "bankr"
             case .bluesky:        "bsky"
             case .farcaster:      "fc"
             case .pinterest:      "pinterest"
@@ -112,6 +114,7 @@ enum BridgeRouter {
         Row(offer: "Claude",    id: "claude", destination: .claude),
         Row(offer: "Gemini",    id: "gemini", destination: .gemini),
         Row(offer: "Venice",    id: "venice", destination: .venice),
+        Row(offer: "Bankr",     id: "bankr",  destination: .bankr),
         Row(offer: "Bluesky",   id: "bsky",   destination: .bluesky),
         Row(offer: "Farcaster", id: "fc",     destination: .farcaster),
         Row(offer: "Pinterest", id: "pinterest", destination: .pinterest),
@@ -169,6 +172,7 @@ struct BridgeDestinationView: View {
         case .claude:         ClaudeImportScreen()
         case .gemini:         GeminiImportScreen()
         case .venice:         VeniceSetupScreen()
+        case .bankr:          BankrSetupScreen()
         case .bluesky:        HandleSetupScreen(bridge: .bluesky)
         case .farcaster:      HandleSetupScreen(bridge: .farcaster)
         case .pinterest:      HandleSetupScreen(bridge: .pinterest)

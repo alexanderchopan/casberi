@@ -62,11 +62,15 @@ struct OnboardingView: View {
                                "YouTube", "Todoist", "RSS", "ChatGPT",
                                "Gemini", "Linear", "Raindrop", "Readwise",
                                "Tokens", "Venice", "OpenClaw", "Cal.com",
-                               "Calendly", "Stocktwits",
+                               "Bankr", "Stocktwits",
                                "iCloud Mail", "Apple Music", "Apple Health",
                                "Reminders", "Calendar", "Photos"]
     // 25 non-Apple cubes (a full 5×5 grid) then the six Apple tiles as the
     // top row — Stocktwits (2026-07-15) completed the bottom grid's last row.
+    // The grid is FULL: a 26th cube lands on the Apple row (cubeTarget puts
+    // index 25 at row 5), so a new tile SWAPS one out rather than appending.
+    // Bankr took Calendly's cube (2026-07-16) — Cal.com already carries
+    // scheduling here, and the pile is a curated subset, never the catalog.
     private static let appleRowStart = 25
     /// False = above the screen · true = settled in the glass.
     @State private var cubesLanded = false
