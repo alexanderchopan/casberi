@@ -204,8 +204,8 @@ enum StorePreview {
         case "Farcaster": [
             "root = Stack([w])",
             "w = Widget(\"Accounts and channels\", null, [r1, r2])",
-            "r1 = PostRow(\"dwr\", \"base fees at all-time low\", \"https://imagedelivery.net/BXluQx4ige9GuW0Ia56BHw/bc698287-5adc-4cc5-a503-de16963ed900/original\", \"\", \"\")",
-            "r2 = PostRow(\"v\", \"shipping in /dev today\", \"https://imagedelivery.net/BXluQx4ige9GuW0Ia56BHw/e3d80f99-f7c0-4b04-dcad-557593d85500/original\", \"\", \"\")",
+            "r1 = PostRow(\"vitalik.eth\", \"Looks like the options thing is happening already!\", \"https://media.firefly.land/lens/126a045e-f7bb-44cc-80b1-2bd63ce9be58.png\", \"\", \"\")",
+            "r2 = PostRow(\"clanker\", \"you have my attention\", \"https://imagedelivery.net/BXluQx4ige9GuW0Ia56BHw/f770987a-9c3a-45fd-eee3-2c0b182f8700/original\", \"\", \"\")",
         ]
         case "OpenSea": [
             "root = Stack([w])",
