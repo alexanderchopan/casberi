@@ -2564,8 +2564,9 @@ it doesn't interrupt you.* Immediacy is the one honest casualty of
 on-device, and calm is the product's temperament anyway.
 
 **The order** (user's ranking): ① BYO-key model escape hatch, ② OAuth
-where public-client flows exist, ③ write-back verbs in the sheet,
-④ round out App Intents, ⑤ screenshot OCR, ⑥ the librarian digest.
+where public-client flows exist, ③ write-back verbs in the sheet —
+**reversed 2026-07-15, every bridge stays read-only**, ④ round out App
+Intents, ⑤ screenshot OCR, ⑥ the librarian digest.
 
 **Rulings baked in:**
 
@@ -2588,20 +2589,20 @@ where public-client flows exist, ③ write-back verbs in the sheet,
   only honest read path is TDLib, logging in as the person — fully
   on-device, but a heavy client-grade dependency that is its own future
   decision. Until that day, no Telegram verbs.
-- **Write-backs live in the sheet, consent-gated, capability-gated.** Per
-  the standing law (writes in the sheet, with consent): Todoist
-  complete/snooze, GitHub comment/close, Linear status/comment, Bluesky
-  reply/like/repost, Calendar accept/decline. A verb appears only when its
-  bridge is connected with a token that can actually perform it — the
-  honesty rule's "no dead controls" applied to writes.
-  *(Amended same day, first build: the Telegram rule generalizes — Bluesky
-  reply/like/repost also wait, because today's Bluesky bridge is a
-  handle-only public follow with no session to write with. Respond
-  requires an authenticated read first, on every network. Shipped first:
-  Complete in Todoist and Close on GitHub — one-tap writes the tokens can
-  already carry; comment/reply composers come with the librarian's
-  draft-for-approval. The write verb LEADS the sheet's verb stack and
-  never reaches feed swipes.)*
+- **Goal ③ (write-back verbs) REVERSED, 2026-07-15 — every bridge stays
+  read-only.** Complete in Todoist and Close on GitHub had shipped
+  (`BridgeWrites.swift`, one-tap writes the tokens could already carry,
+  gated behind the sheet's confirm) but the user ruled the app shouldn't
+  hold write capability at all — the honesty-rule framing ("read-only —
+  never writes") that every other bridge's copy already used should hold
+  for GitHub and Todoist too, not just most of the catalog. `BridgeWrites.swift`
+  was deleted along with the `bridgeWrite` verb, the `-writeProbe` hook, and
+  the TokenSetupScreen/GitHubDeviceFlow copy that promised writes. GitHub's
+  OAuth still requests `repo` scope (classic OAuth has no read-only repo
+  scope — it's the smallest scope reaching private issues/PRs), but Casberi
+  never exercises the write half of it. Linear status/comment,
+  Bluesky/Farcaster reply/like/repost, and Calendar accept/decline were
+  never built and are not planned — no bridge writes back to its source.
 - **The librarian proposes; the person disposes.** Digest, tag proposals,
   resurfacing, dedup candidates — all through the proposal-card pattern
   `OrganizeLLM` already set. Nothing tags, merges, sends, or deletes

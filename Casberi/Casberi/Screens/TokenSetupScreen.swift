@@ -161,7 +161,7 @@ struct TokenSetupScreen: View {
             Text("Sign in").dsText(.label12)
                 .foregroundStyle(DS.textTertiary)
         } footer: {
-            Text("Sign-in grants repo, profile, and gist access — enough for every feed you pick. Casberi only reads on its own; any write — like closing an issue — asks first, every time.")
+            Text("Sign-in grants repo, profile, and gist access — GitHub's smallest scope that reaches private issues and PRs. Casberi only reads — it never writes back to GitHub.")
                 .dsText(.callout15).foregroundStyle(DS.textTertiary)
         }
     }

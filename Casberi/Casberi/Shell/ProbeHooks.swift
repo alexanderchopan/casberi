@@ -486,24 +486,6 @@ enum ProbeHooks {
                       hits.map { "\($0.title) (\($0.source))" }.joined(separator: " · "))
             }
         },
-        // `-writeProbe "todoist:<id>"` or `-writeProbe "<github issue/PR
-        // url>"` performs the bridge write with the stored token and logs the
-        // honest outcome — with no token it logs the not-connected line.
-        Hook(key: "writeProbe") { spec, _ in
-            Task { @MainActor in
-                let write: BridgeWrite? = if spec.hasPrefix("todoist:") {
-                    .todoistComplete(taskID: String(spec.dropFirst("todoist:".count)))
-                } else if let t = BridgeWrites.githubTarget(in: spec) {
-                    .githubClose(owner: t.owner, repo: t.repo, number: t.number)
-                } else { nil }
-                guard let write else {
-                    NSLog("Write probe: unparseable spec %@", spec)
-                    return
-                }
-                let outcome = await BridgeWrites.perform(write)
-                NSLog("Write probe: ok=%d — %@", outcome.ok ? 1 : 0, outcome.line)
-            }
-        },
         // `-seedThing "Source:delay"` lands a link thing for that source
         // after the delay — flips the chip's "new" ring mid-visit exactly
         // the way a foreground sync does (motion verification).

@@ -823,20 +823,6 @@ struct ThingSheetView: View {
             modelContext.saveHonestly()
             CorpusSignal.shared.bump()
             verbResult = "Denied — your gateway was told"
-        case .bridgeWrite(let write):
-            // The consent already happened (this runs from the confirm
-            // dialog); the API's answer is reported as it came.
-            let outcome = await BridgeWrites.perform(write)
-            verbResult = outcome.line
-            verbResultIsError = !outcome.ok
-            if outcome.ok {
-                // The write landed at the source — the mirror settles too,
-                // so the verb retires and the row reads done.
-                thing.mark = .done
-                modelContext.saveHonestly()
-                CorpusSignal.shared.bump()
-                DSHaptic.success()
-            }
         }
     }
 
