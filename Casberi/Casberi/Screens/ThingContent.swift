@@ -39,6 +39,10 @@ struct ThingContentView: View {
                 KalshiMarketContent(series: route.series, event: route.event)
             } else if let ticker = StockChart.route(from: thing.content) {
                 StockChartContent(thing: thing, ticker: ticker)
+            } else if thing.source == "GitHub", thing.sourceRef?.hasPrefix("gh:release:") == true {
+                // A release leads with its preview, then its own notes —
+                // read live, since `enrichedText` is retrieval-only.
+                GitHubReleaseContent(thing: thing)
             } else if thing.source == "GitHub", thing.starCount != nil || thing.repoLanguage != nil {
                 // A starred / watched repo leads with its preview, then the
                 // language dot and the "since you starred" line.
@@ -64,7 +68,17 @@ struct ThingContentView: View {
                 StoredArtContent(urlString: art)
             }
         case .chat:
-            if !thing.content.isEmpty { ChatBubbles(text: thing.content) }
+            // A post/cast is not a conversation — it's one person's words,
+            // its pictures, what it quotes, and how it landed. Its own read
+            // (2026-07-16); the ChatBubbles path stayed for the imports
+            // (ChatGPT, Claude) whose content really is a transcript. Before
+            // this, a post rendered its `content` as bubbles — and a post's
+            // content is its PERMALINK, so the sheet showed a URL in a bubble.
+            if SocialThread.isSocial(thing.source) {
+                SocialPostContent(thing: thing)
+            } else if !thing.content.isEmpty {
+                ChatBubbles(text: thing.content)
+            }
         case .voice:
             VoiceContent(transcript: thing.content, sourceRef: thing.sourceRef,
                          audio: thing.audio)
@@ -713,11 +727,7 @@ private struct GitHubStarContent: View {
 
     /// "owner/repo" parsed from the repo's html_url.
     private var repoPath: String? {
-        guard let url = URL(string: thing.content),
-              (url.host ?? "").contains("github.com") else { return nil }
-        let parts = url.pathComponents.filter { $0 != "/" }
-        guard parts.count >= 2 else { return nil }
-        return "\(parts[0])/\(parts[1])"
+        GitHubFeedFetch.repoPath(fromWebURL: thing.content)
     }
 
     var body: some View {
@@ -805,6 +815,37 @@ private struct GitHubStarContent: View {
         "Vue": Color(hex: "#41B883"),         "Zig": Color(hex: "#EC915C"),
         "Solidity": Color(hex: "#AA6746"),    "Nix": Color(hex: "#7E7EFF"),
     ]
+}
+
+/// A release: its link preview, then its own notes — read fresh when the
+/// sheet opens (2026-07-16), the `enrichedText`-is-retrieval-only rule means
+/// this can't be stored, so it follows the star-count/social-engagement
+/// precedent instead: live, and simply absent if the fetch can't reach it.
+private struct GitHubReleaseContent: View {
+    let thing: Thing
+    @State private var notes: String?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s3) {
+            if let url = URL(string: thing.content) {
+                LinkPreviewCard(url: url, storedImageURL: thing.previewImageURL)
+            }
+            if let notes {
+                Text(notes)
+                    .dsText(.callout15).foregroundStyle(DS.textSecondary)
+                    .lineLimit(10)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding(.horizontal, DS.Space.s4)
+        .padding(.bottom, DS.Space.s3)
+        .task { await load() }
+    }
+
+    private func load() async {
+        guard let token = TokenVault.get(TokenBridge.github.tokenKey) else { return }
+        notes = await GitHubFeedFetch.releaseBody(thing: thing, token: token)
+    }
 }
 
 /// A Kalshi market's odds, drawn natively — the KalshiMarketView read: a

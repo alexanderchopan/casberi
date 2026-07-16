@@ -103,7 +103,7 @@ enum TokenBridge: String, CaseIterable, Identifiable {
     var canLine: String {
         switch self {
         case .readwise: "Reads your highlights."
-        case .github:   "Reads the GitHub feeds you pick — issues, stars, releases, gists, contributions, watched repos."
+        case .github:   "Reads the GitHub feeds you pick — issues, notifications, stars, releases, gists, contributions, watched repos — plus any repos you watch privately, never touching your GitHub account."
         case .todoist:  "Reads your open tasks."
         case .raindrop: "Reads your bookmarks."
         case .calcom:   "Reads your bookings."
@@ -129,7 +129,7 @@ enum TokenIngest {
         running.insert(bridge)
         defer { running.remove(bridge) }
 
-        guard let incoming = await fetch(bridge, token: token) else { return nil }
+        guard let incoming = await fetch(bridge, token: token, context: context) else { return nil }
 
         var existing = IngestSupport.existingSourceRefs(context)
         // One backfill per source string the items actually carry — no
@@ -157,10 +157,11 @@ enum TokenIngest {
 
     // MARK: - Per-app fetches (each is one or two GETs against the app's own API)
 
-    private static func fetch(_ bridge: TokenBridge, token: String) async -> [Thing]? {
+    @MainActor
+    private static func fetch(_ bridge: TokenBridge, token: String, context: ModelContext) async -> [Thing]? {
         switch bridge {
         case .readwise: await readwise(token)
-        case .github:   await github(token)
+        case .github:   await github(token, context: context)
         case .todoist:  await todoist(token)
         case .raindrop: await raindrop(token)
         case .calcom:   await calcom(token)
@@ -202,10 +203,12 @@ enum TokenIngest {
     }
 
     /// GitHub — the feeds the person turned on (Stars, New releases, Gists,
-    /// Contributions, Watched repos, and the original Issues & PRs). Each is a
+    /// Contributions, Watched repos, Notifications, and the original Issues &
+    /// PRs), plus any repos watched directly (`GitHubRepoWatch`). Each is a
     /// GET or two against GitHub's own API; `GitHubFeedFetch` builds the things.
-    private static func github(_ token: String) async -> [Thing]? {
-        await GitHubFeedFetch.all(token: token)
+    @MainActor
+    private static func github(_ token: String, context: ModelContext) async -> [Thing]? {
+        await GitHubFeedFetch.all(token: token, context: context)
     }
 
     /// Todoist — open tasks, newest 30.

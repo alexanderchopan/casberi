@@ -19,6 +19,13 @@ struct TokenSetupScreen: View {
     @State private var result: String?
     @State private var resultIsError = false
 
+    /// GitHub only — watching a repo directly, privately (2026-07-16): unlike
+    /// a star or subscribe, it never touches the GitHub account.
+    @State private var watchField = ""
+    @State private var watching = false
+    @State private var watchResult: String?
+    @State private var watchResultIsError = false
+
     /// GitHub's feed selection — one connection, several streams the person
     /// turns on (the wallet's holdings/NFTs idea, generalized). Only read on
     /// the GitHub branch; harmless to bind for every bridge.
@@ -52,7 +59,10 @@ struct TokenSetupScreen: View {
             if deviceFlowOffered { signInSection }
             stepsSection
             tokenSection
-            if bridge == .github && bridge.connected { feedsSection }
+            if bridge == .github && bridge.connected {
+                feedsSection
+                watchSection
+            }
             if !recent.isEmpty {
                 PinToHomeButton(source: bridge.rawValue, inSection: true)
                 RecentThingsSection(header: "Landed", things: recent)
@@ -319,6 +329,54 @@ struct TokenSetupScreen: View {
         } footer: {
             Text("Pick what to watch. Stars and watched repos are what you saved; releases and contributions are what happened. Everything lands under GitHub.")
                 .dsText(.callout15).foregroundStyle(DS.textTertiary)
+        }
+    }
+
+    /// GitHub only — watch a repo without starring or subscribing to it on
+    /// GitHub itself (2026-07-16). The watch lands as a thing immediately;
+    /// deleting it in the sheet unwatches it (feed swipes stay read-only).
+    private var watchSection: some View {
+        Section {
+            VStack(alignment: .leading, spacing: DS.Space.s2) {
+                BridgeFieldRow(placeholder: String(localized: "owner/repo or a GitHub URL"),
+                               text: $watchField, buttonLabel: String(localized: "Watch"),
+                               action: watchRepo)
+                BridgeSyncStatusRows(syncing: watching,
+                                     syncingLine: String(localized: "Looking it up…"),
+                                     result: watchResult, resultIsError: watchResultIsError)
+            }
+            .dsListCardRow()
+        } header: {
+            Text("Watch a repo").dsText(.label12).foregroundStyle(DS.textTertiary)
+        } footer: {
+            Text("Private to this iPhone — unlike a star or subscribe, watching here never touches your GitHub account. New releases land the way starred repos' do.")
+                .dsText(.callout15).foregroundStyle(DS.textTertiary)
+        }
+    }
+
+    private func watchRepo() {
+        let q = watchField.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !q.isEmpty, !watching, let token = TokenVault.get(bridge.tokenKey) else { return }
+        DSHaptic.tap()
+        watching = true
+        watchResultIsError = false
+        Task {
+            let resolved = await GitHubRepoWatch.resolve(q, token: token)
+            watching = false
+            guard let resolved else {
+                watchResult = String(localized: "Couldn't find that repo on GitHub.")
+                watchResultIsError = true
+                return
+            }
+            guard let thing = GitHubRepoWatch.add(resolved, context: modelContext) else {
+                watchResult = String(localized: "\(resolved.fullName) is already watched.")
+                watchResultIsError = true
+                return
+            }
+            watchField = ""
+            watchResult = String(localized: "Watching \(thing.title)")
+            loadRecent()
+            await sync()
         }
     }
 
