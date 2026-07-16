@@ -44,9 +44,6 @@ struct WalletScreen: View {
     @State private var showCombinedSheet = false
     @State private var result: String?
     @State private var resultIsError = false
-    /// Per-wallet value history (2026-07-14) — the locally-sampled USD line,
-    /// forward-only from the day watching began.
-    @State private var valueLines: [(id: UUID, label: String, samples: [WalletStore.ValueSample])] = []
     /// Per-wallet NFT shelves — Alchemy's NFT read, spam filtered.
     @State private var nftGroups: [WalletIngest.NFTGroup] = []
     /// A tapped holdings cell: the token's thing sheet when watched, the
@@ -64,6 +61,10 @@ struct WalletScreen: View {
     /// here too since that call discards the per-wallet totals after
     /// building its treemap string.
     @State private var walletTotals: [WalletIngest.HoldingsGroup] = []
+    /// Whether the Chains row is expanded (2026-07-15) — collapsed by
+    /// default to a one-line summary ("Ethereum, Base +3"); a set-once
+    /// setting doesn't deserve six full-height rows every visit.
+    @State private var chainsExpanded = false
     @Environment(\.colorScheme) private var scheme
     @Environment(\.openURL) private var openURL
     /// The one swipe lesson, shared across every screen that pins by swipe
@@ -75,44 +76,49 @@ struct WalletScreen: View {
 
     var body: some View {
         List {
-            addSection.listRowSeparator(.hidden)
-            // The pin lives on each address row now (2026-07-09) — one
-            // switch per wallet, right where you'd reach for it, instead of
-            // a single toggle below that couldn't say WHICH wallet it meant
-            // once more than one was watched.
-            if !wallet.addresses.isEmpty { watchingSection.listRowSeparator(.hidden) }
-            if !wallet.addresses.isEmpty { chainsSection.listRowSeparator(.hidden) }
-            // The combined "bundle" leads the holdings — total net worth and one
-            // merged treemap — with the per-wallet charts below it. Only when
-            // more than one wallet is watched (one wallet's own view IS its
-            // portfolio); ruling 2026-07-15, alongside the per-wallet views.
-            if wallet.addresses.count > 1, !portfolioHoldings.els.isEmpty {
-                portfolioSection.listRowSeparator(.hidden)
-            }
-            if !wallet.addresses.isEmpty, !holdings.els.isEmpty {
-                Section {
-                    GenRender(id: "root", els: holdings.els)
-                        .listRowBackground(Color.clear)
-                        .listRowSeparator(.hidden)
-                        .listRowInsets(EdgeInsets())
+            // Empty state: the add field and the vitalik chip ARE the
+            // screen — nothing to lead with yet. Connected state inverts
+            // the old order (2026-07-15, user: "reads as a settings form,
+            // not as the place where your money lives"): value first,
+            // admin (watching / add / chains) clustered at the bottom.
+            if wallet.addresses.isEmpty {
+                addSection.listRowSeparator(.hidden)
+            } else {
+                // The combined "bundle" leads — total value, the allocation
+                // bar, and one merged treemap. Only when more than one
+                // wallet is watched (one wallet's own view IS its
+                // portfolio); ruling 2026-07-15, alongside the per-wallet views.
+                if wallet.addresses.count > 1, !portfolioHoldings.els.isEmpty {
+                    portfolioSection.listRowSeparator(.hidden)
                 }
-                .listRowSeparator(.hidden)
-            }
-            if !wallet.addresses.isEmpty, !valueLines.isEmpty {
-                valueSection.listRowSeparator(.hidden)
-            }
-            if !wallet.addresses.isEmpty, !nftGroups.isEmpty {
-                nftSection.listRowSeparator(.hidden)
-            }
-            if syncing || result != nil {
-                Section {
-                    BridgeSyncStatusRows(syncing: syncing, syncingLine: String(localized: "Reading onchain activity…"),
-                                        result: result, resultIsError: resultIsError)
+                if !holdings.els.isEmpty {
+                    Section {
+                        // A face+name legend above the stack (2026-07-15) —
+                        // scan the per-wallet treemaps by identity, the same
+                        // mark the rows and combined sheet already wear,
+                        // rather than reading each card's text label.
+                        if walletTotals.count > 1 { walletIdentityLegend }
+                        GenRender(id: "root", els: holdings.els)
+                            .listRowBackground(Color.clear)
+                            .listRowSeparator(.hidden)
+                            .listRowInsets(EdgeInsets())
+                    }
+                    .listRowSeparator(.hidden)
                 }
-                .listRowSeparator(.hidden)
-            }
-            if !recent.isEmpty { recentSection.listRowSeparator(.hidden) }
-            if !wallet.addresses.isEmpty {
+                if !nftGroups.isEmpty { nftSection.listRowSeparator(.hidden) }
+                if !recent.isEmpty { recentSection.listRowSeparator(.hidden) }
+                // Admin cluster: manage which wallets are watched, add
+                // another, narrow the chains — the settings, not the point.
+                watchingSection.listRowSeparator(.hidden)
+                addSection.listRowSeparator(.hidden)
+                chainsSection.listRowSeparator(.hidden)
+                if syncing || result != nil {
+                    Section {
+                        BridgeSyncStatusRows(syncing: syncing, syncingLine: String(localized: "Reading onchain activity…"),
+                                            result: result, resultIsError: resultIsError)
+                    }
+                    .listRowSeparator(.hidden)
+                }
                 BridgeDisconnectSection(
                     bridgeID: "wallet", name: "Wallet",
                     teardown: { WalletStore.shared.addresses = [] }
@@ -199,46 +205,51 @@ struct WalletScreen: View {
                 DSHaptic.tap()
                 showCombinedSheet = true
             } label: {
-                HStack(alignment: .center, spacing: DS.Space.s3) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        // "Combined value", not "Net worth" (ruling 2026-07-15,
-                        // softening §71): the frame is your history with what you
-                        // watch, not a terminal — and it's only these watched
-                        // wallets' onchain value, never a claim about your whole
-                        // net worth.
-                        Text("Combined value")
-                            .dsText(.subhead13).foregroundStyle(DS.textSecondary)
-                        Text(TokenStats.compact(portfolioTotal))
-                            .dsText(.heading22).foregroundStyle(DS.textPrimary)
-                            .monospacedDigit()
-                    }
-                    Spacer()
-                    if portfolioSamples.count >= 2 {
-                        let closes = portfolioSamples.map(\.usd)
-                        let first = closes.first ?? 0
-                        let last = closes.last ?? 0
-                        let change = first > 0 ? (last - first) / first : 0
-                        VStack(alignment: .trailing, spacing: 4) {
-                            TokenChartPlot(chart: TokenChart(closes: closes, price: last,
-                                                             change: change),
-                                           accent: TokenChartStyle.accent(up: change >= 0,
-                                                                          scheme: scheme),
-                                           height: 30, pulses: false)
-                                .frame(width: 84)
-                            TokenDeltaPill(
-                                change: change,
-                                label: "since \(portfolioSamples.first!.at.formatted(.dateTime.month(.abbreviated).day()))",
-                                compact: true)
+                // One card, one tap target (2026-07-15) — the headline and
+                // the allocation bar are the same fact (what you have,
+                // where it sits), not two separate rows.
+                VStack(alignment: .leading, spacing: DS.Space.s3) {
+                    HStack(alignment: .center, spacing: DS.Space.s3) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            // "Combined value", not "Net worth" (ruling 2026-07-15,
+                            // softening §71): the frame is your history with what you
+                            // watch, not a terminal — and it's only these watched
+                            // wallets' onchain value, never a claim about your whole
+                            // net worth.
+                            Text("Combined value")
+                                .dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                            Text(TokenStats.compact(portfolioTotal))
+                                .dsText(.heading22).foregroundStyle(DS.textPrimary)
+                                .monospacedDigit()
                         }
+                        Spacer()
+                        if portfolioSamples.count >= 2 {
+                            let closes = portfolioSamples.map(\.usd)
+                            let first = closes.first ?? 0
+                            let last = closes.last ?? 0
+                            let change = first > 0 ? (last - first) / first : 0
+                            VStack(alignment: .trailing, spacing: 4) {
+                                TokenChartPlot(chart: TokenChart(closes: closes, price: last,
+                                                                 change: change),
+                                               accent: TokenChartStyle.accent(up: change >= 0,
+                                                                              scheme: scheme),
+                                               height: 30, pulses: false)
+                                    .frame(width: 84)
+                                TokenDeltaPill(
+                                    change: change,
+                                    label: "since \(portfolioSamples.first!.at.formatted(.dateTime.month(.abbreviated).day()))",
+                                    compact: true)
+                            }
+                        }
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(DS.textTertiary)
                     }
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(DS.textTertiary)
+                    if walletTotals.count > 1 { allocationBarContent }
                 }
             }
             .buttonStyle(.plain)
             .dsListCardRow()
-            if walletTotals.count > 1 { allocationBar }
             if !portfolioHoldings.els.isEmpty {
                 GenRender(id: "root", els: portfolioHoldings.els)
                     .listRowBackground(Color.clear)
@@ -258,9 +269,10 @@ struct WalletScreen: View {
     /// one segment per wallet sized by its share of the combined total, each
     /// tinted in that wallet's face color. A portfolio total answers "how am
     /// I doing"; this answers the multi-wallet question no total can: where.
-    /// Hidden below $1 total (nothing to allocate) or with only one wallet
-    /// priced (its bar would just be one full-width color).
-    private var allocationBar: some View {
+    /// Hidden below $1 total (nothing to allocate). Nested inside the
+    /// combined card's own button (not a separate row) — headline and
+    /// allocation are one fact, not two.
+    private var allocationBarContent: some View {
         let total = walletTotals.reduce(0) { $0 + $1.totalUSD }
         return Group {
             if total >= 1 {
@@ -290,71 +302,63 @@ struct WalletScreen: View {
                         }
                     }
                 }
-                .dsListCardRow()
             }
         }
+    }
+
+    /// A face+name chip per wallet, above the per-wallet treemap stack
+    /// (2026-07-15) — the same identity mark the rows and combined sheet
+    /// wear, so a multi-wallet stack scans by face instead of by reading
+    /// each card's text label.
+    private var walletIdentityLegend: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: DS.Space.s4) {
+                ForEach(Array(walletTotals.enumerated()), id: \.offset) { _, g in
+                    if let addr = g.address {
+                        HStack(spacing: 5) {
+                            WalletFace(address: addr, size: 16)
+                            Text(g.label).dsText(.label12).foregroundStyle(DS.textSecondary)
+                        }
+                    }
+                }
+            }
+        }
+        .listRowBackground(Color.clear)
+        .listRowSeparator(.hidden)
+        .listRowInsets(EdgeInsets(top: DS.Space.s2, leading: DS.Space.s4,
+                                  bottom: 0, trailing: DS.Space.s4))
     }
 
     // MARK: - Value history (2026-07-14)
 
-    /// The USD closes for a row's sparkline — nil until the wallet has ≥2
-    /// sampled points (a single dot isn't a line).
-    private func rowSpark(_ addr: WalletStore.WatchedAddress) -> [Double]? {
+    /// A row's sampled history — nil until the wallet has ≥2 sampled points
+    /// (a single dot isn't a line).
+    private func rowSamples(_ addr: WalletStore.WatchedAddress) -> [WalletStore.ValueSample]? {
         let s = wallet.valueSamples(forAddress: addr.address)
         guard s.count >= 2 else { return nil }
-        return s.map(\.usd)
+        return s
+    }
+
+    /// A watched wallet's live USD total, from the same fetch that feeds the
+    /// allocation bar — the row's subline (2026-07-15). Nil until the first
+    /// sync lands (no stale "$0" flash).
+    private func walletValue(for address: String) -> Double? {
+        walletTotals.first { $0.address?.lowercased() == address.lowercased() }?.totalUSD
+    }
+
+    /// The row's subline: the wallet's live value once known — more useful
+    /// than repeating the address a second time. Falls back to the address
+    /// (only when a label already occupies the name line above it) until
+    /// the first sync lands, and to nothing when there's neither.
+    private func rowSubline(_ addr: WalletStore.WatchedAddress) -> String? {
+        if let usd = walletValue(for: addr.address) { return TokenStats.compact(usd) }
+        return addr.label.isEmpty ? nil : addr.short
     }
 
     private func loadValueLines() {
-        valueLines = wallet.addresses.compactMap { addr in
-            let samples = wallet.valueSamples(forAddress: addr.address)
-            guard samples.count >= 2 else { return nil }
-            return (addr.id, addr.label.isEmpty ? addr.short : addr.label, samples)
-        }
         // The combined net-worth line only exists with more than one wallet;
-        // with one, the per-wallet line above already IS the portfolio.
+        // with one, the Watching row's own sparkline already IS the portfolio.
         portfolioSamples = wallet.addresses.count > 1 ? wallet.combinedValueSamples() : []
-    }
-
-    /// Each wallet's sampled USD line — drawn with the token plot idiom
-    /// (no pulse: samples land as you visit, nothing is live-streaming).
-    private var valueSection: some View {
-        Section {
-            ForEach(valueLines, id: \.id) { line in
-                let closes = line.samples.map(\.usd)
-                let first = closes.first ?? 0
-                let last = closes.last ?? 0
-                let change = first > 0 ? (last - first) / first : 0
-                HStack(spacing: DS.Space.s3) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(line.label)
-                            .dsText(.body17).foregroundStyle(DS.textPrimary)
-                            .lineLimit(1)
-                        Text(TokenStats.compact(last))
-                            .dsText(.subhead13).foregroundStyle(DS.textSecondary)
-                            .monospacedDigit()
-                    }
-                    Spacer()
-                    TokenChartPlot(chart: TokenChart(closes: closes, price: last,
-                                                     change: change),
-                                   accent: TokenChartStyle.accent(up: change >= 0,
-                                                                  scheme: scheme),
-                                   height: 30, pulses: false)
-                        .frame(width: 84)
-                    TokenDeltaPill(
-                        change: change,
-                        label: "since \(line.samples.first!.at.formatted(.dateTime.month(.abbreviated).day()))",
-                        compact: true)
-                }
-                .dsListCardRow()
-            }
-        } header: {
-            Text("Value").dsText(.label12)
-                .foregroundStyle(DS.textSecondary)
-        } footer: {
-            Text("Sampled as you use Casberi, and quietly in the background — history builds from the day you started watching, never back-filled.")
-                .dsText(.callout15).foregroundStyle(DS.textSecondary)
-        }
     }
 
     // MARK: - NFTs (2026-07-14)
@@ -527,26 +531,39 @@ struct WalletScreen: View {
                         VStack(alignment: .leading, spacing: 2) {
                             Text(addr.label.isEmpty ? addr.short : addr.label)
                                 .dsText(.body17).foregroundStyle(DS.textPrimary)
-                            if !addr.label.isEmpty {
-                                Text(addr.short).dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                                .lineLimit(1)
+                            // The value once known (2026-07-15) — more useful
+                            // than repeating the address a second time; the
+                            // Value section used to carry this separately.
+                            if let subline = rowSubline(addr) {
+                                Text(subline).dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                                    .monospacedDigit()
                             }
                         }
                         .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
                     Spacer()
-                    // A glanceable value heartbeat (2026-07-15) — the same
-                    // split Tokens uses: a bare sparkline on the row, the full
-                    // read with numbers in the Value section below. Only once
-                    // the wallet has ≥2 sampled points.
-                    if let closes = rowSpark(addr) {
-                        let change = closes.first.map { $0 > 0 ? (closes.last! - $0) / $0 : 0 } ?? 0
-                        TokenChartPlot(chart: TokenChart(closes: closes, price: closes.last ?? 0,
-                                                         change: change),
-                                       accent: TokenChartStyle.accent(up: change >= 0, scheme: scheme),
-                                       height: 22, pulses: false)
-                            .frame(width: 48)
-                            .accessibilityHidden(true)
+                    // The value heartbeat, merged from the old standalone
+                    // Value section (2026-07-15) — sparkline + delta pill,
+                    // right on the row. Only once the wallet has ≥2 sampled
+                    // points.
+                    if let samples = rowSamples(addr) {
+                        let closes = samples.map(\.usd)
+                        let first = closes.first ?? 0
+                        let last = closes.last ?? 0
+                        let change = first > 0 ? (last - first) / first : 0
+                        VStack(alignment: .trailing, spacing: 4) {
+                            TokenChartPlot(chart: TokenChart(closes: closes, price: last,
+                                                             change: change),
+                                           accent: TokenChartStyle.accent(up: change >= 0, scheme: scheme),
+                                           height: 22, pulses: false)
+                                .frame(width: 40)
+                                .accessibilityHidden(true)
+                            TokenDeltaPill(change: change,
+                                           label: samples.first!.at.formatted(.dateTime.month(.abbreviated).day()),
+                                           compact: true)
+                        }
                     }
                     // A visible pin control on every row (user, 2026-07-14):
                     // wallets pin per-ADDRESS (you might watch three and pin
@@ -605,36 +622,71 @@ struct WalletScreen: View {
 
     // MARK: - Chains (2026-07-15)
 
-    /// Which chains to read across every watched wallet — a checklist, the
-    /// GeckoTerminal/OpenSea idiom. Default all-on; toggling narrows the reads
-    /// and re-syncs. Never lets the last chain off (the store guards it).
+    /// Which chains to read across every watched wallet — collapsed to a
+    /// one-line summary by default (2026-07-15: six full-height checkmark
+    /// rows was a lot of ceremony for a set-once setting); tap to expand
+    /// into the GeckoTerminal/OpenSea checklist idiom. Default all-on;
+    /// toggling narrows the reads and re-syncs. Never lets the last chain
+    /// off (the store guards it).
     private var chainsSection: some View {
         Section {
-            ForEach(WalletChainStore.selectable, id: \.id) { chain in
-                Button {
-                    toggleChain(chain.id)
-                } label: {
-                    HStack(spacing: DS.Space.s3) {
-                        Text(chain.name)
-                            .dsText(.body17).foregroundStyle(DS.textPrimary)
-                        Spacer()
-                        if chainStore.isSelected(chain.id) {
-                            Image(systemName: "checkmark")
-                                .dsText(.body17).foregroundStyle(DS.tint)
-                        }
-                    }
-                    .contentShape(Rectangle())
+            Button {
+                DSHaptic.tap()
+                withAnimation(.easeInOut(duration: 0.2)) { chainsExpanded.toggle() }
+            } label: {
+                HStack(spacing: DS.Space.s3) {
+                    Text("Chains")
+                        .dsText(.body17).foregroundStyle(DS.textPrimary)
+                    Spacer()
+                    Text(chainsSummary)
+                        .dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                    Image(systemName: chainsExpanded ? "chevron.down" : "chevron.right")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(DS.textTertiary)
                 }
-                .buttonStyle(.plain)
-                .dsListCardRow()
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .dsListCardRow()
+            if chainsExpanded {
+                ForEach(WalletChainStore.selectable, id: \.id) { chain in
+                    Button {
+                        toggleChain(chain.id)
+                    } label: {
+                        HStack(spacing: DS.Space.s3) {
+                            Text(chain.name)
+                                .dsText(.body17).foregroundStyle(DS.textPrimary)
+                            Spacer()
+                            if chainStore.isSelected(chain.id) {
+                                Image(systemName: "checkmark")
+                                    .dsText(.body17).foregroundStyle(DS.tint)
+                            }
+                        }
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .dsListCardRow()
+                }
             }
         } header: {
             Text("Chains").dsText(.label12)
                 .foregroundStyle(DS.textSecondary)
         } footer: {
-            Text("Read each watched wallet across these chains only — turn off the ones you don't use.")
-                .dsText(.callout15).foregroundStyle(DS.textSecondary)
+            if chainsExpanded {
+                Text("Read each watched wallet across these chains only — turn off the ones you don't use.")
+                    .dsText(.callout15).foregroundStyle(DS.textSecondary)
+            }
         }
+    }
+
+    /// "All 5" when nothing's narrowed, else the selected names ("Ethereum,
+    /// Base +3" past two) — the collapsed row's one-line fact.
+    private var chainsSummary: String {
+        let selected = WalletChainStore.selectable.filter { chainStore.isSelected($0.id) }
+        if selected.count == WalletChainStore.selectable.count { return "All \(selected.count)" }
+        let names = selected.map(\.name)
+        if names.count <= 2 { return names.joined(separator: ", ") }
+        return "\(names[0]), \(names[1]) +\(names.count - 2)"
     }
 
     private func toggleChain(_ id: String) {
@@ -738,9 +790,14 @@ struct WalletScreen: View {
                     VStack(alignment: .leading, spacing: 2) {
                         Text(thing.title).dsText(.body17).foregroundStyle(DS.textPrimary)
                             .lineLimit(1)
-                        Text(walletLabel(thing) ?? thing.content)
-                            .dsText(.subhead13).foregroundStyle(DS.textSecondary)
-                            .lineLimit(1)
+                        // The wallet label when more than one is watched, or
+                        // nothing — the block-explorer URL as a subline was
+                        // receipt noise in a screen full of stories
+                        // (2026-07-15); the link still lives behind the tap.
+                        if let label = walletLabel(thing) {
+                            Text(label).dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                                .lineLimit(1)
+                        }
                     }
                     Spacer()
                     Text(shortTime(thing.capturedAt))
