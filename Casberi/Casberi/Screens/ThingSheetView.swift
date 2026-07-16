@@ -32,6 +32,11 @@ struct ThingSheetView: View {
     @State private var renameTarget: String?
     @State private var renameDraft = ""
     @State private var deleteTarget: String?
+    /// Naming a wallet transaction's counterparty (2026-07-15) — the address
+    /// being named, and the draft. The label enriches every FUTURE transfer
+    /// with that counterparty (CounterpartyLabels).
+    @State private var counterpartyTarget: String?
+    @State private var counterpartyDraft = ""
     /// The TAGS row opens the full editor (chips, rename, delete) in place.
     @State private var editingTags = false
     /// The hue wash pours in on open (delight 2026-07-13) — once per sheet.
@@ -180,6 +185,70 @@ struct ThingSheetView: View {
                 Button("Cancel", role: .cancel) { confirmingVerb = nil }
             }
         }
+        // Name this counterparty — the name rides every future transfer with it.
+        .alert("Name this address",
+               isPresented: Binding(get: { counterpartyTarget != nil },
+                                    set: { if !$0 { counterpartyTarget = nil } })) {
+            TextField("Name (e.g. Mom)", text: $counterpartyDraft)
+            Button("Save") { nameCounterparty() }
+            Button("Cancel", role: .cancel) { counterpartyTarget = nil }
+        } message: {
+            Text("Your name for this address rides every future transfer with it. A blank name clears it.")
+        }
+    }
+
+    /// Stores (or clears) the person's label for the counterparty address, then
+    /// rewrites every already-landed transfer that carries it — so naming an
+    /// address updates your whole history with it, not just what comes next.
+    /// (Only transfers that stored the counterparty hex can be rewritten — ones
+    /// landed before that field existed are left as they are.)
+    private func nameCounterparty() {
+        guard let address = counterpartyTarget else { return }
+        counterpartyTarget = nil
+        CounterpartyLabels.shared.setLabel(counterpartyDraft, for: address)
+        // The display name after the change: the user's label, else whatever
+        // else resolves it (a known contract, a watched handle), else nil —
+        // clearing a label reverts the historical titles to that.
+        retitleWalletThings(counterparty: address, to: WalletIngest.knownLabel(for: address))
+        DSHaptic.success()
+    }
+
+    /// Rewrites the counterparty clause of every landed Wallet transfer whose
+    /// stored counterparty matches — to `name`, or stripped when `name` is nil.
+    private func retitleWalletThings(counterparty: String, to name: String?) {
+        let addr = counterparty.lowercased()
+        let all = (try? modelContext.fetch(
+            FetchDescriptor<Thing>(predicate: #Predicate { $0.source == "Wallet" }))) ?? []
+        var changed = false
+        for t in all where t.counterpartyAddress?.lowercased() == addr {
+            if let rebuilt = Self.retitled(t.title, to: name), rebuilt != t.title {
+                t.title = rebuilt
+                changed = true
+            }
+        }
+        if changed {
+            try? modelContext.save()
+            CorpusSignal.shared.bump()   // Home/Feed compose a doc, not a live @Query
+        }
+    }
+
+    /// Swaps (or strips) a transfer title's trailing counterparty clause. The
+    /// only " from "/" to "/" on " in a wallet title is that clause — amounts
+    /// are numbers and assets are space-less symbols — so the last one is safe
+    /// to replace. A nameless title gains a clause from its verb; a "Moved …"
+    /// self-transfer (named from watched-wallet labels, not this) is left alone.
+    static func retitled(_ title: String, to name: String?) -> String? {
+        for delim in [" from ", " to ", " on "] {
+            if let r = title.range(of: delim, options: .backwards) {
+                if let name { return String(title[..<r.upperBound]) + name }
+                return String(title[..<r.lowerBound])   // strip the clause
+            }
+        }
+        guard let name else { return nil }
+        if title.hasPrefix("Received") { return title + " from " + name }
+        if title.hasPrefix("Sent")     { return title + " to " + name }
+        if title.hasPrefix("Swapped")  { return title + " on " + name }
+        return nil
     }
 
     // MARK: - Eyebrow (source icon · kind · age)
@@ -250,6 +319,12 @@ struct ThingSheetView: View {
                 specRow("By", "\(agent)\(thing.provenance.machine.map { " on \($0)" } ?? "")")
             }
             specRow("From", PlaceWords.line(for: thing))
+            // A wallet transfer's counterparty — the other side of the trade,
+            // nameable ("this is Mom"). Only when the hex was captured (native
+            // sends have none) (2026-07-15).
+            if thing.source == "Wallet", let cp = thing.counterpartyAddress, !cp.isEmpty {
+                counterpartyRow(cp)
+            }
             tagsRow
         }
         // One quiet card (2026-07-13 polish): the bare rows floated in the
@@ -274,6 +349,32 @@ struct ThingSheetView: View {
                 .lineLimit(2)
             Spacer(minLength: 0)
         }
+    }
+
+    /// The counterparty's name (yours if set, else a known contract / watched
+    /// handle, else the short hex) with a pencil — tap to name it. What you name
+    /// it here rides every future transfer with this address.
+    private func counterpartyRow(_ address: String) -> some View {
+        Button {
+            counterpartyDraft = CounterpartyLabels.shared.label(for: address) ?? ""
+            counterpartyTarget = address
+        } label: {
+            HStack(alignment: .firstTextBaseline, spacing: 0) {
+                Text("Who")
+                    .dsText(.label12).foregroundStyle(DS.textTertiary)
+                    .frame(width: 80, alignment: .leading)
+                Text(WalletIngest.knownLabel(for: address) ?? WalletStore.shortAddress(address))
+                    .dsText(.callout15).foregroundStyle(DS.textPrimary)
+                    .lineLimit(1)
+                Image(systemName: "square.and.pencil")
+                    .font(.system(size: 12))
+                    .foregroundStyle(DS.textTertiary)
+                    .padding(.leading, DS.Space.s2)
+                Spacer(minLength: 0)
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
     }
 
     /// Tags as a text line — your own tags wear their hue; the "+" opens the

@@ -88,6 +88,12 @@ final class WalletStore {
     struct ValueSample: Codable {
         let at: Date
         let usd: Double
+        /// The wallet's top positions by USD at this moment (symbol → USD),
+        /// snapshotted so the combined sheet can attribute a move to a token
+        /// ("mostly ETH", 2026-07-15). Optional — samples from before this field
+        /// decode with nil (synthesized Codable uses decodeIfPresent for
+        /// optionals), so attribution only draws once enough new samples carry it.
+        var holdings: [String: Double]? = nil
     }
 
     private static func historyKey(_ address: String) -> String {
@@ -167,12 +173,47 @@ final class WalletStore {
         }
     }
 
+    /// The combined move attributed by TOKEN (2026-07-15) — each symbol's USD
+    /// change from the first aligned moment to the last, summed across wallets,
+    /// biggest swing first. The combined sheet's "What moved" read: "ETH +$310,
+    /// USDC −$4". Forward-only and honest like every sample it's built from —
+    /// only samples that carry a per-token snapshot count, so it stays empty
+    /// until enough of those exist, and it aligns on the wallets' first snapshot
+    /// so a composition change can't masquerade as a move (§77's rule, applied
+    /// per token). Deltas under $1 drop as noise.
+    func combinedHoldingsDeltas() -> [(symbol: String, delta: Double)] {
+        let lines = addresses
+            .map { valueSamples(forAddress: $0.address).filter { $0.holdings != nil } }
+            .filter { !$0.isEmpty }
+        guard !lines.isEmpty,
+              let start = lines.compactMap({ $0.first?.at }).max(),
+              let end = lines.compactMap({ $0.last?.at }).max(),
+              end > start
+        else { return [] }
+        func merged(at moment: Date) -> [String: Double] {
+            var total: [String: Double] = [:]
+            for samples in lines {
+                guard let s = samples.last(where: { $0.at <= moment }),
+                      let h = s.holdings else { continue }
+                for (sym, usd) in h { total[sym, default: 0] += usd }
+            }
+            return total
+        }
+        let firstMap = merged(at: start)
+        let lastMap = merged(at: end)
+        let symbols = Set(firstMap.keys).union(lastMap.keys)
+        return symbols
+            .map { (symbol: $0, delta: (lastMap[$0] ?? 0) - (firstMap[$0] ?? 0)) }
+            .filter { abs($0.delta) >= 1 }
+            .sorted { abs($0.delta) > abs($1.delta) }
+    }
+
     /// Appends a sample unless one landed in the last 4 hours — holdings
     /// refresh every foreground, and a line of near-identical minutes-apart
     /// points is noise, not history. Main-actor: it fires wallet moments
     /// (WalletMoments), and its only caller (WalletIngest) already is.
     @MainActor
-    func recordSample(address: String, totalUSD: Double) {
+    func recordSample(address: String, totalUSD: Double, holdings: [String: Double] = [:]) {
         // A single watched wallet's own value hitting a new high is its
         // moment (delight 2026-07-15; the combined high covers the multi-
         // wallet case — WalletIngest). The mark is checked every fetch, not
@@ -185,7 +226,8 @@ final class WalletStore {
         }
         var samples = valueSamples(forAddress: address)
         if let last = samples.last, Date.now.timeIntervalSince(last.at) < 4 * 3600 { return }
-        samples.append(ValueSample(at: .now, usd: totalUSD))
+        samples.append(ValueSample(at: .now, usd: totalUSD,
+                                   holdings: holdings.isEmpty ? nil : holdings))
         if samples.count > 240 { samples.removeFirst(samples.count - 240) }
         if let data = try? JSONEncoder().encode(samples) {
             UserDefaults.standard.set(data, forKey: Self.historyKey(address))

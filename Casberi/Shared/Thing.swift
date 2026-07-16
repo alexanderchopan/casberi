@@ -136,6 +136,16 @@ final class Thing {
     /// (2026-07-09). Optional + default nil keeps CloudKit mirroring happy;
     /// nil for every non-Wallet thing.
     var walletAddress: String? = nil
+    /// The OTHER side of a Wallet transaction, lowercased hex (2026-07-15) — who
+    /// it came from when received, where it went when sent. The title names this
+    /// counterparty when it resolves to something (a watched wallet, a known
+    /// contract, ENS, or a name the person gave it), but the raw hex was
+    /// discarded after the title was written, so the thing sheet had nothing to
+    /// bind a "name this address" verb to. Persisting it lets the person label a
+    /// counterparty from the sheet (CounterpartyLabels), enriching future
+    /// transfers. Optional + default nil keeps CloudKit mirroring happy; nil for
+    /// native-coin transfers with no counterparty and every non-Wallet thing.
+    var counterpartyAddress: String? = nil
     /// The account a social post came from — the Bluesky/Farcaster handle
     /// that authored it. When more than one account of a source is watched,
     /// the row leads with that author's avatar and names them, the way a

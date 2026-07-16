@@ -22,6 +22,9 @@ private let walletRecentDescriptor: FetchDescriptor<Thing> = {
 /// server.
 struct WalletScreen: View {
     @Bindable private var wallet = WalletStore.shared
+    /// Which chains are read (2026-07-15) — the person can narrow the five to
+    /// the ones they care about; toggling re-syncs.
+    @Bindable private var chainStore = WalletChainStore.shared
     @State private var newAddress = ""
     @FocusState private var addressFieldFocused: Bool
     /// Holdings render through the gen-UI engine — allocation is magnitude, so
@@ -67,6 +70,7 @@ struct WalletScreen: View {
             // a single toggle below that couldn't say WHICH wallet it meant
             // once more than one was watched.
             if !wallet.addresses.isEmpty { watchingSection.listRowSeparator(.hidden) }
+            if !wallet.addresses.isEmpty { chainsSection.listRowSeparator(.hidden) }
             // The combined "bundle" leads the holdings — total net worth and one
             // merged treemap — with the per-wallet charts below it. Only when
             // more than one wallet is watched (one wallet's own view IS its
@@ -502,6 +506,48 @@ struct WalletScreen: View {
             Text("Swipe a wallet to pin its holdings to Home and Feed.")
                 .dsText(.callout15).foregroundStyle(DS.textSecondary)
         }
+    }
+
+    // MARK: - Chains (2026-07-15)
+
+    /// Which chains to read across every watched wallet — a checklist, the
+    /// GeckoTerminal/OpenSea idiom. Default all-on; toggling narrows the reads
+    /// and re-syncs. Never lets the last chain off (the store guards it).
+    private var chainsSection: some View {
+        Section {
+            ForEach(WalletChainStore.selectable, id: \.id) { chain in
+                Button {
+                    toggleChain(chain.id)
+                } label: {
+                    HStack(spacing: DS.Space.s3) {
+                        Text(chain.name)
+                            .dsText(.body17).foregroundStyle(DS.textPrimary)
+                        Spacer()
+                        if chainStore.isSelected(chain.id) {
+                            Image(systemName: "checkmark")
+                                .dsText(.body17).foregroundStyle(DS.tint)
+                        }
+                    }
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .dsListCardRow()
+            }
+        } header: {
+            Text("Chains").dsText(.label12)
+                .foregroundStyle(DS.textSecondary)
+        } footer: {
+            Text("Read each watched wallet across these chains only — turn off the ones you don't use.")
+                .dsText(.callout15).foregroundStyle(DS.textSecondary)
+        }
+    }
+
+    private func toggleChain(_ id: String) {
+        DSHaptic.tap()
+        chainStore.toggle(id)
+        // Re-read holdings and activity over the new chain set, and rebuild the
+        // value lines the dropped chain may have fed.
+        sync()
     }
 
     /// The row that plays the swipe demo — the first watched address, once

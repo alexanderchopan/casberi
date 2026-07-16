@@ -923,6 +923,17 @@ struct RootShell: View {
             }
             return doc
         }
+        // A wallet ask ("how's my wallet") is answered from the live holdings
+        // and the forward-only value line — computed, no model (2026-07-15).
+        // Before StatusAsk on purpose: the word "wallet" names the holdings, not
+        // the feeds' pulse.
+        if WalletAsk.matches(query) {
+            lastAnswerHits = []
+            if let line = await WalletAsk.answer() {
+                return proseDoc(line)
+            }
+            return proseDoc(String(localized: "Nothing in your wallet yet — watch an address from Apps → Wallet."))
+        }
         // A status ask ("tell me what's going on") names no content to score,
         // so it grounds on recency itself: the newest things from every source
         // in a recent window — the feeds' pulse. The model synthesizes over
@@ -936,24 +947,25 @@ struct RootShell: View {
             // Started here, awaited only when the doc is assembled, so the
             // candle fetches ride under the model's own synthesis time.
             let context = modelContext
-            let tokenLineTask: Task<String?, Never>? =
-                (pulse.windowWords == "while you were away")
-                ? AppVisit.away.map { away in
-                    Task { await TokensAsk.awayLine(window: away, context: context) }
-                }
-                : nil
+            let awayWindow = (pulse.windowWords == "while you were away") ? AppVisit.away : nil
+            let tokenLineTask: Task<String?, Never>? = awayWindow.map { away in
+                Task { await TokensAsk.awayLine(window: away, context: context) }
+            }
             func tokenLine() async -> String? {
                 guard let tokenLineTask else { return nil }
                 return await tokenLineTask.value
             }
+            // The wallet's own away line (2026-07-15) — the value's move over the
+            // window, read from local samples (no network), so it needs no task.
+            let walletLine = awayWindow.flatMap { WalletAsk.awayLine(window: $0) }
             guard !pulse.pool.isEmpty else {
-                return appendingInsight(await tokenLine(), to: proseDoc(StatusAsk.line(pulse)))
+                return appendingInsight(await tokenLine(), walletLine, to: proseDoc(StatusAsk.line(pulse)))
             }
             if let prose = await streamSynthesis(query, over: candidates(pulse.sample),
                                                  onProseDoc: onProseDoc) {
-                return appendingInsight(await tokenLine(), to: proseDoc(prose))
+                return appendingInsight(await tokenLine(), walletLine, to: proseDoc(prose))
             }
-            return appendingInsight(await tokenLine(), to: pulseDoc(pulse))
+            return appendingInsight(await tokenLine(), walletLine, to: pulseDoc(pulse))
         }
         // A follow-up ("which ones were from sam") searches the LAST
         // answer's grounding, not the whole corpus (2026-07-10).
@@ -1120,19 +1132,25 @@ struct RootShell: View {
          "ins = Insight(\"\(genSafe(text))\")"]
     }
 
-    /// Tacks a computed line under an answer doc as its own Insight — the
-    /// away recap's watchlist line rides whatever the answer path produced
-    /// (prose, the counted pulse, or the honest empty). nil passes through.
-    private func appendingInsight(_ line: String?, to doc: [String]) -> [String] {
-        guard let line,
+    /// Tacks computed lines under an answer doc as their own Insights — the
+    /// away recap's watchlist and wallet lines ride whatever the answer path
+    /// produced (prose, the counted pulse, or the honest empty). nil lines are
+    /// skipped; each real one gets its own uniquely-named ref so two can splice
+    /// without colliding.
+    private func appendingInsight(_ lines: String?..., to doc: [String]) -> [String] {
+        let real = lines.compactMap { $0 }
+        guard !real.isEmpty,
               let i = doc.firstIndex(where: { $0.hasPrefix("root = Stack([") }),
               doc[i].hasSuffix("])")
         else { return doc }
         var out = doc
+        let refs = real.indices.map { "extraIns\($0)" }
         // Splice before the closing "])" — suffix surgery, so a root whose
         // ref list ever nests its own brackets can't be corrupted mid-line.
-        out[i] = String(out[i].dropLast(2)) + ", extraIns])"
-        out.append("extraIns = Insight(\"\(genSafe(line))\")")
+        out[i] = String(out[i].dropLast(2)) + ", " + refs.joined(separator: ", ") + "])"
+        for (j, line) in real.enumerated() {
+            out.append("\(refs[j]) = Insight(\"\(genSafe(line))\")")
+        }
         return out
     }
 

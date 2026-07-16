@@ -35,6 +35,13 @@ final class FarcasterStore {
         /// Watch MENTIONS of them — casts naming this account land, so
         /// "while I was away" can answer with who talked to you.
         var mentions = false
+        /// The Ethereum addresses this fid has verified onchain (2026-07-15) —
+        /// resolved once from the keyless node's `verificationsByFid`, cached
+        /// like the fid. Powers the wallet↔Farcaster join: "Watch their wallet"
+        /// on the account row, and naming a watched account's wallet in a
+        /// transfer ("from @dwr"). Empty until resolved or when the fid verified
+        /// none.
+        var verifiedAddresses: [String] = []
 
         init(username: String, fid: Int = 0) {
             self.username = username
@@ -53,6 +60,7 @@ final class FarcasterStore {
             avatarURL = try c.decodeIfPresent(String.self, forKey: .avatarURL)
             likes = try c.decodeIfPresent(Bool.self, forKey: .likes) ?? false
             mentions = try c.decodeIfPresent(Bool.self, forKey: .mentions) ?? false
+            verifiedAddresses = try c.decodeIfPresent([String].self, forKey: .verifiedAddresses) ?? []
         }
     }
 
@@ -153,6 +161,24 @@ final class FarcasterStore {
         accounts[i].mentions = on
     }
 
+    /// Caches an fid's verified onchain addresses (lowercased), once resolved —
+    /// the same run-once-then-remember discipline as the fid and profile.
+    func setVerifiedAddresses(_ addresses: [String], for username: String) {
+        guard let i = accounts.firstIndex(where: { $0.username == username }) else { return }
+        accounts[i].verifiedAddresses = addresses.map { $0.lowercased() }
+    }
+
+    /// The "@handle" of a watched account that verified this address, if any —
+    /// consulted by `WalletIngest.counterpartyNames` so a transfer to/from a
+    /// watched Farcaster account's own wallet reads "from @dwr". Only over
+    /// WATCHED accounts (the reverse index we already hold), never a lookup.
+    func handle(forAddress address: String) -> String? {
+        let a = address.lowercased()
+        guard let match = accounts.first(where: { $0.verifiedAddresses.contains(a) })
+        else { return nil }
+        return "@\(match.username)"
+    }
+
     @discardableResult
     func addChannel(_ channel: Channel) -> Bool {
         guard !channels.contains(where: { $0.name == channel.name }) else { return false }
@@ -240,6 +266,50 @@ enum FarcasterIngest {
     }
     @MainActor private static var profiles: [Int: Profile] = [:]
 
+    // MARK: - Verified wallets (the wallet↔Farcaster join, 2026-07-15)
+
+    /// The Ethereum addresses this fid verified onchain (lowercased) — the
+    /// keyless node's `verificationsByFid`. Only Ethereum verifications (a
+    /// 0x/42-hex address) are kept; a Solana verification isn't an EVM wallet we
+    /// read. Empty when the fid verified none or the fetch failed.
+    static func verifiedEthAddresses(fid: Int) async -> [String] {
+        guard let root = await IngestSupport.getJSON(
+            "\(node)/v1/verificationsByFid?fid=\(fid)") as? [String: Any],
+              let messages = root["messages"] as? [[String: Any]] else { return [] }
+        var out: [String] = []
+        for m in messages {
+            guard let data = m["data"] as? [String: Any] else { continue }
+            // The body key changed as the protocol went multi-chain — accept both.
+            let body = (data["verificationAddEthAddressBody"] as? [String: Any])
+                ?? (data["verificationAddAddressBody"] as? [String: Any])
+            guard let address = body?["address"] as? String else { continue }
+            let a = address.lowercased()
+            guard ENS.isHexAddress(a), !out.contains(a) else { continue }
+            out.append(a)
+        }
+        return out
+    }
+
+    /// The verified wallets for a watched username — cached on the account, else
+    /// resolved (its fid first if needed) and cached. Backs "Watch their wallet".
+    @MainActor
+    static func verifiedEthAddresses(username: String) async -> [String] {
+        let store = FarcasterStore.shared
+        guard let account = store.accounts.first(where: { $0.username == username }) else { return [] }
+        if !account.verifiedAddresses.isEmpty { return account.verifiedAddresses }
+        var fid = account.fid
+        if fid == 0 {
+            guard let proof = await IngestSupport.getJSON(
+                "\(node)/v1/userNameProofByName?name=\(account.username)") as? [String: Any],
+                  let resolved = proof["fid"] as? Int else { return [] }
+            fid = resolved
+            store.setFid(fid, for: account.username)
+        }
+        let verified = await verifiedEthAddresses(fid: fid)
+        if !verified.isEmpty { store.setVerifiedAddresses(verified, for: account.username) }
+        return verified
+    }
+
     /// Resolves each username (once), fetches recent casts — plus likes and
     /// mentions where those are watched, and every followed channel's feed —
     /// and lands new ones as chat things. Returns the new count, or nil when
@@ -283,6 +353,14 @@ enum FarcasterIngest {
                who.displayName != account.displayName || who.bio != account.bio
                 || who.avatarURL != account.avatarURL {
                 store.setProfile(who, for: account.username)
+            }
+            // Cache this account's verified wallets once (the wallet↔Farcaster
+            // join) — so a transfer to/from a watched account's own wallet reads
+            // "from @dwr", and "Watch their wallet" is instant. Only when empty,
+            // like the fid.
+            if account.verifiedAddresses.isEmpty {
+                let verified = await verifiedEthAddresses(fid: fid)
+                if !verified.isEmpty { store.setVerifiedAddresses(verified, for: account.username) }
             }
             // Backfill the face onto EVERY existing cast of theirs that
             // predates the field, so the whole feed wears faces, not just

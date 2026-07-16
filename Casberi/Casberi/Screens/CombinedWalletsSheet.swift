@@ -25,6 +25,13 @@ struct CombinedWalletsSheet: View {
         let tint: Color
     }
 
+    /// The combined move attributed by token — top 3 symbols by USD swing over
+    /// the sampled window (2026-07-15). Empty until enough per-token snapshots
+    /// exist (forward-only, like the line).
+    private var movers: [(symbol: String, delta: Double)] {
+        Array(WalletStore.shared.combinedHoldingsDeltas().prefix(3))
+    }
+
     private var perWallet: [Line] {
         wallets.compactMap { addr in
             let samples = WalletStore.shared.valueSamples(forAddress: addr.address)
@@ -41,6 +48,22 @@ struct CombinedWalletsSheet: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: DS.Space.s6) {
                     combinedHeader
+                    if !movers.isEmpty {
+                        VStack(alignment: .leading, spacing: DS.Space.s3) {
+                            Text("What moved").dsText(.label12)
+                                .foregroundStyle(DS.textSecondary)
+                            ForEach(movers, id: \.symbol) { m in
+                                HStack {
+                                    Text(m.symbol).dsText(.body17)
+                                        .foregroundStyle(DS.textPrimary)
+                                    Spacer()
+                                    Text(signed(m.delta)).dsText(.body17).monospacedDigit()
+                                        .foregroundStyle(m.delta >= 0 ? DS.confirm : DS.attention)
+                                }
+                                .dsListCardRow()
+                            }
+                        }
+                    }
                     if !perWallet.isEmpty {
                         VStack(alignment: .leading, spacing: DS.Space.s3) {
                             Text("Each wallet").dsText(.label12)
@@ -65,6 +88,11 @@ struct CombinedWalletsSheet: View {
                 }
             }
         }
+    }
+
+    /// "+$310" / "−$4" — signed compact USD for a token's move.
+    private func signed(_ v: Double) -> String {
+        "\(v >= 0 ? "+" : "−")\(TokenStats.compact(abs(v)))"
     }
 
     // MARK: - Combined hero

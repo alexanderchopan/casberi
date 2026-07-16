@@ -275,6 +275,12 @@ struct Composer: View {
         if all.contains(where: { $0.source == "Tokens" }) {
             out.append("How's my watchlist?")
         }
+        // The wallet chip (2026-07-15): gated on a watched address existing, so
+        // WalletAsk always has holdings to answer with — the chip can't drift
+        // from the ask it triggers.
+        if !WalletStore.shared.addresses.isEmpty {
+            out.append("How's my wallet?")
+        }
         // The chips teach what the composer can DO (2026-07-10) — counting
         // stayed a secret power until the chips showed it. Only asks the corpus
         // can honestly answer right now. (Pinning left the composer 2026-07-12:

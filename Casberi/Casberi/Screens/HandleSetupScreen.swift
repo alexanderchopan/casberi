@@ -311,6 +311,7 @@ struct HandleSetupScreen: View {
 
     @Environment(\.modelContext) private var modelContext
     @Environment(BridgeStore.self) private var store
+    @Environment(ShellChrome.self) private var chrome
     @State private var nameField = ""
     @State private var syncing = false
     @State private var result: String?
@@ -582,6 +583,27 @@ struct HandleSetupScreen: View {
                     }
                     .padding(.top, DS.Space.s1)
                 }
+                // The wallet↔Farcaster join (2026-07-15): watch this account's
+                // verified onchain wallet — its holdings and activity land like
+                // any watched address. Farcaster only (Bluesky has no onchain
+                // verification); watch-only, so peeking is legitimate.
+                if bridge == .farcaster {
+                    Button {
+                        watchWallet(for: account.key)
+                    } label: {
+                        HStack(spacing: DS.Space.s1) {
+                            Image(systemName: "wallet.pass")
+                                .font(.system(size: 11, weight: .medium))
+                            Text("Watch their wallet").dsText(.label12)
+                        }
+                        .foregroundStyle(DS.textTertiary)
+                        .padding(.horizontal, DS.Space.s3)
+                        .frame(height: 28)
+                        .background(DS.gray100, in: Capsule(style: .continuous))
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.top, DS.Space.s1)
+                }
             }
             Spacer()
         }
@@ -594,6 +616,25 @@ struct HandleSetupScreen: View {
         }
         .dsListCardRow()
         .listRowSeparator(.hidden)
+    }
+
+    /// Resolves a watched Farcaster account's verified wallet and watches it —
+    /// the first address not already watched, labeled with the handle. Reports
+    /// the outcome honestly (no verified wallet, already watching, or watching).
+    private func watchWallet(for username: String) {
+        Task {
+            let verified = await FarcasterIngest.verifiedEthAddresses(username: username)
+            let alreadyWatched = Set(WalletStore.shared.addresses.map { $0.address.lowercased() })
+            guard let address = verified.first(where: { !alreadyWatched.contains($0) }) else {
+                chrome.flash(verified.isEmpty
+                    ? String(localized: "No verified wallet for @\(username).")
+                    : String(localized: "Already watching @\(username)'s wallet."))
+                return
+            }
+            WalletStore.shared.add(address, label: "@\(username)")
+            DSHaptic.success()
+            chrome.flash(String(localized: "Watching @\(username)'s wallet."))
+        }
     }
 
     /// A lit-or-quiet capsule: on wears the tint, off stays gray — a switch
