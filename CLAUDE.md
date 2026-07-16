@@ -44,6 +44,10 @@ Or just run `scripts/verify.sh` (build + install + screen sweep + answer probe).
 - Installing for probes: pick the NEWEST DerivedData (`ls -dt ~/Library/Developer/Xcode/DerivedData/Casberi-*` — plain `ls -d` is alphabetical and served a day-old binary for 30 minutes on 2026-07-14). `runAll` NSLogs `probeArgs:` with the launch args it saw — if that line is missing or stale, you're running the wrong binary.
 - On a fresh sim install the demo seeds re-ask Photos/Calendar/Health permission at launch, and the queued sheets block everything (probes still run, but the UI is unusable and Health's ask stalls its probe). Pre-grant what simctl can (`xcrun simctl privacy booted grant photos com.casberi.app` — AFTER install; uninstall wipes grants) and tap the Health sheet once via computer-use; grants then persist for every later headless run.
 
+## Dev keys (real secrets for keyed probes)
+
+- Real test keys for keyed probes (`-byokKey`, `-tokenBridge`, `-openSeaKey`, …) live in the macOS login Keychain under service `casberi-dev.<name>`, managed by `scripts/dev-keys.sh` (`set` prompts silently or reads stdin — the user stores once; `get`/`list`/`delete`). **RULE (user, 2026-07-16): fetch a key ONLY inline via command substitution** — e.g. `xcrun simctl launch booted com.casberi.app -byokKey "venice:$(scripts/dev-keys.sh get venice)"` — never `get` into echo/cat/a variable you print, so values never enter assistant context or session transcripts. `scripts/dev-keys.sh list` shows what's available (names only). This replaces asking the user to paste keys per session; if a needed key isn't stored, ask them to run `dev-keys.sh set <name>` once.
+
 ## DEBUG launch-arg hooks
 
 All read via UserDefaults in `Shell/RootShell.swift` unless noted:
