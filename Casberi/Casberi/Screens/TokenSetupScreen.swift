@@ -30,6 +30,9 @@ struct TokenSetupScreen: View {
     private enum DevicePhase { case idle, requesting, waiting(GitHubDeviceFlow.Code) }
     @State private var devicePhase: DevicePhase = .idle
     @State private var pollTask: Task<Void, Never>?
+    /// Bumped when the device code is copied — the copy button briefly reads
+    /// "Copied" so the tap is acknowledged.
+    @State private var codeCopied = false
     private var deviceFlowOffered: Bool {
         bridge == .github && GitHubDeviceFlow.isAvailable
     }
@@ -99,15 +102,34 @@ struct TokenSetupScreen: View {
                     }
                 case .waiting(let code):
                     // The code is the whole moment — big, spaced by GitHub's
-                    // own hyphen, one tap to copy in case Safari loses it.
-                    Text(code.userCode)
-                        .font(.system(size: 34, weight: .bold, design: .monospaced))
-                        .foregroundStyle(DS.textPrimary)
-                        .frame(maxWidth: .infinity)
-                        .onTapGesture {
-                            UIPasteboard.general.string = code.userCode
-                            DSHaptic.tap()
+                    // own hyphen, sitting in a well with an explicit Copy button
+                    // so it plainly reads as "copy this and paste it on GitHub"
+                    // (the bare tap-to-copy went unnoticed; user, 2026-07-15).
+                    HStack(spacing: DS.Space.s3) {
+                        Text(code.userCode)
+                            .font(.system(size: 34, weight: .bold, design: .monospaced))
+                            .foregroundStyle(DS.textPrimary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .minimumScaleFactor(0.6)
+                            .lineLimit(1)
+                        Button(action: { copyCode(code.userCode) }) {
+                            HStack(spacing: DS.Space.s1) {
+                                Image(systemName: codeCopied ? "checkmark" : "doc.on.doc")
+                                    .font(.system(size: 13, weight: .semibold))
+                                Text(codeCopied ? "Copied" : "Copy").dsText(.subhead13).fontWeight(.semibold)
+                            }
+                            .foregroundStyle(codeCopied ? DS.confirm : DS.tint)
+                            .padding(.horizontal, DS.Space.s3)
+                            .frame(height: 34)
+                            .background(DS.gray100, in: Capsule(style: .continuous))
+                            .contentShape(Capsule(style: .continuous))
                         }
+                        .buttonStyle(.plain)
+                    }
+                    .padding(DS.Space.s3)
+                    .frame(maxWidth: .infinity)
+                    .background(DS.surfaceWell,
+                                in: RoundedRectangle(cornerRadius: DS.Radius.control, style: .continuous))
                     Text("Enter this code on GitHub — approval lands the token here by itself.")
                         .dsText(.subhead13).foregroundStyle(DS.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
@@ -180,6 +202,16 @@ struct TokenSetupScreen: View {
                     return
                 }
             }
+        }
+    }
+
+    private func copyCode(_ code: String) {
+        UIPasteboard.general.string = code
+        DSHaptic.tap()
+        withAnimation(DS.Motion.standard) { codeCopied = true }
+        Task { @MainActor in
+            try? await Task.sleep(for: .seconds(2))
+            withAnimation(DS.Motion.standard) { codeCopied = false }
         }
     }
 

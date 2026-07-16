@@ -104,6 +104,10 @@ struct BridgeFieldRow: View {
 
     var body: some View {
         HStack(spacing: DS.Space.s2) {
+            // A recessed well behind the typeable area so the field reads as a
+            // text box you can tap into — not flat card-colored placeholder that
+            // people mistook for a disabled control (user, 2026-07-15). The
+            // `surfaceWell` fill sits below the sheet, the same recess GenUI uses.
             HStack(spacing: 0) {
                 if let prefix {
                     Text(prefix)
@@ -121,6 +125,11 @@ struct BridgeFieldRow: View {
                         .layoutPriority(1)
                 }
             }
+            .padding(.horizontal, DS.Space.s3)
+            .frame(minHeight: 44)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(DS.surfaceWell,
+                        in: RoundedRectangle(cornerRadius: DS.Radius.control, style: .continuous))
             Button(LocalizedStringKey(buttonLabel), action: action)
                 .dsText(.callout15).fontWeight(.semibold)
                 .foregroundStyle(text.isEmpty ? DS.textTertiary : .white)
