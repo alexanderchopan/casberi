@@ -1873,7 +1873,16 @@ private struct GenTagMap: View {
                             // screen instead of a dead-end empty tag view
                             // (2026-07-10).
                             if iconMode == "token" {
-                                projectTap?(item.route.map { "@token:\($0)" } ?? "@wallet")
+                                // Carry the cell's own symbol (item.tag) into the
+                                // sentinel so the quick sheet names the token from
+                                // the first frame — Dexscreener only ever refines
+                                // it (adds the full name), never supplies the
+                                // ticker we already hold here. A symbol with a
+                                // colon would break the parse, so guard it.
+                                let sym = item.tag.contains(":") ? "" : item.tag
+                                projectTap?(item.route.map { r in
+                                    sym.isEmpty ? "@token:\(r)" : "@token:\(r):\(sym)"
+                                } ?? "@wallet")
                             } else {
                                 projectTap?(item.tag)
                             }
