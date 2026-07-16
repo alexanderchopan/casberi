@@ -1081,34 +1081,26 @@ struct FeedScreen: View {
                                  trailing: DS.Space.s4 + DS.Space.s3))
             .listRowSeparator(.hidden)
             // One gesture, one meaning: TAP opens the sheet — tags and verbs
-            // live there — and SWIPE is the real hand-off: Open IN THE SOURCE
-            // APP, only when the thing has a destination (calshow://, the link,
-            // photos-redirect://…). Pinning left the swipe entirely (ruling
-            // 2026-07-12): a pin is per-APP now, placed from the app's own
-            // screen, not a per-item Feed gesture. Share joined the trailing
-            // edge (2026-07-13, user): it sits ahead of Open so a full swipe
-            // still hands off to the source app unchanged — full swipe is
-            // gated to ONLY when Open exists, so a thing with no destination
-            // (a voice note, a chat import) doesn't get Share fired by a full
-            // swipe that used to do nothing.
-            .swipeActions(edge: .trailing, allowsFullSwipe: openVerb(for: thing) != nil) {
-                if let openVerb = openVerb(for: thing) {
-                    Button {
-                        run(openVerb, on: thing)
-                    } label: {
-                        Label("Open", systemImage: "arrow.up.right")
-                    }
-                    .tint(DS.gray600)
-                }
+            // live there. Each swipe edge now carries exactly one verb (ruling
+            // 2026-07-15, supersedes 2026-07-10/07-13: Open on both edges read
+            // as redundant — the same hand-off discoverable twice). Pinning
+            // left the swipe entirely (ruling 2026-07-12): a pin is per-APP
+            // now, placed from the app's own screen, not a per-item Feed
+            // gesture.
+            //
+            // Trailing (swipe left): Share only, no full swipe — sharing is
+            // deliberate, a tap on the revealed button, never fired by an
+            // overshoot.
+            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                 ThingShareLink(thing: thing) {
                     Label("Share", systemImage: "square.and.arrow.up")
                 }
                 .tint(DS.tint)
             }
-            // The hand-off earns its own edge too (2026-07-10, user):
-            // full-swipe RIGHT opens in the source app — the second button
-            // on the left-swipe stays for one-handed reach either way.
-            .swipeActions(edge: .leading, allowsFullSwipe: true) {
+            // Leading (swipe right): Open in the source app — full swipe
+            // hands off in one gesture, gated to only when the thing has a
+            // destination (calshow://, the link, photos-redirect://…).
+            .swipeActions(edge: .leading, allowsFullSwipe: openVerb(for: thing) != nil) {
                 if let openVerb = openVerb(for: thing) {
                     Button {
                         run(openVerb, on: thing)
