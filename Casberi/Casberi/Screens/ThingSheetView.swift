@@ -46,6 +46,11 @@ struct ThingSheetView: View {
     /// the section renders only when replies exist (no dead section, no
     /// spinner theater).
     @State private var replies: [SocialReply] = []
+    /// Walking the thread in-app (2026-07-16) — the parent this post answers,
+    /// opened as a post sheet rather than kicked out to the browser.
+    @State private var walkingTo: SocialCard?
+    /// The person behind a tapped face — the profile card.
+    @State private var profileTarget: SocialProfile?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// Seeded by the record's shape (2026-07-13 polish): a TALL thing (media
     /// or a long body) still opens FULL-height so its verbs never start
@@ -61,8 +66,16 @@ struct ThingSheetView: View {
             || !(thing.previewImageURL ?? "").isEmpty
             || TokenChart.route(from: thing.content) != nil
             || StockChart.route(from: thing.content) != nil
+            // A quoted post is a card the height of a small paragraph — the
+            // same "tall thing" the detent rule was written for, so it opens
+            // full-height rather than starting its verbs below the fold.
+            || thing.quote != nil
+        // A social post's `content` is its permalink — always short — so the
+        // length test has to read the POST, else a 900-character cast opened
+        // half-height with its own words below the fold (2026-07-16).
+        let bodyLength = max(thing.content.count, (thing.postText ?? "").count)
         _detent = State(initialValue:
-            hasMedia || thing.content.count > 280 ? .large : .medium)
+            hasMedia || bodyLength > 280 ? .large : .medium)
     }
 
     var body: some View {
@@ -76,17 +89,25 @@ struct ThingSheetView: View {
                     .padding(.horizontal, DS.Space.s4)
                     .padding(.top, DS.Space.s6)
                     .settleIn()
-                Text(thing.title)
-                    .dsText(.heading34).foregroundStyle(DS.textPrimary)
+                if let parent = thing.parent {
+                    replyingToRow(parent)
+                        .padding(.horizontal, DS.Space.s4)
+                        .padding(.top, DS.Space.s2)
+                        .settleIn(delay: 0.04)
+                }
+                titleBlock
                     .padding(.horizontal, DS.Space.s4)
                     .padding(.top, DS.Space.s3)
                     .settleIn(delay: 0.06)
                 // Events speak through WHEN below; and when the content is
                 // just the title again (a short note with no body beyond its
                 // own headline), showing it twice reads as a stutter.
-                let contentShown = thing.kind != .event
+                // A social post always shows content — its pictures, what it
+                // quotes, how it landed — and its `content` is a permalink, so
+                // the title-stutter test never applied to it anyway.
+                let contentShown = isSocialPost || (thing.kind != .event
                     && thing.content.trimmingCharacters(in: .whitespacesAndNewlines)
-                        != thing.title.trimmingCharacters(in: .whitespacesAndNewlines)
+                        != thing.title.trimmingCharacters(in: .whitespacesAndNewlines))
                 if contentShown {
                     ThingContentView(thing: thing)
                         .padding(.top, DS.Space.s3)
@@ -104,7 +125,14 @@ struct ThingSheetView: View {
                 actionRows
                     .padding(.top, DS.Space.s6)
                 if !replies.isEmpty {
-                    repliesSection
+                    // One replies renderer (2026-07-16) — the thing sheet and
+                    // the in-app walker show a reply identically, however deep
+                    // you are. Here a tap OPENS the walker (this sheet has no
+                    // navigation stack of its own); inside the walker the same
+                    // tap pushes. The section doesn't know which — it just
+                    // reports the card.
+                    SocialRepliesSection(replies: replies, source: thing.source,
+                                         open: { walkingTo = $0 })
                         .padding(.horizontal, DS.Space.s4)
                         .padding(.top, DS.Space.s4)
                 }
@@ -195,6 +223,16 @@ struct ThingSheetView: View {
         } message: {
             Text("Your name for this address rides every future transfer with it. A blank name clears it.")
         }
+        // Walking the thread in-app (2026-07-16) — the parent this post
+        // answers, or a reply under it. A read: no consent gate, the standing
+        // rule for the thread section it grew out of.
+        .sheet(item: $walkingTo) { card in
+            SocialPostSheet(post: card, source: thing.source)
+        }
+        // The person behind a tapped face — theirs to watch from here.
+        .sheet(item: $profileTarget) { p in
+            SocialProfileCard(profile: p)
+        }
     }
 
     /// Stores (or clears) the person's label for the counterparty address, then
@@ -251,6 +289,57 @@ struct ThingSheetView: View {
         return nil
     }
 
+    // MARK: - Title (a post's words ARE the title, 2026-07-16)
+
+    /// Everything else leads with a headline. A post leads with the POST: its
+    /// full text, in the title's slot, because a cast IS its words — and the
+    /// 80-character title is a row's clamp, not the thing itself. Rendering the
+    /// clamp here and the full text below would stutter; rendering only the
+    /// clamp is what lost the words in the first place.
+    ///
+    /// The size follows the length, the way every social client's does: a
+    /// one-liner gets the full display size and the drama that comes with it,
+    /// a paragraph steps down to a size you can actually read a paragraph in.
+    /// Both are the type ramp — hierarchy by size, no other trick (design law).
+    @ViewBuilder private var titleBlock: some View {
+        if isSocialPost {
+            let words = postWords
+            Text(words)
+                .dsText(words.count > 100 ? .heading22 : .heading34)
+                .foregroundStyle(DS.textPrimary)
+                .fixedSize(horizontal: false, vertical: true)
+        } else {
+            Text(thing.title)
+                .dsText(.heading34).foregroundStyle(DS.textPrimary)
+        }
+    }
+
+    /// The post's own words — the full text when the record carries it, else
+    /// the title (posts landed before `postText` existed, until a refresh heals
+    /// them). Never a permalink.
+    private var postWords: String {
+        let full = (thing.postText ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        return full.isEmpty ? thing.title : full
+    }
+
+    /// The post this one answers — "Replying to @alice", above the words, where
+    /// every client puts it. A tap walks into the parent in-app.
+    private func replyingToRow(_ parent: SocialCard) -> some View {
+        Button {
+            walkingTo = parent
+        } label: {
+            HStack(spacing: DS.Space.s1) {
+                Image(systemName: "arrowshape.turn.up.left")
+                    .dsText(.label12).foregroundStyle(DS.textTertiary)
+                Text("Replying to @\(SocialThread.shortHandle(parent.handle))")
+                    .dsText(.label12).foregroundStyle(DS.textTertiary)
+                Spacer(minLength: 0)
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
     // MARK: - Eyebrow (source icon · kind · age)
 
     private var eyebrow: some View {
@@ -260,9 +349,22 @@ struct ThingSheetView: View {
             // network). The feed rows lead with faces; the sheet should too
             // (2026-07-14). Everything else keeps the source mark + kind tag.
             if isSocialPost, let avatar = thing.authorAvatarURL, !avatar.isEmpty {
-                RemoteThumb(urlString: avatar, size: 18, fallback: thing.source, circular: true)
-                    .coinFlip(trigger: thing.id)
-                Text("@\(authorShortHandle) · \(shortTime(thing.capturedAt)) ago")
+                // The face is a door to the person (2026-07-16) — tap it and
+                // you can watch them, wherever you met them.
+                Button {
+                    profileTarget = SocialProfile(
+                        source: thing.source, handle: thing.authorHandle ?? "",
+                        displayName: nil, bio: nil, avatarURL: avatar)
+                } label: {
+                    RemoteThumb(urlString: avatar, size: 18, fallback: thing.source, circular: true)
+                        .coinFlip(trigger: thing.id)
+                }
+                .buttonStyle(.plain)
+                // WHY this post is here rides the sentence when there's a
+                // reason worth stating ("@dwr · in /design · 2h ago") — a
+                // liked cast, a channel cast, and your own post used to read
+                // identically (2026-07-16).
+                Text(eyebrowLine)
                     .dsText(.label12)
                     .foregroundStyle(DS.textTertiary)
             } else {
@@ -291,6 +393,15 @@ struct ThingSheetView: View {
     /// the person knows.
     private var authorShortHandle: String {
         SocialThread.shortHandle(thing.authorHandle ?? "")
+    }
+
+    /// "@dwr · in /design · 2h ago" — who, why (when there's a why), when.
+    private var eyebrowLine: String {
+        let age = "\(shortTime(thing.capturedAt)) ago"
+        guard let why = SocialThread.contextPhrase(for: thing) else {
+            return "@\(authorShortHandle) · \(age)"
+        }
+        return "@\(authorShortHandle) · \(why) · \(age)"
     }
 
     // MARK: - Spec table (Gallery's graft — labels change per kind)
@@ -615,59 +726,6 @@ struct ThingSheetView: View {
         thing.tags.removeAll { $0 == tag }
         modelContext.saveHonestly()
         CorpusSignal.shared.bump()
-    }
-
-    // MARK: - Replies (a post's thread, 2026-07-14)
-
-    /// The conversation under a post/cast — read-only context in the spec
-    /// table's quiet-card clothes: a face, the handle, the words. The header
-    /// counts the thread ("Replies · 8"), the rows arrive one after another
-    /// (the feed's stagger), and a tap opens that reply on the network.
-    private var repliesSection: some View {
-        VStack(alignment: .leading, spacing: DS.Space.s3) {
-            // Honest count: the fetch caps at replyCap, so a thread AT the cap
-            // may hold more — say "8+", never a false total (honesty rule).
-            Text(replies.count < SocialThread.replyCap
-                 ? "Replies · \(replies.count)"
-                 : "Replies · \(replies.count)+")
-                .dsText(.label12).foregroundStyle(DS.textTertiary)
-            ForEach(Array(replies.enumerated()), id: \.element.id) { i, reply in
-                replyRow(reply).staggerIn(index: min(i, 8))
-            }
-        }
-        .padding(DS.Space.s4)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(DS.fillFaint,
-                    in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
-    }
-
-    @ViewBuilder
-    private func replyRow(_ reply: SocialReply) -> some View {
-        let row = HStack(alignment: .top, spacing: DS.Space.s2) {
-            if let avatar = reply.avatarURL {
-                RemoteThumb(urlString: avatar, size: 20,
-                            fallback: thing.source, circular: true)
-            } else {
-                BridgeIcon(name: thing.source, size: 20, circular: true)
-            }
-            VStack(alignment: .leading, spacing: 2) {
-                Text("@\(reply.handle)")
-                    .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-                Text(reply.text)
-                    .dsText(.callout15).foregroundStyle(DS.textPrimary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            Spacer(minLength: 0)
-        }
-        .contentShape(Rectangle())
-        // A tap opens that reply on the network — a read, so it passes
-        // without the write-confirm (swipe-verbs-are-reads rule).
-        if let url = reply.url.flatMap(URL.init) {
-            Button { openURL(url) } label: { row }
-                .buttonStyle(.plain)
-        } else {
-            row
-        }
     }
 
     // MARK: - Related shelf (streams last)

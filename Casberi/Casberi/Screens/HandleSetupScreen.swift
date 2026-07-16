@@ -205,7 +205,7 @@ enum HandleBridge: String {
 
     var canLine: String {
         switch self {
-        case .bluesky:   "Reads public posts and mentions."
+        case .bluesky:   "Reads public posts — accounts, feeds, mentions."
         case .farcaster: "Reads public casts — accounts, channels, likes."
         case .pinterest: "Reads your public pins."
         default:         feedKind!.canLine
@@ -261,11 +261,16 @@ enum HandleBridge: String {
     /// multi bridges, the first watched account stands in.
     var currentName: String { names.first ?? "" }
 
-    /// Connected at all — for Farcaster a followed CHANNEL with no account
-    /// still counts (it syncs, it can disconnect); everywhere else the
-    /// account list is the whole story.
+    /// Connected at all — for Farcaster a followed CHANNEL, and for Bluesky a
+    /// followed FEED (2026-07-16), still counts with no account at all: it
+    /// syncs, it can disconnect. Everywhere else the account list is the whole
+    /// story.
     var isConnected: Bool {
-        self == .farcaster ? FarcasterStore.shared.connected : !names.isEmpty
+        switch self {
+        case .farcaster: FarcasterStore.shared.connected
+        case .bluesky:   BlueskyStore.shared.connected
+        default:         !names.isEmpty
+        }
     }
 
     /// Teardown only (the single Pinterest path + Disconnect): an empty name
@@ -340,6 +345,9 @@ struct HandleSetupScreen: View {
     @State private var channelField = ""
     @State private var channelSyncing = false
     @State private var channelError: String?
+    /// Bluesky feed search results, awaiting a pick — a feed has no typeable
+    /// name, so the search IS the entry gesture (2026-07-16).
+    @State private var feedHits: [BlueskyStore.Feed] = []
     /// A chip toggled (or channel followed) while a sync is in flight —
     /// the finished sync runs once more instead of silently dropping it.
     @State private var resyncQueued = false
@@ -367,6 +375,9 @@ struct HandleSetupScreen: View {
             }
             if bridge == .farcaster {
                 channelsSection.listRowSeparator(.hidden)
+            }
+            if bridge == .bluesky {
+                feedsSection.listRowSeparator(.hidden)
             }
             // Pin to Home (and its auto-social inverse) sits above the recent
             // list — the same spot every app screen puts it (user, 2026-07-14),
@@ -697,6 +708,82 @@ struct HandleSetupScreen: View {
             Text("A channel is a topic feed — /design, /base — followed by name, same as a person.")
                 .dsText(.callout15).foregroundStyle(DS.textTertiary)
         }
+    }
+
+    /// Followed feeds (Bluesky only, 2026-07-16) — the answer to the question
+    /// prd §75 deliberately held: Bluesky's channels. It has no global channel
+    /// names to type, so its topical lanes are custom FEEDS, addressed by
+    /// at-uri and found by search. That difference is the whole design: where
+    /// Farcaster's field takes "/design" and resolves it, this one takes
+    /// "science" and shows you what's there — the same finder gesture the name
+    /// field above already uses for people. Once followed, a feed behaves
+    /// exactly like a channel: its posts land beside the people's.
+    private var feedsSection: some View {
+        Section {
+            VStack(alignment: .leading, spacing: DS.Space.s2) {
+                BridgeFieldRow(placeholder: "science", text: $channelField,
+                               buttonLabel: "Find", action: searchFeeds)
+                ForEach(feedHits) { feed in
+                    BridgeSearchResultRow(
+                        imageURL: feed.imageURL, fallbackIcon: bridge.rawValue,
+                        title: feed.name, subtitle: String(localized: "Feed"),
+                        action: { followFeed(feed) })
+                }
+                BridgeSyncStatusRows(syncing: channelSyncing,
+                                     syncingLine: String(localized: "Finding feeds…"),
+                                     result: channelError, resultIsError: true)
+            }
+            .dsListCardRow()
+            ForEach(BlueskyStore.shared.feeds) { feed in
+                HStack(spacing: DS.Space.s3) {
+                    if let image = feed.imageURL {
+                        RemoteThumb(urlString: image, size: 28,
+                                    fallback: bridge.rawValue, circular: true)
+                    } else {
+                        BridgeIcon(name: bridge.rawValue, size: 28, circular: true)
+                    }
+                    Text(feed.name).dsText(.body17).foregroundStyle(DS.textPrimary)
+                    Spacer()
+                }
+                .swipeActions(edge: .trailing) {
+                    Button(role: .destructive) {
+                        BlueskyStore.shared.removeFeed(feed.uri)
+                        DSHaptic.tap()
+                    } label: { Label("Remove", systemImage: "minus.circle") }
+                }
+                .dsListCardRow()
+                .listRowSeparator(.hidden)
+            }
+        } header: {
+            Text("Feeds").dsText(.label12).foregroundStyle(DS.textTertiary)
+        } footer: {
+            Text("A feed is a topic lane someone curates — search a subject, follow one, its posts land beside the people's.")
+                .dsText(.callout15).foregroundStyle(DS.textTertiary)
+        }
+    }
+
+    private func searchFeeds() {
+        let query = channelField.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !query.isEmpty, !channelSyncing else { return }
+        channelSyncing = true
+        channelError = nil
+        feedHits = []
+        Task {
+            let found = await BlueskyIngest.searchFeeds(query)
+            channelSyncing = false
+            feedHits = found
+            if found.isEmpty {
+                channelError = String(localized: "No feeds by that name.")
+            }
+        }
+    }
+
+    private func followFeed(_ feed: BlueskyStore.Feed) {
+        BlueskyStore.shared.addFeed(feed)
+        feedHits = []
+        channelField = ""
+        DSHaptic.tap()
+        Task { await sync() }
     }
 
     private func followChannel() {

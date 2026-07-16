@@ -88,6 +88,32 @@ struct Provenance: Codable, Hashable {
     var machine: String?
 }
 
+/// A post referenced BY a thing — the cast it quotes, or the cast it replies
+/// under (2026-07-16). One shape for both: a face, a handle, the words, and
+/// the permalink a tap follows. Stored as a Codable value on the model, the
+/// way `Provenance` is — a quote is one compound fact, not four loose columns.
+///
+/// `text` is the referenced post's FULL text, not a title line: the card that
+/// renders it clamps at read time (a quote is context, so it shows a few lines
+/// and stops), and clamping at ingest would throw away words the sheet may
+/// later want.
+struct SocialCard: Codable, Hashable, Identifiable {
+    /// Computed, so it never enters the encoded form — the protocol ref when
+    /// there is one, else whatever else distinguishes this card.
+    var id: String { ref ?? url ?? "\(handle):\(text)" }
+
+    var handle: String
+    var text: String
+    var avatarURL: String?
+    /// The web permalink — what Open follows.
+    var url: String?
+    /// The PROTOCOL ref, in `Thing.sourceRef` form ("fc:<hash>",
+    /// "bsky:<at-uri>") — what reading this post's own replies needs, so a tap
+    /// can walk the thread in-app. The web permalink can't stand in: a
+    /// Farcaster one carries only the first 10 characters of the hash.
+    var ref: String? = nil
+}
+
 /// The one container. Notes, screenshots, chats, events, links — and later
 /// jobs, runs, outputs, skills — all land here as a `Thing` (PRD S1).
 ///
@@ -231,6 +257,56 @@ final class Thing {
     /// The ISO 4217 code (`USD`, `GBP`) `priceValue` is denominated in — so a
     /// re-formatted price never guesses the currency. nil when unknown.
     var priceCurrency: String? = nil
+
+    // MARK: - Social posts (2026-07-16)
+
+    /// A post's FULL text — the cast/post exactly as written (2026-07-16). The
+    /// `title` is still the one-line 80-char clamp every row and search reads,
+    /// and `content` still holds the web permalink (so Open/Share/route logic
+    /// is untouched) — but a post longer than its title used to be
+    /// unrecoverable: the sheet rendered `content`, i.e. a URL string, and the
+    /// words were simply gone from the app. This carries them. nil for every
+    /// non-social thing, and for posts landed before this field (the refresh
+    /// backfills the ones still in the page).
+    var postText: String? = nil
+
+    /// WHY a social post is here, when it isn't simply "an account you watch
+    /// posted it": `"liked"` (they liked it — the save verb) or `"mention"`
+    /// (it names them). nil = authored by a watched account, the plain case.
+    /// A raw string, not an enum, so an unknown future value from a synced
+    /// device degrades to "no marker" instead of failing the decode.
+    var socialContext: String? = nil
+
+    /// The channel/feed a post arrived through — a Farcaster channel name
+    /// (`design`) or a Bluesky custom feed's display name. Orthogonal to
+    /// `socialContext`: a mention can arrive in a channel. nil when the post
+    /// came from an account directly.
+    var channelName: String? = nil
+
+    /// A post's engagement at LAST SYNC (2026-07-16) — what the network's own
+    /// public API reported, never derived or estimated. These go stale between
+    /// syncs, which is why the sheet states them as a quiet line and not a live
+    /// number. nil (not 0) when the source didn't report it: a zero means "none",
+    /// an absent value means "we don't know", and the honesty rule needs those
+    /// to stay different.
+    var likeCount: Int? = nil
+    var repostCount: Int? = nil
+    var replyCount: Int? = nil
+
+    /// The post this one QUOTES — both networks' signature form, dropped at
+    /// ingest until now (a quote-post read as a bare, contextless line).
+    var quote: SocialCard? = nil
+
+    /// The post this one REPLIES under — so the sheet can say "Replying to
+    /// @…" and a landed mention (usually a reply) carries the thing it
+    /// answers. nil for a top-level post.
+    var parent: SocialCard? = nil
+
+    /// EVERY image the post carries, in order (2026-07-16). `previewImageURL`
+    /// stays the row's single 26pt thumb (the band's rhythm holds); this is
+    /// what the sheet lays out, so a four-photo post stops losing three of
+    /// them. Empty for a text-only post and for everything non-social.
+    var imageURLs: [String] = []
 
     init(
         id: UUID = UUID(),

@@ -151,6 +151,65 @@ enum ProbeHooks {
                 NSLog("Bluesky probe: %@ new things", n.map(String.init) ?? "FAILED")
             }
         },
+        // `-bskyFeed <query|at-uri>` follows a Bluesky FEED headlessly and
+        // syncs — Bluesky's answer to a Farcaster channel (2026-07-16). A bare
+        // word searches the feed directory and takes the top hit; an at-uri
+        // follows that feed exactly.
+        Hook(key: "bskyFeed") { query, context in
+            Task { @MainActor in
+                let feed = await BlueskyIngest.followFeed(query)
+                let n = await BlueskyIngest.refresh(context: context)
+                NSLog("Bluesky feed probe: %@ followed, %@ new things",
+                      feed?.name ?? "NONE", n.map(String.init) ?? "FAILED")
+            }
+        },
+        // `-socialProbe <Bluesky|Farcaster>` reports what the enrichment
+        // actually landed across that source's corpus (2026-07-16) — how many
+        // posts carry their full text, pictures, a quote, a parent, a context
+        // marker — so the batch verifies headlessly instead of by eye. Also
+        // prints the first enriched post, since a count can be right while the
+        // content is wrong.
+        Hook(key: "socialProbe") { source, context in
+            Task { @MainActor in
+                let all = (try? context.fetch(FetchDescriptor<Thing>(
+                    predicate: #Predicate { $0.source == source }))) ?? []
+                let withText = all.filter { ($0.postText ?? "").isEmpty == false }
+                let longer = withText.filter { ($0.postText ?? "").count > $0.title.count }
+                NSLog("""
+                      socialProbe %@: %d things, %d with full text (%d longer than title), \
+                      %d with images, %d quoting, %d replying, %d marked, %d in a channel
+                      """,
+                      source, all.count, withText.count, longer.count,
+                      all.filter { !$0.imageURLs.isEmpty }.count,
+                      all.filter { $0.quote != nil }.count,
+                      all.filter { $0.parent != nil }.count,
+                      all.filter { $0.socialContext != nil }.count,
+                      all.filter { $0.channelName != nil }.count)
+                if let sample = longer.first ?? withText.first {
+                    NSLog("socialProbe sample: title=%@ | postText=%@",
+                          sample.title, sample.postText ?? "nil")
+                }
+                // `ref` is what makes a quote WALKABLE (its own thread) — a
+                // card carrying a permalink but no ref opens to a dead end, so
+                // the probe reports it rather than leaving it to a tap to find.
+                NSLog("socialProbe walkable quotes: %d of %d",
+                      all.filter { $0.quote?.ref != nil }.count,
+                      all.filter { $0.quote != nil }.count)
+                if let quoted = all.first(where: { $0.quote != nil }), let q = quoted.quote {
+                    NSLog("socialProbe quote: @%@ (ref %@) said %@",
+                          q.handle, q.ref ?? "NONE", q.text)
+                    // The deep link to a RICH post — quote card, full text, the
+                    // lot — so the sheet can be opened headlessly
+                    // (`casberi://thing/<id>`) instead of hunting for a row to tap.
+                    NSLog("socialProbe quoteThing: casberi://thing/%@",
+                          quoted.id.uuidString)
+                }
+                if let replying = all.first(where: { $0.parent != nil }) {
+                    NSLog("socialProbe replyThing: casberi://thing/%@",
+                          replying.id.uuidString)
+                }
+            }
+        },
         // `-bskyMentions <handle>` watches MENTIONS of a Bluesky account
         // (adding it if new) and syncs — posts naming them land as things.
         Hook(key: "bskyMentions") { name, context in

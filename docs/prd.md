@@ -3133,3 +3133,135 @@ is to ship them as ONE seat, not two:
   ruling 2026-07-13's two verbs; a kept watch row would re-register the seat
   and keep the foreground poll landing). Landed posts are history and follow
   the person's own "remove its things too" choice.
+
+## 81. Social enrichment — the post itself, why it's here, and the people behind it (user, 2026-07-16)
+
+User: "how could we enrich the farcaster and bluesky experiences… don't think
+just features, think design too." The assessment found the plumbing already
+excellent (§74/§75) and the PRESENTATION generic: a cast rendered with the same
+anatomy as an RSS link, and the most social facts about a post were dropped at
+ingest or shown as a URL. Nine changes, all keyless and read-only, both networks
+in one pass through the shared `SocialBridge` layer.
+
+**The post is the point (the bug that started it).** A post's text became the
+80-char `title`; `Thing.content` held the PERMALINK. So the sheet rendered
+`content` through the chat path — a URL in a speech bubble — and the words of
+anything longer were absent from the app entirely. Measured live: 53 of 73
+Bluesky posts and 58 of 84 casts were longer than their title, i.e. most posts
+were losing their words. Now `Thing.postText` carries the full text, and the
+SHEET LEADS WITH IT: the post's own words in the title slot, sized by length
+(≤100 chars keeps `heading34` and its drama; longer steps to `heading22`, a size
+you can read a paragraph in — the type ramp, no other trick). `content` still
+holds the permalink, so every open/share/route path is untouched.
+
+**Why it's here (the marker).** A liked cast, a channel cast, a mention, and
+your own post all rendered identically. `Thing.socialContext` ("liked" /
+"mention") + `Thing.channelName` now stamp WHY at ingest, and the row's trailing
+slot says it: "Liked", "/design", "Mentions you". **The marker beats the handle
+in that slot** — the row already leads with the author's FACE, so the word that
+differentiates is why it arrived, not who a second time. A post with no such
+reason falls through to the handle rule (§74), unchanged. The sheet's eyebrow
+carries both as a sentence: "@dwr · in /design · 2h ago".
+
+**Engagement, honestly.** Bluesky's AppView serves exact totals and hydrates
+them on every post view (free at ingest — they render in the first frame);
+Snapchain serves reaction MESSAGES, so a Farcaster count is one page's size and
+a full page reads "100+" (`SocialCount.atLeast`). Both are re-read LIVE when the
+sheet opens — a count is only true at the moment it's read. A count the network
+didn't report has NO cell: an absent number and a reported zero are different
+facts.
+
+**Quotes, parents, and all the pictures.** `Thing.quote` / `Thing.parent`
+(`SocialCard`: face, handle, words, permalink, protocol ref) and
+`Thing.imageURLs`. A quote renders as a recessed card in the body; a parent as
+"Replying to @alice" above the words. Bluesky hydrates both a quote and every
+image for free; Farcaster's node serves raw protocol data, so a quote/parent is
+a bare `{fid, hash}` — one capped fan-out per page (`prefetchCards`) warms them,
+and the ref dedupe keeps the steady state at zero.
+
+**Threads stay in-app.** A reply tap used to open the browser, which ended the
+session in Casberi. Now it opens the post here — its face, its words, its own
+replies — and those push again, so a conversation walks as deep as it goes.
+This needs the PROTOCOL ref, not the permalink: Farcaster's web URL carries only
+the first 10 chars of the hash, so `SocialCard.ref`/`SocialReply.ref` carry
+`sourceRef` form ("fc:<hash>", "bsky:<at-uri>"). A walked post is NOT a thing —
+not in the corpus, no row, nothing saved. It's a read.
+
+**People are doors.** Tapping any face — a row's author, a reply's, a quoted
+post's — opens `SocialProfileCard`: face, name, bio, and ONE verb, Watch (plus
+Farcaster's "Watch their wallet"). That's what turns a mention from a dead end
+into a door: someone talks to you, you tap them, you watch them.
+**Cross-network is a SEARCH, never a join** — nothing links a Farcaster username
+to a Bluesky handle (Farcaster's onchain verifications have no Bluesky analog),
+so "Look for them on Bluesky" runs the same people-search the setup field runs
+and hands over the hits. Which one is really them is the person's call. Claiming
+the match would be a guess wearing a fact's clothes.
+
+**Bluesky feeds — the held question, answered.** §75 held Bluesky channels
+"pending a decision on the discovery-search UX". The answer: its topical lanes
+are custom FEEDS (at-uri, no global names), so **the search IS the entry
+gesture** — type "science", pick from what's there, exactly the finder the name
+field above it already uses for people. Once followed, a feed behaves like a
+channel: its posts land beside the people's, marked with the feed's name. Verified
+live: 25 Science posts landed keyless.
+
+**Bluesky mentions already rode "while I was away"** — the librarian's window is
+a pure time filter over the corpus (`AskCommands`), never source-specific, so
+any landed thing rides it. Nothing to build; confirmed, not assumed.
+
+Rulings that fell out of the build:
+- **Heal, don't strand.** A post already in the corpus dedupes OUT of the
+  landing path, so the enrichment would only ever reach posts landed from that
+  day on — an existing corpus would show none of it. Both ingests now heal on
+  the dedupe hit (fill a gap, never rewrite what a good sync landed), and a
+  heal-only pass joins the save condition. Verified: 10 of 10 casts healed their
+  full text on the first pass.
+- **A card presented from anywhere can't demand the environment.** The first
+  deep link to the profile card CRASHED (`_assertionFailure` in
+  `EnvironmentValues.subscript.getter`): sheets hang off view chains OUTSIDE
+  RootShell's `.environment(chrome)`, and a non-optional `@Environment(ShellChrome.self)`
+  traps when the object is absent. It reads chrome OPTIONALLY now. Losing the
+  toast costs nothing the person needs — the Watch row states its own outcome.
+- Counts are stored AND read live: the snapshot renders in the first frame, the
+  live read replaces it. A stored field nothing reads is dead data (caught in
+  review — the counts were being written and healed every refresh and displayed
+  never).
+
+Debug: `-bskyFeed <query|at-uri>`, `-socialProbe <Bluesky|Farcaster>`, and the
+`casberi://person/<Source>/<handle>` deep link (the card by name, so the screen
+sweep reaches it headlessly like every other surface).
+
+## 82. Bankr joins the agent keys — the one agent with a wallet (user, 2026-07-16) — BUILT
+
+Bankr (bankr.bot) is a wallet-attached trading agent with a prompt API the
+same BYOK shape as the other four: a key in a header, a question in, text
+out. It becomes the FIFTH agent provider (§69's picker: Claude, ChatGPT,
+Gemini, Venice, Bankr), same vault seat pattern, same consent tap, same
+honest-failure wording. A user pastes their own key from bankr.bot/api-keys;
+their Bankr Club sub or credits pay for their own prompts — server-free ring
+intact (§67).
+
+Two sanctioned divergences from the one contract, both because Bankr is an
+agent, not a bare model:
+
+- **Async job flow.** `POST api.bankr.bot/agent/prompt` returns a jobId;
+  the answer is polled off `GET /agent/job/<id>` every 2s (~90s cap).
+- **Wallet grounding.** Bankr may draw on the connected wallet and live
+  markets IN ADDITION to the retrieved things — so an empty corpus match
+  still asks it ("what's my portfolio worth" needs no saved thing), where
+  every other provider gets the honest "nothing matches" line instead.
+
+One non-negotiable rides every prompt: ANSWER ONLY. The same key could
+trade, so the answer path hard-prefixes "do not execute, prepare, or queue
+any transaction… even if the question reads like a command", and the
+settings small print tells the person to mint the key READ-ONLY (Bankr
+keys support that; a read-only key 403s on writes — defense in depth).
+Actions through Bankr (an "Ask Bankr" sheet verb, or ever placing a trade)
+would be separate consented verbs, deliberately unbuilt.
+
+Key validation spends nothing: auth is checked before the job lookup, so a
+bogus job id returns 404 on a good key and 401 on a bad one.
+
+Debug: `-byokKey "bankr:<key>"` + `-byokProbe "<query>"` (a bogus key
+verifies the honest 401 → nil path free, and the empty-corpus divergence —
+the probe reaches Bankr instead of stopping at "nothing matches").

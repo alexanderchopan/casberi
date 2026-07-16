@@ -42,8 +42,17 @@ struct BandRow: View {
         if let tag = thing.tags.first(where: { ThingKind.from(typeTag: $0) == nil }) { return tag }
         switch thing.source {
         case "Wallet":    return WalletStore.shared.label(forAddress: thing.walletAddress)
-        case "Bluesky":   return BlueskyStore.shared.rowLabel(for: thing.authorHandle)
-        case "Farcaster": return FarcasterStore.shared.rowLabel(for: thing.authorHandle)
+        // WHY a post is here beats WHO posted it in this slot (2026-07-16): a
+        // liked cast, a channel cast, and your own post used to read
+        // identically, and the row already leads with the author's FACE — so
+        // the word that differentiates is "Liked", "/design", "Mentions you",
+        // not the handle a second time. A post with no such reason (an account
+        // you watch simply posted) falls through to the handle rule, unchanged.
+        case "Bluesky", "Farcaster":
+            if let why = SocialThread.contextLabel(for: thing) { return why }
+            return thing.source == "Bluesky"
+                ? BlueskyStore.shared.rowLabel(for: thing.authorHandle)
+                : FarcasterStore.shared.rowLabel(for: thing.authorHandle)
         // The publisher names itself in the trailing slot — BBC News,
         // TechCrunch — the icon's word twin, the way a social row names its
         // account. Empty on rows that landed before the name was captured.
