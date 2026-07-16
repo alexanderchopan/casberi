@@ -37,6 +37,7 @@ enum HomeComposition {
         var boardKeys: [String: String] = [:]
     }
 
+    @MainActor
     static func compose(things: [Thing],
                         walletHoldings: [WalletIngest.HoldingsGroup] = [],
                         walletCombined: WalletIngest.HoldingsGroup? = nil,
@@ -56,6 +57,7 @@ enum HomeComposition {
 
     // MARK: - Documents
 
+    @MainActor
     private static func daily(things: [Thing], projects: [Cluster], walletHoldings: [WalletIngest.HoldingsGroup] = [],
                                      walletCombined: WalletIngest.HoldingsGroup? = nil,
                                      walletNFTs: [WalletIngest.NFTGroup] = [],
@@ -353,6 +355,7 @@ enum HomeComposition {
         rootRefs.append("comingUp")
     }
 
+    @MainActor
     private static func appendPinnedApps(_ things: [Thing],
                                          to doc: inout [String],
                                          rootRefs: inout [String],
@@ -368,17 +371,40 @@ enum HomeComposition {
         for source in onBoard {
             // Pinning doesn't invent content — a source with nothing landed
             // yet shows no tile (its pin persists; the tile appears when the
-            // first thing arrives), same rule the media shelves follow. Three
-            // is the ceiling now (2026-07-14): big shows all three as a card,
-            // wide shows the first as one line, small shows it full-size —
-            // no span ever needs a fourth.
-            let items = Array(things.filter { $0.source == source }.prefix(3))
-            guard !items.isEmpty else { continue }
+            // first thing arrives), same rule the media shelves follow.
+            let sourceThings = things.filter { $0.source == source }
+            guard !sourceThings.isEmpty else { continue }
             let id = "appTile\(emitted)"
             let mail = source == "Gmail" || source == "iCloud Mail"
             let social = HomePinnedSources.autoSocial.contains(source)
+            // The watchlist leads with what MOVED (2026-07-15), not what was
+            // watched most recently — the shared TokenWatchOrder (movers by
+            // default) reorders the FULL set before the three-row cap picks
+            // its winners, and the subtitle names the day's up/down split
+            // from the SAME cached pulses, so Home can never disagree with
+            // Feed's lede about which tokens moved.
+            let (ordered, subtitle): ([Thing], String) = {
+                guard source == "Tokens" else { return (sourceThings, "") }
+                let sorted = TokenWatchOrder.shared.apply(
+                    sourceThings, sourceRef: \.sourceRef,
+                    change24h: { TokenPulse.shared.pulse(for: $0)?.change24h })
+                // Two watched tokens minimum (WatchlistLede's own rule) — one
+                // token's row already says everything about itself.
+                let pulses = sourceThings.compactMap { TokenPulse.shared.pulse(for: $0) }
+                guard pulses.count >= 2 else { return (sorted, "") }
+                let up = pulses.filter { $0.change24h > 0 }.count
+                let down = pulses.filter { $0.change24h < 0 }.count
+                var parts: [String] = []
+                if up > 0 { parts.append(String(localized: "\(up) up")) }
+                if down > 0 { parts.append(String(localized: "\(down) down")) }
+                return (sorted, parts.joined(separator: " · "))
+            }()
+            // Three is the ceiling now (2026-07-14): big shows all three as a
+            // card, wide shows the first as one line, small shows it
+            // full-size — no span ever needs a fourth.
+            let items = Array(ordered.prefix(3))
             let childIds = items.indices.map { "\(id)c\($0)" }
-            doc.append("\(id) = Widget(\(q(appTitle(source))), \(q("")), [\(childIds.joined(separator: ", "))], \(q(source)))")
+            doc.append("\(id) = Widget(\(q(appTitle(source))), \(q(subtitle)), [\(childIds.joined(separator: ", "))], \(q(source)))")
             for (i, t) in items.enumerated() {
                 doc.append(appChild(id: "\(id)c\(i)", t, mail: mail, social: social))
             }

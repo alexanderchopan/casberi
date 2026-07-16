@@ -74,5 +74,13 @@ final class TokenPulse {
             out[ref] = Pulse(closes: chart.closes, change24h: chart.change, fetchedAt: stamp)
         }
         pulses.merge(out) { _, new in new }
+        // Home's watchlist tile reads this cache from a plain compose
+        // function, not a live SwiftUI body — @Observable's automatic
+        // re-render only covers reads made DURING body evaluation (the
+        // Feed's rows qualify; this doesn't), so without an explicit bump
+        // a fresh pulse landing after the first compose would leave the
+        // tile's movers-first order and up/down subtitle frozen at
+        // whatever they were (usually nothing) before this fetch finished.
+        if !out.isEmpty { CorpusSignal.shared.bump() }
     }
 }

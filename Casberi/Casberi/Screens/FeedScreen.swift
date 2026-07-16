@@ -600,8 +600,7 @@ struct FeedScreen: View {
             groupedSections(days, hintID: hintID, nextEventID: nextEventID, boundary: boundaryThingID(in: days))
         case .tokens:
             watchlistLedeSection(visible)
-            let days = dayGroups(visible)
-            groupedSections(days, hintID: hintID, nextEventID: nextEventID, boundary: boundaryThingID(in: days))
+            watchlistSection(visible, hintID: hintID, nextEventID: nextEventID)
         default:
             if filter.tag != "All" && shape == .all {
                 daySection(filterLabel, visible, hintID: hintID, nextEventID: nextEventID)
@@ -652,6 +651,26 @@ struct FeedScreen: View {
             ledeSection(WatchlistLede(
                 up: pulses.filter { $0.change24h > 0 }.count,
                 down: pulses.filter { $0.change24h < 0 }.count))
+        }
+    }
+
+    /// The watchlist's OWN order, not chronology (2026-07-15) — day headers
+    /// answer "when did I watch this", a question that stops mattering once
+    /// there's more than a couple of tokens; what you actually want is what
+    /// MOVED, or the order you dragged it into (TokenWatchOrder — the same
+    /// shared choice the settings screen and Home's tile read). One flat
+    /// section, no day breaks; the "new since" divider drops with it — it's
+    /// a chronological-feed idea, and this list may no longer read top to
+    /// bottom by time.
+    @ViewBuilder
+    private func watchlistSection(_ visible: [Thing], hintID: UUID?, nextEventID: UUID?) -> some View {
+        let ordered = TokenWatchOrder.shared.apply(
+            visible, sourceRef: \.sourceRef,
+            change24h: { TokenPulse.shared.pulse(for: $0)?.change24h })
+        Section {
+            ForEach(Array(ordered.enumerated()), id: \.element.id) { i, thing in
+                shapedListRow(thing, index: i, hintID: hintID, nextEventID: nextEventID)
+            }
         }
     }
 

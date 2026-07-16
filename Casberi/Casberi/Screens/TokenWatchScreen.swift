@@ -44,6 +44,14 @@ struct TokenWatchScreen: View {
         return watched.first?.id
     }
 
+    /// The watchlist's shared order (2026-07-15) — read as a computed
+    /// property, not cached, so a mode switch or a fresh pulse repaints it
+    /// immediately (an @Observable read inside `body` tracks both).
+    private var orderedWatched: [Thing] {
+        TokenWatchOrder.shared.apply(watched, sourceRef: \.sourceRef,
+                                      change24h: { TokenPulse.shared.pulse(for: $0)?.change24h })
+    }
+
     private func loadWatched() {
         watched = recentBridgeThings(source: "Tokens", context: modelContext)
     }
@@ -74,6 +82,14 @@ struct TokenWatchScreen: View {
         .dsPageBackground()
         .navigationTitle("Tokens")
         .navigationBarTitleDisplayMode(.large)
+        .toolbar {
+            // Drag handles only earn their keep in "My order" — the other
+            // two modes already state their own order (movers, recency), so
+            // showing Edit there would offer a drag that does nothing.
+            if TokenWatchOrder.shared.mode == .manual, watched.count > 1 {
+                ToolbarItem(placement: .topBarTrailing) { EditButton().tint(DS.textPrimary) }
+            }
+        }
         .onAppear { loadWatched() }
         // The debounced token search.
         .task(id: queryField) {
@@ -104,7 +120,7 @@ struct TokenWatchScreen: View {
             Text("Watch a token").dsText(.label12)
                 .foregroundStyle(DS.textTertiary)
         } footer: {
-            Text("Type a name, symbol, address, or link — matching tokens appear as you type. A watched token's live price chart lands in your feed.")
+            Text("Type a name, symbol, address, or link — matching tokens appear as you type. Separate several with commas (\"eth, sol, pepe\") to build a watchlist in one go. A watched token's live price chart lands in your feed.")
                 .dsText(.callout15).foregroundStyle(DS.textTertiary)
         }
     }
@@ -119,39 +135,100 @@ struct TokenWatchScreen: View {
     /// on leading here, so one verb had two directions).
     /// Unwatching deletes the thing: the thing IS the watch, not landed
     /// history — and its sourceRef leaving the store lets a re-add resolve.
+    ///
+    /// Rows wear the same live price + 24h sparkline the feed's rows do
+    /// (2026-07-15) — the SAME cached TokenPulse, so the management screen
+    /// can never disagree with the feed about which tokens moved. Row order
+    /// follows the shared TokenWatchOrder (movers first by default).
     private var watchlistSection: some View {
-        Section {
-            ForEach(watched) { thing in
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(thing.title)
-                        .dsText(.body17).foregroundStyle(DS.textPrimary)
-                        .lineLimit(2)
-                    Text(LiveTimeText.short(thing.capturedAt))
-                        .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-                }
-                .dsListCardRow()
-                .modifier(SwipeHintNudge(active: thing.id == hintTokenID) { swipeCoachDone = true })
-                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                    // Full swipe = Unwatch (the explicit group replaces the
-                    // system delete). Pinning a single token left the swipe
-                    // (2026-07-12) — pin "Tokens" from its screen for a
-                    // watchlist tile on Home, not one token at a time.
-                    Button(role: .destructive) {
-                        if let i = watched.firstIndex(where: { $0.id == thing.id }) {
-                            unwatch(at: IndexSet(integer: i))
+        let items = orderedWatched
+        return Section {
+            ForEach(items) { thing in
+                watchRow(thing)
+                    .dsListCardRow()
+                    .modifier(SwipeHintNudge(active: thing.id == hintTokenID) { swipeCoachDone = true })
+                    .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                        // Full swipe = Unwatch (the explicit group replaces the
+                        // system delete). Pinning a single token left the swipe
+                        // (2026-07-12) — pin "Tokens" from its screen for a
+                        // watchlist tile on Home, not one token at a time.
+                        Button(role: .destructive) {
+                            if let i = watched.firstIndex(where: { $0.id == thing.id }) {
+                                unwatch(at: IndexSet(integer: i))
+                            }
+                        } label: {
+                            Label("Unwatch", systemImage: "trash")
                         }
-                    } label: {
-                        Label("Unwatch", systemImage: "trash")
                     }
-                }
             }
-            .onDelete(perform: unwatch)
+            .onDelete { offsets in unwatch(displayed: items, at: offsets) }
+            .onMove { from, to in reorder(displayed: items, from: from, to: to) }
+            // Drag only means something in "My order" — the other two modes
+            // already state their own ordering rule.
+            .moveDisabled(TokenWatchOrder.shared.mode != .manual)
         } header: {
-            Text("Watchlist").dsText(.label12)
-                .foregroundStyle(DS.textTertiary)
+            HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+                Text("Watchlist").dsText(.label12)
+                    .foregroundStyle(DS.textTertiary)
+                Spacer(minLength: 0)
+                sortMenu
+            }
         } footer: {
             Text("Swipe a token to pin it to Home and Feed, or to stop watching it.")
                 .dsText(.callout15).foregroundStyle(DS.textTertiary)
+        }
+    }
+
+    /// One watchlist row: title, then either the live pulse (sparkline,
+    /// price, signed 1D change — same anatomy the feed's BandRow wears) or,
+    /// for a token whose pulse hasn't landed yet, the plain watched-since
+    /// timestamp it always showed.
+    @ViewBuilder
+    private func watchRow(_ thing: Thing) -> some View {
+        let pulse = TokenPulse.shared.pulse(for: thing)
+        HStack(alignment: .top, spacing: DS.Space.s3) {
+            Text(thing.title)
+                .dsText(.body17).foregroundStyle(DS.textPrimary)
+                .lineLimit(2)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            if let pulse, let last = pulse.closes.last {
+                VStack(alignment: .trailing, spacing: 2) {
+                    Sparkline(closes: pulse.closes, up: pulse.change24h >= 0)
+                    Text(TokenChartStyle.priceText(last))
+                        .dsText(.subhead13).foregroundStyle(DS.textPrimary)
+                        .monospacedDigit()
+                    TokenDeltaPill(change: pulse.change24h, label: "1D", compact: true)
+                }
+            } else {
+                Text(LiveTimeText.short(thing.capturedAt))
+                    .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+            }
+        }
+    }
+
+    /// The sort choice — a menu, not a segmented control, so the header
+    /// keeps its one-line height at every text size.
+    private var sortMenu: some View {
+        Menu {
+            ForEach(TokenWatchSortMode.allCases, id: \.self) { mode in
+                Button {
+                    DSHaptic.selection()
+                    TokenWatchOrder.shared.setMode(mode)
+                } label: {
+                    if mode == TokenWatchOrder.shared.mode {
+                        Label(mode.label, systemImage: "checkmark")
+                    } else {
+                        Text(mode.label)
+                    }
+                }
+            }
+        } label: {
+            HStack(spacing: 3) {
+                Text(TokenWatchOrder.shared.mode.label)
+                Image(systemName: "chevron.up.chevron.down")
+                    .font(.system(size: 10, weight: .semibold))
+            }
+            .dsText(.label12).foregroundStyle(DS.textTertiary)
         }
     }
 
@@ -164,7 +241,19 @@ struct TokenWatchScreen: View {
     }
 
     private func unwatch(at offsets: IndexSet) {
-        let dropped = offsets.map { watched[$0] }
+        unwatch(displayed: watched, at: offsets)
+    }
+
+    /// Drops the tapped rows from whichever array the caller was actually
+    /// showing (`watched`'s own order for the swipe button, `orderedWatched`
+    /// for native Edit-mode delete) — the two can differ once a sort mode
+    /// reorders the list, so an offset only ever means something against the
+    /// array it came from.
+    private func unwatch(displayed items: [Thing], at offsets: IndexSet) {
+        let dropped = offsets.map { items[$0] }
+        for thing in dropped {
+            if let ref = thing.sourceRef { TokenWatchOrder.shared.remove(ref) }
+        }
         SpotlightIndex.remove(ids: dropped.map(\.id))
         for thing in dropped { modelContext.delete(thing) }
         modelContext.saveHonestly()
@@ -173,10 +262,29 @@ struct TokenWatchScreen: View {
         register()
     }
 
-    private func watch() {
-        let q = queryField.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !q.isEmpty, !working else { return }
+    /// A drag in "My order" saves the whole new sequence — the manual order
+    /// IS the displayed order from here on, not a diff against the old one.
+    private func reorder(displayed items: [Thing], from source: IndexSet, to destination: Int) {
+        var refs = items.map { $0.sourceRef ?? "" }
+        refs.move(fromOffsets: source, toOffset: destination)
+        TokenWatchOrder.shared.saveManual(refs)
         DSHaptic.tap()
+    }
+
+    private func watch() {
+        let raw = queryField.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !raw.isEmpty, !working else { return }
+        DSHaptic.tap()
+        // A comma-separated paste ("eth, sol, pepe") builds a whole
+        // watchlist in one submit — each piece resolves independently so one
+        // bad symbol doesn't block the rest (2026-07-15).
+        let queries = raw.split(separator: ",")
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+        if queries.count > 1 {
+            watchMany(queries)
+            return
+        }
         // The debounced search already ran this exact query — its top hit
         // IS what a fresh resolve() would return, so reuse it rather than
         // repeating the network round-trip.
@@ -186,7 +294,7 @@ struct TokenWatchScreen: View {
         }
         working = true
         Task {
-            let token = await TokenWatch.resolve(q)
+            let token = await TokenWatch.resolve(raw)
             working = false
             guard let token else {
                 result = String(localized: "Couldn't find that token — try its contract address.")
@@ -194,6 +302,37 @@ struct TokenWatchScreen: View {
                 return
             }
             add(token)
+        }
+    }
+
+    /// Resolves and watches each piece of a comma-separated list on its own
+    /// — a bad symbol in the middle doesn't stop the rest, and the closing
+    /// message says exactly how many landed vs. which couldn't be found.
+    private func watchMany(_ queries: [String]) {
+        working = true
+        Task {
+            var watchedCount = 0
+            var failed: [String] = []
+            for q in queries {
+                if let token = await TokenWatch.resolve(q) {
+                    if TokenWatch.add(token, context: modelContext) != nil { watchedCount += 1 }
+                } else {
+                    failed.append(q)
+                }
+            }
+            working = false
+            queryField = ""
+            hits = []
+            loadWatched()
+            register()
+            resultIsError = !failed.isEmpty
+            if watchedCount == 0 {
+                result = String(localized: "Couldn't find any of those tokens — try contract addresses.")
+            } else if failed.isEmpty {
+                result = String(localized: "Watching \(watchedCount) tokens")
+            } else {
+                result = String(localized: "Watching \(watchedCount) of \(queries.count) — couldn't find \(failed.joined(separator: ", "))")
+            }
         }
     }
 

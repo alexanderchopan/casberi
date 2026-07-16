@@ -1,4 +1,5 @@
 import SwiftUI
+import SwiftData
 import Photos
 import LinkPresentation
 import AVFoundation
@@ -537,11 +538,21 @@ private struct ScheduleCard: View {
 /// the token; a stat the pair doesn't report simply isn't shown).
 /// Illiquid/dead tokens have no pool anywhere, so it falls back to the
 /// plain link, never an empty chart.
+///
+/// A token discovered elsewhere — GeckoTerminal trending, a pasted
+/// Dexscreener link — draws the exact same chart (trending is discovery,
+/// watching stays the Tokens bridge's explicit tap), so it also carries the
+/// one-verb Watch row (2026-07-15) — the same door TokenQuickSheet already
+/// offers a held-but-unwatched wallet holding, here for any token thing.
 private struct TokenChartContent: View {
     let thing: Thing
     let chain: String
     let address: String
     @State private var stats: TokenStats?
+    @Environment(\.modelContext) private var modelContext
+    @Environment(BridgeStore.self) private var store
+    @State private var resolved: TokenWatch.Resolved?
+    @State private var watchedTitle: String?
 
     /// The watch-time anchor — only when the record really carries one
     /// (tokens watched before the field stay anchorless, honestly).
@@ -550,6 +561,11 @@ private struct TokenChartContent: View {
         else { return nil }
         return (p, thing.capturedAt)
     }
+
+    /// This IS the watchlist's own thing — the row below already says so via
+    /// its "since you watched" anchor, so a second Watch verb would be a
+    /// dead control on the one place it can never apply.
+    private var offersWatch: Bool { thing.source != "Tokens" }
 
     var body: some View {
         VStack(alignment: .leading, spacing: DS.Space.s4) {
@@ -560,10 +576,64 @@ private struct TokenChartContent: View {
                 }
             }
             statStrip
+            if offersWatch { watchRow }
         }
         .padding(.horizontal, DS.Space.s4)
         .padding(.bottom, DS.Space.s3)
         .task { stats = await TokenStats.fetch(chain: chain, address: address) }
+        .task {
+            guard offersWatch else { return }
+            let route = TokenQuickRoute(chain: chain, address: address)
+            if let already = route.watchedThing(in: modelContext) {
+                watchedTitle = already.title
+            } else {
+                resolved = await TokenWatch.search(address).first { $0.id == route.id }
+            }
+        }
+    }
+
+    /// One real verb: Watch — the same one-tap door TokenQuickSheet offers a
+    /// held-but-unwatched holding, styled to sit inline among this content's
+    /// other quiet cards rather than as a full sheet row.
+    @ViewBuilder private var watchRow: some View {
+        if let watchedTitle {
+            HStack(spacing: DS.Space.s2) {
+                Image(systemName: "checkmark")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(DS.confirm)
+                Text("Watching \(watchedTitle)")
+                    .dsText(.callout15).foregroundStyle(DS.textSecondary)
+                Spacer(minLength: 0)
+            }
+            .padding(DS.Space.s3)
+            .background(DS.fillFaint,
+                        in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+        } else if let resolved {
+            Button {
+                DSHaptic.tap()
+                if let watched = TokenWatch.add(resolved, context: modelContext) {
+                    DSHaptic.success()
+                    watchedTitle = watched.title
+                    TokenWatch.registerBridge(store: store, context: modelContext)
+                } else {
+                    watchedTitle = "\(resolved.name) · $\(resolved.symbol)"
+                }
+            } label: {
+                HStack(spacing: DS.Space.s2) {
+                    Image(systemName: "eye")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(DS.textSecondary)
+                    Text("Watch this token")
+                        .dsText(.callout15).foregroundStyle(DS.textPrimary)
+                    Spacer(minLength: 0)
+                }
+                .padding(DS.Space.s3)
+                .background(DS.fillFaint,
+                            in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+        }
     }
 
     /// The market's shape in four quiet numbers — cells only for stats the
