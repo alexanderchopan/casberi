@@ -286,6 +286,17 @@ final class WalletStore {
         if addresses[i].pinnedToHome { addresses[i].nftStripHidden = false }
     }
 
+    /// Renames a watched wallet — the missing half of the label story: an
+    /// ENS add sets the label automatically, but a raw-hex watch had no way
+    /// to ever become "Cold" or "Trading" (a real gap in a multi-wallet
+    /// world, where every surface — feed tags, treemap eyebrows, self-
+    /// transfer titles — leans on this label the moment more than one
+    /// wallet is watched). Empty clears back to the address-only display.
+    func rename(_ id: WatchedAddress.ID, to label: String) {
+        guard let i = addresses.firstIndex(where: { $0.id == id }) else { return }
+        addresses[i].label = label.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
     /// Shows/hides a pinned wallet's NFT strip on Home — the Wallet screen's
     /// own control (the reachable verb: the board's drag driver pre-empts
     /// long-press menus there), plus the strip's long-press remove for

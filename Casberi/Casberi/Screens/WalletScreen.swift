@@ -53,6 +53,17 @@ struct WalletScreen: View {
     /// quick chart sheet when not.
     @State private var openTokenThing: Thing?
     @State private var quickToken: TokenQuickRoute?
+    /// Renaming a watched wallet (2026-07-15) — the missing half of the label
+    /// story: an ENS add sets the label automatically, but a raw-hex watch
+    /// had no way to ever become "Cold" or "Trading". Tap the row's name.
+    @State private var renameTarget: WalletStore.WatchedAddress.ID?
+    @State private var renameDraft = ""
+    /// Each watched wallet's own USD total, watch order (2026-07-15) — feeds
+    /// the allocation bar answering "where is my stuff", not just "what's it
+    /// worth". Same fetch `holdingsChart()` already makes internally; kept
+    /// here too since that call discards the per-wallet totals after
+    /// building its treemap string.
+    @State private var walletTotals: [WalletIngest.HoldingsGroup] = []
     @Environment(\.colorScheme) private var scheme
     @Environment(\.openURL) private var openURL
     /// The one swipe lesson, shared across every screen that pins by swipe
@@ -154,6 +165,25 @@ struct WalletScreen: View {
                                  combined: portfolioSamples,
                                  wallets: wallet.addresses)
         }
+        // Name a watched wallet — the name rides every surface that already
+        // leans on it (feed tags, treemap eyebrows, self-transfer titles).
+        .alert("Name this wallet",
+               isPresented: Binding(get: { renameTarget != nil },
+                                    set: { if !$0 { renameTarget = nil } })) {
+            TextField("Name (e.g. Main, Cold)", text: $renameDraft)
+            Button("Save") { saveRename() }
+            Button("Cancel", role: .cancel) { renameTarget = nil }
+        } message: {
+            Text("A blank name shows the address instead.")
+        }
+    }
+
+    private func saveRename() {
+        guard let id = renameTarget else { return }
+        renameTarget = nil
+        wallet.rename(id, to: renameDraft)
+        loadValueLines()
+        DSHaptic.success()
     }
 
     // MARK: - Portfolio (combined bundle, 2026-07-15)
@@ -208,6 +238,7 @@ struct WalletScreen: View {
             }
             .buttonStyle(.plain)
             .dsListCardRow()
+            if walletTotals.count > 1 { allocationBar }
             if !portfolioHoldings.els.isEmpty {
                 GenRender(id: "root", els: portfolioHoldings.els)
                     .listRowBackground(Color.clear)
@@ -220,6 +251,47 @@ struct WalletScreen: View {
         } footer: {
             Text("Everything you watch, together — read on this iPhone, no account, watch-only.")
                 .dsText(.callout15).foregroundStyle(DS.textSecondary)
+        }
+    }
+
+    /// Where your stuff actually sits (2026-07-15) — a single stacked band,
+    /// one segment per wallet sized by its share of the combined total, each
+    /// tinted in that wallet's face color. A portfolio total answers "how am
+    /// I doing"; this answers the multi-wallet question no total can: where.
+    /// Hidden below $1 total (nothing to allocate) or with only one wallet
+    /// priced (its bar would just be one full-width color).
+    private var allocationBar: some View {
+        let total = walletTotals.reduce(0) { $0 + $1.totalUSD }
+        return Group {
+            if total >= 1 {
+                VStack(alignment: .leading, spacing: DS.Space.s2) {
+                    GeometryReader { geo in
+                        HStack(spacing: 2) {
+                            ForEach(Array(walletTotals.enumerated()), id: \.offset) { _, g in
+                                let share = g.totalUSD / total
+                                if share > 0 {
+                                    Capsule(style: .continuous)
+                                        .fill(g.address.map(WalletFace.tint) ?? DS.fillFaint)
+                                        .frame(width: max(4, geo.size.width * share))
+                                }
+                            }
+                        }
+                    }
+                    .frame(height: 8)
+                    HStack(spacing: DS.Space.s3) {
+                        ForEach(Array(walletTotals.enumerated()), id: \.offset) { _, g in
+                            HStack(spacing: 4) {
+                                Circle()
+                                    .fill(g.address.map(WalletFace.tint) ?? DS.fillFaint)
+                                    .frame(width: 6, height: 6)
+                                Text("\(g.label) \(Int((g.totalUSD / total * 100).rounded()))%")
+                                    .dsText(.label12).foregroundStyle(DS.textSecondary)
+                            }
+                        }
+                    }
+                }
+                .dsListCardRow()
+            }
         }
     }
 
@@ -378,8 +450,10 @@ struct WalletScreen: View {
             async let holdingsDoc = WalletIngest.holdingsChart()
             async let portfolioDoc = WalletIngest.combinedHoldings()
             async let nfts = WalletIngest.nftsByWallet()
+            async let totals = WalletIngest.topHoldingsByWallet()
             let added = await refreshed
             if let doc = await holdingsDoc { holdings.paint(doc) }
+            walletTotals = await totals
             // The combined bundle — total + one merged treemap (nil unless
             // more than one wallet is watched).
             if let group = await portfolioDoc {
@@ -402,7 +476,20 @@ struct WalletScreen: View {
                 return
             }
             resultIsError = false
-            result = added > 0 ? String(localized: "\(added) new") : String(localized: "Connected — watching for activity.")
+            // A wallet that reached the chain but found nothing at all — no
+            // priced holdings, no activity, across every selected chain —
+            // gets an honest, specific nudge rather than the generic "watching
+            // for activity" line, which reads as broken after the first sync
+            // finds truly nothing (2026-07-15: a typo'd address "watches"
+            // forever with no other signal that something might be wrong).
+            let nothingFound = added == 0 && walletTotals.allSatisfy { $0.totalUSD < 1 }
+            if added > 0 {
+                result = String(localized: "\(added) new")
+            } else if nothingFound && wallet.addresses.count == 1 {
+                result = String(localized: "No activity found on your chains yet — double-check the address, or give it a moment.")
+            } else {
+                result = String(localized: "Connected — watching for activity.")
+            }
             let proof = added > 0 ? "\(added) new" : "Synced just now"
             if store.registerConnected(id: "wallet", name: "Wallet", proof: proof,
                                        can: ["Reads your wallet's activity.",
@@ -432,13 +519,21 @@ struct WalletScreen: View {
                     // watching three wallets no longer means three identical
                     // blue icons.
                     WalletFace(address: addr.address, size: 36)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(addr.label.isEmpty ? addr.short : addr.label)
-                            .dsText(.body17).foregroundStyle(DS.textPrimary)
-                        if !addr.label.isEmpty {
-                            Text(addr.short).dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                    Button {
+                        DSHaptic.tap()
+                        renameDraft = addr.label
+                        renameTarget = addr.id
+                    } label: {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(addr.label.isEmpty ? addr.short : addr.label)
+                                .dsText(.body17).foregroundStyle(DS.textPrimary)
+                            if !addr.label.isEmpty {
+                                Text(addr.short).dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                            }
                         }
+                        .contentShape(Rectangle())
                     }
+                    .buttonStyle(.plain)
                     Spacer()
                     // A glanceable value heartbeat (2026-07-15) — the same
                     // split Tokens uses: a bare sparkline on the row, the full

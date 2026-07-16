@@ -412,6 +412,11 @@ enum WalletIngest {
     /// with its top-5-by-value cells ("ETH 34, USDC 12, …").
     struct HoldingsGroup {
         let label: String
+        /// The watched wallet this group belongs to — nil for the combined
+        /// "All wallets" group, which spans every address (2026-07-15, feeds
+        /// the allocation bar which needs to key back to a wallet's face
+        /// color without guessing from the label).
+        var address: String? = nil
         let cells: [String]
         /// Total USD across every counted holding (the >= $1 set, not just
         /// the top-5 cells) and how many that is — the subline's fact.
@@ -518,6 +523,7 @@ enum WalletIngest {
                     guard let hex = await hexAddresses([entry.address]).first,
                           let h = await holdings(addresses: [hex]) else { return (i, nil) }
                     return (i, HoldingsGroup(label: entry.label.isEmpty ? entry.short : entry.label,
+                                             address: entry.address,
                                              cells: h.cells, totalUSD: h.total,
                                              tokenCount: h.count,
                                              topBySymbol: topBySymbol(h.bySymbol)))
