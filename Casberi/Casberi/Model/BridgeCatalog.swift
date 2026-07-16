@@ -52,7 +52,7 @@ enum BridgeCatalog {
         Offer(name: "Reminders",   tagline: "Lists stay in reach",                   group: "Schedule",  connectable: true,
               summary: "Your reminders join your things and stay findable, and Casberi can add one to your list when you ask."),
         Offer(name: "Wallet",      tagline: "Track any wallet's activity",          group: "Wallet",    connectable: true,
-              summary: "Paste a wallet address and its onchain activity — received, sent, tokens in and out, across chains — lands in your feed like anything else. Read-only, public data, no server. Watching an address can never trade or move funds.",
+              summary: "Paste a wallet address — 0x…, an ENS name, or a .sol name — and its onchain activity (received, sent, swapped, tokens in and out) lands in your feed like anything else, across Ethereum, Base, Arbitrum, Optimism, Polygon and Solana. Read-only, public data, no server. Watching an address can never trade or move funds.",
               needsSetup: true),
         Offer(name: "Gmail",       tagline: "Your inbox, findable",                  group: "Mail",      connectable: true,
               summary: "Your recent mail becomes findable things. Connects over IMAP with a Google app password — your real password is never shared, and it's read-only. Needs 2-Step Verification on your Google account.",

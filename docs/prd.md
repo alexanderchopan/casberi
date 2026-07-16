@@ -3387,6 +3387,12 @@ approved unlimited USDT (holding $290K of it) landed exactly 1 thing from a
 
 ## 85. Solana joins the wallet — holdings and `.sol` names, activity honestly held (user, 2026-07-16) — BUILT
 
+> **Superseded in part, same day, by §86:** the activity half shipped once its
+> cost was measured instead of assumed. Everything below about HOLDINGS still
+> stands; the "activity isn't read" copy it describes is gone. Read the two
+> together — §85 is why a partial chain must say so, §86 is why it wasn't
+> partial for long.
+
 Reverses §"Solana held" (2026-07-15), but only halfway, and the half matters.
 The question that started it was "can we resolve `.sol` names?" — and the
 honest answer was: resolving one is trivial, but a resolved name with nowhere
@@ -3456,3 +3462,72 @@ activity. Base MCP (`mcp.base.org`) was evaluated in the same session and
 passed on: it is an MCP *server* for agent harnesses, Casberi has no MCP client,
 and what it offers is mostly writes — which §82's answer-only ruling already
 settled.
+
+## 86. Solana activity — the half that was held, once the cost was measured (user, 2026-07-16) — BUILT
+
+§85 shipped Solana holdings and held its activity, and the reasons given were
+wrong. The user asked the right question — *"why shouldn't we? because we don't
+care? because we love ethereum and EVM?"* — and the honest answer was neither:
+the cost had been ASSERTED, not measured. Measuring it took twenty minutes and
+reversed every argument.
+
+- *"N+1 requests — 11 calls against EVM's 2."* Wrong. Solana's JSON-RPC accepts
+  an ARRAY of calls: ten `getTransaction`s return in ONE ~0.4s request. A Solana
+  wallet costs **2 requests**; the EVM path costs **10** (five chains × two
+  directions). It is the CHEAPER arm.
+- *"No analog to the swap-folding router table."* Wrong. Program ids ARE the
+  analog (`pAMMBay…` = PumpSwap), and the logs name the instruction outright
+  (`Instruction: BuyExactQuoteIn`). Same table, same shape.
+- *"Instruction-level parsing is hard."* Overstated. `jsonParsed` plus a
+  pre/post balance diff derived the right answer on 3 of 3, then 10 of 10.
+
+RULING: a capability may be deferred for cost, but the cost must be MEASURED
+before it counts as a reason. "It's expensive" asserted from architecture
+intuition is not a product decision — it's a guess wearing one. What actually
+survived contact was a design problem, not a cost: not *can* we read Solana
+activity, but *what counts as news*.
+
+**What the measurements taught, all four load-bearing:**
+
+1. **`getSignaturesForAddress` returns MENTIONS, not transfers.** The real
+   asymmetry with EVM, where `getAssetTransfers` only ever returns movement.
+   SIX of toly.sol's ten most recent signatures moved nothing for the owner at
+   all — his address is merely named in other people's PumpSwap buys. Dropped
+   for having no legs.
+2. **The native delta is contaminated by fee and rent.** A wallet that sent
+   299.9 USDC shows −0.002064 SOL, which is not a send. Add the fee back (when
+   the wallet paid it) and the residue lands on EXACTLY 0.000000000 for a
+   fee-only tx and EXACTLY 0.00203928 — the rent-exempt account minimum — for
+   one that opened an account. Hence `nativeNoiseFloor`, a mechanical filter,
+   distinct from the value judgment below.
+3. **Signing is Solana's from/to.** Solana has no from/to for EVM's spam rule to
+   key on, but signers carry the same meaning: a tx you SIGNED you did (EVM's
+   "sent" — always news); one you didn't happened TO you (EVM's "received" —
+   filtered). Every one of toly.sol's ten was unsigned by him; all eight of
+   Binance's were signed. The mapping held on both.
+4. **Solana's noise floor is a different animal.** pump.fun creator fees arrive
+   constantly at ~$0.43. `dustFloorUSD` mirrors `holdingFloor` ($1.99) on
+   purpose — the line that says a position isn't worth a treemap cell says a
+   windfall isn't worth a thing — and applies ONLY to passive receipts, never to
+   something you signed.
+
+The filters compose into the honest result: toly.sol lands **0 of 10** (he did
+nothing; it was all done around him), Binance lands **10 of 10** ("Sent 39.84
+SOL", "Sent 35,289,738 PUMP", "Sent 124.03 $WIF"). A real swapper produced
+"Swapped 5,200 Svaicf → 2.44 SOL on PumpSwap".
+
+**Naming is a gate, not a decoration.** `jsonParsed` gives mints, and a mint is
+a hash — which the design law forbids in a title. Alchemy doesn't serve Metaplex
+DAS. Dexscreener, which the Tokens bridge uses, fails on exactly the mints that
+matter: it never names USDC (a pair's QUOTE carries no symbol) and it named
+wrapped SOL **"FOGO"**, because SVM forks reuse mint addresses and its pair list
+spans chains. Jupiter's keyless search answered all four correctly, batched 8-in
+8-out. A leg that still can't be named kills the whole title rather than
+printing a mint — the move drops instead.
+
+Two things this cost that are worth remembering: Jupiter's endpoint is a SEARCH,
+not a lookup, so an unknown mint can come back matched to some other token by
+name — keying the result off the mint the ANSWER carries (never the one asked
+for) is what makes a stray harmless. And the odd-looking symbols are real:
+`Ctgbpg` is CAPE GRID TOWN PENGUIN, `Svaicf` is SILICON CHIP VALLEY FORGE. Both
+looked like base58 fragments and both survived checking.
