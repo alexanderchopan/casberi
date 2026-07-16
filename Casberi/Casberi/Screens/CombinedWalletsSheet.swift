@@ -112,7 +112,7 @@ struct CombinedWalletsSheet: View {
                 let last = closes.last ?? 0
                 let change = first > 0 ? (last - first) / first : 0
                 TokenChartPlot(chart: TokenChart(closes: closes, price: last, change: change),
-                               accent: TokenChartStyle.accent(up: change >= 0, scheme: scheme),
+                               accent: TokenChartStyle.accent(change: change, scheme: scheme),
                                height: 150, pulses: false)
                 TokenDeltaPill(change: change,
                                label: "since \(combined.first!.at.formatted(.dateTime.month(.abbreviated).day()))")

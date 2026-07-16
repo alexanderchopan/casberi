@@ -397,14 +397,106 @@ enum ProbeHooks {
                       }.joined(separator: ", "))
             }
         },
-        // `-walletAddress <0x…>` (or `<0x…>|<Label>`) watches a wallet headlessly.
+        // `-clearWallets YES` empties the watch list. The only way to test a
+        // SINGLE-family watch list (Solana-only, say) on a device that already
+        // watches others: `simctl spawn defaults delete` can't do it — the
+        // CLI's write races cfprefsd and the app reads the stale value anyway
+        // (paid for 2026-07-16). Declared BEFORE `walletAddress` because hooks
+        // run in list order, so this clears first and the add lands after.
+        Hook(key: "clearWallets") { _, _ in
+            let before = WalletStore.shared.addresses.count
+            WalletStore.shared.addresses = []
+            NSLog("Clear-wallets probe: %d -> 0", before)
+        },
+        // `-walletAddress <0x…|ENS|.sol>` (or `<addr>|<Label>`) watches a wallet
+        // headlessly. A Solana address/name needs its chain on or it can never
+        // read — the same guard the Wallet screen's add path applies.
         Hook(key: "walletAddress") { spec, context in
             let parts = spec.split(separator: "|", maxSplits: 1).map(String.init)
             guard let address = parts.first else { return }   // "" crashed on parts[0]
+            if SNS.isAddress(address) || SNS.looksLikeName(address) {
+                WalletChainStore.shared.ensureEnabled("solana-mainnet")
+            }
             WalletStore.shared.add(address, label: parts.count > 1 ? parts[1] : "")
             Task { @MainActor in
                 let n = await WalletIngest.refresh(context: context)
                 NSLog("Wallet probe: %@ new", n.map(String.init) ?? "FAILED")
+            }
+        },
+        // `-approvalProbe <blocksBack|YES>` runs the token-approval sync over
+        // the watched wallets and NSLogs the landed count. A numeric spec
+        // rewinds every cursor that many blocks first, so real past approvals
+        // land and the whole path verifies without waiting for a live one.
+        // Pairs with `-walletAddress`.
+        Hook(key: "approvalProbe") { spec, context in
+            Task { @MainActor in
+                let n = await WalletApprovals.probe(context: context, blocksBack: Int(spec))
+                NSLog("Approval probe: %d landed", n)
+            }
+        },
+        // `-solNameProbe <name.sol>` resolves a Solana name through SNS and
+        // NSLogs the address (or the honest miss) — the fastest check that the
+        // resolver still answers, without touching the corpus.
+        Hook(key: "solNameProbe") { spec, _ in
+            Task {
+                let address = await SNS.resolve(spec)
+                NSLog("SOL name probe: %@ -> %@", spec, address ?? "UNRESOLVED")
+            }
+        },
+        // `-corpusDupeProbe YES` reports any sourceRef the corpus holds TWICE.
+        // `Thing.sourceRef` carries no unique constraint, so every bridge's
+        // dedupe rests entirely on its own `existing.contains(ref)` check — and
+        // re-landing is the wallet path's historical bug class (the swap-legs
+        // fix of 2026-07-13 exists for exactly this). A standing probe turns
+        // "did it re-land?" from an argument into a number.
+        Hook(key: "corpusDupeProbe") { _, context in
+            let refs = ((try? context.fetch(FetchDescriptor<Thing>())) ?? [])
+                .compactMap(\.sourceRef)
+            var counts: [String: Int] = [:]
+            for ref in refs { counts[ref, default: 0] += 1 }
+            let dupes = counts.filter { $0.value > 1 }
+            NSLog("Corpus dupe probe: %d ref(s), %d distinct, %d DUPLICATED",
+                  refs.count, counts.count, dupes.count)
+            for (ref, n) in dupes.sorted(by: { $0.value > $1.value }).prefix(5) {
+                NSLog("  x%d %@", n, ref)
+            }
+        },
+        // `-solActivityProbe <base58>` walks the Solana activity read for one
+        // address and NSLogs each step — signatures in, what moved, whether it
+        // was signed, the spam verdict, and the title it would land. The count
+        // alone (`-walletAddress`) can't tell "nothing happened" from "the
+        // filter ate it", and for Solana that distinction IS the feature.
+        Hook(key: "solActivityProbe") { address, _ in
+            Task { @MainActor in
+                let key = IngestSupport.alchemyKey
+                guard let moves = await SolanaActivity.moves(address: address, key: key) else {
+                    NSLog("SOL activity probe: FAILED — RPC unreachable")
+                    return
+                }
+                let price = await SolanaActivity.solPrice(key: key)
+                let held = await WalletIngest.heldPricedContracts(addresses: [address])
+                let symbols = await SolanaActivity.symbols(for: moves.flatMap { $0.legs.map(\.mint) })
+                NSLog("SOL activity probe: %d move(s) with legs (SOL $%@, held %@)",
+                      moves.count, price.map { String(format: "%.2f", $0) } ?? "?",
+                      held.map { "\($0.count)" } ?? "UNREAD")
+                for m in moves {
+                    let news = SolanaActivity.isNews(m, heldPriced: held, solPrice: price)
+                    let title = SolanaActivity.title(for: m, symbols: symbols)
+                    NSLog("  %@ signed=%@ legs=%d → %@",
+                          news ? "NEWS " : "drop ", m.signed ? "Y" : "n", m.legs.count,
+                          news ? (title ?? "UNNAMEABLE (dropped)") : "—")
+                }
+            }
+        },
+        // `-holdingsProbe YES` runs the Diagnostics sheet's holdings walk
+        // headlessly, NSLogging each step — the treemap's read (resolution →
+        // Portfolio call → cells) verified without driving the UI. Pairs with
+        // `-walletAddress`.
+        Hook(key: "holdingsProbe") { _, _ in
+            Task { @MainActor in
+                for line in await WalletIngest.holdingsDiagnostic() {
+                    NSLog("Holdings probe: %@", line)
+                }
             }
         },
         // `-pinWallet YES` pins every currently-watched wallet's holdings

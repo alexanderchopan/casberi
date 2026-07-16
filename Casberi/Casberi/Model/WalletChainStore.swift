@@ -21,26 +21,43 @@ final class WalletChainStore {
     /// shows. Each is verified to read end-to-end (transfers + holdings + prices,
     /// and a live tx explorer) before it lands here; adding a chain the Portfolio
     /// prices endpoint doesn't cover would 400 the whole holdings read.
-    /// (Solana was evaluated 2026-07-15 and held: getAssetTransfers is EVM-only,
-    /// so its activity can't ride this pipeline — a separate non-EVM path.)
+    ///
+    /// Solana (2026-07-16) arrived in two halves. Holdings first (prd §85): the
+    /// Portfolio endpoint takes `solana-mainnet` on the same key, so a `.sol`
+    /// name lands a wallet with a real treemap. Activity followed the same day
+    /// (prd §86) once the cost was MEASURED rather than assumed — it rides
+    /// `SolanaActivity`, not `getAssetTransfers`, which stays EVM-only (hence
+    /// `WalletIngest.transferChains`). Solana is a full chain here now; the
+    /// split lives in HOW each half is read, not in what a person gets.
     static let selectable: [(id: String, name: String)] = [
         ("eth-mainnet",      "Ethereum"),
         ("base-mainnet",     "Base"),
         ("arb-mainnet",      "Arbitrum"),
         ("opt-mainnet",      "Optimism"),
         ("matic-mainnet",    "Polygon"),
+        ("solana-mainnet",   "Solana"),
         ("robinhood-mainnet","Robinhood"),
     ]
     static var allNetworkIDs: [String] { selectable.map(\.id) }
 
-    /// What a wallet reads by default — the five established chains. Robinhood
-    /// Chain (added 2026-07-15) is genuinely readable but niche and new, so it's
-    /// available in the picker yet OFF by default: a chain you turn on, not one
-    /// every wallet spends requests on.
+    /// What a wallet reads by default. Robinhood Chain (added 2026-07-15) is
+    /// genuinely readable but niche and new, so it's available in the picker yet
+    /// OFF by default: a chain you turn on, not one every wallet spends requests
+    /// on. Solana is ON, and unlike Robinhood it costs an EVM-only person
+    /// nothing — the holdings read routes each address to the chains its own
+    /// SHAPE can live on (`WalletIngest.networks(for:)`), so a `0x…` wallet
+    /// never spends a request on Solana and vice versa.
     static let defaultNetworkIDs = ["eth-mainnet", "base-mainnet", "arb-mainnet",
-                                    "opt-mainnet", "matic-mainnet"]
+                                    "opt-mainnet", "matic-mainnet", "solana-mainnet"]
 
     private var selected: [String] { didSet { persist() } }
+
+    /// One-time seed of a chain added AFTER a person already chose their set.
+    /// A saved set that predates an option doesn't mean "off" — it means never
+    /// asked; treating the two the same would leave every existing wallet
+    /// unable to read a `.sol` name it can now resolve. Seeded once, so turning
+    /// Solana back off afterwards sticks.
+    private static let solanaSeededKey = "wallet.chains.solanaSeeded.v1"
 
     private init() {
         if let data = UserDefaults.standard.data(forKey: Self.key),
@@ -50,9 +67,27 @@ final class WalletChainStore {
             let known = Set(Self.allNetworkIDs)
             selected = saved.filter { known.contains($0) }
             if selected.isEmpty { selected = Self.defaultNetworkIDs }
+            let defaults = UserDefaults.standard
+            if !defaults.bool(forKey: Self.solanaSeededKey) {
+                defaults.set(true, forKey: Self.solanaSeededKey)
+                if !selected.contains("solana-mainnet") {
+                    selected = Self.allNetworkIDs.filter {
+                        selected.contains($0) || $0 == "solana-mainnet"
+                    }
+                }
+            }
         } else {
-            selected = Self.defaultNetworkIDs   // default: the five established chains
+            selected = Self.defaultNetworkIDs   // a fresh wallet reads the defaults
+            UserDefaults.standard.set(true, forKey: Self.solanaSeededKey)
         }
+    }
+
+    /// Turns a chain on if it isn't already — used when a watched address can
+    /// ONLY be read on that chain (adding a `.sol` name with Solana switched
+    /// off would otherwise land a wallet that can never show anything).
+    func ensureEnabled(_ id: String) {
+        guard Self.allNetworkIDs.contains(id), !selected.contains(id) else { return }
+        selected = Self.allNetworkIDs.filter { selected.contains($0) || $0 == id }
     }
 
     var activeIDs: [String] { selected }

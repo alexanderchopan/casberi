@@ -3265,3 +3265,194 @@ bogus job id returns 404 on a good key and 401 on a bad one.
 Debug: `-byokKey "bankr:<key>"` + `-byokProbe "<query>"` (a bogus key
 verifies the honest 401 → nil path free, and the empty-corpus divergence —
 the probe reaches Bankr instead of stopping at "nothing matches").
+
+Bankr also takes a catalog SEAT, Venice's precedent exactly (§70 ①): an
+Agents-shelf offer with its own setup screen (`Screens/BankrSetupScreen.swift`,
+route + seat id `bankr`), sharing the one vault key — connect it there or in
+Settings → Your key, either lands the same key. All four catalog surfaces
+moved in the same session per the sync rule: the offer, the website Agents
+shelf, the website hero rain, and the onboarding pile. The onboarding pile
+was FULL (25 cubes = a 5×5 grid; index 25 starts the Apple row), so Bankr
+SWAPPED Calendly's cube rather than appending — Cal.com already carries
+scheduling there, and the pile is a curated subset, never the catalog.
+
+## 83. Three honesty repairs the nightly audit found (audit, 2026-07-16) — BUILT
+
+The 2026-07-16 screen audit found no regressions but three live honesty
+violations, all shipped, all the same shape: a surface stating something the
+data underneath doesn't support. Fixed together.
+
+① **A disabled button has to LOOK disabled.** `VeniceSetupScreen` and
+`BankrSetupScreen` each hand-rolled their Connect button: `.buttonStyle(.plain)`
+over a custom `.background(DS.tint)`, then `.disabled(...)` when the key field
+is empty. SwiftUI dims a plain-style button's *label*, not a background you
+painted yourself — so both rendered full-strength blue and tappable-looking
+while inert. That is the "no dead controls" rule broken by a styling detail,
+not by intent. Both now wear the off state (`DS.gray200` + `DS.textTertiary`)
+the way the shared `BridgeFieldRow` always has. RULING: a hand-rolled button
+that sets its own background MUST also swap that background on the disabled
+path — `.disabled` alone is not a visual state. Prefer `BridgeFieldRow`.
+
+② **A market with no book has no odds.** Kalshi's setup list read
+`last_price_dollars` as the probability. Kalshi leaves a market listed long
+after its order book empties (yes_bid 0 / yes_ask 1 = no orders either side),
+leaving a stale residual trade behind — often $0.0010. Printed, that read
+"0%", so six of the eight "busiest open markets, live" claimed the USA,
+France, Portugal and Morocco each had a 0% chance of winning a World Cup they
+haven't played. Lifetime-volume sorting floated exactly those dead books to
+the top.
+
+The fix reads the market the way the market states itself: the book BRACKETS
+the answer — yes trades somewhere in [bid, ask] — so `KalshiWatch.bookMid` is
+the midpoint of that bracket, and `last_price` is not consulted at all. A
+stale trade is not a price. One-sided books stay listed and are quoted from
+their bracket (a 99¢ bid with no ask is a near-certainty; a 1¢ ask with no
+bid is a long shot) — an earlier draft demanding a two-sided book blanked
+exactly those, i.e. the game a team has all but won. Bid 0 / ask 1 is the one
+bracket that says nothing (the whole range = no orders either side): that
+market quotes nothing, so the row doesn't list and a watched one takes the
+card's honest unavailable fallback. Deliberately NOT a coin-flip default —
+an empty book's mid is 50%, which would invent a market where there is none.
+`previousProbability` reads the PREVIOUS book the same way
+(`previous_yes_bid/ask`), so the "vs last" delta subtracts like for like
+instead of mid-minus-last-trade, which manufactured half a spread of movement.
+
+RULING: never derive a displayed price from a stale last trade. Quote the
+live book, or say nothing — and quote it the same way on both sides of any
+delta.
+
+③ **Zero has no direction.** The delta label formatted with `%+.1f%%` and took
+its ink from `change >= 0`, so a −0.04% move printed red "−0.0%" — a loss the
+number itself denies — and +0.04% printed green "+0.0%". Flat is now its own
+state (`TokenChartStyle.isFlat`, `accent(change:)`): no sign, quiet
+`DS.textTertiary`, at exactly the boundary where the printed number would
+round to 0.0. Green-up/red-down still carries real moves; it just stops
+claiming one that rounding erased. RULING: the sign and the state color are
+only honest once the change survives the rounding you print at.
+
+Also gated: `RSSScreen`'s toolbar `EditButton` — every other section there is
+gated on `!feeds.isEmpty`, but Edit wasn't, so a user with zero feeds got a
+live Edit over an empty list.
+
+## 84. Approvals — the wallet's security surface, with Revoke.cash as the write (user, 2026-07-16) — BUILT
+
+**Ruling.** Token approvals join the wallet bridge as a READ: a new `Approval`
+/ `ApprovalForAll` event on a watched wallet lands as a thing ("Approved
+0x4531…cd4e to spend unlimited USDT"), and the Wallet screen carries an
+Approvals section — one row per EVM wallet, opening that wallet's Revoke.cash
+dashboard. The WRITE stays off the table entirely: revoking is an on-chain
+transaction, Casberi never executes transactions (§82's line), so the thing's
+content and the row both point at the tool built for it. Revoke.cash Premium
+was evaluated first and offers nothing to integrate — it's a consumer
+subscription (batch/auto-revoking), no API; the free per-address page
+(`revoke.cash/address/<0x…>?chainId=…`, verified live) is the whole
+integration surface.
+
+**Shape.** `Model/WalletApprovals.swift`, riding inside `WalletIngest.refresh`
+(same running guard, every sync path). Incremental by design: first sight of a
+(wallet, chain) seeds a block cursor silently — the NFT-arrival baseline idiom,
+no history dump on connect — and each pass reads only the gap via
+`eth_getLogs` filtered on the OWNER topic. ERC-721 single-token grants (the
+4-topic `Approval` variant) are skipped as noise; revokes land too ("Revoked
+1inch's USDT approval") — good news is still news. Newest 10 per (wallet,
+chain) per pass; real block timestamps (capped) so an approval found after a
+week away lands dated when it happened.
+
+**Two lessons paid for (2026-07-16, measured before shipping):**
+- **Alchemy's free tier caps `eth_getLogs` at a TEN-block range** — the whole
+  read runs on per-chain public keyless RPCs instead (mevblocker/onfinality for
+  Ethereum, the chains' own official RPCs for Base/Arbitrum/Optimism,
+  onfinality for Polygon), each with its measured max range, chunked at up to
+  16 chunks per pass. Only `alchemy_getTokenMetadata` (symbol/decimals for
+  titles) stays on the Alchemy key. Don't swap hosts without re-measuring;
+  drpc.org and most aggregator "free" RPCs are quota-flaky.
+- **Spam tokens EMIT FAKE Approval events naming any famous address as owner**
+  — vitalik.eth "approved" 3,832 times across ~3,800 junk contracts in one
+  measured window, none signed by him. So approvals wear the transfer feed's
+  held-filter: an ERC-20 approval lands only for a token the wallet holds
+  above the dust floor, an operator grant only for a collection among its
+  non-spam NFT holdings — and the pass fails CLOSED (cursor untouched, retry
+  next pass) when the held set couldn't be read. A fabricated "you approved X"
+  is worse than a delayed one.
+
+**Out of scope, deliberately:** a native open-approvals readout (full-history
+backfill is the expensive read — that's Revoke.cash's own moat and what their
+page already shows one tap away); Solana and Robinhood Chain (no EVM
+approvals / not on Revoke.cash — a door to a 404 would be a dead control).
+
+**Probe:** `-approvalProbe <blocksBack|YES>` — rewinds every cursor N blocks,
+runs the sync, NSLogs the landed count. Verified live: a wallet that had just
+approved unlimited USDT (holding $290K of it) landed exactly 1 thing from a
+5,000-block window while the spam flood landed 0.
+
+## 85. Solana joins the wallet — holdings and `.sol` names, activity honestly held (user, 2026-07-16) — BUILT
+
+Reverses §"Solana held" (2026-07-15), but only halfway, and the half matters.
+The question that started it was "can we resolve `.sol` names?" — and the
+honest answer was: resolving one is trivial, but a resolved name with nowhere
+to land is worse than an unresolved one. `toly.sol` already failed *honestly*
+("Couldn't resolve — check the name or paste a 0x address"); shipping the
+resolver alone would have replaced that with a watched wallet, permanently
+empty, indistinguishable from a wallet that holds nothing. So the resolver
+ships WITH somewhere to land, or not at all.
+
+**What reads: holdings.** Alchemy's Portfolio `by-address` takes
+`solana-mainnet` on the same key the EVM chains use — no new provider, no
+dashboard change, no account. A `.sol` wallet gets a real treemap, value
+samples, and a face.
+
+**What doesn't: activity.** `alchemy_getAssetTransfers` is an EVM method with
+no Solana equivalent — Solana's activity needs getSignaturesForAddress plus
+per-signature pre/post balance diffing, a genuinely separate ingest, and the
+swap-folding router table has no Solana analog. That path is NOT built, and
+the surfaces say so rather than implying otherwise — all four of them: the add
+field's footer ("Solana reads holdings only, for now"); the catalog summary,
+which promised activity "across chains" and now names the five EVM chains it
+means; and, for a Solana-only watch list, both the sync line ("Connected —
+reading holdings. Solana activity isn't read yet.") instead of the generic
+"watching for activity", and the bridge's own `can:` list, which otherwise told
+the Apps page it "reads your wallet's activity" for a person whose activity has
+no path. Adding a chain to the picker is what made the last three false — the
+lesson is that a partial chain's blast radius is every surface that ever
+generalised over "chains". `WalletIngest.transferChains` is what enforces the
+split; `ChainKind` is what makes it a property of the chain, not a special case
+sprinkled at call sites.
+
+RULING: a chain may join the wallet **partially**, but every surface it touches
+must state which half it got. A capability gap is shippable; a capability gap
+the UI papers over is not.
+
+**Four things measured, all counter-intuitive, all load-bearing:**
+
+- **`withPrices` doesn't price SPL.** It prices EVM tokens inline, but on
+  Solana returns a price for native SOL and *nothing else* — two wallets, 100
+  tokens each, exactly one priced. Alchemy knows the prices; that endpoint just
+  won't join them. So `WalletIngest.priceSPL` sends the mints back out through
+  the Prices endpoint (25/request, its cap). Without it a Solana treemap shows
+  SOL alone and reads "holds only SOL" — false.
+- **Native decimals can't be read off the response.** The native coin comes back
+  with null metadata, and the old code defaulted to 18. SOL is 9. At 18, SOL
+  computes to $0.00005, drops under `holdingFloor`, and *vanishes silently* —
+  the treemap would have been empty with no error anywhere. Decimals now live on
+  `Chain`.
+- **Base58 is case-sensitive.** Contracts were lowercased at the source, which
+  is free for EVM hex and destroys a Solana mint. `HeldToken.contract` keeps its
+  original case now; `heldPricedContracts` lowercases at the point of EVM
+  comparison instead (it only ever meets EVM legs).
+- **A Solana-only watch list ran zero transfer jobs**, so `reachedAny` was
+  vacuously false and `refresh` returned nil — the screen painted "Couldn't
+  reach the chain" over a working treemap, and the bridge never registered as
+  connected. Reachability for that person is the holdings read, not the transfer
+  sync.
+
+**Free rides:** `chainSlug["solana-mainnet"] = "solana"` — both chart tiers
+(GeckoTerminal, Dexscreener) spell it that way, so an SPL cell's tap opens a
+real chart like any ERC-20's. And Basenames already resolved: `jesse.base.eth`
+comes back correct from the existing ENS resolver, since Basenames are ENS
+subnames — no work needed, checked before assuming.
+
+**Held deliberately:** Solana NFTs (Alchemy's NFT API is EVM-only) and Solana
+activity. Base MCP (`mcp.base.org`) was evaluated in the same session and
+passed on: it is an MCP *server* for agent harnesses, Casberi has no MCP client,
+and what it offers is mostly writes — which §82's answer-only ruling already
+settled.

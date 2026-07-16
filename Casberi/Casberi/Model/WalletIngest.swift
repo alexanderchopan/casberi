@@ -9,15 +9,33 @@ import SwiftData
 /// only by their rules, so it couldn't stay serverless; Alchemy can.)
 enum WalletIngest {
 
+    /// Which family a chain belongs to — the wallet's two pipelines, not a
+    /// cosmetic tag. Both read holdings through the same Portfolio call, but
+    /// ACTIVITY forks: EVM rides `alchemy_getAssetTransfers` here, Solana rides
+    /// `SolanaActivity` (batched getSignaturesForAddress + getTransaction),
+    /// because that method has no Solana equivalent. Same feed either way.
+    private enum ChainKind { case evm, solana }
+
     /// Every chain we CAN read, and where a tx opens. One `getAssetTransfers`
-    /// per direction per chain.
-    private struct Chain { let network, explorer, symbol: String }
+    /// per direction per EVM chain.
+    private struct Chain {
+        let network, explorer, symbol: String
+        var kind: ChainKind = .evm
+        /// The native coin's decimals. The Portfolio endpoint returns a native
+        /// balance with NULL metadata, so this can't be read off the response —
+        /// and getting it wrong is silent, not loud: SOL scaled by 10^18 instead
+        /// of 10^9 computes to $0.00005, drops under `holdingFloor`, and the
+        /// coin simply vanishes from the treemap (measured 2026-07-16).
+        var nativeDecimals: Int = 18
+    }
     private static let allChains: [Chain] = [
         Chain(network: "eth-mainnet",  explorer: "https://etherscan.io/tx/",              symbol: "ETH"),
         Chain(network: "base-mainnet", explorer: "https://basescan.org/tx/",              symbol: "ETH"),
         Chain(network: "arb-mainnet",  explorer: "https://arbiscan.io/tx/",               symbol: "ETH"),
         Chain(network: "opt-mainnet",  explorer: "https://optimistic.etherscan.io/tx/",   symbol: "ETH"),
         Chain(network: "matic-mainnet",explorer: "https://polygonscan.com/tx/",           symbol: "MATIC"),
+        Chain(network: "solana-mainnet", explorer: "https://solscan.io/tx/",              symbol: "SOL",
+              kind: .solana, nativeDecimals: 9),
         Chain(network: "robinhood-mainnet", explorer: "https://robinhoodchain.blockscout.com/tx/", symbol: "ETH"),
     ]
 
@@ -29,6 +47,23 @@ enum WalletIngest {
     private static var chains: [Chain] {
         let active = Set(WalletChainStore.activeNetworkIDs())
         return allChains.filter { active.contains($0.network) }
+    }
+
+    /// The chains the TRANSFER sync reads — EVM only, since that pipeline IS
+    /// `getAssetTransfers`. Firing it at `solana-mainnet` would spend a request
+    /// per watched address per direction to be told the method doesn't exist.
+    private static var transferChains: [Chain] { chains.filter { $0.kind == .evm } }
+
+    /// The networks one address can actually live on, by its SHAPE — base58
+    /// reads Solana, `0x…` reads the EVM chains. This is what makes Solana free
+    /// for an EVM-only person: their wallets never carry `solana-mainnet` into
+    /// the holdings call, so turning it on costs them no requests. (The endpoint
+    /// tolerates the mismatch — measured 2026-07-16, it returns nothing for the
+    /// wrong pair rather than 400ing — but paying for a guaranteed-empty read on
+    /// every address every foreground is waste, not safety.)
+    private static func networks(for address: String) -> [String] {
+        let wantsSolana = SNS.isAddress(address)
+        return chains.filter { ($0.kind == .solana) == wantsSolana }.map(\.network)
     }
 
     @MainActor private static var running = false
@@ -49,11 +84,16 @@ enum WalletIngest {
         running = true
         defer { running = false }
 
-        // Watched entries can be ENS names; the Transfers API needs hex —
+        // Watched entries can be ENS or `.sol` names; the APIs need an address —
         // resolve first, or nothing ever lands (the bug: a watched name
         // returned empty silently).
-        let addresses = await hexAddresses(watched)
+        let addresses = await resolvedAddresses(watched)
         guard !addresses.isEmpty else { return nil }
+        // The transfer sync is EVM-only, so a Solana wallet contributes nothing
+        // here — it still reads holdings below. A person watching ONLY Solana
+        // has no transfer jobs at all, which must not read as "unreachable":
+        // `reachedAny` stays false, and the holdings path is what speaks.
+        let evmAddresses = evmOnly(addresses)
 
         let existing = IngestSupport.existingSourceRefs(context)
 
@@ -66,8 +106,8 @@ enum WalletIngest {
         // requests for 3 wallets) drew silent 429s that the old serial
         // pacing never triggered (review 2026-07-13). `boundedGather`
         // preserves job order, matching `topHoldingsByWallet` below.
-        let jobs = addresses.flatMap { address in
-            chains.flatMap { chain in
+        let jobs = evmAddresses.flatMap { address in
+            transferChains.flatMap { chain in
                 [true, false].map { received in (address, chain, received) }   // received (to) + sent (from)
             }
         }
@@ -112,11 +152,14 @@ enum WalletIngest {
         // floor) is dropped from the ACTIVITY feed too now (2026-07-15), the
         // same way the holdings treemap already drops it. One batched read for
         // the whole pass.
-        let heldPriced = await heldPricedContracts(addresses: addresses)
+        let heldByOwner = await heldPricedContractsByOwner(addresses: addresses)
+        let heldPriced = heldByOwner.map { Set($0.values.joined()) }
         // …and the non-spam NFT contracts each wallet holds, for the NFT arm of
         // the same filter — an airdropped junk NFT is dropped from the feed the
-        // way a junk token is (2026-07-15). Keyed "address|network".
-        let ownedNFTs = await ownedNFTContracts(addresses: addresses)
+        // way a junk token is (2026-07-15). Keyed "address|network". EVM only:
+        // `getContractsForOwner` is an EVM method, and the legs it filters are
+        // EVM legs anyway.
+        let ownedNFTs = await ownedNFTContracts(addresses: evmAddresses)
 
         // Fold each wallet's legs by (address, chain, tx hash): a hash that
         // BOTH sends and receives for one wallet is a trade — one
@@ -182,7 +225,37 @@ enum WalletIngest {
             added += 1
         }
         if added > 0 { context.saveHonestly() }
-        return reachedAny ? added : nil
+        // New token approvals ride the same pass (2026-07-16, prd §84) — an
+        // incremental filtered-log read per wallet per chain, landing
+        // "Approved X to spend unlimited Y" things whose link is the wallet's
+        // Revoke.cash page. Inside the running guard like everything above.
+        let approvalsAdded = await WalletApprovals.sync(context: context,
+                                                        addresses: evmAddresses,
+                                                        existing: existing,
+                                                        heldByOwner: heldByOwner,
+                                                        ownedNFTs: ownedNFTs)
+        added += approvalsAdded
+        // …and the Solana arm (prd §86), which lands its own things off its own
+        // two calls. Inside the running guard like everything above.
+        let solana = await solanaSync(context: context, addresses: solanaOnly(addresses),
+                                      existing: existing, heldPriced: heldPriced)
+        added += solana.added
+
+        // `reachedAny` speaks only for the EVM TRANSFER sync, which a
+        // Solana-only watch list never runs — left alone it is vacuously false
+        // and the caller paints "Couldn't reach the chain" over a wallet whose
+        // treemap is right there showing SOL. Each arm gets to vouch for
+        // itself: Solana's RPC answering counts, and failing that the holdings
+        // read does (`heldPriced` is non-nil exactly when the Portfolio API
+        // answered) — so a Solana wallet whose activity RPC is down but whose
+        // holdings load is still honestly "reached".
+        // The approvals arm rides PUBLIC RPCs, not Alchemy — things it landed
+        // are proof of reach in their own right (review 2026-07-16: without
+        // this, a partial Alchemy outage could paint "couldn't reach" over
+        // approvals that just landed).
+        let reached = reachedAny || solana.reached || approvalsAdded > 0
+            || (evmAddresses.isEmpty && heldPriced != nil)
+        return reached ? added : nil
     }
 
     /// One transfer leg in flight through a refresh pass — the raw Alchemy
@@ -321,15 +394,108 @@ enum WalletIngest {
         return names
     }
 
-    /// Resolves watched entries to hex, dropping any ENS name that won't
+    /// Resolves watched entries to the addresses the APIs actually read — ENS
+    /// names to hex, `.sol` names to base58 — dropping any name that won't
     /// resolve (a typo'd name simply lands nothing, honestly).
-    private static func hexAddresses(_ raw: [String]) async -> [String] {
+    ///
+    /// The result deliberately MIXES families: the holdings read serves both and
+    /// routes each address by shape. Callers that can only serve EVM (the
+    /// transfer sync, the NFT reads) narrow with `evmOnly`. `.sol` is tried
+    /// before ENS because `ENS.looksLikeName` takes ANY dotted string — it would
+    /// happily send `toly.sol` to the ENS resolver, which answers with a null
+    /// address rather than an error.
+    static func resolvedAddresses(_ raw: [String]) async -> [String] {
         var out: [String] = []
         for a in raw {
-            if ENS.isHexAddress(a) { out.append(a) }
+            if ENS.isHexAddress(a) || SNS.isAddress(a) { out.append(a) }
+            else if SNS.looksLikeName(a) {
+                if let sol = await SNS.resolve(a) { out.append(sol) }
+            }
             else if let hex = await ENS.resolve(a) { out.append(hex) }
         }
         return out
+    }
+
+    /// The hex addresses among a resolved set. The EVM-only pipelines can't do
+    /// anything with a base58 one but spend a request finding out.
+    private static func evmOnly(_ addresses: [String]) -> [String] {
+        addresses.filter { ENS.isHexAddress($0) }
+    }
+
+    /// The base58 addresses among a resolved set — the Solana arm's input.
+    private static func solanaOnly(_ addresses: [String]) -> [String] {
+        addresses.filter { SNS.isAddress($0) }
+    }
+
+    /// Lands the Solana half of a pass (prd §86) — the non-EVM ingest. Sits
+    /// beside the EVM arm rather than inside it because the two share almost
+    /// nothing: a different call shape (batched JSON-RPC, not
+    /// `getAssetTransfers`), a different notion of direction (signing, not
+    /// from/to) and a different noise problem. What they DO share is the spam
+    /// rule's input — `heldPriced`, already fetched once for the whole pass —
+    /// and the honesty contract: `reached` false means the RPC was unreachable,
+    /// never "nothing happened".
+    ///
+    /// Returns the count landed and whether Solana was actually reached.
+    @MainActor
+    private static func solanaSync(context: ModelContext, addresses: [String],
+                                   existing: Set<String>,
+                                   heldPriced: Set<String>?) async -> (added: Int, reached: Bool) {
+        // Nothing to do, and — crucially — not a failure: `reached` false here
+        // must not make the caller cry "couldn't reach the chain".
+        guard !addresses.isEmpty, chains.contains(where: { $0.kind == .solana }),
+              let solanaChain = allChains.first(where: { $0.kind == .solana })
+        else { return (0, false) }
+
+        let key = IngestSupport.alchemyKey
+        let solPrice = await SolanaActivity.solPrice(key: key)
+        // Two at a time — the same courtesy the EVM fan-out shows a free-tier
+        // key, and each wallet is already only two requests.
+        let results = await IngestSupport.boundedGather(addresses, maxConcurrent: 2) { address in
+            (address, await SolanaActivity.moves(address: address, key: key))
+        }
+
+        var reached = false
+        var fresh: [(address: String, move: SolanaActivity.Move)] = []
+        var seen = Set<String>()
+        for (address, moves) in results {
+            guard let moves else { continue }   // nil = unreachable, not empty
+            reached = true
+            for move in moves {
+                let ref = "wallet:sol:\(move.signature)"
+                // One signature can name two watched wallets — land it once.
+                guard !existing.contains(ref), seen.insert(ref).inserted,
+                      SolanaActivity.isNews(move, heldPriced: heldPriced, solPrice: solPrice)
+                else { continue }
+                fresh.append((address, move))
+            }
+        }
+        guard !fresh.isEmpty else { return (0, reached) }
+
+        // ONE naming call for the whole pass, not one per move.
+        let symbols = await SolanaActivity.symbols(for: fresh.flatMap { $0.move.legs.map(\.mint) })
+        var landed: [Thing] = []
+        for (address, move) in fresh {
+            // No title means a leg we couldn't name — dropped rather than
+            // printed as a raw mint. See `SolanaActivity.title`.
+            guard let title = SolanaActivity.title(for: move, symbols: symbols) else { continue }
+            let thing = Thing(
+                kind: .transaction,
+                title: title,
+                content: solanaChain.explorer + move.signature,
+                source: "Wallet",
+                capturedAt: move.when,
+                sourceRef: "wallet:sol:\(move.signature)"
+            )
+            thing.walletAddress = address
+            landed.append(thing)
+        }
+        for thing in landed {
+            context.insert(thing)
+            SpotlightIndex.index([thing])
+        }
+        if !landed.isEmpty { context.saveHonestly() }
+        return (landed.count, reached)
     }
 
     private static func fetch(address: String, chain: Chain,
@@ -476,8 +642,8 @@ enum WalletIngest {
             ? WalletStore.shared.addresses.filter(\.pinnedToHome)
             : WalletStore.shared.addresses
         guard watched.count > 1 else { return nil }
-        let hexes = await hexAddresses(watched.map(\.address))
-        guard !hexes.isEmpty, let h = await holdings(addresses: hexes) else { return nil }
+        let resolved = await resolvedAddresses(watched.map(\.address))
+        guard !resolved.isEmpty, let h = await holdings(addresses: resolved) else { return nil }
         return HoldingsGroup(label: String(localized: "All wallets"), cells: h.cells,
                              totalUSD: h.total, tokenCount: h.count,
                              topBySymbol: topBySymbol(h.bySymbol))
@@ -520,8 +686,8 @@ enum WalletIngest {
         let results = await withTaskGroup(of: (Int, HoldingsGroup?).self) { group in
             for (i, entry) in watched.enumerated() {
                 group.addTask {
-                    guard let hex = await hexAddresses([entry.address]).first,
-                          let h = await holdings(addresses: [hex]) else { return (i, nil) }
+                    guard let address = await resolvedAddresses([entry.address]).first,
+                          let h = await holdings(addresses: [address]) else { return (i, nil) }
                     return (i, HoldingsGroup(label: entry.label.isEmpty ? entry.short : entry.label,
                                              address: entry.address,
                                              cells: h.cells, totalUSD: h.total,
@@ -609,6 +775,12 @@ enum WalletIngest {
         let contract: String?
         let network: String
         let usd: Double
+        /// The wallet that holds it, lowercased — the Portfolio endpoint names
+        /// each token's owner, so a multi-address read stays attributable
+        /// (the approvals spam filter is per-owner; a pooled set would let a
+        /// spam-emitted fake approval on wallet A pass because wallet B holds
+        /// the token — review 2026-07-16).
+        let owner: String
     }
 
     /// Every priced token (>= the dust floor) the given addresses hold, across
@@ -617,23 +789,44 @@ enum WalletIngest {
     /// is 3", measured 2026-07-15 — a 4th 400s the whole call) and paged up to
     /// 8 pages (≈800 tokens) so a whale's real holdings surface without
     /// unbounded paging. nil only when nothing was reachable at all.
+    /// One holding as the Portfolio endpoint hands it over, before the floor is
+    /// applied. The price is optional because a missing one isn't always a
+    /// junk token — on Solana it's the norm (see `priceSPL`).
+    private struct Candidate {
+        let symbol: String
+        let contract: String?
+        let network: String
+        let amount: Double
+        let owner: String
+        var price: Double?
+    }
+
     private static func fetchHeldTokens(addresses: [String]) async -> [HeldToken]? {
         guard !addresses.isEmpty else { return nil }
-        let networks = chains.map(\.network)
-        // network → native symbol, so a chain's own coin (ETH/MATIC) — which
-        // the API returns with a null symbol — still names itself.
-        let native = Dictionary(uniqueKeysWithValues: chains.map { ($0.network, $0.symbol) })
+        // network → the native coin's symbol AND decimals. A chain's own coin
+        // comes back with null metadata, so neither can be read off the
+        // response — both have to come from our table.
+        let native = Dictionary(uniqueKeysWithValues:
+            chains.map { ($0.network, (symbol: $0.symbol, decimals: $0.nativeDecimals)) })
         let url = "https://api.g.alchemy.com/data/v1/\(IngestSupport.alchemyKey)/assets/tokens/by-address"
 
-        var out: [HeldToken] = []
+        // Each address carries its OWN network list, by shape — so a chunk can
+        // mix a `0x…` wallet and a `.sol` one and neither pays for the other's
+        // chains. An address whose chains are all switched off has nothing to
+        // ask and is dropped rather than sent with an empty list.
+        let routed = addresses.map { (address: $0, networks: networks(for: $0)) }
+                              .filter { !$0.networks.isEmpty }
+        guard !routed.isEmpty else { return nil }
+
+        var candidates: [Candidate] = []
         var reached = false
-        for chunk in stride(from: 0, to: addresses.count, by: 3).map({
-            Array(addresses[$0..<min($0 + 3, addresses.count)])
+        for chunk in stride(from: 0, to: routed.count, by: 3).map({
+            Array(routed[$0..<min($0 + 3, routed.count)])
         }) {
             var pageKey: String? = nil
             for _ in 0..<8 {
                 var body: [String: Any] = [
-                    "addresses": chunk.map { ["address": $0, "networks": networks] },
+                    "addresses": chunk.map { ["address": $0.address, "networks": $0.networks] },
                     "withMetadata": true, "withPrices": true,
                 ]
                 if let pageKey { body["pageKey"] = pageKey }
@@ -645,19 +838,22 @@ enum WalletIngest {
                 for t in tokens {
                     let md = t["tokenMetadata"] as? [String: Any]
                     let mdSymbol = (md?["symbol"] as? String).flatMap { $0.isEmpty ? nil : $0 }
-                    // Native coin has no tokenAddress and no symbol — name it by chain.
-                    let isNative = (t["tokenAddress"] as? String) == nil
-                    guard let symbol = mdSymbol ?? (isNative ? native[t["network"] as? String ?? ""] : nil),
-                          let balHex = t["tokenBalance"] as? String,
-                          let price = firstPrice(t["tokenPrices"]), price > 0 else { continue }
-                    let decimals = (md?["decimals"] as? Int) ?? 18   // native is always 18
-                    let amount = hexToDouble(balHex) / pow(10, Double(decimals))
-                    let usd = amount * price
-                    guard usd >= holdingFloor else { continue }
-                    out.append(HeldToken(symbol: clean(symbol),
-                                         contract: (t["tokenAddress"] as? String)?.lowercased(),
-                                         network: (t["network"] as? String) ?? "",
-                                         usd: usd))
+                    let network = (t["network"] as? String) ?? ""
+                    // Native coin has no tokenAddress and no symbol — name it by
+                    // chain. NOT lowercased: an EVM contract is case-insensitive
+                    // hex, but a Solana mint is base58, where case IS the address.
+                    let contract = t["tokenAddress"] as? String
+                    let isNative = contract == nil
+                    guard let symbol = mdSymbol ?? (isNative ? native[network]?.symbol : nil),
+                          let balHex = t["tokenBalance"] as? String else { continue }
+                    let decimals = (md?["decimals"] as? Int)
+                        ?? (isNative ? native[network]?.decimals : nil)
+                        ?? 18   // an ERC-20 that didn't report its own
+                    candidates.append(Candidate(symbol: clean(symbol), contract: contract,
+                                                network: network,
+                                                amount: hexToDouble(balHex) / pow(10, Double(decimals)),
+                                                owner: ((t["address"] as? String) ?? "").lowercased(),
+                                                price: firstPrice(t["tokenPrices"])))
                 }
 
                 guard let next = data["pageKey"] as? String, !next.isEmpty else { break }
@@ -665,7 +861,67 @@ enum WalletIngest {
             }
         }
         guard reached else { return nil }
-        return out
+
+        return await priceSPL(candidates).compactMap { c in
+            guard let price = c.price, price > 0 else { return nil }
+            let usd = c.amount * price
+            guard usd >= holdingFloor else { return nil }
+            return HeldToken(symbol: c.symbol, contract: c.contract,
+                             network: c.network, usd: usd, owner: c.owner)
+        }
+    }
+
+    /// Prices the Solana holdings the Portfolio endpoint left unpriced.
+    ///
+    /// Measured 2026-07-16: `withPrices` prices EVM tokens inline, but on Solana
+    /// it prices native SOL and nothing else — two different wallets, 100 tokens
+    /// each, exactly one priced. Alchemy DOES know the SPL prices; that endpoint
+    /// just doesn't join them. So the mints go back out through the Prices
+    /// endpoint, which answers them (USDC $0.9999, JUP $0.2016). Without this a
+    /// Solana wallet's treemap shows SOL alone and reads as "holds only SOL" —
+    /// false, and exactly the kind of false the honesty rule is pointed at.
+    ///
+    /// Capped at 25 mints per request (its documented limit, measured: a 26th
+    /// errors the call) and 100 in total — a treemap's top 5 is long since
+    /// decided by then, and an unbounded fan-out over a whale's junk-token tail
+    /// would spend a rate limit the transfer sync shares. The cap is applied in
+    /// the order the API returned, NOT by iterating a Set: a wallet just over
+    /// 100 mints (the test wallet returns exactly 100) would otherwise price an
+    /// arbitrary subset each pass — Swift's Set order is seeded per process —
+    /// and its treemap cells would come and go with the holdings unchanged.
+    private static func priceSPL(_ candidates: [Candidate]) async -> [Candidate] {
+        let mints = candidates.filter {
+            $0.network == "solana-mainnet" && $0.price == nil
+        }.compactMap(\.contract)
+        guard !mints.isEmpty else { return candidates }
+        var seen = Set<String>()
+        let unique = Array(mints.filter { seen.insert($0).inserted }.prefix(100))
+        let url = "https://api.g.alchemy.com/prices/v1/\(IngestSupport.alchemyKey)/tokens/by-address"
+
+        var found: [String: Double] = [:]
+        for chunk in stride(from: 0, to: unique.count, by: 25).map({
+            Array(unique[$0..<min($0 + 25, unique.count)])
+        }) {
+            let body: [String: Any] = [
+                "addresses": chunk.map { ["network": "solana-mainnet", "address": $0] },
+            ]
+            guard let root = await IngestSupport.postJSON(url, body: body) as? [String: Any],
+                  let data = root["data"] as? [[String: Any]] else { continue }
+            for entry in data {
+                guard let address = entry["address"] as? String,
+                      let price = firstPrice(entry["prices"]), price > 0 else { continue }
+                found[address] = price
+            }
+        }
+        guard !found.isEmpty else { return candidates }
+
+        return candidates.map { c in
+            guard c.price == nil, let contract = c.contract,
+                  let price = found[contract] else { return c }
+            var priced = c
+            priced.price = price
+            return priced
+        }
     }
 
     /// The contract addresses (lowercased) the given wallets hold above the
@@ -675,9 +931,38 @@ enum WalletIngest {
     /// empty set) when the holdings read FAILED — the caller must then fail open
     /// and land everything, or a transient hiccup would silently drop every
     /// legitimate received token (an empty set is a real "holds nothing").
-    private static func heldPricedContracts(addresses: [String]) async -> Set<String>? {
+    static func heldPricedContracts(addresses: [String]) async -> Set<String>? {
         guard let tokens = await fetchHeldTokens(addresses: addresses) else { return nil }
-        return Set(tokens.compactMap(\.contract))
+        // Each entry normalised the way its OWN family compares, because this
+        // set meets BOTH now (prd §86). An EVM leg's contract arrives
+        // lowercased and its hex is case-insensitive, so folding case is free.
+        // A Solana mint is base58, where case IS the address: lowercasing one
+        // would match nothing and quietly filter every real SPL receipt out as
+        // spam. The two alphabets can't collide, so one set still serves both.
+        return Set(tokens.compactMap { token -> String? in
+            guard let contract = token.contract else { return nil }
+            return token.network == SolanaActivity.network ? contract : contract.lowercased()
+        })
+    }
+
+    /// The same allowlist keyed by OWNER (lowercased address) — the approvals
+    /// spam filter's shape (prd §84): a fake Approval event naming wallet A
+    /// must not ride on wallet B's real holding, so the pooled set isn't
+    /// allowed there. Entries are normalised per family exactly like
+    /// `heldPricedContracts` (EVM lowercased, Solana mints case-preserved);
+    /// `refresh` derives its pooled set from this map so the two filters ride
+    /// ONE Portfolio fetch.
+    static func heldPricedContractsByOwner(addresses: [String])
+        async -> [String: Set<String>]? {
+        guard let tokens = await fetchHeldTokens(addresses: addresses) else { return nil }
+        var out: [String: Set<String>] = [:]
+        for token in tokens {
+            guard let contract = token.contract else { continue }
+            let normalized = token.network == SolanaActivity.network
+                ? contract : contract.lowercased()
+            out[token.owner, default: []].insert(normalized)
+        }
+        return out
     }
 
     /// The NON-spam NFT contracts each wallet holds, keyed "address|network"
@@ -688,7 +973,7 @@ enum WalletIngest {
     /// present means that (address, chain) was read successfully — a missing key
     /// is "couldn't read", so the caller fails OPEN (an NFT on an unread chain
     /// is never dropped).
-    private static func ownedNFTContracts(addresses: [String]) async -> [String: Set<String>] {
+    static func ownedNFTContracts(addresses: [String]) async -> [String: Set<String>] {
         // The EVM chains getContractsForOwner serves — the five established
         // ones (Robinhood's NFT API may 404, which just leaves it unfiltered).
         let nets = ["eth-mainnet", "base-mainnet", "arb-mainnet", "opt-mainnet", "matic-mainnet"]
@@ -737,6 +1022,10 @@ enum WalletIngest {
     private static let chainSlug: [String: String] = [
         "eth-mainnet": "ethereum", "base-mainnet": "base", "arb-mainnet": "arbitrum",
         "opt-mainnet": "optimism", "matic-mainnet": "polygon",
+        // Solana rides free: both chart tiers `TokenChart` falls through
+        // (GeckoTerminal, then Dexscreener) spell it "solana", so an SPL cell's
+        // tap opens a real chart the same way an ERC-20 cell's does.
+        "solana-mainnet": "solana",
     ]
 
     // MARK: - NFTs (2026-07-14)
@@ -784,7 +1073,9 @@ enum WalletIngest {
             return cached.groups
         }
         let fetched = await IngestSupport.boundedGather(watched, maxConcurrent: 4) { entry in
-            guard let hex = await hexAddresses([entry.address]).first else {
+            // EVM only — Alchemy's NFT API is an EVM API. A Solana wallet
+            // contributes no group rather than an empty-looking one.
+            guard let hex = evmOnly(await resolvedAddresses([entry.address])).first else {
                 return NFTGroup(address: entry.address, label: "", nfts: [])
             }
             return NFTGroup(address: entry.address,
@@ -861,17 +1152,25 @@ enum WalletIngest {
         var out: [String] = []
         let watched = WalletStore.shared.addresses.map(\.address)
         guard !watched.isEmpty else { return ["No watched address"] }
-        let addresses = await hexAddresses(watched)
-        out.append("Resolved \(addresses.count)/\(watched.count) address(es) to hex")
+        let addresses = await resolvedAddresses(watched)
+        let evm = evmOnly(addresses)
+        out.append("Resolved \(addresses.count)/\(watched.count) address(es) — \(evm.count) EVM, \(addresses.count - evm.count) Solana")
         guard !addresses.isEmpty else {
-            out.append("FAIL address/ENS resolution — nothing to query")
+            out.append("FAIL address/ENS/.sol resolution — nothing to query")
             return out
         }
 
-        let networks = chains.map(\.network)
+        // Routed by shape, exactly as `fetchHeldTokens` does — a diagnostic that
+        // asked differently than the real read would be worse than none.
+        let routed = addresses.map { (address: $0, networks: networks(for: $0)) }
+                              .filter { !$0.networks.isEmpty }
+        guard !routed.isEmpty else {
+            out.append("FAIL every watched address's chains are switched off")
+            return out
+        }
         let url = "https://api.g.alchemy.com/data/v1/\(IngestSupport.alchemyKey)/assets/tokens/by-address"
         let body: [String: Any] = [
-            "addresses": addresses.map { ["address": $0, "networks": networks] },
+            "addresses": routed.map { ["address": $0.address, "networks": $0.networks] },
             "withMetadata": true, "withPrices": true,
         ]
         guard let root = await IngestSupport.postJSON(url, body: body) as? [String: Any] else {
@@ -884,13 +1183,17 @@ enum WalletIngest {
             return out
         }
         let priced = tokens.filter { (firstPrice($0["tokenPrices"]) ?? 0) > 0 }.count
-        out.append("Tokens returned: \(tokens.count), of which priced: \(priced)")
+        let solTokens = tokens.filter { ($0["network"] as? String) == "solana-mainnet" }.count
+        out.append("Tokens returned: \(tokens.count) (\(solTokens) Solana), priced inline: \(priced)")
+        if solTokens > 0 {
+            out.append("Solana: inline prices cover native SOL only — SPL prices come from the separate Prices call")
+        }
         let groups = await topHoldingsByWallet()
         if !groups.isEmpty {
             for g in groups {
                 out.append("OK \(g.label): \(g.cells.count) cells — \(g.cells.joined(separator: ", "))")
             }
-        } else if priced == 0 {
+        } else if priced == 0 && solTokens == 0 {
             out.append("Empty (correct): nothing priced held — only unpriced/airdrop tokens")
         } else {
             out.append(String(format: "Empty: %d priced token(s), all under the $%.2f floor (dust/spam)", priced, holdingFloor))
@@ -905,7 +1208,7 @@ enum WalletIngest {
         return nil
     }
 
-    private static func hexToDouble(_ hex: String) -> Double {
+    static func hexToDouble(_ hex: String) -> Double {
         var s = hex.lowercased(); if s.hasPrefix("0x") { s.removeFirst(2) }
         var v = 0.0
         for c in s { guard let d = c.hexDigitValue else { return v }; v = v * 16 + Double(d) }
@@ -917,8 +1220,9 @@ enum WalletIngest {
         return up.isEmpty ? "TOKEN" : String(up.prefix(6))
     }
 
-    /// Compact amount: 1,240 · 0.53 · 0.00042.
-    private static func format(_ v: Double) -> String {
+    /// Compact amount: 1,240 · 0.53 · 0.00042. Shared with `SolanaActivity`,
+    /// whose titles sit beside these in the same feed and must round alike.
+    static func format(_ v: Double) -> String {
         if v == 0 { return "0" }
         if v >= 1000 {
             let f = NumberFormatter(); f.numberStyle = .decimal; f.maximumFractionDigits = 0

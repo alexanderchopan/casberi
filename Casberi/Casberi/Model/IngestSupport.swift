@@ -150,6 +150,23 @@ enum IngestSupport {
         return await run(request)
     }
 
+    /// A JSON-RPC BATCH: an ARRAY of calls in one request, answered with an
+    /// array of results (2026-07-16, Solana activity). `postJSON` above takes a
+    /// dictionary body and so can't express this — and the batch is the whole
+    /// reason a Solana wallet costs two requests rather than eleven: ten
+    /// `getTransaction` calls come back in a single ~0.4s round trip.
+    static func postJSONArray(_ url: String, auth: String? = nil, body: [[String: Any]],
+                              headers: [String: String] = [:]) async -> [[String: Any]]? {
+        guard let u = URL(string: url),
+              let payload = try? JSONSerialization.data(withJSONObject: body) else { return nil }
+        var request = URLRequest(url: u)
+        request.httpMethod = "POST"
+        request.httpBody = payload
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        apply(auth: auth, headers: headers, to: &request)
+        return await run(request) as? [[String: Any]]
+    }
+
     private static func apply(auth: String?, headers: [String: String],
                               to request: inout URLRequest) {
         if let auth { request.setValue(auth, forHTTPHeaderField: "Authorization") }

@@ -18,6 +18,17 @@ enum TokenChartStyle {
         return scheme == .light ? base.mix(with: .black, by: 0.35) : base
     }
 
+    /// A change that rounds away at the one decimal we print has no direction
+    /// to report: "-0.0%" in red claims a loss the number itself denies. Flat
+    /// is its own state — no sign, quiet ink (2026-07-16).
+    static func isFlat(_ c: Double) -> Bool { abs(c * 100) < 0.05 }
+
+    /// The delta's ink, flat included — the up/down reading of a change is
+    /// only honest once the change survives rounding.
+    static func accent(change: Double, scheme: ColorScheme) -> Color {
+        isFlat(change) ? DS.textTertiary : accent(up: change >= 0, scheme: scheme)
+    }
+
     static func priceText(_ p: Double) -> String {
         if p >= 1 { return String(format: "$%.2f", p) }
         if p >= 0.01 { return String(format: "$%.4f", p) }
@@ -25,7 +36,8 @@ enum TokenChartStyle {
     }
 
     static func changeText(_ c: Double) -> String {
-        String(format: "%@%.1f%%", c >= 0 ? "+" : "", c * 100)
+        if isFlat(c) { return "0.0%" }
+        return String(format: "%@%.1f%%", c > 0 ? "+" : "", c * 100)
     }
 
     /// The chosen range persists per symbol (prd 51) — a 7d watcher isn't
@@ -51,7 +63,7 @@ struct TokenDeltaPill: View {
     @Environment(\.colorScheme) private var scheme
 
     var body: some View {
-        let ink = TokenChartStyle.accent(up: change >= 0, scheme: scheme)
+        let ink = TokenChartStyle.accent(change: change, scheme: scheme)
         Text("\(TokenChartStyle.changeText(change)) · \(label)")
             .dsText(compact ? .label12 : .subhead13)
             .monospacedDigit()
@@ -238,7 +250,7 @@ struct TokenChartView<R: PriceRange, Fallback: View>: View {
         return chart.change
     }
     private var accent: Color {
-        TokenChartStyle.accent(up: displayChange >= 0, scheme: scheme)
+        TokenChartStyle.accent(change: displayChange, scheme: scheme)
     }
 
     var body: some View {

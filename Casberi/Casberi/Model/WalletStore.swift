@@ -75,6 +75,10 @@ final class WalletStore {
                 // prior watch period whose history was already wiped (the same
                 // "re-watching starts honest, at zero" rule the history obeys).
                 UserDefaults.standard.removeObject(forKey: "wallet.high.\(old.address.lowercased())")
+                // The approval block cursors leave too (prd §84) — a stale
+                // cursor would back-fill the unwatched gap into the feed on
+                // re-watch, instead of the silent fresh-baseline seed.
+                WalletApprovals.clearCursors(address: old.address)
             }
         }
     }

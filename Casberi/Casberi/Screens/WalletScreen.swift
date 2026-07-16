@@ -110,6 +110,9 @@ struct WalletScreen: View {
                 // Admin cluster: manage which wallets are watched, add
                 // another, narrow the chains — the settings, not the point.
                 watchingSection.listRowSeparator(.hidden)
+                if wallet.addresses.contains(where: { WalletApprovals.canServe($0.address) }) {
+                    approvalsSection.listRowSeparator(.hidden)
+                }
                 addSection.listRowSeparator(.hidden)
                 chainsSection.listRowSeparator(.hidden)
                 if syncing || result != nil {
@@ -231,7 +234,7 @@ struct WalletScreen: View {
                             VStack(alignment: .trailing, spacing: 4) {
                                 TokenChartPlot(chart: TokenChart(closes: closes, price: last,
                                                                  change: change),
-                                               accent: TokenChartStyle.accent(up: change >= 0,
+                                               accent: TokenChartStyle.accent(change: change,
                                                                               scheme: scheme),
                                                height: 30, pulses: false)
                                     .frame(width: 84)
@@ -494,6 +497,9 @@ struct WalletScreen: View {
             } else {
                 result = String(localized: "Connected — watching for activity.")
             }
+            // Solana's carve-outs are gone as of prd §86: every chain in the
+            // picker now reads activity as well as holdings, so the generic
+            // lines are true again for everyone.
             let proof = added > 0 ? "\(added) new" : "Synced just now"
             if store.registerConnected(id: "wallet", name: "Wallet", proof: proof,
                                        can: ["Reads your wallet's activity.",
@@ -556,7 +562,7 @@ struct WalletScreen: View {
                         VStack(alignment: .trailing, spacing: 4) {
                             TokenChartPlot(chart: TokenChart(closes: closes, price: last,
                                                              change: change),
-                                           accent: TokenChartStyle.accent(up: change >= 0, scheme: scheme),
+                                           accent: TokenChartStyle.accent(change: change, scheme: scheme),
                                            height: 22, pulses: false)
                                 .frame(width: 40)
                                 .accessibilityHidden(true)
@@ -616,6 +622,51 @@ struct WalletScreen: View {
                 .foregroundStyle(DS.textSecondary)
         } footer: {
             Text("Swipe a wallet to pin its holdings to Home and Feed.")
+                .dsText(.callout15).foregroundStyle(DS.textSecondary)
+        }
+    }
+
+    // MARK: - Approvals (2026-07-16, prd §84)
+
+    /// Each wallet's door to its Revoke.cash approvals dashboard — the read
+    /// lives here (and new approvals land as things); the WRITE (revoking is
+    /// an on-chain transaction) lives on Revoke.cash, the tool built for it,
+    /// stated plainly in the footer. EVM wallets only: Revoke.cash has no
+    /// Solana page, and a door to a 404 would be a dead control.
+    private var approvalsSection: some View {
+        Section {
+            // `canServe`, not a bare hex check — a wallet watched by ENS name
+            // stores the name, and Revoke.cash resolves names (verified live);
+            // only Solana forms have no page there.
+            ForEach(wallet.addresses.filter { WalletApprovals.canServe($0.address) }) { addr in
+                Button {
+                    DSHaptic.selection()
+                    if let url = URL(string: WalletApprovals.revokeURL(address: addr.address)) {
+                        openURL(url)
+                    }
+                } label: {
+                    HStack(spacing: DS.Space.s3) {
+                        WalletFace(address: addr.address, size: 28)
+                        Text(addr.label.isEmpty ? addr.short : addr.label)
+                            .dsText(.body17).foregroundStyle(DS.textPrimary)
+                            .lineLimit(1)
+                        Spacer()
+                        Text("Revoke.cash")
+                            .dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                        Image(systemName: "arrow.up.right")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(DS.textTertiary)
+                    }
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .dsListCardRow()
+            }
+        } header: {
+            Text("Approvals").dsText(.label12)
+                .foregroundStyle(DS.textSecondary)
+        } footer: {
+            Text("What each wallet has allowed contracts to spend. New approvals land in your feed; review and revoke on Revoke.cash — revoking is a transaction you sign there, never in Casberi.")
                 .dsText(.callout15).foregroundStyle(DS.textSecondary)
         }
     }
@@ -706,7 +757,7 @@ struct WalletScreen: View {
 
     private var addSection: some View {
         Section {
-            BridgeFieldRow(placeholder: "Address (0x… or ENS)", text: $newAddress,
+            BridgeFieldRow(placeholder: "Address (0x…, ENS, or .sol)", text: $newAddress,
                            buttonLabel: "Watch", keyboard: .default,
                            focus: $addressFieldFocused, action: watch)
             // Nothing watched yet, nothing on the clipboard — one tap watches
@@ -742,7 +793,7 @@ struct WalletScreen: View {
                 .foregroundStyle(DS.textSecondary)
         } footer: {
             if wallet.addresses.isEmpty {
-                Text("Paste a wallet address or ENS name — its holdings and activity land in your feed.")
+                Text("Paste a wallet address, an ENS name, or a .sol name — its holdings and activity land in your feed.")
                     .dsText(.callout15).foregroundStyle(DS.textSecondary)
             }
         }
@@ -751,9 +802,25 @@ struct WalletScreen: View {
     private func watch() {
         let input = newAddress.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !input.isEmpty else { return }
-        // An ENS name (vitalik.eth) resolves to hex now — the address is what
-        // the APIs read; the name rides along as the row's label.
-        if ENS.looksLikeName(input) {
+        // A name (vitalik.eth, toly.sol) resolves to an address — the address is
+        // what the APIs read; the name rides along as the row's label. `.sol` is
+        // tried FIRST: `ENS.looksLikeName` takes any dotted string, so it would
+        // otherwise send toly.sol to the ENS resolver, which answers with a null
+        // address rather than an error.
+        if SNS.looksLikeName(input) {
+            Task {
+                guard let address = await SNS.resolve(input) else {
+                    resultIsError = true
+                    result = String(localized: "Couldn't resolve \(input) — check the name, or paste the address.")
+                    return
+                }
+                // A Solana wallet can only be read on Solana; adding one with
+                // that chain switched off would watch an address that can never
+                // show anything.
+                WalletChainStore.shared.ensureEnabled("solana-mainnet")
+                addWatched(address: address, label: input)
+            }
+        } else if ENS.looksLikeName(input) {
             Task {
                 guard let hex = await ENS.resolve(input) else {
                     resultIsError = true
@@ -763,6 +830,7 @@ struct WalletScreen: View {
                 addWatched(address: hex, label: input)
             }
         } else {
+            if SNS.isAddress(input) { WalletChainStore.shared.ensureEnabled("solana-mainnet") }
             addWatched(address: input, label: "")
         }
     }
