@@ -969,15 +969,29 @@ struct RootShell: View {
         }
         switch await resolvedMode(query) {
         case .lookup:
-            // A FRESH lookup runs the tool-calling agent: the model searches the
-            // whole corpus itself (multi-hop), so it reaches things one keyword
-            // pass would miss. A FOLLOW-UP ("which of those…") stays on the
-            // pre-retrieved, pool-refined compose so "those"/"them" keep meaning
-            // the last answer's things — the tool path searches everything and
-            // has no such anchor. Both ground on real things (honesty rail): the
-            // tool hits map back to real rows; the model never invents one.
+            // The fast COMPOSE path is the default: it answers over the
+            // keyword+semantic retriever's set, which ranks BETTER than the
+            // agent's keyword-only tools and returns in ~half the time. The
+            // tool-calling AGENT only earns its extra latency when that retrieval
+            // came back THIN — a couple of hits — where its whole-corpus,
+            // multi-hop search has room to round the answer out (gate added
+            // 2026-07-15; the count is the qualifying-hit count, so a bare
+            // kind/date list — many hits — correctly stays on the fast path). A
+            // FOLLOW-UP ("which of those…") always stays on compose so
+            // "those"/"them" keep meaning the last answer's things — the agent
+            // searches everything and has no such anchor. Both ground on real
+            // things (honesty rail): tool hits map back to real rows, and the
+            // model never invents one. Threshold is a one-line tunable — raise
+            // it to lean on the agent, lower it to lean on speed.
             let followUp = isFollowUp(query) && !lastAnswerHits.isEmpty
-            if !followUp, let result = await AnswerTools.answer(query: query, corpus: toolSnapshot()) {
+            let retrievalThin = hits.count < 4
+            #if DEBUG
+            NSLog("[Casberi] lookup route: %d hits, followUp=%@ → %@", hits.count,
+                  followUp ? "yes" : "no",
+                  (!followUp && retrievalThin) ? "agent" : "compose")
+            #endif
+            if !followUp, retrievalThin,
+               let result = await AnswerTools.answer(query: query, corpus: toolSnapshot()) {
                 let grounded = things(forIDs: result.hitIDs)
                 if !grounded.isEmpty {
                     lastAnswerHits = grounded

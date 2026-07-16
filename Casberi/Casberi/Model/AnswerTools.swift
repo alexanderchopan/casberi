@@ -17,12 +17,14 @@ import FoundationModels
 /// invent one. The tools read a plain `Sendable` snapshot (never SwiftData
 /// across actors), taken once before the session runs.
 ///
-/// This is the DEFAULT path for a fresh LOOKUP ask (`answerDocument`) on an
-/// Apple-Intelligence device — a follow-up stays on the pool-refined compose so
-/// "those"/"them" keep their anchor, and synthesis keeps its streaming path.
-/// Where the model is unavailable or declines, the caller falls back to the
-/// scoring doc (zero regression). Also exercisable in isolation via the
-/// `-toolAnswer` probe.
+/// The path for a fresh LOOKUP ask whose keyword+semantic retrieval came back
+/// THIN (`answerDocument`'s gate) on an Apple-Intelligence device — the case
+/// where a whole-corpus search earns its extra latency. A rich retrieval uses
+/// the fast compose instead; a follow-up stays on the pool-refined compose so
+/// "those"/"them" keep their anchor; synthesis keeps its streaming path. Where
+/// the model is unavailable or declines, the caller falls back to the scoring
+/// doc (zero regression). Also exercisable in isolation via the `-toolAnswer`
+/// probe (which ignores the gate).
 enum AnswerTools {
 
     /// A real thing, flattened to plain `Sendable` text for the tools — no
