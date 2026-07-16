@@ -2899,9 +2899,16 @@ soonest first, an overdue reminder leading:
 
 Not a pinned board module: no size pin, no "Remove from Home" (there's no pin
 behind it) — automatic synthesis like the map. `HomeComposition.appendComingUp`
-emits a plain `Widget` of `Row`s (each row's time slot carries the WHEN as
-words); `Model/ComingUp.swift` is the query. Headless check: `-comingUpProbe YES`
-logs the lane over the current corpus.
+emits the flat `ComingUp` component; `Model/ComingUp.swift` is the query.
+Headless check: `-comingUpProbe YES` logs the lane over the current corpus.
+
+**Just one item (user, 2026-07-16).** The card shows a SINGLE row — the most
+imminent thing (`ComingUp.items(from:).first`: soonest by date, an overdue
+reminder leading because its due date is before now). The day-section grouping
+from 2026-07-15 (a `ComingHead` divider per day, always-present Today with a
+"Nothing scheduled" placeholder) is dropped — one row carries the WHEN
+("Overdue" / "Today" / "Tomorrow" / weekday) in its trailing slot. Still shown
+only when something is actually coming up (no empty card).
 
 Record surfaces stay the past (honesty): because upcoming events now carry a
 future `capturedAt`, the Home cover's "Just landed" picks the newest thing with
