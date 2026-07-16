@@ -1208,7 +1208,17 @@ struct RootShell: View {
                                   "what", "whats", "what's", "landed", "on", "happened",
                                   "is", "are", "was", "were", "do", "does", "did", "i",
                                   "me", "you", "your", "who", "how", "when", "where",
-                                  "why", "which", "it", "and", "or", "to", "with"]
+                                  "why", "which", "it", "and", "or", "to", "with",
+                                  // Command / query verbs (2026-07-15): a lookup
+                                  // like "show me my events" or "which events do
+                                  // I have" names an ACTION, not content — left
+                                  // in, "show"/"have" scored as search terms and
+                                  // matched nothing, so the ask returned empty. A
+                                  // bare kind/date list then falls through to the
+                                  // "list that kind" path as intended.
+                                  "show", "find", "search", "list", "look", "up",
+                                  "save", "saved", "have", "has", "had", "get",
+                                  "see", "tell", "give", "all", "any"]
         terms.removeAll { stops.contains($0) }
 
         // A date phrase ("today", "last week", "thursday") is a WHEN filter,
