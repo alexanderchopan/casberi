@@ -21,7 +21,7 @@ struct KalshiMarketView<Fallback: View>: View {
         guard let market, let previous = market.previousProbability else { return 0 }
         return market.probability - previous
     }
-    private var accent: Color { TokenChartStyle.accent(up: delta >= 0, scheme: scheme) }
+    private var accent: Color { TokenChartStyle.accent(change: delta, scheme: scheme) }
 
     var body: some View {
         Group {

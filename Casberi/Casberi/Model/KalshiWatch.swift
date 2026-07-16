@@ -85,7 +85,7 @@ enum KalshiWatch {
             for market in markets {
                 guard let ticker = market["ticker"] as? String,
                       let title = market["title"] as? String,
-                      let prob = num(market["last_price_dollars"]) else { continue }
+                      let prob = liveProbability(market) else { continue }
                 let subtitle = (market["yes_sub_title"] as? String) ?? ""
                 if !q.isEmpty {
                     let hay = "\(eventTitle) \(title) \(subtitle)".lowercased()
@@ -94,7 +94,7 @@ enum KalshiWatch {
                 rows.append(Resolved(
                     ticker: ticker, eventTicker: eventTicker, seriesTicker: seriesTicker,
                     title: title, subtitle: subtitle, probability: prob,
-                    previousProbability: num(market["previous_price_dollars"]),
+                    previousProbability: previousProbability(market),
                     volume: num(market["volume_fp"]) ?? 0))
             }
         }
@@ -104,6 +104,36 @@ enum KalshiWatch {
     /// Resolves a query to its busiest matching market — the Watch button's path.
     static func resolve(_ query: String) async -> Resolved? {
         await search(query, limit: 1).first
+    }
+
+    /// The book brackets the market's own answer: yes trades somewhere in
+    /// [bid, ask], so its midpoint IS the probability — one-sided books
+    /// included (a 99¢ bid with no ask is a near-certainty, a 1¢ ask with no
+    /// bid is a long shot; both are real quotes). Bid 0 / ask 1 is the one
+    /// bracket that says nothing — the whole range, i.e. no orders either
+    /// side — and that is exactly the emptied book, so it quotes nothing.
+    ///
+    /// `last_price` is deliberately NOT consulted: Kalshi leaves a market
+    /// listed after its book empties, and the residual trade left behind
+    /// (often a tenth of a cent) is what printed "0%" against the USA to win
+    /// a World Cup it hasn't played. A stale trade is not a price (prd §83 ②).
+    private static func bookMid(_ market: [String: Any], bid bidKey: String,
+                               ask askKey: String) -> Double? {
+        guard let bid = num(market[bidKey]), let ask = num(market[askKey]),
+              bid > 0 || ask < 1 else { return nil }
+        return (bid + ask) / 2
+    }
+
+    /// Now.
+    static func liveProbability(_ market: [String: Any]) -> Double? {
+        bookMid(market, bid: "yes_bid_dollars", ask: "yes_ask_dollars")
+    }
+
+    /// The prior close, read the SAME way — a "vs last" delta has to subtract
+    /// like for like, and a mid minus a last trade invents a move out of half
+    /// the spread.
+    static func previousProbability(_ market: [String: Any]) -> Double? {
+        bookMid(market, bid: "previous_yes_bid_dollars", ask: "previous_yes_ask_dollars")
     }
 
     /// Adds a resolved market to the watchlist. Returns the new thing, or

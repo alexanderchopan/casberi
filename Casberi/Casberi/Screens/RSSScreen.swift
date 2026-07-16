@@ -57,7 +57,11 @@ struct RSSScreen: View {
         .navigationTitle("RSS")
         .navigationBarTitleDisplayMode(.large)
         .toolbar {
-            ToolbarItem(placement: .topBarTrailing) { EditButton().tint(DS.textPrimary) }
+            // Edit only exists once there's a following list to edit — every
+            // other section here is gated the same way.
+            if !rss.feeds.isEmpty {
+                ToolbarItem(placement: .topBarTrailing) { EditButton().tint(DS.textPrimary) }
+            }
         }
         .onAppear {
             // Every visit refreshes — feeds are cheap to poll.

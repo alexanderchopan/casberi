@@ -1,0 +1,184 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;transition:none!important}
+html,body{width:1080px;height:1920px;overflow:hidden;background:#EEEAE1;
+  font-family:-apple-system,"Helvetica Neue","SF Pro Display",system-ui,sans-serif;-webkit-font-smoothing:antialiased;}
+.mono{font-family:ui-monospace,"SF Mono","Menlo",monospace;}
+.stage{position:absolute;inset:0;overflow:hidden;background:#EEEAE1;}
+.grain{position:absolute;inset:0;opacity:.5;background-image:radial-gradient(circle at 20% 30%, rgba(0,0,0,.03) 0 1px, transparent 1px),radial-gradient(circle at 70% 65%, rgba(0,0,0,.025) 0 1px, transparent 1px);background-size:7px 7px, 9px 9px;}
+.mast{position:absolute;left:70px;right:70px;top:74px;display:flex;justify-content:space-between;font-size:27px;letter-spacing:.16em;color:#14110d;font-weight:600;}
+.rule{position:absolute;left:70px;right:70px;top:126px;height:3px;background:#14110d;transform-origin:left;}
+.wm{position:absolute;right:20px;top:150px;font-size:560px;line-height:.8;font-weight:800;letter-spacing:-.04em;opacity:.08;will-change:opacity,transform;}
+.kick{position:absolute;left:74px;top:238px;font-size:32px;letter-spacing:.14em;font-weight:600;will-change:transform,opacity;}
+.head{position:absolute;left:70px;top:284px;right:70px;font-size:132px;line-height:.94;font-weight:800;letter-spacing:-.045em;color:#14110d;white-space:pre-line;will-change:transform,opacity;}
+.foot{position:absolute;left:74px;right:74px;bottom:70px;display:flex;justify-content:space-between;font-size:26px;letter-spacing:.12em;color:#14110d;font-weight:600;}
+.wipe{position:absolute;top:-12%;left:0;width:135%;height:124%;transform:skewX(-9deg) translateX(160%);will-change:transform;}
+
+.comp{position:absolute;left:120px;top:820px;width:840px;height:820px;border-radius:34px;overflow:hidden;
+  box-shadow:34px 40px 0 rgba(20,17,13,.13), 0 30px 70px rgba(20,17,13,.26);opacity:0;will-change:transform,opacity;transform-origin:center top;padding:54px;color:#e6edf3;
+  background:#0D1117;box-shadow:34px 40px 0 rgba(20,17,13,.13), inset 0 0 0 1px rgba(255,255,255,.06), 0 30px 70px rgba(20,17,13,.26);}
+
+/* connect */
+.gmark{width:110px;height:110px;fill:#e6edf3;}
+.gsub{font-size:34px;color:#8b949e;margin-top:30px;}
+.gcode{font-size:104px;font-weight:700;letter-spacing:.14em;margin-top:20px;}
+.gurl{font-size:32px;color:#8b949e;margin-top:34px;}
+.gok{display:inline-flex;align-items:center;gap:16px;margin-top:40px;font-size:34px;color:#2DA44E;font-weight:600;will-change:opacity,transform;}
+.gok .dot{width:34px;height:34px;border-radius:50%;background:#2DA44E;display:flex;align-items:center;justify-content:center;color:#0D1117;font-size:24px;}
+
+/* rows (issues/prs, stars) */
+.grow{display:flex;align-items:center;gap:26px;padding:30px 0;border-top:2px solid rgba(255,255,255,.07);will-change:transform,opacity;}
+.grow:first-of-type{border-top:none;}
+.gi{width:56px;height:56px;border-radius:14px;flex:none;display:flex;align-items:center;justify-content:center;font-size:32px;}
+.gt{font-size:40px;font-weight:600;}
+.gm{font-size:27px;color:#8b949e;margin-top:6px;}
+.gtime{margin-left:auto;font-size:27px;color:#8b949e;}
+.lang{width:22px;height:22px;border-radius:50%;display:inline-block;margin-right:10px;vertical-align:-2px;}
+
+/* write back */
+.wtitle{font-size:38px;font-weight:650;}
+.wsub{font-size:27px;color:#8b949e;margin-top:8px;}
+.wbox{margin-top:34px;background:#010409;border:2px solid rgba(255,255,255,.1);border-radius:20px;padding:30px 34px;font-size:36px;min-height:180px;line-height:1.35;color:#e6edf3;}
+.wcaret{display:inline-block;width:4px;height:40px;background:#e6edf3;vertical-align:-6px;margin-left:3px;}
+.wbtn{margin-top:30px;align-self:flex-start;background:#2DA44E;color:#04140a;font-weight:700;font-size:34px;padding:24px 50px;border-radius:20px;display:inline-block;will-change:opacity,transform;}
+
+/* contribution graph */
+.gtot{font-size:40px;font-weight:650;margin-bottom:26px;}
+.graph{display:grid;grid-template-columns:repeat(52,1fr);grid-auto-rows:1fr;gap:6px;width:100%;aspect-ratio:52/7;}
+.cell{border-radius:4px;background:#161b22;will-change:opacity,transform;}
+.legend{display:flex;align-items:center;gap:12px;justify-content:flex-end;margin-top:30px;font-size:26px;color:#8b949e;}
+.legend i{width:26px;height:26px;border-radius:6px;display:inline-block;}
+
+.outro{position:absolute;inset:0;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;padding:0 74px;opacity:0;will-change:opacity;}
+.outro .big{font-size:200px;font-weight:800;letter-spacing:-.05em;color:#14110d;line-height:.9;}
+.outro .u{font-size:34px;letter-spacing:.1em;color:#14110d;margin-top:40px;font-weight:600;}
+.outro .u b{color:#2DA44E;}
+</style></head><body>
+<div class="stage">
+  <div class="grain"></div>
+  <div class="mast mono"><span>CASBERI</span><span>GITHUB</span></div>
+  <div class="rule" id="rule"></div>
+  <div class="wm" id="wm">01</div>
+
+  <div class="comp" id="comp0">
+    <svg class="gmark" viewBox="0 0 24 24"><path d="M12 .5C5.37.5 0 5.87 0 12.5c0 5.3 3.44 9.8 8.2 11.39.6.11.82-.26.82-.58v-2c-3.34.72-4.04-1.61-4.04-1.61-.55-1.39-1.34-1.76-1.34-1.76-1.09-.75.08-.73.08-.73 1.2.08 1.84 1.24 1.84 1.24 1.07 1.83 2.81 1.3 3.5.99.11-.78.42-1.3.76-1.6-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.13-.3-.54-1.52.11-3.18 0 0 1.01-.32 3.3 1.23a11.5 11.5 0 0 1 6 0c2.29-1.55 3.3-1.23 3.3-1.23.65 1.66.24 2.88.12 3.18.77.84 1.23 1.91 1.23 3.22 0 4.61-2.81 5.63-5.48 5.92.43.37.82 1.1.82 2.22v3.29c0 .32.21.7.82.58C20.57 22.29 24 17.8 24 12.5 24 5.87 18.63.5 12 .5z"/></svg>
+    <div class="gsub">Sign in with GitHub — a read-only token, kept in your Keychain.</div>
+    <div class="gcode mono" id="gcode">········</div>
+    <div class="gurl mono">github.com/login/device</div>
+    <div class="gok" id="gok"><span class="dot">✓</span> Connected</div>
+  </div>
+
+  <div class="comp" id="comp1">
+    <div class="grow" data-i="0"><div class="gi" style="background:#8250df22;color:#a371f7">⌥</div><div><div class="gt">PR #142 · token layer</div><div class="gm">casberi/casberi · opened 1h ago</div></div><div class="gtime">merged</div></div>
+    <div class="grow" data-i="1"><div class="gi" style="background:#2da44e22;color:#2DA44E">◍</div><div><div class="gt">Issue · dark mode contrast</div><div class="gm">casberi/casberi · 3h ago</div></div><div class="gtime">open</div></div>
+    <div class="grow" data-i="2"><div class="gi" style="background:#8250df22;color:#a371f7">⌥</div><div><div class="gt">PR #139 · widget crash</div><div class="gm">casberi/casberi · 6h ago</div></div><div class="gtime">review</div></div>
+  </div>
+
+  <div class="comp" id="comp2">
+    <div class="grow" data-i="0"><div class="gi" style="background:#e3b34122;color:#e3b341">★</div><div><div class="gt">vercel / next.js</div><div class="gm"><span class="lang" style="background:#3178c6"></span>Release v15.1.0</div></div><div class="gtime">2h</div></div>
+    <div class="grow" data-i="1"><div class="gi" style="background:#e3b34122;color:#e3b341">★</div><div><div class="gt">pointfreeco / swift-composable</div><div class="gm"><span class="lang" style="background:#f05138"></span>New release</div></div><div class="gtime">5h</div></div>
+    <div class="grow" data-i="2"><div class="gi" style="background:#8b949e22;color:#8b949e">‹›</div><div><div class="gt">gist · treemap.swift</div><div class="gm">your gists</div></div><div class="gtime">1d</div></div>
+  </div>
+
+  <div class="comp" id="comp3">
+    <div class="wtitle">Issue · dark mode contrast</div>
+    <div class="wsub">casberi/casberi · #128</div>
+    <div class="wbox" id="wbox"><span id="wtype"></span><span class="wcaret" id="wcaret"></span></div>
+    <div class="wbtn" id="wbtn">Comment</div>
+  </div>
+
+  <div class="comp" id="comp4">
+    <div class="gtot"><b id="gtotn">0</b> contributions this year</div>
+    <div class="graph" id="graph"></div>
+    <div class="legend">Less <i style="background:#161b22"></i><i style="background:#0e4429"></i><i style="background:#006d32"></i><i style="background:#26a641"></i><i style="background:#39d353"></i> More</div>
+  </div>
+
+  <div class="kick mono" id="kick"></div>
+  <div class="head" id="head"></div>
+  <div class="foot mono"><span>casberi.app</span><span id="pg">01 / 05</span></div>
+  <div class="wipe" id="wipe"></div>
+  <div class="outro" id="outro"><div class="big">Casberi</div><div class="u mono"><b>casberi.app</b> · free on TestFlight</div></div>
+</div>
+<script>
+const clamp01=v=>Math.max(0,Math.min(1,v));
+const easeOut=p=>1-Math.pow(1-p,3);
+const back=p=>{const c=1.7;return 1+(c+1)*Math.pow(p-1,3)+c*Math.pow(p-1,2);};
+const INTRO=0.45, BEAT=1.9, OUT_AT=9.95, N=5;
+const D=[{"kick":"01 · CONNECT","head":"A read-only\ntoken.","accent":"#2DA44E"},{"kick":"02 · CODE","head":"PRs and\nissues.","accent":"#2DA44E"},{"kick":"03 · FEEDS","head":"Stars and\nreleases.","accent":"#2DA44E"},{"kick":"04 · WRITE BACK","head":"Comment,\nfrom here.","accent":"#2DA44E"},{"kick":"05 · ACTIVITY","head":"Your year,\nin green.","accent":"#39D353"}];
+window.TOTAL=11.85;
+const comps=[...document.querySelectorAll('.comp')];
+const LV=['#161b22','#0e4429','#006d32','#26a641','#39d353'];
+const CODE='WDJB-MJHT', MSG='Bumping the token contrast to 4.5:1 — PR incoming.';
+
+// build the contribution grid: column-major (week by week), deterministic level
+const graph=document.getElementById('graph'); const cells=[];
+for(let d=0;d<7;d++)for(let w=0;w<52;w++){
+  const el=document.createElement('div'); el.className='cell';
+  const h=Math.abs(Math.sin(w*12.9898+d*4.1414)*43758.5453)%1;      // 0..1 stable
+  const bell=Math.exp(-Math.pow((w-30)/22,2));                        // busier mid-year
+  let lv=0; const s=h*bell*1.5; if(s>1.05)lv=4; else if(s>0.72)lv=3; else if(s>0.42)lv=2; else if(s>0.2)lv=1;
+  el.dataset.lv=lv; el.dataset.order=(w*7+d); el.style.gridColumn=(w+1); el.style.gridRow=(d+1);
+  graph.appendChild(el); cells.push(el);
+}
+const TOTAL_CONTRIB=cells.reduce((a,c)=>a+[0,2,6,11,16][+c.dataset.lv],0);
+
+window.seek=function(t){
+  let active=Math.max(0,Math.min(N-1,Math.floor((t-INTRO)/BEAT)));
+  const bs=INTRO+active*BEAT, local=t-bs, acc=D[active].accent;
+  const pIn=clamp01((local-0.28)/1.25);
+
+  let coverAcc=acc, wipeX=200;
+  const bounds=[]; for(let k=1;k<N;k++) bounds.push({t:INTRO+k*BEAT,c:D[k].accent}); bounds.push({t:OUT_AT,c:'#14110d'});
+  for(const b of bounds){const p=(t-(b.t-0.34))/0.68; if(p>=0&&p<=1){wipeX=(1-p)*135-p*135*1.15;coverAcc=b.c;}}
+  const wp=document.getElementById('wipe'); wp.style.background=coverAcc; wp.style.transform='skewX(-9deg) translateX('+wipeX+'%)';
+
+  document.getElementById('rule').style.transform='scaleX('+easeOut(clamp01(t/0.6))+')';
+  const wm=document.getElementById('wm'); wm.textContent=(active+1<10?'0':'')+(active+1);
+  wm.style.color=acc; wm.style.opacity=0.09*clamp01(local/0.4); wm.style.transform='translateY('+((1-easeOut(clamp01(local/0.5)))*30)+'px)';
+
+  const ki=document.getElementById('kick'); ki.textContent=D[active].kick; ki.style.color=acc;
+  const kin=clamp01(local/0.4); ki.style.opacity=easeOut(kin); ki.style.transform='translateX('+((1-easeOut(kin))*-40)+'px)';
+
+  const he=document.getElementById('head'); he.textContent=D[active].head;
+  const hin=clamp01((local-0.06)/0.5); he.style.opacity=clamp01(local/0.2); he.style.transform='translateY('+((1-back(hin))*80)+'px)';
+  document.getElementById('pg').textContent=(active+1<10?'0':'')+(active+1)+' / 0'+N;
+
+  comps.forEach((c,i)=>{
+    const cbs=INTRO+i*BEAT, cl=t-cbs, cin=clamp01((cl-0.12)/0.6);
+    const beatEnd=INTRO+(i+1)*BEAT, outp=clamp01((t-(beatEnd-0.3))/0.4);
+    let op=(i===active?1:0)*clamp01(cl/0.15);
+    if(t>OUT_AT) op*=(1-clamp01((t-OUT_AT)/0.25));
+    const y=(1-back(cin))*180+outp*200+Math.sin(t*0.9+i)*5;
+    const rot=(-2.2)+(1-easeOut(cin))*-5+outp*4;
+    c.style.opacity=op; c.style.transform='translateY('+y+'px) rotate('+rot+'deg)';
+  });
+  animateComp(active, pIn, t);
+
+  const fo=(t>OUT_AT)?(1-clamp01((t-OUT_AT)/0.25)):1;
+  ['kick','head'].forEach(id=>{const e=document.getElementById(id);e.style.opacity=Math.min(+e.style.opacity||1,fo);});
+  document.getElementById('outro').style.opacity=easeOut(clamp01((t-(OUT_AT+0.25))/0.5));
+};
+
+function stagger(sel,p,step,dur,rise){document.querySelectorAll(sel).forEach((r,k)=>{const rp=clamp01((p-k*step)/dur);r.style.opacity=rp;r.style.transform='translateY('+((1-easeOut(rp))*(rise||24))+'px)';});}
+function animateComp(i,p,t){
+  if(i===0){
+    const n=Math.round(CODE.length*clamp01(p/0.45)); document.getElementById('gcode').textContent=CODE.slice(0,n)+'········'.slice(0,Math.max(0,CODE.length-n));
+    const ok=document.getElementById('gok'); const okp=clamp01((p-0.6)/0.3); ok.style.opacity=okp; ok.style.transform='scale('+(0.85+0.15*back(clamp01((p-0.6)/0.4)))+')';
+  } else if(i===1){ stagger('#comp1 .grow',p,0.15,0.4,26); }
+  else if(i===2){ stagger('#comp2 .grow',p,0.15,0.4,26); }
+  else if(i===3){
+    const n=Math.round(MSG.length*clamp01(p/0.75)); document.getElementById('wtype').textContent=MSG.slice(0,n);
+    document.getElementById('wcaret').style.opacity=(Math.floor(t*2)%2)?1:0.2;
+    const bp=clamp01((p-0.78)/0.2); const b=document.getElementById('wbtn'); b.style.opacity=bp; b.style.transform='scale('+(0.9+0.1*easeOut(bp))+')';
+  } else if(i===4){
+    document.getElementById('gtotn').textContent=Math.round(TOTAL_CONTRIB*easeOut(p)).toLocaleString();
+    cells.forEach(c=>{
+      const w=Math.floor(+c.dataset.order/7);
+      const ap=clamp01((p - (w/52)*0.85)/0.12);       // fill column by column
+      c.style.opacity=0.25+0.75*ap;
+      c.style.background=ap>0.5?LV[+c.dataset.lv]:'#161b22';
+      c.style.transform='scale('+(0.4+0.6*back(ap))+')';
+    });
+  }
+}
+window.seek(0);
+</script></body></html>

@@ -19,6 +19,8 @@ struct RootShell: View {
     /// the sheet hugs it (grows on its own when an answer streams in).
     @State private var actionsHeight: CGFloat = 360
     @State private var deepLinkThing: Thing?
+    /// `casberi://person/<Source>/<handle>` — the profile card, by name.
+    @State private var deepLinkPerson: SocialProfile?
     @AppStorage("onboarded") private var onboarded = false
     /// After onboarding completes, the "How it works" greeting shows a new
     /// person once (2026-07-11) — swapped in as a SECOND STEP inside the same
@@ -483,6 +485,15 @@ struct RootShell: View {
         .sheet(item: $deepLinkThing) { thing in
             ThingSheetView(thing: thing)
         }
+        .sheet(item: $deepLinkPerson) { person in
+            // These sheets hang OUTSIDE the `.environment(chrome)` above, so
+            // the card is handed chrome explicitly — else its toasts would go
+            // nowhere. (The card survives without it either way; it reads the
+            // environment optionally, precisely because it opens from chains
+            // that may not carry chrome.)
+            SocialProfileCard(profile: person)
+                .environment(chrome)
+        }
         .fullScreenCover(isPresented: Binding(
             get: { !onboarded }, set: { if !$0 { onboarded = true; onboardingHowItWorks = false } }
         )) {
@@ -544,6 +555,16 @@ struct RootShell: View {
             HomeRoute.shared.push = .apps
         case "settings":
             HomeRoute.shared.push = .settings
+        // casberi://person/<Source>/<handle> — the profile card for one person
+        // on one network (2026-07-16). In the app it's reached by tapping a
+        // face; this is the same card by name, so the screen sweep can reach it
+        // headlessly like every other surface.
+        case "person":
+            let parts = url.pathComponents.filter { $0 != "/" }
+            if parts.count == 2, SocialThread.isSocial(parts[0]) {
+                deepLinkPerson = SocialProfile(source: parts[0], handle: parts[1],
+                                               displayName: nil, bio: nil, avatarURL: nil)
+            }
         case "thing":
             FeedFilter.shared.source = "All"
             let part = url.pathComponents.filter { $0 != "/" }.first
@@ -1034,13 +1055,17 @@ struct RootShell: View {
 
     /// The BYO-key retry (prd §67) — the same question over the SAME evidence
     /// the on-device answer saw (`lastAnswerHits`), synthesized by the person's
-    /// own agent key (Claude, ChatGPT, Gemini, or Venice), device→API direct.
+    /// own agent key (Claude, ChatGPT, Gemini, Venice, or Bankr), device→API
+    /// direct.
     /// nil means the key or the network failed and the composer words that; an
     /// empty grounding gets an honest line instead, because a stronger model
     /// can't change what's here.
     private func keyedAnswerDocument(_ query: String) async -> [String]? {
         let hits = lastAnswerHits.isEmpty ? retrieve(query) : lastAnswerHits
-        guard !hits.isEmpty else {
+        // Bankr answers from the wallet and live markets too, so an empty
+        // corpus match still asks; every other agent only re-reads the same
+        // evidence, so an empty match gets the honest line instead.
+        guard !hits.isEmpty || AgentKey.active == .bankr else {
             return proseDoc("Nothing in your things matches that — a bigger model can't change what's here.")
         }
         guard let prose = await AgentAnswer.synthesize(query: query,

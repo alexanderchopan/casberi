@@ -194,7 +194,8 @@ struct BandRow: View {
                     Text(Self.deltaText(pulse.change24h))
                         .font(.system(size: 11, weight: .semibold))
                         .monospacedDigit()
-                        .foregroundStyle(pulse.change24h >= 0 ? DS.confirm : DS.destructive)
+                        .foregroundStyle(TokenChartStyle.accent(change: pulse.change24h,
+                                                                scheme: scheme))
                 } else if live {
                     HStack(spacing: 4) {
                         Circle().fill(DS.confirm).frame(width: 6, height: 6)
@@ -217,9 +218,10 @@ struct BandRow: View {
         .padding(.vertical, DS.Space.s2)
     }
 
-    /// "+4.2%" / "-7.8%" — one decimal; sign is the point.
+    /// "+4.2%" / "-7.8%" — one decimal; sign is the point, except at a flat
+    /// change, where there is no sign to make (`TokenChartStyle.changeText`).
     private static func deltaText(_ change: Double) -> String {
-        String(format: "%+.1f%%", change * 100)
+        TokenChartStyle.changeText(change)
     }
 }
 

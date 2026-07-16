@@ -70,16 +70,22 @@ struct BankrSetupScreen: View {
                     .padding(.horizontal, DS.Space.s3)
                     .frame(height: 44)
                     .background(DS.fillFaint, in: Capsule(style: .continuous))
+                // A plain-style button with its own background gets no dimming
+                // from `.disabled` — it has to wear the off state itself, the
+                // way BridgeFieldRow does, or it reads live while inert.
+                let armed = !checking && !keyDraft.trimmingCharacters(in: .whitespaces).isEmpty
                 Button { connect() } label: {
                     Text(checking ? "Checking…" : (configured ? "Update" : "Connect"))
                         .dsText(.callout15).fontWeight(.semibold)
-                        .foregroundStyle(.white)
+                        .foregroundStyle(armed ? AnyShapeStyle(.white) : AnyShapeStyle(DS.textTertiary))
                         .padding(.horizontal, DS.Space.s4)
                         .frame(height: 44)
-                        .background(DS.tint, in: Capsule(style: .continuous))
+                        .background(armed ? AnyShapeStyle(DS.tint) : AnyShapeStyle(DS.gray200),
+                                    in: Capsule(style: .continuous))
+                        .animation(DS.Motion.standard, value: armed)
                 }
                 .buttonStyle(.plain)
-                .disabled(checking || keyDraft.trimmingCharacters(in: .whitespaces).isEmpty)
+                .disabled(!armed)
             }
             .dsListCardRow()
             BridgeSyncStatusRows(result: result, resultIsError: resultIsError)

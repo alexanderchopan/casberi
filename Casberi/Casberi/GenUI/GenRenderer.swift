@@ -773,7 +773,7 @@ private struct SoloTokenTile: View {
 
     private var symbol: String { el.str(0) }
     private var accent: Color {
-        TokenChartStyle.accent(up: (chart?.change ?? 0) >= 0, scheme: scheme)
+        TokenChartStyle.accent(change: chart?.change ?? 0, scheme: scheme)
     }
 
     var body: some View {
@@ -1485,7 +1485,7 @@ private struct GenTokenChip: View {
 
     private var symbol: String { el.str(0) }
     private var accent: Color {
-        TokenChartStyle.accent(up: (chart?.change ?? 0) >= 0, scheme: scheme)
+        TokenChartStyle.accent(change: chart?.change ?? 0, scheme: scheme)
     }
 
     var body: some View {
