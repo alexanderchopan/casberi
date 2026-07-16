@@ -265,6 +265,14 @@ struct MainSurface: View {
                         .navigationTransition(.zoom(sourceID: "settingsDoor", in: doorNS))
                 }
             }
+            // The ONE bridge-screen registration for the whole stack (see
+            // `HomeRoute.bridgePush`) — Feed's Manage, an Apps tile's
+            // capsule, and a product page's Connect/Open all push through
+            // this single binding regardless of how deep they sit, so the
+            // pushed screen always gets a correct back chevron.
+            .navigationDestination(item: $route.bridgePush) { dest in
+                BridgeDestinationView(destination: dest)
+            }
         }
         .tint(DS.tint)
     }

@@ -32,7 +32,6 @@ struct FeedScreen: View {
     @State private var staleExpanded = false
     @State private var blockStream = GenStream()
     @Bindable private var wallet = WalletStore.shared
-    @State private var pushedBridge: BridgeRouter.Destination?
     // First-run teaching (option 4: no demo mode — this lives in the real
     // app and retires on first use, forever).
     @AppStorage("coach.swipe.done") private var swipeCoachDone = false
@@ -253,12 +252,11 @@ struct FeedScreen: View {
         // inside that one stack. Its own inner push (a bridge control panel)
         // stays here; Apps/Settings moved up to the shell.
         feedList
-            .navigationDestination(item: $pushedBridge) { BridgeDestinationView(destination: $0) }
             // Re-tapping the active chip pops this surface's own pushed
             // screens and sheets back to root (the old per-tab pop habit).
             .onChange(of: chrome.popHome) {
                 sheetThing = nil
-                pushedBridge = nil
+                HomeRoute.shared.bridgePush = nil
                 confirming = nil
             }
     }
@@ -287,7 +285,8 @@ struct FeedScreen: View {
     /// live status. Tapping opens the app's control panel through the router —
     /// the dedicated screen when the bridge has one (Tokens' watchlist,
     /// Wallet's addresses), the generic detail page otherwise. It rides
-    /// `pushedBridge` — the same channel a Wallet row already uses. (2026-07-11:
+    /// `HomeRoute.shared.bridgePush` — the same channel a Wallet row already
+    /// uses. (2026-07-11:
     /// this hardcoded `.detail`, so Tokens' Feed header opened a page with
     /// no way to watch a second token.)
     ///
@@ -304,7 +303,7 @@ struct FeedScreen: View {
         HStack(spacing: DS.Space.s2) {
         Button {
             DSHaptic.selection()
-            pushedBridge = BridgeRouter.destination(forID: bridge.id)
+            HomeRoute.shared.bridgePush = BridgeRouter.destination(forID: bridge.id)
         } label: {
             HStack(spacing: DS.Space.s2) {
                 Circle()
@@ -837,7 +836,7 @@ struct FeedScreen: View {
                                 quickToken = route
                             }
                         } else if name == "@wallet" {
-                            pushedBridge = .wallet
+                            HomeRoute.shared.bridgePush = .wallet
                         }
                     }
             }
@@ -1284,7 +1283,7 @@ struct FeedScreen: View {
     /// which had nothing more than an explorer link to show (ruling 2026-07-09).
     private func openThing(_ thing: Thing) {
         if thing.source == "Wallet" {
-            pushedBridge = .wallet
+            HomeRoute.shared.bridgePush = .wallet
         } else {
             sheetThing = thing
         }

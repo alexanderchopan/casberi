@@ -10,6 +10,17 @@ final class HomeRoute {
     static let shared = HomeRoute()
     enum Push: String, Identifiable { case apps, settings; var id: String { rawValue } }
     var push: Push?
+    /// A bridge's own screen (wallet, tokens, a setup screen, …) — ONE shared
+    /// push target for every entry point (Feed's Manage, Apps' tile capsules,
+    /// a product page's Connect/Open), registered as a single
+    /// `navigationDestination` at the shell (`MainSurface`). Before this,
+    /// three screens each registered their own `navigationDestination(item:)`
+    /// for the same `BridgeRouter.Destination` type at different depths of
+    /// the one shared NavigationStack — undefined per Apple's "one
+    /// destination provider per type per stack" rule, and the reported
+    /// symptom (audit 2026-07-15) was a pushed bridge screen with no working
+    /// back chevron.
+    var bridgePush: BridgeRouter.Destination?
     /// A tag to open as its own view — set by an Ask answer that names a tag,
     /// so "what did I save about work" opens the Work view the treemap opens.
     var openTag: String?

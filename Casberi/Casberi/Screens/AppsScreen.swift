@@ -18,7 +18,6 @@ struct AppsScreen: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var pairing = false
     @State private var storyID: String?
-    @State private var setupRoute: BridgeRouter.Destination?
     @State private var query = ""
     /// The connect payoff (delight): every Connect on this screen — story
     /// card OR shelf capsule — ends the same way the product page's does,
@@ -213,9 +212,6 @@ struct AppsScreen: View {
         .navigationTitle("Apps")
         .navigationBarTitleDisplayMode(.large)
         .sheet(isPresented: $pairing) { PairClientSheet() }
-        .navigationDestination(item: $setupRoute) { dest in
-            BridgeDestinationView(destination: dest)
-        }
         #if DEBUG
         .navigationDestination(item: $probe) { p in
             switch p {
@@ -235,7 +231,7 @@ struct AppsScreen: View {
             // `-openSetup "<Offer name>"` pushes a bridge's setup screen
             // directly — the token/handle field screens have no deep link.
             if let name = UserDefaults.standard.string(forKey: "openSetup") {
-                setupRoute = BridgeRouter.destination(forOffer: name)
+                HomeRoute.shared.bridgePush = BridgeRouter.destination(forOffer: name)
             }
             #endif
         }
@@ -357,7 +353,7 @@ struct AppsScreen: View {
                 // setup screen; only the system-permission bridges connect in
                 // one tap, same split the chart uses.
                 if offer.needsSetup {
-                    setupRoute = BridgeRouter.destination(forOffer: offer.name)
+                    HomeRoute.shared.bridgePush = BridgeRouter.destination(forOffer: offer.name)
                 } else {
                     attemptConnect(offer)
                 }
@@ -726,7 +722,7 @@ struct AppsScreen: View {
                 enabled: entry.tier == 1 && StorePreview.doc(for: entry.offer.name) != nil,
                 onConnect: {
                     if entry.offer.needsSetup {
-                        setupRoute = BridgeRouter.destination(forOffer: entry.offer.name)
+                        HomeRoute.shared.bridgePush = BridgeRouter.destination(forOffer: entry.offer.name)
                     } else {
                         attemptConnect(entry.offer)
                     }
@@ -753,13 +749,13 @@ struct AppsScreen: View {
             // Broken connection — Fix opens management, where Reconnect lives.
             if let bridge = entry.bridge {
                 VerbCapsule(verb: .fix) {
-                    setupRoute = BridgeRouter.destination(forID: bridge.id)
+                    HomeRoute.shared.bridgePush = BridgeRouter.destination(forID: bridge.id)
                 }
             }
         case 2:
             if let bridge = entry.bridge {
                 VerbCapsule(verb: .open) {
-                    setupRoute = BridgeRouter.destination(forID: bridge.id)
+                    HomeRoute.shared.bridgePush = BridgeRouter.destination(forID: bridge.id)
                 }
             }
         case 1:
@@ -767,7 +763,7 @@ struct AppsScreen: View {
                 // Setup bridges collect input first — Connect opens their
                 // screen; the connect happens there, with proof.
                 VerbCapsule(verb: .connect) {
-                    setupRoute = BridgeRouter.destination(forOffer: entry.offer.name)
+                    HomeRoute.shared.bridgePush = BridgeRouter.destination(forOffer: entry.offer.name)
                 }
             } else {
                 VerbCapsule(verb: .connect) { attemptConnect(entry.offer) }

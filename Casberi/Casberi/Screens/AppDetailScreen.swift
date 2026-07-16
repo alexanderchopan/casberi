@@ -10,7 +10,6 @@ struct AppDetailScreen: View {
     let offer: BridgeCatalog.Offer
     @Environment(BridgeStore.self) private var store
     @Environment(\.modelContext) private var modelContext
-    @State private var openBridge: BridgeRouter.Destination?
     @State private var previewStream = GenStream()
     /// The connect payoff (delight, 2026-07-12): bumping this blooms the app's
     /// hue over the page via the shared `.connectBloom` — "connect ends in
@@ -70,9 +69,6 @@ struct AppDetailScreen: View {
                 previewStream.stream(doc)
             }
         }
-        .navigationDestination(item: $openBridge) { dest in
-            BridgeDestinationView(destination: dest)
-        }
     }
 
     // MARK: - Header (big icon + name + action, App Store product-page shape)
@@ -103,18 +99,18 @@ struct AppDetailScreen: View {
                 // A broken setup bridge (mail/wallet/token) is fixed by redoing
                 // its setup, not the one-tap connect path.
                 if offer.needsSetup {
-                    openBridge = BridgeRouter.destination(forOffer: offer.name)
+                    HomeRoute.shared.bridgePush = BridgeRouter.destination(forOffer: offer.name)
                 } else {
                     doConnect()
                 }
             }
         } else if connected {
             VerbCapsule(verb: .open) {
-                if let id = bridge?.id { openBridge = BridgeRouter.destination(forID: id) }
+                if let id = bridge?.id { HomeRoute.shared.bridgePush = BridgeRouter.destination(forID: id) }
             }
         } else if offer.connectable {
             if offer.needsSetup {
-                VerbCapsule(verb: .connect) { openBridge = BridgeRouter.destination(forOffer: offer.name) }
+                VerbCapsule(verb: .connect) { HomeRoute.shared.bridgePush = BridgeRouter.destination(forOffer: offer.name) }
             } else {
                 VerbCapsule(verb: .connect) {
                     doConnect()

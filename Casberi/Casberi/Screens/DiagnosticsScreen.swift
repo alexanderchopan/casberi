@@ -10,6 +10,7 @@ import MusicKit
 /// fine here: this screen exists for debugging sessions, not daily use.
 struct DiagnosticsScreen: View {
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.dismiss) private var dismiss
     @State private var lines: [String] = []
     @State private var running = false
 
@@ -42,6 +43,11 @@ struct DiagnosticsScreen: View {
         .dsPageBackground()
         .navigationTitle("Diagnostics")
         .navigationBarTitleDisplayMode(.large)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button("Done") { dismiss() }
+            }
+        }
         .task { await run() }
     }
 
