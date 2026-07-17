@@ -421,6 +421,7 @@ struct HandleSetupScreen: View {
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
+        .bridgeSetupWash(name: bridge.rawValue)
         .dsPageBackground()
         .navigationTitle(bridge.rawValue)
         .navigationBarTitleDisplayMode(.large)

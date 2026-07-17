@@ -43,6 +43,10 @@ struct TokenSetupScreen: View {
     private var deviceFlowOffered: Bool {
         bridge == .github && GitHubDeviceFlow.isAvailable
     }
+    /// The manual token path, folded behind a disclosure when sign-in is
+    /// offered — it's the fallback, and two full-weight paths made the screen
+    /// a wall (mock review 2026-07-16). Paste-only bridges show it plainly.
+    @State private var manualPathOpen = false
 
     /// This bridge's things — cached per appearance and after each sync, rather
     /// than re-fetched twice on every body pass. The source is per-bridge, so
@@ -55,15 +59,33 @@ struct TokenSetupScreen: View {
 
     var body: some View {
         List {
-            BridgeSetupHeader(name: bridge.rawValue)
-            if deviceFlowOffered { signInSection }
-            stepsSection
-            tokenSection
+            BridgeSetupHeader(name: bridge.rawValue, connected: bridge.connected)
+            if deviceFlowOffered {
+                // Sign-in is THE path; the token hunt folds away behind a
+                // disclosure so the screen leads with one action instead of
+                // two competing ones (mock review 2026-07-16). The proof and
+                // error rows surface beside sign-in while the manual path —
+                // whose card normally carries them — is folded.
+                signInSection
+                if !manualPathOpen { statusSection }
+                manualPathToggleSection
+            }
+            if manualPathOpen || !deviceFlowOffered {
+                stepsSection
+                tokenSection
+            }
             if bridge == .github && bridge.connected {
                 feedsSection
                 watchSection
             }
-            if !recent.isEmpty {
+            if recent.isEmpty {
+                // Only before the connect: a connected bridge whose sync
+                // landed nothing must not wear "when you connect" (honesty
+                // rule; review 2026-07-16).
+                if !bridge.connected {
+                    GhostPreviewSection(name: bridge.rawValue)
+                }
+            } else {
                 PinToHomeButton(source: bridge.rawValue, inSection: true)
                 RecentThingsSection(header: "Landed", things: recent)
             }
@@ -71,6 +93,7 @@ struct TokenSetupScreen: View {
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
+        .bridgeSetupWash(name: bridge.rawValue)
         .dsPageBackground()
         .navigationTitle(bridge.rawValue)
         .navigationBarTitleDisplayMode(.large)
@@ -182,7 +205,7 @@ struct TokenSetupScreen: View {
         result = nil
         pollTask = Task { @MainActor in
             guard let code = await GitHubDeviceFlow.start() else {
-                finishDeviceFlow(error: String(localized: "GitHub didn't answer — try again, or paste a token below."))
+                finishDeviceFlow(error: String(localized: "GitHub didn't answer — try again, or get a token by hand."))
                 return
             }
             withAnimation(DS.Motion.standard) { devicePhase = .waiting(code) }
@@ -239,6 +262,38 @@ struct TokenSetupScreen: View {
         }
     }
 
+    /// The sync proof and honest failures, surfaced beside sign-in while the
+    /// manual path (whose card normally carries these rows) is folded away.
+    private var statusSection: some View {
+        Section {
+            BridgeSyncStatusRows(syncing: syncing,
+                                 syncingLine: String(localized: "Fetching your \(bridge.noun)…"),
+                                 result: result, resultIsError: resultIsError)
+        }
+    }
+
+    /// The fold: one quiet row that opens the token-by-hand path.
+    private var manualPathToggleSection: some View {
+        Section {
+            Button {
+                withAnimation(DS.Motion.standard) { manualPathOpen.toggle() }
+            } label: {
+                HStack(spacing: DS.Space.s3) {
+                    Text("Prefer a token by hand?")
+                        .dsText(.body17).foregroundStyle(DS.textPrimary)
+                    Spacer()
+                    Image(systemName: "chevron.down")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(DS.textTertiary)
+                        .rotationEffect(.degrees(manualPathOpen ? 180 : 0))
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .dsListCardRow()
+        }
+    }
+
     private var stepsSection: some View {
         // One list row holding the whole numbered list — a Section of ForEach
         // rows draws a separator between them that survives row-level
@@ -263,8 +318,7 @@ struct TokenSetupScreen: View {
             }
             .dsListCardRow()
         } header: {
-            // With sign-in above, the token hunt reads as the fallback it is.
-            Text(deviceFlowOffered ? "Or get a token by hand" : "Get your token")
+            Text("Get your token")
                 .dsText(.label12)
                 .foregroundStyle(DS.textTertiary)
         }
@@ -298,32 +352,39 @@ struct TokenSetupScreen: View {
     /// person each turns on; toggling re-syncs so a newly-chosen feed lands
     /// now, not next foreground.
     private var feedsSection: some View {
+        // One list row holding every feed (a VStack) — separate rows leak a
+        // hairline between them that survives .listRowSeparator(.hidden) (the
+        // first-post-header-separator gotcha stepsSection documents). Design
+        // law: no hairlines, zero exceptions.
         Section {
-            ForEach(GitHubFeed.allCases) { feed in
-                Button {
-                    githubFeeds.toggle(feed)
-                    DSHaptic.tap()
-                    Task { await sync() }
-                } label: {
-                    HStack(alignment: .firstTextBaseline, spacing: DS.Space.s3) {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(feed.title)
-                                .dsText(.body17).foregroundStyle(DS.textPrimary)
-                            Text(feed.blurb)
-                                .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-                                .fixedSize(horizontal: false, vertical: true)
+            VStack(alignment: .leading, spacing: 0) {
+                ForEach(GitHubFeed.allCases) { feed in
+                    Button {
+                        githubFeeds.toggle(feed)
+                        DSHaptic.tap()
+                        Task { await sync() }
+                    } label: {
+                        HStack(alignment: .firstTextBaseline, spacing: DS.Space.s3) {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(feed.title)
+                                    .dsText(.body17).foregroundStyle(DS.textPrimary)
+                                Text(feed.blurb)
+                                    .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                            Spacer(minLength: DS.Space.s2)
+                            if githubFeeds.isOn(feed) {
+                                Image(systemName: "checkmark")
+                                    .dsText(.body17).foregroundStyle(DS.tint)
+                            }
                         }
-                        Spacer(minLength: DS.Space.s2)
-                        if githubFeeds.isOn(feed) {
-                            Image(systemName: "checkmark")
-                                .dsText(.body17).foregroundStyle(DS.tint)
-                        }
+                        .contentShape(Rectangle())
                     }
-                    .contentShape(Rectangle())
+                    .buttonStyle(.plain)
+                    .padding(.vertical, DS.Space.s1)
                 }
-                .buttonStyle(.plain)
-                .dsListCardRow()
             }
+            .dsListCardRow()
         } header: {
             Text("Feeds").dsText(.label12).foregroundStyle(DS.textTertiary)
         } footer: {
@@ -429,6 +490,11 @@ struct TokenSetupScreen: View {
                     // retry a dead token on every foreground.
                     TokenVault.delete(bridge.tokenKey)
                     result = String(localized: "That token didn't work — check it (and your connection) and paste again.")
+                    // "Paste again" must point at a visible field — if the
+                    // manual path is folded (a device-flow connect that failed
+                    // on its first sync), unfold it so the error and the field
+                    // share the screen (review 2026-07-16).
+                    withAnimation(DS.Motion.standard) { manualPathOpen = true }
                 } else {
                     // A background re-sync of an already-connected bridge failed. The
                     // user didn't just paste anything, so don't accuse the empty field

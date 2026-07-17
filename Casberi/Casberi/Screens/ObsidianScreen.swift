@@ -32,6 +32,7 @@ struct ObsidianScreen: View {
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
+        .bridgeSetupWash(name: "Obsidian")
         .dsPageBackground()
         .navigationTitle("Obsidian")
         .navigationBarTitleDisplayMode(.large)

@@ -30,11 +30,24 @@ struct RSSScreen: View {
 
     var body: some View {
         List {
-            BridgeSetupHeader(name: "RSS")
+            BridgeSetupHeader(name: "RSS", connected: !rss.feeds.isEmpty)
             if !rss.feeds.isEmpty { followingSection.listRowSeparator(.hidden) }
             addSection.listRowSeparator(.hidden)
-            if !rss.feeds.isEmpty { pinToHomeSection.listRowSeparator(.hidden) }
-            if !recent.isEmpty {
+            if !rss.feeds.isEmpty {
+                PinToHomeButton(source: "RSS", inSection: true,
+                                footer: "Your feeds' newest posts ride a strip on Home.")
+                    .listRowSeparator(.hidden)
+            }
+            if recent.isEmpty {
+                // Only before the first feed: once one is followed, a ghost
+                // captioned "when you follow a feed" would contradict the
+                // Following list above it (honesty rule; review 2026-07-16).
+                if rss.feeds.isEmpty {
+                    GhostPreviewSection(name: "RSS",
+                                        replaceLine: "Your real posts replace this when you follow a feed.")
+                        .listRowSeparator(.hidden)
+                }
+            } else {
                 RecentThingsSection(header: "Recent", things: recent, titleLines: 1)
                     .listRowSeparator(.hidden)
             }
@@ -53,6 +66,7 @@ struct RSSScreen: View {
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
+        .bridgeSetupWash(name: "RSS")
         .dsPageBackground()
         .navigationTitle("RSS")
         .navigationBarTitleDisplayMode(.large)
@@ -110,39 +124,9 @@ struct RSSScreen: View {
             Text("Add a feed").dsText(.label12)
                 .foregroundStyle(DS.textTertiary)
         } footer: {
-            Text("Paste a site's feed URL — new posts land in your feed as links.")
-                .dsText(.callout15).foregroundStyle(DS.textTertiary)
-        }
-    }
-
-    // MARK: - Pin to Home
-
-    private var pinnedToHome: Bool { HomePinnedSources.shared.isPinned("RSS") }
-
-    /// Pin to Home (prd 58, Goal 4) — the board grows from the catalog: a
-    /// followed feed can earn a Home card here, on its own screen, without
-    /// waiting to cross the automatic magnitude threshold. One verb, both
-    /// directions; the newest posts ride a magazine strip on Home.
-    private var pinToHomeSection: some View {
-        Section {
-            Button {
-                HomePinnedSources.shared.toggle("RSS")
-                CorpusSignal.shared.bump()   // Home recomposes on this signal.
-                DSHaptic.tap()
-            } label: {
-                HStack(spacing: DS.Space.s2) {
-                    Image(systemName: pinnedToHome ? "pin.fill" : "pin")
-                    Text(pinnedToHome ? "Pinned to Home" : "Pin to Home")
-                }
-                .dsText(.body17).foregroundStyle(pinnedToHome ? DS.tint : DS.textPrimary)
-                .frame(maxWidth: .infinity).frame(height: 44)
-                .background(pinnedToHome ? DS.tintDim : DS.gray100,
-                            in: Capsule(style: .continuous))
-            }
-            .buttonStyle(.plain)
-            .listRowBackground(Color.clear)
-        } footer: {
-            Text("Your feeds' newest posts ride a strip on Home.")
+            // The mechanic only — the promise lives in the header, the privacy
+            // line in the footer; each block says its one thing (2026-07-16).
+            Text("A site's own address works too — Casberi finds its feed.")
                 .dsText(.callout15).foregroundStyle(DS.textTertiary)
         }
     }

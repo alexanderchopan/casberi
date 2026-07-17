@@ -58,6 +58,7 @@ struct KalshiScreen: View {
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
+        .bridgeSetupWash(name: "Kalshi")
         .dsPageBackground()
         .navigationTitle("Kalshi")
         .navigationBarTitleDisplayMode(.large)

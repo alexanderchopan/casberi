@@ -13,6 +13,11 @@ struct PinToHomeButton: View {
     let source: String
     /// True to wrap the button in its own `Section` (List/Form screens).
     var inSection: Bool = false
+    /// One line under the section — what pinning places on Home, in the
+    /// source's own words ("The newest drops ride a strip on Home."). Lets
+    /// the screens that hand-rolled this section for their footer use the
+    /// shared control instead (consolidation 2026-07-16).
+    var footer: String? = nil
 
     private var pinned: Bool { HomePinnedSources.shared.isPinned(source) }
 
@@ -20,6 +25,11 @@ struct PinToHomeButton: View {
         if inSection {
             Section {
                 button.listRowBackground(Color.clear)
+            } footer: {
+                if let footer {
+                    Text(LocalizedStringKey(footer))
+                        .dsText(.callout15).foregroundStyle(DS.textTertiary)
+                }
             }
         } else {
             button

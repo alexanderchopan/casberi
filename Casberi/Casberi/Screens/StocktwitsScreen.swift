@@ -85,6 +85,7 @@ struct StocktwitsScreen: View {
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
+        .bridgeSetupWash(name: "Stocktwits")
         .dsPageBackground()
         .navigationTitle("Stocktwits")
         .navigationBarTitleDisplayMode(.large)

@@ -51,6 +51,7 @@ struct ShopifyScreen: View {
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
+        .bridgeSetupWash(name: "Shopify")
         .dsPageBackground()
         .navigationTitle("Shopify")
         .navigationBarTitleDisplayMode(.large)

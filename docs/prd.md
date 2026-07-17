@@ -3714,3 +3714,54 @@ can actually carry text earn a chip: the old grid's blank jumps (Calendar,
 Reminders, ChatGPT, Claude tiles) died with it, as did the `-forceTools` hook;
 `-composerDraft "<text>"` replaces it as the headless reach for the typed
 state. Typed text still never saves — it gains destinations, not persistence.
+
+## 91. Connect pages redesign — wash, tagline, ghost preview, toggle verbs (user approved from mockups, 2026-07-16) — BUILT
+
+The setup-screen family was redesigned from a three-mockup review (RSS,
+GitHub, OpenSea) the user approved. Four rulings, two of which supersede
+earlier recorded ones:
+
+**Setup wash.** Every setup screen with a brand hue wears a faint top wash
+(`bridgeSetupWash`, hue at 0.30 fading out above the action area — about a
+third of the product page's atmosphere). Primary controls never sit ON the
+wash (two near-match blues read as a mistake), and the connected header wash
+plus connect bloom still land on top as the reward. Hueless apps get nothing,
+the same ruling every wash follows. The 0.30 strength is the user's call —
+the first build shipped 0.10 and read as no wash at all ("so there is no
+more color?").
+
+**Tagline header — supersedes §store-rulings item (3) ("the catalog offer's
+own summary").** The setup header's blurb is now the offer's TAGLINE in
+primary color, not the summary in gray: the person just read the summary on
+the product page they arrived from, and an all-gray pre-connect screen read
+as disabled. One source of words still holds — the tagline is the catalog's
+own field.
+
+**Ghost preview — amends the 2026-07-07 "option 4" confinement ruling.**
+`GhostPreviewSection` streams the SAME StorePreview doc the product page
+shows, on the setup screen, dimmed (0.55), inert, under a "What lands — a
+preview" header and a "Your real things replace this when you …" caption.
+The confinement ruling ("fake content is confined to the one surface where
+preview framing is honest and expected") now covers BOTH surfaces of the
+connect journey — product page and setup screen — under the same explicit
+preview framing. Gating is honesty-critical: the ghost shows only when
+NOTHING has landed AND the bridge is NOT connected — a connected bridge with
+an empty corpus must not wear a caption telling the person to do the thing
+they already did (caught in review before commit).
+
+**Toggles as the connect verb.** OpenSea/GeckoTerminal chain rows are
+switches now, not appearing checkmarks — a control that starts a live watch
+shows both states. All off pre-connect (a preselected default would be fake
+status); the footer says plainly that switching one on starts the watching.
+Known trade accepted: a SwiftUI Toggle's label is not tappable, so the tap
+target shrank from the full row to the switch — platform convention, revisit
+if it confuses. GitHub's manual-token path folds behind "Prefer a token by
+hand?" (sign-in is THE path); sync proof/errors surface beside sign-in while
+folded, and a failed first connect unfolds the field its error points at.
+
+Held for a later pass (review findings, deliberate): Deals/Shopify/
+HandleSetup still hand-roll their pin sections (user stopped that
+consolidation mid-review); Deals/GitHub-feeds keep the checkmark idiom;
+the chains Toggle section is duplicated across OpenSea/GeckoTerminal and
+the wash/ghost/hairline patterns are per-screen rather than hoisted into
+shared chrome.

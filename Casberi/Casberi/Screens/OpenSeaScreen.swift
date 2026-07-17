@@ -31,10 +31,23 @@ struct OpenSeaScreen: View {
 
     var body: some View {
         List {
-            BridgeSetupHeader(name: "OpenSea")
+            BridgeSetupHeader(name: "OpenSea", connected: opensea.connected)
             chainsSection.listRowSeparator(.hidden)
-            if opensea.connected { pinToHomeSection.listRowSeparator(.hidden) }
-            if !recent.isEmpty {
+            if opensea.connected {
+                PinToHomeButton(source: "OpenSea", inSection: true,
+                                footer: "The newest drops ride a strip on Home.")
+                    .listRowSeparator(.hidden)
+            }
+            if recent.isEmpty {
+                // Only before the first chain: a ghost captioned "when you
+                // switch a chain on" under an ON toggle would be fake status
+                // (honesty rule; review 2026-07-16).
+                if !opensea.connected {
+                    GhostPreviewSection(name: "OpenSea",
+                                        replaceLine: "Your real drops replace this when you switch a chain on.")
+                        .listRowSeparator(.hidden)
+                }
+            } else {
                 RecentThingsSection(header: "New drops", things: recent, titleLines: 1)
                     .listRowSeparator(.hidden)
             }
@@ -51,6 +64,7 @@ struct OpenSeaScreen: View {
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
+        .bridgeSetupWash(name: "OpenSea")
         .dsPageBackground()
         .navigationTitle("OpenSea")
         .navigationBarTitleDisplayMode(.large)
@@ -66,24 +80,32 @@ struct OpenSeaScreen: View {
 
     private var chainsSection: some View {
         Section {
-            ForEach(OpenSeaChain.allCases) { chain in
-                Button {
-                    toggle(chain)
-                } label: {
-                    HStack(spacing: DS.Space.s3) {
+            // A switch, not an appearing checkmark — the row IS the connect
+            // verb here, and a control that starts a live watch should look
+            // like one with both states visible (mock review 2026-07-16).
+            // One list row holding every chain (a VStack) — separate rows leak
+            // a hairline that survives .listRowSeparator(.hidden) (the
+            // first-post-header-separator gotcha). Design law: no hairlines.
+            VStack(spacing: 0) {
+                ForEach(OpenSeaChain.allCases) { chain in
+                    Toggle(isOn: Binding(
+                        get: { opensea.isWatching(chain) },
+                        // Guard on the committed value: a same-value commit (a
+                        // knob drag released on its own side, an accessibility
+                        // set) must not invert the watch behind the switch.
+                        set: { on in
+                            guard on != opensea.isWatching(chain) else { return }
+                            toggle(chain)
+                        }
+                    )) {
                         Text(chain.display)
                             .dsText(.body17).foregroundStyle(DS.textPrimary)
-                        Spacer()
-                        if opensea.isWatching(chain) {
-                            Image(systemName: "checkmark")
-                                .dsText(.body17).foregroundStyle(DS.tint)
-                        }
                     }
-                    .contentShape(Rectangle())
+                    .tint(DS.tint)
+                    .padding(.vertical, DS.Space.s1)
                 }
-                .buttonStyle(.plain)
-                .dsListCardRow()
             }
+            .dsListCardRow()
         } header: {
             HStack {
                 Text("Chains").dsText(.label12).foregroundStyle(DS.textTertiary)
@@ -95,35 +117,7 @@ struct OpenSeaScreen: View {
                 }
             }
         } footer: {
-            Text("Watch a chain and its newest collections land as links — the ones with real artwork, not the empty test contracts. Read-only.")
-                .dsText(.callout15).foregroundStyle(DS.textTertiary)
-        }
-    }
-
-    // MARK: - Pin to Home
-
-    private var pinnedToHome: Bool { HomePinnedSources.shared.isPinned("OpenSea") }
-
-    private var pinToHomeSection: some View {
-        Section {
-            Button {
-                HomePinnedSources.shared.toggle("OpenSea")
-                CorpusSignal.shared.bump()
-                DSHaptic.tap()
-            } label: {
-                HStack(spacing: DS.Space.s2) {
-                    Image(systemName: pinnedToHome ? "pin.fill" : "pin")
-                    Text(pinnedToHome ? "Pinned to Home" : "Pin to Home")
-                }
-                .dsText(.body17).foregroundStyle(pinnedToHome ? DS.tint : DS.textPrimary)
-                .frame(maxWidth: .infinity).frame(height: 44)
-                .background(pinnedToHome ? DS.tintDim : DS.gray100,
-                            in: Capsule(style: .continuous))
-            }
-            .buttonStyle(.plain)
-            .listRowBackground(Color.clear)
-        } footer: {
-            Text("The newest drops ride a strip on Home.")
+            Text("Switch a chain on and watching starts — its newest collections land as links, the ones with real artwork, not the empty test contracts. Read-only.")
                 .dsText(.callout15).foregroundStyle(DS.textTertiary)
         }
     }

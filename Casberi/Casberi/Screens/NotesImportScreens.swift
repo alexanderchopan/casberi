@@ -43,6 +43,7 @@ struct DayOneImportScreen: View {
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
+        .bridgeSetupWash(name: "Day One")
         .dsPageBackground()
         .navigationTitle("Day One")
         .navigationBarTitleDisplayMode(.large)
@@ -120,6 +121,7 @@ struct JournalImportScreen: View {
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
+        .bridgeSetupWash(name: "Apple Journal")
         .dsPageBackground()
         .navigationTitle("Apple Journal")
         .navigationBarTitleDisplayMode(.large)
@@ -205,6 +207,7 @@ struct NotesShareScreen: View {
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
+        .bridgeSetupWash(name: "Apple Notes")
         .dsPageBackground()
         .navigationTitle("Apple Notes")
         .navigationBarTitleDisplayMode(.large)
