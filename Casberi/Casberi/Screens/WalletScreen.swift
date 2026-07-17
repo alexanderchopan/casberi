@@ -295,6 +295,15 @@ struct WalletScreen: View {
     /// Hidden below $1 total (nothing to allocate). Nested inside the
     /// combined card's own button (not a separate row) — headline and
     /// allocation are one fact, not two.
+    /// A wallet's whole-percent share of the combined total, guarded so a
+    /// non-finite operand can never trap `Int(_:)` (a hard crash). Clamped to
+    /// 0…100 for display.
+    private func pct(_ value: Double, of total: Double) -> Int {
+        let p = (value / total * 100).rounded()
+        guard p.isFinite else { return 0 }
+        return min(100, max(0, Int(p)))
+    }
+
     private var allocationBarContent: some View {
         let total = walletTotals.reduce(0) { $0 + $1.totalUSD }
         return Group {
@@ -304,10 +313,13 @@ struct WalletScreen: View {
                         HStack(spacing: 2) {
                             ForEach(Array(walletTotals.enumerated()), id: \.offset) { _, g in
                                 let share = g.totalUSD / total
-                                if share > 0 {
+                                // `total` is >= 1 above, but guard non-finite so a
+                                // stray garbage totalUSD can never hand SwiftUI a
+                                // NaN/Inf frame width (a hard crash).
+                                if share.isFinite, share > 0 {
                                     Capsule(style: .continuous)
                                         .fill(g.address.map(WalletFace.tint) ?? DS.fillFaint)
-                                        .frame(width: max(4, geo.size.width * share))
+                                        .frame(width: max(4, geo.size.width * min(share, 1)))
                                 }
                             }
                         }
@@ -319,7 +331,7 @@ struct WalletScreen: View {
                                 Circle()
                                     .fill(g.address.map(WalletFace.tint) ?? DS.fillFaint)
                                     .frame(width: 6, height: 6)
-                                Text("\(g.label) \(Int((g.totalUSD / total * 100).rounded()))%")
+                                Text("\(g.label) \(pct(g.totalUSD, of: total))%")
                                     .dsText(.label12).foregroundStyle(DS.textSecondary)
                             }
                         }

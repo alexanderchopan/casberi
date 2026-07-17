@@ -92,6 +92,18 @@ enum WalletIngest {
     /// drops the dust while keeping genuine small positions.
     static let holdingFloor: Double = 1.99
 
+    /// The upper sanity bound a single priced position must stay UNDER to count
+    /// (2026-07-17). Symmetric to `holdingFloor`. A fake-priced airdrop can
+    /// report an astronomically large on-chain balance that, times any nonzero
+    /// price, computes to a garbage or non-finite USD value (`hexToDouble` of a
+    /// huge/overlong balance hex → a >1e59 amount, even ±Infinity). Such a
+    /// token isn't a real holding: no single position approaches $1T. Left
+    /// unfiltered it poisoned the aggregated total AND crashed the treemap's
+    /// `Int(usd.squareRoot() * 10)` cell-scaling on a tester's wallet (a
+    /// non-finite / out-of-range `Double`→`Int` is a hard runtime trap), while
+    /// loading fine for a dev whose wallets held no such token.
+    static let holdingCeiling: Double = 1e12
+
     /// Reads recent transfers for every watched address, across chains, and
     /// lands new ones. Returns the new count, or nil when nothing could be
     /// reached at all (offline / bad key).
@@ -1030,8 +1042,12 @@ enum WalletIngest {
             // `.isFinite` FIRST: an untrusted balance/price can overflow to inf
             // (or NaN), and `inf >= holdingFloor` is true — so the floor alone
             // lets a poison value through to the treemap's `Int(...)` (crash)
-            // and into the persisted sample (crash again next launch).
-            guard usd.isFinite, usd >= holdingFloor else { return nil }
+            // and into the persisted sample (crash again next launch). The
+            // ceiling then drops a fake-priced airdrop whose value is FINITE but
+            // still absurdly large (see `holdingCeiling`) — treemapWeight clamps
+            // that safely, but left in it would inflate the displayed combined
+            // total and dominate the allocation bar.
+            guard usd.isFinite, usd >= holdingFloor, usd < holdingCeiling else { return nil }
             return HeldToken(symbol: c.symbol, contract: c.contract,
                              network: c.network, usd: usd, owner: c.owner)
         }
