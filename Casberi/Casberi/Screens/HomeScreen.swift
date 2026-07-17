@@ -24,6 +24,11 @@ final class HomeRoute {
     /// A tag to open as its own view — set by an Ask answer that names a tag,
     /// so "what did I save about work" opens the Work view the treemap opens.
     var openTag: String?
+    /// An offer whose product page should open once the catalog lands — set
+    /// by the empty feed's pile (a tile is a door to that app's page, not
+    /// just to the shelf); AppsScreen consumes it on appear, after the
+    /// `.apps` push above has mounted the stack.
+    var openOffer: String?
     private init() {}
 }
 

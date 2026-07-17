@@ -253,6 +253,17 @@ struct AppsScreen: View {
         }
         #endif
         .onAppear {
+            // A tile on the empty feed's pile landed here wanting its
+            // product page — same double-push the `-openApp` probe proved.
+            // Resolve before pushing: navigationDestination's `if let` falls
+            // through to EmptyView, so an unresolvable name (a renamed offer
+            // outrunning the pile array) would push a blank screen.
+            if let name = HomeRoute.shared.openOffer {
+                HomeRoute.shared.openOffer = nil
+                if BridgeCatalog.offers.contains(where: { $0.name == name }) {
+                    openOffer = name
+                }
+            }
             #if DEBUG
             if UserDefaults.standard.bool(forKey: "openPair") { pairing = true }
             if UserDefaults.standard.bool(forKey: "openWallet") { probe = .wallet }

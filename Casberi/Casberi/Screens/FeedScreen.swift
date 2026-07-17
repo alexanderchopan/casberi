@@ -1177,43 +1177,63 @@ struct FeedScreen: View {
 
     // MARK: - Pieces
 
-    /// Empty Feed — the surface's own choreography with skeletons; the copy
-    /// points to the first action (brief §7 empty states).
+    /// Empty Feed — the rain come to rest (2026-07-16, replacing the quiet
+    /// line + skeleton rows: skeletons mean "loading" everywhere, so an
+    /// empty state wearing them forever read as stuck, not promising). The
+    /// headline speaks in the display tier (the Home cover's voice), one
+    /// door opens the catalog, and the settled pile is the onboarding rain
+    /// landed HERE — every tile a real offer that opens its own product
+    /// page, so the pile is honest by construction. Rendered FLAT (plain
+    /// stacks, no Widget/Row path) — this sits in the eager feed body,
+    /// where tree depth is the launch-crash class.
     private var emptyState: some View {
-        // The berry draws itself on; the composer is already on screen. One
-        // line, one door: an empty feed's next move is connecting an app.
-        VStack(spacing: DS.Space.s3) {
-            QuietStateView(line: "Things you capture land here.")
+        VStack(alignment: .leading, spacing: 0) {
+            Text("Let's fill this feed.")
+                .dsText(.heading34).fontWeight(.heavy)
+                .foregroundStyle(DS.textPrimary)
+                .settleIn()
+            Text("Connect an app and things start landing on their own.")
+                .dsText(.body17).foregroundStyle(DS.textSecondary)
+                .padding(.top, DS.Space.s2)
+                .settleIn(delay: 0.05)
             Button {
                 DSHaptic.selection()
                 HomeRoute.shared.push = .apps
             } label: {
-                Text("Browse apps")
-                    .dsText(.callout15).fontWeight(.semibold)
-                    .foregroundStyle(DS.tint)
-                    .padding(.horizontal, DS.Space.s4)
-                    .frame(height: 36)
-                    .background(DS.tintDim, in: Capsule(style: .continuous))
+                HStack(spacing: DS.Space.s1) {
+                    Text("Open the catalog")
+                        .dsText(.callout15).fontWeight(.semibold)
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 12, weight: .semibold))
+                }
+                .foregroundStyle(DS.tint)
+                .padding(.horizontal, DS.Space.s4)
+                .frame(height: 36)
+                .background(DS.tintDim, in: Capsule(style: .continuous))
             }
             .buttonStyle(.plain)
-
-            // The shape of what's coming — a day header and skeleton rows
-            // that stagger in the way the real feed will.
-            VStack(alignment: .leading, spacing: DS.Space.s2) {
-                Text("Today")
-                    .dsText(.heading17).foregroundStyle(DS.textTertiary)
-                    .settleIn(delay: 0.15)
-                ForEach(0..<3, id: \.self) { i in
-                    GenSkeletonRow()
-                        .staggerIn(index: i + 4)
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, DS.Space.s4)
-            .padding(.top, DS.Space.s6)
+            .padding(.top, DS.Space.s4)
+            .settleIn(delay: 0.1)
+            // The other doors, named — the copy used to CLAIM capture
+            // without teaching a single capture verb.
+            Text("Or paste a link, share into Casberi, or snap a screenshot — those land here too.")
+                .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                .padding(.top, DS.Space.s3)
+                .settleIn(delay: 0.15)
+            Spacer(minLength: DS.Space.s6)
+            EmptyFeedPile()
         }
-        .frame(maxWidth: .infinity)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, DS.Space.s4)
         .padding(.top, DS.Space.s6)
+        // The pile rests at the FOOT of the screen (the rain lands where the
+        // floor is): the row takes a fixed drop and the Spacer above hands
+        // the slack to the pile. A plain minHeight, not
+        // `containerRelativeFrame` — inside this List that modifier reported
+        // a container shorter than the viewport and always floored (measured
+        // 2026-07-16). On an oversized-type layout the Spacer collapses and
+        // the row grows past the minimum instead of crowding.
+        .frame(minHeight: 540, alignment: .top)
     }
 
     /// A filter with no matches: the filtered app's own icon, a plain line,
@@ -1520,5 +1540,102 @@ struct RowEntrance: ViewModifier {
         withAnimation(DS.Motion.standard.delay(Double(min(index, 12)) * style.step)) {
             shown = true
         }
+    }
+}
+
+// MARK: - Empty-feed pile (the rain come to rest)
+
+/// The settled pile of app tiles at the foot of the empty feed — the
+/// onboarding rain's third act (HowItWorksSheet rains them past, its step-1
+/// strip shows them settled; here they rest where things will land). On
+/// first appearance the tiles fall in and settle — gravity is an ease-IN,
+/// the house rule — then the caption fades up. Every tile is a door to that
+/// offer's product page in the catalog (no dead controls), routed through
+/// HomeRoute.openOffer so the push survives the .apps hop.
+private struct EmptyFeedPile: View {
+    /// Hand-curated subset of the catalog — every name MUST resolve to a
+    /// real BridgeCatalog offer (scripts/catalog-sync.sh checks this array
+    /// by name, like the other decorative marquees). First six are the back
+    /// row; the last six draw over them as the front row.
+    static let pileApps = ["Notion", "Strava", "ChatGPT", "Photos",
+                           "Wallet", "Reddit",
+                           "Gmail", "GitHub", "Farcaster", "Bluesky",
+                           "Claude", "YouTube"]
+
+    /// Deterministic per-tile jitter — no randomness in a view body; the
+    /// same pile settles identically every launch (and the screen sweep
+    /// sees one design).
+    private static let tilt:  [Double]  = [-5, 3, -2, 6, -4, 2,
+                                           -6, 4, -3, 5, -2, 3]
+    private static let restY: [CGFloat] = [3, -2, 4, 0, 2, -1,
+                                           3, 1, -2, 2, 0, 3]
+
+    /// How far above their rest the tiles wait — past the top of the screen
+    /// from the pile's mid-page seat, so the fall crosses the headline the
+    /// way the onboarding rain crosses the steps (no clip window: a clipped
+    /// fall showed only its last inches, and the window's headroom read as
+    /// a dead gap under the caption).
+    private static let fallFrom: CGFloat = 700
+
+    /// False = the tiles wait above the screen · true = they have landed.
+    @State private var fell = false
+    /// prd 43h: Reduce Motion is law — under it the pile is simply there,
+    /// settled, no 700pt fall (nil animation makes the flip instant).
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        VStack(spacing: DS.Space.s3) {
+            Text("Tap any app to add it")
+                .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                .opacity(fell ? 1 : 0)
+                .animation(reduceMotion ? nil : .easeOut(duration: 0.3).delay(1.5),
+                           value: fell)
+            // Two rows nestled brick-wise: the back row smaller and shifted
+            // half a pitch — depth and irregularity, a pile not a grid.
+            VStack(spacing: -10) {
+                row(0..<6, size: 44).offset(x: 24)
+                row(6..<12, size: 52)
+            }
+        }
+        .onAppear {
+            fell = true
+            #if DEBUG
+            // `-pileTap "<Offer name>"` — fire a tile's tap after the fall,
+            // the headless check of the tile → product-page arc.
+            if let name = UserDefaults.standard.string(forKey: "pileTap") {
+                Task { @MainActor in
+                    try? await Task.sleep(for: .seconds(1.5))
+                    NSLog("pileTap: \(name)")
+                    HomeRoute.shared.openOffer = name
+                    HomeRoute.shared.push = .apps
+                }
+            }
+            #endif
+        }
+    }
+
+    private func row(_ range: Range<Int>, size: CGFloat) -> some View {
+        HStack(spacing: DS.Space.s2) {
+            ForEach(range, id: \.self) { i in
+                tile(Self.pileApps[i], index: i, size: size)
+            }
+        }
+    }
+
+    private func tile(_ name: String, index i: Int, size: CGFloat) -> some View {
+        Button {
+            DSHaptic.selection()
+            HomeRoute.shared.openOffer = name
+            HomeRoute.shared.push = .apps
+        } label: {
+            BridgeIcon(name: name, size: size)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(Text(name))
+        .rotationEffect(.degrees(fell ? Self.tilt[i] : Self.tilt[i] * 0.4))
+        .offset(y: fell ? Self.restY[i] : -Self.fallFrom)
+        .animation(reduceMotion ? nil
+                                : .easeIn(duration: 0.55).delay(0.35 + Double(i) * 0.05),
+                   value: fell)
     }
 }

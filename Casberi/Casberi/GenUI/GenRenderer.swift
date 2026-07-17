@@ -2022,23 +2022,6 @@ private struct GenAppsInvite: View {
     }
 }
 
-/// The shared quiet-state body — Feed's empty state's moment.
-struct QuietStateView: View {
-    let line: String
-
-    var body: some View {
-        VStack(spacing: DS.Space.s3) {
-            CasberiMarkDrawOn(size: 44)
-            Text(line)
-                .dsText(.body17)
-                .foregroundStyle(DS.textSecondary)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.horizontal, DS.Space.s4)
-        .padding(.vertical, DS.Space.s6)
-    }
-}
-
 // MARK: - Skeletons
 
 struct GenSkeletonRow: View {

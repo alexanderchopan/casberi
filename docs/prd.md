@@ -4008,3 +4008,27 @@ probing the CTA landing; delete the stored key instead. (2) A concurrent
 session driving the same booted sim can foreground THEIR binary mid-probe —
 screenshots of a state you didn't launch mean collision, not regression
 (this session's b2/video runs caught the other session's composer work).
+
+## 97. The empty feed is the rain come to rest (2026-07-16) — BUILT
+
+The truly-empty feed's quiet line + "Browse apps" chip + skeleton rows died
+(supersedes §61's item 4 empty-door shape: the door survives, the quiet
+berry and skeletons don't). Skeletons mean "loading" in every app, so an
+empty state wearing them forever read as stuck — and the screen whispered
+while the rest of the app went bold. What shipped (`FeedScreen.emptyState`
++ `EmptyFeedPile`): a display-tier headline ("Let's fill this feed.",
+`.heading34` heavy — the cover voice, scaling with Dynamic Type), one
+subline, the "Open the catalog" pill, a tertiary line naming the capture
+verbs (paste / share / screenshot — the old copy CLAIMED capture without
+teaching a verb), and the settled pile: twelve real catalog tiles resting
+at the foot of the screen, slightly uneven, back row smaller behind the
+front — the onboarding rain's third act (§96 rains them past, its step-1
+strip shows them settled, the empty feed is where they land). On first
+appearance the tiles fall in from above the screen and settle (gravity is
+an ease-IN, the house rule; under Reduce Motion the pile is simply there,
+per 43h). Honesty: every tile is a door — tap opens that offer's product
+page via `HomeRoute.openOffer` (the `openTag` pattern), and the pile array
+is catalog-sync-checked like the other marquees so a rename can't leave a
+dead tile. Rendered FLAT (plain stacks, no Widget/Row path) per the
+eager-head stack-depth rule. Headless: `-pileTap "<Offer name>"`;
+`QuietStateView`/`CasberiMarkDrawOn` deleted with the old state.
