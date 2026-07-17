@@ -90,10 +90,9 @@ struct WalletScreen: View {
     var body: some View {
         List {
             // Empty state: the add field and the vitalik chip ARE the
-            // screen — nothing to lead with yet. Connected state inverts
-            // the old order (2026-07-15, user: "reads as a settings form,
-            // not as the place where your money lives"): value first,
-            // admin (watching / add / chains) clustered at the bottom.
+            // screen — nothing to lead with yet. Connected state: the
+            // watched wallets and their approvals lead (prd §104), value
+            // views and activity follow, admin (add / chains) at the bottom.
             if wallet.addresses.isEmpty {
                 addSection.listRowSeparator(.hidden)
                 // The empty state reports too (2026-07-16). This section used
@@ -105,7 +104,18 @@ struct WalletScreen: View {
                 // way.
                 statusSection
             } else {
-                // The combined "bundle" leads — total value, the allocation
+                // Watching leads (user, 2026-07-17, prd §104): the rows carry
+                // the pin control, and burying them under the treemaps and
+                // transactions made "what do I pin" a scroll hunt. Approvals
+                // rides directly under it — the security read belongs beside
+                // the wallets it reads, not below the activity log. The
+                // 2026-07-15 "value first" ruling is served by the rows
+                // themselves now (value subline + sparkline per wallet).
+                watchingSection.listRowSeparator(.hidden)
+                if wallet.addresses.contains(where: { WalletApprovals.canServe($0.address) }) {
+                    approvalsSection.listRowSeparator(.hidden)
+                }
+                // The combined "bundle" — total value, the allocation
                 // bar, and one merged treemap. Only when more than one
                 // wallet is watched (one wallet's own view IS its
                 // portfolio); ruling 2026-07-15, alongside the per-wallet views.
@@ -127,12 +137,8 @@ struct WalletScreen: View {
                 }
                 if !nftGroups.isEmpty { nftSection.listRowSeparator(.hidden) }
                 if !recent.isEmpty { recentSection.listRowSeparator(.hidden) }
-                // Admin cluster: manage which wallets are watched, add
-                // another, narrow the chains — the settings, not the point.
-                watchingSection.listRowSeparator(.hidden)
-                if wallet.addresses.contains(where: { WalletApprovals.canServe($0.address) }) {
-                    approvalsSection.listRowSeparator(.hidden)
-                }
+                // Admin cluster: add another wallet, narrow the chains —
+                // the settings, not the point.
                 addSection.listRowSeparator(.hidden)
                 chainsSection.listRowSeparator(.hidden)
                 statusSection

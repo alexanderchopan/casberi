@@ -4193,3 +4193,9 @@ would orphan the rows' long-press verbs).
   hangs outside RootShell's `.environment(bridges)`. Fixed both ways: the
   sheet now hands the store in, and the read is optional (missing store only
   skips bridge registration on Watch).
+
+## 104. Wallet screen: Watching and Approvals lead (user, 2026-07-17) — BUILT
+
+User: watching and revoke sat below the transactions, "but that makes them buried and also less clear on what to pin. i think they should be at the top." Connected-state order is now **Watching → Approvals → portfolio bundle → per-wallet treemaps → NFTs → recent → add / chains / status / disconnect**.
+
+This amends §-adjacent 2026-07-15's "value first, admin at the bottom" inversion without betraying it: the watching rows have carried the value themselves since 2026-07-15 (per-wallet USD subline + sparkline + delta pill), so leading with them still leads with the money — and the pin control lives on those rows, so they're also the answer to "what do I pin," which was unfindable under two treemaps and an activity log. Approvals rides directly beneath Watching: the security read belongs beside the wallets it reads, not below the feed of what already happened. Add/chains/status stay clustered at the bottom — still the settings, still not the point.
