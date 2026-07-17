@@ -306,7 +306,10 @@ enum HomeComposition {
     /// `ComingHead` day divider then that day's rows — always led by Today (even
     /// empty, a "Nothing scheduled" line) so the card reads as a calendar that
     /// starts on today rather than jumping to the next event. The WHEN now lives
-    /// in the section header, not each row's trailing slot.
+    /// in the section header, not each row's trailing slot. Collapsed by
+    /// default since 2026-07-17 (prd §101): the DOC still carries the full
+    /// sectioned lane (3-row budget), but GenComingUp draws one lead row until
+    /// the person expands — the composition doesn't know or care.
     ///
     /// Rendered by the dedicated FLAT `ComingUp` component, NOT the generic
     /// `Widget` (crash fix 2026-07-15): a `Widget` of `Row`s nests each row

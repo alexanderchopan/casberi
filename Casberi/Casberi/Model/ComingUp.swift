@@ -58,7 +58,7 @@ enum ComingUp {
                 // No due date → not a deadline, so it can't be "coming up".
                 // Overdue reminders lead, but only recently overdue ones: a
                 // still-open reminder due months ago is stale, and a pile of
-                // them would fill the card (`prefix(5)`) and bury today's real
+                // them would fill the card's row budget and bury today's real
                 // items. Bound the lookback to the same week the lane looks
                 // ahead — a symmetric ±window around now.
                 guard let due = t.dueAt,
@@ -89,9 +89,11 @@ enum ComingUp {
     /// first (their own section), then Today (always, even empty), then each
     /// following day that has something. `limit` caps the ITEM rows across
     /// sections (headers and the empty-Today placeholder don't count) so the
-    /// card stays compact — the same budget the flat list used to prefix.
+    /// card stays compact. 3 by ruling (user, 2026-07-17): five rows made Home
+    /// read as a calendar — 3 is the EXPANDED budget; the card itself collapses
+    /// to one row by default (see GenComingUp).
     static func sections(from things: [Thing], now: Date = .now,
-                         calendar: Calendar = .current, limit: Int = 5) -> [Section] {
+                         calendar: Calendar = .current, limit: Int = 3) -> [Section] {
         let capped = Array(items(from: things, now: now, calendar: calendar).prefix(limit))
         let todayStart = calendar.startOfDay(for: now)
 

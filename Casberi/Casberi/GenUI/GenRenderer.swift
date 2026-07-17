@@ -551,8 +551,19 @@ private struct GenComingUp: View {
     let els: GenEls
     @Environment(\.genThingOpen) private var thingOpen
     @Environment(\.genThingHandoff) private var thingHandoff
+    /// Collapsed by default (ruling 2026-07-17): five rows of schedule made
+    /// Home read as a calendar and dulled the pull to open the real one. The
+    /// card leads with ONE row — the next thing due, its day worn inline — and
+    /// an "N more" footer expands to the sectioned view (3-row budget). The
+    /// choice persists; no per-launch re-decision.
+    @AppStorage("comingUpExpanded") private var expanded = false
 
     var body: some View {
+        // Children arrive interleaved: a `ComingHead` day divider, then that
+        // day's `Row`s. Resolved refs draw, unresolved ones (still streaming)
+        // simply drop — the mount law without a skeleton nest.
+        let children = el.refs(1).compactMap { els[$0] }
+        let rowCount = children.count { $0.comp != "ComingHead" }
         VStack(alignment: .leading, spacing: 0) {
             // Sentence-case header, same type ramp as every board card's title
             // (§8) — plain Text (the title is a fixed literal, never a thing's
@@ -562,22 +573,64 @@ private struct GenComingUp: View {
                 .foregroundStyle(DS.textPrimary)
                 .padding(.init(top: DS.Space.s4, leading: DS.Space.s4,
                                bottom: DS.Space.s1, trailing: DS.Space.s4))
-            // Headers and rows inline — resolved refs draw, unresolved ones
-            // (still streaming) simply drop, the mount law without a skeleton
-            // nest. A `ComingHead` is a day divider (Today / Tomorrow / Overdue
-            // / weekday); everything else is a `Row`.
-            ForEach(el.refs(1), id: \.self) { ref in
-                if let child = els[ref] {
+            if expanded && rowCount > 1 {
+                // The calendar read: day sections, Today always leading (even
+                // empty — ruling 2026-07-15), up to the 3-row budget.
+                ForEach(Array(children.enumerated()), id: \.offset) { _, child in
                     if child.comp == "ComingHead" { headLine(child) }
                     else { rowLine(child) }
                 }
+            } else if let next = nextUp(children) {
+                // The ticker read: just the next thing due, its section's day
+                // label ("Today" / "Tomorrow" / "Overdue" / weekday) in the
+                // trailing slot so a no-today lead still says WHEN it is —
+                // the 2026-07-15 confusion, answered inline instead of by a
+                // sectioned calendar.
+                rowLine(next.row, when: next.when)
             }
+            // The expand/collapse footer — only when there's actually more to
+            // show (honesty: a one-row lane gets no dead control).
+            if rowCount > 1 { footer(more: rowCount - 1) }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.bottom, DS.Space.s2)
         .dsWidgetSurface()
         .padding(.horizontal, DS.Space.s4)
         .padding(.top, DS.Space.s4)
+    }
+
+    /// The first real row and the day label of the section it sits in —
+    /// children are ordered head-then-rows, so the nearest preceding
+    /// `ComingHead` names the row's day.
+    private func nextUp(_ children: [GenEl]) -> (row: GenEl, when: String)? {
+        var day = ""
+        for child in children {
+            if child.comp == "ComingHead" { day = child.str(0) }
+            else { return (child, day) }
+        }
+        return nil
+    }
+
+    /// "N more" / "Show less" — a muted footer line, sentence case (§8), the
+    /// whole card's only control. Count is the rows this card holds beyond the
+    /// lead, so tapping delivers exactly what the label promised.
+    private func footer(more: Int) -> some View {
+        Button {
+            withAnimation(DS.Motion.standard) { expanded.toggle() }
+        } label: {
+            HStack(spacing: DS.Space.s1) {
+                Text(expanded ? String(localized: "Show less")
+                              : String(localized: "\(more) more"))
+                    .dsText(.subhead13)
+                Image(systemName: expanded ? "chevron.up" : "chevron.down")
+                    .font(.system(size: 10, weight: .semibold))
+            }
+            .foregroundStyle(DS.textSecondary)
+            .padding(.horizontal, DS.Space.s4)
+            .padding(.vertical, DS.Space.s2)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
     }
 
     /// A day-section header — the WHEN as words, sentence case (§8: no
@@ -605,7 +658,7 @@ private struct GenComingUp: View {
     /// WHEN), built here as a leaf so the card stays shallow. Tap + long-press
     /// ride the shared `pinnedRowActions`; no glint (that's answer-only) and no
     /// per-row mount animation (the card mounts as one).
-    private func rowLine(_ row: GenEl) -> some View {
+    private func rowLine(_ row: GenEl, when: String = "") -> some View {
         HStack(spacing: DS.Space.s3) {
             TagGlyph(tag: row.str(1), size: 24)
             Text(row.str(0))
@@ -613,9 +666,10 @@ private struct GenComingUp: View {
                 .foregroundStyle(DS.textPrimary)
                 .lineLimit(1)
                 .frame(maxWidth: .infinity, alignment: .leading)
-            // Trailing slot — empty now that the day lives in the section
-            // header (only a non-empty WHEN, e.g. a future bespoke time, draws).
-            let trailing = row.str(3)
+            // Trailing slot — in the sectioned view the day lives in the
+            // header, so this is empty; the collapsed lead row passes its
+            // section's day label in `when` instead.
+            let trailing = when.isEmpty ? row.str(3) : when
             if !trailing.isEmpty {
                 Text(trailing).dsText(.subhead13).foregroundStyle(DS.textTertiary)
             }

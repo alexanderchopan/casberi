@@ -2326,7 +2326,10 @@ Three mechanics, three tokens/modifiers (`Design/Glass.swift`,
 
 Deliberately EXCLUDED: the floating layer (composer, toasts, tab bar — Liquid
 Glass carries its own elevation; a card shadow would double up) and pills /
-controls (Deny button, onboarding capsules — controls, not surfaces). A
+controls (Deny button, onboarding capsules — controls, not surfaces).
+(amendment 2026-07-13, `0764ee3`: the tab bar died — the floating layer is now
+composer, FAB, and toasts. The exclusion rule is unchanged; only the example is
+retired. Full ruling: §100.) A
 "raised chip" token was prototyped and DROPPED: raising by tone alone can't
 survive light mode (a white chip on a white card), and it would need a
 per-element shadow to work — not worth a fourth mechanic. Lift + recess are the
@@ -4058,3 +4061,101 @@ to the Apps page (it used to guard out all @-sentinels there, which would
 have made the card a dead control — honesty rule). Like every computed
 ask, it clears `lastAnswerHits` so a keyed retry re-retrieves. Headless:
 `-answerProbe "what apps do you have"`.
+
+## 99. No notifications, no widget (2026-07-17) — RULING
+
+Casberi does not send notifications — not a deferral, a positioning
+ruling (user): the pitch is "easier than relying on notifications," the
+app that watches accounts/wallets/feeds so ten other apps do not have to
+ping you. Sending our own would make Casberi an eleventh notifier — the
+thing it claims to replace. Arrival surfaces carry what other apps would
+push: the "while I was away" brief, the Coming up lane, the feed itself.
+The answer waits for the user; nothing demands them. Corollary: the app
+never shows the notification-permission prompt — the absence is itself
+the statement. This holds even for the tempting class (wallet approval
+events): a server-less local notification would arrive hours late off
+background refresh anyway, so the away brief loses almost nothing.
+
+The Home Screen WIDGET is also OFF the roadmap for now (user, same
+session): ~a quarter of users ever place widgets, and the real cost is
+not the build but the standing surface — a second process on the shared
+store, timeline staleness, its own empty/fallback/theme states, one more
+thing every audit walks. Not worth it pre-launch with zero users to
+place it. Revisit only post-App-Store if Connect widget analytics say
+otherwise. Do not re-suggest either of these.
+
+## 100. The tab bar dies — one surface, a Pinned-first chip header, a FAB (2026-07-13, recorded 2026-07-17) — BUILT
+
+Retroactive ruling: the shell change shipped in `0764ee3` (2026-07-13) but
+never got a numbered entry — it lived only in CLAUDE.md's design-law digest,
+so every ruling written before it (§16 Shell, the §opt-4 onboarding batch, the
+2026-07-08 store/tab batches, §61's elevation-law example) still narrated a tab
+bar with no ledger entry marking them superseded. This is that entry; those
+older rulings stay as written (append-only ledger — true when ruled), read
+against this one.
+
+WHAT DIED: the three-tab shell (Home · Feed · Apps, ruled 2026-07-06 and
+carried through the store batches) and its `GlassTabBar`. Home and Feed were
+never really two places — both compose the same corpus, one as a board, one as
+a stream — and keeping them as separate tab roots forced a standing tax of
+reconciliation code (`FeedRoute`, `jumpedFromHome`, `goHomeRequest`, `popFeed`)
+that existed only to sync two NavigationStacks. All deleted.
+
+WHAT SHIPPED: ONE surface (`Shell/MainSurface.swift`). A single
+`NavigationStack` under a fixed chip header — **Pinned** (your board) leads,
+then **All**, then every source most-recent-first (`Corpus.surfaced`, the same
+rule Home and Feed already shared, so the chip row lists exactly the sources
+the feed shows). The body under the header swaps between the board (Pinned
+selected) and the shaped feed (any other chip); there are no tabs to switch,
+only chips to filter. The composer returns to a **FAB** the shell floats over
+the surface. Management lives in two doors the container owns so they can't
+drift between screens: **avatar → Settings**, **grid → Apps**, each a zoom
+transition anchored to its door (`doorNS`).
+
+LANDING: a curator with something pinned opens on their board; a new install
+or anyone who never pinned opens on the whole record instead of an empty board
+(the "Pinned" chip is still there, its body just isn't the landing when it
+would be bare).
+
+CONSEQUENCES THAT BIT LATER, logged here so they read as consequences and not
+new bugs: (1) Liquid Glass's floating layer is now composer + FAB + toasts —
+§61's "tab bar" example was amended in place the same session this was recorded.
+(2) `-openSettings` broke: it had lived in HomeScreen's onAppear, but the
+one-surface shell only mounts HomeScreen when the landing chip is "Pinned", so
+on an unpinned install the hook never fired (fixed 2026-07-14 by moving it to
+`RootShell`'s onAppear; `casberi://settings` is the reliable route — see the
+deep-links line in CLAUDE.md). (3) `casberi://account` still resolves (→ the
+Apps door) for back-compat. Deep links are the audit's way in now that there
+are no tabs to select.
+
+## 101. "Coming up" collapses to one row (2026-07-17) — BUILT
+
+User ruling: the card was showing up to five schedule rows at the top of Home,
+which "makes the home feed be something it isn't" — a person who sees their
+whole day there stops opening their calendar, and Home starts reading as a
+calendar app. The user offered a 1/3/5 three-way toggle or a 1/3 two-way and
+delegated the pick.
+
+Ruling: **two states, 1 and 3.** Five dies entirely (it's the count that caused
+the complaint), and a three-way toggle needs control chrome — a segmented
+picker or stepper — on a card that's supposed to be ambient synthesis, not a
+widget with settings.
+
+- **Collapsed (default):** one row — the next thing due (overdue leads, same
+  order as always) — with its day label ("Today" / "Tomorrow" / "Overdue" /
+  weekday) worn inline in the trailing slot. This deliberately drops the
+  §always-lead-with-Today sectioning in collapsed mode: the 2026-07-15
+  confusion ("why does it lead with tomorrow's meeting?") was about a
+  CALENDAR view jumping ahead silently; a single ticker row that says
+  "Tomorrow" right on it answers the WHEN without the sections.
+- **Expanded:** the existing day-sectioned view (Overdue → Today-always →
+  following days), now budgeted at **3 item rows** (`ComingUp.sections`
+  default limit 5 → 3).
+- **The toggle** is a muted "N more" / "Show less" footer line — the card's
+  only control, shown only when there IS more than the lead row (honesty: a
+  one-row lane gets no dead control), and its count is the rows the card
+  actually holds, so tapping delivers exactly what the label promised. The
+  choice persists (`comingUpExpanded` in AppStorage).
+- The composition doc still carries the full sectioned lane; collapse is
+  purely GenComingUp's draw decision — `-comingUpProbe` (which logs the
+  uncapped lane) and the flat-render crash law are untouched.
