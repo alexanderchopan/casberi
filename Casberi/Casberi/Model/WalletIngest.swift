@@ -944,7 +944,8 @@ enum WalletIngest {
     /// One priced token a wallet holds — the shared read behind both the
     /// holdings treemap and the activity spam filter, so "what you hold" means
     /// the same thing to both. Native coins carry a nil contract.
-    private struct HeldToken {
+    /// Sendable so a read can be cached in and returned across `HoldingsCache`.
+    private struct HeldToken: Sendable {
         let symbol: String
         let contract: String?
         let network: String
@@ -975,8 +976,112 @@ enum WalletIngest {
         var price: Double?
     }
 
+    /// Coalesces concurrent holdings reads and briefly caches the result — the
+    /// scaling relief for the shared Alchemy key (see `fetchHeldTokens`). Nested
+    /// so it can hold `HeldToken`. An entry is stored only on a real read; a nil
+    /// (nothing reached) never lands, so a rate-limited miss isn't remembered.
+    private actor HoldingsCache {
+        static let shared = HoldingsCache()
+        private static let ttl: TimeInterval = 90
+
+        private struct Entry { let tokens: [HeldToken]; let at: Date }
+        private var fresh: [String: Entry] = [:]
+        private var inFlight: [String: Task<[HeldToken]?, Never>] = [:]
+
+        /// A live-enough read for `key`: a fresh cache hit, the value of an
+        /// already-running fetch for the same key, or a new fetch (whose task
+        /// every concurrent caller then shares). The actor's serialization is
+        /// what makes the check-then-register step race-free — there is no await
+        /// between reading `inFlight` and writing it.
+        func tokens(key: String, fetch: @Sendable @escaping () async -> [HeldToken]?) async -> [HeldToken]? {
+            if let e = fresh[key], e.at.timeIntervalSinceNow > -Self.ttl { return e.tokens }
+            if let running = inFlight[key] { return await running.value }
+            let task = Task { await fetch() }
+            inFlight[key] = task
+            let result = await task.value
+            inFlight[key] = nil
+            if let result { fresh[key] = Entry(tokens: result, at: Date()) }
+            return result
+        }
+
+        /// Drop every cached read so the next fetch goes live. A deliberate
+        /// pull-to-refresh calls this so the TTL never serves stale holdings
+        /// under a gesture whose whole contract is "re-fetch now" — the in-flight
+        /// coalescing map is untouched, so a pull still joins (not doubles) a
+        /// read already on the wire. Also the only thing that bounds `fresh`,
+        /// which otherwise only ever grows.
+        func invalidate() { fresh.removeAll() }
+    }
+
+    /// Clears the holdings cache so the next read is live — for pull-to-refresh
+    /// (see `HoldingsCache.invalidate`). Automatic foreground fan-out does NOT
+    /// call this; only a deliberate user pull does.
+    static func invalidateHoldingsCache() async { await HoldingsCache.shared.invalidate() }
+
+    /// The priced-holdings read, coalesced and briefly cached (2026-07-17).
+    ///
+    /// One app foreground fans the SAME `by-address` Portfolio call out 5–8×:
+    /// Home's pinned + combined passes, the Wallet screen's two, Feed's chip,
+    /// BridgeRefresh, plus the approvals and Solana spam filters — none aware of
+    /// the others. On Alchemy's shared free key that multiplies the month's
+    /// compute burn for byte-identical data (the shared-key capacity ceiling,
+    /// see `fetchPortfolioPage`). The wrapper sits at THIS boundary so every
+    /// caller and the SPL/DeFiLlama price-fills below ride it. `HoldingsCache`
+    /// does the coalescing (concurrent asks for one address-set await a single
+    /// network task — zero staleness) and holds a 90s TTL under the existing
+    /// stale-card layer (`recordSample` + "as of Xh ago"), which still owns
+    /// anything older. A nil (nothing reached) is never cached, so a
+    /// rate-limited miss stays free to heal next try.
     private static func fetchHeldTokens(addresses: [String]) async -> [HeldToken]? {
         guard !addresses.isEmpty else { return nil }
+        // Key on the ROUTED request, not the bare addresses: a chain toggled
+        // off changes `networks(for:)`, and the key must move with it so a
+        // config change can't be served a pre-toggle read from the cache.
+        let key = addresses.sorted()
+            .map { "\($0):\(networks(for: $0).joined(separator: ","))" }
+            .joined(separator: "|")
+        return await HoldingsCache.shared.tokens(key: key) {
+            await fetchHeldTokensUncached(addresses: addresses)
+        }
+    }
+
+    private static func fetchHeldTokensUncached(addresses: [String]) async -> [HeldToken]? {
+        let (candidates, reached) = await collectCandidates(addresses: addresses)
+        guard reached else { return nil }
+
+        // Alchemy first — inline EVM prices, then its SPL Prices endpoint
+        // (`priceSPL`) — then the keyless DeFiLlama backstop over anything still
+        // unpriced. A token surfaces from the backstop EXACTLY when it would
+        // otherwise be dropped by the `price > 0` guard below and vanish from
+        // the treemap (worst on Solana, and worst under the shared Alchemy
+        // key's rate limits — the two the backstop exists to cover).
+        let priced = await priceSPL(candidates)
+        let backstopped = await backstopPrices(priced)
+        return backstopped.compactMap { c in
+            guard let price = c.price, price > 0 else { return nil }
+            let usd = c.amount * price
+            // `.isFinite` FIRST: an untrusted balance/price can overflow to inf
+            // (or NaN), and `inf >= holdingFloor` is true — so the floor alone
+            // lets a poison value through to the treemap's `Int(...)` (crash)
+            // and into the persisted sample (crash again next launch). The
+            // ceiling then drops a fake-priced airdrop whose value is FINITE but
+            // still absurdly large (see `holdingCeiling`) — treemapWeight clamps
+            // that safely, but left in it would inflate the displayed combined
+            // total and dominate the allocation bar.
+            guard usd.isFinite, usd >= holdingFloor, usd < holdingCeiling else { return nil }
+            return HeldToken(symbol: c.symbol, contract: c.contract,
+                             network: c.network, usd: usd, owner: c.owner)
+        }
+    }
+
+    /// The raw holdings Alchemy's Portfolio `by-address` hands back for the
+    /// given addresses — balances + metadata + whatever prices it joined —
+    /// before any floor, SPL fill, or backstop. Split out of `fetchHeldTokens`
+    /// (2026-07-17) so the DeFiLlama probe can walk the SAME candidate list the
+    /// real read builds. `reached` is false only when NOTHING was reachable at
+    /// all (the nil the caller turns into "couldn't reach the chain").
+    private static func collectCandidates(addresses: [String]) async -> (candidates: [Candidate], reached: Bool) {
+        guard !addresses.isEmpty else { return ([], false) }
         // network → the native coin's symbol AND decimals. A chain's own coin
         // comes back with null metadata, so neither can be read off the
         // response — both have to come from our table.
@@ -990,7 +1095,7 @@ enum WalletIngest {
         // ask and is dropped rather than sent with an empty list.
         let routed = addresses.map { (address: $0, networks: networks(for: $0)) }
                               .filter { !$0.networks.isEmpty }
-        guard !routed.isEmpty else { return nil }
+        guard !routed.isEmpty else { return ([], false) }
 
         var candidates: [Candidate] = []
         var reached = false
@@ -1034,23 +1139,7 @@ enum WalletIngest {
                 pageKey = next
             }
         }
-        guard reached else { return nil }
-
-        return await priceSPL(candidates).compactMap { c in
-            guard let price = c.price, price > 0 else { return nil }
-            let usd = c.amount * price
-            // `.isFinite` FIRST: an untrusted balance/price can overflow to inf
-            // (or NaN), and `inf >= holdingFloor` is true — so the floor alone
-            // lets a poison value through to the treemap's `Int(...)` (crash)
-            // and into the persisted sample (crash again next launch). The
-            // ceiling then drops a fake-priced airdrop whose value is FINITE but
-            // still absurdly large (see `holdingCeiling`) — treemapWeight clamps
-            // that safely, but left in it would inflate the displayed combined
-            // total and dominate the allocation bar.
-            guard usd.isFinite, usd >= holdingFloor, usd < holdingCeiling else { return nil }
-            return HeldToken(symbol: c.symbol, contract: c.contract,
-                             network: c.network, usd: usd, owner: c.owner)
-        }
+        return (candidates, reached)
     }
 
     /// One Portfolio page, retried on a rate limit or a transient server drop
@@ -1126,6 +1215,88 @@ enum WalletIngest {
             return priced
         }
     }
+
+    /// Fills any candidate STILL unpriced after Alchemy — an EVM token its
+    /// Portfolio didn't join a price for, or an SPL mint its Prices endpoint
+    /// missed — from the keyless DeFiLlama backstop (`DefiLlamaPrices`, prd
+    /// §115). It only ever fills `price == nil` (never overrides Alchemy) and
+    /// only trusts a price at or above the confidence floor, so a token
+    /// surfaces here exactly when it would otherwise be dropped by
+    /// `fetchHeldTokens`' `price > 0` guard and vanish from the treemap. The
+    /// whole wallet's misses go out in one batched request that doesn't ride
+    /// the shared Alchemy key.
+    private static func backstopPrices(_ candidates: [Candidate]) async -> [Candidate] {
+        var seen = Set<String>()
+        let unpriced = candidates.compactMap { c -> (network: String, contract: String)? in
+            guard c.price == nil, let contract = c.contract,
+                  seen.insert("\(c.network)|\(contract)").inserted else { return nil }
+            return (network: c.network, contract: contract)
+        }
+        // Capped like `priceSPL` (100), in API order: a spam-heavy whale reports
+        // ~180 unpriced mints, almost all junk DeFiLlama will never price, and
+        // re-asking that tail on every foreground refresh is wasted work — a
+        // treemap's top cells and the "across N tokens" count are long decided
+        // by the first 100. Deduped first (a token held by several watched
+        // wallets appears once per owner) so the cap counts distinct mints.
+        guard !unpriced.isEmpty else { return candidates }
+        let found = await DefiLlamaPrices.prices(for: Array(unpriced.prefix(100)))
+        guard !found.isEmpty else { return candidates }
+
+        return candidates.map { c in
+            guard c.price == nil, let contract = c.contract,
+                  let p = found["\(c.network)|\(contract)"],
+                  p.confidence >= DefiLlamaPrices.confidenceFloor else { return c }
+            var priced = c
+            priced.price = p.price
+            return priced
+        }
+    }
+
+    #if DEBUG
+    /// The `-defillamaProbe <address>` walk: for one wallet, how many held
+    /// tokens Alchemy leaves unpriced and how many DeFiLlama then rescues — the
+    /// backstop's whole reason to exist, measured end-to-end on a real wallet
+    /// (prd §115). Reuses `collectCandidates` + `priceSPL`, so it exercises the
+    /// exact path `fetchHeldTokens` runs, then reports the backstop's verdict
+    /// per still-unpriced mint. Reads only.
+    static func backstopDiagnostic(address: String) async -> [String] {
+        // Resolve ENS / `.sol` names the way the real read does, or a name
+        // routes as the wrong family and the Portfolio call comes back empty.
+        let resolved = await resolvedAddresses([address])
+        guard let addr = resolved.first else { return ["FAILED — couldn't resolve \(address)"] }
+        let (candidates, reached) = await collectCandidates(addresses: [addr])
+        guard reached else { return ["FAILED — nothing reachable (offline / bad key)"] }
+        let afterAlchemy = await priceSPL(candidates)
+        let unpriced = afterAlchemy.filter { $0.price == nil && $0.contract != nil }
+        var out = [String(format: "%d held token(s), %d unpriced after Alchemy",
+                          candidates.count, unpriced.count)]
+        guard !unpriced.isEmpty else {
+            out.append("nothing for the backstop to do")
+            return out
+        }
+        let found = await DefiLlamaPrices.prices(for: unpriced.map {
+            (network: $0.network, contract: $0.contract!)
+        })
+        var rescued = 0, lowConf = 0, missed = 0
+        for c in unpriced {
+            guard let p = found["\(c.network)|\(c.contract!)"] else {
+                missed += 1
+                out.append("  \(c.symbol) [\(c.network)]: no DeFiLlama price")
+                continue
+            }
+            if p.confidence >= DefiLlamaPrices.confidenceFloor {
+                rescued += 1
+                out.append(String(format: "  %@: $%.4f (conf %.2f) → RESCUED", c.symbol, p.price, p.confidence))
+            } else {
+                lowConf += 1
+                out.append(String(format: "  %@: $%.4f (conf %.2f) → below floor, skipped", c.symbol, p.price, p.confidence))
+            }
+        }
+        out.append(String(format: "backstop: %d rescued, %d low-confidence, %d unpriced",
+                          rescued, lowConf, missed))
+        return out
+    }
+    #endif
 
     /// The contract addresses (lowercased) the given wallets hold above the
     /// dust floor — the activity spam filter's allowlist: a received token that

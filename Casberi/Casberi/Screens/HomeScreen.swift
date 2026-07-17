@@ -731,6 +731,10 @@ struct HomeScreen: View {
         boardEditing = false
         refreshTick += 1
         chrome.refreshPulse += 1   // spins the avatar door, deals the berry rain
+        // A deliberate pull means "re-fetch now" — drop the holdings cache so the
+        // reads below go live, not TTL-cached (the cache exists to collapse the
+        // automatic foreground fan-out, not to blunt an explicit pull).
+        await WalletIngest.invalidateHoldingsCache()
         if wallet.addresses.contains(where: \.pinnedToHome) {
             async let pinned = WalletIngest.pinnedWalletHoldings()
             async let combined = WalletIngest.combinedHoldings(pinnedOnly: true)

@@ -1525,6 +1525,10 @@ struct FeedScreen: View {
     /// records paint, so the delight is the cascade, not a typewriter. A short
     /// beat lets the pull read before it lands with a soft thud.
     private func refreshFeed() async {
+        // A deliberate pull re-fetches live — clear the holdings cache so the
+        // Wallet feed's treemap isn't served a TTL-cached read (same contract as
+        // Home's pull; the cache is for the automatic fan-out, not the gesture).
+        await WalletIngest.invalidateHoldingsCache()
         BridgeRefresh.refreshAllConnected(context: modelContext, store: bridges)
         chrome.refreshPulse += 1   // spins the avatar door, deals the berry rain
         shapeWave += 1

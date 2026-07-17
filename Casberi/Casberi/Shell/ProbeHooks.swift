@@ -638,6 +638,20 @@ enum ProbeHooks {
                 }
             }
         },
+        // `-defillamaProbe <address>` walks the DeFiLlama price backstop (prd
+        // §115) end-to-end for one wallet: how many held tokens Alchemy leaves
+        // unpriced, and how many the keyless `coins.llama.fi` fill then rescues
+        // (with each price + confidence, and which fell under the floor). The
+        // count alone can't tell "Alchemy priced everything" from "the backstop
+        // saved a vanishing token" — and that rescue IS the feature. Pair with
+        // `-walletAddress`; reads only.
+        Hook(key: "defillamaProbe") { address, _ in
+            Task { @MainActor in
+                for line in await WalletIngest.backstopDiagnostic(address: address) {
+                    NSLog("DeFiLlama probe: %@", line)
+                }
+            }
+        },
         // `-wcConnectProbe YES` proposes a read-only WalletConnect session and
         // NSLogs the EXACT namespaces payload plus the `wc:` URI. The payload
         // line is the point: it's the proof that "we ask for nothing" is real
