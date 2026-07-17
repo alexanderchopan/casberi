@@ -882,7 +882,7 @@ enum WalletIngest {
         let samples = WalletStore.shared.valueSamples(forAddress: address)
         guard let last = samples.last, let held = last.holdings, !held.isEmpty else { return nil }
         let cells = held.sorted { $0.value > $1.value }.prefix(5)
-            .map { sym, usd in "\(sym) \(max(1, Int(usd.squareRoot() * 10)))" }
+            .map { sym, usd in "\(sym) \(treemapWeight(usd))" }
         return HoldingsGroup(label: label, address: address, cells: Array(cells),
                              totalUSD: last.usd, tokenCount: held.count,
                              topBySymbol: held, stale: last.at)
@@ -924,7 +924,7 @@ enum WalletIngest {
         let cells = bySymbol.sorted { $0.value > $1.value }.prefix(5)
             .map { sym, usd in
                 let route = routeBySymbol[sym].map { " @t:\($0.route)" } ?? ""
-                return "\(sym) \(max(1, Int(usd.squareRoot() * 10)))\(route)"
+                return "\(sym) \(treemapWeight(usd))\(route)"
             }
         return (true, (cells, bySymbol.values.reduce(0, +), bySymbol.count, bySymbol))
     }
@@ -1027,7 +1027,11 @@ enum WalletIngest {
         return await priceSPL(candidates).compactMap { c in
             guard let price = c.price, price > 0 else { return nil }
             let usd = c.amount * price
-            guard usd >= holdingFloor else { return nil }
+            // `.isFinite` FIRST: an untrusted balance/price can overflow to inf
+            // (or NaN), and `inf >= holdingFloor` is true — so the floor alone
+            // lets a poison value through to the treemap's `Int(...)` (crash)
+            // and into the persisted sample (crash again next launch).
+            guard usd.isFinite, usd >= holdingFloor else { return nil }
             return HeldToken(symbol: c.symbol, contract: c.contract,
                              network: c.network, usd: usd, owner: c.owner)
         }
@@ -1386,8 +1390,10 @@ enum WalletIngest {
 
     private static func firstPrice(_ raw: Any?) -> Double? {
         guard let arr = raw as? [[String: Any]], let first = arr.first else { return nil }
-        if let s = first["value"] as? String { return Double(s) }
-        if let d = first["value"] as? Double { return d }
+        // `.isFinite`: `Double("1e400")` returns `.infinity`, not nil, so an
+        // absurd/malformed price string would otherwise pass straight through.
+        if let s = first["value"] as? String, let d = Double(s), d.isFinite { return d }
+        if let d = first["value"] as? Double, d.isFinite { return d }
         return nil
     }
 
@@ -1396,6 +1402,37 @@ enum WalletIngest {
         var v = 0.0
         for c in s { guard let d = c.hexDigitValue else { return v }; v = v * 16 + Double(d) }
         return v
+    }
+
+    /// A treemap cell's area weight from a USD value, in a guaranteed-safe Int
+    /// range. `Int(Double)` TRAPS on a non-finite or oversized value, and these
+    /// USD numbers are built from untrusted on-chain data: a spam/airdrop
+    /// token's bogus price string parses to `.infinity` (Swift's `Double(_:)`
+    /// overflows to inf, it does NOT return nil), and a giant balance hex
+    /// overflows `hexToDouble` to a huge/inf Double — either sails past the
+    /// `usd >= holdingFloor` gate (inf and huge finite both compare `>=`) and,
+    /// because inf sorts to the top, is guaranteed into the top-5 cells. A raw
+    /// `Int(usd.squareRoot() * 10)` was therefore a launch crash for any wallet
+    /// holding one such token, and — since the value is persisted in the
+    /// last-known sample — it replayed on every later cold launch. Clamp so a
+    /// bad value degrades to a small cell instead of killing the process.
+    static func treemapWeight(_ usd: Double) -> Int {
+        let scaled = usd.squareRoot() * 10
+        guard scaled.isFinite else { return 1 }
+        return max(1, Int(min(scaled, 1_000_000)))
+    }
+
+    /// A hex quantity as an Int, clamped to a safe range. `Int(Double)` traps
+    /// on a non-finite or oversized value, and these hex strings come from
+    /// untrusted on-chain data / the flaky public RPCs the wallet reads — a
+    /// malformed or adversarial response must degrade, not kill the process.
+    /// Used for block numbers, log indices, and the like where a plain
+    /// `Int(hexToDouble(...))` would be a crash on bad input. The cap (9e15) is
+    /// far above any real block number yet below 2^53, so `Int(_:)` is exact.
+    static func hexToInt(_ hex: String) -> Int {
+        let v = hexToDouble(hex)
+        guard v.isFinite, v >= 0 else { return 0 }
+        return v < 9_000_000_000_000_000 ? Int(v) : 9_000_000_000_000_000
     }
 
     private static func clean(_ symbol: String) -> String {
@@ -1409,7 +1446,9 @@ enum WalletIngest {
         if v == 0 { return "0" }
         if v >= 1000 {
             let f = NumberFormatter(); f.numberStyle = .decimal; f.maximumFractionDigits = 0
-            return f.string(from: NSNumber(value: v)) ?? String(Int(v))
+            // `%.0f`, not `Int(v)`: the formatter returns nil exactly for
+            // NaN/inf, and `Int(v)` would then trap on that same value.
+            return f.string(from: NSNumber(value: v)) ?? String(format: "%.0f", v)
         }
         if v >= 1 { return String(format: "%.2f", v) }
         return String(format: "%.4f", v)

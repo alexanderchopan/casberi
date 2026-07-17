@@ -91,7 +91,7 @@ enum WalletPrepare {
               let log = logs.first(where: { entry in
                   // A missing index must not read as 0 — logIndex 0 is real.
                   guard let hex = entry["logIndex"] as? String else { return false }
-                  return Int(WalletIngest.hexToDouble(hex)) == logIndex
+                  return WalletIngest.hexToInt(hex) == logIndex
               }),
               let contract = (log["address"] as? String)?.lowercased(),
               let topics = log["topics"] as? [String], topics.count >= 3

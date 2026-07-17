@@ -319,9 +319,9 @@ enum WalletApprovals {
                 spender: "0x" + spenderTopic.suffix(40).lowercased(),
                 forAll: forAll,
                 rawValue: WalletIngest.hexToDouble((log["data"] as? String) ?? "0x0"),
-                block: Int(WalletIngest.hexToDouble(blockHex)),
+                block: WalletIngest.hexToInt(blockHex),
                 txHash: txHash,
-                logIndex: Int(WalletIngest.hexToDouble(indexHex))))
+                logIndex: WalletIngest.hexToInt(indexHex)))
         }
         events = Array(events.suffix(10))
         guard !events.isEmpty else { return [] }
@@ -394,7 +394,7 @@ enum WalletApprovals {
     private static func blockNumber(_ chain: Chain) async -> Int? {
         guard let hex = await call(chain, method: "eth_blockNumber", params: []) as? String
         else { return nil }
-        return Int(WalletIngest.hexToDouble(hex))
+        return WalletIngest.hexToInt(hex)
     }
 
     /// Approval + ApprovalForAll logs where the OWNER topic is this wallet —

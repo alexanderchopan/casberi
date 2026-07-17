@@ -308,7 +308,7 @@ enum PeerBridge {
                 intentHash: intentHash,
                 orchestrator: contract,
                 rawAmount: word(data, 0).map(WalletIngest.hexToDouble) ?? 0,
-                block: Int(WalletIngest.hexToDouble(blockHex)),
+                block: WalletIngest.hexToInt(blockHex),
                 txHash: txHash))
         }
         fills = Array(fills.suffix(10))
@@ -433,7 +433,7 @@ enum PeerBridge {
     private static func blockNumber() async -> Int? {
         guard let hex = await call(method: "eth_blockNumber", params: []) as? String
         else { return nil }
-        return Int(WalletIngest.hexToDouble(hex))
+        return WalletIngest.hexToInt(hex)
     }
 
     /// IntentFulfilled logs where fundsTransferredTo is this wallet — both
