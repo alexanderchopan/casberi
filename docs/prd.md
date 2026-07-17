@@ -3905,3 +3905,30 @@ Headless: `-howItWorksCTA <s>` fires the CTA after a delay (pair with
 **Naming (user, same day): the Apps surface is never a "store" in
 user-facing copy — it's "the catalog."** "Store" reads as a place you pay.
 Shopify/Steam copy keeps "store" where it means a literal merchant shop.
+
+Post-review hardening (same session, all re-verified on the sim): the pan
+DELIVERS ITS OWN CALLBACKS from its touch handlers (a stock recognizer's
+target-action on SwiftUI's scroll view fires only intermittently —
+BoardDragDriver's lesson, which the first cut had only half-followed); the
+deal swaps state in the spring's COMPLETION (`completionCriteria:
+.logicallyComplete`) behind a `dealing` guard — the first cut's fixed
+0.3s asyncAfter raced a fast second swipe into double-advances; the daily
+rotation seeds the deck INDEX once per mount instead of rotating the seat
+array per evaluation (which reshuffled the deck under a live index at
+midnight and whenever the seat count changed); the fly-off distance is the
+card's measured width + 100 (a hardcoded 640 would have swapped state
+on-screen on iPad); a mid-drag unmount settles the drag before removing
+the recognizer; swipes may start on the peeking edges; the under-cards are
+hidden from VoiceOver and the deck advances via a named accessibility
+action ("Next card"); the deck is its own child view owning the drag
+state, so a dragged frame re-renders three cards, not every shelf row.
+
+## 94. The qualifier badges die on the shelf rows (user, 2026-07-16) — BUILT
+
+"'No account' repeatedly under the names of things, or 'one tap' or
+'import' — who cares, it's extra text the user doesn't need to see." The
+qualifier capsule badge left the catalog's shelf rows (and with it, search
+results); rows read icon → name → tagline. The qualifier survives in ONE
+place: as a Discover card's eyebrow, where a single card states its
+reason. `Offer.qualifier` itself stays — it powers the reason-or-no-seat
+rule (§93).

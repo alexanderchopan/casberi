@@ -8,50 +8,6 @@ import Foundation
 /// honest and expected.
 enum StorePreview {
 
-    /// One ghosted sample line for the story card's middle band — the title
-    /// text, plus a social account's avatar URL when the row is a `PostRow`
-    /// (Bluesky/Farcaster), so the pill can lead with a face the way the real
-    /// feed row does.
-    struct Sample: Hashable {
-        let title: String
-        let avatarURL: String?
-    }
-
-    /// Up to two sample rows for an offer — the story card's middle band
-    /// ghosts what lands, parsed from the same preview doc the product page
-    /// streams so the story and the page never disagree. Cached: the
-    /// carousel's interactive scroll re-evaluates card bodies every frame,
-    /// and the parse is constant per offer.
-    private static var sampleCache: [String: [Sample]] = [:]
-    static func samples(for name: String) -> [Sample] {
-        if let hit = sampleCache[name] { return hit }
-        var rows: [Sample] = []
-        for line in doc(for: name) ?? [] {
-            guard rows.count < 2 else { break }
-            let quotes = line.split(separator: "\"").enumerated()
-                .filter { $0.offset % 2 == 1 }.map { String($0.element) }
-            if line.contains("PostRow(\"") {
-                // PostRow(handle, text, avatarURL, …) — the same "handle: text"
-                // the Row form ghosted, now with the author's real avatar
-                // leading (the URL is arg 3; empty falls through to no face).
-                if quotes.count >= 2 {
-                    let url = quotes.count >= 3 && !quotes[2].isEmpty ? quotes[2] : nil
-                    rows.append(Sample(title: "\(quotes[0]): \(quotes[1])", avatarURL: url))
-                }
-            } else if line.contains("TxRow(\"") {
-                // TxRow(verb, body, context) — the verb alone ("Swapped")
-                // reads as a broken placeholder; the body is the story.
-                if quotes.count >= 2 { rows.append(Sample(title: "\(quotes[0]) \(quotes[1])", avatarURL: nil)) }
-            } else if line.contains("Row(\"") {
-                if let t = quotes.first { rows.append(Sample(title: t, avatarURL: nil)) }
-            } else if line.contains("TakeawayCard(") || line.contains("ApprovalCard(") {
-                if quotes.count >= 2 { rows.append(Sample(title: quotes[1], avatarURL: nil)) }
-            }
-        }
-        sampleCache[name] = rows
-        return rows
-    }
-
     /// The preview document for an offer, or nil when a preview would add
     /// nothing (connectable apps show real things instead; Venice lands no
     /// things — its key powers answers, so the tagline row speaks for it).
