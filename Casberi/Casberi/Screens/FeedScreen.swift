@@ -199,6 +199,11 @@ struct FeedScreen: View {
             // sparkline (TokenPulse) — collapsing 3+ into "Tokens · N things"
             // silently drops every one of them.
             && t.source != "Tokens"
+            // And Bitrefill orders: each wears the product's own artwork and a
+            // "name · $value" title (prd §103). They're deliberate purchases,
+            // low volume — not machine bulk — so a gift-card spree stays
+            // legible row by row instead of "Bitrefill · N things".
+            && t.source != "Bitrefill"
     }
 
     /// 3+ bundleable things from one source in one day collapse into a
