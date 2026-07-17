@@ -569,8 +569,7 @@ struct SocialProfileCard: View {
             return
         }
         watched = true
-        DSHaptic.success()
-        chrome?.flash(String(localized: "Watching @\(shown.shortHandle)."))
+        chrome?.flash(String(localized: "Watching @\(shown.shortHandle)."), tone: .success)
         Task { await SocialPeople.sync(source: shown.source, context: modelContext) }
     }
 
@@ -579,14 +578,15 @@ struct SocialProfileCard: View {
             let verified = await FarcasterIngest.verifiedEthAddresses(username: shown.handle)
             let already = Set(WalletStore.shared.addresses.map { $0.address.lowercased() })
             guard let address = verified.first(where: { !already.contains($0) }) else {
-                chrome?.flash(verified.isEmpty
-                    ? String(localized: "No verified wallet for @\(shown.shortHandle).")
-                    : String(localized: "Already watching @\(shown.shortHandle)'s wallet."))
+                if verified.isEmpty {
+                    chrome?.flash(String(localized: "No verified wallet for @\(shown.shortHandle)."), tone: .failure)
+                } else {
+                    chrome?.flash(String(localized: "Already watching @\(shown.shortHandle)'s wallet."))
+                }
                 return
             }
             WalletStore.shared.add(address, label: "@\(shown.handle)")
-            DSHaptic.success()
-            chrome?.flash(String(localized: "Watching @\(shown.shortHandle)'s wallet."))
+            chrome?.flash(String(localized: "Watching @\(shown.shortHandle)'s wallet."), tone: .success)
         }
     }
 
@@ -605,8 +605,7 @@ struct SocialProfileCard: View {
             chrome?.flash(String(localized: "Already watching that account."))
             return
         }
-        DSHaptic.success()
-        chrome?.flash(String(localized: "Watching @\(picked.shortHandle) on \(other)."))
+        chrome?.flash(String(localized: "Watching @\(picked.shortHandle) on \(other)."), tone: .success)
         Task { await SocialPeople.sync(source: other, context: modelContext) }
     }
 }

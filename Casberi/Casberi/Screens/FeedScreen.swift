@@ -77,7 +77,7 @@ struct FeedScreen: View {
 
     /// The shape a source takes when its chip is in force.
     private enum Shape {
-        case all, photos, wallet, calendar, gmail, chat, social, reminders, agent, safari, notes, you, music, tokens, plain
+        case all, photos, wallet, calendar, gmail, chat, social, reminders, agent, safari, notes, you, music, tokens, bitrefill, plain
         init(source: String) {
             switch source {
             case "All":                 self = .all
@@ -97,6 +97,7 @@ struct FeedScreen: View {
             case "You", "Voice":        self = .you
             case "Apple Music", "Spotify": self = .music
             case "Tokens":              self = .tokens
+            case "Bitrefill":           self = .bitrefill
             default:                    self = .plain
             }
         }
@@ -597,6 +598,10 @@ struct FeedScreen: View {
         case .tokens:
             watchlistLedeSection(visible)
             watchlistSection(visible, nextEventID: nextEventID)
+        case .bitrefill:
+            bitrefillLedeSection(visible)
+            let days = dayGroups(visible)
+            groupedSections(days, nextEventID: nextEventID, boundary: boundaryThingID(in: days))
         default:
             if filter.tag != "All" && shape == .all {
                 daySection(filterLabel, visible, nextEventID: nextEventID)
@@ -647,6 +652,22 @@ struct FeedScreen: View {
             ledeSection(WatchlistLede(
                 up: pulses.filter { $0.change24h > 0 }.count,
                 down: pulses.filter { $0.change24h < 0 }.count))
+        }
+    }
+
+    /// Bitrefill's lede: the account at a glance — the balance its API last
+    /// reported, and how many orders landed this month (from the same rows
+    /// below, so the two can't disagree). Connected-only: a disconnected
+    /// seat must not wear yesterday's balance as if it were current.
+    @ViewBuilder
+    private func bitrefillLedeSection(_ visible: [Thing]) -> some View {
+        if TokenBridge.bitrefill.connected, let balance = BitrefillBalance.formatted {
+            let month = visible.filter {
+                BitrefillFetch.isOrderRef($0.sourceRef)
+                    && Self.groupingCalendar.isDate($0.capturedAt, equalTo: .now,
+                                                    toGranularity: .month)
+            }.count
+            ledeSection(BitrefillLede(balance: balance, monthCount: month))
         }
     }
 
@@ -1166,8 +1187,7 @@ struct FeedScreen: View {
         let wasMark = thing.mark
         thing.mark = nowDone ? .done : .todo
         modelContext.saveHonestly()
-        DSHaptic.success()
-        chrome.flash(nowDone ? "Done — tap again to undo" : "Back on the list")
+        chrome.flash(nowDone ? "Done — tap again to undo" : "Back on the list", tone: .success)
         let sourceRef = thing.sourceRef
         Task {
             let ok = await ScheduleIngest.setCompleted(sourceRef, nowDone)
@@ -1175,7 +1195,7 @@ struct FeedScreen: View {
             await MainActor.run {
                 thing.mark = wasMark
                 modelContext.saveHonestly()
-                chrome.flash("Couldn't reach Reminders — not marked")
+                chrome.flash("Couldn't reach Reminders — not marked", tone: .failure)
             }
         }
     }
@@ -1410,17 +1430,15 @@ struct FeedScreen: View {
             Task {
                 do {
                     try await HandOff.addToCalendar(thing)
-                    DSHaptic.success()
-                    chrome.flash("On your calendar")
-                } catch { chrome.flash(error.localizedDescription) }
+                    chrome.flash("On your calendar", tone: .success)
+                } catch { chrome.flash(error.localizedDescription, tone: .failure) }
             }
         case .addToReminders:
             Task {
                 do {
                     try await HandOff.addToReminders(thing)
-                    DSHaptic.success()
-                    chrome.flash("On your list")
-                } catch { chrome.flash(error.localizedDescription) }
+                    chrome.flash("On your list", tone: .success)
+                } catch { chrome.flash(error.localizedDescription, tone: .failure) }
             }
         case .copyText:
             UIPasteboard.general.string = thing.content.isEmpty ? thing.title : thing.content
@@ -1437,18 +1455,16 @@ struct FeedScreen: View {
                 thing.mark = .done
                 modelContext.saveHonestly()
                 SpotlightIndex.index([real])
-                DSHaptic.success()
-                chrome.flash("Saved")
+                chrome.flash("Saved", tone: .success)
             } else {
                 withAnimation(DS.Motion.standard) {
                     thing.mark = .done
                     modelContext.saveHonestly()
                 }
-                DSHaptic.success()
                 // Honesty: the answer is recorded on the thing. Nothing is
                 // sent anywhere — no agent transport exists yet (2026-07-10;
                 // the old copy claimed a gateway was told).
-                chrome.flash("Approved")
+                chrome.flash("Approved", tone: .success)
             }
         case .deny:
             withAnimation(DS.Motion.standard) {

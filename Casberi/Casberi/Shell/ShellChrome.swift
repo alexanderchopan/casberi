@@ -78,7 +78,20 @@ final class ShellChrome {
         }
     }
 
-    func flash(_ text: String, action: ToastAction? = nil, seconds: Double = 2) {
+    /// A toast's outcome — `.success`/`.failure` fire the matching haptic
+    /// (§ Haptics: the buzz rides WITH the words, never alone) so a call site
+    /// can't buzz success and forget to say so, or fail silently. `.neutral`
+    /// (the default) is for toasts that aren't reporting a write's outcome
+    /// (an informational note, a read, a reversible toggle) — those keep
+    /// whatever haptic their own gesture already fired, if any.
+    enum Tone { case neutral, success, failure }
+
+    func flash(_ text: String, tone: Tone = .neutral, action: ToastAction? = nil, seconds: Double = 2) {
+        switch tone {
+        case .neutral: break
+        case .success: DSHaptic.success()
+        case .failure: DSHaptic.failure()
+        }
         // Replacing an in-flight toast crossfades (id change), never stacks.
         withAnimation(DS.Motion.standard) {
             toast = text

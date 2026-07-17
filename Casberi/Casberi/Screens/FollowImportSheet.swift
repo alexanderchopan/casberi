@@ -238,13 +238,12 @@ struct FollowImportSheet: View {
     private func importPicked() {
         let chosen = (rows ?? []).filter { picked.contains($0.id) }.map(\.hit)
         let added = SocialPeople.watch(chosen, source: source)
-        DSHaptic.success()
         // 0 gets its own line — the plural branch would have reported an import
         // that didn't happen ("Watching 0 more accounts").
         switch added {
-        case 0:  chrome.flash(String(localized: "Already watching those."))
-        case 1:  chrome.flash(String(localized: "Watching 1 more account."))
-        default: chrome.flash(String(localized: "Watching \(added) more accounts."))
+        case 0:  chrome.flash(String(localized: "Already watching those."), tone: .success)
+        case 1:  chrome.flash(String(localized: "Watching 1 more account."), tone: .success)
+        default: chrome.flash(String(localized: "Watching \(added) more accounts."), tone: .success)
         }
         onImport(added)
         dismiss()

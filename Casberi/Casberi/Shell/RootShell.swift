@@ -195,7 +195,7 @@ struct RootShell: View {
             // launch (SharedStore.containerWithFallback), say so once instead
             // of silently showing an empty/unsynced corpus.
             if let reason = SharedStore.degradeReason {
-                chrome.flash(reason, seconds: 4)
+                chrome.flash(reason, tone: .failure, seconds: 4)
             }
             #if DEBUG
             // Perf pass: log init→ready (first content appearance) once per
@@ -668,7 +668,6 @@ struct RootShell: View {
         modelContext.insert(thing)
         modelContext.saveHonestly()
         SpotlightIndex.index([thing])
-        DSHaptic.success()
         land(thing)
         // A pasted URL saves instantly with its address as its face; the real
         // page title arrives a beat later (best-effort, never blocks the save).
@@ -683,7 +682,6 @@ struct RootShell: View {
         modelContext.insert(thing)
         modelContext.saveHonestly()
         SpotlightIndex.index([thing])
-        DSHaptic.success()
         land(thing, undoable: true)
         Task { @MainActor in await LinkTitle.enrich(thing, context: modelContext) }
     }
@@ -726,7 +724,6 @@ struct RootShell: View {
         modelContext.insert(thing)
         modelContext.saveHonestly()
         SpotlightIndex.index([thing])
-        DSHaptic.success()
         land(thing)
     }
 
@@ -741,26 +738,26 @@ struct RootShell: View {
         modelContext.insert(thing)
         modelContext.saveHonestly()
         SpotlightIndex.index([thing])
-        DSHaptic.success()
-        chrome.flash("Kept — it's in your things")
+        chrome.flash("Kept — it's in your things", tone: .success)
     }
 
     /// Every save ends here (§1): toast, and — unless the person is already
     /// watching the record (any feed shape), where the new row IS the
     /// arrival — the proxy-card flight to the "All" chip. The very first
-    /// thing ever gets its own toast and always flies (§8). Haptic stays at
-    /// commit, in the callers.
+    /// thing ever gets its own toast and always flies (§8). The toast's
+    /// `.success` tone carries the haptic, so every caller's commit is felt
+    /// exactly once, here.
     private func land(_ thing: Thing, undoable: Bool = false) {
         let first = !firstThingSaved
         if first { firstThingSaved = true }
 
         if undoable && !first {
             let id = thing.id
-            chrome.flash("Saved", action: .init(label: "Undo") {
+            chrome.flash("Saved", tone: .success, action: .init(label: "Undo") {
                 undoCapture(id: id)
             }, seconds: 4)
         } else {
-            chrome.flash(first ? "Your first thing" : "Saved")
+            chrome.flash(first ? "Your first thing" : "Saved", tone: .success)
         }
 
         if FeedFilter.shared.source == "Pinned" || first {

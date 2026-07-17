@@ -320,7 +320,7 @@ struct AppsScreen: View {
     private func attemptConnect(_ offer: BridgeCatalog.Offer) {
         BridgeConnect.connect(offer, store: store, context: modelContext) { ok in
             if ok { celebrateConnect(offer) }
-            else { chrome.flash("Couldn't connect \(offer.name).") }
+            else { chrome.flash("Couldn't connect \(offer.name).", tone: .failure) }
         }
     }
 
@@ -330,10 +330,9 @@ struct AppsScreen: View {
     /// (The first-connect berry rain is dealt by `connectedCount`'s watcher,
     /// not here — it must fire for setup-screen connects too.)
     private func celebrateConnect(_ offer: BridgeCatalog.Offer) {
-        DSHaptic.success()
         connectHue = DS.brandHue(for: offer.name) ?? DS.tint
         connectToken += 1
-        chrome.flash(BridgeConnect.landingMessage(offer.name))
+        chrome.flash(BridgeConnect.landingMessage(offer.name), tone: .success)
     }
 
     /// Connected, healthy bridges — the count whose 0 → 1 transition is the
@@ -596,7 +595,7 @@ struct AppsScreen: View {
                 .overlay(alignment: .bottomTrailing) {
                     Image(systemName: BridgeGlyph.symbol(for: iconName))
                         .font(.system(size: 150, weight: .semibold))
-                        .foregroundStyle(.white.opacity(0.10))
+                        .foregroundStyle((BridgeGlyph.glyphTint(for: iconName) ?? .white).opacity(0.10))
                         .rotationEffect(.degrees(-12))
                         .offset(x: 44, y: 40)
                 }

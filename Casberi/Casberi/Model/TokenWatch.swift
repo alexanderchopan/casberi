@@ -152,7 +152,9 @@ enum TokenWatch {
                 statusLine: proof,
                 can: ["Watches the tokens you add.", "Read-only — public price data only."]
             ))
-            DSHaptic.success()
+            // No haptic here — every caller already fires its own on the
+            // watch that triggered this (first-ever) registration; buzzing
+            // again here would double it.
         }
     }
 }

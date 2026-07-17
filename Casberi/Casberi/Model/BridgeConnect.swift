@@ -53,7 +53,9 @@ enum BridgeConnect {
             let proof = result.n > 0 ? "\(result.n) \(result.noun) in" : "Synced just now"
             store.registerConnected(id: result.id, name: offer.name,
                                     proof: proof, can: [result.can])
-            DSHaptic.success()
+            // No haptic here — the caller's landing toast carries it
+            // (`chrome.flash(_, tone: .success)`), so a connect never buzzes
+            // twice.
             completion?(true)
         }
     }

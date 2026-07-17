@@ -281,8 +281,8 @@ struct BridgeSyncStatusRows: View {
                     if resultIsError {
                         Text(result)
                             .shake(on: shakes)
-                            .onAppear { shakes += 1 }
-                            .onChange(of: result) { if resultIsError { shakes += 1 } }
+                            .onAppear { shakes += 1; DSHaptic.failure() }
+                            .onChange(of: result) { if resultIsError { shakes += 1; DSHaptic.failure() } }
                     } else {
                         CountUpText(text: result)
                     }

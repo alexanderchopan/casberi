@@ -253,7 +253,7 @@ struct ReorderableBoard<ID: Hashable, Content: View>: View {
 
     private func lift(_ id: ID) {
         guard draggingID != id else { return }
-        DSHaptic.selection()
+        DSHaptic.lift()
         // The first lift arms edit mode; it STAYS armed after this drag
         // settles (persistent — only Done, or leaving Home, clears it), so
         // the board keeps jiggling and the next tile takes only a light press.

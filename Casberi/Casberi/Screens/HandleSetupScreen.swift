@@ -669,14 +669,15 @@ struct HandleSetupScreen: View {
             let verified = await FarcasterIngest.verifiedEthAddresses(username: username)
             let alreadyWatched = Set(WalletStore.shared.addresses.map { $0.address.lowercased() })
             guard let address = verified.first(where: { !alreadyWatched.contains($0) }) else {
-                chrome.flash(verified.isEmpty
-                    ? String(localized: "No verified wallet for @\(username).")
-                    : String(localized: "Already watching @\(username)'s wallet."))
+                if verified.isEmpty {
+                    chrome.flash(String(localized: "No verified wallet for @\(username)."), tone: .failure)
+                } else {
+                    chrome.flash(String(localized: "Already watching @\(username)'s wallet."))
+                }
                 return
             }
             WalletStore.shared.add(address, label: "@\(username)")
-            DSHaptic.success()
-            chrome.flash(String(localized: "Watching @\(username)'s wallet."))
+            chrome.flash(String(localized: "Watching @\(username)'s wallet."), tone: .success)
         }
     }
 

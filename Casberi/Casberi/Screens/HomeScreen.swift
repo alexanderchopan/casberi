@@ -700,7 +700,6 @@ struct HomeScreen: View {
         guard let crossed = thresholds.last(where: { things.count >= $0 }),
               crossed > milestoneReached else { return }
         milestoneReached = crossed
-        DSHaptic.success()
         // The corpus lives behind the All chip — a milestone gives it one
         // proud catch bob alongside the toast. Deferred half a second: the
         // capture that CROSSED the milestone is bobbing its own source chip
@@ -710,7 +709,7 @@ struct HomeScreen: View {
             try? await Task.sleep(for: .milliseconds(500))
             chrome.chipCaught("All")
         }
-        chrome.flash("\(crossed.formatted()) things banked.")
+        chrome.flash("\(crossed.formatted()) things banked.", tone: .success)
     }
 
     /// Pull-to-refresh: awaited (the spinner shows real work), then one

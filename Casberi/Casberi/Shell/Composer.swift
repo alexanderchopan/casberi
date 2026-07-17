@@ -1055,8 +1055,7 @@ struct Composer: View {
     private func applyProposal(_ proposal: OrganizeProposal) {
         guard proposal.canApply else { return }
         let (summary, undo) = Organize.apply(proposal, context: modelContext)
-        DSHaptic.success()
-        chrome.flash(summary, action: .init(label: "Undo", run: undo))
+        chrome.flash(summary, tone: .success, action: .init(label: "Undo", run: undo))
         close()
     }
 

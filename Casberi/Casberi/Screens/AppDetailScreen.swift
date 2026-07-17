@@ -128,10 +128,12 @@ struct AppDetailScreen: View {
     /// reaches the store, so the button flips to Open on its own.
     private func doConnect() {
         BridgeConnect.connect(offer, store: store, context: modelContext) { ok in
-            guard ok else { chrome.flash("Couldn't connect \(offer.name)."); return }
-            DSHaptic.success()
+            guard ok else {
+                chrome.flash("Couldn't connect \(offer.name).", tone: .failure)
+                return
+            }
             connectToken += 1
-            chrome.flash(BridgeConnect.landingMessage(offer.name))
+            chrome.flash(BridgeConnect.landingMessage(offer.name), tone: .success)
         }
     }
 

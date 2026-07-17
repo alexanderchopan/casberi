@@ -331,7 +331,11 @@ struct TokenWatchScreen: View {
                 result = String(localized: "Couldn't find any of those tokens — try contract addresses.")
             } else if failed.isEmpty {
                 result = String(localized: "Watching \(watchedCount) tokens")
+                DSHaptic.success()
             } else {
+                // Mixed outcome: resultIsError stays true for this line, so
+                // the shared status row's shake + failure haptic already
+                // covers it — no separate success buzz to compete with it.
                 result = String(localized: "Watching \(watchedCount) of \(queries.count) — couldn't find \(failed.joined(separator: ", "))")
             }
         }
@@ -349,6 +353,7 @@ struct TokenWatchScreen: View {
         resultIsError = false
         if let thing = TokenWatch.add(token, context: modelContext) {
             result = String(localized: "Watching \(thing.title)")
+            DSHaptic.success()
             queryField = ""
             hits = []
             loadWatched()
