@@ -56,7 +56,7 @@ extension DS {
         case "kalshi":              return Color.fixed("#4fae7b")   // their green (matches the bundled logo)
         case "opensea":             return Color.fixed("#2081e2")   // OpenSea's marine blue
         case "geckoterminal":       return Color.fixed("#7556f6")   // the gecko's purple (sampled from the bundled icon)
-        case "tokens":              return Color.fixed("#f5a623")   // coin gold — this app's own mark, not a vendor's (2026-07-13 rename)
+        case "tokens":              return Color.fixed("#0b0b0b")   // ink — the mark is a green chart on black (user ruling 2026-07-17; the near-zero saturation makes washHue nil, so the token sheet is pure ink ON PURPOSE — a gold/green wash fought the chart's own red)
         case "venice":              return Color.fixed("#0e2942")   // sampled from their deep-blue mark
         case "bankr":               return Color.fixed("#a78bfa")   // the terminal's lavender field (sampled from the bundled icon)
         case "openclaw":            return Color.fixed("#e5342e")   // the agents' red (user, 2026-07-12)

@@ -89,6 +89,31 @@ enum BridgeGlyph {
         DS.brandColor(for: name)
     }
 
+    /// The marks whose identity is the GLYPH's color, not the tile's —
+    /// Tokens is a green chart on ink (user ruling 2026-07-17). Nil for
+    /// every tile-colored mark. Fixed like every brand hex: the Tokens tile
+    /// is black in both modes, so the vivid dark-scheme green always holds.
+    /// Surfaces that paint the brand color as the SIGNAL (the settings
+    /// seat chips) substitute this where non-nil, since a near-black hue
+    /// carries no light of its own.
+    static func glyphTint(for name: String) -> Color? {
+        switch name.lowercased() {
+        // DS.confirm's dark value — re-typed fixed because the mark must not
+        // shift per scheme; keep in step if the confirm green is ever tuned.
+        case "tokens": return Color.fixed("#30d158")
+        default:       return nil
+        }
+    }
+
+    /// The color that SAYS this brand on any surface — the glyph tint where
+    /// the identity is the glyph's (Tokens' green), the tile hue everywhere
+    /// else. Use this wherever the brand color is painted as a signal or
+    /// payoff (seat chips, the connect bloom, inline icons): a near-black
+    /// tile hue carries no light of its own there.
+    static func signalColor(for name: String) -> Color {
+        glyphTint(for: name) ?? color(for: name)
+    }
+
     static func symbol(for name: String) -> String {
         switch name.lowercased() {
         case "calendar":  return "calendar"

@@ -322,6 +322,9 @@ struct TokenChartView<R: PriceRange, Fallback: View>: View {
                     .dsText(.subhead13).foregroundStyle(DS.textTertiary)
                     .lineLimit(1)
             }
+            // Hero centers everything — a left-hung line under a centered
+            // plot read as a stray (user checkpoint 2026-07-17).
+            .frame(maxWidth: .infinity, alignment: hero ? .center : .leading)
         }
     }
 
@@ -339,8 +342,8 @@ struct TokenChartView<R: PriceRange, Fallback: View>: View {
                 .minimumScaleFactor(0.6)
                 .contentTransition(.numericText())
                 .animation(DS.Motion.standard, value: displayPrice)
-            // Solid: this pill sits on the thing sheet's cover wash, where
-            // the quiet fill was unreadable (user checkpoint 2026-07-17).
+            // Solid: the hero speaks at full Cash-App weight — the quiet
+            // fill under a 40pt price read as an afterthought.
             TokenDeltaPill(change: displayChange, label: range.rawValue, solid: true)
         }
         .frame(maxWidth: .infinity)

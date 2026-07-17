@@ -22,7 +22,10 @@ struct AppDetailScreen: View {
     private var connected: Bool {
         bridge != nil && bridge?.status != .paused
     }
-    private var brand: Color { BridgeGlyph.color(for: offer.name) }
+    // signalColor, not the tile hue: this paints the inline feed icon, where
+    // Tokens' near-black tile would vanish on the dark page (its identity
+    // there is the glyph's green). The wash keeps asking DS.washHue itself.
+    private var brand: Color { BridgeGlyph.signalColor(for: offer.name) }
 
     /// The app's identity hue washed down from the top — nil for a hueless
     /// app (the gray fallback is a fill, not an identity: same ruling the
@@ -59,7 +62,11 @@ struct AppDetailScreen: View {
         // recipe, under the content; hueless apps stay pure page, honestly.
         .background(alignment: .top) { brandWash }
         // The connect payoff blooms over the content, then recedes.
-        .connectBloom(hue: DS.brandHue(for: offer.name) ?? DS.tint, token: connectToken)
+        // The payoff must carry light — Tokens blooms its glyph green, not
+        // its near-black tile (signalColor's whole point).
+        .connectBloom(hue: BridgeGlyph.glyphTint(for: offer.name)
+                          ?? DS.brandHue(for: offer.name) ?? DS.tint,
+                      token: connectToken)
         .dsPageBackground()
         .navigationTitle(offer.name)
         .navigationBarTitleDisplayMode(.inline)

@@ -330,7 +330,10 @@ struct AppsScreen: View {
     /// (The first-connect berry rain is dealt by `connectedCount`'s watcher,
     /// not here — it must fire for setup-screen connects too.)
     private func celebrateConnect(_ offer: BridgeCatalog.Offer) {
-        connectHue = DS.brandHue(for: offer.name) ?? DS.tint
+        // Glyph-colored marks bloom their glyph (Tokens' green) — a
+        // near-black tile hue is no payoff (BridgeGlyph.signalColor's rule).
+        connectHue = BridgeGlyph.glyphTint(for: offer.name)
+            ?? DS.brandHue(for: offer.name) ?? DS.tint
         connectToken += 1
         chrome.flash(BridgeConnect.landingMessage(offer.name), tone: .success)
     }

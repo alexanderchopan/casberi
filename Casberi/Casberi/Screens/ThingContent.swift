@@ -660,10 +660,12 @@ private struct TokenChartContent: View {
 
     /// The market's shape, re-ranked (Big money, 2026-07-17): the two
     /// biggest facts — market cap and 24h volume, in rank order — lead as
-    /// bold cards; whatever else the pair reported follows as quiet chips.
-    /// Still cells only for stats actually reported: a token with no cap
-    /// leads with what it HAS (FDV honestly labeled FDV), never an invented
-    /// number.
+    /// bold cards; whatever else the pair reported follows in the SAME
+    /// two-column grid as smaller cards (user checkpoint 2026-07-17: the
+    /// free-floating chips broke the block's cohesion — demotion is scale,
+    /// not a different anatomy). Still cells only for stats actually
+    /// reported: a token with no cap leads with what it HAS (FDV honestly
+    /// labeled FDV), never an invented number.
     @ViewBuilder private var statStrip: some View {
         if let stats {
             let cells: [(String, Double)] = [
@@ -672,50 +674,49 @@ private struct TokenChartContent: View {
             ].compactMap { label, value in value.map { (label, $0) } }
             let lead = cells.prefix(2)
             let rest = cells.dropFirst(2)
-            VStack(spacing: DS.Space.s3) {
+            VStack(spacing: DS.Space.s2) {
                 if !lead.isEmpty {
-                    HStack(alignment: .top, spacing: DS.Space.s3) {
+                    HStack(alignment: .top, spacing: DS.Space.s2) {
                         ForEach(lead, id: \.0) { label, value in
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(LocalizedStringKey(label))
-                                    .dsText(.label12).foregroundStyle(DS.textTertiary)
-                                    .lineLimit(1)
-                                Text(TokenStats.compact(value))
-                                    .dsText(.stat24)
-                                    .foregroundStyle(DS.textPrimary)
-                                    .monospacedDigit()
-                                    .lineLimit(1)
-                                    .minimumScaleFactor(0.7)
-                            }
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(DS.Space.s3)
-                            .background(DS.fillFaint,
-                                        in: RoundedRectangle(cornerRadius: DS.Radius.card,
-                                                             style: .continuous))
+                            statCard(label: label, value: value, lead: true)
                         }
+                        // A lone cell keeps its half-width column — three
+                        // reported stats must not turn the grid ragged.
+                        if lead.count == 1 { Color.clear.frame(maxWidth: .infinity, maxHeight: 1) }
                     }
                 }
                 if !rest.isEmpty {
-                    HStack(spacing: DS.Space.s2) {
+                    HStack(alignment: .top, spacing: DS.Space.s2) {
                         ForEach(rest, id: \.0) { label, value in
-                            // Text + Text so the LABEL still localizes — an
-                            // interpolated "\(label) …" passes it verbatim
-                            // (the lead cards' labels translate; these must
-                            // not silently stay English).
-                            (Text(LocalizedStringKey(label))
-                                + Text(verbatim: " \(TokenStats.compact(value))"))
-                                .dsText(.label12).foregroundStyle(DS.textSecondary)
-                                .monospacedDigit()
-                                .lineLimit(1)
-                                .padding(.horizontal, DS.Space.s3)
-                                .padding(.vertical, 6)
-                                .background(DS.fillFaint, in: Capsule(style: .continuous))
+                            statCard(label: label, value: value, lead: false)
                         }
-                        Spacer(minLength: 0)
+                        if rest.count == 1 { Color.clear.frame(maxWidth: .infinity, maxHeight: 1) }
                     }
                 }
             }
         }
+    }
+
+    /// One card anatomy for every stat — the tile radius, a full s4 pad, the
+    /// value in the rounded money voice. Lead wears stat24; the rest demote
+    /// to price16 in the same seat.
+    private func statCard(label: String, value: Double, lead: Bool) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(LocalizedStringKey(label))
+                .dsText(.label12).foregroundStyle(DS.textTertiary)
+                .lineLimit(1)
+            Text(TokenStats.compact(value))
+                .dsText(lead ? .stat24 : .price16)
+                .foregroundStyle(DS.textPrimary)
+                .monospacedDigit()
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(DS.Space.s4)
+        .background(DS.fillFaint,
+                    in: RoundedRectangle(cornerRadius: DS.Radius.widget,
+                                         style: .continuous))
     }
 }
 

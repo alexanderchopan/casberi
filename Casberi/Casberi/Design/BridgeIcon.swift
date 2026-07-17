@@ -59,7 +59,7 @@ struct BridgeIcon: View {
                     // looked lost in their badge (report 2026-07-09).
                     Image(systemName: BridgeGlyph.symbol(for: name))
                         .font(.system(size: size * 0.54, weight: .semibold))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(BridgeGlyph.glyphTint(for: name) ?? .white)
                 )
         }
     }

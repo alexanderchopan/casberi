@@ -342,12 +342,14 @@ struct AccountTile: View {
         // So the shelf reads its state at a glance — your live apps glow, the
         // rest wait — without a legend.
         let color: Color = switch status {
-        case .connected: BridgeGlyph.color(for: name)
+        // signalColor: a glyph-colored mark (Tokens' green-on-ink) glows by
+        // its glyph — near-black carries no light on this dark surface.
+        case .connected: BridgeGlyph.signalColor(for: name)
         case .attention: DS.attention
         case .paused, nil: DS.textTertiary.opacity(0.4)
         }
         let fill: Color = switch status {
-        case .connected: BridgeGlyph.color(for: name).opacity(0.30)
+        case .connected: BridgeGlyph.signalColor(for: name).opacity(0.30)
         case .attention: DS.attention.opacity(0.30)
         case .paused, nil: DS.fillFaint
         }
