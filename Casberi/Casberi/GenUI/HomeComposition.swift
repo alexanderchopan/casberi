@@ -42,11 +42,13 @@ enum HomeComposition {
                         walletHoldings: [WalletIngest.HoldingsGroup] = [],
                         walletCombined: WalletIngest.HoldingsGroup? = nil,
                         walletNFTs: [WalletIngest.NFTGroup] = [],
-                        walletPending: Bool = false) -> Document {
+                        walletPending: Bool = false,
+                        walletUnreachable: Bool = false) -> Document {
         let projects = projectClusters(things: things)
         return daily(things: things, projects: projects, walletHoldings: walletHoldings,
                      walletCombined: walletCombined,
-                     walletNFTs: walletNFTs, walletPending: walletPending)
+                     walletNFTs: walletNFTs, walletPending: walletPending,
+                     walletUnreachable: walletUnreachable)
     }
 
     /// True when nothing has landed today — the composition acknowledges the
@@ -61,7 +63,8 @@ enum HomeComposition {
     private static func daily(things: [Thing], projects: [Cluster], walletHoldings: [WalletIngest.HoldingsGroup] = [],
                                      walletCombined: WalletIngest.HoldingsGroup? = nil,
                                      walletNFTs: [WalletIngest.NFTGroup] = [],
-                                     walletPending: Bool = false) -> Document {
+                                     walletPending: Bool = false,
+                                     walletUnreachable: Bool = false) -> Document {
         var doc: [String] = []
         var rootRefs: [String] = []
         var boardRefs: [String] = []
@@ -98,7 +101,7 @@ enum HomeComposition {
         // (appendMediaModules), everyone else composes as a Widget of rows.
         appendPinnedApps(things, to: &doc, rootRefs: &rootRefs, boardRefs: &boardRefs, boardKeys: &boardKeys)
         appendGitHubGraph(to: &doc, rootRefs: &rootRefs, boardRefs: &boardRefs)
-        appendWalletHoldings(walletHoldings, combined: walletCombined, pending: walletPending, to: &doc, rootRefs: &rootRefs, boardRefs: &boardRefs, boardKeys: &boardKeys)
+        appendWalletHoldings(walletHoldings, combined: walletCombined, pending: walletPending, unreachable: walletUnreachable, to: &doc, rootRefs: &rootRefs, boardRefs: &boardRefs, boardKeys: &boardKeys)
         appendWalletNFTs(walletNFTs, to: &doc, rootRefs: &rootRefs, boardRefs: &boardRefs, boardKeys: &boardKeys)
         appendMediaModules(things, to: &doc, rootRefs: &rootRefs, boardRefs: &boardRefs)
 
@@ -513,6 +516,7 @@ enum HomeComposition {
     private static func appendWalletHoldings(_ groups: [WalletIngest.HoldingsGroup],
                                              combined: WalletIngest.HoldingsGroup? = nil,
                                              pending: Bool = false,
+                                             unreachable: Bool = false,
                                              to doc: inout [String],
                                              rootRefs: inout [String],
                                              boardRefs: inout [String],
@@ -556,6 +560,18 @@ enum HomeComposition {
         if groups.isEmpty, pending {
             doc.append("walletPreview = TagMapPreview(\(q(String(localized: "Wallet"))), \(q(String(localized: "Loading your holdings…"))), [ETH, BTC, SOL, USDC, More])")
             rootRefs.append("walletPreview")
+        } else if unreachable {
+            // A pinned wallet we couldn't reach AND have never sampled — the one
+            // case with no card and no cache to show. It used to leave the slot
+            // blank, which reads as "my holdings vanished" (device report,
+            // 2026-07-17, same complaint the loading preview answered for the
+            // in-flight window). Say it honestly instead: a muted, non-breathing
+            // card that names the failure and the fix. Pull-to-refresh (the
+            // screen's own retry gesture) reloads it; the retry/backoff in the
+            // fetch means this only persists through a real outage or a dead
+            // connection, not a transient rate-limit.
+            doc.append("walletUnreachable = TagMapError(\(q(String(localized: "Your wallets"))), \(q(String(localized: "Couldn't reach the chain — pull down to refresh"))), [ETH, BTC, SOL, USDC, More])")
+            rootRefs.append("walletUnreachable")
         }
     }
 

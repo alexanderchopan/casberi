@@ -640,14 +640,28 @@ enum WalletIngest {
         /// into each value sample so the combined sheet can attribute a move to a
         /// token ("mostly ETH"). Empty when this group wasn't built for sampling.
         var topBySymbol: [String: Double] = [:]
+        /// Set only on a LAST-KNOWN group (an unreachable wallet showing its
+        /// cached treemap): the moment it was sampled, so the subline can say
+        /// "as of 2h ago" instead of claiming the number is current
+        /// (2026-07-17). nil on a live group — the normal case.
+        var stale: Date? = nil
 
-        /// "$12.4K across 5 tokens" — compact, no cents theater.
+        /// "$12.4K across 5 tokens" live, or "$12.4K · as of 2h ago" when the
+        /// group is a stale last-known snapshot — compact, no cents theater.
         var subline: String {
             let amount: String
             if totalUSD >= 1_000_000 { amount = String(format: "$%.1fM", totalUSD / 1_000_000) }
             else if totalUSD >= 10_000 { amount = String(format: "$%.0fK", totalUSD / 1_000) }
             else if totalUSD >= 1_000 { amount = String(format: "$%.1fK", totalUSD / 1_000) }
             else { amount = String(format: "$%.0f", totalUSD) }
+            if let stale {
+                let mins = max(1, Int(Date.now.timeIntervalSince(stale) / 60))
+                let ago: String
+                if mins < 60 { ago = "\(mins)m ago" }
+                else if mins < 60 * 24 { ago = "\(mins / 60)h ago" }
+                else { ago = "\(mins / 1_440)d ago" }
+                return String(localized: "\(amount) · as of \(ago)")
+            }
             return "\(amount) across \(tokenCount) token\(tokenCount == 1 ? "" : "s")"
         }
     }
@@ -691,7 +705,7 @@ enum WalletIngest {
             : WalletStore.shared.addresses
         guard watched.count > 1 else { return nil }
         let resolved = await resolvedAddresses(watched.map(\.address))
-        guard !resolved.isEmpty, let h = await holdings(addresses: resolved) else { return nil }
+        guard !resolved.isEmpty, let h = (await holdings(addresses: resolved)).group else { return nil }
         return HoldingsGroup(label: String(localized: "All wallets"), cells: h.cells,
                              totalUSD: h.total, tokenCount: h.count,
                              topBySymbol: topBySymbol(h.bySymbol))
@@ -734,13 +748,8 @@ enum WalletIngest {
         let results = await withTaskGroup(of: (Int, HoldingsGroup?).self) { group in
             for (i, entry) in watched.enumerated() {
                 group.addTask {
-                    guard let address = await resolvedAddresses([entry.address]).first,
-                          let h = await holdings(addresses: [address]) else { return (i, nil) }
-                    return (i, HoldingsGroup(label: entry.label.isEmpty ? entry.short : entry.label,
-                                             address: entry.address,
-                                             cells: h.cells, totalUSD: h.total,
-                                             tokenCount: h.count,
-                                             topBySymbol: topBySymbol(h.bySymbol)))
+                    if case let .group(g) = await walletGroupOutcome(entry) { return (i, g) }
+                    return (i, nil)   // unreachable OR reached-but-empty both drop here
                 }
             }
             var collected: [(Int, HoldingsGroup?)] = []
@@ -778,14 +787,119 @@ enum WalletIngest {
         return groups
     }
 
+    /// One watched wallet's holdings outcome — the three states Home has to
+    /// tell apart (2026-07-17). `topHoldingsByWallet` collapses `.empty` and
+    /// `.unreachable` into "no group"; the pinned path below keeps them
+    /// distinct so an unreachable wallet holds its last-known card (or an honest
+    /// error) instead of silently vanishing.
+    private enum WalletHoldingsOutcome {
+        case group(HoldingsGroup)   // reached the chain, and it holds priced tokens
+        case empty                  // reached the chain, nothing priced (correct-and-empty)
+        case unreachable            // couldn't reach the chain (offline / rate-limited / unresolved)
+    }
+
+    private static func walletGroupOutcome(_ entry: WalletStore.WatchedAddress) async -> WalletHoldingsOutcome {
+        guard let address = await resolvedAddresses([entry.address]).first else { return .unreachable }
+        // A wallet with every chain switched off has nothing to ask — that's a
+        // deliberate empty, not a chain we failed to reach. Classify it .empty
+        // so Home shows no card rather than crying "couldn't reach the chain"
+        // over a config the user chose (review 2026-07-17). Mirrors
+        // fetchHeldTokens' own `routed.isEmpty` guard, which returns the same
+        // nil this would otherwise read as unreachable.
+        guard !networks(for: address).isEmpty else { return .empty }
+        let h = await holdings(addresses: [address])
+        guard h.reached else { return .unreachable }
+        guard let g = h.group else { return .empty }
+        return .group(HoldingsGroup(label: entry.label.isEmpty ? entry.short : entry.label,
+                                    address: entry.address,
+                                    cells: g.cells, totalUSD: g.total,
+                                    tokenCount: g.count,
+                                    topBySymbol: topBySymbol(g.bySymbol)))
+    }
+
+    /// What the pinned-wallet module on Home should paint: the treemap groups
+    /// to show (live ones, plus last-known stale ones for wallets we couldn't
+    /// reach), and whether at least one pinned wallet is unreachable with no
+    /// snapshot to fall back on — the one case that earns an honest error card.
+    struct PinnedHoldings {
+        var groups: [HoldingsGroup] = []
+        var unreachableNoCache = false
+    }
+
+    /// The pinned wallets' holdings for Home — like `topHoldingsByWallet(pinnedOnly:)`
+    /// but honest about failure (ruling 2026-07-17, revising the 2026-07-11
+    /// "loading" preview). A reached wallet shows its live treemap; an
+    /// unreachable one shows its LAST-KNOWN treemap, stale-marked ("$12K · as of
+    /// 2h ago"), so a transient rate-limit never blanks the card; only an
+    /// unreachable wallet with no history at all falls through to the error
+    /// card. A reached-but-empty wallet contributes nothing, as before —
+    /// that's correct, not a failure.
+    @MainActor
+    static func pinnedWalletHoldings() async -> PinnedHoldings {
+        let watched = WalletStore.shared.addresses.filter(\.pinnedToHome)
+        guard !watched.isEmpty else { return PinnedHoldings() }
+        let outcomes = await withTaskGroup(of: (Int, WalletHoldingsOutcome).self) { group in
+            for (i, entry) in watched.enumerated() {
+                group.addTask { (i, await walletGroupOutcome(entry)) }
+            }
+            var collected: [(Int, WalletHoldingsOutcome)] = []
+            for await result in group { collected.append(result) }
+            return collected.sorted { $0.0 < $1.0 }
+        }
+        var result = PinnedHoldings()
+        for (i, outcome) in outcomes {
+            let entry = watched[i]
+            switch outcome {
+            case .group(let g):
+                result.groups.append(g)
+                // Only a real fetch feeds the value history — same forward-only
+                // rule as topHoldingsByWallet; a stale card must never re-sample.
+                WalletStore.shared.recordSample(address: entry.address, totalUSD: g.totalUSD,
+                                                holdings: g.topBySymbol)
+            case .empty:
+                break
+            case .unreachable:
+                if let last = lastKnownGroup(label: entry.label.isEmpty ? entry.short : entry.label,
+                                             address: entry.address) {
+                    result.groups.append(last)
+                } else {
+                    result.unreachableNoCache = true
+                }
+            }
+        }
+        return result
+    }
+
+    /// A wallet's last successfully-sampled holdings, rebuilt into a treemap
+    /// group so an unreachable fetch shows the last-known card rather than
+    /// vanishing (2026-07-17). The value samples store only the top few
+    /// positions by symbol (not the whole book, not tap routes), so the stale
+    /// card's cells are routeless — a tap opens the Wallet screen — and its
+    /// subline reads "as of …" instead of a token count we can't be sure of.
+    /// nil when the wallet has never sampled (a fresh add that has never once
+    /// reached the chain) — that's the case that earns the error card instead.
+    static func lastKnownGroup(label: String, address: String) -> HoldingsGroup? {
+        let samples = WalletStore.shared.valueSamples(forAddress: address)
+        guard let last = samples.last, let held = last.holdings, !held.isEmpty else { return nil }
+        let cells = held.sorted { $0.value > $1.value }.prefix(5)
+            .map { sym, usd in "\(sym) \(max(1, Int(usd.squareRoot() * 10)))" }
+        return HoldingsGroup(label: label, address: address, cells: Array(cells),
+                             totalUSD: last.usd, tokenCount: held.count,
+                             topBySymbol: held, stale: last.at)
+    }
+
     /// The top-5-by-value cells for one or more hex addresses, combined —
     /// builds on `fetchHeldTokens` (the shared read), so the treemap and the
     /// activity spam filter agree on what "held" means. `bySymbol` (every
     /// counted position summed by symbol) rides out too, for the combined
     /// sheet's per-token attribution (2026-07-15).
+    /// `reached` distinguishes "couldn't reach the chain" (nil group) from
+    /// "reached, but nothing priced" (also nil group) — the two collapse to the
+    /// same empty treemap, but only the first should surface an error or hold a
+    /// last-known card; the second is correct-and-empty (2026-07-17).
     private static func holdings(addresses: [String])
-        async -> (cells: [String], total: Double, count: Int, bySymbol: [String: Double])? {
-        guard let tokens = await fetchHeldTokens(addresses: addresses) else { return nil }
+        async -> (reached: Bool, group: (cells: [String], total: Double, count: Int, bySymbol: [String: Double])?) {
+        guard let tokens = await fetchHeldTokens(addresses: addresses) else { return (false, nil) }
         var bySymbol: [String: Double] = [:]
         // Each symbol's biggest single position also remembers WHERE it is
         // (chain slug + token address) so its treemap cell can open the same
@@ -799,7 +913,7 @@ enum WalletIngest {
                 routeBySymbol[token.symbol] = (token.usd, "\(slug):\(contract)")
             }
         }
-        guard !bySymbol.isEmpty else { return nil }
+        guard !bySymbol.isEmpty else { return (true, nil) }
 
         // Top 5 by value; sqrt-scale so a big holding doesn't slice the rest
         // to slivers. Icons for "token" mode are a bundled local set keyed by
@@ -812,7 +926,7 @@ enum WalletIngest {
                 let route = routeBySymbol[sym].map { " @t:\($0.route)" } ?? ""
                 return "\(sym) \(max(1, Int(usd.squareRoot() * 10)))\(route)"
             }
-        return (cells, bySymbol.values.reduce(0, +), bySymbol.count, bySymbol)
+        return (true, (cells, bySymbol.values.reduce(0, +), bySymbol.count, bySymbol))
     }
 
     /// One priced token a wallet holds — the shared read behind both the
@@ -878,7 +992,7 @@ enum WalletIngest {
                     "withMetadata": true, "withPrices": true,
                 ]
                 if let pageKey { body["pageKey"] = pageKey }
-                guard let root = await IngestSupport.postJSON(url, body: body) as? [String: Any],
+                guard let root = await fetchPortfolioPage(url, body: body),
                       let data = root["data"] as? [String: Any],
                       let tokens = data["tokens"] as? [[String: Any]] else { break }
                 reached = true
@@ -917,6 +1031,27 @@ enum WalletIngest {
             return HeldToken(symbol: c.symbol, contract: c.contract,
                              network: c.network, usd: usd, owner: c.owner)
         }
+    }
+
+    /// One Portfolio page, retried on a rate limit or a transient server drop
+    /// (2026-07-17). The key is shared across every user on Alchemy's free
+    /// tier, so a 429 is a normal, self-healing condition — treating it like a
+    /// hard failure is exactly what made a pinned wallet's card vanish on Home
+    /// for one user while it loaded fine for another (same code, different
+    /// luck). Retries a 429, a 5xx, or a transport drop (status 0) with a short
+    /// backoff; a 400/401 (bad request / bad key) won't self-heal, so it fails
+    /// fast. Total added wait is bounded (~2s worst case) so an offline device
+    /// still falls through to the last-known card quickly rather than hanging.
+    private static func fetchPortfolioPage(_ url: String, body: [String: Any]) async -> [String: Any]? {
+        let backoff: [UInt64] = [500_000_000, 1_500_000_000]   // 0.5s, then 1.5s
+        for attempt in 0...backoff.count {
+            let (json, status) = await IngestSupport.postJSONStatus(url, body: body)
+            if let root = json as? [String: Any] { return root }
+            let retriable = status == 429 || status == 0 || (500...599).contains(status)
+            guard retriable, attempt < backoff.count else { return nil }
+            try? await Task.sleep(nanoseconds: backoff[attempt])
+        }
+        return nil
     }
 
     /// Prices the Solana holdings the Portfolio endpoint left unpriced.

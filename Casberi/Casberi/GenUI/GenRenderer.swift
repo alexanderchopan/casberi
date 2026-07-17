@@ -250,6 +250,11 @@ struct GenRender: View {
         // The starter shape: same geometry, muted fill, nothing to tap — an
         // honest preview of the map that composes once things land.
         case "TagMapPreview": GenTagMap(id: id, el: el, preview: true).mountIn()
+        // Same muted geometry as the preview, but STATIC (no breathing — nothing
+        // is pending) and honest: a pinned wallet we couldn't reach with no
+        // last-known card to show (2026-07-17). The subline names the fix; the
+        // screen's pull-to-refresh is the retry.
+        case "TagMapError": GenTagMap(id: id, el: el, preview: true, error: true).mountIn()
         // A quiet day's slot is a DOOR now, not a logo (2026-07-10, user:
         // the berry under a quiet cover was saying quiet twice and doing
         // nothing) — connect more apps and quiet days get rarer.
@@ -1743,6 +1748,11 @@ private struct GenTagMap: View {
     /// Preview mode (TagMapPreview): the starter shape before tags exist —
     /// muted fill, no tap targets, no weekend share.
     var preview = false
+    /// Error mode (TagMapError): the preview's muted, untappable geometry, but
+    /// STATIC — it does not breathe, because nothing is pending (2026-07-17).
+    /// An unreachable pinned wallet with no last-known card to show; the
+    /// subline names the fix. Implies `preview` at the call site.
+    var error = false
     @Environment(\.genProjectTap) private var projectTap
     @Environment(\.genZoomNS) private var zoomNS
     @Environment(\.genModuleLarge) private var large
@@ -1859,7 +1869,7 @@ private struct GenTagMap: View {
         .padding(.horizontal, span == .small ? 0 : DS.Space.s4)
         .padding(.top, DS.Space.s4)
         .onAppear {
-            if preview {
+            if preview, !error {
                 withAnimation(.easeInOut(duration: 2.4).repeatForever(autoreverses: true)) {
                     breathe = true
                 }

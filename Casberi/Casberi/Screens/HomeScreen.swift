@@ -85,6 +85,12 @@ struct HomeScreen: View {
     /// 2026-07-11: the empty window during that real network round-trip
     /// read as "my holdings disappeared").
     @State private var walletHoldingsLoading = false
+    /// True when at least one pinned wallet couldn't be reached AND has no
+    /// last-known snapshot to fall back on — the one case that earns an honest
+    /// "couldn't reach" card instead of a blank slot (ruling 2026-07-17). A
+    /// reachable-but-empty wallet, or one showing its stale last-known card,
+    /// leaves this false.
+    @State private var walletUnreachable = false
     @Namespace private var zoomNS
     /// The board (prd 58, Goal 1): which root refs from the last compose are
     /// drag-reorderable modules, and their current display order (natural
@@ -440,7 +446,8 @@ struct HomeScreen: View {
             : HomeComposition.compose(things: surfaced, walletHoldings: walletHoldings,
                                       walletCombined: walletCombined,
                                       walletNFTs: walletNFTs,
-                                      walletPending: walletHoldingsLoading)
+                                      walletPending: walletHoldingsLoading,
+                                      walletUnreachable: walletUnreachable)
         if instant {
             stream.paint(doc.lines)   // an update, not an entrance — no typewriter
         } else {
@@ -667,6 +674,7 @@ struct HomeScreen: View {
     private func loadWalletHoldings() {
         guard wallet.addresses.contains(where: \.pinnedToHome) else {
             walletHoldingsLoading = false
+            walletUnreachable = false
             if !walletHoldings.isEmpty || !walletNFTs.isEmpty || walletCombined != nil {
                 walletHoldings = []
                 walletCombined = nil
@@ -681,10 +689,12 @@ struct HomeScreen: View {
             // overlapped, and the NFT half rides its 15-minute cache after the
             // first fetch. The combined fetch returns nil with one pinned
             // wallet, so it costs nothing then.
-            async let holdings = WalletIngest.topHoldingsByWallet(pinnedOnly: true)
+            async let pinned = WalletIngest.pinnedWalletHoldings()
             async let combined = WalletIngest.combinedHoldings(pinnedOnly: true)
             async let nfts = WalletIngest.pinnedNFTGroups()
-            walletHoldings = await holdings
+            let holdings = await pinned
+            walletHoldings = holdings.groups
+            walletUnreachable = holdings.unreachableNoCache
             walletCombined = await combined
             walletNFTs = await nfts
             walletHoldingsLoading = false
@@ -722,10 +732,12 @@ struct HomeScreen: View {
         refreshTick += 1
         chrome.refreshPulse += 1   // spins the avatar door, deals the berry rain
         if wallet.addresses.contains(where: \.pinnedToHome) {
-            async let holdings = WalletIngest.topHoldingsByWallet(pinnedOnly: true)
+            async let pinned = WalletIngest.pinnedWalletHoldings()
             async let combined = WalletIngest.combinedHoldings(pinnedOnly: true)
             async let nfts = WalletIngest.pinnedNFTGroups()
-            walletHoldings = await holdings
+            let holdings = await pinned
+            walletHoldings = holdings.groups
+            walletUnreachable = holdings.unreachableNoCache
             walletCombined = await combined
             walletNFTs = await nfts
         }

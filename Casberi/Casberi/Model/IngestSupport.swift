@@ -150,6 +150,29 @@ enum IngestSupport {
         return await run(request)
     }
 
+    /// Like `postJSON`, but hands back the HTTP status alongside the decoded
+    /// body so a caller can back off on a 429 (rate limit) or a transient 5xx
+    /// instead of treating every non-200 as a permanent failure (2026-07-17:
+    /// the shipped Alchemy key is shared across all users on the free tier, so
+    /// the holdings fetch needs to distinguish "rate-limited, retry" from
+    /// "unreachable, give up"). `status` is 0 on a transport error (no
+    /// response at all — offline, DNS, connection reset). The body is nil
+    /// unless the status was 200, exactly like `postJSON`.
+    static func postJSONStatus(_ url: String, auth: String? = nil, body: [String: Any],
+                               headers: [String: String] = [:]) async -> (json: Any?, status: Int) {
+        guard let u = URL(string: url),
+              let payload = try? JSONSerialization.data(withJSONObject: body) else { return (nil, 0) }
+        var request = URLRequest(url: u)
+        request.httpMethod = "POST"
+        request.httpBody = payload
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        apply(auth: auth, headers: headers, to: &request)
+        guard let (data, response) = try? await URLSession.shared.data(for: request) else { return (nil, 0) }
+        let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+        guard status == 200 else { return (nil, status) }
+        return (try? JSONSerialization.jsonObject(with: data), status)
+    }
+
     /// A JSON-RPC BATCH: an ARRAY of calls in one request, answered with an
     /// array of results (2026-07-16, Solana activity). `postJSON` above takes a
     /// dictionary body and so can't express this — and the batch is the whole
