@@ -253,6 +253,14 @@ enum WalletIngest {
                                                         heldByOwner: heldByOwner,
                                                         ownedNFTs: ownedNFTs)
         added += approvalsAdded
+        // Peer fills ride the same pass when that seat is on (prd §112) — a
+        // filtered-log read per wallet against Peer's orchestrators on Base,
+        // landing "Bought 25 USDC with Venmo on Peer" things. Inside the
+        // running guard like everything above; no-ops unless connected.
+        let peerAdded = await PeerBridge.sync(context: context,
+                                              addresses: evmAddresses,
+                                              existing: existing)
+        added += peerAdded ?? 0
         // …and the Solana arm (prd §86), which lands its own things off its own
         // two calls. Inside the running guard like everything above.
         let solana = await solanaSync(context: context, addresses: solanaOnly(addresses),
@@ -272,6 +280,7 @@ enum WalletIngest {
         // this, a partial Alchemy outage could paint "couldn't reach" over
         // approvals that just landed).
         let reached = reachedAny || solana.reached || approvalsAdded > 0
+            || (peerAdded ?? 0) > 0
             || (evmAddresses.isEmpty && heldPriced != nil)
         return reached ? added : nil
     }

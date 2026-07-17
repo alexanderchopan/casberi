@@ -34,8 +34,14 @@ struct BandRow: View {
     /// indistinguishable stream.
     private var project: String? {
         if let tag = thing.tags.first(where: { ThingKind.from(typeTag: $0) == nil }) { return tag }
+        // Which watched wallet a transaction came from, when more than one is
+        // watched — keyed on the FIELD (walletAddress), not the source name,
+        // so every wallet-riding seat (Wallet, Peer, the next one) carries
+        // the label without joining a case list (review 2026-07-17).
+        if let wallet = WalletStore.shared.label(forAddress: thing.walletAddress) {
+            return wallet
+        }
         switch thing.source {
-        case "Wallet":    return WalletStore.shared.label(forAddress: thing.walletAddress)
         // WHY a post is here beats WHO posted it in this slot (2026-07-16): a
         // liked cast, a channel cast, and your own post used to read
         // identically, and the row already leads with the author's FACE — so

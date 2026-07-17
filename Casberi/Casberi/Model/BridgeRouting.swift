@@ -15,6 +15,7 @@ enum BridgeRouter {
     enum Destination: Identifiable, Hashable {
         case wallet
         case tokens
+        case peer
         case kalshi
         case stocktwits
         case openSea
@@ -54,6 +55,7 @@ enum BridgeRouter {
             switch self {
             case .wallet:         "wallet"
             case .tokens:         "tokens"
+            case .peer:           "peer"
             case .kalshi:         "kalshi"
             case .stocktwits:     "stocktwits"
             case .openSea:        "opensea"
@@ -102,6 +104,7 @@ enum BridgeRouter {
     private static let rows: [Row] = [
         Row(offer: "Wallet",    id: "wallet", destination: .wallet),
         Row(offer: "Tokens",    id: "tokens", destination: .tokens),
+        Row(offer: "Peer",      id: "peer",   destination: .peer),
         Row(offer: "Kalshi",     id: "kalshi",     destination: .kalshi),
         Row(offer: "Stocktwits", id: "stocktwits", destination: .stocktwits),
         Row(offer: "OpenSea",    id: "opensea",    destination: .openSea),
@@ -161,6 +164,7 @@ struct BridgeDestinationView: View {
         switch destination {
         case .wallet:         WalletScreen()
         case .tokens:         TokenWatchScreen()
+        case .peer:           PeerScreen()
         case .kalshi:         KalshiScreen()
         case .stocktwits:     StocktwitsScreen()
         case .openSea:        OpenSeaScreen()

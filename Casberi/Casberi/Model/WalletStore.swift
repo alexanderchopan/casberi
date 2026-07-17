@@ -79,6 +79,9 @@ final class WalletStore {
                 // cursor would back-fill the unwatched gap into the feed on
                 // re-watch, instead of the silent fresh-baseline seed.
                 WalletApprovals.clearCursors(address: old.address)
+                // The Peer fill cursor leaves with the watch for the same
+                // reason (prd §113).
+                PeerBridge.clearCursor(address: old.address)
             }
         }
     }

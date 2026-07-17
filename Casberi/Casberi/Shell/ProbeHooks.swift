@@ -560,6 +560,19 @@ enum ProbeHooks {
                 NSLog("Prepare probe: %@", line)
             }
         },
+        // `-peerProbe <blocksBack|YES>` switches the Peer seat on and runs the
+        // fill sweep over the watched wallets, NSLogging the landed count. A
+        // numeric spec rewinds every Peer cursor that many blocks below the
+        // Base head first, so real past fills land and the whole path (logs →
+        // signal join → deposit token → titles → things) verifies headlessly.
+        // Pairs with `-walletAddress`.
+        Hook(key: "peerProbe") { spec, context in
+            PeerBridge.connected = true
+            Task { @MainActor in
+                let n = await PeerBridge.probe(context: context, blocksBack: Int(spec))
+                NSLog("Peer probe: %@ landed", n.map(String.init) ?? "FAILED")
+            }
+        },
         // `-solNameProbe <name.sol>` resolves a Solana name through SNS and
         // NSLogs the address (or the honest miss) — the fastest check that the
         // resolver still answers, without touching the corpus.
