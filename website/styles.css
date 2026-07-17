@@ -74,7 +74,7 @@ nav { display: flex; align-items: center; justify-content: space-between; paddin
 .ai-icloud    { background: #3693f3; font-size: 18px; }
 .ai-chatgpt   { background: #fff; }
 .ai-gemini    { background: #fff; }
-.ai-chatgpt img, .ai-slack img, .ai-gemini img { width: 58%; height: 58%; }
+.ai-chatgpt img, .ai-gemini img { width: 58%; height: 58%; }
 .ai.tilefull { background: none; overflow: hidden; }
 .ai.tilefull img { width: 100%; height: 100%; border-radius: inherit; object-fit: cover; }
 .ai-claude    { background: #d97757; font-size: 18px; }
@@ -89,13 +89,11 @@ nav { display: flex; align-items: center; justify-content: space-between; paddin
 .ai-github    { background: #24292f; font-size: 16px; }
 .ai-linear    { background: #5e6ad2; }
 .ai-notion    { background: #fff; color: #111; }
-.ai-x         { background: #000; }
 .ai-reddit    { background: #ff4500; }
 .ai-youtube   { background: #ff0000; font-size: 17px; }
 .ai-music     { background: linear-gradient(160deg, #fb5c74, #fa233b); font-size: 22px; }
 .ai-spotify   { background: #1db954; font-size: 22px; }
 .ai-telegram  { background: #229ed9; font-size: 18px; }
-.ai-slack     { background: #fff; }
 .ai-readwise  { background: #1e3a8a; font-size: 24px; }
 .ai-raindrop  { background: #2f80ed; }
 .ai-rss       { background: #f26522; font-size: 24px; }

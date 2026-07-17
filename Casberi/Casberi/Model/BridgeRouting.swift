@@ -36,6 +36,7 @@ enum BridgeRouter {
         case steam
         case obsidian
         case twitch
+        case spotify
         case substack
         case reddit
         case youtube
@@ -74,6 +75,7 @@ enum BridgeRouter {
             case .steam:          "steam"
             case .obsidian:       "obsidian"
             case .twitch:         "twitch"
+            case .spotify:        "spotify"
             case .substack:       "substack"
             case .reddit:         "reddit"
             case .youtube:        "youtube"
@@ -121,6 +123,7 @@ enum BridgeRouter {
         Row(offer: "Steam",     id: "steam",  destination: .steam),
         Row(offer: "Obsidian",  id: "obsidian", destination: .obsidian),
         Row(offer: "Twitch",    id: "twitch", destination: .twitch),
+        Row(offer: "Spotify",   id: "spotify", destination: .spotify),
         Row(offer: "Substack",  id: "substack", destination: .substack),
         Row(offer: "Reddit",    id: "reddit",   destination: .reddit),
         Row(offer: "YouTube",   id: "youtube",  destination: .youtube),
@@ -179,6 +182,7 @@ struct BridgeDestinationView: View {
         case .steam:          SteamScreen()
         case .obsidian:       ObsidianScreen()
         case .twitch:         TwitchScreen()
+        case .spotify:        SpotifyScreen()
         case .substack:       HandleSetupScreen(bridge: .substack)
         case .reddit:         HandleSetupScreen(bridge: .reddit)
         case .youtube:        HandleSetupScreen(bridge: .youtube)

@@ -85,7 +85,7 @@ struct FeedScreen: View {
             case "Wallet":              self = .wallet
             case "Calendar", "Cal.com", "Calendly": self = .calendar
             case "Gmail", "iCloud Mail": self = .gmail
-            case "ChatGPT", "Claude", "Gemini", "Slack": self = .chat
+            case "ChatGPT", "Claude", "Gemini": self = .chat
             // Posts read as posts in their own room (2026-07-13) — split from
             // .chat: a saved conversation is a snippet row, a post is a card.
             case "Farcaster", "Bluesky": self = .social

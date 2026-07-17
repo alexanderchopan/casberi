@@ -442,10 +442,8 @@ enum HomeComposition {
         case "Linear":                                     return String(localized: "Assigned to you")
         case "Notion":                                     return String(localized: "Pages")
         case "Reddit", "Raindrop":                         return String(localized: "Saved")
-        case "X":                                          return String(localized: "Bookmarked")
         case "YouTube":                                    return String(localized: "Liked and saved")
         case "Twitch":                                     return String(localized: "Live now")
-        case "Slack":                                      return String(localized: "Worth keeping")
         // Twitch keeps its plain name (default) — a fixed "Live now" header
         // would assert real-time state the recency-ordered rows can't verify
         // (honesty rule; TwitchBridge gates its own live indicator on liveRefs).

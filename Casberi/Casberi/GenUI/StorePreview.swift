@@ -71,11 +71,6 @@ enum StorePreview {
             "w = Widget(\"Pages\", null, [r1])",
             "r1 = Row(\"Q3 planning notes\", \"Note\", \"Notion\", \"1d\")",
         ]
-        case "X": [
-            "root = Stack([w])",
-            "w = Widget(\"Bookmarked\", null, [r1])",
-            "r1 = Row(\"Thread: on-device models in 2026\", \"Link\", \"X\", \"5h\")",
-        ]
         case "Reddit": [
             "root = Stack([w])",
             "w = Widget(\"Saved\", null, [r1])",
@@ -125,10 +120,6 @@ enum StorePreview {
             "w = Widget(\"On your list\", null, [r1, r2])",
             "r1 = Row(\"Renew passport\", \"Reminder\", \"Todoist\", \"today\")",
             "r2 = Row(\"Send the invoice\", \"Reminder\", \"Todoist\", \"Fri\")",
-        ]
-        case "Slack": [
-            "root = Stack([c])",
-            "c = TakeawayCard(\"#DESIGN\", \"Decision: ship the new feed rows\", \"Maya: let's go with the color tags — sign-off attached.\")",
         ]
         case "Raindrop": [
             "root = Stack([w])",
