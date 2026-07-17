@@ -608,8 +608,45 @@ enum ProbeHooks {
                   methodCount, eventCount)
             Task { @MainActor in
                 do {
-                    let uri = try await WalletConnectBridge.connectURI()
-                    NSLog("WalletConnect probe: uri=%@", uri.absoluteString)
+                    // The full handshake, with `open` stubbed to report success
+                    // without launching anything — the simulator has no wallet
+                    // app, and a real `openURL` here would only ever log the
+                    // `.noWalletApp` path. Minting the URI is a genuine relay
+                    // round-trip (WebSocket connect, publish), so reaching this
+                    // line at all proves the project id and socket work; the
+                    // settle→read→teardown leg needs a wallet to approve, so
+                    // headless this reports `.timedOut` after the timeout, which
+                    // is itself the honest no-hang check.
+                    let outcome = try await WalletConnectBridge.connect(
+                        timeout: .seconds(WalletConnectProbe.timeout)
+                    ) { url in
+                        NSLog("WalletConnect probe: uri=%@", url.absoluteString)
+                        return true
+                    }
+                    switch outcome {
+                    case .connected(let accounts):
+                        // Reaching here means teardown already SUCCEEDED —
+                        // `connect` returns accounts on no other path. The
+                        // namespace rides the log because "did the Solana arm
+                        // actually answer" is the whole question this probe
+                        // gets asked now.
+                        let rendered = accounts
+                            .map { "\($0.namespace):\($0.address)" }
+                            .joined(separator: ",")
+                        NSLog("WalletConnect probe: connected %d account(s) %@ — session torn down",
+                              accounts.count, rendered)
+                    case .noWalletApp:
+                        NSLog("WalletConnect probe: no wallet app claimed the wc: scheme")
+                    case .timedOut:
+                        // The uri= line above always precedes this one (the
+                        // stub only runs after the mint), so it already says
+                        // minting worked — no need to restate it here.
+                        NSLog("WalletConnect probe: no approval within %.0fs — proposal expired, nothing survives",
+                              WalletConnectProbe.timeout)
+                    }
+                } catch WalletConnectBridge.ConnectError.tearDownFailed(let topic, let underlying) {
+                    NSLog("WalletConnect probe: TEARDOWN FAILED topic=%@ %@ — a live session survived the read",
+                          topic, String(describing: underlying))
                 } catch {
                     NSLog("WalletConnect probe: FAILED %@", String(describing: error))
                 }
@@ -909,5 +946,22 @@ enum ProbeHooks {
             }
         },
     ]
+}
+
+/// Tunables for `-wcConnectProbe`.
+///
+/// Declared below `ProbeHooks` rather than above it: sitting between that
+/// type's doc comment and the type itself silently rebinds the whole comment
+/// to this enum, leaving the probe registry undocumented.
+enum WalletConnectProbe {
+    /// How long the probe waits for an approval. 20s, not the handshake's real
+    /// 5 minutes: headless there's no wallet to approve, so the default run
+    /// would sit for five minutes to report what it already knows at twenty
+    /// seconds. `-wcTimeout <s>` widens it for a device run where a real wallet
+    /// IS going to answer.
+    static var timeout: Double {
+        let override = UserDefaults.standard.double(forKey: "wcTimeout")
+        return override > 0 ? override : 20
+    }
 }
 #endif

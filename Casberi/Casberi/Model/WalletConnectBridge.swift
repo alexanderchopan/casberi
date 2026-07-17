@@ -39,11 +39,17 @@ enum WalletConnectBridge {
 
     // MARK: - Availability
 
-    /// Shipped project id. Empty until a build carries one — the Reown project
-    /// id is NOT a secret (it rides in the binary, exactly like every web
-    /// dapp's), but it isn't committed yet, so DEBUG reads `-wcProjectID` and
-    /// release degrades to paste-only rather than pretending Connect works.
-    private static let shippedProjectID = ""
+    /// Shipped Reown project id (2026-07-16). NOT a secret — it identifies the
+    /// app to the relay and rides in the binary exactly like every web dapp's
+    /// rides in its JS bundle. It is not a credential: it authorises nothing,
+    /// and the read-only proposal is what keeps the handshake safe, not the
+    /// obscurity of this string. What it DOES carry is our relay rate limit, so
+    /// treat a rotation as a release, not a config tweak.
+    ///
+    /// `-wcProjectID` still overrides it in DEBUG (a throwaway id for probing
+    /// against a fresh relay quota). Empty here would degrade the screen to
+    /// paste-only rather than showing a Connect button that can't work.
+    private static let shippedProjectID = "0ee1e915fc17d733fbd5d2d3b6824c66"
 
     static var projectID: String {
         let override = UserDefaults.standard.string(forKey: "wcProjectID")?
@@ -110,37 +116,276 @@ enum WalletConnectBridge {
     /// want at launch, not a mysterious connect failure five screens later.
     private static let ethereumMainnet = Blockchain("eip155:1")!
 
+    /// The chain-store id for Solana, which is one row in the picker but a
+    /// whole namespace here.
+    static let solanaNetworkID = "solana-mainnet"
+
+    /// CAIP-2 namespaces, named once. These two strings decide which family an
+    /// account belongs to, which chains get proposed, and whether an address is
+    /// case-sensitive — spelling them inline in each of those places is how the
+    /// three quietly disagree.
+    static let solanaNamespace = "solana"
+    static let evmNamespace = "eip155"
+
+    /// Solana mainnet, named BOTH ways a wallet might know it (2026-07-16).
+    /// This looks like belt-and-braces and isn't — the two ids are the same
+    /// chain, and which one a given wallet answers to is not something we get
+    /// to choose:
+    ///
+    /// 1. `5eykt4…` is correct and current. It is the first 32 chars of the
+    ///    real mainnet genesis hash — verified against the chain itself
+    ///    (`getGenesisHash` → `5eykt4UsFv8P8NJdTREpY1vzqKqZKvdpKuc147dw2N9d`),
+    ///    and it is the only mainnet id in the CAIP-2 namespace registry.
+    /// 2. `4sGjMW…` is legacy, and is in the wild because CAIP-30's own test
+    ///    cases shipped it labelled "Solana Mainnet", derived from a genesis
+    ///    hash (`4sGjMW1sUnHzSxGspuhpqLDx6wiyjNtAMdL4VZHirAn`) that is NOT the
+    ///    mainnet genesis. The spec was wrong; wallets implemented the spec.
+    ///
+    /// Naming both is free precisely because of the optional-namespace
+    /// property this file is built on: nothing is required, so a wallet that
+    /// knows only one id approves that one and ignores the other rather than
+    /// refusing. A wallet answering to both returns the same address twice and
+    /// `accounts(from:)` dedupes it. Naming only the correct one would be
+    /// standards-pure and would silently fail to connect real wallets — the
+    /// exact "silent compatibility bug" the EVM table above refuses to risk.
+    private static let solanaMainnetChains: [Blockchain] = [
+        Blockchain("solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp")!,
+        Blockchain("solana:4sGjMW1sUnHzSxGspuhpqLDx6wiyjNtZ")!,
+    ]
+
     /// The proposal: the chains we actually read, and nothing else. `methods`
     /// and `events` are empty ON PURPOSE and must stay that way — a single
     /// entry here is a capability the wallet would grant us, and the promise
     /// on the Wallet screen would stop being true.
+    ///
+    /// One namespace per family, and only for families the person actually has
+    /// switched on: proposing `solana` to someone who reads EVM only would ask
+    /// their wallet for an account on a chain this app won't look at. Neither
+    /// namespace may carry empty chains — `Namespace.validate` rejects only
+    /// that (`unsupportedChains`), so an empty list is the one way to make a
+    /// read-only proposal throw.
     static func readOnlyNamespaces() -> [String: ProposalNamespace] {
-        let chains = WalletChainStore.activeNetworkIDs()
+        let active = WalletChainStore.activeNetworkIDs()
+        var namespaces: [String: ProposalNamespace] = [:]
+
+        let evmChains = active
             .compactMap { caip2ByNetworkID[$0] }
             .compactMap { Blockchain($0) }
-        return ["eip155": ProposalNamespace(chains: chains.isEmpty ? [ethereumMainnet] : chains,
-                                            methods: [],
-                                            events: [])]
+        if !evmChains.isEmpty {
+            namespaces[evmNamespace] = ProposalNamespace(chains: evmChains, methods: [], events: [])
+        }
+        if active.contains(solanaNetworkID) {
+            namespaces[solanaNamespace] = ProposalNamespace(chains: solanaMainnetChains,
+                                                            methods: [], events: [])
+        }
+        // Every chain off, or a chain set that maps to nothing: fall back to
+        // Ethereum rather than propose a namespace-less session the SDK would
+        // reject. An EOA wears the same address on every EVM chain, so the
+        // address we came for arrives regardless of which we name.
+        if namespaces.isEmpty {
+            namespaces[evmNamespace] = ProposalNamespace(chains: [ethereumMainnet],
+                                                         methods: [], events: [])
+        }
+        return namespaces
     }
 
     // MARK: - Connect
 
     enum ConnectError: Error {
         case unavailable
+        /// The SDK handed back a URI that isn't a URL. Distinct from
+        /// `unavailable` — availability was already established by then, and a
+        /// caller that hides the Connect button on `.unavailable` must not hide
+        /// it for a parse bug.
+        case malformedURI(String)
+        /// The session outlived the read and two attempts to kill it. Carries
+        /// the topic because the person's escape hatch is disconnecting
+        /// Casberi from inside their own wallet, and the wallet lists sessions
+        /// by topic. Never swallow this — see `tearDown`.
+        case tearDownFailed(topic: String, underlying: Error)
     }
 
-    /// Propose, and hand back the `wc:` URI to deep-link into a wallet.
-    static func connectURI() async throws -> WalletConnectURI {
+    /// What a completed handshake meant. Deliberately NOT `[String]?` — "no
+    /// wallet app" and "you never approved" are different things to say, and a
+    /// nil would flatten them into one wrong line.
+    enum ConnectOutcome {
+        /// The accounts the wallet handed over, AFTER the session carrying them
+        /// was torn down. Empty is possible in principle and means the wallet
+        /// approved without sharing an account.
+        case connected([ConnectedAccount])
+        /// No installed app claims the `wc:` scheme. The proposal was published
+        /// but no wallet was ever shown it; paste is the way.
+        case noWalletApp
+        /// Nobody approved before the proposal expired.
+        case timedOut
+    }
+
+    // Deliberately no `connectURI()` here. It existed, the probe was its only
+    // caller, and `connect` replaced it — but the reason not to bring it back
+    // is that it was the safe-looking half of an unsafe whole: propose a
+    // session and hand the URI out, with the settle listener, the read and the
+    // teardown all left as the caller's problem. That's the shape a future
+    // "I just need a URI" caller reaches for, and it leaks live sessions.
+    // Whatever you need, add it to `connect`.
+
+    /// The whole handshake: propose → open the wallet → wait for approval →
+    /// read the address → kill the session. This is the only entry point any
+    /// UI should call; the pieces below it are public for the probe.
+    ///
+    /// `open` is injected rather than reached for directly so the probe can
+    /// stub it, and it must return whether an installed app actually claimed
+    /// the `wc:` scheme. Getting that answer is harder than it looks and the
+    /// screen carries the note: neither `UIApplication.open`'s completion nor
+    /// SwiftUI's `openURL` reports it truthfully (both say success for a URI
+    /// nothing claims), so the real implementation gates on `canOpenURL`. Do
+    /// not "simplify" a caller back to the opened-Bool alone.
+    ///
+    /// Note what does NOT happen on the `.noWalletApp` path: nothing is torn
+    /// down, because nothing settled — an unanswered proposal is a pairing,
+    /// not a session. It carries no methods and expires on its own at
+    /// `expiryTimestamp` (5 minutes), so there is nothing to revoke.
+    static func connect(timeout: Duration = .seconds(300),
+                        open: @MainActor (URL) async -> Bool) async throws -> ConnectOutcome {
         guard isAvailable else { throw ConnectError.unavailable }
         configureIfNeeded()
-        return try await Sign.instance.connect(namespaces: readOnlyNamespaces())
+
+        let uri = try await Sign.instance.connect(namespaces: readOnlyNamespaces())
+        guard let url = URL(string: uri.absoluteString) else {
+            throw ConnectError.malformedURI(uri.absoluteString)
+        }
+
+        // Subscribe BEFORE the wallet can possibly answer. `connect` returns
+        // once the proposal is published, and a wallet that auto-approves a
+        // remembered pairing can settle in the window between that return and
+        // a subscribe placed after `open` — the settle event would fire with
+        // nobody listening, and this would then wait out the full timeout
+        // while a LIVE session sat on the relay. `async let` starts the child
+        // task at this line, which closes the window.
+        async let settled = firstSettledSession(timeout: timeout)
+
+        guard await open(url) else {
+            // Return WITHOUT awaiting `settled`, on purpose. Returning from a
+            // scope with an outstanding `async let` cancels the child and then
+            // awaits it, and both of the listener's arms are cancellation-aware
+            // (`Task.sleep` throws, the `for await` ends), so it unwinds
+            // immediately. Writing `_ = await settled` here instead — which
+            // reads like "tidy up the child" and was the first thing this code
+            // did — is the opposite: a plain await waits for it to finish
+            // NORMALLY, so this path blocked for the full five-minute timeout
+            // before reporting a no-wallet it already knew about at second one.
+            // Measured 2026-07-16: the button sat spinning on a simulator that
+            // had already told us `canOpenURL` was false.
+            return .noWalletApp
+        }
+        guard let session = await settled else { return .timedOut }
+
+        let found = accounts(from: session)
+
+        // Read first, then kill — and hand the addresses back only once the
+        // kill SUCCEEDED. That ordering is the feature: an address reaches the
+        // caller exclusively through a path where the session that carried it
+        // is already gone, so there is no branch on which we watch a wallet
+        // while a live pairing survives.
+        if let failure = await tearDownShielded(topic: session.topic) {
+            throw ConnectError.tearDownFailed(topic: session.topic, underlying: failure)
+        }
+        return .connected(found)
     }
 
-    /// Every address the settled session handed over.
-    static func addresses(from session: Session) -> [String] {
-        session.namespaces.values
-            .flatMap(\.accounts)
-            .map(\.address)
+    /// One account a wallet shared: the address, and which family it belongs
+    /// to. The family is read off the session rather than guessed from the
+    /// address's shape — the wallet already told us, and `SNS.isAddress`-style
+    /// sniffing would be a guess standing next to an authoritative answer.
+    struct ConnectedAccount: Equatable {
+        let address: String
+        /// CAIP-2 namespace — `eip155` or `solana`.
+        let namespace: String
+        var isSolana: Bool { namespace == solanaNamespace }
+        /// The chain this account needs switched on to be readable at all, or
+        /// nil when the default chain set already covers it. The screen asks
+        /// this rather than restating the id, so the namespace and the chain
+        /// can't drift apart in two files.
+        var requiredNetworkID: String? { isSolana ? solanaNetworkID : nil }
+    }
+
+    /// Every DISTINCT account the settled session handed over, in the order it
+    /// sent them.
+    ///
+    /// Deduped, because a CAIP-10 account is an address ON A CHAIN: a session
+    /// settled over our five EVM chains carries the same EOA five times, once
+    /// per chain, and a Solana wallet answering to both mainnet ids sends the
+    /// same address twice. Measured 2026-07-16 — before this dedupe the probe
+    /// reported "connected 5 address(es)" against a wallet holding exactly one.
+    /// Casberi watches an ADDRESS, not an address-on-a-chain
+    /// (`WalletChainStore` alone decides which chains get read), so the chain
+    /// half is noise; the NAMESPACE is not, since it decides whether Solana has
+    /// to be switched on to read the thing at all.
+    ///
+    /// The comparison key normalises PER FAMILY, and that asymmetry is not
+    /// cosmetic: EVM is case-insensitive (EIP-55 case is a checksum, so the
+    /// same wallet arrives cased differently from different wallets and must
+    /// collapse), while base58 is case-SENSITIVE — lowercasing a Solana address
+    /// can fold two genuinely different wallets into one. Note the test is an
+    /// ALLOWLIST — lowercase only what is known to be EVM — not "everything
+    /// that isn't Solana": the moment a second base58 namespace is proposed
+    /// (sui, near, tron are all real WalletConnect namespaces) a denylist would
+    /// silently start corrupting it. Never store the normalised form either
+    /// way; the rows show what the wallet sent.
+    ///
+    /// Namespaces are walked in SORTED key order, not Dictionary order. The
+    /// order here becomes the order they're watched in, and WalletScreen's
+    /// first watched address leads the screen — so iterating a Dictionary would
+    /// hand a different wallet the lead on each connect, for the same wallet.
+    static func accounts(from session: Session) -> [ConnectedAccount] {
+        var seen = Set<String>()
+        var distinct: [ConnectedAccount] = []
+        for key in session.namespaces.keys.sorted() {
+            for account in session.namespaces[key]?.accounts ?? [] {
+                let normalised = account.namespace == evmNamespace
+                    ? account.address.lowercased()
+                    : account.address
+                guard seen.insert("\(account.namespace):\(normalised)").inserted else { continue }
+                distinct.append(ConnectedAccount(address: account.address,
+                                                 namespace: account.namespace))
+            }
+        }
+        return distinct
+    }
+
+    /// Kill the session where cancellation cannot reach it, returning the
+    /// failure rather than throwing it. Nil means the session is gone.
+    ///
+    /// Detached ON PURPOSE, and this is the subtlest load-bearing line in the
+    /// file. `connect` runs inside a Task the screen cancels when someone taps
+    /// cancel, and cancellation propagates into every `await` below it — which
+    /// is right for the WAIT and catastrophic for the KILL. A cancel landing in
+    /// the window between settle and teardown would make `disconnect` throw,
+    /// make the 1s retry gate throw instantly (a cancelled sleep doesn't
+    /// sleep), and strand a live, signable session on the relay: precisely the
+    /// outcome this whole design exists to prevent, caused by the person trying
+    /// to back out of it. A detached task inherits no cancellation, so once a
+    /// session exists its teardown always runs to a real answer.
+    ///
+    /// Takes the topic, not the `Session`, so nothing non-Sendable crosses into
+    /// the detached task.
+    private static func tearDownShielded(topic: String) async -> Error? {
+        await Task.detached {
+            do {
+                try await tearDown(topic: topic)
+                return nil
+            } catch {
+                // One retry — a transient relay blip shouldn't strand a session
+                // the person can't see. This sleep really sleeps: detached, so
+                // no cancellation to short-circuit it.
+                try? await Task.sleep(for: .seconds(1))
+                do {
+                    try await tearDown(topic: topic)
+                    return nil
+                } catch let second {
+                    return second
+                }
+            }
+        }.value
     }
 
     /// Kill the session. **Throws on purpose — do not `try?` this.**
@@ -149,10 +394,12 @@ enum WalletConnectBridge {
     /// long enough to read `accounts`, and a session that outlives that read is
     /// a live pairing the wallet will still honour signing requests on. If this
     /// throws, the promise on the Wallet screen is false until it succeeds, so
-    /// the caller must retry or say so out loud (`ShellChrome.flash()`) —
-    /// swallowing it is the one failure mode this whole design exists to avoid.
-    static func tearDown(_ session: Session) async throws {
-        try await Sign.instance.disconnect(topic: session.topic)
+    /// the caller must retry or say so out loud — swallowing it is the one
+    /// failure mode this whole design exists to avoid. Callers inside `connect`
+    /// go through `tearDownShielded`, which adds the retry and the cancellation
+    /// shield; this is the bare verb.
+    static func tearDown(topic: String) async throws {
+        try await Sign.instance.disconnect(topic: topic)
     }
 
     /// The first session the wallet settles, or nil if `timeout` elapses, the

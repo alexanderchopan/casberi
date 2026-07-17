@@ -44,6 +44,23 @@ struct WalletScreen: View {
     @State private var showCombinedSheet = false
     @State private var result: String?
     @State private var resultIsError = false
+    /// The in-flight WalletConnect handshake — proposed, wallet opened, waiting
+    /// on a human to approve over there (2026-07-16). Held as the Task rather
+    /// than a Bool so a second tap can CANCEL it: the wait runs to the
+    /// proposal's 5-minute expiry, and a person who opened their wallet, chose
+    /// not to approve, and came back must not find a stuck button and no way
+    /// out. Separate from `syncing` — that one means "reading chains", this one
+    /// means "waiting on your wallet", and collapsing them puts the wrong line
+    /// on screen.
+    @State private var connectTask: Task<Void, Never>?
+    /// Bumped on every start and every cancel, so an in-flight handshake can
+    /// tell whether it's still the CURRENT one. Cancellation only lands at the
+    /// next suspension point — a cancelled handshake sitting in the relay
+    /// round-trip can take a second to unwind — so without this, "cancel, then
+    /// tap Connect again" lets the dying task's cleanup clear the new task's
+    /// handle and write the new task's outcome.
+    @State private var connectGeneration = 0
+    private var connecting: Bool { connectTask != nil }
     /// Per-wallet NFT shelves — Alchemy's NFT read, spam filtered.
     @State private var nftGroups: [WalletIngest.NFTGroup] = []
     /// A tapped holdings cell: the token's thing sheet when watched, the
@@ -83,6 +100,14 @@ struct WalletScreen: View {
             // admin (watching / add / chains) clustered at the bottom.
             if wallet.addresses.isEmpty {
                 addSection.listRowSeparator(.hidden)
+                // The empty state reports too (2026-07-16). This section used
+                // to exist only in the connected branch below, so with nothing
+                // watched yet every outcome was set and then silently dropped
+                // — a mistyped ENS name answered with nothing at all, in the
+                // exact state where a first-time typo is likeliest. Found while
+                // wiring Connect, whose "no wallet app" line vanished the same
+                // way.
+                statusSection
             } else {
                 // The combined "bundle" leads — total value, the allocation
                 // bar, and one merged treemap. Only when more than one
@@ -115,13 +140,7 @@ struct WalletScreen: View {
                 }
                 addSection.listRowSeparator(.hidden)
                 chainsSection.listRowSeparator(.hidden)
-                if syncing || result != nil {
-                    Section {
-                        BridgeSyncStatusRows(syncing: syncing, syncingLine: String(localized: "Reading onchain activity…"),
-                                            result: result, resultIsError: resultIsError)
-                    }
-                    .listRowSeparator(.hidden)
-                }
+                statusSection
                 BridgeDisconnectSection(
                     bridgeID: "wallet", name: "Wallet",
                     teardown: { WalletStore.shared.addresses = [] }
@@ -755,8 +774,31 @@ struct WalletScreen: View {
         return wallet.addresses.first?.id
     }
 
+    /// What just happened — the spinner while chains are read, then the outcome
+    /// line. Rendered in BOTH the empty and connected states; see the note at
+    /// the call site.
+    @ViewBuilder
+    private var statusSection: some View {
+        if syncing || result != nil {
+            Section {
+                BridgeSyncStatusRows(syncing: syncing,
+                                     syncingLine: String(localized: "Reading onchain activity…"),
+                                     result: result, resultIsError: resultIsError)
+            }
+            .listRowSeparator(.hidden)
+        }
+    }
+
     private var addSection: some View {
         Section {
+            // The fast path leads: let the wallet hand its address over rather
+            // than making someone copy 42 hex characters between two apps
+            // (2026-07-16). The paste field below stays regardless — this is
+            // the fast path, never the only one (ruling 2026-07-16), and a
+            // hardware wallet or a wallet on another device has no other way
+            // in. Absent entirely when no project id is configured: a control
+            // that can't work doesn't appear.
+            if WalletConnectBridge.isAvailable { connectRow }
             BridgeFieldRow(placeholder: "Address (0x…, ENS, or .sol)", text: $newAddress,
                            buttonLabel: "Watch", keyboard: .default,
                            focus: $addressFieldFocused, action: watch)
@@ -789,14 +831,171 @@ struct WalletScreen: View {
                                           bottom: 0, trailing: DS.Space.s4))
             }
         } header: {
-            Text("Watch an address").dsText(.label12)
+            // "Add a wallet", not "Watch an address": with Connect leading the
+            // section, the header has to name both ways in — connecting hands
+            // an address over, it doesn't type one.
+            Text("Add a wallet").dsText(.label12)
                 .foregroundStyle(DS.textSecondary)
         } footer: {
             if wallet.addresses.isEmpty {
-                Text("Paste a wallet address, an ENS name, or a .sol name — its holdings and activity land in your feed.")
+                Text(WalletConnectBridge.isAvailable
+                     ? "Connect your wallet to hand its address over, or paste any address, ENS, or .sol name — holdings and activity land in your feed. Connecting asks for nothing but the address."
+                     : "Paste a wallet address, an ENS name, or a .sol name — its holdings and activity land in your feed.")
                     .dsText(.callout15).foregroundStyle(DS.textSecondary)
             }
         }
+    }
+
+    /// "Connect wallet" — one tap, then approve in the wallet that opens; while
+    /// waiting, the same button cancels.
+    ///
+    /// Never disabled, so there's no disabled background to get wrong (prd
+    /// §83): waiting is a state you can leave, not a state that locks the
+    /// screen. The label says so rather than leaving "tap again to cancel" as
+    /// folklore — a control whose only exit is invisible is a dead control
+    /// wearing a spinner.
+    private var connectRow: some View {
+        Button {
+            DSHaptic.tap()
+            if connecting { cancelConnect() } else { connectWallet() }
+        } label: {
+            HStack(spacing: DS.Space.s2) {
+                if connecting {
+                    ProgressView().controlSize(.small).tint(.white)
+                } else {
+                    Image(systemName: "wallet.bifold")
+                        .font(.system(size: 15, weight: .semibold))
+                }
+                Text(connecting ? "Waiting for your wallet — cancel" : "Connect wallet")
+                    .dsText(.callout15).fontWeight(.semibold)
+            }
+            .foregroundStyle(.white)
+            .frame(maxWidth: .infinity)
+            .frame(height: 44)
+            .background(DS.tint, in: Capsule(style: .continuous))
+            .contentShape(Capsule(style: .continuous))
+            .animation(DS.Motion.standard, value: connecting)
+        }
+        .buttonStyle(.plain)
+        .listRowBackground(Color.clear)
+        .listRowInsets(EdgeInsets(top: DS.Space.s1, leading: DS.Space.s4,
+                                  bottom: DS.Space.s2, trailing: DS.Space.s4))
+    }
+
+    private func cancelConnect() {
+        connectGeneration &+= 1   // orphans the in-flight task before it unwinds
+        connectTask?.cancel()
+        connectTask = nil
+        result = nil
+    }
+
+    private func connectWallet() {
+        result = nil
+        connectGeneration &+= 1
+        let generation = connectGeneration
+        connectTask = Task { @MainActor in
+            // Only clear the handle if it's still OURS — a task orphaned by a
+            // cancel or by a newer tap must not clear the current one's.
+            defer { if connectGeneration == generation { connectTask = nil } }
+
+            let outcome: Result<WalletConnectBridge.ConnectOutcome, Error>
+            do {
+                outcome = .success(try await WalletConnectBridge.connect(open: openWalletApp))
+            } catch {
+                outcome = .failure(error)
+            }
+
+            // One staleness gate over BOTH arms. A cancelled or superseded
+            // handshake says nothing at all: the person cancelled it, they
+            // know, and every line below would be a lie about a handshake
+            // they already abandoned — cancellation surfaces as `.timedOut`
+            // ("nothing came back from your wallet"), and a cancel landing
+            // mid-teardown surfaces as `.tearDownFailed`, which would accuse
+            // their wallet of holding a session open.
+            guard connectGeneration == generation, !Task.isCancelled else { return }
+
+            switch outcome {
+            case .success(.connected(let found)):
+                watchConnected(found)
+            case .success(.noWalletApp):
+                resultIsError = true
+                result = String(localized: "No wallet app on this iPhone — paste the address instead.")
+            case .success(.timedOut):
+                resultIsError = true
+                result = String(localized: "Nothing came back from your wallet — approve the request there, or paste the address instead.")
+            case .failure(WalletConnectBridge.ConnectError.tearDownFailed):
+                // The one failure this whole design exists to catch, so it says
+                // so out loud instead of quietly watching the address: a
+                // session survived the read, and until it's gone the screen's
+                // read-only promise is false.
+                resultIsError = true
+                result = String(localized: "Connected, but the session wouldn't close — open your wallet and disconnect Casberi. Nothing was watched.")
+            case .failure:
+                resultIsError = true
+                result = String(localized: "Couldn't reach your wallet — paste the address instead.")
+            }
+        }
+    }
+
+    /// Hand the `wc:` URI to whichever wallet claims the scheme, and report
+    /// whether one actually did.
+    ///
+    /// `canOpenURL` FIRST, and it — not the open's own result — is what the
+    /// answer rests on. Measured 2026-07-16, both ways of asking afterwards
+    /// lie: `UIApplication.open`'s completion and SwiftUI's `openURL` each
+    /// reported success for a `wc:` URI that no installed app claimed, while
+    /// LaunchServices failed it a beat later in its own daemon
+    /// (`LSApplicationWorkspaceErrorDomain Code=115`, visible only in the
+    /// device log). Believing that Bool left the screen waiting five minutes
+    /// on a wallet that never opened. `canOpenURL` is synchronous, asks the
+    /// installed-app registry directly, and needs exactly one
+    /// `LSApplicationQueriesSchemes` entry — `wc`, which every WalletConnect
+    /// wallet registers — so it does not rot as wallets come and go.
+    ///
+    /// The open still happens and its result is still ANDed in: a false there
+    /// is rare but real (a wallet mid-uninstall), and this is a path where
+    /// claiming more than we know is the whole thing we're avoiding.
+    @MainActor
+    private func openWalletApp(_ url: URL) async -> Bool {
+        guard UIApplication.shared.canOpenURL(url) else { return false }
+        return await withCheckedContinuation { continuation in
+            UIApplication.shared.open(url, options: [:]) { opened in
+                continuation.resume(returning: opened)
+            }
+        }
+    }
+
+    /// Watch whatever the settled session handed over. A wallet may share
+    /// several accounts at once; all of them are addresses the person chose to
+    /// give us, so all of them are watched rather than silently taking the
+    /// first. Labels stay empty — the wallet sends a raw account, and the row
+    /// is renameable.
+    private func watchConnected(_ found: [WalletConnectBridge.ConnectedAccount]) {
+        var addedAny = false
+        for account in found {
+            // A Solana wallet can only be read on Solana; adding one with that
+            // chain switched off would watch an address that can never show
+            // anything. Same rule the paste path applies to a `.sol` name —
+            // except the family is read off the session here rather than
+            // sniffed from the address, and the account names the chain it
+            // needs rather than this screen restating the id.
+            if let network = account.requiredNetworkID {
+                WalletChainStore.shared.ensureEnabled(network)
+            }
+            // `add` returns false on a duplicate — kept in the body rather
+            // than a `where` clause, which would hide the mutation.
+            if wallet.add(account.address, label: "") { addedAny = true }
+        }
+        guard addedAny else {
+            resultIsError = true
+            result = found.isEmpty
+                ? String(localized: "Your wallet approved but shared no address — paste it instead.")
+                : String(localized: "Already watching that address.")
+            return
+        }
+        resultIsError = false
+        DSHaptic.success()
+        sync()
     }
 
     private func watch() {

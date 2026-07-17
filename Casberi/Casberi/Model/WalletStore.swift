@@ -261,13 +261,28 @@ final class WalletStore {
         }
     }
 
+    /// The form two watched addresses are COMPARED in — never the form one is
+    /// stored in.
+    ///
+    /// Normalises per family, and the asymmetry is load-bearing (2026-07-16).
+    /// An EVM address is hex whose case is an EIP-55 checksum, not identity:
+    /// the same wallet arrives cased differently from different sources and
+    /// must collapse to one row. A Solana address is base58, where case IS
+    /// identity — lowercasing it can fold two genuinely different wallets
+    /// together and silently discard the second. So lowercase only what is
+    /// provably hex, and leave everything else exactly as it came.
+    private static func dedupeKey(_ address: String) -> String {
+        ENS.isHexAddress(address) ? address.lowercased() : address
+    }
+
     /// Adds a pasted address. Light validation only — an address is public
     /// data and a bad one simply never produces things.
     @discardableResult
     func add(_ raw: String, label: String = "") -> Bool {
         let addr = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        let key = Self.dedupeKey(addr)
         guard addr.count >= 6,
-              !addresses.contains(where: { $0.address.lowercased() == addr.lowercased() })
+              !addresses.contains(where: { Self.dedupeKey($0.address) == key })
         else { return false }
         addresses.append(WatchedAddress(label: label, address: addr))
         return true
