@@ -4,8 +4,8 @@ import SwiftUI
 /// model, for a new person after the retiring coach lines are gone. Re-ruled
 /// 2026-07-16: the evergreen abstractions ("Keep tabs", "Make it yours") left
 /// a real tester not knowing what to do — now it teaches the ONE loop that
-/// matters, as four numbered steps: open the store → connect → pin → ask. Still no
-/// gesture-by-gesture manual; it names the store's place and glyph because
+/// matters, as four numbered steps: open the catalog → connect → pin → ask. Still no
+/// gesture-by-gesture manual; it names the catalog's place and glyph because
 /// that door is the whole game. Reached from the Settings tile to revisit any
 /// time, and wired into the onboarding tail so a new person meets it once.
 ///
@@ -17,14 +17,15 @@ import SwiftUI
 /// glyph chip it echoes. Step 1 carries a settled strip of real app icons,
 /// slightly uneven like the onboarding rain they just watched land — the
 /// same brands, come to rest. Cards arrive staggered, the connect screen's
-/// entrance. In the onboarding tail the page ends at a "Browse the store"
-/// door that lands IN the store (the arc: apps rain down → the four steps →
-/// the store where those apps live); from Settings it keeps the plain Done.
+/// entrance. In the onboarding tail the page ends at a "Browse the catalog"
+/// door that lands IN the catalog (the arc: apps rain down → the four steps →
+/// the catalog where those apps live); from Settings it keeps the plain Done.
+/// Naming (user, 2026-07-16): user-facing copy never says "store" for this
+/// surface — it's "the catalog" ("store" reads as a place you pay).
 /// Text literals auto-localize (LocalizedStringKey).
 struct HowItWorksSheet: View {
-    /// Set by the onboarding tail: the CTA that dismisses onboarding INTO
-    /// the store. Nil from Settings — the toolbar Done is the exit there.
-    var onOpenStore: (() -> Void)? = nil
+    /// Set by the onboarding tail: the CTA that dismisses onboarding INTO    /// the catalog. Nil from Settings — the toolbar Done is the exit there.
+    var onOpenCatalog: (() -> Void)? = nil
 
     @Environment(\.dismiss) private var dismiss
     @State private var arrived = false
@@ -38,7 +39,7 @@ struct HowItWorksSheet: View {
     }
 
     // Four numbered steps (ruling 2026-07-16, replacing the four abstract
-    // beats): a new person must leave knowing exactly (1) where the store is,
+    // beats): a new person must leave knowing exactly (1) where the catalog is,
     // (2) that connecting fills the feed by itself, (3) what pinning is FOR,
     // (4) that the composer answers questions about what they've saved.
     // Step 1 wears the REAL Apps-door glyph (TopDoors' square.grid.2x2) so
@@ -48,7 +49,7 @@ struct HowItWorksSheet: View {
     // The titles carry no "1." prefix — the giant numeral IS the number.
     private let points: [Point] = [
         Point(glyph: "square.grid.2x2.fill", hue: .blue,
-              title: "Open the store",
+              title: "Open the catalog",
               line: "Top right of your feed. Apps, people, wallets, stocks — everything you can add lives there."),
         Point(glyph: "checkmark.circle.fill", hue: .green,
               title: "Connect things",
@@ -57,7 +58,7 @@ struct HowItWorksSheet: View {
               title: "Pin your favorites",
               line: "Home is built from what you pin. The feed always has everything."),
         // Wears the composer FAB's real glyph (a plain plus), same reason
-        // step 1 wears the store's grid.
+        // step 1 wears the catalog's grid.
         Point(glyph: "plus", hue: .purple,
               title: "Ask",
               line: "Tap the + button and ask questions about anything you've saved."),
@@ -98,9 +99,9 @@ struct HowItWorksSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 // From Settings the sheet keeps its plain exit; in the
-                // onboarding tail the store CTA below is the only door
+                // onboarding tail the catalog CTA below is the only door
                 // forward (one door, the connect screen's rule).
-                if onOpenStore == nil {
+                if onOpenCatalog == nil {
                     ToolbarItem(placement: .topBarTrailing) {
                         Button("Done") { dismiss() }
                             .tint(DS.tint)
@@ -108,12 +109,12 @@ struct HowItWorksSheet: View {
                 }
             }
             .safeAreaInset(edge: .bottom) {
-                if let onOpenStore {
+                if let onOpenCatalog {
                     Button {
                         DSHaptic.success()
-                        onOpenStore()
+                        onOpenCatalog()
                     } label: {
-                        Text("Browse the store")
+                        Text("Browse the catalog")
                             .dsText(.body17)
                             .foregroundStyle(.white)
                             .frame(maxWidth: .infinity)
@@ -131,14 +132,14 @@ struct HowItWorksSheet: View {
         .onAppear { withAnimation(DS.Motion.standard) { arrived = true } }
         #if DEBUG
         // `-howItWorksCTA <s>` fires the onboarding-tail CTA after a delay —
-        // the store landing verifies headlessly (the `-demoPick` pattern).
+        // the catalog landing verifies headlessly (the `-demoPick` pattern).
         .onAppear {
             let delay = UserDefaults.standard.double(forKey: "howItWorksCTA")
-            guard delay > 0, let onOpenStore else { return }
+            guard delay > 0, let onOpenCatalog else { return }
             Task { @MainActor in
                 try? await Task.sleep(for: .seconds(delay))
                 NSLog("howItWorksCTA: fired")
-                onOpenStore()
+                onOpenCatalog()
             }
         }
         #endif
@@ -174,7 +175,7 @@ struct HowItWorksSheet: View {
                         .foregroundStyle(DS.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
-                if index == 0 { storeStrip }
+                if index == 0 { catalogStrip }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(DS.Space.s6)
@@ -190,7 +191,7 @@ struct HowItWorksSheet: View {
                                     "GitHub", "Farcaster", "Wallet"]
     private static let stripTilt: [Double] = [-3, 2, -2, 3, -3, 2]
 
-    private var storeStrip: some View {
+    private var catalogStrip: some View {
         HStack(spacing: DS.Space.s2) {
             ForEach(Array(Self.stripApps.enumerated()), id: \.element) { i, name in
                 BridgeIcon(name: name, size: 40)

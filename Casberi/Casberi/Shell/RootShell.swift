@@ -518,14 +518,14 @@ struct RootShell: View {
             // revealed until the greeting's door is taken.
             Group {
                 if onboardingHowItWorks {
-                    // The greeting's one door forward lands IN the store
+                    // The greeting's one door forward lands IN the catalog
                     // (ruling 2026-07-16, replacing the feed landing): the
-                    // arc is apps rain down → the four steps → the store
+                    // arc is apps rain down → the four steps → the catalog
                     // where those apps live, so step 1 is fulfilled the
                     // moment the cover lifts. The record ("All" chip) waits
                     // one back-swipe beneath it, already holding whatever
                     // the connects landed.
-                    HowItWorksSheet(onOpenStore: {
+                    HowItWorksSheet(onOpenCatalog: {
                         HomeRoute.shared.push = .apps
                         onboardingHowItWorks = false
                         onboarded = true

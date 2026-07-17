@@ -3889,15 +3889,19 @@ already carries. Step 1 holds a settled strip of six real app icons, each
 resting slightly tilted — the icon rain the person just watched, come to
 rest. Titles dropped their "1." prefixes; the numeral IS the number.
 
-**Onboarding lands IN the store, not the feed.** The greeting's one door
-forward is a glass "Browse the store" CTA that dismisses the cover directly
+**Onboarding lands IN the catalog, not the feed.** The greeting's one door
+forward is a glass "Browse the catalog" CTA that dismisses the cover directly
 onto the Apps screen — the arc is: apps rain down → the four steps → the
-store where those apps live, so step 1 ("open the store") is fulfilled the
+catalog where those apps live, so step 1 ("open the catalog") is fulfilled the
 moment the cover lifts. This replaces §opt-4's 2026-07-07 feed landing for
 the onboarding tail only; the record ("All" chip) waits one back-swipe
 beneath, already holding whatever the connects landed. From Settings the
 sheet keeps its plain toolbar Done — the CTA exists only in the onboarding
-tail (`HowItWorksSheet(onOpenStore:)`).
+tail (`HowItWorksSheet(onOpenCatalog:)`).
 
 Headless: `-howItWorksCTA <s>` fires the CTA after a delay (pair with
 `-demoPick` to walk the whole arc; NSLogs "howItWorksCTA: fired").
+
+**Naming (user, same day): the Apps surface is never a "store" in
+user-facing copy — it's "the catalog."** "Store" reads as a place you pay.
+Shopify/Steam copy keeps "store" where it means a literal merchant shop.
