@@ -3686,3 +3686,31 @@ Held for later (discussed, not ruled): follow-type rows on the onboarding
 connect card (a person / a token / a wallet beside the app rows — "any follow
 is a connect in the store"), and an embedded store shelf on the sparse feed.
 Both aim at the same gap; the four-step greeting is the contained first fix.
+
+## 90. The composer's tool grid dies; "Open in" chips carry the text out (user, 2026-07-16) — BUILT
+
+The 2026-07-12 tool tiles were built for "oh, I need to…" moments — jump to
+your own tool without hunting the home screen. Two flaws surfaced when the
+user looked at them cold: the tiles read as "what are these for?", and the
+jumps carried NOTHING — a blank Notes list or an empty Google page is the
+home screen with extra steps. Worse, the grid showed only while the field was
+EMPTY: the moment you had text worth handing off was exactly when the tools
+disappeared. And the launcher was the first thing a new user saw on tapping
++, diluting the ask (the surface's differentiated verb, and onboarding step 4's
+promise).
+
+**The ruling: the grid is gone. In its place, "Open in" chips that appear the
+moment there's typed text — and the text goes WITH the jump.** The two chip
+bands are the field's two exits, mutually exclusive: ask chips while empty,
+Open-in chips while typed. The leading caption + app-name chips read as one
+sentence ("Open in · Notes · Messages · Mail · Google") — "take it with you"
+copy was rejected as too abstract.
+
+Mechanics (verified on-sim): Messages rides `sms:?body=` (screenshot-proof the
+body lands), Mail `mailto:?body=`, Google the `q=` query. Notes has no
+compose URL — its chip copies the text and flashes "Copied — paste it into
+your note" (honesty rule: never a silent blank jump). Only destinations that
+can actually carry text earn a chip: the old grid's blank jumps (Calendar,
+Reminders, ChatGPT, Claude tiles) died with it, as did the `-forceTools` hook;
+`-composerDraft "<text>"` replaces it as the headless reach for the typed
+state. Typed text still never saves — it gains destinations, not persistence.

@@ -72,10 +72,6 @@ struct Composer: View {
     /// Flips true just after the bubble opens so the ask chips stagger in
     /// rather than snapping (delight, 2026-07-12).
     @State private var chipsAppeared = false
-    /// The tool tile currently launching — pops it up and fades it as its app
-    /// takes over, so the hand-off reads physical (delight, 2026-07-12).
-    @State private var launchingTool: String?
-
     @FocusState private var fieldFocused: Bool
     @State private var answerStream = GenStream()
     /// The composer is a CONVERSATION now (2026-07-12): each answered ask
@@ -164,17 +160,6 @@ struct Composer: View {
     /// typing, answering, recording, or a proposal all stop it.
     private var cyclingActive: Bool {
         isOpen && !hasDraft && !answering && !isRecording && proposal == nil && !reduceMotion
-    }
-
-    /// A tool tile's press: it gives under the finger and springs back —
-    /// the app-icon feel (delight, 2026-07-12).
-    private struct TilePress: ButtonStyle {
-        func makeBody(configuration: Configuration) -> some View {
-            configuration.label
-                .scaleEffect(configuration.isPressed ? 0.90 : 1)
-                .animation(.spring(response: 0.28, dampingFraction: 0.6),
-                           value: configuration.isPressed)
-        }
     }
 
     /// One ask chip's staggered rise-in on open (delight, 2026-07-12).
@@ -349,10 +334,9 @@ struct Composer: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         // Opens UNFOCUSED (2026-07-12): the tray leads with the field's
-        // invitation, the ask chips, and the tool grid all visible — tapping
-        // the field is what raises the keyboard to ask. Auto-focusing hid the
-        // tools behind the keyboard, biasing the surface toward "ask" when it's
-        // now "ask OR jump to a tool".
+        // invitation and the ask chips visible — tapping the field is what
+        // raises the keyboard to ask. (The tool-tile grid this once protected
+        // died 2026-07-16 — see takeChips.)
     }
 
     // MARK: - Open
@@ -370,9 +354,10 @@ struct Composer: View {
                     .padding(.horizontal, DS.Space.s4)
                     .padding(.top, DS.Space.s2)
                     .settleIn()
-                // The pairing line — teaches the sheet's dual nature (jump OR
-                // ask) and keeps the greeting from reading as an orphan label.
-                Text("Jump to a tool, or ask below.")
+                // The pairing line — teaches the sheet's dual nature (ask, or
+                // write and leave with it) and keeps the greeting from reading
+                // as an orphan label.
+                Text("Ask about your things — or type, then open it in another app.")
                     .dsText(.subhead13)
                     .foregroundStyle(DS.textTertiary)
                     .padding(.horizontal, DS.Space.s4)
@@ -386,13 +371,6 @@ struct Composer: View {
 
             // Ask chips moved DOWN to sit by the input (2026-07-12) — rendered
             // as `askChips` just above the bottom bar, near where you compose.
-
-            // The finite tool launcher — a fixed grid of jumps to the person's
-            // OWN tools, shown while the field is empty (the "ask OR jump"
-            // surface). Hidden the moment you start composing.
-            if isOpen && !hasDraft && !answering && !isRecording, proposal == nil {
-                toolGrid
-            }
 
             // Tag completions — your real tags finish the word being typed.
             if !tagMatches.isEmpty {
@@ -564,8 +542,11 @@ struct Composer: View {
               .padding(.top, DS.Space.s3)
 
             // Chips sit right by the input — asks/commands you can fire from
-            // where you compose (moved down 2026-07-12).
+            // where you compose (moved down 2026-07-12). The two bands are
+            // mutually exclusive: askChips while the field is empty, takeChips
+            // once there's typed text to carry out.
             askChips
+            takeChips
             // The input, pinned to the bottom — a friendly rounded bar.
             inputBar
         }
@@ -604,6 +585,16 @@ struct Composer: View {
                 chipsAppeared = false
                 try? await Task.sleep(for: .milliseconds(90))
                 chipsAppeared = true
+                #if DEBUG
+                // `-composerDraft "<text>"` pre-fills the field on open —
+                // headless reach for the typed state (the Open-in chips)
+                // for screenshots and the screen sweep.
+                if draft.isEmpty,
+                   let text = UserDefaults.standard.string(forKey: "composerDraft"),
+                   !text.isEmpty {
+                    fillDraft(text)
+                }
+                #endif
             }
             await consumeAskRequest()
             await autoSendIfProbed()
@@ -895,107 +886,52 @@ struct Composer: View {
         .padding(.bottom, DS.Space.s3)
     }
 
-    // MARK: - Tool launcher (jumps to the person's own tools)
+    // MARK: - Take it with you (the typed text leaves with the jump)
 
-    /// The tiles to show — a `probe` tile (ChatGPT/Claude) only appears when its
-    /// app is installed, so a tile never opens a website instead of the app.
-    private var visibleTools: [QuickTool] {
-        #if DEBUG
-        // `-forceTools YES` shows probe-gated tiles in the simulator, where
-        // third-party apps can't be installed (screenshot/video staging only).
-        if UserDefaults.standard.bool(forKey: "forceTools") { return QuickTool.all }
-        #endif
-        return QuickTool.all.filter { !$0.probe || UIApplication.shared.canOpenURL($0.url) }
-    }
-
-    private var toolGrid: some View {
-        // No label — the tiles are self-evident (the "Your tools" caption was
-        // an orphan). Columns adapt to the count so no row is ever ragged:
-        // 6 tools (no AI apps) → 3×2, 8 (both installed) → 4×2; only the rare
-        // 7 leaves a short second row. The grid sits on an ELEVATED card —
-        // depth by tone and shadow, never by line (the ladder, 2026-07-12) —
-        // and the tiles rise in with the ask chips' stagger.
-        let tools = visibleTools
-        let cols = tools.count <= 6 ? 3 : 4
-        return LazyVGrid(
-            columns: Array(repeating: GridItem(.flexible(), spacing: DS.Space.s2), count: cols),
-            spacing: DS.Space.s4
-        ) {
-            ForEach(Array(tools.enumerated()), id: \.element.id) { i, tool in
-                Button { runTool(tool) } label: {
-                    VStack(spacing: DS.Space.s2) {
-                        toolIcon(tool)
-                            // The launch pop — the tapped tile springs up and
-                            // fades as its app takes over the screen.
-                            .scaleEffect(launchingTool == tool.id ? 1.22 : 1)
-                            .opacity(launchingTool == tool.id ? 0.55 : 1)
-                        Text(LocalizedStringKey(tool.label))
-                            .dsText(.subhead13)
-                            .foregroundStyle(DS.textSecondary)
-                            .lineLimit(1)
+    /// The "take it with you" chips (2026-07-16, replacing the tool-tile
+    /// grid): shown the moment there's typed text, in the ask chips' slot —
+    /// the two bands are the field's two exits, and only one is ever visible.
+    /// The draft rides the jump (mail/message body, search query; Notes via
+    /// the clipboard, said plainly by the flash). The leading caption IS the
+    /// teach — "Open in" + app-name chips reads as one sentence, concrete
+    /// (user, 2026-07-16: "take it with you" was too abstract).
+    @ViewBuilder
+    private var takeChips: some View {
+        if isOpen && hasDraft && !answering && !isRecording, proposal == nil {
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: DS.Space.s2) {
+                    Text("Open in")
+                        .dsText(.subhead13)
+                        .foregroundStyle(DS.textTertiary)
+                    ForEach(TakeTool.all) { tool in
+                        Button { runTake(tool) } label: {
+                            Chip(text: tool.label, style: .neutral, glyph: tool.glyph)
+                        }
+                        .buttonStyle(.plain)
                     }
                 }
-                .buttonStyle(TilePress())
-                .modifier(ChipEntrance(index: i, shown: chipsAppeared, reduceMotion: reduceMotion))
+                .padding(.horizontal, DS.Space.s4)
             }
-        }
-        .padding(.vertical, DS.Space.s4)
-        .padding(.horizontal, DS.Space.s2)
-        .background(DS.background100,
-                    in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
-        .shadow(color: DS.cardShadow, radius: 18, x: 0, y: 6)
-        .padding(.horizontal, DS.Space.s4)
-        .padding(.top, DS.Space.s4)
-    }
-
-    /// A tool's face: the real brand mark when one is bundled (ChatGPT, Claude
-    /// — they coin-flip in, the bridge icons' own delight), else the app-icon
-    /// treatment — a solid brand-color squircle, white glyph, a whisper of top
-    /// sheen. The washy tint fills died with the v2 pass (2026-07-12): solid
-    /// reads as an app, tint read as a stain, worst in dark.
-    @ViewBuilder
-    private func toolIcon(_ tool: QuickTool) -> some View {
-        let shape = RoundedRectangle(cornerRadius: DS.Radius.appIcon(50), style: .continuous)
-        if let ui = UIImage(named: "brand-\(tool.id)") {
-            Image(uiImage: ui)
-                .resizable()
-                .scaledToFill()
-                .frame(width: 50, height: 50)
-                .clipShape(shape)
-                .coinFlip(trigger: chipsAppeared)
-        } else {
-            shape
-                .fill(tool.tint)
-                .overlay(
-                    shape.fill(LinearGradient(colors: [.white.opacity(0.16), .clear],
-                                              startPoint: .top, endPoint: .center))
-                )
-                .overlay(
-                    Image(systemName: tool.symbol)
-                        .font(.system(size: 21, weight: .semibold))
-                        .foregroundStyle(.white)
-                )
-                .frame(width: 50, height: 50)
+            .padding(.top, DS.Space.s4)
+            .padding(.bottom, DS.Space.s2)
         }
     }
 
-    /// A tool tile jumps out to that app and closes the composer — nothing
-    /// lands in Casberi (the ruling: people create in their own tools).
-    private func runTool(_ tool: QuickTool) {
-        // The hand-off is physical: the tile POPS like a home-screen icon
-        // opening — a heavier tap and a spring-up mask the app switch, so
-        // jumping to your tool reads as a deliberate throw, not a silent
-        // close (delight, 2026-07-12). Reduce Motion takes the instant path.
-        guard !reduceMotion else { DSHaptic.tap(); openURL(tool.url); close(); return }
+    /// A take chip jumps out to that app with the typed text and closes the
+    /// composer — nothing lands in Casberi (the ruling: people create in
+    /// their own tools). Notes can't carry text by URL, so its chip copies
+    /// first and the flash says exactly that (honesty rule: no silent blank
+    /// jump).
+    private func runTake(_ tool: TakeTool) {
+        let text = draft.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty, let url = tool.makeURL(text) else { return }
         DSHaptic.tap()
-        withAnimation(.spring(response: 0.24, dampingFraction: 0.5)) {
-            launchingTool = tool.id
+        if tool.copiesFirst {
+            UIPasteboard.general.string = text
+            chrome.flash("Copied — paste it into your note")
         }
-        Task {
-            try? await Task.sleep(for: .milliseconds(170))
-            openURL(tool.url)
-            close()
-        }
+        openURL(url)
+        close()
     }
 
     private func applyProposal(_ proposal: OrganizeProposal) {
