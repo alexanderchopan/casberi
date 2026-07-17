@@ -549,6 +549,17 @@ enum ProbeHooks {
                 NSLog("Approval probe: %d landed", n)
             }
         },
+        // `-prepareProbe YES` runs the approval PREPARE path (prd §111) over
+        // the newest landed approval thing — receipt refetch → live
+        // allowance/operator read → revoke calldata → fee quote — and NSLogs
+        // each fact. Reads only, nothing signed or sent. Pairs with
+        // `-approvalProbe <blocksBack>` to land an approval thing first.
+        Hook(key: "prepareProbe") { _, context in
+            Task { @MainActor in
+                let line = await WalletPrepare.probe(context: context)
+                NSLog("Prepare probe: %@", line)
+            }
+        },
         // `-solNameProbe <name.sol>` resolves a Solana name through SNS and
         // NSLogs the address (or the honest miss) — the fastest check that the
         // resolver still answers, without touching the corpus.

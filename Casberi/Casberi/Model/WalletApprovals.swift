@@ -86,7 +86,9 @@ enum WalletApprovals {
     private static let approvalTopic =
         "0x8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925"
     /// `ApprovalForAll(owner, operator, approved)` — the NFT operator grant.
-    private static let forAllTopic =
+    /// Internal, not private: `WalletPrepare` re-reads a landed approval's log
+    /// and needs to tell the two shapes apart.
+    static let forAllTopic =
         "0x17307eab39ab6107e8899845ad3d59bd9653f200f220920489ca2b5937696c31"
 
     /// The wallet's approvals dashboard on Revoke.cash — the address page is
@@ -105,6 +107,19 @@ enum WalletApprovals {
     static func canServe(_ address: String) -> Bool {
         ENS.isHexAddress(address)
             || (ENS.looksLikeName(address) && !SNS.looksLikeName(address))
+    }
+
+    /// The prepare path (`WalletPrepare`, prd §111) rides this same measured
+    /// chain table — one table, so a chain added above serves the sync AND the
+    /// prepare reads, and a network this table doesn't know honestly can't
+    /// prepare. Reads only, like everything on these hosts.
+    static func rpcRead(network: String, method: String, params: [Any]) async -> Any? {
+        guard let chain = allChains.first(where: { $0.network == network }) else { return nil }
+        return await call(chain, method: method, params: params)
+    }
+
+    static func chainId(forNetwork network: String) -> Int? {
+        allChains.first { $0.network == network }?.chainId
     }
 
     private static func cursorKey(_ network: String, _ address: String) -> String {
