@@ -309,6 +309,9 @@ struct ThingSheetView: View {
 
     /// Rewrites the counterparty clause of every landed Wallet transfer whose
     /// stored counterparty matches — to `name`, or stripped when `name` is nil.
+    /// The clause lives twice, and both writes happen here: the title's words,
+    /// and `transferCounterparty` (the structured copy TransferStage reads) —
+    /// updating one without the other is how a stage would drift from its row.
     private func retitleWalletThings(counterparty: String, to name: String?) {
         let addr = counterparty.lowercased()
         let all = (try? modelContext.fetch(
@@ -317,6 +320,10 @@ struct ThingSheetView: View {
         for t in all where t.counterpartyAddress?.lowercased() == addr {
             if let rebuilt = Self.retitled(t.title, to: name), rebuilt != t.title {
                 t.title = rebuilt
+                changed = true
+            }
+            if t.transferCounterparty != name {
+                t.transferCounterparty = name
                 changed = true
             }
         }

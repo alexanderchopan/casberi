@@ -172,6 +172,34 @@ final class Thing {
     /// transfers. Optional + default nil keeps CloudKit mirroring happy; nil for
     /// native-coin transfers with no counterparty and every non-Wallet thing.
     var counterpartyAddress: String? = nil
+    /// A Wallet transfer's direction as DATA — `"sent"` or `"received"`
+    /// (2026-07-16). The stage (`TransferStage`) used to parse the verb back
+    /// out of the title sentence; the title stays the display string, this is
+    /// the fact it was built from. A raw string, not an enum, so an unknown
+    /// future value from a newer synced device degrades to the title-parse
+    /// fallback instead of failing the decode. Optional + default nil keeps
+    /// CloudKit mirroring happy; nil for swaps and self-moves (two legs, no
+    /// single direction), for every non-Wallet thing, and for transfers
+    /// landed before this field — those keep parsing the title.
+    var transferDirection: String? = nil
+    /// The moved amount as the title leads with it — `"0.9962 ETH"` (just
+    /// `"ETH"` when the value was unreadable, mirroring the title). Set
+    /// beside `transferDirection`; same nils.
+    var transferAmount: String? = nil
+    /// The venue a Solana move rode (`"Jupiter"`) — a WHERE, not a who: the
+    /// program that executed it, never a renameable counterparty (that clause
+    /// lives in `transferCounterparty` and `counterpartyAddress`). nil for
+    /// EVM transfers (their " on …" clause is the counterparty) and
+    /// everything else.
+    var transferVenue: String? = nil
+    /// The counterparty's display name as the title carries it — `"Uniswap"`,
+    /// `"Mom"`, a swap's router (2026-07-16). Exactly two writers, the same
+    /// two that write the title's clause: ingest (the resolved name, nil when
+    /// nameless) and the rename flow (`retitleWalletThings` sets this beside
+    /// the rewritten title), so the field can never trail a rename. nil for
+    /// every non-Wallet thing and for transfers landed before this field —
+    /// those parse the title.
+    var transferCounterparty: String? = nil
     /// The account a social post came from — the Bluesky/Farcaster handle
     /// that authored it. When more than one account of a source is watched,
     /// the row leads with that author's avatar and names them, the way a

@@ -309,7 +309,13 @@ enum WalletIngest {
             sourceRef: ref
         )
         thing.walletAddress = sent.address
+        // The router is the swap's counterparty, and its name is the title's
+        // " on …" clause — so it rides `transferCounterparty` (rename-safe),
+        // not `transferVenue` (Solana's un-renameable program slot). No
+        // direction/amount: a swap is two-legged, and keeps the standard
+        // sheet layout until its grammar earns a stage.
         thing.counterpartyAddress = router
+        thing.transferCounterparty = venue
         return thing
     }
 
@@ -485,18 +491,21 @@ enum WalletIngest {
         let symbols = await SolanaActivity.symbols(for: fresh.flatMap { $0.move.legs.map(\.mint) })
         var landed: [Thing] = []
         for (address, move) in fresh {
-            // No title means a leg we couldn't name — dropped rather than
-            // printed as a raw mint. See `SolanaActivity.title`.
-            guard let title = SolanaActivity.title(for: move, symbols: symbols) else { continue }
+            // No story means a leg we couldn't name — dropped rather than
+            // printed as a raw mint. See `SolanaActivity.story`.
+            guard let story = SolanaActivity.story(for: move, symbols: symbols) else { continue }
             let thing = Thing(
                 kind: .transaction,
-                title: title,
+                title: story.title,
                 content: solanaChain.explorer + move.signature,
                 source: "Wallet",
                 capturedAt: move.when,
                 sourceRef: "wallet:sol:\(move.signature)"
             )
             thing.walletAddress = address
+            thing.transferDirection = story.direction
+            thing.transferAmount = story.amount
+            thing.transferVenue = story.venue
             landed.append(thing)
         }
         for thing in landed {
@@ -548,6 +557,12 @@ enum WalletIngest {
         // reads at a glance; "Moved" replaces the directional verb.
         let watched = WalletStore.shared.addresses
         let title: String
+        // The directional facts, kept as data beside the sentence built from
+        // them — so TransferStage reads fields, not words. nil on the "Moved"
+        // arm: a self-transfer has no single direction (and no stage).
+        var direction: String? = nil
+        var amountText: String? = nil
+        var counterpartyName: String? = nil
         if watched.count > 1,
            let cp, let other = watched.first(where: { $0.address.lowercased() == cp }),
            let mine = watched.first(where: { $0.address.lowercased() == address.lowercased() }) {
@@ -566,8 +581,11 @@ enum WalletIngest {
             // title never wears a raw hash.
             if let who = cp.flatMap({ names[$0] }) {
                 t2 += received ? " from \(who)" : " to \(who)"
+                counterpartyName = who
             }
             title = t2
+            direction = received ? "received" : "sent"
+            amountText = amount.isEmpty ? asset : "\(amount) \(asset)"
         }
         let when = IngestSupport.isoDate((t["metadata"] as? [String: Any])?["blockTimestamp"])
         let thing = Thing(
@@ -580,6 +598,9 @@ enum WalletIngest {
         )
         thing.walletAddress = address
         thing.counterpartyAddress = cp
+        thing.transferDirection = direction
+        thing.transferAmount = amountText
+        thing.transferCounterparty = counterpartyName
         return thing
     }
 

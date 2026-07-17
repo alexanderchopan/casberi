@@ -17,8 +17,10 @@ struct TransferStage {
     let direction: Direction
     /// "0.9962 ETH" — the words between the verb and the clauses.
     let amount: String
-    /// The counterparty's name as the title carries it ("Mom", "Uniswap") —
-    /// the display fallback when no hex was captured to resolve live.
+    /// The counterparty's display name ("Mom", "Uniswap") — from
+    /// `transferCounterparty` (kept in step with renames by the rename flow),
+    /// or parsed from the title for pre-field transfers. The display fallback
+    /// when no hex was captured to resolve live.
     let titledName: String?
     /// The venue a Solana move rode ("Jupiter") — the title's " on …" tail.
     /// A where, not a who: it joins the chain subline, never the party row.
@@ -27,6 +29,29 @@ struct TransferStage {
     init?(_ thing: Thing) {
         guard thing.kind == .transaction, thing.source == "Wallet" else { return nil }
         let title = thing.title
+
+        // Structured fields first (2026-07-16): a transfer landed since the
+        // fields existed carries direction/amount/counterparty/venue as data
+        // (stamped at ingest by WalletIngest/SolanaActivity, and
+        // `transferCounterparty` rewritten by the rename flow beside the
+        // title), so the stage never re-derives a fact from a sentence. An
+        // unrecognized direction (a newer device's sync) falls through to
+        // the title parse.
+        let fieldDirection: Direction? = switch thing.transferDirection {
+        case "sent": .sent
+        case "received": .received
+        default: nil
+        }
+        if let fieldDirection, let amount = thing.transferAmount, !amount.isEmpty {
+            direction = fieldDirection
+            self.amount = amount
+            venue = thing.transferVenue
+            titledName = thing.transferCounterparty
+            return
+        }
+
+        // The title parse — the fallback for transfers landed before the
+        // fields existed.
         let direction: Direction, prefix: String, delim: String
         if title.hasPrefix("Sent ") {
             (direction, prefix, delim) = (.sent, "Sent ", " to ")

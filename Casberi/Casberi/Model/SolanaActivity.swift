@@ -288,12 +288,26 @@ enum SolanaActivity {
 
     // MARK: - Story
 
-    /// The title a move earns, or nil when we can't tell it honestly.
+    /// What a move says, structured — the title PLUS the parts it was built
+    /// from (2026-07-16), so the landed thing carries direction/amount/venue
+    /// as data and `TransferStage` stops re-deriving facts from a sentence.
+    struct Story {
+        let title: String
+        /// `"sent"`/`"received"` — nil for a swap (two legs, no single
+        /// direction; swaps keep the standard sheet layout).
+        let direction: String?
+        /// The named amount the title leads with — `"0.5 SOL"`; nil for a swap.
+        let amount: String?
+        /// The program the move rode (`"Jupiter"`) — the title's " on …" tail.
+        let venue: String?
+    }
+
+    /// The story a move earns, or nil when we can't tell it honestly.
     ///
     /// Naming is a gate, not a decoration: the design law says a title never
     /// wears a raw hash, and a mint IS a hash. A leg we can't name kills the
-    /// whole title rather than printing `Received 1000000 GjWRMFCec…`.
-    static func title(for move: Move, symbols: [String: String]) -> String? {
+    /// whole story rather than printing `Received 1000000 GjWRMFCec…`.
+    static func story(for move: Move, symbols: [String: String]) -> Story? {
         func name(_ leg: Leg) -> String? {
             guard let symbol = symbols[leg.mint] else { return nil }
             return "\(WalletIngest.format(abs(leg.amount))) \(symbol)"
@@ -306,17 +320,25 @@ enum SolanaActivity {
         // EVM path does with its send+receive legs on a shared hash.
         if let out = gave.first, let back = got.first {
             guard let a = name(out), let b = name(back) else { return nil }
-            return "Swapped \(a) → \(b)\(tail)"
+            return Story(title: "Swapped \(a) → \(b)\(tail)",
+                         direction: nil, amount: nil, venue: move.venue)
         }
         if let back = got.first {
             guard let a = name(back) else { return nil }
-            return "Received \(a)\(tail)"
+            return Story(title: "Received \(a)\(tail)",
+                         direction: "received", amount: a, venue: move.venue)
         }
         if let out = gave.first {
             guard let a = name(out) else { return nil }
-            return "Sent \(a)\(tail)"
+            return Story(title: "Sent \(a)\(tail)",
+                         direction: "sent", amount: a, venue: move.venue)
         }
         return nil
+    }
+
+    /// Just the sentence — what the `-solActivityProbe` log line reads.
+    static func title(for move: Move, symbols: [String: String]) -> String? {
+        story(for: move, symbols: symbols)?.title
     }
 
     /// Whether a move is news for this wallet — Solana's spam rule.
