@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import Translation
 
 /// The thing sheet (M4, redesigned 2026-07-07 — "Ink with Gallery grafted
 /// in", user's pick): ink-black ground, no cards. The source's hue washes
@@ -51,6 +52,10 @@ struct ThingSheetView: View {
     @State private var walkingTo: SocialCard?
     /// The person behind a tapped face — the profile card.
     @State private var profileTarget: SocialProfile?
+    /// Translate verb (2026-07-17): the system Translation sheet, shown over
+    /// the thing's own words — no custom UI, Apple's picker does the rest.
+    @State private var showTranslate = false
+    @State private var translateText = ""
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// Seeded by the record's shape (2026-07-13 polish): a TALL thing (media
     /// or a long body) still opens FULL-height so its verbs never start
@@ -289,6 +294,8 @@ struct ThingSheetView: View {
         .sheet(item: $profileTarget) { p in
             SocialProfileCard(profile: p)
         }
+        // Translate: the system sheet, over the thing's own words.
+        .translationPresentation(isPresented: $showTranslate, text: translateText)
     }
 
     /// Stores (or clears) the person's label for the counterparty address, then
@@ -977,6 +984,10 @@ struct ThingSheetView: View {
             modelContext.saveHonestly()
             CorpusSignal.shared.bump()
             verbResult = "Done"
+        case .translate:
+            verbResult = nil
+            translateText = thing.postText ?? thing.content
+            showTranslate = true
         case .approve:
             // Demo bridge: the decision lands locally; the gateway wire is M5.
             thing.mark = .done

@@ -15,6 +15,7 @@ struct Verb: Identifiable {
         case markDone                 // rung 1 mark
         case approve                  // S10: the person's yes — IS the consent
         case deny                     // S10: the person's no
+        case translate                // read: system Translation sheet over the thing's own text
     }
     let label: String
     let icon: String
@@ -35,6 +36,7 @@ struct Verb: Identifiable {
         case .markDone:       return "Done"
         case .approve:        return "Approve"
         case .deny:           return "Deny"
+        case .translate:      return "Translate"
         }
     }
     var id: String { label }
@@ -106,6 +108,9 @@ enum VerbDerivation {
                             action: .addToReminders))
             if let v = externalVerb(for: thing, apps: [.todoist]) { out.append(v) }
             out.append(Verb(label: "Copy text", icon: "doc.on.doc", action: .copyText))
+            if !(thing.postText ?? thing.content).isEmpty {
+                out.append(Verb(label: "Translate", icon: "character.bubble", action: .translate))
+            }
         case .chat, .mail, .file, .voice:
             // A social post opens its own thread on the network — the specific
             // permalink (thing.content), so it lands on the cast, not the
@@ -117,6 +122,11 @@ enum VerbDerivation {
                                 action: .openURL(url)))
             }
             out.append(Verb(label: "Copy text", icon: "doc.on.doc", action: .copyText))
+            // The full body — a post's own words (postText), else whatever
+            // the kind carries as its text (a transcript, a mail body).
+            if !(thing.postText ?? thing.content).isEmpty {
+                out.append(Verb(label: "Translate", icon: "character.bubble", action: .translate))
+            }
         default:
             break
         }
@@ -354,6 +364,7 @@ enum PlaceWords {
         case .transaction: return "in your wallet"
         case .contact:     return "in your contacts"
         case .product:     return "from a store you follow"
+        case .accessory:   return "in your home"
         default:           return "in your things"
         }
     }

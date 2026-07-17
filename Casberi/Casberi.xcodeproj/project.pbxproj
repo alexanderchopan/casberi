@@ -545,6 +545,8 @@
 				INFOPLIST_KEY_NSContactsUsageDescription = "Casberi reads your contacts so the people you know become findable — search-only, never shown in your feed.";
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "Casberi reads your workouts so they land in your feed.";
 				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "Casberi only reads your workouts so they land in your feed — it never writes to Health.";
+				INFOPLIST_KEY_NSHomeKitUsageDescription = "Casberi reads your home's accessories — locks, doors, sensors — so their state lands as things.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Casberi reads your location once to show today's weather in Coming up — never in the background.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Casberi records your voice notes when you tap the mic.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Casberi reads screenshots you take so they land as things.";
 				INFOPLIST_KEY_NSRemindersFullAccessUsageDescription = "Casberi adds reminders to your list when you ask.";
@@ -593,6 +595,8 @@
 				INFOPLIST_KEY_NSContactsUsageDescription = "Casberi reads your contacts so the people you know become findable — search-only, never shown in your feed.";
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "Casberi reads your workouts so they land in your feed.";
 				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "Casberi only reads your workouts so they land in your feed — it never writes to Health.";
+				INFOPLIST_KEY_NSHomeKitUsageDescription = "Casberi reads your home's accessories — locks, doors, sensors — so their state lands as things.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Casberi reads your location once to show today's weather in Coming up — never in the background.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Casberi records your voice notes when you tap the mic.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Casberi reads screenshots you take so they land as things.";
 				INFOPLIST_KEY_NSRemindersFullAccessUsageDescription = "Casberi adds reminders to your list when you ask.";

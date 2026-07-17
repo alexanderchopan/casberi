@@ -81,6 +81,10 @@ enum ComingUp {
     struct Section: Identifiable {
         let label: String
         let items: [Item]
+        /// Computed here, once, off the actual date compare — never re-derived
+        /// downstream by matching `label` against a literal "Today", which
+        /// breaks under any locale where the localized string isn't English.
+        var isToday: Bool = false
         var isEmpty: Bool { items.isEmpty }
         var id: String { label }
     }
@@ -119,7 +123,7 @@ enum ComingUp {
             else if let first = dayItems.first {
                 label = self.label(for: first, now: now, calendar: calendar)
             } else { continue }   // a non-today day never lands empty; guard anyway
-            out.append(Section(label: label, items: dayItems))
+            out.append(Section(label: label, items: dayItems, isToday: day == todayStart))
         }
         return out
     }

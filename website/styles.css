@@ -107,6 +107,7 @@ nav { display: flex; align-items: center; justify-content: space-between; paddin
 .ai-substack  { background: #ff6719; }
 .ai-podcasts  { background: linear-gradient(160deg, #d669ff, #822cbf); }
 .ai-contacts  { background: #34c759; }
+.ai-homekit   { background: linear-gradient(160deg, #8e8e93, #48484a); }
 .ai-kindle    { background: linear-gradient(160deg, #4a4f57, #23272e); }
 .ai-shopify   { background: #5e8e3e; }
 .ai-deals     { background: #e0245e; }
@@ -746,7 +747,7 @@ footer .tagline { font-size: 16px; font-weight: 600; color: var(--ink); margin-b
   }
 
 /* Make-it-yours live cards: cycling avatars and banner colors (2026-07-13) */
-.avatar-stack { position: relative; width: 38px; height: 38px; flex: none; }
+.avatar-stack { position: relative; width: 64px; height: 64px; flex: none; }
 .avatar-stack img { position: absolute; inset: 0; width: 100%; height: 100%;
   border-radius: 50%; background: rgba(255,255,255,.08);
   opacity: 0; transform: scale(.8); transition: opacity .45s ease, transform .45s cubic-bezier(.34,1.56,.64,1); }

@@ -113,6 +113,12 @@ enum BridgeRefresh {
                 _ = await ContactsIngest.refresh(context: context)
             }
         }
+        if connected("homekit") {
+            let s = slot(); Task { @MainActor in
+                await BridgeRefresh.stagger(s)
+                _ = await HomeKitIngest.refresh(context: context)
+            }
+        }
         for bridge in TokenBridge.allCases where bridge.connected {
             let s = slot(); Task { @MainActor in
                 await BridgeRefresh.stagger(s)

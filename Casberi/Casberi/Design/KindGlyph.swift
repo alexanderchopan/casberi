@@ -50,6 +50,7 @@ extension ThingKind {
         case .transaction: return "arrow.left.arrow.right"
         case .contact:    return "person.crop.circle"
         case .product:    return "bag"
+        case .accessory:  return "homekit"
         }
     }
 
@@ -166,6 +167,7 @@ enum BridgeGlyph {
         case "deals":     return "tag.fill"
         case "open food facts": return "barcode.viewfinder"
         case "bitrefill": return "gift"
+        case "homekit":   return "homekit"
         default:          return "app"
         }
     }
@@ -197,6 +199,7 @@ extension ThingKind {
         case .transaction: return Color(hex: "#f7931a")  // amber — onchain (a vertical kind, may share the warm family)
         case .contact:    return Color(hex: "#34c759")   // green — people
         case .product:    return Color(hex: "#30b0c7")   // teal — shopping
+        case .accessory:  return Color(hex: "#8e8e93")   // gray — home hardware
         }
     }
 }

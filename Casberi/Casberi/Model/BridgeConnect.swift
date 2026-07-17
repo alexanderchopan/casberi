@@ -46,6 +46,9 @@ enum BridgeConnect {
             case "Contacts":
                 result = await ContactsIngest.connectAndIngest(context: context)
                     .map { ($0, "contacts", "contacts", "Reads your contacts — search-only, never in your feed.") }
+            case "HomeKit":
+                result = await HomeKitIngest.connectAndIngest(context: context)
+                    .map { ($0, "homekit", "accessories", "Reads your home's accessories — search-only, never in your feed.") }
             default:
                 result = nil
             }

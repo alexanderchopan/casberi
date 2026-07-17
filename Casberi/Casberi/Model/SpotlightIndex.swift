@@ -13,19 +13,27 @@ enum SpotlightIndex {
     /// reconcile indexes only things past it, then advances it.
     private static let watermarkKey = "spotlight.watermark"
 
+    /// The shared attribute-set builder — title/description/keywords, the one
+    /// place both the manual CoreSpotlight index below and `ThingEntity`'s
+    /// semantic-Spotlight `IndexedEntity` conformance draw from, so the two
+    /// index surfaces never drift apart on what a thing says about itself.
+    static func attributeSet(for thing: Thing) -> CSSearchableItemAttributeSet {
+        let attrs = CSSearchableItemAttributeSet(contentType: .text)
+        attrs.title = thing.title
+        attrs.contentDescription = thing.content.isEmpty
+            ? "A \(thing.kind.typeTag.lowercased()) in Casberi"
+            : thing.content
+        attrs.keywords = thing.tags + [thing.source, "Casberi"]
+        return attrs
+    }
+
     static func index(_ things: [Thing]) {
         guard !things.isEmpty else { return }
         let items = things.map { thing in
-            let attrs = CSSearchableItemAttributeSet(contentType: .text)
-            attrs.title = thing.title
-            attrs.contentDescription = thing.content.isEmpty
-                ? "A \(thing.kind.typeTag.lowercased()) in Casberi"
-                : thing.content
-            attrs.keywords = thing.tags + [thing.source, "Casberi"]
-            return CSSearchableItem(
+            CSSearchableItem(
                 uniqueIdentifier: thing.id.uuidString,
                 domainIdentifier: domain,
-                attributeSet: attrs
+                attributeSet: attributeSet(for: thing)
             )
         }
         CSSearchableIndex.default().indexSearchableItems(items)

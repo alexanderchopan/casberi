@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import Translation
 
 /// Feed — the record paints (M3), and it is ENTIRELY a feed (re-ruling
 /// 2026-07-04): source chips, machine presence, then rows. The type chart
@@ -45,6 +46,9 @@ struct FeedScreen: View {
     /// (2026-07-14). Watched ones open their thing via sheetThing.
     @State private var quickToken: TokenQuickRoute?
     @State private var confirming: (Verb, Thing)?
+    /// Translate verb, swipe-triggered — same system sheet as ThingSheetView's.
+    @State private var showTranslate = false
+    @State private var translateText = ""
     @State private var staleExpanded = false
     @State private var blockStream = GenStream()
     @Bindable private var wallet = WalletStore.shared
@@ -552,6 +556,7 @@ struct FeedScreen: View {
         .sheet(item: $quickToken) { route in
             TokenQuickSheet(route: route)
         }
+        .translationPresentation(isPresented: $showTranslate, text: translateText)
         .confirmationDialog(
             confirming.map { "\($0.0.label): \($0.1.title)?" } ?? "",
             isPresented: Binding(get: { confirming != nil },
@@ -1451,6 +1456,9 @@ struct FeedScreen: View {
         case .markDone:
             thing.mark = .done
             modelContext.saveHonestly()
+        case .translate:
+            translateText = thing.postText ?? thing.content
+            showTranslate = true
         case .approve:
             // An MCP client asked to save a thing (PRD §34) — the approval
             // carries the payload; the tap is what commits it. Consent → write.

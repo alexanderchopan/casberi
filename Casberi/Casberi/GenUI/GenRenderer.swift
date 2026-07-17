@@ -557,6 +557,10 @@ private struct GenComingUp: View {
     /// an "N more" footer expands to the sectioned view (3-row budget). The
     /// choice persists; no per-launch re-decision.
     @AppStorage("comingUpExpanded") private var expanded = false
+    /// Today's forecast (2026-07-17) — a live WeatherKit read, never stored on
+    /// a thing; nil until it resolves (or resolves to nil on denial/failure,
+    /// in which case Today stays plain, honesty rule).
+    @State private var weather: String?
 
     var body: some View {
         // Children arrive interleaved: a `ComingHead` day divider, then that
@@ -586,7 +590,7 @@ private struct GenComingUp: View {
                 // trailing slot so a no-today lead still says WHEN it is —
                 // the 2026-07-15 confusion, answered inline instead of by a
                 // sectioned calendar.
-                rowLine(next.row, when: next.when)
+                rowLine(next.row, when: next.when, isToday: next.isToday)
             }
             // The expand/collapse footer — only when there's actually more to
             // show (honesty: a one-row lane gets no dead control).
@@ -597,16 +601,30 @@ private struct GenComingUp: View {
         .dsWidgetSurface()
         .padding(.horizontal, DS.Space.s4)
         .padding(.top, DS.Space.s4)
+        .task { weather = await WeatherEnrichment.todaySummary() }
     }
 
-    /// The first real row and the day label of the section it sits in —
-    /// children are ordered head-then-rows, so the nearest preceding
-    /// `ComingHead` names the row's day.
-    private func nextUp(_ children: [GenEl]) -> (row: GenEl, when: String)? {
+    /// "Today" grows a trailing forecast when one resolved; every other day
+    /// label (Tomorrow, a weekday, Overdue) passes through unchanged — the
+    /// card only ever answers for the day it's actually shown for. Gated on
+    /// the `isToday` flag `ComingUp.Section` computes off the actual date,
+    /// NOT a string match against the label — the label is already the
+    /// LOCALIZED word (`String(localized: "Today")`), so comparing it to the
+    /// English literal "Today" silently never matched on any other locale.
+    private func dayLabel(_ label: String, isToday: Bool) -> String {
+        guard isToday, let weather else { return label }
+        return "\(label) · \(weather)"
+    }
+
+    /// The first real row, the day label of the section it sits in, and
+    /// whether that section is Today — children are ordered head-then-rows,
+    /// so the nearest preceding `ComingHead` names the row's day.
+    private func nextUp(_ children: [GenEl]) -> (row: GenEl, when: String, isToday: Bool)? {
         var day = ""
+        var isToday = false
         for child in children {
-            if child.comp == "ComingHead" { day = child.str(0) }
-            else { return (child, day) }
+            if child.comp == "ComingHead" { day = child.str(0); isToday = child.str(2) == "1" }
+            else { return (child, day, isToday) }
         }
         return nil
     }
@@ -639,7 +657,7 @@ private struct GenComingUp: View {
     /// still visibly starts on today.
     private func headLine(_ head: GenEl) -> some View {
         VStack(alignment: .leading, spacing: DS.Space.s1) {
-            Text(head.str(0))
+            Text(dayLabel(head.str(0), isToday: head.str(2) == "1"))
                 .dsText(.heading17)
                 .foregroundStyle(DS.textSecondary)
             if head.str(1) == "1" {
@@ -658,7 +676,7 @@ private struct GenComingUp: View {
     /// WHEN), built here as a leaf so the card stays shallow. Tap + long-press
     /// ride the shared `pinnedRowActions`; no glint (that's answer-only) and no
     /// per-row mount animation (the card mounts as one).
-    private func rowLine(_ row: GenEl, when: String = "") -> some View {
+    private func rowLine(_ row: GenEl, when: String = "", isToday: Bool = false) -> some View {
         HStack(spacing: DS.Space.s3) {
             TagGlyph(tag: row.str(1), size: 24)
             Text(row.str(0))
@@ -671,7 +689,7 @@ private struct GenComingUp: View {
             // section's day label in `when` instead.
             let trailing = when.isEmpty ? row.str(3) : when
             if !trailing.isEmpty {
-                Text(trailing).dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                Text(dayLabel(trailing, isToday: isToday)).dsText(.subhead13).foregroundStyle(DS.textTertiary)
             }
         }
         .padding(.horizontal, DS.Space.s4)

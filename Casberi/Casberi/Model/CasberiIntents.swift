@@ -97,14 +97,15 @@ struct SearchCasberiIntent: AppIntent {
         Summary("Search Casberi for \(\.$query)")
     }
 
-    func perform() async throws -> some IntentResult & ReturnsValue<String> & ProvidesDialog {
+    func perform() async throws -> some IntentResult & ReturnsValue<[ThingEntity]> & ProvidesDialog {
         let hits = try IntentCorpus.match(query, limit: 5)
         guard !hits.isEmpty else {
-            return .result(value: "", dialog: "Nothing in your things matches that.")
+            return .result(value: [], dialog: "Nothing in your things matches that.")
         }
+        let entities = hits.map(ThingEntity.init)
         let lines = hits.map { "\($0.title) — \($0.source)" }
         let joined = lines.joined(separator: "\n")
-        return .result(value: joined,
+        return .result(value: entities,
                        dialog: IntentDialog(full: "\(hits.count) thing\(hits.count == 1 ? "" : "s"):\n\(joined)",
                                             supporting: "From your things."))
     }

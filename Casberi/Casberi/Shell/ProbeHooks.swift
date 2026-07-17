@@ -382,6 +382,29 @@ enum ProbeHooks {
                 }
             }
         },
+        // `-weatherProbe YES` — fetch today's WeatherKit forecast headless
+        // (one-shot location + WeatherService) and NSLog the summary, or an
+        // honest FAILED on denial/unavailability.
+        Hook(key: "weatherProbe") { _, _ in
+            Task { @MainActor in
+                if let summary = await WeatherEnrichment.todaySummary() {
+                    NSLog("Weather probe: %@", summary)
+                } else {
+                    NSLog("Weather probe: FAILED (denied or unavailable)")
+                }
+            }
+        },
+        // `-homeKitProbe YES` — connects HomeKit headlessly and NSLogs the
+        // accessory count. Simulator caveat: no real HomeKit accessories
+        // exist there — expect 0 unless paired with the HomeKit Accessory
+        // Simulator or run on a real device (same honest-zero shape as the
+        // Strava probe).
+        Hook(key: "homeKitProbe") { _, context in
+            Task { @MainActor in
+                let n = await HomeKitIngest.connectAndIngest(context: context)
+                NSLog("HomeKit probe: %@", n.map { "\($0) accessories" } ?? "FAILED (denied)")
+            }
+        },
         // `-shopifyStore <url[,url]>` follows one or more Shopify stores and
         // syncs — headless bridge test. A blocked store logs FAILED honestly.
         Hook(key: "shopifyStore") { spec, context in

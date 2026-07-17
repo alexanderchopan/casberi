@@ -46,6 +46,7 @@ struct AppsScreen: View {
     private static let categories: [(name: String, exemplar: String, groups: Set<String>)] = [
         ("Onchain", "Wallet",      ["Wallet", "NFTs", "Onchain"]),
         ("Life",    "Photos",      ["Photos", "Schedule", "Fitness"]),
+        ("Home",    "HomeKit",     ["Home"]),
         ("Notes",   "Apple Notes", ["Notes"]),
         ("Social",  "Bluesky",     ["Network"]),
         ("Agents",  "Claude",      ["Agent", "Machines"]),

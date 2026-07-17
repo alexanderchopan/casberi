@@ -24,6 +24,11 @@ enum ThingKind: String, Codable, CaseIterable {
     // A discrete item with a price and a store, so it fits the feed like a link
     // does; its own kind gives shopping a bag glyph and a "Products" pile.
     case product
+    // HomeKit (2026-07-17) — a home accessory's live state (a lock, a door, a
+    // sensor). Search-only, like Contacts: HomeKit has no historical-event
+    // API, so a home's accessories land as a handful of reference things kept
+    // current in place, not a growing feed of "the same door again."
+    case accessory
 
     /// Set form for treemap cells ("Events" is the pile; "Event" is the thing).
     var typeTagPlural: String {
@@ -53,6 +58,7 @@ enum ThingKind: String, Codable, CaseIterable {
         case .transaction: return "Transaction"
         case .contact:    return "Contact"
         case .product:    return "Product"
+        case .accessory:  return "Accessory"
         }
     }
 }
@@ -63,7 +69,7 @@ enum ThingKind: String, Codable, CaseIterable {
 /// would bury the day's real captures. One rule, read by every surface that
 /// shows the corpus, so a search-only source is declared in exactly one place.
 enum Corpus {
-    static let searchOnlySources: Set<String> = ["Contacts"]
+    static let searchOnlySources: Set<String> = ["Contacts", "HomeKit"]
 
     /// The things a surface (Feed, Home) should show — the corpus minus the
     /// search-only sources.

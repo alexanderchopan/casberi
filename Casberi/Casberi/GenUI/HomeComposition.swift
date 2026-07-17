@@ -342,7 +342,7 @@ enum HomeComposition {
         for (s, section) in sections.enumerated() {
             let headID = "comingUpH\(s)"
             childIds.append(headID)
-            lines.append("\(headID) = ComingHead(\(q(section.label)), \(q(section.isEmpty ? "1" : "")))")
+            lines.append("\(headID) = ComingHead(\(q(section.label)), \(q(section.isEmpty ? "1" : "")), \(q(section.isToday ? "1" : "")))")
             for item in section.items {
                 let t = item.thing
                 let openable = VerbDerivation.verbs(for: t).contains {

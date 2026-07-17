@@ -189,6 +189,8 @@ enum BridgeCatalog {
               needsSetup: true),
         Offer(name: "Contacts",    tagline: "The people you know, findable",         group: "People",    connectable: true,
               summary: "Your contacts become findable people — a name you're looking for turns up with everything it connects to. Search-only: they never crowd your feed. Everything stays on this iPhone — Contacts never touches a server. Read-only."),
+        Offer(name: "HomeKit",     tagline: "Your home's accessories, at a glance",  group: "Home",      connectable: true,
+              summary: "Your HomeKit accessories — locks, doors, sensors — land as things you can find, kept current while the app is open. Search-only: they never crowd your feed. Read-only — Casberi never controls anything."),
     ]
 
     /// Group order for the catalog screen (insertion order of first member).
