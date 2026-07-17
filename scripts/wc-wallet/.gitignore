@@ -1,0 +1,4 @@
+# Installed on first run by ../wc-handshake.sh — ~50 transitive packages, and
+# nothing in the repo is built from them. package-lock.json IS committed, so an
+# install is reproducible.
+node_modules/

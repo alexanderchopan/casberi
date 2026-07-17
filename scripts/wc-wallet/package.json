@@ -1,0 +1,10 @@
+{
+  "name": "casberi-wc-wallet-probe",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Wallet-side WalletConnect client for verifying Casberi's read-only handshake end-to-end. Driven by scripts/wc-handshake.sh.",
+  "dependencies": {
+    "@walletconnect/sign-client": "^2.21.0"
+  }
+}
