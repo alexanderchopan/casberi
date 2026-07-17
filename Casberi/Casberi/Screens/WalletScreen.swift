@@ -979,6 +979,13 @@ struct WalletScreen: View {
                 // read-only promise is false.
                 resultIsError = true
                 result = String(localized: "Connected, but the session wouldn't close — open your wallet and disconnect Casberi. Nothing was watched.")
+            case .failure(WalletConnectBridge.ConnectError.keychainUnavailable(let status)):
+                // The keychain preflight failed — the handshake never started
+                // (the SDK would have crashed on this exact write). The code
+                // rides along because it's the one fact that diagnoses this
+                // from a screenshot.
+                resultIsError = true
+                result = String(localized: "This device's keychain refused the handshake (code \(status)) — paste the address instead.")
             case .failure:
                 resultIsError = true
                 result = String(localized: "Couldn't reach your wallet — paste the address instead.")

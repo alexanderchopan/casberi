@@ -10,10 +10,30 @@ import WalletConnectRelay
 /// `WebSocketConnecting` is a callback protocol, not an async one: the SDK sets
 /// `onConnect`/`onText`/`onDisconnect` and expects them fired from the socket's
 /// own lifetime. Delivery therefore happens off the main actor, which is why
-/// nothing here is `@MainActor`, why `isConnected` is lock-guarded (the SDK
-/// reads it from its own thread while URLSession writes it from the delegate
-/// queue), and why `receive` re-arms itself after each message —
-/// URLSessionWebSocketTask hands over exactly one.
+/// nothing here is `@MainActor`, and why `receive` re-arms itself after each
+/// message — URLSessionWebSocketTask hands over exactly one.
+///
+/// EVERY piece of mutable state lives behind one lock (2026-07-17), because the
+/// SDK genuinely drives this object from three places at once — read out of
+/// reown-swift 2.3.0, not assumed: `AutomaticSocketConnectionHandler` calls
+/// `connect()` from its syncQueue (the periodic reconnect timer) AND from the
+/// cooperative pool (`handleInternalConnect` calls it directly from async
+/// context), `disconnect()` arrives on the MAIN thread (the background-task
+/// expiration handler — fired ~30s after a wallet app opens over us, which is
+/// why only a real device ever exercises it; the sim harness stubs `open` and
+/// never backgrounds), and `refreshTokenIfNeeded` writes `request` from the
+/// syncQueue while a connect reads it. Unsynchronized `task`/`session` vars
+/// under that traffic are ARC pointer races — the crash wears an unrelated
+/// EXC_BAD_ACCESS somewhere in objc_release.
+///
+/// Callbacks carry a STALENESS guard: a failing receive or a delegate close
+/// only reports `onDisconnect` if it belongs to the CURRENT task/session. The
+/// old session's death rattle arriving after a reconnect would otherwise tell
+/// the SDK "disconnected" mid-connect and burn its immediate-retry budget on a
+/// socket that's fine. A deliberate `disconnect()` fires `onDisconnect(nil)`
+/// itself — the SDK's own `WebSocketMock` does exactly that, so it's the
+/// contract, and the suppressed stale callbacks can't leave the status
+/// provider hanging.
 ///
 /// The delegate is a SEPARATE object holding a weak back-reference, which is
 /// load-bearing: URLSession retains its delegate until invalidated, so making
@@ -25,58 +45,81 @@ final class WalletConnectSocket: WebSocketConnecting {
     var onConnect: (() -> Void)?
     var onDisconnect: ((Error?) -> Void)?
     var onText: ((String) -> Void)?
-    var request: URLRequest
 
     private let lock = NSLock()
+    private var _request: URLRequest
     private var _isConnected = false
-    var isConnected: Bool {
-        get { lock.withLock { _isConnected } }
-        set { lock.withLock { _isConnected = newValue } }
-    }
-
-    private var task: URLSessionWebSocketTask?
-    private var session: URLSession?
+    private var _task: URLSessionWebSocketTask?
+    private var _session: URLSession?
     private let delegate = SocketDelegate()
 
+    /// The SDK mutates this (Authorization refresh on reconnect) from its
+    /// syncQueue while a connect on another thread reads it — locked like
+    /// everything else.
+    var request: URLRequest {
+        get { lock.withLock { _request } }
+        set { lock.withLock { _request = newValue } }
+    }
+
+    var isConnected: Bool {
+        lock.withLock { _isConnected }
+    }
+
     init(request: URLRequest) {
-        self.request = request
+        _request = request
         delegate.socket = self
     }
 
     deinit {
-        session?.invalidateAndCancel()
+        _session?.invalidateAndCancel()
     }
 
     func connect() {
         // A session can't be reused after invalidation, so each connect gets a
-        // fresh one and each disconnect invalidates it.
-        session?.invalidateAndCancel()
+        // fresh one and each disconnect invalidates it. Build outside the lock,
+        // swap inside it, kill the old one after — concurrent connects (the
+        // periodic timer racing handleInternalConnect) each settle on exactly
+        // one live session, and the loser's callbacks fail the staleness guard.
         let session = URLSession(configuration: .default,
                                  delegate: delegate,
                                  delegateQueue: nil)
-        self.session = session
         let task = session.webSocketTask(with: request)
-        self.task = task
+        let old: URLSession? = lock.withLock {
+            let old = _session
+            _session = session
+            _task = task
+            _isConnected = false
+            return old
+        }
+        old?.invalidateAndCancel()
         receive(on: task)
         task.resume()
     }
 
     func disconnect() {
+        let (task, session): (URLSessionWebSocketTask?, URLSession?) = lock.withLock {
+            defer { _task = nil; _session = nil; _isConnected = false }
+            return (_task, _session)
+        }
         task?.cancel(with: .goingAway, reason: nil)
-        task = nil
         // Releases URLSession's strong hold on `delegate`. Without this the
         // session, its delegate queue, and this socket outlive every reconnect.
         session?.invalidateAndCancel()
-        session = nil
-        isConnected = false
+        // A deliberate close reports itself (the SDK's WebSocketMock does the
+        // same) — the receive loop's cancellation error is stale by the time it
+        // lands and the guard below drops it.
+        if task != nil { onDisconnect?(nil) }
     }
 
     func write(string: String, completion: (() -> Void)?) {
+        let task = lock.withLock { _task }
         task?.send(.string(string)) { _ in completion?() }
     }
 
     /// One `receive` yields one message, so each success re-arms. A failure is
-    /// terminal — the SDK's reconnect logic owns what happens next.
+    /// terminal for THIS task — reported only if the task is still current
+    /// (see the staleness note above); the SDK's reconnect logic owns what
+    /// happens next.
     private func receive(on task: URLSessionWebSocketTask) {
         task.receive { [weak self] result in
             guard let self else { return }
@@ -85,40 +128,55 @@ final class WalletConnectSocket: WebSocketConnecting {
                 if case .string(let text) = message { self.onText?(text) }
                 self.receive(on: task)
             case .failure(let error):
-                self.isConnected = false
-                self.onDisconnect?(error)
+                let isCurrent = self.lock.withLock {
+                    guard self._task === task else { return false }
+                    self._task = nil
+                    self._isConnected = false
+                    return true
+                }
+                if isCurrent { self.onDisconnect?(error) }
             }
         }
     }
 
-    fileprivate func handleOpen() {
-        isConnected = true
-        onConnect?()
+    fileprivate func handleOpen(for session: URLSession) {
+        let isCurrent = lock.withLock {
+            guard _session === session else { return false }
+            _isConnected = true
+            return true
+        }
+        if isCurrent { onConnect?() }
     }
 
-    fileprivate func handleClose() {
-        isConnected = false
-        onDisconnect?(nil)
+    fileprivate func handleClose(for session: URLSession) {
+        let isCurrent = lock.withLock {
+            guard _session === session else { return false }
+            _isConnected = false
+            return true
+        }
+        if isCurrent { onDisconnect?(nil) }
     }
 }
 
 /// Weakly held bridge from URLSession's delegate callbacks back to the socket.
 /// See `WalletConnectSocket` — this exists only to keep URLSession's strong
-/// delegate reference off the socket itself.
+/// delegate reference off the socket itself. It forwards the SESSION each
+/// callback arrived on, so the socket can tell a current close from a stale
+/// one (the delegate is shared across every session this socket ever opens).
 private final class SocketDelegate: NSObject, URLSessionWebSocketDelegate {
     weak var socket: WalletConnectSocket?
 
     func urlSession(_ session: URLSession,
                     webSocketTask: URLSessionWebSocketTask,
                     didOpenWithProtocol protocol: String?) {
-        socket?.handleOpen()
+        socket?.handleOpen(for: session)
     }
 
     func urlSession(_ session: URLSession,
                     webSocketTask: URLSessionWebSocketTask,
                     didCloseWith closeCode: URLSessionWebSocketTask.CloseCode,
                     reason: Data?) {
-        socket?.handleClose()
+        socket?.handleClose(for: session)
     }
 }
 

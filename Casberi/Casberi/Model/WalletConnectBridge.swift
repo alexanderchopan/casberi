@@ -1,5 +1,6 @@
 import Foundation
 import Combine
+import Security
 import WalletConnectSign
 import WalletConnectPairing
 import WalletConnectNetworking
@@ -63,6 +64,12 @@ enum WalletConnectBridge {
 
     // MARK: - Configuration
 
+    /// The app group the SDK stores its pairing keys under — the same group
+    /// the SwiftData store shares with the extensions. Named once: the
+    /// keychain preflight below must probe EXACTLY the group the SDK will
+    /// write, or a pass there says nothing about the write that crashes.
+    private static let appGroup = "group.com.casberi.app"
+
     private static var configured = false
 
     static func configureIfNeeded() {
@@ -75,7 +82,7 @@ enum WalletConnectBridge {
         guard let redirect = try? AppMetadata.Redirect(native: "casberi://",
                                                        universal: nil) else { return }
 
-        Networking.configure(groupIdentifier: "group.com.casberi.app",
+        Networking.configure(groupIdentifier: appGroup,
                              projectId: projectID,
                              socketFactory: WalletConnectSocketFactory())
 
@@ -203,6 +210,16 @@ enum WalletConnectBridge {
         /// Casberi from inside their own wallet, and the wallet lists sessions
         /// by topic. Never swallow this — see `tearDown`.
         case tearDownFailed(topic: String, underlying: Error)
+        /// This device's keychain refused the app-group write the handshake
+        /// crypto depends on (carries the `OSStatus` for the log line and the
+        /// screen's honest copy). Pre-flighted HERE because the SDK
+        /// force-unwraps that exact write — `try! kms.createSymmetricKey` /
+        /// `try! kms.createX25519KeyPair` in reown-swift 2.3.0's
+        /// AppPairService/AppProposeService — so its failure is a process
+        /// kill, not an error anyone can catch. The simulator never enforces
+        /// keychain access groups, which is why only a device can surface
+        /// this; `scripts/wc-handshake.sh` can't.
+        case keychainUnavailable(OSStatus)
     }
 
     /// What a completed handshake meant. Deliberately NOT `[String]?` — "no
@@ -247,6 +264,13 @@ enum WalletConnectBridge {
     static func connect(timeout: Duration = .seconds(300),
                         open: @MainActor (URL) async -> Bool) async throws -> ConnectOutcome {
         guard isAvailable else { throw ConnectError.unavailable }
+        // Prove the keychain write the SDK is about to force-try, while its
+        // failure can still be an error instead of a crash. See
+        // `ConnectError.keychainUnavailable`.
+        if let refusal = keychainRefusal() {
+            NSLog("WalletConnect: keychain refused the app-group write (OSStatus %d) — connect degraded to paste-only", refusal)
+            throw ConnectError.keychainUnavailable(refusal)
+        }
         configureIfNeeded()
 
         let uri = try await Sign.instance.connect(namespaces: readOnlyNamespaces())
@@ -290,6 +314,32 @@ enum WalletConnectBridge {
             throw ConnectError.tearDownFailed(topic: session.topic, underlying: failure)
         }
         return .connected(found)
+    }
+
+    /// The status the keychain answers the SDK's write with, asked FIRST —
+    /// nil means writes work and the handshake may proceed. This mirrors the
+    /// exact query `KeychainStorage.buildBaseServiceQuery` builds around the
+    /// pairing keys (generic password, data-protection keychain,
+    /// after-first-unlock-this-device-only, our app group), because the
+    /// access group + data-protection pair is what iOS authorises against —
+    /// probing anything weaker would pass where the real write dies. The
+    /// probe item is deleted on the way out; a duplicate left by an
+    /// interrupted earlier run answers the same question, so it counts as a
+    /// pass too.
+    private static func keychainRefusal() -> OSStatus? {
+        var query: [CFString: Any] = [
+            kSecClass: kSecClassGenericPassword,
+            kSecAttrAccessible: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly,
+            kSecUseDataProtectionKeychain: true,
+            kSecAttrService: "casberi.wc.preflight",
+            kSecAttrAccessGroup: appGroup,
+            kSecAttrAccount: "probe"
+        ]
+        query[kSecValueData] = Data([1])
+        let status = SecItemAdd(query as CFDictionary, nil)
+        query.removeValue(forKey: kSecValueData)
+        SecItemDelete(query as CFDictionary)
+        return (status == errSecSuccess || status == errSecDuplicateItem) ? nil : status
     }
 
     /// One account a wallet shared: the address, and which family it belongs
