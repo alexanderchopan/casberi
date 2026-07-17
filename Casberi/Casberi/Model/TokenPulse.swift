@@ -16,6 +16,12 @@ final class TokenPulse {
     struct Pulse {
         let closes: [Double]
         let change24h: Double   // fraction, e.g. -0.048 = -4.8%
+        /// The live price and market size, riding the same fetch (2026-07-17,
+        /// the fat-row build) — so a feed row can quote them without a
+        /// request of its own. cap/fdv are nil when the source didn't say.
+        let price: Double
+        let marketCap: Double?
+        let fdv: Double?
         let fetchedAt: Date
     }
 
@@ -71,7 +77,9 @@ final class TokenPulse {
         var out: [String: Pulse] = [:]
         for (ref, chart) in fetched {
             guard let chart else { continue }
-            out[ref] = Pulse(closes: chart.closes, change24h: chart.change, fetchedAt: stamp)
+            out[ref] = Pulse(closes: chart.closes, change24h: chart.change,
+                             price: chart.price, marketCap: chart.marketCap,
+                             fdv: chart.fdv, fetchedAt: stamp)
         }
         pulses.merge(out) { _, new in new }
         // Home's watchlist tile reads this cache from a plain compose

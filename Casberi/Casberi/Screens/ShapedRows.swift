@@ -24,12 +24,6 @@ struct BandRow: View {
     /// Honest by construction: the caller derives it from the source's own
     /// current-live set, never from the row's age.
     var live: Bool = false
-    /// A watched token's last 24h (Option A ruling 2026-07-10) — the right
-    /// stack carries a sparkline over the signed change instead of
-    /// time-over-tag (a watchlist row's timestamp says only "watched N days
-    /// ago"; its 24h is what you actually glance for). The caller derives
-    /// it from TokenPulse, so only Tokens rows ever carry one.
-    var pulse: TokenPulse.Pulse? = nil
     @Environment(\.colorScheme) private var scheme
 
     private var done: Bool { thing.mark == .done }
@@ -160,8 +154,12 @@ struct BandRow: View {
                 RemoteThumb(urlString: publisher, size: 26, fallback: thing.source)
             } else if let image = thing.previewImageURL, !image.isEmpty,
                       thing.source != "Twitch" || live {
+                // A token's coin logo is circular in the fat row — keep the
+                // same shape while its pulse hasn't landed yet, so the coin
+                // doesn't morph squircle→circle when the price arrives.
                 RemoteThumb(urlString: image, size: 26, fallback: thing.source,
-                            perishable: thing.source == "Twitch")
+                            perishable: thing.source == "Twitch",
+                            circular: thing.source == "Tokens")
             } else if thing.kind == .screenshot, thing.sourceRef != nil {
                 PhotoWell(thing: thing, size: 26)
             } else {
@@ -189,14 +187,7 @@ struct BandRow: View {
                 RemoteThumb(urlString: art, size: 26, fallback: thing.source)
             }
             VStack(alignment: .trailing, spacing: 1) {
-                if let pulse {
-                    Sparkline(closes: pulse.closes, up: pulse.change24h >= 0)
-                    Text(Self.deltaText(pulse.change24h))
-                        .font(.system(size: 11, weight: .semibold))
-                        .monospacedDigit()
-                        .foregroundStyle(TokenChartStyle.accent(change: pulse.change24h,
-                                                                scheme: scheme))
-                } else if live {
+                if live {
                     HStack(spacing: 4) {
                         Circle().fill(DS.confirm).frame(width: 6, height: 6)
                         Text("Live").dsText(.label12).foregroundStyle(DS.confirm)
@@ -206,8 +197,7 @@ struct BandRow: View {
                 } else {
                     LiveTimeText(date: thing.capturedAt)
                 }
-                // The signed change occupies the tag line on a pulsed row.
-                if pulse == nil, let project {
+                if let project {
                     Text(project)
                         .font(.system(size: 11, weight: .medium))
                         .foregroundStyle(projectInk)
@@ -217,19 +207,86 @@ struct BandRow: View {
         }
         .padding(.vertical, DS.Space.s2)
     }
+}
 
-    /// "+4.2%" / "-7.8%" — one decimal; sign is the point, except at a flat
-    /// change, where there is no sign to make (`TokenChartStyle.changeText`).
-    private static func deltaText(_ change: Double) -> String {
-        TokenChartStyle.changeText(change)
+
+/// The fat token row (prd §102, 2026-07-17, approved mock; supersedes Option
+/// A's sparkline-in-the-band): the coin leads at 38pt, the name sits over
+/// "SYMBOL · $94.1B cap", and the right stack is the live price in the
+/// rounded display voice over a solid state pill. The pill carries direction
+/// alone, number-first, so color is never the only voice; no timestamp (a
+/// watchlist row's "watched N days ago" was already ruled noise, 2026-07-15).
+/// Its own struct like MusicRow/CheckRow/ExcerptRow — the caller (FeedScreen's
+/// shapedRow) mounts it only when a pulse EXISTS and falls back to the plain
+/// band + timestamp until one lands, so this view never fakes a price.
+struct TokenRow: View {
+    let thing: Thing
+    let pulse: TokenPulse.Pulse
+
+    var body: some View {
+        HStack(spacing: DS.Space.s3) {
+            if let image = thing.previewImageURL, !image.isEmpty {
+                RemoteThumb(urlString: image, size: 38, fallback: thing.source,
+                            circular: true)
+            } else {
+                BridgeIcon(name: thing.source, size: 38)
+            }
+            VStack(alignment: .leading, spacing: 1) {
+                Text(tokenName)
+                    .dsText(.body17).fontWeight(.semibold)
+                    .foregroundStyle(DS.textPrimary)
+                    .lineLimit(1)
+                if let vitals {
+                    Text(vitals)
+                        .dsText(.label12).foregroundStyle(DS.textSecondary)
+                        .monospacedDigit()
+                        .lineLimit(1)
+                }
+            }
+            Spacer(minLength: DS.Space.s2)
+            VStack(alignment: .trailing, spacing: 3) {
+                Text(TokenChartStyle.priceText(pulse.price))
+                    .dsText(.price16)
+                    .foregroundStyle(DS.textPrimary)
+                    .monospacedDigit()
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+                TokenDeltaPill(change: pulse.change24h, label: "",
+                               compact: true, solid: true)
+            }
+        }
+        .padding(.vertical, DS.Space.s2)
+    }
+
+    /// "Solana" out of "Solana · $SOL" — via the format's one parser
+    /// (`TokensAsk.name/symbol`), never re-split here (review 2026-07-17: a
+    /// third inline parser had already drifted from the canonical one).
+    private var tokenName: String { TokensAsk.name(of: thing.title) }
+
+    /// "SOL · $94.1B cap" — the symbol plus the market size the pulse
+    /// carried. FDV stands in, labeled as FDV, when the source reported no
+    /// cap; neither reported → the symbol stands alone; no symbol either →
+    /// no line (never an invented number).
+    private var vitals: String? {
+        let parsed = TokensAsk.symbol(of: thing.title)
+        let symbol: String? = parsed == thing.title ? nil : parsed
+        let size: String? = if let cap = pulse.marketCap {
+            "\(TokenStats.compact(cap)) cap"
+        } else if let fdv = pulse.fdv {
+            "\(TokenStats.compact(fdv)) FDV"
+        } else { nil }
+        let joined = [symbol, size].compactMap(\.self).joined(separator: " · ")
+        return joined.isEmpty ? nil : joined
     }
 }
 
 
-/// The 24h price line a token row wears (Option A, 2026-07-10): 2pt round
-/// stroke, no axes, no dots — the signed percent beneath carries the number,
-/// the line carries the shape. Green up / red down is state (the color law's
-/// third permitted job), matching the confirm/destructive family.
+/// The 24h price line (Option A, 2026-07-10): 2pt round stroke, no axes, no
+/// dots — the signed percent beneath carries the number, the line carries
+/// the shape. Green up / red down is state (the color law's third permitted
+/// job), matching the confirm/destructive family. Feed rows retired it for
+/// the fat token anatomy (TokenRow, 2026-07-17); TokenWatchScreen's
+/// management rows still wear it.
 struct Sparkline: View {
     let closes: [Double]
     let up: Bool

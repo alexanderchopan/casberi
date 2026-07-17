@@ -126,6 +126,10 @@ enum TokenWatch {
         // carried the live price — keep it, so the sheet can say "+41% since
         // you watched" against a number that was really true at this moment.
         thing.watchPriceUsd = token.priceUsd.flatMap(Double.init)
+        // The coin's own face, for the fat feed row (2026-07-17) — the
+        // resolve carried it; tokens watched before this stamp fall back to
+        // the Tokens glyph.
+        thing.previewImageURL = token.imageURL
         context.insert(thing)
         context.saveHonestly()
         SpotlightIndex.index([thing])

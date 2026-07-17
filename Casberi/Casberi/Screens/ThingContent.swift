@@ -564,7 +564,12 @@ private struct TokenChartContent: View {
     let address: String
     @State private var stats: TokenStats?
     @Environment(\.modelContext) private var modelContext
-    @Environment(BridgeStore.self) private var store
+    // Optional on purpose (2026-07-17): this content mounts from sheet
+    // chains that don't all carry the store (the deep-link/-openThing sheet
+    // hangs outside RootShell's `.environment(bridges)`), and the REQUIRED
+    // form is a mount-time fatal — the sheet crashed the app before the
+    // first frame. Missing store only skips bridge registration on Watch.
+    @Environment(BridgeStore.self) private var store: BridgeStore?
     @State private var resolved: TokenWatch.Resolved?
     @State private var watchedTitle: String?
 
@@ -583,7 +588,7 @@ private struct TokenChartContent: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: DS.Space.s4) {
-            TokenChartView(chain: chain, address: address, since: since) {
+            TokenChartView(chain: chain, address: address, since: since, hero: true) {
                 // No pool (dead/illiquid) — the plain link, honestly.
                 if let url = URL(string: "https://dexscreener.com/\(chain)/\(address)") {
                     LinkPreviewCard(url: url)
@@ -611,71 +616,105 @@ private struct TokenChartContent: View {
     /// other quiet cards rather than as a full sheet row.
     @ViewBuilder private var watchRow: some View {
         if let watchedTitle {
+            // The settled state wears the same full-width capsule the verb
+            // did — quiet fill, confirm check — so watching doesn't snap the
+            // layout, and it stays a label, not a control.
             HStack(spacing: DS.Space.s2) {
                 Image(systemName: "checkmark")
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.system(size: 15, weight: .bold))
                     .foregroundStyle(DS.confirm)
                 Text("Watching \(watchedTitle)")
-                    .dsText(.callout15).foregroundStyle(DS.textSecondary)
-                Spacer(minLength: 0)
+                    .dsText(.callout15).fontWeight(.semibold)
+                    .foregroundStyle(DS.textSecondary)
+                    .lineLimit(1)
             }
-            .padding(DS.Space.s3)
-            .background(DS.fillFaint,
-                        in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 14)
+            .background(DS.fillFaint, in: Capsule(style: .continuous))
         } else if let resolved {
+            // The one verb, at full Cash-App weight (Big money, 2026-07-17):
+            // a tint-filled capsule spanning the sheet.
             Button {
                 DSHaptic.tap()
                 if let watched = TokenWatch.add(resolved, context: modelContext) {
                     DSHaptic.success()
                     watchedTitle = watched.title
-                    TokenWatch.registerBridge(store: store, context: modelContext)
+                    if let store {
+                        TokenWatch.registerBridge(store: store, context: modelContext)
+                    }
                 } else {
                     watchedTitle = "\(resolved.name) · $\(resolved.symbol)"
                 }
             } label: {
-                HStack(spacing: DS.Space.s2) {
-                    Image(systemName: "eye")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(DS.textSecondary)
-                    Text("Watch this token")
-                        .dsText(.callout15).foregroundStyle(DS.textPrimary)
-                    Spacer(minLength: 0)
-                }
-                .padding(DS.Space.s3)
-                .background(DS.fillFaint,
-                            in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
-                .contentShape(Rectangle())
+                Text("Watch this token")
+                    .dsText(.body17).fontWeight(.bold)
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(DS.tint, in: Capsule(style: .continuous))
+                    .contentShape(Capsule(style: .continuous))
             }
             .buttonStyle(.plain)
         }
     }
 
-    /// The market's shape in four quiet numbers — cells only for stats the
-    /// pair actually reported.
+    /// The market's shape, re-ranked (Big money, 2026-07-17): the two
+    /// biggest facts — market cap and 24h volume, in rank order — lead as
+    /// bold cards; whatever else the pair reported follows as quiet chips.
+    /// Still cells only for stats actually reported: a token with no cap
+    /// leads with what it HAS (FDV honestly labeled FDV), never an invented
+    /// number.
     @ViewBuilder private var statStrip: some View {
         if let stats {
             let cells: [(String, Double)] = [
-                ("Liquidity", stats.liquidityUsd), ("24h volume", stats.volume24h),
-                ("FDV", stats.fdv), ("Market cap", stats.marketCap),
+                ("Market cap", stats.marketCap), ("24h volume", stats.volume24h),
+                ("FDV", stats.fdv), ("Liquidity", stats.liquidityUsd),
             ].compactMap { label, value in value.map { (label, $0) } }
-            HStack(alignment: .top, spacing: DS.Space.s3) {
-                ForEach(cells, id: \.0) { label, value in
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(LocalizedStringKey(label))
-                            .dsText(.label12).foregroundStyle(DS.textTertiary)
-                            .lineLimit(1)
-                        Text(TokenStats.compact(value))
-                            .dsText(.callout15).foregroundStyle(DS.textPrimary)
-                            .monospacedDigit()
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.7)
+            let lead = cells.prefix(2)
+            let rest = cells.dropFirst(2)
+            VStack(spacing: DS.Space.s3) {
+                if !lead.isEmpty {
+                    HStack(alignment: .top, spacing: DS.Space.s3) {
+                        ForEach(lead, id: \.0) { label, value in
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(LocalizedStringKey(label))
+                                    .dsText(.label12).foregroundStyle(DS.textTertiary)
+                                    .lineLimit(1)
+                                Text(TokenStats.compact(value))
+                                    .dsText(.stat24)
+                                    .foregroundStyle(DS.textPrimary)
+                                    .monospacedDigit()
+                                    .lineLimit(1)
+                                    .minimumScaleFactor(0.7)
+                            }
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(DS.Space.s3)
+                            .background(DS.fillFaint,
+                                        in: RoundedRectangle(cornerRadius: DS.Radius.card,
+                                                             style: .continuous))
+                        }
                     }
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                if !rest.isEmpty {
+                    HStack(spacing: DS.Space.s2) {
+                        ForEach(rest, id: \.0) { label, value in
+                            // Text + Text so the LABEL still localizes — an
+                            // interpolated "\(label) …" passes it verbatim
+                            // (the lead cards' labels translate; these must
+                            // not silently stay English).
+                            (Text(LocalizedStringKey(label))
+                                + Text(verbatim: " \(TokenStats.compact(value))"))
+                                .dsText(.label12).foregroundStyle(DS.textSecondary)
+                                .monospacedDigit()
+                                .lineLimit(1)
+                                .padding(.horizontal, DS.Space.s3)
+                                .padding(.vertical, 6)
+                                .background(DS.fillFaint, in: Capsule(style: .continuous))
+                        }
+                        Spacer(minLength: 0)
+                    }
                 }
             }
-            .padding(DS.Space.s3)
-            .background(DS.fillFaint,
-                        in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
         }
     }
 }

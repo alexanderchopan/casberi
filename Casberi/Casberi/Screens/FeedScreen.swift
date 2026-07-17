@@ -1141,12 +1141,17 @@ struct FeedScreen: View {
             default:
                 // Perishables show their clock everywhere (ruling 2026-07-09):
                 // the next event's countdown and a stream's Live state ride
-                // the row in All too, not just in their source's shape —
-                // and a watched token its 24h pulse (Option A, 2026-07-10).
-                BandRow(thing: thing,
-                        emphasized: thing.id == nextEventID,
-                        live: isLive(thing),
-                        pulse: TokenPulse.shared.pulse(for: thing))
+                // the row in All too, not just in their source's shape. A
+                // watched token whose pulse has landed wears the fat anatomy
+                // (TokenRow, prd §102) everywhere too; until it lands, the
+                // plain band + timestamp — never a faked price.
+                if let pulse = TokenPulse.shared.pulse(for: thing) {
+                    TokenRow(thing: thing, pulse: pulse)
+                } else {
+                    BandRow(thing: thing,
+                            emphasized: thing.id == nextEventID,
+                            live: isLive(thing))
+                }
             }
         }
     }

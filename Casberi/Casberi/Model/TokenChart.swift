@@ -76,6 +76,13 @@ struct TokenChart {
     /// is (dots, straight segments, said out loud) and offers no ranges
     /// (prd 51: a fallback curve stops pretending).
     var coarse: Bool = false
+    /// Market cap / FDV, riding the SAME response the curve came from
+    /// (2026-07-17, the fat-row build): GeckoTerminal's pool attributes and
+    /// Dexscreener's pair both report them; Alchemy's candles carry neither.
+    /// nil = the source didn't say — never derived, so a row simply omits
+    /// the cap instead of inventing one.
+    var marketCap: Double? = nil
+    var fdv: Double? = nil
 
     /// Pulls the token address (and chain) out of a dexscreener link like
     /// `https://dexscreener.com/base/0x…`.
@@ -145,7 +152,9 @@ struct TokenChart {
         }
         guard let first = closes.first, let last = closes.last, first > 0 else { return nil }
         return TokenChart(closes: closes, price: last,
-                          change: (last - first) / first)
+                          change: (last - first) / first,
+                          marketCap: num(pool["market_cap_usd"]),
+                          fdv: num(pool["fdv_usd"]))
     }
 
     /// Dexscreener's chain slugs → Alchemy's network params — the EVM chains
@@ -219,7 +228,8 @@ struct TokenChart {
         // Oldest → newest, the order the chart draws left to right.
         let closes = [ago("h24"), ago("h6"), ago("h1"), ago("m5"), price]
         return TokenChart(closes: closes, price: price, change: pct("h24") / 100,
-                          coarse: true)
+                          coarse: true,
+                          marketCap: num(pair["marketCap"]), fdv: num(pair["fdv"]))
     }
 
     /// The token's most-liquid Dexscreener pair, preferring its own chain —

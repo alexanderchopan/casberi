@@ -495,22 +495,10 @@ struct RootShell: View {
             }
         }
         .sheet(item: $deepLinkThing) { thing in
-            // This chain hangs outside the shell's `.environment(bridges)`
-            // (see the profile-card note below) — hand the store in, or a
-            // token thing's content (whose Watch row registers the Tokens
-            // bridge) mounts storeless. Crashed here 2026-07-17; the read
-            // is optional now too, but the store should really be present.
-            ThingSheetView(thing: thing)
-                .environment(bridges)
+            rootPresented(ThingSheetView(thing: thing))
         }
         .sheet(item: $deepLinkPerson) { person in
-            // These sheets hang OUTSIDE the `.environment(chrome)` above, so
-            // the card is handed chrome explicitly — else its toasts would go
-            // nowhere. (The card survives without it either way; it reads the
-            // environment optionally, precisely because it opens from chains
-            // that may not carry chrome.)
-            SocialProfileCard(profile: person)
-                .environment(chrome)
+            rootPresented(SocialProfileCard(profile: person))
         }
         .fullScreenCover(isPresented: Binding(
             get: { !onboarded }, set: { if !$0 { onboarded = true } }
@@ -527,16 +515,27 @@ struct RootShell: View {
             // down → the four steps → the catalog where those apps live, so
             // step 1 is fulfilled the moment the cover lifts. The record
             // ("All" chip) waits one back-swipe beneath it.
-            HowItWorksSheet(onOpenCatalog: {
+            rootPresented(HowItWorksSheet(onOpenCatalog: {
                 landInCatalog = true
                 onboarded = true
-            })
-            // fullScreenCover hosts its content in a separate presentation
-            // that doesn't reliably inherit `\.locale` from the presenter
-            // (unlike `.sheet`) — reapply so first-run copy honors the
-            // language override too.
-            .environment(\.locale, LanguageStore.shared.locale)
+            }))
         }
+    }
+
+    /// Everything the shell hands its own tree, re-applied to a ROOT-PRESENTED
+    /// sheet or cover — whose content hangs OUTSIDE the chain those modifiers
+    /// wrap (fullScreenCover doesn't even reliably inherit `\.locale`). One
+    /// door for all of it, because per-sheet hand-wiring is exactly how the
+    /// token sheet crashed on 2026-07-17: the thing sheet had been handed
+    /// chrome-adjacent pieces but not bridges, and a required
+    /// `@Environment(BridgeStore.self)` under it was a mount-time fatal. Any
+    /// new root sheet/cover goes through here; any new shell-wide environment
+    /// object gets added HERE, not to individual sheets.
+    private func rootPresented(_ content: some View) -> some View {
+        content
+            .environment(bridges)
+            .environment(chrome)
+            .environment(\.locale, LanguageStore.shared.locale)
     }
 
     /// casberi:// routing — one place, used by onOpenURL and the debug hook.

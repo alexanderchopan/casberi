@@ -55,22 +55,41 @@ enum TokenChartStyle {
 /// The signed percent in a state-fill capsule, naming its window:
 /// "−1.8% · 24h". The fill is the kind-pill grammar (color at low opacity);
 /// the number still carries the sign, so color is never the only voice.
+/// An empty label drops the window ("+4.2%" alone — the feed row's dose,
+/// where every pulse is 24h and saying so per row is noise). `solid` is the
+/// full-ink fill (2026-07-17, the fat-row build) — but only when the change
+/// has a direction: flat keeps the quiet fill, because a loud pill around
+/// "0.0%" would be state-styling with no state to report.
 struct TokenDeltaPill: View {
     let change: Double
     let label: String
     /// The Home row's smaller dose.
     var compact: Bool = false
+    var solid: Bool = false
     @Environment(\.colorScheme) private var scheme
 
     var body: some View {
         let ink = TokenChartStyle.accent(change: change, scheme: scheme)
-        Text("\(TokenChartStyle.changeText(change)) · \(label)")
+        let flat = TokenChartStyle.isFlat(change)
+        let loud = solid && !flat
+        let text = label.isEmpty
+            ? TokenChartStyle.changeText(change)
+            : "\(TokenChartStyle.changeText(change)) · \(label)"
+        Text(text)
             .dsText(compact ? .label12 : .subhead13)
+            .fontWeight(solid ? .bold : .regular)
             .monospacedDigit()
-            .foregroundStyle(ink)
+            // A solid pill must hold on ANY backing — the hero sits on the
+            // sheet's cover wash, where the quiet 15% fill vanished (review
+            // 2026-07-17). Loud = full state ink; solid-but-flat = a neutral
+            // strong fill: still no direction color (honesty §83), just
+            // enough body to survive the wash.
+            .foregroundStyle(loud ? .white : solid ? DS.textPrimary : ink)
             .padding(.horizontal, compact ? 7 : 9)
             .padding(.vertical, compact ? 2 : 3)
-            .background(ink.opacity(scheme == .light ? 0.12 : 0.15),
+            .background(loud ? ink
+                        : solid ? DS.fillStrong
+                        : ink.opacity(scheme == .light ? 0.12 : 0.15),
                         in: Capsule(style: .continuous))
     }
 }
@@ -210,6 +229,11 @@ struct TokenChartView<R: PriceRange, Fallback: View>: View {
     /// a number known locally that no market site can show. nil (older
     /// watches, non-watchlist charts) renders nothing.
     var since: (price: Double, date: Date)? = nil
+    /// The Big money dose (2026-07-17, approved mock): the price leads big,
+    /// centered, in the rounded display voice, with the delta pill beneath
+    /// it, and the range chips move below the plot. False keeps the classic
+    /// left-aligned header row — every existing call site unchanged.
+    var hero: Bool = false
     @ViewBuilder let fallback: () -> Fallback
 
     private enum Phase { case loading, ready, dead }
@@ -225,11 +249,12 @@ struct TokenChartView<R: PriceRange, Fallback: View>: View {
     @Environment(\.colorScheme) private var scheme
 
     init(memoryKey: String, fetch: @escaping (R) async -> TokenChart?,
-         since: (price: Double, date: Date)? = nil,
+         since: (price: Double, date: Date)? = nil, hero: Bool = false,
          @ViewBuilder fallback: @escaping () -> Fallback) {
         self.memoryKey = memoryKey
         self.fetch = fetch
         self.since = since
+        self.hero = hero
         self.fallback = fallback
         _range = State(initialValue: TokenChartStyle.rememberedRange(key: memoryKey))
     }
@@ -270,8 +295,9 @@ struct TokenChartView<R: PriceRange, Fallback: View>: View {
     @ViewBuilder private var loaded: some View {
         if let chart {
             VStack(alignment: .leading, spacing: DS.Space.s3) {
-                header(chart)
+                if hero { heroHeader } else { header(chart) }
                 plot(chart)
+                if hero { heroFooter(chart) }
                 sinceWatchedLine(chart)
                 if let note {
                     Text(note)
@@ -299,6 +325,50 @@ struct TokenChartView<R: PriceRange, Fallback: View>: View {
         }
     }
 
+    /// The Big money header (prd §102, from the approved mock): price
+    /// centered on the ramp's hero rung, the window-naming delta pill
+    /// beneath. Scrubbing still rolls this number; the pill still re-labels
+    /// to the scrubbed window's change.
+    private var heroHeader: some View {
+        VStack(spacing: DS.Space.s2) {
+            Text(TokenChartStyle.priceText(displayPrice))
+                .dsText(.price40)
+                .foregroundStyle(DS.textPrimary)
+                .monospacedDigit()
+                .lineLimit(1)
+                .minimumScaleFactor(0.6)
+                .contentTransition(.numericText())
+                .animation(DS.Motion.standard, value: displayPrice)
+            // Solid: this pill sits on the thing sheet's cover wash, where
+            // the quiet fill was unreadable (user checkpoint 2026-07-17).
+            TokenDeltaPill(change: displayChange, label: range.rawValue, solid: true)
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    /// Hero's under-plot seat for what the classic header carried on its
+    /// right: the range chips, or the coarse fallback's honest label.
+    private func heroFooter(_ chart: TokenChart) -> some View {
+        HStack {
+            Spacer(minLength: 0)
+            chipsOrCoarseLabel(chart)
+            Spacer(minLength: 0)
+        }
+    }
+
+    /// The range chips, or — coarse — the fallback saying what it is (and
+    /// offering no ranges: 7d on five points would be a fake control). ONE
+    /// builder for both the classic header's trailing seat and heroFooter,
+    /// so the two layouts can't drift on the same honesty copy.
+    @ViewBuilder private func chipsOrCoarseLabel(_ chart: TokenChart) -> some View {
+        if chart.coarse {
+            Text("24h · 5 price points")
+                .dsText(.label12).foregroundStyle(DS.textTertiary)
+        } else {
+            rangeChips
+        }
+    }
+
     private func header(_ chart: TokenChart) -> some View {
         HStack(spacing: DS.Space.s2) {
             Text(TokenChartStyle.priceText(displayPrice))
@@ -308,14 +378,7 @@ struct TokenChartView<R: PriceRange, Fallback: View>: View {
                 .animation(DS.Motion.standard, value: displayPrice)
             TokenDeltaPill(change: displayChange, label: range.rawValue)
             Spacer(minLength: DS.Space.s2)
-            if chart.coarse {
-                // The fallback says what it is — and offers no ranges
-                // (7d on five points would be a fake control).
-                Text("24h · 5 price points")
-                    .dsText(.label12).foregroundStyle(DS.textTertiary)
-            } else {
-                rangeChips
-            }
+            chipsOrCoarseLabel(chart)
         }
     }
 
@@ -505,10 +568,10 @@ extension TokenChartView {
     /// sites read exactly as before the view went generic. The memory key
     /// keeps its historical spelling: remembered ranges survive the change.
     init(chain: String, address: String,
-         since: (price: Double, date: Date)? = nil,
+         since: (price: Double, date: Date)? = nil, hero: Bool = false,
          @ViewBuilder fallback: @escaping () -> Fallback) where R == TokenRange {
         self.init(memoryKey: "token.range.\(chain).\(address)",
                   fetch: { await TokenChart.fetch(chain: chain, address: address, range: $0) },
-                  since: since, fallback: fallback)
+                  since: since, hero: hero, fallback: fallback)
     }
 }

@@ -4159,3 +4159,37 @@ widget with settings.
 - The composition doc still carries the full sectioned lane; collapse is
   purely GenComingUp's draw decision — `-comingUpProbe` (which logs the
   uncapped lane) and the flat-render crash law are untouched.
+
+## 102. Token surfaces go Big money — the sheet re-ranks, the row gets fat (2026-07-17) — BUILT
+
+User asked "can we show market cap on our tokens?", then picked from six
+mockups (three sheet, three feed; "Cash App meets Casberi"). Approved: the
+**Big money** sheet and **fat rows**. Explicitly REJECTED: the top-mover hero
+card on the Tokens view ("user can go to home feed for that and it just gets
+in the way") and the tile shelf (duplicates Home's pinned Tokens tile; cards
+would orphan the rows' long-press verbs).
+
+- **The sheet (Big money):** `TokenChartView` grew a `hero` dose (only the
+  token thing sheet passes it) — price centered at 40pt rounded bold (a
+  deliberate hero rung above the ramp's 34; the one place it's allowed),
+  delta pill beneath it, range chips move below the plot. The stat strip
+  re-ranked: **market cap and 24h volume lead as two bold cards** (24pt
+  rounded), FDV and liquidity demote to quiet chips; still cells only for
+  stats the pair reported — a capless token leads with FDV, labeled FDV.
+  Watch became one full-width tint capsule; the settled "Watching" state
+  wears the same capsule quiet, as a label not a control.
+- **The feed (fat rows):** a pulsed token row steps out of the band anatomy
+  (supersedes Option A's sparkline-in-the-band, prd 2026-07-10): 38pt coin
+  (TokenWatch.add now stamps the resolve's logo onto previewImageURL), name
+  over "SYMBOL · $94.1B cap" vitals, live price in 16pt rounded bold over a
+  **solid** state pill. Flat keeps the quiet fill and no direction (honesty
+  §83). The market size rides the SAME fetch the pulse already made —
+  `TokenChart` captures `market_cap_usd`/`fdv_usd` off GeckoTerminal's pools
+  response and `marketCap`/`fdv` off the Dexscreener pair; zero new
+  requests. A pulse-less row keeps the plain band + timestamp.
+- **Crash paid for:** any token thing opened via the deep-link/`-openThing`
+  sheet crashed at mount since 2026-07-15 — `TokenChartContent`'s required
+  `@Environment(BridgeStore.self)` met the `deepLinkThing` sheet chain that
+  hangs outside RootShell's `.environment(bridges)`. Fixed both ways: the
+  sheet now hands the store in, and the read is optional (missing store only
+  skips bridge registration on Watch).
