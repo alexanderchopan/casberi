@@ -69,7 +69,7 @@ enum BridgeCatalog {
         Offer(name: "Gemini",      tagline: "Import your chats, keep them findable", group: "Agent",     connectable: true,
               summary: "A one-time import of your Gemini history via Google Takeout, kept searchable alongside your things. (No live read — Google doesn't offer one; this is your export, backfilled.)",
               needsSetup: true),
-        Offer(name: "Tokens",      tagline: "Track any token",                       group: "Wallet",    connectable: true,
+        Offer(name: "Tokens",      tagline: "Track any token",                       group: "Markets",   connectable: true,
               summary: "Watch any token — paste its address or a link and its live price chart lands in your feed, drawn on your iPhone. Public price data only; nothing about you leaves the device.",
               needsSetup: true),
         Offer(name: "Kalshi",      tagline: "Watch real-event odds",                 group: "Markets",   connectable: true,
@@ -86,7 +86,7 @@ enum BridgeCatalog {
         Offer(name: "Peer",        tagline: "Your Peer trades, as they settle",      group: "Markets",   connectable: true,
               summary: "Peer trades settle onchain into your own wallet — connect and each fill lands in your feed as it settles: which token, how much, and the payment app that paid for it (\"Bought 25 USDC with Venmo on Peer\"). Read from the public chain for the wallets you already watch; Peer's zero-knowledge design keeps your Venmo or PayPal side private, so the chain never shows it and neither does Casberi. No account, no key, read-only: nothing here ever starts a trade.",
               needsSetup: true),
-        Offer(name: "GeckoTerminal", tagline: "Trending tokens, per chain",          group: "Onchain",   connectable: true,
+        Offer(name: "GeckoTerminal", tagline: "Trending tokens, per chain",          group: "Markets",   connectable: true,
               summary: "Pick the chains you care about and the tokens trending on each — GeckoTerminal's own ranking, by 24-hour volume and price move — land in your feed as links. No account, no key: fetched straight from GeckoTerminal's public API by this iPhone. Read-only public price data; nothing here buys, sells, or trades. Each trending row opens to its live on-device chart.",
               needsSetup: true),
         Offer(name: "OpenSea",     tagline: "New NFT drops in your feed",            group: "NFTs",      connectable: true,
@@ -174,10 +174,10 @@ enum BridgeCatalog {
         Offer(name: "RSS",         tagline: "Any site with a feed",                  group: "Reading",   connectable: true,
               summary: "Follow any site that publishes a feed — new posts land in your feed as links, fetched by this iPhone directly. No account, no algorithm in between.",
               needsSetup: true),
-        // Onchain, not Social (user ruling 2026-07-14, matching the website's
-        // shelving): Farcaster is the onchain network — it browses with
-        // Wallet/Tokens/OpenSea, and its detail eyebrow says so.
-        Offer(name: "Farcaster",   tagline: "Track any Farcaster account",           group: "Onchain",   connectable: true,
+        // Social, with Bluesky (user ruling 2026-07-17, reversing the
+        // 2026-07-14 "onchain network" shelving): Farcaster is a social account
+        // first — it browses beside Bluesky, and its detail eyebrow says so.
+        Offer(name: "Farcaster",   tagline: "Track any Farcaster account",           group: "Network",   connectable: true,
               summary: "An open social protocol — casts are public, so this connects with just a username: your own or anyone's, plus /channels by name. An account's likes and mentions can land too. No password, nothing stored but the name.",
               needsSetup: true),
         Offer(name: "Bluesky",     tagline: "Track any Bluesky account",             group: "Network",   connectable: true,

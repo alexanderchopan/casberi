@@ -44,7 +44,12 @@ struct AppsScreen: View {
     // never vertical section headers)
 
     private static let categories: [(name: String, exemplar: String, groups: Set<String>)] = [
-        ("Onchain", "Wallet",      ["Wallet", "NFTs", "Onchain"]),
+        // The finance pair LEADS the catalog (user ruling 2026-07-17): the
+        // "Onchain" category is dissolved — Markets is the front door, gathering
+        // the watch-a-market bridges (Tokens, OpenSea, GeckoTerminal join
+        // Kalshi, Stocktwits, Peer); Wallet stands on its own right behind it.
+        ("Markets", "Kalshi",      ["Markets", "NFTs"]),
+        ("Wallet",  "Wallet",      ["Wallet"]),
         ("Life",    "Photos",      ["Photos", "Schedule", "Fitness"]),
         ("Home",    "HomeKit",     ["Home"]),
         ("Notes",   "Apple Notes", ["Notes"]),
@@ -55,10 +60,6 @@ struct AppsScreen: View {
         ("Reading", "Readwise",    ["Reading", "Saves"]),
         ("Media",   "Spotify",     ["Watching", "Listening", "Games", "Images"]),
         ("Shopping", "Shopify",    ["Shopping"]),
-        // Markets rides LAST (user ruling 2026-07-13, tightened same day):
-        // Onchain leads the catalog; prediction markets are a tail interest,
-        // not the front door — the shelf closes the store.
-        ("Markets", "Kalshi",      ["Markets"]),
     ]
 
     private func category(of offer: BridgeCatalog.Offer) -> String {

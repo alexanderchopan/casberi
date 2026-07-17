@@ -1,4 +1,11 @@
-// Solana names (SNS) promo — live-animated. node render.js clip-solana-live.html --size=1080x1920
+// Solana promo — live-animated. node render.js clip-solana-live.html --size=1080x1920
+// Supersedes the names-only cut (2026-07-16): prd §86 shipped Solana ACTIVITY,
+// so the old beat 4 ("Holdings, not transfers") is now false and is gone.
+// Every number is measured, from Model/SolanaActivity.swift + Model/SNS.swift:
+//   toly.sol → 86xCnPeV… (verified live against the Bonfida proxy SNS.swift calls)
+//   2 requests/wallet vs the EVM path's 10 (5 chains × 2 directions)
+//   6 of toly.sol's 10 most recent signatures moved nothing for him
+//   0.00203928 SOL = the rent-exempt minimum; nativeNoiseFloor = 0.005
 const fs=require('fs'), path=require('path');
 const AVD='/Users/alexanderchopan/Developer/casberi/scratchpad/ens';
 const av=n=>'data:image/png;base64,'+fs.readFileSync(path.join(AVD,n+'.png')).toString('base64');
@@ -6,12 +13,25 @@ const AC='#9945FF', GR='#14F195', HEX='#627EEA';
 const BEATS=[
   {kick:'NAME',      head:'Type a name,\nnot a pubkey.', accent:AC},
   {kick:'RESOLVE',   head:'Straight to\nthe pubkey.',     accent:AC},
-  {kick:'FAMILIES',  head:'A different\nfamily.',          accent:AC},
-  {kick:'HONEST',    head:'Holdings,\nnot transfers.',     accent:AC},
+  {kick:'ACTIVITY',  head:'Two calls,\nnot ten.',          accent:AC},
+  {kick:'NEWS',      head:'Six of ten\nmoved nothing.',    accent:AC},
   {kick:'WATCHLIST', head:'One list,\nboth chains.',       accent:AC},
 ];
 const INTRO=0.45,BEAT=2.0,OUT_AT=INTRO+BEATS.length*BEAT,TOTAL=OUT_AT+1.9;
 const DATA=BEATS.map((b,i)=>({kick:(i+1<10?'0':'')+(i+1)+' · '+b.kick,head:b.head,accent:b.accent}));
+// SolanaActivity.title() formats — "Swapped a → b on venue" / "Received a" / "Sent a"
+const SIGS=[
+  ['mention','Named in someone else’s PumpSwap buy'],
+  ['move','Swapped 299.9 USDC → 1.4 SOL on PumpSwap'],
+  ['mention','Named in someone else’s PumpSwap buy'],
+  ['mention','Nothing moved for this wallet'],
+  ['move','Sent 12.5 SOL'],
+  ['mention','Nothing moved for this wallet'],
+  ['mention','Named in someone else’s swap'],
+  ['move','Received 1,200 USDC'],
+  ['mention','Nothing moved for this wallet'],
+  ['move','Swapped 0.8 SOL → 140 JUP on Jupiter'],
+];
 
 const html=`<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><style>
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;transition:none!important}
@@ -23,7 +43,7 @@ html,body{width:1080px;height:1920px;overflow:hidden;background:#EEEAE1;font-fam
 .rule{position:absolute;left:70px;right:70px;top:126px;height:3px;background:#14110d;transform-origin:left;}
 .wm{position:absolute;right:20px;top:150px;font-size:560px;line-height:.8;font-weight:800;letter-spacing:-.04em;opacity:.08;will-change:opacity,transform;}
 .kick{position:absolute;left:74px;top:238px;font-size:32px;letter-spacing:.14em;font-weight:600;will-change:transform,opacity;}
-.head{position:absolute;left:70px;top:284px;right:70px;font-size:126px;line-height:.94;font-weight:800;letter-spacing:-.045em;color:#14110d;white-space:pre-line;will-change:transform,opacity;}
+.head{position:absolute;left:70px;top:284px;right:70px;font-size:120px;line-height:.94;font-weight:800;letter-spacing:-.045em;color:#14110d;white-space:pre-line;will-change:transform,opacity;}
 .foot{position:absolute;left:74px;right:74px;bottom:70px;display:flex;justify-content:space-between;font-size:26px;letter-spacing:.12em;color:#14110d;font-weight:600;}
 .wipe{position:absolute;top:-12%;left:0;width:135%;height:124%;transform:skewX(-9deg) translateX(160%);will-change:transform;}
 .comp{position:absolute;left:120px;top:820px;width:840px;height:820px;border-radius:34px;overflow:hidden;box-shadow:34px 40px 0 rgba(20,17,13,.13), inset 0 0 0 1px rgba(255,255,255,.05), 0 30px 70px rgba(20,17,13,.26);opacity:0;will-change:transform,opacity;transform-origin:center top;padding:52px;color:#fff;background:#0d0a16;}
@@ -39,19 +59,28 @@ html,body{width:1080px;height:1920px;overflow:hidden;background:#EEEAE1;font-fam
 .rn{font-size:46px;font-weight:750;} .ra{font-size:26px;color:rgba(255,255,255,.5);margin-top:8px;word-break:break-all;}
 .rok{display:inline-flex;align-items:center;gap:12px;margin-top:28px;font-size:28px;color:${GR};font-weight:650;will-change:opacity,transform;}
 .rok i{width:36px;height:36px;border-radius:50%;background:${GR};color:#04140a;display:flex;align-items:center;justify-content:center;font-size:23px;font-style:normal;}
-/* families */
-.fam{background:#07050d;border-radius:22px;padding:28px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.08);margin-bottom:22px;will-change:opacity,transform;}
-.fline{display:flex;align-items:center;gap:16px;font-size:31px;font-weight:700;flex-wrap:wrap;}
-.fline em{font-style:normal;color:rgba(255,255,255,.4);font-size:24px;letter-spacing:.08em;}
-.fline .out{font-family:ui-monospace,"SF Mono","Menlo",monospace;font-size:26px;font-weight:600;}
-.tag{font-size:21px;font-weight:800;padding:6px 14px;border-radius:100px;margin-left:auto;}
-.fnote{font-size:27px;color:rgba(255,255,255,.5);line-height:1.45;will-change:opacity;}
-/* honest */
-.hrow{display:flex;align-items:center;gap:22px;padding:24px 0;font-size:34px;font-weight:600;border-top:2px solid rgba(255,255,255,.07);will-change:opacity,transform;}
-.hrow:first-of-type{border-top:none;}
-.hrow .k{width:150px;font-weight:800;} .hrow .v{margin-left:auto;font-size:28px;}
-.yes{color:${GR};} .no{color:rgba(255,255,255,.35);}
-.hnote{margin-top:30px;font-size:27px;color:rgba(255,255,255,.5);line-height:1.45;will-change:opacity;}
+/* activity — request bars */
+.bar{margin-bottom:34px;will-change:opacity,transform;}
+.bl{display:flex;align-items:baseline;font-size:34px;font-weight:650;margin-bottom:14px;}
+.bl .cnt{margin-left:auto;font-size:30px;font-weight:800;}
+.bl em{font-style:normal;font-size:24px;color:rgba(255,255,255,.4);margin-left:14px;}
+.btrack{height:30px;border-radius:100px;background:rgba(255,255,255,.08);overflow:hidden;}
+.bfill{height:100%;border-radius:100px;width:0;}
+.anote{margin-top:24px;font-size:26px;color:rgba(255,255,255,.5);line-height:1.45;will-change:opacity;}
+.anote b{color:${GR};}
+.brk{background:#07050d;border-radius:20px;padding:8px 28px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.08);}
+.brow{display:flex;align-items:center;gap:22px;padding:22px 0;border-top:2px solid rgba(255,255,255,.07);font-size:27px;will-change:opacity,transform;}
+.brow:first-child{border-top:none;}
+.bn{width:44px;height:44px;border-radius:12px;flex:none;background:rgba(20,241,149,.14);color:${GR};display:flex;align-items:center;justify-content:center;font-weight:800;font-size:24px;}
+.brow em{font-style:normal;color:rgba(255,255,255,.4);font-size:23px;}
+.bt{margin-left:auto;color:${GR};font-weight:700;font-size:25px;}
+/* news — signature rows */
+.sgrid{display:flex;flex-direction:column;gap:7px;}
+.sig{display:flex;align-items:center;gap:18px;padding:9px 18px;border-radius:12px;background:rgba(255,255,255,.05);font-size:22px;will-change:opacity,transform;}
+.sig .sd{width:11px;height:11px;border-radius:50%;flex:none;}
+.sig .stx{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.nnote{margin-top:22px;font-size:24px;color:rgba(255,255,255,.5);line-height:1.45;will-change:opacity;}
+.nnote b{color:#fff;}
 /* watchlist */
 .wrow{display:flex;align-items:center;gap:26px;padding:28px 0;border-top:2px solid rgba(255,255,255,.07);will-change:opacity,transform;}
 .wrow:first-of-type{border-top:none;}
@@ -64,7 +93,7 @@ html,body{width:1080px;height:1920px;overflow:hidden;background:#EEEAE1;font-fam
 </style></head><body>
 <div class="stage">
   <div class="grain"></div>
-  <div class="mast mono"><span>CASBERI</span><span>SOLANA NAMES</span></div>
+  <div class="mast mono"><span>CASBERI</span><span>SOLANA</span></div>
   <div class="rule" id="rule"></div>
   <div class="wm" id="wm">01</div>
 
@@ -82,16 +111,28 @@ html,body{width:1080px;height:1920px;overflow:hidden;background:#EEEAE1;font-fam
   </div>
 
   <div class="comp" id="comp2">
-    <div class="fam" data-i="0"><div class="fline"><span>vitalik.eth</span><em>→ ENS →</em><span class="out" style="color:${HEX}">0xd8dA…6045</span><span class="tag" style="background:${HEX}33;color:#9db4f5">hex</span></div></div>
-    <div class="fam" data-i="1"><div class="fline"><span>toly.sol</span><em>→ SNS →</em><span class="out" style="color:${GR}">86xCnPeV…2MMY</span><span class="tag" style="background:${GR}26;color:${GR}">base58</span></div></div>
-    <div class="fnote" id="fnote">Basenames came free — they're ENS subnames, so the resolver just follows them. This one doesn't. Different resolver, different alphabet: a <b style="color:${HEX}">0x</b> address can never be base58.</div>
+    <div class="shd mono">REQUESTS PER WALLET, PER PASS</div>
+    <div class="bar" data-i="0">
+      <div class="bl"><span style="color:${HEX}">Ethereum &amp; friends</span><em>5 chains × 2 directions</em><span class="cnt" id="c0" style="color:${HEX}">0</span></div>
+      <div class="btrack"><div class="bfill" id="b0" style="background:${HEX}" data-w="100"></div></div>
+    </div>
+    <div class="bar" data-i="1">
+      <div class="bl"><span style="color:${GR}">Solana</span><em>batched JSON-RPC</em><span class="cnt" id="c1" style="color:${GR}">0</span></div>
+      <div class="btrack"><div class="bfill" id="b1" style="background:${GR}" data-w="20"></div></div>
+    </div>
+    <div class="brk">
+      <div class="brow" data-i="0"><span class="bn mono">1</span><span>getSignaturesForAddress</span></div>
+      <div class="brow" data-i="1"><span class="bn mono">1</span><span>getTransaction <em>× 10, batched</em></span><span class="bt mono">~0.4s</span></div>
+    </div>
+    <div class="anote" id="anote">Solana's RPC takes an array of calls, so <b>ten whole transactions arrive in one request</b>. The chain everyone assumed would cost more costs less.</div>
   </div>
 
   <div class="comp" id="comp3">
-    <div class="shd mono">WHAT EACH ADDRESS READS</div>
-    <div class="hrow" data-i="0"><span class="k" style="color:${HEX}">hex</span><span>Holdings</span><span class="v yes">✓ and transfers</span></div>
-    <div class="hrow" data-i="1"><span class="k" style="color:${GR}">base58</span><span>Holdings</span><span class="v no">— holdings only</span></div>
-    <div class="hnote" id="hnote">Asset transfers are EVM-only, so a Solana wallet leads with what it holds. The app knows which kind it got, and says so — no empty tab pretending to load.</div>
+    <div class="shd mono">TOLY.SOL · LAST TEN SIGNATURES</div>
+    <div class="sgrid">
+      ${SIGS.map((s,i)=>`<div class="sig" data-i="${i}" data-k="${s[0]}"><span class="sd"></span><span class="stx">${s[1]}</span></div>`).join('')}
+    </div>
+    <div class="nnote" id="nnote">A signature means you were <b>named</b>, not that anything moved. Six here were someone else's trade. The app drops what has no legs — and keeps what you signed.</div>
   </div>
 
   <div class="comp" id="comp4">
@@ -141,11 +182,27 @@ function animateComp(i,p,t){
     document.getElementById('rident').style.transform='scale('+(0.5+0.5*back(clamp01((p-0.15)/0.4)))+') rotate('+(p*40)+'deg)';
     const ok=document.getElementById('rok');const okp=clamp01((p-0.55)/0.3);ok.style.opacity=okp;ok.style.transform='translateY('+((1-easeOut(okp))*14)+'px)';
   } else if(i===2){
-    document.querySelectorAll('#comp2 .fam').forEach((s,k)=>{const cp=clamp01((p-k*0.16)/0.35);s.style.opacity=cp;s.style.transform='translateX('+((1-easeOut(cp))*-32)+'px)';});
-    document.getElementById('fnote').style.opacity=clamp01((p-0.45)/0.3);
+    document.querySelectorAll('#comp2 .bar').forEach((s,k)=>{const cp=clamp01((p-k*0.14)/0.32);s.style.opacity=cp;s.style.transform='translateX('+((1-easeOut(cp))*-30)+'px)';});
+    [[0,10],[1,2]].forEach(([k,target])=>{
+      const gp=clamp01((p-0.12-k*0.14)/0.4);
+      const f=document.getElementById('b'+k);f.style.width=(+f.dataset.w*easeOut(gp))+'%';
+      document.getElementById('c'+k).textContent=Math.round(target*easeOut(gp));
+    });
+    document.querySelectorAll('#comp2 .brow').forEach((r,k)=>{const rp=clamp01((p-0.5-k*0.1)/0.28);r.style.opacity=rp;r.style.transform='translateX('+((1-easeOut(rp))*-24)+'px)';});
+    document.getElementById('anote').style.opacity=clamp01((p-0.72)/0.26);
   } else if(i===3){
-    document.querySelectorAll('#comp3 .hrow').forEach((r,k)=>{const rp=clamp01((p-k*0.16)/0.35);r.style.opacity=rp;r.style.transform='translateX('+((1-easeOut(rp))*-28)+'px)';});
-    document.getElementById('hnote').style.opacity=clamp01((p-0.5)/0.3);
+    document.querySelectorAll('#comp3 .sig').forEach((r,k)=>{
+      const rp=clamp01((p-k*0.045)/0.22);r.style.opacity=rp;r.style.transform='translateX('+((1-easeOut(rp))*-26)+'px)';
+      const mention=r.dataset.k==='mention';
+      const fade=clamp01((p-0.6)/0.25);            // the filter sweeps through
+      const dim=mention?(1-0.72*fade):1;
+      r.style.opacity=rp*dim;
+      const dot=r.querySelector('.sd');
+      dot.style.background=mention?'rgba(255,255,255,.25)':'${GR}';
+      r.style.background=mention?'rgba(255,255,255,.05)':('rgba(20,241,149,'+(0.05+0.1*fade)+')');
+      r.querySelector('.stx').style.textDecoration=(mention&&fade>0.5)?'line-through':'none';
+    });
+    document.getElementById('nnote').style.opacity=clamp01((p-0.72)/0.25);
   } else if(i===4){
     document.querySelectorAll('#comp4 .wrow').forEach((r,k)=>{const rp=clamp01((p-k*0.15)/0.4);r.style.opacity=rp;r.style.transform='translateX('+((1-easeOut(rp))*-34)+'px)';});
   }
