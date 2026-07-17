@@ -27,13 +27,9 @@ struct WalletScreen: View {
     @Bindable private var chainStore = WalletChainStore.shared
     @State private var newAddress = ""
     @FocusState private var addressFieldFocused: Bool
-    /// Holdings render through the gen-UI engine — allocation is magnitude, so
-    /// the treemap is its native shape (holdings are SYNTHESIS, not things).
-    /// Both holdings and activity are live from Alchemy — no server.
     @Environment(\.modelContext) private var modelContext
     @Environment(BridgeStore.self) private var store
     @State private var syncing = false
-    @State private var holdings = GenStream()
     /// The combined "bundle" treemap across every watched wallet (2026-07-15) —
     /// shown alongside the per-wallet charts when more than one is watched.
     @State private var portfolioHoldings = GenStream()
@@ -72,11 +68,11 @@ struct WalletScreen: View {
     /// had no way to ever become "Cold" or "Trading". Tap the row's name.
     @State private var renameTarget: WalletStore.WatchedAddress.ID?
     @State private var renameDraft = ""
-    /// Each watched wallet's own USD total, watch order (2026-07-15) — feeds
-    /// the allocation bar answering "where is my stuff", not just "what's it
-    /// worth". Same fetch `holdingsChart()` already makes internally; kept
-    /// here too since that call discards the per-wallet totals after
-    /// building its treemap string.
+    /// Each watched wallet's own USD total, watch order (2026-07-15) — the
+    /// one holdings fetch behind every surface here: the per-wallet treemap
+    /// cards, the identity legend, the allocation bar, and the row sublines
+    /// (2026-07-17; the treemaps used to ride a separate `holdingsChart()`
+    /// doc that ran the same per-wallet fetch a second time).
     @State private var walletTotals: [WalletIngest.HoldingsGroup] = []
     /// Whether the Chains row is expanded (2026-07-15) — collapsed by
     /// default to a one-line summary ("Ethereum, Base +3"); a set-once
@@ -116,17 +112,16 @@ struct WalletScreen: View {
                 if wallet.addresses.count > 1, !portfolioHoldings.els.isEmpty {
                     portfolioSection.listRowSeparator(.hidden)
                 }
-                if !holdings.els.isEmpty {
+                if !walletTotals.isEmpty {
                     Section {
                         // A face+name legend above the stack (2026-07-15) —
                         // scan the per-wallet treemaps by identity, the same
                         // mark the rows and combined sheet already wear,
                         // rather than reading each card's text label.
                         if walletTotals.count > 1 { walletIdentityLegend }
-                        GenRender(id: "root", els: holdings.els)
-                            .listRowBackground(Color.clear)
-                            .listRowSeparator(.hidden)
-                            .listRowInsets(EdgeInsets())
+                        ForEach(walletTotals, id: \.address) { group in
+                            holdingsMap(group)
+                        }
                     }
                     .listRowSeparator(.hidden)
                 }
@@ -351,6 +346,58 @@ struct WalletScreen: View {
                                   bottom: 0, trailing: DS.Space.s4))
     }
 
+    // MARK: - Holdings treemaps (per wallet)
+
+    /// One wallet's treemap card — holdings render through the gen-UI engine
+    /// (allocation is magnitude, so the treemap is its native shape; holdings
+    /// are SYNTHESIS, not things), one card per wallet so each can wear its
+    /// own Home control (2026-07-17). The pin sits in the header's free
+    /// trailing corner — ON the very thing pinning places on Home — because
+    /// the Watching section's pin lives in the admin cluster at the bottom,
+    /// and a fresh connect buries it under exactly this card plus the
+    /// activity it just landed; nothing at the moment of intent said Home
+    /// exists. Same per-address verb as the row pin and the swipe.
+    private func holdingsMap(_ group: WalletIngest.HoldingsGroup) -> some View {
+        let doc = WalletIngest.groupDocument(group).joined(separator: "\n")
+        return GenRender(id: "root", els: GenParser.parse(prefix: doc[...], isComplete: true))
+            .overlay(alignment: .topTrailing) {
+                if let addr = group.address,
+                   let entry = wallet.addresses.first(where: {
+                       $0.address.lowercased() == addr.lowercased()
+                   }) {
+                    mapPinControl(entry)
+                }
+            }
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
+            .listRowInsets(EdgeInsets())
+    }
+
+    /// The card's Home verb, labeled — a bare corner glyph would be one more
+    /// thing to decode, and discoverability is this control's whole job.
+    /// Same grammar as the NFT strip's "On Home · remove" line below it.
+    private func mapPinControl(_ entry: WalletStore.WatchedAddress) -> some View {
+        Button {
+            DSHaptic.tap()
+            wallet.togglePin(entry.id)
+        } label: {
+            HStack(spacing: DS.Space.s1) {
+                Image(systemName: entry.pinnedToHome ? "pin.fill" : "pin")
+                    .font(.system(size: 11, weight: .medium))
+                Text(entry.pinnedToHome ? "On Home" : "Pin to Home")
+                    .dsText(.subhead13)
+            }
+            .foregroundStyle(entry.pinnedToHome ? DS.tint : DS.textSecondary)
+            .padding(.vertical, DS.Space.s1)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        // Matches GenTagMap's own header inset (top s4, horizontal s4), so
+        // the control sits on the title line, across from the wallet's name.
+        .padding(.top, DS.Space.s4)
+        .padding(.trailing, DS.Space.s4)
+    }
+
     // MARK: - Value history (2026-07-14)
 
     /// A row's sampled history — nil until the wallet has ≥2 sampled points
@@ -473,12 +520,14 @@ struct WalletScreen: View {
             // slowest one, not the sum (transfers + holdings + NFTs each
             // chain their own round-trips).
             async let refreshed = WalletIngest.refresh(context: modelContext)
-            async let holdingsDoc = WalletIngest.holdingsChart()
             async let portfolioDoc = WalletIngest.combinedHoldings()
             async let nfts = WalletIngest.nftsByWallet()
+            // One fetch feeds every holdings surface now — the treemap cards,
+            // the legend, the allocation bar, the row sublines (2026-07-17;
+            // holdingsChart() ran the same per-wallet fetch a second time
+            // just to build the doc string this screen no longer renders).
             async let totals = WalletIngest.topHoldingsByWallet()
             let added = await refreshed
-            if let doc = await holdingsDoc { holdings.paint(doc) }
             walletTotals = await totals
             // The combined bundle — total + one merged treemap (nil unless
             // more than one wallet is watched).
