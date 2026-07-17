@@ -72,6 +72,9 @@ struct Composer: View {
     /// Flips true just after the bubble opens so the ask chips stagger in
     /// rather than snapping (delight, 2026-07-12).
     @State private var chipsAppeared = false
+    /// The date NSDataDetector found in the draft (nil when none) — feeds the
+    /// Send-to band's receipt line and Calendar's calshow timestamp.
+    @State private var detectedDate: Date?
     @FocusState private var fieldFocused: Bool
     @State private var answerStream = GenStream()
     /// The composer is a CONVERSATION now (2026-07-12): each answered ask
@@ -354,10 +357,10 @@ struct Composer: View {
                     .padding(.horizontal, DS.Space.s4)
                     .padding(.top, DS.Space.s2)
                     .settleIn()
-                // The pairing line — teaches the sheet's dual nature (ask, or
-                // write and leave with it) and keeps the greeting from reading
-                // as an orphan label.
-                Text("Ask about your things — or type, then open it in another app.")
+                // The pairing line — teaches the sheet's dual nature (ask a
+                // question, or write a fact and send it out) and keeps the
+                // greeting from reading as an orphan label.
+                Text("Ask about your things, or write something and send it to another app.")
                     .dsText(.subhead13)
                     .foregroundStyle(DS.textTertiary)
                     .padding(.horizontal, DS.Space.s4)
@@ -851,27 +854,40 @@ struct Composer: View {
                     if prefilled { prefilled = false }
                     else if new.count - old.count > 8 { pasted = true }
                     if new.isEmpty { pasted = false }
+                    detectDraftDate()
                 }
                 .lineLimit(1...5)
 
             // The send dot is ALWAYS present — grey and waiting when the field
             // is empty (tap = focus the field), springing to tint the moment
             // there's something to send. A visible affordance beats a control
-            // that pops out of nowhere (v2 pass, 2026-07-12).
+            // that pops out of nowhere (v2 pass, 2026-07-12). With typed text
+            // it wears the word "Ask" (2026-07-16): the verb was invisible,
+            // and "does typing save?" was a real question — the label answers
+            // it. A live recording keeps the bare arrow: stopping SAVES the
+            // voice note, and an "Ask" label there would lie.
             Button {
                 if hasDraft || isRecording { commit() } else { fieldFocused = true }
             } label: {
-                Image(systemName: "arrow.up")
-                    .font(.system(size: 15, weight: .bold))
-                    .foregroundStyle(hasDraft || isRecording ? .white : DS.textTertiary)
-                    .frame(width: 32, height: 32)
-                    .background(hasDraft || isRecording ? AnyShapeStyle(DS.tint)
-                                                        : AnyShapeStyle(DS.fillFaint),
-                                in: Circle())
-                    .symbolEffect(.bounce, value: hasDraft || isRecording)
+                HStack(spacing: DS.Space.s1) {
+                    if hasDraft && !isRecording {
+                        Text("Ask")
+                            .dsText(.label12).fontWeight(.semibold)
+                    }
+                    Image(systemName: "arrow.up")
+                        .font(.system(size: hasDraft && !isRecording ? 12 : 15, weight: .bold))
+                        .symbolEffect(.bounce, value: hasDraft || isRecording)
+                }
+                .foregroundStyle(hasDraft || isRecording ? .white : DS.textTertiary)
+                .padding(.horizontal, hasDraft && !isRecording ? DS.Space.s3 : 0)
+                .frame(minWidth: 32)
+                .frame(height: 32)
+                .background(hasDraft || isRecording ? AnyShapeStyle(DS.tint)
+                                                    : AnyShapeStyle(DS.fillFaint),
+                            in: Capsule(style: .continuous))
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("Send")
+            .accessibilityLabel(hasDraft && !isRecording ? "Ask" : "Send")
         }
         .padding(.leading, DS.Space.s2)
         .padding(.trailing, DS.Space.s2)
@@ -886,49 +902,84 @@ struct Composer: View {
         .padding(.bottom, DS.Space.s3)
     }
 
-    // MARK: - Take it with you (the typed text leaves with the jump)
+    // MARK: - Send to (the typed text leaves with the jump)
 
-    /// The "take it with you" chips (2026-07-16, replacing the tool-tile
-    /// grid): shown the moment there's typed text, in the ask chips' slot —
-    /// the two bands are the field's two exits, and only one is ever visible.
-    /// The draft rides the jump (mail/message body, search query; Notes via
-    /// the clipboard, said plainly by the flash). The leading caption IS the
-    /// teach — "Open in" + app-name chips reads as one sentence, concrete
-    /// (user, 2026-07-16: "take it with you" was too abstract).
+    /// A question is the Ask button's job — the Send-to band sits out so the
+    /// one honest exit is obvious. Conservative: a trailing "?" or a leading
+    /// question word.
+    private var draftIsQuestion: Bool {
+        let text = draft.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        if text.hasSuffix("?") { return true }
+        let first = text.split(separator: " ").first.map(String.init) ?? ""
+        return ["what", "who", "when", "where", "why", "how", "how's",
+                "did", "does", "do", "is", "are", "can", "show", "find"].contains(first)
+    }
+
+    /// The "Send to" chips (2026-07-16, third form of this band — see
+    /// TakeTool): shown the moment there's typed text that isn't a question,
+    /// in the ask chips' slot — the two bands are the field's two exits, and
+    /// only one is ever visible. What you typed is a FACT bound for another
+    /// app; the text rides the jump (Messages/Mail body, Google query,
+    /// Calendar at the detected date) or the clipboard where no URL carries
+    /// it (the flash says so). A found date earns a receipt line — proof the
+    /// Calendar jump will land on the right day.
     @ViewBuilder
     private var takeChips: some View {
-        if isOpen && hasDraft && !answering && !isRecording, proposal == nil {
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: DS.Space.s2) {
-                    Text("Open in")
-                        .dsText(.subhead13)
-                        .foregroundStyle(DS.textTertiary)
-                    ForEach(TakeTool.all) { tool in
-                        Button { runTake(tool) } label: {
-                            Chip(text: tool.label, style: .neutral, glyph: tool.glyph)
+        if isOpen && hasDraft && !answering && !isRecording, proposal == nil,
+           !draftIsQuestion {
+            VStack(alignment: .leading, spacing: DS.Space.s1) {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: DS.Space.s2) {
+                        Text("Send to")
+                            .dsText(.subhead13)
+                            .foregroundStyle(DS.textTertiary)
+                        ForEach(TakeTool.all) { tool in
+                            Button { runTake(tool) } label: {
+                                Chip(text: tool.label, style: .neutral, glyph: tool.glyph)
+                            }
+                            .buttonStyle(.plain)
                         }
-                        .buttonStyle(.plain)
                     }
+                    .padding(.horizontal, DS.Space.s4)
                 }
-                .padding(.horizontal, DS.Space.s4)
+                if let date = detectedDate {
+                    Text("Found a time: \(date.formatted(.dateTime.weekday(.wide).month(.abbreviated).day().hour().minute()))")
+                        .dsText(.label12)
+                        .foregroundStyle(DS.textTertiary)
+                        .padding(.horizontal, DS.Space.s4)
+                }
             }
             .padding(.top, DS.Space.s4)
             .padding(.bottom, DS.Space.s2)
         }
     }
 
-    /// A take chip jumps out to that app with the typed text and closes the
-    /// composer — nothing lands in Casberi (the ruling: people create in
-    /// their own tools). Notes can't carry text by URL, so its chip copies
-    /// first and the flash says exactly that (honesty rule: no silent blank
-    /// jump).
+    /// Re-reads the draft for a date (NSDataDetector) — called on each edit.
+    /// Cheap at typing cadence; cached in `detectedDate` so the band and the
+    /// Calendar jump read one value.
+    private func detectDraftDate() {
+        let text = draft.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty,
+              let detector = try? NSDataDetector(types: NSTextCheckingResult.CheckingType.date.rawValue) else {
+            detectedDate = nil
+            return
+        }
+        let range = NSRange(text.startIndex..., in: text)
+        detectedDate = detector.firstMatch(in: text, range: range)?.date
+    }
+
+    /// A Send-to chip jumps out to that app with the typed text and closes
+    /// the composer — it never writes there and nothing lands in Casberi
+    /// (rulings: people create in their own tools; we jump, we don't write).
+    /// Where no URL can carry the text, the chip copies it first and the
+    /// flash says exactly that (honesty rule: no silent blank jump).
     private func runTake(_ tool: TakeTool) {
         let text = draft.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !text.isEmpty, let url = tool.makeURL(text) else { return }
+        guard !text.isEmpty, let url = tool.makeURL(text, detectedDate) else { return }
         DSHaptic.tap()
         if tool.copiesFirst {
             UIPasteboard.general.string = text
-            chrome.flash("Copied — paste it into your note")
+            chrome.flash("Copied — paste it in \(tool.label)")
         }
         openURL(url)
         close()
@@ -1187,7 +1238,10 @@ struct AwayRollChip: View {
     var body: some View {
         HStack(spacing: DS.Space.s1) {
             Image(systemName: "sparkle").font(.system(size: 12))
-            Text("\(shown) things while I was away")
+            // "Catch me up" face (user, 2026-07-16 — the away brief lives as
+            // a chip, not a card); the tap still sends the canonical
+            // "While I was away?" ask, and the count still rolls in.
+            Text("Catch me up — \(shown) things")
                 .dsText(.label12)
                 .contentTransition(.numericText(value: Double(shown)))
         }

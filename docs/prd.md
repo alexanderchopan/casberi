@@ -3765,3 +3765,35 @@ consolidation mid-review); Deals/GitHub-feeds keep the checkmark idiom;
 the chains Toggle section is duplicated across OpenSea/GeckoTerminal and
 the wash/ghost/hairline patterns are per-screen rather than hoisted into
 shared chrome.
+
+## 91. Ask or task — the composer's two exits, named (user, 2026-07-16) — BUILT
+
+§90's "Open in" chips didn't survive first contact: "Open in" is app-plumbing
+language (a user wouldn't guess the TEXT travels), and the person typing
+"dentist tuesday 3pm" isn't asking — they're writing a FACT bound for another
+app. Three rulings, one revised surface:
+
+**We jump, we never write.** Direct EventKit writes were considered and
+rejected ("no matter what we should jump — we don't write"). So the chips are
+"Send to" + app names — Reminders, Calendar, Notes, Messages, Mail, Google —
+and because a jump can't honestly claim "Add to", the labels don't. The text
+rides the jump where a URL carries it (Messages/Mail compose body, Google
+query) and rides the clipboard where none does (Reminders/Notes/Calendar,
+flash: "Copied — paste it in <app>"). Calendar's jump opens AT the detected
+date — calshow: takes seconds-since-reference-date (verified on-sim: Jul 21
+detected → Calendar opened on Jul 21, 2026).
+
+**Ask or task, taught by the surface.** The send button wears the word "Ask"
+whenever there's typed text (a live recording keeps the bare arrow — stopping
+SAVES the voice note, and an "Ask" label there would lie). The greeting line:
+"Ask about your things, or write something and send it to another app." A
+question-shaped draft (trailing "?" or a leading question word) hides the
+Send-to band entirely — asking is that draft's one exit. NSDataDetector finds
+times in fact-shaped drafts and a receipt line says so ("Found a time:
+Tuesday, Jul 21 at 3:00 PM") — proof the Calendar jump lands right, and the
+band never reorders (fixed positions, the launcher law §90 kept).
+
+**The away brief is a chip, not a card.** The composer-opens-with-a-brief
+mockup was liked but merged down: the existing away chip now wears "Catch me
+up — N things" (count roll kept, canonical "While I was away?" ask kept).
+`-composerDraft "<text>"` reaches the typed states headlessly.
