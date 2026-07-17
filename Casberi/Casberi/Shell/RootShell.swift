@@ -512,18 +512,24 @@ struct RootShell: View {
             // Onboarding (option 4, 2026-07-07): the mini store connects the
             // three real bridges for REAL, and that's the whole tour — no
             // demo mode, no sample things. The dream lives on the store
-            // pages as engine-rendered previews. Landing is the record ("All"
-            // chip): the connects just filled it, and a brand-new person has
-            // nothing pinned yet. The "How it works" greeting is a second
-            // step of this SAME cover (below), not a separate presentation —
-            // it swaps in in place, so the feed is never revealed until the
-            // person taps Done on the greeting.
+            // pages as engine-rendered previews. The "How it works" greeting
+            // is a second step of this SAME cover (below), not a separate
+            // presentation — it swaps in in place, so the shell is never
+            // revealed until the greeting's door is taken.
             Group {
                 if onboardingHowItWorks {
-                    // Its own Done button calls the environment's dismiss(),
-                    // which resolves to this cover's binding and exits both
-                    // steps at once.
-                    HowItWorksSheet()
+                    // The greeting's one door forward lands IN the store
+                    // (ruling 2026-07-16, replacing the feed landing): the
+                    // arc is apps rain down → the four steps → the store
+                    // where those apps live, so step 1 is fulfilled the
+                    // moment the cover lifts. The record ("All" chip) waits
+                    // one back-swipe beneath it, already holding whatever
+                    // the connects landed.
+                    HowItWorksSheet(onOpenStore: {
+                        HomeRoute.shared.push = .apps
+                        onboardingHowItWorks = false
+                        onboarded = true
+                    })
                 } else {
                     OnboardingView(store: bridges) { _ in
                         FeedFilter.shared.source = "All"

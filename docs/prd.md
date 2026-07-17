@@ -3819,3 +3819,85 @@ pairing line, tag completions, Send-to + "Found a time" receipt, mic / field
 
 **Ruling (user, 2026-07-16): no logo in the composer.** A berry-marked
 greeting was tried and rejected — the mark stays out of the sheet.
+
+## 93. Discover becomes a deck — teaser cards, reasons, the demo moves to the page (user picked from three mockups, 2026-07-16) — BUILT
+
+The Apps page's Discover carousel (four swipeable 220pt gradient slabs)
+became a DECK: one card visible, the next cards peeking above it as scaled
+edges, a horizontal swipe DEALS the front card (either direction — it flies
+off, the next rises, the dealt card slides round to the bottom; the deck
+recycles, browsing not consuming), an honest "1 of 4" count below (the page
+dots died). Chosen over two siblings the user reviewed as mockups: a
+one-poster-plus-mini-reason-cards layout ("the 2 up row of mini reason
+cards is annoying") and a preview-rows-on-the-card demo anatomy ("demo
+cards... that is what happens when you click into the app, not on the
+card"). Explicitly rejected: any dismissal ("i don't like the idea of
+dismissing a card for 30 days") — a card is never hidden by the user;
+freshness is the system's job.
+
+The rules, as built (AppsScreen.swift):
+
+- **The card is a TEASER**: reason eyebrow, headline (the tagline), icon +
+  Connect. The preview capsule rows LEFT the card — the product page and
+  the long-press peek already render the same StorePreview document at
+  full contrast; one document, one home. Card height is content-defined
+  (the minHeight 220 died with the preview band).
+- **Reason or no seat**: the "New" fallback eyebrow died. Every seat's
+  eyebrow states a computable reason — "Goes with X" (adjacency to a
+  connected bridge) or the offer's own qualifier ("No account" / "One tap"
+  / "Import"). An offer with neither waits in its shelf.
+- **The whole card is a door**: card body → product page (where the demo
+  is); the capsule alone connects (or routes to setup, the shelves'
+  split). Via TapGesture + navigationDestination, NOT a
+  Button/NavigationLink — a button fires on release even after a drag, so
+  a swipe ALSO opened the page (measured).
+- **The daily deal**: seat order rotates by day-of-year mod deck size, so
+  the deck opens on a different front card each day. Deterministic, no
+  per-user state.
+- **Honest count**: "1 of 4" is the real seat count; the peeking edges are
+  real cards (one per remaining card, max 2).
+- Kept: never a Soon app, never a connected one; cap 4; the search field
+  is now ALWAYS visible (`.navigationBarDrawer(displayMode: .always)`).
+
+Paid-for lessons (all measured on the sim, 2026-07-16, three probes deep):
+(1) the deck swipe is a **UIKit UIPanGestureRecognizer on the enclosing
+UIScrollView** (`DeckPanCatcher`, BoardDragDriver's architecture) that
+begins only for clearly-horizontal pulls starting on the card — a SwiftUI
+DragGesture (plain OR simultaneous, any minimumDistance) beat the scroll
+pan and the page stopped scrolling from a finger on the card; (2) the
+card gradient is **opaque** (brand mixed toward black, not
+brand.opacity(0.65)) because stacked cards bleed through a translucent
+one; (3) the ghost glyph rides an **overlay of the gradient, never a
+ZStack sibling in the background** — a rigid 150pt image made the
+background TALLER than short cards and the gradient painted past both
+edges (the count rendered ON the card; minHeight 220 had been hiding this
+since the carousel shipped).
+
+## 94. The greeting goes large; onboarding lands in the store (user, 2026-07-16) — BUILT
+
+Two rulings on §89's four-step greeting, from "make it visually stunning,
+large proportions — I like the icon rain":
+
+**The steps wear their numerals giant.** Each step is now a full-width card:
+the numeral 148pt SF Rounded heavy in the step's hue, bleeding off the card's
+top-right corner (clipped by the card); a 58pt glyph chip; the title at the
+heading-22 tier; body copy at body-17. The header is the connect screen's own
+34-heavy SF Rounded, and the cards arrive staggered with its entrance curve —
+the two onboarding beats read as one voice. The numeral is information (the
+sequence), not decoration; its hue is the step identity the glyph chip
+already carries. Step 1 holds a settled strip of six real app icons, each
+resting slightly tilted — the icon rain the person just watched, come to
+rest. Titles dropped their "1." prefixes; the numeral IS the number.
+
+**Onboarding lands IN the store, not the feed.** The greeting's one door
+forward is a glass "Browse the store" CTA that dismisses the cover directly
+onto the Apps screen — the arc is: apps rain down → the four steps → the
+store where those apps live, so step 1 ("open the store") is fulfilled the
+moment the cover lifts. This replaces §opt-4's 2026-07-07 feed landing for
+the onboarding tail only; the record ("All" chip) waits one back-swipe
+beneath, already holding whatever the connects landed. From Settings the
+sheet keeps its plain toolbar Done — the CTA exists only in the onboarding
+tail (`HowItWorksSheet(onOpenStore:)`).
+
+Headless: `-howItWorksCTA <s>` fires the CTA after a delay (pair with
+`-demoPick` to walk the whole arc; NSLogs "howItWorksCTA: fired").
