@@ -199,7 +199,7 @@ enum TokenIngest {
         case .notion:   await notion(token)
         case .linear:   await linear(token)
         case .bitrefill: await BitrefillFetch.things(token: token)
-        case .oneclaw:  await OneClawFetch.things(token: token)
+        case .oneclaw:  await OneClawFetch.things(token: token, context: context)
         }
     }
 

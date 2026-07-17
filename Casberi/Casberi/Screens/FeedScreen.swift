@@ -209,6 +209,10 @@ struct FeedScreen: View {
             // low volume — not machine bulk — so a gift-card spree stays
             // legible row by row instead of "Bitrefill · N things".
             && t.source != "Bitrefill"
+            // And 1Claw grants: policies are typically created together, so
+            // they share a created_at day — bundled, the grant table the
+            // bridge exists to show collapses into "1Claw · N links".
+            && t.source != "1Claw"
     }
 
     /// 3+ bundleable things from one source in one day collapse into a

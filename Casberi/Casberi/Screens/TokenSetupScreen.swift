@@ -462,6 +462,11 @@ struct TokenSetupScreen: View {
     private func connect() {
         let token = tokenField.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !token.isEmpty else { return }
+        // Pasting over an existing token is a reconnect: drop the prior key's
+        // cached readings (balance, vault reach) BEFORE storing, or a paste
+        // whose first sync fails leaves the new key wearing the old key's
+        // numbers as if they were its own.
+        bridge.onRemove()
         TokenVault.set(token, for: bridge.tokenKey)
         tokenField = ""
         DSHaptic.tap()

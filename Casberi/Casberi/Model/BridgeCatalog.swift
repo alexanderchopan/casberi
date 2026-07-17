@@ -104,7 +104,7 @@ enum BridgeCatalog {
         Offer(name: "Bankr",       tagline: "Answers that know your wallet",        group: "Agent",     connectable: true,
               summary: "Bankr is an agent with a wallet, so its answers can weigh what you hold and what the market is doing — not just what you saved. Your Bankr key powers \"Try with your key\": any answer re-runs on Bankr, straight from this iPhone, only when you tap. Make it a read-only key: every question says answer only, and nothing here trades, sends, or swaps.",
               needsSetup: true),
-        // 1Claw is the agents' vault (2026-07-17, prd 104): grants, not
+        // 1Claw is the agents' vault (2026-07-17, prd 111): grants, not
         // secrets — the feed answers "what can this key reach", never what
         // a secret's value is.
         Offer(name: "1Claw",       tagline: "What your agent's key can reach",       group: "Agent",     connectable: true,

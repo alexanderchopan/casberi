@@ -1,4 +1,5 @@
 import Foundation
+import SwiftData
 
 /// 1Claw (2026-07-17) — the agent secrets vault, read side only. 1Claw holds
 /// API keys for AI agents behind scoped, human-granted policies; connecting it
@@ -30,32 +31,91 @@ enum OneClawFetch {
         ref?.hasPrefix("1claw:policy:") ?? false
     }
 
-    /// The key's whole view: exchange → vaults → per-vault grant table.
-    /// Returns nil only when the exchange or the VAULTS read fails — the
-    /// honest key-rejected signal TokenIngest words as "check the token".
-    /// A per-vault policies read failing just means that vault lands no
-    /// grant rows (its most likely cause is a key without `policies:read`).
-    static func things(token: String) async -> [Thing]? {
+    /// The key's whole view: exchange → vaults → per-vault grant tables
+    /// (bounded fan-out, the ingest norm). Returns nil only when the exchange
+    /// or the VAULTS read fails — the honest key-rejected signal TokenIngest
+    /// words as "check the token". The spec doesn't require the `vaults`
+    /// envelope key, so a valid key with zero vaults (omitted or JSON-null
+    /// list) is an EMPTY reach, not a rejected key. A per-vault policies read
+    /// failing just means that vault lands no grant rows (its most likely
+    /// cause is a key without `policies:read`).
+    ///
+    /// Grants are MUTABLE records — a policy can be edited or revoked under
+    /// the same id — so unlike an append-only bridge this fetch also
+    /// RECONCILES the corpus: an already-landed grant's title/`dueAt` follow
+    /// the record, and a grant that vanished from the tables is deleted.
+    /// Deletion only runs when EVERY vault's table was actually readable —
+    /// with one table unreadable, "revoked" and "couldn't read" are
+    /// indistinguishable, and guessing would erase real grants.
+    @MainActor
+    static func things(token: String, context: ModelContext) async -> [Thing]? {
         guard let jwt = await exchange(key: token) else { return nil }
         let auth = "Bearer \(jwt)"
         guard let vaultsRoot = await IngestSupport.getJSON("\(api)/vaults", auth: auth)
-                as? [String: Any],
-              let vaults = vaultsRoot["vaults"] as? [[String: Any]] else { return nil }
+                as? [String: Any] else { return nil }
+        let vaults = (vaultsRoot["vaults"] as? [[String: Any]]) ?? []
 
-        var things: [Thing] = []
-        for vault in vaults {
-            guard let vaultID = vault["id"] as? String else { continue }
-            let vaultName = (vault["name"] as? String).flatMap { $0.isEmpty ? nil : $0 }
-            let root = await IngestSupport.getJSON("\(api)/vaults/\(vaultID)/policies",
-                                                   auth: auth) as? [String: Any]
-            for policy in (root?["policies"] as? [[String: Any]]) ?? [] {
-                if let thing = policyThing(policy, vaultName: vaultName) {
-                    things.append(thing)
-                }
-            }
+        let tables = await IngestSupport.boundedGather(vaults, maxConcurrent: 4) { vault in
+            await policyTable(vault, auth: auth)
         }
+        var things: [Thing] = []
+        var allReadable = true
+        for table in tables {
+            guard let table else { allReadable = false; continue }
+            things += table
+        }
+        reconcile(incoming: things, complete: allReadable, context: context)
         OneClawAccess.set(vaults: vaults.count)
         return things
+    }
+
+    /// One vault's grant table as things — nil when the read itself failed
+    /// (vs. an empty-but-readable table), the distinction `reconcile` needs.
+    private static func policyTable(_ vault: [String: Any], auth: String) async -> [Thing]? {
+        guard let vaultID = vault["id"] as? String else { return [] }
+        let vaultName = (vault["name"] as? String).flatMap { $0.isEmpty ? nil : $0 }
+        guard let root = await IngestSupport.getJSON("\(api)/vaults/\(vaultID)/policies",
+                                                     auth: auth) as? [String: Any]
+        else { return nil }
+        return ((root["policies"] as? [[String: Any]]) ?? [])
+            .compactMap { policyThing($0, vaultName: vaultName) }
+    }
+
+    /// Landed grant rows follow the live record: an edited policy's row takes
+    /// the new title/expiry in place (TokenIngest's dedupe would otherwise
+    /// freeze it at first landing), and — only when the read was `complete` —
+    /// a revoked policy's row is deleted, Spotlight included. Without this,
+    /// the feed overstates the key's reach, the one failure a grants surface
+    /// must not have.
+    @MainActor
+    private static func reconcile(incoming: [Thing], complete: Bool, context: ModelContext) {
+        let descriptor = FetchDescriptor<Thing>(
+            predicate: #Predicate { $0.source == "1Claw" })
+        guard let landed = try? context.fetch(descriptor) else { return }
+        let grants = landed.filter { isGrantRef($0.sourceRef) }
+        guard !grants.isEmpty else { return }
+        let byRef = Dictionary(incoming.compactMap { t in t.sourceRef.map { ($0, t) } },
+                               uniquingKeysWith: { first, _ in first })
+        var changed = false
+        var removedIDs: [UUID] = []
+        for grant in grants {
+            guard let ref = grant.sourceRef else { continue }
+            if let fresh = byRef[ref] {
+                if grant.title != fresh.title || grant.dueAt != fresh.dueAt {
+                    grant.title = fresh.title
+                    grant.dueAt = fresh.dueAt
+                    changed = true
+                }
+            } else if complete {
+                removedIDs.append(grant.id)
+                context.delete(grant)
+                changed = true
+            }
+        }
+        if changed {
+            context.saveHonestly()
+            SpotlightIndex.remove(ids: removedIDs)
+        }
     }
 
     /// A grant: "Prod · secrets/anthropic/* · read, rotate" — the vault, the
@@ -117,11 +177,11 @@ enum OneClawFetch {
             NSLog("1Claw probe: agents/me unreadable (a user key, or no agents:read)")
         }
         guard let vaultsRoot = await IngestSupport.getJSON("\(api)/vaults", auth: auth)
-                as? [String: Any],
-              let vaults = vaultsRoot["vaults"] as? [[String: Any]] else {
+                as? [String: Any] else {
             NSLog("1Claw probe: vaults read FAILED")
             return
         }
+        let vaults = (vaultsRoot["vaults"] as? [[String: Any]]) ?? []
         NSLog("1Claw probe: %d vaults", vaults.count)
         for vault in vaults {
             guard let id = vault["id"] as? String else { continue }
