@@ -35,6 +35,10 @@ enum WalletPrepare {
         /// The prepared revoke as a wallet-ready JSON object — nil when the
         /// grant is no longer active (nothing left to prepare).
         let transactionJSON: String?
+        /// The wallet's Revoke.cash page, built from the thing's OWN fields
+        /// (owner + chain) — the card's door never trusts `content` to be
+        /// what its label claims (review 2026-07-17).
+        let revokeURL: String
     }
 
     /// The cheap gate the sheet checks before spending any network read.
@@ -72,6 +76,12 @@ enum WalletPrepare {
         let network = String(parts[2]), txHash = String(parts[3])
         guard let chainId = WalletApprovals.chainId(forNetwork: network)
         else { return .fail("unknown chain \(network)") }
+        // The person's chain toggle holds here too — a chain switched off in
+        // the Wallet screen spends no prepare reads either. The sheet just
+        // shows no card; the thing's Revoke.cash content link still works.
+        guard WalletChainStore.activeNetworkIDs().contains(network)
+        else { return .fail("chain switched off") }
+        let revokeURL = WalletApprovals.revokeURL(address: owner, chainId: chainId)
 
         // The event's log, refetched — the token contract lives only there.
         guard let receipt = await WalletApprovals.rpcRead(
@@ -99,12 +109,17 @@ enum WalletPrepare {
             + pad(owner) + pad(spender)
         guard let stateHex = await WalletApprovals.rpcRead(
                 network: network, method: "eth_call",
-                params: [["to": contract, "data": stateData], "latest"]) as? String
+                params: [["to": contract, "data": stateData], "latest"]) as? String,
+              // A revert / empty reply is "0x", which parses to the same 0 as
+              // a genuine revoke — only a full 32-byte word is a real answer.
+              // Fail CLOSED (no card) rather than dress a failed read as
+              // "revoked" (review 2026-07-17; WalletApprovals' own lesson 2).
+              stateHex.count >= 66
         else { return .fail("state unreadable") }
         let active = WalletIngest.hexToDouble(stateHex) > 0
         guard active else {
-            return .ok(Check(active: false, forAll: forAll,
-                             feeLine: nil, transactionJSON: nil))
+            return .ok(Check(active: false, forAll: forAll, feeLine: nil,
+                             transactionJSON: nil, revokeURL: revokeURL))
         }
 
         // The revoke, encoded: approve(spender, 0) / setApprovalForAll(
@@ -118,20 +133,23 @@ enum WalletPrepare {
 
         // The fee — estimateGas doubles as a dry run (a reverting revoke
         // fails the estimate), so a quoted fee also means "would succeed".
+        // The two reads are independent — one round-trip's wait, not two.
+        async let gasRead = WalletApprovals.rpcRead(
+            network: network, method: "eth_estimateGas",
+            params: [["from": owner, "to": contract, "data": calldata]])
+        async let priceRead = WalletApprovals.rpcRead(
+            network: network, method: "eth_gasPrice", params: [])
         var feeLine: String?
-        if let gasHex = await WalletApprovals.rpcRead(
-               network: network, method: "eth_estimateGas",
-               params: [["from": owner, "to": contract, "data": calldata]]) as? String,
-           let priceHex = await WalletApprovals.rpcRead(
-               network: network, method: "eth_gasPrice", params: []) as? String {
+        if let gasHex = await gasRead as? String,
+           let priceHex = await priceRead as? String {
             let fee = WalletIngest.hexToDouble(gasHex)
                 * WalletIngest.hexToDouble(priceHex) / 1e18
-            if fee > 0 {
-                feeLine = "~\(WalletIngest.format(fee)) \(nativeSymbol(network))"
+            if fee > 0, let symbol = WalletIngest.nativeSymbol(forNetwork: network) {
+                feeLine = "~\(WalletIngest.format(fee)) \(symbol)"
             }
         }
-        return .ok(Check(active: true, forAll: forAll,
-                         feeLine: feeLine, transactionJSON: json))
+        return .ok(Check(active: true, forAll: forAll, feeLine: feeLine,
+                         transactionJSON: json, revokeURL: revokeURL))
     }
 
     /// `-prepareProbe YES` — runs the whole path over the newest landed
@@ -160,10 +178,5 @@ enum WalletPrepare {
     /// A hex address as a 32-byte ABI word.
     private static func pad(_ address: String) -> String {
         String(repeating: "0", count: 24) + address.dropFirst(2).lowercased()
-    }
-
-    /// The chain's native coin, for the fee line.
-    private static func nativeSymbol(_ network: String) -> String {
-        network == "matic-mainnet" ? "POL" : "ETH"
     }
 }

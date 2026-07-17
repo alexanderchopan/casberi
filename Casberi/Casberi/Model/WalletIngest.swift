@@ -48,6 +48,15 @@ enum WalletIngest {
         allChains.first { content.hasPrefix($0.explorer) }?.displayName
     }
 
+    /// The chain's native coin symbol ("ETH", "MATIC", "SOL") — the prepare
+    /// path's fee line (WalletPrepare, prd §111) quotes fees in it. Read off
+    /// THIS table so a fee can never disagree with the treemap's own label
+    /// (review 2026-07-17: a hand-rolled second map said "POL" where the
+    /// holdings screen says "MATIC").
+    static func nativeSymbol(forNetwork network: String) -> String? {
+        allChains.first { $0.network == network }?.symbol
+    }
+
     /// The chains actually read this pass — the person's selection (default: all
     /// of them). Filtered from `allChains` so turning a chain off drops it from
     /// the transfer sync, the holdings read, and the value samples alike, and

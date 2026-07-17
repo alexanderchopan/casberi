@@ -22,7 +22,10 @@ struct ApprovalPrepareCard: View {
                 if let fee = check.feeLine {
                     feeRow(fee)
                 }
-                if let url = URL(string: thing.content), url.scheme?.hasPrefix("http") == true {
+                // The door is built from the thing's own fields (owner +
+                // chain), never read off `content` — a door labelled
+                // Revoke.cash must only ever open Revoke.cash.
+                if let url = URL(string: check.revokeURL) {
                     doorRow(icon: "arrow.up.right", label: "Revoke on Revoke.cash") {
                         openURL(url)
                     }
@@ -30,8 +33,7 @@ struct ApprovalPrepareCard: View {
                 if let json = check.transactionJSON {
                     doorRow(icon: copied ? "checkmark" : "doc.on.doc",
                             label: copied ? "Copied" : "Copy revoke transaction") {
-                        UIPasteboard.general.string = json
-                        withAnimation(DS.Motion.standard) { copied = true }
+                        copy(json)
                     }
                 }
                 Text("A transaction you sign there — never in Casberi.")
@@ -53,6 +55,19 @@ struct ApprovalPrepareCard: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(DS.fillFaint,
                     in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+    }
+
+    /// Copy + the brief "Copied" acknowledgment — TokenSetupScreen's
+    /// `copyCode` shape, reset included (a button stuck on "Copied" forever
+    /// reads as state it no longer has).
+    private func copy(_ json: String) {
+        UIPasteboard.general.string = json
+        DSHaptic.tap()
+        withAnimation(DS.Motion.standard) { copied = true }
+        Task { @MainActor in
+            try? await Task.sleep(for: .seconds(2))
+            withAnimation(DS.Motion.standard) { copied = false }
+        }
     }
 
     /// "Still active — Uniswap can still spend this token" — the spender named
