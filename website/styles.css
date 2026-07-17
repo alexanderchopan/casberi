@@ -85,6 +85,7 @@ nav { display: flex; align-items: center; justify-content: space-between; paddin
 .ai-geckoterminal { background: #272053; }
 .ai-venice    { background: #18181b; }
 .ai-bankr     { background: #a78bfa; }
+.ai-1claw     { background: #990029; }
 .ai-openclaw  { background: #475569; font-size: 15px; }
 .ai-github    { background: #24292f; font-size: 16px; }
 .ai-linear    { background: #5e6ad2; }

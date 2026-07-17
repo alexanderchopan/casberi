@@ -250,7 +250,8 @@ final class Thing {
     /// time, so its deadline can't ride that field; events carry their deadline
     /// as `capturedAt` (the start) and leave this nil. Set after init by
     /// `ScheduleIngest.connectReminders` from `dueDateComponents`; nil for a
-    /// reminder with no due date and for every non-reminder thing. Optional +
+    /// reminder with no due date. A 1Claw grant's `expires_at` lands here too
+    /// (a real structured deadline); other things leave it nil. Optional +
     /// default nil keeps CloudKit mirroring happy.
     var dueAt: Date? = nil
 

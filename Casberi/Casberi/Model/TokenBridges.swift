@@ -16,6 +16,7 @@ enum TokenBridge: String, CaseIterable, Identifiable {
     case notion   = "Notion"
     case linear   = "Linear"
     case bitrefill = "Bitrefill"
+    case oneclaw  = "1Claw"
 
     var id: String { rawValue }
 
@@ -31,6 +32,7 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         case .notion:   "notion"
         case .linear:   "linear"
         case .bitrefill: "bitrefill"
+        case .oneclaw:  "oneclaw"
         }
     }
 
@@ -76,6 +78,10 @@ enum TokenBridge: String, CaseIterable, Identifiable {
             "Open bitrefill.com/account/developers in a browser.",
             "In the API Keys tab, create a key — any name works.",
             "Copy it and paste it below."]
+        case .oneclaw: [
+            "Open 1claw.xyz in a browser and sign in.",
+            "Create an agent (or open one) and copy its API key — it starts with ocv_.",
+            "Paste it below."]
         }
     }
 
@@ -90,6 +96,7 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         case .notion:   "ntn_…"
         case .linear:   "lin_api_…"
         case .bitrefill: "API key"
+        case .oneclaw:  "ocv_…"
         }
     }
 
@@ -105,6 +112,7 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         case .notion:   "pages"
         case .linear:   "issues"
         case .bitrefill: "orders"
+        case .oneclaw:  "grants"
         }
     }
 
@@ -119,6 +127,7 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         case .notion:   "Reads the pages you connect."
         case .linear:   "Reads issues assigned to you."
         case .bitrefill: "Reads your orders, refills, and balance — nothing here ever buys, pays, or spends."
+        case .oneclaw:  "Reads which vaults and secret paths the key can reach — names and permissions only. Nothing here ever reads a secret's value, signs, or spends."
         }
     }
 
@@ -129,6 +138,7 @@ enum TokenBridge: String, CaseIterable, Identifiable {
     func onRemove() {
         switch self {
         case .bitrefill: BitrefillBalance.clear()
+        case .oneclaw:   OneClawAccess.clear()
         default:         break
         }
     }
@@ -189,6 +199,7 @@ enum TokenIngest {
         case .notion:   await notion(token)
         case .linear:   await linear(token)
         case .bitrefill: await BitrefillFetch.things(token: token)
+        case .oneclaw:  await OneClawFetch.things(token: token)
         }
     }
 

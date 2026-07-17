@@ -81,7 +81,7 @@ struct FeedScreen: View {
 
     /// The shape a source takes when its chip is in force.
     private enum Shape {
-        case all, photos, wallet, calendar, gmail, chat, social, reminders, agent, safari, notes, you, music, tokens, bitrefill, plain
+        case all, photos, wallet, calendar, gmail, chat, social, reminders, agent, safari, notes, you, music, tokens, bitrefill, oneclaw, plain
         init(source: String) {
             switch source {
             case "All":                 self = .all
@@ -102,6 +102,7 @@ struct FeedScreen: View {
             case "Apple Music", "Spotify": self = .music
             case "Tokens":              self = .tokens
             case "Bitrefill":           self = .bitrefill
+            case "1Claw":               self = .oneclaw
             default:                    self = .plain
             }
         }
@@ -612,6 +613,10 @@ struct FeedScreen: View {
             bitrefillLedeSection(visible)
             let days = dayGroups(visible)
             groupedSections(days, nextEventID: nextEventID, boundary: boundaryThingID(in: days))
+        case .oneclaw:
+            oneclawLedeSection(visible)
+            let days = dayGroups(visible)
+            groupedSections(days, nextEventID: nextEventID, boundary: boundaryThingID(in: days))
         default:
             if filter.tag != "All" && shape == .all {
                 daySection(filterLabel, visible, nextEventID: nextEventID)
@@ -678,6 +683,19 @@ struct FeedScreen: View {
                                                     toGranularity: .month)
             }.count
             ledeSection(BitrefillLede(balance: balance, monthCount: month))
+        }
+    }
+
+    /// 1Claw's lede: the key's reach at a glance — the vault count its API
+    /// last reported, and how many grants landed as rows below (counted from
+    /// the same rows, so the two can't disagree). Connected-only: a
+    /// disconnected seat must not wear yesterday's reach as if it were
+    /// current.
+    @ViewBuilder
+    private func oneclawLedeSection(_ visible: [Thing]) -> some View {
+        if TokenBridge.oneclaw.connected, let vaults = OneClawAccess.formatted {
+            let grants = visible.filter { OneClawFetch.isGrantRef($0.sourceRef) }.count
+            ledeSection(OneClawLede(vaults: vaults, grantCount: grants))
         }
     }
 

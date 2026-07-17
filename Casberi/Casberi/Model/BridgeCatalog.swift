@@ -104,6 +104,12 @@ enum BridgeCatalog {
         Offer(name: "Bankr",       tagline: "Answers that know your wallet",        group: "Agent",     connectable: true,
               summary: "Bankr is an agent with a wallet, so its answers can weigh what you hold and what the market is doing — not just what you saved. Your Bankr key powers \"Try with your key\": any answer re-runs on Bankr, straight from this iPhone, only when you tap. Make it a read-only key: every question says answer only, and nothing here trades, sends, or swaps.",
               needsSetup: true),
+        // 1Claw is the agents' vault (2026-07-17, prd 104): grants, not
+        // secrets — the feed answers "what can this key reach", never what
+        // a secret's value is.
+        Offer(name: "1Claw",       tagline: "What your agent's key can reach",       group: "Agent",     connectable: true,
+              summary: "1Claw is a vault that holds your AI agents' secrets behind human-granted permissions. Paste an agent's API key and its actual reach lands in your feed — every vault it can see, and each grant's secret paths and permissions, straight from 1Claw's own records. Names and permissions only, read straight from this iPhone: nothing here ever reads a secret's value, signs, or spends.",
+              needsSetup: true),
         Offer(name: "OpenClaw",    tagline: "Your agents' work lands here",          group: "Machines",  connectable: false,
               summary: "What your agents make — jobs, runs, outputs — lands in your feed with full provenance, and their approvals reach you here."),
         Offer(name: "GitHub",      tagline: "Stars, releases, issues — your GitHub", group: "Work",      connectable: true,

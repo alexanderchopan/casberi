@@ -1,0 +1,162 @@
+import Foundation
+
+/// 1Claw (2026-07-17) — the agent secrets vault, read side only. 1Claw holds
+/// API keys for AI agents behind scoped, human-granted policies; connecting it
+/// here answers "what can this key actually reach" with the vault's own
+/// records. An agent API key (`ocv_…`, minted in the 1Claw dashboard)
+/// exchanges for a short-lived JWT at the documented auth endpoint, then the
+/// key's own view lands: every vault it can see, and each vault's grant table
+/// — one thing per policy, wearing the secret path pattern and permissions
+/// the grant actually names. Metadata only, by construction: nothing here
+/// ever reads a secret VALUE, signs, or spends — the endpoints called can't.
+///
+/// Honesty ceiling (built against OpenAPI spec 2.27.0, unmeasured against the
+/// live API — re-measure before hardening): a minimally-scoped key may lack
+/// `policies:read`, so a vault's grant read can come back empty-handed. That
+/// degrades to the vaults themselves with no grant rows — the feed never
+/// invents a grant table it couldn't read. A grant's `expires_at` lands in
+/// `dueAt` (a real structured deadline), though the Coming up lane reads only
+/// reminders today — surfacing expiring access there is a separate ruling.
+enum OneClawFetch {
+
+    static let api = "https://api.1claw.xyz/v1"
+    /// Where a grant row opens — the 1Claw dashboard. The API documents no
+    /// per-vault web permalink; the root is the honest destination.
+    static let dashboard = "https://1claw.xyz"
+
+    /// True for a grant thing's ref — the classification the lede needs,
+    /// owned here beside the ref it mints (`policyThing`).
+    static func isGrantRef(_ ref: String?) -> Bool {
+        ref?.hasPrefix("1claw:policy:") ?? false
+    }
+
+    /// The key's whole view: exchange → vaults → per-vault grant table.
+    /// Returns nil only when the exchange or the VAULTS read fails — the
+    /// honest key-rejected signal TokenIngest words as "check the token".
+    /// A per-vault policies read failing just means that vault lands no
+    /// grant rows (its most likely cause is a key without `policies:read`).
+    static func things(token: String) async -> [Thing]? {
+        guard let jwt = await exchange(key: token) else { return nil }
+        let auth = "Bearer \(jwt)"
+        guard let vaultsRoot = await IngestSupport.getJSON("\(api)/vaults", auth: auth)
+                as? [String: Any],
+              let vaults = vaultsRoot["vaults"] as? [[String: Any]] else { return nil }
+
+        var things: [Thing] = []
+        for vault in vaults {
+            guard let vaultID = vault["id"] as? String else { continue }
+            let vaultName = (vault["name"] as? String).flatMap { $0.isEmpty ? nil : $0 }
+            let root = await IngestSupport.getJSON("\(api)/vaults/\(vaultID)/policies",
+                                                   auth: auth) as? [String: Any]
+            for policy in (root?["policies"] as? [[String: Any]]) ?? [] {
+                if let thing = policyThing(policy, vaultName: vaultName) {
+                    things.append(thing)
+                }
+            }
+        }
+        OneClawAccess.set(vaults: vaults.count)
+        return things
+    }
+
+    /// A grant: "Prod · secrets/anthropic/* · read, rotate" — the vault, the
+    /// secret path pattern, and the permissions, all straight off the policy
+    /// record. Dated when the grant was created; an expiring grant carries
+    /// its deadline in `dueAt`.
+    private static func policyThing(_ policy: [String: Any], vaultName: String?) -> Thing? {
+        guard let id = policy["id"] as? String,
+              let pattern = policy["secret_path_pattern"] as? String else { return nil }
+        let permissions = (policy["permissions"] as? [String]) ?? []
+        var parts = [pattern]
+        if let vaultName { parts.insert(vaultName, at: 0) }
+        if !permissions.isEmpty { parts.append(permissions.joined(separator: ", ")) }
+        let thing = Thing(
+            kind: .link,
+            title: IngestSupport.titleLine(parts.joined(separator: " · ")),
+            content: dashboard,
+            source: "1Claw",
+            capturedAt: IngestSupport.isoDate(policy["created_at"]) ?? .now,
+            sourceRef: "1claw:policy:\(id)"
+        )
+        thing.dueAt = IngestSupport.isoDate(policy["expires_at"])
+        return thing
+    }
+
+    /// The documented exchange: the pasted key for a short-lived JWT. An
+    /// agent key (`ocv_…`) auto-resolves its agent at the agent endpoint; any
+    /// other shape is treated as a human's user API key and exchanged at the
+    /// user endpoint. Both take just `{api_key}` and answer `access_token`.
+    /// One fetch outlives no JWT, so no refresh handling.
+    private static func exchange(key: String) async -> String? {
+        let path = key.hasPrefix("ocv_") ? "auth/agent-token" : "auth/api-key-token"
+        guard let root = await IngestSupport.postJSON("\(api)/\(path)",
+                                                      body: ["api_key": key]) as? [String: Any]
+        else { return nil }
+        return root["access_token"] as? String
+    }
+
+    #if DEBUG
+    /// The `-oneclawProbe` walk: every step NSLogged, so "the key can't read
+    /// policies" and "there are no policies" stop looking identical — for
+    /// this bridge that distinction IS the feature. Reads the stored token.
+    static func probe() async {
+        guard let token = TokenVault.get(TokenBridge.oneclaw.tokenKey) else {
+            NSLog("1Claw probe: no stored key — connect first (-tokenBridge \"1Claw:<key>\")")
+            return
+        }
+        guard let jwt = await exchange(key: token) else {
+            NSLog("1Claw probe: key exchange FAILED (bad key, or the API is unreachable)")
+            return
+        }
+        let auth = "Bearer \(jwt)"
+        if let me = await IngestSupport.getJSON("\(api)/agents/me", auth: auth)
+            as? [String: Any] {
+            let scopes = (me["scopes"] as? [String]) ?? []
+            NSLog("1Claw probe: agent %@, scopes [%@]",
+                  (me["name"] as? String) ?? "?", scopes.joined(separator: ", "))
+        } else {
+            NSLog("1Claw probe: agents/me unreadable (a user key, or no agents:read)")
+        }
+        guard let vaultsRoot = await IngestSupport.getJSON("\(api)/vaults", auth: auth)
+                as? [String: Any],
+              let vaults = vaultsRoot["vaults"] as? [[String: Any]] else {
+            NSLog("1Claw probe: vaults read FAILED")
+            return
+        }
+        NSLog("1Claw probe: %d vaults", vaults.count)
+        for vault in vaults {
+            guard let id = vault["id"] as? String else { continue }
+            let name = (vault["name"] as? String) ?? id
+            if let root = await IngestSupport.getJSON("\(api)/vaults/\(id)/policies",
+                                                      auth: auth) as? [String: Any],
+               let policies = root["policies"] as? [[String: Any]] {
+                NSLog("1Claw probe: vault %@ — %d grants", name, policies.count)
+            } else {
+                NSLog("1Claw probe: vault %@ — grants UNREADABLE (no policies:read?)", name)
+            }
+        }
+    }
+    #endif
+}
+
+/// The reachable-vault count, cached for the feed's lede. UserDefaults, not
+/// the corpus — a count is a reading, not a thing. `formatted` is nil until a
+/// read has actually landed, so the lede never invents a zero; `clear()`
+/// drops it when the key is removed, so a reconnected DIFFERENT key never
+/// wears the prior one's reach.
+enum OneClawAccess {
+    private static let vaultsKey = "oneclaw.access.vaults"
+
+    static func set(vaults: Int) {
+        UserDefaults.standard.set(vaults, forKey: vaultsKey)
+    }
+
+    static func clear() {
+        UserDefaults.standard.removeObject(forKey: vaultsKey)
+    }
+
+    static var formatted: String? {
+        guard UserDefaults.standard.object(forKey: vaultsKey) != nil else { return nil }
+        let n = UserDefaults.standard.integer(forKey: vaultsKey)
+        return n == 1 ? "1 vault" : "\(n) vaults"
+    }
+}

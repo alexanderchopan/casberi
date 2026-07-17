@@ -124,6 +124,13 @@ enum ProbeHooks {
                       n.map(String.init) ?? "FAILED")
             }
         },
+        // `-oneclawProbe YES` walks the 1Claw access read with the STORED key
+        // (connect first via `-tokenBridge "1Claw:<key>"`), logging each step
+        // — scopes, vaults, per-vault grant counts or the honest "unreadable"
+        // — so a missing grant table and an empty one stop looking identical.
+        Hook(key: "oneclawProbe") { _, _ in
+            Task { await OneClawFetch.probe() }
+        },
         // `-fcName <username>` connects Farcaster headlessly (appends, so a
         // comma-separated list watches several — dedupes, safe to re-fire).
         Hook(key: "fcName") { name, context in

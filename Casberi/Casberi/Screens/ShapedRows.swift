@@ -1252,6 +1252,30 @@ struct BitrefillLede: View {
     }
 }
 
+/// 1Claw's lede: the key's reach — how many vaults its API last reported,
+/// with the grant-row count beside it. Facts only: no "secure"/"exposed"
+/// judgments, and no claims about grants the key couldn't read.
+struct OneClawLede: View {
+    let vaults: String
+    let grantCount: Int
+
+    var body: some View {
+        HStack(spacing: DS.Space.s2) {
+            Text("Access")
+                .dsText(.body17).foregroundStyle(DS.textPrimary)
+            Spacer(minLength: 0)
+            if grantCount > 0 {
+                Text(grantCount == 1 ? "1 grant" : "\(grantCount) grants")
+                    .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+            }
+            Text(vaults)
+                .dsText(.body17).fontWeight(.semibold)
+                .foregroundStyle(DS.textPrimary)
+        }
+        .padding(.vertical, DS.Space.s2)
+    }
+}
+
 /// Tokens' lede: the watchlist's day at a glance — how many are up, how many
 /// down, over the same cached 24h pulses the rows themselves wear (honest by
 /// construction: one data source, two renders). Green/red is state, the color
