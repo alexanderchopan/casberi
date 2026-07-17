@@ -3797,3 +3797,25 @@ band never reorders (fixed positions, the launcher law §90 kept).
 mockup was liked but merged down: the existing away chip now wears "Catch me
 up — N things" (count roll kept, canonical "While I was away?" ask kept).
 `-composerDraft "<text>"` reaches the typed states headlessly.
+
+## 92. The composer's empty state goes bold — ask tiles, one featured (user picked "option A" from three mockups, 2026-07-16) — BUILT
+
+The empty sheet's horizontal chip strip died: it clipped its own labels
+("How's m…"), and a suggestion you can't read isn't one. The corpus-derived
+asks now render as a 2×2 grid of bold tiles (glyph top-leading in tint, the
+whole ask unclipped at the bottom, `DS.Radius.widget` corners, `DS.gray100`
+fill) under the "What now?" greeting at display scale (`heading34`, SF
+Rounded). The ONE featured tile — the organize invite ("Tag your N <Source>
+things") — wears the solid tint, the grid's single accent (one-tint law).
+The librarian's catch-up tile keeps its rolling count. The Send-to band's
+pills grew to match the grid's grammar (40pt, glyph + callout15 semibold) so
+the field's two exits read as one design. Everything else held: greeting +
+pairing line, tag completions, Send-to + "Found a time" receipt, mic / field
+/ Ask button. The field's invitation placeholder now actually cycles (the
+`invitations` list had been wired to nothing).
+
+**Ruling (user, 2026-07-16): "How many links this week?" is never suggested
+— nobody cares.** Counting stays a typed power; no chip or tile teaches it.
+
+**Ruling (user, 2026-07-16): no logo in the composer.** A berry-marked
+greeting was tried and rejected — the mark stays out of the sheet.

@@ -63,11 +63,11 @@ struct Composer: View {
     /// the specifics you can tap.
     @State private var placeholderIndex = 0
     private let invitations = [
-        "Ask anything. Organize everything.",
+        "Ask, or say what to do",
         "What did I save this week?",
-        "Find that thing I pasted.",
-        "Recap my month.",
-        "Tag everything from an app.",
+        "Find that thing I pasted",
+        "Recap my month",
+        "Tag everything from an app",
     ]
     /// Flips true just after the bubble opens so the ask chips stagger in
     /// rather than snapping (delight, 2026-07-12).
@@ -269,14 +269,10 @@ struct Composer: View {
         if !WalletStore.shared.addresses.isEmpty {
             out.append("How's my wallet?")
         }
-        // The chips teach what the composer can DO (2026-07-10) — counting
-        // stayed a secret power until the chips showed it. Only asks the corpus
-        // can honestly answer right now. (Pinning left the composer 2026-07-12:
-        // it's per-APP now, placed from the app's own screen, not a phrase.)
-        let weekStart = Calendar.current.dateInterval(of: .weekOfYear, for: .now)?.start ?? dayStart
-        if all.contains(where: { $0.kind == .link && $0.capturedAt >= weekStart }) {
-            out.append("How many links this week?")
-        }
+        // Only asks the corpus can honestly answer right now. (Pinning left
+        // the composer 2026-07-12: it's per-APP now, placed from the app's own
+        // screen, not a phrase. "How many links this week?" died 2026-07-16 —
+        // ruling: nobody cares; counting stays a typed power, never a tile.)
         if let top = tagPool.first {
             out.append("Show \(top)")
         }
@@ -300,7 +296,9 @@ struct Composer: View {
             // change identity between opens.
             .max { ($0.value.total, $1.key) < ($1.value.total, $0.key) }
             .map { OrganizeHint(source: $0.key, count: $0.value.total) }
-        suggestions = Array(out.prefix(organizeHint == nil ? 3 : 2))
+        // Fill the 2×2 grid: three asks beside the organize invite when it's
+        // earned, four when it isn't — the tiles read whole either way.
+        suggestions = Array(out.prefix(organizeHint == nil ? 4 : 3))
     }
 
     /// One conversation turn — the muted question, then its answer.
@@ -351,8 +349,10 @@ struct Composer: View {
             // sheet its warmth (design pass 2026-07-12, "B: greeting-led").
             // Hidden once a conversation is underway: the answer is the header.
             if embedded, turns.isEmpty, !answering, proposal == nil {
+                // The greeting at display scale (option A, 2026-07-16) — the
+                // sheet leads with one big rounded question, Cash App-bold.
                 Text("What now?")
-                    .dsText(.heading22)
+                    .dsText(.heading34)
                     .foregroundStyle(DS.textPrimary)
                     .padding(.horizontal, DS.Space.s4)
                     .padding(.top, DS.Space.s2)
@@ -363,6 +363,7 @@ struct Composer: View {
                 Text("Ask about your things, or write something and send it to another app.")
                     .dsText(.subhead13)
                     .foregroundStyle(DS.textTertiary)
+                    .fixedSize(horizontal: false, vertical: true)
                     .padding(.horizontal, DS.Space.s4)
                     .padding(.top, 2)
                     .settleIn(delay: 0.06)
@@ -608,7 +609,9 @@ struct Composer: View {
             while !Task.isCancelled {
                 try? await Task.sleep(for: .seconds(3))
                 if Task.isCancelled { break }
-                placeholderIndex = (placeholderIndex + 1) % invitations.count
+                withAnimation(DS.Motion.standard) {
+                    placeholderIndex = (placeholderIndex + 1) % invitations.count
+                }
             }
         }
     }
@@ -750,65 +753,72 @@ struct Composer: View {
 
     // MARK: - Ask chips + input bar (chat grammar: by the bottom)
 
-    /// The ask chips — asks the corpus can answer now, plus the organize invite
-    /// — shown while the field is empty, right above the input.
+    /// The ask tiles (option A, 2026-07-16) — asks the corpus can answer now,
+    /// plus the organize invite, as a bold 2×2 grid while the field is empty.
+    /// The chip strip died here: it clipped its own labels ("How's m…"), and
+    /// a suggestion you can't read isn't one. Each tile states its whole ask,
+    /// wears a glyph naming what kind of answer it is, and is a real thumb
+    /// target; the ONE featured tile (the organize invite) wears the solid
+    /// tint — the grid's single accent, per the one-tint law.
     @ViewBuilder
     private var askChips: some View {
         if isOpen && !hasDraft && !answering && !isRecording,
            proposal == nil, !suggestions.isEmpty || organizeHint != nil {
             let hintLead = organizeHint != nil ? 1 : 0
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: DS.Space.s2) {
-                    if let hint = organizeHint {
-                        Button {
-                            DSHaptic.selection()
-                            fillDraft("tag \(hint.source.lowercased()) as ")
-                            fieldFocused = true
-                        } label: {
-                            Chip(text: "Tag your \(hint.count) \(hint.source) things",
-                                 style: .tint, glyph: "tag")
-                        }
-                        .buttonStyle(.plain)
-                        .modifier(ChipEntrance(index: 0, shown: chipsAppeared, reduceMotion: reduceMotion))
+            LazyVGrid(columns: [GridItem(.flexible(), spacing: DS.Space.s3),
+                                GridItem(.flexible(), spacing: DS.Space.s3)],
+                      spacing: DS.Space.s3) {
+                if let hint = organizeHint {
+                    AskTile(glyph: "tag",
+                            title: "Tag your \(hint.count) \(hint.source) things",
+                            featured: true) {
+                        DSHaptic.selection()
+                        fillDraft("tag \(hint.source.lowercased()) as ")
+                        fieldFocused = true
                     }
-                    // Two suggestions, no more — the chips whisper "you could
-                    // ask" beside the field; a wall of them fought the tiles
-                    // for attention (v2 pass, 2026-07-12).
-                    ForEach(Array(suggestions.prefix(2).enumerated()), id: \.offset) { i, ask in
-                        Button {
+                    .modifier(ChipEntrance(index: 0, shown: chipsAppeared, reduceMotion: reduceMotion))
+                }
+                ForEach(Array(suggestions.enumerated()), id: \.offset) { i, ask in
+                    // The librarian's tile rolls its real count up as it
+                    // appears — "Catch me up — 14 things" arriving digit by
+                    // digit (delight 2026-07-13). The tap still sends the
+                    // canonical "While I was away?" ask.
+                    if ask.hasPrefix("While I was away"), awayLanded >= 3 {
+                        AskTile(glyph: "sparkles", title: "Catch me up",
+                                rollCount: awayLanded) {
                             DSHaptic.selection()
                             draft = ask
                             commit()
-                        } label: {
-                            // The librarian's chip rolls its real count up
-                            // as it appears — "14 things while I was away"
-                            // arriving digit by digit (delight 2026-07-13).
-                            // The tap still sends the canonical ask.
-                            if ask.hasPrefix("While I was away"), awayLanded >= 3 {
-                                AwayRollChip(count: awayLanded)
-                            } else {
-                                Chip(text: ask, style: .neutral, glyph: "sparkle")
-                            }
                         }
-                        .buttonStyle(.plain)
+                        .modifier(ChipEntrance(index: i + hintLead, shown: chipsAppeared, reduceMotion: reduceMotion))
+                    } else {
+                        AskTile(glyph: askGlyph(ask), title: ask) {
+                            DSHaptic.selection()
+                            draft = ask
+                            commit()
+                        }
                         .modifier(ChipEntrance(index: i + hintLead, shown: chipsAppeared, reduceMotion: reduceMotion))
                     }
                 }
-                .padding(.horizontal, DS.Space.s4)
             }
-            // A soft trailing fade so a clipped chip reads as "more to scroll",
-            // not cut off mid-word.
-            .mask(
-                LinearGradient(stops: [.init(color: .black, location: 0),
-                                       .init(color: .black, location: 0.88),
-                                       .init(color: .clear, location: 1)],
-                               startPoint: .leading, endPoint: .trailing)
-            )
-            // Clear air between the tool card and the chips — the chips are a
-            // separate band (ask), not stuck to the tools (jump).
+            .padding(.horizontal, DS.Space.s4)
+            // Clear air between the greeting and the grid — the tiles are a
+            // separate band (ask), not stuck to the header.
             .padding(.top, DS.Space.s4)
             .padding(.bottom, DS.Space.s2)
         }
+    }
+
+    /// The glyph an ask row wears — what kind of answer the tap brings back.
+    private func askGlyph(_ ask: String) -> String {
+        if ask.hasPrefix("What's new in") { return "app.badge" }
+        if ask.hasPrefix("What's going on") { return "bolt" }
+        if ask.hasPrefix("What landed today") { return "tray.and.arrow.down" }
+        if ask.hasPrefix("How's my watchlist") { return "chart.line.uptrend.xyaxis" }
+        if ask.hasPrefix("How's my wallet") { return "wallet.bifold" }
+        if ask.hasPrefix("Show ") { return "tag" }
+        if ask.hasPrefix("What's this week") { return "calendar" }
+        return "sparkle"
     }
 
     // MARK: - Input bar (chat grammar: pinned to the bottom)
@@ -831,9 +841,16 @@ struct Composer: View {
             .accessibilityLabel(isRecording ? "Stop and keep" : "Record a voice note")
 
             TextField("", text: $draft, axis: .vertical)
+                // The invitation cycles through what the composer can DO —
+                // ask, find, recap, tag — so the empty field teaches its
+                // range instead of reading as one dead line (wired to the
+                // long-standing `invitations` cycle, 2026-07-16).
                 .placeholder(when: !hasDraft) {
-                    Text("Ask, or say what to do")
+                    Text(invitations[placeholderIndex])
                         .dsText(.body17).foregroundStyle(DS.textTertiary)
+                        .lineLimit(1)
+                        .id(placeholderIndex)
+                        .transition(.opacity)
                 }
                 .dsText(.body17)
                 .foregroundStyle(DS.textPrimary)
@@ -933,11 +950,24 @@ struct Composer: View {
                         Text("Send to")
                             .dsText(.subhead13)
                             .foregroundStyle(DS.textTertiary)
+                        // Chunkier pills than the shell Chip — the same bold
+                        // grammar as the ask tiles (option A, 2026-07-16), so
+                        // the field's two exits read as one design.
                         ForEach(TakeTool.all) { tool in
                             Button { runTake(tool) } label: {
-                                Chip(text: tool.label, style: .neutral, glyph: tool.glyph)
+                                HStack(spacing: DS.Space.s2) {
+                                    Image(systemName: tool.glyph)
+                                        .font(.system(size: 14, weight: .medium))
+                                        .foregroundStyle(DS.tint)
+                                    Text(tool.label)
+                                        .dsText(.callout15).fontWeight(.semibold)
+                                        .foregroundStyle(DS.textPrimary)
+                                }
+                                .padding(.horizontal, DS.Space.s3 + 2)
+                                .frame(height: 40)
+                                .background(DS.gray100, in: Capsule(style: .continuous))
                             }
-                            .buttonStyle(.plain)
+                            .buttonStyle(PressSpring())
                         }
                     }
                     .padding(.horizontal, DS.Space.s4)
@@ -1227,44 +1257,64 @@ struct Chip: View {
     }
 }
 
-/// The librarian chip with its count rolling in — the digits climb to the
-/// real away total right after the chip lands (numericText, once). Tapping
-/// it sends the canonical "While I was away?" via the enclosing button.
-struct AwayRollChip: View {
-    let count: Int
+/// One bold ask tile (option A, 2026-07-16) — the empty sheet's 2×2 grid
+/// unit. The glyph sits top-leading, the whole ask reads unclipped at the
+/// bottom (the chip strip's mid-word truncation died with it). `featured`
+/// is the grid's single solid-tint tile — the organize invite. The optional
+/// rolling count is the librarian's catch-up tile: the digits climb to the
+/// real away total right after the tile lands (numericText, once).
+struct AskTile: View {
+    let glyph: String
+    let title: String
+    var featured = false
+    /// When set, the title reads "<title> — N things" with N rolling in.
+    var rollCount: Int? = nil
+    let action: () -> Void
     @State private var shown = 0
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        HStack(spacing: DS.Space.s1) {
-            Image(systemName: "sparkle").font(.system(size: 12))
-            // "Catch me up" face (user, 2026-07-16 — the away brief lives as
-            // a chip, not a card); the tap still sends the canonical
-            // "While I was away?" ask, and the count still rolls in.
-            Text("Catch me up — \(shown) things")
-                .dsText(.label12)
-                .contentTransition(.numericText(value: Double(shown)))
-        }
-        .foregroundStyle(DS.textPrimary)
-        .padding(.horizontal, DS.Space.s3)
-        .frame(height: 28)
-        .background(DS.gray100, in: Capsule(style: .continuous))
-        .onAppear {
-            if reduceMotion { shown = count } else {
-                withAnimation(.spring(response: 0.9, dampingFraction: 0.9).delay(0.35)) {
-                    shown = count
+        Button(action: action) {
+            VStack(alignment: .leading, spacing: DS.Space.s3) {
+                Image(systemName: glyph)
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundStyle(featured ? AnyShapeStyle(.white) : AnyShapeStyle(DS.tint))
+                Spacer(minLength: 0)
+                Group {
+                    if rollCount != nil {
+                        Text("\(title) — \(shown) things")
+                            .contentTransition(.numericText(value: Double(shown)))
+                    } else {
+                        Text(title)
+                    }
                 }
+                .dsText(.callout15).fontWeight(.semibold)
+                .foregroundStyle(featured ? Color.white : DS.textPrimary)
+                .multilineTextAlignment(.leading)
+                .fixedSize(horizontal: false, vertical: true)
             }
+            .padding(DS.Space.s3 + 2)
+            .frame(maxWidth: .infinity, minHeight: 104, alignment: .leading)
+            .background(featured ? AnyShapeStyle(DS.tint) : AnyShapeStyle(DS.gray100),
+                        in: RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
+            .contentShape(RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
         }
+        .buttonStyle(PressSpring())
+        .onAppear { roll(to: rollCount) }
         // The suggestions rebuild while the composer is open — a grown away
         // pool re-rolls to the new count instead of going stale (review
         // catch 2026-07-13).
-        .onChange(of: count) { _, new in
-            withAnimation(reduceMotion ? nil : .spring(response: 0.6, dampingFraction: 0.9)) {
-                shown = new
+        .onChange(of: rollCount) { _, new in roll(to: new) }
+        .accessibilityLabel(rollCount.map { "\(title) — \($0) things" } ?? title)
+    }
+
+    private func roll(to count: Int?) {
+        guard let count else { return }
+        if reduceMotion { shown = count } else {
+            withAnimation(.spring(response: 0.9, dampingFraction: 0.9).delay(0.35)) {
+                shown = count
             }
         }
-        .accessibilityLabel("\(count) things while I was away")
     }
 }
 
