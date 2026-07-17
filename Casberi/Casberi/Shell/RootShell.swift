@@ -22,6 +22,13 @@ struct RootShell: View {
     /// `casberi://person/<Source>/<handle>` — the profile card, by name.
     @State private var deepLinkPerson: SocialProfile?
     @AppStorage("onboarded") private var onboarded = false
+    /// Set by the onboarding CTA, consumed by the cover's onDismiss: the
+    /// catalog push must wait until the cover is fully DOWN. Pushing while
+    /// the cover still stood raced its dismissal, and SwiftUI intermittently
+    /// drops a navigationDestination push made under a presented cover — the
+    /// same drop class as `-openSettings` at launch (audit 2026-07-13); the
+    /// user saw it as "Browse the catalog sometimes doesn't work" (2026-07-17).
+    @State private var landInCatalog = false
     @AppStorage("privacy.hidePreviews") private var hidePreviews = true
     @AppStorage("firstThingSaved") private var firstThingSaved = false
     @Environment(\.scenePhase) private var scenePhase
@@ -488,7 +495,13 @@ struct RootShell: View {
             }
         }
         .sheet(item: $deepLinkThing) { thing in
+            // This chain hangs outside the shell's `.environment(bridges)`
+            // (see the profile-card note below) — hand the store in, or a
+            // token thing's content (whose Watch row registers the Tokens
+            // bridge) mounts storeless. Crashed here 2026-07-17; the read
+            // is optional now too, but the store should really be present.
             ThingSheetView(thing: thing)
+                .environment(bridges)
         }
         .sheet(item: $deepLinkPerson) { person in
             // These sheets hang OUTSIDE the `.environment(chrome)` above, so
@@ -501,7 +514,12 @@ struct RootShell: View {
         }
         .fullScreenCover(isPresented: Binding(
             get: { !onboarded }, set: { if !$0 { onboarded = true } }
-        )) {
+        ), onDismiss: {
+            guard landInCatalog else { return }
+            landInCatalog = false
+            FeedFilter.shared.source = "All"
+            HomeRoute.shared.push = .apps
+        }) {
             // Onboarding is ONE screen (re-ruled 2026-07-16 — the connect
             // screen died): the "How it works" greeting, wearing the rain
             // itself. Its one door forward lands IN the catalog, which is
@@ -510,8 +528,7 @@ struct RootShell: View {
             // step 1 is fulfilled the moment the cover lifts. The record
             // ("All" chip) waits one back-swipe beneath it.
             HowItWorksSheet(onOpenCatalog: {
-                FeedFilter.shared.source = "All"
-                HomeRoute.shared.push = .apps
+                landInCatalog = true
                 onboarded = true
             })
             // fullScreenCover hosts its content in a separate presentation
