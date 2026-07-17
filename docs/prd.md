@@ -3662,3 +3662,27 @@ bridge sync never ran on a pull — only the 600ms pulse stub did.
 Verified: 10/10 cold-launch survival with three feeds mounted where one was
 (the stack-overflow class of CLAUDE.md — dropping the coach's `hintID` threading
 flattened the row path enough to pay for the pager's depth).
+
+## 89. Onboarding teaches the loop, not the philosophy (user, 2026-07-16) — BUILT
+
+A tester finished onboarding and didn't know what to do next. The diagnosis
+(after several rounds): every action in Casberi — connect an app, follow a
+person, watch a wallet or token — lives in the store, and nothing taught a new
+person that the store exists, where it is, or that pinning is how Home gets
+built. The old "How it works" greeting spoke in evergreen abstractions ("Keep
+tabs", "Take action", "Make it yours") that named categories, not first moves.
+
+**The ruling: a new person must leave onboarding knowing exactly four things —
+(1) go to the store, (2) connect, (3) pin to Home, (4) ask about what you've
+saved.** The greeting now says precisely that, as numbered steps, wearing the
+real controls' glyphs (the Apps door's grid, the composer FAB's plus) so both
+are recognizable in the shell later.
+
+Copy subtlety paid for in review: step 3 must NOT read as "pin what you want
+to keep in sight" — that implies unpinned things vanish. Pinning picks what
+Home leads with; the feed always has everything. The step says both halves.
+
+Held for later (discussed, not ruled): follow-type rows on the onboarding
+connect card (a person / a token / a wallet beside the app rows — "any follow
+is a connect in the store"), and an embedded store shelf on the sparse feed.
+Both aim at the same gap; the four-step greeting is the contained first fix.

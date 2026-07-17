@@ -1,11 +1,14 @@
 import SwiftUI
 
 /// "How it works" (2026-07-11) — the one persistent place that explains the
-/// model, for a new person after the retiring coach lines are gone. Deliberately
-/// EVERGREEN: principles in Casberi's voice, not a gesture-by-gesture manual
-/// (the exact taps change; three did in one day). Reached from the Settings
-/// tile to revisit any time, and wired into the onboarding tail so a new person
-/// meets it once. Text literals auto-localize (LocalizedStringKey).
+/// model, for a new person after the retiring coach lines are gone. Re-ruled
+/// 2026-07-16: the evergreen abstractions ("Keep tabs", "Make it yours") left
+/// a real tester not knowing what to do — now it teaches the ONE loop that
+/// matters, as four numbered steps: open the store → connect → pin → ask. Still no
+/// gesture-by-gesture manual; it names the store's place and glyph because
+/// that door is the whole game. Reached from the Settings tile to revisit any
+/// time, and wired into the onboarding tail so a new person meets it once.
+/// Text literals auto-localize (LocalizedStringKey).
 struct HowItWorksSheet: View {
     @Environment(\.dismiss) private var dismiss
 
@@ -17,22 +20,29 @@ struct HowItWorksSheet: View {
         var id: String { glyph }
     }
 
-    // The four beats mirror the docs' four feature sections (2026-07-13):
-    // Just connect → Keep tabs → Take action → Make it yours. One line each —
-    // the essence of the section, never the full card list.
+    // Four numbered steps (ruling 2026-07-16, replacing the four abstract
+    // beats): a new person must leave knowing exactly (1) where the store is,
+    // (2) that connecting fills the feed by itself, (3) what pinning is FOR,
+    // (4) that the composer answers questions about what they've saved.
+    // Step 1 wears the REAL Apps-door glyph (TopDoors' square.grid.2x2) so
+    // they recognize it in the shell later. Step 3's line closes the loop
+    // explicitly — "the feed always has everything" — because "keep in sight"
+    // phrasing read as if unpinned things vanish (user, 2026-07-16).
     private let points: [Point] = [
         Point(glyph: "square.grid.2x2.fill", hue: .blue,
-              title: "Just connect",
-              line: "No account. Your apps, in one feed."),
+              title: "1. Open the store",
+              line: "Top right of your feed. Apps, people, wallets, stocks — everything you can add lives there."),
+        Point(glyph: "checkmark.circle.fill", hue: .green,
+              title: "2. Connect things",
+              line: "Everything you connect lands in your feed, automatically."),
         Point(glyph: "pin.fill", hue: .pink,
-              title: "Keep tabs",
-              line: "Pin, share, tag, and act on your things."),
-        Point(glyph: "sparkles", hue: .purple,
-              title: "Take action",
-              line: "Ask, organize, or jump to a tool."),
-        Point(glyph: "slider.horizontal.3", hue: .orange,
-              title: "Make it yours",
-              line: "Your avatar, background, language, data."),
+              title: "3. Pin your favorites",
+              line: "Home is built from what you pin. The feed always has everything."),
+        // Wears the composer FAB's real glyph (a plain plus), same reason
+        // step 1 wears the store's grid.
+        Point(glyph: "plus", hue: .purple,
+              title: "4. Ask",
+              line: "Tap the + button and ask questions about anything you've saved."),
     ]
 
     var body: some View {
