@@ -52,7 +52,7 @@ struct ThingSheetView: View {
     @State private var walkingTo: SocialCard?
     /// The person behind a tapped face — the profile card.
     @State private var profileTarget: SocialProfile?
-    /// An approval thing's prepare card (prd §111) — the grant's LIVE state,
+    /// An approval thing's prepare card (prd §112) — the grant's LIVE state,
     /// the fee to revoke, the doors out. Fetched on open like replies; the
     /// section renders only when the check answered.
     @State private var approvalCheck: WalletPrepare.Check?

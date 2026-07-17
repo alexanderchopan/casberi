@@ -1,7 +1,7 @@
 import Foundation
 import SwiftData
 
-/// The preparing surface (2026-07-17, prd §111) — the smart-account line the
+/// The preparing surface (2026-07-17, prd §112) — the smart-account line the
 /// wallet bridge holds: Casberi READS on-chain state and PREPARES transactions,
 /// and a signature always happens somewhere else (a wallet app, Revoke.cash).
 /// Nothing here can move funds: every call is a keyless JSON-RPC read on the

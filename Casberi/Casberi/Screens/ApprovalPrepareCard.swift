@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// The approval thing's prepare card (prd §111) — the preparing surface drawn
+/// The approval thing's prepare card (prd §112) — the preparing surface drawn
 /// as UI. Everything on it is a read or a hand-off: the grant's LIVE state,
 /// the fee a revoke would cost, and two doors out (Revoke.cash, where the
 /// signing lives; the prepared transaction on the pasteboard, for any wallet).

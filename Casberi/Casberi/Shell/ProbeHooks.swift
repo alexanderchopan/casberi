@@ -549,7 +549,7 @@ enum ProbeHooks {
                 NSLog("Approval probe: %d landed", n)
             }
         },
-        // `-prepareProbe YES` runs the approval PREPARE path (prd §111) over
+        // `-prepareProbe YES` runs the approval PREPARE path (prd §112) over
         // the newest landed approval thing — receipt refetch → live
         // allowance/operator read → revoke calldata → fee quote — and NSLogs
         // each fact. Reads only, nothing signed or sent. Pairs with

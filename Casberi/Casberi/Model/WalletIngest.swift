@@ -49,7 +49,7 @@ enum WalletIngest {
     }
 
     /// The chain's native coin symbol ("ETH", "MATIC", "SOL") — the prepare
-    /// path's fee line (WalletPrepare, prd §111) quotes fees in it. Read off
+    /// path's fee line (WalletPrepare, prd §112) quotes fees in it. Read off
     /// THIS table so a fee can never disagree with the treemap's own label
     /// (review 2026-07-17: a hand-rolled second map said "POL" where the
     /// holdings screen says "MATIC").

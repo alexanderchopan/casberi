@@ -109,7 +109,7 @@ enum WalletApprovals {
             || (ENS.looksLikeName(address) && !SNS.looksLikeName(address))
     }
 
-    /// The prepare path (`WalletPrepare`, prd §111) rides this same measured
+    /// The prepare path (`WalletPrepare`, prd §112) rides this same measured
     /// chain table — one table, so a chain added above serves the sync AND the
     /// prepare reads, and a network this table doesn't know honestly can't
     /// prepare. Reads only, like everything on these hosts.
