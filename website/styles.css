@@ -683,6 +683,7 @@ footer .tagline { font-size: 16px; font-weight: 600; color: var(--ink); margin-b
 
   /* closing settings row — same card language as the grids above */
   .yours-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  .yours-grid.two { grid-template-columns: repeat(2, 1fr); margin-top: 12px; }
   @media (max-width: 900px) { .yours-grid { grid-template-columns: repeat(2, 1fr); } }
   @media (max-width: 480px) { .yours-grid { grid-template-columns: 1fr; } }
 
@@ -701,7 +702,7 @@ footer .tagline { font-size: 16px; font-weight: 600; color: var(--ink); margin-b
   .b-small:hover { transform: translateY(-3px); }
   .b-small svg { transition: transform .3s cubic-bezier(.34,1.56,.64,1); transform-origin: 50% 60%; }
   .b-small:hover svg { transform: scale(1.25) rotate(-8deg); }
-  .yours-grid .b-small:nth-child(3):hover svg { transform: rotate(360deg) scale(1.15); transition: transform .7s cubic-bezier(.3,.7,.3,1); }
+  .yours-grid.two .b-small:nth-child(1):hover svg { transform: rotate(360deg) scale(1.15); transition: transform .7s cubic-bezier(.3,.7,.3,1); }
 
   .hello { font-style: normal; font-weight: 650; color: var(--blue-bright); font-size: 13px;
     display: inline-block; min-width: 86px; transition: opacity .25s; }
