@@ -22,13 +22,6 @@ struct RootShell: View {
     /// `casberi://person/<Source>/<handle>` — the profile card, by name.
     @State private var deepLinkPerson: SocialProfile?
     @AppStorage("onboarded") private var onboarded = false
-    /// After onboarding completes, the "How it works" greeting shows a new
-    /// person once (2026-07-11) — swapped in as a SECOND STEP inside the same
-    /// full-screen cover (not a sheet presented after the cover dismisses),
-    /// so the feed never flashes underneath between the two (2026-07-13 fix:
-    /// the old onDismiss handoff had a visible gap where the cover had
-    /// already revealed the feed before the sheet slid up).
-    @State private var onboardingHowItWorks = false
     @AppStorage("privacy.hidePreviews") private var hidePreviews = true
     @AppStorage("firstThingSaved") private var firstThingSaved = false
     @Environment(\.scenePhase) private var scenePhase
@@ -507,36 +500,20 @@ struct RootShell: View {
                 .environment(chrome)
         }
         .fullScreenCover(isPresented: Binding(
-            get: { !onboarded }, set: { if !$0 { onboarded = true; onboardingHowItWorks = false } }
+            get: { !onboarded }, set: { if !$0 { onboarded = true } }
         )) {
-            // Onboarding (option 4, 2026-07-07): the mini store connects the
-            // three real bridges for REAL, and that's the whole tour — no
-            // demo mode, no sample things. The dream lives on the store
-            // pages as engine-rendered previews. The "How it works" greeting
-            // is a second step of this SAME cover (below), not a separate
-            // presentation — it swaps in in place, so the shell is never
-            // revealed until the greeting's door is taken.
-            Group {
-                if onboardingHowItWorks {
-                    // The greeting's one door forward lands IN the catalog
-                    // (ruling 2026-07-16, replacing the feed landing): the
-                    // arc is apps rain down → the four steps → the catalog
-                    // where those apps live, so step 1 is fulfilled the
-                    // moment the cover lifts. The record ("All" chip) waits
-                    // one back-swipe beneath it, already holding whatever
-                    // the connects landed.
-                    HowItWorksSheet(onOpenCatalog: {
-                        HomeRoute.shared.push = .apps
-                        onboardingHowItWorks = false
-                        onboarded = true
-                    })
-                } else {
-                    OnboardingView(store: bridges) { _ in
-                        FeedFilter.shared.source = "All"
-                        onboardingHowItWorks = true
-                    }
-                }
-            }
+            // Onboarding is ONE screen (re-ruled 2026-07-16 — the connect
+            // screen died): the "How it works" greeting, wearing the rain
+            // itself. Its one door forward lands IN the catalog, which is
+            // where connecting actually happens now — the arc is apps rain
+            // down → the four steps → the catalog where those apps live, so
+            // step 1 is fulfilled the moment the cover lifts. The record
+            // ("All" chip) waits one back-swipe beneath it.
+            HowItWorksSheet(onOpenCatalog: {
+                FeedFilter.shared.source = "All"
+                HomeRoute.shared.push = .apps
+                onboarded = true
+            })
             // fullScreenCover hosts its content in a separate presentation
             // that doesn't reliably inherit `\.locale` from the presenter
             // (unlike `.sheet`) — reapply so first-run copy honors the

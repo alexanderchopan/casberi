@@ -12,11 +12,12 @@
 #        a connectable app missing from the site, or a site tile that is not
 #        a connectable offer (typo, rename, or a showcase app that slipped in).
 #
-#   2. ONBOARDING CONNECT LIST is code-derived (OnboardingView.offers filters
-#        BridgeCatalog.offers directly) — it cannot drift, so nothing to check.
+#   2. ONBOARDING CONNECT LIST is gone (re-ruled 2026-07-16): the connect
+#        screen died — onboarding is the "How it works" greeting straight
+#        into the catalog, and the catalog is code-derived. Nothing to check.
 #
 #   3. DECORATIVE MARQUEES — the website hero rain (index.html .rain) and the
-#        onboarding ice pile (OnboardingView.marqueeApps) — are hand-curated
+#        onboarding rain (HowItWorksSheet.marqueeApps) — are hand-curated
 #        SUBSETS by design (the rain has never listed Photos/Wallet/etc.).
 #        We do NOT require completeness, but every name they reference MUST
 #        resolve to a real offer, so a rename/removal/typo can't leave a dead
@@ -30,7 +31,8 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 CATALOG="Casberi/Casberi/Model/BridgeCatalog.swift"
-ONBOARD="Casberi/Casberi/Screens/OnboardingView.swift"
+ONBOARD="Casberi/Casberi/Screens/HowItWorksSheet.swift"
+FEED="Casberi/Casberi/Screens/FeedScreen.swift"
 INDEX="website/index.html"
 
 tmp="$(mktemp -d)"
@@ -57,6 +59,10 @@ awk '/class="rain">/{f=1} /rain-target/{f=0} f' "$INDEX" \
 # --- 4. Onboarding ice-pile names (marqueeApps array) --------------------
 awk '/marqueeApps *= *\[/{f=1} f{print} f&&/\]/{exit}' "$ONBOARD" \
   | grep -oE '"[^"]+"' | tr -d '"' | sort -u > "$tmp/onb_marquee"
+
+# --- 5. Empty-feed pile names (EmptyFeedPile.pileApps array) --------------
+awk '/pileApps *= *\[/{f=1} f{print} f&&/\]/{exit}' "$FEED" \
+  | grep -oE '"[^"]+"' | tr -d '"' | sort -u > "$tmp/feed_pile"
 
 fail=0
 say()  { printf '%s\n' "$*"; }
@@ -85,13 +91,14 @@ check_marquee_validity() {
 }
 say "Marquee names resolve to real offers"
 check_marquee_validity "website hero marquee" "$tmp/web_marquee"
-check_marquee_validity "onboarding ice pile"  "$tmp/onb_marquee"
+check_marquee_validity "onboarding rain"  "$tmp/onb_marquee"
+check_marquee_validity "empty-feed pile"  "$tmp/feed_pile"
 [ "$fail" -eq 0 ] && say "  ✓ all marquee names valid"
 
 # === Info: connectable apps not (yet) in a decorative marquee ============
 say "Connectable apps absent from a marquee (info only)"
 info "hero marquee omits: $(comm -23 "$tmp/connectable" "$tmp/web_marquee" | paste -sd, - | sed 's/,/, /g')"
-info "onboarding pile omits: $(comm -23 "$tmp/connectable" "$tmp/onb_marquee" | paste -sd, - | sed 's/,/, /g')"
+info "onboarding rain omits: $(comm -23 "$tmp/connectable" "$tmp/onb_marquee" | paste -sd, - | sed 's/,/, /g')"
 
 echo
 if [ "$fail" -ne 0 ]; then

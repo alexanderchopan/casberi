@@ -60,7 +60,7 @@ Screens with specs in the PRD: Home (composition per moment; one daily layout; p
 - Account details (Data, Privacy, Subscription, Theme, Usage, Support, Updates): pattern = sheet with one control cluster; content per PRD Account section.
 - Empty states (Home, Feed, Apps): pattern = the surface's own choreography with skeletons; content points to the first action.
 - Permission asks (calendar, photos, contacts, notifications, mic): pattern = in-context sheet at the moment of unlock; copy names what the person controls; never a settings route.
-- Onboarding: three value cards, each one tap, each skippable; skip-all leaves the composer working.
+- Onboarding: ONE screen (prd §96, 2026-07-16 — supersedes the original three value cards and the later connect screen): the "How it works" greeting wearing the icon rain, its one door landing in the Apps catalog, where connecting happens for real.
 - Remove app: sheet with keep-or-purge choice.
 - Approval sheet (post-v1, S10): gen UI composition — diff, scope, agent, target; approve or block.
 

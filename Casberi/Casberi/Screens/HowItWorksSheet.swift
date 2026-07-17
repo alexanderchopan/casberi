@@ -15,11 +15,18 @@ import SwiftUI
 /// and the title at the heading-22 tier. The numeral is information (the
 /// sequence), not decoration; its hue is the step's identity, same as the
 /// glyph chip it echoes. Step 1 carries a settled strip of real app icons,
-/// slightly uneven like the onboarding rain they just watched land — the
-/// same brands, come to rest. Cards arrive staggered, the connect screen's
-/// entrance. In the onboarding tail the page ends at a "Browse the catalog"
-/// door that lands IN the catalog (the arc: apps rain down → the four steps →
-/// the catalog where those apps live); from Settings it keeps the plain Done.
+/// slightly uneven like the onboarding rain — the same brands, come to
+/// rest. Cards arrive staggered, the old connect screen's entrance.
+///
+/// Re-ruled 2026-07-16 (user): the connect screen DIED — this page IS
+/// onboarding now, one screen. Its rain moved here: in the onboarding tail
+/// the full curated set of app tiles falls down the screen in front of the
+/// steps and passes off the bottom — a curtain of everything that can land,
+/// while step 1's strip sits below as the rain come to rest. Connecting
+/// happens where it always really happened: in the catalog, which the one
+/// door forward opens (the arc: apps rain down → the four steps → the
+/// catalog where those apps live); from Settings there is no rain and the
+/// plain Done remains.
 /// Naming (user, 2026-07-16): user-facing copy never says "store" for this
 /// surface — it's "the catalog" ("store" reads as a place you pay).
 /// Text literals auto-localize (LocalizedStringKey).
@@ -29,6 +36,11 @@ struct HowItWorksSheet: View {
 
     @Environment(\.dismiss) private var dismiss
     @State private var arrived = false
+    /// False = the rain waits above the screen · true = it has fallen through.
+    @State private var rainFell = false
+    /// True once the last tile is past the bottom — the overlay unmounts, so
+    /// 31 offscreen icon views don't stay composited under the cover forever.
+    @State private var rainDone = false
 
     private struct Point: Identifiable {
         let glyph: String
@@ -64,13 +76,60 @@ struct HowItWorksSheet: View {
               line: "Tap the + button and ask questions about anything you've saved."),
     ]
 
+    // MARK: - The onboarding rain (moved here 2026-07-16 when the connect
+    // screen died). A hand-curated subset of the catalog — every name MUST
+    // resolve to a real BridgeCatalog offer (catalog-sync.sh checks this
+    // array by name). The last six are Apple's bridges as symbol tiles
+    // (their icons are legally unbundlable).
+    private static let marqueeApps = ["Wallet", "Farcaster", "Gmail", "GitHub",
+                                      "Claude", "GeckoTerminal", "Strava", "Bluesky",
+                                      "Shopify", "Notion", "Reddit",
+                                      "YouTube", "Todoist", "RSS", "ChatGPT",
+                                      "Gemini", "Linear", "Raindrop", "Readwise",
+                                      "Tokens", "Venice", "OpenClaw", "Cal.com",
+                                      "Bankr", "Stocktwits",
+                                      "iCloud Mail", "Apple Music", "Apple Health",
+                                      "Reminders", "Calendar", "Photos"]
+
+    /// Deterministic per-tile jitter — no Math.random in a view body; the
+    /// same fall replays identically (and the screen sweep sees one design).
+    private static let jitter: [CGFloat] = [-4, 3, -2, 5, -5, 2, -3, 4]
+
+    /// The curtain: every marquee tile falls from above the screen, tumbles,
+    /// and passes off the bottom — rain, not ice; nothing rests over the
+    /// steps (the strip in step 1 is the rain come to rest). Gravity is an
+    /// ease-IN: tiles accelerate, they don't glide. Never hit-testable.
+    private var rain: some View {
+        GeometryReader { geo in
+            ForEach(Array(Self.marqueeApps.enumerated()), id: \.element) { i, name in
+                // Golden-ratio spread — deterministic, evenly scattered
+                // columns without a visible grid.
+                let frac = (Double(i) * 0.381966).truncatingRemainder(dividingBy: 1)
+                let x = DS.Space.s4 + CGFloat(frac) * (geo.size.width - DS.Space.s4 * 2)
+                let tilt = Double(Self.jitter[i % Self.jitter.count])
+                BridgeIcon(name: name, size: 64)
+                    .rotationEffect(.degrees(rainFell ? tilt * 3.4 : tilt * 0.5))
+                    .position(x: x + Self.jitter[(i + 3) % Self.jitter.count],
+                              y: rainFell ? geo.size.height + 140 : -120)
+                    // The base delay clears the cover's own presentation —
+                    // start the rain while the cover is still fading in and
+                    // half the fall is spent invisible (measured 2026-07-16).
+                    .animation(.easeIn(duration: 0.75)
+                                .delay(0.7 + Double(i) * 0.055),
+                               value: rainFell)
+            }
+        }
+        .ignoresSafeArea()
+        .allowsHitTesting(false)
+    }
+
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: DS.Space.s4) {
-                    // The header is the display tier — same 34-heavy SF
-                    // Rounded as the connect screen's title, so the two
-                    // onboarding beats read as one voice.
+                    // The header is the display tier — 34-heavy SF Rounded,
+                    // the Home cover's voice; this is the first screen a
+                    // new person meets.
                     VStack(alignment: .leading, spacing: DS.Space.s2) {
                         Text("How it works")
                             .font(.system(size: 34, weight: .heavy, design: .rounded))
@@ -128,8 +187,20 @@ struct HowItWorksSheet: View {
                 }
             }
         }
+        // The rain falls only in the onboarding tail — from Settings this is
+        // a reference page, and a second rain would be a fake first time.
+        .overlay { if onOpenCatalog != nil && !rainDone { rain } }
         .tint(DS.tint)
-        .onAppear { withAnimation(DS.Motion.standard) { arrived = true } }
+        .onAppear {
+            withAnimation(DS.Motion.standard) { arrived = true }
+            guard onOpenCatalog != nil else { return }
+            rainFell = true
+            // Last tile: 0.7 base + 30 × 0.055 stagger + 0.75 fall ≈ 3.1s.
+            Task { @MainActor in
+                try? await Task.sleep(for: .seconds(3.6))
+                rainDone = true
+            }
+        }
         #if DEBUG
         // `-howItWorksCTA <s>` fires the onboarding-tail CTA after a delay —
         // the catalog landing verifies headlessly (the `-demoPick` pattern).
@@ -185,7 +256,7 @@ struct HowItWorksSheet: View {
     }
 
     /// The onboarding rain, settled: a row of the same real brands, each
-    /// resting slightly uneven — the connect screen's jitter, come to rest.
+    /// resting slightly uneven — the rain's own jitter, come to rest.
     /// Illustration by identity (real icons), never a control.
     private static let stripApps = ["Photos", "Calendar", "Gmail",
                                     "GitHub", "Farcaster", "Wallet"]
@@ -204,7 +275,7 @@ struct HowItWorksSheet: View {
 }
 
 private extension View {
-    /// The steps' entrance — the connect screen's arrive, same curve.
+    /// The steps' entrance — sections fade up in order, one curve.
     func arrive(_ on: Bool, delay: Double) -> some View {
         opacity(on ? 1 : 0)
             .offset(y: on ? 0 : 10)
