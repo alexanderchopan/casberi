@@ -95,25 +95,70 @@ struct ThingSheetView: View {
                         .padding(.top, DS.Space.s2)
                         .settleIn(delay: 0.04)
                 }
-                titleBlock
-                    .padding(.horizontal, DS.Space.s4)
-                    .padding(.top, DS.Space.s3)
-                    .settleIn(delay: 0.06)
+                // The stage (B1, 2026-07-16): a wallet transfer or a screenshot
+                // leads with a HERO that depicts the thing — parties + signed
+                // amount on the wash's seam, or the image in a floating frame —
+                // and its verbs become the dial. Everything else keeps the
+                // title-led layout.
+                let stage = self.stage
+                let framedShot = stage == nil && thing.kind == .screenshot
+                if let stage {
+                    TransferStageView(thing: thing, stage: stage,
+                                      onNameCounterparty: nameCounterpartyAction)
+                        .padding(.horizontal, DS.Space.s4)
+                        .padding(.top, DS.Space.s6)
+                        .settleIn(delay: 0.06)
+                    VerbDial(thing: thing, verbs: walletVerbs,
+                             onVerb: runVerb, onName: nameCounterpartyAction)
+                        .padding(.top, DS.Space.s6)
+                        .settleIn(delay: 0.12)
+                    dialResult
+                } else if framedShot {
+                    // The framed exception (B1c): facts stand bare on the wash;
+                    // pixels recess into a frame that floats on it — the image
+                    // sits IN the source's color without the color ever touching
+                    // its pixels. The title drops below at reading size: for a
+                    // screenshot the picture is the identity, the words the
+                    // caption.
+                    ThingContentView(thing: thing)
+                        .shadow(color: DS.cardShadow, radius: 18, y: 10)
+                        .padding(.top, DS.Space.s3)
+                        .settleIn(delay: 0.06)
+                    Text(thing.title)
+                        .dsText(.heading22).foregroundStyle(DS.textPrimary)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.horizontal, DS.Space.s4)
+                        .padding(.top, DS.Space.s2)
+                        .settleIn(delay: 0.1)
+                    VerbDial(thing: thing, verbs: VerbDerivation.verbs(for: thing),
+                             onVerb: runVerb, onName: nil)
+                        .padding(.top, DS.Space.s6)
+                        .settleIn(delay: 0.14)
+                    dialResult
+                } else {
+                    titleBlock
+                        .padding(.horizontal, DS.Space.s4)
+                        .padding(.top, DS.Space.s3)
+                        .settleIn(delay: 0.06)
+                }
                 // Events speak through WHEN below; and when the content is
                 // just the title again (a short note with no body beyond its
                 // own headline), showing it twice reads as a stutter.
                 // A social post always shows content — its pictures, what it
                 // quotes, how it landed — and its `content` is a permalink, so
                 // the title-stutter test never applied to it anyway.
-                let contentShown = isSocialPost || (thing.kind != .event
+                let contentShown = stage == nil && !framedShot
+                    && (isSocialPost || (thing.kind != .event
                     && thing.content.trimmingCharacters(in: .whitespacesAndNewlines)
-                        != thing.title.trimmingCharacters(in: .whitespacesAndNewlines))
+                        != thing.title.trimmingCharacters(in: .whitespacesAndNewlines)))
                 if contentShown {
                     ThingContentView(thing: thing)
                         .padding(.top, DS.Space.s3)
                         .settleIn(delay: 0.12)
                 }
-                specTable(contentShown: contentShown)
+                // The stage already shows the counterparty (with its pencil),
+                // so its spec table drops the Who row instead of repeating it.
+                specTable(contentShown: contentShown, showsWho: stage == nil)
                     .padding(.horizontal, DS.Space.s4)
                     .padding(.top, DS.Space.s6)
                     .settleIn(delay: 0.18)
@@ -122,8 +167,10 @@ struct ThingSheetView: View {
                         .padding(.top, DS.Space.s3)
                         .id("tags")
                 }
-                actionRows
-                    .padding(.top, DS.Space.s6)
+                if stage == nil && !framedShot {
+                    actionRows
+                        .padding(.top, DS.Space.s6)
+                }
                 if !replies.isEmpty {
                     // One replies renderer (2026-07-16) — the thing sheet and
                     // the in-app walker show a reply identically, however deep
@@ -154,7 +201,16 @@ struct ThingSheetView: View {
             if let hue = DS.washHue(for: thing.source) {
                 // Bold, not a film (user ruling 2026-07-13): the crown IS
                 // the source's color, flowing into the sheet's ink.
-                LinearGradient(stops: [
+                // A stage sheet uses the SEAM recipe (B1a, 2026-07-16): the
+                // solid crown ends sooner and the fade completes early, so the
+                // signed amount lands on near-ink — identity (faces) lives on
+                // the solid zone, data lives at or below the seam.
+                let seam = stage != nil
+                LinearGradient(stops: seam ? [
+                    .init(color: hue, location: 0),
+                    .init(color: hue, location: 0.26),
+                    .init(color: hue.opacity(0), location: 0.78),
+                ] : [
                     .init(color: hue, location: 0),
                     .init(color: hue, location: 0.3),
                     .init(color: hue.opacity(0), location: 1),
@@ -406,7 +462,7 @@ struct ThingSheetView: View {
 
     // MARK: - Spec table (Gallery's graft — labels change per kind)
 
-    private func specTable(contentShown: Bool) -> some View {
+    private func specTable(contentShown: Bool, showsWho: Bool = true) -> some View {
         VStack(alignment: .leading, spacing: DS.Space.s3) {
             if thing.kind == .event, !thing.content.isEmpty {
                 specRow("When", thing.content)
@@ -433,7 +489,8 @@ struct ThingSheetView: View {
             // A wallet transfer's counterparty — the other side of the trade,
             // nameable ("this is Mom"). Only when the hex was captured (native
             // sends have none) (2026-07-15).
-            if thing.source == "Wallet", let cp = thing.counterpartyAddress, !cp.isEmpty {
+            if showsWho, thing.source == "Wallet",
+               let cp = thing.counterpartyAddress, !cp.isEmpty {
                 counterpartyRow(cp)
             }
             tagsRow
@@ -467,8 +524,7 @@ struct ThingSheetView: View {
     /// it here rides every future transfer with this address.
     private func counterpartyRow(_ address: String) -> some View {
         Button {
-            counterpartyDraft = CounterpartyLabels.shared.label(for: address) ?? ""
-            counterpartyTarget = address
+            nameCounterpartyAction?()   // the one entry into the naming flow
         } label: {
             HStack(alignment: .firstTextBaseline, spacing: 0) {
                 Text("Who")
@@ -520,30 +576,75 @@ struct ThingSheetView: View {
         return line.font(.system(size: 15))
     }
 
+    // MARK: - The dial's wiring (stage sheets — B1, 2026-07-16)
+
+    /// The transfer's parsed hero, when this thing earns one — the ONE
+    /// decision point both the layout and the wash's seam recipe read.
+    private var stage: TransferStage? { TransferStage(thing) }
+
+    /// A wallet transfer's dial verbs: Open (the explorer link, when the
+    /// record carries one) and Copy. Name and Share ride the dial's own slots.
+    private var walletVerbs: [Verb] {
+        var out: [Verb] = []
+        if let url = Capture.detectURL(in: thing.content) {
+            out.append(Verb(label: "Open", icon: "arrow.up.right", action: .openURL(url)))
+        }
+        out.append(Verb(label: "Copy link", icon: "doc.on.doc", action: .copyText))
+        return out
+    }
+
+    /// The one verb gate, both layouts: reads pass, writes confirm.
+    private func runVerb(_ verb: Verb) {
+        if verb.isWrite {
+            confirmingVerb = verb
+        } else {
+            Task { await perform(verb) }
+        }
+    }
+
+    /// The naming flow, when there's an address to name — nil keeps the
+    /// stage's face plain and the Name disc absent (no dead controls).
+    private var nameCounterpartyAction: (() -> Void)? {
+        guard let cp = thing.counterpartyAddress, !cp.isEmpty else { return nil }
+        return {
+            counterpartyDraft = CounterpartyLabels.shared.label(for: cp) ?? ""
+            counterpartyTarget = cp
+        }
+    }
+
+    /// The verb outcome, honesty-styled — ONE text both layouts place, so a
+    /// bridge's no reads the same wherever the verb lived.
+    @ViewBuilder private var verbOutcome: some View {
+        if let verbResult {
+            Text(verbResult)
+                .dsText(.subhead13)
+                .foregroundStyle(verbResultIsError ? DS.attention : DS.confirm)
+        }
+    }
+
+    /// The outcome under the dial — centered, where the discs are.
+    private var dialResult: some View {
+        verbOutcome
+            .frame(maxWidth: .infinity)
+            .padding(.top, DS.Space.s2)
+    }
+
     // MARK: - Actions (quiet text rows — verbs, then Pin, then Share)
 
     private var actionRows: some View {
         VStack(alignment: .leading, spacing: 0) {
             ForEach(VerbDerivation.verbs(for: thing)) { verb in
                 Button {
-                    if verb.isWrite {
-                        confirmingVerb = verb   // writes confirm
-                    } else {
-                        Task { await perform(verb) }   // reads pass
-                    }
+                    runVerb(verb)   // reads pass; writes confirm
                 } label: {
                     actionRow(icon: verb.icon, label: verb.label)
                 }
                 .buttonStyle(.plain)
             }
             shareRow
-            if let verbResult {
-                Text(verbResult)
-                    .dsText(.subhead13)
-                    .foregroundStyle(verbResultIsError ? DS.attention : DS.confirm)
-                    .padding(.horizontal, DS.Space.s4)
-                    .padding(.top, DS.Space.s2)
-            }
+            verbOutcome
+                .padding(.horizontal, DS.Space.s4)
+                .padding(.top, DS.Space.s2)
         }
     }
 

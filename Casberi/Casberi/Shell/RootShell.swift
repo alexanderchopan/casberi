@@ -310,6 +310,18 @@ struct RootShell: View {
                 UserDefaults.standard.removeObject(forKey: "deeplink")
                 route(url)
             }
+            // `-openThing "<title prefix>"` opens the newest thing whose title
+            // starts with the prefix — the sheet-by-content route for headless
+            // sheet checks (a UUID changes every install; a title doesn't).
+            if let prefix = UserDefaults.standard.string(forKey: "openThing"),
+               !prefix.isEmpty {
+                let all = (try? modelContext.fetch(FetchDescriptor<Thing>(
+                    sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]
+                ))) ?? []
+                deepLinkThing = all.first { $0.title.hasPrefix(prefix) }
+                NSLog("[Casberi] openThing: %@",
+                      deepLinkThing?.title ?? "no match for \(prefix)")
+            }
             // `-openSettings YES` pushes Settings. Lives HERE (not
             // HomeScreen's onAppear, where it was born): since the
             // one-surface shell, HomeScreen only mounts when the landing

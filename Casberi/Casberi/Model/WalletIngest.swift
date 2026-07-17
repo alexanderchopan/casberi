@@ -19,7 +19,7 @@ enum WalletIngest {
     /// Every chain we CAN read, and where a tx opens. One `getAssetTransfers`
     /// per direction per EVM chain.
     private struct Chain {
-        let network, explorer, symbol: String
+        let network, explorer, symbol, displayName: String
         var kind: ChainKind = .evm
         /// The native coin's decimals. The Portfolio endpoint returns a native
         /// balance with NULL metadata, so this can't be read off the response —
@@ -29,15 +29,24 @@ enum WalletIngest {
         var nativeDecimals: Int = 18
     }
     private static let allChains: [Chain] = [
-        Chain(network: "eth-mainnet",  explorer: "https://etherscan.io/tx/",              symbol: "ETH"),
-        Chain(network: "base-mainnet", explorer: "https://basescan.org/tx/",              symbol: "ETH"),
-        Chain(network: "arb-mainnet",  explorer: "https://arbiscan.io/tx/",               symbol: "ETH"),
-        Chain(network: "opt-mainnet",  explorer: "https://optimistic.etherscan.io/tx/",   symbol: "ETH"),
-        Chain(network: "matic-mainnet",explorer: "https://polygonscan.com/tx/",           symbol: "MATIC"),
-        Chain(network: "solana-mainnet", explorer: "https://solscan.io/tx/",              symbol: "SOL",
+        Chain(network: "eth-mainnet",  explorer: "https://etherscan.io/tx/",              symbol: "ETH",   displayName: "Ethereum"),
+        Chain(network: "base-mainnet", explorer: "https://basescan.org/tx/",              symbol: "ETH",   displayName: "Base"),
+        Chain(network: "arb-mainnet",  explorer: "https://arbiscan.io/tx/",               symbol: "ETH",   displayName: "Arbitrum"),
+        Chain(network: "opt-mainnet",  explorer: "https://optimistic.etherscan.io/tx/",   symbol: "ETH",   displayName: "Optimism"),
+        Chain(network: "matic-mainnet",explorer: "https://polygonscan.com/tx/",           symbol: "MATIC", displayName: "Polygon"),
+        Chain(network: "solana-mainnet", explorer: "https://solscan.io/tx/",              symbol: "SOL",   displayName: "Solana",
               kind: .solana, nativeDecimals: 9),
-        Chain(network: "robinhood-mainnet", explorer: "https://robinhoodchain.blockscout.com/tx/", symbol: "ETH"),
+        Chain(network: "robinhood-mainnet", explorer: "https://robinhoodchain.blockscout.com/tx/", symbol: "ETH", displayName: "Robinhood"),
     ]
+
+    /// The chain a landed transfer belongs to, read off its stored explorer
+    /// link (exact prefix match, so etherscan.io never claims
+    /// optimistic.etherscan.io's links). The thing sheet's stage subline —
+    /// kept HERE so a new chain can't reach transfers without also naming
+    /// itself (the catalog-drift class).
+    static func chainName(forContent content: String) -> String? {
+        allChains.first { content.hasPrefix($0.explorer) }?.displayName
+    }
 
     /// The chains actually read this pass — the person's selection (default: all
     /// of them). Filtered from `allChains` so turning a chain off drops it from
