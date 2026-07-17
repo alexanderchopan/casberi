@@ -57,6 +57,31 @@ struct MainSurface: View {
 
     private var showingBoard: Bool { filter.source == "Pinned" }
 
+    /// The pager's pages — the chip row minus the board (2026-07-16). The
+    /// feeds swipe; the board doesn't, and that asymmetry is deliberate:
+    /// `BoardDragDriver` arms its press for 24pt while a scroll pan begins at
+    /// ~10pt, and `lift()` fires `onPhase(.began)` without checking UIKit
+    /// accepted it — a pager pan inside that window would enter edit mode
+    /// while the page slid away, which is the exact state-leak class the
+    /// driver's UIKit rewrite exists to close. The board is reached by its
+    /// pin chip, and it isn't a feed anyway.
+    private var feedLabels: [String] {
+        var labels = chipLabels.filter { $0 != "Pinned" }
+        // The selected source ALWAYS gets a page, even with nothing in it.
+        // The chip row is built from things that exist, but `filter.source` is
+        // written unvalidated — a deep link (casberi://feed/source/Gmail), a
+        // bridge connected but not yet synced, or deleting the last thing from
+        // the room you're standing in all name a source with no chip. Without
+        // this, the selection matches no `.tag`, and a TabView with an
+        // unmatched selection quietly renders a DIFFERENT page: the Gmail wash
+        // painted over the All feed, no chip lit, and the honest "Nothing from
+        // Gmail yet" empty state unreachable (measured 2026-07-16).
+        if filter.source != "Pinned", !labels.contains(filter.source) {
+            labels.append(filter.source)
+        }
+        return labels
+    }
+
     /// A shaped feed wears its source's hue (B ruling 2026-07-10): the whole
     /// top of the screen — status bar, doors, chip strip, then the feed's own
     /// header — sits on the source's wash hue, fading out as the day groups
@@ -113,12 +138,25 @@ struct MainSurface: View {
                 .padding(.top, DS.Space.s2)
                 .padding(.bottom, DS.Space.s2)
 
-                // The body under the header — the board, or the feed.
+                // The body under the header — the board, or the feeds.
                 Group {
                     if showingBoard {
                         HomeScreen()
                     } else {
-                        FeedScreen()
+                        // The feeds are one pager (2026-07-16): a chip tap and
+                        // a swipe are the same move now, because selection
+                        // binds to the SAME value the chips write — so the
+                        // strip, the wash, and every deep link
+                        // (casberi://feed/source/X) all keep working with no
+                        // second source of truth to reconcile.
+                        TabView(selection: $filter.source) {
+                            ForEach(feedLabels, id: \.self) { label in
+                                FeedScreen(source: label,
+                                           isActive: label == filter.source)
+                                    .tag(label)
+                            }
+                        }
+                        .tabViewStyle(.page(indexDisplayMode: .never))
                     }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)

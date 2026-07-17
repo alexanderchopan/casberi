@@ -98,10 +98,16 @@ final class ShellChrome {
 
 extension View {
     /// Attach to a screen's ScrollView: reports scroll direction to the shell.
-    func minimizesChrome(_ chrome: ShellChrome) -> some View {
+    /// `active: false` mutes the observer without unmounting it — the feed
+    /// pager keeps neighbour pages alive (2026-07-16), and three scroll
+    /// observers writing one shared `chrome.minimized` means an off-screen
+    /// page settling at offset 0 can un-minimize the chrome while you scroll
+    /// the visible one.
+    func minimizesChrome(_ chrome: ShellChrome, active: Bool = true) -> some View {
         onScrollGeometryChange(for: CGFloat.self) {
             $0.contentOffset.y
         } action: { old, new in
+            guard active else { return }
             guard abs(new - old) > 4 else { return }   // ignore jitter
             let down = new > old && new > 60
             if chrome.minimized != down {

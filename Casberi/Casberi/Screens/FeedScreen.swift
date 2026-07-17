@@ -18,11 +18,27 @@ import SwiftData
 /// (the consent card). Day groups, pins, swipes, the sheet, and write-confirm
 /// all survive inside shapes.
 struct FeedScreen: View {
+    /// The source this feed IS (2026-07-16, the pager): each page owns one
+    /// source for its whole life instead of the whole screen re-reading the
+    /// shared filter. `FeedFilter.shared.source` is still the truth for WHICH
+    /// page is up — it's the pager's selection — but a page's own shape,
+    /// query, and boundary are this.
+    let source: String
+    /// Whether this page is the one in front. A pager keeps its neighbours
+    /// MOUNTED, so `onAppear` stopped meaning "the person is looking at this"
+    /// — every per-visit effect (the boundary freeze, the entrance wave, the
+    /// hue flood, the synthesis stream, chrome minimizing) gates on this
+    /// instead, or a page swiped PAST would burn its arrival unseen and stamp
+    /// its own "New since" line away.
+    let isActive: Bool
+
     @Query(sort: \Thing.capturedAt, order: .reverse) private var things: [Thing]
     @Environment(ShellChrome.self) private var chrome
     @Environment(BridgeStore.self) private var bridges
     @Environment(\.modelContext) private var modelContext
 
+    /// Only `tag` is read from here now — a kind filter is a cross-page state
+    /// (it arrives from Home's kind bar and applies to the All room).
     @State private var filter = FeedFilter.shared
     @State private var sheetThing: Thing?
     /// A tapped holdings cell whose token isn't watched — its quick chart
@@ -32,10 +48,7 @@ struct FeedScreen: View {
     @State private var staleExpanded = false
     @State private var blockStream = GenStream()
     @Bindable private var wallet = WalletStore.shared
-    // First-run teaching (option 4: no demo mode — this lives in the real
-    // app and retires on first use, forever).
-    @AppStorage("coach.swipe.done") private var swipeCoachDone = false
-    /// Bumped when the source chip changes — rows replay their shape's
+    /// Bumped when this page lands — rows replay their shape's
     /// entrance (each shape arrives its own way, ruling 2026-07-07).
     @State private var shapeWave = 0
     /// Eases 1 → 0 on each source switch: the app's hue floods down over the
@@ -43,20 +56,19 @@ struct FeedScreen: View {
     /// the color arriving, so a switch reads as "entering this app's feed"
     /// (delight, 2026-07-12) instead of a quiet crossfade behind the content.
     @State private var flood: CGFloat = 0
-    /// The last time the person left each feed — one timestamp per source
-    /// (All included; "feed.lastSeen" is All's original key, so nothing
-    /// migrates), no per-thing read state. Each room's boundary freezes the
-    /// FIRST time it lands during a visit and holds for the whole visit
-    /// (ruling 2026-07-09: the divider never moves while you look at it —
-    /// a chip bounce out and back must not erase it), and every room visited
-    /// is stamped only when the screen goes away. onDisappear reads the
-    /// visited SET, not `filter.source`: switching to the Pinned chip swaps
-    /// this screen out with the shared filter already reading "Pinned",
-    /// which would stamp a junk key and skip the real room (review
-    /// 2026-07-13).
+    /// The last time the person left THIS feed ("feed.lastSeen" is All's
+    /// original key, so nothing migrates), no per-thing read state. The
+    /// boundary freezes when the page lands and holds for the whole visit
+    /// (ruling 2026-07-09: the divider never moves while you look at it — a
+    /// bounce out and back must not erase it), and stamps when the page is
+    /// left. The old per-source dictionary + visited SET are gone with the
+    /// pager (2026-07-16): one screen used to serve every room, so it had to
+    /// remember which rooms it had been; a page IS its room and can only ever
+    /// stamp its own key. That also retires the 2026-07-13 bug those guards
+    /// existed for (the shared filter reading "Pinned" while this screen went
+    /// away, stamping a junk key) — this page never sees another room's name.
     @State private var newSince: Date?
-    @State private var visitFrozen: [String: Date?] = [:]
-    @State private var visitedSources: Set<String> = []
+    @State private var visitFrozen = false
     @Namespace private var zoomNS
     /// prd 43h: Reduce Motion is law — the hand-rolled moves (the switch flood,
     /// row entrances) fall back to plain state changes under it.
@@ -89,7 +101,7 @@ struct FeedScreen: View {
             }
         }
     }
-    private var shape: Shape { Shape(source: filter.source) }
+    private var shape: Shape { Shape(source: source) }
 
 
     /// How this shape's rows arrive: the agenda slides in from the leading
@@ -116,15 +128,15 @@ struct FeedScreen: View {
 
     private var visible: [Thing] {
         feedThings.filter { thing in
-            (filter.source == "All" || thing.source == filter.source)
+            (source == "All" || thing.source == source)
                 && (filter.tag == "All" || thing.tags.contains(filter.tag))
         }
     }
-    private var isFiltered: Bool { filter.source != "All" || filter.tag != "All" }
+    private var isFiltered: Bool { source != "All" || filter.tag != "All" }
     private var filterLabel: String {
         let tagLabel = filter.tag == "All" ? nil
             : (ThingKind.from(typeTag: filter.tag)?.typeTagPlural ?? filter.tag)
-        return [filter.source == "All" ? nil : filter.source, tagLabel]
+        return [source == "All" ? nil : source, tagLabel]
             .compactMap { $0 }.joined(separator: " · ")
     }
 
@@ -133,17 +145,8 @@ struct FeedScreen: View {
     /// Voice, Safari) owns no control panel, so it gets no door. Paused seats
     /// aren't "connected", so they don't either.
     private var activeSourceBridge: BridgeApp? {
-        guard filter.source != "All" else { return nil }
-        return bridges.bridges.first { $0.name == filter.source && $0.status != .paused }
-    }
-
-    /// The one row that teaches the swipe (demo only, once): it nudges left,
-    /// a pin peeks out, it settles back. Motion, not a tooltip.
-    /// Takes the already-computed `visible` so the caller derives it ONCE per
-    /// render and shares it, same convention as `bundle`/`boundaryID` below.
-    private func hintThingID(_ visible: [Thing]) -> UUID? {
-        guard !swipeCoachDone else { return nil }
-        return visible.first(where: { $0.kind != .approval })?.id
+        guard source != "All" else { return nil }
+        return bridges.bridges.first { $0.name == source && $0.status != .paused }
     }
 
     /// Day groups, newest day first ("Today", "Yesterday", then dated).
@@ -267,7 +270,7 @@ struct FeedScreen: View {
     /// it's the color moment the quiet background crossfade lacked. Absent for
     /// All (no identity hue) and under Reduce Motion (`flood` never rises).
     @ViewBuilder private var switchFlood: some View {
-        if let hue = DS.washHue(for: filter.source) {
+        if let hue = DS.washHue(for: source) {
             // A TOP-BAND kiss, not a full-bleed veil: it reinforces the resting
             // wash's zone and clears well before the rows, so even a dark-hued
             // source is a brief tint at the crown, never a screen-wide dim.
@@ -468,7 +471,6 @@ struct FeedScreen: View {
                         .listRowSeparator(.hidden)
                         .listRowInsets(EdgeInsets())
                 } else {
-                    let hintID = hintThingID(visible)
                     let nextID = nextEventID(visible)
                     // A pin is a HOME pin only (ruling 2026-07-10): the Feed's
                     // own Pinned section doubled what Home already shows and
@@ -476,7 +478,7 @@ struct FeedScreen: View {
                     // their natural chronological place. The holdings module
                     // lives on Home too (same-day amendment) — in Feed it shows
                     // only in the Wallet chip's own shape, never leading All.
-                    shapedSections(visible, hintID: hintID, nextEventID: nextID)
+                    shapedSections(visible, nextEventID: nextID)
                     // No closing line in the Reminders shape: its state groups
                     // deliberately render a subset (Done shows same-day only), so
                     // a `visible`-count claim would disagree with the rows above.
@@ -492,7 +494,13 @@ struct FeedScreen: View {
                 .listRowSeparator(.hidden)
         }
         .listStyle(.plain)
-        .refreshable { await refreshFeed() }
+        // ONE pull, both outcomes. This List carried TWO `.refreshable` until
+        // 2026-07-16 — SwiftUI keeps the outermost, so the real bridge sync
+        // never ran on a pull; only the 600ms pulse stub did.
+        .refreshable {
+            chrome.refreshPulse += 1   // spins the avatar door, deals the berry rain
+            await refreshFeed()
+        }
         .animation(DS.Motion.standard, value: things.count)   // new things rise in
         .scrollContentBackground(.hidden)
         .overlay(alignment: .top) { switchFlood }
@@ -501,48 +509,36 @@ struct FeedScreen: View {
         // would hide it — the very bug that once forced the wash to be an
         // overlay. Pinned/All/hueless keep the normal page coat.
         .background {
-            if DS.washHue(for: filter.source) == nil {
+            if DS.washHue(for: source) == nil {
                 DSPageBackground()
             }
         }
         .environment(\.defaultMinListHeaderHeight, 0)
         .scrollIndicators(.hidden)
-        .minimizesChrome(chrome)
+        .minimizesChrome(chrome, active: isActive)
         .dsSoftTopEdge()
-        .refreshable {
-            // Pull to refresh runs sync (M1 CloudKit half wires in here).
-            chrome.refreshPulse += 1   // spins the avatar door, deals the berry rain
-            try? await Task.sleep(for: .milliseconds(600))
-        }
-        // The one synthesis block a shaped source earns streams through the
-        // engine when its chip lands (skeleton entrance, same as Home).
+        // Arrival is `isActive`, not `onAppear` (2026-07-16, the pager): a
+        // mounted neighbour appears without ever being looked at, so landing
+        // effects hang off the front page changing, and leaving stamps the
+        // boundary on the way out.
         .onAppear {
-            streamBlock()
             #if DEBUG
-            // `-feedSource Zerion` lands on that chip for screenshots.
-            if let src = UserDefaults.standard.string(forKey: "feedSource") {
+            // `-feedSource Zerion` lands on that chip for screenshots. From
+            // the front page only — three mounted pages would each write it.
+            if isActive, let src = UserDefaults.standard.string(forKey: "feedSource") {
                 filter.source = src
             }
             #endif
-            // Freeze the boundary for this visit; leaving re-stamps it.
-            // (After the DEBUG hook, so a forced chip reads its own stamp
-            // and All is never marked visited by a hooked launch.)
-            freezeBoundary(for: filter.source)
+            if isActive { land() }
         }
-        .onDisappear { visitedSources.forEach(stampSeen) }
-        .onChange(of: filter.source) { _, new in
-            freezeBoundary(for: new)
-            shapeWave += 1
-            // The hue floods in, then recedes as the shaped rows compose.
-            if !reduceMotion {
-                flood = 1
-                withAnimation(.easeOut(duration: 0.55)) { flood = 0 }
-            }
-            streamBlock()
+        .onDisappear { if visitFrozen { leave() } }
+        .onChange(of: isActive) { _, now in
+            if now { land() } else { leave() }
         }
         // Adding/removing a watched wallet re-fetches the Wallet chip's
-        // holdings block while it's in force.
-        .onChange(of: wallet.addresses) { streamBlock() }
+        // holdings block — only on the page in force; a background Wallet
+        // page has no reason to re-hit Alchemy.
+        .onChange(of: wallet.addresses) { if isActive { streamBlock() } }
         .sheet(item: $sheetThing) { thing in
             ThingSheetView(thing: thing)
                 .navigationTransition(.zoom(sourceID: thing.id, in: zoomNS))
@@ -569,7 +565,7 @@ struct FeedScreen: View {
     /// ids computed alongside it) and threads them into every shape branch —
     /// none of the branches below re-derive `visible` themselves.
     @ViewBuilder
-    private func shapedSections(_ visible: [Thing], hintID: UUID?, nextEventID: UUID?) -> some View {
+    private func shapedSections(_ visible: [Thing], nextEventID: UUID?) -> some View {
         // The new-since divider rides every chronological shape now
         // (2026-07-13) — each source's feed keeps its own last-visit stamp.
         // Photos (a grid), Calendar (future-first) and Reminders (state
@@ -580,38 +576,38 @@ struct FeedScreen: View {
         case .wallet:
             holdingsBlockSection
             let days = dayGroups(visible)
-            groupedSections(days, hintID: hintID, nextEventID: nextEventID, boundary: boundaryThingID(in: days))
+            groupedSections(days, nextEventID: nextEventID, boundary: boundaryThingID(in: days))
         case .calendar:
-            groupedSections(agendaGroups(visible), hintID: hintID, nextEventID: nextEventID)
+            groupedSections(agendaGroups(visible), nextEventID: nextEventID)
         case .gmail:
-            waitingSection(visible, hintID: hintID, nextEventID: nextEventID)
+            waitingSection(visible, nextEventID: nextEventID)
             let days = dayGroups(visible)
-            groupedSections(days, hintID: hintID, nextEventID: nextEventID, boundary: boundaryThingID(in: days))
+            groupedSections(days, nextEventID: nextEventID, boundary: boundaryThingID(in: days))
         case .reminders:
-            reminderSections(visible, hintID: hintID, nextEventID: nextEventID)
+            reminderSections(visible, nextEventID: nextEventID)
         case .agent:
             let approvals = pendingApprovals(visible)
-            needsYouSection(approvals, hintID: hintID, nextEventID: nextEventID)
+            needsYouSection(approvals, nextEventID: nextEventID)
             let days = agentDayGroups(visible, excluding: approvals)
-            groupedSections(days, hintID: hintID, nextEventID: nextEventID, boundary: boundaryThingID(in: days))
+            groupedSections(days, nextEventID: nextEventID, boundary: boundaryThingID(in: days))
         case .music:
             listeningLedeSection(visible)
             let days = dayGroups(visible)
-            groupedSections(days, hintID: hintID, nextEventID: nextEventID, boundary: boundaryThingID(in: days))
+            groupedSections(days, nextEventID: nextEventID, boundary: boundaryThingID(in: days))
         case .tokens:
             watchlistLedeSection(visible)
-            watchlistSection(visible, hintID: hintID, nextEventID: nextEventID)
+            watchlistSection(visible, nextEventID: nextEventID)
         default:
             if filter.tag != "All" && shape == .all {
-                daySection(filterLabel, visible, hintID: hintID, nextEventID: nextEventID)
+                daySection(filterLabel, visible, nextEventID: nextEventID)
             } else if shape == .all {
                 // All is where volume floods — bundles + the new-since
                 // divider live here. A single source's shape IS that source;
                 // bundling there would collapse the whole screen into one row.
-                bundledSections(visible, hintID: hintID, nextEventID: nextEventID)
+                bundledSections(visible, nextEventID: nextEventID)
             } else {
                 let days = dayGroups(visible)
-                groupedSections(days, hintID: hintID, nextEventID: nextEventID, boundary: boundaryThingID(in: days))
+                groupedSections(days, nextEventID: nextEventID, boundary: boundaryThingID(in: days))
             }
         }
     }
@@ -663,13 +659,13 @@ struct FeedScreen: View {
     /// a chronological-feed idea, and this list may no longer read top to
     /// bottom by time.
     @ViewBuilder
-    private func watchlistSection(_ visible: [Thing], hintID: UUID?, nextEventID: UUID?) -> some View {
+    private func watchlistSection(_ visible: [Thing], nextEventID: UUID?) -> some View {
         let ordered = TokenWatchOrder.shared.apply(
             visible, sourceRef: \.sourceRef,
             change24h: { TokenPulse.shared.pulse(for: $0)?.change24h })
         Section {
             ForEach(Array(ordered.enumerated()), id: \.element.id) { i, thing in
-                shapedListRow(thing, index: i, hintID: hintID, nextEventID: nextEventID)
+                shapedListRow(thing, index: i, nextEventID: nextEventID)
             }
         }
     }
@@ -694,7 +690,7 @@ struct FeedScreen: View {
         }
     }
 
-    private func bundledSections(_ visible: [Thing], hintID: UUID?, nextEventID: UUID?) -> some View {
+    private func bundledSections(_ visible: [Thing], nextEventID: UUID?) -> some View {
         // Derive ONCE per render, then share — the day bundles, each day's true
         // total, and the new-since boundary. Read inside the row/header loops
         // (as `newBoundaryID` and `dayGroups.first(where:)` were) they rebuilt
@@ -711,7 +707,7 @@ struct FeedScreen: View {
                     if row.id == boundary { newSinceDivider }
                     switch row {
                     case .single(let thing):
-                        shapedListRow(thing, index: i, hintID: hintID, nextEventID: nextEventID)
+                        shapedListRow(thing, index: i, nextEventID: nextEventID)
                     case .bundle(let source, let word, let count, let newest):
                         bundleListRow(source: source, word: word, count: count,
                                       newest: newest, index: i)
@@ -775,20 +771,35 @@ struct FeedScreen: View {
                                   forKey: lastSeenKey(for: source))
     }
 
-    /// Lands on a room: its boundary freezes on FIRST arrival this visit and
-    /// re-reads from the frozen copy after — a bounce out to another chip and
-    /// back can't move the line. Pinned isn't a feed room (the board swaps
-    /// this screen out), so it never freezes or stamps.
-    private func freezeBoundary(for source: String) {
-        guard source != "Pinned" else { return }
-        visitedSources.insert(source)
-        if let frozen = visitFrozen[source] {
-            newSince = frozen
-        } else {
-            let stamp = lastSeen(for: source)
-            visitFrozen[source] = stamp
-            newSince = stamp
+    /// This page came to the front: freeze its boundary for the visit, replay
+    /// the shape's entrance, flood the hue, stream its synthesis block. Every
+    /// one of these is an ARRIVAL — spending them on a mounted-but-unseen
+    /// neighbour would hand the person a page whose moment already happened.
+    private func land() {
+        freezeBoundary()
+        shapeWave += 1
+        // The hue floods in, then recedes as the shaped rows compose.
+        if !reduceMotion {
+            flood = 1
+            withAnimation(.easeOut(duration: 0.55)) { flood = 0 }
         }
+        streamBlock()
+    }
+
+    /// The person left this page — stamp what they saw, so the next visit's
+    /// "New since" line is honest, and let the boundary freeze afresh then.
+    private func leave() {
+        stampSeen(source)
+        visitFrozen = false
+    }
+
+    /// The boundary freezes on arrival and holds for the whole visit — a
+    /// bounce out to another page and back can't move the line (ruling
+    /// 2026-07-09).
+    private func freezeBoundary() {
+        guard !visitFrozen else { return }
+        visitFrozen = true
+        newSince = lastSeen(for: source)
     }
 
     /// A bundle in the list: same card treatment as a thing row; the tap
@@ -822,10 +833,10 @@ struct FeedScreen: View {
 
     @ViewBuilder
     private func groupedSections(_ groups: [(String, [Thing])],
-                                 hintID: UUID?, nextEventID: UUID?,
+                                 nextEventID: UUID?,
                                  boundary: UUID? = nil) -> some View {
         ForEach(groups, id: \.0) { label, rows in
-            daySection(label, rows, hintID: hintID, nextEventID: nextEventID, boundary: boundary)
+            daySection(label, rows, nextEventID: nextEventID, boundary: boundary)
         }
     }
 
@@ -960,10 +971,10 @@ struct FeedScreen: View {
     /// fake status. The section now shows only what the person marked
     /// in motion, and earns back a smarter derivation later.
     @ViewBuilder
-    private func waitingSection(_ visible: [Thing], hintID: UUID?, nextEventID: UUID?) -> some View {
+    private func waitingSection(_ visible: [Thing], nextEventID: UUID?) -> some View {
         let waiting = visible.filter { $0.mark == .doing }.prefix(2).map { $0 }
         if !waiting.isEmpty {
-            daySection("Waiting on you", waiting, hintID: hintID, nextEventID: nextEventID)
+            daySection("Waiting on you", waiting, nextEventID: nextEventID)
         }
     }
 
@@ -975,7 +986,7 @@ struct FeedScreen: View {
     /// Reminders: state groups — Doing, To do (stale todos collapse), Done
     /// (same-day only).
     @ViewBuilder
-    private func reminderSections(_ visible: [Thing], hintID: UUID?, nextEventID: UUID?) -> some View {
+    private func reminderSections(_ visible: [Thing], nextEventID: UUID?) -> some View {
         let doing = visible.filter { $0.mark == .doing }
         let todos = visible.filter { $0.mark == .todo || $0.mark == .none }
         let weekAgo = Date.now.addingTimeInterval(-7 * 86_400)
@@ -984,13 +995,13 @@ struct FeedScreen: View {
         let doneToday = visible.filter {
             $0.mark == .done && Calendar.current.isDateInToday($0.capturedAt)
         }
-        if !doing.isEmpty { daySection("Doing", doing, hintID: hintID, nextEventID: nextEventID) }
+        if !doing.isEmpty { daySection("Doing", doing, nextEventID: nextEventID) }
         if !fresh.isEmpty || !stale.isEmpty {
             Section {
-                ForEach(Array(fresh.enumerated()), id: \.element.id) { i, thing in shapedListRow(thing, index: i, hintID: hintID, nextEventID: nextEventID) }
+                ForEach(Array(fresh.enumerated()), id: \.element.id) { i, thing in shapedListRow(thing, index: i, nextEventID: nextEventID) }
                 if !stale.isEmpty {
                     if staleExpanded {
-                        ForEach(Array(stale.enumerated()), id: \.element.id) { i, thing in shapedListRow(thing, index: i, hintID: hintID, nextEventID: nextEventID) }
+                        ForEach(Array(stale.enumerated()), id: \.element.id) { i, thing in shapedListRow(thing, index: i, nextEventID: nextEventID) }
                     } else {
                         HStack {
                             Text("Older").dsText(.body17).foregroundStyle(DS.textSecondary)
@@ -1010,7 +1021,7 @@ struct FeedScreen: View {
                 Text("To do").dsText(.heading17).foregroundStyle(DS.textPrimary).textCase(nil)
             }
         }
-        if !doneToday.isEmpty { daySection("Done", doneToday, hintID: hintID, nextEventID: nextEventID) }
+        if !doneToday.isEmpty { daySection("Done", doneToday, nextEventID: nextEventID) }
     }
 
     /// OpenClaw: pending asks lead as consent cards; the groups below
@@ -1020,9 +1031,9 @@ struct FeedScreen: View {
     }
 
     @ViewBuilder
-    private func needsYouSection(_ approvals: [Thing], hintID: UUID?, nextEventID: UUID?) -> some View {
+    private func needsYouSection(_ approvals: [Thing], nextEventID: UUID?) -> some View {
         if !approvals.isEmpty {
-            daySection("Needs you", approvals, hintID: hintID, nextEventID: nextEventID)
+            daySection("Needs you", approvals, nextEventID: nextEventID)
         }
     }
 
@@ -1052,13 +1063,10 @@ struct FeedScreen: View {
     }
 
     /// The row inside a list section, with the standard list plumbing attached.
-    private func shapedListRow(_ thing: Thing, index: Int = 0, hintID: UUID?, nextEventID: UUID?) -> some View {
+    private func shapedListRow(_ thing: Thing, index: Int = 0, nextEventID: UUID?) -> some View {
         // AnyView: same metadata-depth insurance as GenRender (crash fix).
         return AnyView(shapedRow(thing, nextEventID: nextEventID))
             .modifier(RowEntrance(index: index, wave: shapeWave, style: entranceStyle))
-            .modifier(SwipeHintNudge(active: thing.id == hintID) {
-                swipeCoachDone = true
-            })
             .contentShape(Rectangle())
             .matchedTransitionSource(id: thing.id, in: zoomNS)
             .onTapGesture { openThing(thing) }
@@ -1081,33 +1089,25 @@ struct FeedScreen: View {
                                  trailing: DS.Space.s4 + DS.Space.s3))
             .listRowSeparator(.hidden)
             // One gesture, one meaning: TAP opens the sheet — tags and verbs
-            // live there. Each swipe edge now carries exactly one verb (ruling
-            // 2026-07-15, supersedes 2026-07-10/07-13: Open on both edges read
-            // as redundant — the same hand-off discoverable twice). Pinning
-            // left the swipe entirely (ruling 2026-07-12): a pin is per-APP
-            // now, placed from the app's own screen, not a per-item Feed
-            // gesture.
-            //
-            // Trailing (swipe left): Share only, no full swipe — sharing is
-            // deliberate, a tap on the revealed button, never fired by an
-            // overshoot.
-            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                ThingShareLink(thing: thing) {
-                    Label("Share", systemImage: "square.and.arrow.up")
-                }
-                .tint(DS.tint)
-            }
-            // Leading (swipe right): Open in the source app — full swipe
-            // hands off in one gesture, gated to only when the thing has a
-            // destination (calshow://, the link, photos-redirect://…).
-            .swipeActions(edge: .leading, allowsFullSwipe: openVerb(for: thing) != nil) {
+            // live there. The row's OTHER verbs ride a long-press (ruling
+            // 2026-07-16, supersedes the both-edge swipe of 2026-07-15): the
+            // feed pages between sources now, and a horizontal pan can only
+            // belong to one thing. Measured before ruling — a `TabView(.page)`
+            // pan claims 100% of horizontal drags, at every drag length, even
+            // at the last page where it merely rubber-bands and the row still
+            // never opens. So the swipe wasn't degraded, it was unreachable;
+            // long-press is what's left, and it's what the Home board has used
+            // for Open/Unpin all along (`GenRenderer.pinnedRowActions`).
+            .contextMenu {
                 if let openVerb = openVerb(for: thing) {
                     Button {
                         run(openVerb, on: thing)
                     } label: {
-                        Label("Open", systemImage: "arrow.up.right")
+                        Label("Open in app", systemImage: "arrow.up.right")
                     }
-                    .tint(DS.confirm)
+                }
+                ThingShareLink(thing: thing) {
+                    Label("Share", systemImage: "square.and.arrow.up")
                 }
             }
     }
@@ -1220,8 +1220,8 @@ struct FeedScreen: View {
     /// and one way back. Never a bare "Nothing matches."
     private var filteredEmptyState: some View {
         VStack(spacing: DS.Space.s3) {
-            if filter.source != "All" {
-                BridgeIcon(name: filter.source, size: 44)
+            if source != "All" {
+                BridgeIcon(name: source, size: 44)
             } else if let kind = ThingKind.from(typeTag: filter.tag) {
                 KindGlyph(kind: kind, size: 44)
             }
@@ -1248,7 +1248,7 @@ struct FeedScreen: View {
             // all-feed empty state already does this with skeleton rows;
             // a shaped empty shows what ITS rows will look like: a grid
             // for Photos, rows for everything else.
-            if filter.source != "All" {
+            if source != "All" {
                 emptyShapePreview
                     .padding(.top, DS.Space.s6)
             }
@@ -1281,9 +1281,9 @@ struct FeedScreen: View {
 
     private var emptyLine: String {
         let tagLabel = ThingKind.from(typeTag: filter.tag)?.typeTagPlural ?? filter.tag
-        switch (filter.source != "All", filter.tag != "All") {
-        case (true, true):   return "Nothing from \(filter.source) under \(tagLabel) yet."
-        case (true, false):  return "Nothing from \(filter.source) yet."
+        switch (source != "All", filter.tag != "All") {
+        case (true, true):   return "Nothing from \(source) under \(tagLabel) yet."
+        case (true, false):  return "Nothing from \(source) yet."
         case (false, true):  return "No \(tagLabel.lowercased()) yet."
         default:             return "Nothing here yet."
         }
@@ -1304,14 +1304,14 @@ struct FeedScreen: View {
     /// (To do / Doing), native scroll — no gesture fights.
     @ViewBuilder
     private func daySection(_ label: String, _ rows: [Thing],
-                            hintID: UUID?, nextEventID: UUID?,
+                            nextEventID: UUID?,
                             boundary: UUID? = nil) -> some View {
         Section {
             // Rows dispatch by shape (shaped feeds); the swipe stays triage —
             // reads only, writes live in the sheet (ruling), Copy sheet-only.
             ForEach(Array(rows.enumerated()), id: \.element.id) { i, thing in
                 if thing.id == boundary { newSinceDivider }
-                shapedListRow(thing, index: i, hintID: hintID, nextEventID: nextEventID)
+                shapedListRow(thing, index: i, nextEventID: nextEventID)
             }
         } header: {
             HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
@@ -1337,7 +1337,7 @@ struct FeedScreen: View {
     /// The social room says "posts": its things are kind .chat (the ingest's
     /// container), but nobody calls a Bluesky post a chat.
     private func countLabel(_ rows: [Thing]) -> String {
-        guard filter.source != "All" else { return "\(rows.count)" }
+        guard source != "All" else { return "\(rows.count)" }
         if shape == .social {
             return rows.count == 1 ? "1 post" : "\(rows.count) posts"
         }
@@ -1356,9 +1356,9 @@ struct FeedScreen: View {
     /// Takes the render's `visible` (the Feed-freeze rule) instead of
     /// re-deriving it.
     private func caughtUpFooter(_ rows: [Thing]) -> some View {
-        Text(filter.source == "All"
+        Text(source == "All"
              ? "That's everything · \(rows.count == 1 ? "1 thing" : "\(rows.count) things")"
-             : "That's everything from \(filter.source) · \(countLabel(rows))")
+             : "That's everything from \(source) · \(countLabel(rows))")
             .dsText(.subhead13)
             .foregroundStyle(DS.textTertiary)
             .frame(maxWidth: .infinity)
@@ -1458,7 +1458,7 @@ struct FeedScreen: View {
     }
 
     private func streamBlock() {
-        guard filter.source == "Wallet" else {
+        guard source == "Wallet" else {
             if !blockStream.els.isEmpty { blockStream.paint([]) }
             return
         }

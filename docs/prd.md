@@ -3604,3 +3604,61 @@ the self-follow it includes (78 vs 77).
 
 A big graph is a real wait (1,848 people ≈ 31s paced), so the sheet counts out
 loud — "Reading the follow list… 450 so far" — rather than spinning mute.
+
+## 88. The feeds swipe; the row swipe dies to pay for it (user, 2026-07-16) — BUILT
+
+Swiping between feeds was asked for, measured, and shipped. The chip strip is
+no longer the only way across the corpus: the feeds are one `TabView(.page)`
+whose selection BINDS to `FeedFilter.shared.source` — the same value the chips
+write — so a tap and a swipe are the same move, and the strip, the source wash,
+and every deep link (`casberi://feed/source/X`) keep working with no second
+source of truth to reconcile.
+
+**It cost the row swipe, and that was the ruling.** Rows carried Share
+(trailing) and Open-in-app (leading) since 2026-07-15. They're gone; both verbs
+now ride a LONG-PRESS, which is what the Home board has used for Open/Unpin all
+along (`GenRenderer.pinnedRowActions`) — so the two surfaces finally share one
+grammar instead of disagreeing. Tap still opens the sheet: one gesture, one
+meaning, unchanged.
+
+**Measured before ruling — do not re-litigate this from theory.** The question
+was whether a pager and both-edge `swipeActions` could coexist. Two careful
+readings of the code predicted opposite winners, so it was tested on the sim
+(2026-07-16) instead of argued: **the pager claims 100% of horizontal drags**,
+at every drag length, on every page. Not "usually" — the row's actions could not
+be revealed once. Worst case is the tell: on the LAST page, where there is no
+page to go to, the drag merely rubber-bands the feed and the row still never
+opens — so the swipe wasn't degraded by paging, it was made unreachable, and a
+gesture that does nothing is worse than a gesture that's gone. The prior
+expectation (that the row would win, per Mail vs X) was simply wrong.
+
+**The board stays OUT of the pager** — Pinned is reached by its chip, and it
+isn't a feed anyway. This is not squeamishness: `BoardDragDriver` arms its press
+for 24pt while a scroll pan begins at ~10pt, and `lift()` fires `onPhase(.began)`
+without checking UIKit accepted the transition — a pager pan inside that window
+enters edit mode while the page slides away, which is the exact state-leak class
+the driver's UIKit rewrite exists to close (four failed repair commits already).
+Pulling a tile out of a 2-up pair is inherently a horizontal drag, so it would
+be the common motion, not an edge case.
+
+**What a pager broke that a single screen didn't, fixed here:** a pager keeps
+neighbours MOUNTED, so `onAppear` stopped meaning "the person is looking at
+this". Every per-visit effect now gates on a new `isActive` — the boundary
+freeze, the entrance wave, the hue flood, the synthesis stream, and
+`minimizesChrome` (three scroll observers writing one global would let an
+off-screen page un-minimize the chrome). Without it, a page swiped PAST would
+burn its arrival animation unseen and stamp away its own "New since" line.
+`FeedScreen(source:)` now owns its room for life, which RETIRES the per-source
+`visitFrozen` dictionary and `visitedSources` set — those existed only because
+one screen served every room, and with them goes the 2026-07-13 junk-key bug
+they guarded (a page can only ever stamp its own key).
+
+The swipe COACH (`SwipeHintNudge`) left the feed with the gesture it taught, but
+survives on the pushed management screens (Wallet, Tokens, Stocktwits, Kalshi),
+which keep their swipes — they're outside the pager. Also fixed in passing: the
+feed List carried TWO `.refreshable`; SwiftUI keeps the outermost, so the real
+bridge sync never ran on a pull — only the 600ms pulse stub did.
+
+Verified: 10/10 cold-launch survival with three feeds mounted where one was
+(the stack-overflow class of CLAUDE.md — dropping the coach's `hintID` threading
+flattened the row path enough to pay for the pager's depth).
