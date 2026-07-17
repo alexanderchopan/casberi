@@ -264,7 +264,12 @@ struct BoardDragDriver<ID: Hashable>: UIViewRepresentable {
 /// move is `.moved` and the touch ending or being cancelled is `.ended`.
 /// Moving too far BEFORE the duration elapses fails the recognizer, so the
 /// scroll pan keeps the touch — a flick still scrolls, only a settled finger
-/// grabs a card.
+/// grabs a card. A touch whose scroll is already in flight never lifts
+/// either (see `lift()`): the pan begins inside the 24pt allowance, so a
+/// gentle scroll start, a pause mid-scroll, or catching a decelerating
+/// fling would otherwise reach the timer and grab a card out from under an
+/// active scroll — the lift disables the pan, so the page froze mid-gesture
+/// ("Home sticks during scroll", fix 2026-07-17).
 ///
 /// It reports through `onPhase` from its own touch handlers, never through
 /// target-action (see BoardDragDriver's header: action dispatch from
@@ -372,6 +377,18 @@ final class LongPressDragRecognizer: UIGestureRecognizer {
 
     private func lift() {
         guard trackedTouch != nil, !lifted else { return }
+        // The touch is already a scroll: the pan begins ~10pt into a move —
+        // inside the 24pt allowance — so a slow scroll start or a mid-scroll
+        // pause still reaches this timer with the content tracking the
+        // finger; catching a decelerating fling holds it here too (the catch
+        // begins the pan with zero movement). Lifting now would grab the
+        // card under the finger and disable the pan, killing the scroll
+        // mid-gesture. Fail instead — the scroll keeps the touch, and a lift
+        // takes a fresh press from rest (the Home Screen rule).
+        if let sv = view as? UIScrollView, sv.isDragging || sv.isDecelerating {
+            state = .failed
+            return
+        }
         lifted = true
         state = .began
         onPhase?(.began)
