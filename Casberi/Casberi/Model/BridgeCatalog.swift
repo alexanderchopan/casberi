@@ -84,6 +84,11 @@ enum BridgeCatalog {
         Offer(name: "OpenSea",     tagline: "New NFT drops in your feed",            group: "NFTs",      connectable: true,
               summary: "Watch the chains you care about and their newest NFT collections land in your feed as links — the ones with real artwork, not the empty test contracts. Fetched straight from OpenSea's public API, read-only: nothing here buys, sells, or bids.",
               needsSetup: true),
+        // Shopping, not Markets (2026-07-17): Bitrefill is your own commerce
+        // account — orders and receipts — not a market you watch.
+        Offer(name: "Bitrefill",   tagline: "Your gift cards, in reach",             group: "Shopping",  connectable: true,
+              summary: "What you buy on Bitrefill lands in your feed — gift cards wearing their own artwork, phone top-ups, eSIMs, balance refills — with your balance at the top of the Bitrefill feed. Connects with an API key from Bitrefill's developer settings — it stays in this iPhone's Keychain. Read-only by conduct: nothing here ever buys, pays, or spends your balance.",
+              needsSetup: true),
         Offer(name: "Shopify",     tagline: "Follow any store's new drops",          group: "Shopping",  connectable: true,
               summary: "Follow any Shopify store — paste its web address and its newest products, restocks, and sale prices land in your feed as things, opening back on the store's own page. Fetched straight from the store's public catalog by this iPhone: no account, no sign-in, read-only — nothing here checks out or pays. Some big stores block automated reads; those it can't follow, it says so.",
               needsSetup: true),

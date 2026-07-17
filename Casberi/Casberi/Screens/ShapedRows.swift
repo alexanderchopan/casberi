@@ -1228,6 +1228,30 @@ struct ListeningLede: View {
     }
 }
 
+/// Bitrefill's lede: the account balance the API last reported, with this
+/// month's order count beside it. Facts only — no spend prompts, and no
+/// "unused"/"expires" claims the API can't back (BitrefillBridge's ceiling).
+struct BitrefillLede: View {
+    let balance: String
+    let monthCount: Int
+
+    var body: some View {
+        HStack(spacing: DS.Space.s2) {
+            Text("Balance")
+                .dsText(.body17).foregroundStyle(DS.textPrimary)
+            Spacer(minLength: 0)
+            if monthCount > 0 {
+                Text(monthCount == 1 ? "1 order this month" : "\(monthCount) orders this month")
+                    .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+            }
+            Text(balance)
+                .dsText(.body17).fontWeight(.semibold)
+                .foregroundStyle(DS.textPrimary)
+        }
+        .padding(.vertical, DS.Space.s2)
+    }
+}
+
 /// Tokens' lede: the watchlist's day at a glance — how many are up, how many
 /// down, over the same cached 24h pulses the rows themselves wear (honest by
 /// construction: one data source, two renders). Green/red is state, the color

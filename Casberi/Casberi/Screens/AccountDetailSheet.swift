@@ -524,6 +524,7 @@ struct AccountDetailSheet: View {
     /// longer has. Things stay untouched.
     private func deleteAccess() {
         TokenVault.deleteAll()
+        TokenBridge.allCases.forEach { $0.onRemove() }   // drop any cached non-thing state too
         MCPPairing.reset()
         let credentialBacked = Set(
             TokenBridge.allCases.map(\.bridgeID)

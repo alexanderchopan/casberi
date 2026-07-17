@@ -4194,6 +4194,15 @@ would orphan the rows' long-press verbs).
   sheet now hands the store in, and the read is optional (missing store only
   skips bridge registration on Watch).
 
+## 103. Bitrefill joins the catalog — orders in, balance in the lede, honesty ceiling on the shelf (2026-07-17) — BUILT
+
+Bitrefill (crypto gift cards / top-ups / eSIMs) lands as a token bridge — a personal API key from bitrefill.com/account/developers, Bearer auth against `api-bitrefill.com/v2` (a DASH in the host, not a dot). Orders land as link things ("Amazon.com · $50", the product's own artwork as the thumb, dated by `delivered_time`; sourceRef `bitrefill:order:<id>`); invoices with no orders on them are balance refills ("Balance refill · $50 in bitcoin"; sourceRef `bitrefill:invoice:<id>`); the account balance is a UserDefaults reading (`BitrefillBalance`), not a thing, feeding the Bitrefill feed's lede ("Balance … $12.40 · N orders this month") — connected-only, so a removed key never wears yesterday's balance.
+
+RULINGS:
+- **Shopping, not Markets.** Bitrefill is your own commerce account — receipts — not a market you watch. It shelves with Shopify/Deals, and the website mirrors that.
+- **The honesty ceiling, measured 2026-07-17:** the orders schema carries NO redemption status (Bitrefill can't know a code was spent at Amazon) and NO expiry. So the approved mock's "Ready to use" shelf, "Unused/Redeemed" trailing words, and the expiring-card pulse row are DEFERRED — rows claim only name, price, and when it arrived. If Bitrefill's API ever reports expiry or redemption, the mock's shelf+pulse design (session 2026-07-17) is the approved shape to build.
+- **Key honesty:** Bitrefill offers no read-only key scope, so the promise is Casberi's conduct, stated on the offer: "nothing here ever buys, pays, or spends your balance" — the Bankr posture, without the mint-it-read-only instruction Bankr can give.
+
 ## 104. Wallet screen: Watching and Approvals lead (user, 2026-07-17) — BUILT
 
 User: watching and revoke sat below the transactions, "but that makes them buried and also less clear on what to pin. i think they should be at the top." Connected-state order is now **Watching → Approvals → portfolio bundle → per-wallet treemaps → NFTs → recent → add / chains / status / disconnect**.

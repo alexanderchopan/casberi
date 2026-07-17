@@ -445,6 +445,7 @@ struct TokenSetupScreen: View {
         Section {
             Button("Remove token", role: .destructive) {
                 TokenVault.delete(bridge.tokenKey)
+                bridge.onRemove()
                 store.bridges.removeAll { $0.id == bridge.bridgeID }
                 result = String(localized: "Token removed — your things stay.")
                 resultIsError = false

@@ -86,6 +86,7 @@ extension DS {
         case "deals":               return Color.fixed("#e0245e")   // a sale-tag crimson
         case "open food facts":     return Color.fixed("#7cb342")   // a fresh grocery green
         case "stocktwits":          return Color.fixed("#008fff")   // their azure (icon-sampled)
+        case "bitrefill":           return Color.fixed("#002b28")   // their dark teal (icon-sampled)
         default:                    return nil
         }
     }

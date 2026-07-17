@@ -78,7 +78,7 @@ nav { display: flex; align-items: center; justify-content: space-between; paddin
 .ai.tilefull { background: none; overflow: hidden; }
 .ai.tilefull img { width: 100%; height: 100%; border-radius: inherit; object-fit: cover; }
 .ai-claude    { background: #d97757; font-size: 18px; }
-.ai-tokens    { background: #f5a623; }
+.ai-tokens    { background: #0b0b0b; }
 .ai-kalshi    { background: #4fae7b; }
 .ai-stocktwits { background: #008fff; }
 .ai-opensea   { background: #2081e2; }
@@ -110,6 +110,7 @@ nav { display: flex; align-items: center; justify-content: space-between; paddin
 .ai-kindle    { background: linear-gradient(160deg, #4a4f57, #23272e); }
 .ai-shopify   { background: #5e8e3e; }
 .ai-deals     { background: #e0245e; }
+.ai-bitrefill { background: #002b28; }
 .ai-openfoodfacts { background: #7cb342; }
 .ai-more      { background: var(--surface-2); color: var(--muted); }
 .ai-more span { font-size: 20px; font-weight: 800; letter-spacing: -1px; line-height: 1; }

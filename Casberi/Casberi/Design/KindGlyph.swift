@@ -140,6 +140,7 @@ enum BridgeGlyph {
         case "shopify":   return "bag"
         case "deals":     return "tag.fill"
         case "open food facts": return "barcode.viewfinder"
+        case "bitrefill": return "gift"
         default:          return "app"
         }
     }

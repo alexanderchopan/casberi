@@ -15,6 +15,7 @@ enum TokenBridge: String, CaseIterable, Identifiable {
     case calendly = "Calendly"
     case notion   = "Notion"
     case linear   = "Linear"
+    case bitrefill = "Bitrefill"
 
     var id: String { rawValue }
 
@@ -29,6 +30,7 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         case .calendly: "calendly"
         case .notion:   "notion"
         case .linear:   "linear"
+        case .bitrefill: "bitrefill"
         }
     }
 
@@ -70,6 +72,10 @@ enum TokenBridge: String, CaseIterable, Identifiable {
             "Open Linear → Settings → Security & access → Personal API keys.",
             "Create a key — read access is enough.",
             "Copy it and paste it below."]
+        case .bitrefill: [
+            "Open bitrefill.com/account/developers in a browser.",
+            "In the API Keys tab, create a key — any name works.",
+            "Copy it and paste it below."]
         }
     }
 
@@ -83,6 +89,7 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         case .calendly: "Personal access token"
         case .notion:   "ntn_…"
         case .linear:   "lin_api_…"
+        case .bitrefill: "API key"
         }
     }
 
@@ -97,6 +104,7 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         case .calendly: "meetings"
         case .notion:   "pages"
         case .linear:   "issues"
+        case .bitrefill: "orders"
         }
     }
 
@@ -110,6 +118,18 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         case .calendly: "Reads your scheduled meetings."
         case .notion:   "Reads the pages you connect."
         case .linear:   "Reads issues assigned to you."
+        case .bitrefill: "Reads your orders, refills, and balance — nothing here ever buys, pays, or spends."
+        }
+    }
+
+    /// Bridge-specific teardown beyond the token itself — a hook the remove
+    /// path calls so a bridge that caches non-thing state (a reading, not a
+    /// Thing) drops it when disconnected, and a reconnected DIFFERENT account
+    /// never wears the prior one's cache. Most bridges hold nothing extra.
+    func onRemove() {
+        switch self {
+        case .bitrefill: BitrefillBalance.clear()
+        default:         break
         }
     }
 }
@@ -168,6 +188,7 @@ enum TokenIngest {
         case .calendly: await calendly(token)
         case .notion:   await notion(token)
         case .linear:   await linear(token)
+        case .bitrefill: await BitrefillFetch.things(token: token)
         }
     }
 
