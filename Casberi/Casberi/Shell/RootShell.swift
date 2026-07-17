@@ -594,8 +594,17 @@ struct RootShell: View {
                  onKeepAnswer: keepAnswer,
                  glassNamespace: nil)
             .environment(\.genProjectTap) { name in
-                // Sentinels ("@wallet", "@token:…") are surface routes, not
-                // tags — from the composer they'd open a bogus tag view
+                // The apps answer's catalog door: "@apps" routes to the Apps
+                // page here too (same marker the quiet-day invite uses on
+                // Home) — a card that did nothing inside the composer would
+                // be a dead control (honesty rule).
+                if name == "@apps" {
+                    composerOpen = false
+                    HomeRoute.shared.push = .apps
+                    return
+                }
+                // Other sentinels ("@wallet", "@token:…") are surface routes,
+                // not tags — from the composer they'd open a bogus tag view
                 // literally named "@token:…"; an unknown sentinel does
                 // nothing (HomeScreen's own rule).
                 guard !name.hasPrefix("@") else { return }
@@ -818,6 +827,50 @@ struct RootShell: View {
         }
     }
 
+    /// "what apps do you have" — the app set, computed. Connected seats speak
+    /// first (names, plus an honest attention count); a catalog ask answers by
+    /// size with a taste of names. Every variant carries the catalog door —
+    /// the same "@apps" card the quiet day's slot uses — so the answer opens
+    /// the real Apps surface instead of dead-ending in prose.
+    private func appsDoc(_ ask: AppsAsk.Intent) -> [String] {
+        let seats = bridges.bridges
+        let shelf = BridgeCatalog.offers.filter(\.connectable)
+        let emptyLine = "No apps connected yet — the catalog has \(shelf.count) ready to connect."
+        let line: String
+        switch ask {
+        case .count:
+            line = seats.isEmpty
+                ? emptyLine
+                : "You've connected \(seats.count) of the \(shelf.count) apps in the catalog."
+        case .connected:
+            if seats.isEmpty {
+                line = emptyLine
+            } else {
+                var l = "You've connected \(seats.count) app\(seats.count == 1 ? "" : "s") — \(naturalList(seats.map(\.name)))."
+                let needs = bridges.attentionCount
+                if needs > 0 { l += " \(needs) need\(needs == 1 ? "s" : "") attention." }
+                line = l
+            }
+        case .catalog:
+            var l = "The catalog has \(shelf.count) apps to connect — \(shelf.prefix(3).map(\.name).joined(separator: ", ")), and more."
+            if !seats.isEmpty { l += " You've connected \(seats.count)." }
+            line = l
+        }
+        return ["root = Stack([ins, door])",
+                "ins = Insight(\"\(genSafe(line))\")",
+                "door = AppsInvite(\"\(genSafe(String(localized: "Browse the catalog")))\", \"\")"]
+    }
+
+    /// Names as a sentence — "A, B, and C", folding overflow into "N more"
+    /// (a 20-seat answer should scan, not scroll).
+    private func naturalList(_ names: [String], max: Int = 6) -> String {
+        var parts = Array(names.prefix(max))
+        if names.count > parts.count { parts.append("\(names.count - parts.count) more") }
+        guard parts.count > 1 else { return parts.first ?? "" }
+        return parts.dropLast().joined(separator: ", ")
+            + (parts.count == 2 ? " and " : ", and ") + parts.last!
+    }
+
     /// A tag name safe as a bare TagMap cell label — a comma or bracket would
     /// break the cell list's grammar, and the trailing count is its own token.
     private func tagMapLabel(_ tag: String) -> String {
@@ -908,6 +961,16 @@ struct RootShell: View {
             // silently grounding on a previous one's evidence (review 2026-07-13).
             lastAnswerHits = []
             return tagsDoc(tagsAsk, in: allThings)
+        }
+        // An apps ask ("what apps do you have") is a meta-question about the
+        // app set — connected seats + the catalog — answered computed, never
+        // the model. Before AggregateAsk so "how many apps" counts apps, not
+        // things, and before retrieval so "apps"/"have" never become search
+        // terms and surface noise (the bug: this ask fell through to the
+        // term-scored retriever and answered with unrelated things, 2026-07-17).
+        if let appsAsk = AppsAsk.parse(query) {
+            lastAnswerHits = []
+            return appsDoc(appsAsk)
         }
         if let agg = AggregateAsk.parse(query, sources: knownSources) {
             lastAnswerHits = []

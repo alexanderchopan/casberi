@@ -4032,3 +4032,29 @@ is catalog-sync-checked like the other marquees so a rename can't leave a
 dead tile. Rendered FLAT (plain stacks, no Widget/Row path) per the
 eager-head stack-depth rule. Headless: `-pileTap "<Offer name>"`;
 `QuietStateView`/`CasberiMarkDrawOn` deleted with the old state.
+
+## 98. "What apps do you have" answers from the app set, not the retriever (2026-07-17) — BUILT
+
+The user asked the composer "what apps do you have" and got nonsense: no
+handler owned the question, so it fell through to the term-scored
+retriever, which read the literal words ("apps", "have") as search terms
+and grounded the answer on whatever things happened to score — the same
+failure class §"TagsAsk" fixed for "what tags do i have" (2026-07-12).
+What shipped: `AppsAsk` (`Model/AskCommands.swift`) parses meta-questions
+about the app SET — three intents: connected ("what apps are connected",
+"what apps do i have"), catalog ("what apps do you have", "which apps can
+i connect"), count ("how many apps") — phrase-gated so "anything new from
+my apps" stays a status ask and "which app sent the most" stays
+AggregateAsk's superlative (a `most` guard). It runs BEFORE AggregateAsk
+on purpose: "how many apps" used to match AggregateAsk's bare "how many"
+and answer with the TOTAL THING COUNT — a second live bug this fixes.
+The answer (`appsDoc` in `Shell/RootShell.swift`) is computed, never the
+model: connected seats from BridgeStore (names + an honest attention
+count), catalog size from `BridgeCatalog.offers.filter(\.connectable)`,
+worded per the §96 ruling ("the catalog", never "store"). Every variant
+carries the catalog door — the same `AppsInvite("@apps")` card the quiet
+day's slot uses — and the composer's `genProjectTap` now routes "@apps"
+to the Apps page (it used to guard out all @-sentinels there, which would
+have made the card a dead control — honesty rule). Like every computed
+ask, it clears `lastAnswerHits` so a keyed retry re-retrieves. Headless:
+`-answerProbe "what apps do you have"`.
