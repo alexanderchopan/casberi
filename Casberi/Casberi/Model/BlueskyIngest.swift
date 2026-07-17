@@ -116,6 +116,24 @@ final class BlueskyStore {
         return true
     }
 
+    /// Adds many at once, deduped, persisting ONCE — the follow import lands
+    /// hundreds, and `accounts` persists on every mutation, so appending in a
+    /// loop would re-encode the whole growing list per person. Returns how
+    /// many were new.
+    @discardableResult
+    func add(contentsOf raws: [String]) -> Int {
+        var known = Set(accounts.map(\.handle))
+        var fresh: [Account] = []
+        for raw in raws {
+            let h = Self.normalize(raw)
+            guard !h.isEmpty, known.insert(h).inserted else { continue }
+            fresh.append(Account(handle: h))
+        }
+        guard !fresh.isEmpty else { return 0 }
+        accounts.append(contentsOf: fresh)
+        return fresh.count
+    }
+
     func remove(_ handle: String) { accounts.removeAll { $0.handle == handle } }
 
     /// Teardown clears the whole connection — people and feeds both.

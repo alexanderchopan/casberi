@@ -115,6 +115,26 @@ final class FarcasterStore {
         return true
     }
 
+    /// Adds many at once, deduped, persisting ONCE — the follow import lands
+    /// hundreds, and `accounts` persists on every mutation, so appending in a
+    /// loop would re-encode the whole growing list per person. Each carries
+    /// the fid the graph read already knew, so the import also skips the
+    /// name→fid lookup the first sync would otherwise pay PER account.
+    /// Returns how many were new.
+    @discardableResult
+    func add(contentsOf raws: [(name: String, fid: Int?)]) -> Int {
+        var known = Set(accounts.map(\.username))
+        var fresh: [Account] = []
+        for raw in raws {
+            let n = Self.normalize(raw.name)
+            guard !n.isEmpty, known.insert(n).inserted else { continue }
+            fresh.append(Account(username: n, fid: raw.fid ?? 0))
+        }
+        guard !fresh.isEmpty else { return 0 }
+        accounts.append(contentsOf: fresh)
+        return fresh.count
+    }
+
     func remove(_ username: String) { accounts.removeAll { $0.username == username } }
 
     /// Teardown clears the whole connection — people and channels both.

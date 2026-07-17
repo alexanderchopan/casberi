@@ -213,6 +213,41 @@ enum ProbeHooks {
                       feed?.name ?? "NONE", n.map(String.init) ?? "FAILED")
             }
         },
+        // `-followsProbe "<Bluesky|Farcaster>:<handle>"` reads that account's
+        // follow graph and reports what came back (2026-07-16, prd 87) — the
+        // read behind the "Who they follow" picker, headless. It WATCHES
+        // NOBODY: the graph is a read, and the taps that watch are the
+        // person's, so a probe that imported would be testing a path the app
+        // doesn't have. `truncated` is the honesty check — the sheet's "first
+        // N" line is only true if this says so.
+        Hook(key: "followsProbe") { spec, _ in
+            let parts = spec.split(separator: ":", maxSplits: 1).map(String.init)
+            guard parts.count == 2 else {
+                NSLog("followsProbe: expected \"<Bluesky|Farcaster>:<handle>\", got %@", spec)
+                return
+            }
+            Task { @MainActor in
+                let graph = await SocialFollows.graph(source: parts[0], handle: parts[1])
+                // `reachable` is the one that can't be inferred from the count:
+                // 0 people means "follows nobody" ONLY if the read got through.
+                NSLog("followsProbe %@ @%@: %d follows, truncated=%@, reachable=%@",
+                      parts[0], parts[1], graph.people.count,
+                      graph.truncated ? "YES" : "no",
+                      graph.reachable ? "yes" : "NO")
+                // A count alone can't tell a hydrated row from an empty one —
+                // the picker needs a face and a name per person, so print what
+                // the rows would actually wear.
+                let faces = graph.people.filter { $0.avatarURL != nil }.count
+                let named = graph.people.filter { $0.displayName != $0.handle }.count
+                NSLog("followsProbe hydration: %d with a face, %d with a display name",
+                      faces, named)
+                for p in graph.people.prefix(3) {
+                    NSLog("followsProbe · %@ (@%@) fid=%@ face=%@",
+                          p.displayName, p.handle, p.fid.map(String.init) ?? "nil",
+                          p.avatarURL ?? "nil")
+                }
+            }
+        },
         // `-socialProbe <Bluesky|Farcaster>` reports what the enrichment
         // actually landed across that source's corpus (2026-07-16) — how many
         // posts carry their full text, pictures, a quote, a parent, a context

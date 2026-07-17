@@ -3531,3 +3531,76 @@ name — keying the result off the mint the ANSWER carries (never the one asked
 for) is what makes a stray harmless. And the odd-looking symbols are real:
 `Ctgbpg` is CAPE GRID TOWN PENGUIN, `Svaicf` is SILICON CHIP VALLEY FORGE. Both
 looked like base58 fragments and both survived checking.
+
+## 87. Who they follow — the follow graph as a picker, not a mirror (user, 2026-07-16) — BUILT
+
+The question was: both networks expose who you follow, so couldn't we let a
+person automatically follow, in Casberi, everyone they already follow?
+
+Yes to the read; no to the "automatically". Both graphs are public and keyless
+— `app.bsky.graph.getFollows` on the AppView, `client.farcaster.xyz/v2/following`
+on the client API — and both hand back HYDRATED profiles (face, name, handle),
+so the list renders with no second lookup. Nothing here needs a sign-in.
+
+**The ruling: it lands as a PICKER.** Three reasons, in order of weight.
+
+1. **Scale.** A measured account follows **1,848** people; another **3,757**.
+   Mirroring that isn't importing a few friends, it's subscribing to a
+   timeline, and it pays a sync job per person on every refresh. Casberi is a
+   personal corpus; a timeline is the thing it isn't.
+2. **Precedent.** The app has already ruled this exact shape twice.
+   `SocialPeople.findElsewhere` (§81) hands you hits and makes the watch YOUR
+   tap rather than claiming a join it can't prove. Trending (§76) shows, and
+   the tap watches. This is the same gesture at a bigger scale.
+3. **It's not what people mean.** "Follow who I follow" is the wish; the want
+   is the handful of people you'd have typed in one by one, without the typing.
+
+**Nothing is preselected** (user, 2026-07-16). You opt people in. A "select
+all" was deliberately NOT built — it's one tap back to the flood the picker
+exists to prevent. Held as an open question, not a gap.
+
+**The list is in network order, with a filter field** (user, 2026-07-16). No
+rank we didn't compute. Bluesky serves most-recently-followed first, which is
+already a real signal; Farcaster serves its own. Ranking by follower count was
+costed and rejected: free on Farcaster (inline `followerCount`), ~1 extra
+request per 25 people on Bluesky (`getProfiles` caps at 25), and it surfaces
+the biggest accounts — the loudest feeds, covered everywhere else, which is
+backwards for a corpus. The field FILTERS what's already there; it never
+searches the network.
+
+**Where it lives:** a "Who they follow" capsule on the watched-account row,
+beside "Watch their wallet" (§79) — same anatomy, same place, both networks.
+That siting is why the feature needs no new notion of who YOU are: your own
+account is normally the one you watch first, so on your row this reads exactly
+as "bring in who I follow", with no identity question and no sign-in. On anyone
+else's row it's a way into their taste, which is the same verb.
+
+### What the measuring cost, and what not to re-litigate
+
+**Farcaster's client API is rate limited to 20 requests per 10 seconds** (its
+own 429 body says so), and the walk MUST stay paced — `SocialFollows.pageDelay`
+is load bearing. Unpaced, a 1,848-follow graph came back as exactly **999
+people, presented as complete**: `IngestSupport.run` reports a non-200 as nil,
+so the loop just stops. That's the honesty rule's nightmare — not an error, a
+wrong list wearing a right one's clothes. `Graph.truncated` exists so the sheet
+can say "this is the first N" whenever the walk didn't finish.
+
+**The trap:** the ceiling is enforced **per connection**, so it does not
+reproduce with curl or any client opening a fresh connection per request —
+those walked all 37 pages clean and pronounced the endpoint healthy, three
+times, while the app failed identically at page 21. URLSession reuses one
+keep-alive connection; that's the whole difference. Reproduce against a single
+keep-alive connection or you will conclude the delay is unnecessary. (Measured:
+150ms fails, 400ms and 550ms both complete; 500ms shipped, ~14 req/10s.)
+
+Bluesky needs no such pacing — 40 back-to-back pages drew nothing.
+
+**Snapchain was the wrong host for this, and not for the reason expected.** The
+keyless node answers the graph too (`linksByFid`), but only as target FIDs, and
+there's no batch fid→username — a 1,848-follow graph would cost 1,848 lookups
+against the client API's 37. An early worry that the node PRUNES the graph was
+checked and is false: it agreed with the client API on dwr's count to within
+the self-follow it includes (78 vs 77).
+
+A big graph is a real wait (1,848 people ≈ 31s paced), so the sheet counts out
+loud — "Reading the follow list… 450 so far" — rather than spinning mute.

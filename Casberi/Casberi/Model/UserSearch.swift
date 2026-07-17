@@ -66,7 +66,9 @@ enum UserSearch {
         }
     }
 
-    private static func name(_ raw: Any?, fallback: String) -> String {
+    /// Shared with `SocialFollows`, which builds the same Hit rows from the
+    /// same two networks' profile shapes.
+    static func name(_ raw: Any?, fallback: String) -> String {
         let trimmed = (raw as? String)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         return trimmed.isEmpty ? fallback : trimmed
     }

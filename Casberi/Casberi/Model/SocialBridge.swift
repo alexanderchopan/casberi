@@ -219,6 +219,46 @@ enum SocialPeople {
         }
     }
 
+    /// A handle in the form its store keeps. Hits carry the network's raw
+    /// handle (the stores normalize again on add — harmless), so anything
+    /// COMPARING a hit against the watch list has to normalize first.
+    static func normalize(_ handle: String, source: String) -> String {
+        switch source {
+        case "Farcaster": return FarcasterStore.normalize(handle)
+        case "Bluesky":   return BlueskyStore.normalize(handle)
+        default:          return handle
+        }
+    }
+
+    /// Every handle watched on this network. The import sheet snapshots this
+    /// once rather than asking `isWatched` per row — a graph runs to ~1,800
+    /// people, and a per-row scan of the watch list is quadratic.
+    @MainActor
+    static func watchedHandles(source: String) -> Set<String> {
+        switch source {
+        case "Farcaster": return Set(FarcasterStore.shared.accounts.map(\.username))
+        case "Bluesky":   return Set(BlueskyStore.shared.accounts.map(\.handle))
+        default:          return []
+        }
+    }
+
+    /// Starts watching a whole picked set at once (2026-07-16) — the follow
+    /// import's landing. One store write for the lot, so a 200-person import
+    /// persists once; each carries the fid/handle the graph read already knew.
+    /// Returns how many were NEW, which is what the sheet reports (picking
+    /// someone already watched is a no-op, not a second connect).
+    @MainActor
+    @discardableResult
+    static func watch(_ people: [UserSearch.Hit], source: String) -> Int {
+        switch source {
+        case "Farcaster":
+            return FarcasterStore.shared.add(contentsOf: people.map { ($0.handle, $0.fid) })
+        case "Bluesky":
+            return BlueskyStore.shared.add(contentsOf: people.map(\.handle))
+        default: return 0
+        }
+    }
+
     /// Refresh whichever bridge just gained an account, so a Watch from the
     /// card lands their posts immediately instead of at the next foreground.
     @MainActor

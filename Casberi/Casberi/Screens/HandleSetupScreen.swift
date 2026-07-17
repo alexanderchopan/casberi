@@ -352,6 +352,11 @@ struct HandleSetupScreen: View {
     /// the finished sync runs once more instead of silently dropping it.
     @State private var resyncQueued = false
 
+    /// The account whose follow graph the import sheet is showing, or nil
+    /// (2026-07-16) — the handle doubles as the sheet's item, so opening it
+    /// for a second account can't show the first one's list.
+    @State private var followImport: FollowImportTarget?
+
     /// People matching what's typed so far — the field doubles as a finder
     /// on the bridges with public search. Cleared on add and on emptying.
     @State private var hits: [UserSearch.Hit] = []
@@ -438,6 +443,13 @@ struct HandleSetupScreen: View {
                     .filter { !watched.contains(bridge.normalize($0.handle)) }
             }) {
                 hits = found
+            }
+        }
+        .sheet(item: $followImport) { target in
+            FollowImportSheet(source: target.source, handle: target.handle) { added in
+                guard added > 0 else { return }
+                accountNames = bridge.names
+                Task { await sync() }   // their posts land now, not next foreground
             }
         }
     }
@@ -594,27 +606,27 @@ struct HandleSetupScreen: View {
                     }
                     .padding(.top, DS.Space.s1)
                 }
-                // The wallet↔Farcaster join (2026-07-15): watch this account's
-                // verified onchain wallet — its holdings and activity land like
-                // any watched address. Farcaster only (Bluesky has no onchain
-                // verification); watch-only, so peeking is legitimate.
-                if bridge == .farcaster {
-                    Button {
-                        watchWallet(for: account.key)
-                    } label: {
-                        HStack(spacing: DS.Space.s1) {
-                            Image(systemName: "wallet.pass")
-                                .font(.system(size: 11, weight: .medium))
-                            Text("Watch their wallet").dsText(.label12)
+                HStack(spacing: DS.Space.s2) {
+                    // The wallet↔Farcaster join (2026-07-15): watch this
+                    // account's verified onchain wallet — its holdings and
+                    // activity land like any watched address. Farcaster only
+                    // (Bluesky has no onchain verification); watch-only, so
+                    // peeking is legitimate.
+                    if bridge == .farcaster {
+                        rowCapsule("wallet.pass", "Watch their wallet") {
+                            watchWallet(for: account.key)
                         }
-                        .foregroundStyle(DS.textTertiary)
-                        .padding(.horizontal, DS.Space.s3)
-                        .frame(height: 28)
-                        .background(DS.gray100, in: Capsule(style: .continuous))
                     }
-                    .buttonStyle(.plain)
-                    .padding(.top, DS.Space.s1)
+                    // Their follow graph as a picker (2026-07-16, prd 87).
+                    // Both networks publish it keylessly, so on YOUR OWN
+                    // watched account this is "bring in who I follow" — with
+                    // no new notion of who you are, and no sign-in.
+                    rowCapsule("person.2", "Who they follow") {
+                        followImport = FollowImportTarget(source: bridge.rawValue,
+                                                          handle: account.key)
+                    }
                 }
+                .padding(.top, DS.Space.s1)
             }
             Spacer()
         }
@@ -627,6 +639,25 @@ struct HandleSetupScreen: View {
         }
         .dsListCardRow()
         .listRowSeparator(.hidden)
+    }
+
+    /// The account row's quiet action, in chip clothes — the same capsule
+    /// anatomy the watch chips wear, minus the lit state (these DO a thing
+    /// rather than hold one).
+    private func rowCapsule(_ icon: String, _ label: String,
+                            action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: DS.Space.s1) {
+                Image(systemName: icon)
+                    .font(.system(size: 11, weight: .medium))
+                Text(LocalizedStringKey(label)).dsText(.label12)
+            }
+            .foregroundStyle(DS.textTertiary)
+            .padding(.horizontal, DS.Space.s3)
+            .frame(height: 28)
+            .background(DS.gray100, in: Capsule(style: .continuous))
+        }
+        .buttonStyle(.plain)
     }
 
     /// Resolves a watched Farcaster account's verified wallet and watches it —
