@@ -3899,8 +3899,9 @@ beneath, already holding whatever the connects landed. From Settings the
 sheet keeps its plain toolbar Done — the CTA exists only in the onboarding
 tail (`HowItWorksSheet(onOpenCatalog:)`).
 
-Headless: `-howItWorksCTA <s>` fires the CTA after a delay (pair with
-`-demoPick` to walk the whole arc; NSLogs "howItWorksCTA: fired").
+Headless: `-howItWorksCTA <s>` fires the CTA after a delay (NSLogs
+"howItWorksCTA: fired"). [Stale as of §96, same day: `-demoPick` died with
+the connect screen — `-fresh YES -howItWorksCTA <s>` walks the arc alone.]
 
 **Naming (user, same day): the Apps surface is never a "store" in
 user-facing copy — it's "the catalog."** "Store" reads as a place you pay.
@@ -3932,3 +3933,78 @@ results); rows read icon → name → tagline. The qualifier survives in ONE
 place: as a Discover card's eyebrow, where a single card states its
 reason. `Offer.qualifier` itself stays — it powers the reason-or-no-seat
 rule (§93).
+
+## 95. Ask tiles learn from taps; no launcher tile (user + assistant, 2026-07-16) — BUILT
+
+Two rulings from one question ("can the tiles be smarter, and should
+there be an 'open my…' tile?").
+
+**Tap-learning decay.** The composer's ask tiles keep their honesty gating
+(a tile must answer) but the priority order is no longer fixed forever: an
+ask kind offered **10 opens without a tap** steps behind the next
+qualifier — demoted by SORT, never filtered, so a short grid still fills
+with it. A tap resets its counter. Counters are keyed by MEMORY KEY: the
+ask's stable kind ("week", "wallet"), or kind:qualifier where one kind
+wears many faces ("showtag:recipes", "context:Photos" — so one tag's
+earned neglect never pre-demotes a different tag's first offering), never
+display strings (titles carry live counts and would fragment the
+counters), stored in UserDefaults (`Model/AskMemory.swift` — the
+exemptions live there too, in one place). Exempt: "While I was away?"
+(timely, not evergreen — it leads only when a real gap holds enough to
+say something) and the organize invite (its own slot and gate). An open
+that hands off an ask (a status chip's question filling the field) does
+NOT count as an offer — the tiles never had a chance to be tapped. No ML,
+no ratios — a counter and a stable partition. Probe: `-askStats
+"<key>:<n>[,…]|clear"` seeds the counters (once per launch,
+self-guarded — a per-view guard would re-seed each open and clobber the
+bumps); every open NSLogs `askTiles:` with the chosen keys.
+
+**No launcher tile.** "Open my wallet" as a tile is ruled out: the
+source-chip header on Home IS the launcher, one tap away behind the
+sheet, and the tile grid has one grammar — questions the corpus can
+answer. Precedent: §90's "counting stays a typed power, never a tile."
+If launcher-ness is ever wanted, it's a typed verb ("open …" routing to
+the existing deep links), not a tile. Held, not built.
+
+## 96. The connect screen dies — onboarding is the greeting, wearing the rain (user, 2026-07-16) — BUILT
+
+"I no longer think we should have the first screen that has the apps to
+connect. The icon tiles should rain down on the screen you created, then the
+user goes straight to the app catalogue."
+
+Onboarding is ONE screen now. The connect screen (§opt-4's mini store of
+Photos/Calendar/Reminders, re-ruled 2026-07-07) is DELETED —
+`OnboardingView.swift` is gone, and with it the `-demoPick` hook and the
+minute-zero permission asks. A fresh install opens straight onto the "How it
+works" greeting (§89/§94), which now carries the rain itself: the full
+curated marquee (31 tiles, the same set the connect screen dropped — the six
+Apple bridges still landing last as symbol tiles) falls down the screen IN
+FRONT of the step cards and passes off the bottom. Rain, not ice: nothing
+rests over scrollable content — step 1's settled strip of six is the rain
+come to rest, same metaphor, same jitter. The fall is an ease-IN (gravity
+accelerates; the old pile's spring-bounce was for landing, and nothing lands
+here), deterministic (golden-ratio columns + the jitter table, no
+Math.random), never hit-testable, and its base delay (0.7s) clears the
+cover's own presentation — started at onAppear the curtain was half-spent
+behind the cover fade (measured on the sim). From Settings there is no rain —
+a second rain would be a fake first time.
+
+Connecting moved to where the door already led: the catalog. The greeting's
+"Browse the catalog" CTA (§94) is unchanged and is now the whole arc — rain →
+four steps → catalog. `RootShell`'s cover lost its two-step swap
+(`onboardingHowItWorks` state deleted); the CTA sets the feed to "All",
+pushes Apps, and marks onboarded. What's given up, deliberately: the
+in-context permission asks at minute zero (they now fire from each app's
+catalog row/product page, where §opt-4 always ran them anyway) and the
+feed-preview card's fill-in-place reward.
+
+Bookkeeping: `catalog-sync.sh`'s marquee check now reads
+`HowItWorksSheet.marqueeApps` (same array name, moved file); the onboarding
+arc verifies headless with `-fresh YES -howItWorksCTA <s>` alone. Probe
+lesson paid for twice this session: (1) `-onboarded NO` as a launch arg
+MASKS the CTA's `onboarded = true` write for the whole run (the argument
+domain wins reads), so the cover "never dismisses" — don't pass it when
+probing the CTA landing; delete the stored key instead. (2) A concurrent
+session driving the same booted sim can foreground THEIR binary mid-probe —
+screenshots of a state you didn't launch mean collision, not regression
+(this session's b2/video runs caught the other session's composer work).

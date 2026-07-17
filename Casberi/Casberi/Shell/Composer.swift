@@ -140,8 +140,24 @@ struct Composer: View {
 
     /// Empty-field ask suggestions — derived from the live corpus on open
     /// (re-ruling 2026-07-08: the dead GENERIC chips stay dead; these are
-    /// asks the corpus can actually answer right now).
-    @State private var suggestions: [String] = []
+    /// asks the corpus can actually answer right now). `kind` is the ask's
+    /// stable identity, `glyph` is assigned where the ask is created (no
+    /// parallel switch to forget), and `memoryKey` keys the decay counters
+    /// (see AskMemory) — kind:qualifier where one kind wears many faces,
+    /// so "Show recipes" neglect never pre-demotes "Show travel".
+    private struct AskOption {
+        let kind: String
+        let title: String
+        let glyph: String
+        let memoryKey: String
+        init(kind: String, title: String, glyph: String, memoryKey: String? = nil) {
+            self.kind = kind
+            self.title = title
+            self.glyph = glyph
+            self.memoryKey = memoryKey ?? kind
+        }
+    }
+    @State private var suggestions: [AskOption] = []
     /// The away window's real count — the librarian chip rolls up to it
     /// (delight 2026-07-13); set beside the gate that shows the chip.
     @State private var awayLanded = 0
@@ -218,8 +234,14 @@ struct Composer: View {
     /// Builds the ask chips from what the corpus can answer TODAY. Empty
     /// corpus → no chips (the field is the invitation).
     private func computeSuggestions() {
+        #if DEBUG
+        // `-askStats "<key>:<n>[,…]|clear"` — seed the decay counters
+        // headlessly (see AskMemory; self-guarded to once per launch), so
+        // demotion verifies in one launch.
+        AskMemory.seedFromLaunchArgs()
+        #endif
         tagPool = tagCandidates()   // one corpus walk per open, not per keystroke
-        var out: [String] = []
+        var out: [AskOption] = []
         // One plain fetch, filtered in memory — a #Predicate can't compare
         // the Codable ThingKind enum (it throws at runtime, and try? made
         // the miss silent).
@@ -229,7 +251,8 @@ struct Composer: View {
         // composer meets you where you are. Only when that source actually has
         // things to synthesize (honesty rule: a chip must answer).
         if let src = contextSource(), all.contains(where: { $0.source == src }) {
-            out.append("What's new in \(src)?")
+            out.append(AskOption(kind: "context", title: "What's new in \(src)?",
+                                 glyph: "app.badge", memoryKey: "context:\(src)"))
         }
         let dayStart = Calendar.current.startOfDay(for: .now)
         // The feeds' pulse (2026-07-11): "What's going on?" synthesizes the
@@ -244,7 +267,8 @@ struct Composer: View {
         let awayCount = StatusAsk.pulse("while i was away", things: all)?.pool.count ?? 0
         awayLanded = awayCount
         if awayCount >= 3 {
-            out.insert("While I was away?", at: 0)
+            out.insert(AskOption(kind: "away", title: "While I was away?",
+                                 glyph: "sparkles"), at: 0)
         }
         let pulseChip = StatusAsk.pulse("what's going on", things: all)
             .map { $0.pool.count >= 2 } ?? false
@@ -253,31 +277,36 @@ struct Composer: View {
         if awayCount >= 3 {
             // covered by "While I was away?"
         } else if pulseChip {
-            out.append("What's going on?")
+            out.append(AskOption(kind: "pulse", title: "What's going on?", glyph: "bolt"))
         } else if all.contains(where: { $0.capturedAt >= dayStart }) {
-            out.append("What landed today?")
+            out.append(AskOption(kind: "today", title: "What landed today?",
+                                 glyph: "tray.and.arrow.down"))
         }
         // The watchlist chip (2026-07-14): watched tokens are the corpus' one
         // LIVE number — teach that the composer reads them. Gated on the same
         // things TokensAsk answers from, so the chip always answers.
         if all.contains(where: { $0.source == "Tokens" }) {
-            out.append("How's my watchlist?")
+            out.append(AskOption(kind: "watchlist", title: "How's my watchlist?",
+                                 glyph: "chart.line.uptrend.xyaxis"))
         }
         // The wallet chip (2026-07-15): gated on a watched address existing, so
         // WalletAsk always has holdings to answer with — the chip can't drift
         // from the ask it triggers.
         if !WalletStore.shared.addresses.isEmpty {
-            out.append("How's my wallet?")
+            out.append(AskOption(kind: "wallet", title: "How's my wallet?",
+                                 glyph: "wallet.bifold"))
         }
         // Only asks the corpus can honestly answer right now. (Pinning left
         // the composer 2026-07-12: it's per-APP now, placed from the app's own
         // screen, not a phrase. "How many links this week?" died 2026-07-16 —
         // ruling: nobody cares; counting stays a typed power, never a tile.)
         if let top = tagPool.first {
-            out.append("Show \(top)")
+            out.append(AskOption(kind: "showtag", title: "Show \(top)",
+                                 glyph: "tag", memoryKey: "showtag:\(top)"))
         }
         if !all.isEmpty {
-            out.append("What's this week?")
+            out.append(AskOption(kind: "week", title: "What's this week?",
+                                 glyph: "calendar"))
         }
         // The organize invite (ruling 2026-07-10): the source with the most
         // things still wearing only their type tag (≥3) earns the nudge.
@@ -296,9 +325,28 @@ struct Composer: View {
             // change identity between opens.
             .max { ($0.value.total, $1.key) < ($1.value.total, $0.key) }
             .map { OrganizeHint(source: $0.key, count: $0.value.total) }
+        // Tap-learning decay (ruling 2026-07-16, prd 95): an ask offered ten
+        // opens without a tap steps behind the next qualifier — demoted by
+        // a stable partition, never filtered, so a short grid still fills
+        // with it. A tap resets its counter; exemptions (the away chip is
+        // timely, not evergreen) live in AskMemory. The organize invite has
+        // its own slot and gate.
+        let ranked = out.filter { !AskMemory.neglected($0.memoryKey) }
+                   + out.filter { AskMemory.neglected($0.memoryKey) }
         // Fill the 2×2 grid: three asks beside the organize invite when it's
         // earned, four when it isn't — the tiles read whole either way.
-        suggestions = Array(out.prefix(organizeHint == nil ? 4 : 3))
+        suggestions = Array(ranked.prefix(organizeHint == nil ? 4 : 3))
+        // A handed-off ask (a status chip's question) fills the field the
+        // moment the sheet settles — the tiles never had a chance to be
+        // tapped, so that open must not count against them.
+        if chrome.askRequest == nil {
+            AskMemory.shown(suggestions.map(\.memoryKey))
+        }
+        #if DEBUG
+        NSLog("[Casberi] askTiles: %@%@",
+              organizeHint.map { "hint:\($0.source) " } ?? "",
+              suggestions.map(\.memoryKey).joined(separator: ","))
+        #endif
     }
 
     /// One conversation turn — the muted question, then its answer.
@@ -783,18 +831,19 @@ struct Composer: View {
                     // appears — "Catch me up — 14 things" arriving digit by
                     // digit (delight 2026-07-13). The tap still sends the
                     // canonical "While I was away?" ask.
-                    if ask.hasPrefix("While I was away"), awayLanded >= 3 {
+                    if ask.kind == "away", awayLanded >= 3 {
                         AskTile(glyph: "sparkles", title: "Catch me up",
                                 rollCount: awayLanded) {
                             DSHaptic.selection()
-                            draft = ask
+                            draft = ask.title
                             commit()
                         }
                         .modifier(ChipEntrance(index: i + hintLead, shown: chipsAppeared, reduceMotion: reduceMotion))
                     } else {
-                        AskTile(glyph: askGlyph(ask), title: ask) {
+                        AskTile(glyph: ask.glyph, title: ask.title) {
                             DSHaptic.selection()
-                            draft = ask
+                            AskMemory.tapped(ask.memoryKey)
+                            draft = ask.title
                             commit()
                         }
                         .modifier(ChipEntrance(index: i + hintLead, shown: chipsAppeared, reduceMotion: reduceMotion))
@@ -807,18 +856,6 @@ struct Composer: View {
             .padding(.top, DS.Space.s4)
             .padding(.bottom, DS.Space.s2)
         }
-    }
-
-    /// The glyph an ask row wears — what kind of answer the tap brings back.
-    private func askGlyph(_ ask: String) -> String {
-        if ask.hasPrefix("What's new in") { return "app.badge" }
-        if ask.hasPrefix("What's going on") { return "bolt" }
-        if ask.hasPrefix("What landed today") { return "tray.and.arrow.down" }
-        if ask.hasPrefix("How's my watchlist") { return "chart.line.uptrend.xyaxis" }
-        if ask.hasPrefix("How's my wallet") { return "wallet.bifold" }
-        if ask.hasPrefix("Show ") { return "tag" }
-        if ask.hasPrefix("What's this week") { return "calendar" }
-        return "sparkle"
     }
 
     // MARK: - Input bar (chat grammar: pinned to the bottom)
