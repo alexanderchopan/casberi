@@ -178,10 +178,19 @@ struct HowItWorksSheet: View {
                             .foregroundStyle(.white)
                             .frame(maxWidth: .infinity)
                             .frame(height: 48)
+                            // Floating chrome — glass is the floating layer's
+                            // law. The glass lives INSIDE the label so the
+                            // Button owns the whole hit region: interactive
+                            // glass (iOS 26 `.interactive()`) applied OUTSIDE a
+                            // button intercepts touches for its own press
+                            // deformation and intermittently eats the tap —
+                            // the user saw it as "takes several taps"
+                            // (2026-07-17). Matches BridgeDetailScreen's
+                            // Reconnect button, the pattern that works.
+                            .dsGlassProminent(tint: DS.tint, cornerRadius: DS.Radius.pill)
+                            .contentShape(Capsule())
                     }
                     .buttonStyle(.plain)
-                    // Floating chrome — glass is the floating layer's law.
-                    .dsGlassProminent(tint: DS.tint, cornerRadius: DS.Radius.pill)
                     .padding(.horizontal, DS.Space.s4)
                     .padding(.bottom, DS.Space.s2)
                 }
