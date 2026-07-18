@@ -614,38 +614,81 @@ private struct GenAppRow: View {
     let el: GenEl
     @Environment(\.genThingOpen) private var thingOpen
     @Environment(\.openURL) private var openURL
+    @Environment(\.genRefreshTick) private var refreshTick
+    @Environment(\.colorScheme) private var scheme
+    /// The Tokens row's live chart (args 5-7 name the top mover; empty for
+    /// every other app — the fetch never runs and the row stays plain text).
+    @State private var chart: TokenChart?
+    @State private var revealed = false
+
+    private var isToken: Bool { !el.str(6).isEmpty }
+    private var accent: Color {
+        TokenChartStyle.accent(change: chart?.change ?? 0, scheme: scheme)
+    }
 
     var body: some View {
-        HStack(spacing: DS.Space.s3) {
-            BridgeIcon(name: el.str(0), size: 28)
-            VStack(alignment: .leading, spacing: 1) {
-                HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-                    Text(el.str(0))
-                        .dsText(.body17)
-                        .foregroundStyle(DS.textPrimary)
-                    if !el.str(1).isEmpty {
-                        Text(el.str(1))
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+            HStack(spacing: DS.Space.s3) {
+                BridgeIcon(name: el.str(0), size: 28)
+                VStack(alignment: .leading, spacing: 1) {
+                    HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+                        Text(el.str(0))
+                            .dsText(.body17)
+                            .foregroundStyle(DS.textPrimary)
+                        if !el.str(1).isEmpty {
+                            Text(el.str(1))
+                                .dsText(.subhead13)
+                                .foregroundStyle(DS.textTertiary)
+                                .contentTransition(.numericText())
+                        }
+                    }
+                    // Tokens carries no item-title line — its ticker rides the
+                    // trailing price cluster and the chart strip below IS the
+                    // content ("Wrapped Ether · $WETH" would just restate WETH).
+                    if !isToken, !el.str(2).isEmpty {
+                        Text(el.str(2))
                             .dsText(.subhead13)
-                            .foregroundStyle(DS.textTertiary)
-                            .contentTransition(.numericText())
+                            .foregroundStyle(DS.textSecondary)
+                            .lineLimit(1)
                     }
                 }
-                // The Tokens row's second line is the LIVE chip — sparkline +
-                // price + 1D delta for the top mover (args 5-7; user: "WE NEED
-                // THE SPARKLINE"). Every other app's is the plain item line.
-                if !el.str(6).isEmpty {
-                    AppRowTokenLine(symbol: el.str(7), chain: el.str(5),
-                                    address: el.str(6))
-                } else if !el.str(2).isEmpty {
-                    Text(el.str(2))
-                        .dsText(.subhead13)
-                        .foregroundStyle(DS.textSecondary)
-                        .lineLimit(1)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                if isToken {
+                    // Ticker · price · 1D delta, right-aligned like a
+                    // watchlist row; appears with the chart data.
+                    if let chart {
+                        HStack(spacing: DS.Space.s2) {
+                            Text(el.str(7)).dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                            Text(TokenChartStyle.priceText(chart.price))
+                                .dsText(.body17).foregroundStyle(DS.textPrimary)
+                                .contentTransition(.numericText())
+                            TokenDeltaPill(change: chart.change, label: "1D", compact: true)
+                        }
+                    }
+                } else {
+                    Text(el.str(3)).dsText(.subhead13).foregroundStyle(DS.textTertiary)
                 }
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            if el.str(6).isEmpty {
-                Text(el.str(3)).dsText(.subhead13).foregroundStyle(DS.textTertiary)
+            // The sparkline FILLS the card (user 2026-07-17: the postage-stamp
+            // 52pt inline plot "doesn't even fill the card") — the same
+            // full-width strip the solo token tile drew, edge to edge of the
+            // row's inner width, left-to-right reveal when the data lands.
+            if isToken {
+                Group {
+                    if let chart {
+                        TokenChartPlot(chart: chart, accent: accent, height: 32, pulses: false)
+                            .mask(alignment: .leading) {
+                                GeometryReader { geo in
+                                    Rectangle().frame(width: revealed ? geo.size.width : 0)
+                                }
+                            }
+                    } else {
+                        RoundedRectangle(cornerRadius: 6, style: .continuous)
+                            .fill(DS.surfaceWell)
+                    }
+                }
+                .frame(maxWidth: .infinity)
+                .frame(height: 32)
             }
         }
         .padding(.horizontal, DS.Space.s4)
@@ -674,6 +717,14 @@ private struct GenAppRow: View {
             } label: {
                 Label("Remove from Home", systemImage: "pin.slash")
             }
+        }
+        // Keyed like GenTokenChip's fetch: streams can mount the row before
+        // its args land, and a pull re-fetches; no-op for non-token rows.
+        .task(id: "\(refreshTick):\(el.str(5))/\(el.str(6))") {
+            guard isToken, !el.str(5).isEmpty else { return }
+            revealed = false
+            chart = await TokenChart.fetch(chain: el.str(5), address: el.str(6))
+            if chart != nil { withAnimation(.easeOut(duration: 0.7)) { revealed = true } }
         }
     }
 }
@@ -1680,55 +1731,6 @@ extension View {
         }
     }
 
-}
-
-/// The Tokens AppRow's live second line — ticker, on-device sparkline, price,
-/// 1D delta for the top mover (user 2026-07-17: the sparkline is the one
-/// visual the app-card form carried that the row system had to keep). The
-/// same keyed fetch/reveal pattern GenTokenChip uses, sized to sit INSIDE a
-/// row (no own padding, surface, or actions — the AppRow owns all three).
-private struct AppRowTokenLine: View {
-    let symbol: String
-    let chain: String
-    let address: String
-    @State private var chart: TokenChart?
-    @State private var revealed = false
-    @Environment(\.genRefreshTick) private var refreshTick
-    @Environment(\.colorScheme) private var scheme
-
-    var body: some View {
-        HStack(spacing: DS.Space.s2) {
-            Text(symbol).dsText(.subhead13).foregroundStyle(DS.textSecondary)
-                .lineLimit(1)
-            Group {
-                if let chart {
-                    TokenChartPlot(chart: chart,
-                                   accent: TokenChartStyle.accent(change: chart.change, scheme: scheme),
-                                   height: 20, pulses: false)
-                        .mask(alignment: .leading) {
-                            GeometryReader { geo in
-                                Rectangle().frame(width: revealed ? geo.size.width : 0)
-                            }
-                        }
-                } else {
-                    RoundedRectangle(cornerRadius: 5, style: .continuous).fill(DS.surfaceWell)
-                }
-            }
-            .frame(width: 52, height: 20)
-            if let chart {
-                Text(TokenChartStyle.priceText(chart.price))
-                    .dsText(.subhead13).foregroundStyle(DS.textPrimary)
-                    .contentTransition(.numericText())
-                TokenDeltaPill(change: chart.change, label: "1D", compact: true)
-            }
-        }
-        .task(id: "\(refreshTick):\(chain)/\(address)") {
-            guard !chain.isEmpty, !address.isEmpty else { return }
-            revealed = false
-            chart = await TokenChart.fetch(chain: chain, address: address)
-            if chart != nil { withAnimation(.easeOut(duration: 0.7)) { revealed = true } }
-        }
-    }
 }
 
 /// TokenChip(symbol, chain, address, thingId, openable) — a compact token line
