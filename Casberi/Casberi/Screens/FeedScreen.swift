@@ -51,6 +51,15 @@ struct FeedScreen: View {
     @State private var translateText = ""
     @State private var staleExpanded = false
     @State private var blockStream = GenStream()
+    // The Wallet feed's NFT strip, painted below the treemap (2026-07-18) — its
+    // own stream so a slow NFT read never holds up the holdings treemap paint.
+    @State private var nftStream = GenStream()
+    // GitHub's contribution graph rides the TOP of its own source feed (moved
+    // off Home, 2026-07-18): the green-squares year is a GitHub thing, so it
+    // belongs where GitHub lives. Self-fetching @Observable store, same one the
+    // graph always used; the hero only paints once a real year with
+    // contributions has landed (an empty grid is a skeleton, not content).
+    @State private var githubGraph = GitHubGraphStore.shared
     @Bindable private var wallet = WalletStore.shared
     /// Bumped when this page lands — rows replay their shape's
     /// entrance (each shape arrives its own way, ruling 2026-07-07).
@@ -398,6 +407,35 @@ struct FeedScreen: View {
         .padding(.bottom, DS.Space.s2)
     }
 
+    /// The GitHub source feed's lede — "Your year in code · N contributions"
+    /// and the green-squares grid, drawn on device and cached in
+    /// `GitHubGraphStore` (the same store, and reusing `ContributionGraph`, that
+    /// the retired Home tile used). Paints only for a real year with
+    /// contributions (an empty grid is a skeleton, not content); the fetch that
+    /// seeds that year runs from the List's own `.task` (see feedList), not
+    /// here — a conditionally-empty view's `.task` wouldn't fire.
+    @ViewBuilder private var githubGraphHero: some View {
+        Group {
+            if let year = githubGraph.year, year.total > 0 {
+                VStack(alignment: .leading, spacing: DS.Space.s2) {
+                    HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+                        Text("Your year in code")
+                            .dsText(.body17).foregroundStyle(DS.textPrimary)
+                        Text("\(year.total.formatted()) contributions")
+                            .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                    }
+                    ContributionGraph(year: year)
+                }
+                .padding(.horizontal, DS.Space.s4)
+                .padding(.vertical, DS.Space.s3)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .dsWidgetSurface()
+                .padding(.horizontal, DS.Space.s4)
+                .padding(.top, DS.Space.s2)
+            }
+        }
+    }
+
     private var feedList: some View {
         List {
             Group {
@@ -463,6 +501,13 @@ struct FeedScreen: View {
                     sourceHeader(bridge, showAddHint: showsAddHint,
                                  headerCompose: composeAction)
                 }
+                // GitHub's source feed leads with its contribution graph (moved
+                // off Home, 2026-07-18). Gated on the source STRING, not the
+                // BridgeStore seat — the graph belongs to GitHub's token
+                // (`GitHubGraphStore` self-fetches with it), so it rides the
+                // GitHub feed whenever it's the filter; the hero self-checks for
+                // a landed year and takes no room otherwise.
+                if source == "GitHub" { githubGraphHero }
             }
             .listRowBackground(Color.clear)
             .listRowSeparator(.hidden)
@@ -518,6 +563,11 @@ struct FeedScreen: View {
         }
         .animation(DS.Motion.standard, value: things.count)   // new things rise in
         .scrollContentBackground(.hidden)
+        // Seed/refresh the contribution year from a RELIABLE always-present spot
+        // (the conditionally-empty hero's own `.task` doesn't fire until a year
+        // lands — chicken-and-egg). `source` is fixed per feed instance, so this
+        // runs once when the GitHub feed appears; `refreshIfStale` self-guards.
+        .task { if source == "GitHub" { await githubGraph.refreshIfStale() } }
         .overlay(alignment: .top) { switchFlood }
         // A SHAPED feed sits directly on MainSurface's bold hue field (user
         // ruling 2026-07-13, Cash-App bold): painting the opaque page here
@@ -591,6 +641,7 @@ struct FeedScreen: View {
             photoGridSection(visible)
         case .wallet:
             holdingsBlockSection
+            nftBlockSection
             let days = dayGroups(visible)
             groupedSections(days, nextEventID: nextEventID, boundary: boundaryThingID(in: days))
         case .calendar:
@@ -922,6 +973,22 @@ struct FeedScreen: View {
                             HomeRoute.shared.bridgePush = .wallet
                         }
                     }
+            }
+        }
+    }
+
+    /// The Wallet feed's NFT strip, below the treemap (2026-07-18). A tapped
+    /// tile opens the piece on OpenSea directly (`GenMediaTile` reads its
+    /// URL-shaped id) — no `genProjectTap` handler, because an NFT is a door,
+    /// not a thing, and never lands in the corpus.
+    @ViewBuilder
+    private var nftBlockSection: some View {
+        if !nftStream.els.isEmpty {
+            Section {
+                GenRender(id: "root", els: nftStream.els)
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+                    .listRowInsets(EdgeInsets())
             }
         }
     }
@@ -1540,13 +1607,23 @@ struct FeedScreen: View {
     private func streamBlock() {
         guard source == "Wallet" else {
             if !blockStream.els.isEmpty { blockStream.paint([]) }
+            if !nftStream.els.isEmpty { nftStream.paint([]) }
             return
         }
+        // Two independent reads — the treemap paints as soon as holdings land
+        // without waiting on the (slower, 2-GET-per-wallet) NFT fetch.
         Task { @MainActor in
             if let doc = await WalletIngest.holdingsChart() {
                 blockStream.paint(doc)
             } else if !blockStream.els.isEmpty {
                 blockStream.paint([])
+            }
+        }
+        Task { @MainActor in
+            if let doc = await WalletIngest.nftShelfDocument() {
+                nftStream.paint(doc)
+            } else if !nftStream.els.isEmpty {
+                nftStream.paint([])
             }
         }
     }

@@ -809,19 +809,18 @@ enum ProbeHooks {
                       things.map { "\($0.count) things" } ?? "FAILED")
             }
         },
-        // `-ghGraphDemo YES` seeds a synthetic contribution year and pins +
-        // fake-connects GitHub so the Home contribution-graph tile renders on
-        // the simulator (no real account needed). Screenshot/staging only.
+        // `-ghGraphDemo YES` seeds a synthetic contribution year and
+        // fake-connects GitHub so the contribution graph renders on the
+        // simulator (no real account needed). The graph leads the GitHub SOURCE
+        // FEED now (moved off Home 2026-07-18), so pair with `-feedSource GitHub`
+        // to see it. Screenshot/staging only.
         Hook(key: "ghGraphDemo") { _, _ in
             UserDefaults.standard.set(true, forKey: "ghGraphDemo")
             if TokenVault.get(TokenBridge.github.tokenKey) == nil {
                 TokenVault.set("demo", for: TokenBridge.github.tokenKey)
             }
-            if !HomePinnedSources.shared.isPinned("GitHub") {
-                HomePinnedSources.shared.toggle("GitHub")
-            }
             CorpusSignal.shared.bump()
-            NSLog("GitHub graph demo: seeded + pinned GitHub")
+            NSLog("GitHub graph demo: seeded + connected GitHub (shows in the GitHub source feed)")
         },
         // `-ghDeviceProbe YES` runs the GitHub device-flow start request and
         // logs the outcome — with no client id it logs the honest unavailable

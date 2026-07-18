@@ -267,9 +267,6 @@ struct GenRender: View {
         // single latest post. Board members exactly like pinned/wallet/map:
         // draggable (Goal 1), sizable via the same pin (Goal 2).
         case "MediaShelf":  GenMediaShelf(id: id, el: el, els: els).mountIn()
-        // GitHub's contribution graph — a bespoke wide board module, its own
-        // green-squares year drawn on device (self-fetching, like the token tile).
-        case "GithubGraph": GenGithubGraph(widgetID: id, el: el).mountIn()
         // One retiring teaching line (Feed's coach grammar) — plain tinted
         // words, no overlays, no arrows.
         case "Coach":       GenCoach(el: el).mountIn()
@@ -1103,61 +1100,6 @@ private struct SoloTokenTile: View {
             RoundedRectangle(cornerRadius: 6, style: .continuous)
                 .fill(DS.surfaceWell).frame(height: 40)
         }
-    }
-}
-
-/// The GitHub contribution graph as a board module (2026-07-14): the
-/// green-squares year, drawn on device from GitHub's GraphQL calendar and
-/// cached in `GitHubGraphStore`. A wide/big tile — the grid wants width, so it
-/// never pairs 2-up (`allowedSpans`). Removable via the wobble minus like any
-/// pinned app; it opens nothing (the graph IS the content).
-private struct GenGithubGraph: View {
-    let widgetID: String
-    let el: GenEl
-    @Environment(\.genThingHandoff) private var thingHandoff
-    @Environment(\.genThingOpen) private var thingOpen
-    @Environment(\.genAppRemove) private var appRemove
-    @Environment(\.colorScheme) private var scheme
-    @State private var store = GitHubGraphStore.shared
-
-    var body: some View {
-        // Honesty (2026-07-17): a 53-week grid of empty wells is not content —
-        // it's a skeleton claiming space (and, forced into the 150pt square
-        // tile chrome, a broken-looking empty box). The module renders ONLY
-        // with a real year that has contributions; until the fetch lands, or
-        // when GitHub is unreachable, it takes NO room. The fetch still runs so
-        // a warm cache paints instantly on the next compose.
-        let year = store.year
-        Group {
-            if let year, year.total > 0 {
-                // One wide strip that FITS its content (user 2026-07-17: the
-                // square tile "doesn't even fit the screen") — header + the
-                // graph, card height = content height, no resize.
-                VStack(alignment: .leading, spacing: DS.Space.s2) {
-                    HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-                        Text(el.str(0)).dsText(.body17).foregroundStyle(DS.textPrimary)
-                        Text("\(year.total.formatted()) contributions")
-                            .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-                    }
-                    ContributionGraph(year: year)
-                }
-                .padding(.horizontal, DS.Space.s4)
-                .padding(.vertical, DS.Space.s3)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .dsWidgetSurface()
-                .padding(.horizontal, DS.Space.s4)
-                .padding(.top, DS.Space.s3)
-                .contentShape(RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
-                .contextMenu {
-                    Button(role: .destructive) {
-                        appRemove?()
-                    } label: {
-                        Label("Remove from Home", systemImage: "pin.slash")
-                    }
-                }
-            }
-        }
-        .task { await store.refreshIfStale() }
     }
 }
 

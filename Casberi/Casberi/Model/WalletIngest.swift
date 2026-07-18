@@ -697,6 +697,34 @@ enum WalletIngest {
         return doc
     }
 
+    /// Every watched wallet's NFTs as a stacked MediaShelf document — the Wallet
+    /// feed's image strip, sibling to `holdingsChart()`'s treemap (ruling
+    /// 2026-07-18, revising prd §72's Home-only placement: the treemap AND the
+    /// NFTs both ride the Wallet chip's own feed, below the treemap). Every
+    /// watched wallet, not pinned-only — the Wallet feed shows the whole source,
+    /// the way the treemap here already does (Home stays pinned-only via
+    /// `pinnedNFTGroups`). Each NFT id is its OpenSea URL, which `GenMediaTile`
+    /// opens directly — an NFT is a door, not a thing, so nothing lands in the
+    /// corpus. Nil when no watched wallet holds a piece.
+    @MainActor
+    static func nftShelfDocument() async -> [String]? {
+        let groups = await nftsByWallet()
+        guard !groups.isEmpty else { return nil }
+        let ids = groups.indices.map { "nft\($0)" }
+        var doc = ["root = Stack([\(ids.joined(separator: ", "))])"]
+        for (i, g) in groups.enumerated() {
+            let capped = Array(g.nfts.prefix(12))
+            let itemIds = capped.indices.map { "nft\(i)i\($0)" }
+            // Arg 4 (pin) empty: a feed shelf isn't a board module, so it wears
+            // no size pin and no "Remove from Home" — it's just the source's art.
+            doc.append("nft\(i) = MediaShelf(\(q("NFTs · \(g.label)")), \(q("")), [\(itemIds.joined(separator: ", "))], \(q("nft")))")
+            for (j, nft) in capped.enumerated() {
+                doc.append("nft\(i)i\(j) = MediaItem(\(q(nft.name)), \(q(nft.imageURL)), \(q(nft.openseaURL?.absoluteString ?? "")), \(q("")))")
+            }
+        }
+        return doc
+    }
+
     private static func q(_ s: String) -> String {
         "\"\(s.replacingOccurrences(of: "\"", with: "'"))\""
     }

@@ -145,7 +145,6 @@ enum HomeComposition {
         // things, not a single item; image sources keep their bespoke shelf
         // (appendMediaModules), everyone else composes as a Widget of rows.
         appendPinnedApps(things, to: &doc, rootRefs: &rootRefs, boardRefs: &boardRefs, boardKeys: &boardKeys)
-        appendGitHubGraph(to: &doc, rootRefs: &rootRefs, boardRefs: &boardRefs)
         appendWalletHoldings(walletHoldings, combined: walletCombined, pending: walletPending, unreachable: walletUnreachable, to: &doc, rootRefs: &rootRefs, boardRefs: &boardRefs, boardKeys: &boardKeys)
         appendWalletNFTs(walletNFTs, to: &doc, rootRefs: &rootRefs, boardRefs: &boardRefs, boardKeys: &boardKeys)
         appendMediaModules(things, to: &doc, rootRefs: &rootRefs, boardRefs: &boardRefs)
@@ -333,11 +332,6 @@ enum HomeComposition {
     /// content IS pictures, so a strip/grid beats a list of titled rows.
     static let mediaSources: Set<String> = ["Apple Music", "Pinterest", "Photos", "RSS"]
 
-    /// Sources whose pin composes as a bespoke tile that is NOT a list of recent
-    /// rows — GitHub's is its contribution graph (`appendGitHubGraph`). Skipped
-    /// by the generic pinned-app path like the media shelves are.
-    static let graphSources: Set<String> = ["GitHub"]
-
     /// High-volume auto-ingest sources that own their own Home surfaces — the
     /// wallet's holdings treemap, the token charts — and would otherwise
     /// dominate any newest-N read with transaction/price noise. Excluded from
@@ -386,7 +380,6 @@ enum HomeComposition {
         let onBoard = Set(bySource.keys)
             .subtracting(["You", "Wallet"])
             .subtracting(mediaSources)
-            .subtracting(graphSources)
             .filter { !store.isHidden($0) }
             .sorted()
         // The away window (AppVisit) powers a live per-tile signal — "N new"
@@ -530,30 +523,6 @@ enum HomeComposition {
         }
         let fresh = newSinceAway(things, window: window)
         return (fresh, fresh.isEmpty ? 0 : 1, things.first)
-    }
-
-    /// GitHub's pinned tile is its contribution graph — the green-squares year,
-    /// not a list of recent rows. Emitted when GitHub is pinned AND connected
-    /// (the graph needs the token's GraphQL); the tile self-fetches its data
-    /// (`GitHubGraphStore`), so the doc only names the module. The board key is
-    /// the ref itself (`HomePinnedSources.moduleRef`), so no `boardKeys` entry.
-    @MainActor
-    private static func appendGitHubGraph(to doc: inout [String],
-                                          rootRefs: inout [String],
-                                          boardRefs: inout [String]) {
-        // Auto-pin (2026-07-18): a connected GitHub shows its graph by default,
-        // unless hidden. Honesty (2026-07-17): AND only once a real year with
-        // contributions has landed (the cached `GitHubGraphStore.year`) — an
-        // all-empty grid is a skeleton, not content, and it was painting a big
-        // broken-looking box in the demo (no real GitHub data). A warm cache
-        // emits here; a cold/unreachable one simply doesn't, and the graph
-        // returns the moment a real fetch lands and Home recomposes.
-        guard TokenBridge.github.connected,
-              !HomePinnedSources.shared.isHidden("GitHub"),
-              let year = GitHubGraphStore.shared.year, year.total > 0 else { return }
-        doc.append("githubGraphShelf = GithubGraph(\(q(String(localized: "Your year in code"))), \(q("")))")
-        rootRefs.append("githubGraphShelf")
-        boardRefs.append("githubGraphShelf")
     }
 
     // The bespoke tile-header phrases (appTitle: "On your list", "In your
