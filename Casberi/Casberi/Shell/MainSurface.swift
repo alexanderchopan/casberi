@@ -120,7 +120,8 @@ struct MainSurface: View {
             VStack(spacing: 0) {
                 // The fixed navigation strip — always in reach, never scrolls
                 // away with content (the whole point of dropping the tab bar).
-                SourceChips(labels: chipLabels, active: filter.source) { label in
+                SourceChips(labels: chipLabels, active: filter.source,
+                            onApps: { route.push = .apps }, zoomNS: doorNS) { label in
                     if label == filter.source {
                         // Re-tapping the chip you're already on pops back to
                         // root (the old per-tab habit) instead of doing nothing.
@@ -288,8 +289,10 @@ struct MainSurface: View {
                 // tab roots. Any pull-to-refresh spins the avatar (the old
                 // Home-only rule died with the tabs; restored 2026-07-14
                 // after the tab-drop rewire orphaned the trigger).
+                // The catalogue door moved to the head of the source strip
+                // (SourceChips); the top-right is the avatar alone now — the
+                // "me / settings" corner, one concept, one place.
                 TopDoors(onSettings: { route.push = .settings },
-                         onApps: { route.push = .apps },
                          refreshSpin: chrome.refreshPulse,
                          zoomNS: doorNS)
             }

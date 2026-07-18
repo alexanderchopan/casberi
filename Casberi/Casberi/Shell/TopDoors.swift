@@ -8,37 +8,22 @@ import SwiftUI
 /// no-tab-indicator rule holds. Pushed screens keep their back button.
 struct TopDoors: ToolbarContent {
     var onSettings: () -> Void
-    var onApps: () -> Void
     /// Bumped by Home's pull-to-refresh — the avatar does one full spin
     /// while the refresh runs (2026-07-10): it's the person's own face
     /// doing the work. 0 everywhere else (Feed never spins).
     var refreshSpin: Int = 0
-    /// The zoom transitions' anchors (restored 2026-07-10, prd 45): each
-    /// room grows out of ITS door — Settings from the avatar, the store
-    /// from the grid. Geometry is what makes a transition read as travel.
+    /// The zoom transition anchor — Settings grows out of the avatar. (The
+    /// catalogue door moved to the head of the source strip, 2026-07-17, so
+    /// the top-right is the avatar alone — the "me" corner.)
     var zoomNS: Namespace.ID? = nil
-    /// Taps bounce their door (Telegram grammar, same as the tab icons).
-    @State private var appsBounce = 0
+    /// Taps bounce the door (Telegram grammar, same as the tab icons).
     @State private var avatarBounce = 0
 
     var body: some ToolbarContent {
-        // Both doors sit together on the right — they are one cluster of
-        // management controls, and the left edge stays clear for titles and
-        // the Home cover text.
+        // The avatar alone on the right — the "me / settings" corner, the one
+        // place account lives (the left edge stays clear for titles and the
+        // Home cover text).
         ToolbarItemGroup(placement: .topBarTrailing) {
-            Button {
-                appsBounce += 1
-                onApps()
-            } label: {
-                if let zoomNS {
-                    AppsDoor().symbolEffect(.bounce, value: appsBounce)
-                        .matchedTransitionSource(id: "appsDoor", in: zoomNS)
-                } else {
-                    AppsDoor().symbolEffect(.bounce, value: appsBounce)
-                }
-            }
-            .accessibilityLabel("Apps")
-            .tint(DS.tint)
             Button {
                 avatarBounce += 1
                 onSettings()

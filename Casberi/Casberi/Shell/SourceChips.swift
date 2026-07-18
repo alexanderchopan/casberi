@@ -15,6 +15,13 @@ struct SourceChips: View {
     /// The full ordered label list — "Pinned", "All", then real sources.
     let labels: [String]
     let active: String
+    /// Opens the app catalogue (user 2026-07-17: its door moved OUT of the
+    /// top-right cluster and INTO the head of this strip — "add a source"
+    /// belongs with your sources).
+    var onApps: () -> Void = {}
+    /// The zoom anchor the catalogue grows out of — the store still grows from
+    /// its own door, that door just lives here now.
+    var zoomNS: Namespace.ID? = nil
     let onTap: (String) -> Void
 
     @Environment(BridgeStore.self) private var bridges
@@ -25,25 +32,55 @@ struct SourceChips: View {
     @Namespace private var chipRingNS
 
     var body: some View {
-        // ScrollViewReader keeps the ACTIVE chip visible — a deep link
-        // (casberi://feed/source/Zerion) can select a chip past the fold, and a
-        // filter you can't see reads as no filter at all.
-        ScrollViewReader { proxy in
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: DS.Space.s3) {
-                    ForEach(labels, id: \.self) { label in
-                        chip(label)
+        HStack(spacing: DS.Space.s3) {
+            // The catalogue anchors the HEAD of the strip, FIXED outside the
+            // scroll (user 2026-07-17): it's an action, not a filter, and it
+            // must stay in reach as the active source chip re-centers below —
+            // an inline chip would slide off with the rest.
+            catalogueChip
+                .padding(.leading, DS.Space.s4)
+            // ScrollViewReader keeps the ACTIVE chip visible — a deep link
+            // (casberi://feed/source/Zerion) can select a chip past the fold,
+            // and a filter you can't see reads as no filter at all.
+            ScrollViewReader { proxy in
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: DS.Space.s3) {
+                        ForEach(labels, id: \.self) { label in
+                            chip(label)
+                        }
                     }
+                    .padding(.trailing, DS.Space.s4)
                 }
-                .padding(.horizontal, DS.Space.s4)
-            }
-            .onAppear {
-                if active != "All" { proxy.scrollTo(active, anchor: .center) }
-            }
-            .onChange(of: active) { _, now in
-                withAnimation(DS.Motion.standard) { proxy.scrollTo(now, anchor: .center) }
+                .onAppear {
+                    if active != "All" { proxy.scrollTo(active, anchor: .center) }
+                }
+                .onChange(of: active) { _, now in
+                    withAnimation(DS.Motion.standard) { proxy.scrollTo(now, anchor: .center) }
+                }
             }
         }
+    }
+
+    /// The app-catalogue door — the same `AppsDoor` grid glyph (and its
+    /// attention state) it wore in the top-right, now the strip's first chip in
+    /// the neutral circle Pinned/All share. The store still zooms out of it.
+    @ViewBuilder private var catalogueChip: some View {
+        Button {
+            DSHaptic.selection()
+            onApps()
+        } label: {
+            ZStack {
+                Circle().fill(DS.gray100)
+                if let zoomNS {
+                    AppsDoor().matchedTransitionSource(id: "appsDoor", in: zoomNS)
+                } else {
+                    AppsDoor()
+                }
+            }
+            .frame(width: 46, height: 46)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Apps")
     }
 
     @ViewBuilder
