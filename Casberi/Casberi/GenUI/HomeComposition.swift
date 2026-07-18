@@ -470,7 +470,18 @@ enum HomeComposition {
             // empty for every non-image source.
             let filmIds = seed.filmstrip.indices.map { "\(id)f\($0)" }
             let filmSeat = ", [\(filmIds.joined(separator: ", "))]"
-            doc.append("\(id) = AppRow(\(q(seed.source)), \(q(seed.signal)), \(q(item?.title ?? "")), \(q(item.map { shortTime($0.capturedAt) } ?? "")), \(q(item?.id.uuidString ?? ""))\(chipSeat), \(q("\(seed.rank)"))\(filmSeat))")
+            // RSS aggregates many feeds into one row, so the peek names WHICH
+            // feed the headline is from (the same "Feed: headline" shape the
+            // App Store mock already promised, StorePreview.swift) — every
+            // other source's peek stays a bare title.
+            let peekTitle: String = {
+                guard let item else { return "" }
+                if seed.source == "RSS", let feed = item.authorHandle, !feed.isEmpty {
+                    return "\(feed): \(item.title)"
+                }
+                return item.title
+            }()
+            doc.append("\(id) = AppRow(\(q(seed.source)), \(q(seed.signal)), \(q(peekTitle)), \(q(item.map { shortTime($0.capturedAt) } ?? "")), \(q(item?.id.uuidString ?? ""))\(chipSeat), \(q("\(seed.rank)"))\(filmSeat))")
             for (j, t) in seed.filmstrip.enumerated() {
                 doc.append(mediaItem(id: "\(id)f\(j)", t))
             }
