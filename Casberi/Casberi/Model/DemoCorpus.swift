@@ -1,5 +1,6 @@
 import Foundation
 import SwiftData
+import UIKit
 
 /// The M0 demo corpus — 30 things across the nine v1 kinds, drawn from the PRD
 /// evidence set and the prototype data. Project tags (Lisbon trip, Mobile app,
@@ -13,6 +14,7 @@ enum DemoCorpus {
         guard count == 0 else { return }
         let seeds = things()
         stampDeadlines(seeds)
+        stampPhotoThumbnails(seeds)
         for thing in seeds { context.insert(thing) }
         context.saveHonestly()
     }
@@ -34,6 +36,24 @@ enum DemoCorpus {
         find("Measure the hallway")?.dueAt = atDay(4, hour: 12)   // a weekday out
         find("Design review")?.capturedAt = atDay(1, hour: 14)    // Tomorrow (event)
         find("Dinner with Sam")?.capturedAt = atDay(1, hour: 19)  // Tomorrow evening (event)
+    }
+
+    /// Gives each demo Photos thing its bundled sample image as real
+    /// `previewImageData` (2026-07-18) — without this the Photos things carry
+    /// NO image at all (neither field set), so `HomeComposition.hasImage`
+    /// correctly declines them and the Home row's medium-native filmstrip
+    /// (prd 124) silently falls back to text — the ONE image-bearing source
+    /// the built-in demo has, never actually showing its own headline
+    /// feature to a first-time opener. `DemoSampleImage.demoSample(for:)`
+    /// already existed for the thing sheet / Photos grid (`sourceRef` →
+    /// bundled asset); this is the same resolve, just stored once at seed
+    /// time so every OTHER consumer of `previewImageData` (the Home
+    /// filmstrip included) works identically to a real screenshot.
+    private static func stampPhotoThumbnails(_ seeds: [Thing]) {
+        for thing in seeds where thing.source == "Photos" {
+            guard let ref = thing.sourceRef, ref.hasPrefix("sample:demo-shot-") else { continue }
+            thing.previewImageData = UIImage.demoSample(for: ref)?.jpegData(compressionQuality: 0.7)
+        }
     }
 
     /// `dayOffset` days from today's start, at `hour` — a wall-clock-stable
