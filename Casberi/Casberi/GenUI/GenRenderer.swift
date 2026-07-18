@@ -627,6 +627,13 @@ private struct GenAppRow: View {
     private var accent: Color {
         TokenChartStyle.accent(change: chart?.change ?? 0, scheme: scheme)
     }
+    /// The Wallet row's balance history (arg 10) — embedded closes, not
+    /// fetched (2026-07-18: the data already lives in `WalletStore.
+    /// combinedValueSamples()`, composed once with the rest of the doc). Every
+    /// other row leaves arg 10 unset, so this is empty everywhere else.
+    private var walletChart: TokenChart? {
+        TokenChart.from(closes: el.str(10).split(separator: ",").compactMap { Double($0) })
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
@@ -706,6 +713,17 @@ private struct GenAppRow: View {
                 .frame(maxWidth: .infinity)
                 .frame(height: 32)
             }
+            // The Wallet row's own sparkline (2026-07-18) — same full-width
+            // strip as Tokens', drawn from the embedded balance history
+            // instead of a live fetch (no reveal animation needed: the data
+            // is already in hand when the row mounts).
+            if let walletChart {
+                TokenChartPlot(chart: walletChart,
+                              accent: TokenChartStyle.accent(change: walletChart.change, scheme: scheme),
+                              height: 32, pulses: false)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 32)
+            }
             // The image source's PEEK — up to four recent thumbnails filling
             // the row width (user 2026-07-18: "seeing a single row with text
             // for those isn't quite the same"). One row tall, medium-native;
@@ -744,7 +762,17 @@ private struct GenAppRow: View {
                 }
             }
             Button(role: .destructive) {
-                HomePinnedSources.shared.setOnHome(el.str(0), false)
+                // The Wallet row's presence is driven by each wallet's own
+                // `pinnedToHome` (WalletStore), not the hide/show set every
+                // other row uses — removing it means unpinning every wallet
+                // that put it there, or `setOnHome` would silently do nothing.
+                if el.str(0) == "Wallet" {
+                    for i in WalletStore.shared.addresses.indices {
+                        WalletStore.shared.addresses[i].pinnedToHome = false
+                    }
+                } else {
+                    HomePinnedSources.shared.setOnHome(el.str(0), false)
+                }
                 CorpusSignal.shared.bump()
             } label: {
                 Label("Remove from Home", systemImage: "pin.slash")
@@ -1162,6 +1190,36 @@ struct ContributionGraph: View {
     static func color(for day: ContributionDay?) -> Color {
         guard let day, day.level > 0 else { return DS.surfaceWell }
         return DS.confirm.opacity(0.30 + 0.22 * Double(day.level - 1))
+    }
+}
+
+/// A calendar-heatmap card — the GitHub graph's chrome, generalized so any
+/// source that reads as a consistency-over-time habit (journaling, training,
+/// captures) can lead its feed with the same green-squares grid. Flat by
+/// design: one shallow VStack over the Canvas-drawn `ContributionGraph`, so it
+/// mounts safely at the eager feed head (the launch-stack law). GitHub and the
+/// corpus-derived sources both draw through this one card.
+struct CalendarHeatmapHero: View {
+    let title: String
+    let subtitle: String
+    let year: ContributionYear?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+            HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+                Text(title)
+                    .dsText(.body17).foregroundStyle(DS.textPrimary)
+                Text(subtitle)
+                    .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+            }
+            ContributionGraph(year: year)
+        }
+        .padding(.horizontal, DS.Space.s4)
+        .padding(.vertical, DS.Space.s3)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .dsWidgetSurface()
+        .padding(.horizontal, DS.Space.s4)
+        .padding(.top, DS.Space.s2)
     }
 }
 

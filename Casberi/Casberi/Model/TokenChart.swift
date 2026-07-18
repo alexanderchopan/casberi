@@ -255,6 +255,23 @@ struct TokenChart {
         if let s = any as? String { return Double(s) }
         return nil
     }
+
+    /// Synthesizes a chart from an already-sampled close series — no fetch:
+    /// the data already lives in `WalletStore.ValueSample` history (2026-07-18,
+    /// "do we have that data?" — yes). nil under two points, the same honesty
+    /// floor `WalletStore.combinedValueSamples()` itself keeps.
+    static func from(closes: [Double]) -> TokenChart? {
+        guard closes.count >= 2, let first = closes.first, first != 0,
+              let last = closes.last else { return nil }
+        return TokenChart(closes: closes, price: last, change: (last - first) / first)
+    }
+
+    /// The wallet-history form of `from(closes:)` — a wallet's or the combined
+    /// portfolio's `ValueSample` line, drawn as the same native chart a token
+    /// wears.
+    static func from(samples: [WalletStore.ValueSample]) -> TokenChart? {
+        from(closes: samples.map(\.usd))
+    }
 }
 
 /// The market-structure numbers around a watched token (2026-07-14) —

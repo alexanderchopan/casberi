@@ -82,6 +82,13 @@ struct FeedScreen: View {
     /// away, stamping a junk key) — this page never sees another room's name.
     @State private var newSince: Date?
     @State private var visitFrozen = false
+    /// A tapped Themes cell (2026-07-18, the All feed's own treemap) — the
+    /// same project detail door Home's map already opened.
+    @State private var openProject: ProjectRoute?
+    struct ProjectRoute: Identifiable, Hashable {
+        let name: String
+        var id: String { name }
+    }
     @Namespace private var zoomNS
     /// prd 43h: Reduce Motion is law — the hand-rolled moves (the switch flood,
     /// row entrances) fall back to plain state changes under it.
@@ -415,24 +422,10 @@ struct FeedScreen: View {
     /// seeds that year runs from the List's own `.task` (see feedList), not
     /// here — a conditionally-empty view's `.task` wouldn't fire.
     @ViewBuilder private var githubGraphHero: some View {
-        Group {
-            if let year = githubGraph.year, year.total > 0 {
-                VStack(alignment: .leading, spacing: DS.Space.s2) {
-                    HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-                        Text("Your year in code")
-                            .dsText(.body17).foregroundStyle(DS.textPrimary)
-                        Text("\(year.total.formatted()) contributions")
-                            .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-                    }
-                    ContributionGraph(year: year)
-                }
-                .padding(.horizontal, DS.Space.s4)
-                .padding(.vertical, DS.Space.s3)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .dsWidgetSurface()
-                .padding(.horizontal, DS.Space.s4)
-                .padding(.top, DS.Space.s2)
-            }
+        if let year = githubGraph.year, year.total > 0 {
+            CalendarHeatmapHero(title: "Your year in code",
+                                subtitle: "\(year.total.formatted()) contributions",
+                                year: year)
         }
     }
 
@@ -608,6 +601,10 @@ struct FeedScreen: View {
             ThingSheetView(thing: thing)
                 .navigationTransition(.zoom(sourceID: thing.id, in: zoomNS))
         }
+        .navigationDestination(item: $openProject) { route in
+            ProjectDetailScreen(projectName: route.name)
+                .navigationTransition(.zoom(sourceID: route.name, in: zoomNS))
+        }
         .sheet(item: $quickToken) { route in
             TokenQuickSheet(route: route)
         }
@@ -636,10 +633,18 @@ struct FeedScreen: View {
         // (2026-07-13) — each source's feed keeps its own last-visit stamp.
         // Photos (a grid), Calendar (future-first) and Reminders (state
         // groups) aren't chronological top-to-bottom, so no line there.
+        //
+        // Sources that read as a habit lead with a calendar heatmap (the GitHub
+        // contribution graph, generalized) — derived from THIS feed's own dates,
+        // above whatever shape the rows take below.
+        if let hlabel = FeedHeatmap.label(for: source) {
+            calendarHeatmapSection(visible, label: hlabel)
+        }
         switch shape {
         case .photos:
             photoGridSection(visible)
         case .wallet:
+            walletBalanceLedeSection
             holdingsBlockSection
             nftBlockSection
             let days = dayGroups(visible)
@@ -676,6 +681,11 @@ struct FeedScreen: View {
             if filter.tag != "All" && shape == .all {
                 daySection(filterLabel, visible, nextEventID: nextEventID)
             } else if shape == .all {
+                // The Themes treemap leads the unfiltered All room (2026-07-18,
+                // moved off Home) — a cross-source overview, so it only makes
+                // sense over the WHOLE corpus, not a kind-filtered slice (the
+                // `if` branch above).
+                themesLedeSection
                 // All is where volume floods — bundles + the new-since
                 // divider live here. A single source's shape IS that source;
                 // bundling there would collapse the whole screen into one row.
@@ -941,6 +951,60 @@ struct FeedScreen: View {
                                  boundary: UUID? = nil) -> some View {
         ForEach(groups, id: \.0) { label, rows in
             daySection(label, rows, nextEventID: nextEventID, boundary: boundary)
+        }
+    }
+
+    /// The cross-source Themes treemap (2026-07-18: moved off Home — "should
+    /// it go on all?" — a cross-source overview belongs on the cross-source
+    /// feed, the same split that already sent the Wallet treemap to the
+    /// Wallet feed). Synchronous, off the SAME `visible` the rows below draw
+    /// from (no separate query, so the two can't disagree) — no GenStream
+    /// needed, unlike the wallet block, which waits on a real network fetch.
+    @ViewBuilder
+    private var themesLedeSection: some View {
+        if let doc = HomeComposition.themesDocument(things: visible) {
+            let els = GenParser.parse(prefix: doc.joined(separator: "\n")[...], isComplete: true)
+            Section {
+                GenRender(id: "root", els: els)
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+                    .listRowInsets(EdgeInsets())
+                    .environment(\.genProjectTap) { name in
+                        openProject = ProjectRoute(name: name)
+                    }
+            }
+        }
+    }
+
+    /// A source's own consistency heatmap (2026-07-18) — the same green-squares
+    /// grid the GitHub feed leads with, here derived from the feed's own things:
+    /// each thing's `capturedAt` bucketed into the trailing year. Synchronous,
+    /// off the SAME `visible` the rows draw from (no separate query). Renders
+    /// only once a few days are lit, so a near-empty grid can't read as a
+    /// loading skeleton.
+    @ViewBuilder
+    private func calendarHeatmapSection(_ visible: [Thing], label: FeedHeatmap.Label) -> some View {
+        let year = ContributionYear.from(dates: visible.map(\.capturedAt))
+        if year.activeDays >= 4 {
+            Section {
+                CalendarHeatmapHero(title: label.title,
+                                    subtitle: FeedHeatmap.subtitle(label, total: year.total),
+                                    year: year)
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+                    .listRowInsets(EdgeInsets())
+            }
+        }
+    }
+
+    /// The portfolio's own value-history line (2026-07-18), leading the
+    /// treemap — real samples off `WalletStore.combinedValueSamples()`
+    /// (recorded on every real holdings fetch since a wallet was watched, not
+    /// synthesized). Empty (no section) until two aligned samples exist.
+    @ViewBuilder
+    private var walletBalanceLedeSection: some View {
+        if let chart = TokenChart.from(samples: wallet.combinedValueSamples()) {
+            ledeSection(WalletBalanceLede(chart: chart))
         }
     }
 

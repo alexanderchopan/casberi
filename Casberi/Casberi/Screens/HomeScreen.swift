@@ -76,9 +76,6 @@ struct HomeScreen: View {
     /// with one or zero pinned (2026-07-15). Leads the per-wallet maps on the
     /// board, matching the Wallet screen's combined view.
     @State private var walletCombined: WalletIngest.HoldingsGroup?
-    /// Pinned wallets' NFT strips (ruling 2026-07-14) — ride the wallet pin
-    /// by default, removable per wallet via long-press.
-    @State private var walletNFTs: [WalletIngest.NFTGroup] = []
     /// True from the moment a pinned wallet's balance fetch starts until it
     /// resolves — lets the composer show an honest loading placeholder in
     /// the wallet's slot instead of leaving it blank (device report,
@@ -466,7 +463,6 @@ struct HomeScreen: View {
             ? HomeComposition.empty
             : HomeComposition.compose(things: surfaced, walletHoldings: walletHoldings,
                                       walletCombined: walletCombined,
-                                      walletNFTs: walletNFTs,
                                       walletPending: walletHoldingsLoading,
                                       walletUnreachable: walletUnreachable,
                                       insight: HomeInsightStore.shared.line,
@@ -583,20 +579,18 @@ struct HomeScreen: View {
         return .small
     }
 
-    /// The spans a module allows (the bento guardrails): a treemap needs area
-    /// so it skips `wide`. A pinned app tile now takes all three (2026-07-14) —
-    /// small renders its ONE most recent item full-size (never a cramped row);
-    /// wide shows one item as a line beneath the header; big shows three, a
-    /// proper card. Everything else can shrink to a small square too.
+    /// The spans a module allows (the bento guardrails). Every board module
+    /// left on Home is a row now (Themes and the wallet treemap both moved to
+    /// feeds, 2026-07-18) — the only remaining non-row is GitHub's grid.
     private func allowedSpans(_ ref: String) -> [ModuleSpan] {
-        if ref.hasPrefix("walletMap") || ref == "walletCombined" || ref == "map" { return [.small, .big] }
         // The contribution graph is a 53-wide grid — one wide strip, full
         // width, content height (2026-07-17: it never squared into a tile or
         // resized; the grid IS its size).
         if ref == "githubGraphShelf" { return [.wide] }
-        // An app ROW has exactly one size (prd 120) — draggable for order,
-        // never resizable, never paired. One form is the point.
-        if ref.hasPrefix("appRow") { return [.wide] }
+        // An app ROW has exactly one size (prd 120), the Wallet row included —
+        // draggable for order, never resizable, never paired. One form is the
+        // point.
+        if ref.hasPrefix("appRow") || ref == "walletRow" { return [.wide] }
         return [.small, .wide, .big]
     }
 
@@ -657,43 +651,26 @@ struct HomeScreen: View {
     /// The board's remove verb for a module, when it has one — the edit-mode
     /// badge and the (currently driver-shadowed) context menus share this
     /// single derivation, so the two paths can't drift. nil for modules with
-    /// nothing to remove (auto-earned shelves, the map, the cover) — those
-    /// wear no badge (honesty rule: no dead controls).
+    /// nothing to remove (auto-earned shelves, the cover) — those wear no
+    /// badge (honesty rule: no dead controls).
     private func moduleRemoval(_ ref: String) -> (() -> Void)? {
-        // A wallet's NFT strip removes per WALLET (ruling 2026-07-14): arg 6
-        // of its MediaShelf carries the address the removal is scoped to —
-        // the treemap and the wallet pin stay untouched.
-        if ref.hasPrefix("nftShelf"), let address = stream.els[ref]?.str(5),
-           !address.isEmpty {
+        // The Wallet row — removing it unpins every wallet that put it there
+        // (the treemap/NFTs stay, they're the Wallet FEED's now, not Home's;
+        // 2026-07-18). Its own source name doesn't route through
+        // `HomePinnedSources` like every other row (the Wallet row's presence
+        // is driven by `pinnedToHome`, not the hide/show set), so it needs
+        // this dedicated case.
+        if ref == "walletRow" {
+            guard wallet.addresses.contains(where: \.pinnedToHome) else { return nil }
             return {
                 DSHaptic.tap()
-                wallet.setNFTStrip(hidden: true, address: address)
-                walletNFTs.removeAll { $0.address.lowercased() == address.lowercased() }
-                recomposeOrDefer()
-                chrome.flash("Removed from Home")
-            }
-        }
-        // A pinned wallet's treemap — removing it IS the unpin (the same
-        // verb the Wallet screen's swipe carries; the wallet stays watched,
-        // and its NFT strip leaves with the pin).
-        if ref.hasPrefix("walletMap"), let eyebrow = stream.els[ref]?.str(0) {
-            let label = eyebrow.hasPrefix("@pin ")
-                ? String(eyebrow.dropFirst("@pin ".count)) : eyebrow
-            guard let entry = wallet.addresses.first(where: {
-                ($0.label.isEmpty ? $0.short : $0.label) == label && $0.pinnedToHome
-            }) else { return nil }
-            let id = entry.id
-            return {
-                DSHaptic.tap()
-                if let i = wallet.addresses.firstIndex(where: { $0.id == id }) {
-                    wallet.addresses[i].pinnedToHome = false
-                }
+                for i in wallet.addresses.indices { wallet.addresses[i].pinnedToHome = false }
                 loadWalletHoldings()
                 chrome.flash("Removed from Home")
             }
         }
         let source = HomePinnedSources.source(forModuleRef: ref)
-            ?? (ref.hasPrefix("appRow") ? stream.els[ref]?.str(0) : nil)
+            ?? (stream.els[ref]?.comp == "AppRow" ? stream.els[ref]?.str(0) : nil)
         guard let source, !source.isEmpty else { return nil }
         // An auto-earned media shelf has no pin to drop (its context menu
         // hides for the same reason) — no badge.
@@ -714,13 +691,10 @@ struct HomeScreen: View {
         }
     }
 
-    /// A stable identity for a board ref, independent of its slot index — a
-    /// wallet's holdings map keeps its own key even as other wallets are
-    /// pinned/unpinned and shift `walletMapN`'s number around.
-    /// A ref's stable persistence key: the composer's `app:<source>` /
-    /// `wallet:<label>` when it supplied one (see `HomeComposition.Document`),
-    /// else the ref itself (media shelves, the map). Independent of the streamed
-    /// doc's parse state, so a saved arrangement round-trips on cold launch.
+    /// A ref's stable persistence key: the composer's `app:<source>` when it
+    /// supplied one (see `HomeComposition.Document`), else the ref itself.
+    /// Independent of the streamed doc's parse state, so a saved arrangement
+    /// round-trips on cold launch.
     private func moduleKey(_ ref: String) -> String {
         boardKeys[ref] ?? ref
     }
@@ -734,28 +708,26 @@ struct HomeScreen: View {
         guard wallet.addresses.contains(where: \.pinnedToHome) else {
             walletHoldingsLoading = false
             walletUnreachable = false
-            if !walletHoldings.isEmpty || !walletNFTs.isEmpty || walletCombined != nil {
+            if !walletHoldings.isEmpty || walletCombined != nil {
                 walletHoldings = []
                 walletCombined = nil
-                walletNFTs = []
                 recomposeOrDefer()
             }
             return
         }
         walletHoldingsLoading = true
         Task { @MainActor in
-            // Holdings, the combined bundle, and NFTs are independent reads —
-            // overlapped, and the NFT half rides its 15-minute cache after the
-            // first fetch. The combined fetch returns nil with one pinned
-            // wallet, so it costs nothing then.
+            // Holdings and the combined bundle are independent reads,
+            // overlapped. The combined fetch returns nil with one pinned
+            // wallet, so it costs nothing then. (NFTs dropped 2026-07-18 —
+            // the Wallet row on Home carries only the total + top holdings;
+            // the NFT strip lives on the Wallet feed now, fetched there.)
             async let pinned = WalletIngest.pinnedWalletHoldings()
             async let combined = WalletIngest.combinedHoldings(pinnedOnly: true)
-            async let nfts = WalletIngest.pinnedNFTGroups()
             let holdings = await pinned
             walletHoldings = holdings.groups
             walletUnreachable = holdings.unreachableNoCache
             walletCombined = await combined
-            walletNFTs = await nfts
             walletHoldingsLoading = false
             recomposeOrDefer()
         }
@@ -797,12 +769,10 @@ struct HomeScreen: View {
         if wallet.addresses.contains(where: \.pinnedToHome) {
             async let pinned = WalletIngest.pinnedWalletHoldings()
             async let combined = WalletIngest.combinedHoldings(pinnedOnly: true)
-            async let nfts = WalletIngest.pinnedNFTGroups()
             let holdings = await pinned
             walletHoldings = holdings.groups
             walletUnreachable = holdings.unreachableNoCache
             walletCombined = await combined
-            walletNFTs = await nfts
         }
         // Pull RE-STREAMS the composition, it doesn't just repaint (A, ruling
         // 2026-07-12): the modules dissolve to their skeletons and stream back

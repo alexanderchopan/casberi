@@ -700,12 +700,12 @@ enum WalletIngest {
     /// Every watched wallet's NFTs as a stacked MediaShelf document — the Wallet
     /// feed's image strip, sibling to `holdingsChart()`'s treemap (ruling
     /// 2026-07-18, revising prd §72's Home-only placement: the treemap AND the
-    /// NFTs both ride the Wallet chip's own feed, below the treemap). Every
-    /// watched wallet, not pinned-only — the Wallet feed shows the whole source,
-    /// the way the treemap here already does (Home stays pinned-only via
-    /// `pinnedNFTGroups`). Each NFT id is its OpenSea URL, which `GenMediaTile`
-    /// opens directly — an NFT is a door, not a thing, so nothing lands in the
-    /// corpus. Nil when no watched wallet holds a piece.
+    /// NFTs both ride the Wallet chip's own feed, below the treemap — Home
+    /// dropped its own NFT strip the same day, now carrying only the Wallet
+    /// row's total + top holdings). Every watched wallet, not pinned-only —
+    /// the Wallet feed shows the whole source. Each NFT id is its OpenSea URL,
+    /// which `GenMediaTile` opens directly — an NFT is a door, not a thing, so
+    /// nothing lands in the corpus. Nil when no watched wallet holds a piece.
     @MainActor
     static func nftShelfDocument() async -> [String]? {
         let groups = await nftsByWallet()
@@ -1496,18 +1496,6 @@ enum WalletIngest {
             WalletMoments.shared.fire(String(localized: "\(first.label) received \(first.nft.name)\(more) 🖼️"))
         }
         return groups
-    }
-
-    /// The NFT strips Home shows (ruling 2026-07-14): pinned wallets only,
-    /// minus any whose strip was long-press removed. Rides the same cache as
-    /// the Wallet screen's shelves.
-    @MainActor
-    static func pinnedNFTGroups() async -> [NFTGroup] {
-        let showing = WalletStore.shared.addresses
-            .filter { $0.pinnedToHome && !$0.nftStripHidden }
-            .map { $0.address.lowercased() }
-        guard !showing.isEmpty else { return [] }
-        return await nftsByWallet().filter { showing.contains($0.address.lowercased()) }
     }
 
     /// A wallet's NFTs off Alchemy's NFT API — the image-bearing chains

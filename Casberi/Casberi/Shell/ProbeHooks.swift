@@ -538,6 +538,27 @@ enum ProbeHooks {
                 NSLog("Wallet probe: %@ new", n.map(String.init) ?? "FAILED")
             }
         },
+        // `-seedWalletHistory "<usd,usd,…>"` writes a synthetic ValueSample
+        // line for the first watched wallet, spaced 4h+ apart so the real
+        // `recordSample` throttle can never fold them into one point —
+        // headless test of the Wallet row's/feed's balance sparkline (prd
+        // 126), which draws off exactly this history and otherwise only
+        // gains a second point after 4 real hours of use. Declared AFTER
+        // `walletAddress` (hooks run in list order) so the wallet exists to
+        // key the history to.
+        Hook(key: "seedWalletHistory") { spec, _ in
+            let values = spec.split(separator: ",").compactMap { Double($0) }
+            guard let entry = WalletStore.shared.addresses.first, !values.isEmpty else { return }
+            let samples = values.enumerated().map { i, usd in
+                WalletStore.ValueSample(
+                    at: Date.now.addingTimeInterval(Double(i - values.count) * 4 * 3600),
+                    usd: usd)
+            }
+            if let data = try? JSONEncoder().encode(samples) {
+                UserDefaults.standard.set(data, forKey: "wallet.history.\(entry.address.lowercased())")
+            }
+            NSLog("Seed-wallet-history probe: %d samples for %@", samples.count, entry.address)
+        },
         // `-approvalProbe <blocksBack|YES>` runs the token-approval sync over
         // the watched wallets and NSLogs the landed count. A numeric spec
         // rewinds every cursor that many blocks first, so real past approvals

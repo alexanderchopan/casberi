@@ -20,21 +20,20 @@ import SwiftData
 enum HomeComposition {
 
     /// A composed document plus which of its root-level refs are board
-    /// MODULES (prd 58, Goal 1) — pinned things, a wallet's holdings map,
-    /// "What's going on". Everything else at root (the cover, the quiet-day
-    /// invite, the pin coach line) is fixed furniture, not a card the person
-    /// drags. HomeScreen reorders only within `boardRefs`.
+    /// MODULES (prd 58, Goal 1) — the per-app rows, the Wallet row. Everything
+    /// else at root (the cover, the quiet-day invite, the intelligence card)
+    /// is fixed furniture, not a card the person drags. HomeScreen reorders
+    /// only within `boardRefs`.
     struct Document {
         let lines: [String]
         let boardRefs: [String]
-        /// The STABLE persistence key for each board ref whose key isn't the ref
-        /// itself — `appTileN → app:<source>`, `walletMapN → wallet:<label>`.
-        /// Composed here (where the source/label is known) rather than re-derived
-        /// from the rendered element, because on a streamed cold-launch compose
-        /// the elements aren't parsed yet when the board reads its saved order —
-        /// so a `stream.els`-based key would miss and the arrangement would reset
-        /// (fix 2026-07-13). Refs absent here key by themselves (media shelves,
-        /// the map).
+        /// The STABLE persistence key for each board ref — `appRowN → app:
+        /// <source>`, `walletRow → app:Wallet`. Composed here (where the
+        /// source is known) rather than re-derived from the rendered element,
+        /// because on a streamed cold-launch compose the elements aren't
+        /// parsed yet when the board reads its saved order — so a
+        /// `stream.els`-based key would miss and the arrangement would reset
+        /// (fix 2026-07-13).
         var boardKeys: [String: String] = [:]
     }
 
@@ -42,17 +41,15 @@ enum HomeComposition {
     static func compose(things: [Thing],
                         walletHoldings: [WalletIngest.HoldingsGroup] = [],
                         walletCombined: WalletIngest.HoldingsGroup? = nil,
-                        walletNFTs: [WalletIngest.NFTGroup] = [],
                         walletPending: Bool = false,
                         walletUnreachable: Bool = false,
                         insight: String? = nil,
                         insightThing: String? = nil) -> Document {
-        let projects = projectClusters(things: things)
-        return daily(things: things, projects: projects, walletHoldings: walletHoldings,
-                     walletCombined: walletCombined,
-                     walletNFTs: walletNFTs, walletPending: walletPending,
-                     walletUnreachable: walletUnreachable, insight: insight,
-                     insightThing: insightThing)
+        daily(things: things, walletHoldings: walletHoldings,
+             walletCombined: walletCombined,
+             walletPending: walletPending,
+             walletUnreachable: walletUnreachable, insight: insight,
+             insightThing: insightThing)
     }
 
     /// True when nothing has landed today — the composition acknowledges the
@@ -64,9 +61,8 @@ enum HomeComposition {
     // MARK: - Documents
 
     @MainActor
-    private static func daily(things: [Thing], projects: [Cluster], walletHoldings: [WalletIngest.HoldingsGroup] = [],
+    private static func daily(things: [Thing], walletHoldings: [WalletIngest.HoldingsGroup] = [],
                                      walletCombined: WalletIngest.HoldingsGroup? = nil,
-                                     walletNFTs: [WalletIngest.NFTGroup] = [],
                                      walletPending: Bool = false,
                                      walletUnreachable: Bool = false,
                                      insight: String? = nil,
@@ -148,68 +144,22 @@ enum HomeComposition {
         appendPinnedApps(things, to: &doc, rootRefs: &rootRefs, boardRefs: &boardRefs, boardKeys: &boardKeys)
         appendWalletHoldings(walletHoldings, combined: walletCombined, pending: walletPending, unreachable: walletUnreachable, to: &doc, rootRefs: &rootRefs, boardRefs: &boardRefs, boardKeys: &boardKeys)
 
-        // Where the map belongs even when it didn't compose yet — the starter
-        // preview slots in here, not at the tail.
-        let mapSlot = rootRefs.count
-        // Projects — an interactive treemap: magnitude fill, tap opens the
-        // project. Chips were tried and reverted same day (2026-07-10).
-        // The map is the on-device intelligence's THEMES view now, not a source
-        // tally (auto-pin tune, user 2026-07-18): every connected source is its
-        // own board tile, so a source-clustered map just repeats them. The map
-        // earns its place only when it can show what the tiles can't — projects,
-        // the cross-source themes your things are about. When no projects have
-        // formed yet, there's no map (the tiles carry the screen); it returns
-        // the moment a theme does. The old "By app" fallback map is retired.
-        if !projects.isEmpty {
-            let items = projects.prefix(6).map { "\($0.name) \($0.things.count)" }
-            // "Themes" (2026-07-17): the vague, conversational "What's going on"
-            // didn't say what this section IS — the cross-app THREADS your
-            // things are about, a different lens from the per-app rows above
-            // (which is why it's a treemap, not a row). The plain name reads as
-            // that distinct lens, matching the app rows' own name-what-it-is.
-            doc.append("map = TagMap(\(q(String(localized: "Themes"))), null, [\(items.joined(separator: ", "))])")
-            rootRefs.append("map")
-            boardRefs.append("map")
-        }
-        appendStarterPreviews(things: things,
-                              hasMap: rootRefs.contains("map"),
-                              mapSlot: mapSlot, to: &doc, rootRefs: &rootRefs, boardRefs: &boardRefs)
+        // The Themes treemap (the cross-app project clusters `projectClusters`
+        // finds) moved OFF Home to the top of the "All" feed (2026-07-18, user:
+        // "should it go on all?") — Home is now uniformly the per-app rows
+        // above; a cross-source overview belongs on the cross-source feed, the
+        // same split that sent the Wallet treemap to the Wallet feed. All draws
+        // it straight from `projectClusters` itself (FeedScreen), so this
+        // composer no longer touches `projects` at all.
 
         doc.insert("root = Stack([\(rootRefs.joined(separator: ", "))])", at: 0)
         return Document(lines: doc, boardRefs: boardRefs, boardKeys: boardKeys)
     }
 
-    /// The empty state previews the real modules — the muted map shows the
-    /// SHAPE of home and says plainly that connecting apps fills it.
-    /// Preview, not fake data: kind names, no counts, nothing to tap.
     static let empty = Document(lines: [
-        "root = Stack([hero, map])",
+        "root = Stack([hero])",
         "hero = Hero(\(q(String(localized: "Getting started"))), \(q(String(localized: "Your home builds itself"))), \(q(String(localized: "Connect an app or capture one thing - what lands composes this screen."))))",
-        previewMapLine,
     ], boardRefs: [])
-
-    /// The preview module, shared by the empty doc and the sparse-corpus path.
-    private static let previewMapLine =
-        "map = TagMapPreview(\(q(String(localized: "Themes"))), \(q(String(localized: "Your things map here as they land"))), [Links, Notes, Events, Mail, Screenshots])"
-
-    /// A corpus this small hasn't earned real modules yet — one connected app
-    /// or a first capture. The previews stay alongside the real rows so the
-    /// screen shows where it's going instead of trailing off.
-    private static func isSparse(_ things: [Thing]) -> Bool { things.count < 8 }
-
-    /// Appends the preview map when the real one didn't compose. `mapSlot`
-    /// is where a real map would have landed in `rootRefs` (right after
-    /// cover/quiet/insight) — the preview takes that slot too, instead of
-    /// trailing behind pinned content composed after it.
-    private static func appendStarterPreviews(things: [Thing], hasMap: Bool, mapSlot: Int,
-                                              to doc: inout [String], rootRefs: inout [String],
-                                              boardRefs: inout [String]) {
-        guard isSparse(things), !hasMap else { return }
-        doc.append(previewMapLine)
-        rootRefs.insert("map", at: mapSlot)
-        // The preview isn't tappable (no real modules exist yet), so it
-        // isn't a board module either — nothing to drag before things land.
-    }
 
     // MARK: - Derivations
 
@@ -252,6 +202,22 @@ enum HomeComposition {
                     ? $0.things.count > $1.things.count
                     : $0.name < $1.name
             }
+    }
+
+    /// The Themes treemap document — the cross-source overview that moved OFF
+    /// Home to the top of the "All" feed (2026-07-18, user: "should it go on
+    /// all?"): a cross-source view belongs on the cross-source feed, same
+    /// split that already sent the Wallet treemap to the Wallet feed. Same
+    /// TagMap component/sizing the wallet treemap draws (no `genSpan` pin, so
+    /// it takes the renderer's own unconstrained size — answering "is it too
+    /// large / same as the wallet one?": identically sized, since it's the
+    /// same component). Nil when no project has clustered yet — same standard
+    /// `projectClusters` always held (min 2 things sharing a real tag).
+    static func themesDocument(things: [Thing]) -> [String]? {
+        let projects = projectClusters(things: things)
+        guard !projects.isEmpty else { return nil }
+        let items = projects.prefix(6).map { "\($0.name) \($0.things.count)" }
+        return ["root = TagMap(\(q(String(localized: "Themes"))), null, [\(items.joined(separator: ", "))])"]
     }
 
     // MARK: - Cover (H7 — the doc names facts; the renderer owns the rest)
@@ -610,10 +576,17 @@ enum HomeComposition {
         }
         let id = "walletRow"
         boardKeys[id] = "app:Wallet"
+        // The row's peek is the SAME value-history line the Wallet feed's
+        // balance lede draws (2026-07-18) — no fetch here either, the samples
+        // already exist in `WalletStore.combinedValueSamples()`. Arg 10, an
+        // extra str arg past the filmstrip refs; every other AppRow line just
+        // leaves it unset (GenEl.str returns "" past the end of args).
+        let sparkline = WalletStore.shared.combinedValueSamples()
+            .map { String($0.usd) }.joined(separator: ",")
         // rank 0 — a balance is ambient, not a needs-you signal, so the total
         // reads in the quiet tertiary ink. Source "Wallet" routes the row tap
         // to the wallet feed (chip/addr fields empty, no filmstrip).
-        doc.append("\(id) = AppRow(\(q("Wallet")), \(q(signal)), \(q(peek)), \(q("")), \(q("")), \(q("")), \(q("")), \(q("")), \(q("0")), [])")
+        doc.append("\(id) = AppRow(\(q("Wallet")), \(q(signal)), \(q(peek)), \(q("")), \(q("")), \(q("")), \(q("")), \(q("")), \(q("0")), [], \(q(sparkline)))")
         rootRefs.append(id)
         boardRefs.append(id)
     }
