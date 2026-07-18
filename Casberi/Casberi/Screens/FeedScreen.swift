@@ -28,7 +28,7 @@ struct FeedScreen: View {
     /// Whether this page is the one in front. A pager keeps its neighbours
     /// MOUNTED, so `onAppear` stopped meaning "the person is looking at this"
     /// — every per-visit effect (the boundary freeze, the entrance wave, the
-    /// hue flood, the synthesis stream, chrome minimizing) gates on this
+    /// synthesis stream, chrome minimizing) gates on this
     /// instead, or a page swiped PAST would burn its arrival unseen and stamp
     /// its own "New since" line away.
     let isActive: Bool
@@ -70,11 +70,6 @@ struct FeedScreen: View {
     /// Bumped when this page lands — rows replay their shape's
     /// entrance (each shape arrives its own way, ruling 2026-07-07).
     @State private var shapeWave = 0
-    /// Eases 1 → 0 on each source switch: the app's hue floods down over the
-    /// feed for a beat, then recedes as the shaped rows compose beneath it —
-    /// the color arriving, so a switch reads as "entering this app's feed"
-    /// (delight, 2026-07-12) instead of a quiet crossfade behind the content.
-    @State private var flood: CGFloat = 0
     /// The last time the person left THIS feed ("feed.lastSeen" is All's
     /// original key, so nothing migrates), no per-thing read state. The
     /// boundary freezes when the page lands and holds for the whole visit
@@ -96,8 +91,8 @@ struct FeedScreen: View {
         var id: String { name }
     }
     @Namespace private var zoomNS
-    /// prd 43h: Reduce Motion is law — the hand-rolled moves (the switch flood,
-    /// row entrances) fall back to plain state changes under it.
+    /// prd 43h: Reduce Motion is law — the hand-rolled moves (row entrances)
+    /// fall back to plain state changes under it.
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.openURL) private var openURL
 
@@ -311,26 +306,6 @@ struct FeedScreen: View {
                 HomeRoute.shared.bridgePush = nil
                 confirming = nil
             }
-    }
-
-    /// The switch flood (delight, 2026-07-12): the source's hue sweeps down
-    /// over the feed and fades out as you land on its chip. Top-heavy and
-    /// brief so it never buries the rows — `flood` eases 1 → 0 in ~0.5s — and
-    /// it's the color moment the quiet background crossfade lacked. Absent for
-    /// All (no identity hue) and under Reduce Motion (`flood` never rises).
-    @ViewBuilder private var switchFlood: some View {
-        if let hue = DS.washHue(for: source) {
-            // A TOP-BAND kiss, not a full-bleed veil: it reinforces the resting
-            // wash's zone and clears well before the rows, so even a dark-hued
-            // source is a brief tint at the crown, never a screen-wide dim.
-            LinearGradient(colors: [hue.opacity(0.34), .clear],
-                           startPoint: .top, endPoint: .bottom)
-                .frame(height: 300)
-                .frame(maxWidth: .infinity, alignment: .top)
-                .opacity(flood)
-                .ignoresSafeArea(edges: .top)
-                .allowsHitTesting(false)
-        }
     }
 
     /// A slim, tappable strip above a single source's shaped feed: the app, its
@@ -579,16 +554,10 @@ struct FeedScreen: View {
         // lands — chicken-and-egg). `source` is fixed per feed instance, so this
         // runs once when the GitHub feed appears; `refreshIfStale` self-guards.
         .task { if source == "GitHub" { await githubGraph.refreshIfStale() } }
-        .overlay(alignment: .top) { switchFlood }
-        // A SHAPED feed sits directly on MainSurface's bold hue field (user
-        // ruling 2026-07-13, Cash-App bold): painting the opaque page here
-        // would hide it — the very bug that once forced the wash to be an
-        // overlay. Pinned/All/hueless keep the normal page coat.
-        .background {
-            if DS.washHue(for: source) == nil {
-                DSPageBackground()
-            }
-        }
+        // Every feed sits on the neutral themed page — ink, no per-source hue
+        // field (user ruling 2026-07-18: the borrowed brand wash read as
+        // decoration, not information; the chip already names the source).
+        .background { DSPageBackground() }
         .environment(\.defaultMinListHeaderHeight, 0)
         .scrollIndicators(.hidden)
         .minimizesChrome(chrome, active: isActive)
@@ -935,17 +904,12 @@ struct FeedScreen: View {
     }
 
     /// This page came to the front: freeze its boundary for the visit, replay
-    /// the shape's entrance, flood the hue, stream its synthesis block. Every
-    /// one of these is an ARRIVAL — spending them on a mounted-but-unseen
-    /// neighbour would hand the person a page whose moment already happened.
+    /// the shape's entrance, stream its synthesis block. Every one of these is
+    /// an ARRIVAL — spending them on a mounted-but-unseen neighbour would hand
+    /// the person a page whose moment already happened.
     private func land() {
         freezeBoundary()
         shapeWave += 1
-        // The hue floods in, then recedes as the shaped rows compose.
-        if !reduceMotion {
-            flood = 1
-            withAnimation(.easeOut(duration: 0.55)) { flood = 0 }
-        }
         streamBlock()
     }
 

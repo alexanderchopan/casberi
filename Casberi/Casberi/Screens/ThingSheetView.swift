@@ -40,8 +40,6 @@ struct ThingSheetView: View {
     @State private var counterpartyDraft = ""
     /// The TAGS row opens the full editor (chips, rename, delete) in place.
     @State private var editingTags = false
-    /// The hue wash pours in on open (delight 2026-07-13) — once per sheet.
-    @State private var washPoured = false
     /// A post/cast's thread (2026-07-14) — fetched live from the source's
     /// public API when the sheet opens a social thing (Bluesky or Farcaster);
     /// the section renders only when replies exist (no dead section, no
@@ -60,7 +58,6 @@ struct ThingSheetView: View {
     /// the thing's own words — no custom UI, Apple's picker does the rest.
     @State private var showTranslate = false
     @State private var translateText = ""
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// Seeded by the record's shape (2026-07-13 polish): a TALL thing (media
     /// or a long body) still opens FULL-height so its verbs never start
     /// below the fold — the original `.large` ruling, kept for the case that
@@ -106,9 +103,8 @@ struct ThingSheetView: View {
                 }
                 // The stage (B1, 2026-07-16): a wallet transfer or a screenshot
                 // leads with a HERO that depicts the thing — parties + signed
-                // amount on the wash's seam, or the image in a floating frame —
-                // and its verbs become the dial. Everything else keeps the
-                // title-led layout.
+                // amount, or the image in a floating frame — and its verbs
+                // become the dial. Everything else keeps the title-led layout.
                 let stage = self.stage
                 let framedShot = stage == nil && thing.kind == .screenshot
                 if let stage {
@@ -203,52 +199,12 @@ struct ThingSheetView: View {
             .padding(.bottom, DS.Space.s6)
         }
         .scrollIndicators(.hidden)
-        .background(alignment: .top) {
-            // The source's hue washes down from the top and fades into the
-            // ink (ruling 2026-07-10, user: "it's gorgeous"). One fixed
-            // recipe — 45% into clear over 260pt, no per-hue tuning — and
-            // it sits UNDER the content as atmosphere: no ink ever depends
-            // on it for contrast, which is why this wash lives while the
-            // treemap fills and the banner died. Hueless sources (your own
-            // notes, unknown apps) stay pure ink: the gray fallback is a
-            // fill, not an identity.
-            if let hue = DS.washHue(for: thing.source) {
-                // Bold, not a film (user ruling 2026-07-13): the crown IS
-                // the source's color, flowing into the sheet's ink.
-                // A stage sheet uses the SEAM recipe (B1a, 2026-07-16): the
-                // solid crown ends sooner and the fade completes early, so the
-                // signed amount lands on near-ink — identity (faces) lives on
-                // the solid zone, data lives at or below the seam.
-                let seam = stage != nil
-                LinearGradient(stops: seam ? [
-                    .init(color: hue, location: 0),
-                    .init(color: hue, location: 0.26),
-                    .init(color: hue.opacity(0), location: 0.78),
-                ] : [
-                    .init(color: hue, location: 0),
-                    .init(color: hue, location: 0.3),
-                    .init(color: hue.opacity(0), location: 1),
-                ], startPoint: .top, endPoint: .bottom)
-                    .frame(height: 300)
-                    // The pour (delight 2026-07-13): the bleed slides down
-                    // into place as the sheet opens — a bleed that literally
-                    // bleeds in. Once per open; instant under Reduce Motion.
-                    .opacity(washPoured ? 1 : 0)
-                    .offset(y: washPoured ? 0 : -140)
-                    .frame(maxHeight: .infinity, alignment: .top)
-                    // TOP only: the wash bleeds under the notch, but ignoring
-                    // the BOTTOM edge too let the scroll content run under the
-                    // home indicator, clipping the last actions on hue'd sheets.
-                    .ignoresSafeArea(edges: .top)
-                    .onAppear {
-                        if reduceMotion { washPoured = true } else {
-                            withAnimation(.easeOut(duration: 0.35).delay(0.05)) {
-                                washPoured = true
-                            }
-                        }
-                    }
-            }
-        }
+        // The source's hue wash that once poured down the crown is gone (user
+        // ruling 2026-07-18: full ink, matching the feed). The wash read as
+        // borrowed identity — and on a plain sheet it flooded the spec table,
+        // muddying the When/From/Tags labels the "no ink depends on it" claim
+        // said it wouldn't. Identity lives in the source glyph and row now; the
+        // sheet is pure ink, like the photo viewer it already is below.
         // Ink: the sheet is black in both modes, like a photo viewer — its
         // controls render dark regardless of the app's theme.
         .presentationBackground(Color.black)
@@ -606,7 +562,7 @@ struct ThingSheetView: View {
     // MARK: - The dial's wiring (stage sheets — B1, 2026-07-16)
 
     /// The transfer's parsed hero, when this thing earns one — the ONE
-    /// decision point both the layout and the wash's seam recipe read.
+    /// decision point the stage layout reads.
     private var stage: TransferStage? { TransferStage(thing) }
 
     /// A wallet transfer's dial verbs: Open (the explorer link, when the

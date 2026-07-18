@@ -133,13 +133,10 @@ struct SourceChips: View {
                 // object traveling, not two states blinking); orange = the
                 // connection needs you (health lives where you live).
                 if isActive {
-                    // On a shaped feed the page IS the source's color — the
-                    // active chip would melt into its own field, so the ring
-                    // goes white to cut the space between them (user ruling
-                    // 2026-07-13). Tint everywhere else.
-                    let ringColor: Color =
-                        DS.washHue(for: active) != nil ? .white : DS.tint
-                    let ring = Circle().strokeBorder(ringColor, lineWidth: 2.5)
+                    // The active ring is always tint now — the feed sits on the
+                    // neutral ink page (user ruling 2026-07-18: full ink), so
+                    // there's no source-hue field for a tint ring to melt into.
+                    let ring = Circle().strokeBorder(DS.tint, lineWidth: 2.5)
                     if reduceMotion {
                         ring
                     } else {

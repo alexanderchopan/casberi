@@ -94,8 +94,9 @@ extension DS {
         }
     }
 
-    /// The brand hue normalized for the WASH surfaces — the feed's shape
-    /// wash, the switch flood, the thing sheet, the app detail page. Raw
+    /// The brand hue normalized for the WASH surfaces — the app detail page,
+    /// the bridge setup header, the token quick sheet (the feed AND the thing
+    /// sheet dropped their washes, user ruling 2026-07-18: full ink). Raw
     /// brand hexes aren't a designed ramp: RGB-mixing them toward black
     /// shifted yellows to olive and browns, and left the near-black marks
     /// (Steam, Venice) as colorless smudges (user, 2026-07-13). Still one

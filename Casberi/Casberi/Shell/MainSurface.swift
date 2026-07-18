@@ -82,38 +82,13 @@ struct MainSurface: View {
         return labels
     }
 
-    /// A shaped feed wears its source's hue (B ruling 2026-07-10): the whole
-    /// top of the screen — status bar, doors, chip strip, then the feed's own
-    /// header — sits on the source's wash hue, fading out as the day groups
-    /// begin. Lives here (not inside FeedScreen) because the chip strip and
-    /// status bar are OUTSIDE the feed's own view, on this shared surface
-    /// (bug, 2026-07-14: the wash used to start at the feed's List, leaving
-    /// the chips and status bar flat black above it). One recipe, no per-hue
-    /// tuning — `DS.washHue` normalizes the brand hex (2026-07-13; the old
-    /// mix-toward-black turned yellows olive and near-black marks to smudge)
-    /// — and nil (no wash) for Pinned/All/a hueless source, honestly.
-    ///
-    /// Rendered as a BACKGROUND now, and BOLD (user ruling 2026-07-13,
-    /// "bold like Cash App"): the hue is the solid field the content sits
-    /// ON — full-strength at the crown, flowing into the page color — not a
-    /// translucent film laid over the rows. The old overlay approach (which
-    /// existed because FeedScreen's opaque page paint hid a background wash)
-    /// is retired the right way: a SHAPED feed skips its own opaque coat
-    /// (`FeedScreen` checks the same `washHue`), so this field genuinely
-    /// shows through behind the rows instead of tinting them from above.
-    @ViewBuilder private var shapeWash: some View {
-        if let hue = DS.washHue(for: filter.source) {
-            LinearGradient(stops: [
-                .init(color: hue, location: 0),
-                .init(color: hue, location: 0.4),
-                .init(color: hue.opacity(0), location: 1),
-            ], startPoint: .top, endPoint: .bottom)
-                .frame(height: 620)
-                .frame(maxHeight: .infinity, alignment: .top)
-                .transition(.opacity)
-                .id(filter.source)   // crossfade between hues, not a smear
-        }
-    }
+    // The per-source brand-hue wash that once flooded this surface is gone
+    // (user ruling 2026-07-18: full ink). A feed's identity lives in its chip
+    // and icon, not a borrowed brand-color field — the wash read as decoration
+    // over the content, and hues like Calendar's red collided with the
+    // alert/loss meaning red carries elsewhere. The feed now sits on the
+    // neutral `DS.themedPage` like the board does. (`DS.washHue` stays for the
+    // sheet/detail/setup surfaces, which still wear a source's identity.)
 
     var body: some View {
         NavigationStack {
@@ -170,11 +145,7 @@ struct MainSurface: View {
             // screens already render the theme photo themselves, and a second
             // full render here would be pure waste under an opaque layer.
             .background {
-                ZStack(alignment: .top) {
-                    DS.themedPage
-                    shapeWash
-                }
-                .ignoresSafeArea()
+                DS.themedPage.ignoresSafeArea()
             }
             // The first-thing bloom — a new app's first landing washes its
             // hue across the header for a beat, then fades. The one moment
