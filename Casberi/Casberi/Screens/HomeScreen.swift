@@ -207,11 +207,13 @@ struct HomeScreen: View {
                         GenRender(id: ref, els: stream.els)
                     }
                     // One retiring line (prd 58a) — shown until the first
-                    // pin tap, forever, same grammar as the pin coach.
+                    // resize (or the first edit-mode entry), forever, same
+                    // grammar as the pin coach. Now that the size pin lives in
+                    // edit mode, the coach teaches the hold that reveals it.
                     if !sizeCoachDone, !boardOrder.isEmpty {
                         // Secondary ink, not tint — a coach line isn't a
                         // control, and tint-colored prose reads as a link.
-                        Text("Tap a pin to grow its card")
+                        Text("Touch and hold a card to resize or rearrange")
                             .dsText(.subhead13)
                             .foregroundStyle(DS.textSecondary)
                             .padding(.horizontal, DS.Space.s4)
@@ -282,21 +284,18 @@ struct HomeScreen: View {
             // it allows (small → wide → big, skipping any it can't take). The
             // pin never removes anything (unpin lives elsewhere per module),
             // so it's free to mean "press me".
-            .environment(\.genSizeToggle) { ref in
-                DSHaptic.selection()
-                sizeCoachDone = true
-                HomeModuleSize.shared.cycle(moduleKey(ref),
-                                            allowed: allowedSpans(ref),
-                                            default: defaultSpan(ref))
-                // Span decides packing — bump the revision so the board re-reads
-                // spans and re-packs (a grown module leaves its 2-up pair for a
-                // full-width row, a shrunk one re-pairs). HomeModuleSize is
-                // observed, but the board reads it through closures the revision
-                // forces to re-run.
-                withAnimation(DS.Motion.standard) {
-                    boardSizeRevision += 1
-                }
-            }
+            //
+            // The pin shows ONLY in edit mode now (de-cute, 2026-07-18): every
+            // board tile wore a standing size pin at rest — three pieces of
+            // meta-chrome (pin + wallet @pin mark + edit badges) on a screen
+            // whose law is "no dead controls, the content carries it". Every
+            // ShelfSizePin render site gates on this closure being non-nil
+            // (`if let sizeToggle`), so handing it nil at rest hides all nine at
+            // once; a long-press lift arms edit mode and brings them back beside
+            // the remove badge (the iOS hold → wobble → resize grammar removal
+            // already moved to, ruling 2026-07-14). Sizes still render at rest;
+            // only the CONTROL hides.
+            .environment(\.genSizeToggle, sizeToggleAction)
             // Long-press → Remove from Home. A media shelf maps its ref → source
             // via the static table; a generic app tile carries its source in the
             // element (arg 3). An explicit pin is dropped (clear also forgets its
@@ -362,12 +361,19 @@ struct HomeScreen: View {
         // composes from — repaint so the renamed tag shows immediately.
         .onChange(of: CorpusSignal.shared.revision) { recomposeOrDefer() }
         // Edit mode ended — land any recompose that arrived mid-rearrange.
+        // Entering it retires the resize coach (the hold it teaches just
+        // happened), so someone who only ever reorders isn't nagged forever.
         .onChange(of: boardEditing) { _, editing in
+            if editing { sizeCoachDone = true }
             if !editing, recomposeDeferred {
                 recomposeDeferred = false
                 streamComposition(instant: true)
             }
         }
+        // The on-device "Noticed" line landed (or changed, or cleared) — repaint
+        // so it appears under the cover. Routed through recomposeOrDefer so it
+        // waits out an in-flight rearrange like any other recompose.
+        .onChange(of: HomeInsightStore.shared.line) { recomposeOrDefer() }
         // Pinning/unpinning a wallet (WalletScreen) re-fetches (or drops) its
         // holdings treemap — same "pin means keep this in view" rule as a
         // Thing pin, just without a Thing to observe via things.count. Pin is
@@ -441,13 +447,19 @@ struct HomeScreen: View {
         // Home synthesizes the surfaced corpus — search-only sources (Contacts)
         // stay out of the treemap the same way they stay out of the feed.
         let surfaced = Corpus.surfaced(things)
+        // Refresh the on-device "Noticed" line off the render path. Cheap and
+        // idempotent (a signature check returns early when nothing moved), so
+        // calling it on every compose is the natural throttle — a landed line
+        // repaints through the `HomeInsightStore.shared.line` observer above.
+        HomeInsightStore.shared.refresh(from: surfaced)
         let doc = surfaced.isEmpty
             ? HomeComposition.empty
             : HomeComposition.compose(things: surfaced, walletHoldings: walletHoldings,
                                       walletCombined: walletCombined,
                                       walletNFTs: walletNFTs,
                                       walletPending: walletHoldingsLoading,
-                                      walletUnreachable: walletUnreachable)
+                                      walletUnreachable: walletUnreachable,
+                                      insight: HomeInsightStore.shared.line)
         if instant {
             stream.paint(doc.lines)   // an update, not an entrance — no typewriter
         } else {
@@ -503,6 +515,30 @@ struct HomeScreen: View {
     /// map) and text posts (social) always span full width.
     private func isPairable(_ ref: String) -> Bool {
         ["musicShelf", "pinShelf", "shotShelf"].contains { ref.hasPrefix($0) }
+    }
+
+    /// The board's size control, handed to the renderer via `genSizeToggle`.
+    /// nil at rest (the size pin gates on it, so nil hides every pin); the
+    /// live cycle-through-spans closure only in edit mode (de-cute 2026-07-18).
+    /// A typed property, not an inline ternary, so the closure's type is
+    /// unambiguous and the escaping `self` capture reads plainly.
+    private var sizeToggleAction: ((String) -> Void)? {
+        guard boardEditing else { return nil }
+        return { ref in
+            DSHaptic.selection()
+            sizeCoachDone = true
+            HomeModuleSize.shared.cycle(moduleKey(ref),
+                                        allowed: allowedSpans(ref),
+                                        default: defaultSpan(ref))
+            // Span decides packing — bump the revision so the board re-reads
+            // spans and re-packs (a grown module leaves its 2-up pair for a
+            // full-width row, a shrunk one re-pairs). HomeModuleSize is
+            // observed, but the board reads it through closures the revision
+            // forces to re-run.
+            withAnimation(DS.Motion.standard) {
+                boardSizeRevision += 1
+            }
+        }
     }
 
     /// A module's effective span: the person's stored choice, or the default

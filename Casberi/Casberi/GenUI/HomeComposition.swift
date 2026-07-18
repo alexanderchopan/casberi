@@ -43,12 +43,13 @@ enum HomeComposition {
                         walletCombined: WalletIngest.HoldingsGroup? = nil,
                         walletNFTs: [WalletIngest.NFTGroup] = [],
                         walletPending: Bool = false,
-                        walletUnreachable: Bool = false) -> Document {
+                        walletUnreachable: Bool = false,
+                        insight: String? = nil) -> Document {
         let projects = projectClusters(things: things)
         return daily(things: things, projects: projects, walletHoldings: walletHoldings,
                      walletCombined: walletCombined,
                      walletNFTs: walletNFTs, walletPending: walletPending,
-                     walletUnreachable: walletUnreachable)
+                     walletUnreachable: walletUnreachable, insight: insight)
     }
 
     /// True when nothing has landed today — the composition acknowledges the
@@ -64,7 +65,8 @@ enum HomeComposition {
                                      walletCombined: WalletIngest.HoldingsGroup? = nil,
                                      walletNFTs: [WalletIngest.NFTGroup] = [],
                                      walletPending: Bool = false,
-                                     walletUnreachable: Bool = false) -> Document {
+                                     walletUnreachable: Bool = false,
+                                     insight: String? = nil) -> Document {
         var doc: [String] = []
         var rootRefs: [String] = []
         var boardRefs: [String] = []
@@ -76,6 +78,19 @@ enum HomeComposition {
         // The doc only names facts; the renderer owns image, bleed, fallbacks.
         doc.append(cover(things: things))
         rootRefs.append("cover")
+
+        // The "Noticed" line — one genuine cross-thing connection the on-device
+        // model found among recent things (prd §36c reopened: that ruling
+        // removed the deterministic co-occurrence version for manufacturing
+        // connections, and said a real model-written one would be a fresh
+        // build — this is it). The model may DECLINE (nil here), so this is
+        // only ever a real observation, never a forced one. Fixed furniture
+        // like the cover, NOT a board module — it isn't something the person
+        // pinned, so it takes no size pin and no remove badge.
+        if let insight, !insight.isEmpty {
+            doc.append("insight = Insight(\(q(insight)))")
+            rootRefs.append("insight")
+        }
 
         // "Coming up" — the person's own dated things (upcoming events, due
         // reminders) resurfaced because a deadline is near, leading the board
@@ -443,7 +458,10 @@ enum HomeComposition {
     /// no eyebrow caps (design law): the words carry it.
     private static func appTitle(_ source: String) -> String {
         switch source {
-        case "Gmail", "iCloud Mail":                       return String(localized: "Waiting on you")
+        // "In your inbox", not "Waiting on you" — Home's voice guardrail bans
+        // obligation phrasing (handoff-home: no "waiting on you"), and the
+        // person pinned this themselves; the card states what's there, not a duty.
+        case "Gmail", "iCloud Mail":                       return String(localized: "In your inbox")
         case "GitHub":                                     return String(localized: "In your feed")
         case "Linear":                                     return String(localized: "Assigned to you")
         case "Notion":                                     return String(localized: "Pages")

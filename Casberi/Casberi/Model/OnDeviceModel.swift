@@ -151,6 +151,57 @@ enum OnDeviceModel {
         """
     }
 
+    // MARK: - Home "Noticed" line
+
+    /// One observational sentence for Home's "Noticed" line — a genuine
+    /// cross-thing connection among recent things, or nil when there's none
+    /// worth stating. Unlike `compose`/`synthesisStream`, this answers no
+    /// question: it's an unprompted observation, and it is ALLOWED to decline
+    /// (prd §36c — the old deterministic version was removed precisely because
+    /// it manufactured connections; the model saying nothing is the fix). Runs
+    /// on a throwaway session so it never touches the composer's conversation.
+    /// Returns nil where the model is unavailable — Home then shows no line,
+    /// exactly as before this existed.
+    static func homeInsight(candidates: [Candidate]) async -> String? {
+        #if canImport(FoundationModels)
+        if #available(iOS 26.0, *) {
+            return await FoundationAnswer.homeInsight(candidates: candidates)
+        }
+        #endif
+        return nil
+    }
+
+    /// The Home-insight contract: notice ONE real thread across MORE THAN ONE
+    /// thing, in one plain sentence, or write the single word NONE. The NONE
+    /// escape and the "never invent" rail are what keep §36c from recurring.
+    static var homeInsightInstructions: String {
+        """
+        You help someone notice a connection across the things they have \
+        saved. Speak TO them as "you" — never write in the first person. \
+        Look at the things listed and find ONE genuine thread that runs \
+        across MORE THAN ONE of them: a subject that shows up in different \
+        apps, or several saves clearly about the same thing. State it in ONE \
+        short plain sentence, grounded only in these things — no metaphors, \
+        no marketing, no preamble, no lists. If there is no real connection \
+        worth noting — if the things are unrelated — reply with exactly the \
+        single word NONE. Never invent a connection just to have something \
+        to say.
+        """ + LanguageStore.shared.llmLanguageDirective
+    }
+
+    /// The Home-insight user prompt, over the same numbered evidence shape
+    /// every model path shares.
+    static func homeInsightPrompt(candidates: [Candidate]) -> String {
+        """
+        Their recent things, numbered (an indented quote under a thing is its \
+        own text — everything you may use):
+        \(numberedCandidates(candidates))
+
+        Reply with one plain sentence naming a real connection across two or \
+        more of these things, or the single word NONE.
+        """
+    }
+
     // MARK: - Lifecycle
 
     /// Warms the model so the first Ask doesn't pay the one-time load. Safe to
@@ -259,6 +310,16 @@ struct GroundedAnswerLayout {
     var picks: [Int]
 }
 
+/// The Home "Noticed" line's schema — one field. File-scope (not nested), the
+/// same rule `GroundedAnswerLayout` follows, so the @Generable macro's keypaths
+/// resolve cleanly (nesting one corrupts the heap; CLAUDE.md).
+@available(iOS 26.0, *)
+@Generable
+struct HomeNoticeLayout {
+    @Guide(description: "One plain sentence naming a real connection across two or more of the listed things, grounded only in them. If there is no real connection worth noting, the single word NONE.")
+    var line: String
+}
+
 /// The iOS-26 half — isolated so the plain `OnDeviceModel` API above carries no
 /// `@available` and the composer can call it without an availability dance.
 @available(iOS 26.0, *)
@@ -312,6 +373,35 @@ enum FoundationAnswer {
             ConversationModel.reset()
             let (fresh, _) = ConversationModel.acquire(instructions: instructions)
             return try? await run(fresh)
+        }
+    }
+
+    /// The Home "Noticed" line — a fresh, throwaway session (NOT the shared
+    /// `ConversationModel`: Home is not the composer's conversation, and the
+    /// two must never bleed into each other). The model writes into a one-field
+    /// `@Generable` layout (the same `respond(to:generating:)` path `compose`
+    /// uses), declining by putting the single word NONE in the field, which we
+    /// map to nil so the caller shows no line. @MainActor to match the other
+    /// model paths — the `await respond` yields the main actor for the whole
+    /// inference, so this never blocks the UI.
+    @MainActor
+    static func homeInsight(candidates: [OnDeviceModel.Candidate]) async -> String? {
+        guard OnDeviceModel.isAvailable, candidates.count >= 3 else { return nil }
+        let session = LanguageModelSession(instructions: OnDeviceModel.homeInsightInstructions)
+        do {
+            let response = try await session.respond(
+                to: OnDeviceModel.homeInsightPrompt(candidates: candidates),
+                generating: HomeNoticeLayout.self)
+            let text = response.content.line.trimmingCharacters(in: .whitespacesAndNewlines)
+            // The model declined (NONE), or wrote too little to be a real
+            // observation — either way, no line.
+            let stripped = text.trimmingCharacters(in: CharacterSet(charactersIn: ".!\"' "))
+            if stripped.isEmpty || stripped.uppercased() == "NONE" || text.count < 12 {
+                return nil
+            }
+            return text
+        } catch {
+            return nil
         }
     }
 
