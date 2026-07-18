@@ -819,6 +819,17 @@ tag) — shown only when more than one wallet is watched, and only for a
 raw address match (an ENS-named watch won't retroactively match its
 resolved hex, so it simply carries no label rather than a wrong one).
 
+**Amendment (user, 2026-07-18): a person's FIRST watched wallet auto-pins
+to Home.** Watching ≠ pinning stays the rule, but a first-time watcher was
+landing on a Home board their new wallet never reached — holdings show only
+for a pinned wallet, and the pin sat behind a swipe (reported: "I followed a
+Wallet, but it didn't show on my home feed"). `WalletStore.add` now sets
+`pinnedToHome` on the first wallet only (the list was empty, so nothing is
+pinned yet); every wallet after it stays manual, so the "two wallets are two
+purposes, pin the one you mean" ruling above is untouched. Applies wherever a
+wallet is watched (the Wallet screen, a social profile's "watch their
+wallet"). Fully reversible — unpinning is one tap.
+
 ## 36i. TagMap cells: icons where they're always accurate, never a guess (2026-07-09)
 
 Three treemaps share one renderer (`GenTagMap`): Home's "What's going on"

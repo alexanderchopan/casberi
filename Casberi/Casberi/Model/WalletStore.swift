@@ -287,7 +287,17 @@ final class WalletStore {
         guard addr.count >= 6,
               !addresses.contains(where: { Self.dedupeKey($0.address) == key })
         else { return false }
-        addresses.append(WatchedAddress(label: label, address: addr))
+        // A person's FIRST watched wallet auto-pins to Home (ruling
+        // 2026-07-18). Watching ≠ pinning by design (2026-07-09) — holdings
+        // show on Home/Feed only for a PINNED wallet — but that left a
+        // first-time watcher facing a Home board their new wallet never
+        // reached, with the pin buried behind a swipe. Auto-pinning only the
+        // FIRST wallet (the list was empty, so nothing is pinned yet) keeps the
+        // multi-wallet ruling intact: every wallet after it stays manual, since
+        // two watched wallets are usually two purposes and the person pins the
+        // one they mean. Fully reversible — unpinning is one tap.
+        let isFirst = addresses.isEmpty
+        addresses.append(WatchedAddress(label: label, address: addr, pinnedToHome: isFirst))
         return true
     }
 
