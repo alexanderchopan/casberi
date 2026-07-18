@@ -9,8 +9,7 @@ against the full App Store Review Guidelines. This doc is the prep; the steps ma
 
 ## 0. Prerequisites
 
-- [ ] Apple Developer Program membership **active** (not lapsed). You have a live TestFlight
-      build, so this is almost certainly already true — just confirm.
+- [x] Apple Developer Program membership **active** (confirmed by user, 2026-07-17).
 - [ ] The build you want to ship is uploaded and shows in App Store Connect → TestFlight.
       (Reuse the exact build public testers are on — no rebuild needed.)
 
@@ -225,6 +224,6 @@ website deploy rule.)
 | App Privacy label answers | ✅ guidance ready — you enter in ASC |
 | Export compliance answer | ✅ guidance ready |
 | Review notes | ✅ drafted |
-| **Screenshots (6.9")** | ⬜ need to produce — I can capture candidates |
-| Membership active | ⬜ you confirm |
+| **Screenshots (6.9")** | 🟡 candidate set captured 2026-07-17 (`~/Desktop/casberi-appstore-shots/`, 6 shots, all 1320×2868, dark): 1-home, 2-feed, 3-answer (keyboard-free), 4-thing, 5-apps, 6-data (the on-device/iCloud-off/export-delete trust tray) — awaiting your approval; a light-mode set is available on request |
+| Membership active | ✅ confirmed 2026-07-17 |
 | Submit in App Store Connect | ⬜ you (I can't submit) |
