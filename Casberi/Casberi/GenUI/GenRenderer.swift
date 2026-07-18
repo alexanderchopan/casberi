@@ -630,7 +630,13 @@ private struct GenAppRow: View {
                             .contentTransition(.numericText())
                     }
                 }
-                if !el.str(2).isEmpty {
+                // The Tokens row's second line is the LIVE chip — sparkline +
+                // price + 1D delta for the top mover (args 5-7; user: "WE NEED
+                // THE SPARKLINE"). Every other app's is the plain item line.
+                if !el.str(6).isEmpty {
+                    AppRowTokenLine(symbol: el.str(7), chain: el.str(5),
+                                    address: el.str(6))
+                } else if !el.str(2).isEmpty {
                     Text(el.str(2))
                         .dsText(.subhead13)
                         .foregroundStyle(DS.textSecondary)
@@ -638,7 +644,9 @@ private struct GenAppRow: View {
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            Text(el.str(3)).dsText(.subhead13).foregroundStyle(DS.textTertiary)
+            if el.str(6).isEmpty {
+                Text(el.str(3)).dsText(.subhead13).foregroundStyle(DS.textTertiary)
+            }
         }
         .padding(.horizontal, DS.Space.s4)
         .padding(.vertical, DS.Space.s3)
@@ -1672,6 +1680,55 @@ extension View {
         }
     }
 
+}
+
+/// The Tokens AppRow's live second line — ticker, on-device sparkline, price,
+/// 1D delta for the top mover (user 2026-07-17: the sparkline is the one
+/// visual the app-card form carried that the row system had to keep). The
+/// same keyed fetch/reveal pattern GenTokenChip uses, sized to sit INSIDE a
+/// row (no own padding, surface, or actions — the AppRow owns all three).
+private struct AppRowTokenLine: View {
+    let symbol: String
+    let chain: String
+    let address: String
+    @State private var chart: TokenChart?
+    @State private var revealed = false
+    @Environment(\.genRefreshTick) private var refreshTick
+    @Environment(\.colorScheme) private var scheme
+
+    var body: some View {
+        HStack(spacing: DS.Space.s2) {
+            Text(symbol).dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                .lineLimit(1)
+            Group {
+                if let chart {
+                    TokenChartPlot(chart: chart,
+                                   accent: TokenChartStyle.accent(change: chart.change, scheme: scheme),
+                                   height: 20, pulses: false)
+                        .mask(alignment: .leading) {
+                            GeometryReader { geo in
+                                Rectangle().frame(width: revealed ? geo.size.width : 0)
+                            }
+                        }
+                } else {
+                    RoundedRectangle(cornerRadius: 5, style: .continuous).fill(DS.surfaceWell)
+                }
+            }
+            .frame(width: 52, height: 20)
+            if let chart {
+                Text(TokenChartStyle.priceText(chart.price))
+                    .dsText(.subhead13).foregroundStyle(DS.textPrimary)
+                    .contentTransition(.numericText())
+                TokenDeltaPill(change: chart.change, label: "1D", compact: true)
+            }
+        }
+        .task(id: "\(refreshTick):\(chain)/\(address)") {
+            guard !chain.isEmpty, !address.isEmpty else { return }
+            revealed = false
+            chart = await TokenChart.fetch(chain: chain, address: address)
+            if chart != nil { withAnimation(.easeOut(duration: 0.7)) { revealed = true } }
+        }
+    }
 }
 
 /// TokenChip(symbol, chain, address, thingId, openable) — a compact token line

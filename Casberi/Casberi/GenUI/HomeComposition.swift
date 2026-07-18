@@ -456,7 +456,19 @@ enum HomeComposition {
         for (i, seed) in ranked.enumerated() {
             let id = "appRow\(i)"
             let item = seed.exemplar
-            doc.append("\(id) = AppRow(\(q(seed.source)), \(q(seed.signal)), \(q(item?.title ?? "")), \(q(item.map { shortTime($0.capturedAt) } ?? "")), \(q(item?.id.uuidString ?? "")))")
+            // The Tokens row keeps its SPARKLINE (user 2026-07-17: "WE NEED
+            // THE SPARKLINE") — the one visual the card form carried that a
+            // text row can't. Args 5-7 hand the renderer the top mover's
+            // chain/address/ticker; its second line becomes the live chip
+            // (sparkline + price + 1D delta, drawn on-device — prd 51: a
+            // token's content IS its chart). Every other app's args 5-7 are
+            // empty and the row stays plain text.
+            var chipSeat = ", \(q("")), \(q("")), \(q(""))"
+            if seed.source == "Tokens", let item,
+               let route = TokenChart.route(from: item.content) {
+                chipSeat = ", \(q(route.chain)), \(q(route.address)), \(q(TokensAsk.symbol(of: item.title)))"
+            }
+            doc.append("\(id) = AppRow(\(q(seed.source)), \(q(seed.signal)), \(q(item?.title ?? "")), \(q(item.map { shortTime($0.capturedAt) } ?? "")), \(q(item?.id.uuidString ?? ""))\(chipSeat))")
             rootRefs.append(id)
         }
     }
