@@ -6,11 +6,12 @@ import SwiftData
 /// local author produces the same document shape from the same facts, and the
 /// engine streams it identically — swapping the source later changes no visuals.
 ///
-/// Voice constraints (Home spec): themes and content, no obligations — with one
-/// deliberate exception, the "Coming up" card (`appendComingUp`, user ruling
-/// 2026-07-14): a deadline IS an obligation, and surfacing it is that card's
-/// whole point. Everything else on the board keeps the no-obligations voice.
-/// Tile sublines read content, not status. Hero: one synthesis statement, facts
+/// Voice constraints (Home spec): themes and content, no obligations. (The
+/// standalone "Coming up" card was retired 2026-07-18 — the intelligence is one
+/// card now, the "Noticed" line; dated events/reminders read off their own
+/// source tiles on the board instead.) Everything on the board keeps the
+/// no-obligations voice. Tile sublines read content, not status. Hero: one
+/// synthesis statement, facts
 /// only, priority project movement > pending decision > imminent event >
 /// bridge arrival. One layout every day (2026-07-12): the weekday-triggered
 /// "Your week, banked" recap and the morning/evening split were removed — the
@@ -79,33 +80,32 @@ enum HomeComposition {
         doc.append(cover(things: things))
         rootRefs.append("cover")
 
-        // Lead with what the app figured out (powerful-Home direction, user
-        // 2026-07-18): "While you were away" — what LANDED since the last visit
-        // — then the synthesized thread, then "Coming up". The board (what you
-        // keep an eye on) drops below all of it, so Home reads as a tool that's
-        // working, not a wall you arranged.
-        appendAway(things, to: &doc, rootRefs: &rootRefs)
-
-        // The "Noticed" line — one genuine cross-thing connection the on-device
-        // model found among recent things (prd §36c reopened: that ruling
-        // removed the deterministic co-occurrence version for manufacturing
-        // connections, and said a real model-written one would be a fresh
-        // build — this is it). The model may DECLINE (nil here), so this is
-        // only ever a real observation, never a forced one. Fixed furniture
-        // like the cover, NOT a board module — it isn't something the person
-        // pinned, so it takes no size pin and no remove badge.
-        if let insight, !insight.isEmpty {
-            doc.append("insight = Insight(\(q(insight)))")
+        // The intelligence is ONE card (user 2026-07-18): "Just landed", "While
+        // you were away", and "Noticed" all convey what's new / what the app
+        // noticed, so they share ONE blue card instead of a cover hero plus two
+        // synthesis cards. Three eyebrow-and-line sections in one `Insight`:
+        //   1. Just landed — the newest thing that ACTUALLY landed (capturedAt
+        //      at or before now; a future calendar event isn't "just landed",
+        //      it surfaces in its own tile). Tappable — opens the thing (arg 6).
+        //   2. While you were away — the firehose-excluded read of what landed
+        //      since the last visit.
+        //   3. Noticed — the on-device model's one genuine cross-thing
+        //      connection (prd §36c reopened; the model may DECLINE, so it's
+        //      only ever a real observation).
+        // Each section is skipped when its line is empty; the card is omitted
+        // only when all three are. "Coming up" stays retired (its dated items
+        // read off their own source tiles). Fixed furniture like the cover, NOT
+        // a board module — no size pin, no remove badge.
+        let landed = things.first { $0.kind != .approval && $0.capturedAt <= .now }
+        let landedLine = landed?.title ?? ""
+        let landedEyebrow = landed.map { String(localized: "Just landed · \($0.source)") } ?? ""
+        let landedID = landed?.id.uuidString ?? ""
+        let away = awayLine(things)
+        let noticed = insight ?? ""
+        if !landedLine.isEmpty || !away.isEmpty || !noticed.isEmpty {
+            doc.append("insight = Insight(\(q(landedLine)), \(q(landedEyebrow)), \(q(away)), \(q(away.isEmpty ? "" : String(localized: "While you were away"))), \(q(noticed)), \(q(noticed.isEmpty ? "" : String(localized: "Noticed"))), \(q(landedID)))")
             rootRefs.append("insight")
         }
-
-        // "Coming up" — the person's own dated things (upcoming events, due
-        // reminders) resurfaced because a deadline is near, leading the board
-        // right under the cover (user ruling 2026-07-14). A deliberate
-        // exception to the Home "no obligations" voice: a deadline IS an
-        // obligation, and surfacing it is the whole point of this card. Shows
-        // only when something is actually due — never an empty card.
-        appendComingUp(things, to: &doc, rootRefs: &rootRefs)
 
         // A quiet day's slot invites more apps (2026-07-10, user — the
         // berry said quiet twice under the quiet cover and did nothing).
@@ -251,7 +251,7 @@ enum HomeComposition {
         // Lifetime kind composition — the same chips every day, no reset.
         let chips = coverChips(things)
         // The chips slot always emits (empty only for an all-approval corpus)
-        // so the id's seat (arg 8) holds its position.
+        // so the id's seat (arg 7) holds its position.
         let chipsSeat = chips.map { ", \($0)" } ?? ", []"
         // Quiet cover — nothing landed today. The words state the quiet; the
         // chips still show the corpus's composition (a quiet day didn't change
@@ -259,22 +259,43 @@ enum HomeComposition {
         if isQuietDay(things) {
             return "cover = Cover(\(q(String(localized: "Today"))), \(q(String(localized: "A quiet day"))), \(q(String(localized: "Nothing new yet — your things keep."))), \(q("")), \(q(date)), \(q("quiet"))\(chipsSeat), \(q("")))"
         }
-        // "Just landed" must name a thing that ACTUALLY landed — the newest
-        // thing whose capturedAt is at or before now. Since the calendar ingest
-        // now reaches a week ahead (and Cal.com/Calendly always did), a future
-        // event carries a future capturedAt and would otherwise sort to the top
-        // and get announced as "Just landed" — a fake status for a dinner three
-        // days out (honesty rule). The future belongs to "Coming up", not here.
-        if let latest = things.first(where: { $0.kind != .approval && $0.capturedAt <= .now }) {
-            // Arg 5 marks the stream complete so the renderer's black field
-            // doesn't flash in before the doc settles. Arg 4 (the old banner
-            // slot) carries the SOURCE — the card leads with its app icon
-            // (2026-07-10, user). Arg 8 is the thing's id — the card opens
-            // what landed (2026-07-11, user).
-            let subline = chips != nil ? "" : "\(latest.kind.typeTag) · \(latest.source)"
-            return "cover = Cover(\(q(String(localized: "Just landed · \(latest.source)"))), \(q(latest.title)), \(q(subline)), \(q(latest.source)), \(q(date)), \(q(latest.kind.typeTag))\(chipsSeat), \(q(latest.id.uuidString)))"
+        // A thing actually landed today — but "Just landed" now LEADS the blue
+        // intelligence card (see `daily`), not a cover hero (user 2026-07-18:
+        // the cover and that card were two cards both conveying what's new). So
+        // the cover here is just the date header + kind chips: empty hero fields
+        // (GenCover draws no hero card when the title is empty).
+        if things.contains(where: { $0.kind != .approval && $0.capturedAt <= .now }) {
+            return "cover = Cover(\(q("")), \(q("")), \(q("")), \(q("")), \(q(date)), \(q(""))\(chipsSeat), \(q("")))"
         }
         return "cover = Cover(\(q(String(localized: "Now"))), \(q(String(localized: "Your things go here"))), \(q(String(localized: "Paste, speak, or share one in."))), \(q("")), \(q(date)), \(q("quiet"))\(chipsSeat), \(q("")))"
+    }
+
+    /// The "While you were away" line — a factual, bounded read of what
+    /// MEANINGFULLY landed since the last visit (AppVisit's frozen window, with
+    /// the Wallet/Tokens firehose and pending approvals excluded, so it's signal
+    /// not "29 mostly wallet spam"). Empty when the gap was trivial or nothing
+    /// meaningful arrived. Shares the ONE intelligence card with the Noticed
+    /// line (user 2026-07-18 — the two are combined, not two cards).
+    private static func awayLine(_ things: [Thing]) -> String {
+        guard let window = AppVisit.away else { return "" }
+        let arrived = things.filter {
+            $0.kind != .approval && !firehoseSources.contains($0.source)
+                && window.contains($0.capturedAt)
+        }
+        guard !arrived.isEmpty else { return "" }
+        // Name the top sources it came from, "You" excluded (a capture isn't an
+        // app news "came from"); the count still totals everything.
+        var bySource: [String: Int] = [:]
+        for t in arrived where t.source != "You" { bySource[t.source, default: 0] += 1 }
+        let top = bySource.sorted {
+            $0.value != $1.value ? $0.value > $1.value : $0.key < $1.key
+        }.prefix(2).map { $0.key }
+        let sources = top.joined(separator: " and ")
+        // The eyebrow ("While you were away") carries the frame, so the body is
+        // a tight count, not a full "since you were last here" sentence.
+        return sources.isEmpty
+            ? String(localized: "\(arrived.count) new")
+            : String(localized: "\(arrived.count) new, mostly from \(sources)")
     }
 
     // MARK: - Cover chips (the corpus's kind composition — ruling 2026-07-12)
@@ -304,6 +325,15 @@ enum HomeComposition {
     /// by the generic pinned-app path like the media shelves are.
     static let graphSources: Set<String> = ["GitHub"]
 
+    /// High-volume auto-ingest sources that own their own Home surfaces — the
+    /// wallet's holdings treemap, the token charts — and would otherwise
+    /// dominate any newest-N read with transaction/price noise. Excluded from
+    /// the synthesis head's aggregate reads (the cover's "+N new" away count and
+    /// the "Noticed" line's candidate window) so those summarize the meaningful
+    /// arrivals, not the firehose. Per-tile signals are unaffected — a Tokens
+    /// tile still shows its own movers.
+    static let firehoseSources: Set<String> = ["Wallet", "Tokens"]
+
     /// A pinned app is one board tile of its recent things (ruling 2026-07-12):
     /// pinning is per-APP now, not per-item — you keep "your reminders" in
     /// view, not one reminder. Each non-image pinned source composes as a
@@ -319,67 +349,6 @@ enum HomeComposition {
     /// same "on the board" set the old single-post card used, now plural.
     /// Sorted by name so the natural order is stable across composes (the
     /// person's own arrangement rides `HomeBoardOrder` on top).
-    /// The "Coming up" card (2026-07-14) — upcoming events and due reminders,
-    /// soonest first, an overdue reminder leading. A plain leading card, NOT a
-    /// board module: no size pin and no "Remove from Home" (there's no pin
-    /// behind it) — it's automatic synthesis like the map, not a thing the
-    /// person pinned. Emitted only when something is due (honesty: no empty
-    /// card, no dead controls). Grouped into day SECTIONS (2026-07-15) — a
-    /// `ComingHead` day divider then that day's rows — always led by Today (even
-    /// empty, a "Nothing scheduled" line) so the card reads as a calendar that
-    /// starts on today rather than jumping to the next event. The WHEN now lives
-    /// in the section header, not each row's trailing slot. Collapsed by
-    /// default since 2026-07-17 (prd §101): the DOC still carries the full
-    /// sectioned lane (3-row budget), but GenComingUp draws one lead row until
-    /// the person expands — the composition doesn't know or care.
-    ///
-    /// Rendered by the dedicated FLAT `ComingUp` component, NOT the generic
-    /// `Widget` (crash fix 2026-07-15): a `Widget` of `Row`s nests each row
-    /// through GenRender → AnyView → GenRow → MountIn → pinnedRowActions, ~12
-    /// view levels deep. Five of those at the top of the EAGER Home head pushed
-    /// the first-frame SwiftUI tree past the 8MB main-stack margin — the
-    /// recurring deep-tree overflow (CLAUDE.md: "flatten the composition tree,
-    /// not more stack"). `GenComingUp` builds header + all headers/rows in ONE
-    /// body, one shallow HStack/VStack per line, no per-line erasure/mount. Both
-    /// `ComingHead(...)` and `Row(...)` children are read straight from `els`.
-    private static func appendComingUp(_ things: [Thing],
-                                       to doc: inout [String],
-                                       rootRefs: inout [String]) {
-        // The card only appears when something's actually coming up (honesty:
-        // no empty card). When it does, it's grouped into day SECTIONS that
-        // always lead with Today — so a person with nothing today sees "Today ·
-        // Nothing scheduled" instead of the card jumping to tomorrow's meeting
-        // (ruling 2026-07-15). `sections` always carries a Today section, so
-        // "coming up" means at least one section actually has a row.
-        let sections = ComingUp.sections(from: things)
-        guard sections.contains(where: { !$0.isEmpty }) else { return }
-
-        // Children are a flat, heterogeneous list of `ComingHead` (a day header,
-        // arg1 "1" when the section is empty) and `Row` lines — GenComingUp
-        // renders them inline in one shallow body, the flat-render law the crash
-        // fix set (CLAUDE.md: any card in the eager Home head must render flat).
-        var childIds: [String] = []
-        var lines: [String] = []
-        var rowN = 0
-        for (s, section) in sections.enumerated() {
-            let headID = "comingUpH\(s)"
-            childIds.append(headID)
-            lines.append("\(headID) = ComingHead(\(q(section.label)), \(q(section.isEmpty ? "1" : "")), \(q(section.isToday ? "1" : "")))")
-            for item in section.items {
-                let t = item.thing
-                let openable = VerbDerivation.verbs(for: t).contains {
-                    if case .openURL = $0.action { return true } else { return false }
-                } ? "app" : ""
-                let rowID = "comingUpC\(rowN)"; rowN += 1
-                childIds.append(rowID)
-                lines.append("\(rowID) = Row(\(q(t.title)), \(q(t.kind.typeTag)), \(q(t.source)), \(q("")), \(q(t.id.uuidString)), \(q(openable)))")
-            }
-        }
-        doc.append("comingUp = ComingUp(\(q(String(localized: "Coming up"))), [\(childIds.joined(separator: ", "))])")
-        doc.append(contentsOf: lines)
-        rootRefs.append("comingUp")
-    }
-
     @MainActor
     private static func appendPinnedApps(_ things: [Thing],
                                          to doc: inout [String],
@@ -426,11 +395,11 @@ enum HomeComposition {
             // Feed's lede about which tokens moved.
             let (ordered, subtitle): ([Thing], String) = {
                 guard source == "Tokens" else {
-                    // Every other tile's subtitle is its live "N new" since the
-                    // last visit — a signal the tile is moving, honest because
-                    // it's bounded to the real away gap. Empty when nothing
-                    // landed while away (no gap, or a quiet source).
-                    return (sourceThings, newSinceAway(sourceThings, window: awayWindow))
+                    // Each tile's subtitle is its sharpest HONEST signal for that
+                    // source (overdue reminders, upcoming events, mentions),
+                    // falling back to "N new" since the last visit. Never a
+                    // guessed status (honesty rule).
+                    return (sourceThings, tileSignal(source, sourceThings, window: awayWindow))
                 }
                 let sorted = TokenWatchOrder.shared.apply(
                     sourceThings, sourceRef: \.sourceRef,
@@ -474,32 +443,38 @@ enum HomeComposition {
         return n > 0 ? String(localized: "\(n) new") : ""
     }
 
-    /// "While you were away" — a factual, bounded read of what LANDED since the
-    /// last visit (AppVisit's frozen away window), leading the synthesis head
-    /// (powerful-Home, user 2026-07-18). Non-obligation voice (states what
-    /// arrived, never what's due) and bounded to the real away gap, so it isn't
-    /// the daily-count noise the cover ruling removed. Absent when the gap was
-    /// trivial or nothing arrived. Rides the shared Insight element with its own
-    /// eyebrow (arg 1). Fixed furniture, not a board module.
-    private static func appendAway(_ things: [Thing],
-                                   to doc: inout [String],
-                                   rootRefs: inout [String]) {
-        guard let window = AppVisit.away else { return }
-        let arrived = things.filter { $0.kind != .approval && window.contains($0.capturedAt) }
-        guard !arrived.isEmpty else { return }
-        // Name the top sources it came from, "You" excluded (a capture isn't an
-        // app you'd say news "came from"); the count still totals everything.
-        var bySource: [String: Int] = [:]
-        for t in arrived where t.source != "You" { bySource[t.source, default: 0] += 1 }
-        let top = bySource.sorted {
-            $0.value != $1.value ? $0.value > $1.value : $0.key < $1.key
-        }.prefix(2).map { $0.key }
-        let sources = top.joined(separator: " and ")
-        let line = sources.isEmpty
-            ? String(localized: "\(arrived.count) new since you were last here.")
-            : String(localized: "\(arrived.count) new since you were last here — mostly from \(sources).")
-        doc.append("away = Insight(\(q(line)), \(q(String(localized: "While you were away"))))")
-        rootRefs.append("away")
+    /// A pinned tile's subtitle — its sharpest HONEST live signal, chosen per
+    /// source and derived entirely from the corpus (never a guessed status,
+    /// e.g. mail "needs a reply", which we can't know). Each source falls back
+    /// to "N new" when it has no sharper honest read. Tokens is handled inline
+    /// (its movers ride cached pulses); this covers every other source.
+    private static func tileSignal(_ source: String, _ things: [Thing],
+                                   window: Range<Date>?) -> String {
+        switch source {
+        case "Reminders", "Todoist":
+            // Overdue leads (a real deadline has passed), else what's still due
+            // — both off `dueAt`, never a done item. Recovers the overdue
+            // prominence the retired "Coming up" card carried (§118).
+            let open = things.filter { $0.mark != .done }
+            let overdue = open.filter { ($0.dueAt ?? .distantFuture) < .now }.count
+            if overdue > 0 { return String(localized: "\(overdue) overdue") }
+            let due = open.filter { ($0.dueAt ?? .distantPast) >= .now }.count
+            if due > 0 { return String(localized: "\(due) due") }
+        case "Calendar", "Cal.com", "Calendly":
+            // What's still ahead — the rows ARE the calendar, so the subtitle
+            // counts upcoming events (a future event's start rides capturedAt,
+            // same read the cover uses to keep the future out of "Just landed").
+            let upcoming = things.filter { $0.kind == .event && $0.capturedAt >= .now }.count
+            if upcoming > 0 { return String(localized: "\(upcoming) upcoming") }
+        case "Bluesky", "Farcaster":
+            // Mentions of you (the enrichment's `socialContext`) — the one
+            // social read worth surfacing over raw recency.
+            let mentions = things.filter { $0.socialContext == "mention" }.count
+            if mentions > 0 { return String(localized: "\(mentions) mentions") }
+        default:
+            break
+        }
+        return newSinceAway(things, window: window)
     }
 
     /// GitHub's pinned tile is its contribution graph — the green-squares year,

@@ -177,15 +177,24 @@ enum OnDeviceModel {
     static var homeInsightInstructions: String {
         """
         You help someone notice a connection across the things they have \
-        saved. Speak TO them as "you" — never write in the first person. \
-        Look at the things listed and find ONE genuine thread that runs \
-        across MORE THAN ONE of them: a subject that shows up in different \
-        apps, or several saves clearly about the same thing. State it in ONE \
-        short plain sentence, grounded only in these things — no metaphors, \
-        no marketing, no preamble, no lists. If there is no real connection \
-        worth noting — if the things are unrelated — reply with exactly the \
-        single word NONE. Never invent a connection just to have something \
-        to say.
+        saved. Speak TO them as "you" — never write in the first person, and \
+        never narrate other people by name or as "he"/"she" doing something \
+        ("Alex went…", "Sam attended…"); if a thing doesn't plainly state who \
+        did what, do not guess. Find ONE genuine thread across MORE THAN ONE \
+        of the things: a shared TOPIC, PROJECT, PLACE, or PERSON the things \
+        are actually about — a subject that shows up across different apps, or \
+        several saves clearly about the same thing. Two items merely being the \
+        same KIND (both transactions, both events) or from the same APP is NOT \
+        a connection worth noting — that is trivial; skip it. State the thread \
+        in ONE short plain sentence, grounded only in these things — no \
+        metaphors, no marketing, no preamble, no lists. Do NOT copy or restate \
+        a single item. Write ONLY the observation itself — never echo the \
+        list's formatting, and never include an app name, a kind label, or a \
+        timestamp (no "— Transaction, from Wallet, 12h", no "from the Wallet \
+        app"). If there is no real thread worth noting — if the things are \
+        unrelated, or the only thing in common is trivial — reply with exactly \
+        the single word NONE. A truthful NONE is better than a forced or \
+        obvious connection.
         """ + LanguageStore.shared.llmLanguageDirective
     }
 
@@ -393,16 +402,59 @@ enum FoundationAnswer {
                 to: OnDeviceModel.homeInsightPrompt(candidates: candidates),
                 generating: HomeNoticeLayout.self)
             let text = response.content.line.trimmingCharacters(in: .whitespacesAndNewlines)
+            #if DEBUG
+            NSLog("[Casberi] homeInsight raw → %@", text)
+            #endif
             // The model declined (NONE), or wrote too little to be a real
             // observation — either way, no line.
             let stripped = text.trimmingCharacters(in: CharacterSet(charactersIn: ".!\"' "))
             if stripped.isEmpty || stripped.uppercased() == "NONE" || text.count < 12 {
                 return nil
             }
+            // Echo guard (honesty rail): the small model sometimes copies one
+            // candidate line back verbatim — scaffolding and all ("Sent … —
+            // Transaction, from Wallet, 12h") — instead of connecting several
+            // things. That's a single-item restatement, never the cross-thing
+            // observation this line promises, so treat it as a decline.
+            if echoesACandidate(text, candidates) { return nil }
             return text
         } catch {
             return nil
         }
+    }
+
+    /// True when `text` is (or contains) a verbatim echo of one candidate — its
+    /// title alone, its whole serialized line, or the "— <kind>, from <source>,"
+    /// metadata fragment that only ever appears in the list's formatting. A real
+    /// observation contains none of those, so this only ever fires on a copy.
+    private static func echoesACandidate(_ text: String, _ candidates: [OnDeviceModel.Candidate]) -> Bool {
+        func norm(_ s: String) -> String {
+            s.lowercased()
+                .replacingOccurrences(of: "\n", with: " ")
+                .replacingOccurrences(of: "  ", with: " ")
+                .trimmingCharacters(in: CharacterSet(charactersIn: ".!\"' "))
+        }
+        let out = norm(text)
+        guard !out.isEmpty else { return true }
+        var titleHits = 0
+        for c in candidates {
+            let title = norm(c.title)
+            let source = norm(c.source)
+            if title == out { return true }
+            if norm("\(c.title) — \(c.kind), from \(c.source), \(c.when)") == out { return true }
+            // Serialization / app-name leaks — pure list formatting, never a
+            // synthesized sentence: ", from ChatGPT," (the numbered line's
+            // metadata) or "the Wallet app" (an app name the line must not
+            // carry). The prompt bans naming apps, so echoing one is a decline.
+            if out.contains(", from \(source)") { return true }
+            if out.contains("\(source) app") { return true }
+            // Count verbatim titles present — three or more means the model
+            // pasted a list of things rather than connecting them (two titles
+            // can be a legitimate connective sentence, "your X and your Y", so
+            // the threshold sits above that to avoid rejecting real prose).
+            if !title.isEmpty, out.contains(title) { titleHits += 1 }
+        }
+        return titleHits >= 3
     }
 
     /// Streams a grounded plain-text synthesis. Bridges the model's response

@@ -404,20 +404,59 @@ private struct GenInsight: View {
     let el: GenEl
     @Environment(\.genProseStreaming) private var streaming
 
-    /// Arg 1 — the eyebrow, "Noticed" when the caller left it empty.
-    private var eyebrow: String {
+    @Environment(\.genThingOpen) private var thingOpen
+
+    /// Section 1's eyebrow (arg 1) — "Noticed" when a single-line caller left
+    /// it empty (`Insight(text)`).
+    private var eyebrow1: String {
         let e = el.str(1)
         return e.isEmpty ? String(localized: "Noticed") : e
     }
 
+    /// The one blue card carries up to THREE eyebrow-and-line sections (user
+    /// 2026-07-18): Home stacks "Just landed" (arg 0/1, tappable to open the
+    /// thing via arg 6), "While you were away" (arg 2/3), and "Noticed" (arg
+    /// 4/5) here — the cover hero and the two synthesis cards were all conveying
+    /// "what's new", so they became ONE card. Each section is skipped when its
+    /// line is empty (a model decline, no away gap, a quiet day with nothing
+    /// fresh); a single-line caller passes only arg 0 and gets exactly the old
+    /// one-section card. Shallow by design — three VStacks, no Widget/Row
+    /// nesting (the eager-head flat-render law, CLAUDE.md).
     var body: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s3) {
+            if !el.str(0).isEmpty {
+                landedOrStreamed
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        let id = el.str(6)
+                        if !id.isEmpty { thingOpen?(id) }
+                    }
+            }
+            if !el.str(2).isEmpty {
+                lineSection(eyebrow: el.str(3), body: el.str(2))
+            }
+            if !el.str(4).isEmpty {
+                lineSection(eyebrow: el.str(5), body: el.str(4))
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(DS.Space.s4)
+        .background(DS.tintDim, in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+        .padding(.horizontal, DS.Space.s4)
+        .padding(.top, DS.Space.s4)
+    }
+
+    /// Section 1's body — the streaming dot rides here for a live single-line
+    /// caller; for Home this is the static "Just landed" line.
+    @ViewBuilder private var landedOrStreamed: some View {
         VStack(alignment: .leading, spacing: DS.Space.s1) {
-            Text(eyebrow)
+            Text(eyebrow1)
                 .dsText(.label12)
                 .foregroundStyle(DS.textSecondary)
             if streaming {
-                // The model is still writing — one small dot breathes after
-                // the last character. No shimmer, no skeleton (§2).
+                // The model is still writing — one small dot breathes after the
+                // last character. No shimmer, no skeleton (§2).
                 TimelineView(.animation) { ctx in
                     let t = ctx.date.timeIntervalSinceReferenceDate
                     let phase = (sin(t * 2 * .pi) + 1) / 2
@@ -436,11 +475,20 @@ private struct GenInsight: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
+    }
+
+    /// A plain eyebrow-and-line section (the away / Noticed lines).
+    private func lineSection(eyebrow: String, body: String) -> some View {
+        VStack(alignment: .leading, spacing: DS.Space.s1) {
+            Text(eyebrow)
+                .dsText(.label12)
+                .foregroundStyle(DS.textSecondary)
+            Text(body)
+                .dsText(.callout15)
+                .foregroundStyle(DS.textPrimary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(DS.Space.s4)
-        .background(DS.tintDim, in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
-        .padding(.horizontal, DS.Space.s4)
-        .padding(.top, DS.Space.s4)
     }
 }
 
@@ -517,8 +565,24 @@ private struct GenWidget: View {
             // span so a Row renders its lineForm, not its own square tile — and
             // carry the tile's "Remove from Home" so a long-press on any row can
             // drop the app (each row's own contextMenu shadows the card's).
-            ForEach(rowRefs, id: \.self) {
-                GenRender(id: $0, els: els, slot: .row)
+            //
+            // Rendered FLAT (crash fix 2026-07-17): rows dispatch straight on
+            // the child's component — the same switch `soloContent` already
+            // uses — instead of GenRender → AnyView → component → mountIn per
+            // row. Auto-pin (§117) multiplied the board's tiles and every tile
+            // carried up to three of those ~12-level row subtrees inside an
+            // EAGER MagazineLayout; a scroll-time AttributeGraph cascade over
+            // that forest overflowed the 8MB main stack INSIDE
+            // `GenWidget.card.getter` (KERN_PROTECTION_FAILURE on the stack
+            // guard; the recurring deep-tree class — CLAUDE.md: "flatten the
+            // composition tree, not more stack"; same remedy as GenComingUp).
+            // The card as a whole still mountIn()s, so entrance still animates;
+            // a widget row's set is fixed (Row/MailRow/PostRow/TokenChip —
+            // exactly what `appChild` emits), so the direct dispatch can't
+            // strand a component the generic path would have caught: an unknown
+            // comp draws the same skeleton slot GenRender's .row slot drew.
+            ForEach(rowRefs, id: \.self) { ref in
+                rowContent(ref)
                     .environment(\.genSpan, pinned ? ModuleSpan?.none : span)
                     .environment(\.genAppRemove, pinned ? { sourceUnpin?(id) } : nil)
             }
@@ -528,6 +592,24 @@ private struct GenWidget: View {
         .dsWidgetSurface()
         .padding(.horizontal, DS.Space.s4)
         .padding(.top, DS.Space.s4)
+    }
+
+    /// One row of the card, flat: the concrete row view for the child's
+    /// component, no GenRender/AnyView/mountIn wrapper (see the crash-fix
+    /// comment at the call site). An unresolved ref (still streaming) draws
+    /// the same skeleton row the generic path's `.row` slot drew.
+    @ViewBuilder private func rowContent(_ ref: String) -> some View {
+        if let child = els[ref] {
+            switch child.comp {
+            case "Row":       GenRow(id: ref, el: child)
+            case "MailRow":   GenMailRow(el: child)
+            case "PostRow":   GenPostRow(el: child)
+            case "TokenChip": GenTokenChip(el: child)
+            default:          GenSkeletonRow()
+            }
+        } else {
+            GenSkeletonRow()
+        }
     }
 
     /// The small-span solo tile — dispatches on the one child's component so
@@ -2427,52 +2509,54 @@ private struct GenCover: View {
             if !chips.isEmpty {
                 KindCountRow(items: chips, ink: coverInk)
             }
-            HStack(alignment: .top, spacing: DS.Space.s3) {
-                // The source's icon leads the card (2026-07-10, user) — the
-                // old banner ref slot (arg 4) carries the source name.
-                if !el.str(3).isEmpty {
-                    BridgeIcon(name: el.str(3), size: 28)
-                }
-                VStack(alignment: .leading, spacing: DS.Space.s1) {
-                    Text(el.str(0))
-                        .dsText(.label12)
-                        .foregroundStyle(DS.textSecondary)
-                    Text(el.str(1))
-                        // The display-tier ramp token (36g: SF Rounded lives
-                        // there) — no off-ramp sizes (2026-07-10, user).
-                        .dsText(.heading22)
-                        .foregroundStyle(DS.textPrimary)
-                        .lineLimit(2)
-                        .minimumScaleFactor(0.7)
-                        .fixedSize(horizontal: false, vertical: true)
-                    if !el.str(2).isEmpty {
-                        Text(el.str(2))
-                            .dsText(.subhead13)
+            // The hero card shows only for the quiet/empty STATES ("A quiet
+            // day", "Your things go here") — a non-empty title (arg 1). When a
+            // thing actually landed, "Just landed" now leads the blue
+            // intelligence card instead (user 2026-07-18: the cover and that
+            // card were two cards both conveying what's new), so here the cover
+            // is just the date header + kind chips.
+            if !el.str(1).isEmpty {
+                HStack(alignment: .top, spacing: DS.Space.s3) {
+                    // The source's icon leads the card (2026-07-10, user) — the
+                    // old banner ref slot (arg 4) carries the source name.
+                    if !el.str(3).isEmpty {
+                        BridgeIcon(name: el.str(3), size: 28)
+                    }
+                    VStack(alignment: .leading, spacing: DS.Space.s1) {
+                        Text(el.str(0))
+                            .dsText(.label12)
                             .foregroundStyle(DS.textSecondary)
+                        Text(el.str(1))
+                            // The display-tier ramp token (36g: SF Rounded lives
+                            // there) — no off-ramp sizes (2026-07-10, user).
+                            .dsText(.heading22)
+                            .foregroundStyle(DS.textPrimary)
+                            .lineLimit(2)
+                            .minimumScaleFactor(0.7)
+                            .fixedSize(horizontal: false, vertical: true)
+                        if !el.str(2).isEmpty {
+                            Text(el.str(2))
+                                .dsText(.subhead13)
+                                .foregroundStyle(DS.textSecondary)
+                        }
                     }
                 }
-            }
-            // Inner horizontal padding matches GenWidget's rows (s4), so
-            // every card's content starts on ONE line (2026-07-10, user:
-            // "Just landed" and the section labels didn't align).
-            .padding(.horizontal, DS.Space.s4)
-            .padding(.vertical, DS.Space.s3)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            // The same sheet surface every other card wears — opaque, so
-            // its own inks hold on any wallpaper behind it.
-            .background(DS.surfaceSheet,
-                        in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
-            // What landed opens (2026-07-11, user: "shouldn't a user be
-            // able to tap it and go to it?") — the pinned tiles' tap, on
-            // the one freshest thing. The id streams in last, so the card
-            // simply isn't tappable until the line completes. An "@"-prefixed
-            // id still routes to the surface tap handler (projectTap) for any
-            // future sentinel, but the cover emits a real thing id now.
-            .contentShape(RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
-            .onTapGesture {
-                let id = el.str(7)
-                guard !id.isEmpty else { return }
-                if id.hasPrefix("@") { projectTap?(id) } else { thingOpen?(id) }
+                // Inner horizontal padding matches GenWidget's rows (s4), so
+                // every card's content starts on ONE line (2026-07-10, user:
+                // "Just landed" and the section labels didn't align).
+                .padding(.horizontal, DS.Space.s4)
+                .padding(.vertical, DS.Space.s3)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                // The same sheet surface every other card wears — opaque, so
+                // its own inks hold on any wallpaper behind it.
+                .background(DS.surfaceSheet,
+                            in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+                .contentShape(RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+                .onTapGesture {
+                    let id = el.str(7)
+                    guard !id.isEmpty else { return }
+                    if id.hasPrefix("@") { projectTap?(id) } else { thingOpen?(id) }
+                }
             }
         }
         .padding(DS.Space.s4)

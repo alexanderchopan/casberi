@@ -384,20 +384,18 @@ struct HandleSetupScreen: View {
             if bridge == .bluesky {
                 feedsSection.listRowSeparator(.hidden)
             }
-            // Pin to Home (and its auto-social inverse) sits above the recent
-            // list — the same spot every app screen puts it (user, 2026-07-14),
-            // so it's never a long scroll away. Every connected account is
-            // pinnable (ruling 2026-07-12) — except the auto-social ones
-            // (Bluesky/Farcaster), which show by default and carry the inverse
-            // "Show on Home" toggle instead. Shown once the account has landed
-            // a thing — an empty source composes no tile, so its pin would be a
-            // dead control.
-            if !bridge.currentName.isEmpty, !recent.isEmpty,
-               !HomePinnedSources.autoSocial.contains(bridge.rawValue) {
-                pinToHomeSection.listRowSeparator(.hidden)
-            }
-            if bridge.isConnected, HomePinnedSources.autoSocial.contains(bridge.rawValue) {
-                showOnHomeSection.listRowSeparator(.hidden)
+            // Home visibility sits above the recent list — the same spot every
+            // app screen puts it (user, 2026-07-14), never a long scroll away.
+            // Under auto-pin (user 2026-07-18) the old split — a non-social "Pin
+            // to Home" vs an auto-social "Show on Home" — collapsed into the ONE
+            // shared `PinToHomeButton` ("On Home"/"Show on Home", isOnHome/
+            // setOnHome) the moment every source became show-unless-hidden. Shown
+            // once the account has a Home tile to toggle (an empty source
+            // composes none, so the control would be dead).
+            if hasHomeTile {
+                PinToHomeButton(source: bridge.rawValue, inSection: true,
+                                footer: homeVisibilityFooter)
+                    .listRowSeparator(.hidden)
             }
             if !recent.isEmpty {
                 RecentThingsSection(header: bridge.recentHeader, things: recent,
@@ -455,59 +453,22 @@ struct HandleSetupScreen: View {
         }
     }
 
-    /// Pin to Home (prd 58, Goal 4) — the board grows from the catalog:
-    /// connecting an account can end here, without waiting for it to earn
-    /// a card the automatic way. Same verb, both directions, as Wallet's
-    /// own per-address pin.
-    private var pinnedToHome: Bool { HomePinnedSources.shared.isPinned(bridge.rawValue) }
-
-    private var pinToHomeSection: some View {
-        Section {
-            Button {
-                HomePinnedSources.shared.toggle(bridge.rawValue)
-                CorpusSignal.shared.bump()
-                DSHaptic.tap()
-            } label: {
-                HStack(spacing: DS.Space.s2) {
-                    Image(systemName: pinnedToHome ? "pin.fill" : "pin")
-                    Text(pinnedToHome ? "Pinned to Home" : "Pin to Home")
-                    Spacer()
-                }
-                .dsText(.body17).foregroundStyle(pinnedToHome ? DS.tint : DS.textPrimary)
-            }
-            .buttonStyle(.plain)
-        }
+    /// Whether the account has a Home tile to toggle: an auto-social source
+    /// (Bluesky/Farcaster) once connected — its latest post shows by default;
+    /// any other source once it's landed a thing — an empty source composes no
+    /// tile, so the control would be dead. The control itself is the shared
+    /// `PinToHomeButton` (auto-pin, user 2026-07-18) either way.
+    private var hasHomeTile: Bool {
+        if HomePinnedSources.autoSocial.contains(bridge.rawValue) { return bridge.isConnected }
+        return !bridge.currentName.isEmpty && !recent.isEmpty
     }
 
-    /// Show on Home — the inverse of "Pin to Home" for auto-social sources
-    /// (Bluesky/Farcaster): their latest post shows by default, so this brings
-    /// back a card the person removed (long-press → Remove from Home, or this
-    /// toggle) rather than opting one in. Management lives on the source's own
-    /// screen, per ruling 58a.
-    private var shownOnHome: Bool { !HomePinnedSources.shared.isHidden(bridge.rawValue) }
-
-    private var showOnHomeSection: some View {
-        Section {
-            Button {
-                // shownOnHome true means visible → hide; false means hidden → show.
-                HomePinnedSources.shared.setHidden(bridge.rawValue, shownOnHome)
-                CorpusSignal.shared.bump()
-                DSHaptic.tap()
-            } label: {
-                HStack(spacing: DS.Space.s2) {
-                    Image(systemName: shownOnHome ? "pin.fill" : "pin.slash")
-                    Text(shownOnHome ? "On Home" : "Show on Home")
-                    Spacer()
-                }
-                .dsText(.body17).foregroundStyle(shownOnHome ? DS.tint : DS.textPrimary)
-            }
-            .buttonStyle(.plain)
-        } footer: {
-            Text(shownOnHome
-                 ? "Your latest \(bridge.rawValue) post shows on Home. Turn this off — or long-press the card — to remove it."
-                 : "Removed from Home. Turn this on to show your latest \(bridge.rawValue) post again.")
-                .dsText(.callout15).foregroundStyle(DS.textTertiary)
-        }
+    /// The auto-socials get a line naming what shows (their latest post);
+    /// a generic source needs none (its tile is self-evident).
+    private var homeVisibilityFooter: String? {
+        HomePinnedSources.autoSocial.contains(bridge.rawValue)
+            ? "Your latest \(bridge.rawValue) post shows on Home. Turn this off — or long-press the card — to remove it."
+            : nil
     }
 
     /// Close the loop (delight 2026-07-14): the first connect ends with a
@@ -970,11 +931,11 @@ struct HandleSetupScreen: View {
         return faces
     }
 
-    /// Whether landing on Home would actually show this source — the auto
-    /// socials show by default, others only once pinned. Keeps the "See it on
-    /// Home" hint from pointing at a board that wouldn't show the new card.
+    /// Whether landing on Home would actually show this source — under auto-pin
+    /// (user 2026-07-18) every connected source shows unless removed, so this is
+    /// just "not hidden". Keeps the "See it on Home" hint from pointing at a
+    /// board that wouldn't show the new card.
     private var landsOnHome: Bool {
-        HomePinnedSources.autoSocial.contains(bridge.rawValue)
-            || HomePinnedSources.shared.isPinned(bridge.rawValue)
+        HomePinnedSources.shared.isOnHome(bridge.rawValue)
     }
 }

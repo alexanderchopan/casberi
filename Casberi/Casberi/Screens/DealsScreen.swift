@@ -91,30 +91,14 @@ struct DealsScreen: View {
         }
     }
 
-    private var pinnedToHome: Bool { HomePinnedSources.shared.isPinned("Deals") }
-
+    // The one shared Home-visibility control (auto-pin, user 2026-07-18):
+    // "On Home" by default, "Show on Home" once removed — routes through
+    // `isOnHome`/`setOnHome` like every other source, so the label and the
+    // action match the board (the hand-rolled "Pin to Home" button read the
+    // empty explicit-pin set and mis-reported an auto-pinned source as unpinned).
     private var pinToHomeSection: some View {
-        Section {
-            Button {
-                HomePinnedSources.shared.toggle("Deals")
-                CorpusSignal.shared.bump()
-                DSHaptic.tap()
-            } label: {
-                HStack(spacing: DS.Space.s2) {
-                    Image(systemName: pinnedToHome ? "pin.fill" : "pin")
-                    Text(pinnedToHome ? "Pinned to Home" : "Pin to Home")
-                }
-                .dsText(.body17).foregroundStyle(pinnedToHome ? DS.tint : DS.textPrimary)
-                .frame(maxWidth: .infinity).frame(height: 44)
-                .background(pinnedToHome ? DS.tintDim : DS.gray100,
-                            in: Capsule(style: .continuous))
-            }
-            .buttonStyle(.plain)
-            .listRowBackground(Color.clear)
-        } footer: {
-            Text("The latest deals ride a strip on Home.")
-                .dsText(.callout15).foregroundStyle(DS.textTertiary)
-        }
+        PinToHomeButton(source: "Deals", inSection: true,
+                        footer: "The latest deals ride a strip on Home.")
     }
 
     private var footerSection: some View {

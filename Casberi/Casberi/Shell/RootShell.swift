@@ -383,6 +383,21 @@ struct RootShell: View {
                       items.map { "\($0.thing.kind.typeTag) · \($0.thing.title) — \(ComingUp.label(for: $0))" }
                           .joined(separator: "\n"))
             }
+            // Debug hook: `-homeInsightProbe YES` runs the on-device "Noticed"
+            // line over the current corpus (bypassing the cache), logging the
+            // candidates fed, the raw model text, and the post-guard result, so
+            // the line's voice/quality/decline-rate can be sampled headlessly.
+            if UserDefaults.standard.bool(forKey: "homeInsightProbe") {
+                let delay = UserDefaults.standard.double(forKey: "probeDelay")
+                Task { @MainActor in
+                    if delay > 0 { try? await Task.sleep(for: .seconds(delay)) }
+                    let all = (try? modelContext.fetch(FetchDescriptor<Thing>())) ?? []
+                    let surfaced = Corpus.surfaced(all)
+                        .sorted { $0.capturedAt > $1.capturedAt }
+                    let line = await HomeInsightStore.shared.debugProbe(from: surfaced)
+                    NSLog("[Casberi] homeInsightProbe result → %@", line ?? "NONE (declined)")
+                }
+            }
             // Debug hooks for the BYO-key path: `-byokKey <key>` stores a key
             // headlessly — an optional "provider:" prefix picks the agent
             // ("venice:vk-…"; bare keys stay Anthropic), "clear" removes every

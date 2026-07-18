@@ -53,7 +53,7 @@ final class HomeInsightStore {
             if line != nil { line = nil; persist() }
             return
         }
-        let recent = Array(things.prefix(Self.window))
+        let recent = Self.window(from: things)
         let sig = Self.signature(of: recent)
         guard sig != signature, !running else { return }
         // Too few things to notice anything ACROSS — no line, but remember the
@@ -87,7 +87,22 @@ final class HomeInsightStore {
     /// How many of the newest things the line is written from — enough for a
     /// real cross-source connection, capped so the prompt fits the on-device
     /// context window (the same budget `RootShell.answerSnippet` sizes for).
-    private static let window = 18
+    private static let windowSize = 18
+
+    /// The things the line is written from: the newest `windowSize`, with the
+    /// Wallet/Tokens firehose excluded. Those sources auto-ingest at high volume
+    /// and own their own Home surfaces (the wallet treemap, token charts), so in
+    /// the newest-N window they crowd out the meaningful saves and the small
+    /// model latches onto "Sent X TOKEN" spam — measured 2026-07-18: 8 of 18
+    /// were transactions/watchlist links, and the line either echoed one or
+    /// fabricated a story around them. Dropping them leaves the window for what
+    /// the person actually saved (notes, chats, events, articles), which is what
+    /// a "Noticed a connection" line is about. Not a manufactured connection —
+    /// just better evidence.
+    private static func window(from things: [Thing]) -> [Thing] {
+        Array(things.lazy.filter { $0.source != "Wallet" && $0.source != "Tokens" }
+            .prefix(windowSize))
+    }
 
     /// A stable signature of the recent set plus the calendar day, so the line
     /// refreshes when new things land or the day turns — and only then.
@@ -128,4 +143,22 @@ final class HomeInsightStore {
         if s < 86_400 { return "\(Int(s / 3600))h" }
         return "\(Int(s / 86_400))d"
     }
+
+    #if DEBUG
+    /// `-homeInsightProbe` support — run the line over `things` bypassing the
+    /// cache, logging the candidates fed and the post-guard result (nil =
+    /// declined), so the prompt's voice/decline-rate can be sampled headlessly.
+    /// The raw model text is logged separately by `FoundationAnswer.homeInsight`.
+    func debugProbe(from things: [Thing]) async -> String? {
+        let recent = Self.window(from: things)
+        let candidates = recent.map(Self.candidate)
+        let listing = candidates.enumerated().map { i, c in
+            var l = "\(i + 1). \(c.title) — \(c.kind), from \(c.source), \(c.when)"
+            if !c.note.isEmpty { l += "\n   \"\(c.note)\"" }
+            return l
+        }.joined(separator: "\n")
+        NSLog("[Casberi] homeInsightProbe candidates (%d):\n%@", candidates.count, listing)
+        return await OnDeviceModel.homeInsight(candidates: candidates)
+    }
+    #endif
 }
