@@ -107,7 +107,11 @@ enum HomeComposition {
         // specific door available: the thing the model's connection ran
         // through (`insightThing`), else what just landed, else the feed
         // (whose "New since" divider marks the away window).
-        let landed = things.first { $0.kind != .approval && $0.capturedAt <= .now }
+        // Firehose-excluded like every aggregate read (§119): a token-watch
+        // refresh re-landing "dogwifhat · $WIF" isn't the day's headline.
+        let landed = things.first {
+            $0.kind != .approval && !firehoseSources.contains($0.source) && $0.capturedAt <= .now
+        }
         let landedSentence = landed.map { String(localized: "Just landed: \($0.title).") } ?? ""
         let away = awayLine(things)
         let noticed = insight ?? ""
@@ -403,22 +407,21 @@ enum HomeComposition {
         // static list of recent items (tiles-as-signals, powerful-Home).
         let awayWindow = AppVisit.away
 
-        // Pass 1 — each source's rows and its signal. The watchlist leads with
-        // what MOVED (2026-07-15): the shared TokenWatchOrder (movers by
-        // default) reorders the FULL set before the three-row cap, and the
-        // subtitle names the day's up/down split from the SAME cached pulses,
-        // so Home can never disagree with Feed's lede about which tokens moved.
-        // Every other source rides `tileSignal` (overdue / upcoming / mentions,
-        // else "N new" — honest, never guessed).
-        struct TileSeed { let source: String; let ordered: [Thing]
-                          let subtitle: String; let rank: Int }
-        let seeds: [TileSeed] = onBoard.compactMap { source in
+        // Pass 1 — each source's signal and the thing it points at. The
+        // watchlist's signal is its movers split, from the SAME cached pulses
+        // Feed's lede reads, so the two can never disagree; its exemplar is
+        // the top mover (TokenWatchOrder). Every other source rides
+        // `tileSignal` (overdue / upcoming / mentions, else "N new" — honest,
+        // never guessed).
+        struct RowSeed { let source: String; let exemplar: Thing?
+                         let signal: String; let rank: Int }
+        let seeds: [RowSeed] = onBoard.compactMap { source in
             let sourceThings = bySource[source] ?? []
             guard !sourceThings.isEmpty else { return nil }
             guard source == "Tokens" else {
-                let (subtitle, rank) = tileSignal(source, sourceThings, window: awayWindow)
-                return TileSeed(source: source, ordered: sourceThings,
-                                subtitle: subtitle, rank: rank)
+                let (signal, rank, exemplar) = tileSignal(source, sourceThings, window: awayWindow)
+                return RowSeed(source: source, exemplar: exemplar,
+                               signal: signal, rank: rank)
             }
             let sorted = TokenWatchOrder.shared.apply(
                 sourceThings, sourceRef: \.sourceRef,
@@ -426,80 +429,37 @@ enum HomeComposition {
             // Two watched tokens minimum (WatchlistLede's own rule) — one
             // token's row already says everything about itself.
             let pulses = sourceThings.compactMap { TokenPulse.shared.pulse(for: $0) }
-            guard pulses.count >= 2 else {
-                return TileSeed(source: source, ordered: sorted, subtitle: "", rank: 0)
-            }
             let up = pulses.filter { $0.change24h > 0 }.count
             let down = pulses.filter { $0.change24h < 0 }.count
             var parts: [String] = []
-            if up > 0 { parts.append(String(localized: "\(up) up")) }
-            if down > 0 { parts.append(String(localized: "\(down) down")) }
-            let subtitle = parts.joined(separator: " · ")
-            return TileSeed(source: source, ordered: sorted,
-                            subtitle: subtitle, rank: subtitle.isEmpty ? 0 : 1)
+            if pulses.count >= 2, up > 0 { parts.append(String(localized: "\(up) up")) }
+            if pulses.count >= 2, down > 0 { parts.append(String(localized: "\(down) down")) }
+            let signal = parts.joined(separator: " · ")
+            return RowSeed(source: source, exemplar: sorted.first,
+                           signal: signal, rank: signal.isEmpty ? 0 : 1)
         }
 
-        // Pass 2 — signal-driven order (tool-does-the-triage, 2026-07-17):
-        // what needs you (overdue, mentions) floats above what merely moved,
-        // quiet tiles sink; name is the stable tiebreak so equal-signal tiles
-        // never reshuffle between composes. The person's own arrangement
-        // still WINS outright — HomeBoardOrder applies their saved order on
-        // top of this natural one, so ranking only decides where an
-        // un-arranged tile first lands.
-        var ranked = seeds.sorted {
+        // Pass 2 — ONE ROW PER APP (user ruling 2026-07-17: "a row is all
+        // they get; otherwise go to the app's feed"). The bento's three
+        // costumes for one app — solo tile, 1-row card, 3-row card — read as
+        // no rule at all; now every app is exactly one row (icon · name ·
+        // signal · the thing the signal points at), tapping opens that app's
+        // feed, and CARDS exist only for true visualizations (the wallet
+        // treemap, the GitHub graph, the media strips — they compose
+        // elsewhere and stay board modules). Rows are fixed furniture in
+        // signal order (what needs you first, name the stable tiebreak) —
+        // not draggable, not resizable, not capped (a row costs one line, so
+        // the "Show N more" expander died with the cards).
+        let ranked = seeds.sorted {
             $0.rank != $1.rank ? $0.rank > $1.rank : $0.source < $1.source
         }
-
-        // The board is BOUNDED (2026-07-17): auto-pin grows tiles with every
-        // connected source, and an eager MagazineLayout pays for all of them
-        // on the first frame (the stack-overflow class this board already hit
-        // twice). Past the cap, the quiet tail collapses behind one "Show N
-        // more" line (`MoreTiles`, rendered by HomeScreen below the board —
-        // subtract-model: the strongest-signal tiles stay, nothing is lost,
-        // one tap shows all and the choice sticks). Signal order guarantees
-        // the cap only ever hides the quietest tiles.
-        let showAll = UserDefaults.standard.bool(forKey: "home.board.showAll")
-        if !showAll, ranked.count > boardTileCap {
-            let hidden = ranked.count - boardTileCap
-            ranked = Array(ranked.prefix(boardTileCap))
-            doc.append("moreTiles = MoreTiles(\(q("\(hidden)")))")
-        }
-
-        for (emitted, seed) in ranked.enumerated() {
-            let source = seed.source
-            let id = "appTile\(emitted)"
-            let mail = source == "Gmail" || source == "iCloud Mail"
-            let social = HomePinnedSources.autoSocial.contains(source)
-            // Three is the ceiling now (2026-07-14): big shows all three as a
-            // card, wide shows the first as one line, small shows it
-            // full-size — no span ever needs a fourth.
-            let items = Array(seed.ordered.prefix(3))
-            let childIds = items.indices.map { "\(id)c\($0)" }
-            // Arg 4 carries the signal RANK so HomeScreen's default span can
-            // give a needs-you tile (overdue/mentions/due) a wide opening
-            // without parsing the localized subtitle. GenWidget ignores it.
-            // The header is the app's OWN NAME (user 2026-07-17: "'On your
-            // list' — shouldn't it just be called what it is, 'Reminders'?").
-            // The bespoke-phrase map (appTitle: "On your list", "In your
-            // inbox", "Watchlist"…) was the last of the cute layer — a tile
-            // announces which app it is, and the signal subtitle beside it
-            // carries the state; a phrase carried neither.
-            doc.append("\(id) = Widget(\(q(source)), \(q(seed.subtitle)), [\(childIds.joined(separator: ", "))], \(q(source)), \(q("\(seed.rank)")))")
-            for (i, t) in items.enumerated() {
-                doc.append(appChild(id: "\(id)c\(i)", t, mail: mail, social: social))
-            }
+        for (i, seed) in ranked.enumerated() {
+            let id = "appRow\(i)"
+            let item = seed.exemplar
+            doc.append("\(id) = AppRow(\(q(seed.source)), \(q(seed.signal)), \(q(item?.title ?? "")), \(q(item.map { shortTime($0.capturedAt) } ?? "")), \(q(item?.id.uuidString ?? "")))")
             rootRefs.append(id)
-            boardRefs.append(id)
-            // Key by SOURCE so the tile's size/slot survive other apps being
-            // pinned/unpinned above it — matches HomePinnedSources.boardKey.
-            boardKeys[id] = "app:\(source)"
         }
     }
-
-    /// The most app tiles the board shows before collapsing the quiet tail
-    /// behind "Show N more" — enough for every signal-bearing tile on a busy
-    /// day, few enough that the eager board's first frame stays bounded.
-    private static let boardTileCap = 6
 
     /// A tile's "N new" subtitle — how many of its things landed inside the
     /// away window (what changed since the last visit). Empty when there's no
@@ -517,37 +477,49 @@ enum HomeComposition {
     /// to "N new" when it has no sharper honest read. Tokens is handled inline
     /// (its movers ride cached pulses); this covers every other source.
     ///
-    /// The RANK orders the board (signal-driven, 2026-07-17) and steers the
-    /// default span: what needs you outranks what merely moved —
-    /// overdue 5 > mentions 4 > due 3 > upcoming 2 > new/movers 1 > quiet 0.
+    /// The RANK orders the rows (signal-driven, 2026-07-17): what needs you
+    /// outranks what merely moved — overdue 5 > mentions 4 > due 3 >
+    /// upcoming 2 > new/movers 1 > quiet 0. The EXEMPLAR is the one thing the
+    /// signal points at — the row shows IT, not just the newest item: the
+    /// most-overdue reminder, the next event, the latest mention.
     private static func tileSignal(_ source: String, _ things: [Thing],
-                                   window: Range<Date>?) -> (String, Int) {
+                                   window: Range<Date>?) -> (String, Int, Thing?) {
         switch source {
         case "Reminders", "Todoist":
             // Overdue leads (a real deadline has passed), else what's still due
             // — both off `dueAt`, never a done item. Recovers the overdue
             // prominence the retired "Coming up" card carried (§118).
             let open = things.filter { $0.mark != .done }
-            let overdue = open.filter { ($0.dueAt ?? .distantFuture) < .now }.count
-            if overdue > 0 { return (String(localized: "\(overdue) overdue"), 5) }
-            let due = open.filter { ($0.dueAt ?? .distantPast) >= .now }.count
-            if due > 0 { return (String(localized: "\(due) due"), 3) }
+            let overdue = open.filter { ($0.dueAt ?? .distantFuture) < .now }
+            if !overdue.isEmpty {
+                return (String(localized: "\(overdue.count) overdue"), 5,
+                        overdue.min { ($0.dueAt ?? .now) < ($1.dueAt ?? .now) })
+            }
+            let due = open.filter { ($0.dueAt ?? .distantPast) >= .now }
+            if !due.isEmpty {
+                return (String(localized: "\(due.count) due"), 3,
+                        due.min { ($0.dueAt ?? .now) < ($1.dueAt ?? .now) })
+            }
         case "Calendar", "Cal.com", "Calendly":
-            // What's still ahead — the rows ARE the calendar, so the subtitle
-            // counts upcoming events (a future event's start rides capturedAt,
-            // same read the cover uses to keep the future out of "Just landed").
-            let upcoming = things.filter { $0.kind == .event && $0.capturedAt >= .now }.count
-            if upcoming > 0 { return (String(localized: "\(upcoming) upcoming"), 2) }
+            // What's still ahead — a future event's start rides capturedAt,
+            // same read the cover uses to keep the future out of "Just landed".
+            let upcoming = things.filter { $0.kind == .event && $0.capturedAt >= .now }
+            if !upcoming.isEmpty {
+                return (String(localized: "\(upcoming.count) upcoming"), 2,
+                        upcoming.min { $0.capturedAt < $1.capturedAt })
+            }
         case "Bluesky", "Farcaster":
             // Mentions of you (the enrichment's `socialContext`) — the one
             // social read worth surfacing over raw recency.
-            let mentions = things.filter { $0.socialContext == "mention" }.count
-            if mentions > 0 { return (String(localized: "\(mentions) mentions"), 4) }
+            let mentions = things.filter { $0.socialContext == "mention" }
+            if !mentions.isEmpty {
+                return (String(localized: "\(mentions.count) mentions"), 4, mentions.first)
+            }
         default:
             break
         }
         let fresh = newSinceAway(things, window: window)
-        return (fresh, fresh.isEmpty ? 0 : 1)
+        return (fresh, fresh.isEmpty ? 0 : 1, things.first)
     }
 
     /// GitHub's pinned tile is its contribution graph — the green-squares year,
@@ -573,38 +545,10 @@ enum HomeComposition {
     // it just be called what it is?") — a tile's header is the app's own name,
     // and the live signal subtitle carries the state.
 
-    /// One line inside a pinned app tile — a live TokenChip (sparkline + price)
-    /// for a token link (Tokens: a token's content IS its chart, prd 51), a
-    /// PostRow for Bluesky/Farcaster (the author's own avatar leads, same as the
-    /// old single-post card carried), a MailRow for the inboxes (subject +
-    /// snippet), a plain tappable Row for everything else. All carry the thing
-    /// id so a tap opens it, and the hand-off flag so "Open in app" appears
-    /// only when it goes somewhere.
-    private static func appChild(id: String, _ t: Thing, mail: Bool, social: Bool = false) -> String {
-        let openable = VerbDerivation.verbs(for: t).contains {
-            if case .openURL = $0.action { return true } else { return false }
-        } ? "app" : ""
-        if t.kind == .link, let route = TokenChart.route(from: t.content) {
-            return "\(id) = TokenChip(\(q(tickerSymbol(t.title))), \(q(route.chain)), \(q(route.address)), \(q(t.id.uuidString)), \(q(openable)))"
-        }
-        if social {
-            return "\(id) = PostRow(\(q(t.authorHandle ?? "")), \(q(t.title)), \(q(t.authorAvatarURL ?? "")), \(q(t.id.uuidString)), \(q(openable)))"
-        }
-        if mail {
-            let snippet = String(t.content.prefix(120))
-            return "\(id) = MailRow(\(q(t.title)), \(q(snippet)), \(q(shortTime(t.capturedAt))), \(q(t.id.uuidString)), \(q(openable)))"
-        }
-        return "\(id) = Row(\(q(t.title)), \(q(t.kind.typeTag)), \(q(t.source)), \(q(shortTime(t.capturedAt))), \(q(t.id.uuidString)), \(q(openable)))"
-    }
-
-    /// The bare ticker from a watched token's own "Name · $TICKER" title
-    /// (`TokenWatch`'s format) — TokenChip's symbol shares its line with the
-    /// plot and price, so the FULL title truncated there (2026-07-14: even a
-    /// short ticker like ETH scrolled past its slot inside "Ethereum · $ETH").
-    /// One parser for the format — TokensAsk.symbol.
-    private static func tickerSymbol(_ title: String) -> String {
-        TokensAsk.symbol(of: title)
-    }
+    // appChild (the per-kind row forms inside app cards — TokenChip, PostRow,
+    // MailRow, Row) died with the cards themselves (2026-07-17): an app is one
+    // AppRow now; its per-kind richness lives where it always did, in the
+    // app's own feed.
 
     /// Wallet holdings on Home (ruling 2026-07-08): pinning the wallet shows
     /// each watched wallet's own top-5-by-value treemap, the same TagMap

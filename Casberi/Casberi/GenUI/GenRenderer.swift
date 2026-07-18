@@ -224,10 +224,9 @@ struct GenRender: View {
         // subtrees and overflow the main stack. mountIn() once for the card,
         // not per row.
         case "ComingUp":    GenComingUp(el: el, els: els).mountIn()
-        // The bounded board's expander (2026-07-17) — "Show N more", below the
-        // board, revealing the quiet tail of auto-pinned tiles. Sticky once
-        // tapped (a per-launch re-decision would be nagging).
-        case "MoreTiles":   GenMoreTiles(el: el).mountIn()
+        // One row per app (user ruling 2026-07-17) — the board's app content
+        // is a signal-ordered list of rows, not cards; see GenAppRow.
+        case "AppRow":      GenAppRow(el: el).mountIn()
         case "Row":         GenRow(id: id, el: el).mountIn()
         case "TokenChip":   GenTokenChip(el: el).mountIn()
         case "Suggest":     GenSuggest().mountIn()
@@ -602,28 +601,72 @@ private struct GenWidget: View {
     }
 }
 
-/// MoreTiles(count) — the bounded board's expander (2026-07-17): auto-pin
-/// grows a tile per connected source, and the eager board pays for every one
-/// on the first frame, so past `HomeComposition.boardTileCap` the quiet tail
-/// collapses behind this one line. Tapping shows all (sticky — persisted, so
-/// the choice isn't re-asked every launch) and recomposes via CorpusSignal.
-/// Secondary ink like the coach lines: it's a quiet control, not a headline.
-private struct GenMoreTiles: View {
+/// AppRow(source, signal, itemTitle, when, thingID) — one app, one row (user
+/// ruling 2026-07-17: "a row is all they get; otherwise go to the app's
+/// feed"). The app's icon and NAME lead, the live signal ("1 overdue") sits
+/// beside them, and the second line is the thing the signal points at. A tap
+/// opens that app's feed (`casberi://feed/source/…` — the existing route);
+/// long-press offers opening the item itself or removing the app from Home.
+/// FLAT by design (one HStack, no Widget/Row nesting — the eager-head law),
+/// and each row wears the same card surface a Feed row does, so Home's rows
+/// read as the app's one row language, not new chrome.
+private struct GenAppRow: View {
     let el: GenEl
+    @Environment(\.genThingOpen) private var thingOpen
+    @Environment(\.openURL) private var openURL
+
     var body: some View {
-        Button {
-            UserDefaults.standard.set(true, forKey: "home.board.showAll")
-            DSHaptic.tap()
-            CorpusSignal.shared.bump()
-        } label: {
-            Text("Show \(el.str(0)) more")
-                .dsText(.subhead13)
-                .foregroundStyle(DS.textSecondary)
-                .frame(maxWidth: .infinity)
-                .frame(height: 44)
+        HStack(spacing: DS.Space.s3) {
+            BridgeIcon(name: el.str(0), size: 28)
+            VStack(alignment: .leading, spacing: 1) {
+                HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+                    Text(el.str(0))
+                        .dsText(.body17)
+                        .foregroundStyle(DS.textPrimary)
+                    if !el.str(1).isEmpty {
+                        Text(el.str(1))
+                            .dsText(.subhead13)
+                            .foregroundStyle(DS.textTertiary)
+                            .contentTransition(.numericText())
+                    }
+                }
+                if !el.str(2).isEmpty {
+                    Text(el.str(2))
+                        .dsText(.subhead13)
+                        .foregroundStyle(DS.textSecondary)
+                        .lineLimit(1)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            Text(el.str(3)).dsText(.subhead13).foregroundStyle(DS.textTertiary)
         }
-        .buttonStyle(.plain)
         .padding(.horizontal, DS.Space.s4)
+        .padding(.vertical, DS.Space.s3)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .dsWidgetSurface()
+        .padding(.horizontal, DS.Space.s4)
+        .padding(.top, DS.Space.s3)
+        .contentShape(RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
+        .onTapGesture {
+            if let url = URL(string: "casberi://feed/source/\(el.str(0).addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? el.str(0))") {
+                openURL(url)
+            }
+        }
+        .contextMenu {
+            if !el.str(4).isEmpty {
+                Button {
+                    thingOpen?(el.str(4))
+                } label: {
+                    Label("Open", systemImage: "arrow.up.right")
+                }
+            }
+            Button(role: .destructive) {
+                HomePinnedSources.shared.setOnHome(el.str(0), false)
+                CorpusSignal.shared.bump()
+            } label: {
+                Label("Remove from Home", systemImage: "pin.slash")
+            }
+        }
     }
 }
 
