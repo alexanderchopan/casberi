@@ -61,6 +61,12 @@ struct FeedScreen: View {
     // contributions has landed (an empty grid is a skeleton, not content).
     @State private var githubGraph = GitHubGraphStore.shared
     @Bindable private var wallet = WalletStore.shared
+    /// The wallet the Wallet feed is scoped to (prd §128) — nil is "All", the
+    /// combined view. Set by the switcher chip strip at the top of the wallet
+    /// feed; scopes the balance lede, holdings treemap, NFT strip, and the
+    /// transaction rows to one watched wallet. Only meaningful on the Wallet
+    /// page (each FeedScreen owns one source); nil everywhere else.
+    @State private var selectedWallet: String?
     /// Bumped when this page lands — rows replay their shape's
     /// entrance (each shape arrives its own way, ruling 2026-07-07).
     @State private var shapeWave = 0
@@ -152,7 +158,19 @@ struct FeedScreen: View {
         feedThings.filter { thing in
             (source == "All" || thing.source == source)
                 && (filter.tag == "All" || thing.tags.contains(filter.tag))
+                && walletScopeAllows(thing)
         }
+    }
+
+    /// The Wallet feed's per-wallet scope (prd §128) — everything passes in
+    /// "All" (selectedWallet nil, and it's never set off the Wallet page); when
+    /// scoped, only transactions from that watched wallet. `Thing.walletAddress`
+    /// equals the stored `WatchedAddress.address`, so hex compares
+    /// case-insensitively and base58 exactly (Solana case is identity).
+    private func walletScopeAllows(_ thing: Thing) -> Bool {
+        guard let scope = selectedWallet else { return true }
+        guard let wa = thing.walletAddress else { return false }
+        return ENS.isHexAddress(scope) ? wa.lowercased() == scope.lowercased() : wa == scope
     }
     private var isFiltered: Bool { source != "All" || filter.tag != "All" }
     private var filterLabel: String {
@@ -596,7 +614,19 @@ struct FeedScreen: View {
         // Adding/removing a watched wallet re-fetches the Wallet chip's
         // holdings block — only on the page in force; a background Wallet
         // page has no reason to re-hit Alchemy.
-        .onChange(of: wallet.addresses) { if isActive { streamBlock() } }
+        .onChange(of: wallet.addresses) {
+            // A scope whose wallet dropped (or the list fell back to one)
+            // returns to All rather than stranding the feed on a gone wallet.
+            if let sel = selectedWallet,
+               wallet.addresses.count <= 1
+                || !wallet.addresses.contains(where: { walletSameAddress($0.address, sel) }) {
+                selectedWallet = nil
+            }
+            if isActive { streamBlock() }
+        }
+        // Scoping to a wallet (or back to All) re-paints the treemap/NFT strip
+        // for that scope; the rows and balance lede re-derive from state.
+        .onChange(of: selectedWallet) { if isActive { streamBlock() } }
         .sheet(item: $sheetThing) { thing in
             ThingSheetView(thing: thing)
                 .navigationTransition(.zoom(sourceID: thing.id, in: zoomNS))
@@ -662,6 +692,7 @@ struct FeedScreen: View {
         case .photos:
             photoGridSection(visible)
         case .wallet:
+            walletSwitcherSection
             walletBalanceLedeSection
             holdingsBlockSection
             nftBlockSection
@@ -1033,9 +1064,77 @@ struct FeedScreen: View {
     /// synthesized). Empty (no section) until two aligned samples exist.
     @ViewBuilder
     private var walletBalanceLedeSection: some View {
-        if let chart = TokenChart.from(samples: wallet.combinedValueSamples()) {
+        // Scoped to the selected wallet's own value line, else the combined
+        // portfolio line (prd §128). Both start honest — nil until two aligned
+        // samples exist (TokenChart.from guards ≥2), so no lede until then.
+        let samples = selectedWallet.map { wallet.valueSamples(forAddress: $0) }
+            ?? wallet.combinedValueSamples()
+        if let chart = TokenChart.from(samples: samples) {
             ledeSection(WalletBalanceLede(chart: chart))
         }
+    }
+
+    /// The wallet switcher (prd §128) — an "All" chip then one chip per watched
+    /// wallet, each wearing its `WalletFace` and, when selected, its signature
+    /// tint. Scopes the whole Wallet feed (balance, treemap, NFTs, rows) to one
+    /// wallet; only shown with more than one watched. Fill-only selection (no
+    /// lines, per the design law). Mirrors the Wallet screen's own switcher.
+    @ViewBuilder
+    private var walletSwitcherSection: some View {
+        if wallet.addresses.count > 1 {
+            Section {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: DS.Space.s2) {
+                        walletSwitcherChip(label: "All", address: nil)
+                        ForEach(wallet.addresses) { addr in
+                            walletSwitcherChip(label: addr.label.isEmpty ? addr.short : addr.label,
+                                               address: addr.address)
+                        }
+                    }
+                    .padding(.vertical, 2)
+                }
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+                .listRowInsets(EdgeInsets(top: DS.Space.s2, leading: DS.Space.s4,
+                                          bottom: 0, trailing: DS.Space.s4))
+            }
+        }
+    }
+
+    private func walletSwitcherChip(label: String, address: String?) -> some View {
+        let isOn = walletChipIsOn(address)
+        let tint = address.map(WalletFace.tint) ?? DS.tint
+        return Button {
+            DSHaptic.selection()
+            withAnimation(DS.Motion.standard) { selectedWallet = address }
+        } label: {
+            HStack(spacing: 5) {
+                if let address { WalletFace(address: address, size: 18) }
+                Text(label)
+                    .dsText(.subhead13)
+                    .fontWeight(isOn ? .semibold : .regular)
+                    .foregroundStyle(isOn ? DS.textPrimary : DS.textSecondary)
+                    .lineLimit(1)
+            }
+            .padding(.horizontal, DS.Space.s3)
+            .padding(.vertical, DS.Space.s2)
+            .background(isOn ? tint.opacity(0.18) : DS.fillFaint,
+                        in: Capsule(style: .continuous))
+            .contentShape(Capsule(style: .continuous))
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func walletChipIsOn(_ address: String?) -> Bool {
+        guard let address else { return selectedWallet == nil }
+        guard let sel = selectedWallet else { return false }
+        return walletSameAddress(sel, address)
+    }
+
+    /// Hex compares case-insensitively (EIP-55 case is a checksum), base58
+    /// exactly (Solana case is identity) — the switcher's address equality.
+    private func walletSameAddress(_ a: String, _ b: String) -> Bool {
+        ENS.isHexAddress(a) ? a.lowercased() == b.lowercased() : a == b
     }
 
     /// The wallet leads with holdings — real, from Alchemy (WalletIngest),
@@ -1706,15 +1805,18 @@ struct FeedScreen: View {
         }
         // Two independent reads — the treemap paints as soon as holdings land
         // without waiting on the (slower, 2-GET-per-wallet) NFT fetch.
+        // Scoped to the selected wallet when the feed is (prd §128) — the doc
+        // generators filter their groups to that address; nil paints all.
+        let scope = selectedWallet
         Task { @MainActor in
-            if let doc = await WalletIngest.holdingsChart() {
+            if let doc = await WalletIngest.holdingsChart(scopeTo: scope) {
                 blockStream.paint(doc)
             } else if !blockStream.els.isEmpty {
                 blockStream.paint([])
             }
         }
         Task { @MainActor in
-            if let doc = await WalletIngest.nftShelfDocument() {
+            if let doc = await WalletIngest.nftShelfDocument(scopeTo: scope) {
                 nftStream.paint(doc)
             } else if !nftStream.els.isEmpty {
                 nftStream.paint([])

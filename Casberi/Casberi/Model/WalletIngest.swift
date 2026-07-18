@@ -685,9 +685,25 @@ enum WalletIngest {
     /// (ruling 2026-07-09): two watched addresses are usually two different
     /// purposes (main vs. cold, personal vs. a DAO) and summing them into one
     /// total hid which wallet actually held what.
+    /// Whether a wallet group's address is the one the feed is scoped to —
+    /// hex compares case-insensitively (EIP-55 case is a checksum, not
+    /// identity), base58 exactly (Solana case IS identity). Mirrors the
+    /// asymmetry `WalletStore.dedupeKey` and the switcher's `sameAddress` use.
+    private static func scopeMatch(_ groupAddress: String?, _ scope: String) -> Bool {
+        guard let groupAddress else { return false }
+        return ENS.isHexAddress(scope)
+            ? groupAddress.lowercased() == scope.lowercased()
+            : groupAddress == scope
+    }
+
     @MainActor
-    static func holdingsChart() async -> [String]? {
-        let groups = await topHoldingsByWallet()
+    static func holdingsChart(scopeTo address: String? = nil) async -> [String]? {
+        var groups = await topHoldingsByWallet()
+        // The Wallet feed can scope to one watched wallet (prd §128) — filter
+        // the groups AFTER the fetch, never before, so every wallet's value
+        // history still samples (topHoldingsByWallet's recordSample side effect)
+        // regardless of what the feed is currently showing.
+        if let address { groups = groups.filter { scopeMatch($0.address, address) } }
         guard !groups.isEmpty else { return nil }
         let ids = groups.indices.map { "w\($0)" }
         var doc = ["root = Stack([\(ids.joined(separator: ", "))])"]
@@ -707,8 +723,9 @@ enum WalletIngest {
     /// which `GenMediaTile` opens directly — an NFT is a door, not a thing, so
     /// nothing lands in the corpus. Nil when no watched wallet holds a piece.
     @MainActor
-    static func nftShelfDocument() async -> [String]? {
-        let groups = await nftsByWallet()
+    static func nftShelfDocument(scopeTo address: String? = nil) async -> [String]? {
+        var groups = await nftsByWallet()
+        if let address { groups = groups.filter { scopeMatch($0.address, address) } }
         guard !groups.isEmpty else { return nil }
         let ids = groups.indices.map { "nft\($0)" }
         var doc = ["root = Stack([\(ids.joined(separator: ", "))])"]

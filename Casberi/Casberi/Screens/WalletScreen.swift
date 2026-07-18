@@ -1,6 +1,18 @@
 import SwiftUI
 import SwiftData
 
+/// The wallet things already in the corpus — newest first. A @Query so the
+/// list updates live and the fetch runs once per store change, not twice per
+/// body pass.
+private let walletRecentDescriptor: FetchDescriptor<Thing> = {
+    var d = FetchDescriptor<Thing>(
+        predicate: #Predicate { $0.source == "Wallet" },
+        sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]
+    )
+    d.fetchLimit = 12
+    return d
+}()
+
 /// Wallet, connected — the wallet's home in Casberi. The person manages WHICH
 /// addresses are watched (paste to add, swipe to remove, drag to reorder — the
 /// first address leads), sees a live holdings treemap (top 5 by USD value), and
@@ -18,16 +30,6 @@ struct WalletScreen: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(BridgeStore.self) private var store
     @State private var syncing = false
-    /// The wallet the whole screen is scoped to (prd §128) — nil is "All",
-    /// the combined view. When set, every section below (holdings, activity,
-    /// approvals, NFTs) reads only this wallet; the switcher chip strip at the
-    /// top sets it. Only ever a value with more than one wallet watched — one
-    /// wallet's own view already IS the whole screen. Held as the resolved
-    /// address string, which equals `Thing.walletAddress` byte-for-byte (both
-    /// come from the same stored `WatchedAddress.address`), so the Recent
-    /// query can match it exactly — no ENS/hex mismatch, and base58 case is
-    /// preserved (never lowercased) as Solana requires.
-    @State private var selectedWallet: String?
     /// The combined "bundle" treemap across every watched wallet (2026-07-15) —
     /// shown alongside the per-wallet charts when more than one is watched.
     @State private var portfolioHoldings = GenStream()
@@ -83,6 +85,8 @@ struct WalletScreen: View {
     /// retires it everywhere.
     @AppStorage("coach.swipe.done") private var swipeCoachDone = false
 
+    @Query(walletRecentDescriptor) private var recent: [Thing]
+
     var body: some View {
         List {
             // Empty state: the add field and the vitalik chip ARE the
@@ -107,50 +111,32 @@ struct WalletScreen: View {
                 // the wallets it reads, not below the activity log. The
                 // 2026-07-15 "value first" ruling is served by the rows
                 // themselves now (value subline + sparkline per wallet).
-                // The wallet switcher (prd §128) — scopes the whole screen to
-                // one watched wallet; "All" returns to the combined view. Only
-                // when more than one is watched.
-                if wallet.addresses.count > 1 {
-                    switcherSection.listRowSeparator(.hidden)
-                }
                 watchingSection.listRowSeparator(.hidden)
-                // Approvals for whichever wallets are in view — hidden when the
-                // scoped wallet has no Revoke.cash page (e.g. Solana).
-                if wallet.addresses.contains(where: {
-                    WalletApprovals.canServe($0.address) && isSelected($0.address)
-                }) {
+                if wallet.addresses.contains(where: { WalletApprovals.canServe($0.address) }) {
                     approvalsSection.listRowSeparator(.hidden)
                 }
                 // The combined "bundle" — total value, the allocation
                 // bar, and one merged treemap. Only when more than one
                 // wallet is watched (one wallet's own view IS its
                 // portfolio); ruling 2026-07-15, alongside the per-wallet views.
-                // The combined bundle is the "All" view's headline — hidden the
-                // moment the screen scopes to one wallet (its own total rides its
-                // Watching row; a combined value beside one wallet's holdings is
-                // exactly the incoherence this scope exists to remove).
-                if selectedWallet == nil, wallet.addresses.count > 1, !portfolioHoldings.els.isEmpty {
+                if wallet.addresses.count > 1, !portfolioHoldings.els.isEmpty {
                     portfolioSection.listRowSeparator(.hidden)
                 }
-                if !visibleTotals.isEmpty {
+                if !walletTotals.isEmpty {
                     Section {
-                        // No identity legend here anymore — the switcher carries
-                        // wallet identity now, and each treemap card already
-                        // names its wallet in the header.
-                        ForEach(visibleTotals, id: \.address) { group in
+                        // A face+name legend above the stack (2026-07-15) —
+                        // scan the per-wallet treemaps by identity, the same
+                        // mark the rows and combined sheet already wear,
+                        // rather than reading each card's text label.
+                        if walletTotals.count > 1 { walletIdentityLegend }
+                        ForEach(walletTotals, id: \.address) { group in
                             holdingsMap(group)
                         }
                     }
                     .listRowSeparator(.hidden)
                 }
-                if !visibleNFTs.isEmpty { nftSection.listRowSeparator(.hidden) }
-                // Recent activity, scoped — its own @Query fetched for exactly
-                // the selected wallet (or all), so a scoped view never under-
-                // shows by filtering a fixed 12-row all-wallets fetch down to a
-                // handful.
-                WalletRecentList(selected: selectedWallet,
-                                 showLabels: selectedWallet == nil && wallet.addresses.count > 1)
-                    .listRowSeparator(.hidden)
+                if !nftGroups.isEmpty { nftSection.listRowSeparator(.hidden) }
+                if !recent.isEmpty { recentSection.listRowSeparator(.hidden) }
                 // Admin cluster: add another wallet, narrow the chains —
                 // the settings, not the point.
                 addSection.listRowSeparator(.hidden)
@@ -184,14 +170,6 @@ struct WalletScreen: View {
             let kept = Set(wallet.addresses.map(\.address))
             nftGroups.removeAll { !kept.contains($0.address) }
             loadValueLines()
-            // A scope that no longer exists (its wallet dropped, or the list
-            // fell back to one) returns to All rather than stranding the screen
-            // on a wallet that's gone.
-            if let sel = selectedWallet,
-               wallet.addresses.count <= 1
-                || !wallet.addresses.contains(where: { sameAddress($0.address, sel) }) {
-                selectedWallet = nil
-            }
         }
         // A tapped holdings cell (2026-07-14): the token's own chart — its
         // thing sheet when watched, the quick sheet when it's just held.
@@ -363,88 +341,27 @@ struct WalletScreen: View {
         }
     }
 
-    // MARK: - Wallet switcher (whole-screen scope, prd §128)
-
-    /// The scope control: an "All" chip then one chip per watched wallet, each
-    /// wearing that wallet's face and — when selected — its signature tint, the
-    /// same identity the treemaps and rows carry, so the chosen color threads
-    /// through every section below. Fill-only selection: the design law draws
-    /// no lines, so a stroked "selected" ring is out.
-    private var switcherSection: some View {
-        Section {
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: DS.Space.s2) {
-                    switcherChip(label: "All", address: nil)
-                    ForEach(wallet.addresses) { addr in
-                        switcherChip(label: addr.label.isEmpty ? addr.short : addr.label,
-                                     address: addr.address)
+    /// A face+name chip per wallet, above the per-wallet treemap stack
+    /// (2026-07-15) — the same identity mark the rows and combined sheet
+    /// wear, so a multi-wallet stack scans by face instead of by reading
+    /// each card's text label.
+    private var walletIdentityLegend: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: DS.Space.s4) {
+                ForEach(Array(walletTotals.enumerated()), id: \.offset) { _, g in
+                    if let addr = g.address {
+                        HStack(spacing: 5) {
+                            WalletFace(address: addr, size: 16)
+                            Text(g.label).dsText(.label12).foregroundStyle(DS.textSecondary)
+                        }
                     }
                 }
-                .padding(.vertical, 2)
             }
-            .listRowBackground(Color.clear)
-            .listRowSeparator(.hidden)
-            .listRowInsets(EdgeInsets(top: DS.Space.s2, leading: DS.Space.s4,
-                                      bottom: 0, trailing: DS.Space.s4))
         }
-    }
-
-    private func switcherChip(label: String, address: String?) -> some View {
-        let isOn = chipIsOn(address)
-        let tint = address.map(WalletFace.tint) ?? DS.tint
-        return Button {
-            DSHaptic.selection()
-            withAnimation(DS.Motion.standard) { selectedWallet = address }
-        } label: {
-            HStack(spacing: 5) {
-                if let address { WalletFace(address: address, size: 18) }
-                Text(label)
-                    .dsText(.subhead13)
-                    .fontWeight(isOn ? .semibold : .regular)
-                    .foregroundStyle(isOn ? DS.textPrimary : DS.textSecondary)
-                    .lineLimit(1)
-            }
-            .padding(.horizontal, DS.Space.s3)
-            .padding(.vertical, DS.Space.s2)
-            .background(isOn ? tint.opacity(0.18) : DS.fillFaint,
-                        in: Capsule(style: .continuous))
-            .contentShape(Capsule(style: .continuous))
-        }
-        .buttonStyle(.plain)
-    }
-
-    /// Whether a chip is the active one — the "All" chip (nil) matches the All
-    /// scope; a wallet chip matches by address.
-    private func chipIsOn(_ address: String?) -> Bool {
-        guard let address else { return selectedWallet == nil }
-        guard let sel = selectedWallet else { return false }
-        return sameAddress(sel, address)
-    }
-
-    /// Whether a section's content shows under the current scope — everything
-    /// in "All", else only the selected wallet's.
-    private func isSelected(_ address: String?) -> Bool {
-        guard let sel = selectedWallet else { return true }
-        guard let address else { return false }
-        return sameAddress(sel, address)
-    }
-
-    /// Address equality that respects each family: EVM hex compares
-    /// case-insensitively (EIP-55 case is a checksum, not identity); anything
-    /// else — Solana base58, where case IS identity — compares exactly. The
-    /// same asymmetry `WalletStore.dedupeKey` is built on.
-    private func sameAddress(_ a: String, _ b: String) -> Bool {
-        ENS.isHexAddress(a) ? a.lowercased() == b.lowercased() : a == b
-    }
-
-    /// The per-wallet holdings groups in view under the current scope.
-    private var visibleTotals: [WalletIngest.HoldingsGroup] {
-        walletTotals.filter { isSelected($0.address) }
-    }
-
-    /// The NFT shelves in view under the current scope.
-    private var visibleNFTs: [WalletIngest.NFTGroup] {
-        nftGroups.filter { isSelected($0.address) }
+        .listRowBackground(Color.clear)
+        .listRowSeparator(.hidden)
+        .listRowInsets(EdgeInsets(top: DS.Space.s2, leading: DS.Space.s4,
+                                  bottom: 0, trailing: DS.Space.s4))
     }
 
     // MARK: - Holdings treemaps (per wallet)
@@ -537,9 +454,9 @@ struct WalletScreen: View {
     /// opens the piece on OpenSea (read-only browse, like every link out).
     private var nftSection: some View {
         Section {
-            ForEach(visibleNFTs, id: \.address) { group in
+            ForEach(nftGroups, id: \.address) { group in
                 VStack(alignment: .leading, spacing: DS.Space.s2) {
-                    if visibleNFTs.count > 1 {
+                    if nftGroups.count > 1 {
                         Text(group.label)
                             .dsText(.subhead13).foregroundStyle(DS.textSecondary)
                     }
@@ -780,9 +697,7 @@ struct WalletScreen: View {
             // `canServe`, not a bare hex check — a wallet watched by ENS name
             // stores the name, and Revoke.cash resolves names (verified live);
             // only Solana forms have no page there.
-            ForEach(wallet.addresses.filter {
-                WalletApprovals.canServe($0.address) && isSelected($0.address)
-            }) { addr in
+            ForEach(wallet.addresses.filter { WalletApprovals.canServe($0.address) }) { addr in
                 Button {
                     DSHaptic.selection()
                     if let url = URL(string: WalletApprovals.revokeURL(address: addr.address)) {
@@ -1179,7 +1094,36 @@ struct WalletScreen: View {
         sync()
     }
 
-    // MARK: - What's landed (the scoped Recent list is `WalletRecentList` below)
+    // MARK: - What's landed
+
+    private var recentSection: some View {
+        Section {
+            ForEach(recent) { thing in
+                HStack(spacing: DS.Space.s3) {
+                    KindGlyph(kind: thing.kind, size: 28)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(thing.title).dsText(.body17).foregroundStyle(DS.textPrimary)
+                            .lineLimit(1)
+                        // The wallet label when more than one is watched, or
+                        // nothing — the block-explorer URL as a subline was
+                        // receipt noise in a screen full of stories
+                        // (2026-07-15); the link still lives behind the tap.
+                        if let label = walletLabel(thing) {
+                            Text(label).dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                                .lineLimit(1)
+                        }
+                    }
+                    Spacer()
+                    Text(shortTime(thing.capturedAt))
+                        .dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                }
+                .dsListCardRow()
+            }
+        } header: {
+            Text("Recent").dsText(.label12)
+                .foregroundStyle(DS.textSecondary)
+        }
+    }
 
     private var footerSection: some View {
         Section {
@@ -1189,73 +1133,14 @@ struct WalletScreen: View {
         }
     }
 
-}
-
-/// The wallet's recent activity, scoped by its own `@Query` (prd §128). A
-/// subview so the fetch predicate can change with the selected wallet —
-/// `@Query` binds its descriptor at init, so scoping the parent's static
-/// query reactively isn't possible; a scoped subview is the SwiftData idiom.
-///
-/// Crucially it fetches for exactly the selected wallet rather than filtering
-/// the parent's fixed 12-row all-wallets fetch, so a scoped view can't under-
-/// show (11 rows belong to another wallet, this one gets 1). `Thing.walletAddress`
-/// equals the watched `address` byte-for-byte, so an exact `==` predicate is
-/// both correct and base58-safe (no lowercasing).
-private struct WalletRecentList: View {
-    /// True only in the "All" scope with more than one wallet watched — the
-    /// row then names which wallet the transaction came from; when scoped, the
-    /// switcher chip already says whose feed this is, so the tag is redundant.
-    let showLabels: Bool
-    @Query private var recent: [Thing]
-
-    init(selected: String?, showLabels: Bool) {
-        self.showLabels = showLabels
-        var d: FetchDescriptor<Thing>
-        if let selected {
-            d = FetchDescriptor<Thing>(
-                predicate: #Predicate { $0.source == "Wallet" && $0.walletAddress == selected })
-        } else {
-            d = FetchDescriptor<Thing>(
-                predicate: #Predicate { $0.source == "Wallet" })
-        }
-        d.sortBy = [SortDescriptor(\.capturedAt, order: .reverse)]
-        d.fetchLimit = 12
-        _recent = Query(d)
+    /// Which watched wallet a landed transaction came from, when more than
+    /// one is watched — falls back to nil (the explorer link shows instead)
+    /// rather than guessing.
+    private func walletLabel(_ thing: Thing) -> String? {
+        wallet.label(forAddress: thing.walletAddress)
     }
 
-    var body: some View {
-        if !recent.isEmpty {
-            Section {
-                ForEach(recent) { thing in
-                    HStack(spacing: DS.Space.s3) {
-                        KindGlyph(kind: thing.kind, size: 28)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(thing.title).dsText(.body17).foregroundStyle(DS.textPrimary)
-                                .lineLimit(1)
-                            // The wallet label when more than one is watched and
-                            // not scoped — the block-explorer URL as a subline
-                            // was receipt noise (2026-07-15); the link still
-                            // lives behind the tap.
-                            if showLabels,
-                               let label = WalletStore.shared.label(forAddress: thing.walletAddress) {
-                                Text(label).dsText(.subhead13).foregroundStyle(DS.textSecondary)
-                                    .lineLimit(1)
-                            }
-                        }
-                        Spacer()
-                        Text(Self.shortTime(thing.capturedAt))
-                            .dsText(.subhead13).foregroundStyle(DS.textSecondary)
-                    }
-                    .dsListCardRow()
-                }
-            } header: {
-                Text("Recent").dsText(.label12)
-                    .foregroundStyle(DS.textSecondary)
-            }
-        }
-    }
-
-    static func shortTime(_ date: Date) -> String {
+    private func shortTime(_ date: Date) -> String {
         let s = Date.now.timeIntervalSince(date)
         if s < 3600 { return "\(max(1, Int(s / 60)))m" }
         if s < 86_400 { return "\(Int(s / 3600))h" }
