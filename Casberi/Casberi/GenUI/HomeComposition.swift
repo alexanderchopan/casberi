@@ -478,7 +478,13 @@ enum HomeComposition {
             // Arg 4 carries the signal RANK so HomeScreen's default span can
             // give a needs-you tile (overdue/mentions/due) a wide opening
             // without parsing the localized subtitle. GenWidget ignores it.
-            doc.append("\(id) = Widget(\(q(appTitle(source))), \(q(seed.subtitle)), [\(childIds.joined(separator: ", "))], \(q(source)), \(q("\(seed.rank)")))")
+            // The header is the app's OWN NAME (user 2026-07-17: "'On your
+            // list' — shouldn't it just be called what it is, 'Reminders'?").
+            // The bespoke-phrase map (appTitle: "On your list", "In your
+            // inbox", "Watchlist"…) was the last of the cute layer — a tile
+            // announces which app it is, and the signal subtitle beside it
+            // carries the state; a phrase carried neither.
+            doc.append("\(id) = Widget(\(q(source)), \(q(seed.subtitle)), [\(childIds.joined(separator: ", "))], \(q(source)), \(q("\(seed.rank)")))")
             for (i, t) in items.enumerated() {
                 doc.append(appChild(id: "\(id)c\(i)", t, mail: mail, social: social))
             }
@@ -562,42 +568,10 @@ enum HomeComposition {
         boardRefs.append("githubGraphShelf")
     }
 
-    /// A pinned app tile's header — a bespoke phrase where the app has one
-    /// (its store preview's voice), else the app's own name. Sentence case,
-    /// no eyebrow caps (design law): the words carry it.
-    private static func appTitle(_ source: String) -> String {
-        switch source {
-        // "In your inbox", not "Waiting on you" — Home's voice guardrail bans
-        // obligation phrasing (handoff-home: no "waiting on you"), and the
-        // person pinned this themselves; the card states what's there, not a duty.
-        case "Gmail", "iCloud Mail":                       return String(localized: "In your inbox")
-        case "GitHub":                                     return String(localized: "In your feed")
-        case "Linear":                                     return String(localized: "Assigned to you")
-        case "Notion":                                     return String(localized: "Pages")
-        case "Reddit", "Raindrop":                         return String(localized: "Saved")
-        case "YouTube":                                    return String(localized: "Liked and saved")
-        case "Twitch":                                     return String(localized: "Live now")
-        // Twitch keeps its plain name (default) — a fixed "Live now" header
-        // would assert real-time state the recency-ordered rows can't verify
-        // (honesty rule; TwitchBridge gates its own live indicator on liveRefs).
-        case "Apple Health":                               return String(localized: "Training")
-        case "Strava":                                     return String(localized: "Activities")
-        case "Cal.com":                                    return String(localized: "Booked with you")
-        case "Calendly":                                   return String(localized: "On your schedule")
-        case "Calendar":                                   return String(localized: "On your calendar")
-        case "Todoist", "Reminders":                       return String(localized: "On your list")
-        case "Readwise", "Kindle":                         return String(localized: "Highlights")
-        case "Tokens":                                      return String(localized: "Watchlist")
-        case "Kalshi":                                     return String(localized: "Markets")
-        case "Bluesky", "Farcaster":                       return String(localized: "Recent posts")
-        case "ChatGPT", "Claude", "Gemini":                return String(localized: "Recent chats")
-        case "Substack", "Podcasts":                       return String(localized: "New")
-        case "Steam":                                      return String(localized: "Recently played")
-        case "Apple Notes", "Day One", "Apple Journal", "Obsidian":
-                                                           return String(localized: "Notes")
-        default:                                           return source
-        }
-    }
+    // The bespoke tile-header phrases (appTitle: "On your list", "In your
+    // inbox", "Watchlist", "Recent chats"…) died 2026-07-17 (user: "shouldn't
+    // it just be called what it is?") — a tile's header is the app's own name,
+    // and the live signal subtitle carries the state.
 
     /// One line inside a pinned app tile — a live TokenChip (sparkline + price)
     /// for a token link (Tokens: a token's content IS its chart, prd 51), a

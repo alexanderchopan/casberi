@@ -206,21 +206,12 @@ struct HomeScreen: View {
                     ForEach(rootRefs.filter { !boardModuleRefs.contains($0) }, id: \.self) { ref in
                         GenRender(id: ref, els: stream.els)
                     }
-                    // The board is a SECOND layer now (powerful-Home, user
-                    // 2026-07-18): the synthesis head above answers "what
-                    // changed / what's the thread / what's coming"; this titled
-                    // section is "what you keep an eye on" — the auto-pinned apps
-                    // you didn't remove. Naming it demotes it from the identity
-                    // of Home to one section of it. Shown only when the board has
-                    // modules (honesty: no header over nothing).
-                    if !boardOrder.isEmpty {
-                        Text("Keeping an eye on")
-                            .dsText(.heading22)
-                            .foregroundStyle(DS.textPrimary)
-                            .padding(.horizontal, DS.Space.s4)
-                            .padding(.top, DS.Space.s6)
-                            .padding(.bottom, DS.Space.s2)
-                    }
+                    // No section header over the board (user 2026-07-17: the
+                    // "Keeping an eye on" title "just sounds trite — pinned to
+                    // Home IS the point of the page"). The board follows the
+                    // one intelligence card directly; the tiles' own names and
+                    // signals carry it.
+                    //
                     // One retiring line (prd 58a) — shown until the first
                     // resize (or the first edit-mode entry), forever, same
                     // grammar as the pin coach. Now that the size pin lives in
