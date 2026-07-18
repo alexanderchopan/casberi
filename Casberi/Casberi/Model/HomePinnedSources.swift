@@ -117,41 +117,26 @@ final class HomePinnedSources {
         }
     }
 
-    /// The Home board module an IMAGE-media source composes as
-    /// (`HomeComposition`'s bespoke shelves) — the bridge between a source
-    /// NAME and its board module REF. Image sources keep their own shelf id;
-    /// every other pinned app composes as a generic `Widget` tile whose
-    /// board key is `app:<source>` (see `boardKey`). nil for a non-media source.
+    /// The Home board module a source composes as when it's NOT a generic app
+    /// row — only GitHub's contribution graph now (2026-07-18: the media
+    /// sources became rows with a thumbnail filmstrip, keyed `app:<source>`
+    /// like every other app; their shelf refs retired with the shelf). nil for
+    /// a row source.
     static func moduleRef(for source: String) -> String? {
-        switch source {
-        case "Apple Music": return "musicShelf"
-        case "Pinterest":   return "pinShelf"
-        case "Photos":      return "shotShelf"
-        case "RSS":         return "rssShelf"
-        case "GitHub":      return "githubGraphShelf"
-        default:            return nil
-        }
+        source == "GitHub" ? "githubGraphShelf" : nil
     }
 
-    /// The inverse of `moduleRef(for:)` — a media shelf's ref back to its
-    /// source, so the board's "Remove from Home" knows which pin to drop.
-    /// A generic app tile carries its source in the doc instead (arg 3), read
-    /// straight off the element, so it needs no entry here.
+    /// The inverse of `moduleRef(for:)` — a module ref back to its source, so
+    /// the board's "Remove from Home" knows which pin to drop. An app row
+    /// carries its source in the doc instead (read off the element).
     static func source(forModuleRef ref: String) -> String? {
-        switch ref {
-        case "musicShelf": return "Apple Music"
-        case "pinShelf":   return "Pinterest"
-        case "shotShelf":  return "Photos"
-        case "rssShelf":   return "RSS"
-        case "githubGraphShelf": return "GitHub"
-        default:           return nil
-        }
+        ref == "githubGraphShelf" ? "GitHub" : nil
     }
 
-    /// The stable board key a source's tile persists its size/order under —
-    /// a media source uses its shelf ref (which equals its module key), every
-    /// other app uses `app:<source>`. `HomeScreen.moduleKey` derives the same
-    /// key from a live element, so a pin/unpin and a reorder round-trip.
+    /// The stable board key a source persists its size/order under — GitHub's
+    /// graph uses its module ref, every other app (rows, media included) uses
+    /// `app:<source>`. `HomeScreen.moduleKey` derives the same key from a live
+    /// element, so a pin/unpin and a reorder round-trip.
     static func boardKey(for source: String) -> String {
         moduleRef(for: source) ?? "app:\(source)"
     }

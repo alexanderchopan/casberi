@@ -139,15 +139,14 @@ enum HomeComposition {
 
         // Pinned apps — the sources the person chose to keep in view, ahead of
         // the map (ruling 2026-07-09): a deliberate choice outranks an automatic
-        // clustering, and it shouldn't cost a scroll to reach. User-chosen, so
-        // it passes the no-obligations rule: Casberi never picked these. Pinning
-        // is per-APP now (2026-07-12) — a pinned app is one tile of its recent
-        // things, not a single item; image sources keep their bespoke shelf
-        // (appendMediaModules), everyone else composes as a Widget of rows.
+        // clustering, and it shouldn't cost a scroll to reach. Every connected
+        // source is one row now (`appendPinnedApps`) — image sources included,
+        // their peek a thumbnail filmstrip (2026-07-18: the media shelf-card
+        // retired; a row carries the medium-native peek). Only the wallet's
+        // own visualizations stay cards.
         appendPinnedApps(things, to: &doc, rootRefs: &rootRefs, boardRefs: &boardRefs, boardKeys: &boardKeys)
         appendWalletHoldings(walletHoldings, combined: walletCombined, pending: walletPending, unreachable: walletUnreachable, to: &doc, rootRefs: &rootRefs, boardRefs: &boardRefs, boardKeys: &boardKeys)
         appendWalletNFTs(walletNFTs, to: &doc, rootRefs: &rootRefs, boardRefs: &boardRefs, boardKeys: &boardKeys)
-        appendMediaModules(things, to: &doc, rootRefs: &rootRefs, boardRefs: &boardRefs)
 
         // Where the map belongs even when it didn't compose yet — the starter
         // preview slots in here, not at the tail.
@@ -377,9 +376,14 @@ enum HomeComposition {
         // tile path.
         var bySource: [String: [Thing]] = [:]
         for t in things { bySource[t.source, default: []].append(t) }
+        // Media sources (Photos/Pinterest/Music/RSS) are rows too now (user
+        // 2026-07-18) — a text row is a lossy translation of an image source,
+        // so their row's content peek is a THUMBNAIL FILMSTRIP in the source's
+        // native medium, not the shelf-card that broke Home's one-row rule.
+        // Only "You" (own captures — the cover leads with them) and "Wallet"
+        // (its own treemap/NFT modules) stay off the row path.
         let onBoard = Set(bySource.keys)
             .subtracting(["You", "Wallet"])
-            .subtracting(mediaSources)
             .filter { !store.isHidden($0) }
             .sorted()
         // The away window (AppVisit) powers a live per-tile signal — "N new"
@@ -394,14 +398,20 @@ enum HomeComposition {
         // `tileSignal` (overdue / upcoming / mentions, else "N new" — honest,
         // never guessed).
         struct RowSeed { let source: String; let exemplar: Thing?
-                         let signal: String; let rank: Int }
+                         let signal: String; let rank: Int; var filmstrip: [Thing] = [] }
         let seeds: [RowSeed] = onBoard.compactMap { source in
             let sourceThings = bySource[source] ?? []
             guard !sourceThings.isEmpty else { return nil }
             guard source == "Tokens" else {
                 let (signal, rank, exemplar) = tileSignal(source, sourceThings, window: awayWindow)
+                // An image source's peek is its newest imaged things (up to a
+                // filmstrip's worth); a source with no imagery falls back to
+                // the text exemplar (medium-native — the honesty gate).
+                let film = mediaSources.contains(source)
+                    ? Array(sourceThings.filter(Self.hasImage).prefix(4))
+                    : []
                 return RowSeed(source: source, exemplar: exemplar,
-                               signal: signal, rank: rank)
+                               signal: signal, rank: rank, filmstrip: film)
             }
             let sorted = TokenWatchOrder.shared.apply(
                 sourceThings, sourceRef: \.sourceRef,
@@ -419,17 +429,14 @@ enum HomeComposition {
                            signal: signal, rank: signal.isEmpty ? 0 : 1)
         }
 
-        // Pass 2 — ONE ROW PER APP (user ruling 2026-07-17: "a row is all
-        // they get; otherwise go to the app's feed"). The bento's three
-        // costumes for one app — solo tile, 1-row card, 3-row card — read as
-        // no rule at all; now every app is exactly one row (icon · name ·
-        // signal · the thing the signal points at), tapping opens that app's
-        // feed, and CARDS exist only for true visualizations (the wallet
-        // treemap, the GitHub graph, the media strips — they compose
-        // elsewhere and stay board modules). Rows are fixed furniture in
-        // signal order (what needs you first, name the stable tiebreak) —
-        // not draggable, not resizable, not capped (a row costs one line, so
-        // the "Show N more" expander died with the cards).
+        // Pass 2 — ONE ROW PER APP (user ruling 2026-07-17). Every app is one
+        // row (icon · name · signal · a content PEEK · time); tapping opens
+        // that app's feed. The peek renders in the source's native medium
+        // (2026-07-18): a text line for text sources, the sparkline for Tokens,
+        // a thumbnail filmstrip for image sources — one row anatomy, medium-
+        // native content, so a card is never needed for an app. Rows are
+        // draggable board modules in signal order; only true source-level
+        // VISUALIZATIONS (the wallet treemap, the GitHub graph) stay cards.
         let ranked = seeds.sorted {
             $0.rank != $1.rank ? $0.rank > $1.rank : $0.source < $1.source
         }
@@ -452,7 +459,15 @@ enum HomeComposition {
             // signal (overdue/mentions/due, rank ≥ 3) in primary ink — the one
             // row that wants you stands out of the monochrome list without a
             // new color (2026-07-17). GenAppRow reads it; other readers ignore.
-            doc.append("\(id) = AppRow(\(q(seed.source)), \(q(seed.signal)), \(q(item?.title ?? "")), \(q(item.map { shortTime($0.capturedAt) } ?? "")), \(q(item?.id.uuidString ?? ""))\(chipSeat), \(q("\(seed.rank)")))")
+            // Arg 9 = the filmstrip's MediaItem refs (image sources) — the row's
+            // peek is those thumbnails instead of a text line (user 2026-07-18);
+            // empty for every non-image source.
+            let filmIds = seed.filmstrip.indices.map { "\(id)f\($0)" }
+            let filmSeat = ", [\(filmIds.joined(separator: ", "))]"
+            doc.append("\(id) = AppRow(\(q(seed.source)), \(q(seed.signal)), \(q(item?.title ?? "")), \(q(item.map { shortTime($0.capturedAt) } ?? "")), \(q(item?.id.uuidString ?? ""))\(chipSeat), \(q("\(seed.rank)"))\(filmSeat))")
+            for (j, t) in seed.filmstrip.enumerated() {
+                doc.append(mediaItem(id: "\(id)f\(j)", t))
+            }
             rootRefs.append(id)
             // Rows are DRAGGABLE board modules (user 2026-07-17: "what if
             // someone wants to change their order?") — signal order is only
@@ -607,64 +622,13 @@ enum HomeComposition {
 
     // MARK: - Rich module interiors (prd 58, Goal 3)
 
-    /// Music, Pinterest, screenshots, and RSS each compose a bespoke image
-    /// shelf. Under auto-pin (user 2026-07-18) they show the moment ONE thing
-    /// exists, unless the person hid the source — the same show-unless-hidden
-    /// rule the app tiles follow, so a connected image source lands on Home by
-    /// itself and is removed by subtraction. (This supersedes the old magnitude-2
-    /// auto-earn / explicit-pin threshold; the firehose caveat that kept RSS
-    /// opt-in is answered by the shelf being removable in one tap.)
-    private static func appendMediaModules(_ things: [Thing], to doc: inout [String],
-                                           rootRefs: inout [String], boardRefs: inout [String]) {
-        let store = HomePinnedSources.shared
-        // A media shelf is PICTURES — it composes only over items that have a
-        // real image, and not at all when none do (honesty 2026-07-17: an
-        // image strip of grey placeholders is the "empty visual" the demo kept
-        // showing; a source with things but no imagery isn't a media shelf).
-        // An image is a remote URL OR local bytes (a screenshot's are local,
-        // resolved by thing id) — both readable here.
-        func imaged(_ items: [Thing]) -> [Thing] {
-            items.filter { !($0.previewImageURL ?? "").isEmpty || $0.previewImageData != nil }
-        }
-        // Connected (has an imaged thing) and not hidden — the auto-pin gate.
-        func shown(_ items: [Thing], _ name: String) -> Bool {
-            !items.isEmpty && !store.isHidden(name)
-        }
-        let music = imaged(things.filter { $0.source == "Apple Music" })
-        if shown(music, "Apple Music") {
-            appendMediaShelf(id: "musicShelf", eyebrow: "Apple Music", kind: "music",
-                             items: music, pinned: true,
-                             to: &doc, rootRefs: &rootRefs, boardRefs: &boardRefs)
-        }
-        let pins = imaged(things.filter { $0.source == "Pinterest" })
-        if shown(pins, "Pinterest") {
-            appendMediaShelf(id: "pinShelf", eyebrow: "Pinterest", kind: "pinterest",
-                             items: pins, pinned: true,
-                             to: &doc, rootRefs: &rootRefs, boardRefs: &boardRefs)
-        }
-        let shots = imaged(things.filter { $0.kind == .screenshot })
-        if shown(shots, "Photos") {
-            appendMediaShelf(id: "shotShelf", eyebrow: "Screenshots", kind: "screenshot",
-                             items: shots, pinned: true,
-                             to: &doc, rootRefs: &rootRefs, boardRefs: &boardRefs)
-        }
-        // RSS auto-shows too now (a feed is a firehose, but the shelf is bounded
-        // and removable in one tap — the subtract model answers the flood the
-        // old opt-in gate guarded against). Imaged posts lead (a clean magazine
-        // strip); a text-only feed still shows its newest as tiles.
-        let rssAll = things.filter { $0.source == "RSS" }
-        if shown(rssAll, "RSS") {
-            let imaged = rssAll.filter { !($0.previewImageURL ?? "").isEmpty }
-            let rss = imaged.isEmpty ? rssAll : imaged
-            appendMediaShelf(id: "rssShelf", eyebrow: "RSS", kind: "rss",
-                             items: rss, pinned: true,
-                             to: &doc, rootRefs: &rootRefs, boardRefs: &boardRefs)
-        }
-        // Social (Bluesky/Farcaster) composes as a pinned APP tile now
-        // (2026-07-12) — a plural list of recent posts, not one auto-earned
-        // card — through `appendPinnedApps`. It still shows unless hidden
-        // ("Show on Home"), so nothing is lost; the tile just grew from one
-        // post to a feed of them.
+    /// A thing carries a real image — a remote preview URL OR local thumbnail
+    /// bytes (a screenshot's are local, resolved by thing id). The gate for an
+    /// image source's Home filmstrip: only imaged things become thumbnails, and
+    /// a source with none falls back to its text peek (honesty — no grey
+    /// placeholder strips, the demo's old empty-visual problem).
+    static func hasImage(_ t: Thing) -> Bool {
+        !(t.previewImageURL ?? "").isEmpty || t.previewImageData != nil
     }
 
     /// A pinned wallet's NFT strip (ruling 2026-07-14) — rides the wallet
@@ -694,24 +658,6 @@ enum HomeComposition {
             rootRefs.append(id)
             boardRefs.append(id)
         }
-    }
-
-    /// A source's image strip — newest first, capped at 12 (regular shows
-    /// what fits on a scroll, large's grid shows the rest as it grows).
-    private static func appendMediaShelf(id: String, eyebrow: String, kind: String, items: [Thing],
-                                         pinned: Bool = false,
-                                         to doc: inout [String], rootRefs: inout [String],
-                                         boardRefs: inout [String]) {
-        let capped = Array(items.prefix(12))
-        let itemIds = capped.indices.map { "\(id)i\($0)" }
-        // Arg 5 ("pin"/"") marks a shelf that's on the board by an explicit
-        // pin — only then does its long-press offer "Remove from Home" (an
-        // auto-earned shelf has no pin to drop; hiding it means leaving the
-        // source in Apps). Trailing arg, so existing readers (0–3) are unmoved.
-        doc.append("\(id) = MediaShelf(\(q(eyebrow)), \(q("")), [\(itemIds.joined(separator: ", "))], \(q(kind)), \(q(pinned ? "pin" : "")))")
-        for (i, t) in capped.enumerated() { doc.append(mediaItem(id: "\(id)i\(i)", t)) }
-        rootRefs.append(id)
-        boardRefs.append(id)
     }
 
     /// MediaItem(title, imageURL, thingId, openable) — a shelf's child line.

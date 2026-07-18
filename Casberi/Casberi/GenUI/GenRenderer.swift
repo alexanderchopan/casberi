@@ -226,7 +226,7 @@ struct GenRender: View {
         case "ComingUp":    GenComingUp(el: el, els: els).mountIn()
         // One row per app (user ruling 2026-07-17) — the board's app content
         // is a signal-ordered list of rows, not cards; see GenAppRow.
-        case "AppRow":      GenAppRow(el: el).mountIn()
+        case "AppRow":      GenAppRow(el: el, els: els).mountIn()
         case "Row":         GenRow(id: id, el: el).mountIn()
         case "TokenChip":   GenTokenChip(el: el).mountIn()
         case "Suggest":     GenSuggest().mountIn()
@@ -610,6 +610,7 @@ private struct GenWidget: View {
 private struct GenAppRow: View {
     let el: GenEl
     @Environment(\.genThingOpen) private var thingOpen
+    let els: GenEls
     @Environment(\.openURL) private var openURL
     @Environment(\.genRefreshTick) private var refreshTick
     @Environment(\.colorScheme) private var scheme
@@ -619,6 +620,10 @@ private struct GenAppRow: View {
     @State private var revealed = false
 
     private var isToken: Bool { !el.str(6).isEmpty }
+    /// Image sources carry a filmstrip of MediaItem refs (arg 9) — their peek
+    /// is those thumbnails, not the text line (medium-native, user 2026-07-18).
+    private var filmstrip: [String] { el.refs(9) }
+    private var isMedia: Bool { !filmstrip.isEmpty }
     private var accent: Color {
         TokenChartStyle.accent(change: chart?.change ?? 0, scheme: scheme)
     }
@@ -651,7 +656,7 @@ private struct GenAppRow: View {
                     // The item line is its own door (2026-07-17): tapping the
                     // TITLE opens the thing; the rest of the row opens the
                     // app's feed (the inner gesture wins where they overlap).
-                    if !isToken, !el.str(2).isEmpty {
+                    if !isToken, !isMedia, !el.str(2).isEmpty {
                         Text(el.str(2))
                             .dsText(.subhead13)
                             .foregroundStyle(DS.textSecondary)
@@ -700,6 +705,22 @@ private struct GenAppRow: View {
                 }
                 .frame(maxWidth: .infinity)
                 .frame(height: 32)
+            }
+            // The image source's PEEK — up to four recent thumbnails filling
+            // the row width (user 2026-07-18: "seeing a single row with text
+            // for those isn't quite the same"). One row tall, medium-native;
+            // each thumb taps to its item, the rest of the row to the feed.
+            if isMedia {
+                HStack(spacing: DS.Space.s2) {
+                    ForEach(filmstrip, id: \.self) { ref in
+                        if let child = els[ref] {
+                            GenMediaTile(el: child, size: nil)
+                                .frame(maxWidth: .infinity)
+                                .clipShape(RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+                        }
+                    }
+                }
+                .frame(height: 76)
             }
         }
         .padding(.horizontal, DS.Space.s4)
