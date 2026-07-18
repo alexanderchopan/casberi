@@ -32,15 +32,21 @@ enum TokenWatch {
     /// tokens all titled "Ethereum · $ETH" at six different prices, none of
     /// them ETH's). The map rewrites the household name to the canonical
     /// wrapped token's address — the same move the pasted-link path already
-    /// makes — and `search` pins the rows to that one token, so the row shown
-    /// is the real thing (wearing its honest DEX name, priced as the coin).
-    private static let householdNames: [String: (chain: String, address: String)] = [
-        "ethereum": ("ethereum", "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"),   // WETH
-        "eth":      ("ethereum", "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"),
-        "bitcoin":  ("ethereum", "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599"),   // WBTC
-        "btc":      ("ethereum", "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599"),
-        "solana":   ("solana",   "So11111111111111111111111111111111111111112"),  // wrapped SOL
-        "sol":      ("solana",   "So11111111111111111111111111111111111111112"),
+    /// makes — and `search` pins the rows to that one token, so the row's
+    /// price/chart/dedupe are the real coin's. But the row WEARS the
+    /// household name you typed (ruling 2026-07-18): someone who searches
+    /// "ethereum" sees "Ethereum · $ETH", not the on-chain "Wrapped Ether ·
+    /// $WETH" — the wrapper is plumbing, the coin is the answer. The name
+    /// isn't the impostor's tell; the ADDRESS is (pinned to WETH's), so
+    /// wearing $ETH here is honest where the scam tokens weren't.
+    private static let householdNames:
+        [String: (chain: String, address: String, name: String, symbol: String)] = [
+        "ethereum": ("ethereum", "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2", "Ethereum", "ETH"),  // WETH
+        "eth":      ("ethereum", "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2", "Ethereum", "ETH"),
+        "bitcoin":  ("ethereum", "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599", "Bitcoin", "BTC"),   // WBTC
+        "btc":      ("ethereum", "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599", "Bitcoin", "BTC"),
+        "solana":   ("solana",   "So11111111111111111111111111111111111111112", "Solana", "SOL"),   // wrapped SOL
+        "sol":      ("solana",   "So11111111111111111111111111111111111111112", "Solana", "SOL"),
     ]
 
     /// Address equality per family: EVM hex compares case-folded (EIP-55
@@ -86,8 +92,13 @@ enum TokenWatch {
             if let pinned,
                chain != pinned.chain || !sameToken(address, pinned.address) { continue }
             let liq = liquidity(pair)
+            // A pinned household name shows the coin's name, not the
+            // wrapper's — the address (WETH's) is the real tell, so this
+            // stays honest where the "Ethereum · $ETH" scam tokens weren't.
             let token = Resolved(
-                chain: chain, address: address, name: name, symbol: symbol,
+                chain: chain, address: address,
+                name: pinned?.name ?? name,
+                symbol: pinned?.symbol ?? symbol,
                 priceUsd: pair["priceUsd"] as? String,
                 imageURL: IngestSupport.imageURL(
                     (pair["info"] as? [String: Any])?["imageUrl"] as? String))
