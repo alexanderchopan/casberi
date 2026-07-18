@@ -44,6 +44,30 @@ final class HomePinnedSources {
     /// True when the person removed this auto-social source's card from Home.
     func isHidden(_ source: String) -> Bool { hidden.contains(source) }
 
+    /// Auto-pin (user 2026-07-18): a CONNECTED source shows on Home unless the
+    /// person removed it — the state a source-screen control reflects ("On
+    /// Home" by default, "Show on Home" once removed). Supersedes the explicit
+    /// opt-in pin as the DEFAULT; an explicit pin is now just "not hidden".
+    /// (Whether the tile actually draws still needs a real thing, as always —
+    /// pinning never invents content.)
+    func isOnHome(_ source: String) -> Bool { !isHidden(source) }
+
+    /// Show a source's tile on Home (`true`) or remove it (`false`). Removing
+    /// hides it AND drops any explicit pin plus the tile's saved size/order, so
+    /// a later re-show starts clean; showing just un-hides. The one entry point
+    /// the shared "On Home" control and the board's "Remove from Home" share.
+    func setOnHome(_ source: String, _ on: Bool) {
+        if on {
+            setHidden(source, false)
+        } else {
+            if sources.remove(source) != nil {
+                forgetBoardState(source)
+                UserDefaults.standard.set(Array(sources), forKey: Self.key)
+            }
+            setHidden(source, true)
+        }
+    }
+
     /// Remove an auto-social card from Home (`true`) or bring it back
     /// (`false`) — the "Show on Home" toggle and the card's long-press
     /// "Remove from Home" both land here.

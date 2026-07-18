@@ -206,6 +206,21 @@ struct HomeScreen: View {
                     ForEach(rootRefs.filter { !boardModuleRefs.contains($0) }, id: \.self) { ref in
                         GenRender(id: ref, els: stream.els)
                     }
+                    // The board is a SECOND layer now (powerful-Home, user
+                    // 2026-07-18): the synthesis head above answers "what
+                    // changed / what's the thread / what's coming"; this titled
+                    // section is "what you keep an eye on" — the auto-pinned apps
+                    // you didn't remove. Naming it demotes it from the identity
+                    // of Home to one section of it. Shown only when the board has
+                    // modules (honesty: no header over nothing).
+                    if !boardOrder.isEmpty {
+                        Text("Keeping an eye on")
+                            .dsText(.heading22)
+                            .foregroundStyle(DS.textPrimary)
+                            .padding(.horizontal, DS.Space.s4)
+                            .padding(.top, DS.Space.s6)
+                            .padding(.bottom, DS.Space.s2)
+                    }
                     // One retiring line (prd 58a) — shown until the first
                     // resize (or the first edit-mode entry), forever, same
                     // grammar as the pin coach. Now that the size pin lives in
@@ -217,7 +232,7 @@ struct HomeScreen: View {
                             .dsText(.subhead13)
                             .foregroundStyle(DS.textSecondary)
                             .padding(.horizontal, DS.Space.s4)
-                            .padding(.top, DS.Space.s4)
+                            .padding(.top, DS.Space.s1)
                     }
                     // The magazine board — extracted so the body stays within
                     // the type-checker's budget (the merge of magazine packing
@@ -676,15 +691,12 @@ struct HomeScreen: View {
         }
         return {
             DSHaptic.tap()
-            // Drop any explicit pin first (also forgets the tile's saved
-            // size/order). An auto-social account can be BOTH explicitly
-            // pinned AND auto-shown, so also suppress the auto-show — else
-            // its `sources` membership would resurrect the tile on the next
-            // compose (setHidden alone left the explicit pin standing).
+            // Auto-pin (2026-07-18): every connected source shows unless hidden,
+            // so removing a tile HIDES its source — that's the subtract control.
+            // Clear any explicit pin too (and its saved size/order); clear()
+            // also drops a stale hide, so set the hide AFTER it.
             HomePinnedSources.shared.clear(source)
-            if HomePinnedSources.autoSocial.contains(source) {
-                HomePinnedSources.shared.setHidden(source, true)
-            }
+            HomePinnedSources.shared.setHidden(source, true)
             CorpusSignal.shared.bump()
             streamComposition(instant: true)
             chrome.flash("Removed from Home")

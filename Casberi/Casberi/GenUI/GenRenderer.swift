@@ -396,14 +396,23 @@ private struct GenHero: View {
     }
 }
 
-/// Insight(text) — the one cross-source connection, "Noticed" eyebrow.
+/// Insight(text, eyebrow?) — a synthesis line under a small eyebrow. Arg 1 is
+/// the eyebrow, defaulting to "Noticed" (the cross-source connection) when
+/// empty, so every existing caller is unchanged; Home's "While you were away"
+/// card passes its own eyebrow through the same element.
 private struct GenInsight: View {
     let el: GenEl
     @Environment(\.genProseStreaming) private var streaming
 
+    /// Arg 1 — the eyebrow, "Noticed" when the caller left it empty.
+    private var eyebrow: String {
+        let e = el.str(1)
+        return e.isEmpty ? String(localized: "Noticed") : e
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: DS.Space.s1) {
-            Text("Noticed")
+            Text(eyebrow)
                 .dsText(.label12)
                 .foregroundStyle(DS.textSecondary)
             if streaming {

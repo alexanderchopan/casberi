@@ -79,6 +79,13 @@ enum HomeComposition {
         doc.append(cover(things: things))
         rootRefs.append("cover")
 
+        // Lead with what the app figured out (powerful-Home direction, user
+        // 2026-07-18): "While you were away" — what LANDED since the last visit
+        // — then the synthesized thread, then "Coming up". The board (what you
+        // keep an eye on) drops below all of it, so Home reads as a tool that's
+        // working, not a wall you arranged.
+        appendAway(things, to: &doc, rootRefs: &rootRefs)
+
         // The "Noticed" line — one genuine cross-thing connection the on-device
         // model found among recent things (prd §36c reopened: that ruling
         // removed the deterministic co-occurrence version for manufacturing
@@ -124,22 +131,19 @@ enum HomeComposition {
         // preview slots in here, not at the tail.
         let mapSlot = rootRefs.count
         // Projects — an interactive treemap: magnitude fill, tap opens the
-        // project. Chips were tried and reverted same day (2026-07-10):
-        // without a pinned wallet Home would have no treemap at all, and
-        // the map IS the visual anchor of the screen.
+        // project. Chips were tried and reverted same day (2026-07-10).
+        // The map is the on-device intelligence's THEMES view now, not a source
+        // tally (auto-pin tune, user 2026-07-18): every connected source is its
+        // own board tile, so a source-clustered map just repeats them. The map
+        // earns its place only when it can show what the tiles can't — projects,
+        // the cross-source themes your things are about. When no projects have
+        // formed yet, there's no map (the tiles carry the screen); it returns
+        // the moment a theme does. The old "By app" fallback map is retired.
         if !projects.isEmpty {
             let items = projects.prefix(6).map { "\($0.name) \($0.things.count)" }
             doc.append("map = TagMap(\(q(String(localized: "What's going on"))), null, [\(items.joined(separator: ", "))])")
             rootRefs.append("map")
             boardRefs.append("map")
-        } else {
-            let sources = sourceClusters(things: things)
-            if !sources.isEmpty {
-                let items = sources.prefix(6).map { "\($0.name) \($0.things.count)" }
-                doc.append("map = TagMap(\(q(String(localized: "What's going on"))), \(q(String(localized: "By app — tags take over as they form"))), [\(items.joined(separator: ", "))], \(q("source")))")
-                rootRefs.append("map")
-                boardRefs.append("map")
-            }
         }
         appendStarterPreviews(things: things,
                               hasMap: rootRefs.contains("map"),
@@ -383,17 +387,33 @@ enum HomeComposition {
                                          boardRefs: inout [String],
                                          boardKeys: inout [String: String]) {
         let store = HomePinnedSources.shared
-        let onBoard = store.sources
-            .union(HomePinnedSources.autoSocial.filter { !store.isHidden($0) })
+        // Auto-pin (user 2026-07-18): every CONNECTED source is on the board by
+        // default — the person subtracts what they don't want (less mental than
+        // building the board from empty), the same show-unless-hidden model
+        // Bluesky/Farcaster already used, now generalized to all. "Connected" =
+        // has landed at least one thing (pinning never invents content); the
+        // only control is hide (the tile's "Remove from Home" → `setHidden`).
+        // Image/graph sources compose as their own shelves elsewhere; "Wallet"
+        // has its own treemap + NFT modules (pinned per-address via WalletStore),
+        // so a generic activity tile beside it would be a redundant second
+        // wallet; "You" is the person's own captures (the cover already leads
+        // with the newest), not an app connection. All stay off the generic
+        // tile path.
+        var bySource: [String: [Thing]] = [:]
+        for t in things { bySource[t.source, default: []].append(t) }
+        let onBoard = Set(bySource.keys)
+            .subtracting(["You", "Wallet"])
             .subtracting(mediaSources)
             .subtracting(graphSources)
+            .filter { !store.isHidden($0) }
             .sorted()
+        // The away window (AppVisit) powers a live per-tile signal — "N new"
+        // since the last visit — so a tile reads as its world moving, not a
+        // static list of recent items (tiles-as-signals, powerful-Home).
+        let awayWindow = AppVisit.away
         var emitted = 0
         for source in onBoard {
-            // Pinning doesn't invent content — a source with nothing landed
-            // yet shows no tile (its pin persists; the tile appears when the
-            // first thing arrives), same rule the media shelves follow.
-            let sourceThings = things.filter { $0.source == source }
+            let sourceThings = bySource[source] ?? []
             guard !sourceThings.isEmpty else { continue }
             let id = "appTile\(emitted)"
             let mail = source == "Gmail" || source == "iCloud Mail"
@@ -405,7 +425,13 @@ enum HomeComposition {
             // from the SAME cached pulses, so Home can never disagree with
             // Feed's lede about which tokens moved.
             let (ordered, subtitle): ([Thing], String) = {
-                guard source == "Tokens" else { return (sourceThings, "") }
+                guard source == "Tokens" else {
+                    // Every other tile's subtitle is its live "N new" since the
+                    // last visit — a signal the tile is moving, honest because
+                    // it's bounded to the real away gap. Empty when nothing
+                    // landed while away (no gap, or a quiet source).
+                    return (sourceThings, newSinceAway(sourceThings, window: awayWindow))
+                }
                 let sorted = TokenWatchOrder.shared.apply(
                     sourceThings, sourceRef: \.sourceRef,
                     change24h: { TokenPulse.shared.pulse(for: $0)?.change24h })
@@ -438,6 +464,44 @@ enum HomeComposition {
         }
     }
 
+    /// A tile's "N new" subtitle — how many of its things landed inside the
+    /// away window (what changed since the last visit). Empty when there's no
+    /// away gap or the source was quiet, so a tile only claims motion when it
+    /// really moved (honesty rule).
+    private static func newSinceAway(_ things: [Thing], window: Range<Date>?) -> String {
+        guard let window else { return "" }
+        let n = things.filter { window.contains($0.capturedAt) }.count
+        return n > 0 ? String(localized: "\(n) new") : ""
+    }
+
+    /// "While you were away" — a factual, bounded read of what LANDED since the
+    /// last visit (AppVisit's frozen away window), leading the synthesis head
+    /// (powerful-Home, user 2026-07-18). Non-obligation voice (states what
+    /// arrived, never what's due) and bounded to the real away gap, so it isn't
+    /// the daily-count noise the cover ruling removed. Absent when the gap was
+    /// trivial or nothing arrived. Rides the shared Insight element with its own
+    /// eyebrow (arg 1). Fixed furniture, not a board module.
+    private static func appendAway(_ things: [Thing],
+                                   to doc: inout [String],
+                                   rootRefs: inout [String]) {
+        guard let window = AppVisit.away else { return }
+        let arrived = things.filter { $0.kind != .approval && window.contains($0.capturedAt) }
+        guard !arrived.isEmpty else { return }
+        // Name the top sources it came from, "You" excluded (a capture isn't an
+        // app you'd say news "came from"); the count still totals everything.
+        var bySource: [String: Int] = [:]
+        for t in arrived where t.source != "You" { bySource[t.source, default: 0] += 1 }
+        let top = bySource.sorted {
+            $0.value != $1.value ? $0.value > $1.value : $0.key < $1.key
+        }.prefix(2).map { $0.key }
+        let sources = top.joined(separator: " and ")
+        let line = sources.isEmpty
+            ? String(localized: "\(arrived.count) new since you were last here.")
+            : String(localized: "\(arrived.count) new since you were last here — mostly from \(sources).")
+        doc.append("away = Insight(\(q(line)), \(q(String(localized: "While you were away"))))")
+        rootRefs.append("away")
+    }
+
     /// GitHub's pinned tile is its contribution graph — the green-squares year,
     /// not a list of recent rows. Emitted when GitHub is pinned AND connected
     /// (the graph needs the token's GraphQL); the tile self-fetches its data
@@ -446,8 +510,11 @@ enum HomeComposition {
     private static func appendGitHubGraph(to doc: inout [String],
                                           rootRefs: inout [String],
                                           boardRefs: inout [String]) {
-        guard HomePinnedSources.shared.isPinned("GitHub"),
-              TokenBridge.github.connected else { return }
+        // Auto-pin (2026-07-18): a connected GitHub shows its graph by default,
+        // unless hidden — "connected" here is the bridge (the graph self-fetches
+        // and may have no landed Things to gate on). Removing it hides "GitHub".
+        guard TokenBridge.github.connected,
+              !HomePinnedSources.shared.isHidden("GitHub") else { return }
         doc.append("githubGraphShelf = GithubGraph(\(q(String(localized: "Your year in code"))), \(q("")))")
         rootRefs.append("githubGraphShelf")
         boardRefs.append("githubGraphShelf")
@@ -595,54 +662,49 @@ enum HomeComposition {
 
     // MARK: - Rich module interiors (prd 58, Goal 3)
 
-    /// Music, Pinterest, and screenshots each earn a board module once a
-    /// source has landed enough to be worth its own card — same threshold
-    /// `sourceClusters` uses for the treemap (2, min-magnitude rule). Social
-    /// (Bluesky/Farcaster) earns a card the moment ONE post exists: it's a
-    /// single latest-post card, not a magnitude cluster, so there's no
-    /// "not enough yet" state to wait out.
+    /// Music, Pinterest, screenshots, and RSS each compose a bespoke image
+    /// shelf. Under auto-pin (user 2026-07-18) they show the moment ONE thing
+    /// exists, unless the person hid the source — the same show-unless-hidden
+    /// rule the app tiles follow, so a connected image source lands on Home by
+    /// itself and is removed by subtraction. (This supersedes the old magnitude-2
+    /// auto-earn / explicit-pin threshold; the firehose caveat that kept RSS
+    /// opt-in is answered by the shelf being removable in one tap.)
     private static func appendMediaModules(_ things: [Thing], to doc: inout [String],
                                            rootRefs: inout [String], boardRefs: inout [String]) {
-        let pinned = HomePinnedSources.shared.sources
-        // A pinned source (prd 58, Goal 4 — "Pin to Home" on the source's
-        // own screen) earns its card the moment it has ONE real thing,
-        // instead of waiting to cross the automatic magnitude threshold —
-        // pinning doesn't invent content, it just skips the wait.
-        func earned(_ items: [Thing], pinnedAs name: String) -> Bool {
-            items.count >= 2 || (pinned.contains(name) && !items.isEmpty)
+        let store = HomePinnedSources.shared
+        // Connected (has a thing) and not hidden — the auto-pin gate.
+        func shown(_ items: [Thing], _ name: String) -> Bool {
+            !items.isEmpty && !store.isHidden(name)
         }
         let music = things.filter { $0.source == "Apple Music" }
-        if earned(music, pinnedAs: "Apple Music") {
+        if shown(music, "Apple Music") {
             appendMediaShelf(id: "musicShelf", eyebrow: "Apple Music", kind: "music",
-                             items: music, pinned: pinned.contains("Apple Music"),
+                             items: music, pinned: true,
                              to: &doc, rootRefs: &rootRefs, boardRefs: &boardRefs)
         }
         let pins = things.filter { $0.source == "Pinterest" }
-        if earned(pins, pinnedAs: "Pinterest") {
+        if shown(pins, "Pinterest") {
             appendMediaShelf(id: "pinShelf", eyebrow: "Pinterest", kind: "pinterest",
-                             items: pins, pinned: pinned.contains("Pinterest"),
+                             items: pins, pinned: true,
                              to: &doc, rootRefs: &rootRefs, boardRefs: &boardRefs)
         }
         let shots = things.filter { $0.kind == .screenshot }
-        if earned(shots, pinnedAs: "Photos") {
+        if shown(shots, "Photos") {
             appendMediaShelf(id: "shotShelf", eyebrow: "Screenshots", kind: "screenshot",
-                             items: shots, pinned: pinned.contains("Photos"),
+                             items: shots, pinned: true,
                              to: &doc, rootRefs: &rootRefs, boardRefs: &boardRefs)
         }
-        // RSS earns its shelf ONLY by an explicit pin — a feed is a firehose,
-        // already surfaced in the "What's going on" source map, so it never
-        // auto-crosses the magnitude threshold onto the board. Imaged posts
-        // lead (a clean magazine strip); a text-only feed still shows its
-        // newest as tiles so the pin is never a dead control.
-        if pinned.contains("RSS") {
-            let rssAll = things.filter { $0.source == "RSS" }
+        // RSS auto-shows too now (a feed is a firehose, but the shelf is bounded
+        // and removable in one tap — the subtract model answers the flood the
+        // old opt-in gate guarded against). Imaged posts lead (a clean magazine
+        // strip); a text-only feed still shows its newest as tiles.
+        let rssAll = things.filter { $0.source == "RSS" }
+        if shown(rssAll, "RSS") {
             let imaged = rssAll.filter { !($0.previewImageURL ?? "").isEmpty }
             let rss = imaged.isEmpty ? rssAll : imaged
-            if !rss.isEmpty {
-                appendMediaShelf(id: "rssShelf", eyebrow: "RSS", kind: "rss",
-                                 items: rss, pinned: true,
-                                 to: &doc, rootRefs: &rootRefs, boardRefs: &boardRefs)
-            }
+            appendMediaShelf(id: "rssShelf", eyebrow: "RSS", kind: "rss",
+                             items: rss, pinned: true,
+                             to: &doc, rootRefs: &rootRefs, boardRefs: &boardRefs)
         }
         // Social (Bluesky/Farcaster) composes as a pinned APP tile now
         // (2026-07-12) — a plural list of recent posts, not one auto-earned
