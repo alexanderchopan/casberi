@@ -164,7 +164,12 @@ enum HomeComposition {
         // the moment a theme does. The old "By app" fallback map is retired.
         if !projects.isEmpty {
             let items = projects.prefix(6).map { "\($0.name) \($0.things.count)" }
-            doc.append("map = TagMap(\(q(String(localized: "What's going on"))), null, [\(items.joined(separator: ", "))])")
+            // "Themes" (2026-07-17): the vague, conversational "What's going on"
+            // didn't say what this section IS — the cross-app THREADS your
+            // things are about, a different lens from the per-app rows above
+            // (which is why it's a treemap, not a row). The plain name reads as
+            // that distinct lens, matching the app rows' own name-what-it-is.
+            doc.append("map = TagMap(\(q(String(localized: "Themes"))), null, [\(items.joined(separator: ", "))])")
             rootRefs.append("map")
             boardRefs.append("map")
         }
@@ -187,7 +192,7 @@ enum HomeComposition {
 
     /// The preview module, shared by the empty doc and the sparse-corpus path.
     private static let previewMapLine =
-        "map = TagMapPreview(\(q(String(localized: "What's going on"))), \(q(String(localized: "Your things map here as they land"))), [Links, Notes, Events, Mail, Screenshots])"
+        "map = TagMapPreview(\(q(String(localized: "Themes"))), \(q(String(localized: "Your things map here as they land"))), [Links, Notes, Events, Mail, Screenshots])"
 
     /// A corpus this small hasn't earned real modules yet — one connected app
     /// or a first capture. The previews stay alongside the real rows so the
@@ -261,36 +266,25 @@ enum HomeComposition {
         Date.now.formatted(.dateTime.weekday(.wide).month(.wide).day())
     }
 
-    /// The cover line — pure content (2026-07-10): the Banner became the
-    /// Background setting, so the cover carries no image ref (arg 4 stays for
-    /// arity, always empty). The chips now read the WHOLE corpus by kind
-    /// (ruling 2026-07-12) — a stable synthesis of what your stuff is made of,
-    /// the same every day, no daily reset. Today's activity was noise for
-    /// anyone with feeds (always a big number, never news); recency is Feed's
-    /// job. The chips complement the map: the map is your corpus by theme, the
-    /// chips are your corpus by kind. Both ride every cover, quiet or active.
+    /// The cover line — the DATE, plus the quiet/empty message when there's
+    /// nothing to lead with. Kind chips retired 2026-07-17 (a whole-corpus
+    /// lifetime tally that only looked like signal — the feed filters by kind
+    /// natively, and the board's rows carry the live signal now); arg 6 stays
+    /// `[]` for arity so the id's seat (arg 7) holds its position.
     private static func cover(things: [Thing]) -> String {
         let date = dateline(things: things)
-        // Lifetime kind composition — the same chips every day, no reset.
-        let chips = coverChips(things)
-        // The chips slot always emits (empty only for an all-approval corpus)
-        // so the id's seat (arg 7) holds its position.
-        let chipsSeat = chips.map { ", \($0)" } ?? ", []"
-        // Quiet cover — nothing landed today. The words state the quiet; the
-        // chips still show the corpus's composition (a quiet day didn't change
-        // what your stuff is made of). No thing id — nothing fresh to open.
+        // Quiet cover — nothing landed today. The words state the quiet; no
+        // thing id (nothing fresh to open).
         if isQuietDay(things) {
-            return "cover = Cover(\(q(String(localized: "Today"))), \(q(String(localized: "A quiet day"))), \(q(String(localized: "Nothing new yet — your things keep."))), \(q("")), \(q(date)), \(q("quiet"))\(chipsSeat), \(q("")))"
+            return "cover = Cover(\(q(String(localized: "Today"))), \(q(String(localized: "A quiet day"))), \(q(String(localized: "Nothing new yet — your things keep."))), \(q("")), \(q(date)), \(q("quiet")), [], \(q("")))"
         }
-        // A thing actually landed today — but "Just landed" now LEADS the blue
-        // intelligence card (see `daily`), not a cover hero (user 2026-07-18:
-        // the cover and that card were two cards both conveying what's new). So
-        // the cover here is just the date header + kind chips: empty hero fields
+        // A thing landed today — "Just landed" leads the blue intelligence card
+        // (see `daily`), not a cover hero, so the cover is just the date header
         // (GenCover draws no hero card when the title is empty).
         if things.contains(where: { $0.kind != .approval && $0.capturedAt <= .now }) {
-            return "cover = Cover(\(q("")), \(q("")), \(q("")), \(q("")), \(q(date)), \(q(""))\(chipsSeat), \(q("")))"
+            return "cover = Cover(\(q("")), \(q("")), \(q("")), \(q("")), \(q(date)), \(q("")), [], \(q("")))"
         }
-        return "cover = Cover(\(q(String(localized: "Now"))), \(q(String(localized: "Your things go here"))), \(q(String(localized: "Paste, speak, or share one in."))), \(q("")), \(q(date)), \(q("quiet"))\(chipsSeat), \(q("")))"
+        return "cover = Cover(\(q(String(localized: "Now"))), \(q(String(localized: "Your things go here"))), \(q(String(localized: "Paste, speak, or share one in."))), \(q("")), \(q(date)), \(q("quiet")), [], \(q("")))"
     }
 
     /// The "While you were away" line — a factual, bounded read of what
@@ -306,8 +300,17 @@ enum HomeComposition {
                 && window.contains($0.capturedAt)
         }
         guard !arrived.isEmpty else { return "" }
-        // Name the top sources it came from, "You" excluded (a capture isn't an
-        // app news "came from"); the count still totals everything.
+        // Surface the DECISION-shaped part of the arrivals when there is one
+        // (user 2026-07-17: a raw count is a volume, not a signal). Mentions of
+        // you are the one "someone's waiting on you" read honestly derivable
+        // from what arrived (the enrichment's `socialContext`); when any came
+        // in, the line names them instead of a bare "mostly from X".
+        let mentions = arrived.filter { $0.socialContext == "mention" }.count
+        if mentions > 0 {
+            return String(localized: "\(arrived.count) new while you were away, \(mentions) mentioning you.")
+        }
+        // Otherwise name the top sources it came from, "You" excluded (a capture
+        // isn't an app news "came from"); the count still totals everything.
         var bySource: [String: Int] = [:]
         for t in arrived where t.source != "You" { bySource[t.source, default: 0] += 1 }
         let top = bySource.sorted {
@@ -321,29 +324,9 @@ enum HomeComposition {
             : String(localized: "\(arrived.count) new while you were away, mostly from \(sources).")
     }
 
-    // MARK: - Cover chips (the corpus's kind composition — ruling 2026-07-12)
-
-    /// The corpus's kind composition, "[Tag N, ...]", count-ordered, max 5 —
-    /// the cover's chip row. Whole corpus, not today or this week: a stable
-    /// read of what your stuff is made of, and a tap opens that kind in Feed.
-    /// Approvals never count (they're pending asks, not saved things), and
-    /// neither does the Wallet/Tokens firehose (2026-07-17): a watched wallet's
-    /// auto-ingested receipts made "134 transactions" the first number on the
-    /// screen, drowning the 7 links the person actually saved — the same
-    /// aggregate-read exclusion the away count and the Noticed window already
-    /// apply. The wallet's numbers live in its own modules. Nil only when
-    /// nothing else remains.
-    private static func coverChips(_ things: [Thing]) -> String? {
-        var counts: [ThingKind: Int] = [:]
-        for t in things where t.kind != .approval && !firehoseSources.contains(t.source) {
-            counts[t.kind, default: 0] += 1
-        }
-        guard !counts.isEmpty else { return nil }
-        let items = counts.sorted {
-            $0.value != $1.value ? $0.value > $1.value : $0.key.typeTag < $1.key.typeTag
-        }.prefix(5).map { "\($0.key.typeTag) \($0.value)" }
-        return "[\(items.joined(separator: ", "))]"
-    }
+    // The cover's kind-count chips (a whole-corpus lifetime tally) retired
+    // 2026-07-17 — they looked like signal but never changed; the feed filters
+    // by kind natively, and the board's live signals do the real work.
 
     /// The image-media sources whose pin composes as a bespoke shelf
     /// (`appendMediaModules`) rather than the generic Widget tile — their
@@ -472,7 +455,11 @@ enum HomeComposition {
                let route = TokenChart.route(from: item.content) {
                 chipSeat = ", \(q(route.chain)), \(q(route.address)), \(q(TokensAsk.symbol(of: item.title)))"
             }
-            doc.append("\(id) = AppRow(\(q(seed.source)), \(q(seed.signal)), \(q(item?.title ?? "")), \(q(item.map { shortTime($0.capturedAt) } ?? "")), \(q(item?.id.uuidString ?? ""))\(chipSeat))")
+            // Arg 8 = the signal RANK, so the row can EMPHASIZE a needs-you
+            // signal (overdue/mentions/due, rank ≥ 3) in primary ink — the one
+            // row that wants you stands out of the monochrome list without a
+            // new color (2026-07-17). GenAppRow reads it; other readers ignore.
+            doc.append("\(id) = AppRow(\(q(seed.source)), \(q(seed.signal)), \(q(item?.title ?? "")), \(q(item.map { shortTime($0.capturedAt) } ?? "")), \(q(item?.id.uuidString ?? ""))\(chipSeat), \(q("\(seed.rank)")))")
             rootRefs.append(id)
             // Rows are DRAGGABLE board modules (user 2026-07-17: "what if
             // someone wants to change their order?") — signal order is only

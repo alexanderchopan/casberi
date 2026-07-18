@@ -555,7 +555,18 @@ struct HomeScreen: View {
     /// A module's effective span: the person's stored choice, or the default
     /// that opens the board one-hero.
     private func spanOf(_ ref: String) -> ModuleSpan {
-        HomeModuleSize.shared.span(moduleKey(ref)) ?? defaultSpan(ref)
+        // CLAMP the person's stored choice to what the module currently allows
+        // (2026-07-17): a module's allowed spans can shrink under it — app rows
+        // went wide-only, the GitHub graph to one width — and a stale stored
+        // size (a Bluesky/Farcaster row still carrying `.small` from its
+        // resizable-tile era) would otherwise pair a full-width row 2-up at
+        // half width (the "Farcaster" that wrapped). An out-of-range stored
+        // size is ignored, falling back to the default.
+        let allowed = allowedSpans(ref)
+        if let stored = HomeModuleSize.shared.span(moduleKey(ref)), allowed.contains(stored) {
+            return stored
+        }
+        return defaultSpan(ref)
     }
 
     /// One-hero opening (prd 58h, revised 2026-07-12): the FIRST board module

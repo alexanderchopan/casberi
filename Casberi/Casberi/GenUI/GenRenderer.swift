@@ -636,9 +636,15 @@ private struct GenAppRow: View {
                             .dsText(.body17)
                             .foregroundStyle(DS.textPrimary)
                         if !el.str(1).isEmpty {
+                            // A needs-you signal (rank ≥ 3: overdue/mentions/due,
+                            // arg 8) wears PRIMARY ink so the eye finds it in the
+                            // monochrome list; a merely-moving "N new" stays
+                            // quiet (tertiary). Honest — overdue really is more
+                            // important — and no new color.
+                            let urgent = (Int(el.str(8)) ?? 0) >= 3
                             Text(el.str(1))
                                 .dsText(.subhead13)
-                                .foregroundStyle(DS.textTertiary)
+                                .foregroundStyle(urgent ? DS.textPrimary : DS.textTertiary)
                                 .contentTransition(.numericText())
                         }
                     }
@@ -2569,13 +2575,6 @@ private struct GenCover: View {
     @Environment(\.genThingOpen) private var thingOpen
     @Environment(\.genProjectTap) private var projectTap
 
-    /// Today's kind counts (arg 7) — the chip row that replaced the subline
-    /// (ruling 2026-07-09); requireCount keeps a half-streamed tag from
-    /// flashing a fallback chip.
-    private var chips: [KindCountRow.Item] {
-        KindCountRow.parse(el.refs(6), requireCount: true)
-    }
-
     /// White over a set wallpaper (a deepened color or a dimmed photo —
     /// both dark fields); the page's own adaptive ink on the default page.
     private var coverInk: Color {
@@ -2621,66 +2620,49 @@ private struct GenCover: View {
         }
     }
 
-    /// Slim hero (redesign C, 2026-07-10): the DATA leads — today's kind
-    /// counts ride above the headline, and "Just landed" is a compact card.
-    /// The chips are the summary of the day; one specific capture is a
-    /// detail, not the moment.
-    private var textBlock: some View {
-        VStack(alignment: .leading, spacing: DS.Space.s3) {
-            if !chips.isEmpty {
-                KindCountRow(items: chips, ink: coverInk)
-            }
-            // The hero card shows only for the quiet/empty STATES ("A quiet
-            // day", "Your things go here") — a non-empty title (arg 1). When a
-            // thing actually landed, "Just landed" now leads the blue
-            // intelligence card instead (user 2026-07-18: the cover and that
-            // card were two cards both conveying what's new), so here the cover
-            // is just the date header + kind chips.
-            if !el.str(1).isEmpty {
-                HStack(alignment: .top, spacing: DS.Space.s3) {
-                    // The source's icon leads the card (2026-07-10, user) — the
-                    // old banner ref slot (arg 4) carries the source name.
-                    if !el.str(3).isEmpty {
-                        BridgeIcon(name: el.str(3), size: 28)
-                    }
-                    VStack(alignment: .leading, spacing: DS.Space.s1) {
-                        Text(el.str(0))
-                            .dsText(.label12)
+    /// The cover is the DATE header ALONE once a thing has landed (kind chips
+    /// retired 2026-07-17 — a whole-corpus lifetime tally that only looked like
+    /// signal; the feed filters by kind natively, and the board's rows carry
+    /// the live signal now). The hero card returns ONLY for the quiet/empty
+    /// STATES — "A quiet day" / "Your things go here" (a non-empty title, arg
+    /// 1) — where the words ARE the message. Empty otherwise, so the cover
+    /// costs nothing but the date band.
+    @ViewBuilder private var textBlock: some View {
+        if !el.str(1).isEmpty {
+            HStack(alignment: .top, spacing: DS.Space.s3) {
+                if !el.str(3).isEmpty {
+                    BridgeIcon(name: el.str(3), size: 28)
+                }
+                VStack(alignment: .leading, spacing: DS.Space.s1) {
+                    Text(el.str(0))
+                        .dsText(.label12)
+                        .foregroundStyle(DS.textSecondary)
+                    Text(el.str(1))
+                        .dsText(.heading22)
+                        .foregroundStyle(DS.textPrimary)
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.7)
+                        .fixedSize(horizontal: false, vertical: true)
+                    if !el.str(2).isEmpty {
+                        Text(el.str(2))
+                            .dsText(.subhead13)
                             .foregroundStyle(DS.textSecondary)
-                        Text(el.str(1))
-                            // The display-tier ramp token (36g: SF Rounded lives
-                            // there) — no off-ramp sizes (2026-07-10, user).
-                            .dsText(.heading22)
-                            .foregroundStyle(DS.textPrimary)
-                            .lineLimit(2)
-                            .minimumScaleFactor(0.7)
-                            .fixedSize(horizontal: false, vertical: true)
-                        if !el.str(2).isEmpty {
-                            Text(el.str(2))
-                                .dsText(.subhead13)
-                                .foregroundStyle(DS.textSecondary)
-                        }
                     }
                 }
-                // Inner horizontal padding matches GenWidget's rows (s4), so
-                // every card's content starts on ONE line (2026-07-10, user:
-                // "Just landed" and the section labels didn't align).
-                .padding(.horizontal, DS.Space.s4)
-                .padding(.vertical, DS.Space.s3)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                // The same sheet surface every other card wears — opaque, so
-                // its own inks hold on any wallpaper behind it.
-                .background(DS.surfaceSheet,
-                            in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
-                .contentShape(RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
-                .onTapGesture {
-                    let id = el.str(7)
-                    guard !id.isEmpty else { return }
-                    if id.hasPrefix("@") { projectTap?(id) } else { thingOpen?(id) }
-                }
             }
+            .padding(.horizontal, DS.Space.s4)
+            .padding(.vertical, DS.Space.s3)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(DS.surfaceSheet,
+                        in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+            .contentShape(RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+            .onTapGesture {
+                let id = el.str(7)
+                guard !id.isEmpty else { return }
+                if id.hasPrefix("@") { projectTap?(id) } else { thingOpen?(id) }
+            }
+            .padding(DS.Space.s4)
         }
-        .padding(DS.Space.s4)
     }
 }
 

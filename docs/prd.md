@@ -4385,3 +4385,16 @@ Follow-ups the row system exposed, all device-verified:
 - **The item line is its own door** — tapping a row's title opens the thing; the rest of the row opens the app's feed (inner gesture wins the overlap).
 
 `GenUI/GenRenderer.swift` (GenAppRow drag/door, GenGithubGraph strip+gate), `GenUI/HomeComposition.swift` (row boardRefs, media `imaged` gate, github data gate, landed excludes events), `Screens/HomeScreen.swift` (appRow spans, removal, coach).
+
+## 122. Home: cut the last decoration, let urgency show, name the themes (2026-07-17)
+
+A design pass over what remained. All device-verified.
+- **Kind-count chips retired from the cover.** "6 events · 4 links · 4 reminders…" was a whole-corpus LIFETIME tally that only looked like signal — it never changed meaningfully, the feed filters by kind natively, and the board's rows carry the live signal now. Gone: the date is a clean single-line header straight into the intelligence card, and a row more fits above the fold. `coverChips` deleted; `GenCover.textBlock` draws only the quiet/empty message (else nothing).
+- **A needs-you row signal wears PRIMARY ink.** Every row was identical monochrome, so "2 overdue" read like "2 new". Now a rank-≥3 signal (overdue/mentions/due, carried as `AppRow` arg 8) is primary; a merely-moving "N new" stays tertiary. The eye finds what needs it — honest (overdue really is more important), no new color.
+- **The away line surfaces mentions.** A raw "22 new" is a volume; when mentions arrived in the window (`socialContext`), the line names them ("22 new while you were away, 3 mentioning you") — the one "someone's waiting on you" read honestly derivable from the arrivals.
+- **The themes map is named "Themes"** (was the vague "What's going on") — it's the cross-app threads lens, a different thing from the per-app rows, and the plain name says so (matching the rows' own name-what-it-is).
+- **Sparse/first-run audited** — the paragraph card shows only the sentences it has (one line when new), rows appear only for sources with content, empty visual modules don't render: a thin Home reads as calm, not broken. No change needed.
+
+`GenUI/HomeComposition.swift`, `GenUI/GenRenderer.swift`.
+
+Bug fixed same day (user: "Farcaster and Bluesky are rendering like tiles not rows"): `HomeScreen.spanOf` returned the person's STORED size without clamping it to the module's currently-allowed spans — so a Bluesky/Farcaster row still carrying a `.small` from its resizable-tile era paired 2-up at half width (the wrapped "Farcaster"). It now ignores an out-of-range stored size and falls back to the default, so any module whose allowed spans shrank under it (app rows → wide-only, the GitHub graph → one width) renders correctly. Verified by injecting stale `.small` sizes for two demo rows — both still render full-width.
