@@ -144,7 +144,51 @@ enum TokenWatch {
         context.insert(thing)
         context.saveHonestly()
         SpotlightIndex.index([thing])
+        // Dexscreener carried no logo? Fall back to GeckoTerminal's per-token
+        // image (2026-07-18) — keyless, same chain+address. Backfilled off the
+        // main path so the watch stays instant; the row's glyph swaps to the
+        // real face when it lands (SwiftData observes the patch). Still nil
+        // (a chain GeckoTerminal doesn't index, or a token neither vendor has
+        // a logo for) → the Tokens glyph stays, the honest floor.
+        if token.imageURL == nil {
+            let chain = token.chain, address = token.address
+            Task { @MainActor in
+                guard let image = await geckoLogo(chain: chain, address: address) else { return }
+                var d = FetchDescriptor<Thing>(predicate: #Predicate { $0.sourceRef == ref })
+                d.fetchLimit = 1
+                // Re-fetch, not the captured object — an unwatch between the
+                // watch and this patch would leave a deleted model; and only
+                // patch if still logo-less (a concurrent path could have won).
+                guard let live = try? context.fetch(d).first,
+                      live.previewImageURL == nil else { return }
+                live.previewImageURL = image
+                context.saveHonestly()
+            }
+        }
         return thing
+    }
+
+    /// GeckoTerminal's per-token logo — the fallback when Dexscreener's search
+    /// carried no `info.imageUrl` (2026-07-18). Keyless, one call to the
+    /// per-token endpoint with the chain+address the watch already holds.
+    /// GeckoTerminal names its networks differently (`eth`, `polygon_pos`, …),
+    /// so the Dexscreener chain maps through `TrendingChain` to the gecko slug;
+    /// a token on a chain GeckoTerminal doesn't index resolves to nil and keeps
+    /// the glyph. The address is passed through unaltered — never lowercase a
+    /// Solana mint (base58 is case-sensitive). Returns nil for GeckoTerminal's
+    /// generic "missing"/dexscreener placeholder — a wrong mark is worse than
+    /// none.
+    static func geckoLogo(chain: String, address: String) async -> String? {
+        guard let gecko = TrendingChain.from(chain)?.gecko,
+              let encoded = address.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed),
+              let root = await IngestSupport.getJSON(
+                "https://api.geckoterminal.com/api/v2/networks/\(gecko)/tokens/\(encoded)")
+                as? [String: Any],
+              let attrs = (root["data"] as? [String: Any])?["attributes"] as? [String: Any],
+              let raw = attrs["image_url"] as? String,
+              !raw.isEmpty, raw != "missing", !raw.contains("dexscreener-icon.png")
+        else { return nil }
+        return IngestSupport.imageURL(raw)
     }
 
     /// Registers (or refreshes) the Tokens bridge with the live watched
