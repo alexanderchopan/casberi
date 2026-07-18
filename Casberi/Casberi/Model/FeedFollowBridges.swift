@@ -375,6 +375,29 @@ enum FeedFollowIngest {
         var existing = IngestSupport.existingSourceRefs(context)
         let backfill = ArtlessBackfill(context, source: kind.source)
         var added = 0
+        // Retroactive authorHandle backfill (2026-07-18): items that landed
+        // before feed-follow set `authorHandle` get their feed name patched in
+        // as they're re-seen on refresh, so the feed's "top …" leaderboard fills
+        // for a corpus that pre-dates the field. Lazy — the source's things are
+        // fetched (and filtered to the handle-less ones) only on the first
+        // already-landed ref, so a fresh feed with nothing to patch pays nothing.
+        var handleless: [String: Thing]?
+        var patchedHandle = false
+        func patchHandle(_ ref: String, _ name: String) {
+            guard !name.isEmpty else { return }
+            if handleless == nil {
+                let src = kind.source
+                let all = (try? context.fetch(FetchDescriptor<Thing>(
+                    predicate: #Predicate { $0.source == src }))) ?? []
+                handleless = Dictionary(all.filter { $0.authorHandle == nil }
+                    .compactMap { t in t.sourceRef.map { ($0, t) } },
+                    uniquingKeysWith: { first, _ in first })
+            }
+            if let thing = handleless?[ref], thing.authorHandle == nil {
+                thing.authorHandle = name
+                patchedHandle = true
+            }
+        }
 
         // Concurrent fetch, then processed back in the entries' own order
         // (the same ref landing from two entries should resolve the same
@@ -400,6 +423,13 @@ enum FeedFollowIngest {
             if entry.title.isEmpty, !parsed.title.isEmpty {
                 store.setTitle(parsed.title, for: entry.id)
             }
+            // The feed's own name, carried onto each item as `authorHandle` (the
+            // same field RSS sets, RSSIngest.swift) — it names which channel /
+            // publication / subreddit / show an item came from when more than one
+            // is followed, and it's the grouping key the feed's "top …" bars rank
+            // on (FeedLeaderboard). Feed-follow used to drop it, leaving every
+            // YouTube video an indistinguishable `source:"YouTube"` row.
+            let feedName = entry.title.isEmpty ? parsed.title : entry.title
             // Newest 15 per feed — the feed is a firehose; the corpus isn't.
             for item in parsed.items.prefix(15) {
                 let stableKey = item.guid.isEmpty ? item.link : item.guid
@@ -407,6 +437,7 @@ enum FeedFollowIngest {
                 let ref = "\(kind.refPrefix):\(stableKey)"
                 if existing.contains(ref) {
                     backfill.patch(ref, image: item.imageURL)
+                    patchHandle(ref, feedName)
                     continue
                 }
                 guard !item.title.isEmpty else { continue }
@@ -419,13 +450,14 @@ enum FeedFollowIngest {
                     sourceRef: ref
                 )
                 thing.previewImageURL = IngestSupport.imageURL(item.imageURL)
+                if !feedName.isEmpty { thing.authorHandle = feedName }
                 context.insert(thing)
                 existing.insert(ref)
                 SpotlightIndex.index([thing])
                 added += 1
             }
         }
-        if added > 0 || backfill.any { context.saveHonestly() }
+        if added > 0 || backfill.any || patchedHandle { context.saveHonestly() }
         return reachedAny ? added : nil
     }
 }

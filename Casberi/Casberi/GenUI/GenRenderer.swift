@@ -1193,11 +1193,43 @@ struct ContributionGraph: View {
     }
 }
 
+// MARK: - Feed-head insight cards (per-source feed overviews)
+//
+// All four share ONE card chrome and header, and each renders FLAT — a single
+// shallow body over a Canvas / one GeometryReader — so they mount safely at the
+// eager feed head (the launch-stack law, same reason `GenComingUp` exists). The
+// data behind each is derived only from what the bridge really stored
+// (`FeedInsight` / `FeedHeatmap`); the guards live there, so a card that reaches
+// a view always has something real to draw.
+
+/// The shared card surface + title row for the insight heroes.
+private struct InsightCard<Content: View>: View {
+    @ViewBuilder var content: Content
+    var body: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s2) { content }
+            .padding(.horizontal, DS.Space.s4)
+            .padding(.vertical, DS.Space.s3)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .dsWidgetSurface()
+            .padding(.horizontal, DS.Space.s4)
+            .padding(.top, DS.Space.s2)
+    }
+}
+
+private struct InsightHeader: View {
+    let title: String
+    let subtitle: String
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+            Text(title).dsText(.body17).foregroundStyle(DS.textPrimary)
+            Text(subtitle).dsText(.subhead13).foregroundStyle(DS.textTertiary)
+        }
+    }
+}
+
 /// A calendar-heatmap card — the GitHub graph's chrome, generalized so any
 /// source that reads as a consistency-over-time habit (journaling, training,
-/// captures) can lead its feed with the same green-squares grid. Flat by
-/// design: one shallow VStack over the Canvas-drawn `ContributionGraph`, so it
-/// mounts safely at the eager feed head (the launch-stack law). GitHub and the
+/// captures) can lead its feed with the same green-squares grid. GitHub and the
 /// corpus-derived sources both draw through this one card.
 struct CalendarHeatmapHero: View {
     let title: String
@@ -1205,21 +1237,139 @@ struct CalendarHeatmapHero: View {
     let year: ContributionYear?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: DS.Space.s2) {
-            HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-                Text(title)
-                    .dsText(.body17).foregroundStyle(DS.textPrimary)
-                Text(subtitle)
-                    .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-            }
+        InsightCard {
+            InsightHeader(title: title, subtitle: subtitle)
             ContributionGraph(year: year)
         }
-        .padding(.horizontal, DS.Space.s4)
-        .padding(.vertical, DS.Space.s3)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .dsWidgetSurface()
-        .padding(.horizontal, DS.Space.s4)
-        .padding(.top, DS.Space.s2)
+    }
+}
+
+/// A ranked-bars leaderboard (top senders, subreddits, artists, played games).
+/// One GeometryReader lays out every bar; the bars are proportional to the top
+/// group, the count sits at the trailing edge.
+struct LeaderboardHero: View {
+    let board: FeedInsight.Leaderboard
+
+    var body: some View {
+        let rows = board.rows
+        let maxV = max(rows.map(\.value).max() ?? 1, 1)
+        InsightCard {
+            InsightHeader(title: board.title, subtitle: board.subtitle)
+            GeometryReader { geo in
+                let w = geo.size.width
+                let labelW = min(max(w * 0.4, 88), 148)
+                let valueW: CGFloat = 40
+                let barW = max(w - labelW - valueW - DS.Space.s2 * 2, 24)
+                VStack(spacing: 8) {
+                    ForEach(rows) { row in
+                        HStack(spacing: DS.Space.s2) {
+                            Text(row.label)
+                                .dsText(.callout15).foregroundStyle(DS.textPrimary)
+                                .lineLimit(1).truncationMode(.tail)
+                                .frame(width: labelW, alignment: .leading)
+                            ZStack(alignment: .leading) {
+                                Capsule().fill(DS.surfaceWell).frame(height: 8)
+                                Capsule().fill(DS.tint.opacity(0.85))
+                                    .frame(width: max(barW * CGFloat(row.value) / CGFloat(maxV), 4), height: 8)
+                            }
+                            .frame(width: barW)
+                            Text(row.detail)
+                                .dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                                .monospacedDigit().lineLimit(1)
+                                .frame(width: valueW, alignment: .trailing)
+                        }
+                        .frame(height: 20)
+                    }
+                }
+            }
+            .frame(height: CGFloat(rows.count) * 28)
+        }
+    }
+}
+
+/// A distribution bar — one stacked capsule split by share, with a legend below.
+/// Bull/bear on a ticker feed, the arrival mix of a social feed.
+struct DistributionHero: View {
+    let dist: FeedInsight.Distribution
+    @Environment(\.colorScheme) private var scheme
+
+    var body: some View {
+        let segments = dist.segments
+        let total = max(segments.reduce(0) { $0 + $1.count }, 1)
+        InsightCard {
+            InsightHeader(title: dist.title, subtitle: dist.subtitle)
+            GeometryReader { geo in
+                let gaps = CGFloat(segments.count - 1) * 2
+                HStack(spacing: 2) {
+                    ForEach(segments) { seg in
+                        color(seg.tone)
+                            .frame(width: max((geo.size.width - gaps) * CGFloat(seg.count) / CGFloat(total), 3))
+                    }
+                }
+                .clipShape(Capsule(style: .continuous))
+            }
+            .frame(height: 12)
+            HStack(spacing: DS.Space.s3) {
+                ForEach(segments) { seg in
+                    HStack(spacing: DS.Space.s1) {
+                        Circle().fill(color(seg.tone)).frame(width: 7, height: 7)
+                        Text("\(seg.label) \(seg.count)")
+                            .dsText(.subhead13).foregroundStyle(DS.textSecondary).lineLimit(1)
+                    }
+                }
+                Spacer(minLength: 0)
+            }
+        }
+    }
+
+    private func color(_ tone: FeedInsight.Tone) -> Color {
+        switch tone {
+        case .positive: TokenChartStyle.accent(up: true, scheme: scheme)
+        case .negative: TokenChartStyle.accent(up: false, scheme: scheme)
+        case .neutral:  DS.textTertiary
+        case .accent:   DS.tint
+        case .alt1:     .purple
+        case .alt2:     .pink
+        }
+    }
+}
+
+/// A thumbnail mosaic — a 4-across wall of a source's own images (NFT art,
+/// pins, product shots, video thumbs). `Color.clear` carries the aspect ratio so
+/// the grid self-sizes; RemoteThumb handles caching and dead-image fallback.
+struct ImageMosaicHero: View {
+    let mosaic: FeedInsight.Mosaic
+
+    var body: some View {
+        let urls = Array(mosaic.urls.prefix(8))
+        let rows = urls.count > 4 ? 2 : 1
+        let shown = Array(urls.prefix(rows * 4))
+        InsightCard {
+            InsightHeader(title: mosaic.title, subtitle: mosaic.subtitle)
+            Color.clear
+                .aspectRatio(4.0 / CGFloat(rows), contentMode: .fit)
+                .overlay {
+                    GeometryReader { geo in
+                        let gap: CGFloat = 4
+                        let tile = (geo.size.width - gap * 3) / 4
+                        VStack(spacing: gap) {
+                            ForEach(0..<rows, id: \.self) { r in
+                                HStack(spacing: gap) {
+                                    ForEach(0..<4, id: \.self) { c in
+                                        let idx = r * 4 + c
+                                        if idx < shown.count {
+                                            RemoteThumb(urlString: shown[idx], size: tile,
+                                                        fallback: mosaic.fallback)
+                                        } else {
+                                            Color.clear.frame(width: tile, height: tile)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+        }
     }
 }
 

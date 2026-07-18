@@ -1033,6 +1033,54 @@ enum ProbeHooks {
                 NSLog("Pin probe: FAILED to find a thing from %@", source)
             }
         },
+        // `-seedInsightDemo YES` seeds synthetic things so the feed-head insight
+        // heroes (FeedInsight) can be seen rendering on the simulator, where the
+        // real bridges need keys/accounts the sim has none of — the same job
+        // `-ghGraphDemo` does for the contribution graph. Reddit exercises the
+        // ranked-bars leaderboard (grouped by subreddit via authorHandle);
+        // OpenSea exercises the image mosaic (real remote images). Deduped by
+        // sourceRef, so a re-run is a no-op.
+        Hook(key: "seedInsightDemo") { _, context in
+            let existing = IngestSupport.existingSourceRefs(context)
+            var landed = 0
+            func seed(_ ref: String, _ make: () -> Thing) {
+                guard !existing.contains(ref) else { return }
+                context.insert(make()); landed += 1
+            }
+            // Reddit — 12 posts across 4 subreddits, uneven so the bars rank.
+            let subs = [("r/swift", 5), ("r/apple", 4), ("r/programming", 2), ("r/webdev", 1)]
+            var n = 0
+            for (sub, count) in subs {
+                for i in 0..<count {
+                    n += 1
+                    let ref = "insightdemo:reddit:\(n)"
+                    seed(ref) {
+                        let t = Thing(kind: .link, title: "\(sub) post \(i + 1)",
+                                      content: "https://reddit.com/\(sub)/comments/\(n)/post/",
+                                      source: "Reddit",
+                                      capturedAt: .now.addingTimeInterval(Double(-n) * 3600),
+                                      sourceRef: ref)
+                        t.authorHandle = sub
+                        return t
+                    }
+                }
+            }
+            // OpenSea — 6 collections wearing real remote artwork for the mosaic.
+            for i in 0..<6 {
+                let ref = "insightdemo:opensea:\(i)"
+                seed(ref) {
+                    let t = Thing(kind: .link, title: "Collection \(i + 1)",
+                                  content: "https://opensea.io/collection/demo\(i)",
+                                  source: "OpenSea",
+                                  capturedAt: .now.addingTimeInterval(Double(-i) * 3600),
+                                  sourceRef: ref)
+                    t.previewImageURL = "https://picsum.photos/seed/casberi\(i)/300"
+                    return t
+                }
+            }
+            context.saveHonestly()
+            NSLog("Insight demo: seeded %d things (Reddit leaderboard + OpenSea mosaic)", landed)
+        },
     ]
 }
 

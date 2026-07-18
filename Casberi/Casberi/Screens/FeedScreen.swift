@@ -634,11 +634,29 @@ struct FeedScreen: View {
         // Photos (a grid), Calendar (future-first) and Reminders (state
         // groups) aren't chronological top-to-bottom, so no line there.
         //
-        // Sources that read as a habit lead with a calendar heatmap (the GitHub
-        // contribution graph, generalized) — derived from THIS feed's own dates,
-        // above whatever shape the rows take below.
-        if let hlabel = FeedHeatmap.label(for: source) {
-            calendarHeatmapSection(visible, label: hlabel)
+        // A per-source feed overview leads the rows — derived from THIS feed's
+        // own things (the same `visible`), above whatever shape they take below.
+        // Each source qualifies for at most one: a habit heatmap, a ranked-bars
+        // leaderboard, a distribution bar, or a thumbnail mosaic. All render only
+        // when the real data is there (guards live in FeedHeatmap / FeedInsight).
+        // Derived once and reused: `heroShown` lets a shape's own recap lede
+        // (music's "today", Gmail's "waiting") yield so a feed never stacks two
+        // overview cards — the lede's records still ride the rows below.
+        let heatmapLabel = FeedHeatmap.label(for: source)
+        let leaderboard = heatmapLabel == nil ? FeedInsight.leaderboard(source: source, things: visible) : nil
+        let distribution = heatmapLabel == nil && leaderboard == nil
+            ? FeedInsight.distribution(source: source, things: visible) : nil
+        let mosaic = heatmapLabel == nil && leaderboard == nil && distribution == nil
+            ? FeedInsight.mosaic(source: source, things: visible) : nil
+        let heroShown = heatmapLabel != nil || leaderboard != nil || distribution != nil || mosaic != nil
+        if let heatmapLabel {
+            calendarHeatmapSection(visible, label: heatmapLabel)
+        } else if let leaderboard {
+            insightSection { LeaderboardHero(board: leaderboard) }
+        } else if let distribution {
+            insightSection { DistributionHero(dist: distribution) }
+        } else if let mosaic {
+            insightSection { ImageMosaicHero(mosaic: mosaic) }
         }
         switch shape {
         case .photos:
@@ -652,7 +670,7 @@ struct FeedScreen: View {
         case .calendar:
             groupedSections(agendaGroups(visible), nextEventID: nextEventID)
         case .gmail:
-            waitingSection(visible, nextEventID: nextEventID)
+            if !heroShown { waitingSection(visible, nextEventID: nextEventID) }
             let days = dayGroups(visible)
             groupedSections(days, nextEventID: nextEventID, boundary: boundaryThingID(in: days))
         case .reminders:
@@ -663,7 +681,7 @@ struct FeedScreen: View {
             let days = agentDayGroups(visible, excluding: approvals)
             groupedSections(days, nextEventID: nextEventID, boundary: boundaryThingID(in: days))
         case .music:
-            listeningLedeSection(visible)
+            if !heroShown { listeningLedeSection(visible) }
             let days = dayGroups(visible)
             groupedSections(days, nextEventID: nextEventID, boundary: boundaryThingID(in: days))
         case .tokens:
@@ -973,6 +991,18 @@ struct FeedScreen: View {
                         openProject = ProjectRoute(name: name)
                     }
             }
+        }
+    }
+
+    /// The list-row chrome every insight hero mounts in (clear background, no
+    /// separator, edge-to-edge — the card owns its own padding).
+    @ViewBuilder
+    private func insightSection<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
+        Section {
+            content()
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+                .listRowInsets(EdgeInsets())
         }
     }
 
