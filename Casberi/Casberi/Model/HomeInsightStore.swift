@@ -27,6 +27,12 @@ final class HomeInsightStore {
     /// observed by HomeScreen so a landed line repaints.
     private(set) var line: String?
 
+    /// The thing the line's connection runs through — the newest of the
+    /// model's own picks, mapped from its candidate indices (2026-07-17: the
+    /// Noticed line is a DOOR; tapping it opens this thing). nil when the
+    /// model returned no usable picks — the line then stands untappable.
+    private(set) var pickedThingID: String?
+
     /// The corpus+day signature the current line was written from — a refresh
     /// over the same signature is a no-op, so no inference is ever wasted.
     @ObservationIgnored private var signature: String
@@ -35,9 +41,11 @@ final class HomeInsightStore {
 
     private static let lineKey = "home.insight.line"
     private static let sigKey = "home.insight.sig"
+    private static let pickKey = "home.insight.pick"
 
     private init() {
         line = UserDefaults.standard.string(forKey: Self.lineKey)
+        pickedThingID = UserDefaults.standard.string(forKey: Self.pickKey)
         signature = UserDefaults.standard.string(forKey: Self.sigKey) ?? ""
     }
 
@@ -50,7 +58,7 @@ final class HomeInsightStore {
         // Apple Intelligence off doesn't keep showing a stale one.
         guard OnDeviceModel.isAvailable else {
             signature = ""
-            if line != nil { line = nil; persist() }
+            if line != nil { line = nil; pickedThingID = nil; persist() }
             return
         }
         let recent = Self.window(from: things)
@@ -60,18 +68,24 @@ final class HomeInsightStore {
         // signature so we don't re-check until things actually move.
         guard recent.count >= 3 else {
             signature = sig
-            if line != nil { line = nil; persist() }
+            if line != nil { line = nil; pickedThingID = nil; persist() }
             return
         }
         running = true
         let candidates = recent.map(Self.candidate)
+        let recentIDs = recent.map { $0.id.uuidString }
         Task { @MainActor in
             defer { running = false }
-            let text = await OnDeviceModel.homeInsight(candidates: candidates)
+            let result = await OnDeviceModel.homeInsight(candidates: candidates)
             // Stamp the signature alongside the result so the next compose's
             // refresh sees a match and doesn't re-run for the same corpus.
             signature = sig
-            line = text
+            line = result?.line
+            // The door: the NEWEST picked thing (candidates are newest-first,
+            // so the lowest index wins). Bounds re-checked here even though
+            // the model layer validated — this map must never trap.
+            pickedThingID = result?.picks.min()
+                .flatMap { recentIDs.indices.contains($0) ? recentIDs[$0] : nil }
             persist()
         }
     }
@@ -79,6 +93,7 @@ final class HomeInsightStore {
     private func persist() {
         let d = UserDefaults.standard
         if let line { d.set(line, forKey: Self.lineKey) } else { d.removeObject(forKey: Self.lineKey) }
+        if let pickedThingID { d.set(pickedThingID, forKey: Self.pickKey) } else { d.removeObject(forKey: Self.pickKey) }
         d.set(signature, forKey: Self.sigKey)
     }
 
@@ -158,7 +173,12 @@ final class HomeInsightStore {
             return l
         }.joined(separator: "\n")
         NSLog("[Casberi] homeInsightProbe candidates (%d):\n%@", candidates.count, listing)
-        return await OnDeviceModel.homeInsight(candidates: candidates)
+        let result = await OnDeviceModel.homeInsight(candidates: candidates)
+        if let result {
+            NSLog("[Casberi] homeInsightProbe picks → [%@]",
+                  result.picks.map(String.init).joined(separator: ","))
+        }
+        return result?.line
     }
     #endif
 }

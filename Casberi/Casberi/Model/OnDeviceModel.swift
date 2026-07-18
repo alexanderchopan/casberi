@@ -1,4 +1,5 @@
 import Foundation
+import NaturalLanguage
 #if canImport(FoundationModels)
 import FoundationModels
 #endif
@@ -162,7 +163,7 @@ enum OnDeviceModel {
     /// on a throwaway session so it never touches the composer's conversation.
     /// Returns nil where the model is unavailable — Home then shows no line,
     /// exactly as before this existed.
-    static func homeInsight(candidates: [Candidate]) async -> String? {
+    static func homeInsight(candidates: [Candidate]) async -> (line: String, picks: [Int])? {
         #if canImport(FoundationModels)
         if #available(iOS 26.0, *) {
             return await FoundationAnswer.homeInsight(candidates: candidates)
@@ -207,7 +208,8 @@ enum OnDeviceModel {
         \(numberedCandidates(candidates))
 
         Reply with one plain sentence naming a real connection across two or \
-        more of these things, or the single word NONE.
+        more of these things — plus the numbers of the things it runs \
+        across — or the single word NONE.
         """
     }
 
@@ -327,6 +329,8 @@ struct GroundedAnswerLayout {
 struct HomeNoticeLayout {
     @Guide(description: "One plain sentence naming a real connection across two or more of the listed things, grounded only in them. If there is no real connection worth noting, the single word NONE.")
     var line: String
+    @Guide(description: "The numbers of the listed things the connection runs across — two or more, from the numbered list. Empty when the line is NONE.")
+    var picks: [Int]
 }
 
 /// The iOS-26 half — isolated so the plain `OnDeviceModel` API above carries no
@@ -394,7 +398,7 @@ enum FoundationAnswer {
     /// model paths — the `await respond` yields the main actor for the whole
     /// inference, so this never blocks the UI.
     @MainActor
-    static func homeInsight(candidates: [OnDeviceModel.Candidate]) async -> String? {
+    static func homeInsight(candidates: [OnDeviceModel.Candidate]) async -> (line: String, picks: [Int])? {
         guard OnDeviceModel.isAvailable, candidates.count >= 3 else { return nil }
         let session = LanguageModelSession(instructions: OnDeviceModel.homeInsightInstructions)
         do {
@@ -403,7 +407,8 @@ enum FoundationAnswer {
                 generating: HomeNoticeLayout.self)
             let text = response.content.line.trimmingCharacters(in: .whitespacesAndNewlines)
             #if DEBUG
-            NSLog("[Casberi] homeInsight raw → %@", text)
+            NSLog("[Casberi] homeInsight raw → %@ picks=%@", text,
+                  response.content.picks.map(String.init).joined(separator: ","))
             #endif
             // The model declined (NONE), or wrote too little to be a real
             // observation — either way, no line.
@@ -417,10 +422,40 @@ enum FoundationAnswer {
             // things. That's a single-item restatement, never the cross-thing
             // observation this line promises, so treat it as a decline.
             if echoesACandidate(text, candidates) { return nil }
-            return text
+            // Third-person guard (voice rail, 2026-07-17): the residual bad
+            // output narrates a person by name — "Sam attended a dinner…" —
+            // usually FABRICATING the action (measured: the model invented
+            // attendance the things never stated). The contract speaks TO the
+            // person about their things; a sentence whose subject is somebody's
+            // name breaks the voice even when true, so it declines.
+            if startsWithPersonName(text) { return nil }
+            // The model's own indices, 1-based in the prompt → 0-based into
+            // `candidates`, out-of-range dropped. An empty set is fine — the
+            // line stands, it just isn't a door.
+            let picks = response.content.picks
+                .filter { (1...candidates.count).contains($0) }
+                .map { $0 - 1 }
+            return (text, picks)
         } catch {
             return nil
         }
+    }
+
+    /// True when the sentence's first word is a person's name (NLTagger's
+    /// `.personalName`) — the shape of the third-person narration the voice
+    /// rail bans. First word only: a name deeper in the sentence ("Dinner with
+    /// Sam and the Lisbon flight…") is the model correctly citing a thing.
+    private static func startsWithPersonName(_ text: String) -> Bool {
+        let tagger = NLTagger(tagSchemes: [.nameType])
+        tagger.string = text
+        var isPerson = false
+        tagger.enumerateTags(in: text.startIndex..<text.endIndex, unit: .word,
+                             scheme: .nameType,
+                             options: [.omitWhitespace, .omitPunctuation, .joinNames]) { tag, _ in
+            isPerson = (tag == .personalName)
+            return false   // first word decides
+        }
+        return isPerson
     }
 
     /// True when `text` is (or contains) a verbatim echo of one candidate — its

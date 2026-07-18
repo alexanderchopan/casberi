@@ -238,6 +238,14 @@ struct HomeScreen: View {
                     // the type-checker's budget (the merge of magazine packing
                     // and auto-scroll plumbing pushed it over, 2026-07-11).
                     boardSection
+                    // The bounded board's tail (2026-07-17): past the tile cap
+                    // the quiet tiles collapse behind one "Show N more" line.
+                    // Composed outside `root` on purpose — it's neither head
+                    // furniture nor a draggable module, so it renders here,
+                    // after the board, straight from the element table.
+                    if stream.els["moreTiles"] != nil {
+                        GenRender(id: "moreTiles", els: stream.els)
+                    }
                 }
                 .padding(.bottom, ShellMetrics.bottomInset)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -474,7 +482,8 @@ struct HomeScreen: View {
                                       walletNFTs: walletNFTs,
                                       walletPending: walletHoldingsLoading,
                                       walletUnreachable: walletUnreachable,
-                                      insight: HomeInsightStore.shared.line)
+                                      insight: HomeInsightStore.shared.line,
+                                      insightThing: HomeInsightStore.shared.pickedThingID)
         if instant {
             stream.paint(doc.lines)   // an update, not an entrance — no typewriter
         } else {
@@ -573,6 +582,17 @@ struct HomeScreen: View {
         // The hero slot leads big when its module can take it.
         if ref == boardOrder.first, allowed.contains(.big) { return .big }
         if !allowed.contains(.small) { return allowed.first ?? .wide }
+        // Auto-span from signal (2026-07-17): a needs-you tile (overdue,
+        // mentions, due — rank ≥ 3, carried as the Widget's arg 4 so no
+        // localized-string parsing) opens WIDE, showing its top item as a
+        // line; quiet and merely-moving tiles open small and pair 2-up. The
+        // spans are information doses — let the doses assign themselves. A
+        // stored choice always wins (spanOf checks it first), so this only
+        // decides where an untouched tile starts.
+        if ref.hasPrefix("appTile"), allowed.contains(.wide),
+           let rank = stream.els[ref].flatMap({ Int($0.str(4)) }), rank >= 3 {
+            return .wide
+        }
         return .small
     }
 

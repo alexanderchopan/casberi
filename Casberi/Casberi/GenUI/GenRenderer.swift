@@ -224,6 +224,10 @@ struct GenRender: View {
         // subtrees and overflow the main stack. mountIn() once for the card,
         // not per row.
         case "ComingUp":    GenComingUp(el: el, els: els).mountIn()
+        // The bounded board's expander (2026-07-17) — "Show N more", below the
+        // board, revealing the quiet tail of auto-pinned tiles. Sticky once
+        // tapped (a per-launch re-decision would be nagging).
+        case "MoreTiles":   GenMoreTiles(el: el).mountIn()
         case "Row":         GenRow(id: id, el: el).mountIn()
         case "TokenChip":   GenTokenChip(el: el).mountIn()
         case "Suggest":     GenSuggest().mountIn()
@@ -405,58 +409,29 @@ private struct GenInsight: View {
     @Environment(\.genProseStreaming) private var streaming
 
     @Environment(\.genThingOpen) private var thingOpen
+    @Environment(\.openURL) private var openURL
 
-    /// Section 1's eyebrow (arg 1) — "Noticed" when a single-line caller left
-    /// it empty (`Insight(text)`).
-    private var eyebrow1: String {
+    /// Arg 1 — the eyebrow, "Noticed" when the caller left it empty.
+    private var eyebrow: String {
         let e = el.str(1)
         return e.isEmpty ? String(localized: "Noticed") : e
     }
 
-    /// The one blue card carries up to THREE eyebrow-and-line sections (user
-    /// 2026-07-18): Home stacks "Just landed" (arg 0/1, tappable to open the
-    /// thing via arg 6), "While you were away" (arg 2/3), and "Noticed" (arg
-    /// 4/5) here — the cover hero and the two synthesis cards were all conveying
-    /// "what's new", so they became ONE card. Each section is skipped when its
-    /// line is empty (a model decline, no away gap, a quiet day with nothing
-    /// fresh); a single-line caller passes only arg 0 and gets exactly the old
-    /// one-section card. Shallow by design — three VStacks, no Widget/Row
-    /// nesting (the eager-head flat-render law, CLAUDE.md).
+    /// ONE eyebrow and ONE paragraph (user 2026-07-18, second pass: the
+    /// three-mini-section card "hasn't earned that space" — Home now composes
+    /// just-landed + while-you-were-away + the model's connection into a single
+    /// flowing paragraph in the DOC, and this renders it compactly). The card
+    /// keeps one tap (arg 2 a thing id to open; arg 3 "feed" routes to the
+    /// feed instead) — the most specific door the composition had. Answer docs
+    /// keep passing `Insight(text)` and render identically to before.
     var body: some View {
-        VStack(alignment: .leading, spacing: DS.Space.s3) {
-            if !el.str(0).isEmpty {
-                landedOrStreamed
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        let id = el.str(6)
-                        if !id.isEmpty { thingOpen?(id) }
-                    }
-            }
-            if !el.str(2).isEmpty {
-                lineSection(eyebrow: el.str(3), body: el.str(2))
-            }
-            if !el.str(4).isEmpty {
-                lineSection(eyebrow: el.str(5), body: el.str(4))
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(DS.Space.s4)
-        .background(DS.tintDim, in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
-        .padding(.horizontal, DS.Space.s4)
-        .padding(.top, DS.Space.s4)
-    }
-
-    /// Section 1's body — the streaming dot rides here for a live single-line
-    /// caller; for Home this is the static "Just landed" line.
-    @ViewBuilder private var landedOrStreamed: some View {
         VStack(alignment: .leading, spacing: DS.Space.s1) {
-            Text(eyebrow1)
+            Text(eyebrow)
                 .dsText(.label12)
                 .foregroundStyle(DS.textSecondary)
             if streaming {
-                // The model is still writing — one small dot breathes after the
-                // last character. No shimmer, no skeleton (§2).
+                // The model is still writing — one small dot breathes after
+                // the last character. No shimmer, no skeleton (§2).
                 TimelineView(.animation) { ctx in
                     let t = ctx.date.timeIntervalSinceReferenceDate
                     let phase = (sin(t * 2 * .pi) + 1) / 2
@@ -475,20 +450,17 @@ private struct GenInsight: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
-    }
-
-    /// A plain eyebrow-and-line section (the away / Noticed lines).
-    private func lineSection(eyebrow: String, body: String) -> some View {
-        VStack(alignment: .leading, spacing: DS.Space.s1) {
-            Text(eyebrow)
-                .dsText(.label12)
-                .foregroundStyle(DS.textSecondary)
-            Text(body)
-                .dsText(.callout15)
-                .foregroundStyle(DS.textPrimary)
-                .fixedSize(horizontal: false, vertical: true)
-        }
         .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(DS.Space.s4)
+        .background(DS.tintDim, in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+        .padding(.horizontal, DS.Space.s4)
+        .padding(.top, DS.Space.s4)
+        .contentShape(RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+        .onTapGesture {
+            let id = el.str(2)
+            if !id.isEmpty { thingOpen?(id) }
+            else if el.str(3) == "feed", let url = URL(string: "casberi://feed") { openURL(url) }
+        }
     }
 }
 
@@ -627,6 +599,31 @@ private struct GenWidget: View {
         } else {
             GenSkeletonTile()
         }
+    }
+}
+
+/// MoreTiles(count) — the bounded board's expander (2026-07-17): auto-pin
+/// grows a tile per connected source, and the eager board pays for every one
+/// on the first frame, so past `HomeComposition.boardTileCap` the quiet tail
+/// collapses behind this one line. Tapping shows all (sticky — persisted, so
+/// the choice isn't re-asked every launch) and recomposes via CorpusSignal.
+/// Secondary ink like the coach lines: it's a quiet control, not a headline.
+private struct GenMoreTiles: View {
+    let el: GenEl
+    var body: some View {
+        Button {
+            UserDefaults.standard.set(true, forKey: "home.board.showAll")
+            DSHaptic.tap()
+            CorpusSignal.shared.bump()
+        } label: {
+            Text("Show \(el.str(0)) more")
+                .dsText(.subhead13)
+                .foregroundStyle(DS.textSecondary)
+                .frame(maxWidth: .infinity)
+                .frame(height: 44)
+        }
+        .buttonStyle(.plain)
+        .padding(.horizontal, DS.Space.s4)
     }
 }
 
