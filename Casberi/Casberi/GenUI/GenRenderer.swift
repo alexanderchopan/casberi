@@ -645,11 +645,19 @@ private struct GenAppRow: View {
                     // Tokens carries no item-title line — its ticker rides the
                     // trailing price cluster and the chart strip below IS the
                     // content ("Wrapped Ether · $WETH" would just restate WETH).
+                    // The item line is its own door (2026-07-17): tapping the
+                    // TITLE opens the thing; the rest of the row opens the
+                    // app's feed (the inner gesture wins where they overlap).
                     if !isToken, !el.str(2).isEmpty {
                         Text(el.str(2))
                             .dsText(.subhead13)
                             .foregroundStyle(DS.textSecondary)
                             .lineLimit(1)
+                            .contentShape(Rectangle())
+                            .onTapGesture {
+                                let id = el.str(4)
+                                if !id.isEmpty { thingOpen?(id) }
+                            }
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -1100,36 +1108,50 @@ private struct SoloTokenTile: View {
 private struct GenGithubGraph: View {
     let widgetID: String
     let el: GenEl
-    @Environment(\.genThingOpen) private var thingOpen
     @Environment(\.genThingHandoff) private var thingHandoff
-    @Environment(\.genSizeToggle) private var sizeToggle
+    @Environment(\.genThingOpen) private var thingOpen
     @Environment(\.genAppRemove) private var appRemove
     @Environment(\.colorScheme) private var scheme
     @State private var store = GitHubGraphStore.shared
 
     var body: some View {
-        let content = VStack(alignment: .leading, spacing: DS.Space.s3) {
-            HStack(alignment: .top, spacing: 0) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(el.str(0)).dsText(.callout15).foregroundStyle(DS.textPrimary)
-                    if let total = store.year?.total {
-                        Text("\(total.formatted()) contributions")
+        // Honesty (2026-07-17): a 53-week grid of empty wells is not content —
+        // it's a skeleton claiming space (and, forced into the 150pt square
+        // tile chrome, a broken-looking empty box). The module renders ONLY
+        // with a real year that has contributions; until the fetch lands, or
+        // when GitHub is unreachable, it takes NO room. The fetch still runs so
+        // a warm cache paints instantly on the next compose.
+        let year = store.year
+        Group {
+            if let year, year.total > 0 {
+                // One wide strip that FITS its content (user 2026-07-17: the
+                // square tile "doesn't even fit the screen") — header + the
+                // graph, card height = content height, no resize.
+                VStack(alignment: .leading, spacing: DS.Space.s2) {
+                    HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+                        Text(el.str(0)).dsText(.body17).foregroundStyle(DS.textPrimary)
+                        Text("\(year.total.formatted()) contributions")
                             .dsText(.subhead13).foregroundStyle(DS.textTertiary)
                     }
+                    ContributionGraph(year: year)
                 }
-                Spacer(minLength: 0)
-                if let sizeToggle {
-                    ShelfSizePin(large: false) { sizeToggle(widgetID) }
-                        .padding(.top, -12).padding(.trailing, -12)
+                .padding(.horizontal, DS.Space.s4)
+                .padding(.vertical, DS.Space.s3)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .dsWidgetSurface()
+                .padding(.horizontal, DS.Space.s4)
+                .padding(.top, DS.Space.s3)
+                .contentShape(RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
+                .contextMenu {
+                    Button(role: .destructive) {
+                        appRemove?()
+                    } label: {
+                        Label("Remove from Home", systemImage: "pin.slash")
+                    }
                 }
             }
-            ContributionGraph(year: store.year)
         }
-        .soloTileChrome()
         .task { await store.refreshIfStale() }
-        return content.pinnedRowActions(id: "", openable: false,
-                                        open: thingOpen, unpin: nil, handoff: thingHandoff,
-                                        removeApp: appRemove)
     }
 }
 

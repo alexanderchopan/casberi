@@ -108,9 +108,13 @@ enum HomeComposition {
         // through (`insightThing`), else what just landed, else the feed
         // (whose "New since" divider marks the away window).
         // Firehose-excluded like every aggregate read (§119): a token-watch
-        // refresh re-landing "dogwifhat · $WIF" isn't the day's headline.
+        // refresh re-landing "dogwifhat · $WIF" isn't the day's headline. And
+        // no calendar EVENTS: "Just landed: Team standup" reads as news about
+        // a meeting that was merely synced — scheduled things belong to the
+        // Calendar row, not the landed slot.
         let landed = things.first {
-            $0.kind != .approval && !firehoseSources.contains($0.source) && $0.capturedAt <= .now
+            $0.kind != .approval && $0.kind != .event
+                && !firehoseSources.contains($0.source) && $0.capturedAt <= .now
         }
         let landedSentence = landed.map { String(localized: "Just landed: \($0.title).") } ?? ""
         let away = awayLine(things)
@@ -470,6 +474,13 @@ enum HomeComposition {
             }
             doc.append("\(id) = AppRow(\(q(seed.source)), \(q(seed.signal)), \(q(item?.title ?? "")), \(q(item.map { shortTime($0.capturedAt) } ?? "")), \(q(item?.id.uuidString ?? ""))\(chipSeat))")
             rootRefs.append(id)
+            // Rows are DRAGGABLE board modules (user 2026-07-17: "what if
+            // someone wants to change their order?") — signal order is only
+            // the natural default; a drag pins the person's own order via
+            // HomeBoardOrder, exactly as the tiles worked. One size though:
+            // rows never resize or pair (allowedSpans keeps them wide-only).
+            boardRefs.append(id)
+            boardKeys[id] = "app:\(seed.source)"
         }
     }
 
@@ -539,14 +550,20 @@ enum HomeComposition {
     /// (the graph needs the token's GraphQL); the tile self-fetches its data
     /// (`GitHubGraphStore`), so the doc only names the module. The board key is
     /// the ref itself (`HomePinnedSources.moduleRef`), so no `boardKeys` entry.
+    @MainActor
     private static func appendGitHubGraph(to doc: inout [String],
                                           rootRefs: inout [String],
                                           boardRefs: inout [String]) {
         // Auto-pin (2026-07-18): a connected GitHub shows its graph by default,
-        // unless hidden — "connected" here is the bridge (the graph self-fetches
-        // and may have no landed Things to gate on). Removing it hides "GitHub".
+        // unless hidden. Honesty (2026-07-17): AND only once a real year with
+        // contributions has landed (the cached `GitHubGraphStore.year`) — an
+        // all-empty grid is a skeleton, not content, and it was painting a big
+        // broken-looking box in the demo (no real GitHub data). A warm cache
+        // emits here; a cold/unreachable one simply doesn't, and the graph
+        // returns the moment a real fetch lands and Home recomposes.
         guard TokenBridge.github.connected,
-              !HomePinnedSources.shared.isHidden("GitHub") else { return }
+              !HomePinnedSources.shared.isHidden("GitHub"),
+              let year = GitHubGraphStore.shared.year, year.total > 0 else { return }
         doc.append("githubGraphShelf = GithubGraph(\(q(String(localized: "Your year in code"))), \(q("")))")
         rootRefs.append("githubGraphShelf")
         boardRefs.append("githubGraphShelf")
@@ -644,23 +661,32 @@ enum HomeComposition {
     private static func appendMediaModules(_ things: [Thing], to doc: inout [String],
                                            rootRefs: inout [String], boardRefs: inout [String]) {
         let store = HomePinnedSources.shared
-        // Connected (has a thing) and not hidden — the auto-pin gate.
+        // A media shelf is PICTURES — it composes only over items that have a
+        // real image, and not at all when none do (honesty 2026-07-17: an
+        // image strip of grey placeholders is the "empty visual" the demo kept
+        // showing; a source with things but no imagery isn't a media shelf).
+        // An image is a remote URL OR local bytes (a screenshot's are local,
+        // resolved by thing id) — both readable here.
+        func imaged(_ items: [Thing]) -> [Thing] {
+            items.filter { !($0.previewImageURL ?? "").isEmpty || $0.previewImageData != nil }
+        }
+        // Connected (has an imaged thing) and not hidden — the auto-pin gate.
         func shown(_ items: [Thing], _ name: String) -> Bool {
             !items.isEmpty && !store.isHidden(name)
         }
-        let music = things.filter { $0.source == "Apple Music" }
+        let music = imaged(things.filter { $0.source == "Apple Music" })
         if shown(music, "Apple Music") {
             appendMediaShelf(id: "musicShelf", eyebrow: "Apple Music", kind: "music",
                              items: music, pinned: true,
                              to: &doc, rootRefs: &rootRefs, boardRefs: &boardRefs)
         }
-        let pins = things.filter { $0.source == "Pinterest" }
+        let pins = imaged(things.filter { $0.source == "Pinterest" })
         if shown(pins, "Pinterest") {
             appendMediaShelf(id: "pinShelf", eyebrow: "Pinterest", kind: "pinterest",
                              items: pins, pinned: true,
                              to: &doc, rootRefs: &rootRefs, boardRefs: &boardRefs)
         }
-        let shots = things.filter { $0.kind == .screenshot }
+        let shots = imaged(things.filter { $0.kind == .screenshot })
         if shown(shots, "Photos") {
             appendMediaShelf(id: "shotShelf", eyebrow: "Screenshots", kind: "screenshot",
                              items: shots, pinned: true,

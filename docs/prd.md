@@ -4373,3 +4373,15 @@ The board's last bento residue named and killed. The user, looking at Reminders 
 Amended same day (user: "WE NEED THE SPARKLINE"): the Tokens row keeps the one visual its card form carried — its second line is the LIVE chip for the top mover (ticker · on-device sparkline · price · 1D delta; `AppRowTokenLine`, the same keyed fetch/reveal GenTokenChip uses, sized to sit inside the row with no chrome of its own). Every other app's second line stays plain text. Device-verified: "Tokens / WIF ~ $1.50 · 0.0% · 1D" with the plot drawn and the flat delta wearing no color (honesty rule).
 
 Second amendment (user: the 52pt inline plot "doesn't even fill the card"): the Tokens row is a proper watchlist row now — line 1 trailing is ticker · price · 1D delta, and the sparkline is a FULL-WIDTH strip (height 32) spanning the card's inner width beneath it, the same edge-to-edge plot the solo token tile drew, left-to-right reveal on data. The fetch lives on `GenAppRow` itself (keyed like GenTokenChip's; no-op for non-token rows).
+
+## 121. Home: rows drag, visuals earn their space, doors sharpen (2026-07-17)
+
+Follow-ups the row system exposed, all device-verified:
+- **Rows are draggable again** (user: "what if someone wants to change their order?"). Signal order is only the default; a long-press lift reorders and persists via HomeBoardOrder, exactly as tiles did — app rows are board modules now (boardRefs + `app:<source>` keys). One size still: `allowedSpans(appRow) == [.wide]` — draggable for order, never resizable, never paired. The coach reworded to "Touch and hold to rearrange" (rows don't resize). Verified: Gmail dragged below Voice, order held.
+- **Visual modules render only with real content** (honesty, the row pass applied to the last un-audited section):
+  - The GitHub graph shows ONLY once a real year with contributions has landed (`GitHubGraphStore.year.total > 0`, gated in both compose and renderer). An all-empty 53-week grid was a skeleton, and — forced into the 150pt square `soloTileChrome` — a broken empty box ("doesn't even fit the screen"). It's now a tight WIDE STRIP (header + graph, content height, no resize), and in the demo (no real GitHub data) it simply doesn't appear.
+  - Media shelves (music/Pinterest/screenshots) compose only over items that actually carry an image (`previewImageURL` or local `previewImageData`), and not at all when none do — the demo's grey placeholder "Screenshots" box is gone; a real device's imaged screenshots still show.
+- **"Just landed" excludes calendar EVENTS** — "Just landed: Team standup" read as news about a merely-synced meeting; scheduled things belong to the Calendar row. Now "Just landed: Trip plan: Lisbon".
+- **The item line is its own door** — tapping a row's title opens the thing; the rest of the row opens the app's feed (inner gesture wins the overlap).
+
+`GenUI/GenRenderer.swift` (GenAppRow drag/door, GenGithubGraph strip+gate), `GenUI/HomeComposition.swift` (row boardRefs, media `imaged` gate, github data gate, landed excludes events), `Screens/HomeScreen.swift` (appRow spans, removal, coach).

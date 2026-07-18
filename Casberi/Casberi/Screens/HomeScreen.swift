@@ -219,7 +219,11 @@ struct HomeScreen: View {
                     if !sizeCoachDone, !boardOrder.isEmpty {
                         // Secondary ink, not tint — a coach line isn't a
                         // control, and tint-colored prose reads as a link.
-                        Text("Touch and hold a card to resize or rearrange")
+                        // "Rearrange" only (2026-07-17): rows — most of the
+                        // board now — drag but never resize; the size pin
+                        // teaches itself in edit mode on the modules that
+                        // still take it.
+                        Text("Touch and hold to rearrange")
                             .dsText(.subhead13)
                             .foregroundStyle(DS.textSecondary)
                             .padding(.horizontal, DS.Space.s4)
@@ -575,9 +579,13 @@ struct HomeScreen: View {
     /// proper card. Everything else can shrink to a small square too.
     private func allowedSpans(_ ref: String) -> [ModuleSpan] {
         if ref.hasPrefix("walletMap") || ref == "walletCombined" || ref == "map" { return [.small, .big] }
-        // The contribution graph is a 53-wide grid — it needs full width, so it
-        // skips the 1×1 small (which would crush it) and never pairs 2-up.
-        if ref == "githubGraphShelf" { return [.wide, .big] }
+        // The contribution graph is a 53-wide grid — one wide strip, full
+        // width, content height (2026-07-17: it never squared into a tile or
+        // resized; the grid IS its size).
+        if ref == "githubGraphShelf" { return [.wide] }
+        // An app ROW has exactly one size (prd 120) — draggable for order,
+        // never resizable, never paired. One form is the point.
+        if ref.hasPrefix("appRow") { return [.wide] }
         return [.small, .wide, .big]
     }
 
@@ -674,7 +682,7 @@ struct HomeScreen: View {
             }
         }
         let source = HomePinnedSources.source(forModuleRef: ref)
-            ?? (ref.hasPrefix("appTile") ? stream.els[ref]?.str(3) : nil)
+            ?? (ref.hasPrefix("appRow") ? stream.els[ref]?.str(0) : nil)
         guard let source, !source.isEmpty else { return nil }
         // An auto-earned media shelf has no pin to drop (its context menu
         // hides for the same reason) — no badge.
