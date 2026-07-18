@@ -214,7 +214,7 @@ enum TrendingIngest {
             let name = (token["name"] as? String)?
                 .trimmingCharacters(in: .whitespacesAndNewlines) ?? symbol
             return Trend(name: name, symbol: symbol, tokenAddress: tokenAddress,
-                         image: Self.tokenImage(token["image_url"]))
+                         image: IngestSupport.tokenLogoURL(token["image_url"]))
         }
     }
 
@@ -291,12 +291,4 @@ enum TrendingIngest {
         return 0
     }
 
-    /// The token's logo, unless it's GeckoTerminal's generic "missing" stand-in
-    /// (a `dexscreener-icon.png` placeholder, or the literal string "missing") —
-    /// a token with no real logo keeps the text row, never a wrong mark.
-    private static func tokenImage(_ raw: Any?) -> String? {
-        guard let s = raw as? String, !s.isEmpty, s != "missing",
-              !s.contains("dexscreener-icon.png") else { return nil }
-        return IngestSupport.imageURL(s)
-    }
 }

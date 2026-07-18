@@ -188,14 +188,11 @@ struct TokenWatchScreen: View {
     private func watchRow(_ thing: Thing) -> some View {
         let pulse = TokenPulse.shared.pulse(for: thing)
         HStack(alignment: .top, spacing: DS.Space.s3) {
-            // The coin's own face — the same logo the search rows above wore
-            // when it was watched (2026-07-17). Tokens watched before that
-            // stamp have no previewImageURL and fall back to the Tokens glyph.
-            if let image = thing.previewImageURL, !image.isEmpty {
-                RemoteThumb(urlString: image, size: 28, fallback: "Tokens", circular: true)
-            } else {
-                BridgeIcon(name: "Tokens", size: 28, circular: true)
-            }
+            // The coin's own face — the same logo (and leaf) the search rows
+            // above wore when it was watched (2026-07-17). Tokens watched
+            // before that stamp have no previewImageURL and fall back to the
+            // Tokens glyph.
+            BridgeLogo(imageURL: thing.previewImageURL, fallbackIcon: "Tokens")
             Text(thing.title)
                 .dsText(.body17).foregroundStyle(DS.textPrimary)
                 .lineLimit(2)

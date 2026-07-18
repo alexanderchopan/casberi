@@ -176,19 +176,17 @@ enum TokenWatch {
     /// a token on a chain GeckoTerminal doesn't index resolves to nil and keeps
     /// the glyph. The address is passed through unaltered — never lowercase a
     /// Solana mint (base58 is case-sensitive). Returns nil for GeckoTerminal's
-    /// generic "missing"/dexscreener placeholder — a wrong mark is worse than
-    /// none.
-    static func geckoLogo(chain: String, address: String) async -> String? {
+    /// generic "missing"/dexscreener placeholder (`IngestSupport.tokenLogoURL`
+    /// filters both) — a wrong mark is worse than none.
+    private static func geckoLogo(chain: String, address: String) async -> String? {
         guard let gecko = TrendingChain.from(chain)?.gecko,
               let encoded = address.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed),
               let root = await IngestSupport.getJSON(
                 "https://api.geckoterminal.com/api/v2/networks/\(gecko)/tokens/\(encoded)")
                 as? [String: Any],
-              let attrs = (root["data"] as? [String: Any])?["attributes"] as? [String: Any],
-              let raw = attrs["image_url"] as? String,
-              !raw.isEmpty, raw != "missing", !raw.contains("dexscreener-icon.png")
+              let attrs = (root["data"] as? [String: Any])?["attributes"] as? [String: Any]
         else { return nil }
-        return IngestSupport.imageURL(raw)
+        return IngestSupport.tokenLogoURL(attrs["image_url"])
     }
 
     /// Registers (or refreshes) the Tokens bridge with the live watched

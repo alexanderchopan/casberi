@@ -95,6 +95,17 @@ enum IngestSupport {
         return s
     }
 
+    /// A token logo from a market API (GeckoTerminal/Dexscreener), minus its
+    /// "no logo here" sentinels — the flow serves a literal "missing" or a
+    /// shared `dexscreener-icon.png` placeholder for a token with no real face,
+    /// and a wrong mark is worse than none. Normalizes the survivor to https.
+    /// Shared by GeckoTrending's trending feed and TokenWatch's logo fallback.
+    static func tokenLogoURL(_ raw: Any?) -> String? {
+        guard let s = raw as? String, !s.isEmpty, s != "missing",
+              !s.contains("dexscreener-icon.png") else { return nil }
+        return imageURL(s)
+    }
+
     // MARK: - Dates
 
     private static let iso: ISO8601DateFormatter = {

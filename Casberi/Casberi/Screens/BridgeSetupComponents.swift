@@ -312,6 +312,24 @@ func debouncedSearch<T>(_ query: String, minLength: Int = 2,
     return Task.isCancelled ? nil : found
 }
 
+/// A remote logo that falls back to a bridge glyph when there's no URL — both
+/// circular. The leading face shared by a finder's search rows and the
+/// watchlist rows the hits become (a token hit and the thing it turns into wear
+/// one face, one shape).
+struct BridgeLogo: View {
+    let imageURL: String?
+    let fallbackIcon: String
+    var size: CGFloat = 28
+
+    var body: some View {
+        if let imageURL, !imageURL.isEmpty {
+            RemoteThumb(urlString: imageURL, size: size, fallback: fallbackIcon, circular: true)
+        } else {
+            BridgeIcon(name: fallbackIcon, size: size, circular: true)
+        }
+    }
+}
+
 /// A tappable search-result row — a face or logo, a two-line name+handle
 /// stack, and a tap that connects it. Shared by every finder field.
 struct BridgeSearchResultRow: View {
@@ -324,12 +342,7 @@ struct BridgeSearchResultRow: View {
     var body: some View {
         Button(action: action) {
             HStack(spacing: DS.Space.s3) {
-                if let imageURL {
-                    RemoteThumb(urlString: imageURL, size: 28,
-                                fallback: fallbackIcon, circular: true)
-                } else {
-                    BridgeIcon(name: fallbackIcon, size: 28, circular: true)
-                }
+                BridgeLogo(imageURL: imageURL, fallbackIcon: fallbackIcon)
                 VStack(alignment: .leading, spacing: 0) {
                     Text(title).dsText(.body17).foregroundStyle(DS.textPrimary)
                         .lineLimit(1)
