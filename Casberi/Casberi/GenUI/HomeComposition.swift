@@ -329,7 +329,11 @@ enum HomeComposition {
     /// The image-media sources whose pin composes as a bespoke shelf
     /// (`appendMediaModules`) rather than the generic Widget tile — their
     /// content IS pictures, so a strip/grid beats a list of titled rows.
-    static let mediaSources: Set<String> = ["Apple Music", "Pinterest", "Photos", "RSS"]
+    /// RSS is NOT here (2026-07-18 correction) despite carrying article
+    /// images: its content is the headline, not the picture — a filmstrip
+    /// row was suppressing the title text entirely (isMedia guards it out
+    /// in GenAppRow) for a source where the title is the whole point.
+    static let mediaSources: Set<String> = ["Apple Music", "Pinterest", "Photos"]
 
     /// High-volume auto-ingest sources that own their own Home surfaces — the
     /// wallet's holdings treemap, the token charts — and would otherwise
@@ -376,12 +380,14 @@ enum HomeComposition {
         // tile path.
         var bySource: [String: [Thing]] = [:]
         for t in things { bySource[t.source, default: []].append(t) }
-        // Media sources (Photos/Pinterest/Music/RSS) are rows too now (user
+        // Media sources (Photos/Pinterest/Music) are rows too now (user
         // 2026-07-18) — a text row is a lossy translation of an image source,
         // so their row's content peek is a THUMBNAIL FILMSTRIP in the source's
         // native medium, not the shelf-card that broke Home's one-row rule.
-        // Only "You" (own captures — the cover leads with them) and "Wallet"
-        // (its own treemap/NFT modules) stay off the row path.
+        // RSS stays off the filmstrip path (its content is headlines, not
+        // pictures) and reads as a normal titled row. Only "You" (own
+        // captures — the cover leads with them) and "Wallet" (its own
+        // treemap/NFT modules) stay off the row path entirely.
         let onBoard = Set(bySource.keys)
             .subtracting(["You", "Wallet"])
             .filter { !store.isHidden($0) }
