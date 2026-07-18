@@ -376,11 +376,13 @@ enum HomeComposition {
             guard !sourceThings.isEmpty else { return nil }
             guard source == "Tokens" else {
                 let (signal, rank, exemplar) = tileSignal(source, sourceThings, window: awayWindow)
-                // An image source's peek is its newest imaged things (up to a
-                // filmstrip's worth); a source with no imagery falls back to
-                // the text exemplar (medium-native — the honesty gate).
+                // An image source's peek is its ONE newest imaged thing (user
+                // 2026-07-18: "just one photo, one album" — a strip of four read
+                // as a billboard stacked with every other app's band); a source
+                // with no imagery falls back to the text exemplar (the honesty
+                // gate). The renderer draws it as a single trailing thumbnail.
                 let film = mediaSources.contains(source)
-                    ? Array(sourceThings.filter(Self.hasImage).prefix(4))
+                    ? Array(sourceThings.filter(Self.hasImage).prefix(1))
                     : []
                 return RowSeed(source: source, exemplar: exemplar,
                                signal: signal, rank: rank, filmstrip: film)

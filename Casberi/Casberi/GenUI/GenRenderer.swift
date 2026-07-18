@@ -617,7 +617,6 @@ private struct GenAppRow: View {
     /// The Tokens row's live chart (args 5-7 name the top mover; empty for
     /// every other app — the fetch never runs and the row stays plain text).
     @State private var chart: TokenChart?
-    @State private var revealed = false
 
     private var isToken: Bool { !el.str(6).isEmpty }
     /// Image sources carry a filmstrip of MediaItem refs (arg 9) — their peek
@@ -657,12 +656,10 @@ private struct GenAppRow: View {
                                 .contentTransition(.numericText())
                         }
                     }
-                    // Tokens carries no item-title line — its ticker rides the
-                    // trailing price cluster and the chart strip below IS the
-                    // content ("Wrapped Ether · $WETH" would just restate WETH).
                     // The item line is its own door (2026-07-17): tapping the
                     // TITLE opens the thing; the rest of the row opens the
                     // app's feed (the inner gesture wins where they overlap).
+                    // Media rows carry no text line — the thumbnail is the peek.
                     if !isToken, !isMedia, !el.str(2).isEmpty {
                         Text(el.str(2))
                             .dsText(.subhead13)
@@ -673,12 +670,28 @@ private struct GenAppRow: View {
                                 let id = el.str(4)
                                 if !id.isEmpty { thingOpen?(id) }
                             }
+                    } else if isToken, !el.str(7).isEmpty {
+                        // The token's ticker rides the subtitle now that the
+                        // sparkline is a trailing detail, not a full-width band
+                        // (user 2026-07-18) — ticker · 1D delta, the watchlist
+                        // row's left column. The delta lands with the chart.
+                        HStack(spacing: DS.Space.s2) {
+                            Text(el.str(7))
+                                .dsText(.subhead13)
+                                .foregroundStyle(DS.textSecondary)
+                            if let chart {
+                                TokenDeltaPill(change: chart.change, label: "1D", compact: true)
+                            }
+                        }
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 if isToken {
-                    // Ticker · price · 1D delta, right-aligned like a
-                    // watchlist row; appears with the chart data.
+                    // Sparkline · price, right-aligned like a watchlist row; the
+                    // chart is a trailing DETAIL beside the number now (user
+                    // 2026-07-18: the full-width band stacked with every app's
+                    // read as a wall of billboards), the ticker/delta on the
+                    // subtitle. Appears with the chart data.
                     if let chart {
                         // Hold the cluster at its intrinsic width so the price
                         // and the 1D pill never wrap (user 2026-07-18: "$1861.6/7"
@@ -687,66 +700,31 @@ private struct GenAppRow: View {
                         // row's left is only "Tokens" + a short badge, so this
                         // side can safely keep its natural width.
                         HStack(spacing: DS.Space.s2) {
-                            Text(el.str(7)).dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                            TokenChartPlot(chart: chart, accent: accent, height: 24, pulses: false)
+                                .frame(width: 48, height: 24)
                             Text(TokenChartStyle.priceText(chart.price))
                                 .dsText(.body17).foregroundStyle(DS.textPrimary)
                                 .contentTransition(.numericText())
-                            TokenDeltaPill(change: chart.change, label: "1D", compact: true)
                         }
                         .lineLimit(1)
                         .fixedSize(horizontal: true, vertical: false)
                     }
+                } else if let walletChart {
+                    // The wallet's balance history, the same trailing sparkline a
+                    // token wears — the total already rides the header signal.
+                    TokenChartPlot(chart: walletChart,
+                                  accent: TokenChartStyle.accent(change: walletChart.change, scheme: scheme),
+                                  height: 24, pulses: false)
+                        .frame(width: 48, height: 24)
+                } else if isMedia, let ref = filmstrip.first, let child = els[ref] {
+                    // One representative thumbnail (user 2026-07-18: "just one
+                    // photo, one album") — the source's medium as a trailing peek
+                    // detail, not a full-width strip. Taps to that item.
+                    GenMediaTile(el: child, size: 56)
+                        .clipShape(RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
                 } else {
                     Text(el.str(3)).dsText(.subhead13).foregroundStyle(DS.textTertiary)
                 }
-            }
-            // The sparkline FILLS the card (user 2026-07-17: the postage-stamp
-            // 52pt inline plot "doesn't even fill the card") — the same
-            // full-width strip the solo token tile drew, edge to edge of the
-            // row's inner width, left-to-right reveal when the data lands.
-            if isToken {
-                Group {
-                    if let chart {
-                        TokenChartPlot(chart: chart, accent: accent, height: 32, pulses: false)
-                            .mask(alignment: .leading) {
-                                GeometryReader { geo in
-                                    Rectangle().frame(width: revealed ? geo.size.width : 0)
-                                }
-                            }
-                    } else {
-                        RoundedRectangle(cornerRadius: 6, style: .continuous)
-                            .fill(DS.surfaceWell)
-                    }
-                }
-                .frame(maxWidth: .infinity)
-                .frame(height: 32)
-            }
-            // The Wallet row's own sparkline (2026-07-18) — same full-width
-            // strip as Tokens', drawn from the embedded balance history
-            // instead of a live fetch (no reveal animation needed: the data
-            // is already in hand when the row mounts).
-            if let walletChart {
-                TokenChartPlot(chart: walletChart,
-                              accent: TokenChartStyle.accent(change: walletChart.change, scheme: scheme),
-                              height: 32, pulses: false)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 32)
-            }
-            // The image source's PEEK — up to four recent thumbnails filling
-            // the row width (user 2026-07-18: "seeing a single row with text
-            // for those isn't quite the same"). One row tall, medium-native;
-            // each thumb taps to its item, the rest of the row to the feed.
-            if isMedia {
-                HStack(spacing: DS.Space.s2) {
-                    ForEach(filmstrip, id: \.self) { ref in
-                        if let child = els[ref] {
-                            GenMediaTile(el: child, size: nil)
-                                .frame(maxWidth: .infinity)
-                                .clipShape(RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
-                        }
-                    }
-                }
-                .frame(height: 76)
             }
         }
         .padding(.horizontal, DS.Space.s4)
@@ -790,9 +768,8 @@ private struct GenAppRow: View {
         // its args land, and a pull re-fetches; no-op for non-token rows.
         .task(id: "\(refreshTick):\(el.str(5))/\(el.str(6))") {
             guard isToken, !el.str(5).isEmpty else { return }
-            revealed = false
-            chart = await TokenChart.fetch(chain: el.str(5), address: el.str(6))
-            if chart != nil { withAnimation(.easeOut(duration: 0.7)) { revealed = true } }
+            let fetched = await TokenChart.fetch(chain: el.str(5), address: el.str(6))
+            withAnimation(.easeOut(duration: 0.4)) { chart = fetched }
         }
     }
 }
