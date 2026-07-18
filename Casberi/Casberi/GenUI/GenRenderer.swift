@@ -680,6 +680,12 @@ private struct GenAppRow: View {
                     // Ticker · price · 1D delta, right-aligned like a
                     // watchlist row; appears with the chart data.
                     if let chart {
+                        // Hold the cluster at its intrinsic width so the price
+                        // and the 1D pill never wrap (user 2026-07-18: "$1861.6/7"
+                        // and "+1.1%/· 1D" broke across two lines when the leading
+                        // maxWidth:.infinity VStack squeezed this side). The token
+                        // row's left is only "Tokens" + a short badge, so this
+                        // side can safely keep its natural width.
                         HStack(spacing: DS.Space.s2) {
                             Text(el.str(7)).dsText(.subhead13).foregroundStyle(DS.textSecondary)
                             Text(TokenChartStyle.priceText(chart.price))
@@ -687,6 +693,8 @@ private struct GenAppRow: View {
                                 .contentTransition(.numericText())
                             TokenDeltaPill(change: chart.change, label: "1D", compact: true)
                         }
+                        .lineLimit(1)
+                        .fixedSize(horizontal: true, vertical: false)
                     }
                 } else {
                     Text(el.str(3)).dsText(.subhead13).foregroundStyle(DS.textTertiary)
