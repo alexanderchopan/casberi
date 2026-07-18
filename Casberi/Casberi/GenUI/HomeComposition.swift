@@ -142,11 +142,11 @@ enum HomeComposition {
         // clustering, and it shouldn't cost a scroll to reach. Every connected
         // source is one row now (`appendPinnedApps`) — image sources included,
         // their peek a thumbnail filmstrip (2026-07-18: the media shelf-card
-        // retired; a row carries the medium-native peek). Only the wallet's
-        // own visualizations stay cards.
+        // retired; a row carries the medium-native peek). The Wallet is a row
+        // too (its total + top holdings); its treemap and NFT strips live ONLY
+        // on the Wallet feed now (user 2026-07-18), so Home is uniformly rows.
         appendPinnedApps(things, to: &doc, rootRefs: &rootRefs, boardRefs: &boardRefs, boardKeys: &boardKeys)
         appendWalletHoldings(walletHoldings, combined: walletCombined, pending: walletPending, unreachable: walletUnreachable, to: &doc, rootRefs: &rootRefs, boardRefs: &boardRefs, boardKeys: &boardKeys)
-        appendWalletNFTs(walletNFTs, to: &doc, rootRefs: &rootRefs, boardRefs: &boardRefs, boardKeys: &boardKeys)
 
         // Where the map belongs even when it didn't compose yet — the starter
         // preview slots in here, not at the tail.
@@ -566,58 +566,45 @@ enum HomeComposition {
                                              rootRefs: inout [String],
                                              boardRefs: inout [String],
                                              boardKeys: inout [String: String]) {
-        // The combined "Across your wallets" map LEADS the per-wallet ones
-        // when more than one wallet is pinned (ruling 2026-07-15, softening
-        // §71): the same additive bundle the Wallet screen shows, so Home's
-        // total matches its per-wallet tiles. `combined` is nil with one or
-        // zero pinned wallets — a single wallet's own map already is its
-        // combined view. Softened voice: "Across your wallets", never "Net
-        // worth" or "Portfolio".
-        if let c = combined {
-            let id = "walletCombined"
-            boardKeys[id] = "wallet:__all__"
-            doc.append("\(id) = TagMap(\(q("@pin " + String(localized: "Across your wallets"))), \(q(c.subline)), [\(c.cells.joined(separator: ", "))], \(q("token")))")
-            rootRefs.append(id)
-            boardRefs.append(id)
-        }
-        for (i, g) in groups.enumerated() {
-            let id = "walletMap\(i)"
-            // Key by the wallet's label so its treemap keeps its slot/size as
-            // other wallets are pinned/unpinned (matches HomeScreen.moduleKey).
-            boardKeys[id] = "wallet:\(g.label)"
-            // "@pin " leading the eyebrow → GenTagMap renders the Pinned
-            // card's tilted pin, small, before the wallet's name (ruling
-            // 2026-07-10): these maps are on Home because the wallet is
-            // pinned, and everything pin-born wears the pin. The Wallet
-            // screen and the Feed block compose the same maps WITHOUT the
-            // marker — there, nothing is pinned.
-            doc.append("\(id) = TagMap(\(q("@pin " + g.label)), \(q(g.subline)), [\(g.cells.joined(separator: ", "))], \(q("token")))")
-            rootRefs.append(id)
-            boardRefs.append(id)
-        }
-        // A pinned wallet's balance fetch is a real network round-trip — the
-        // slot sat empty for that whole window and read as "my holdings
-        // disappeared" (device report, 2026-07-11) instead of "loading". The
-        // starter-preview idiom already says this honestly elsewhere
-        // (appendStarterPreviews): same muted shape, breathing, nothing to
-        // tap, gone the moment real cells land. Not a board module (nothing
-        // to drag before the real card exists).
-        if groups.isEmpty, pending {
-            doc.append("walletPreview = TagMapPreview(\(q(String(localized: "Wallet"))), \(q(String(localized: "Loading your holdings…"))), [ETH, BTC, SOL, USDC, More])")
-            rootRefs.append("walletPreview")
+        // Wallet is ONE ROW on Home now (user 2026-07-18: the treemap belongs
+        // ONLY on the Wallet source feed — it was duplicated here and was the
+        // last visualization breaking Home's one-row-per-app rule). The row
+        // shows the total value and the top holdings; tapping opens the Wallet
+        // feed, where the treemap (and NFTs, and transactions) live. Loading and
+        // unreachable read as the row's OWN signal — never a vanished slot (the
+        // device-report failure the preview/error cards answered), just an
+        // honest word in the row that was already there.
+        let total = combined?.totalUSD ?? groups.first?.totalUSD
+        let cells = combined?.cells ?? groups.first?.cells ?? []
+        // Cell format is "SYMBOL weight" — the symbol is the first token; cells
+        // are value-ordered, so the first few are the biggest holdings.
+        let topSymbols = cells.prefix(3).compactMap { $0.split(separator: " ").first.map(String.init) }
+        let signal: String
+        let peek: String
+        if let total {
+            signal = walletTotalText(total)
+            peek = topSymbols.joined(separator: " · ")
+        } else if pending {
+            signal = String(localized: "Loading…"); peek = ""
         } else if unreachable {
-            // A pinned wallet we couldn't reach AND have never sampled — the one
-            // case with no card and no cache to show. It used to leave the slot
-            // blank, which reads as "my holdings vanished" (device report,
-            // 2026-07-17, same complaint the loading preview answered for the
-            // in-flight window). Say it honestly instead: a muted, non-breathing
-            // card that names the failure and the fix. Pull-to-refresh (the
-            // screen's own retry gesture) reloads it; the retry/backoff in the
-            // fetch means this only persists through a real outage or a dead
-            // connection, not a transient rate-limit.
-            doc.append("walletUnreachable = TagMapError(\(q(String(localized: "Your wallets"))), \(q(String(localized: "Couldn't reach the chain — pull down to refresh"))), [ETH, BTC, SOL, USDC, More])")
-            rootRefs.append("walletUnreachable")
+            signal = String(localized: "Couldn't reach"); peek = ""
+        } else {
+            return   // no pinned wallet / no data — no row
         }
+        let id = "walletRow"
+        boardKeys[id] = "app:Wallet"
+        // rank 0 — a balance is ambient, not a needs-you signal, so the total
+        // reads in the quiet tertiary ink. Source "Wallet" routes the row tap
+        // to the wallet feed (chip/addr fields empty, no filmstrip).
+        doc.append("\(id) = AppRow(\(q("Wallet")), \(q(signal)), \(q(peek)), \(q("")), \(q("")), \(q("")), \(q("")), \(q("")), \(q("0")), [])")
+        rootRefs.append(id)
+        boardRefs.append(id)
+    }
+
+    /// A wallet's total, whole dollars with grouping — "$12,345". Cents are
+    /// noise at a glance (the feed's treemap carries the precision).
+    private static func walletTotalText(_ usd: Double) -> String {
+        "$" + Int(usd.rounded()).formatted(.number.grouping(.automatic))
     }
 
     // MARK: - Rich module interiors (prd 58, Goal 3)
@@ -631,34 +618,9 @@ enum HomeComposition {
         !(t.previewImageURL ?? "").isEmpty || t.previewImageData != nil
     }
 
-    /// A pinned wallet's NFT strip (ruling 2026-07-14) — rides the wallet
-    /// pin by default as its OWN board card (removable, resizable, and
-    /// reorderable independently of the treemap), through the MediaShelf
-    /// idiom the image sources already wear. Wallets holding no NFTs
-    /// contribute nothing; a long-press "Remove from Home" hides the strip
-    /// per wallet (MediaShelf's pinned verb — arg 6 carries the address the
-    /// removal is scoped to). Cells tap out to the piece on OpenSea.
-    private static func appendWalletNFTs(_ groups: [WalletIngest.NFTGroup],
-                                         to doc: inout [String], rootRefs: inout [String],
-                                         boardRefs: inout [String],
-                                         boardKeys: inout [String: String]) {
-        for (i, g) in groups.enumerated() {
-            let id = "nftShelf\(i)"
-            // Keyed by address so the strip keeps its slot/size as other
-            // wallets are pinned/unpinned (the walletMap precedent).
-            boardKeys[id] = "walletNFTs:\(g.address.lowercased())"
-            let capped = Array(g.nfts.prefix(12))
-            let itemIds = capped.indices.map { "\(id)i\($0)" }
-            doc.append("\(id) = MediaShelf(\(q("NFTs · \(g.label)")), \(q("")), [\(itemIds.joined(separator: ", "))], \(q("nft")), \(q("pin")), \(q(g.address)))")
-            for (j, nft) in capped.enumerated() {
-                // The thing-id slot carries the OpenSea URL — GenMediaTile
-                // opens URL-shaped ids directly (an NFT is not a thing).
-                doc.append("\(id)i\(j) = MediaItem(\(q(nft.name)), \(q(nft.imageURL)), \(q(nft.openseaURL?.absoluteString ?? "")), \(q("")))")
-            }
-            rootRefs.append(id)
-            boardRefs.append(id)
-        }
-    }
+    // A pinned wallet's NFT strip retired from Home 2026-07-18 (user: the
+    // wallet's visualizations live on the Wallet feed, where the NFT block
+    // already composes) — Home carries the one Wallet row instead.
 
     /// MediaItem(title, imageURL, thingId, openable) — a shelf's child line.
     /// A screenshot carries no image URL (its bytes are local, prd 48); the
