@@ -1018,12 +1018,12 @@ struct FeedScreen: View {
     /// loading skeleton.
     @ViewBuilder
     private func calendarHeatmapSection(_ visible: [Thing], label: FeedHeatmap.Label) -> some View {
-        let year = ContributionYear.from(dates: visible.map(\.capturedAt))
+        let year = ContributionYear.from(dates: visible.map(\.capturedAt), columns: label.columns)
         if year.activeDays >= 4 {
             Section {
                 CalendarHeatmapHero(title: label.title,
                                     subtitle: FeedHeatmap.subtitle(label, total: year.total),
-                                    year: year)
+                                    year: year, minColumns: label.columns)
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
                     .listRowInsets(EdgeInsets())

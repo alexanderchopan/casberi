@@ -16,6 +16,11 @@ enum FeedHeatmap {
         /// Count noun, singular (1 entry) and plural (N entries).
         let unit: String
         let units: String
+        /// Grid width in weeks. A full year (53) for the habit sources; a short
+        /// recent window for the social feeds, whose corpus is a rolling capped
+        /// sample — a trailing year there would be a mostly-empty grid with one
+        /// bright recent smudge, so they draw the last few months instead.
+        var columns: Int = 53
     }
 
     static let labels: [String: Label] = [
@@ -29,6 +34,11 @@ enum FeedHeatmap {
         "ChatGPT":       Label(title: "Your chat year",       unit: "chat",       units: "chats"),
         "Claude":        Label(title: "Your chat year",       unit: "chat",       units: "chats"),
         "Gemini":        Label(title: "Your chat year",       unit: "chat",       units: "chats"),
+        // Social feeds: every item is a cast/post (your own, ones you liked, ones
+        // that mention you, channel casts — all casts), so the grid honestly reads
+        // as casting density. Windowed to ~14 weeks (see `columns`).
+        "Farcaster":     Label(title: "Casting activity",     unit: "cast",       units: "casts", columns: 14),
+        "Bluesky":       Label(title: "Posting activity",     unit: "post",       units: "posts", columns: 14),
     ]
 
     static func label(for source: String) -> Label? { labels[source] }

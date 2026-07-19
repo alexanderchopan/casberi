@@ -113,7 +113,6 @@ enum FeedInsight {
     static func distribution(source: String, things: [Thing]) -> Distribution? {
         switch source {
         case "Stocktwits": return stocktwitsMood(things)
-        case "Farcaster", "Bluesky": return socialMix(things)
         default: return nil
         }
     }
@@ -137,31 +136,6 @@ enum FeedInsight {
             Segment(label: "Neutral", count: neutral, tone: .neutral),
         ].filter { $0.count > 0 }
         return Distribution(title: "The mood on your tickers",
-                            subtitle: "\(total) \(total == 1 ? "post" : "posts")", segments: segments)
-    }
-
-    /// How a social feed arrives — authored by an account you watch, through a
-    /// channel, a post they liked, or one that mentions them. Read straight from
-    /// each post's stored `socialContext` / `channelName`.
-    private static func socialMix(_ things: [Thing]) -> Distribution? {
-        var authored = 0, channels = 0, liked = 0, mentions = 0
-        for thing in things {
-            switch thing.socialContext {
-            case "liked":   liked += 1
-            case "mention": mentions += 1
-            default:
-                if thing.channelName?.isEmpty == false { channels += 1 } else { authored += 1 }
-            }
-        }
-        let total = authored + channels + liked + mentions
-        let segments = [
-            Segment(label: "Posts",    count: authored, tone: .accent),
-            Segment(label: "Channels", count: channels, tone: .alt1),
-            Segment(label: "Liked",    count: liked,    tone: .alt2),
-            Segment(label: "Mentions", count: mentions, tone: .neutral),
-        ].filter { $0.count > 0 }
-        guard total >= 4, segments.count >= 2 else { return nil }
-        return Distribution(title: "How your feed arrives",
                             subtitle: "\(total) \(total == 1 ? "post" : "posts")", segments: segments)
     }
 

@@ -251,8 +251,8 @@ enum HandleBridge: String {
     /// The line under the watched-accounts list, explaining its toggles.
     var watchFooter: String? {
         switch self {
-        case .farcaster: "Likes lands casts an account likes — like it there, it's saved here. Mentions lands casts naming them."
-        case .bluesky:   "Mentions lands posts that name them — replies and quotes included."
+        case .farcaster: "Likes — also saves the casts an account has liked. Mentions — also saves casts that name them."
+        case .bluesky:   "Mentions — also saves posts that name them, replies and quotes included."
         default:         nil
         }
     }

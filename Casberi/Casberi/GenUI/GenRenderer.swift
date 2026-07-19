@@ -1144,12 +1144,16 @@ private struct SoloTokenTile: View {
 /// muted skeleton (loading / unreachable) — never fake counts.
 struct ContributionGraph: View {
     let year: ContributionYear?
+    /// The minimum column count the grid always fills — 53 for the year graph
+    /// (so a sparse corpus or a nil loading state still draws a full year), a
+    /// smaller number for a windowed heatmap (the social recent-weeks grid).
+    var minColumns: Int = 53
 
     private static let gap: CGFloat = 3
 
     var body: some View {
         let weeks = year?.weeks ?? []
-        let cols = max(weeks.count, 53)
+        let cols = max(weeks.count, minColumns)
         Canvas { ctx, size in
             let gap = Self.gap
             let cell = min((size.width - gap * CGFloat(cols - 1)) / CGFloat(cols),
@@ -1220,11 +1224,14 @@ struct CalendarHeatmapHero: View {
     let title: String
     let subtitle: String
     let year: ContributionYear?
+    /// Passed through to the grid — 53 (a year) unless a windowed source
+    /// (the social recent-weeks heatmap) draws fewer columns.
+    var minColumns: Int = 53
 
     var body: some View {
         InsightCard {
             InsightHeader(title: title, subtitle: subtitle)
-            ContributionGraph(year: year)
+            ContributionGraph(year: year, minColumns: minColumns)
         }
     }
 }
