@@ -81,47 +81,32 @@ enum HomeComposition {
 
         // The intelligence is ONE card (user 2026-07-18): "Just landed", "While
         // you were away", and "Noticed" all convey what's new / what the app
-        // noticed, so they share ONE blue card instead of a cover hero plus two
-        // synthesis cards. Three eyebrow-and-line sections in one `Insight`:
-        //   1. Just landed — the newest thing that ACTUALLY landed (capturedAt
-        //      at or before now; a future calendar event isn't "just landed",
-        //      it surfaces in its own tile). Tappable — opens the thing (arg 6).
-        //   2. While you were away — the firehose-excluded read of what landed
+        // noticed, so they share ONE blue card. It carries only the
+        // CROSS-CUTTING reads the board's rows can't give:
+        //   1. While you were away — the firehose-excluded read of what landed
         //      since the last visit.
-        //   3. Noticed — the on-device model's one genuine cross-thing
+        //   2. Noticed — the on-device model's one genuine cross-thing
         //      connection (prd §36c reopened; the model may DECLINE, so it's
         //      only ever a real observation).
-        // Each section is skipped when its line is empty; the card is omitted
-        // only when all three are. "Coming up" stays retired (its dated items
-        // read off their own source tiles). Fixed furniture like the cover, NOT
-        // a board module — no size pin, no remove badge.
-        // ONE quiet paragraph (user 2026-07-18, second pass: three mini
-        // sections "haven't earned that space"): just-landed + what arrived
-        // while away + the model's connection compose into a single flowing
-        // text under one "Noticed" eyebrow, each sentence skipped when it has
-        // nothing to say, the card omitted when none do. One tap — the most
-        // specific door available: the thing the model's connection ran
-        // through (`insightThing`), else what just landed, else the feed
-        // (whose "New since" divider marks the away window).
-        // Firehose-excluded like every aggregate read (§119): a token-watch
-        // refresh re-landing "dogwifhat · $WIF" isn't the day's headline. And
-        // no calendar EVENTS: "Just landed: Team standup" reads as news about
-        // a meeting that was merely synced — scheduled things belong to the
-        // Calendar row, not the landed slot.
-        let landed = things.first {
-            $0.kind != .approval && $0.kind != .event
-                && !firehoseSources.contains($0.source) && $0.capturedAt <= .now
-        }
-        let landedSentence = landed.map { String(localized: "Just landed: \($0.title).") } ?? ""
+        // The old "Just landed: X" sentence is GONE (user 2026-07-18): the
+        // richer thumb rows now show each app's latest item, so restating it
+        // here just repeated the top row — and it answers "the model can't earn
+        // that space yet", because the card now takes the space only when it has
+        // something the rows don't. Each line is skipped when empty; the card is
+        // omitted when both are, and the board leads. One quiet paragraph under
+        // a "Noticed" eyebrow. Fixed furniture like the cover, NOT a board
+        // module — no size pin, no remove badge.
         let away = awayLine(things)
         let noticed = insight ?? ""
-        let paragraph = [landedSentence, away, noticed]
+        let paragraph = [away, noticed]
             .filter { !$0.isEmpty }
             .map { $0.hasSuffix(".") || $0.hasSuffix("!") || $0.hasSuffix("?") ? $0 : $0 + "." }
             .joined(separator: " ")
         if !paragraph.isEmpty {
-            let openID = insightThing ?? (landed?.id.uuidString ?? "")
-            let feedFallback = openID.isEmpty && !away.isEmpty ? "feed" : ""
+            // Open the thing the model's connection ran through; else (the away
+            // read alone) the feed, whose "New since" divider marks the window.
+            let openID = insightThing ?? ""
+            let feedFallback = openID.isEmpty ? "feed" : ""
             doc.append("insight = Insight(\(q(paragraph)), \(q("")), \(q(openID)), \(q(feedFallback)))")
             rootRefs.append("insight")
         }
@@ -459,7 +444,13 @@ enum HomeComposition {
                 }
                 return item.title
             }()
-            doc.append("\(id) = AppRow(\(q(seed.source)), \(q(seed.signal)), \(q(peekTitle)), \(q(item.map { shortTime($0.capturedAt) } ?? "")), \(q(item?.id.uuidString ?? ""))\(chipSeat), \(q("\(seed.rank)"))\(filmSeat))")
+            // Arg 10 for a social row = the author's handle, so tapping the
+            // avatar opens their profile (casberi://person/<source>/<handle>).
+            // Non-social rows leave it unset; the wallet row (its own function)
+            // reuses arg 10 for its balance sparkline — disjoint by row type.
+            let handleSeat = Self.socialSources.contains(seed.source)
+                ? ", \(q(item?.authorHandle ?? ""))" : ""
+            doc.append("\(id) = AppRow(\(q(seed.source)), \(q(seed.signal)), \(q(peekTitle)), \(q(item.map { shortTime($0.capturedAt) } ?? "")), \(q(item?.id.uuidString ?? ""))\(chipSeat), \(q("\(seed.rank)"))\(filmSeat)\(handleSeat))")
             for (j, t) in seed.filmstrip.enumerated() {
                 // Social/RSS rows draw their MARK (author avatar / feed logo),
                 // not the item image — override the MediaItem's URL with it

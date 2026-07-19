@@ -654,6 +654,14 @@ private struct GenAppRow: View {
     private var walletChart: TokenChart? {
         TokenChart.from(closes: el.str(10).split(separator: ",").compactMap { Double($0) })
     }
+    /// arg 10 does double duty by row type (mutually exclusive): the wallet
+    /// row's balance closes (isWallet, above) or a social row's author handle
+    /// for the profile deep link (isSocial).
+    private var socialHandle: String { el.str(10) }
+    /// The brand marks that are white-backed and glare brightest in the column
+    /// (user 2026-07-18) — inset in a faint square so they read as contained,
+    /// not a lit block. Dark/colored marks (OpenClaw, GitHub…) stay full-bleed.
+    private var lightMark: Bool { el.str(0) == "ChatGPT" || el.str(0) == "Gmail" }
 
     /// The 46pt leading square — the row's content at a glance. An imaged item
     /// shows its picture (medium-native); a token/wallet shows its sparkline in
@@ -676,16 +684,39 @@ private struct GenAppRow: View {
                                   height: 30, pulses: false)
                         .frame(width: s - 12, height: 30)
                 }
+        } else if isSocial {
+            // A face → the person, not the post: tapping an avatar opens the
+            // profile card (casberi://person/<source>/<handle>). RemoteThumb
+            // loads the avatar circularly and falls back to the app glyph (also
+            // circular) when a post has no avatar. The handle rides arg 10.
+            let avatar = thumbRef.flatMap { els[$0]?.str(1) } ?? ""
+            let handle = socialHandle
+            Button {
+                DSHaptic.selection()
+                if !handle.isEmpty,
+                   let url = URL(string: "casberi://person/\(el.str(0))/\(handle.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? handle)") {
+                    openURL(url)
+                }
+            } label: {
+                RemoteThumb(urlString: avatar, size: s, fallback: el.str(0), circular: true)
+            }
+            .buttonStyle(.plain)
+        } else if el.str(0) == "RSS", let ref = thumbRef, let child = els[ref] {
+            // The feed's logo, a squircle, with NO tap of its own — a publisher
+            // mark opens the feed, which the row tap already does (2026-07-18).
+            RemoteThumb(urlString: child.str(1), size: s, fallback: "RSS", circular: false)
         } else if let ref = thumbRef, let child = els[ref] {
-            // Social: the author's avatar, clipped to a circle. Everything else:
-            // the item's picture in the app-icon squircle.
-            GenMediaTile(el: child, size: s)
-                .clipShape(isSocial ? AnyShape(Circle()) : AnyShape(shape))
+            // A non-social item's own picture — tapping it opens that thing.
+            GenMediaTile(el: child, size: s).clipShape(shape)
+        } else if hasBrandAsset, lightMark {
+            // A white-backed mark (ChatGPT/Gmail) — inset in a faint square so
+            // it stops being the brightest block in the column.
+            shape.fill(DS.fillFaint).frame(width: s, height: s)
+                .overlay { BridgeIcon(name: el.str(0), size: s - 12) }
         } else if hasBrandAsset {
-            // A real bundled brand icon (OpenClaw's berry, GitHub, ChatGPT…) —
-            // show it as-is; a source we have a mark for should wear it, not a
-            // generic glyph (fix 2026-07-18: the quiet-square fallback below was
-            // masking every bundled asset).
+            // A real bundled brand icon (OpenClaw's berry, GitHub…) — full-bleed;
+            // a source we have a mark for should wear it, not a generic glyph
+            // (fix 2026-07-18: the quiet-square fallback below masked every asset).
             BridgeIcon(name: el.str(0), size: s)
         } else {
             // No bundled brand asset (the Apple apps — Reminders, Calendar,
