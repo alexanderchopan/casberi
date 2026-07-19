@@ -640,10 +640,20 @@ struct HomeScreen: View {
             .frame(maxWidth: .infinity)
             .overlay(alignment: .topLeading) {
                 if boardEditing, let remove = moduleRemoval(ref) {
+                    // Overhangs the VISIBLE CARD's top-left corner, iOS's own
+                    // remove grammar — the size pin keeps the opposite corner.
+                    // A magazine (small) tile's frame IS its card, so the -6
+                    // overhang lands on the frame corner directly. A full-width
+                    // row (appRow, walletRow, …) is placed flush to the board
+                    // edge but carries its own s4 horizontal / s3 top inset
+                    // around the card, so the badge must clear that inset first
+                    // — without it the badge overhangs the FULL-WIDTH FRAME
+                    // corner, i.e. the screen's left edge, and clips off-screen
+                    // (the minus was unreachable, 2026-07-19).
+                    let magazine = span == .small
                     BoardRemoveBadge(action: remove)
-                        // Overhangs the corner, the system's own grammar —
-                        // the size pin keeps the opposite corner.
-                        .offset(x: -6, y: -6)
+                        .offset(x: (magazine ? 0 : DS.Space.s4) - 6,
+                                y: (magazine ? 0 : DS.Space.s3) - 6)
                 }
             }
     }
