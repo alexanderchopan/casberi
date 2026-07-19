@@ -1,5 +1,13 @@
 // Farcaster promo — live-animated UI (no screenshots) in the editorial frame.
 // node render.js clip-farcaster-live.html --size=1080x1920
+// Refreshed 2026-07-17 for the newest social features:
+//   prd 74 — likes / mentions / channels as watch targets
+//   prd 81 — "the post itself, why it's here, the people behind it":
+//     full postText, socialContext markers ("Liked" / "Mentions you" / "/design"
+//     channel — channel wins), quote/parent SocialCard, like/repost/replyCount
+//   prd 87 — "Who they follow": the follow graph as a PICKER, not a mirror
+//     (a measured account follows 1,848; nothing is auto-watched)
+// Marker strings verbatim from ShapedRows/SocialBridge: "Liked","Mentions you","/design".
 const fs = require('fs');
 const path = require('path');
 const AVDIR = '/Users/alexanderchopan/Developer/casberi/scratchpad/fc-avatars';
@@ -7,13 +15,13 @@ const av = n => 'data:image/png;base64,' + fs.readFileSync(path.join(AVDIR, n + 
 
 const PUR = '#7C4DEC', PUR2 = '#5B32C0';
 const BEATS = [
-  { kick: 'CONNECT',  head: 'Just a\nusername.',  accent: PUR },
-  { kick: 'ACCOUNTS', head: 'Follow\nanyone.',    accent: PUR },
-  { kick: 'FEED',     head: 'Every\ncast.',        accent: PUR },
-  { kick: 'REPLIES',  head: 'The whole\nthread.',  accent: PUR },
-  { kick: 'HOME',     head: 'All on your\nHome.',  accent: PUR },
+  { kick: 'CONNECT',  head: 'Just a\nusername.',   accent: PUR },
+  { kick: 'WATCH',    head: 'Casts, likes,\nmentions.', accent: PUR },
+  { kick: 'CONTEXT',  head: "Why it's\nhere.",       accent: PUR },
+  { kick: 'THE POST', head: 'The whole\npost.',      accent: PUR },
+  { kick: 'FOLLOWS',  head: 'Who they\nfollow.',     accent: PUR },
 ];
-const INTRO = 0.45, BEAT = 1.9;
+const INTRO = 0.45, BEAT = 2.0;
 const OUT_AT = INTRO + BEATS.length * BEAT;
 const TOTAL = OUT_AT + 1.9;
 const DATA = BEATS.map((b, i) => ({ kick: (i + 1 < 10 ? '0' : '') + (i + 1) + ' · ' + b.kick, head: b.head, accent: b.accent }));
@@ -29,7 +37,7 @@ html,body{width:1080px;height:1920px;overflow:hidden;background:#EEEAE1;
 .rule{position:absolute;left:70px;right:70px;top:126px;height:3px;background:#14110d;transform-origin:left;}
 .wm{position:absolute;right:20px;top:150px;font-size:560px;line-height:.8;font-weight:800;letter-spacing:-.04em;opacity:.08;will-change:opacity,transform;}
 .kick{position:absolute;left:74px;top:238px;font-size:32px;letter-spacing:.14em;font-weight:600;will-change:transform,opacity;}
-.head{position:absolute;left:70px;top:284px;right:70px;font-size:132px;line-height:.94;font-weight:800;letter-spacing:-.045em;color:#14110d;white-space:pre-line;will-change:transform,opacity;}
+.head{position:absolute;left:70px;top:284px;right:70px;font-size:126px;line-height:.94;font-weight:800;letter-spacing:-.045em;color:#14110d;white-space:pre-line;will-change:transform,opacity;}
 .foot{position:absolute;left:74px;right:74px;bottom:70px;display:flex;justify-content:space-between;font-size:26px;letter-spacing:.12em;color:#14110d;font-weight:600;}
 .wipe{position:absolute;top:-12%;left:0;width:135%;height:124%;transform:skewX(-9deg) translateX(160%);will-change:transform;}
 
@@ -38,10 +46,6 @@ html,body{width:1080px;height:1920px;overflow:hidden;background:#EEEAE1;
 .comp.pur{background:linear-gradient(160deg,#7C4DEC,#5B32C0);}
 .comp.dark{background:#100e17;}
 .av{border-radius:50%;flex:none;background:#2a2440 center/cover no-repeat;}
-.av.g1{background:radial-gradient(circle at 38% 32%,#8fd6b0,#1f8f66 72%);}
-.av.g2{background:radial-gradient(circle at 38% 32%,#f0b48a,#c26a2a 72%);}
-.av.g3{background:radial-gradient(circle at 38% 32%,#9ab6f0,#2f5bc0 72%);}
-.av.g4{background:radial-gradient(circle at 38% 32%,#e79ad0,#a83b86 72%);}
 
 /* connect */
 .fmark{width:120px;height:120px;border-radius:30px;background:rgba(255,255,255,.16);display:flex;align-items:center;justify-content:center;}
@@ -55,24 +59,48 @@ html,body{width:1080px;height:1920px;overflow:hidden;background:#EEEAE1;
 /* account row + chips */
 .acc{display:flex;align-items:center;gap:30px;will-change:transform,opacity;}
 .acc .av{width:100px;height:100px;}
-.an{font-size:52px;font-weight:700;}
+.an{font-size:50px;font-weight:700;}
 .ah{font-size:30px;color:rgba(255,255,255,.55);margin-top:6px;}
-.chips{display:flex;gap:22px;margin-top:44px;}
-.chip{font-size:34px;font-weight:600;padding:20px 44px;border-radius:100px;background:rgba(255,255,255,.09);color:rgba(255,255,255,.6);will-change:background,color,transform;}
+.chips{display:flex;gap:20px;margin-top:44px;flex-wrap:wrap;}
+.chip{font-size:32px;font-weight:600;padding:18px 40px;border-radius:100px;background:rgba(255,255,255,.09);color:rgba(255,255,255,.6);will-change:background,color,transform;}
 .chipnote{font-size:28px;color:rgba(255,255,255,.5);margin-top:40px;line-height:1.4;}
 
-/* casts / replies */
-.rhead{font-size:28px;letter-spacing:.14em;color:rgba(255,255,255,.55);margin-bottom:14px;}
-.cast{display:flex;gap:24px;padding:26px 0;will-change:transform,opacity;border-top:2px solid rgba(255,255,255,.08);}
-.cast:first-of-type{border-top:none;}
-.cast .av{width:70px;height:70px;}
-.ch{font-size:28px;color:rgba(255,255,255,.55);margin-bottom:8px;}
-.ct{font-size:38px;line-height:1.24;font-weight:500;}
-.reply{display:flex;gap:22px;padding:20px 0;will-change:transform,opacity;}
-.reply .av{width:58px;height:58px;}
-.rh{font-size:26px;color:rgba(255,255,255,.55);}
-.rt{font-size:34px;margin-top:5px;line-height:1.2;}
-.htitle{font-size:44px;font-weight:750;margin-bottom:20px;}
+/* context rows — why it's here */
+.crow{display:flex;align-items:center;gap:24px;padding:28px 0;border-top:2px solid rgba(255,255,255,.08);will-change:opacity,transform;}
+.crow:first-of-type{border-top:none;}
+.crow .av{width:76px;height:76px;}
+.cn{font-size:28px;color:rgba(255,255,255,.55);margin-bottom:7px;}
+.cx{font-size:33px;line-height:1.22;font-weight:500;}
+.mk{margin-left:auto;flex:none;font-size:25px;font-weight:700;padding:11px 24px;border-radius:100px;}
+.mk.like{background:rgba(255,92,122,.16);color:#ff8fa3;}
+.mk.chan{background:rgba(124,77,236,.22);color:#c3aef8;}
+.mk.ment{background:rgba(63,185,80,.16);color:#7ee08a;}
+.cnote{margin-top:32px;font-size:27px;color:rgba(255,255,255,.5);line-height:1.45;will-change:opacity;}
+.cnote b{color:#fff;}
+
+/* the post — enriched */
+.ptop{display:flex;gap:24px;align-items:center;will-change:opacity,transform;}
+.ptop .av{width:82px;height:82px;}
+.ph{font-size:30px;color:rgba(255,255,255,.55);}
+.pn{font-size:38px;font-weight:700;}
+.ptext{font-size:37px;line-height:1.32;font-weight:500;margin-top:26px;will-change:opacity,transform;}
+.quote{margin-top:28px;border-radius:20px;padding:26px 28px;background:rgba(255,255,255,.06);box-shadow:inset 0 0 0 2px rgba(255,255,255,.1);display:flex;gap:18px;align-items:flex-start;will-change:opacity,transform;}
+.quote .av{width:52px;height:52px;}
+.qn{font-size:26px;color:rgba(255,255,255,.55);margin-bottom:6px;}
+.qt{font-size:30px;line-height:1.25;}
+.counts{display:flex;gap:44px;margin-top:34px;font-size:31px;color:rgba(255,255,255,.6);font-weight:600;will-change:opacity;}
+.counts b{color:#fff;}
+
+/* follow picker */
+.fhead{font-size:28px;letter-spacing:.14em;color:rgba(255,255,255,.55);margin-bottom:20px;}
+.prow{display:flex;align-items:center;gap:24px;padding:22px 0;border-top:2px solid rgba(255,255,255,.08);will-change:opacity,transform;}
+.prow:first-of-type{border-top:none;}
+.prow .av{width:76px;height:76px;}
+.pnm{font-size:36px;font-weight:650;} .phn{font-size:25px;color:rgba(255,255,255,.45);margin-top:4px;}
+.watch{margin-left:auto;flex:none;font-size:28px;font-weight:700;padding:14px 34px;border-radius:100px;background:rgba(255,255,255,.1);color:rgba(255,255,255,.75);will-change:background,color,transform;}
+.watch.on{background:#fff;color:#5B32C0;}
+.fnote{margin-top:26px;font-size:27px;color:rgba(255,255,255,.5);line-height:1.45;will-change:opacity;}
+.fnote b{color:#fff;}
 
 .outro{position:absolute;inset:0;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;padding:0 74px;opacity:0;will-change:opacity;}
 .outro .big{font-size:200px;font-weight:800;letter-spacing:-.05em;color:#14110d;line-height:.9;}
@@ -94,30 +122,31 @@ html,body{width:1080px;height:1920px;overflow:hidden;background:#EEEAE1;
 
   <div class="comp dark" id="comp1">
     <div class="acc" id="acc"><div class="av" style="background-image:url('${av('vitaliketh')}')"></div><div><div class="an">Vitalik Buterin</div><div class="ah mono">@vitalik.eth · hullo</div></div></div>
-    <div class="chips"><div class="chip" data-i="0">Likes</div><div class="chip" data-i="1">Mentions</div></div>
-    <div class="chipnote">Their casts — plus the ones they like and get mentioned in — all land here.</div>
+    <div class="chips"><div class="chip" data-i="0">Casts</div><div class="chip" data-i="1">Likes</div><div class="chip" data-i="2">Mentions</div><div class="chip" data-i="3">Channels</div></div>
+    <div class="chipnote">Their casts — plus the ones they like, get mentioned in, and the channels they post to. All land in your feed.</div>
   </div>
 
   <div class="comp dark" id="comp2">
-    <div class="cast" data-i="0"><div class="av" style="background-image:url('${av('vitaliketh')}')"></div><div><div class="ch mono">vitalik.eth · 4d</div><div class="ct">One thing I find striking in the discourse between AI 2040 and its detractors…</div></div></div>
-    <div class="cast" data-i="1"><div class="av" style="background-image:url('${av('vitaliketh')}')"></div><div><div class="ch mono">vitalik.eth · 7d</div><div class="ct">They are trying to push Chat Control through again.</div></div></div>
-    <div class="cast" data-i="2"><div class="av" style="background-image:url('${av('july')}')"></div><div><div class="ch mono">july · 8d</div><div class="ct">The shi in question.</div></div></div>
+    <div class="crow" data-i="0"><div class="av" style="background-image:url('${av('july')}')"></div><div><div class="cn mono">july · 8d</div><div class="cx">The shi in question.</div></div><span class="mk like">Liked</span></div>
+    <div class="crow" data-i="1"><div class="av" style="background-image:url('${av('vitaliketh')}')"></div><div><div class="cn mono">vitalik.eth · 4d</div><div class="cx">Some notes on the protocol's design tradeoffs…</div></div><span class="mk chan">/design</span></div>
+    <div class="crow" data-i="2"><div class="av" style="background-image:url('${av('omghaxeth')}')"></div><div><div class="cn mono">omghax.eth · 2d</div><div class="cx">@vitalik.eth what do you make of this?</div></div><span class="mk ment">Mentions you</span></div>
+    <div class="cnote" id="cnote">Every post says <b>why it landed</b> — a like, a mention, or the channel it's in.</div>
   </div>
 
   <div class="comp dark" id="comp3">
-    <div class="cast" data-i="0" style="padding-top:0"><div class="av" style="background-image:url('${av('vitaliketh')}')"></div><div><div class="ch mono">vitalik.eth · 7d</div><div class="ct">They are trying to push Chat Control through again.</div></div></div>
-    <div class="rhead mono" style="margin-top:22px">REPLIES · 8+</div>
-    <div class="reply" data-i="0"><div class="av" style="background-image:url('${av('omghaxeth')}')"></div><div><div class="rh mono">@omghax.eth</div><div class="rt">OOF…</div></div></div>
-    <div class="reply" data-i="1"><div class="av" style="background-image:url('${av('strangesmell')}')"></div><div><div class="rh mono">@strangesmell</div><div class="rt">I hate the world we have built…</div></div></div>
-    <div class="reply" data-i="2"><div class="av" style="background-image:url('${av('aldinias')}')"></div><div><div class="rh mono">@aldinias</div><div class="rt">again? feels like they just keep retrying.</div></div></div>
-    <div class="reply" data-i="3"><div class="av" style="background-image:url('${av('mooneth')}')"></div><div><div class="rh mono">@moon.eth</div><div class="rt">They will never stop.</div></div></div>
+    <div class="ptop" id="ptop"><div class="av" style="background-image:url('${av('vitaliketh')}')"></div><div><div class="pn">vitalik.eth</div><div class="ph mono">@vitalik.eth · 4d</div></div></div>
+    <div class="ptext" id="ptext">One thing I find striking in the discourse between AI 2040 and its detractors is how much both sides agree on the facts, and differ only on the framing.</div>
+    <div class="quote" id="quote"><div class="av" style="background-image:url('${av('july')}')"></div><div><div class="qn mono">july</div><div class="qt">the shi in question.</div></div></div>
+    <div class="counts mono" id="counts"><span>♥ <b>1,240</b></span><span>↺ <b>340</b></span><span>💬 <b>89</b></span></div>
   </div>
 
   <div class="comp dark" id="comp4">
-    <div class="htitle">Recent posts</div>
-    <div class="cast" data-i="0"><div class="av" style="background-image:url('${av('vitaliketh')}')"></div><div><div class="ch mono">vitalik.eth</div><div class="ct">One thing I find striking in the discourse between AI 2040…</div></div></div>
-    <div class="cast" data-i="1"><div class="av" style="background-image:url('${av('vitaliketh')}')"></div><div><div class="ch mono">vitalik.eth</div><div class="ct">They are trying to push Chat Control through again.</div></div></div>
-    <div class="cast" data-i="2"><div class="av" style="background-image:url('${av('july')}')"></div><div><div class="ch mono">july</div><div class="ct">The shi in question.</div></div></div>
+    <div class="fhead mono">VITALIK.ETH FOLLOWS · 1,848</div>
+    <div class="prow" data-i="0"><div class="av" style="background-image:url('${av('july')}')"></div><div><div class="pnm">july</div><div class="phn mono">@july</div></div><span class="watch" data-w>Watch</span></div>
+    <div class="prow" data-i="1"><div class="av" style="background-image:url('${av('omghaxeth')}')"></div><div><div class="pnm">omghax.eth</div><div class="phn mono">@omghax.eth</div></div><span class="watch" data-w>Watch</span></div>
+    <div class="prow" data-i="2"><div class="av" style="background-image:url('${av('strangesmell')}')"></div><div><div class="pnm">strangesmell</div><div class="phn mono">@strangesmell</div></div><span class="watch" data-w>Watch</span></div>
+    <div class="prow" data-i="3"><div class="av" style="background-image:url('${av('aldinias')}')"></div><div><div class="pnm">aldinias</div><div class="phn mono">@aldinias</div></div><span class="watch" data-w>Watch</span></div>
+    <div class="fnote" id="fnote">Bring in who they follow — <b>you pick</b> who to watch. Nothing's auto-followed.</div>
   </div>
 
   <div class="kick mono" id="kick"></div>
@@ -139,7 +168,7 @@ const HANDLE='vitalik.eth';
 window.seek=function(t){
   let active=Math.max(0,Math.min(N-1,Math.floor((t-INTRO)/BEAT)));
   const bs=INTRO+active*BEAT, local=t-bs, acc=D[active].accent;
-  const pIn=clamp01((local-0.28)/1.25);
+  const pIn=clamp01((local-0.28)/1.35);
 
   let coverAcc=acc, wipeX=200;
   const bounds=[]; for(let k=1;k<N;k++) bounds.push({t:INTRO+k*BEAT,c:D[k].accent}); bounds.push({t:OUT_AT,c:'#14110d'});
@@ -175,34 +204,47 @@ window.seek=function(t){
 
 function stagger(sel, p, step, dur, rise){
   document.querySelectorAll(sel).forEach((r,k)=>{
-    const rp=clamp01((p-k*step)/dur); r.style.opacity=rp; r.style.transform='translateY('+((1-easeOut(rp))*(rise||24))+'px)';
+    const rp=clamp01((p-k*step)/dur); r.style.opacity=rp; r.style.transform='translateX('+((1-easeOut(rp))*-30)+'px)';
   });
 }
 function animateComp(i,p,t){
   if(i===0){
-    const n=Math.round(HANDLE.length*clamp01(p/0.6));
+    const n=Math.round(HANDLE.length*clamp01(p/0.55));
     document.getElementById('ftype').textContent=HANDLE.slice(0,n);
     document.getElementById('caret').style.opacity=(Math.floor(t*2)%2)?1:0.2;
-    const bp=clamp01((p-0.62)/0.3); const pulse=1+0.06*Math.sin(clamp01((p-0.62)/0.38)*Math.PI);
+    const bp=clamp01((p-0.6)/0.3); const pulse=1+0.06*Math.sin(clamp01((p-0.6)/0.38)*Math.PI);
     const btn=document.getElementById('fbtn'); btn.style.opacity=bp; btn.style.transform='scale('+(bp?pulse:0.9)+')';
   } else if(i===1){
     const a=document.getElementById('acc'); const ap=clamp01(p/0.4); a.style.opacity=ap; a.style.transform='translateX('+((1-easeOut(ap))*-40)+'px)';
     document.querySelectorAll('#comp1 .chip').forEach((c,k)=>{
-      const cp=clamp01((p-0.4-k*0.16)/0.3);
+      const cp=clamp01((p-0.3-k*0.12)/0.28);
       c.style.background=cp>0.5?'#7C4DEC':'rgba(255,255,255,.09)';
       c.style.color=cp>0.5?'#fff':'rgba(255,255,255,.6)';
       c.style.transform='scale('+(0.9+0.1*easeOut(cp))+')';
     });
-  } else if(i===2){ stagger('#comp2 .cast', p, 0.16, 0.4, 26); }
-  else if(i===3){
-    const c0=document.querySelector('#comp3 .cast'); const cp=clamp01(p/0.35); c0.style.opacity=cp; c0.style.transform='translateY('+((1-easeOut(cp))*20)+'px)';
-    document.querySelector('#comp3 .rhead').style.opacity=clamp01((p-0.3)/0.2);
-    document.querySelectorAll('#comp3 .reply').forEach((r,k)=>{
-      const rp=clamp01((p-0.4-k*0.13)/0.32); r.style.opacity=rp; r.style.transform='translateY('+((1-easeOut(rp))*22)+'px)';
-      r.querySelector('.av').style.transform='scale('+(0.5+0.5*back(rp))+')';
+  } else if(i===2){
+    document.querySelectorAll('#comp2 .crow').forEach((r,k)=>{
+      const rp=clamp01((p-k*0.16)/0.36); r.style.opacity=rp; r.style.transform='translateX('+((1-easeOut(rp))*-30)+'px)';
+      const mk=r.querySelector('.mk'); mk.style.transform='scale('+(0.7+0.3*back(clamp01((p-0.12-k*0.16)/0.3)))+')';
     });
+    document.getElementById('cnote').style.opacity=clamp01((p-0.6)/0.3);
+  } else if(i===3){
+    const tp=document.getElementById('ptop'); const tpp=clamp01(p/0.3); tp.style.opacity=tpp; tp.style.transform='translateY('+((1-easeOut(tpp))*18)+'px)';
+    const tx=document.getElementById('ptext'); const txp=clamp01((p-0.16)/0.32); tx.style.opacity=txp; tx.style.transform='translateY('+((1-easeOut(txp))*18)+'px)';
+    const q=document.getElementById('quote'); const qp=clamp01((p-0.42)/0.3); q.style.opacity=qp; q.style.transform='translateY('+((1-back(qp))*22)+'px)';
+    document.getElementById('counts').style.opacity=clamp01((p-0.66)/0.28);
+  } else if(i===4){
+    document.querySelector('#comp4 .fhead').style.opacity=clamp01(p/0.22);
+    document.querySelectorAll('#comp4 .prow').forEach((r,k)=>{
+      const rp=clamp01((p-0.1-k*0.12)/0.3); r.style.opacity=rp; r.style.transform='translateX('+((1-easeOut(rp))*-30)+'px)';
+    });
+    // the first Watch pill taps on — you choose who to watch
+    const w0=document.querySelector('#comp4 .prow .watch');
+    const on=clamp01((p-0.66)/0.2);
+    if(on>0.5){ w0.classList.add('on'); w0.textContent='Watching'; } else { w0.classList.remove('on'); w0.textContent='Watch'; }
+    w0.style.transform='scale('+(1+0.08*Math.sin(on*Math.PI))+')';
+    document.getElementById('fnote').style.opacity=clamp01((p-0.62)/0.3);
   }
-  else if(i===4){ document.querySelector('#comp4 .htitle').style.opacity=clamp01(p/0.25); stagger('#comp4 .cast', p, 0.16, 0.4, 26); }
 }
 window.seek(0);
 </script></body></html>`;

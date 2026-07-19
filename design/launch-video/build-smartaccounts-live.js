@@ -19,7 +19,7 @@ const BEATS=[
   {kick:'THE LINE', head:'Prepare here.\nSign elsewhere.', accent:AC},
   {kick:'LIVE',     head:'Is it still\nactive?',           accent:AC},
   {kick:'FEE',      head:'What revoking\ncosts.',          accent:AC},
-  {kick:'HAND-OFF', head:'Two doors\nout.',                accent:AC},
+  {kick:'PREPARED', head:'Ready for\nany wallet.',         accent:AC},
   {kick:'CLOSED',   head:'It closes\nitself.',             accent:AC},
 ];
 const INTRO=0.45,BEAT=2.0,OUT_AT=INTRO+BEATS.length*BEAT,TOTAL=OUT_AT+1.9;
@@ -90,7 +90,7 @@ html,body{width:1080px;height:1920px;overflow:hidden;background:#EEEAE1;font-fam
 </style></head><body>
 <div class="stage">
   <div class="grain"></div>
-  <div class="mast mono"><span>CASBERI</span><span>SMART ACCOUNTS</span></div>
+  <div class="mast mono"><span>CASBERI</span><span>PREPARING SURFACE</span></div>
   <div class="rule" id="rule"></div>
   <div class="wm" id="wm">01</div>
 
@@ -124,11 +124,11 @@ html,body{width:1080px;height:1920px;overflow:hidden;background:#EEEAE1;font-fam
   </div>
 
   <div class="comp" id="comp3">
-    <div class="shd mono"><span>HAND IT OFF</span></div>
+    <div class="shd mono"><span>THE PREPARED TRANSACTION</span></div>
     <div class="tx mono" id="tx"><span class="k">to</span>  0xA0b8…eB48<br><span class="k">data</span> <span class="s">0x095ea7b3</span>…0000<br><span class="k">value</span> 0x0</div>
-    <div class="door" data-i="0"><span class="di" style="background:rgba(229,72,77,.16);color:${RED}">↗</span><span class="dl">Revoke on Revoke.cash</span></div>
-    <div class="door" data-i="1"><span class="di" style="background:rgba(59,110,246,.16);color:${AC}">⧉</span><span class="dl">Copy revoke transaction</span><span class="da mono">for any wallet</span></div>
-    <div class="hnote" id="hnote">A transaction you sign there — never in Casberi.</div>
+    <div class="door" data-i="0"><span class="di" style="background:rgba(59,110,246,.16);color:${AC}">⧉</span><span class="dl">Copy revoke transaction</span><span class="da mono">for any wallet</span></div>
+    <div class="door" data-i="1"><span class="di" style="background:rgba(229,72,77,.16);color:${RED}">↗</span><span class="dl">Or open Revoke.cash</span></div>
+    <div class="hnote" id="hnote">Encoded, ready to sign — in your wallet, never in Casberi.</div>
   </div>
 
   <div class="comp" id="comp4">

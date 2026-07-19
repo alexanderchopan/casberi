@@ -34,7 +34,7 @@ ORDER=[
  ('home',4),('ask',1),('screenshots',2),('farcaster',3),('spotify',2),
  ('bitrefill',3),('github',2),('tokens',2),('markets',2),('bankr',1),
  ('wallet',0),('basenames',1),('solana',3),('peer',3),('revoke',2),
- ('smartaccounts',0),('1claw',1),('privacy',1),
+ ('preparing',0),('1claw',1),('privacy',1),
 ]
 segs=[f'{WORK}/intro.mp4']
 for i,(name,beat) in enumerate(ORDER):
