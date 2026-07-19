@@ -292,15 +292,6 @@ enum HomeComposition {
     // 2026-07-17 — they looked like signal but never changed; the feed filters
     // by kind natively, and the board's live signals do the real work.
 
-    /// The image-media sources whose pin composes as a bespoke shelf
-    /// (`appendMediaModules`) rather than the generic Widget tile — their
-    /// content IS pictures, so a strip/grid beats a list of titled rows.
-    /// RSS is NOT here (2026-07-18 correction) despite carrying article
-    /// images: its content is the headline, not the picture — a filmstrip
-    /// row was suppressing the title text entirely (isMedia guards it out
-    /// in GenAppRow) for a source where the title is the whole point.
-    static let mediaSources: Set<String> = ["Apple Music", "Pinterest", "Photos"]
-
     /// High-volume auto-ingest sources that own their own Home surfaces — the
     /// wallet's holdings treemap, the token charts — and would otherwise
     /// dominate any newest-N read with transaction/price noise. Excluded from
@@ -309,6 +300,18 @@ enum HomeComposition {
     /// arrivals, not the firehose. Per-tile signals are unaffected — a Tokens
     /// tile still shows its own movers.
     static let firehoseSources: Set<String> = ["Wallet", "Tokens"]
+
+    /// The social post sources — their row leads with the AUTHOR's avatar (a
+    /// circle) rather than the post's image, so a row reads as a person, not an
+    /// app (user 2026-07-18). Bluesky/Farcaster land `authorAvatarURL`.
+    static let socialSources: Set<String> = ["Bluesky", "Farcaster"]
+
+    /// Sources whose row leads with their stored MARK (`authorAvatarURL`) rather
+    /// than an item image — the social author's avatar and the RSS feed's own
+    /// logo (or the publisher favicon RSSIngest falls back to). The renderer
+    /// clips a social mark to a circle (a person) and an RSS logo to the squircle
+    /// (a publisher), but both prefer the mark over the article image.
+    static let markSources: Set<String> = socialSources.union(["RSS"])
 
     /// A pinned app is one board tile of its recent things (ruling 2026-07-12):
     /// pinning is per-APP now, not per-item — you keep "your reminders" in
@@ -346,14 +349,12 @@ enum HomeComposition {
         // tile path.
         var bySource: [String: [Thing]] = [:]
         for t in things { bySource[t.source, default: []].append(t) }
-        // Media sources (Photos/Pinterest/Music) are rows too now (user
-        // 2026-07-18) — a text row is a lossy translation of an image source,
-        // so their row's content peek is a THUMBNAIL FILMSTRIP in the source's
-        // native medium, not the shelf-card that broke Home's one-row rule.
-        // RSS stays off the filmstrip path (its content is headlines, not
-        // pictures) and reads as a normal titled row. Only "You" (own
-        // captures — the cover leads with them) and "Wallet" (its own
-        // treemap/NFT modules) stay off the row path entirely.
+        // Every source is one cardless thumb-list row now (user 2026-07-18): a
+        // leading thumbnail (the item's own picture when it has one, else the
+        // app glyph), the app name as a quiet eyebrow, and the latest item as
+        // the hero line. Only "You" (own captures — the cover leads with them)
+        // and "Wallet" (its own treemap/NFT modules on the Wallet feed) stay off
+        // the generic row path.
         let onBoard = Set(bySource.keys)
             .subtracting(["You", "Wallet"])
             .filter { !store.isHidden($0) }
@@ -376,14 +377,23 @@ enum HomeComposition {
             guard !sourceThings.isEmpty else { return nil }
             guard source == "Tokens" else {
                 let (signal, rank, exemplar) = tileSignal(source, sourceThings, window: awayWindow)
-                // An image source's peek is its ONE newest imaged thing (user
-                // 2026-07-18: "just one photo, one album" — a strip of four read
-                // as a billboard stacked with every other app's band); a source
-                // with no imagery falls back to the text exemplar (the honesty
-                // gate). The renderer draws it as a single trailing thumbnail.
-                let film = mediaSources.contains(source)
-                    ? Array(sourceThings.filter(Self.hasImage).prefix(1))
-                    : []
+                // The row's leading thumbnail (user 2026-07-18, the thumb list):
+                // the exemplar's own picture when it has one, else the source's
+                // newest imaged thing — so a link or post carrying an image shows
+                // it, and a text-only source falls back to the app glyph in the
+                // renderer (the honesty gate — no grey placeholder). One item, a
+                // 46pt square; tokens/wallet never take one (their sparkline
+                // square is drawn on their own paths).
+                let thumbThing: Thing? = {
+                    // Social/RSS: the exemplar carries the mark (author avatar /
+                    // feed logo) on authorAvatarURL — lead with it even when the
+                    // item also has an image (the source logo IS the identity).
+                    if Self.markSources.contains(source), let exemplar,
+                       !(exemplar.authorAvatarURL ?? "").isEmpty { return exemplar }
+                    if let exemplar, Self.hasImage(exemplar) { return exemplar }
+                    return sourceThings.first(where: Self.hasImage)
+                }()
+                let film = thumbThing.map { [$0] } ?? []
                 return RowSeed(source: source, exemplar: exemplar,
                                signal: signal, rank: rank, filmstrip: film)
             }
@@ -451,7 +461,11 @@ enum HomeComposition {
             }()
             doc.append("\(id) = AppRow(\(q(seed.source)), \(q(seed.signal)), \(q(peekTitle)), \(q(item.map { shortTime($0.capturedAt) } ?? "")), \(q(item?.id.uuidString ?? ""))\(chipSeat), \(q("\(seed.rank)"))\(filmSeat))")
             for (j, t) in seed.filmstrip.enumerated() {
-                doc.append(mediaItem(id: "\(id)f\(j)", t))
+                // Social/RSS rows draw their MARK (author avatar / feed logo),
+                // not the item image — override the MediaItem's URL with it
+                // (`authorAvatarURL`). Every other source uses its own picture.
+                let override = Self.markSources.contains(seed.source) ? t.authorAvatarURL : nil
+                doc.append(mediaItem(id: "\(id)f\(j)", t, imageURL: override))
             }
             rootRefs.append(id)
             // Rows are DRAGGABLE board modules (user 2026-07-17: "what if
@@ -617,11 +631,14 @@ enum HomeComposition {
     /// MediaItem(title, imageURL, thingId, openable) — a shelf's child line.
     /// A screenshot carries no image URL (its bytes are local, prd 48); the
     /// renderer resolves those by thing id instead (`genThumbnailData`).
-    private static func mediaItem(id: String, _ t: Thing) -> String {
+    private static func mediaItem(id: String, _ t: Thing, imageURL: String? = nil) -> String {
         let openable = VerbDerivation.verbs(for: t).contains {
             if case .openURL = $0.action { return true } else { return false }
         } ? "app" : ""
-        return "\(id) = MediaItem(\(q(t.title)), \(q(t.previewImageURL ?? "")), \(q(t.id.uuidString)), \(q(openable)))"
+        // `imageURL` overrides the thing's own preview (a social row passes the
+        // author's avatar); the thing id still opens the post.
+        let url = imageURL ?? t.previewImageURL ?? ""
+        return "\(id) = MediaItem(\(q(t.title)), \(q(url)), \(q(t.id.uuidString)), \(q(openable)))"
     }
 
     private static func shortTime(_ date: Date) -> String {

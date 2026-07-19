@@ -598,15 +598,18 @@ private struct GenWidget: View {
     }
 }
 
-/// AppRow(source, signal, itemTitle, when, thingID) — one app, one row (user
-/// ruling 2026-07-17: "a row is all they get; otherwise go to the app's
-/// feed"). The app's icon and NAME lead, the live signal ("1 overdue") sits
-/// beside them, and the second line is the thing the signal points at. A tap
-/// opens that app's feed (`casberi://feed/source/…` — the existing route);
-/// long-press offers opening the item itself or removing the app from Home.
-/// FLAT by design (one HStack, no Widget/Row nesting — the eager-head law),
-/// and each row wears the same card surface a Feed row does, so Home's rows
-/// read as the app's one row language, not new chrome.
+/// AppRow(source, signal, itemTitle, when, thingID) — one app, one row: a
+/// larger, richer thumb-list row ON a card (user 2026-07-18). A 46pt thumbnail
+/// leads, the app name drops to a quiet eyebrow beside its live signal, and the
+/// hero line below is the actual thing — the STUFF, not a page of app names or
+/// counts. The thumbnail is the item's own picture when it has one, the
+/// AUTHOR's avatar (a circle) for a social post, a token/wallet sparkline
+/// square, else a quiet glyph square (honest — no grey placeholder). The
+/// cardless version read clean with a few rows but dense and undifferentiated
+/// with many, so each app keeps its own card plane; the card is just the ground
+/// the rich row sits on. A tap opens that app's feed (`casberi://feed/source/…`);
+/// tapping the hero line opens that item; long-press offers Open / Remove from
+/// Home. FLAT by design (one HStack, no Widget/Row nesting — the eager-head law).
 private struct GenAppRow: View {
     let el: GenEl
     @Environment(\.genThingOpen) private var thingOpen
@@ -619,10 +622,28 @@ private struct GenAppRow: View {
     @State private var chart: TokenChart?
 
     private var isToken: Bool { !el.str(6).isEmpty }
-    /// Image sources carry a filmstrip of MediaItem refs (arg 9) — their peek
-    /// is those thumbnails, not the text line (medium-native, user 2026-07-18).
-    private var filmstrip: [String] { el.refs(9) }
-    private var isMedia: Bool { !filmstrip.isEmpty }
+    private var isWallet: Bool { el.str(0) == "Wallet" }
+    /// A social post row — its thumbnail is the author's avatar, drawn as a
+    /// circle (a person, not an app), the one shape that breaks the squircle
+    /// column on purpose.
+    private var isSocial: Bool { el.str(0) == "Bluesky" || el.str(0) == "Farcaster" }
+    /// True when a REAL brand icon is bundled for this source (OpenClaw's berry,
+    /// GitHub, ChatGPT, …) — the same `brand-<name>` lookup BridgeIcon does. It
+    /// gets shown as-is; only sources WITHOUT one (the Apple apps) fall back to
+    /// the quiet glyph square. Matches BridgeIcon's normalization exactly.
+    private var hasBrandAsset: Bool {
+        UIImage(named: "brand-" + el.str(0).lowercased()
+            .replacingOccurrences(of: " ", with: "-")
+            .replacingOccurrences(of: ".", with: "")) != nil
+    }
+    /// The row's leading thumbnail (arg 9, one MediaItem ref) — the item's own
+    /// picture when it has one; empty for token/wallet rows (they wear a
+    /// sparkline square) and for any text-only source (they fall back to the
+    /// app glyph). The composer picks it; the renderer just draws it.
+    private var thumbRef: String? { el.refs(9).first }
+    /// A needs-you signal (rank ≥ 3: overdue / mentions / due, arg 8) — its word
+    /// reads in secondary ink so the eye finds it in the quiet eyebrow.
+    private var urgent: Bool { (Int(el.str(8)) ?? 0) >= 3 }
     private var accent: Color {
         TokenChartStyle.accent(change: chart?.change ?? 0, scheme: scheme)
     }
@@ -634,102 +655,120 @@ private struct GenAppRow: View {
         TokenChart.from(closes: el.str(10).split(separator: ",").compactMap { Double($0) })
     }
 
-    var body: some View {
-        VStack(alignment: .leading, spacing: DS.Space.s2) {
-            HStack(spacing: DS.Space.s3) {
-                BridgeIcon(name: el.str(0), size: 28)
-                VStack(alignment: .leading, spacing: 1) {
-                    HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-                        Text(el.str(0))
-                            .dsText(.body17)
-                            .foregroundStyle(DS.textPrimary)
-                        if !el.str(1).isEmpty {
-                            // A needs-you signal (rank ≥ 3: overdue/mentions/due,
-                            // arg 8) wears PRIMARY ink so the eye finds it in the
-                            // monochrome list; a merely-moving "N new" stays
-                            // quiet (tertiary). Honest — overdue really is more
-                            // important — and no new color.
-                            let urgent = (Int(el.str(8)) ?? 0) >= 3
-                            Text(el.str(1))
-                                .dsText(.subhead13)
-                                .foregroundStyle(urgent ? DS.textPrimary : DS.textTertiary)
-                                .contentTransition(.numericText())
-                        }
-                    }
-                    // The item line is its own door (2026-07-17): tapping the
-                    // TITLE opens the thing; the rest of the row opens the
-                    // app's feed (the inner gesture wins where they overlap).
-                    // Media rows carry no text line — the thumbnail is the peek.
-                    if !isToken, !isMedia, !el.str(2).isEmpty {
-                        Text(el.str(2))
-                            .dsText(.subhead13)
-                            .foregroundStyle(DS.textSecondary)
-                            .lineLimit(1)
-                            .contentShape(Rectangle())
-                            .onTapGesture {
-                                let id = el.str(4)
-                                if !id.isEmpty { thingOpen?(id) }
-                            }
-                    } else if isToken, !el.str(7).isEmpty {
-                        // The token's ticker rides the subtitle now that the
-                        // sparkline is a trailing detail, not a full-width band
-                        // (user 2026-07-18) — ticker · 1D delta, the watchlist
-                        // row's left column. The delta lands with the chart.
-                        HStack(spacing: DS.Space.s2) {
-                            Text(el.str(7))
-                                .dsText(.subhead13)
-                                .foregroundStyle(DS.textSecondary)
-                            if let chart {
-                                TokenDeltaPill(change: chart.change, label: "1D", compact: true)
-                            }
-                        }
-                    }
+    /// The 46pt leading square — the row's content at a glance. An imaged item
+    /// shows its picture (medium-native); a token/wallet shows its sparkline in
+    /// a faint square; everything else shows the app's own glyph. One shape (the
+    /// app-icon squircle) across all three so the list reads as one column.
+    @ViewBuilder private var leadingThumb: some View {
+        let s: CGFloat = 46
+        let shape = RoundedRectangle(cornerRadius: DS.Radius.appIcon(s), style: .continuous)
+        if isToken, let chart {
+            shape.fill(DS.fillFaint).frame(width: s, height: s)
+                .overlay {
+                    TokenChartPlot(chart: chart, accent: accent, height: 30, pulses: false)
+                        .frame(width: s - 12, height: 30)
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                if isToken {
-                    // Sparkline · price, right-aligned like a watchlist row; the
-                    // chart is a trailing DETAIL beside the number now (user
-                    // 2026-07-18: the full-width band stacked with every app's
-                    // read as a wall of billboards), the ticker/delta on the
-                    // subtitle. Appears with the chart data.
-                    if let chart {
-                        // Hold the cluster at its intrinsic width so the price
-                        // and the 1D pill never wrap (user 2026-07-18: "$1861.6/7"
-                        // and "+1.1%/· 1D" broke across two lines when the leading
-                        // maxWidth:.infinity VStack squeezed this side). The token
-                        // row's left is only "Tokens" + a short badge, so this
-                        // side can safely keep its natural width.
-                        HStack(spacing: DS.Space.s2) {
-                            TokenChartPlot(chart: chart, accent: accent, height: 24, pulses: false)
-                                .frame(width: 48, height: 24)
-                            Text(TokenChartStyle.priceText(chart.price))
-                                .dsText(.body17).foregroundStyle(DS.textPrimary)
-                                .contentTransition(.numericText())
-                        }
-                        .lineLimit(1)
-                        .fixedSize(horizontal: true, vertical: false)
-                    }
-                } else if let walletChart {
-                    // The wallet's balance history, the same trailing sparkline a
-                    // token wears — the total already rides the header signal.
+        } else if isWallet, let walletChart {
+            shape.fill(DS.fillFaint).frame(width: s, height: s)
+                .overlay {
                     TokenChartPlot(chart: walletChart,
                                   accent: TokenChartStyle.accent(change: walletChart.change, scheme: scheme),
-                                  height: 24, pulses: false)
-                        .frame(width: 48, height: 24)
-                } else if isMedia, let ref = filmstrip.first, let child = els[ref] {
-                    // One representative thumbnail (user 2026-07-18: "just one
-                    // photo, one album") — the source's medium as a trailing peek
-                    // detail, not a full-width strip. Taps to that item.
-                    GenMediaTile(el: child, size: 56)
-                        .clipShape(RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
-                } else {
-                    Text(el.str(3)).dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                                  height: 30, pulses: false)
+                        .frame(width: s - 12, height: 30)
+                }
+        } else if let ref = thumbRef, let child = els[ref] {
+            // Social: the author's avatar, clipped to a circle. Everything else:
+            // the item's picture in the app-icon squircle.
+            GenMediaTile(el: child, size: s)
+                .clipShape(isSocial ? AnyShape(Circle()) : AnyShape(shape))
+        } else if hasBrandAsset {
+            // A real bundled brand icon (OpenClaw's berry, GitHub, ChatGPT…) —
+            // show it as-is; a source we have a mark for should wear it, not a
+            // generic glyph (fix 2026-07-18: the quiet-square fallback below was
+            // masking every bundled asset).
+            BridgeIcon(name: el.str(0), size: s)
+        } else {
+            // No bundled brand asset (the Apple apps — Reminders, Calendar,
+            // Photos, …): a QUIET glyph square, not the loud brand-COLOR squircle
+            // BridgeIcon would synthesize for them. The eyebrow already names the
+            // app, so a neutral square + brand-tinted glyph keeps a hint of it
+            // and lets the words be the hero (the calm the real photos get).
+            shape.fill(DS.fillFaint).frame(width: s, height: s)
+                .overlay {
+                    Image(systemName: BridgeGlyph.symbol(for: el.str(0)))
+                        .font(.system(size: s * 0.42, weight: .medium))
+                        .foregroundStyle(BridgeGlyph.signalColor(for: el.str(0)))
+                }
+        }
+    }
+
+    /// The quiet line above the content — the app, then its live signal (or the
+    /// last-landed time when it has none). The name is the eyebrow now: the
+    /// thumb list shows the STUFF, so the content below can be the hero.
+    private var eyebrow: some View {
+        let trailing = isWallet ? "" : (el.str(1).isEmpty ? el.str(3) : el.str(1))
+        return HStack(spacing: 4) {
+            Text(el.str(0)).foregroundStyle(DS.textTertiary)
+            if !trailing.isEmpty {
+                Text(verbatim: "·").foregroundStyle(DS.textTertiary)
+                Text(trailing)
+                    .foregroundStyle(urgent ? DS.textSecondary : DS.textTertiary)
+                    .contentTransition(.numericText())
+            }
+        }
+        .dsText(.subhead13)
+        .lineLimit(1)
+    }
+
+    /// The hero line — the actual thing, in primary ink. A token reads
+    /// ticker · price · 1D; the wallet reads its total · top holdings; every
+    /// other source reads its latest item's title (tap it to open that item —
+    /// the rest of the row opens the app's feed).
+    @ViewBuilder private var mainLine: some View {
+        if isToken {
+            HStack(spacing: DS.Space.s2) {
+                Text(el.str(7)).dsText(.body17).foregroundStyle(DS.textPrimary)
+                if let chart {
+                    Text(TokenChartStyle.priceText(chart.price))
+                        .dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                        .contentTransition(.numericText())
+                    TokenDeltaPill(change: chart.change, label: "1D", compact: true)
                 }
             }
+            .lineLimit(1)
+        } else if isWallet {
+            Text([el.str(1), el.str(2)].filter { !$0.isEmpty }.joined(separator: " · "))
+                .dsText(.body17).foregroundStyle(DS.textPrimary).lineLimit(1)
+        } else if !el.str(2).isEmpty {
+            // Two lines (user 2026-07-18): one-line rows truncated the actual
+            // content ("…in the discourse…") and left the list feeling sparse —
+            // the hero is the STUFF, so give it room to read.
+            Text(el.str(2))
+                .dsText(.body17).foregroundStyle(DS.textPrimary).lineLimit(2)
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    let id = el.str(4)
+                    if !id.isEmpty { thingOpen?(id) }
+                }
+        }
+    }
+
+    var body: some View {
+        HStack(spacing: DS.Space.s3) {
+            leadingThumb
+            VStack(alignment: .leading, spacing: 2) {
+                eyebrow
+                mainLine
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(.horizontal, DS.Space.s4)
         .padding(.vertical, DS.Space.s3)
         .frame(maxWidth: .infinity, alignment: .leading)
+        // On a card (user 2026-07-18): the cardless list read clean with a few
+        // rows but dense and undifferentiated with many — the card gives each app
+        // its own plane. The RICHER row content stays; the card is just its
+        // ground. Same surface + spacing a board card always wore.
         .dsWidgetSurface()
         .padding(.horizontal, DS.Space.s4)
         .padding(.top, DS.Space.s3)
