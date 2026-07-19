@@ -115,17 +115,6 @@ struct BridgeDetailScreen: View {
                         }
                     }
 
-                    // Pin to Home — the board grows from the catalog: pinning
-                    // an app places its tile (its recent things, in the app's
-                    // shape) on Home. Every connected app is pinnable now (ruling
-                    // 2026-07-12: pinning is per-APP, not per-item); one verb,
-                    // both directions. Shown only once the app has landed a thing
-                    // — pinning an empty source is a dead control (it composes no
-                    // tile). The corpus bump recomposes Home while this is on top.
-                    if !recent.isEmpty {
-                        PinToHomeButton(source: bridge.name)
-                    }
-
                     // Controls — words say what happens.
                     HStack(spacing: DS.Space.s3) {
                         Button(bridge.status == .paused ? "Resume" : "Pause") {
