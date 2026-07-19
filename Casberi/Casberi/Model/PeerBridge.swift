@@ -451,9 +451,12 @@ enum PeerBridge {
     }
 
     /// The settled token: `getDeposit(depositId)` on the fill's own escrow
-    /// (the deposit tuple's third word), then symbol + decimals through the
-    /// wallet bridge's existing Alchemy metadata read. In practice this is
-    /// USDC nearly always — but read, never assumed.
+    /// (the deposit tuple's third word), then symbol + decimals read straight
+    /// off the token contract via keyless `eth_call` (2026-07-19, replacing
+    /// `alchemy_getTokenMetadata`) — the same `symbol()`-falling-back-to-
+    /// `name()` decode `WalletApprovals.tokenMetadata` uses, on the same
+    /// `mainnet.base.org` host every other Peer read already rides. In
+    /// practice this is USDC nearly always — but read, never assumed.
     private static func depositToken(escrow: String, depositId: String)
         async -> (symbol: String?, decimals: Int?)? {
         let selector = "0x9f9fb968"   // keccak256("getDeposit(uint256)")[:4]
@@ -464,15 +467,20 @@ enum PeerBridge {
               let tokenWord = word(ret, 2)
         else { return nil }
         let token = "0x" + tokenWord.suffix(40)
-        let url = "https://\(network).g.alchemy.com/v2/\(IngestSupport.alchemyKey)"
-        let body: [String: Any] = ["id": 1, "jsonrpc": "2.0",
-                                   "method": "alchemy_getTokenMetadata",
-                                   "params": [token]]
-        guard let root = await IngestSupport.postJSON(url, body: body) as? [String: Any],
-              let m = root["result"] as? [String: Any] else { return nil }
-        let symbol = ((m["symbol"] as? String) ?? (m["name"] as? String))
-            .flatMap { $0.isEmpty ? nil : $0 }
-        return (symbol, m["decimals"] as? Int)
+
+        async let symbolRet = call(method: "eth_call",
+                                   params: [["to": token, "data": "0x95d89b41"], "latest"])
+        async let decimalsRet = call(method: "eth_call",
+                                     params: [["to": token, "data": "0x313ce567"], "latest"])
+        var symbol = (await symbolRet as? String).flatMap(IngestSupport.decodeABIString)
+        if symbol == nil {
+            let nameRet = await call(method: "eth_call",
+                                     params: [["to": token, "data": "0x06fdde03"], "latest"])
+            symbol = (nameRet as? String).flatMap(IngestSupport.decodeABIString)
+        }
+        let decimals = (await decimalsRet as? String).map(WalletIngest.hexToInt)
+        guard symbol != nil || decimals != nil else { return nil }
+        return (symbol, decimals)
     }
 
     /// Real timestamps for the fills' blocks (deduped, capped — the

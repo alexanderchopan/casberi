@@ -410,29 +410,37 @@ enum WalletApprovals {
         return await call(chain, method: "eth_getLogs", params: [params]) as? [[String: Any]]
     }
 
-    /// Symbol + decimals for the approved tokens — Alchemy's own metadata
-    /// method (not range-bound, so the free tier serves it fine), one call per
-    /// unique contract, capped as a backstop (a pass lands at most 10 events
-    /// per wallet per chain). Serial ON PURPOSE: the sibling timestamp reads
-    /// hit the measured-flaky public hosts, and this whole path runs at most a
-    /// handful of calls on the rare pass that actually landed events. A
-    /// contract that answers with nothing stays nil and the title falls back
-    /// to its short hex.
+    /// Symbol + decimals for the approved tokens — keyless (2026-07-19,
+    /// replacing `alchemy_getTokenMetadata`): `symbol()`/`decimals()` read
+    /// straight off the token contract via `eth_call` on the SAME public RPC
+    /// hosts `fetchLogs`/`blockNumber` above already ride, no Alchemy
+    /// involved at all. `symbol()` falls back to `name()` when it reverts —
+    /// the same fallback Alchemy's own metadata call made, needed by the
+    /// minority of pre-standard tokens that only implement one. One or two
+    /// calls per unique contract, capped as a backstop (a pass lands at most
+    /// 10 events per wallet per chain). Serial ON PURPOSE: the sibling
+    /// timestamp reads hit the measured-flaky public hosts, and this whole
+    /// path runs at most a handful of contracts on the rare pass that
+    /// actually landed events. A contract that answers with nothing stays nil
+    /// and the title falls back to its short hex.
     private static func tokenMetadata(contracts: [String], chain: Chain)
         async -> [String: (symbol: String?, decimals: Int?)] {
         var seen = Set<String>()
         let unique = contracts.filter { seen.insert($0).inserted }
-        let url = "https://\(chain.network).g.alchemy.com/v2/\(IngestSupport.alchemyKey)"
         var out: [String: (symbol: String?, decimals: Int?)] = [:]
         for contract in unique.prefix(12) {
-            let body: [String: Any] = ["id": 1, "jsonrpc": "2.0",
-                                       "method": "alchemy_getTokenMetadata",
-                                       "params": [contract]]
-            guard let root = await IngestSupport.postJSON(url, body: body) as? [String: Any],
-                  let m = root["result"] as? [String: Any] else { continue }
-            let symbol = ((m["symbol"] as? String) ?? (m["name"] as? String))
-                .flatMap { $0.isEmpty ? nil : $0 }
-            out[contract] = (symbol, m["decimals"] as? Int)
+            async let symbolRet = call(chain, method: "eth_call",
+                                       params: [["to": contract, "data": "0x95d89b41"], "latest"])
+            async let decimalsRet = call(chain, method: "eth_call",
+                                         params: [["to": contract, "data": "0x313ce567"], "latest"])
+            var symbol = (await symbolRet as? String).flatMap(IngestSupport.decodeABIString)
+            if symbol == nil {
+                let nameRet = await call(chain, method: "eth_call",
+                                         params: [["to": contract, "data": "0x06fdde03"], "latest"])
+                symbol = (nameRet as? String).flatMap(IngestSupport.decodeABIString)
+            }
+            let decimals = (await decimalsRet as? String).map(WalletIngest.hexToInt)
+            out[contract] = (symbol, decimals)
         }
         return out
     }
