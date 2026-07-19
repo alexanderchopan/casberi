@@ -30,7 +30,7 @@ enum ZerionAPI {
     /// Zerion API key grants read-only portfolio data, the same risk class as the
     /// Alchemy key already committed here — if it leaks, the worst case is quota
     /// use on public data. Rotate at dashboard.zerion.io.
-    static let key = ""
+    static let key = "zk_9e6723c493c64070adb76e706757ad96"
 
     /// Whether a real key is configured. When false every entry point returns nil
     /// immediately (no request, no auth header built), so the Alchemy fallback
@@ -85,7 +85,14 @@ enum ZerionAPI {
         // Ask only for the chains we can route; `filter[positions]=only_simple`
         // drops complex DeFi positions and `filter[trash]=only_non_trash` drops
         // spam, so what comes back is exactly the treemap's population.
-        let chains = networkFor.keys.sorted().joined(separator: ",")
+        // MEASURED 2026-07-19: `filter[chain_ids]` 400s on `solana` even though
+        // `/chains` lists it as a real chain id (and it appears fine in a
+        // position's `implementations[].chain_id`) — the filter only accepts EVM
+        // chain ids. Solana positions simply aren't reachable through this
+        // filtered call; excluding it here is required for EVERY request to
+        // succeed, not just Solana wallets (an EVM-only address still 400s if
+        // `solana` rides along in the filter list).
+        let chains = networkFor.keys.filter { $0 != "solana" }.sorted().joined(separator: ",")
         let query = "filter[positions]=only_simple"
             + "&filter[trash]=only_non_trash"
             + "&currency=usd"
