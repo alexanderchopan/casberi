@@ -738,7 +738,7 @@ struct ThingSheetView: View {
                 Button("Remove from this thing", systemImage: "xmark.circle") {
                     remove(tag: tag)
                 }
-                Button("Rename everywhere…", systemImage: "pencil") {
+                Button("Rename tag everywhere…", systemImage: "pencil") {
                     renameDraft = tag
                     renameTarget = tag
                 }

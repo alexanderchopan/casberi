@@ -3427,30 +3427,30 @@
         }
       }
     },
-    "Rename everywhere…": {
+    "Rename tag everywhere…": {
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "すべてで名前変更…"
+            "value": "タグをすべてで名前変更…"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "모든 곳에서 이름 변경…"
+            "value": "모든 곳에서 태그 이름 변경…"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "在所有位置重命名…"
+            "value": "在所有位置重命名标签…"
           }
         },
         "es": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Renombrar en todas partes…"
+            "value": "Renombrar etiqueta en todas partes…"
           }
         }
       }

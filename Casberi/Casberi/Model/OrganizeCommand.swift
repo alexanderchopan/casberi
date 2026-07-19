@@ -109,7 +109,7 @@ enum Organize {
             }
             let to = toRaw.trimmingCharacters(in: .whitespaces)
             let matched = all.filter { $0.tags.contains(from) }
-            let headline = "Rename \(from) to \(to) — \(matched.count) thing\(matched.count == 1 ? "" : "s")"
+            let headline = "Rename tag \(from) to \(to) — \(matched.count) thing\(matched.count == 1 ? "" : "s")"
             return OrganizeProposal(command: .rename(from: from, to: to),
                                     headline: headline, things: matched, blocked: nil)
         }

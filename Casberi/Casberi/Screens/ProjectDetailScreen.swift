@@ -76,12 +76,11 @@ struct ProjectDetailScreen: View {
         // 2026-07-07 — every project already sits on Home's map, so a pin
         // that only re-sorted it was a second pin system. Thing pins remain.)
         .toolbar {
-            Button("Rename") {
+            Button("Rename tag") {
                 newName = projectName
                 renaming = true
             }
             .tint(DS.tint)
-            .accessibilityLabel("Rename tag")
         }
         .alert("Rename \(projectName)", isPresented: $renaming) {
             TextField("New name", text: $newName)
