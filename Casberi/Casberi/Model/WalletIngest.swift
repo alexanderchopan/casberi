@@ -713,35 +713,6 @@ enum WalletIngest {
         return doc
     }
 
-    /// Every watched wallet's NFTs as a stacked MediaShelf document — the Wallet
-    /// feed's image strip, sibling to `holdingsChart()`'s treemap (ruling
-    /// 2026-07-18, revising prd §72's Home-only placement: the treemap AND the
-    /// NFTs both ride the Wallet chip's own feed, below the treemap — Home
-    /// dropped its own NFT strip the same day, now carrying only the Wallet
-    /// row's total + top holdings). Every watched wallet, not pinned-only —
-    /// the Wallet feed shows the whole source. Each NFT id is its OpenSea URL,
-    /// which `GenMediaTile` opens directly — an NFT is a door, not a thing, so
-    /// nothing lands in the corpus. Nil when no watched wallet holds a piece.
-    @MainActor
-    static func nftShelfDocument(scopeTo address: String? = nil) async -> [String]? {
-        var groups = await nftsByWallet()
-        if let address { groups = groups.filter { scopeMatch($0.address, address) } }
-        guard !groups.isEmpty else { return nil }
-        let ids = groups.indices.map { "nft\($0)" }
-        var doc = ["root = Stack([\(ids.joined(separator: ", "))])"]
-        for (i, g) in groups.enumerated() {
-            let capped = Array(g.nfts.prefix(12))
-            let itemIds = capped.indices.map { "nft\(i)i\($0)" }
-            // Arg 4 (pin) empty: a feed shelf isn't a board module, so it wears
-            // no size pin and no "Remove from Home" — it's just the source's art.
-            doc.append("nft\(i) = MediaShelf(\(q("NFTs · \(g.label)")), \(q("")), [\(itemIds.joined(separator: ", "))], \(q("nft")))")
-            for (j, nft) in capped.enumerated() {
-                doc.append("nft\(i)i\(j) = MediaItem(\(q(nft.name)), \(q(nft.imageURL)), \(q(nft.openseaURL?.absoluteString ?? "")), \(q("")))")
-            }
-        }
-        return doc
-    }
-
     private static func q(_ s: String) -> String {
         "\"\(s.replacingOccurrences(of: "\"", with: "'"))\""
     }
@@ -1127,6 +1098,51 @@ enum WalletIngest {
     /// all (the nil the caller turns into "couldn't reach the chain").
     private static func collectCandidates(addresses: [String]) async -> (candidates: [Candidate], reached: Bool) {
         guard !addresses.isEmpty else { return ([], false) }
+        // Zerion first (2026-07-19): one keyed `/positions` call per wallet
+        // covers EVM + Solana holdings, priced, OFF Alchemy's paid credits — the
+        // move that stops the biggest burn. Only when it actually answers
+        // (`reached`); an empty key or an unreachable read falls straight through
+        // to the Alchemy path below, so holdings never depend on Zerion being up.
+        // See `ZerionAPI`.
+        if ZerionAPI.isConfigured {
+            let z = await collectCandidatesZerion(addresses: addresses)
+            if z.reached { return z }
+        }
+        return await collectCandidatesAlchemy(addresses: addresses)
+    }
+
+    /// Zerion's holdings for the given wallets, mapped into `Candidate`s — the
+    /// preferred read (see `collectCandidates`). `reached` is false only when NO
+    /// wallet answered (the fall-back-to-Alchemy signal); one wallet answering is
+    /// enough to prefer Zerion for the whole set. Each wallet is filtered to ITS
+    /// OWN routed networks, so a chain toggled off in `WalletChainStore` is
+    /// dropped even though the single Zerion call asked for every mapped chain.
+    private static func collectCandidatesZerion(addresses: [String]) async -> (candidates: [Candidate], reached: Bool) {
+        let routed = addresses.map { (address: $0, networks: Set(networks(for: $0))) }
+                              .filter { !$0.networks.isEmpty }
+        guard !routed.isEmpty else { return ([], false) }
+        // Bounded like the Alchemy fan-out — Zerion's free tier is 10 req/s, and
+        // a watched set of a dozen wallets shouldn't burst past it.
+        let holdings = await IngestSupport.boundedGather(routed, maxConcurrent: 4) { r in
+            await ZerionAPI.holdings(address: r.address)
+        }
+        var candidates: [Candidate] = []
+        var reached = false
+        for (i, result) in holdings.enumerated() {
+            guard let result else { continue }   // this wallet unreached — skip it, don't fail the set
+            reached = true
+            let allowed = routed[i].networks
+            for h in result where allowed.contains(h.network) {
+                candidates.append(Candidate(symbol: h.symbol, contract: h.contract,
+                                            network: h.network, amount: h.amount,
+                                            owner: h.owner, price: h.price))
+            }
+        }
+        return (candidates, reached)
+    }
+
+    private static func collectCandidatesAlchemy(addresses: [String]) async -> (candidates: [Candidate], reached: Bool) {
+        guard !addresses.isEmpty else { return ([], false) }
         // network → the native coin's symbol AND decimals. A chain's own coin
         // comes back with null metadata, so neither can be read off the
         // response — both have to come from our table.
@@ -1309,7 +1325,10 @@ enum WalletIngest {
         // routes as the wrong family and the Portfolio call comes back empty.
         let resolved = await resolvedAddresses([address])
         guard let addr = resolved.first else { return ["FAILED — couldn't resolve \(address)"] }
-        let (candidates, reached) = await collectCandidates(addresses: [addr])
+        // Deliberately the Alchemy path (not Zerion-first `collectCandidates`) —
+        // this probe measures Alchemy's coverage vs the DeFiLlama backstop, and
+        // Zerion-priced candidates would make "unpriced after Alchemy" a lie.
+        let (candidates, reached) = await collectCandidatesAlchemy(addresses: [addr])
         guard reached else { return ["FAILED — nothing reachable (offline / bad key)"] }
         let afterAlchemy = await priceSPL(candidates)
         let unpriced = afterAlchemy.filter { $0.price == nil && $0.contract != nil }
@@ -1446,108 +1465,6 @@ enum WalletIngest {
         // tap opens a real chart the same way an ERC-20 cell's does.
         "solana-mainnet": "solana",
     ]
-
-    // MARK: - NFTs (2026-07-14)
-
-    /// One NFT a watched wallet holds — enough for a shelf cell and its
-    /// OpenSea door. Read-only public data, like everything else here.
-    struct WalletNFT: Identifiable {
-        let contract: String
-        let tokenId: String
-        let name: String
-        let collection: String
-        let imageURL: String
-        /// OpenSea's chain path ("ethereum", "base").
-        let chainPath: String
-        var id: String { "\(chainPath):\(contract):\(tokenId)" }
-        var openseaURL: URL? {
-            URL(string: "https://opensea.io/assets/\(chainPath)/\(contract)/\(tokenId)")
-        }
-    }
-
-    struct NFTGroup {
-        /// The watched entry's own address string — the stable row identity
-        /// (labels are free text and can repeat).
-        let address: String
-        let label: String
-        let nfts: [WalletNFT]
-    }
-
-    /// NFT holdings change rarely; every Wallet-screen appearance re-hitting
-    /// 2 GETs per wallet for identical bytes wastes quota (the TokenPulse
-    /// 15-minute idiom). Keyed by the watched set, so add/remove refetches.
-    @MainActor private static var nftCache: (key: String, at: Date, groups: [NFTGroup])?
-
-    /// Every watched wallet's NFTs, one group per wallet that holds any —
-    /// the Wallet screen's shelf. A wallet with none simply contributes no
-    /// group (correct-but-empty, not a failure). Wallets fetch concurrently
-    /// (bounded — the same Alchemy key the transfer sync bursts on).
-    @MainActor
-    static func nftsByWallet() async -> [NFTGroup] {
-        let watched = WalletStore.shared.addresses
-        guard !watched.isEmpty else { return [] }
-        let key = watched.map { $0.address.lowercased() }.sorted().joined(separator: ",")
-        if let cached = nftCache, cached.key == key,
-           cached.at.timeIntervalSinceNow > -900 {
-            return cached.groups
-        }
-        let fetched = await IngestSupport.boundedGather(watched, maxConcurrent: 4) { entry in
-            // EVM only — Alchemy's NFT API is an EVM API. A Solana wallet
-            // contributes no group rather than an empty-looking one.
-            guard let hex = evmOnly(await resolvedAddresses([entry.address])).first else {
-                return NFTGroup(address: entry.address, label: "", nfts: [])
-            }
-            return NFTGroup(address: entry.address,
-                            label: entry.label.isEmpty ? entry.short : entry.label,
-                            nfts: await nfts(addressHex: hex))
-        }
-        let groups = fetched.filter { !$0.nfts.isEmpty }
-        nftCache = (key, .now, groups)
-        // A watched wallet receiving a new piece is a moment (delight
-        // 2026-07-15) — the berry rain falls and the toast names it, sibling
-        // to the starred-repo release rain. Silent on the first-ever read
-        // (seeds the baseline; no "received 40 NFTs" on connect).
-        let arrivals = WalletMoments.shared.newlyArrived(from: groups)
-        if let first = arrivals.first {
-            let more = arrivals.count > 1 ? " +\(arrivals.count - 1) more" : ""
-            WalletMoments.shared.fire(String(localized: "\(first.label) received \(first.nft.name)\(more) 🖼️"))
-        }
-        return groups
-    }
-
-    /// A wallet's NFTs off Alchemy's NFT API — the image-bearing chains
-    /// (Ethereum + Base), spam filtered, first page only. Pieces without an
-    /// image are skipped: a shelf of gray squares says nothing.
-    static func nfts(addressHex: String, limit: Int = 12) async -> [WalletNFT] {
-        let sources: [(network: String, path: String)] =
-            [("eth-mainnet", "ethereum"), ("base-mainnet", "base")]
-        var out: [WalletNFT] = []
-        for source in sources {
-            let url = "https://\(source.network).g.alchemy.com/nft/v3/\(IngestSupport.alchemyKey)"
-                + "/getNFTsForOwner?owner=\(addressHex)&withMetadata=true"
-                + "&pageSize=\(limit)&excludeFilters%5B%5D=SPAM"
-            guard let root = await IngestSupport.getJSON(url) as? [String: Any],
-                  let owned = root["ownedNfts"] as? [[String: Any]] else { continue }
-            for n in owned {
-                guard let contract = n["contract"] as? [String: Any],
-                      let contractAddr = contract["address"] as? String,
-                      let tokenId = n["tokenId"] as? String,
-                      let image = n["image"] as? [String: Any],
-                      let imageURL = IngestSupport.imageURL(
-                        (image["thumbnailUrl"] as? String) ?? (image["cachedUrl"] as? String))
-                else { continue }
-                let collection = ((contract["openSeaMetadata"] as? [String: Any])?["collectionName"] as? String)
-                    ?? (contract["name"] as? String) ?? ""
-                let shortId = tokenId.count > 8 ? "\(tokenId.prefix(6))…" : tokenId
-                let name = (n["name"] as? String).flatMap { $0.isEmpty ? nil : $0 }
-                    ?? (collection.isEmpty ? "#\(shortId)" : "\(collection) #\(shortId)")
-                out.append(WalletNFT(contract: contractAddr, tokenId: tokenId,
-                                     name: name, collection: collection,
-                                     imageURL: imageURL, chainPath: source.path))
-            }
-        }
-        return Array(out.prefix(limit))
-    }
 
     /// A step-by-step trace of the holdings path for DiagnosticsScreen — the
     /// same call `topHoldings` makes, reporting each step's real result so a

@@ -51,9 +51,6 @@ struct FeedScreen: View {
     @State private var translateText = ""
     @State private var staleExpanded = false
     @State private var blockStream = GenStream()
-    // The Wallet feed's NFT strip, painted below the treemap (2026-07-18) — its
-    // own stream so a slow NFT read never holds up the holdings treemap paint.
-    @State private var nftStream = GenStream()
     // GitHub's contribution graph rides the TOP of its own source feed (moved
     // off Home, 2026-07-18): the green-squares year is a GitHub thing, so it
     // belongs where GitHub lives. Self-fetching @Observable store, same one the
@@ -673,7 +670,6 @@ struct FeedScreen: View {
             walletSwitcherSection
             walletBalanceLedeSection
             holdingsBlockSection
-            nftBlockSection
             let days = dayGroups(visible)
             groupedSections(days, nextEventID: nextEventID, boundary: boundaryThingID(in: days))
         case .calendar:
@@ -1139,22 +1135,6 @@ struct FeedScreen: View {
                             HomeRoute.shared.bridgePush = .wallet
                         }
                     }
-            }
-        }
-    }
-
-    /// The Wallet feed's NFT strip, below the treemap (2026-07-18). A tapped
-    /// tile opens the piece on OpenSea directly (`GenMediaTile` reads its
-    /// URL-shaped id) — no `genProjectTap` handler, because an NFT is a door,
-    /// not a thing, and never lands in the corpus.
-    @ViewBuilder
-    private var nftBlockSection: some View {
-        if !nftStream.els.isEmpty {
-            Section {
-                GenRender(id: "root", els: nftStream.els)
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
-                    .listRowInsets(EdgeInsets())
             }
         }
     }
@@ -1773,26 +1753,17 @@ struct FeedScreen: View {
     private func streamBlock() {
         guard source == "Wallet" else {
             if !blockStream.els.isEmpty { blockStream.paint([]) }
-            if !nftStream.els.isEmpty { nftStream.paint([]) }
             return
         }
-        // Two independent reads — the treemap paints as soon as holdings land
-        // without waiting on the (slower, 2-GET-per-wallet) NFT fetch.
-        // Scoped to the selected wallet when the feed is (prd §128) — the doc
-        // generators filter their groups to that address; nil paints all.
+        // The treemap paints as soon as holdings land. Scoped to the selected
+        // wallet when the feed is (prd §128) — the doc generator filters its
+        // groups to that address; nil paints all.
         let scope = selectedWallet
         Task { @MainActor in
             if let doc = await WalletIngest.holdingsChart(scopeTo: scope) {
                 blockStream.paint(doc)
             } else if !blockStream.els.isEmpty {
                 blockStream.paint([])
-            }
-        }
-        Task { @MainActor in
-            if let doc = await WalletIngest.nftShelfDocument(scopeTo: scope) {
-                nftStream.paint(doc)
-            } else if !nftStream.els.isEmpty {
-                nftStream.paint([])
             }
         }
     }

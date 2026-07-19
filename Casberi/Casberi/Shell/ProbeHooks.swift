@@ -673,6 +673,20 @@ enum ProbeHooks {
                 }
             }
         },
+        // `-zerionProbe <address>` walks the Zerion holdings read (prd — the
+        // Alchemy-reduction work, 2026-07-19) for one wallet: reachability,
+        // holding count, priced-vs-unpriced, and the first rows. UNMEASURED
+        // against the live API — this is the check that Zerion's `/positions`
+        // returns what the Alchemy treemap shows before it's trusted as primary.
+        // With no key set it says so and confirms the Alchemy fallback is live.
+        // Pair with `-walletAddress`; reads only.
+        Hook(key: "zerionProbe") { address, _ in
+            Task { @MainActor in
+                for line in await ZerionAPI.diagnostic(address: address) {
+                    NSLog("Zerion probe: %@", line)
+                }
+            }
+        },
         // `-wcConnectProbe YES` proposes a read-only WalletConnect session and
         // NSLogs the EXACT namespaces payload plus the `wc:` URI. The payload
         // line is the point: it's the proof that "we ask for nothing" is real
