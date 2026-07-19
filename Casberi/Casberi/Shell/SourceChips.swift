@@ -31,14 +31,23 @@ struct SourceChips: View {
     /// (the old tab lozenge's grammar, motion pass 2026-07-11).
     @Namespace private var chipRingNS
 
+    // Leading-dissolve geometry (user, 2026-07-19): the app icon sits at `s4`
+    // and is 46 wide, so its right edge lands at 62. The strip runs UNDER it and
+    // is masked — fully clear where the icon covers a chip, a short ramp back to
+    // solid just past the icon, then solid the rest of the way. `stripInset` sets
+    // the first chip to rest right where the ramp ends, so nothing is dimmed at
+    // rest. Tune `fadeRamp` for a softer/tighter melt.
+    private static let fadeClear: CGFloat = DS.Space.s4 + 46 - 8
+    private static let fadeRamp: CGFloat = 24
+    private static let stripInset: CGFloat = fadeClear + fadeRamp
+
     var body: some View {
-        HStack(spacing: DS.Space.s3) {
-            // The catalogue anchors the HEAD of the strip, FIXED outside the
-            // scroll (user 2026-07-17): it's an action, not a filter, and it
-            // must stay in reach as the active source chip re-centers below —
-            // an inline chip would slide off with the rest.
-            catalogueChip
-                .padding(.leading, DS.Space.s4)
+        // The scroll strip runs the full width, UNDER the fixed app icon; the
+        // leading fade mask dissolves each chip as it reaches the icon, so chips
+        // melt INTO the catalogue button instead of being sheared off at a hard
+        // clip line (user, 2026-07-19 — "disappear into it, not into a hard
+        // line on the source chips").
+        ZStack(alignment: .leading) {
             // ScrollViewReader keeps the ACTIVE chip visible — a deep link
             // (casberi://feed/source/Zerion) can select a chip past the fold,
             // and a filter you can't see reads as no filter at all.
@@ -49,6 +58,9 @@ struct SourceChips: View {
                             chip(label)
                         }
                     }
+                    // Clears the fixed app icon at rest; the strip slides left
+                    // beneath it — and through the fade — as you scroll.
+                    .padding(.leading, Self.stripInset)
                     .padding(.trailing, DS.Space.s4)
                 }
                 .onAppear {
@@ -58,6 +70,26 @@ struct SourceChips: View {
                     withAnimation(DS.Motion.standard) { proxy.scrollTo(now, anchor: .center) }
                 }
             }
+            .mask(alignment: .leading) { leadingFade }
+
+            // The catalogue anchors the HEAD of the strip, FIXED outside the
+            // scroll (user 2026-07-17): it's an action, not a filter, and it
+            // must stay in reach as the active source chip re-centers below.
+            // It rides ON TOP so chips vanish into it.
+            catalogueChip
+                .padding(.leading, DS.Space.s4)
+        }
+    }
+
+    /// The leading dissolve: transparent where the app icon sits, a soft ramp
+    /// back to opaque just past it, opaque across the rest of the strip.
+    private var leadingFade: some View {
+        HStack(spacing: 0) {
+            Color.clear.frame(width: Self.fadeClear)
+            LinearGradient(colors: [.clear, .black],
+                           startPoint: .leading, endPoint: .trailing)
+                .frame(width: Self.fadeRamp)
+            Rectangle().fill(.black)
         }
     }
 
