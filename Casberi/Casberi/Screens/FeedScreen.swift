@@ -184,11 +184,20 @@ struct FeedScreen: View {
         return bridges.bridges.first { $0.name == source && $0.status != .paused }
     }
 
-    /// Day groups, newest day first ("Today", "Yesterday", then dated).
+    /// Day groups, newest day first ("Today", "Yesterday", then dated). A feed
+    /// is history — it reads from today back. A reminder/event lands with
+    /// `capturedAt` set to when it's DUE, so a future-dated thing sorts newest
+    /// by raw time and would LEAD the feed — a Wednesday sitting above Today
+    /// (user, 2026-07-19). What's still ahead lives on Home's "Coming up" lane,
+    /// not here, so future days are dropped from the walk; the feed starts on
+    /// Today. (Timed things still to come LATER today stay under Today — the
+    /// day, not the clock, is what leads.)
     private func dayGroups(_ visible: [Thing]) -> [(String, [Thing])] {
+        let today = Self.groupingCalendar.startOfDay(for: .now)
         var order: [String] = []
         var groups: [String: [Thing]] = [:]
-        for thing in visible {
+        for thing in visible
+        where Self.groupingCalendar.startOfDay(for: thing.capturedAt) <= today {
             let label = dayLabel(thing.capturedAt)
             if groups[label] == nil { order.append(label) }
             groups[label, default: []].append(thing)
