@@ -132,6 +132,100 @@ enum ZerionAPI {
         return out
     }
 
+    // MARK: - Activity (2026-07-19)
+
+    /// One fungible-asset leg of a wallet's activity, as Zerion's
+    /// `/transactions` hands it over — the neutral shape `WalletIngest` maps
+    /// into an Alchemy-`getAssetTransfers`-SHAPED dictionary so every
+    /// downstream rule (swap folding, counterparty naming, the spam filter,
+    /// dedup) runs UNCHANGED; only the fetch layer differs (mirrors
+    /// `collectCandidates`/`Holding` above). Deliberately fungible-ONLY: an
+    /// NFT transfer (no `fungible_info`) is skipped here, not mapped — NFT
+    /// activity keeps riding Alchemy's dedicated erc721/erc1155 categories
+    /// unconditionally (see `WalletIngest.fetch`), since this file has no
+    /// measured Zerion NFT-transfer schema to map from and guessing wrong
+    /// would silently drop a real NFT receipt rather than degrade gracefully.
+    struct Transfer {
+        let hash: String
+        /// Alchemy network id (mapped through `networkFor`).
+        let network: String
+        /// `true` when the wallet received this leg — Zerion's "in"/"self"
+        /// map to received, "out"/"self" map to sent (a self-transfer counts
+        /// as BOTH, matching how querying Alchemy in both directions would
+        /// naturally report a from==to transfer).
+        let received: Bool
+        let symbol: String
+        /// nil = native coin, matching `Holding.contract`'s same convention
+        /// and passed through just as UNCHANGED.
+        let contract: String?
+        let amount: Double
+        let counterparty: String?   // lowercased hex; the OTHER side of this leg
+        let when: Date
+    }
+
+    /// A wallet's recent fungible activity across the EVM chains Casberi
+    /// reads, newest first — or nil when Zerion couldn't be reached at all
+    /// (the fall-back-to-Alchemy signal; an EMPTY array is a real "nothing
+    /// recent"). One request covers every chain and both directions at once
+    /// — the replacement for Alchemy's up-to-10-requests-per-wallet fan-out
+    /// (5 chains × 2 directions). Solana excluded (see `holdings`' measured
+    /// `filter[chain_ids]` quirk); Solana activity is untouched, still riding
+    /// `SolanaActivity`'s Alchemy calls (cheap already — 2 requests/wallet).
+    static func transactions(address: String) async -> [Transfer]? {
+        guard isConfigured,
+              let auth = "\(key):".data(using: .utf8)?.base64EncodedString(),
+              let encoded = address.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed)
+        else { return nil }
+
+        let chains = networkFor.keys.filter { $0 != "solana" }.sorted().joined(separator: ",")
+        let query = "currency=usd&filter[chain_ids]=\(chains)"
+        let url = "https://api.zerion.io/v1/wallets/\(encoded)/transactions/?\(query)"
+
+        guard let root = await IngestSupport.getJSON(url, auth: "Basic \(auth)") as? [String: Any],
+              let data = root["data"] as? [[String: Any]] else { return nil }
+
+        var out: [Transfer] = []
+        for tx in data {
+            guard let attrs = tx["attributes"] as? [String: Any],
+                  (attrs["status"] as? String ?? "confirmed") == "confirmed",
+                  let hash = attrs["hash"] as? String,
+                  let when = IngestSupport.isoDate(attrs["mined_at"])
+            else { continue }
+
+            guard let chainId = ((tx["relationships"] as? [String: Any])?["chain"]
+                    as? [String: Any])?["data"] as? [String: Any],
+                  let zid = chainId["id"] as? String,
+                  let network = networkFor[zid] else { continue }
+
+            guard let transfers = attrs["transfers"] as? [[String: Any]] else { continue }
+            for t in transfers {
+                // Fungible-only — an NFT transfer carries no `fungible_info`
+                // and is skipped (see the type doc above).
+                guard let info = t["fungible_info"] as? [String: Any],
+                      let symbol = (info["symbol"] as? String).flatMap({ $0.isEmpty ? nil : $0 }),
+                      let quantity = t["quantity"] as? [String: Any],
+                      let amount = doubleValue(quantity["float"]), amount > 0,
+                      let direction = t["direction"] as? String
+                else { continue }
+                let contract = implementationAddress(info["implementations"], chainId: zid)
+                let sender = (t["sender"] as? String)?.lowercased()
+                let recipient = (t["recipient"] as? String)?.lowercased()
+
+                if direction == "in" || direction == "self" {
+                    out.append(Transfer(hash: hash, network: network, received: true,
+                                        symbol: clean(symbol), contract: contract, amount: amount,
+                                        counterparty: sender, when: when))
+                }
+                if direction == "out" || direction == "self" {
+                    out.append(Transfer(hash: hash, network: network, received: false,
+                                        symbol: clean(symbol), contract: contract, amount: amount,
+                                        counterparty: recipient, when: when))
+                }
+            }
+        }
+        return out
+    }
+
     // MARK: - Parsing helpers
 
     /// The implementation address for a given chain id, or nil for the native
@@ -189,6 +283,31 @@ enum ZerionAPI {
                               h.price.map { String(format: "$%.4f", $0) } ?? "—"))
         }
         if holdings.count > 15 { out.append("  … +\(holdings.count - 15) more") }
+        return out
+    }
+
+    /// The `-zerionActivityProbe <address>` walk: what Zerion's transactions
+    /// endpoint returns for one wallet — reachability, leg count, and the
+    /// first rows (hash / chain / direction / symbol / amount) — so it can be
+    /// eyeballed against the Wallet feed's recent activity before it's
+    /// trusted as the EVM-activity source. Reads only.
+    static func activityDiagnostic(address: String) async -> [String] {
+        guard isConfigured else {
+            return ["Zerion activity probe: NO KEY set — Alchemy fallback is live"]
+        }
+        guard let legs = await transactions(address: address) else {
+            return ["Zerion activity probe: FAILED — unreachable (offline / bad key / bad address)"]
+        }
+        guard !legs.isEmpty else {
+            return ["Zerion activity probe: reached, 0 fungible legs (a real 'nothing recent', not a miss)"]
+        }
+        var out = [String(format: "Zerion activity probe: %d leg(s)", legs.count)]
+        for l in legs.prefix(15) {
+            out.append(String(format: "  %@ [%@] %@ %@ %@ cp=%@",
+                              String(l.hash.prefix(10)), l.network, l.received ? "recv" : "send",
+                              String(format: "%g", l.amount), l.symbol, l.counterparty ?? "—"))
+        }
+        if legs.count > 15 { out.append("  … +\(legs.count - 15) more") }
         return out
     }
     #endif

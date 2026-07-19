@@ -3,17 +3,30 @@ import SwiftData
 
 /// The wallet bridge (2026-07-08) — reads a public wallet's onchain activity
 /// (received/sent, tokens in and out) across chains and lands it as things.
-/// Powered by Alchemy's Transfers API, called directly from this iPhone: no
-/// server. The address is public and read-only — watching one can never trade
-/// or move funds. (This replaced the Zerion concept: Zerion's key is server-
-/// only by their rules, so it couldn't stay serverless; Alchemy can.)
+/// Called directly from this iPhone: no server. The address is public and
+/// read-only — watching one can never trade or move funds.
+///
+/// EVM fungible activity rides Zerion first (2026-07-19, once Alchemy went
+/// pay-as-you-go and hit quota): one `/transactions` call per wallet covers
+/// every chain and both directions, replacing Alchemy's `alchemy_getAssetTransfers`
+/// fan-out (up to 10 requests/wallet). Only when Zerion actually reaches a
+/// wallet — a miss falls straight through to the original full Alchemy fetch
+/// for that wallet (see `fetch`). NFT-category activity (erc721/erc1155)
+/// keeps riding Alchemy UNCONDITIONALLY even when Zerion covers the fungible
+/// side — this file has no measured Zerion NFT-transfer schema, and
+/// degrading an NFT receipt to silently-dropped would be worse than the
+/// small, cheap Alchemy call it still costs.
 enum WalletIngest {
 
     /// Which family a chain belongs to — the wallet's two pipelines, not a
-    /// cosmetic tag. Both read holdings through the same Portfolio call, but
-    /// ACTIVITY forks: EVM rides `alchemy_getAssetTransfers` here, Solana rides
-    /// `SolanaActivity` (batched getSignaturesForAddress + getTransaction),
-    /// because that method has no Solana equivalent. Same feed either way.
+    /// cosmetic tag. Both read holdings through the same Zerion-first call
+    /// (`collectCandidates`), but ACTIVITY forks: EVM rides Zerion-first/
+    /// Alchemy-fallback here (`fetch`), Solana rides `SolanaActivity`
+    /// (Alchemy, batched getSignaturesForAddress + getTransaction) —
+    /// untouched for now, already cheap (2 requests/wallet) and its
+    /// signing-based direction model doesn't map onto Zerion's fungible
+    /// `Transfer` shape the way EVM's from/to model does. Same feed either
+    /// way.
     private enum ChainKind { case evm, solana }
 
     /// Every chain we CAN read, and where a tx opens. One `getAssetTransfers`
@@ -126,6 +139,25 @@ enum WalletIngest {
         let evmAddresses = evmOnly(addresses)
 
         let existing = IngestSupport.existingSourceRefs(context)
+        // The cross-provider safety net for the Zerion cutover (2026-07-19):
+        // a transfer Alchemy already landed carries a stable `content`
+        // permalink (`chain.explorer + hash`) independent of whatever ref
+        // scheme produced it. See `IngestSupport.existingContent`.
+        let existingWalletContent = IngestSupport.existingContent(context, source: "Wallet")
+
+        // Zerion first for EVM fungible activity — one request per wallet,
+        // covering every chain and both directions at once. Only used for a
+        // wallet where it actually answers (`zerionByAddress[addr] != nil`);
+        // a miss leaves that wallet's entry absent and `fetch` falls through
+        // to the original full Alchemy call for it.
+        let zerionResults = await IngestSupport.boundedGather(evmAddresses, maxConcurrent: 4) { addr in
+            (addr.lowercased(), await ZerionAPI.transactions(address: addr))
+        }
+        // `uniquingKeysWith`, not `uniqueKeysWithValues`: two watched entries
+        // (an ENS name and its raw hex, say) can resolve to the SAME address,
+        // and `evmAddresses` carries no uniqueness guarantee — a duplicate key
+        // would crash `uniqueKeysWithValues` on every refresh for that wallet.
+        let zerionByAddress = Dictionary(zerionResults, uniquingKeysWith: { first, _ in first })
 
         // Every (address, chain, direction) combination is an independent
         // network call — fetched serially before, up to
@@ -143,7 +175,9 @@ enum WalletIngest {
         }
         let results = await IngestSupport.boundedGather(jobs, maxConcurrent: 4) { job in
             let (address, chain, received) = job
-            return (address, chain, received, await fetch(address: address, chain: chain, received: received))
+            let zerion = zerionByAddress[address.lowercased()] ?? nil
+            return (address, chain, received,
+                   await fetch(address: address, chain: chain, received: received, zerion: zerion))
         }
 
         // A hash whose SWAP already landed (ref "wallet:swap:<network>:<hash>")
@@ -171,6 +205,12 @@ enum WalletIngest {
                 // Already folded into a landed swap — never re-land its legs.
                 if !leg.hash.isEmpty,
                    swappedHashes.contains("\(chain.network):\(leg.hash)") { continue }
+                // The Zerion-cutover safety net (2026-07-19): this exact
+                // transaction may already be landed under an Alchemy-sourced
+                // ref this pass's `ref` set can't see (different uid scheme
+                // entirely) — its permalink can. See `zerionTransferDict`.
+                if !leg.hash.isEmpty,
+                   existingWalletContent.contains(chain.explorer + leg.hash) { continue }
                 fresh.append(leg)
             }
         }
@@ -546,8 +586,55 @@ enum WalletIngest {
         return (landed.count, reached)
     }
 
-    private static func fetch(address: String, chain: Chain,
-                              received: Bool) async -> [[String: Any]]? {
+    /// One (address, chain, direction) job's transfers, in the Alchemy
+    /// `getAssetTransfers`-shaped dictionary form `Leg` and `thing(from:)`
+    /// already know how to read. `zerion` is this address's prefetched
+    /// Zerion activity (nil = Zerion didn't reach this wallet — the full
+    /// Alchemy fetch below is unchanged for it). When Zerion DID reach the
+    /// wallet, its matching fungible legs are used directly and Alchemy is
+    /// asked ONLY for the NFT categories (small, cheap, unconditional — see
+    /// the type header on `WalletIngest`).
+    private static func fetch(address: String, chain: Chain, received: Bool,
+                              zerion: [ZerionAPI.Transfer]?) async -> [[String: Any]]? {
+        if let zerion {
+            let mapped = zerion
+                .filter { $0.network == chain.network && $0.received == received }
+                .map(zerionTransferDict)
+            let nfts = await fetchAlchemy(address: address, chain: chain, received: received,
+                                          categories: ["erc721", "erc1155"]) ?? []
+            return mapped + nfts
+        }
+        return await fetchAlchemy(address: address, chain: chain, received: received,
+                                  categories: ["external", "internal", "erc20", "erc721", "erc1155"])
+    }
+
+    /// Maps one Zerion fungible leg into the Alchemy-shaped dictionary —
+    /// only this fetch layer differs by source; every downstream rule (swap
+    /// folding, counterparty naming, the spam filter) runs unchanged.
+    /// `uniqueId` is deterministic and Zerion-namespaced (never collides with
+    /// an Alchemy uid's own format) — stable across passes so a re-run
+    /// doesn't re-land the same leg, but by construction DIFFERENT from
+    /// whatever ref an earlier Alchemy sync gave the same real transaction.
+    /// That's exactly why `refresh` also cross-checks `existingWalletContent`
+    /// — it's what stops a transfer Alchemy already landed from landing a
+    /// SECOND time under this new ref the day Zerion takes over a wallet.
+    private static func zerionTransferDict(_ t: ZerionAPI.Transfer) -> [String: Any] {
+        var d: [String: Any] = [
+            "hash": t.hash,
+            "asset": t.symbol,
+            "value": t.amount,
+            "category": t.contract != nil ? "erc20" : "external",
+            "uniqueId": "zerion:\(t.hash):\(t.received ? "in" : "out"):\(t.symbol):"
+                + "\(t.counterparty ?? ""):\(t.amount)",
+            "metadata": ["blockTimestamp": IngestSupport.isoString(t.when)],
+        ]
+        if let contract = t.contract { d["rawContract"] = ["address": contract] }
+        if let cp = t.counterparty { d[t.received ? "from" : "to"] = cp }
+        return d
+    }
+
+    private static func fetchAlchemy(address: String, chain: Chain, received: Bool,
+                                     categories: [String]) async -> [[String: Any]]? {
         let url = "https://\(chain.network).g.alchemy.com/v2/\(IngestSupport.alchemyKey)"
         let params: [String: Any] = [
             "fromBlock": "0x0", "toBlock": "latest",
@@ -558,7 +645,7 @@ enum WalletIngest {
             // wallet whose recent activity is mostly onchain interactions
             // rather than direct sends was showing "connected, nothing
             // landed" because that whole category was unfetched.
-            "category": ["external", "internal", "erc20", "erc721", "erc1155"],
+            "category": categories,
             "withMetadata": true, "excludeZeroValue": true,
             "maxCount": "0xa", "order": "desc",
         ]

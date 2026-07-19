@@ -37,6 +37,20 @@ enum IngestSupport {
     /// (the Apple Music pattern, 2026-07-10).
     /// Every landed thing for a source, keyed by ref — for backfilling fields
     /// onto rows that already exist (an avatar the first sync didn't carry).
+    /// Every landed thing's `content` for one source — a stable identity
+    /// (`chain.explorer + hash` for a wallet transfer) INDEPENDENT of
+    /// whatever `sourceRef` scheme landed it. Added 2026-07-19 for the
+    /// Zerion/Alchemy wallet-activity cutover: a transfer Alchemy already
+    /// landed under its own opaque `uniqueId`-based ref must not re-land a
+    /// second time under a new Zerion-sourced ref the day Zerion becomes
+    /// primary — the ref sets differ by construction, but the permalink
+    /// they'd both produce for the same real transaction doesn't.
+    static func existingContent(_ context: ModelContext, source: String) -> Set<String> {
+        var descriptor = FetchDescriptor<Thing>(predicate: #Predicate { $0.source == source })
+        descriptor.propertiesToFetch = [\.content]
+        return Set(((try? context.fetch(descriptor)) ?? []).map(\.content))
+    }
+
     static func thingsByRef(_ context: ModelContext, source: String) -> [String: Thing] {
         let descriptor = FetchDescriptor<Thing>(predicate: #Predicate { $0.source == source })
         var map: [String: Thing] = [:]
@@ -120,6 +134,11 @@ enum IngestSupport {
         f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         return f
     }()
+
+    /// The reverse of `isoDate` — for a caller that needs to hand a `Date`
+    /// back into a raw-dictionary shape another parser expects as an ISO
+    /// string (the Zerion→Alchemy-shaped transfer mapping, 2026-07-19).
+    static func isoString(_ date: Date) -> String { iso.string(from: date) }
 
     static func isoDate(_ raw: Any?) -> Date? {
         guard let s = raw as? String else { return nil }

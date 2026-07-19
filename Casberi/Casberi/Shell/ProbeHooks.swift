@@ -687,6 +687,19 @@ enum ProbeHooks {
                 }
             }
         },
+        // `-zerionActivityProbe <address>` walks Zerion's `/transactions`
+        // read for one wallet: reachability, fungible-leg count, and the
+        // first rows (hash / chain / direction / symbol / amount / cp) —
+        // compare against the Wallet feed's recent activity for that address
+        // before trusting Zerion as the EVM-activity source. UNMEASURED
+        // against the live API. Pair with `-walletAddress`; reads only.
+        Hook(key: "zerionActivityProbe") { address, _ in
+            Task { @MainActor in
+                for line in await ZerionAPI.activityDiagnostic(address: address) {
+                    NSLog("Zerion activity probe: %@", line)
+                }
+            }
+        },
         // `-wcConnectProbe YES` proposes a read-only WalletConnect session and
         // NSLogs the EXACT namespaces payload plus the `wc:` URI. The payload
         // line is the point: it's the proof that "we ask for nothing" is real
