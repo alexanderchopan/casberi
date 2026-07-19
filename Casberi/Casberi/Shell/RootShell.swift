@@ -183,14 +183,29 @@ struct RootShell: View {
         // the newest thing's sheet (the widget-tap route).
         .onOpenURL { route($0) }
         .onAppear {
-            // Landing (2026-07-13): a curator who's pinned something lands on
-            // their board — they know what they want. Someone with nothing
-            // pinned yet (new, or never curated) lands on the whole record
-            // instead of an empty board. Deep links and debug hooks below can
-            // still override this within the same launch.
-            let hasPins = !HomePinnedSources.shared.sources.isEmpty
+            // Landing (2026-07-13, revised 2026-07-19): land on the board when
+            // it has content, else on the whole record — so a returning user
+            // with connected apps opens to their board, and only a brand-new /
+            // uncurated corpus opens to "All" rather than an empty board.
+            //
+            // The predicate has to match what the board actually DRAWS. Under
+            // the auto-pin ruling (2026-07-18) the board shows every connected
+            // source's row by default, not just the ones explicitly pinned — so
+            // the old `HomePinnedSources.sources` check (explicit pins only) sent
+            // everyone who never tapped "Pin to Home" to "All" even though their
+            // board was full of auto-pinned rows (reported: "it lands on all and
+            // not pinned"). `boardSources` is the SAME set `appendPinnedApps`
+            // composes from, so the two can't drift. Deep links and debug hooks
+            // below can still override this within the same launch.
+            // Only the `source` column is read (boardSources touches nothing
+            // else), so fetch just that — a partial fetch keeps this launch-time
+            // read off the first-frame critical path on a large corpus.
+            var boardDescriptor = FetchDescriptor<Thing>()
+            boardDescriptor.propertiesToFetch = [\.source]
+            let boardThings = (try? modelContext.fetch(boardDescriptor)) ?? []
+            let hasBoard = !HomeComposition.boardSources(boardThings).isEmpty
                 || WalletStore.shared.addresses.contains(where: \.pinnedToHome)
-            FeedFilter.shared.source = hasPins ? "Pinned" : "All"
+            FeedFilter.shared.source = hasBoard ? "Pinned" : "All"
             // Honesty rule: if CasberiApp had to degrade the store open this
             // launch (SharedStore.containerWithFallback), say so once instead
             // of silently showing an empty/unsynced corpus.

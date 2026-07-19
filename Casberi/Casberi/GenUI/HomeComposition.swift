@@ -146,6 +146,23 @@ enum HomeComposition {
         "hero = Hero(\(q(String(localized: "Getting started"))), \(q(String(localized: "Your home builds itself"))), \(q(String(localized: "Connect an app or capture one thing - what lands composes this screen."))))",
     ], boardRefs: [])
 
+    /// The sources that earn a Home board ROW under the auto-pin model
+    /// (2026-07-18): every connected source with at least one landed thing,
+    /// minus the two that never take a generic row — "You" (own captures, the
+    /// cover leads with them) and "Wallet" (its own row via WalletStore) — minus
+    /// the sources the person hid. `appendPinnedApps` and the landing heuristic
+    /// (`RootShell`) both read this, so "does the board have content" can never
+    /// drift from what the board actually draws. Sorted by name for a stable
+    /// natural order (the person's own arrangement rides `HomeBoardOrder`).
+    @MainActor
+    static func boardSources(_ things: [Thing]) -> [String] {
+        let store = HomePinnedSources.shared
+        return Set(things.map(\.source))
+            .subtracting(["You", "Wallet"])
+            .filter { !store.isHidden($0) }
+            .sorted()
+    }
+
     // MARK: - Derivations
 
     struct Cluster {
@@ -319,7 +336,6 @@ enum HomeComposition {
                                          rootRefs: inout [String],
                                          boardRefs: inout [String],
                                          boardKeys: inout [String: String]) {
-        let store = HomePinnedSources.shared
         // Auto-pin (user 2026-07-18): every CONNECTED source is on the board by
         // default — the person subtracts what they don't want (less mental than
         // building the board from empty), the same show-unless-hidden model
@@ -340,10 +356,7 @@ enum HomeComposition {
         // the hero line. Only "You" (own captures — the cover leads with them)
         // and "Wallet" (its own treemap/NFT modules on the Wallet feed) stay off
         // the generic row path.
-        let onBoard = Set(bySource.keys)
-            .subtracting(["You", "Wallet"])
-            .filter { !store.isHidden($0) }
-            .sorted()
+        let onBoard = Self.boardSources(things)
         // The away window (AppVisit) powers a live per-tile signal — "N new"
         // since the last visit — so a tile reads as its world moving, not a
         // static list of recent items (tiles-as-signals, powerful-Home).
