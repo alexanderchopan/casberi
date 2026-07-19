@@ -132,16 +132,14 @@ enum BridgeRefresh {
             }
             // The wallet's delight + faces pass (2026-07-15): fetch the full
             // holdings (records value samples, checks the combined/single new
-            // high) and the NFTs (checks arrivals) so a moment fires from a
-            // plain foreground on Home, not only from the Wallet screen. NFTs
-            // ride their own 15-min cache; holdings sample-throttle at 4h. The
-            // moments enqueue on WalletMoments, which MainSurface drains into
-            // the berry rain + toast. Faces resolve here too, so a wallet wears
-            // its ENS avatar before you ever open its screen.
+            // high) so a moment fires from a plain foreground on Home, not only
+            // from the Wallet screen. Holdings sample-throttle at 4h. The moments
+            // enqueue on WalletMoments, which MainSurface drains into the berry
+            // rain + toast. Faces resolve here too, so a wallet wears its ENS
+            // avatar before you ever open its screen.
             let s2 = slot(); Task { @MainActor in
                 await BridgeRefresh.stagger(s2)
                 _ = await WalletIngest.topHoldingsByWallet()
-                _ = await WalletIngest.nftsByWallet()
                 await WalletStore.shared.loadAvatars()
             }
         }

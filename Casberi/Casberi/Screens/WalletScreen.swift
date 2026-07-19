@@ -57,8 +57,6 @@ struct WalletScreen: View {
     /// handle and write the new task's outcome.
     @State private var connectGeneration = 0
     private var connecting: Bool { connectTask != nil }
-    /// Per-wallet NFT shelves — Alchemy's NFT read, spam filtered.
-    @State private var nftGroups: [WalletIngest.NFTGroup] = []
     /// A tapped holdings cell: the token's thing sheet when watched, the
     /// quick chart sheet when not.
     @State private var openTokenThing: Thing?
@@ -135,7 +133,6 @@ struct WalletScreen: View {
                     }
                     .listRowSeparator(.hidden)
                 }
-                if !nftGroups.isEmpty { nftSection.listRowSeparator(.hidden) }
                 if !recent.isEmpty { recentSection.listRowSeparator(.hidden) }
                 // Admin cluster: add another wallet, narrow the chains —
                 // the settings, not the point.
@@ -165,10 +162,7 @@ struct WalletScreen: View {
                 Task { await wallet.loadAvatars() }
             }
         }
-        // A dropped wallet's shelves leave with it, not on the next sync.
         .onChange(of: wallet.addresses) {
-            let kept = Set(wallet.addresses.map(\.address))
-            nftGroups.removeAll { !kept.contains($0.address) }
             loadValueLines()
         }
         // A tapped holdings cell (2026-07-14): the token's own chart — its
@@ -448,71 +442,15 @@ struct WalletScreen: View {
         portfolioSamples = wallet.addresses.count > 1 ? wallet.combinedValueSamples() : []
     }
 
-    // MARK: - NFTs (2026-07-14)
-
-    /// The wallet's pieces, one shelf per wallet that holds any — a tap
-    /// opens the piece on OpenSea (read-only browse, like every link out).
-    private var nftSection: some View {
-        Section {
-            ForEach(nftGroups, id: \.address) { group in
-                VStack(alignment: .leading, spacing: DS.Space.s2) {
-                    if nftGroups.count > 1 {
-                        Text(group.label)
-                            .dsText(.subhead13).foregroundStyle(DS.textSecondary)
-                    }
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: DS.Space.s3) {
-                            ForEach(group.nfts) { nft in
-                                nftCell(nft)
-                            }
-                        }
-                    }
-                }
-                .listRowBackground(Color.clear)
-                .listRowInsets(EdgeInsets(top: DS.Space.s2, leading: DS.Space.s4,
-                                          bottom: DS.Space.s2, trailing: 0))
-            }
-        } header: {
-            Text("NFTs").dsText(.label12)
-                .foregroundStyle(DS.textSecondary)
-        }
-    }
-
-    private func nftCell(_ nft: WalletIngest.WalletNFT) -> some View {
-        Button {
-            guard let url = nft.openseaURL else { return }
-            DSHaptic.selection()
-            openURL(url)
-        } label: {
-            VStack(alignment: .leading, spacing: DS.Space.s1) {
-                AsyncImage(url: URL(string: nft.imageURL)) { phase in
-                    if let image = phase.image {
-                        image.resizable().scaledToFill()
-                    } else {
-                        DS.fillFaint
-                    }
-                }
-                .frame(width: 96, height: 96)
-                .clipShape(RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
-                Text(nft.name)
-                    .dsText(.label12).foregroundStyle(DS.textSecondary)
-                    .lineLimit(1)
-                    .frame(width: 96, alignment: .leading)
-            }
-        }
-        .buttonStyle(.plain)
-    }
-
     private func sync() {
         guard !syncing else { return }
         syncing = true
         Task {
-            // Three independent reads — overlapped, so the screen pays the
-            // slowest one, not the sum (transfers + holdings + NFTs each
-            // chain their own round-trips).
+            // Two independent reads — overlapped, so the screen pays the
+            // slowest one, not the sum (transfers + holdings each chain their
+            // own round-trips).
             async let refreshed = WalletIngest.refresh(context: modelContext)
             async let portfolioDoc = WalletIngest.combinedHoldings()
-            async let nfts = WalletIngest.nftsByWallet()
             // One fetch feeds every holdings surface now — the treemap cards,
             // the legend, the allocation bar, the row sublines (2026-07-17;
             // holdingsChart() ran the same per-wallet fetch a second time
@@ -530,7 +468,6 @@ struct WalletScreen: View {
                 portfolioHoldings.paint([])
             }
             loadValueLines()   // the holdings fetch may have landed a sample
-            nftGroups = await nfts
             syncing = false
             // A bridge only registers "connected" once it actually reached
             // Alchemy — a bad key or offline device must never claim success

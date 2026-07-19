@@ -37,6 +37,20 @@ enum IngestSupport {
     /// (the Apple Music pattern, 2026-07-10).
     /// Every landed thing for a source, keyed by ref — for backfilling fields
     /// onto rows that already exist (an avatar the first sync didn't carry).
+    /// Every landed thing's `content` for one source — a stable identity
+    /// (`chain.explorer + hash` for a wallet transfer) INDEPENDENT of
+    /// whatever `sourceRef` scheme landed it. Added 2026-07-19 for the
+    /// Zerion/Alchemy wallet-activity cutover: a transfer Alchemy already
+    /// landed under its own opaque `uniqueId`-based ref must not re-land a
+    /// second time under a new Zerion-sourced ref the day Zerion becomes
+    /// primary — the ref sets differ by construction, but the permalink
+    /// they'd both produce for the same real transaction doesn't.
+    static func existingContent(_ context: ModelContext, source: String) -> Set<String> {
+        var descriptor = FetchDescriptor<Thing>(predicate: #Predicate { $0.source == source })
+        descriptor.propertiesToFetch = [\.content]
+        return Set(((try? context.fetch(descriptor)) ?? []).map(\.content))
+    }
+
     static func thingsByRef(_ context: ModelContext, source: String) -> [String: Thing] {
         let descriptor = FetchDescriptor<Thing>(predicate: #Predicate { $0.source == source })
         var map: [String: Thing] = [:]
@@ -106,6 +120,58 @@ enum IngestSupport {
         return imageURL(s)
     }
 
+    // MARK: - ERC-20 ABI decoding
+
+    /// Decodes an `eth_call` return for `symbol()`/`name()` — ERC-20 has no
+    /// enforced return type, and two encodings appear in the wild: the
+    /// standard ABI dynamic `string` (an offset word, a length word, then the
+    /// UTF8 payload) and, on some pre-standard tokens, a raw `bytes32` (ASCII,
+    /// right-padded with zero bytes, no length prefix at all). Tries the
+    /// dynamic decode first — assumes the near-universal single-return-value
+    /// offset of 0x20, true for every real compiler's output — and falls back
+    /// to reading the first word as padded ASCII when that doesn't parse.
+    /// Added 2026-07-19 for the keyless symbol/decimals read that replaced
+    /// `alchemy_getTokenMetadata` in the approvals and Peer bridges. nil on a
+    /// reverted call, malformed data, or an empty result — a token whose name
+    /// can't be read falls back to its short hex, never a guess.
+    static func decodeABIString(_ hex: String) -> String? {
+        var s = hex.lowercased(); if s.hasPrefix("0x") { s.removeFirst(2) }
+        guard s.count >= 128 else { return abiWord0AsASCII(s) }
+        let lenStart = s.index(s.startIndex, offsetBy: 64)
+        let lenEnd = s.index(lenStart, offsetBy: 64)
+        if let len = Int(s[lenStart..<lenEnd], radix: 16), len > 0, len < 200 {
+            let available = s.distance(from: lenEnd, to: s.endIndex)
+            let dataEnd = s.index(lenEnd, offsetBy: min(len * 2, available))
+            if dataEnd > lenEnd, let bytes = hexBytes(String(s[lenEnd..<dataEnd])),
+               let str = String(bytes: bytes, encoding: .utf8), !str.isEmpty {
+                return str
+            }
+        }
+        return abiWord0AsASCII(s)
+    }
+
+    /// The bytes32 fallback: the call's first 32-byte word, trimmed at the
+    /// first zero byte (right-padding) and decoded as UTF8.
+    private static func abiWord0AsASCII(_ s: String) -> String? {
+        guard s.count >= 64, let bytes = hexBytes(String(s.prefix(64))) else { return nil }
+        let trimmed = bytes.prefix { $0 != 0 }
+        guard let str = String(bytes: trimmed, encoding: .utf8), !str.isEmpty else { return nil }
+        return str
+    }
+
+    private static func hexBytes(_ hex: String) -> [UInt8]? {
+        guard hex.count % 2 == 0 else { return nil }
+        var bytes: [UInt8] = []
+        var idx = hex.startIndex
+        while idx < hex.endIndex {
+            let next = hex.index(idx, offsetBy: 2)
+            guard let b = UInt8(hex[idx..<next], radix: 16) else { return nil }
+            bytes.append(b)
+            idx = next
+        }
+        return bytes
+    }
+
     // MARK: - Dates
 
     private static let iso: ISO8601DateFormatter = {
@@ -120,6 +186,11 @@ enum IngestSupport {
         f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         return f
     }()
+
+    /// The reverse of `isoDate` — for a caller that needs to hand a `Date`
+    /// back into a raw-dictionary shape another parser expects as an ISO
+    /// string (the Zerion→Alchemy-shaped transfer mapping, 2026-07-19).
+    static func isoString(_ date: Date) -> String { iso.string(from: date) }
 
     static func isoDate(_ raw: Any?) -> Date? {
         guard let s = raw as? String else { return nil }
