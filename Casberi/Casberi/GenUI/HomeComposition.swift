@@ -388,6 +388,14 @@ enum HomeComposition {
                     // item also has an image (the source logo IS the identity).
                     if Self.markSources.contains(source), let exemplar,
                        !(exemplar.authorAvatarURL ?? "").isEmpty { return exemplar }
+                    // GitHub is the exception (report 2026-07-19): its things'
+                    // `previewImageURL` is the repo OWNER's avatar, not content —
+                    // a starred/watched repo in the `dashpay` org carried the Dash
+                    // crypto logo, so the "Pushed to main …" row wore Dash's mark
+                    // instead of GitHub's. GitHub's identity is the octocat glyph,
+                    // so lead with it (empty film → the renderer's BridgeIcon
+                    // fallback) rather than any third-party owner avatar.
+                    if source == "GitHub" { return nil }
                     if let exemplar, Self.hasImage(exemplar) { return exemplar }
                     return sourceThings.first(where: Self.hasImage)
                 }()
