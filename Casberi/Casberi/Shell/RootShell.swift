@@ -38,6 +38,10 @@ struct RootShell: View {
     /// Sam?") searches inside it instead of the whole corpus (2026-07-10).
     @State private var lastAnswerHits: [Thing] = []
     @State private var redactNow = false
+    /// The bar↔surface morph (2026-07-20) — shared between `AgentBar` and
+    /// `Composer`'s `glassNamespace`, both keying `matchedGeometryEffect` to
+    /// the same `"agentMorph"` id.
+    @Namespace private var agentMorph
 
     var body: some View {
         // THROWAWAY (2026-07-19): `-summonProto YES` swaps the whole shell for
@@ -100,22 +104,34 @@ struct RootShell: View {
             // raised yet THIS LAUNCH (a plain, session-scoped flag — distinct
             // from `KeptAskStore`'s own PER-ASK persisted "seen" dot, which
             // renders on the pills once risen, not here).
-            AgentBar(hasUnseenSignal: KeptAskStore.shared.anyChanged && !agentEverOpened) {
-                DSHaptic.tap()
-                composerOpen = true
+            // Hidden entirely once risen (2026-07-20) — `agentMorph` needs
+            // exactly one side of the matched pair present at a time, and a
+            // bar sitting inert under the risen sheet was dead weight anyway.
+            if !composerOpen {
+                AgentBar(hasUnseenSignal: KeptAskStore.shared.anyChanged && !agentEverOpened,
+                         morphNS: agentMorph) {
+                    DSHaptic.tap()
+                    composerOpen = true
+                }
+                .padding(.horizontal, DS.Space.s4)
+                .padding(.bottom, DS.Space.s2)
+                .transition(.opacity)
             }
-            .padding(.horizontal, DS.Space.s4)
-            .padding(.bottom, DS.Space.s2)
 
-            // The agent, full screen (ruling 3 — never a sheet/tray). One
-            // transition, ported from the throwaway prototype
-            // (Screens/SummonPrototype.swift) that proved it feels right.
+            // The agent, full screen (ruling 3 — never a sheet/tray). Grows
+            // out of the bar's own frame (2026-07-20, `agentMorph` — the
+            // "now-playing bar" morph the design is named after): the outer
+            // shape is `matchedGeometryEffect`-paired with `AgentBar`'s via
+            // `Composer`'s `glassNamespace`, so the sheet's bounds visibly
+            // interpolate from the small capsule to full screen instead of
+            // sliding up as an unrelated sheet. Content still needs its own
+            // fade-in since the frame match alone doesn't animate opacity.
             if composerOpen {
                 ZStack {
                     DS.page.ignoresSafeArea()
                     agentSurface
                 }
-                .transition(.move(edge: .bottom))
+                .transition(.opacity)
                 .zIndex(3)
             }
         }
@@ -686,7 +702,7 @@ struct RootShell: View {
                  contextSource: { nil },
                  onNavigate: navigate,
                  onKeepAnswer: keepAnswer,
-                 glassNamespace: nil,
+                 glassNamespace: agentMorph,
                  resolveThing: { idString in
                      guard let uuid = UUID(uuidString: idString) else { return nil }
                      return (try? modelContext.fetch(FetchDescriptor<Thing>(

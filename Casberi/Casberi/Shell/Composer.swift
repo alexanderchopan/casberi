@@ -249,6 +249,11 @@ struct Composer: View {
     /// whole store, and computed-per-keystroke it made typing pay a corpus
     /// fetch per character (review 2026-07-08).
     @State private var tagPool: [String] = []
+    /// The rest-screen greeting's stat line ("2,481 things, across 14
+    /// apps."), ruling 4 — snapshotted once per open alongside `tagPool`
+    /// (same corpus walk `computeSuggestions()` already pays for, not a
+    /// second one).
+    @State private var corpusSummary = ""
 
     /// One corpus-derived nudge toward the tag command ("Tag your 6
     /// Farcaster things"). Unlike ask chips, tap PREFILLS the command —
@@ -334,6 +339,16 @@ struct Composer: View {
         // the Codable ThingKind enum (it throws at runtime, and try? made
         // the miss silent).
         let all = (try? modelContext.fetch(FetchDescriptor<Thing>())) ?? []
+        // The greeting's stat line (ruling 4) — real counts off the fetch
+        // just paid for. Empty corpus = empty line (the greeting stands
+        // alone; a "0 things" boast would be dishonest warmth).
+        if all.isEmpty {
+            corpusSummary = ""
+        } else {
+            let sources = Set(all.map(\.source)).count
+            let things = all.count.formatted()
+            corpusSummary = "\(things) thing\(all.count == 1 ? "" : "s"), across \(sources) app\(sources == 1 ? "" : "s")."
+        }
         // Context-aware lead (2026-07-12): if you opened the composer while
         // looking at one source's feed, its recap leads the chips — the
         // composer meets you where you are. Only when that source actually has
@@ -462,15 +477,35 @@ struct Composer: View {
         #endif
     }
 
-    /// One conversation turn — the muted question, then its answer.
+    /// "Saturday morning." — the day and its moment, ruled as the greeting's
+    /// first line (docs/agent-brief.md ruling 4). The weekday comes from the
+    /// current calendar/locale; the moment splits the day the way people
+    /// actually say it (morning until noon, afternoon until 6, evening
+    /// after) — no "Good ..." prefix, the period IS the warmth.
+    private func timeGreeting(now: Date = .now) -> String {
+        let weekday = now.formatted(.dateTime.weekday(.wide))
+        let hour = Calendar.current.component(.hour, from: now)
+        let moment = hour < 5 ? String(localized: "night")
+                   : hour < 12 ? String(localized: "morning")
+                   : hour < 18 ? String(localized: "afternoon")
+                   : String(localized: "evening")
+        return "\(weekday) \(moment)."
+    }
+
+    /// One conversation turn — the question as the answer's own TITLE, then
+    /// its answer. Heading weight (was subhead-muted, fixed 2026-07-20):
+    /// ruling 8 calls each answer a "sovereign screen", and its question is
+    /// that screen's title — one step down from the greeting's own
+    /// `.heading34` since this repeats per turn rather than leading the
+    /// whole surface.
     @ViewBuilder
     private func convoTurn<Content: View>(question: String,
                                           @ViewBuilder content: () -> Content) -> some View {
         VStack(alignment: .leading, spacing: DS.Space.s1) {
             if !question.isEmpty {
                 Text(question)
-                    .dsText(.subhead13).fontWeight(.semibold)
-                    .foregroundStyle(DS.textSecondary)
+                    .dsText(.heading17)
+                    .foregroundStyle(DS.textPrimary)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, DS.Space.s4)
             }
@@ -550,14 +585,30 @@ struct Composer: View {
             // sheet its warmth (design pass 2026-07-12, "B: greeting-led").
             // Hidden once a conversation is underway: the answer is the header.
             if embedded, turns.isEmpty, !answering, proposal == nil {
-                // The greeting at display scale (option A, 2026-07-16) — the
-                // sheet leads with one big rounded question, Cash App-bold.
-                Text("What now?")
+                // The greeting, as RULED (docs/agent-brief.md ruling 4,
+                // built 2026-07-20 — the static "What now?" that shipped
+                // first was a placeholder for this): the day and its moment
+                // ("Saturday morning."), then the corpus as one warm stat
+                // ("2,481 things, across 14 apps."). Deterministic, real,
+                // recomputed each open — never a canned line.
+                Text(timeGreeting())
                     .dsText(.heading34)
                     .foregroundStyle(DS.textPrimary)
-                    .padding(.horizontal, DS.Space.s4)
+                    .padding(.leading, DS.Space.s4)
+                    // Clears the ✕ pinned top-trailing — "Wednesday
+                    // afternoon." at display scale runs the full width and
+                    // collided with it (caught on sim, 2026-07-20).
+                    .padding(.trailing, 64)
                     .padding(.top, DS.Space.s2)
                     .settleIn()
+                if !corpusSummary.isEmpty {
+                    Text(corpusSummary)
+                        .dsText(.callout15)
+                        .foregroundStyle(DS.textSecondary)
+                        .padding(.horizontal, DS.Space.s4)
+                        .padding(.top, 2)
+                        .settleIn(delay: 0.05)
+                }
                 // The pairing line — teaches the sheet's dual nature (ask a
                 // question, or write a fact and send it out) and keeps the
                 // greeting from reading as an orphan label.
@@ -566,8 +617,8 @@ struct Composer: View {
                     .foregroundStyle(DS.textTertiary)
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.horizontal, DS.Space.s4)
-                    .padding(.top, 2)
-                    .settleIn(delay: 0.06)
+                    .padding(.top, DS.Space.s2)
+                    .settleIn(delay: 0.1)
             }
             // The content sizes to ITSELF (no filling scroll) so the sheet can
             // hug it — no stranded empty space. The answer conversation carries
@@ -604,6 +655,7 @@ struct Composer: View {
                                 convoTurn(question: turn.question) {
                                     VStack(alignment: .leading, spacing: DS.Space.s1) {
                                         GenRender(id: "root", els: turn.els)
+                                            .environment(\.genAgentAnswerContext, true)
                                         if turn.keyed { keyedBadge }
                                     }
                                 }
@@ -630,6 +682,7 @@ struct Composer: View {
                                             // answer only, so a scroll-back
                                             // never replays it.
                                             .environment(\.genCitationGlint, true)
+                                            .environment(\.genAgentAnswerContext, true)
                                         // A keyed answer says so, always — the
                                         // badge is the honesty rule applied to
                                         // where the answer was made.
@@ -699,6 +752,14 @@ struct Composer: View {
                                                 }
                                             }
                                             .padding(.horizontal, DS.Space.s4)
+                                            // One settled VERB ROW (2026-07-20):
+                                            // clear air above and below so
+                                            // Keep / Save / Try-with-key read
+                                            // as the answer's own action band,
+                                            // not trailing content stuck to
+                                            // the last row.
+                                            .padding(.top, DS.Space.s3)
+                                            .padding(.bottom, DS.Space.s2)
                                         }
                                     }
                                 }
@@ -834,6 +895,17 @@ struct Composer: View {
         .background(embedded ? Color.clear : DS.surfaceSheet.opacity(0.97), in: bubbleShape)
         .clipShape(embedded ? AnyShape(Rectangle()) : AnyShape(bubbleShape))
         .scaleEffect(embedded ? 1 : (isOpen ? 1 : 0.3), anchor: .bottomTrailing)
+        // The bar→surface morph (2026-07-20, `glassNamespace`) — a PLAIN
+        // frame interpolation, deliberately NOT another glass-pipeline morph
+        // (see the lesson just above: prd 44/52 both tried tying the open
+        // animation to `glassEffect`/`glassEffectID` and broke on real
+        // devices twice, because a glitched glass morph took the content
+        // down with it). `matchedGeometryEffect` never touches glass
+        // compositing — it only interpolates this container's own frame
+        // from `AgentBar`'s last position, while the ink background above
+        // and the content within render normally throughout. Embedded only —
+        // the non-embedded bubble already has its own scale-driven open.
+        .modifier(MorphMatch(ns: embedded ? glassNamespace : nil))
         .task(id: isOpen) {
             if isOpen {
                 computeSuggestions()
@@ -1096,23 +1168,31 @@ struct Composer: View {
                         draft = title
                         commit()
                     } label: {
-                        HStack(spacing: 6) {
+                        // Hero treatment (2026-07-20): these pills ARE the
+                        // board's replacement — the standing per-app glance
+                        // surface — so they earn real presence: callout-size
+                        // title, roomier padding, and a CHANGED pill wears a
+                        // full tint wash (not just its dot) so a live signal
+                        // reads as a filled element against the steady gray
+                        // of its unchanged neighbors. Still text-only chips
+                        // (ruling 5's tripwire: never a thumbnail).
+                        HStack(spacing: DS.Space.s2) {
                             if changed {
-                                Circle().fill(DS.tint).frame(width: 6, height: 6)
+                                Circle().fill(DS.tint).frame(width: 7, height: 7)
                             }
                             Text(title)
-                                .dsText(.subhead13)
+                                .dsText(.callout15)
                                 .foregroundStyle(changed ? DS.textPrimary : DS.textSecondary)
                             if !digest.isEmpty {
                                 Text("· \(digest)")
                                     .dsText(.subhead13)
-                                    .foregroundStyle(DS.textTertiary)
+                                    .foregroundStyle(changed ? DS.textSecondary : DS.textTertiary)
                             }
                         }
                         .opacity(neglected ? 0.55 : 1)
-                        .padding(.horizontal, DS.Space.s3)
-                        .padding(.vertical, DS.Space.s2)
-                        .background(DS.gray100,
+                        .padding(.horizontal, DS.Space.s4)
+                        .padding(.vertical, DS.Space.s3)
+                        .background(changed ? AnyShapeStyle(DS.tintDim) : AnyShapeStyle(DS.gray100),
                                     in: RoundedRectangle(cornerRadius: DS.Radius.control,
                                                          style: .continuous))
                     }
@@ -1192,15 +1272,19 @@ struct Composer: View {
             // ⌄ — the second exit (ruling 7): the thing that raised the
             // agent lowers it. Only ever visible at the agent's own root —
             // this bar is part of `openBubble`, which a NavigationStack push
-            // hides behind the pushed screen automatically.
+            // hides behind the pushed screen automatically. A bare glyph, no
+            // drawn circle (fix 2026-07-20) — the mic is the one true
+            // circular button beside the field now; ruling 7 already has
+            // this exit "on trial" against ✕, so it reads as the lighter of
+            // the two.
             Button {
                 close()
             } label: {
                 Image(systemName: "chevron.down")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(DS.textSecondary)
-                    .frame(width: 32, height: 32)
-                    .background(DS.fillFaint, in: Circle())
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(DS.textTertiary)
+                    .frame(width: 32, height: 36)
+                    .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .accessibilityLabel("Lower")
@@ -1470,9 +1554,13 @@ struct Composer: View {
             let gen = askGeneration
             let q = draft
             draft = ""              // clear the field so a follow-up is ready
-            answerStream.paint(OnDeviceModel.isAvailable
-                               ? ["root = Stack([w])", "w = Insight(\"Thinking…\")"]
-                               : [])
+            // No placeholder doc while in flight (fix 2026-07-20): the old
+            // `Insight("Thinking…")` painted the answer card's full tintDim
+            // chrome around a word — an empty-looking navy card. The
+            // breathing berry beside the question header (rendered whenever
+            // `inFlight`, just above the GenRender) is the whole loading
+            // state now; the first real content to appear IS the answer.
+            answerStream.paint([])
             Task { @MainActor in
                 // Organize-ish wording the strict parser missed ("put
                 // everything about lisbon under Trip") — the model fills the

@@ -68,6 +68,17 @@ extension EnvironmentValues {
         get { self[GenCitationGlintKey.self] }
         set { self[GenCitationGlintKey.self] = newValue }
     }
+    /// True when rendering inside the AGENT's answer column (Composer sets
+    /// it around both its GenRender calls, 2026-07-20). Two renderers read
+    /// it: `GenInsight` drops its "Noticed" eyebrow fallback (the question
+    /// above an answer already labels it — "Noticed" was the old Home
+    /// card's vocabulary and wrong on something you asked for), and
+    /// `GenTagMap` tightens its cell heights (feed proportions oversized
+    /// the cells at the agent's narrower answer width).
+    var genAgentAnswerContext: Bool {
+        get { self[GenAgentAnswerContextKey.self] }
+        set { self[GenAgentAnswerContextKey.self] = newValue }
+    }
     /// Bumped by Home's pull-to-refresh — live modules (token charts) key
     /// their fetch on it so a pull re-fetches what a recompose alone
     /// wouldn't (same doc line → same task id → no refetch).
@@ -147,6 +158,10 @@ private struct GenProseStreamingKey: EnvironmentKey {
 /// once as they mount — "I went and found these" as a gesture, never
 /// replayed on scroll-back (delight 2026-07-13).
 private struct GenCitationGlintKey: EnvironmentKey {
+    static let defaultValue = false
+}
+
+private struct GenAgentAnswerContextKey: EnvironmentKey {
     static let defaultValue = false
 }
 
@@ -400,14 +415,21 @@ private struct GenHero: View {
 private struct GenInsight: View {
     let el: GenEl
     @Environment(\.genProseStreaming) private var streaming
+    @Environment(\.genAgentAnswerContext) private var inAgentAnswer
 
     @Environment(\.genThingOpen) private var thingOpen
     @Environment(\.openURL) private var openURL
 
-    /// Arg 1 — the eyebrow, "Noticed" when the caller left it empty.
-    private var eyebrow: String {
+    /// Arg 1 — the eyebrow. Empty arg + a normal context = "Noticed" (the
+    /// cross-source connection card's own label, unchanged). Empty arg
+    /// INSIDE an agent answer = no eyebrow at all (fix 2026-07-20): the
+    /// question above the answer already labels it, and "Noticed" on
+    /// something you explicitly asked for was a vocabulary leak from the
+    /// old Home card. A caller who PASSES an eyebrow keeps it everywhere.
+    private var eyebrow: String? {
         let e = el.str(1)
-        return e.isEmpty ? String(localized: "Noticed") : e
+        if !e.isEmpty { return e }
+        return inAgentAnswer ? nil : String(localized: "Noticed")
     }
 
     /// ONE eyebrow and ONE paragraph (user 2026-07-18, second pass: the
@@ -419,9 +441,11 @@ private struct GenInsight: View {
     /// keep passing `Insight(text)` and render identically to before.
     var body: some View {
         VStack(alignment: .leading, spacing: DS.Space.s1) {
-            Text(eyebrow)
-                .dsText(.label12)
-                .foregroundStyle(DS.textSecondary)
+            if let eyebrow {
+                Text(eyebrow)
+                    .dsText(.label12)
+                    .foregroundStyle(DS.textSecondary)
+            }
             if streaming {
                 // The model is still writing — one small dot breathes after
                 // the last character. No shimmer, no skeleton (§2).
@@ -1797,6 +1821,9 @@ private struct GenTagMap: View {
     /// nil off the board; `small` gives the map a shorter, fewer-cell 1×1
     /// tile (prd 58h) — a treemap needs area, so it skips `wide`.
     @Environment(\.genSpan) private var span
+    /// True inside the agent's own answer column (2026-07-20) — tightens
+    /// `boardHeight` below; see `genAgentAnswerContext`'s own doc comment.
+    @Environment(\.genAgentAnswerContext) private var inAgentAnswer
     /// The entrance plays once per screen appearance (§3); filter and theme
     /// re-renders never replay it.
     @State private var settled = false
@@ -1853,7 +1880,13 @@ private struct GenTagMap: View {
     /// not just pin-born wallet maps — and it's the size control (prd
     /// 58a): tap it, the module blooms to large. The preview map isn't a
     /// real module yet (nothing to size), so it carries no pin.
-    private var boardHeight: CGFloat { span == .small ? 150 : (large ? 320 : 220) }
+    /// Inside an agent ANSWER the map tightens to 160 (2026-07-20): feed
+    /// proportions at the answer column's width left the big cells mostly
+    /// empty air — same data, denser read.
+    private var boardHeight: CGFloat {
+        if inAgentAnswer { return 160 }
+        return span == .small ? 150 : (large ? 320 : 220)
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
