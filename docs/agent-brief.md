@@ -86,15 +86,42 @@ Canonical mockups (visual reference, in ruling order):
     arrangement — `HomePinnedSources`/`HomeBoardOrder` data is deleted with
     the board (TestFlight-scale user base; the kept-ask set starts fresh and
     user-authored).
-12. **"Pin to Home" becomes "Keep the ask."** Pinning is no longer an action
-    anywhere. On the ~23 connection/setup screens carrying `PinToHomeButton`
-    (BridgeDetailScreen, PeerScreen, WalletScreen, RSSScreen, the import
-    screens, …), the button is replaced by keeping that surface's standing
-    ask in the agent — e.g. Peer → keep "What's new in Peer?", Wallet → keep
-    "How's my money?", a token page → keep that token's ask. Per the
-    vocabulary law the action mints a **chip, never a row**, and the button
-    states what it does ("Keep the ask" / kept state shows it's kept —
-    honesty rule, no dead controls).
+12. **"Pin to Home" is DELETED, with no replacement action** (corrected
+    2026-07-19 — the first version of this ruling wrongly invented a
+    replacement button; there isn't one). There is no "Home" left to pin to,
+    so pinning isn't a verb anymore, anywhere. `PinToHomeButton` and every one
+    of its ~23 call sites (BridgeDetailScreen, PeerScreen, WalletScreen,
+    RSSScreen, the import screens, …) is removed outright — no new control
+    takes its place. Connecting a source already auto-creates its feed and
+    chip (`MainSurface.chipLabels` derives the chip list from `feedThings`,
+    unconditionally); that was already true, it just also used to feed a
+    board that no longer exists. **"Keeping an ask" is a wholly separate,
+    agent-only action** (ask → get an answer → tap Keep) and is never wired
+    to a connection/setup screen — Peer's setup screen has no reason to know
+    kept asks exist.
+    `HandleSetupScreen`'s **"See on Home" CTA is a DIFFERENT button** (not
+    `PinToHomeButton`) the inventory sweep found — its job was "prove the
+    connection worked, show where it went," which still matters. Its
+    replacement: **"See in Feed"**, routing to that source's own feed page
+    (a feed always exists automatically now) — same job, no board to route
+    to.
+    **Wallet, resolved** (user ruling 2026-07-19: "needs to be able to ask
+    for either"): no new mechanism required. `WalletScreen`'s own combined
+    portfolio (`portfolioTotal`/`portfolioSamples`) already aggregates over
+    EVERY watched address unconditionally — it never read `pinnedToHome`
+    ([WalletScreen.swift:442](../Casberi/Casberi/Screens/WalletScreen.swift:442)).
+    Per-address rows already exist too. So both asks the user needs — "How's
+    my money?" (aggregate) and a per-wallet ask — already have their data
+    sitting in the feed, untouched by the board's deletion; the kept-ask
+    composers just read the same two views the feed already reads.
+    `pinnedToHome` (`WalletStore.WatchedAddress`), its pin-icon toggle, its
+    swipe action, and the three `pinnedToHome` filters in `WalletIngest.swift`
+    (lines 819, 855, 954) were a THIRD, board-only concept — a curation layer
+    letting someone exclude one watched wallet from the Home summary
+    specifically. Its only consumer is `HomeComposition.appendWalletHoldings`.
+    Once that deletes with the board, `pinnedToHome` has nothing left to feed
+    and is dead code — remove the field, the toggle, the swipe action, and
+    the three filters alongside the board.
 
 ## Explicitly NOT ruled — do not build, do not touch
 
@@ -171,39 +198,76 @@ byok routing all fold in); a last-seen store for signal diffs; the
 Noticed/away intelligence moves from `HomeComposition` into kept-ask
 composers.
 
-**Dismantling the Pinned board (executes rulings 11–12).** The inventory,
-measured 2026-07-19 — sweep again before cutting (`grep -rn "Pinned\|
-HomePinnedSources\|HomeBoardOrder\|PinToHome\|boardRefs\|pinSource\|
-pinWallet"`):
+**Dismantling the Pinned board (executes rulings 11–12).** Inventory swept
+read-only 2026-07-19 (report below is the record — sweep again before
+cutting, in case something moved: `grep -rn "Pinned\|HomePinnedSources\|
+HomeBoardOrder\|HomeModuleSize\|PinToHome\|pinnedToHome\|boardRefs\|
+pinSource\|pinWallet"`):
 
-1. Landing: `RootShell`'s board-vs-feed heuristic → always the All feed;
-   `casberi://home` → the feed (widgets/App Intents route through it).
-   Remove the "Pinned" chip from the source-chip header.
-2. Delete the board render path: `Screens/HomeScreen.swift`'s board,
+1. **Landing/routing — wider than one heuristic.** Six call sites in
+   `RootShell.swift` set `FeedFilter.shared.source = "Pinned"` (the launch
+   landing check, the `casberi://home` deep link, two branches inside
+   `navigate(_:)`/the composer's tag-sentinel handler, plus one READ at the
+   capture-flight check) — all six collapse to "All"/drop the special case.
+   `Shell/MainSurface.swift`'s `chipLabels` (drop the hardcoded `["Pinned",
+   "All"] + ordered` prefix), `showingBoard`, and `feedLabels`'s `!=
+   "Pinned"` filtering all simplify once "Pinned" is never a value.
+   `Shell/SourceChips.swift`'s `case "Pinned":` glyph branch is then dead,
+   remove it. One more real call site the first sweep missed:
+   `Screens/HandleSetupScreen.swift:482`'s "See on Home" CTA — see step 3.
+2. **Delete `Screens/HomeScreen.swift` OUTRIGHT** — confirmed (unlike the
+   first draft's guess) it is mounted in exactly ONE place
+   (`MainSurface.swift:120`, gated by `showingBoard`), so once that gate is
+   gone the whole file is dead, not just "its board." Also delete:
    `HomeComposition`'s board composition (cover, appRows, walletRow,
-   boardRefs/boardKeys), `Design/BoardDragDriver.swift`,
-   `Design/ReorderableBoard.swift`, `Model/HomePinnedSources.swift`,
-   `Model/HomeBoardOrder.swift`, and the board-only branches in
-   `GenUI/GenRenderer.swift` (GenAppRow etc. — check nothing else renders
-   them first).
-3. Replace `Screens/PinToHomeButton.swift` with the keep-the-ask button and
-   update all ~23 call sites (BridgeDetailScreen, PeerScreen, WalletScreen,
+   boardRefs/boardKeys — check whether any non-board caller still needs
+   `HomeComposition` for anything before deleting the type entirely),
+   `Design/BoardDragDriver.swift`, `Design/ReorderableBoard.swift`,
+   `Model/HomePinnedSources.swift`, `Model/HomeBoardOrder.swift`, and
+   `Model/HomeModuleSize.swift` (board-only, the first draft's inventory
+   missed it). `GitHub`'s `githubGraphShelf` module ref
+   (`HomePinnedSources.moduleRef`/`source(forModuleRef:)`,
+   `HomeScreen.swift:589`) is already vestigial dead code — `HomeComposition`
+   never actually emits an element with that id, every source composes as a
+   plain AppRow. It dies for free with this deletion; no separate work.
+3. **`PinToHomeButton` deletes with NO replacement** (ruling 12, corrected —
+   see the ruling itself for why). Delete `Screens/PinToHomeButton.swift` and
+   remove all ~22 real call sites outright (BridgeDetailScreen, PeerScreen,
    RSSScreen, TokenWatchScreen/TokenSetupScreen, OpenSeaScreen,
    GeckoTerminalScreen, StocktwitsScreen, KalshiScreen, DealsScreen,
    MailScreen, SpotifyScreen, SteamScreen, TwitchScreen, ShopifyScreen,
    HandleSetupScreen, ObsidianScreen, KindleImportScreen, the
-   ChatGPT/Claude/Gemini/Notes import screens). Wallet's pin →
-   "How's my money?"; a source's pin → its context ask
-   ("What's new in <App>?"); a token's pin → that token's ask.
-4. Hooks: retire `-pinSource`/`-pinWallet` (Shell/ProbeHooks.swift); add
-   `-keepAsk "<key>"` + a probe that NSLogs the kept-ask set, so the button
-   verifies headlessly.
-5. Home-only furniture: the banner/cover wallpaper (`HomeBackgroundStore`,
+   ChatGPT/Claude/Gemini/Notes import screens) — just the button and its
+   `if !recent.isEmpty { … }`/section wrapper, nothing new in its place.
+   `WalletScreen.swift` never used `PinToHomeButton` (it has its own
+   per-address `pinnedToHome` toggle) — see the Wallet paragraph below.
+   Separately, `HandleSetupScreen`'s **"See on Home" section**
+   (`showHomeHint`, ~line 478) is a DIFFERENT control the button-only sweep
+   missed — replace it with "See in Feed", routing to that source's own feed
+   page instead of `FeedFilter.source = "Pinned"`.
+4. **Wallet — delete `pinnedToHome` as dead weight, keep its two real views.**
+   `WalletStore.WatchedAddress.pinnedToHome`, its pin-icon toggle and swipe
+   action in `WalletScreen.swift` (~line 573), and the three `pinnedToHome`
+   filters in `Model/WalletIngest.swift` (lines 819, 855, 954) all exist ONLY
+   to feed `HomeComposition.appendWalletHoldings`. Once that's gone, delete
+   all of it — the field, the toggle, the filters. Do NOT touch
+   `WalletScreen`'s own combined portfolio (`portfolioTotal`/
+   `portfolioSamples`, ~line 442) or its per-address rows — those already
+   aggregate over every watched address unconditionally and are what the
+   Wallet kept-ask composers should read from directly (both an aggregate
+   "How's my money?" and a per-wallet ask are just reads of data already in
+   the feed, no new mechanism).
+5. Hooks: retire `-pinSource`/`-pinWallet` (Shell/ProbeHooks.swift) — they
+   drove `PinToHomeButton`/`pinnedToHome` directly and have nothing left to
+   set. (Kept-ask hooks like `-keepAsk` belong to the SHELL block above, not
+   this one — keeping an ask is agent-only, never a connection-screen
+   action.)
+6. Home-only furniture: the banner/cover wallpaper (`HomeBackgroundStore`,
    `-setHomeBanner`, the Banner tray in Settings) retires with the board —
    remove the tray (no dead controls). Flag at the checkpoint: the user may
    later want wallpaper on the agent's rest greeting instead.
-6. Docs: record rulings 11–12 (and the rest of this brief's set) in
-   docs/prd.md; update CLAUDE.md's Home/pinning hook docs; retire the
+7. Docs: record rulings 11–12 (corrected) and the rest of this brief's set
+   in docs/prd.md; update CLAUDE.md's Home/pinning hook docs; retire the
    `-comingUpProbe`/board references there.
 
 **Then** the answer-anatomy components (the spec artifact), as their own
