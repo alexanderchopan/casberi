@@ -75,17 +75,38 @@ Canonical mockups (visual reference, in ruling order):
     session), no hairlines, no dead controls, honesty everywhere (pulse only
     when true; deltas only real diffs; a stale answer states "as of" rather
     than pretending freshness).
+11. **The agent replaces the Pinned board** (added by user ruling, same day).
+    The "Pinned" chip and its board die; the app opens on the **All feed**
+    (the landing heuristic in `RootShell` simplifies to just that), and
+    `casberi://home` repoints to the feed so widgets/App Intents keep working.
+    The why is the division law applied: the board's glance job (per-app
+    signals) moves to the agent's chips; its scroll job was always the feed's
+    (the source-chip header already gives per-app views). Keeping the board
+    would rebuild Home beside the agent. **No migration** of pins or
+    arrangement — `HomePinnedSources`/`HomeBoardOrder` data is deleted with
+    the board (TestFlight-scale user base; the kept-ask set starts fresh and
+    user-authored).
+12. **"Pin to Home" becomes "Keep the ask."** Pinning is no longer an action
+    anywhere. On the ~23 connection/setup screens carrying `PinToHomeButton`
+    (BridgeDetailScreen, PeerScreen, WalletScreen, RSSScreen, the import
+    screens, …), the button is replaced by keeping that surface's standing
+    ask in the agent — e.g. Peer → keep "What's new in Peer?", Wallet → keep
+    "How's my money?", a token page → keep that token's ask. Per the
+    vocabulary law the action mints a **chip, never a row**, and the button
+    states what it does ("Keep the ask" / kept state shows it's kept —
+    honesty rule, no dead controls).
 
 ## Explicitly NOT ruled — do not build, do not touch
 
-- **Home/board's fate.** Whether the board merges into the feed is deferred.
-  Do not modify `HomeComposition`, the board, landing logic, or the real shell.
 - **The Deck** (multi-card sessions) — shelved as a someday-iPad idea.
 - **Ember persistence** (retained past answers) — rejected for now.
 - **New GenRenderer components** (value-weighted treemap, Hero-as-block, Row
   delta pills — the "answer anatomy" spec). Real work, separate later goal.
   Phase 1 uses existing components and accepts their Home-shaped flaws.
 - Anything touching the shipping app: schema, catalog, website, verify.sh.
+- **Executing rulings 11–12.** They are settled, but their execution is
+  Phase 2: in Phase 1 do NOT touch the board, `HomeComposition`,
+  `PinToHomeButton`, landing logic, or any real screen.
 
 ## Phase 1 — build the full loop as a throwaway prototype (the deliverable)
 
@@ -141,9 +162,49 @@ touches the real shell.
 
 ## Phase 2 — gated on the user's Phase-1 ruling (do not start)
 
-Productionizing, roughly: bar replaces the FAB in the real shell; the agent
-replaces the composer sheet (the composer's answer path, `lastAnswerHits`,
-Organize, byok routing all fold in); a last-seen store for signal diffs; the
+Productionizing. Each block below is its own goal with its own user
+checkpoint — do not run them together.
+
+**The shell.** Bar replaces the FAB in the real shell; the agent replaces
+the composer sheet (the composer's answer path, `lastAnswerHits`, Organize,
+byok routing all fold in); a last-seen store for signal diffs; the
 Noticed/away intelligence moves from `HomeComposition` into kept-ask
-composers; record the ruling set in docs/prd.md; then the answer-anatomy
-components. Each of those is its own goal with its own checkpoint.
+composers.
+
+**Dismantling the Pinned board (executes rulings 11–12).** The inventory,
+measured 2026-07-19 — sweep again before cutting (`grep -rn "Pinned\|
+HomePinnedSources\|HomeBoardOrder\|PinToHome\|boardRefs\|pinSource\|
+pinWallet"`):
+
+1. Landing: `RootShell`'s board-vs-feed heuristic → always the All feed;
+   `casberi://home` → the feed (widgets/App Intents route through it).
+   Remove the "Pinned" chip from the source-chip header.
+2. Delete the board render path: `Screens/HomeScreen.swift`'s board,
+   `HomeComposition`'s board composition (cover, appRows, walletRow,
+   boardRefs/boardKeys), `Design/BoardDragDriver.swift`,
+   `Design/ReorderableBoard.swift`, `Model/HomePinnedSources.swift`,
+   `Model/HomeBoardOrder.swift`, and the board-only branches in
+   `GenUI/GenRenderer.swift` (GenAppRow etc. — check nothing else renders
+   them first).
+3. Replace `Screens/PinToHomeButton.swift` with the keep-the-ask button and
+   update all ~23 call sites (BridgeDetailScreen, PeerScreen, WalletScreen,
+   RSSScreen, TokenWatchScreen/TokenSetupScreen, OpenSeaScreen,
+   GeckoTerminalScreen, StocktwitsScreen, KalshiScreen, DealsScreen,
+   MailScreen, SpotifyScreen, SteamScreen, TwitchScreen, ShopifyScreen,
+   HandleSetupScreen, ObsidianScreen, KindleImportScreen, the
+   ChatGPT/Claude/Gemini/Notes import screens). Wallet's pin →
+   "How's my money?"; a source's pin → its context ask
+   ("What's new in <App>?"); a token's pin → that token's ask.
+4. Hooks: retire `-pinSource`/`-pinWallet` (Shell/ProbeHooks.swift); add
+   `-keepAsk "<key>"` + a probe that NSLogs the kept-ask set, so the button
+   verifies headlessly.
+5. Home-only furniture: the banner/cover wallpaper (`HomeBackgroundStore`,
+   `-setHomeBanner`, the Banner tray in Settings) retires with the board —
+   remove the tray (no dead controls). Flag at the checkpoint: the user may
+   later want wallpaper on the agent's rest greeting instead.
+6. Docs: record rulings 11–12 (and the rest of this brief's set) in
+   docs/prd.md; update CLAUDE.md's Home/pinning hook docs; retire the
+   `-comingUpProbe`/board references there.
+
+**Then** the answer-anatomy components (the spec artifact), as their own
+goal.
