@@ -771,6 +771,16 @@ struct Composer: View {
         .task(id: isOpen) {
             if isOpen {
                 computeSuggestions()
+                // Kept asks share AskMemory's own decay counters with the
+                // suggestion tiles (ruling 5: "ignored asks decay dim") —
+                // bumped once per open here, exactly how computeSuggestions()
+                // bumps the tiles it actually shows. Never double-counted:
+                // a kept kind is always excluded from `suggestions` (see
+                // computeSuggestions()'s `KeptAskStore.shared.isKept` filter),
+                // so a given key's counter only ever moves from one side.
+                if !KeptAskStore.shared.order.isEmpty {
+                    AskMemory.shown(KeptAskStore.shared.order)
+                }
                 // Kept asks' signal dots refresh on open too (not just on
                 // foreground, docs/agent-brief.md Step 5) — the same
                 // granularity AskMemory's own decay counters already use
@@ -989,6 +999,12 @@ struct Composer: View {
     /// rows/cards are app-language). Changed-first sort; a dot only when the
     /// kept ask's current digest doesn't match what was last seen (never a
     /// model judgment — a plain string compare, `KeptAskStore.changed`).
+    /// Ruling 5's other half, wired in now: a pill nobody's tapped in
+    /// `AskMemory.neglectThreshold` opens decay-dims, same counters the
+    /// empty-composer suggestion tiles already use — `computeSuggestions()`
+    /// excludes kept kinds, so a key's counter only ever moves from one side.
+    /// A pill whose answer just changed never dims, even if it was neglected
+    /// before — a fresh signal is worth noticing regardless of history.
     @ViewBuilder
     private var keptAskPills: some View {
         if isOpen, !hasDraft, !answering, !isRecording, proposal == nil,
@@ -1006,9 +1022,11 @@ struct Composer: View {
                     let digest = store.currentDigests[kind] ?? ""
                     let title = store.titles[kind] ?? kind
                     let changed = store.changed(kind, digest: digest)
+                    let neglected = !changed && AskMemory.neglected(kind)
                     Button {
                         DSHaptic.selection()
                         store.markSeen(kind, digest: digest)
+                        AskMemory.tapped(kind)
                         draft = title
                         commit()
                     } label: {
@@ -1025,6 +1043,7 @@ struct Composer: View {
                                     .foregroundStyle(DS.textTertiary)
                             }
                         }
+                        .opacity(neglected ? 0.55 : 1)
                         .padding(.horizontal, DS.Space.s3)
                         .padding(.vertical, DS.Space.s2)
                         .background(DS.gray100,

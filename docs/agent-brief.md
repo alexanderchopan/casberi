@@ -49,8 +49,14 @@ Canonical mockups (visual reference, in ruling order):
    appears **only when the answer changed** since last seen (a deterministic
    diff of the composer's facts against a stored last-seen — never a model
    judgment). Changed chips sort first; ignored asks decay dim (AskMemory's
-   counters, later). Tripwire, record verbatim: *the day a chip wants a
-   thumbnail is the day the discipline broke.*
+   counters — **implemented 2026-07-20**, prd §132: a kept pill nobody's
+   tapped in `AskMemory.neglectThreshold` opens dims to 55% opacity, sharing
+   the exact counters/thresholds the empty-composer suggestion tiles already
+   used — a changed pill never dims, even if it was neglected before).
+   Tripwire, record verbatim: *the day a chip wants a thumbnail is the day
+   the discipline broke.* (Still holds — the dim is opacity on the existing
+   pill, never an image; the visualization ruling below lives in the
+   ANSWER, never the chip.)
 6. **The bar.** Rides the floating layer on every app screen. **No number
    badges — ever** (ruled annoying). While an unseen changed signal exists,
    the bar's ✦ **pulses** (slow two-breath glow); it stops once the agent is
@@ -122,6 +128,20 @@ Canonical mockups (visual reference, in ruling order):
     Once that deletes with the board, `pinnedToHome` has nothing left to feed
     and is dead code — remove the field, the toggle, the swipe action, and
     the three filters alongside the board.
+13. **An answer backed by a real visualization always shows it — never text
+    alone** (added by user ruling, 2026-07-20, once the board's dismantling
+    was verified). "How's my wallet?" answers with the summary line PLUS the
+    live holdings `TagMap` treemap (the same one the Wallet feed itself
+    draws); "How's my watchlist?" answers with the summary line PLUS a
+    `TokenChip` row per mover. This applies BOTH to a kept ask's composer and
+    to the free-text ask path (`RootShell.answerDocument`) — the two must
+    never disagree about what an answer looks like, so both call the same
+    shared doc-builders (`KeptAskComposers.walletDoc`/`watchlistDoc`). Asks
+    with no natural visual (away, overdue, tags, noticed) stay Insight+rows,
+    unchanged — this rule adds a visualization where a real one already
+    exists, it doesn't invent one. Implemented and device-verified 2026-07-20
+    (prd §132); the chip itself stays text-only (see ruling 5's tripwire) —
+    the visualization lives only in the pushed answer.
 
 ## Explicitly NOT ruled — do not build, do not touch
 

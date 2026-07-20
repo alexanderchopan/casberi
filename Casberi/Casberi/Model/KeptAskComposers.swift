@@ -61,6 +61,11 @@ enum KeptAskComposers {
 
     // MARK: - How's my money
 
+    /// The summary line PLUS the real holdings treemap — the same `TagMap`
+    /// idiom the Wallet feed itself draws (`WalletIngest.holdingsChart`).
+    /// Standing rule: any kept ask backed by a real visualization always
+    /// shows it, never text alone (matches `RootShell.answerDocument`'s
+    /// watchlist branch below, which already did this for TokenChip rows).
     private static func wallet() async -> Result? {
         guard !WalletStore.shared.addresses.isEmpty else { return nil }
         guard let line = await WalletAsk.answer() else {
@@ -70,18 +75,60 @@ enum KeptAskComposers {
         }
         // The line itself is the honest digest — it only changes when the
         // real figure does, same idiom as the Noticed line below.
-        return Result(delta: line, digest: line,
-                      doc: ["root = Stack([ins])", "ins = Insight(\"\(genSafe(line))\")"])
+        let groups = await WalletIngest.topHoldingsByWallet()
+        return Result(delta: line, digest: line, doc: walletDoc(line: line, groups: groups))
+    }
+
+    /// Shared by the kept-ask composer and `RootShell.answerDocument`'s
+    /// free-text wallet branch, so both never disagree about what a wallet
+    /// answer looks like.
+    static func walletDoc(line: String, groups: [WalletIngest.HoldingsGroup]) -> [String] {
+        let ids = groups.indices.map { "w\($0)" }
+        var doc = ["root = Stack([ins\(ids.isEmpty ? "" : ", " + ids.joined(separator: ", "))])",
+                   "ins = Insight(\"\(genSafe(line))\")"]
+        for (i, g) in groups.enumerated() {
+            doc.append("w\(i) = TagMap(\"\(genSafe(g.label))\", \"\(genSafe(g.subline))\", [\(g.cells.joined(separator: ", "))], \"token\")")
+        }
+        return doc
     }
 
     // MARK: - Watchlist
 
+    /// The summary line PLUS a `TokenChip` row per mover — mirrors
+    /// `RootShell.answerDocument`'s free-text watchlist branch exactly (same
+    /// 6-shown cap, same route guard), so a kept "How's my watchlist?" and a
+    /// typed one can never disagree about what's shown.
     private static func watchlist(context: ModelContext) async -> Result? {
         guard !TokensAsk.watched(context).isEmpty else { return nil }
         let moves = await TokensAsk.moves(context: context)
+        guard !moves.isEmpty else {
+            // Watched, but every pulse fetch failed — not the same as an
+            // empty watchlist (honesty rule already paid for in
+            // RootShell.answerDocument; this composer was missing it).
+            return Result(delta: "", digest: "unreachable",
+                          doc: ["root = Stack([ins])",
+                                "ins = Insight(\"\(genSafe("Couldn't read your watchlist's prices right now."))\")"])
+        }
         let line = TokensAsk.line(moves)
-        return Result(delta: line, digest: line,
-                      doc: ["root = Stack([ins])", "ins = Insight(\"\(genSafe(line))\")"])
+        return Result(delta: line, digest: line, doc: watchlistDoc(line: line, moves: moves))
+    }
+
+    /// Shared by the kept-ask composer and `RootShell.answerDocument`'s
+    /// free-text watchlist branch.
+    static func watchlistDoc(line: String, moves: [TokensAsk.Move]) -> [String] {
+        let shown = moves.prefix(6).compactMap { m in
+            TokenChart.route(from: m.thing.content).map { (move: m, route: $0) }
+        }
+        var doc = ["root = Stack([ins\(shown.isEmpty ? "" : ", res")])",
+                   "ins = Insight(\"\(genSafe(line))\")"]
+        if !shown.isEmpty {
+            let ids = shown.indices.map { "t\($0)" }
+            doc.append("res = Widget(\"\(String(localized: "Watchlist"))\", \"\(shown.count)\", [\(ids.joined(separator: ", "))])")
+            for (i, s) in shown.enumerated() {
+                doc.append("t\(i) = TokenChip(\"\(genSafe(s.move.symbol))\", \"\(s.route.chain)\", \"\(s.route.address)\", \"\(s.move.thing.id.uuidString)\", \"\")")
+            }
+        }
+        return doc
     }
 
     // MARK: - What's overdue

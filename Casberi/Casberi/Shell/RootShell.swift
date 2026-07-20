@@ -1085,21 +1085,10 @@ struct RootShell: View {
                     ? "Nothing on your watchlist yet — watch a token from Apps → Tokens."
                     : "Couldn't read your watchlist's prices right now — check your connection.")
             }
-            // Rows only for moves whose thing still routes to a chart — a
-            // dangling ref under a bigger count would overstate what's shown.
-            let shown = moves.prefix(6).compactMap { m in
-                TokenChart.route(from: m.thing.content).map { (move: m, route: $0) }
-            }
-            var doc = ["root = Stack([ins\(shown.isEmpty ? "" : ", res")])",
-                       "ins = Insight(\"\(genSafe(TokensAsk.line(moves)))\")"]
-            if !shown.isEmpty {
-                let ids = shown.indices.map { "t\($0)" }
-                doc.append("res = Widget(\"\(String(localized: "Watchlist"))\", \"\(shown.count)\", [\(ids.joined(separator: ", "))])")
-                for (i, s) in shown.enumerated() {
-                    doc.append("t\(i) = TokenChip(\"\(genSafe(s.move.symbol))\", \"\(s.route.chain)\", \"\(s.route.address)\", \"\(s.move.thing.id.uuidString)\", \"\")")
-                }
-            }
-            return doc
+            // TokenChip rows alongside the summary — `KeptAskComposers.watchlistDoc`
+            // so a typed ask and the kept "How's my watchlist?" chip can never
+            // disagree about what's shown.
+            return KeptAskComposers.watchlistDoc(line: TokensAsk.line(moves), moves: moves)
         }
         // A wallet ask ("how's my wallet") is answered from the live holdings
         // and the forward-only value line — computed, no model (2026-07-15).
@@ -1107,10 +1096,14 @@ struct RootShell: View {
         // the feeds' pulse.
         if WalletAsk.matches(query) {
             lastAnswerHits = []
-            if let line = await WalletAsk.answer() {
-                return proseDoc(line)
+            guard let line = await WalletAsk.answer() else {
+                return proseDoc(String(localized: "Nothing in your wallet yet — watch an address from Apps → Wallet."))
             }
-            return proseDoc(String(localized: "Nothing in your wallet yet — watch an address from Apps → Wallet."))
+            // The real holdings treemap alongside the summary — same TagMap
+            // idiom the Wallet feed draws, shared with the kept-ask composer
+            // via `KeptAskComposers.walletDoc` so the two paths agree.
+            let groups = await WalletIngest.topHoldingsByWallet()
+            return KeptAskComposers.walletDoc(line: line, groups: groups)
         }
         // A status ask ("tell me what's going on") names no content to score,
         // so it grounds on recency itself: the newest things from every source
