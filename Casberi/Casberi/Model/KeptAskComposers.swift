@@ -38,6 +38,9 @@ enum KeptAskComposers {
         if kind.hasPrefix("context:") {
             return contextRecap(String(kind.dropFirst("context:".count)), things: things)
         }
+        if kind.hasPrefix("category:") {
+            return categoryRecap(String(kind.dropFirst("category:".count)), things: things)
+        }
         if kind.hasPrefix("search:") {
             return search(String(kind.dropFirst("search:".count)), things: things)
         }
@@ -197,6 +200,36 @@ enum KeptAskComposers {
         return Result(delta: "\(pool.count) things", digest: "\(pool.count)",
                       doc: ["root = Stack([ins, res])", "ins = Insight(\"\(genSafe(line))\")"]
                           + rows(Array(pool.prefix(6)), title: "From \(source)"))
+    }
+
+    // MARK: - What's up with my <category>
+
+    /// A whole-CATEGORY recap ("How's my Markets stuff?") — the app catalog's
+    /// own vocabulary (`BridgeCatalog.categories`), not just one source.
+    /// Same 3-day/week widening as `contextRecap`, scoped to every source the
+    /// category owns (`BridgeCatalog.category(of:) == category`) rather than
+    /// one — light duplication of the window logic, same precedent noted
+    /// above.
+    private static func categoryRecap(_ category: String, things: [Thing]) -> Result? {
+        let sourcesInCategory = Set(BridgeCatalog.offers
+            .filter { BridgeCatalog.category(of: $0) == category }
+            .map(\.name))
+        let now = Date.now
+        var pool = things.filter { sourcesInCategory.contains($0.source) && $0.capturedAt >= now.addingTimeInterval(-3 * 86_400) }
+        var windowWords = "in the last three days"
+        if pool.isEmpty {
+            pool = things.filter { sourcesInCategory.contains($0.source) && $0.capturedAt >= now.addingTimeInterval(-7 * 86_400) }
+            windowWords = "in the last week"
+        }
+        guard !pool.isEmpty else {
+            return Result(delta: "", digest: "0",
+                          doc: ["root = Stack([ins])",
+                                "ins = Insight(\"\(genSafe("Nothing new from your \(category) apps recently."))\")"])
+        }
+        let line = "\(pool.count) thing\(pool.count == 1 ? "" : "s") from your \(category) apps \(windowWords)."
+        return Result(delta: "\(pool.count) things", digest: "\(pool.count)",
+                      doc: ["root = Stack([ins, res])", "ins = Insight(\"\(genSafe(line))\")"]
+                          + rows(Array(pool.prefix(6)), title: category))
     }
 
     // MARK: - Kept search

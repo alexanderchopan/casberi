@@ -1,33 +1,32 @@
 import SwiftUI
 
-/// The shell's two doors — the avatar (→ Settings) and the grid (→ Apps) —
-/// worn by EVERY tab root (ruling 2026-07-06: not just Home; with two tabs,
-/// Feed had no way to reach either without bouncing through Home). One shared
-/// component so the doors can't drift apart. The grid carries the attention
-/// dot when a bridge needs reconnecting — a nav button, not a tab, so the
-/// no-tab-indicator rule holds. Pushed screens keep their back button.
-struct TopDoors: ToolbarContent {
+/// The avatar door — the Settings entry. Lived alone in the top-right
+/// toolbar corner until 2026-07-20, when it joined the catalogue door as a
+/// second FIXED leading chip in `SourceChips` (Stories-style: your own face
+/// leads the strip, same as the catalogue door already did) — the vacated
+/// nav bar is hidden entirely (`MainSurface`), so this is the only way to
+/// Settings now. Kept as its own small view (not folded directly into
+/// `SourceChips`) so `AvatarDoor`/`DoorSpin`/`DoorBounce` stay one shared
+/// definition regardless of where the door lives.
+struct AvatarChip: View {
     var onSettings: () -> Void
-    /// Bumped by Home's pull-to-refresh — the avatar does one full spin
-    /// while the refresh runs (2026-07-10): it's the person's own face
-    /// doing the work. 0 everywhere else (Feed never spins).
+    /// Bumped by pull-to-refresh — the avatar does one full spin while the
+    /// refresh runs: it's the person's own face doing the work.
     var refreshSpin: Int = 0
-    /// The zoom transition anchor — Settings grows out of the avatar. (The
-    /// catalogue door moved to the head of the source strip, 2026-07-17, so
-    /// the top-right is the avatar alone — the "me" corner.)
+    /// The zoom transition anchor — Settings grows out of the avatar. Shared
+    /// with `SourceChips`'s own `zoomNS` (the catalogue door's "appsDoor"
+    /// transition lives in the same namespace under a different id).
     var zoomNS: Namespace.ID? = nil
     /// Taps bounce the door (Telegram grammar, same as the tab icons).
     @State private var avatarBounce = 0
 
-    var body: some ToolbarContent {
-        // The avatar alone on the right — the "me / settings" corner, the one
-        // place account lives (the left edge stays clear for titles and the
-        // Home cover text).
-        ToolbarItemGroup(placement: .topBarTrailing) {
-            Button {
-                avatarBounce += 1
-                onSettings()
-            } label: {
+    var body: some View {
+        Button {
+            avatarBounce += 1
+            onSettings()
+        } label: {
+            ZStack {
+                Circle().fill(DS.gray100)
                 if let zoomNS {
                     AvatarDoor()
                         .modifier(DoorBounce(trigger: avatarBounce))
@@ -39,8 +38,10 @@ struct TopDoors: ToolbarContent {
                         .modifier(DoorSpin(trigger: refreshSpin))
                 }
             }
-            .accessibilityLabel("Settings")
+            .frame(width: 46, height: 46)
         }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Settings")
     }
 }
 

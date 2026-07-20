@@ -176,9 +176,19 @@ struct Composer: View {
                   things.contains(where: { $0.mark != .done && ($0.source == "Reminders" || $0.source == "Todoist")
                                             && ($0.dueAt ?? .distantFuture) < .now }) {
             kind = "overdue"
-        } else if let name = contextSourceName(q),
+        } else if let name = namedTopicPhrase(q),
                   let source = Set(things.map(\.source)).first(where: { $0.lowercased() == name }) {
             kind = "context:\(source)"
+        } else if let name = namedTopicPhrase(q),
+                  let cat = BridgeCatalog.categories.first(where: { $0.name.lowercased() == name })?.name,
+                  categoryHasThings(cat, in: things) {
+            // The catalog's OWN category vocabulary (2026-07-20) — "how's my
+            // Markets stuff?" answers the same way a per-source recap does,
+            // just spanning every source the category owns. "Onchain" is
+            // deliberately NOT a match here — that category was dissolved
+            // 2026-07-17 (Markets absorbed it); Wallet/Markets are its real
+            // successors.
+            kind = "category:\(cat)"
         } else if TagsAsk.parse(question) == nil, AppsAsk.parse(question) == nil,
                   AggregateAsk.parse(question, sources: Array(Set(things.map(\.source)))) == nil,
                   StatusAsk.pulse(question, things: things) == nil,
@@ -197,16 +207,40 @@ struct Composer: View {
         return kind
     }
 
-    /// "what's new in <source>" / "whats new in <source>" — the bare source
-    /// name after the phrase, lowercased and trimmed, or nil if the phrase
-    /// doesn't match at all. Matching against a REAL source happens at the
-    /// call site (this only strips the phrase).
-    private func contextSourceName(_ q: String) -> String? {
-        for prefix in ["what's new in ", "whats new in "] where q.hasPrefix(prefix) {
-            return String(q.dropFirst(prefix.count))
+    /// "what's new in <name>" / "how's my <name>" / "what's up with my
+    /// <name>" (and casual variants) — the bare name after the phrase,
+    /// lowercased and trimmed, or nil if none match. Shared by both the
+    /// source-context matcher and the category matcher below; matching
+    /// against a REAL source or category happens at each call site (this
+    /// only strips the phrase). Widened 2026-07-20 — the strict "what's new
+    /// in" prefix missed how people actually ask ("what's up w/ my X stuff").
+    private func namedTopicPhrase(_ q: String) -> String? {
+        let prefixes = ["what's new in ", "whats new in ",
+                        "what's up with my ", "whats up with my ",
+                        "how's my ", "hows my "]
+        for prefix in prefixes where q.hasPrefix(prefix) {
+            var name = String(q.dropFirst(prefix.count))
                 .trimmingCharacters(in: CharacterSet(charactersIn: "? "))
+                .trimmingCharacters(in: .whitespaces)
+            // "...Markets STUFF?" — casual phrasing tacks a generic filler
+            // noun onto the real topic name; strip it so "markets stuff"
+            // matches the bare category/source name "markets".
+            for filler in [" stuff", " things", " activity"] where name.hasSuffix(filler) {
+                name = String(name.dropLast(filler.count))
+            }
+            return name
         }
         return nil
+    }
+
+    /// True when some real thing sits in a source the category owns — the
+    /// same honesty gate `contextRecap`'s "must have things from this
+    /// source" check applies at the per-source level.
+    private func categoryHasThings(_ category: String, in things: [Thing]) -> Bool {
+        let sources = Set(BridgeCatalog.offers
+            .filter { BridgeCatalog.category(of: $0) == category }
+            .map(\.name))
+        return things.contains { sources.contains($0.source) }
     }
     /// A typed organize command's pending change — rendered as a card, the
     /// write waits for Apply (typed words never write silently).
@@ -356,6 +390,19 @@ struct Composer: View {
         if let src = contextSource(), all.contains(where: { $0.source == src }) {
             out.append(AskOption(kind: "context", title: "What's new in \(src)?",
                                  glyph: "app.badge", memoryKey: "context:\(src)"))
+            // A category sibling (2026-07-20) — only when it's a meaningfully
+            // BROADER ask than the single-source lead above (more than one
+            // source in the category), else it would just repeat the same
+            // question in different words.
+            if let offer = BridgeCatalog.offers.first(where: { $0.name == src }) {
+                let cat = BridgeCatalog.category(of: offer)
+                let sourcesInCat = Set(BridgeCatalog.offers
+                    .filter { BridgeCatalog.category(of: $0) == cat }.map(\.name))
+                if sourcesInCat.count > 1, all.contains(where: { sourcesInCat.contains($0.source) }) {
+                    out.append(AskOption(kind: "category", title: "How's my \(cat) stuff?",
+                                         glyph: "square.grid.2x2", memoryKey: "category:\(cat)"))
+                }
+            }
         }
         let dayStart = Calendar.current.startOfDay(for: .now)
         // The feeds' pulse (2026-07-11): "What's going on?" synthesizes the
@@ -1206,58 +1253,80 @@ struct Composer: View {
 
     // MARK: - Ask chips + input bar (chat grammar: by the bottom)
 
-    /// The ask tiles (option A, 2026-07-16) — asks the corpus can answer now,
-    /// plus the organize invite, as a bold 2×2 grid while the field is empty.
-    /// The chip strip died here: it clipped its own labels ("How's m…"), and
-    /// a suggestion you can't read isn't one. Each tile states its whole ask,
-    /// wears a glyph naming what kind of answer it is, and is a real thumb
-    /// target; the ONE featured tile (the organize invite) wears the solid
-    /// tint — the grid's single accent, per the one-tint law.
+    /// The ask chips — asks the corpus can answer now, plus the organize
+    /// invite, as `FlowRow` pills while the field is empty. Unified with
+    /// `keptAskPills` (2026-07-20, user: "your chips design was better")
+    /// — was a 2×2 `AskTile` grid; now the SAME pill vocabulary the kept
+    /// asks above already wear, so the whole rest screen reads as one
+    /// language instead of two. Every specific query is unchanged; the ONE
+    /// trade made explicit: the away chip's rolling-digit-climb delight
+    /// (`AskTile.rollCount`) is gone, replaced by the same static "· N"
+    /// digest suffix every kept pill already shows. The organize invite
+    /// keeps its sole solid-tint treatment — the row's one accent, per the
+    /// one-tint law.
     @ViewBuilder
     private var askChips: some View {
         if isOpen && !hasDraft && !answering && !isRecording,
            proposal == nil, !suggestions.isEmpty || organizeHint != nil {
             let hintLead = organizeHint != nil ? 1 : 0
-            LazyVGrid(columns: [GridItem(.flexible(), spacing: DS.Space.s3),
-                                GridItem(.flexible(), spacing: DS.Space.s3)],
-                      spacing: DS.Space.s3) {
+            FlowRow(spacing: DS.Space.s2) {
                 if let hint = organizeHint {
-                    AskTile(glyph: "tag",
-                            title: "Tag your \(hint.count) \(hint.source) things",
-                            featured: true) {
+                    Button {
                         DSHaptic.selection()
                         fillDraft("tag \(hint.source.lowercased()) as ")
                         fieldFocused = true
+                    } label: {
+                        HStack(spacing: DS.Space.s2) {
+                            Image(systemName: "tag")
+                                .font(.system(size: 13, weight: .semibold))
+                            Text("Tag your \(hint.count) \(hint.source) things")
+                                .dsText(.callout15)
+                        }
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, DS.Space.s4)
+                        .padding(.vertical, DS.Space.s3)
+                        .background(DS.tint, in: RoundedRectangle(cornerRadius: DS.Radius.control,
+                                                                   style: .continuous))
                     }
+                    .buttonStyle(.plain)
                     .modifier(ChipEntrance(index: 0, shown: chipsAppeared, reduceMotion: reduceMotion))
                 }
                 ForEach(Array(suggestions.enumerated()), id: \.offset) { i, ask in
-                    // The librarian's tile rolls its real count up as it
-                    // appears — "Catch me up — 14 things" arriving digit by
-                    // digit (delight 2026-07-13). The tap still sends the
-                    // canonical "While I was away?" ask.
-                    if ask.kind == "away", awayLanded >= 3 {
-                        AskTile(glyph: "sparkles", title: "Catch me up",
-                                rollCount: awayLanded) {
-                            DSHaptic.selection()
-                            draft = ask.title
-                            commit()
+                    // The tap still sends the CANONICAL "While I was away?"
+                    // ask regardless of the pill's display label — matching
+                    // the tile version's own distinction.
+                    let isAway = ask.kind == "away" && awayLanded >= 3
+                    Button {
+                        DSHaptic.selection()
+                        if !isAway { AskMemory.tapped(ask.memoryKey) }
+                        draft = ask.title
+                        commit()
+                    } label: {
+                        HStack(spacing: DS.Space.s2) {
+                            Image(systemName: isAway ? "sparkles" : ask.glyph)
+                                .font(.system(size: 13, weight: .semibold))
+                                .foregroundStyle(DS.tint)
+                            Text(isAway ? "Catch me up" : ask.title)
+                                .dsText(.callout15)
+                                .foregroundStyle(DS.textPrimary)
+                            if isAway {
+                                Text("· \(awayLanded)")
+                                    .dsText(.subhead13)
+                                    .foregroundStyle(DS.textTertiary)
+                            }
                         }
-                        .modifier(ChipEntrance(index: i + hintLead, shown: chipsAppeared, reduceMotion: reduceMotion))
-                    } else {
-                        AskTile(glyph: ask.glyph, title: ask.title) {
-                            DSHaptic.selection()
-                            AskMemory.tapped(ask.memoryKey)
-                            draft = ask.title
-                            commit()
-                        }
-                        .modifier(ChipEntrance(index: i + hintLead, shown: chipsAppeared, reduceMotion: reduceMotion))
+                        .padding(.horizontal, DS.Space.s4)
+                        .padding(.vertical, DS.Space.s3)
+                        .background(DS.gray100, in: RoundedRectangle(cornerRadius: DS.Radius.control,
+                                                                      style: .continuous))
                     }
+                    .buttonStyle(.plain)
+                    .modifier(ChipEntrance(index: i + hintLead, shown: chipsAppeared, reduceMotion: reduceMotion))
                 }
             }
             .padding(.horizontal, DS.Space.s4)
-            // Clear air between the greeting and the grid — the tiles are a
-            // separate band (ask), not stuck to the header.
+            // Clear air between the greeting and the chips — a separate
+            // band (ask), not stuck to the header.
             .padding(.top, DS.Space.s4)
             .padding(.bottom, DS.Space.s2)
         }
@@ -1693,66 +1762,6 @@ struct Chip: View {
     }
 }
 
-/// One bold ask tile (option A, 2026-07-16) — the empty sheet's 2×2 grid
-/// unit. The glyph sits top-leading, the whole ask reads unclipped at the
-/// bottom (the chip strip's mid-word truncation died with it). `featured`
-/// is the grid's single solid-tint tile — the organize invite. The optional
-/// rolling count is the librarian's catch-up tile: the digits climb to the
-/// real away total right after the tile lands (numericText, once).
-struct AskTile: View {
-    let glyph: String
-    let title: String
-    var featured = false
-    /// When set, the title reads "<title> — N things" with N rolling in.
-    var rollCount: Int? = nil
-    let action: () -> Void
-    @State private var shown = 0
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
-    var body: some View {
-        Button(action: action) {
-            VStack(alignment: .leading, spacing: DS.Space.s3) {
-                Image(systemName: glyph)
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundStyle(featured ? AnyShapeStyle(.white) : AnyShapeStyle(DS.tint))
-                Spacer(minLength: 0)
-                Group {
-                    if rollCount != nil {
-                        Text("\(title) — \(shown) things")
-                            .contentTransition(.numericText(value: Double(shown)))
-                    } else {
-                        Text(title)
-                    }
-                }
-                .dsText(.callout15).fontWeight(.semibold)
-                .foregroundStyle(featured ? Color.white : DS.textPrimary)
-                .multilineTextAlignment(.leading)
-                .fixedSize(horizontal: false, vertical: true)
-            }
-            .padding(DS.Space.s3 + 2)
-            .frame(maxWidth: .infinity, minHeight: 104, alignment: .leading)
-            .background(featured ? AnyShapeStyle(DS.tint) : AnyShapeStyle(DS.gray100),
-                        in: RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
-            .contentShape(RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
-        }
-        .buttonStyle(PressSpring())
-        .onAppear { roll(to: rollCount) }
-        // The suggestions rebuild while the composer is open — a grown away
-        // pool re-rolls to the new count instead of going stale (review
-        // catch 2026-07-13).
-        .onChange(of: rollCount) { _, new in roll(to: new) }
-        .accessibilityLabel(rollCount.map { "\(title) — \($0) things" } ?? title)
-    }
-
-    private func roll(to count: Int?) {
-        guard let count else { return }
-        if reduceMotion { shown = count } else {
-            withAnimation(.spring(response: 0.9, dampingFraction: 0.9).delay(0.35)) {
-                shown = count
-            }
-        }
-    }
-}
 
 // MARK: - Placeholder helper
 

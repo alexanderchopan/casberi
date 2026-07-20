@@ -21,8 +21,16 @@ struct SourceChips: View {
     /// top-right cluster and INTO the head of this strip — "add a source"
     /// belongs with your sources).
     var onApps: () -> Void = {}
-    /// The zoom anchor the catalogue grows out of — the store still grows from
-    /// its own door, that door just lives here now.
+    /// Opens Settings — the avatar joined this strip too (2026-07-20,
+    /// Stories-style: your own face leads, fixed, ahead of the catalogue
+    /// door). The system nav bar it used to live in alone is hidden now.
+    var onSettings: () -> Void = {}
+    /// Pull-to-refresh spin, threaded through to the avatar exactly as it
+    /// was when it lived in the toolbar.
+    var refreshSpin: Int = 0
+    /// The zoom anchor BOTH fixed doors grow out of — the catalogue's
+    /// "appsDoor" transition and the avatar's "settingsDoor" transition
+    /// share one namespace under different ids, same as before the move.
     var zoomNS: Namespace.ID? = nil
     let onTap: (String) -> Void
 
@@ -33,13 +41,21 @@ struct SourceChips: View {
     /// (the old tab lozenge's grammar, motion pass 2026-07-11).
     @Namespace private var chipRingNS
 
-    // Leading-dissolve geometry (user, 2026-07-19): the app icon sits at `s4`
-    // and is 46 wide, so its right edge lands at 62. The strip runs UNDER it and
-    // is masked — fully clear where the icon covers a chip, a short ramp back to
-    // solid just past the icon, then solid the rest of the way. `stripInset` sets
-    // the first chip to rest right where the ramp ends, so nothing is dimmed at
-    // rest. Tune `fadeRamp` for a softer/tighter melt.
-    private static let fadeClear: CGFloat = DS.Space.s4 + 46 - 8
+    // Leading-dissolve geometry (user, 2026-07-19; widened 2026-07-20 when
+    // the avatar joined as a SECOND fixed leading icon ahead of the
+    // catalogue door): avatar sits at `s4`, 46 wide; the catalogue door
+    // sits `iconGap` past it, also 46 wide. The strip runs UNDER both and
+    // is masked — fully clear where an icon covers a chip, a short ramp
+    // back to solid just past the second icon, then solid the rest of the
+    // way. `stripInset` sets the first chip to rest right where the ramp
+    // ends, so nothing is dimmed at rest. Tune `fadeRamp` for a softer/
+    // tighter melt.
+    private static let avatarWidth: CGFloat = 46
+    private static let catalogueWidth: CGFloat = 46
+    private static let iconGap: CGFloat = DS.Space.s3
+    private static let catalogueTrailingEdge: CGFloat =
+        DS.Space.s4 + avatarWidth + iconGap + catalogueWidth
+    private static let fadeClear: CGFloat = catalogueTrailingEdge - 8
     private static let fadeRamp: CGFloat = 24
     private static let stripInset: CGFloat = fadeClear + fadeRamp
 
@@ -74,13 +90,26 @@ struct SourceChips: View {
             }
             .mask(alignment: .leading) { leadingFade }
 
-            // The catalogue anchors the HEAD of the strip, FIXED outside the
-            // scroll (user 2026-07-17): it's an action, not a filter, and it
-            // must stay in reach as the active source chip re-centers below.
-            // It rides ON TOP so chips vanish into it.
-            catalogueChip
-                .padding(.leading, DS.Space.s4)
+            // Avatar, then the catalogue — BOTH anchor the HEAD of the strip,
+            // FIXED outside the scroll (avatar joined 2026-07-20; the
+            // catalogue's own fixed placement dates to user 2026-07-17):
+            // neither is a filter, and both must stay in reach as the active
+            // source chip re-centers below. They ride ON TOP so chips vanish
+            // into them.
+            HStack(spacing: Self.iconGap) {
+                avatarChip
+                catalogueChip
+            }
+            .padding(.leading, DS.Space.s4)
         }
+    }
+
+    /// The avatar door — Settings. Stories-style: your own face leads the
+    /// strip (2026-07-20), the same "add a source"-adjacent fixed placement
+    /// the catalogue door already had. `AvatarChip` (`TopDoors.swift`) owns
+    /// the actual door/bounce/spin — this just wires this screen's params.
+    @ViewBuilder private var avatarChip: some View {
+        AvatarChip(onSettings: onSettings, refreshSpin: refreshSpin, zoomNS: zoomNS)
     }
 
     /// The leading dissolve: transparent where the app icon sits, a soft ramp

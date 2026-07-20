@@ -41,29 +41,17 @@ struct AppsScreen: View {
     #endif
 
     // MARK: - Categories (merge map over Offer.group — Browse + chart filter ONLY,
-    // never vertical section headers)
+    // never vertical section headers). Lives in `BridgeCatalog` now
+    // (2026-07-20) — the ruled single source of truth — so the agent's
+    // `category:<name>` kept-ask kind reads the exact same mapping. Kept as
+    // a thin local alias so this file's call sites don't all need renaming.
 
-    private static let categories: [(name: String, exemplar: String, groups: Set<String>)] = [
-        // The finance pair LEADS the catalog (user ruling 2026-07-17): the
-        // "Onchain" category is dissolved — Markets is the front door, gathering
-        // the watch-a-market bridges (Tokens, OpenSea, GeckoTerminal join
-        // Kalshi, Stocktwits, Peer); Wallet stands on its own right behind it.
-        ("Markets", "Kalshi",      ["Markets", "NFTs"]),
-        ("Wallet",  "Wallet",      ["Wallet"]),
-        ("Life",    "Photos",      ["Photos", "Schedule", "Fitness"]),
-        ("Home",    "HomeKit",     ["Home"]),
-        ("Notes",   "Apple Notes", ["Notes"]),
-        ("Social",  "Bluesky",     ["Network"]),
-        ("Agents",  "Claude",      ["Agent", "Machines"]),
-        ("Mail",    "Gmail",       ["Mail"]),
-        ("Work",    "GitHub",      ["Work"]),
-        ("Reading", "Readwise",    ["Reading", "Saves"]),
-        ("Media",   "Spotify",     ["Watching", "Listening", "Games", "Images"]),
-        ("Shopping", "Shopify",    ["Shopping"]),
-    ]
+    private static var categories: [(name: String, exemplar: String, groups: Set<String>)] {
+        BridgeCatalog.categories
+    }
 
     private func category(of offer: BridgeCatalog.Offer) -> String {
-        Self.categories.first { $0.groups.contains(offer.group) }?.name ?? "Life"
+        BridgeCatalog.category(of: offer)
     }
 
     /// "Because you connected" — connecting one app suggests its natural

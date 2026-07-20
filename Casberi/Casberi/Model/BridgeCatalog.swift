@@ -218,6 +218,36 @@ enum BridgeCatalog {
         return order.map { ($0, buckets[$0] ?? []) }
     }
 
+    // MARK: - Categories (merge map over Offer.group — Browse + chart filter
+    // ONLY, never vertical section headers). Moved here from AppsScreen
+    // (2026-07-20) so the agent's `category:<name>` kept-ask kind reads the
+    // SAME mapping the catalog page shows — the whole point of this being
+    // the ruled single source of truth.
+    static let categories: [(name: String, exemplar: String, groups: Set<String>)] = [
+        // The finance pair LEADS the catalog (user ruling 2026-07-17): the
+        // "Onchain" category is dissolved — Markets is the front door, gathering
+        // the watch-a-market bridges (Tokens, OpenSea, GeckoTerminal join
+        // Kalshi, Stocktwits, Peer); Wallet stands on its own right behind it.
+        ("Markets", "Kalshi",      ["Markets", "NFTs"]),
+        ("Wallet",  "Wallet",      ["Wallet"]),
+        // "People" (Contacts) joins Life explicitly (2026-07-20) — it always
+        // landed here via the fallback below, this just says so honestly.
+        ("Life",    "Photos",      ["Photos", "Schedule", "Fitness", "People"]),
+        ("Home",    "HomeKit",     ["Home"]),
+        ("Notes",   "Apple Notes", ["Notes"]),
+        ("Social",  "Bluesky",     ["Network"]),
+        ("Agents",  "Claude",      ["Agent", "Machines"]),
+        ("Mail",    "Gmail",       ["Mail"]),
+        ("Work",    "GitHub",      ["Work"]),
+        ("Reading", "Readwise",    ["Reading", "Saves"]),
+        ("Media",   "Spotify",     ["Watching", "Listening", "Games", "Images"]),
+        ("Shopping", "Shopify",    ["Shopping"]),
+    ]
+
+    static func category(of offer: Offer) -> String {
+        categories.first { $0.groups.contains(offer.group) }?.name ?? "Life"
+    }
+
     /// Offers not yet among the person's bridges — what the Apps page lists
     /// under Available and the tile counts as "to add". A–Z: the flat list is
     /// an inventory you scan by name (the grouped catalog keeps value order —

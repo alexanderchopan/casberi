@@ -89,8 +89,17 @@ struct MainSurface: View {
             VStack(spacing: 0) {
                 // The fixed navigation strip — always in reach, never scrolls
                 // away with content (the whole point of dropping the tab bar).
+                // The avatar leads it now too (2026-07-20) — the system nav
+                // bar it used to sit in alone is hidden below, so this strip
+                // owns the top of the screen outright; the extra top padding
+                // (was s2) is that vacated space becoming air, not bigger
+                // chips (the 56pt Stories size is a 2026-07-10 ruling, not
+                // being revisited here).
                 SourceChips(labels: chipLabels, active: filter.source,
-                            onApps: { route.push = .apps }, zoomNS: doorNS) { label in
+                            onApps: { route.push = .apps },
+                            onSettings: { route.push = .settings },
+                            refreshSpin: chrome.refreshPulse,
+                            zoomNS: doorNS) { label in
                     if label == filter.source {
                         // Re-tapping the chip you're already on pops back to
                         // root (the old per-tab habit) instead of doing nothing.
@@ -104,7 +113,7 @@ struct MainSurface: View {
                         if label == "All" { filter.tag = "All" }
                     }
                 }
-                .padding(.top, DS.Space.s2)
+                .padding(.top, DS.Space.s6)
                 .padding(.bottom, DS.Space.s2)
 
                 // The feeds are one pager (2026-07-16): a chip tap and a
@@ -235,19 +244,13 @@ struct MainSurface: View {
             .overlay { BerryRain(trigger: chrome.refreshPulse) }
             .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackgroundVisibility(.hidden, for: .navigationBar)
-            .toolbar {
-                // The shared doors — one place now, not duplicated onto two
-                // tab roots. Any pull-to-refresh spins the avatar (the old
-                // Home-only rule died with the tabs; restored 2026-07-14
-                // after the tab-drop rewire orphaned the trigger).
-                // The catalogue door moved to the head of the source strip
-                // (SourceChips); the top-right is the avatar alone now — the
-                // "me / settings" corner, one concept, one place.
-                TopDoors(onSettings: { route.push = .settings },
-                         refreshSpin: chrome.refreshPulse,
-                         zoomNS: doorNS)
-            }
+            // The nav bar itself is hidden now (2026-07-20) — nothing lives
+            // in it anymore. The avatar (was the sole trailing toolbar item,
+            // `TopDoors`) joined the catalogue door as a fixed leading chip
+            // in `SourceChips` above; that strip owns the top of the screen
+            // outright. First `.toolbar(.hidden, for:)` in this codebase —
+            // there was nothing to hide FROM before this move.
+            .toolbar(.hidden, for: .navigationBar)
             .navigationDestination(item: $route.push) { push in
                 switch push {
                 case .apps:

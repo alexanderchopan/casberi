@@ -699,7 +699,13 @@ struct RootShell: View {
                  answerWithKey: keyedAnswerDocument,
                  tagCandidates: projectTags,
                  knownSources: { bridges.bridges.map(\.name) },
-                 contextSource: { nil },
+                 // Fixed 2026-07-20 — this was hardcoded nil, silently
+                 // dropping the "meets you where you are" lead chip since
+                 // the agent shell was built. FeedFilter.shared.source is
+                 // the same active-chip signal MainSurface itself binds
+                 // against; "All" is a safe sentinel that never collides
+                 // with a real source name.
+                 contextSource: { FeedFilter.shared.source == "All" ? nil : FeedFilter.shared.source },
                  onNavigate: navigate,
                  onKeepAnswer: keepAnswer,
                  glassNamespace: agentMorph,

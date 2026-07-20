@@ -83,6 +83,11 @@ struct FeedScreen: View {
     /// A tapped Themes cell (2026-07-18, the All feed's own treemap) — the
     /// same project detail door Home's map already opened.
     @State private var openProject: ProjectRoute?
+    /// Themes stays expanded for the rest of THIS session once tapped open
+    /// (2026-07-20) — session-only by design; a fresh mount re-checks the
+    /// digest and may collapse again.
+    @State private var themesExpanded = false
+    private static let themesSeenDigestKey = "feed.themesSeenDigest"
     struct ProjectRoute: Identifiable, Hashable {
         let name: String
         var id: String { name }
@@ -927,11 +932,14 @@ struct FeedScreen: View {
 
     /// The boundary freezes on arrival and holds for the whole visit — a
     /// bounce out to another page and back can't move the line (ruling
-    /// 2026-07-09).
+    /// 2026-07-09). All tracks `AppVisit.away` instead of a per-page stamp
+    /// (2026-07-20) — the same "since you left the app" window the agent's
+    /// own "While I was away?" chip already names; there's no single page
+    /// for the whole corpus to have left.
     private func freezeBoundary() {
         guard !visitFrozen else { return }
         visitFrozen = true
-        newSince = lastSeen(for: source)
+        newSince = source == "All" ? AppVisit.away?.lowerBound : lastSeen(for: source)
     }
 
     /// A bundle in the list: same card treatment as a thing row; the tap
@@ -978,20 +986,71 @@ struct FeedScreen: View {
     /// Wallet feed). Synchronous, off the SAME `visible` the rows below draw
     /// from (no separate query, so the two can't disagree) — no GenStream
     /// needed, unlike the wallet block, which waits on a real network fetch.
+    ///
+    /// Collapses to one line once you've already seen these exact clusters
+    /// (2026-07-20) — a digest of cluster name+count compared against a
+    /// locally-stamped "last seen" digest (its own key, NOT `KeptAskStore`,
+    /// which is scoped to kept ASKS specifically). Tapping expands the full
+    /// treemap for the rest of this session and marks the digest seen.
     @ViewBuilder
     private var themesLedeSection: some View {
         if let doc = HomeComposition.themesDocument(things: visible) {
-            let els = GenParser.parse(prefix: doc.joined(separator: "\n")[...], isComplete: true)
-            Section {
-                GenRender(id: "root", els: els)
+            let digest = doc.joined(separator: "\n")
+            let unchanged = digest == UserDefaults.standard.string(forKey: Self.themesSeenDigestKey)
+            if themesExpanded || !unchanged {
+                let els = GenParser.parse(prefix: digest[...], isComplete: true)
+                Section {
+                    GenRender(id: "root", els: els)
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
+                        .listRowInsets(EdgeInsets())
+                        .environment(\.genProjectTap) { name in
+                            openProject = ProjectRoute(name: name)
+                        }
+                        .onAppear {
+                            // Pin expanded for the rest of this mount too —
+                            // without this, stamping the digest here would
+                            // make the NEXT body re-eval (any unrelated
+                            // state change, still the same visit) read
+                            // `unchanged` true and collapse out from under
+                            // someone mid-visit.
+                            themesExpanded = true
+                            UserDefaults.standard.set(digest, forKey: Self.themesSeenDigestKey)
+                        }
+                }
+            } else {
+                Section {
+                    Button {
+                        DSHaptic.selection()
+                        withAnimation(DS.Motion.standard) { themesExpanded = true }
+                    } label: {
+                        themesCollapsedRow
+                    }
+                    .buttonStyle(.plain)
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
-                    .listRowInsets(EdgeInsets())
-                    .environment(\.genProjectTap) { name in
-                        openProject = ProjectRoute(name: name)
-                    }
+                }
             }
         }
+    }
+
+    /// The collapsed Themes row — eyebrow + a one-line cluster-count summary,
+    /// same voice as `daySection`'s header (name in heading weight, the
+    /// count in tertiary).
+    private var themesCollapsedRow: some View {
+        let clusters = HomeComposition.projectClusters(things: visible).prefix(6)
+        let names = clusters.map(\.name).joined(separator: ", ")
+        return HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+            Text("Themes").dsText(.heading17).foregroundStyle(DS.textPrimary)
+            Text(names).dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                .lineLimit(1).truncationMode(.tail)
+            Spacer(minLength: 0)
+            Image(systemName: "chevron.down")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(DS.textTertiary)
+        }
+        .padding(.horizontal, DS.Space.s4)
+        .padding(.vertical, DS.Space.s3)
     }
 
     /// The list-row chrome every insight hero mounts in (clear background, no
@@ -1557,6 +1616,49 @@ struct FeedScreen: View {
                         .fill(DS.gray100)
                         .frame(height: 90)
                         .staggerIn(index: i + 3)
+                }
+            }
+        case .wallet:
+            // A skeleton treemap mosaic — echoes the Wallet feed's real
+            // holdings treemap (uneven tile sizes, not a uniform grid).
+            RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous)
+                .fill(DS.surfaceSheet)
+                .frame(height: 160)
+                .overlay {
+                    HStack(spacing: DS.Space.s2) {
+                        VStack(spacing: DS.Space.s2) {
+                            RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous)
+                                .fill(DS.gray100).frame(height: 88)
+                            RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous)
+                                .fill(DS.gray100)
+                        }
+                        VStack(spacing: DS.Space.s2) {
+                            RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous)
+                                .fill(DS.gray100)
+                            RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous)
+                                .fill(DS.gray100).frame(height: 56)
+                        }
+                        .frame(width: 72)
+                    }
+                    .padding(DS.Space.s3)
+                }
+                .staggerIn(index: 3)
+        case .calendar:
+            // A skeleton agenda band — each row a tinted strip, echoing
+            // BandRow's own field-of-color shape.
+            VStack(spacing: DS.Space.s2) {
+                ForEach(0..<3, id: \.self) { i in
+                    HStack(spacing: DS.Space.s3) {
+                        Circle().fill(DS.gray100).frame(width: 24, height: 24)
+                        Capsule().fill(DS.gray100).frame(height: 12)
+                        Spacer(minLength: DS.Space.s2)
+                        Capsule().fill(DS.gray100).frame(width: 40, height: 12)
+                    }
+                    .padding(.horizontal, DS.Space.s3)
+                    .padding(.vertical, DS.Space.s3)
+                    .background(DS.gray100.opacity(0.4),
+                                in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+                    .staggerIn(index: i + 3)
                 }
             }
         default:
