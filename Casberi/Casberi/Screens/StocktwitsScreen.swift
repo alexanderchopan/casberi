@@ -56,8 +56,6 @@ struct StocktwitsScreen: View {
             BridgeSetupHeader(name: "Stocktwits")
             addSection.listRowSeparator(.hidden)
             if !watched.isEmpty {
-                PinToHomeButton(source: "Stocktwits", inSection: true)
-                    .listRowSeparator(.hidden)
                 watchlistSection.listRowSeparator(.hidden)
             }
             if !posts.isEmpty {
@@ -76,7 +74,6 @@ struct StocktwitsScreen: View {
                 BridgeDisconnectSection(bridgeID: "stocktwits", name: "Stocktwits",
                                         teardown: {
                                             StockWatch.unwatchAll(context: modelContext)
-                                            HomePinnedSources.shared.clear("Stocktwits")
                                             load()
                                         })
                     .listRowSeparator(.hidden)

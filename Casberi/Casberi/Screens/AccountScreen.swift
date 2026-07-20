@@ -18,39 +18,9 @@ struct SettingsScreen: View {
     @State private var avatarPickerOpen = false
     @State private var avatarDialogOpen = false
     @State private var avatarSelection: PhotosPickerItem?
-    @State private var coverPickerOpen = false
-    @State private var coverDialogOpen = false
-    @State private var coverSelection: PhotosPickerItem?
 
     private let columns = [GridItem(.flexible(), spacing: DS.Space.s3),
                            GridItem(.flexible(), spacing: DS.Space.s3)]
-
-    /// The room wears YOUR color — the Home background you chose, washing
-    /// down from the top the way a source's brand hue washes its shape.
-    /// A photo background arrives blurred and dimmed; no background set =
-    /// no wash (black, honestly — the room is waiting to be painted).
-    @ViewBuilder private var settingsWash: some View {
-        let store = HomeBackgroundStore.shared
-        if store.kind == .photo, let image = store.image {
-            Color.clear
-                .frame(height: 430)
-                .overlay(
-                    Image(uiImage: image)
-                        .resizable().scaledToFill()
-                        .blur(radius: 42, opaque: true)
-                )
-                .clipped()
-                .overlay(Color.black.opacity(0.45))
-                .mask(LinearGradient(colors: [.black, .black, .clear],
-                                     startPoint: .top, endPoint: .bottom))
-                .ignoresSafeArea(edges: .top)
-        } else if let color = store.wallpaperColor {
-            LinearGradient(colors: [color.opacity(0.9), .clear],
-                           startPoint: .top, endPoint: .bottom)
-                .frame(height: 430)
-                .ignoresSafeArea(edges: .top)
-        }
-    }
 
     var body: some View {
         ScrollView {
@@ -68,7 +38,6 @@ struct SettingsScreen: View {
             .scrollIndicators(.hidden)
         .minimizesChrome(chrome)
         .dsSoftTopEdge()
-            .background(alignment: .top) { settingsWash }
             .dsPageBackground()
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.large)
@@ -100,21 +69,6 @@ struct SettingsScreen: View {
                     avatarSelection = nil
                 }
             }
-            .photosPicker(isPresented: $coverPickerOpen,
-                          selection: $coverSelection, matching: .images)
-            .sheet(isPresented: $coverDialogOpen) {
-                HomeCoverSheet(onChoosePhoto: { coverPickerOpen = true })
-            }
-            .onChange(of: coverSelection) { _, item in
-                guard let item else { return }
-                Task {
-                    if let data = try? await item.loadTransferable(type: Data.self),
-                       let image = UIImage(data: data) {
-                        HomeBackgroundStore.shared.setPhoto(image)
-                    }
-                    coverSelection = nil
-                }
-            }
             #if DEBUG
             // Debug hook: `simctl launch ... -deeplink casberi://account
             // -accountDetail data` opens that detail sheet for screenshots.
@@ -124,9 +78,6 @@ struct SettingsScreen: View {
                 }
                 if UserDefaults.standard.bool(forKey: "openHowItWorks") {
                     howItWorksOpen = true
-                }
-                if UserDefaults.standard.bool(forKey: "openBanner") {
-                    coverDialogOpen = true
                 }
                 if let raw = UserDefaults.standard.string(forKey: "accountDetail"),
                    let which = AccountDetail(rawValue: raw) {
@@ -194,14 +145,6 @@ struct SettingsScreen: View {
                          DSHaptic.tap()
                          withAnimation(DS.Motion.standard) { ThemeStore.shared.isLight.toggle() }
                      }),
-            // Home's wallpaper (2026-07-10, was Banner) — a deepened color
-            // or a dimmed photo behind Home's cards, Home only. Same shape
-            // as Avatar: one image, owned locally.
-            TileSpec(title: "Background",
-                     value: HomeBackgroundStore.shared.image == nil ? String(localized: "A color or a photo") : "",
-                     avatar: HomeBackgroundStore.shared.image,
-                     badge: HomeBackgroundStore.shared.image == nil ? ("photo", DS.textTertiary) : nil,
-                     action: { coverDialogOpen = true }),
             // The app's own language — an override that switches Casberi live,
             // on top of the device language (LanguageStore). One tap opens the
             // tray; the subline states the language in force.
@@ -374,115 +317,3 @@ struct DSTileButtonStyle: ButtonStyle {
     }
 }
 
-/// Home's background — a curated color or the person's photo, Home only
-/// (2026-07-10, was the Banner tray). One tray for choose/change/reset,
-/// the same shape as every other picker in the app.
-struct HomeCoverSheet: View {
-    let onChoosePhoto: () -> Void
-    @Bindable private var store = HomeBackgroundStore.shared
-
-    var body: some View {
-        DSTray(title: "Background", height: 380) {
-            VStack(alignment: .leading, spacing: DS.Space.s4) {
-                preview
-                Text("A color or a photo behind your Home screen — and only there.")
-                    .dsText(.callout15).foregroundStyle(DS.textSecondary)
-                HStack(spacing: DS.Space.s3) {
-                    ForEach(HomeBackgroundStore.swatches, id: \.name) { swatch in
-                        swatchButton(swatch)
-                    }
-                    photoSwatch
-                }
-                if store.image != nil {
-                    Button(role: .destructive) {
-                        DSHaptic.tap()
-                        withAnimation(DS.Motion.standard) { store.clear() }
-                    } label: {
-                        Text("Reset to default")
-                            .dsText(.callout15).foregroundStyle(DS.destructive)
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-        }
-    }
-
-    /// WYSIWYG — the exact wallpaper treatment Home paints (deepened color
-    /// / dimmed photo), with a mini card floating on it the way Home's
-    /// cards do.
-    private var preview: some View {
-        ZStack(alignment: .bottomLeading) {
-            if let color = store.wallpaperColor {
-                color
-            } else if store.kind == .photo, let image = store.image {
-                GeometryReader { geo in
-                    Image(uiImage: image)
-                        .resizable().scaledToFill()
-                        .frame(width: geo.size.width, height: geo.size.height)
-                        .clipped()
-                }
-                LinearGradient(colors: [.black.opacity(0.5), .black.opacity(0.72)],
-                               startPoint: .top, endPoint: .bottom)
-            } else {
-                // The default page — the preview shows what "no choice" is.
-                Color.black
-            }
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Just landed").dsText(.label12).foregroundStyle(.white.opacity(0.7))
-                Text("Evening run").dsText(.heading17).foregroundStyle(.white)
-            }
-            .padding(DS.Space.s3)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color(hex: "#161616"),
-                        in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
-            .padding(DS.Space.s3)
-        }
-        .frame(height: 100)
-        .frame(maxWidth: .infinity)
-        .clipShape(RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
-        .animation(DS.Motion.standard, value: store.colorName)
-    }
-
-    private func swatchButton(_ swatch: (name: String, hex: String)) -> some View {
-        let selected = store.kind == .color && store.colorName == swatch.name
-        return Circle()
-            .fill(Color(hex: swatch.hex))
-            .frame(width: 44, height: 44)
-            .overlay(
-                Image(systemName: "checkmark")
-                    .font(.system(size: 15, weight: .bold))
-                    .foregroundStyle(.white)
-                    .opacity(selected ? 1 : 0)
-            )
-            .overlay(
-                Circle().strokeBorder(DS.textPrimary, lineWidth: selected ? 2.5 : 0)
-                    .padding(-3)
-            )
-            .onTapGesture {
-                DSHaptic.tap()
-                withAnimation(DS.Motion.standard) { store.setColor(swatch) }
-            }
-            .accessibilityLabel(swatch.name)
-    }
-
-    private var photoSwatch: some View {
-        let selected = store.kind == .photo
-        return Circle()
-            .fill(DS.fillFaint)
-            .frame(width: 44, height: 44)
-            .overlay(
-                Image(systemName: "photo")
-                    .font(.system(size: 16, weight: .medium))
-                    .foregroundStyle(DS.textPrimary)
-            )
-            .overlay(
-                Circle().strokeBorder(DS.textPrimary, lineWidth: selected ? 2.5 : 0)
-                    .padding(-3)
-            )
-            .onTapGesture {
-                DSHaptic.tap()
-                onChoosePhoto()
-            }
-            .accessibilityLabel(store.kind == .photo ? "Change photo" : "Choose a photo")
-    }
-}

@@ -23,8 +23,6 @@ struct SpotifyScreen: View {
             BridgeSetupHeader(name: "Spotify")
             connectSection.listRowSeparator(.hidden)
             if !recent.isEmpty {
-                PinToHomeButton(source: "Spotify", inSection: true)
-                    .listRowSeparator(.hidden)
                 RecentThingsSection(header: "Liked songs", things: recent)
                     .listRowSeparator(.hidden)
             }

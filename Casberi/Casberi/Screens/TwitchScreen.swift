@@ -28,8 +28,6 @@ struct TwitchScreen: View {
             BridgeSetupHeader(name: "Twitch")
             connectSection.listRowSeparator(.hidden)
             if !recent.isEmpty {
-                PinToHomeButton(source: "Twitch", inSection: true)
-                    .listRowSeparator(.hidden)
                 RecentThingsSection(header: "Live lately", things: recent)
                     .listRowSeparator(.hidden)
             }

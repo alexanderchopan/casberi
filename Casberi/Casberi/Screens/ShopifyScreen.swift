@@ -33,7 +33,6 @@ struct ShopifyScreen: View {
             BridgeSetupHeader(name: "Shopify")
             if !shopify.shops.isEmpty { followingSection.listRowSeparator(.hidden) }
             addSection.listRowSeparator(.hidden)
-            if !shopify.shops.isEmpty { pinToHomeSection.listRowSeparator(.hidden) }
             if !recent.isEmpty {
                 RecentThingsSection(header: "New drops", things: recent, titleLines: 1)
                     .listRowSeparator(.hidden)
@@ -43,7 +42,6 @@ struct ShopifyScreen: View {
                     bridgeID: "shopify", name: "Shopify",
                     teardown: {
                         ShopifyStore.shared.shops = []
-                        HomePinnedSources.shared.clear("Shopify")
                     }
                 ).listRowSeparator(.hidden)
             }
@@ -109,16 +107,6 @@ struct ShopifyScreen: View {
             Text("Paste a Shopify store's web address — its newest products land in your feed as things. Sale prices and restocks land too.")
                 .dsText(.callout15).foregroundStyle(DS.textTertiary)
         }
-    }
-
-    // MARK: - Pin to Home
-
-    // The one shared Home-visibility control (auto-pin, user 2026-07-18):
-    // "On Home" by default, "Show on Home" once removed — routes through
-    // `isOnHome`/`setOnHome` so the label and action match the board.
-    private var pinToHomeSection: some View {
-        PinToHomeButton(source: "Shopify", inSection: true,
-                        footer: "Your stores' newest drops ride a strip on Home.")
     }
 
     private var footerSection: some View {

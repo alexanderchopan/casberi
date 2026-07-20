@@ -1,11 +1,13 @@
 import SwiftUI
 import SwiftData
 
-/// The one surface (2026-07-13, drastic restructure): Home and Feed stopped
-/// being separate tabs. The app is a single scrolling destination with a fixed
-/// chip header — Pinned (your board) leads, then All, then every source. The
-/// body under the header swaps between the board (Pinned) and the feed
-/// (everything else); the composer is a FAB the shell floats over this.
+/// The one surface (2026-07-13, drastic restructure; the Pinned board
+/// retired 2026-07-20, docs/agent-brief.md rulings 11-12): the app is a
+/// single scrolling destination with a fixed chip header — All leads, then
+/// every source. Content-first, always: the per-app glance job the board
+/// used to carry moved to the agent's own kept-ask chips; this surface is
+/// uniformly the feed now. The agent's bar floats over this from RootShell's
+/// own ZStack (not this surface's — it rides every screen this app pushes).
 ///
 /// This container owns the ONE `NavigationStack` and the shared management
 /// doors (avatar → Settings, grid → Apps) so they can't drift between screens
@@ -43,8 +45,8 @@ struct MainSurface: View {
     /// even though it just arrived. Set-diff on the real records instead.
     @State private var seenIDs: Set<UUID>?
 
-    /// Chip order: Pinned, All, then every source most-recent-first (the app you
-    /// just heard from sits up front). `things` is newest-first, so first
+    /// Chip order: All, then every source most-recent-first (the app you just
+    /// heard from sits up front). `things` is newest-first, so first
     /// appearance IS the newest thing per source.
     private var chipLabels: [String] {
         var seen: Set<String> = []
@@ -52,21 +54,13 @@ struct MainSurface: View {
         for thing in feedThings where seen.insert(thing.source).inserted {
             ordered.append(thing.source)
         }
-        return ["Pinned", "All"] + ordered
+        return ["All"] + ordered
     }
 
-    private var showingBoard: Bool { filter.source == "Pinned" }
-
-    /// The pager's pages — the chip row minus the board (2026-07-16). The
-    /// feeds swipe; the board doesn't, and that asymmetry is deliberate:
-    /// `BoardDragDriver` arms its press for 24pt while a scroll pan begins at
-    /// ~10pt, and `lift()` fires `onPhase(.began)` without checking UIKit
-    /// accepted it — a pager pan inside that window would enter edit mode
-    /// while the page slid away, which is the exact state-leak class the
-    /// driver's UIKit rewrite exists to close. The board is reached by its
-    /// pin chip, and it isn't a feed anyway.
+    /// The pager's pages — every chip is a feed now (the board's own
+    /// non-swiping page retired with it, 2026-07-20).
     private var feedLabels: [String] {
-        var labels = chipLabels.filter { $0 != "Pinned" }
+        var labels = chipLabels
         // The selected source ALWAYS gets a page, even with nothing in it.
         // The chip row is built from things that exist, but `filter.source` is
         // written unvalidated — a deep link (casberi://feed/source/Gmail), a
@@ -76,7 +70,7 @@ struct MainSurface: View {
         // unmatched selection quietly renders a DIFFERENT page: the Gmail wash
         // painted over the All feed, no chip lit, and the honest "Nothing from
         // Gmail yet" empty state unreachable (measured 2026-07-16).
-        if filter.source != "Pinned", !labels.contains(filter.source) {
+        if !labels.contains(filter.source) {
             labels.append(filter.source)
         }
         return labels
@@ -105,36 +99,29 @@ struct MainSurface: View {
                     }
                     withAnimation(DS.Motion.standard) {
                         filter.source = label
-                        // Leaving the board for the feed clears any stray kind
-                        // filter so "All" means all; entering the board is
-                        // source-only. A specific source keeps its own tag.
-                        if label == "Pinned" || label == "All" { filter.tag = "All" }
+                        // Entering "All" means all; a specific source keeps
+                        // its own tag.
+                        if label == "All" { filter.tag = "All" }
                     }
                 }
                 .padding(.top, DS.Space.s2)
                 .padding(.bottom, DS.Space.s2)
 
-                // The body under the header — the board, or the feeds.
-                Group {
-                    if showingBoard {
-                        HomeScreen()
-                    } else {
-                        // The feeds are one pager (2026-07-16): a chip tap and
-                        // a swipe are the same move now, because selection
-                        // binds to the SAME value the chips write — so the
-                        // strip, the wash, and every deep link
-                        // (casberi://feed/source/X) all keep working with no
-                        // second source of truth to reconcile.
-                        TabView(selection: $filter.source) {
-                            ForEach(feedLabels, id: \.self) { label in
-                                FeedScreen(source: label,
-                                           isActive: label == filter.source)
-                                    .tag(label)
-                            }
-                        }
-                        .tabViewStyle(.page(indexDisplayMode: .never))
+                // The feeds are one pager (2026-07-16): a chip tap and a
+                // swipe are the same move, because selection binds to the
+                // SAME value the chips write — so the strip, the wash, and
+                // every deep link (casberi://feed/source/X) all keep working
+                // with no second source of truth to reconcile. Uniformly the
+                // feed now (the board's own non-swiping page retired
+                // 2026-07-20).
+                TabView(selection: $filter.source) {
+                    ForEach(feedLabels, id: \.self) { label in
+                        FeedScreen(source: label,
+                                   isActive: label == filter.source)
+                            .tag(label)
                     }
                 }
+                .tabViewStyle(.page(indexDisplayMode: .never))
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
             // The themed page behind the chip header too — the header sits
@@ -236,17 +223,11 @@ struct MainSurface: View {
                 chrome.refreshPulse += 1
                 chrome.flash(latest)
             }
-            // The FAB rides the ROOT surface only (2026-07-13 polish): pushed
-            // rooms (Apps, Settings, a token form) slide over it — a compose
-            // button isn't theirs. RootShell still owns the composer sheet.
-            .overlay(alignment: .bottomTrailing) {
-                ComposerFAB {
-                    DSHaptic.tap()
-                    chrome.openComposer()
-                }
-                .padding(.horizontal, DS.Space.s4)
-                .padding(.bottom, DS.Space.s2)
-            }
+            // The agent bar moved OFF MainSurface entirely (docs/agent-brief.md
+            // ruling 6): it now rides RootShell's own ZStack, above EVERY
+            // screen this app can push (Apps, Settings, a bridge setup form),
+            // not just this one's root — the FAB used to stop at MainSurface's
+            // edge on purpose; the bar deliberately doesn't.
             // Refresh delight (2026-07-14): every pull on this one surface
             // bumps chrome.refreshPulse — the berry rain falls over the
             // content and the avatar door spins (below). Decorative only;

@@ -33,8 +33,6 @@ struct ClaudeImportScreen: View {
             stepsSection.listRowSeparator(.hidden)
             importSection.listRowSeparator(.hidden)
             if !recent.isEmpty {
-                PinToHomeButton(source: "Claude", inSection: true)
-                    .listRowSeparator(.hidden)
                 recentSection.listRowSeparator(.hidden)
             }
         }

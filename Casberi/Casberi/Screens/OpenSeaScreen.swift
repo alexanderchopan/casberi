@@ -33,11 +33,6 @@ struct OpenSeaScreen: View {
         List {
             BridgeSetupHeader(name: "OpenSea", connected: opensea.connected)
             chainsSection.listRowSeparator(.hidden)
-            if opensea.connected {
-                PinToHomeButton(source: "OpenSea", inSection: true,
-                                footer: "The newest drops ride a strip on Home.")
-                    .listRowSeparator(.hidden)
-            }
             if recent.isEmpty {
                 // Only before the first chain: a ghost captioned "when you
                 // switch a chain on" under an ON toggle would be fake status
@@ -56,7 +51,6 @@ struct OpenSeaScreen: View {
                     bridgeID: "opensea", name: "OpenSea",
                     teardown: {
                         OpenSeaStore.shared.disconnect()
-                        HomePinnedSources.shared.clear("OpenSea")
                     }
                 ).listRowSeparator(.hidden)
             }

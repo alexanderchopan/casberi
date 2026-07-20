@@ -86,7 +86,6 @@ struct TokenSetupScreen: View {
                     GhostPreviewSection(name: bridge.rawValue)
                 }
             } else {
-                PinToHomeButton(source: bridge.rawValue, inSection: true)
                 RecentThingsSection(header: "Landed", things: recent)
             }
             if bridge.connected { removeSection }

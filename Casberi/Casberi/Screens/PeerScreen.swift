@@ -36,11 +36,6 @@ struct PeerScreen: View {
         List {
             BridgeSetupHeader(name: "Peer", connected: connected)
             connectSection.listRowSeparator(.hidden)
-            if connected {
-                PinToHomeButton(source: "Peer", inSection: true,
-                                footer: "Your latest fills ride a tile on Home.")
-                    .listRowSeparator(.hidden)
-            }
             if recent.isEmpty {
                 if !connected {
                     GhostPreviewSection(name: "Peer",
@@ -57,7 +52,6 @@ struct PeerScreen: View {
                     bridgeID: "peer", name: "Peer",
                     teardown: {
                         PeerBridge.disconnect()
-                        HomePinnedSources.shared.clear("Peer")
                     }
                 ).listRowSeparator(.hidden)
             }

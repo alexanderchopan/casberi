@@ -26,8 +26,6 @@ struct MailScreen: View {
             stepsSection.listRowSeparator(.hidden)
             fieldsSection.listRowSeparator(.hidden)
             if !recent.isEmpty {
-                PinToHomeButton(source: provider.source, inSection: true)
-                    .listRowSeparator(.hidden)
                 RecentThingsSection(header: "Recent", things: recent)
                     .listRowSeparator(.hidden)
             }

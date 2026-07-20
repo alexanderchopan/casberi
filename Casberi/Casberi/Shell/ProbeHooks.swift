@@ -768,26 +768,6 @@ enum ProbeHooks {
                 }
             }
         },
-        // `-pinWallet YES` pins every currently-watched wallet's holdings
-        // treemap to Home headlessly — pairs with `-walletAddress` for
-        // testing that module. Pin is per-address now (2026-07-09).
-        Hook(key: "pinWallet") { _, _ in
-            for i in WalletStore.shared.addresses.indices {
-                WalletStore.shared.addresses[i].pinnedToHome = true
-            }
-            NSLog("Pin-wallet probe: pinned %d address(es)", WalletStore.shared.addresses.count)
-        },
-        // `-unpinAll YES` removes every pinned app from Home — screenshot
-        // verification of the no-pins state. (Pinning is per-APP now, so this
-        // clears HomePinnedSources, not any thing flag.)
-        Hook(key: "unpinAll") { _, _ in
-            let store = HomePinnedSources.shared
-            let sources = store.sources
-            for source in sources { store.clear(source) }
-            for source in HomePinnedSources.autoSocial { store.setHidden(source, true) }
-            CorpusSignal.shared.bump()
-            NSLog("Unpin probe: cleared %d pinned app(s)", sources.count)
-        },
         // `-appleMusic YES` runs the real Apple Music connect+ingest and
         // logs the outcome (or the underlying MusicKit error).
         Hook(key: "appleMusic") { _, context in
@@ -956,27 +936,6 @@ enum ProbeHooks {
                       all.filter { !$0.content.isEmpty }.count)
             }
         },
-        // `-setHomeBanner <color-name|photo>` sets the Home cover
-        // headlessly — screenshot verification of the picker's two kinds.
-        Hook(key: "setHomeBanner") { spec, _ in
-            if spec == "clear" {
-                HomeBackgroundStore.shared.clear()
-                NSLog("Home background probe: cleared")
-            } else if let swatch = HomeBackgroundStore.swatches.first(where: { $0.name == spec }) {
-                HomeBackgroundStore.shared.setColor(swatch)
-                NSLog("Home background probe: color %@", spec)
-            } else {
-                let size = CGSize(width: 400, height: 400)
-                let format = UIGraphicsImageRendererFormat.default()
-                format.scale = 1
-                let img = UIGraphicsImageRenderer(size: size, format: format).image { ctx in
-                    UIColor.systemBlue.setFill()
-                    ctx.fill(CGRect(origin: .zero, size: size))
-                }
-                HomeBackgroundStore.shared.setPhoto(img)
-                NSLog("Home background probe: photo")
-            }
-        },
         // `-twitchAuth YES` starts the device flow headlessly: NSLogs the
         // code for the person to approve at twitch.tv/activate, polls up to
         // five minutes, then runs the first sync. Sim verification only.
@@ -1035,29 +994,6 @@ enum ProbeHooks {
             Task { @MainActor in
                 let n = await RSSIngest.refresh(context: context)
                 NSLog("RSS probe: %@ new things", n.map(String.init) ?? "FAILED")
-            }
-        },
-        // `-pinSource <source>` pins that APP to Home — headless test of the
-        // pinned app tile (waits up to 5s for an async ingest hook like
-        // -watchToken to land the source's first thing, since a pinned app
-        // with no things shows no tile).
-        Hook(key: "pinSource") { source, context in
-            Task { @MainActor in
-                for _ in 0..<25 {
-                    var descriptor = FetchDescriptor<Thing>(
-                        predicate: #Predicate<Thing> { $0.source == source },
-                        sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]
-                    )
-                    descriptor.fetchLimit = 1
-                    if (try? context.fetch(descriptor))?.first != nil {
-                        HomePinnedSources.shared.toggle(source)
-                        CorpusSignal.shared.bump()
-                        NSLog("Pin probe: pinned app '%@'", source)
-                        return
-                    }
-                    try? await Task.sleep(for: .milliseconds(200))
-                }
-                NSLog("Pin probe: FAILED to find a thing from %@", source)
             }
         },
         // `-seedInsightDemo YES` seeds synthetic things so the feed-head insight

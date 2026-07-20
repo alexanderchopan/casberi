@@ -45,10 +45,24 @@ struct Composer: View {
     var onNavigate: (NavigateIntent) -> Void = { _ in }
     /// Keep a synthesis answer — lands it as a note in the feed so the recap
     /// isn't ephemeral. The composer hands over the answer's plain text.
+    /// Labelled "Save as a note" on the button (docs/agent-brief.md, the
+    /// 2026-07-19 rename): "Keep" itself is reserved for minting a standing
+    /// kept-ask chip — a different verb now, see `onKeep` below.
     var onKeepAnswer: (String) -> Void = { _ in }
     /// The shell's glass namespace — pill and bubble share one glass identity,
     /// so open/close is a morph of the same substance, not a swap.
     var glassNamespace: Namespace.ID? = nil
+    /// Resolves a thing id to a real `Thing` for the agent's own drill-down
+    /// (docs/agent-brief.md ruling 8 — the Stack session model: tapping
+    /// content inside an answer PUSHES a thing-view rather than presenting a
+    /// sheet). nil ids, or ids that no longer resolve, render nothing.
+    var resolveThing: (String) -> Thing? = { _ in nil }
+    /// Lowers the agent (docs/agent-brief.md ruling 9: staying is the
+    /// default; a bare tap never ejects you — this is the ONE thing "Open in
+    /// app" from inside a pushed thing-view is allowed to do to the agent
+    /// itself). Called at the end of every `close()`, so both new exits (✕,
+    /// ⌄) and every pre-existing close path lower the agent uniformly.
+    var onLowerAgent: () -> Void = {}
 
     @Environment(\.modelContext) private var modelContext
     @Environment(ShellChrome.self) private var chrome
@@ -77,6 +91,11 @@ struct Composer: View {
     @State private var detectedDate: Date?
     @FocusState private var fieldFocused: Bool
     @State private var answerStream = GenStream()
+    /// The agent's own navigation trail (ruling 8 — the Stack session model).
+    /// A thing id pushed here opens a real generative thing-view; the ✕/⌄
+    /// exits and the top-trailing ✕ button only show at `path.isEmpty` (the
+    /// agent's own root) — a pushed screen's system back chevron pops it.
+    @State private var path = NavigationPath()
     /// The composer is a CONVERSATION now (2026-07-12): each answered ask
     /// becomes a turn that stays in view, so you can keep asking follow-ups
     /// without re-opening — the Q&A stacks until you close.
@@ -114,6 +133,12 @@ struct Composer: View {
     /// chip gate can't afford a Keychain round-trip per render (typing a
     /// follow-up re-renders per keystroke).
     @State private var keyAvailable = false
+    /// The kept-ask KIND the current question would mint, computed once per
+    /// settled answer (same reason `keyAvailable` is settle-cached, not a
+    /// per-render computed property: a corpus fetch per render would be
+    /// wasteful during a streaming reveal). nil when the question doesn't
+    /// match a keepable shape, or it's already kept.
+    @State private var keepableAskKind: String?
 
     /// The keepable text of a synthesis answer — a synthesis is one Insight
     /// carrying the prose (RootShell's proseDoc). Only that shape is worth
@@ -123,6 +148,33 @@ struct Composer: View {
         guard let insight = els.values.first(where: { $0.comp == "Insight" }) else { return nil }
         let text = insight.str(0)
         return text.count >= 40 ? text : nil
+    }
+
+    /// The kept-ask KIND the question would mint, or nil (docs/agent-brief.md
+    /// ruling 1). A PURE pattern-match against the same recognizers
+    /// `RootShell.answerDocument` checks before any model call — by
+    /// construction this can never reach the model, which is the "no LLM in
+    /// the kept-ask path" guarantee made structural rather than conventional.
+    /// Scoped to exactly the kinds `KeptAskComposers` implements — offering a
+    /// kind with no real composer would be a dead control once kept (honesty
+    /// rule).
+    private func recognizeKeptAskKind(_ question: String, in things: [Thing]) -> String? {
+        guard !question.isEmpty else { return nil }
+        let q = question.lowercased()
+        var kind: String?
+        if TokensAsk.matches(question) {
+            kind = "watchlist"
+        } else if WalletAsk.matches(question) {
+            kind = "wallet"
+        } else if q.contains("away"), let pulse = StatusAsk.pulse(question, things: things),
+                  !pulse.pool.isEmpty {
+            kind = "away"
+        } else if q.hasPrefix("show "),
+                  let tag = tagPool.first(where: { q == "show \($0.lowercased())" }) {
+            kind = "showtag:\(tag)"
+        }
+        guard let kind, !KeptAskStore.shared.isKept(kind) else { return nil }
+        return kind
     }
     /// A typed organize command's pending change — rendered as a card, the
     /// write waits for Apply (typed words never write silently).
@@ -325,6 +377,12 @@ struct Composer: View {
             // change identity between opens.
             .max { ($0.value.total, $1.key) < ($1.value.total, $0.key) }
             .map { OrganizeHint(source: $0.key, count: $0.value.total) }
+        // Already-kept asks lead as their own pills now (docs/agent-brief.md
+        // ruling 4/5, `keptAskPills`) — offering one here too would show the
+        // same question twice, once as a curated pill and once as a
+        // suggestion (user ruling 2026-07-19: both coexist, but never for
+        // the SAME ask).
+        out.removeAll { KeptAskStore.shared.isKept($0.memoryKey) }
         // Tap-learning decay (ruling 2026-07-16, prd 95): an ask offered ten
         // opens without a tap steps behind the next qualifier — demoted by
         // a stable partition, never filtered, so a short grid still fills
@@ -375,17 +433,57 @@ struct Composer: View {
     }
 
     var body: some View {
-        // At rest the composer is the FAB on the tab bar's axis (amendment:
-        // the full-width rest pill died — simpler shell, more reading room).
-        // Engaged, it takes the surface: same glass, morphed.
-        Group {
-            if isOpen { openBubble }
+        // The agent's own Stack (ruling 8): a real NavigationStack, not a
+        // sheet — tapping content inside an answer pushes a generative
+        // thing-view; the system back chevron pops it. genThingOpen is the
+        // SAME environment hook Home's pinned rows already use (GenRenderer),
+        // so every existing doc shape gets tap-to-drill-down for free.
+        NavigationStack(path: $path) {
+            Group {
+                if isOpen { openBubble }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            // Opens UNFOCUSED (2026-07-12): the tray leads with the field's
+            // invitation and the ask chips visible — tapping the field is
+            // what raises the keyboard to ask.
+            .overlay(alignment: .topTrailing) {
+                // ✕ — the first exit (ruling 7). Only at the agent's own
+                // root; a pushed thing-view relies on its system back chevron.
+                if path.isEmpty {
+                    Button {
+                        close()
+                    } label: {
+                        Image(systemName: "xmark")
+                            .dsText(.subhead13)
+                            .foregroundStyle(DS.textSecondary)
+                            .padding(10)
+                            .background(DS.fillFaint, in: Circle())
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.top, DS.Space.s3)
+                    .padding(.trailing, DS.Space.s4)
+                }
+            }
+            .navigationDestination(for: String.self) { id in
+                // Real generative thing-view — the real `ThingSheetView`,
+                // reused as-is rather than a slimmer push-only variant (it
+                // already dispatches every kind; a lighter copy would drift).
+                // "Open in app" (its own existing verb machinery,
+                // VerbDerivation) is the one thing allowed to lower the
+                // agent from inside pushed content (ruling 9) — wrapping its
+                // openURL environment is a plain SwiftUI hook, zero
+                // ThingSheetView changes needed.
+                if let thing = resolveThing(id) {
+                    ThingSheetView(thing: thing)
+                        .environment(\.openURL, OpenURLAction { url in
+                            openURL(url)
+                            onLowerAgent()
+                            return .handled
+                        })
+                }
+            }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        // Opens UNFOCUSED (2026-07-12): the tray leads with the field's
-        // invitation and the ask chips visible — tapping the field is what
-        // raises the keyboard to ask. (The tool-tile grid this once protected
-        // died 2026-07-16 — see takeChips.)
+        .environment(\.genThingOpen) { id in path.append(id) }
     }
 
     // MARK: - Open
@@ -483,10 +581,31 @@ struct Composer: View {
                                         if keyedCurrent, !inFlight { keyedBadge }
                                         if !proseStreaming, !inFlight {
                                             HStack(spacing: DS.Space.s2) {
-                                                // Keep a settled synthesis (2026-07-12):
-                                                // lands the recap as a note so it isn't
-                                                // ephemeral. The consent tap IS the keep,
-                                                // like the parse card's save-on-send.
+                                                // The standing-ask verb (docs/agent-brief.md
+                                                // ruling 5/12): mints a KEPT ASK — a pill on
+                                                // the agent's rest screen that recomposes
+                                                // fresh every open, wearing a dot when its
+                                                // answer changed. Only offered when the
+                                                // question matches a real, deterministic
+                                                // composer (KeptAskComposers) — no dead
+                                                // control once kept.
+                                                if let kind = keepableAskKind {
+                                                    Button {
+                                                        DSHaptic.tap()
+                                                        KeptAskStore.shared.keep(kind, title: currentQuestion)
+                                                        keepableAskKind = nil
+                                                    } label: {
+                                                        Chip(text: "Keep", style: .tint,
+                                                             glyph: "pin.fill")
+                                                    }
+                                                    .buttonStyle(.plain)
+                                                }
+                                                // Save a settled synthesis as a note
+                                                // (2026-07-12; relabelled 2026-07-19 — "Keep"
+                                                // above is a different verb now): lands the
+                                                // recap in the corpus so it isn't ephemeral.
+                                                // The consent tap IS the save, like the parse
+                                                // card's save-on-send.
                                                 if !keptCurrent, currentStreamed,
                                                    let text = keepableText(answerStream.els) {
                                                     Button {
@@ -494,7 +613,7 @@ struct Composer: View {
                                                         keptCurrent = true
                                                         onKeepAnswer(text)
                                                     } label: {
-                                                        Chip(text: "Keep this", style: .tint,
+                                                        Chip(text: "Save as a note", style: .tint,
                                                              glyph: "tray.and.arrow.down")
                                                     }
                                                     .buttonStyle(.plain)
@@ -522,7 +641,20 @@ struct Composer: View {
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
                     }
-                    .frame(maxHeight: 300)
+                    // The 300pt cap made sense hugging a SHEET's height; on
+                    // the full-screen agent (ruling 3) there's a whole screen
+                    // to use instead.
+                    .frame(maxHeight: .infinity)
+                    // Tapping empty space puts the keyboard away WITHOUT
+                    // lowering the agent — a separate action from the ✕/⌄
+                    // exits (ruling 7). Without this, the only tap that
+                    // reached past the keyboard was wired to lowering the
+                    // whole agent, so asking something and wanting to just
+                    // SEE the answer meant leaving the agent entirely to get
+                    // there (found and fixed in the throwaway prototype,
+                    // ported verbatim). Buttons inside (Keep, chips, a
+                    // drill-down row) still take their own tap first.
+                    .onTapGesture { fieldFocused = false }
                     .onChange(of: answerStream.progress) { _, _ in
                         withAnimation(DS.Motion.standard) { proxy.scrollTo("bottom", anchor: .bottom) }
                     }
@@ -593,6 +725,12 @@ struct Composer: View {
               .frame(maxWidth: .infinity, alignment: .leading)
               .padding(.top, DS.Space.s3)
 
+            // Kept asks (docs/agent-brief.md ruling 4/5) — the standing
+            // questions someone chose to keep, leading the empty-field chips
+            // as B1 pills wearing their own one-line signal. The existing
+            // ranked/decayed suggestion grid still follows for asks not yet
+            // kept (user ruling 2026-07-19: both coexist).
+            keptAskPills
             // Chips sit right by the input — asks/commands you can fire from
             // where you compose (moved down 2026-07-12). The two bands are
             // mutually exclusive: askChips while the field is empty, takeChips
@@ -633,6 +771,22 @@ struct Composer: View {
         .task(id: isOpen) {
             if isOpen {
                 computeSuggestions()
+                // Kept asks' signal dots refresh on open too (not just on
+                // foreground, docs/agent-brief.md Step 5) — the same
+                // granularity AskMemory's own decay counters already use
+                // (recomputed per open, never per keystroke). Fired
+                // DETACHED, not awaited inline — a network-backed kept ask
+                // (wallet/watchlist) can take several real seconds, and that
+                // must never delay the chip-reveal animation below. Cheap,
+                // synchronous kinds (away/showtag) update near-instantly
+                // anyway; `KeptAskStore` is @Observable, so `keptAskPills`
+                // simply re-renders whenever `currentDigests` lands, exactly
+                // `HomeInsightStore`'s own "kick async, repaint on arrival"
+                // shape.
+                Task { @MainActor in
+                    let all = (try? modelContext.fetch(FetchDescriptor<Thing>())) ?? []
+                    await KeptAskStore.shared.refreshDigests(things: all, context: modelContext)
+                }
                 // Reset then reveal so the ask chips stagger in on each open.
                 chipsAppeared = false
                 try? await Task.sleep(for: .milliseconds(90))
@@ -650,6 +804,7 @@ struct Composer: View {
             }
             await consumeAskRequest()
             await autoSendIfProbed()
+            await pushIfProbed()
         }
         // The empty invitation cycles while the field is genuinely idle.
         .task(id: cyclingActive) {
@@ -723,6 +878,28 @@ struct Composer: View {
         #endif
     }
 
+    /// DEBUG hook: `-agentThingProbe "<title prefix>"` pushes the agent's own
+    /// Stack straight to a real thing's drill-down (`resolveThing` → the same
+    /// `genThingOpen` path a tapped row takes) — the headless route to verify
+    /// the NavigationStack push + real `ThingSheetView` render without a
+    /// keyboard or a tap (mirrors RootShell's own `-openThing` title-prefix
+    /// match, since a UUID changes every install but a title doesn't).
+    private func pushIfProbed() async {
+        #if DEBUG
+        guard isOpen, path.isEmpty,
+              let prefix = UserDefaults.standard.string(forKey: "agentThingProbe"),
+              !prefix.isEmpty else { return }
+        let all = (try? modelContext.fetch(FetchDescriptor<Thing>(
+            sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]))) ?? []
+        guard let match = all.first(where: { $0.title.hasPrefix(prefix) }) else {
+            NSLog("[Casberi] agentThingProbe: no match for \"%@\"", prefix)
+            return
+        }
+        NSLog("[Casberi] agentThingProbe: pushing \"%@\" (%@)", match.title, match.id.uuidString)
+        path.append(match.id.uuidString)
+        #endif
+    }
+
     // MARK: - Actions
 
     /// Names what pasting would capture — "Paste link" beats "Paste" when the
@@ -745,6 +922,8 @@ struct Composer: View {
         keyedCurrent = false
         inFlight = false
         askGeneration += 1   // any in-flight answer Task retires silently
+        path = NavigationPath()
+        onLowerAgent()
     }
 
     /// The small honest mark a keyed answer wears — where it was made, stated
@@ -778,6 +957,9 @@ struct Composer: View {
             keyedCurrent = true
             keptCurrent = false
             currentStreamed = false
+            // keepableAskKind is NOT reset here: askWithKey() re-asks the
+            // SAME currentQuestion, so the kind commit() already recognized
+            // for it is still correct throughout the retry.
         }
         askGeneration += 1
         let gen = askGeneration
@@ -796,6 +978,64 @@ struct Composer: View {
                 answerStream.stream(["root = Stack([w])",
                                      "w = Insight(\"That didn't go through — check your key in Settings, or your connection.\")"])
             }
+        }
+    }
+
+    // MARK: - Kept-ask pills (docs/agent-brief.md ruling 4/5 — B1)
+
+    /// The standing questions someone chose to keep, as pill chips — a
+    /// FAMILIAR pattern (over a plainer list) and DIFFERENTIATED from the
+    /// app's own rows (user ruling 2026-07-19: chips are agent-language,
+    /// rows/cards are app-language). Changed-first sort; a dot only when the
+    /// kept ask's current digest doesn't match what was last seen (never a
+    /// model judgment — a plain string compare, `KeptAskStore.changed`).
+    @ViewBuilder
+    private var keptAskPills: some View {
+        if isOpen, !hasDraft, !answering, !isRecording, proposal == nil,
+           !KeptAskStore.shared.order.isEmpty {
+            let sorted = KeptAskStore.shared.order.sorted { a, b in
+                let store = KeptAskStore.shared
+                let changedA = store.changed(a, digest: store.currentDigests[a] ?? "")
+                let changedB = store.changed(b, digest: store.currentDigests[b] ?? "")
+                return changedA != changedB ? changedA && !changedB
+                                            : (store.titles[a] ?? "") < (store.titles[b] ?? "")
+            }
+            FlowRow(spacing: DS.Space.s2) {
+                ForEach(sorted, id: \.self) { kind in
+                    let store = KeptAskStore.shared
+                    let digest = store.currentDigests[kind] ?? ""
+                    let title = store.titles[kind] ?? kind
+                    let changed = store.changed(kind, digest: digest)
+                    Button {
+                        DSHaptic.selection()
+                        store.markSeen(kind, digest: digest)
+                        draft = title
+                        commit()
+                    } label: {
+                        HStack(spacing: 6) {
+                            if changed {
+                                Circle().fill(DS.tint).frame(width: 6, height: 6)
+                            }
+                            Text(title)
+                                .dsText(.subhead13)
+                                .foregroundStyle(changed ? DS.textPrimary : DS.textSecondary)
+                            if !digest.isEmpty {
+                                Text("· \(digest)")
+                                    .dsText(.subhead13)
+                                    .foregroundStyle(DS.textTertiary)
+                            }
+                        }
+                        .padding(.horizontal, DS.Space.s3)
+                        .padding(.vertical, DS.Space.s2)
+                        .background(DS.gray100,
+                                    in: RoundedRectangle(cornerRadius: DS.Radius.control,
+                                                         style: .continuous))
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal, DS.Space.s4)
+            .padding(.top, DS.Space.s3)
         }
     }
 
@@ -864,6 +1104,22 @@ struct Composer: View {
     /// something to send — a soft rounded bar so the surface feels inviting.
     private var inputBar: some View {
         HStack(spacing: DS.Space.s2) {
+            // ⌄ — the second exit (ruling 7): the thing that raised the
+            // agent lowers it. Only ever visible at the agent's own root —
+            // this bar is part of `openBubble`, which a NavigationStack push
+            // hides behind the pushed screen automatically.
+            Button {
+                close()
+            } label: {
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(DS.textSecondary)
+                    .frame(width: 32, height: 32)
+                    .background(DS.fillFaint, in: Circle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Lower")
+
             Button {
                 if isRecording { commit() }   // the live mic is STOP + keep
                 else { DSHaptic.tap(); Task { await voice.start() } }
@@ -881,9 +1137,13 @@ struct Composer: View {
                 // The invitation cycles through what the composer can DO —
                 // ask, find, recap, tag — so the empty field teaches its
                 // range instead of reading as one dead line (wired to the
-                // long-standing `invitations` cycle, 2026-07-16).
+                // long-standing `invitations` cycle, 2026-07-16). While a doc
+                // is up, it reads "Ask about this…" instead (ruling 8: a
+                // follow-up grounds in the current answer, via the SAME
+                // `lastAnswerHits` mechanism the answer closures already use).
                 .placeholder(when: !hasDraft) {
-                    Text(invitations[placeholderIndex])
+                    Text(answering || !turns.isEmpty ? String(localized: "Ask about this…")
+                                                     : invitations[placeholderIndex])
                         .dsText(.body17).foregroundStyle(DS.textTertiary)
                         .lineLimit(1)
                         .id(placeholderIndex)
@@ -1119,6 +1379,7 @@ struct Composer: View {
             keptCurrent = false
             currentStreamed = false
             keyedCurrent = false
+            keepableAskKind = nil   // recomputed at settle, for THIS question
             inFlight = true
             askGeneration += 1
             let gen = askGeneration
@@ -1165,6 +1426,11 @@ struct Composer: View {
                 proseStreaming = false
                 inFlight = false
                 keyAvailable = AgentKey.isConfigured   // one read per settle
+                // One more fetch per settle (not per keystroke) — same
+                // precedent `computeSuggestions()` already sets for a plain
+                // corpus-wide read.
+                let settledThings = (try? modelContext.fetch(FetchDescriptor<Thing>())) ?? []
+                keepableAskKind = recognizeKeptAskKind(q, in: settledThings)
                 if streamed { answerStream.paint(finalDoc) }
                 else { answerStream.stream(finalDoc) }
                 fieldFocused = true     // ready for the next follow-up
@@ -1222,52 +1488,6 @@ struct ParseCard: View {
         .padding(DS.Space.s3)
         .background(DS.fillFaint,
                     in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
-    }
-}
-
-/// The composer at rest — a glass circle on the tab bar's axis. Tap and the
-/// same glass morphs into the bubble (shared glassEffectID). The ask glyph,
-/// no menu: one tap, one surface.
-struct ComposerFAB: View {
-    var glassNamespace: Namespace.ID?
-    var action: () -> Void
-    @Environment(ShellChrome.self) private var chrome
-    /// The tap bounces the plus (Telegram grammar, same as the tab icons).
-    @State private var bounce = 0
-
-    var body: some View {
-        let side: CGFloat = chrome.minimized ? 48 : 56
-        Button {
-            bounce += 1
-            action()
-        } label: {
-            // Plus, not a magnifier: the button's job is the capture habit
-            // (Journal's glass + is the system precedent). The bubble teaches
-            // ask once open.
-            Image(systemName: "plus")
-                .font(.system(size: 22, weight: .medium))
-                .symbolEffect(.bounce, value: bounce)
-                .foregroundStyle(DS.textPrimary)
-                .frame(width: side, height: side)
-                .contentShape(Circle())
-        }
-        .buttonStyle(FABPress())
-        .dsGlass(cornerRadius: DS.Radius.pill, glassID: "composer", in: glassNamespace)
-        .accessibilityLabel("Ask or save")
-    }
-}
-
-/// The FAB's press (2026-07-10): `.plain` had NO down-state — the button was
-/// dead under the finger until release. Now it squishes and the plus tilts
-/// 45° toward the × it's about to become as the glass morphs into the
-/// composer; dragging off springs it back untouched.
-private struct FABPress: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .scaleEffect(configuration.isPressed ? 0.86 : 1)
-            .rotationEffect(.degrees(configuration.isPressed ? 45 : 0))
-            .animation(.spring(duration: 0.3, bounce: 0.55),
-                       value: configuration.isPressed)
     }
 }
 
@@ -1411,5 +1631,43 @@ private struct OrganizeProposalCard: View {
         .padding(DS.Space.s3)
         .background(DS.surfaceSheet,
                     in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+    }
+}
+
+/// A minimal wrapping row — kept-ask pills flow onto several lines and
+/// SwiftUI has no built-in for it at this deployment target.
+private struct FlowRow: Layout {
+    var spacing: CGFloat = 8
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let maxW = proposal.width ?? .infinity
+        var x: CGFloat = 0, y: CGFloat = 0, lineH: CGFloat = 0
+        for s in subviews {
+            let sz = s.sizeThatFits(.unspecified)
+            if x + sz.width > maxW, x > 0 {
+                x = 0
+                y += lineH + spacing
+                lineH = 0
+            }
+            x += sz.width + spacing
+            lineH = max(lineH, sz.height)
+        }
+        return CGSize(width: maxW, height: y + lineH)
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize,
+                       subviews: Subviews, cache: inout ()) {
+        var x = bounds.minX, y = bounds.minY, lineH: CGFloat = 0
+        for s in subviews {
+            let sz = s.sizeThatFits(.unspecified)
+            if x + sz.width > bounds.maxX, x > bounds.minX {
+                x = bounds.minX
+                y += lineH + spacing
+                lineH = 0
+            }
+            s.place(at: CGPoint(x: x, y: y), proposal: ProposedViewSize(sz))
+            x += sz.width + spacing
+            lineH = max(lineH, sz.height)
+        }
     }
 }

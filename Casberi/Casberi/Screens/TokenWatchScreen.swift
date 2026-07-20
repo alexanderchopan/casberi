@@ -61,11 +61,6 @@ struct TokenWatchScreen: View {
             BridgeSetupHeader(name: "Tokens")
             addSection.listRowSeparator(.hidden)
             if !watched.isEmpty {
-                // Pin the whole watchlist to Home as one tile (ruling
-                // 2026-07-12) — no longer one token at a time. Sits above the
-                // list so it's in the same spot as every app (user, 2026-07-14).
-                PinToHomeButton(source: "Tokens", inSection: true)
-                    .listRowSeparator(.hidden)
                 watchlistSection.listRowSeparator(.hidden)
             }
             if !watched.isEmpty {

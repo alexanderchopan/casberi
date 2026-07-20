@@ -384,26 +384,13 @@ struct HandleSetupScreen: View {
             if bridge == .bluesky {
                 feedsSection.listRowSeparator(.hidden)
             }
-            // Home visibility sits above the recent list — the same spot every
-            // app screen puts it (user, 2026-07-14), never a long scroll away.
-            // Under auto-pin (user 2026-07-18) the old split — a non-social "Pin
-            // to Home" vs an auto-social "Show on Home" — collapsed into the ONE
-            // shared `PinToHomeButton` ("On Home"/"Show on Home", isOnHome/
-            // setOnHome) the moment every source became show-unless-hidden. Shown
-            // once the account has a Home tile to toggle (an empty source
-            // composes none, so the control would be dead).
-            if hasHomeTile {
-                PinToHomeButton(source: bridge.rawValue, inSection: true,
-                                footer: homeVisibilityFooter)
-                    .listRowSeparator(.hidden)
-            }
             if !recent.isEmpty {
                 RecentThingsSection(header: bridge.recentHeader, things: recent,
                                     total: recentTotal)
                     .listRowSeparator(.hidden)
             }
             if showHomeHint {
-                seeOnHomeSection.listRowSeparator(.hidden)
+                seeInFeedSection.listRowSeparator(.hidden)
             }
             if bridge.isConnected {
                 BridgeDisconnectSection(
@@ -411,7 +398,6 @@ struct HandleSetupScreen: View {
                     teardown: {
                         bridge.setName("")
                         accountNames = []
-                        HomePinnedSources.shared.clear(bridge.rawValue)
                     }
                 ).listRowSeparator(.hidden)
             }
@@ -453,40 +439,24 @@ struct HandleSetupScreen: View {
         }
     }
 
-    /// Whether the account has a Home tile to toggle: an auto-social source
-    /// (Bluesky/Farcaster) once connected — its latest post shows by default;
-    /// any other source once it's landed a thing — an empty source composes no
-    /// tile, so the control would be dead. The control itself is the shared
-    /// `PinToHomeButton` (auto-pin, user 2026-07-18) either way.
-    private var hasHomeTile: Bool {
-        if HomePinnedSources.autoSocial.contains(bridge.rawValue) { return bridge.isConnected }
-        return !bridge.currentName.isEmpty && !recent.isEmpty
-    }
-
-    /// The auto-socials get a line naming what shows (their latest post);
-    /// a generic source needs none (its tile is self-evident).
-    private var homeVisibilityFooter: String? {
-        HomePinnedSources.autoSocial.contains(bridge.rawValue)
-            ? "Your latest \(bridge.rawValue) post shows on Home. Turn this off — or long-press the card — to remove it."
-            : nil
-    }
-
-    /// Close the loop (delight 2026-07-14): the first connect ends with a
-    /// one-tap way to the board where the new card just landed — so a person
-    /// sees where their connection went, instead of guessing. Pops the Apps
-    /// stack and lands the feed on Pinned, exactly like casberi://home.
-    private var seeOnHomeSection: some View {
+    /// Close the loop (delight 2026-07-14, repointed 2026-07-20 — the board
+    /// this used to open onto is gone): the first connect ends with a
+    /// one-tap way to the feed the new card just landed in — so a person
+    /// sees where their connection went, instead of guessing. Every
+    /// connected source always has a feed now (no more pin/hide to gate on),
+    /// so this fires unconditionally on connect (see the call site below).
+    private var seeInFeedSection: some View {
         Section {
             Button {
                 showHomeHint = false
-                FeedFilter.shared.source = "Pinned"
+                FeedFilter.shared.source = bridge.rawValue
                 FeedFilter.shared.tag = "All"
                 HomeRoute.shared.push = nil
                 DSHaptic.tap()
             } label: {
                 HStack(spacing: DS.Space.s2) {
-                    Image(systemName: "house")
-                    Text("See it on Home")
+                    Image(systemName: "list.bullet")
+                    Text("See in Feed")
                     Spacer()
                     Image(systemName: "arrow.right")
                         .font(.system(size: 13, weight: .semibold))
@@ -912,7 +882,9 @@ struct HandleSetupScreen: View {
             DSHaptic.success()
             withAnimation(DS.Motion.standard) {
                 connectFlip += 1
-                if landsOnHome { showHomeHint = true }
+                // Every connected source always has its own feed now (no
+                // pin/hide to gate on) — the hint fires unconditionally.
+                showHomeHint = true
             }
         }
     }
@@ -931,11 +903,4 @@ struct HandleSetupScreen: View {
         return faces
     }
 
-    /// Whether landing on Home would actually show this source — under auto-pin
-    /// (user 2026-07-18) every connected source shows unless removed, so this is
-    /// just "not hidden". Keeps the "See it on Home" hint from pointing at a
-    /// board that wouldn't show the new card.
-    private var landsOnHome: Bool {
-        HomePinnedSources.shared.isOnHome(bridge.rawValue)
-    }
 }

@@ -28,7 +28,6 @@ struct DealsScreen: View {
         List {
             BridgeSetupHeader(name: "Deals")
             sourcesSection.listRowSeparator(.hidden)
-            if deals.connected { pinToHomeSection.listRowSeparator(.hidden) }
             if !recent.isEmpty {
                 RecentThingsSection(header: "Latest deals", things: recent, titleLines: 1)
                     .listRowSeparator(.hidden)
@@ -38,7 +37,6 @@ struct DealsScreen: View {
                     bridgeID: "deals", name: "Deals",
                     teardown: {
                         DealsStore.shared.disconnect()
-                        HomePinnedSources.shared.clear("Deals")
                     }
                 ).listRowSeparator(.hidden)
             }
@@ -89,16 +87,6 @@ struct DealsScreen: View {
             Text("Turn on a source and its newest deals — each already priced in the headline — land in your feed as products. Read-only.")
                 .dsText(.callout15).foregroundStyle(DS.textTertiary)
         }
-    }
-
-    // The one shared Home-visibility control (auto-pin, user 2026-07-18):
-    // "On Home" by default, "Show on Home" once removed — routes through
-    // `isOnHome`/`setOnHome` like every other source, so the label and the
-    // action match the board (the hand-rolled "Pin to Home" button read the
-    // empty explicit-pin set and mis-reported an auto-pinned source as unpinned).
-    private var pinToHomeSection: some View {
-        PinToHomeButton(source: "Deals", inSection: true,
-                        footer: "The latest deals ride a strip on Home.")
     }
 
     private var footerSection: some View {

@@ -23,8 +23,6 @@ struct ObsidianScreen: View {
             BridgeSetupHeader(name: "Obsidian")
             vaultSection.listRowSeparator(.hidden)
             if !recent.isEmpty {
-                PinToHomeButton(source: "Obsidian", inSection: true)
-                    .listRowSeparator(.hidden)
                 RecentThingsSection(header: "Notes", things: recent)
                     .listRowSeparator(.hidden)
             }

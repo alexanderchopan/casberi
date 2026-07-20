@@ -35,8 +35,6 @@ struct DayOneImportScreen: View {
             }
             .listRowSeparator(.hidden)
             if !recent.isEmpty {
-                PinToHomeButton(source: "Day One", inSection: true)
-                    .listRowSeparator(.hidden)
                 RecentThingsSection(header: "Imported", things: Array(recent))
                     .listRowSeparator(.hidden)
             }
@@ -113,8 +111,6 @@ struct JournalImportScreen: View {
             }
             .listRowSeparator(.hidden)
             if !recent.isEmpty {
-                PinToHomeButton(source: "Apple Journal", inSection: true)
-                    .listRowSeparator(.hidden)
                 RecentThingsSection(header: "Imported", things: Array(recent))
                     .listRowSeparator(.hidden)
             }
@@ -177,10 +173,6 @@ struct NotesShareScreen: View {
                 "Tap share, then Casberi.",
                 "It lands in your feed as a note — findable like everything else.",
             ])
-            if !notes.isEmpty {
-                PinToHomeButton(source: "Apple Notes", inSection: true)
-                    .listRowSeparator(.hidden)
-            }
             Section {
                 Button {
                     if let url = URL(string: "mobilenotes://") { openURL(url) }

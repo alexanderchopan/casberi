@@ -33,11 +33,6 @@ struct RSSScreen: View {
             BridgeSetupHeader(name: "RSS", connected: !rss.feeds.isEmpty)
             if !rss.feeds.isEmpty { followingSection.listRowSeparator(.hidden) }
             addSection.listRowSeparator(.hidden)
-            if !rss.feeds.isEmpty {
-                PinToHomeButton(source: "RSS", inSection: true,
-                                footer: "Your feeds' newest posts ride a strip on Home.")
-                    .listRowSeparator(.hidden)
-            }
             if recent.isEmpty {
                 // Only before the first feed: once one is followed, a ghost
                 // captioned "when you follow a feed" would contradict the
@@ -56,9 +51,6 @@ struct RSSScreen: View {
                     bridgeID: "rss", name: "RSS",
                     teardown: {
                         RSSStore.shared.feeds = []
-                        // An outlived pin would silently re-arm the moment RSS
-                        // reconnects — clear it with the feeds it stood for.
-                        HomePinnedSources.shared.clear("RSS")
                     }
                 ).listRowSeparator(.hidden)
             }

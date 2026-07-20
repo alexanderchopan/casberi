@@ -43,8 +43,6 @@ struct KalshiScreen: View {
             BridgeSetupHeader(name: "Kalshi")
             addSection.listRowSeparator(.hidden)
             if !watched.isEmpty {
-                PinToHomeButton(source: "Kalshi", inSection: true)
-                    .listRowSeparator(.hidden)
                 watchlistSection.listRowSeparator(.hidden)
             }
             if !watched.isEmpty {

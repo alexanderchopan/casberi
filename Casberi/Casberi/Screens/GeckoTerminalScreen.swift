@@ -35,11 +35,6 @@ struct GeckoTerminalScreen: View {
         List {
             BridgeSetupHeader(name: "GeckoTerminal", connected: gecko.connected)
             chainsSection.listRowSeparator(.hidden)
-            if gecko.connected {
-                PinToHomeButton(source: "GeckoTerminal", inSection: true,
-                                footer: "The trending movers ride a strip on Home.")
-                    .listRowSeparator(.hidden)
-            }
             if recent.isEmpty {
                 // Only before the first chain: a ghost captioned "when you
                 // switch a chain on" under an ON toggle would be fake status
@@ -58,7 +53,6 @@ struct GeckoTerminalScreen: View {
                     bridgeID: "geckoterminal", name: "GeckoTerminal",
                     teardown: {
                         TrendingStore.shared.disconnect()
-                        HomePinnedSources.shared.clear("GeckoTerminal")
                     }
                 ).listRowSeparator(.hidden)
             }

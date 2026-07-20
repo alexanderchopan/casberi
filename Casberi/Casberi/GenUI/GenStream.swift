@@ -47,8 +47,7 @@ final class GenStream {
         var offset = 0
         for line in lines {
             offset += line.count + 1
-            if line.hasPrefix("root") || line.contains("Widget") || line.contains("Shelf")
-                || line.contains("ComingUp") {
+            if line.hasPrefix("root") || line.contains("Widget") || line.contains("Shelf") {
                 boundaries.insert(offset)
             }
         }

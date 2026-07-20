@@ -2,17 +2,19 @@ import SwiftUI
 
 /// The shell's one navigation strip (2026-07-13, drastic restructure): the app
 /// is a single scrolling surface, and this chip row IS how you move through it.
-/// The tab bar is gone — Pinned leads (your curated board), then All (the whole
-/// feed), then every source most-recent-first. Tapping a chip swaps the surface
-/// under a fixed header, so the strip never scrolls out of reach the way Feed's
-/// old in-list chip row did.
+/// The tab bar is gone — All leads (the whole feed), then every source
+/// most-recent-first. Tapping a chip swaps the surface under a fixed header,
+/// so the strip never scrolls out of reach the way Feed's old in-list chip
+/// row did. (The Pinned board that used to lead retired 2026-07-20,
+/// docs/agent-brief.md rulings 11-12 — content-first, always.)
 ///
 /// Stories-sized (ruling 2026-07-10): 56pt icon-only circles — the brand logo
 /// IS the chip. The active chip wears the blue ink ring; a source whose
 /// connection needs you wears an orange one. No labels (labels made the row
-/// scroll, ruling 2026-07-09) — Pinned wears a pin glyph, All keeps its word.
+/// scroll, ruling 2026-07-09) — All keeps its word, every source wears its
+/// own brand mark.
 struct SourceChips: View {
-    /// The full ordered label list — "Pinned", "All", then real sources.
+    /// The full ordered label list — "All", then real sources.
     let labels: [String]
     let active: String
     /// Opens the app catalogue (user 2026-07-17: its door moved OUT of the
@@ -127,13 +129,6 @@ struct SourceChips: View {
         } label: {
             ZStack {
                 switch label {
-                case "Pinned":
-                    // Your curated board — the literal gesture we ask for, so
-                    // it wears the literal glyph (user, 2026-07-13).
-                    Circle().fill(DS.gray100)
-                    Image(systemName: "pin.fill")
-                        .font(.system(size: 18, weight: .semibold))
-                        .foregroundStyle(DS.textPrimary)
                 case "All":
                     Circle().fill(DS.gray100)
                     Text("All").dsText(.label12)

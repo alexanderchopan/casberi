@@ -812,12 +812,12 @@ enum WalletIngest {
     /// of them (ruling 2026-07-15, revising 2026-07-09): the separate views
     /// stay the default so you never lose which wallet holds what — this is an
     /// extra overview answering "what am I worth in total." Nil with one or
-    /// zero wallets (one wallet's own view already IS its portfolio).
+    /// zero wallets (one wallet's own view already IS its portfolio). The
+    /// `pinnedOnly` restriction retired with the Home board (2026-07-20) — no
+    /// caller ever requested it once Home was the only pinned-only consumer.
     @MainActor
-    static func combinedHoldings(pinnedOnly: Bool = false) async -> HoldingsGroup? {
-        let watched = pinnedOnly
-            ? WalletStore.shared.addresses.filter(\.pinnedToHome)
-            : WalletStore.shared.addresses
+    static func combinedHoldings() async -> HoldingsGroup? {
+        let watched = WalletStore.shared.addresses
         guard watched.count > 1 else { return nil }
         let resolved = await resolvedAddresses(watched.map(\.address))
         guard !resolved.isEmpty, let h = (await holdings(addresses: resolved)).group else { return nil }
@@ -842,18 +842,15 @@ enum WalletIngest {
     }
 
     /// Every watched wallet's holdings, one group per address — for a caller
-    /// composing its own document (Home's and Feed's pinned-wallet module)
-    /// rather than rendering the Wallet screen's standalone one. A wallet
-    /// with nothing priced simply doesn't contribute a group (correct-but-
-    /// empty, not a failure) — order follows watch order, the first address leads.
-    /// `pinnedOnly` restricts to addresses with their own pin on (Home and
-    /// Feed's leading module); the Wallet screen and its own Feed chip show
-    /// everything watched regardless of pin (ruling 2026-07-09).
+    /// composing its own document rather than rendering the Wallet screen's
+    /// standalone one. A wallet with nothing priced simply doesn't contribute
+    /// a group (correct-but-empty, not a failure) — order follows watch
+    /// order, the first address leads. The `pinnedOnly` restriction retired
+    /// with the Home board (2026-07-20) — every watched wallet shows now,
+    /// which is what the Wallet screen and Feed chip already did.
     @MainActor
-    static func topHoldingsByWallet(pinnedOnly: Bool = false) async -> [HoldingsGroup] {
-        let watched = pinnedOnly
-            ? WalletStore.shared.addresses.filter(\.pinnedToHome)
-            : WalletStore.shared.addresses
+    static func topHoldingsByWallet() async -> [HoldingsGroup] {
+        let watched = WalletStore.shared.addresses
         guard !watched.isEmpty else { return [] }
         // Concurrent, not sequential — three watched wallets waiting on three
         // requests in a row is the difference between a couple seconds and
@@ -879,9 +876,7 @@ enum WalletIngest {
         } }
         let groups = results.sorted { $0.0 < $1.0 }.compactMap(\.1)
         // The combined "Across your wallets" total hitting a new high is a
-        // moment (delight 2026-07-15) — fired only over the FULL watched set
-        // (`!pinnedOnly`, so Home's pinned pass and the Wallet screen's full
-        // pass can't disagree on the mark) and only with more than one wallet
+        // moment (delight 2026-07-15) — fired only with more than one wallet
         // (a lone wallet's own high rides its per-address mark in recordSample).
         //
         // TWO honesty guards, both mirroring §77's combined-line rules:
@@ -892,7 +887,7 @@ enum WalletIngest {
         //     watched wallet priced this pass (`groups.count == watched.count`),
         //     so a wallet intermittently failing to fetch — then recovering —
         //     doesn't read as a gain either.
-        if !pinnedOnly, watched.count > 1, groups.count == watched.count {
+        if watched.count > 1, groups.count == watched.count {
             let combined = groups.reduce(0.0) { $0 + $1.totalUSD }
             let signature = watched.map { $0.address.lowercased() }.sorted().joined(separator: ",")
             if WalletMoments.shared.notedNewHigh(scope: "combined:\(signature)", value: combined) {
@@ -930,77 +925,6 @@ enum WalletIngest {
                                     cells: g.cells, totalUSD: g.total,
                                     tokenCount: g.count,
                                     topBySymbol: topBySymbol(g.bySymbol)))
-    }
-
-    /// What the pinned-wallet module on Home should paint: the treemap groups
-    /// to show (live ones, plus last-known stale ones for wallets we couldn't
-    /// reach), and whether at least one pinned wallet is unreachable with no
-    /// snapshot to fall back on — the one case that earns an honest error card.
-    struct PinnedHoldings {
-        var groups: [HoldingsGroup] = []
-        var unreachableNoCache = false
-    }
-
-    /// The pinned wallets' holdings for Home — like `topHoldingsByWallet(pinnedOnly:)`
-    /// but honest about failure (ruling 2026-07-17, revising the 2026-07-11
-    /// "loading" preview). A reached wallet shows its live treemap; an
-    /// unreachable one shows its LAST-KNOWN treemap, stale-marked ("$12K · as of
-    /// 2h ago"), so a transient rate-limit never blanks the card; only an
-    /// unreachable wallet with no history at all falls through to the error
-    /// card. A reached-but-empty wallet contributes nothing, as before —
-    /// that's correct, not a failure.
-    @MainActor
-    static func pinnedWalletHoldings() async -> PinnedHoldings {
-        let watched = WalletStore.shared.addresses.filter(\.pinnedToHome)
-        guard !watched.isEmpty else { return PinnedHoldings() }
-        let outcomes = await withTaskGroup(of: (Int, WalletHoldingsOutcome).self) { group in
-            for (i, entry) in watched.enumerated() {
-                group.addTask { (i, await walletGroupOutcome(entry)) }
-            }
-            var collected: [(Int, WalletHoldingsOutcome)] = []
-            for await result in group { collected.append(result) }
-            return collected.sorted { $0.0 < $1.0 }
-        }
-        var result = PinnedHoldings()
-        for (i, outcome) in outcomes {
-            let entry = watched[i]
-            switch outcome {
-            case .group(let g):
-                result.groups.append(g)
-                // Only a real fetch feeds the value history — same forward-only
-                // rule as topHoldingsByWallet; a stale card must never re-sample.
-                WalletStore.shared.recordSample(address: entry.address, totalUSD: g.totalUSD,
-                                                holdings: g.topBySymbol)
-            case .empty:
-                break
-            case .unreachable:
-                if let last = lastKnownGroup(label: entry.label.isEmpty ? entry.short : entry.label,
-                                             address: entry.address) {
-                    result.groups.append(last)
-                } else {
-                    result.unreachableNoCache = true
-                }
-            }
-        }
-        return result
-    }
-
-    /// A wallet's last successfully-sampled holdings, rebuilt into a treemap
-    /// group so an unreachable fetch shows the last-known card rather than
-    /// vanishing (2026-07-17). The value samples store only the top few
-    /// positions by symbol (not the whole book, not tap routes), so the stale
-    /// card's cells are routeless — a tap opens the Wallet screen — and its
-    /// subline reads "as of …" instead of a token count we can't be sure of.
-    /// nil when the wallet has never sampled (a fresh add that has never once
-    /// reached the chain) — that's the case that earns the error card instead.
-    static func lastKnownGroup(label: String, address: String) -> HoldingsGroup? {
-        let samples = WalletStore.shared.valueSamples(forAddress: address)
-        guard let last = samples.last, let held = last.holdings, !held.isEmpty else { return nil }
-        let cells = held.sorted { $0.value > $1.value }.prefix(5)
-            .map { sym, usd in "\(sym) \(treemapWeight(usd))" }
-        return HoldingsGroup(label: label, address: address, cells: Array(cells),
-                             totalUSD: last.usd, tokenCount: held.count,
-                             topBySymbol: held, stale: last.at)
     }
 
     /// The top-5-by-value cells for one or more hex addresses, combined —

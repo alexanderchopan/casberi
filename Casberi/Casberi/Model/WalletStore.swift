@@ -16,33 +16,6 @@ final class WalletStore {
         /// A name the person gave it ("Main", "Cold") — optional, address shows if empty.
         var label: String
         var address: String
-        /// Holdings on Home and Feed (ruling 2026-07-09): per WALLET, not one
-        /// switch for everything watched — two watched addresses are usually
-        /// two different purposes, and a person may only want one of them
-        /// showing. Same idea as a Feed pin ("keep this in view"), scoped to
-        /// the address it's swiped on.
-        var pinnedToHome: Bool = false
-
-        enum CodingKeys: String, CodingKey {
-            case id, label, address, pinnedToHome
-        }
-
-        init(id: UUID = UUID(), label: String, address: String, pinnedToHome: Bool = false) {
-            self.id = id
-            self.label = label
-            self.address = address
-            self.pinnedToHome = pinnedToHome
-        }
-
-        /// Custom decode: older persisted data has no `pinnedToHome` key —
-        /// it defaults rather than failing to decode.
-        init(from decoder: Decoder) throws {
-            let c = try decoder.container(keyedBy: CodingKeys.self)
-            id = try c.decode(UUID.self, forKey: .id)
-            label = try c.decode(String.self, forKey: .label)
-            address = try c.decode(String.self, forKey: .address)
-            pinnedToHome = try c.decodeIfPresent(Bool.self, forKey: .pinnedToHome) ?? false
-        }
 
         /// "0x1a2B…4f4f" — the row form.
         var short: String { WalletStore.shortAddress(address) }
@@ -281,17 +254,7 @@ final class WalletStore {
         guard addr.count >= 6,
               !addresses.contains(where: { Self.dedupeKey($0.address) == key })
         else { return false }
-        // A person's FIRST watched wallet auto-pins to Home (ruling
-        // 2026-07-18). Watching ≠ pinning by design (2026-07-09) — holdings
-        // show on Home/Feed only for a PINNED wallet — but that left a
-        // first-time watcher facing a Home board their new wallet never
-        // reached, with the pin buried behind a swipe. Auto-pinning only the
-        // FIRST wallet (the list was empty, so nothing is pinned yet) keeps the
-        // multi-wallet ruling intact: every wallet after it stays manual, since
-        // two watched wallets are usually two purposes and the person pins the
-        // one they mean. Fully reversible — unpinning is one tap.
-        let isFirst = addresses.isEmpty
-        addresses.append(WatchedAddress(label: label, address: addr, pinnedToHome: isFirst))
+        addresses.append(WatchedAddress(label: label, address: addr))
         return true
     }
 
@@ -301,12 +264,6 @@ final class WalletStore {
 
     func move(from source: IndexSet, to destination: Int) {
         addresses.move(fromOffsets: source, toOffset: destination)
-    }
-
-    /// Flips one address's pin — scoped to that wallet, never the whole list.
-    func togglePin(_ id: WatchedAddress.ID) {
-        guard let i = addresses.firstIndex(where: { $0.id == id }) else { return }
-        addresses[i].pinnedToHome.toggle()
     }
 
     /// Renames a watched wallet — the missing half of the label story: an

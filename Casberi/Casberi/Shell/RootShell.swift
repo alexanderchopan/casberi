@@ -15,9 +15,10 @@ struct RootShell: View {
     @State private var chrome = ShellChrome()
     @State private var draft = ""
     @State private var composerOpen = false
-    /// The Actions sheet's height — the composer reports its content height so
-    /// the sheet hugs it (grows on its own when an answer streams in).
-    @State private var actionsHeight: CGFloat = 360
+    /// Session-scoped only, never persisted — the bar's pulse (ruling 6)
+    /// stops once the agent has been raised AT ALL this launch. Distinct
+    /// from `KeptAskStore`'s own per-ask, persisted "seen" dot.
+    @State private var agentEverOpened = false
     @State private var deepLinkThing: Thing?
     /// `casberi://person/<Source>/<handle>` — the profile card, by name.
     @State private var deepLinkPerson: SocialProfile?
@@ -39,6 +40,22 @@ struct RootShell: View {
     @State private var redactNow = false
 
     var body: some View {
+        // THROWAWAY (2026-07-19): `-summonProto YES` swaps the whole shell for
+        // the direction-F prototype. A full swap rather than a cover so the
+        // real shell's chrome can't leak into it — delete this branch and
+        // `SummonPrototype.swift` together when the experiment is settled.
+        if UserDefaults.standard.bool(forKey: "summonProto") {
+            // `dsColorScheme()` is not optional here: the branch sits ABOVE the
+            // shell's own `.preferredColorScheme`, so without it every adaptive
+            // token resolves against light traits and `DS.textPrimary` paints
+            // black on the dark page (i.e. invisible).
+            SummonPrototype().dsColorScheme()
+        } else {
+            shell
+        }
+    }
+
+    private var shell: some View {
         ZStack(alignment: .bottom) {
             // The themed page — the same field each screen paints for itself
             // (NavigationStack's backing is opaque, so photo rendering lives
@@ -75,11 +92,38 @@ struct RootShell: View {
                 .zIndex(2)
             }
 
+            // The agent's bar (docs/agent-brief.md ruling 6) — hosted HERE,
+            // not on MainSurface, so it rides every screen this app can push
+            // (Apps, Settings, a bridge setup form), not just MainSurface's
+            // own root the way the FAB it replaces used to. The berry
+            // breathes while some kept ask changed and the agent hasn't been
+            // raised yet THIS LAUNCH (a plain, session-scoped flag — distinct
+            // from `KeptAskStore`'s own PER-ASK persisted "seen" dot, which
+            // renders on the pills once risen, not here).
+            AgentBar(hasUnseenSignal: KeptAskStore.shared.anyChanged && !agentEverOpened) {
+                DSHaptic.tap()
+                composerOpen = true
+            }
+            .padding(.horizontal, DS.Space.s4)
+            .padding(.bottom, DS.Space.s2)
+
+            // The agent, full screen (ruling 3 — never a sheet/tray). One
+            // transition, ported from the throwaway prototype
+            // (Screens/SummonPrototype.swift) that proved it feels right.
+            if composerOpen {
+                ZStack {
+                    DS.page.ignoresSafeArea()
+                    agentSurface
+                }
+                .transition(.move(edge: .bottom))
+                .zIndex(3)
+            }
         }
-        // The FAB moved onto MainSurface's root content (2026-07-13 polish):
-        // it belongs to Home/Feed, so pushed rooms (Apps, Settings, a setup
-        // form) slide over it instead of wearing a compose button that isn't
-        // theirs. The sheet stays here.
+        .animation(DS.Motion.standard, value: composerOpen)
+        // The bar rides RootShell's OWN ZStack now (2026-07-19 — it replaced
+        // the FAB, which used to live on MainSurface's root content
+        // specifically so pushed rooms could slide over it; the bar
+        // deliberately does the opposite, per ruling 6).
         .onChange(of: chrome.composerRequest) { _, _ in
             composerOpen = true
         }
@@ -109,6 +153,22 @@ struct RootShell: View {
                 // yet embedded — a bounded background sweep, so Ask can retrieve
                 // by meaning, not just shared words.
                 EmbeddingIndex.backfill(context: modelContext)
+                // The "Noticed" line's real trigger (docs/agent-brief.md
+                // ruling 10 — a gap the original ruling didn't name):
+                // `HomeInsightStore.refresh` used to fire from ONLY
+                // HomeScreen's own compose cycle, so a person who lands on
+                // "All" a whole session (increasingly the common case under
+                // content-first landing) never got a fresh line — same call,
+                // same signature-gate, just a second trigger point, never
+                // duplicated logic. Also refreshes the kept-ask digest cache
+                // (`KeptAskStore.anyChanged`) the bar's pulse reads from, so
+                // that stays current without recomputing on every render.
+                Task { @MainActor in
+                    let surfaced = Corpus.surfaced((try? modelContext.fetch(FetchDescriptor<Thing>(
+                        sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]))) ?? [])
+                    HomeInsightStore.shared.refresh(from: surfaced)
+                    await KeptAskStore.shared.refreshDigests(things: surfaced, context: modelContext)
+                }
                 // Resnapshot hand-off state so the thing sheet's "Add to <app>"
                 // verbs only show apps the person connected AND has installed.
                 HandOffState.refresh(connected: Set(
@@ -150,16 +210,16 @@ struct RootShell: View {
                 }
             }
         }
-        // The composer is a sheet the FAB opens — no tab to remember and
-        // return to now; dismissing just closes it over whatever's on screen.
-        .sheet(isPresented: $composerOpen) {
-            actionsSheet
-        }
+        // The agent is a full-screen ZStack layer now (docs/agent-brief.md
+        // ruling 3), rendered above in `shell`'s own ZStack — no more sheet.
         // A fresh composer open is a fresh answer conversation — drop the prior
         // transcript so one conversation's turns never bleed into the next
         // (ConversationModel). Follow-ups WITHIN this open carry context.
         .onChange(of: composerOpen) { _, open in
-            if open { OnDeviceModel.resetConversation() }
+            if open {
+                OnDeviceModel.resetConversation()
+                agentEverOpened = true
+            }
         }
         // A surface requested an ask (the weekend cover) — open the composer;
         // it consumes the query once it mounts (prd 54).
@@ -183,29 +243,13 @@ struct RootShell: View {
         // the newest thing's sheet (the widget-tap route).
         .onOpenURL { route($0) }
         .onAppear {
-            // Landing (2026-07-13, revised 2026-07-19): land on the board when
-            // it has content, else on the whole record — so a returning user
-            // with connected apps opens to their board, and only a brand-new /
-            // uncurated corpus opens to "All" rather than an empty board.
-            //
-            // The predicate has to match what the board actually DRAWS. Under
-            // the auto-pin ruling (2026-07-18) the board shows every connected
-            // source's row by default, not just the ones explicitly pinned — so
-            // the old `HomePinnedSources.sources` check (explicit pins only) sent
-            // everyone who never tapped "Pin to Home" to "All" even though their
-            // board was full of auto-pinned rows (reported: "it lands on all and
-            // not pinned"). `boardSources` is the SAME set `appendPinnedApps`
-            // composes from, so the two can't drift. Deep links and debug hooks
-            // below can still override this within the same launch.
-            // Only the `source` column is read (boardSources touches nothing
-            // else), so fetch just that — a partial fetch keeps this launch-time
-            // read off the first-frame critical path on a large corpus.
-            var boardDescriptor = FetchDescriptor<Thing>()
-            boardDescriptor.propertiesToFetch = [\.source]
-            let boardThings = (try? modelContext.fetch(boardDescriptor)) ?? []
-            let hasBoard = !HomeComposition.boardSources(boardThings).isEmpty
-                || WalletStore.shared.addresses.contains(where: \.pinnedToHome)
-            FeedFilter.shared.source = hasBoard ? "Pinned" : "All"
+            // Landing (2026-07-13, simplified 2026-07-20 — the Pinned board
+            // retired, docs/agent-brief.md rulings 11-12): content-first,
+            // always. The agent (its bar + kept asks) now carries the
+            // per-app glance job the board used to; the feed carries the
+            // scroll job it always did. Deep links and debug hooks below can
+            // still override this within the same launch.
+            FeedFilter.shared.source = "All"
             // Honesty rule: if CasberiApp had to degrade the store open this
             // launch (SharedStore.containerWithFallback), say so once instead
             // of silently showing an empty/unsynced corpus.
@@ -289,8 +333,7 @@ struct RootShell: View {
                         // "Tokens" now, not "Dexscreener" — its chart blends three
                         // vendors (commit a2618a2). Things captured before the rename
                         // kept the old source and "dexscreener:" sourceRef prefix, so
-                        // the feed still headed them "Dexscreener". Rewrite both, and
-                        // carry the rename across any Home pin.
+                        // the feed still headed them "Dexscreener". Rewrite both.
                         let staleTokens = (try? modelContext.fetch(FetchDescriptor<Thing>(
                             predicate: #Predicate { $0.source == "Dexscreener" }
                         ))) ?? []
@@ -300,7 +343,6 @@ struct RootShell: View {
                                 thing.sourceRef = "tokens:" + String(ref.dropFirst("dexscreener:".count))
                             }
                         }
-                        HomePinnedSources.shared.rename("Dexscreener", to: "Tokens")
                     }
                     modelContext.saveHonestly()
                     UserDefaults.standard.set(migrationsCurrent, forKey: migrationsKey)
@@ -337,12 +379,11 @@ struct RootShell: View {
                 NSLog("[Casberi] openThing: %@",
                       deepLinkThing?.title ?? "no match for \(prefix)")
             }
-            // `-openSettings YES` pushes Settings. Lives HERE (not
-            // HomeScreen's onAppear, where it was born): since the
-            // one-surface shell, HomeScreen only mounts when the landing
-            // chip is "Pinned", so on an unpinned install the hook never
-            // fired and the launch landed on Home (audit 2026-07-13). This
-            // onAppear runs after the whole tree mounts — same proven
+            // `-openSettings YES` pushes Settings. Lives HERE, not a screen's
+            // own onAppear — content-first landing is now the ONLY landing
+            // (the Pinned board it used to have to out-race retired
+            // 2026-07-20), so there's only ever one surface to time against.
+            // This onAppear runs after the whole tree mounts — same proven
             // timing as the `-deeplink` hook above.
             if UserDefaults.standard.bool(forKey: "openSettings") {
                 HomeRoute.shared.push = .settings
@@ -388,16 +429,6 @@ struct RootShell: View {
                     NSLog("[Casberi] answerProbe(\"%@\") %dms →\n%@", q, ms, doc.joined(separator: "\n"))
                 }
             }
-            // Debug hook: `-comingUpProbe YES` logs the "Coming up" lane over
-            // the current corpus (upcoming events + due reminders, soonest
-            // first) so the Home card's contents verify headlessly.
-            if UserDefaults.standard.bool(forKey: "comingUpProbe") {
-                let things = (try? modelContext.fetch(FetchDescriptor<Thing>())) ?? []
-                let items = ComingUp.items(from: things)
-                NSLog("[Casberi] comingUpProbe → %d:\n%@", items.count,
-                      items.map { "\($0.thing.kind.typeTag) · \($0.thing.title) — \(ComingUp.label(for: $0))" }
-                          .joined(separator: "\n"))
-            }
             // Debug hook: `-homeInsightProbe YES` runs the on-device "Noticed"
             // line over the current corpus (bypassing the cache), logging the
             // candidates fed, the raw model text, and the post-guard result, so
@@ -441,6 +472,24 @@ struct RootShell: View {
                     let ms = Int(Date().timeIntervalSince(start) * 1000)
                     NSLog("[Casberi] byokProbe(\"%@\") %dms →\n%@", q, ms,
                           doc?.joined(separator: "\n") ?? "nil (key/network failed — composer words it)")
+                }
+            }
+            // Debug hook: `-keepAskProbe "<kind>:<title>"` keeps that kind
+            // headlessly (or `clear`); `KeptAskStore.seedFromLaunchArgs()` does
+            // the keep itself. Then run its composer over the real corpus and
+            // log the result, so the persistence + digest machinery verifies
+            // without tapping through the UI.
+            KeptAskStore.seedFromLaunchArgs()
+            if !KeptAskStore.shared.order.isEmpty {
+                Task { @MainActor in
+                    let all = (try? modelContext.fetch(FetchDescriptor<Thing>(
+                        sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]))) ?? []
+                    for kind in KeptAskStore.shared.order {
+                        let result = await KeptAskComposers.compose(kind, things: all, context: modelContext)
+                        NSLog("[Casberi] keepAskProbe compose(\"%@\") → delta=\"%@\" digest=\"%@\"\n%@",
+                              kind, result?.delta ?? "nil", result?.digest ?? "nil",
+                              result?.doc.joined(separator: "\n") ?? "(no composer for this kind)")
+                    }
                 }
             }
             // Debug hook: open the composer so `-uiAnswerProbe` (handled in the
@@ -575,9 +624,9 @@ struct RootShell: View {
         // below.
         HomeRoute.shared.push = nil
         switch url.host() {
-        // casberi://home is back-compat (the app was a Home tab once) — it
-        // now lands on the board.
-        case "home":    FeedFilter.shared.source = "Pinned"; FeedFilter.shared.tag = "All"
+        // casberi://home is back-compat (the app was a Home tab, then a
+        // board) — it now lands on the All feed, ruling 11.
+        case "home":    FeedFilter.shared.source = "All"; FeedFilter.shared.tag = "All"
         case "feed":
             FeedFilter.shared.source = "All"
             FeedFilter.shared.tag = "All"
@@ -624,12 +673,11 @@ struct RootShell: View {
 
     // MARK: - Screens
 
-    /// The Actions sheet: the composer, always open — ask a question or say what
-    /// to do — with its tools. Presented at 1/2, expandable to 3/4. Same wiring
-    /// the floating composer used.
-    private var actionsSheet: some View {
+    /// The agent, full screen (docs/agent-brief.md ruling 3) — the composer's
+    /// entire existing pipeline (byok, Organize, lastAnswerHits, GenStream),
+    /// unchanged, now hosted as a persistent ZStack layer instead of a sheet.
+    private var agentSurface: some View {
         Composer(isOpen: .constant(true), draft: $draft, embedded: true,
-                 onHeight: { actionsHeight = min(max($0, 220), 720) },
                  onCommit: saveDraft, onCommitVoice: saveVoice,
                  answer: answerDocument,
                  answerWithKey: keyedAnswerDocument,
@@ -638,7 +686,13 @@ struct RootShell: View {
                  contextSource: { nil },
                  onNavigate: navigate,
                  onKeepAnswer: keepAnswer,
-                 glassNamespace: nil)
+                 glassNamespace: nil,
+                 resolveThing: { idString in
+                     guard let uuid = UUID(uuidString: idString) else { return nil }
+                     return (try? modelContext.fetch(FetchDescriptor<Thing>(
+                         predicate: #Predicate { $0.id == uuid })))?.first
+                 },
+                 onLowerAgent: { composerOpen = false })
             .environment(\.genProjectTap) { name in
                 // The apps answer's catalog door: "@apps" routes to the Apps
                 // page here too (same marker the quiet-day invite uses on
@@ -652,19 +706,13 @@ struct RootShell: View {
                 // Other sentinels ("@wallet", "@token:…") are surface routes,
                 // not tags — from the composer they'd open a bogus tag view
                 // literally named "@token:…"; an unknown sentinel does
-                // nothing (HomeScreen's own rule).
+                // nothing.
                 guard !name.hasPrefix("@") else { return }
                 HomeRoute.shared.push = nil
                 composerOpen = false
-                FeedFilter.shared.source = "Pinned"
+                FeedFilter.shared.source = "All"
                 HomeRoute.shared.openTag = name
             }
-            // Hug the content — the sheet grows/shrinks with what's inside, so
-            // there's no stranded empty space. Drag up to full for a long answer.
-            .presentationDetents([.height(actionsHeight), .large])
-            .presentationDragIndicator(.visible)
-            .presentationCornerRadius(DS.Radius.sheet)
-            .presentationBackground(DS.surfaceSheet)
     }
 
     // MARK: - Capture (rung 1 write: the composer saves to us)
@@ -681,7 +729,7 @@ struct RootShell: View {
         composerOpen = false
         switch intent {
         case .tag(let name):
-            FeedFilter.shared.source = "Pinned"
+            FeedFilter.shared.source = "All"
             HomeRoute.shared.openTag = name
         case .source(let source):
             FeedFilter.shared.source = source
@@ -790,7 +838,9 @@ struct RootShell: View {
             chrome.flash(first ? "Your first thing" : "Saved", tone: .success)
         }
 
-        if FeedFilter.shared.source == "Pinned" || first {
+        // "Watching the record" used to mean either feed shape (Pinned or
+        // All); the board retired 2026-07-20, so All is the one shape left.
+        if FeedFilter.shared.source == "All" || first {
             chrome.flight = ShellChrome.Flight(kind: thing.kind, title: thing.title)
         }
     }

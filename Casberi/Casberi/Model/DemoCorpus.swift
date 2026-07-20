@@ -40,10 +40,9 @@ enum DemoCorpus {
 
     /// Gives each demo Photos thing its bundled sample image as real
     /// `previewImageData` (2026-07-18) — without this the Photos things carry
-    /// NO image at all (neither field set), so `HomeComposition.hasImage`
-    /// correctly declines them and the Home row's medium-native filmstrip
-    /// (prd 124) silently falls back to text — the ONE image-bearing source
-    /// the built-in demo has, never actually showing its own headline
+    /// NO image at all (neither field set), so an image-only consumer
+    /// correctly declines them and falls back to text — the ONE image-bearing
+    /// source the built-in demo has, never actually showing its own headline
     /// feature to a first-time opener. `DemoSampleImage.demoSample(for:)`
     /// already existed for the thing sheet / Photos grid (`sourceRef` →
     /// bundled asset); this is the same resolve, just stored once at seed

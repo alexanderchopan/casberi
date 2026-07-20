@@ -112,16 +112,23 @@ extension EnvironmentValues {
         get { self[GenMediaCompactKey.self] }
         set { self[GenMediaCompactKey.self] = newValue }
     }
-    /// The board tile's span (prd 58h bento) — small / wide / big — set per
-    /// module by HomeScreen and inherited by descendants (a pinned row reads
-    /// its card's span). nil off the board (Feed, sheets), where a module
-    /// renders its plain form. `genModuleLarge` / `genMediaCompact` are derived
-    /// from this for the existing two-state renderers; a module reads `genSpan`
-    /// directly only where it needs a distinct SMALL (1×1) form.
+    /// A module's span (prd 58h bento) — small / wide / big. Always nil now
+    /// that the board (its one setter, HomeScreen) retired 2026-07-20 — kept
+    /// so `GenWidget`'s existing nil-span handling (the plain, unsized form)
+    /// stays the only code path, rather than threading an Optional-removal
+    /// through every reader for a distinction nothing sets anymore.
     var genSpan: ModuleSpan? {
         get { self[GenSpanKey.self] }
         set { self[GenSpanKey.self] = newValue }
     }
+}
+
+/// A module's span on the old board's bento grid: `small` was a 1×1 square,
+/// `wide` a 2×1 band, `big` a 2×2 feature. The type survives the board
+/// (2026-07-20) only because `genSpan` still reads as this Optional below —
+/// nothing constructs a non-nil value anymore.
+enum ModuleSpan: String, CaseIterable, Sendable {
+    case small, wide, big
 }
 
 private struct GenSpanKey: EnvironmentKey {
@@ -214,19 +221,9 @@ struct GenRender: View {
             ForEach(el.refs(0), id: \.self) { GenRender(id: $0, els: els) }
 
         case "Hero":        GenHero(el: el).mountIn()
-        case "Cover":       GenCover(el: el).mountIn()
         case "KindPills":   GenKindPills(el: el).mountIn()
         case "Insight":     GenInsight(el: el).mountIn()
         case "Widget":      GenWidget(id: id, el: el, els: els).mountIn()
-        // The "Coming up" card — a deliberately FLAT renderer (crash fix
-        // 2026-07-15). Builds header + all rows in one shallow body so the
-        // eager Home head doesn't nest five Widget→Row→pinnedRowActions
-        // subtrees and overflow the main stack. mountIn() once for the card,
-        // not per row.
-        case "ComingUp":    GenComingUp(el: el, els: els).mountIn()
-        // One row per app (user ruling 2026-07-17) — the board's app content
-        // is a signal-ordered list of rows, not cards; see GenAppRow.
-        case "AppRow":      GenAppRow(el: el, els: els).mountIn()
         case "Row":         GenRow(id: id, el: el).mountIn()
         case "TokenChip":   GenTokenChip(el: el).mountIn()
         case "Suggest":     GenSuggest().mountIn()
@@ -543,7 +540,7 @@ private struct GenWidget: View {
             // that forest overflowed the 8MB main stack INSIDE
             // `GenWidget.card.getter` (KERN_PROTECTION_FAILURE on the stack
             // guard; the recurring deep-tree class — CLAUDE.md: "flatten the
-            // composition tree, not more stack"; same remedy as GenComingUp).
+            // composition tree, not more stack").
             // The card as a whole still mountIn()s, so entrance still animates;
             // a widget row's set is fixed (Row/MailRow/PostRow/TokenChip —
             // exactly what `appChild` emits), so the direct dispatch can't
@@ -595,418 +592,6 @@ private struct GenWidget: View {
         } else {
             GenSkeletonTile()
         }
-    }
-}
-
-/// AppRow(source, signal, itemTitle, when, thingID) — one app, one row: a
-/// larger, richer thumb-list row ON a card (user 2026-07-18). A 46pt thumbnail
-/// leads, the app name drops to a quiet eyebrow beside its live signal, and the
-/// hero line below is the actual thing — the STUFF, not a page of app names or
-/// counts. The thumbnail is the item's own picture when it has one, the
-/// AUTHOR's avatar (a circle) for a social post, a token/wallet sparkline
-/// square, else a quiet glyph square (honest — no grey placeholder). The
-/// cardless version read clean with a few rows but dense and undifferentiated
-/// with many, so each app keeps its own card plane; the card is just the ground
-/// the rich row sits on. A tap opens that app's feed (`casberi://feed/source/…`);
-/// tapping the hero line opens that item; long-press offers Open / Remove from
-/// Home. FLAT by design (one HStack, no Widget/Row nesting — the eager-head law).
-private struct GenAppRow: View {
-    let el: GenEl
-    @Environment(\.genThingOpen) private var thingOpen
-    let els: GenEls
-    @Environment(\.openURL) private var openURL
-    @Environment(\.genRefreshTick) private var refreshTick
-    @Environment(\.colorScheme) private var scheme
-    /// The Tokens row's live chart (args 5-7 name the top mover; empty for
-    /// every other app — the fetch never runs and the row stays plain text).
-    @State private var chart: TokenChart?
-
-    private var isToken: Bool { !el.str(6).isEmpty }
-    private var isWallet: Bool { el.str(0) == "Wallet" }
-    /// A social post row — its thumbnail is the author's avatar, drawn as a
-    /// circle (a person, not an app), the one shape that breaks the squircle
-    /// column on purpose.
-    private var isSocial: Bool { el.str(0) == "Bluesky" || el.str(0) == "Farcaster" }
-    /// True when a REAL brand icon is bundled for this source (OpenClaw's berry,
-    /// GitHub, ChatGPT, …) — the same `brand-<name>` lookup BridgeIcon does. It
-    /// gets shown as-is; only sources WITHOUT one (the Apple apps) fall back to
-    /// the quiet glyph square. Matches BridgeIcon's normalization exactly.
-    private var hasBrandAsset: Bool {
-        UIImage(named: "brand-" + el.str(0).lowercased()
-            .replacingOccurrences(of: " ", with: "-")
-            .replacingOccurrences(of: ".", with: "")) != nil
-    }
-    /// The row's leading thumbnail (arg 9, one MediaItem ref) — the item's own
-    /// picture when it has one; empty for token/wallet rows (they wear a
-    /// sparkline square) and for any text-only source (they fall back to the
-    /// app glyph). The composer picks it; the renderer just draws it.
-    private var thumbRef: String? { el.refs(9).first }
-    /// A needs-you signal (rank ≥ 3: overdue / mentions / due, arg 8) — its word
-    /// reads in secondary ink so the eye finds it in the quiet eyebrow.
-    private var urgent: Bool { (Int(el.str(8)) ?? 0) >= 3 }
-    private var accent: Color {
-        TokenChartStyle.accent(change: chart?.change ?? 0, scheme: scheme)
-    }
-    /// The Wallet row's balance history (arg 10) — embedded closes, not
-    /// fetched (2026-07-18: the data already lives in `WalletStore.
-    /// combinedValueSamples()`, composed once with the rest of the doc). Every
-    /// other row leaves arg 10 unset, so this is empty everywhere else.
-    private var walletChart: TokenChart? {
-        TokenChart.from(closes: el.str(10).split(separator: ",").compactMap { Double($0) })
-    }
-    /// arg 10 does double duty by row type (mutually exclusive): the wallet
-    /// row's balance closes (isWallet, above) or a social row's author handle
-    /// for the profile deep link (isSocial).
-    private var socialHandle: String { el.str(10) }
-    /// The brand marks that are white-backed and glare brightest in the column
-    /// (user 2026-07-18) — inset in a faint square so they read as contained,
-    /// not a lit block. Dark/colored marks (OpenClaw, GitHub…) stay full-bleed.
-    private var lightMark: Bool { el.str(0) == "ChatGPT" || el.str(0) == "Gmail" }
-
-    /// The 46pt leading square — the row's content at a glance. An imaged item
-    /// shows its picture (medium-native); a token/wallet shows its sparkline in
-    /// a faint square; everything else shows the app's own glyph. One shape (the
-    /// app-icon squircle) across all three so the list reads as one column.
-    @ViewBuilder private var leadingThumb: some View {
-        let s: CGFloat = 46
-        let shape = RoundedRectangle(cornerRadius: DS.Radius.appIcon(s), style: .continuous)
-        if isToken, let chart {
-            shape.fill(DS.fillFaint).frame(width: s, height: s)
-                .overlay {
-                    TokenChartPlot(chart: chart, accent: accent, height: 30, pulses: false)
-                        .frame(width: s - 12, height: 30)
-                }
-        } else if isWallet, let walletChart {
-            shape.fill(DS.fillFaint).frame(width: s, height: s)
-                .overlay {
-                    TokenChartPlot(chart: walletChart,
-                                  accent: TokenChartStyle.accent(change: walletChart.change, scheme: scheme),
-                                  height: 30, pulses: false)
-                        .frame(width: s - 12, height: 30)
-                }
-        } else if isSocial {
-            // A face → the person, not the post: tapping an avatar opens the
-            // profile card (casberi://person/<source>/<handle>). RemoteThumb
-            // loads the avatar circularly and falls back to the app glyph (also
-            // circular) when a post has no avatar. The handle rides arg 10.
-            let avatar = thumbRef.flatMap { els[$0]?.str(1) } ?? ""
-            let handle = socialHandle
-            Button {
-                DSHaptic.selection()
-                if !handle.isEmpty,
-                   let url = URL(string: "casberi://person/\(el.str(0))/\(handle.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? handle)") {
-                    openURL(url)
-                }
-            } label: {
-                RemoteThumb(urlString: avatar, size: s, fallback: el.str(0), circular: true)
-            }
-            .buttonStyle(.plain)
-        } else if el.str(0) == "RSS", let ref = thumbRef, let child = els[ref] {
-            // The feed's logo, a squircle, with NO tap of its own — a publisher
-            // mark opens the feed, which the row tap already does (2026-07-18).
-            RemoteThumb(urlString: child.str(1), size: s, fallback: "RSS", circular: false)
-        } else if let ref = thumbRef, let child = els[ref] {
-            // A non-social item's own picture — tapping it opens that thing.
-            GenMediaTile(el: child, size: s).clipShape(shape)
-        } else if hasBrandAsset, lightMark {
-            // A white-backed mark (ChatGPT/Gmail) — inset in a faint square so
-            // it stops being the brightest block in the column.
-            shape.fill(DS.fillFaint).frame(width: s, height: s)
-                .overlay { BridgeIcon(name: el.str(0), size: s - 12) }
-        } else if hasBrandAsset {
-            // A real bundled brand icon (OpenClaw's berry, GitHub…) — full-bleed;
-            // a source we have a mark for should wear it, not a generic glyph
-            // (fix 2026-07-18: the quiet-square fallback below masked every asset).
-            BridgeIcon(name: el.str(0), size: s)
-        } else {
-            // No bundled brand asset (the Apple apps — Reminders, Calendar,
-            // Photos, …): a QUIET glyph square, not the loud brand-COLOR squircle
-            // BridgeIcon would synthesize for them. The eyebrow already names the
-            // app, so a neutral square + brand-tinted glyph keeps a hint of it
-            // and lets the words be the hero (the calm the real photos get).
-            shape.fill(DS.fillFaint).frame(width: s, height: s)
-                .overlay {
-                    Image(systemName: BridgeGlyph.symbol(for: el.str(0)))
-                        .font(.system(size: s * 0.42, weight: .medium))
-                        .foregroundStyle(BridgeGlyph.signalColor(for: el.str(0)))
-                }
-        }
-    }
-
-    /// The quiet line above the content — the app, then its live signal (or the
-    /// last-landed time when it has none). The name is the eyebrow now: the
-    /// thumb list shows the STUFF, so the content below can be the hero.
-    private var eyebrow: some View {
-        let trailing = isWallet ? "" : (el.str(1).isEmpty ? el.str(3) : el.str(1))
-        return HStack(spacing: 4) {
-            Text(el.str(0)).foregroundStyle(DS.textTertiary)
-            if !trailing.isEmpty {
-                Text(verbatim: "·").foregroundStyle(DS.textTertiary)
-                Text(trailing)
-                    .foregroundStyle(urgent ? DS.textSecondary : DS.textTertiary)
-                    .contentTransition(.numericText())
-            }
-        }
-        .dsText(.subhead13)
-        .lineLimit(1)
-    }
-
-    /// The hero line — the actual thing, in primary ink. A token reads
-    /// ticker · price · 1D; the wallet reads its total · top holdings; every
-    /// other source reads its latest item's title (tap it to open that item —
-    /// the rest of the row opens the app's feed).
-    @ViewBuilder private var mainLine: some View {
-        if isToken {
-            HStack(spacing: DS.Space.s2) {
-                Text(el.str(7)).dsText(.body17).foregroundStyle(DS.textPrimary)
-                if let chart {
-                    Text(TokenChartStyle.priceText(chart.price))
-                        .dsText(.subhead13).foregroundStyle(DS.textSecondary)
-                        .contentTransition(.numericText())
-                    TokenDeltaPill(change: chart.change, label: "1D", compact: true)
-                }
-            }
-            .lineLimit(1)
-        } else if isWallet {
-            Text([el.str(1), el.str(2)].filter { !$0.isEmpty }.joined(separator: " · "))
-                .dsText(.body17).foregroundStyle(DS.textPrimary).lineLimit(1)
-        } else if !el.str(2).isEmpty {
-            // Two lines (user 2026-07-18): one-line rows truncated the actual
-            // content ("…in the discourse…") and left the list feeling sparse —
-            // the hero is the STUFF, so give it room to read.
-            Text(el.str(2))
-                .dsText(.body17).foregroundStyle(DS.textPrimary).lineLimit(2)
-                .contentShape(Rectangle())
-                .onTapGesture {
-                    let id = el.str(4)
-                    if !id.isEmpty { thingOpen?(id) }
-                }
-        }
-    }
-
-    var body: some View {
-        HStack(spacing: DS.Space.s3) {
-            leadingThumb
-            VStack(alignment: .leading, spacing: 2) {
-                eyebrow
-                mainLine
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-        }
-        .padding(.horizontal, DS.Space.s4)
-        .padding(.vertical, DS.Space.s3)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        // On a card (user 2026-07-18): the cardless list read clean with a few
-        // rows but dense and undifferentiated with many — the card gives each app
-        // its own plane. The RICHER row content stays; the card is just its
-        // ground. Same surface + spacing a board card always wore.
-        .dsWidgetSurface()
-        .padding(.horizontal, DS.Space.s4)
-        .padding(.top, DS.Space.s3)
-        .contentShape(RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
-        .onTapGesture {
-            if let url = URL(string: "casberi://feed/source/\(el.str(0).addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? el.str(0))") {
-                openURL(url)
-            }
-        }
-        .contextMenu {
-            if !el.str(4).isEmpty {
-                Button {
-                    thingOpen?(el.str(4))
-                } label: {
-                    Label("Open", systemImage: "arrow.up.right")
-                }
-            }
-            Button(role: .destructive) {
-                // The Wallet row's presence is driven by each wallet's own
-                // `pinnedToHome` (WalletStore), not the hide/show set every
-                // other row uses — removing it means unpinning every wallet
-                // that put it there, or `setOnHome` would silently do nothing.
-                if el.str(0) == "Wallet" {
-                    for i in WalletStore.shared.addresses.indices {
-                        WalletStore.shared.addresses[i].pinnedToHome = false
-                    }
-                } else {
-                    HomePinnedSources.shared.setOnHome(el.str(0), false)
-                }
-                CorpusSignal.shared.bump()
-            } label: {
-                Label("Remove from Home", systemImage: "pin.slash")
-            }
-        }
-        // Keyed like GenTokenChip's fetch: streams can mount the row before
-        // its args land, and a pull re-fetches; no-op for non-token rows.
-        .task(id: "\(refreshTick):\(el.str(5))/\(el.str(6))") {
-            guard isToken, !el.str(5).isEmpty else { return }
-            let fetched = await TokenChart.fetch(chain: el.str(5), address: el.str(6))
-            withAnimation(.easeOut(duration: 0.4)) { chart = fetched }
-        }
-    }
-}
-
-/// ComingUp(title, [rowRefs]) — the "Coming up" leading card, rendered FLAT
-/// (crash fix 2026-07-15). The generic `Widget` path nests every row through
-/// GenRender → AnyView → GenRow → MountIn → 2×environment → pinnedRowActions,
-/// ~12 view levels deep; five of those at the top of the EAGER Home head
-/// (a plain VStack in a ScrollView — nothing deferred) pushed the first-frame
-/// SwiftUI tree past the 8MB main-stack margin, re-triggering the recurring
-/// deep-tree overflow ("crashes loading Home"; CLAUDE.md — "flatten the
-/// composition tree, not more stack"). This draws the header and ALL rows in
-/// one body: one shallow HStack per row, read straight from `els`, no
-/// per-row GenRender/AnyView/GenRow/MountIn. Behavior is unchanged — tap opens
-/// the thing, long-press offers Open / Open in app (the shared, already-flat
-/// `pinnedRowActions`), each row wears its tag glyph, title, and WHEN label.
-private struct GenComingUp: View {
-    let el: GenEl
-    let els: GenEls
-    @Environment(\.genThingOpen) private var thingOpen
-    @Environment(\.genThingHandoff) private var thingHandoff
-    /// Collapsed by default (ruling 2026-07-17): five rows of schedule made
-    /// Home read as a calendar and dulled the pull to open the real one. The
-    /// card leads with ONE row — the next thing due, its day worn inline — and
-    /// an "N more" footer expands to the sectioned view (3-row budget). The
-    /// choice persists; no per-launch re-decision.
-    @AppStorage("comingUpExpanded") private var expanded = false
-    /// Today's forecast (2026-07-17) — a live WeatherKit read, never stored on
-    /// a thing; nil until it resolves (or resolves to nil on denial/failure,
-    /// in which case Today stays plain, honesty rule).
-    @State private var weather: String?
-
-    var body: some View {
-        // Children arrive interleaved: a `ComingHead` day divider, then that
-        // day's `Row`s. Resolved refs draw, unresolved ones (still streaming)
-        // simply drop — the mount law without a skeleton nest.
-        let children = el.refs(1).compactMap { els[$0] }
-        let rowCount = children.count { $0.comp != "ComingHead" }
-        VStack(alignment: .leading, spacing: 0) {
-            // Sentence-case header, same type ramp as every board card's title
-            // (§8) — plain Text (the title is a fixed literal, never a thing's
-            // text, so it never rides the LocalizedStringKey format path).
-            Text(el.str(0))
-                .dsText(.heading22)
-                .foregroundStyle(DS.textPrimary)
-                .padding(.init(top: DS.Space.s4, leading: DS.Space.s4,
-                               bottom: DS.Space.s1, trailing: DS.Space.s4))
-            if expanded && rowCount > 1 {
-                // The calendar read: day sections, Today always leading (even
-                // empty — ruling 2026-07-15), up to the 3-row budget.
-                ForEach(Array(children.enumerated()), id: \.offset) { _, child in
-                    if child.comp == "ComingHead" { headLine(child) }
-                    else { rowLine(child) }
-                }
-            } else if let next = nextUp(children) {
-                // The ticker read: just the next thing due, its section's day
-                // label ("Today" / "Tomorrow" / "Overdue" / weekday) in the
-                // trailing slot so a no-today lead still says WHEN it is —
-                // the 2026-07-15 confusion, answered inline instead of by a
-                // sectioned calendar.
-                rowLine(next.row, when: next.when, isToday: next.isToday)
-            }
-            // The expand/collapse footer — only when there's actually more to
-            // show (honesty: a one-row lane gets no dead control).
-            if rowCount > 1 { footer(more: rowCount - 1) }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.bottom, DS.Space.s2)
-        .dsWidgetSurface()
-        .padding(.horizontal, DS.Space.s4)
-        .padding(.top, DS.Space.s4)
-        .task { weather = await WeatherEnrichment.todaySummary() }
-    }
-
-    /// "Today" grows a trailing forecast when one resolved; every other day
-    /// label (Tomorrow, a weekday, Overdue) passes through unchanged — the
-    /// card only ever answers for the day it's actually shown for. Gated on
-    /// the `isToday` flag `ComingUp.Section` computes off the actual date,
-    /// NOT a string match against the label — the label is already the
-    /// LOCALIZED word (`String(localized: "Today")`), so comparing it to the
-    /// English literal "Today" silently never matched on any other locale.
-    private func dayLabel(_ label: String, isToday: Bool) -> String {
-        guard isToday, let weather else { return label }
-        return "\(label) · \(weather)"
-    }
-
-    /// The first real row, the day label of the section it sits in, and
-    /// whether that section is Today — children are ordered head-then-rows,
-    /// so the nearest preceding `ComingHead` names the row's day.
-    private func nextUp(_ children: [GenEl]) -> (row: GenEl, when: String, isToday: Bool)? {
-        var day = ""
-        var isToday = false
-        for child in children {
-            if child.comp == "ComingHead" { day = child.str(0); isToday = child.str(2) == "1" }
-            else { return (child, day, isToday) }
-        }
-        return nil
-    }
-
-    /// "N more" / "Show less" — a muted footer line, sentence case (§8), the
-    /// whole card's only control. Count is the rows this card holds beyond the
-    /// lead, so tapping delivers exactly what the label promised.
-    private func footer(more: Int) -> some View {
-        Button {
-            withAnimation(DS.Motion.standard) { expanded.toggle() }
-        } label: {
-            HStack(spacing: DS.Space.s1) {
-                Text(expanded ? String(localized: "Show less")
-                              : String(localized: "\(more) more"))
-                    .dsText(.subhead13)
-                Image(systemName: expanded ? "chevron.up" : "chevron.down")
-                    .font(.system(size: 10, weight: .semibold))
-            }
-            .foregroundStyle(DS.textSecondary)
-            .padding(.horizontal, DS.Space.s4)
-            .padding(.vertical, DS.Space.s2)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-    }
-
-    /// A day-section header — the WHEN as words, sentence case (§8: no
-    /// letter-spacing, no all-caps). An empty section (arg1 "1", only ever
-    /// Today) trades its rows for a muted "Nothing scheduled" line so the card
-    /// still visibly starts on today.
-    private func headLine(_ head: GenEl) -> some View {
-        VStack(alignment: .leading, spacing: DS.Space.s1) {
-            Text(dayLabel(head.str(0), isToday: head.str(2) == "1"))
-                .dsText(.heading17)
-                .foregroundStyle(DS.textSecondary)
-            if head.str(1) == "1" {
-                Text(String(localized: "Nothing scheduled"))
-                    .dsText(.body17)
-                    .foregroundStyle(DS.textTertiary)
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, DS.Space.s4)
-        .padding(.top, DS.Space.s3)
-        .padding(.bottom, head.str(1) == "1" ? DS.Space.s2 : DS.Space.s1)
-    }
-
-    /// One line — the same geometry GenRow draws (tag glyph · title · trailing
-    /// WHEN), built here as a leaf so the card stays shallow. Tap + long-press
-    /// ride the shared `pinnedRowActions`; no glint (that's answer-only) and no
-    /// per-row mount animation (the card mounts as one).
-    private func rowLine(_ row: GenEl, when: String = "", isToday: Bool = false) -> some View {
-        HStack(spacing: DS.Space.s3) {
-            TagGlyph(tag: row.str(1), size: 24)
-            Text(row.str(0))
-                .dsText(.body17)
-                .foregroundStyle(DS.textPrimary)
-                .lineLimit(1)
-                .frame(maxWidth: .infinity, alignment: .leading)
-            // Trailing slot — in the sectioned view the day lives in the
-            // header, so this is empty; the collapsed lead row passes its
-            // section's day label in `when` instead.
-            let trailing = when.isEmpty ? row.str(3) : when
-            if !trailing.isEmpty {
-                Text(dayLabel(trailing, isToday: isToday)).dsText(.subhead13).foregroundStyle(DS.textTertiary)
-            }
-        }
-        .padding(.horizontal, DS.Space.s4)
-        .padding(.vertical, DS.Space.s3)
-        .pinnedRowActions(id: row.str(4), openable: row.str(5) == "app",
-                          open: thingOpen, unpin: nil, handoff: thingHandoff,
-                          removeApp: nil)
     }
 }
 
@@ -1256,7 +841,8 @@ struct ContributionGraph: View {
 //
 // All four share ONE card chrome and header, and each renders FLAT — a single
 // shallow body over a Canvas / one GeometryReader — so they mount safely at the
-// eager feed head (the launch-stack law, same reason `GenComingUp` exists). The
+// eager feed head (the launch-stack law — CLAUDE.md: "flatten the composition
+// tree, not more stack"). The
 // data behind each is derived only from what the bridge really stored
 // (`FeedInsight` / `FeedHeatmap`); the guards live there, so a card that reaches
 // a view always has something real to draw.
@@ -2792,119 +2378,12 @@ private struct GenApprovalCard: View {
     }
 }
 
-// MARK: - Cover (the slim data-first hero)
-
-/// Cover(eyebrow, title, subline, source, dateline, tag, [Tag N, ...],
-/// thingId) — the slim data-first hero, painted straight on the page
-/// (2026-07-10): date, today's kind chips, and the "Just landed" card. The
-/// cover stopped being an image element when the Banner became the
-/// Background setting — the wallpaper is HomeScreen's page background now,
-/// and this block is just content on it. Arg 6's tag still marks the
-/// stream complete; arg 8 (2026-07-11, user) is the landed thing's id —
-/// the card opens it, same tap the Pinned rows carry.
-private struct GenCover: View {
-    let el: GenEl
-    @Environment(\.genCoverTopInset) private var topInset
-    @Environment(\.genThingOpen) private var thingOpen
-    @Environment(\.genProjectTap) private var projectTap
-
-    /// White over a set wallpaper (a deepened color or a dimmed photo —
-    /// both dark fields); the page's own adaptive ink on the default page.
-    private var coverInk: Color {
-        HomeBackgroundStore.shared.image != nil ? .white : DS.textPrimary
-    }
-
-    /// The cover's top edge in global space — the dateline fades over the
-    /// first 60pt of scroll so it never collides with the nav doors (§4).
-    @State private var slotMinY: CGFloat = 0
-    private var datelineFade: Double {
-        let gone = Double(max(0, -slotMinY)) / 60.0
-        return 1.0 - min(1.0, gone)
-    }
-
-    var body: some View {
-        VStack(spacing: 0) {
-            Color.clear.frame(height: topInset)
-            // Reserve the dateline's band so the content can't crowd it.
-            if !el.str(4).isEmpty {
-                Color.clear.frame(height: 44)
-            }
-            textBlock
-                .frame(maxWidth: .infinity, alignment: .leading)
-        }
-        .onGeometryChange(for: CGFloat.self) { proxy in
-            proxy.frame(in: .global).minY
-        } action: { slotMinY = $0 }
-        // Left-aligned with the content below it (2026-07-10, user) —
-        // centered read as a title; the date is a label, and every other
-        // label on the page starts at the leading edge.
-        .overlay(alignment: .topLeading) {
-            if !el.str(4).isEmpty {
-                // The date IS Home's header (2026-07-13 polish): Apps and
-                // Settings open on a heading, and Home opened on a whisper —
-                // the page's first words now carry heading weight.
-                Text(el.str(4))
-                    .dsText(.heading22)
-                    .foregroundStyle(coverInk)
-                    .padding(.top, topInset + DS.Space.s2)
-                    .padding(.leading, DS.Space.s4)
-                    .opacity(datelineFade)
-            }
-        }
-    }
-
-    /// The cover is the DATE header ALONE once a thing has landed (kind chips
-    /// retired 2026-07-17 — a whole-corpus lifetime tally that only looked like
-    /// signal; the feed filters by kind natively, and the board's rows carry
-    /// the live signal now). The hero card returns ONLY for the quiet/empty
-    /// STATES — "A quiet day" / "Your things go here" (a non-empty title, arg
-    /// 1) — where the words ARE the message. Empty otherwise, so the cover
-    /// costs nothing but the date band.
-    @ViewBuilder private var textBlock: some View {
-        if !el.str(1).isEmpty {
-            HStack(alignment: .top, spacing: DS.Space.s3) {
-                if !el.str(3).isEmpty {
-                    BridgeIcon(name: el.str(3), size: 28)
-                }
-                VStack(alignment: .leading, spacing: DS.Space.s1) {
-                    Text(el.str(0))
-                        .dsText(.label12)
-                        .foregroundStyle(DS.textSecondary)
-                    Text(el.str(1))
-                        .dsText(.heading22)
-                        .foregroundStyle(DS.textPrimary)
-                        .lineLimit(2)
-                        .minimumScaleFactor(0.7)
-                        .fixedSize(horizontal: false, vertical: true)
-                    if !el.str(2).isEmpty {
-                        Text(el.str(2))
-                            .dsText(.subhead13)
-                            .foregroundStyle(DS.textSecondary)
-                    }
-                }
-            }
-            .padding(.horizontal, DS.Space.s4)
-            .padding(.vertical, DS.Space.s3)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(DS.surfaceSheet,
-                        in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
-            .contentShape(RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
-            .onTapGesture {
-                let id = el.str(7)
-                guard !id.isEmpty else { return }
-                if id.hasPrefix("@") { projectTap?(id) } else { thingOpen?(id) }
-            }
-            .padding(DS.Space.s4)
-        }
-    }
-}
-
 // MARK: - Kind pills (replaces KindBar on Home — identity color, one row)
 
 /// One row of kind-count chips — hue capsule, glyph in the kind's color,
 /// count in `ink`. A tap opens the Feed filtered to that kind — the chips
-/// are navigation, not decoration. Shared by the cover (white ink over a
-/// photo or the black field) and KindPills (page ink).
+/// are navigation. Used by `GenKindPills` (page ink) — the old Home cover's
+/// own kind-chip variant retired with the board, 2026-07-20.
 private struct KindCountRow: View {
     struct Item { let tag: String; let n: Int; var route: String? = nil }
     let items: [Item]

@@ -8,16 +8,16 @@ import SwiftData
 /// ends in proof — things land. Dedupe rides sourceRef.
 enum ScheduleIngest {
 
-    /// How far ahead calendar events are pulled — the "Coming up" lane's
-    /// horizon (ComingUp.window). Re-ruling 2026-07-14: the feed used to stop
-    /// at the end of today ("the calendar owns the future"); it now reaches a
-    /// week ahead so imminent events can surface on Home as things. Past events
-    /// still start a week back, so the window is a rolling ±7 days.
+    /// How far ahead calendar events are pulled. Re-ruling 2026-07-14: the feed
+    /// used to stop at the end of today ("the calendar owns the future"); it
+    /// now reaches a week ahead so imminent events can surface as things. Past
+    /// events still start a week back, so the window is a rolling ±7 days.
     static let forwardWindow: TimeInterval = 7 * 86_400
 
-    /// Events from a week back through a week ahead — the past feeds the record,
-    /// the next seven days feed the "Coming up" card (re-ruling 2026-07-14).
-    /// BridgeRefresh re-runs this each foreground, so the forward window rolls.
+    /// Events from a week back through a week ahead — the past feeds the
+    /// record, the next seven days feed imminent-event things (re-ruling
+    /// 2026-07-14). BridgeRefresh re-runs this each foreground, so the
+    /// forward window rolls.
     ///
     /// Recurring events (2026-07-14): EventKit hands every occurrence of a
     /// recurring event the SAME `eventIdentifier`, so a daily meeting arrives as

@@ -362,52 +362,14 @@ struct WalletScreen: View {
 
     /// One wallet's treemap card — holdings render through the gen-UI engine
     /// (allocation is magnitude, so the treemap is its native shape; holdings
-    /// are SYNTHESIS, not things), one card per wallet so each can wear its
-    /// own Home control (2026-07-17). The pin sits in the header's free
-    /// trailing corner — ON the very thing pinning places on Home — because
-    /// the Watching section's pin lives in the admin cluster at the bottom,
-    /// and a fresh connect buries it under exactly this card plus the
-    /// activity it just landed; nothing at the moment of intent said Home
-    /// exists. Same per-address verb as the row pin and the swipe.
+    /// are SYNTHESIS, not things), one card per wallet. Its own Home-pin
+    /// control retired with the board (2026-07-20) — nothing to pin to.
     private func holdingsMap(_ group: WalletIngest.HoldingsGroup) -> some View {
         let doc = WalletIngest.groupDocument(group).joined(separator: "\n")
         return GenRender(id: "root", els: GenParser.parse(prefix: doc[...], isComplete: true))
-            .overlay(alignment: .topTrailing) {
-                if let addr = group.address,
-                   let entry = wallet.addresses.first(where: {
-                       $0.address.lowercased() == addr.lowercased()
-                   }) {
-                    mapPinControl(entry)
-                }
-            }
             .listRowBackground(Color.clear)
             .listRowSeparator(.hidden)
             .listRowInsets(EdgeInsets())
-    }
-
-    /// The card's Home verb, labeled — a bare corner glyph would be one more
-    /// thing to decode, and discoverability is this control's whole job.
-    /// Same grammar as the NFT strip's "On Home · remove" line below it.
-    private func mapPinControl(_ entry: WalletStore.WatchedAddress) -> some View {
-        Button {
-            DSHaptic.tap()
-            wallet.togglePin(entry.id)
-        } label: {
-            HStack(spacing: DS.Space.s1) {
-                Image(systemName: entry.pinnedToHome ? "pin.fill" : "pin")
-                    .font(.system(size: 11, weight: .medium))
-                Text(entry.pinnedToHome ? "On Home" : "Pin to Home")
-                    .dsText(.subhead13)
-            }
-            .foregroundStyle(entry.pinnedToHome ? DS.tint : DS.textSecondary)
-            .padding(.vertical, DS.Space.s1)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        // Matches GenTagMap's own header inset (top s4, horizontal s4), so
-        // the control sits on the title line, across from the wallet's name.
-        .padding(.top, DS.Space.s4)
-        .padding(.trailing, DS.Space.s4)
     }
 
     // MARK: - Value history (2026-07-14)
@@ -567,41 +529,16 @@ struct WalletScreen: View {
                                            compact: true)
                         }
                     }
-                    // A visible pin control on every row (user, 2026-07-14):
-                    // wallets pin per-ADDRESS (you might watch three and pin
-                    // one), so the toggle lives on the row rather than as the
-                    // source-level PinToHomeButton every other app screen
-                    // carries above its list. Tap to pin/unpin; the trailing
-                    // swipe still does the same — one verb, two ways.
-                    Button {
-                        DSHaptic.tap()
-                        wallet.togglePin(addr.id)
-                    } label: {
-                        Image(systemName: addr.pinnedToHome ? "pin.fill" : "pin")
-                            .font(.system(size: 14))
-                            .foregroundStyle(addr.pinnedToHome ? DS.tint : DS.textTertiary)
-                            .frame(width: 32, height: 32)
-                            .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
                 }
                 .dsListCardRow()
                 .modifier(SwipeHintNudge(active: addr.id == hintAddressID) { swipeCoachDone = true })
-                // The pin swipe is the SAME GESTURE everywhere (2026-07-10,
-                // user: it was leading here, trailing in Feed — one verb,
-                // two directions): trailing edge, Feed's edge.
-                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                    // Full swipe = pin (Feed's grammar). An explicit trailing
-                    // group replaces the system delete, so Remove rides here
-                    // too — Edit mode's red minus still works.
-                    Button {
-                        DSHaptic.tap()
-                        wallet.togglePin(addr.id)
-                    } label: {
-                        Label(addr.pinnedToHome ? "Unpin" : "Pin",
-                              systemImage: addr.pinnedToHome ? "pin.slash" : "pin")
-                    }
-                    .tint(DS.tint)
+                // Pin retired with the board (2026-07-20) — Remove is now the
+                // swipe group's ONLY action. `allowsFullSwipe` was true when
+                // a full swipe meant Pin (Feed's own reversible grammar); left
+                // true here it would let a full swipe delete a watched wallet
+                // by accident, so it drops to false now that Remove is all
+                // that's left.
+                .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                     Button(role: .destructive) {
                         if let i = wallet.addresses.firstIndex(where: { $0.id == addr.id }) {
                             wallet.remove(at: IndexSet(integer: i))

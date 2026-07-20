@@ -927,9 +927,9 @@ struct AppsScreen: View {
 /// The deck's swipe input. A SwiftUI DragGesture here — plain OR
 /// simultaneous, any minimumDistance — beats the enclosing UIScrollView's
 /// pan, and the page stops scrolling from a finger that lands on the card
-/// (measured on the sim 2026-07-16; the same class of failure as the Home
-/// board's, fixed the same way — one UIKit recognizer on the enclosing
-/// scroll view, per `Design/BoardDragDriver.swift`). This pan begins ONLY
+/// (measured on the sim 2026-07-16; the same class of failure as the old Home
+/// board's drag-to-reorder, fixed the same way — one UIKit recognizer on the
+/// enclosing scroll view). This pan begins ONLY
 /// for a clearly horizontal pull that starts inside the marker's bounds;
 /// vertical and diagonal drags fail it instantly, so the scroll keeps them.
 /// The marker itself never eats touches (`isUserInteractionEnabled = false`)
@@ -955,10 +955,10 @@ private struct DeckPanCatcher: UIViewRepresentable {
     /// Delivers callbacks from its OWN touch handlers — never target-action:
     /// a stock recognizer added to SwiftUI's UIScrollView transitions state
     /// correctly, but its target-action fires only intermittently — SwiftUI's
-    /// gesture environment eats the dispatch (BoardDragDriver's on-device
-    /// lesson, 2026-07-13; §gotchas lesson 2). Setting `state` still feeds
-    /// UIKit's exclusivity machinery, so the scroll pan is cancelled when
-    /// this begins and vice versa.
+    /// gesture environment eats the dispatch (the old Home board's
+    /// drag-to-reorder lesson, 2026-07-13; CLAUDE.md gotchas). Setting
+    /// `state` still feeds UIKit's exclusivity machinery, so the scroll
+    /// pan is cancelled when this begins and vice versa.
     final class Pan: UIPanGestureRecognizer {
         var deliver: ((UIGestureRecognizer.State, CGFloat, CGFloat) -> Void)?
 
