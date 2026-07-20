@@ -46,6 +46,34 @@ enum AskMemory {
         counts = c
     }
 
+    // MARK: - Asks made (proactive minting, docs/agent-brief.md 2026-07-20)
+
+    /// The INVERSE counter: how many times each keepable ask has actually
+    /// been ASKED (typed or tile-tapped), keyed by the same kind strings the
+    /// kept-ask store uses ("wallet", "showtag:recipes", "search:design
+    /// links"). Crossing `mintThreshold` upgrades the answer's quiet Keep
+    /// pill to a prominent "You ask this a lot — keep it?" prompt. Keeping
+    /// (or the ask being already kept) makes the counter moot — it's never
+    /// read for a kept kind, so no reset is needed on keep.
+    static let mintThreshold = 3
+    private static let madeKey = "composer.asksMadeCounts"
+
+    private static var madeCounts: [String: Int] {
+        get { UserDefaults.standard.dictionary(forKey: madeKey) as? [String: Int] ?? [:] }
+        set { UserDefaults.standard.set(newValue, forKey: madeKey) }
+    }
+
+    /// Called once per settled, keepable ask (commit()'s settle step).
+    static func asked(_ key: String) {
+        var c = madeCounts
+        c[key, default: 0] += 1
+        madeCounts = c
+    }
+
+    static func askedOften(_ key: String) -> Bool {
+        madeCounts[key, default: 0] >= mintThreshold
+    }
+
     #if DEBUG
     /// `-askStats "<key>:<n>[,<key>:<n>…]"` or `-askStats clear` — seed the
     /// counters headlessly so the decay verifies without ten launches. Runs
@@ -70,6 +98,30 @@ enum AskMemory {
             c[parts[0]] = n
         }
         counts = c
+    }
+
+    /// `-asksMade "<key>:<n>[,…]"` or `-asksMade clear` — seed the minting
+    /// counter headlessly so the "keep it?" upgrade verifies in one launch.
+    /// Splits each pair on the LAST colon (a compound key like
+    /// `search:design links` carries its own).
+    private static var madeSeededThisLaunch = false
+    static func seedMadeFromLaunchArgs() {
+        guard !madeSeededThisLaunch else { return }
+        madeSeededThisLaunch = true
+        guard let spec = UserDefaults.standard.string(forKey: "asksMade"),
+              !spec.isEmpty else { return }
+        if spec == "clear" {
+            madeCounts = [:]
+            return
+        }
+        var c = madeCounts
+        for pair in spec.split(separator: ",") {
+            guard let colon = pair.range(of: ":", options: .backwards)?.lowerBound,
+                  let n = Int(pair[pair.index(after: colon)...].trimmingCharacters(in: .whitespaces))
+            else { continue }
+            c[String(pair[pair.startIndex..<colon]).trimmingCharacters(in: .whitespaces)] = n
+        }
+        madeCounts = c
     }
     #endif
 }

@@ -35,6 +35,12 @@ enum KeptAskComposers {
         if kind.hasPrefix("showtag:") {
             return showtag(String(kind.dropFirst("showtag:".count)), things: things)
         }
+        if kind.hasPrefix("context:") {
+            return contextRecap(String(kind.dropFirst("context:".count)), things: things)
+        }
+        if kind.hasPrefix("search:") {
+            return search(String(kind.dropFirst("search:".count)), things: things)
+        }
         return nil
     }
 
@@ -164,6 +170,61 @@ enum KeptAskComposers {
         return Result(delta: "\(matched.count) things", digest: "\(matched.count)",
                       doc: ["root = Stack([ins, res])", "ins = Insight(\"\(genSafe(line))\")"]
                           + rows(Array(matched.prefix(6)), title: "Tagged \(tag)"))
+    }
+
+    // MARK: - What's new in <source>
+
+    /// A per-source recap ("What's new in GitHub?") — the same recency
+    /// window `StatusAsk`'s no-timeframe default uses (three days, widening
+    /// to a week when quiet), scoped to one source. Light duplication of
+    /// that widening rather than reaching into `StatusAsk.pulse` (which
+    /// parses a natural-language CUE, not a bare source name) — same
+    /// precedent as `overdue`'s duplication above.
+    private static func contextRecap(_ source: String, things: [Thing]) -> Result? {
+        let now = Date.now
+        var pool = things.filter { $0.source == source && $0.capturedAt >= now.addingTimeInterval(-3 * 86_400) }
+        var windowWords = "in the last three days"
+        if pool.isEmpty {
+            pool = things.filter { $0.source == source && $0.capturedAt >= now.addingTimeInterval(-7 * 86_400) }
+            windowWords = "in the last week"
+        }
+        guard !pool.isEmpty else {
+            return Result(delta: "", digest: "0",
+                          doc: ["root = Stack([ins])",
+                                "ins = Insight(\"\(genSafe("Nothing new from \(source) recently."))\")"])
+        }
+        let line = "\(pool.count) thing\(pool.count == 1 ? "" : "s") from \(source) \(windowWords)."
+        return Result(delta: "\(pool.count) things", digest: "\(pool.count)",
+                      doc: ["root = Stack([ins, res])", "ins = Insight(\"\(genSafe(line))\")"]
+                          + rows(Array(pool.prefix(6)), title: "From \(source)"))
+    }
+
+    // MARK: - Kept search
+
+    /// A free-text ask kept as a standing search (docs/agent-brief.md ruling
+    /// 13, 2026-07-20) — re-runs `Retriever.rank` EVERY time, the same
+    /// deterministic engine `RootShell.answerDocument`'s general retrieval
+    /// branch uses, never the model. The honest degradation this requires:
+    /// a kept "summarize my week" shows what the summary was drawn from, not
+    /// a re-synthesized summary — the chip's title is the ORIGINAL question,
+    /// the answer is "here's what matches now."
+    private static func search(_ query: String, things: [Thing]) -> Result? {
+        let hits = Retriever.rank(query, in: things, isPoolRefinement: false)
+        guard !hits.isEmpty else {
+            return Result(delta: "", digest: "0",
+                          doc: ["root = Stack([ins])",
+                                "ins = Insight(\"\(genSafe("Nothing matches anymore."))\")"])
+        }
+        let line = "\(hits.count) thing\(hits.count == 1 ? "" : "s") match."
+        // Bare count, matching `showtag`/`contextRecap`/`overdue`'s digest
+        // shape exactly — the pill renders this digest verbatim as its own
+        // trailing signal text (`Composer.keptAskPills`), so it has to be
+        // display-safe, not just a good change-detection key. (A same-count
+        // reshuffle of WHICH things match goes undetected — the same
+        // accepted limitation every other count-only composer already has.)
+        return Result(delta: "\(hits.count) things", digest: "\(hits.count)",
+                      doc: ["root = Stack([ins, res])", "ins = Insight(\"\(genSafe(line))\")"]
+                          + rows(Array(hits.prefix(6)), title: "Matches"))
     }
 
     // MARK: - Noticed

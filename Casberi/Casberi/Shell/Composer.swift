@@ -172,9 +172,41 @@ struct Composer: View {
         } else if q.hasPrefix("show "),
                   let tag = tagPool.first(where: { q == "show \($0.lowercased())" }) {
             kind = "showtag:\(tag)"
+        } else if q.contains("overdue"),
+                  things.contains(where: { $0.mark != .done && ($0.source == "Reminders" || $0.source == "Todoist")
+                                            && ($0.dueAt ?? .distantFuture) < .now }) {
+            kind = "overdue"
+        } else if let name = contextSourceName(q),
+                  let source = Set(things.map(\.source)).first(where: { $0.lowercased() == name }) {
+            kind = "context:\(source)"
+        } else if TagsAsk.parse(question) == nil, AppsAsk.parse(question) == nil,
+                  AggregateAsk.parse(question, sources: Array(Set(things.map(\.source)))) == nil,
+                  StatusAsk.pulse(question, things: things) == nil,
+                  !Retriever.rank(question, in: things, isPoolRefinement: false).isEmpty {
+            // Kept SEARCHES (docs/agent-brief.md ruling 13, 2026-07-20) — any
+            // free-text ask that actually retrieved something becomes
+            // keepable. The exclusions above matter: `answerDocument` checks
+            // TagsAsk/AppsAsk/AggregateAsk/StatusAsk BEFORE the general
+            // retriever, so a question one of those would have answered
+            // must never mint a `search:` kind — its kept re-run (retrieval
+            // rows) would silently disagree with what the live answer
+            // actually showed (an arithmetic line, a status pulse, …).
+            kind = "search:\(q.trimmingCharacters(in: CharacterSet(charactersIn: "? ")))"
         }
         guard let kind, !KeptAskStore.shared.isKept(kind) else { return nil }
         return kind
+    }
+
+    /// "what's new in <source>" / "whats new in <source>" — the bare source
+    /// name after the phrase, lowercased and trimmed, or nil if the phrase
+    /// doesn't match at all. Matching against a REAL source happens at the
+    /// call site (this only strips the phrase).
+    private func contextSourceName(_ q: String) -> String? {
+        for prefix in ["what's new in ", "whats new in "] where q.hasPrefix(prefix) {
+            return String(q.dropFirst(prefix.count))
+                .trimmingCharacters(in: CharacterSet(charactersIn: "? "))
+        }
+        return nil
     }
     /// A typed organize command's pending change — rendered as a card, the
     /// write waits for Apply (typed words never write silently).
@@ -291,6 +323,10 @@ struct Composer: View {
         // headlessly (see AskMemory; self-guarded to once per launch), so
         // demotion verifies in one launch.
         AskMemory.seedFromLaunchArgs()
+        // `-asksMade "<key>:<n>[,…]|clear"` — seed the proactive-minting
+        // counter the same way, so the "keep it?" upgrade verifies in one
+        // launch too.
+        AskMemory.seedMadeFromLaunchArgs()
         #endif
         tagPool = tagCandidates()   // one corpus walk per open, not per keystroke
         var out: [AskOption] = []
@@ -352,9 +388,28 @@ struct Composer: View {
         // the composer 2026-07-12: it's per-APP now, placed from the app's own
         // screen, not a phrase. "How many links this week?" died 2026-07-16 —
         // ruling: nobody cares; counting stays a typed power, never a tile.)
-        if let top = tagPool.first {
-            out.append(AskOption(kind: "showtag", title: "Show \(top)",
-                                 glyph: "tag", memoryKey: "showtag:\(top)"))
+        // Top TWO tags now (was one, 2026-07-20) — a chip vocabulary as wide
+        // as the corpus means more than one tag gets a one-tap path to kept.
+        for tag in tagPool.prefix(2) {
+            out.append(AskOption(kind: "showtag", title: "Show \(tag)",
+                                 glyph: "tag", memoryKey: "showtag:\(tag)"))
+        }
+        // The overdue chip (2026-07-20) — mirrors KeptAskComposers.overdue's
+        // own filter (light duplication, same precedent as elsewhere in this
+        // function) so the tile can't offer what its composer would call
+        // empty.
+        if all.contains(where: { $0.mark != .done && ($0.source == "Reminders" || $0.source == "Todoist")
+                                  && ($0.dueAt ?? .distantFuture) < .now }) {
+            out.append(AskOption(kind: "overdue", title: "What's overdue?",
+                                 glyph: "exclamationmark.circle"))
+        }
+        // The Noticed chip (2026-07-20) — the board's old "Noticed" card had
+        // no home after the board retired (prd §131); this is its one way
+        // back in. Tile-only: there's no natural typed trigger for a
+        // spontaneous connection, so it's never in `recognizeKeptAskKind`.
+        if let noticed = HomeInsightStore.shared.line, !noticed.isEmpty {
+            out.append(AskOption(kind: "noticed", title: "Noticed",
+                                 glyph: "sparkle"))
         }
         if !all.isEmpty {
             out.append(AskOption(kind: "week", title: "What's this week?",
@@ -590,13 +645,24 @@ struct Composer: View {
                                                 // composer (KeptAskComposers) — no dead
                                                 // control once kept.
                                                 if let kind = keepableAskKind {
+                                                    // Proactive minting (2026-07-20): asked
+                                                    // often enough (AskMemory.askedOften, the
+                                                    // neglect counter's inverse), the quiet
+                                                    // pill upgrades to a prompt that names WHY
+                                                    // — same action, same component, just the
+                                                    // label earning the attention a repeated
+                                                    // ask deserves.
+                                                    let askedOften = AskMemory.askedOften(kind)
                                                     Button {
                                                         DSHaptic.tap()
                                                         KeptAskStore.shared.keep(kind, title: currentQuestion)
                                                         keepableAskKind = nil
                                                     } label: {
-                                                        Chip(text: "Keep", style: .tint,
-                                                             glyph: "pin.fill")
+                                                        Chip(text: askedOften
+                                                                ? "You ask this a lot — keep it?"
+                                                                : "Keep",
+                                                             style: .tint,
+                                                             glyph: askedOften ? "sparkles" : "pin.fill")
                                                     }
                                                     .buttonStyle(.plain)
                                                 }
@@ -1450,6 +1516,13 @@ struct Composer: View {
                 // corpus-wide read.
                 let settledThings = (try? modelContext.fetch(FetchDescriptor<Thing>())) ?? []
                 keepableAskKind = recognizeKeptAskKind(q, in: settledThings)
+                // Proactive minting (2026-07-20): count each keepable ask
+                // actually made, so a question asked often can upgrade its
+                // quiet Keep pill to a "you ask this a lot" prompt. Counted
+                // ONLY for keepable kinds — the counter's key space IS the
+                // kind space, so an unkeepable ask has nothing to count
+                // toward.
+                if let kind = keepableAskKind { AskMemory.asked(kind) }
                 if streamed { answerStream.paint(finalDoc) }
                 else { answerStream.stream(finalDoc) }
                 fieldFocused = true     // ready for the next follow-up

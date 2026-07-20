@@ -142,6 +142,35 @@ Canonical mockups (visual reference, in ruling order):
     exists, it doesn't invent one. Implemented and device-verified 2026-07-20
     (prd §132); the chip itself stays text-only (see ruling 5's tripwire) —
     the visualization lives only in the pushed answer.
+14. **The chip vocabulary widens to the corpus and the user's own behavior —
+    not a fixed preset menu** (user ruling, 2026-07-20: "more chips, not just
+    the preset ones"). Three deterministic widening mechanisms, all still
+    inside ruling 1's no-model-in-the-kept-path guarantee:
+    - **Parameterized kinds**: `context:<Source>` ("what's new in Calendar?"),
+      `overdue`, and `noticed` (tile-only — no typed trigger, it's a
+      spontaneous connection) join the existing `showtag:<tag>`, now offering
+      the top TWO tags instead of one. The suggestion grid still caps at 4
+      tiles — a wider candidate pool competes for the same slots by real
+      signal, it doesn't grow the grid.
+    - **Kept searches** (the headline unlock): ANY free-text ask that
+      actually retrieved something becomes keepable, as `search:<query>`.
+      This required lifting `RootShell.retrieve`'s scoring body into a
+      standalone `Model/Retriever.swift` (`Retriever.rank`, a pure
+      extraction — `RootShell.retrieve` is now a thin forwarder) so
+      `KeptAskComposers` can re-run the identical engine. **Locked
+      contract**: a kept search ALWAYS re-runs as retrieval, never
+      re-synthesis — a kept "summarize my week" shows what the summary was
+      drawn from, the honest degradation ruling 1 already requires.
+      `recognizeKeptAskKind` explicitly excludes anything `TagsAsk`/
+      `AppsAsk`/`AggregateAsk`/`StatusAsk` would have answered first (their
+      live answer is a computed line, not retrieval rows — letting them
+      mint a `search:` kind would make the kept re-run silently disagree
+      with what the person actually saw).
+    - **Proactive minting**: `AskMemory` gained the neglect counter's
+      inverse (`asked`/`askedOften`, `AskMemory.mintThreshold` = 3) — a
+      keepable ask made often enough upgrades its quiet "Keep" pill to
+      "You ask this a lot — keep it?", same action underneath.
+    Device-verified 2026-07-20 (prd §133).
 
 ## Explicitly NOT ruled — do not build, do not touch
 

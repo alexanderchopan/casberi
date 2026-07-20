@@ -114,7 +114,11 @@ final class KeptAskStore {
             NSLog("[Casberi] keepAskProbe: cleared")
             return
         }
-        guard let colon = spec.firstIndex(of: ":") else { return }
+        // LAST colon, not first (fix 2026-07-20) — a compound kind
+        // (`showtag:Book club`, `context:Calendar`) carries its own colon,
+        // so splitting on the first one truncated the kind and swallowed
+        // the rest into the title. A real title never ends in ": word".
+        guard let colon = spec.range(of: ":", options: .backwards)?.lowerBound else { return }
         let kind = String(spec[spec.startIndex..<colon])
         let title = String(spec[spec.index(after: colon)...])
         shared.keep(kind, title: title)
