@@ -17,7 +17,7 @@ html,body{width:1080px;height:1920px;overflow:hidden;background:#EEEAE1;font-fam
 <div class="mast mono"><span>CASBERI</span><span>REEL</span></div>
 <div class="rule" id="rule"></div>
 <div class="b" id="b">Casberi</div>
-<div class="u mono" id="u"><b>casberi.app</b> · free on TestFlight</div>
+<div class="u mono" id="u"><b>casberi.app</b></div>
 <div class="foot mono"><span>casberi.app</span><span>—</span></div>
 <script>
 const clamp01=v=>Math.max(0,Math.min(1,v)),easeOut=p=>1-Math.pow(1-p,3),back=p=>{const c=1.7;return 1+(c+1)*Math.pow(p-1,3)+c*Math.pow(p-1,2);};

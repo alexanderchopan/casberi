@@ -1,0 +1,145 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;transition:none!important}
+html,body{width:1080px;height:1920px;overflow:hidden;background:#EEEAE1;font-family:-apple-system,"Helvetica Neue","SF Pro Display",system-ui,sans-serif;-webkit-font-smoothing:antialiased;}
+.mono{font-family:ui-monospace,"SF Mono","Menlo",monospace;}
+.stage{position:absolute;inset:0;overflow:hidden;background:#EEEAE1;}
+.grain{position:absolute;inset:0;opacity:.5;background-image:radial-gradient(circle at 20% 30%, rgba(0,0,0,.03) 0 1px, transparent 1px),radial-gradient(circle at 70% 65%, rgba(0,0,0,.025) 0 1px, transparent 1px);background-size:7px 7px, 9px 9px;}
+.mast{position:absolute;left:70px;right:70px;top:74px;display:flex;justify-content:space-between;font-size:27px;letter-spacing:.16em;color:#14110d;font-weight:600;}
+.rule{position:absolute;left:70px;right:70px;top:126px;height:3px;background:#14110d;transform-origin:left;}
+.wm{position:absolute;right:20px;top:150px;font-size:280px;line-height:.82;white-space:nowrap;text-align:right;font-weight:800;letter-spacing:-.04em;opacity:.08;will-change:opacity,transform;}
+.kick{position:absolute;left:74px;top:238px;font-size:32px;letter-spacing:.14em;font-weight:600;will-change:transform,opacity;}
+.head{position:absolute;left:70px;top:284px;right:70px;font-size:126px;line-height:.94;font-weight:800;letter-spacing:-.045em;color:#14110d;white-space:pre-line;will-change:transform,opacity;}
+.foot{position:absolute;left:74px;right:74px;bottom:70px;display:flex;justify-content:space-between;font-size:26px;letter-spacing:.12em;color:#14110d;font-weight:600;}
+.wipe{position:absolute;top:-12%;left:0;width:135%;height:124%;transform:skewX(-9deg) translateX(160%);will-change:transform;}
+.comp{position:absolute;left:120px;top:820px;width:840px;height:820px;border-radius:34px;overflow:hidden;box-shadow:34px 40px 0 rgba(20,17,13,.13), inset 0 0 0 1px rgba(255,255,255,.05), 0 30px 70px rgba(20,17,13,.26);opacity:0;will-change:transform,opacity;transform-origin:center top;padding:52px;color:#fff;background:#0e0a0c;}
+.shd{font-size:28px;letter-spacing:.14em;color:rgba(255,255,255,.5);margin-bottom:24px;}
+/* feed rows */
+.frow{display:flex;align-items:center;gap:24px;padding:26px 0;border-top:2px solid rgba(255,255,255,.07);will-change:opacity,transform;}
+.frow:first-of-type{border-top:none;}
+.fd{width:16px;height:16px;border-radius:50%;flex:none;}
+.fs{font-size:23px;letter-spacing:.06em;color:rgba(255,255,255,.45);width:210px;flex:none;}
+.ftx{font-size:32px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+/* agent bar */
+.bar{position:absolute;left:52px;right:52px;bottom:44px;height:96px;border-radius:100px;background:rgba(255,255,255,.1);box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.14);display:flex;align-items:center;padding:0 40px;gap:24px;will-change:transform,opacity;}
+.spark{font-size:40px;color:#E0345C;will-change:transform,filter;}
+.barlabel{font-size:30px;color:rgba(255,255,255,.6);}
+/* agent rest state */
+.greet{font-size:52px;font-weight:750;line-height:1.1;letter-spacing:-.02em;will-change:opacity,transform;}
+.greet2{font-size:30px;color:rgba(255,255,255,.5);margin-top:14px;will-change:opacity,transform;}
+.chips{margin-top:44px;display:flex;flex-direction:column;gap:20px;}
+.chip{display:flex;align-items:center;gap:18px;background:rgba(255,255,255,.07);border-radius:100px;padding:24px 34px;box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.09);will-change:opacity,transform;}
+.chip .dot{width:16px;height:16px;border-radius:50%;background:#3b8cf0;flex:none;box-shadow:0 0 14px #3b8cf0;}
+.chip .ask{font-size:34px;font-weight:650;}
+.chip .sig{font-size:29px;color:rgba(255,255,255,.5);margin-left:auto;font-weight:600;}
+.chip.up .sig{color:#3fb950;}
+.chip.dim{opacity:.4;}
+.anote{margin-top:34px;font-size:27px;color:rgba(255,255,255,.5);line-height:1.45;will-change:opacity;}
+.anote b{color:#fff;}
+.outro{position:absolute;inset:0;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;padding:0 74px;opacity:0;will-change:opacity;}
+.outro .b{font-size:200px;font-weight:800;letter-spacing:-.05em;color:#14110d;line-height:.9;}
+.outro .u{font-size:34px;letter-spacing:.1em;color:#14110d;margin-top:40px;font-weight:600;} .outro .u b{color:#E0345C;}
+</style></head><body>
+<div class="stage">
+  <div class="grain"></div>
+  <div class="mast mono"><span>CASBERI</span><span>THE AGENT</span></div>
+  <div class="rule" id="rule"></div>
+  <div class="wm" id="wm">01</div>
+
+  <!-- beat 0 & 4: the All feed, content-first, with the agent bar -->
+  <div class="comp" id="comp0">
+    <div class="shd mono">ALL · YOUR FEED</div>
+    <div class="frow" data-i="0"><span class="fd" style="background:#7C4DEC"></span><span class="fs mono">FARCASTER</span><span class="ftx">vitalik.eth · One thing I find striking…</span></div><div class="frow" data-i="1"><span class="fd" style="background:#2E63FF"></span><span class="fs mono">WALLET</span><span class="ftx">Bought 25 USDC with Venmo</span></div><div class="frow" data-i="2"><span class="fd" style="background:#E0982A"></span><span class="fs mono">SCREENSHOT</span><span class="ftx">Chili oil noodles — recipe</span></div><div class="frow" data-i="3"><span class="fd" style="background:#3b8cf0"></span><span class="fs mono">CALENDAR</span><span class="ftx">Dinner with Mark · Fri 7:00</span></div>
+    <div class="bar" id="bar0"><span class="spark" id="spark0">✦</span><span class="barlabel">Ask, or keep a question…</span></div>
+  </div>
+
+  <!-- beat 1: the agent rises (greeting) -->
+  <div class="comp" id="comp1">
+    <div class="greet" id="greet1">Saturday morning.</div>
+    <div class="greet2" id="greet1b">2,481 things, across 14 apps.</div>
+    <div class="chips" id="chips1">
+      <div class="chip up-changed" data-i="0"><span class="dot"></span><span class="ask">While I was away?</span><span class="sig">· 12 new</span></div><div class="chip " data-i="1"><span class="ask">How's my money?</span><span class="sig">· $12,480</span></div><div class="chip " data-i="2"><span class="ask">My watchlist</span><span class="sig">· $HIGHER +18%</span></div>
+    </div>
+  </div>
+
+  <!-- beat 2: kept asks in full -->
+  <div class="comp" id="comp2">
+    <div class="shd mono">KEPT ASKS</div>
+    <div class="chips" id="chips2">
+      <div class="chip  " data-i="0"><span class="ask">While I was away?</span><span class="sig">· 12 new</span></div><div class="chip  up" data-i="1"><span class="ask">How's my money?</span><span class="sig">· $12,480</span></div><div class="chip  up" data-i="2"><span class="ask">My watchlist</span><span class="sig">· $HIGHER +18%</span></div><div class="chip  " data-i="3"><span class="ask">What's new in Calendar?</span><span class="sig">· 3</span></div><div class="chip dim " data-i="4"><span class="ask">Recipes</span><span class="sig">· 5 new</span></div>
+    </div>
+    <div class="anote" id="anote2">Standing questions, answered the moment you open — <b>your things, on your phone</b>, no model in the loop.</div>
+  </div>
+
+  <!-- beat 3: signals -->
+  <div class="comp" id="comp3">
+    <div class="shd mono">WHAT CHANGED, UP FRONT</div>
+    <div class="chips" id="chips3">
+      <div class="chip up" data-i="0"><span class="dot"></span><span class="ask">While I was away?</span><span class="sig">· 12 new</span></div>
+      <div class="chip up" data-i="1"><span class="ask">My watchlist</span><span class="sig">· $HIGHER +18%</span></div>
+      <div class="chip" data-i="2"><span class="ask">How's my money?</span><span class="sig">· $12,480</span></div>
+      <div class="chip dim" data-i="3"><span class="ask">Recipes</span><span class="sig">· 5 new</span></div>
+    </div>
+    <div class="anote" id="anote3">A blue dot marks what <b>genuinely changed</b>; it sorts to the top. An ask you never tap quietly <b>dims away</b>.</div>
+  </div>
+
+  <!-- beat 4: the loop — reuses feed shape -->
+  <div class="comp" id="comp4">
+    <div class="shd mono">ALL · YOUR FEED</div>
+    <div class="frow" data-i="0"><span class="fd" style="background:#7C4DEC"></span><span class="fs mono">FARCASTER</span><span class="ftx">vitalik.eth · One thing I find striking…</span></div><div class="frow" data-i="1"><span class="fd" style="background:#2E63FF"></span><span class="fs mono">WALLET</span><span class="ftx">Bought 25 USDC with Venmo</span></div><div class="frow" data-i="2"><span class="fd" style="background:#E0982A"></span><span class="fs mono">SCREENSHOT</span><span class="ftx">Chili oil noodles — recipe</span></div><div class="frow" data-i="3"><span class="fd" style="background:#3b8cf0"></span><span class="fs mono">CALENDAR</span><span class="ftx">Dinner with Mark · Fri 7:00</span></div>
+    <div class="bar" id="bar4"><span class="spark" id="spark4">✦</span><span class="barlabel">Ask, or keep a question…</span></div>
+  </div>
+
+  <div class="kick mono" id="kick"></div>
+  <div class="head" id="head"></div>
+  <div class="foot mono"><span>casberi.app</span><span>—</span></div>
+  <div class="wipe" id="wipe"></div>
+  <div class="outro" id="outro"><div class="b">Casberi</div><div class="u mono"><b>casberi.app</b></div></div>
+</div>
+<script>
+const clamp01=v=>Math.max(0,Math.min(1,v)),easeOut=p=>1-Math.pow(1-p,3),back=p=>{const c=1.7;return 1+(c+1)*Math.pow(p-1,3)+c*Math.pow(p-1,2);};
+const INTRO=0.45,BEAT=2,OUT_AT=10.45,N=5;
+const D=[{"kick":"CONTENT FIRST","head":"Opens on\nyour feed.","accent":"#E0345C"},{"kick":"THE AGENT","head":"One tap\nraises it.","accent":"#E0345C"},{"kick":"KEPT ASKS","head":"Questions\nyou keep.","accent":"#E0345C"},{"kick":"SIGNALS","head":"It tells you\nwhat moved.","accent":"#E0345C"},{"kick":"THE LOOP","head":"Lower it,\nback to it.","accent":"#E0345C"}];window.TOTAL=12.35;
+const comps=[...document.querySelectorAll('.comp')];
+window.seek=function(t){
+  let active=Math.max(0,Math.min(N-1,Math.floor((t-INTRO)/BEAT)));
+  const bs=INTRO+active*BEAT, local=t-bs, acc=D[active].accent, pIn=clamp01((local-0.28)/1.35);
+  let coverAcc=acc,wipeX=200;const bounds=[];for(let k=1;k<N;k++)bounds.push({t:INTRO+k*BEAT,c:D[k].accent});bounds.push({t:OUT_AT,c:'#14110d'});
+  for(const b of bounds){const p=(t-(b.t-0.34))/0.68;if(p>=0&&p<=1){wipeX=(1-p)*135-p*135*1.15;coverAcc=b.c;}}
+  const wp=document.getElementById('wipe');wp.style.background=coverAcc;wp.style.transform='skewX(-9deg) translateX('+wipeX+'%)';
+  document.getElementById('rule').style.transform='scaleX('+easeOut(clamp01(t/0.6))+')';
+  const wm=document.getElementById('wm');wm.textContent=D[active].kick;wm.style.fontSize=Math.max(90,Math.min(320,900/(0.6*D[active].kick.length)))+'px';wm.style.color=acc;wm.style.opacity=0.09*clamp01(local/0.4);wm.style.transform='translateY('+((1-easeOut(clamp01(local/0.5)))*30)+'px)';
+  const ki=document.getElementById('kick');ki.textContent=D[active].kick;ki.style.color=acc;const kin=clamp01(local/0.4);ki.style.opacity=easeOut(kin);ki.style.transform='translateX('+((1-easeOut(kin))*-40)+'px)';
+  const he=document.getElementById('head');he.textContent=D[active].head;const hin=clamp01((local-0.06)/0.5);he.style.opacity=clamp01(local/0.2);he.style.transform='translateY('+((1-back(hin))*80)+'px)';
+  
+  comps.forEach((c,i)=>{const cbs=INTRO+i*BEAT,cl=t-cbs,cin=clamp01((cl-0.12)/0.6);const beatEnd=INTRO+(i+1)*BEAT,outp=clamp01((t-(beatEnd-0.3))/0.4);let op=(i===active?1:0)*clamp01(cl/0.15);if(t>OUT_AT)op*=(1-clamp01((t-OUT_AT)/0.25));const y=(1-back(cin))*180+outp*200+Math.sin(t*0.9+i)*5;const rot=(-2.2)+(1-easeOut(cin))*-5+outp*4;c.style.opacity=op;c.style.transform='translateY('+y+'px) rotate('+rot+'deg)';});
+  animateComp(active,pIn,t);
+  const fo=(t>OUT_AT)?(1-clamp01((t-OUT_AT)/0.25)):1;['kick','head'].forEach(id=>{const e=document.getElementById(id);e.style.opacity=Math.min(+e.style.opacity||1,fo);});
+  document.getElementById('outro').style.opacity=easeOut(clamp01((t-(OUT_AT+0.25))/0.5));
+};
+function feedIn(sel,p){document.querySelectorAll(sel+' .frow').forEach((r,k)=>{const rp=clamp01((p-k*0.11)/0.32);r.style.opacity=rp;r.style.transform='translateX('+((1-easeOut(rp))*-30)+'px)';});}
+function animateComp(i,p,t){
+  if(i===0){
+    feedIn('#comp0',p);
+    const bar=document.getElementById('bar0');const bp=clamp01((p-0.4)/0.3);bar.style.opacity=bp;bar.style.transform='translateY('+((1-easeOut(bp))*40)+'px)';
+    // ✦ pulses (something changed)
+    const s=document.getElementById('spark0');const g=0.6+0.4*Math.abs(Math.sin(t*2.2));s.style.filter='drop-shadow(0 0 '+(14*g)+'px #E0345C)';s.style.transform='scale('+(0.94+0.1*g)+')';
+  } else if(i===1){
+    const g=document.getElementById('greet1');const gp=clamp01(p/0.3);g.style.opacity=gp;g.style.transform='translateY('+((1-back(gp))*30)+'px)';
+    const g2=document.getElementById('greet1b');const g2p=clamp01((p-0.16)/0.3);g2.style.opacity=g2p;g2.style.transform='translateY('+((1-easeOut(g2p))*18)+'px)';
+    document.querySelectorAll('#chips1 .chip').forEach((c,k)=>{const cp=clamp01((p-0.38-k*0.13)/0.32);c.style.opacity=cp;c.style.transform='translateY('+((1-back(cp))*26)+'px)';
+      const d=c.querySelector('.dot');if(d)d.style.opacity=clamp01((cp-0.5)/0.3);});
+  } else if(i===2){
+    document.querySelectorAll('#chips2 .chip').forEach((c,k)=>{const cp=clamp01((p-k*0.1)/0.3);c.style.opacity=cp*(c.classList.contains('dim')?0.4:1);c.style.transform='translateX('+((1-easeOut(cp))*-30)+'px)';});
+    document.getElementById('anote2').style.opacity=clamp01((p-0.6)/0.3);
+  } else if(i===3){
+    document.querySelectorAll('#chips3 .chip').forEach((c,k)=>{const cp=clamp01((p-k*0.12)/0.32);c.style.opacity=cp*(c.classList.contains('dim')?0.4:1);c.style.transform='translateX('+((1-easeOut(cp))*-30)+'px)';
+      const d=c.querySelector('.dot');if(d){const dp=clamp01((p-0.5)/0.2);d.style.opacity=dp;d.style.transform='scale('+(0.4+0.6*back(dp))+')';}});
+    document.getElementById('anote3').style.opacity=clamp01((p-0.62)/0.3);
+  } else if(i===4){
+    feedIn('#comp4',p);
+    const bar=document.getElementById('bar4');const bp=clamp01((p-0.3)/0.3);bar.style.opacity=bp;bar.style.transform='translateY('+((1-easeOut(bp))*40)+'px)';
+    const s=document.getElementById('spark4');s.style.filter='drop-shadow(0 0 10px #E0345C)';
+  }
+}
+window.seek(0);
+</script></body></html>

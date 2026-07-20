@@ -31,7 +31,7 @@ B={0:0.85,1:2.85,2:4.85,3:6.85,4:8.85}
 SLICE=1.2
 # narrative order: daily -> social -> markets -> crypto/agent/trust -> privacy close
 ORDER=[
- ('home',4),('ask',1),('screenshots',2),('farcaster',3),('spotify',2),
+ ('agent',2),('ask',1),('screenshots',2),('farcaster',3),('spotify',2),
  ('bitrefill',3),('github',2),('tokens',2),('markets',2),('bankr',1),
  ('wallet',0),('basenames',1),('solana',3),('peer',3),('revoke',2),
  ('preparing',0),('1claw',1),('privacy',1),

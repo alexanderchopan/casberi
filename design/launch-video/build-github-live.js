@@ -14,7 +14,7 @@ const BEATS = [
 const INTRO = 0.45, BEAT = 1.9;
 const OUT_AT = INTRO + BEATS.length * BEAT;
 const TOTAL = OUT_AT + 1.9;
-const DATA = BEATS.map((b, i) => ({ kick: (i + 1 < 10 ? '0' : '') + (i + 1) + ' · ' + b.kick, head: b.head, accent: b.accent }));
+const DATA = BEATS.map((b, i) => ({ kick: b.kick, head: b.head, accent: b.accent }));
 
 const OCTO = 'M12 .5C5.37.5 0 5.87 0 12.5c0 5.3 3.44 9.8 8.2 11.39.6.11.82-.26.82-.58v-2c-3.34.72-4.04-1.61-4.04-1.61-.55-1.39-1.34-1.76-1.34-1.76-1.09-.75.08-.73.08-.73 1.2.08 1.84 1.24 1.84 1.24 1.07 1.83 2.81 1.3 3.5.99.11-.78.42-1.3.76-1.6-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.13-.3-.54-1.52.11-3.18 0 0 1.01-.32 3.3 1.23a11.5 11.5 0 0 1 6 0c2.29-1.55 3.3-1.23 3.3-1.23.65 1.66.24 2.88.12 3.18.77.84 1.23 1.91 1.23 3.22 0 4.61-2.81 5.63-5.48 5.92.43.37.82 1.1.82 2.22v3.29c0 .32.21.7.82.58C20.57 22.29 24 17.8 24 12.5 24 5.87 18.63.5 12 .5z';
 
@@ -30,7 +30,7 @@ html,body{width:1080px;height:1920px;overflow:hidden;background:#EEEAE1;
 .grain{position:absolute;inset:0;opacity:.5;background-image:radial-gradient(circle at 20% 30%, rgba(0,0,0,.03) 0 1px, transparent 1px),radial-gradient(circle at 70% 65%, rgba(0,0,0,.025) 0 1px, transparent 1px);background-size:7px 7px, 9px 9px;}
 .mast{position:absolute;left:70px;right:70px;top:74px;display:flex;justify-content:space-between;font-size:27px;letter-spacing:.16em;color:#14110d;font-weight:600;}
 .rule{position:absolute;left:70px;right:70px;top:126px;height:3px;background:#14110d;transform-origin:left;}
-.wm{position:absolute;right:20px;top:150px;font-size:560px;line-height:.8;font-weight:800;letter-spacing:-.04em;opacity:.08;will-change:opacity,transform;}
+.wm{position:absolute;right:20px;top:150px;font-size:280px;line-height:.82;white-space:nowrap;text-align:right;font-weight:800;letter-spacing:-.04em;opacity:.08;will-change:opacity,transform;}
 .kick{position:absolute;left:74px;top:238px;font-size:32px;letter-spacing:.14em;font-weight:600;will-change:transform,opacity;}
 .head{position:absolute;left:70px;top:284px;right:70px;font-size:132px;line-height:.94;font-weight:800;letter-spacing:-.045em;color:#14110d;white-space:pre-line;will-change:transform,opacity;}
 .foot{position:absolute;left:74px;right:74px;bottom:70px;display:flex;justify-content:space-between;font-size:26px;letter-spacing:.12em;color:#14110d;font-weight:600;}
@@ -117,9 +117,9 @@ html,body{width:1080px;height:1920px;overflow:hidden;background:#EEEAE1;
 
   <div class="kick mono" id="kick"></div>
   <div class="head" id="head"></div>
-  <div class="foot mono"><span>casberi.app</span><span id="pg">01 / 05</span></div>
+  <div class="foot mono"><span>casberi.app</span><span>—</span></div>
   <div class="wipe" id="wipe"></div>
-  <div class="outro" id="outro"><div class="big">Casberi</div><div class="u mono"><b>casberi.app</b> · free on TestFlight</div></div>
+  <div class="outro" id="outro"><div class="big">Casberi</div><div class="u mono"><b>casberi.app</b></div></div>
 </div>
 <script>
 const clamp01=v=>Math.max(0,Math.min(1,v));
@@ -155,7 +155,7 @@ window.seek=function(t){
   const wp=document.getElementById('wipe'); wp.style.background=coverAcc; wp.style.transform='skewX(-9deg) translateX('+wipeX+'%)';
 
   document.getElementById('rule').style.transform='scaleX('+easeOut(clamp01(t/0.6))+')';
-  const wm=document.getElementById('wm'); wm.textContent=(active+1<10?'0':'')+(active+1);
+  const wm=document.getElementById('wm'); wm.textContent=D[active].kick;wm.style.fontSize=Math.max(90,Math.min(320,900/(0.6*D[active].kick.length)))+'px';
   wm.style.color=acc; wm.style.opacity=0.09*clamp01(local/0.4); wm.style.transform='translateY('+((1-easeOut(clamp01(local/0.5)))*30)+'px)';
 
   const ki=document.getElementById('kick'); ki.textContent=D[active].kick; ki.style.color=acc;
@@ -163,7 +163,7 @@ window.seek=function(t){
 
   const he=document.getElementById('head'); he.textContent=D[active].head;
   const hin=clamp01((local-0.06)/0.5); he.style.opacity=clamp01(local/0.2); he.style.transform='translateY('+((1-back(hin))*80)+'px)';
-  document.getElementById('pg').textContent=(active+1<10?'0':'')+(active+1)+' / 0'+N;
+  
 
   comps.forEach((c,i)=>{
     const cbs=INTRO+i*BEAT, cl=t-cbs, cin=clamp01((cl-0.12)/0.6);

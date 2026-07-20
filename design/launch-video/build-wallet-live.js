@@ -17,7 +17,7 @@ const BEATS = [
 const INTRO = 0.45, BEAT = 1.9;
 const OUT_AT = INTRO + BEATS.length * BEAT;
 const TOTAL = OUT_AT + 1.9;
-const DATA = BEATS.map((b, i) => ({ kick: (i + 1 < 10 ? '0' : '') + (i + 1) + ' · ' + b.kick, head: b.head, accent: b.accent }));
+const DATA = BEATS.map((b, i) => ({ kick: b.kick, head: b.head, accent: b.accent }));
 
 // treemap tile layouts (grid areas), sized by rough value order
 const HOLD = [['ETH', '1/1/3/3'], ['AWETH', '1/3/3/6'], ['RUSSEL', '3/1/5/3'], ['WBTC', '3/3/5/5'], ['WETH', '3/5/5/6']];
@@ -35,7 +35,7 @@ html,body{width:1080px;height:1920px;overflow:hidden;background:#EEEAE1;
   background-size:7px 7px, 9px 9px;}
 .mast{position:absolute;left:70px;right:70px;top:74px;display:flex;justify-content:space-between;font-size:27px;letter-spacing:.16em;color:#14110d;font-weight:600;}
 .rule{position:absolute;left:70px;right:70px;top:126px;height:3px;background:#14110d;transform-origin:left;}
-.wm{position:absolute;right:20px;top:150px;font-size:560px;line-height:.8;font-weight:800;letter-spacing:-.04em;opacity:.08;will-change:opacity,transform;}
+.wm{position:absolute;right:20px;top:150px;font-size:280px;line-height:.82;white-space:nowrap;text-align:right;font-weight:800;letter-spacing:-.04em;opacity:.08;will-change:opacity,transform;}
 .kick{position:absolute;left:74px;top:238px;font-size:32px;letter-spacing:.14em;font-weight:600;will-change:transform,opacity;}
 .head{position:absolute;left:70px;top:284px;right:70px;font-size:132px;line-height:.94;font-weight:800;letter-spacing:-.045em;color:#14110d;white-space:pre-line;will-change:transform,opacity;}
 .foot{position:absolute;left:74px;right:74px;bottom:70px;display:flex;justify-content:space-between;font-size:26px;letter-spacing:.12em;color:#14110d;font-weight:600;}
@@ -137,9 +137,9 @@ html,body{width:1080px;height:1920px;overflow:hidden;background:#EEEAE1;
 
   <div class="kick mono" id="kick"></div>
   <div class="head" id="head"></div>
-  <div class="foot mono"><span>casberi.app</span><span id="pg">01 / 05</span></div>
+  <div class="foot mono"><span>casberi.app</span><span>—</span></div>
   <div class="wipe" id="wipe"></div>
-  <div class="outro" id="outro"><div class="big">Casberi</div><div class="u mono"><b>casberi.app</b> · free on TestFlight</div></div>
+  <div class="outro" id="outro"><div class="big">Casberi</div><div class="u mono"><b>casberi.app</b></div></div>
 </div>
 <script>
 const clamp01=v=>Math.max(0,Math.min(1,v));
@@ -177,7 +177,7 @@ window.seek=function(t){
   const wp=document.getElementById('wipe'); wp.style.background=coverAcc; wp.style.transform='skewX(-9deg) translateX('+wipeX+'%)';
 
   document.getElementById('rule').style.transform='scaleX('+easeOut(clamp01(t/0.6))+')';
-  const wm=document.getElementById('wm'); wm.textContent=(active+1<10?'0':'')+(active+1);
+  const wm=document.getElementById('wm'); wm.textContent=D[active].kick;wm.style.fontSize=Math.max(90,Math.min(320,900/(0.6*D[active].kick.length)))+'px';
   wm.style.color=acc; wm.style.opacity=0.09*clamp01(local/0.4); wm.style.transform='translateY('+((1-easeOut(clamp01(local/0.5)))*30)+'px)';
 
   const ki=document.getElementById('kick'); ki.textContent=D[active].kick; ki.style.color=acc;
@@ -190,7 +190,7 @@ window.seek=function(t){
   he.textContent=hText;
   const hin=clamp01((local-0.06)/0.5); he.style.opacity=clamp01(local/0.2); he.style.transform='translateY('+((1-back(hin))*80)+'px)';
 
-  document.getElementById('pg').textContent=(active+1<10?'0':'')+(active+1)+' / 0'+N;
+  
 
   // cards: entrance + per-beat internal animation
   comps.forEach((c,i)=>{

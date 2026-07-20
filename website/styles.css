@@ -809,3 +809,11 @@ footer .tagline { font-size: 16px; font-weight: 600; color: var(--ink); margin-b
 .scard .sblock.t2 { background: rgba(175,120,255,.16); }
 .scard .sblock.t3 { background: rgba(80,200,180,.16); }
 .scard .sblock.t4 { background: rgba(255,180,90,.14); }
+
+/* Features page — sizzle reel */
+.reel { max-width: 340px; margin: 34px auto 12px; border-radius: 30px; overflow: hidden;
+  aspect-ratio: 1080 / 1920; background: var(--surface);
+  box-shadow: 0 30px 70px rgba(0,0,0,.5), 0 0 0 1px rgba(255,255,255,.06); }
+.reel video { width: 100%; height: 100%; object-fit: cover; display: block; }
+.reel-cap { text-align: center; color: var(--muted); font-size: 14.5px; margin: 0 auto 44px; }
+@media (max-width: 520px) { .reel { max-width: 300px; } }

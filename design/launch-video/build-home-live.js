@@ -129,7 +129,7 @@ html,body{width:1080px;height:1920px;overflow:hidden;background:#EEEAE1;font-fam
   <div class="head" id="head"></div>
   <div class="foot mono"><span>casberi.app</span><span id="pg">01 / 05</span></div>
   <div class="wipe" id="wipe"></div>
-  <div class="outro" id="outro"><div class="big">Casberi</div><div class="u mono"><b>casberi.app</b> · free on TestFlight</div></div>
+  <div class="outro" id="outro"><div class="big">Casberi</div><div class="u mono"><b>casberi.app</b></div></div>
 </div>
 <script>
 const clamp01=v=>Math.max(0,Math.min(1,v));

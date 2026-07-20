@@ -6,7 +6,7 @@ html,body{width:1080px;height:1920px;overflow:hidden;background:#EEEAE1;font-fam
 .grain{position:absolute;inset:0;opacity:.5;background-image:radial-gradient(circle at 20% 30%, rgba(0,0,0,.03) 0 1px, transparent 1px),radial-gradient(circle at 70% 65%, rgba(0,0,0,.025) 0 1px, transparent 1px);background-size:7px 7px, 9px 9px;}
 .mast{position:absolute;left:70px;right:70px;top:74px;display:flex;justify-content:space-between;font-size:27px;letter-spacing:.16em;color:#14110d;font-weight:600;}
 .rule{position:absolute;left:70px;right:70px;top:126px;height:3px;background:#14110d;transform-origin:left;}
-.wm{position:absolute;right:20px;top:150px;font-size:560px;line-height:.8;font-weight:800;letter-spacing:-.04em;opacity:.08;will-change:opacity,transform;}
+.wm{position:absolute;right:20px;top:150px;font-size:280px;line-height:.82;white-space:nowrap;text-align:right;font-weight:800;letter-spacing:-.04em;opacity:.08;will-change:opacity,transform;}
 .kick{position:absolute;left:74px;top:238px;font-size:32px;letter-spacing:.14em;font-weight:600;will-change:transform,opacity;}
 .head{position:absolute;left:70px;top:284px;right:70px;font-size:132px;line-height:.94;font-weight:800;letter-spacing:-.045em;color:#14110d;white-space:pre-line;will-change:transform,opacity;}
 .foot{position:absolute;left:74px;right:74px;bottom:70px;display:flex;justify-content:space-between;font-size:26px;letter-spacing:.12em;color:#14110d;font-weight:600;}
@@ -69,14 +69,14 @@ html,body{width:1080px;height:1920px;overflow:hidden;background:#EEEAE1;font-fam
 
   <div class="kick mono" id="kick"></div>
   <div class="head" id="head"></div>
-  <div class="foot mono"><span>casberi.app</span><span id="pg">01 / 05</span></div>
+  <div class="foot mono"><span>casberi.app</span><span>—</span></div>
   <div class="wipe" id="wipe"></div>
-  <div class="outro" id="outro"><div class="big">Casberi</div><div class="u mono"><b>casberi.app</b> · free on TestFlight</div></div>
+  <div class="outro" id="outro"><div class="big">Casberi</div><div class="u mono"><b>casberi.app</b></div></div>
 </div>
 <script>
 const clamp01=v=>Math.max(0,Math.min(1,v)),easeOut=p=>1-Math.pow(1-p,3),back=p=>{const c=1.7;return 1+(c+1)*Math.pow(p-1,3)+c*Math.pow(p-1,2);};
 const INTRO=0.45,BEAT=1.9,OUT_AT=9.95,N=5;
-const D=[{"kick":"01 · ODDS","head":"Live\nodds.","accent":"#0FB5C4"},{"kick":"02 · STOCKS","head":"Stock\nchatter.","accent":"#0FB5C4"},{"kick":"03 · DROPS","head":"New\ndrops.","accent":"#0FB5C4"},{"kick":"04 · CHARTS","head":"Every\nchart.","accent":"#0FB5C4"},{"kick":"05 · ONE FEED","head":"All the money,\none feed.","accent":"#0FB5C4"}];window.TOTAL=11.85;
+const D=[{"kick":"ODDS","head":"Live\nodds.","accent":"#0FB5C4"},{"kick":"STOCKS","head":"Stock\nchatter.","accent":"#0FB5C4"},{"kick":"DROPS","head":"New\ndrops.","accent":"#0FB5C4"},{"kick":"CHARTS","head":"Every\nchart.","accent":"#0FB5C4"},{"kick":"ONE FEED","head":"All the money,\none feed.","accent":"#0FB5C4"}];window.TOTAL=11.85;
 const comps=[...document.querySelectorAll('.comp')];
 const CPTS=[[0,230],[70,200],[140,215],[210,150],[280,175],[350,110],[420,135],[500,80],[580,100],[660,45],[740,24]];
 function chartD(p){const n=Math.max(2,Math.round(CPTS.length*p));return 'M'+CPTS.slice(0,n).map(q=>q[0]+' '+q[1]).join(' L');}
@@ -87,10 +87,10 @@ window.seek=function(t){
   for(const b of bounds){const p=(t-(b.t-0.34))/0.68;if(p>=0&&p<=1){wipeX=(1-p)*135-p*135*1.15;coverAcc=b.c;}}
   const wp=document.getElementById('wipe');wp.style.background=coverAcc;wp.style.transform='skewX(-9deg) translateX('+wipeX+'%)';
   document.getElementById('rule').style.transform='scaleX('+easeOut(clamp01(t/0.6))+')';
-  const wm=document.getElementById('wm');wm.textContent=(active+1<10?'0':'')+(active+1);wm.style.color=acc;wm.style.opacity=0.09*clamp01(local/0.4);wm.style.transform='translateY('+((1-easeOut(clamp01(local/0.5)))*30)+'px)';
+  const wm=document.getElementById('wm');wm.textContent=D[active].kick;wm.style.fontSize=Math.max(90,Math.min(320,900/(0.6*D[active].kick.length)))+'px';wm.style.color=acc;wm.style.opacity=0.09*clamp01(local/0.4);wm.style.transform='translateY('+((1-easeOut(clamp01(local/0.5)))*30)+'px)';
   const ki=document.getElementById('kick');ki.textContent=D[active].kick;ki.style.color=acc;const kin=clamp01(local/0.4);ki.style.opacity=easeOut(kin);ki.style.transform='translateX('+((1-easeOut(kin))*-40)+'px)';
   const he=document.getElementById('head');he.textContent=D[active].head;const hin=clamp01((local-0.06)/0.5);he.style.opacity=clamp01(local/0.2);he.style.transform='translateY('+((1-back(hin))*80)+'px)';
-  document.getElementById('pg').textContent=(active+1<10?'0':'')+(active+1)+' / 0'+N;
+  
   comps.forEach((c,i)=>{const cbs=INTRO+i*BEAT,cl=t-cbs,cin=clamp01((cl-0.12)/0.6);const beatEnd=INTRO+(i+1)*BEAT,outp=clamp01((t-(beatEnd-0.3))/0.4);let op=(i===active?1:0)*clamp01(cl/0.15);if(t>OUT_AT)op*=(1-clamp01((t-OUT_AT)/0.25));const y=(1-back(cin))*180+outp*200+Math.sin(t*0.9+i)*5;const rot=(-2.2)+(1-easeOut(cin))*-5+outp*4;c.style.opacity=op;c.style.transform='translateY('+y+'px) rotate('+rot+'deg)';});
   animateComp(active,pIn,t);
   const fo=(t>OUT_AT)?(1-clamp01((t-OUT_AT)/0.25)):1;['kick','head'].forEach(id=>{const e=document.getElementById(id);e.style.opacity=Math.min(+e.style.opacity||1,fo);});
