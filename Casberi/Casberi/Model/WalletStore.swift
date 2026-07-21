@@ -49,6 +49,18 @@ final class WalletStore {
                 // The Peer fill cursor leaves with the watch for the same
                 // reason (prd §113).
                 PeerBridge.clearCursor(address: old.address)
+                // The EIP-7702 delegation baseline leaves too (2026-07-20) —
+                // a re-watch should seed fresh, not compare against a
+                // delegate state from a prior, unrelated watch period.
+                WalletSafety.clearDelegation(address: old.address)
+                // The gas-spent running total leaves too (2026-07-20) — a
+                // re-watch starts the count at zero, honest about what it can
+                // actually know.
+                WalletGas.clearTotals(address: old.address)
+                // The Safe-detection cache leaves too (2026-07-20) — also
+                // the only way to recover from a negative result still
+                // inside its TTL.
+                SafeBridge.clearCache(address: old.address)
             }
         }
     }

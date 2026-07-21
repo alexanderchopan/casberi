@@ -54,6 +54,7 @@ struct ThingSheetView: View {
     /// the fee to revoke, the doors out. Fetched on open like replies; the
     /// section renders only when the check answered.
     @State private var approvalCheck: WalletPrepare.Check?
+    @State private var safeCheck: SafeBridge.Check?
     /// Translate verb (2026-07-17): the system Translation sheet, shown over
     /// the thing's own words — no custom UI, Apple's picker does the rest.
     @State private var showTranslate = false
@@ -113,6 +114,12 @@ struct ThingSheetView: View {
                         .padding(.horizontal, DS.Space.s4)
                         .padding(.top, DS.Space.s6)
                         .settleIn(delay: 0.06)
+                    if thing.securityFlag == "poisoning" {
+                        poisoningWarning
+                            .padding(.horizontal, DS.Space.s4)
+                            .padding(.top, DS.Space.s3)
+                            .settleIn(delay: 0.08)
+                    }
                     VerbDial(thing: thing, verbs: walletVerbs,
                              onVerb: runVerb, onName: nameCounterpartyAction)
                         .padding(.top, DS.Space.s6)
@@ -172,6 +179,11 @@ struct ThingSheetView: View {
                         .padding(.horizontal, DS.Space.s4)
                         .padding(.top, DS.Space.s3)
                 }
+                if let check = safeCheck {
+                    SafeQueueCard(check: check)
+                        .padding(.horizontal, DS.Space.s4)
+                        .padding(.top, DS.Space.s3)
+                }
                 if editingTags {
                     tagsField
                         .padding(.top, DS.Space.s3)
@@ -218,6 +230,9 @@ struct ThingSheetView: View {
             // The gate is a string check — non-approval things spend nothing.
             if WalletPrepare.applies(to: thing) {
                 Task { approvalCheck = await WalletPrepare.check(for: thing) }
+            }
+            if SafeBridge.applies(to: thing) {
+                Task { safeCheck = await SafeBridge.check(for: thing) }
             }
             if focusTags {
                 // Land in the tag editor — the swipe's whole point.
@@ -563,6 +578,20 @@ struct ThingSheetView: View {
 
     /// The transfer's parsed hero, when this thing earns one — the ONE
     /// decision point the stage layout reads.
+    /// Address-poisoning warning (2026-07-20) — a one-line flag, not a card:
+    /// the transfer already lands honestly, this only says its counterparty
+    /// looks like a copy of one the wallet has actually used.
+    private var poisoningWarning: some View {
+        HStack(alignment: .top, spacing: DS.Space.s2) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.system(size: 13))
+                .foregroundStyle(DS.destructive)
+            Text("Looks like a copy of an address you've used — this is a different wallet.")
+                .dsText(.subhead13).foregroundStyle(DS.destructive)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
     private var stage: TransferStage? { TransferStage(thing) }
 
     /// A wallet transfer's dial verbs: Open (the explorer link, when the

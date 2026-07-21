@@ -34,6 +34,12 @@ import SwiftData
 ///     cost, accepted: an approval on a token the wallet has since fully spent
 ///     doesn't land (indistinguishable from spam without history) — the
 ///     Revoke.cash door still shows it one tap away.
+///
+/// Permit2 grants (2026-07-20) ride the exact same pass: a second,
+/// address-filtered `eth_getLogs` per (wallet, chain) reads Permit2's OWN
+/// `Approval` event (a different mechanism from approving Permit2 itself,
+/// which is just a plain ERC-20 approval already caught above) — same spam
+/// filter, same land-once-then-recheck-live shape via `WalletPrepare`.
 enum WalletApprovals {
 
     /// The EVM chains approvals are read on: the keyless RPC hosts that
@@ -90,6 +96,24 @@ enum WalletApprovals {
     /// and needs to tell the two shapes apart.
     static let forAllTopic =
         "0x17307eab39ab6107e8899845ad3d59bd9653f200f220920489ca2b5937696c31"
+
+    /// Permit2 (2026-07-20) — Uniswap's canonical token-approval contract, the
+    /// SAME address on every EVM chain here. Approving Permit2 itself is a
+    /// plain ERC-20 `Approval` (already caught above); separately, Permit2's
+    /// OWN contract tracks a per-spender allowance inside its storage — the
+    /// grant apps built on Permit2 actually spend against, and the one worth
+    /// surfacing. Address + topic0 both verified live (Etherscan/BaseScan/
+    /// Arbiscan/PolygonScan/OP Etherscan for the address; Uniswap's own
+    /// `IAllowanceTransfer.sol` + a keccak256 cross-check against
+    /// 4byte.directory for the event) — don't re-derive without re-measuring.
+    static let permit2Address = "0x000000000022d473030f116ddee9f6b43ac78ba3"
+    /// `Approval(address indexed owner, address indexed token, address
+    /// indexed spender, uint160 amount, uint48 expiration)` — 3 indexed topics
+    /// plus topic0 = 4 total, distinct from the plain ERC-20 Approval's 3.
+    /// Internal, not private: `WalletPrepare` re-reads a landed grant's log
+    /// and needs to recognize this shape too.
+    static let permit2ApprovalTopic =
+        "0xda9fa7c1b00402c17d0161b249b1ab8bbec047c5a52207b9c112deffd817036b"
 
     /// The wallet's approvals dashboard on Revoke.cash — the address page is
     /// public and unauthenticated, takes a hex address OR an ENS name (both
@@ -196,11 +220,26 @@ enum WalletApprovals {
                 var scanned = from - 1
                 var logs: [[String: Any]] = []
                 while scanned < latest {
+                    // Snapshot as immutable locals before the async lets —
+                    // `scanned` is mutated below, and capturing the `var`
+                    // itself into two concurrently-executing initializers is
+                    // a Swift 6 concurrency error, not just a style nit.
+                    let chunkFrom = scanned + 1
                     let to = min(scanned + chain.maxRange, latest)
-                    guard let chunk = await fetchLogs(chain, owner: address,
-                                                      from: scanned + 1, to: to)
+                    // Both queries run concurrently — the Permit2 read (2026-07-20)
+                    // doubles this loop's requests per chunk (bounded by
+                    // `maxChunks`, so steady-state is +1 request per pass, not per
+                    // chunk of a long catch-up). Either failing breaks the whole
+                    // scan, same as before: `scanned` must never advance past a
+                    // chunk this wallet's Permit2 grants weren't actually read for.
+                    async let approvalChunk = fetchLogs(chain, owner: address,
+                                                        from: chunkFrom, to: to)
+                    async let permit2Chunk = fetchPermit2Logs(chain, owner: address,
+                                                              from: chunkFrom, to: to)
+                    guard let a = await approvalChunk, let p = await permit2Chunk
                     else { break }
-                    logs += chunk
+                    logs += a
+                    logs += p
                     scanned = to
                 }
                 guard scanned > cursor else { continue }   // nothing read — transient
@@ -269,10 +308,21 @@ enum WalletApprovals {
     // MARK: - Parsing
 
     private struct Event {
-        let contract: String     // the token/collection that emitted it
+        /// The token/collection the grant concerns — for ERC-20/ForAll this
+        /// is where the log originated (`log.address`); for a Permit2 grant
+        /// the log originates from Permit2 itself, so this is the TOKEN
+        /// address Permit2's event names instead (topics[2]). Either way it's
+        /// what the held-tokens spam filter and `tokenMetadata` key on.
+        let contract: String
         let spender: String
         let forAll: Bool
-        /// Raw approved value (ERC-20) or the bool word (ForAll) — 0 is a REVOKE.
+        /// True for a grant read off Permit2's own `Approval` event rather
+        /// than the token's plain ERC-20 one — same story, different
+        /// mechanism, so the title says so and the sourceRef gets its own
+        /// namespace (`WalletPrepare` needs to read the allowance back
+        /// through Permit2's own contract, not the token's).
+        var viaPermit2 = false
+        /// Raw approved value (ERC-20/Permit2) or the bool word (ForAll) — 0 is a REVOKE.
         let rawValue: Double
         let block: Int
         let txHash: String
@@ -294,31 +344,53 @@ enum WalletApprovals {
             guard (log["removed"] as? Bool) != true,
                   let topics = log["topics"] as? [String],
                   let topic0 = topics.first?.lowercased(),
-                  let contract = (log["address"] as? String)?.lowercased(),
                   let txHash = log["transactionHash"] as? String,
                   let blockHex = log["blockNumber"] as? String,
                   let indexHex = log["logIndex"] as? String
             else { continue }
-            // 4 topics under the Approval signature = an ERC-721 single-token
-            // grant (indexed tokenId) — skipped, see `approvalTopic`.
-            if topic0 == approvalTopic, topics.count != 3 { continue }
-            guard topics.count == 3, let spenderTopic = topics.last else { continue }
-            let forAll = topic0 == forAllTopic
-            // The spam filter (lesson 2): an ERC-20 approval counts only for a
-            // token THIS wallet holds above the dust floor; an operator grant
-            // only for a collection among ITS non-spam holdings. A nil set
-            // means that wallet's read failed or found nothing — closed either
-            // way (a fake story is worse than a late one).
-            if forAll {
-                guard ownedNFTs?.contains(contract) == true else { continue }
+
+            let asset: String
+            let spender: String
+            let forAll: Bool
+            let viaPermit2 = topic0 == permit2ApprovalTopic
+            let rawValue: Double
+
+            if viaPermit2 {
+                // Permit2's own Approval: owner/token/spender all indexed
+                // (topics[1..3]) — the token it concerns, not Permit2's own
+                // address, is what the held-tokens filter and metadata key on.
+                guard topics.count == 4 else { continue }
+                asset = "0x" + topics[2].suffix(40).lowercased()
+                spender = "0x" + topics[3].suffix(40).lowercased()
+                forAll = false
+                rawValue = permit2Amount((log["data"] as? String) ?? "0x0")
             } else {
-                guard held?.contains(contract) == true else { continue }
+                guard let contract = (log["address"] as? String)?.lowercased()
+                else { continue }
+                // 4 topics under the Approval signature = an ERC-721
+                // single-token grant (indexed tokenId) — skipped, see
+                // `approvalTopic`.
+                if topic0 == approvalTopic, topics.count != 3 { continue }
+                guard topics.count == 3, let spenderTopic = topics.last else { continue }
+                asset = contract
+                spender = "0x" + spenderTopic.suffix(40).lowercased()
+                forAll = topic0 == forAllTopic
+                rawValue = WalletIngest.hexToDouble((log["data"] as? String) ?? "0x0")
+            }
+            // The spam filter (lesson 2): an ERC-20/Permit2 approval counts
+            // only for a token THIS wallet holds above the dust floor; an
+            // operator grant only for a collection among ITS non-spam
+            // holdings. A nil set means that wallet's read failed or found
+            // nothing — closed either way (a fake story is worse than a late
+            // one).
+            if forAll {
+                guard ownedNFTs?.contains(asset) == true else { continue }
+            } else {
+                guard held?.contains(asset) == true else { continue }
             }
             events.append(Event(
-                contract: contract,
-                spender: "0x" + spenderTopic.suffix(40).lowercased(),
-                forAll: forAll,
-                rawValue: WalletIngest.hexToDouble((log["data"] as? String) ?? "0x0"),
+                contract: asset, spender: spender, forAll: forAll,
+                viaPermit2: viaPermit2, rawValue: rawValue,
                 block: WalletIngest.hexToInt(blockHex),
                 txHash: txHash,
                 logIndex: WalletIngest.hexToInt(indexHex)))
@@ -332,7 +404,11 @@ enum WalletApprovals {
         var out: [Thing] = []
         var seen = Set<String>()
         for e in events {
-            let ref = "wallet:approval:\(chain.network):\(e.txHash):\(e.logIndex)"
+            // A grant read off Permit2's own event gets its own namespace —
+            // `WalletPrepare` needs to tell the two apart to read the live
+            // allowance back through the right contract (Permit2 vs the
+            // token itself).
+            let ref = "wallet:\(e.viaPermit2 ? "permit2" : "approval"):\(chain.network):\(e.txHash):\(e.logIndex)"
             guard !existing.contains(ref), seen.insert(ref).inserted else { continue }
             let thing = Thing(
                 kind: .transaction,
@@ -357,24 +433,28 @@ enum WalletApprovals {
         let spender = WalletIngest.knownLabel(for: e.spender)
             ?? WalletStore.shortAddress(e.spender)
         let asset = meta?.symbol ?? WalletStore.shortAddress(e.contract)
+        // The one clause that differs from a plain approval — same story,
+        // a different mechanism, stated honestly rather than folded in silent.
+        let via = e.viaPermit2 ? " through Permit2" : ""
         if e.forAll {
             return e.rawValue == 0
                 ? String(localized: "Revoked \(spender)'s access to all \(asset)")
                 : String(localized: "Approved \(spender) to manage all \(asset)")
         }
         if e.rawValue == 0 {
-            return String(localized: "Revoked \(spender)'s \(asset) approval")
+            return String(localized: "Revoked \(spender)'s \(asset) approval\(via)")
         }
         // The unlimited approval is THE thing worth knowing about — 2^256-1 in
-        // practice, but any astronomically-over-supply value means the same.
+        // practice (or Permit2's own uint160 max), but any astronomically-
+        // over-supply value means the same.
         if e.rawValue >= 1e40 {
-            return String(localized: "Approved \(spender) to spend unlimited \(asset)")
+            return String(localized: "Approved \(spender) to spend unlimited \(asset)\(via)")
         }
         if let decimals = meta?.decimals {
             let amount = WalletIngest.format(e.rawValue / pow(10, Double(decimals)))
-            return String(localized: "Approved \(spender) to spend \(amount) \(asset)")
+            return String(localized: "Approved \(spender) to spend \(amount) \(asset)\(via)")
         }
-        return String(localized: "Approved \(spender) to spend \(asset)")
+        return String(localized: "Approved \(spender) to spend \(asset)\(via)")
     }
 
     // MARK: - RPC reads (public keyless hosts; metadata rides Alchemy)
@@ -408,6 +488,30 @@ enum WalletApprovals {
             "topics": [[approvalTopic, forAllTopic], ownerTopic],
         ]
         return await call(chain, method: "eth_getLogs", params: [params]) as? [[String: Any]]
+    }
+
+    /// Permit2's own grants where the OWNER topic is this wallet — unlike
+    /// `fetchLogs` above, ALSO address-filtered to Permit2 itself (its event
+    /// is only meaningful read from that one contract).
+    private static func fetchPermit2Logs(_ chain: Chain, owner: String,
+                                        from: Int, to: Int) async -> [[String: Any]]? {
+        let ownerTopic = "0x000000000000000000000000" + owner.dropFirst(2).lowercased()
+        let params: [String: Any] = [
+            "address": permit2Address,
+            "fromBlock": hex(from), "toBlock": hex(to),
+            "topics": [permit2ApprovalTopic, ownerTopic],
+        ]
+        return await call(chain, method: "eth_getLogs", params: [params]) as? [[String: Any]]
+    }
+
+    /// The first 32-byte word of a Permit2 `Approval` event's `data` — the
+    /// `amount` (uint160); the second word (`expiration`, uint48) isn't
+    /// needed for the approval story. Malformed/short data reads as 0 (a
+    /// revoke), never a guess.
+    private static func permit2Amount(_ data: String) -> Double {
+        var s = data.lowercased(); if s.hasPrefix("0x") { s.removeFirst(2) }
+        guard s.count >= 64 else { return 0 }
+        return WalletIngest.hexToDouble("0x" + s.prefix(64))
     }
 
     /// Symbol + decimals for the approved tokens — keyless (2026-07-19,

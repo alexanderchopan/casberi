@@ -581,6 +581,53 @@ enum ProbeHooks {
                 NSLog("Prepare probe: %@", line)
             }
         },
+        // `-delegationProbe YES` reports each watched wallet's CURRENT
+        // EIP-7702 delegate per active EVM chain (2026-07-20), bypassing the
+        // land-on-change gate so it verifies without needing a live
+        // delegation change. Pairs with `-walletAddress`.
+        Hook(key: "delegationProbe") { _, _ in
+            Task { @MainActor in
+                let line = await WalletSafety.probe()
+                NSLog("Delegation probe: %@", line)
+            }
+        },
+        // `-poisoningProbe YES` runs the address-poisoning fuzzy-match rule
+        // over already-landed Wallet things and reports how many it would
+        // flag — a read-only scan of the matching logic itself, no live
+        // poisoning transfer needed. Pairs with `-walletAddress`.
+        Hook(key: "poisoningProbe") { _, context in
+            let line = WalletSafety.poisoningProbe(context: context)
+            NSLog("Poisoning probe: %@", line)
+        },
+        // `-gasSpentProbe YES` NSLogs the running gas total per watched
+        // wallet (per chain and combined USD). Pairs with `-walletAddress`
+        // (and a real refresh/`-walletAddress` re-fire to have landed at
+        // least one outgoing transaction to accumulate against).
+        Hook(key: "gasSpentProbe") { _, _ in
+            Task { @MainActor in
+                let line = await WalletGas.probe()
+                NSLog("Gas spent probe: %@", line)
+            }
+        },
+        // `-defiProbe YES` NSLogs each watched wallet's Aave collateral/debt/
+        // health-factor across every active Aave-supported chain (or the
+        // honest "no positions found"). Pairs with `-walletAddress`.
+        Hook(key: "defiProbe") { _, _ in
+            Task { @MainActor in
+                let line = await WalletDeFi.probe()
+                NSLog("DeFi probe: %@", line)
+            }
+        },
+        // `-safeProbe YES` NSLogs which watched wallets are detected Safes
+        // per chain and their pending queue counts (or the honest
+        // unreachable/none). Pairs with `-walletAddress` (a Safe address, to
+        // exercise anything).
+        Hook(key: "safeProbe") { _, _ in
+            Task { @MainActor in
+                let line = await SafeBridge.probe()
+                NSLog("Safe probe: %@", line)
+            }
+        },
         // `-peerProbe <blocksBack|YES>` switches the Peer seat on and runs the
         // fill sweep over the watched wallets, NSLogging the landed count. A
         // numeric spec rewinds every Peer cursor that many blocks below the

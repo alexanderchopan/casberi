@@ -232,6 +232,23 @@ enum IngestSupport {
         return await run(request)
     }
 
+    /// Like `getJSON`, but also hands back the HTTP status — for a caller
+    /// that needs to tell "genuinely not found" (404) from "unreachable" (a
+    /// transport failure, 0) apart, the same distinction `postJSONStatus`
+    /// draws for a POST (2026-07-20, the Safe multisig bridge's "is this
+    /// address a Safe at all" detection, which must never cache a transient
+    /// outage as a permanent "no").
+    static func getJSONStatus(_ url: String, auth: String? = nil,
+                              headers: [String: String] = [:]) async -> (json: Any?, status: Int) {
+        guard let u = URL(string: url) else { return (nil, 0) }
+        var request = URLRequest(url: u)
+        apply(auth: auth, headers: headers, to: &request)
+        guard let (data, response) = try? await URLSession.shared.data(for: request) else { return (nil, 0) }
+        let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+        guard status == 200 else { return (nil, status) }
+        return (try? JSONSerialization.jsonObject(with: data), status)
+    }
+
     /// Like `postJSON`, but hands back the HTTP status alongside the decoded
     /// body so a caller can back off on a 429 (rate limit) or a transient 5xx
     /// instead of treating every non-200 as a permanent failure (2026-07-17:

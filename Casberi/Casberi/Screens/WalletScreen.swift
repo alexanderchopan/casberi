@@ -72,6 +72,16 @@ struct WalletScreen: View {
     /// (2026-07-17; the treemaps used to ride a separate `holdingsChart()`
     /// doc that ran the same per-wallet fetch a second time).
     @State private var walletTotals: [WalletIngest.HoldingsGroup] = []
+    /// Each watched wallet's running gas total in USD, keyed by lowercased
+    /// address (2026-07-20) — nil until it has spent something since being
+    /// watched (never a fabricated $0 row).
+    @State private var gasSpent: [String: Double] = [:]
+    /// Live Aave positions across watched wallets (2026-07-20) — empty for a
+    /// wallet with none (never a placeholder card for "not using DeFi").
+    @State private var defiPositions: [WalletDeFi.Position] = []
+    /// Detected-Safe wallets' pending-signature counts, keyed lowercased
+    /// (2026-07-20) — absent for a wallet that isn't a Safe anywhere.
+    @State private var safePending: [String: Int] = [:]
     /// Whether the Chains row is expanded (2026-07-15) — collapsed by
     /// default to a one-line summary ("Ethereum, Base +3"); a set-once
     /// setting doesn't deserve six full-height rows every visit.
@@ -112,6 +122,15 @@ struct WalletScreen: View {
                 watchingSection.listRowSeparator(.hidden)
                 if wallet.addresses.contains(where: { WalletApprovals.canServe($0.address) }) {
                     approvalsSection.listRowSeparator(.hidden)
+                }
+                if wallet.addresses.contains(where: { gasSpent[$0.address.lowercased()] != nil }) {
+                    gasSection.listRowSeparator(.hidden)
+                }
+                if !defiPositions.isEmpty {
+                    defiSection.listRowSeparator(.hidden)
+                }
+                if wallet.addresses.contains(where: { safePending[$0.address.lowercased()] != nil }) {
+                    safeSection.listRowSeparator(.hidden)
                 }
                 // The combined "bundle" — total value, the allocation
                 // bar, and one merged treemap. Only when more than one
@@ -409,9 +428,13 @@ struct WalletScreen: View {
         guard !syncing else { return }
         syncing = true
         Task {
-            // Two independent reads — overlapped, so the screen pays the
-            // slowest one, not the sum (transfers + holdings each chain their
-            // own round-trips).
+            // Resolved once, up front — Aave positions need real hex
+            // addresses, and `WalletDeFi.positions` below rides them.
+            let resolvedEVM = await WalletIngest.resolvedAddresses(wallet.addresses.map(\.address))
+                .filter { ENS.isHexAddress($0) }
+            // Independent reads — overlapped, so the screen pays the
+            // slowest one, not the sum (transfers + holdings + Aave each
+            // chain their own round-trips).
             async let refreshed = WalletIngest.refresh(context: modelContext)
             async let portfolioDoc = WalletIngest.combinedHoldings()
             // One fetch feeds every holdings surface now — the treemap cards,
@@ -419,8 +442,24 @@ struct WalletScreen: View {
             // holdingsChart() ran the same per-wallet fetch a second time
             // just to build the doc string this screen no longer renders).
             async let totals = WalletIngest.topHoldingsByWallet()
+            // DeFi positions (2026-07-20) — live state, like holdings; never
+            // landed as a thing (the risk ALERT is a separate arm inside
+            // `refreshed`).
+            async let defi = WalletDeFi.positions(addresses: resolvedEVM)
+            // Safe detection + pending counts (2026-07-20) — live state for
+            // the summary row; new pending items land as things separately
+            // inside `refreshed`.
+            async let safe = SafeBridge.pendingCounts(addresses: resolvedEVM)
             let added = await refreshed
             walletTotals = await totals
+            defiPositions = await defi
+            safePending = await safe
+            // Gas spent (2026-07-20) — cheap once the running totals already
+            // sit in UserDefaults; this only re-prices them, one wrapped-
+            // native lookup per chain (cached 15 minutes).
+            for addr in wallet.addresses {
+                gasSpent[addr.address.lowercased()] = await WalletGas.totalUSD(address: addr.address)
+            }
             // The combined bundle — total + one merged treemap (nil unless
             // more than one wallet is watched).
             if let group = await portfolioDoc {
@@ -601,6 +640,102 @@ struct WalletScreen: View {
                 .foregroundStyle(DS.textSecondary)
         } footer: {
             Text("What each wallet has allowed contracts to spend. New approvals land in your feed; review and revoke on Revoke.cash — revoking is a transaction you sign there, never in Casberi.")
+                .dsText(.callout15).foregroundStyle(DS.textSecondary)
+        }
+    }
+
+    // MARK: - Gas spent (2026-07-20)
+
+    /// Each wallet's running gas total — a fact no explorer states this way
+    /// (they show a single tx's fee, never a running sum), and one that's
+    /// honestly scoped: "since you started watching", never a fabricated
+    /// lifetime figure a fresh watch couldn't actually know.
+    private var gasSection: some View {
+        Section {
+            ForEach(wallet.addresses.filter { gasSpent[$0.address.lowercased()] != nil }) { addr in
+                HStack(spacing: DS.Space.s3) {
+                    WalletFace(address: addr.address, size: 28)
+                    Text(addr.label.isEmpty ? addr.short : addr.label)
+                        .dsText(.body17).foregroundStyle(DS.textPrimary)
+                        .lineLimit(1)
+                    Spacer()
+                    Text(TokenStats.compact(gasSpent[addr.address.lowercased()] ?? 0))
+                        .dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                        .monospacedDigit()
+                }
+                .dsListCardRow()
+            }
+        } header: {
+            Text("Gas spent").dsText(.label12)
+                .foregroundStyle(DS.textSecondary)
+        } footer: {
+            Text("What each wallet has paid in network fees since you started watching it.")
+                .dsText(.callout15).foregroundStyle(DS.textSecondary)
+        }
+    }
+
+    // MARK: - DeFi positions (2026-07-20)
+
+    /// Live Aave collateral/debt/health-factor per wallet per chain —
+    /// nothing shown for a wallet with no position (the honesty rule: no
+    /// placeholder for "not using DeFi").
+    private var defiSection: some View {
+        Section {
+            ForEach(Array(defiPositions.enumerated()), id: \.offset) { _, p in
+                HStack(spacing: DS.Space.s3) {
+                    WalletFace(address: p.address, size: 28)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(wallet.label(forAddress: p.address) ?? WalletStore.shortAddress(p.address))
+                            .dsText(.body17).foregroundStyle(DS.textPrimary)
+                            .lineLimit(1)
+                        Text("\(WalletIngest.displayName(forNetwork: p.network) ?? p.network) · \(TokenStats.compact(p.totalCollateralUSD)) collateral")
+                            .dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                    }
+                    Spacer()
+                    if let hf = p.healthFactor {
+                        Text(String(format: "%.2f", hf))
+                            .dsText(.body17)
+                            .foregroundStyle(hf < 1.5 ? DS.destructive : DS.textPrimary)
+                            .monospacedDigit()
+                    }
+                }
+                .dsListCardRow()
+            }
+        } header: {
+            Text("DeFi positions").dsText(.label12)
+                .foregroundStyle(DS.textSecondary)
+        } footer: {
+            Text("Aave collateral, debt, and health factor — read live from the chain. Below 1.5 is worth watching; below 1.0 risks liquidation.")
+                .dsText(.callout15).foregroundStyle(DS.textSecondary)
+        }
+    }
+
+    // MARK: - Safe (2026-07-20)
+
+    /// A detected Safe's pending-signature queue, summarized per wallet — no
+    /// door out (the Safe web app's per-chain URL prefix couldn't be
+    /// verified for every chain; see `SafeBridge`'s doc comment), just the
+    /// count and the footer's honest pointer to the person's own Safe app.
+    private var safeSection: some View {
+        Section {
+            ForEach(wallet.addresses.filter { safePending[$0.address.lowercased()] != nil }) { addr in
+                HStack(spacing: DS.Space.s3) {
+                    WalletFace(address: addr.address, size: 28)
+                    Text(addr.label.isEmpty ? addr.short : addr.label)
+                        .dsText(.body17).foregroundStyle(DS.textPrimary)
+                        .lineLimit(1)
+                    Spacer()
+                    let count = safePending[addr.address.lowercased()] ?? 0
+                    Text(count == 1 ? "1 pending" : "\(count) pending")
+                        .dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                }
+                .dsListCardRow()
+            }
+        } header: {
+            Text("Safe").dsText(.label12)
+                .foregroundStyle(DS.textSecondary)
+        } footer: {
+            Text("Signatures still needed on this Safe's queued transactions. New ones land in your feed; review and sign in your Safe app — never here.")
                 .dsText(.callout15).foregroundStyle(DS.textSecondary)
         }
     }

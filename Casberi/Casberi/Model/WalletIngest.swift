@@ -70,6 +70,24 @@ enum WalletIngest {
         allChains.first { $0.network == network }?.symbol
     }
 
+    /// The chain's own address-page URL (2026-07-20, for the EIP-7702
+    /// delegation thing's content link) — not a mechanical fact of its own:
+    /// every explorer here is Etherscan-family and takes `/address/<addr>`
+    /// the same way `/tx/<hash>` names a transaction, so this is a rewrite of
+    /// the SAME measured `explorer` prefix `chainName(forContent:)` already
+    /// reads, not a second host to keep in sync.
+    static func explorerAddressURL(forNetwork network: String, address: String) -> String? {
+        guard let tx = allChains.first(where: { $0.network == network })?.explorer else { return nil }
+        return tx.replacingOccurrences(of: "/tx/", with: "/address/") + address
+    }
+
+    /// The chain's own display name ("Base", "Arbitrum") — for a title clause
+    /// that names WHICH chain a cross-chain signal happened on (2026-07-20,
+    /// the Aave health-factor alert).
+    static func displayName(forNetwork network: String) -> String? {
+        allChains.first { $0.network == network }?.displayName
+    }
+
     /// The chains actually read this pass — the person's selection (default: all
     /// of them). Filtered from `allChains` so turning a chain off drops it from
     /// the transfer sync, the holdings read, and the value samples alike, and
@@ -214,6 +232,21 @@ enum WalletIngest {
                 fresh.append(leg)
             }
         }
+        // Gas spent (2026-07-20): one receipt read per NEW outgoing tx this
+        // wallet initiated this pass, deduped by (chain, address, hash) — a
+        // batch tx can produce several legs but pays gas once. Doesn't touch
+        // `added`/`reached`: a running total isn't a landed thing. Computed
+        // here (from `fresh`, before it's landed), but NOT accumulated until
+        // after the corresponding things are durably saved below — see the
+        // note there.
+        var seenGasTxs = Set<String>()
+        let gasJobs: [WalletGas.Job] = fresh
+            .filter { !$0.received && !$0.hash.isEmpty }
+            .compactMap { leg in
+                let key = "\(leg.chain.network)|\(leg.address.lowercased())|\(leg.hash)"
+                guard seenGasTxs.insert(key).inserted else { return nil }
+                return WalletGas.Job(network: leg.chain.network, address: leg.address, hash: leg.hash)
+            }
         // Name the new transfers' counterparties BEFORE landing them — a
         // title is written once, so the name has to be there at write time.
         let names = await counterpartyNames(for: fresh)
@@ -243,6 +276,12 @@ enum WalletIngest {
             if groups[key] == nil { order.append(key) }
             groups[key, default: []].append(leg)
         }
+
+        // Address-poisoning tagging (2026-07-20): addresses THIS wallet has
+        // sent to are the unambiguous trust anchor — never the received
+        // side, which is exactly what a poisoner controls. One fetch for the
+        // whole pass, before the per-leg loop below needs it.
+        let knownGoodByOwner = WalletSafety.knownGoodCounterparties(context: context, owners: evmAddresses)
 
         var landed: [Thing] = []
         for key in order {
@@ -283,6 +322,10 @@ enum WalletIngest {
                 }
                 if let thing = thing(from: leg.t, chain: leg.chain, received: leg.received,
                                      ref: leg.ref, address: leg.address, names: names) {
+                    if leg.received {
+                        let knownGood = knownGoodByOwner[leg.address.lowercased()] ?? []
+                        WalletSafety.flagPoisoning(thing, knownGood: knownGood)
+                    }
                     landed.append(thing)
                 }
             }
@@ -294,7 +337,14 @@ enum WalletIngest {
             SpotlightIndex.index([thing])
             added += 1
         }
-        if added > 0 { context.saveHonestly() }
+        // Durable before the gas total accumulates (2026-07-20 review):
+        // gas is a bare running sum with no per-tx ledger, so a job whose
+        // underlying thing never actually saved (an app kill, a rejected
+        // write) would re-fetch and re-count its fee next launch with no
+        // way to detect or undo the double-count — the same "land and SAVE
+        // before advancing" lesson `WalletApprovals` already learned.
+        let saved = added == 0 || context.saveHonestly()
+        if saved, !gasJobs.isEmpty { await WalletGas.accumulate(jobs: gasJobs) }
         // New token approvals ride the same pass (2026-07-16, prd §84) — an
         // incremental filtered-log read per wallet per chain, landing
         // "Approved X to spend unlimited Y" things whose link is the wallet's
@@ -318,6 +368,30 @@ enum WalletIngest {
         let solana = await solanaSync(context: context, addresses: solanaOnly(addresses),
                                       existing: existing, heldPriced: heldPriced)
         added += solana.added
+        // EIP-7702 delegation watch (2026-07-20) rides the same pass — one
+        // eth_getCode per wallet per active EVM chain, landing a thing only
+        // when the delegate CHANGES. Inside the running guard like everything
+        // above.
+        let delegationAdded = await WalletSafety.sync(context: context,
+                                                      addresses: evmAddresses,
+                                                      existing: existing)
+        added += delegationAdded
+        // Aave health-factor risk watch (2026-07-20) rides the same pass —
+        // one getUserAccountData read per wallet per Aave-supported chain,
+        // landing a thing only on a NEW crossing into risk. Inside the
+        // running guard like everything above.
+        let defiAdded = await WalletDeFi.sync(context: context,
+                                              addresses: evmAddresses,
+                                              existing: existing)
+        added += defiAdded
+        // Safe multisig pending-queue watch (2026-07-20) rides the same
+        // pass — detection + queue read per wallet per active EVM chain,
+        // landing a thing for every newly seen pending transaction. Inside
+        // the running guard like everything above.
+        let safeAdded = await SafeBridge.sync(context: context,
+                                              addresses: evmAddresses,
+                                              existing: existing)
+        added += safeAdded
 
         // `reachedAny` speaks only for the EVM TRANSFER sync, which a
         // Solana-only watch list never runs — left alone it is vacuously false
@@ -332,7 +406,7 @@ enum WalletIngest {
         // this, a partial Alchemy outage could paint "couldn't reach" over
         // approvals that just landed).
         let reached = reachedAny || solana.reached || approvalsAdded > 0
-            || (peerAdded ?? 0) > 0
+            || (peerAdded ?? 0) > 0 || delegationAdded > 0 || defiAdded > 0 || safeAdded > 0
             || (evmAddresses.isEmpty && heldPriced != nil)
         return reached ? added : nil
     }

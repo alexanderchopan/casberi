@@ -206,6 +206,16 @@ final class Thing {
     /// every non-Wallet thing and for transfers landed before this field —
     /// those parse the title.
     var transferCounterparty: String? = nil
+    /// A wallet safety signal on a landed transfer (2026-07-20) — today only
+    /// `"poisoning"`: an incoming transfer whose counterparty address fuzzily
+    /// mimics one this wallet has actually sent to (same leading/trailing hex,
+    /// different address), the address-poisoning scam's whole mechanism. The
+    /// thing still lands honestly as a transfer; this only adds the warning.
+    /// A raw string, not an enum, so an unknown future value from a newer
+    /// synced device degrades to "no warning shown" instead of failing the
+    /// decode. Optional + default nil keeps CloudKit mirroring happy; nil for
+    /// every non-Wallet thing and for every transfer that isn't flagged.
+    var securityFlag: String? = nil
     /// The account a social post came from — the Bluesky/Farcaster handle
     /// that authored it. When more than one account of a source is watched,
     /// the row leads with that author's avatar and names them, the way a
