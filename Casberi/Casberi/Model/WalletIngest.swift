@@ -1027,13 +1027,21 @@ enum WalletIngest {
         // Each symbol's biggest single position also remembers WHERE it is
         // (chain slug + token address) so its treemap cell can open the same
         // chart a watched token gets (2026-07-14). Native coins have no token
-        // address — their cells stay routeless and fall back to the Wallet screen.
+        // address of their own — routed via that chain's wrapped-native
+        // contract instead (2026-07-21), which carries the same USD price and
+        // *does* have a real Dexscreener pool; before this, a native cell fell
+        // back to the Wallet screen, which stopped making sense once that
+        // screen's own holdings/treemap moved to the Feed (2026-07-20) —
+        // tapping ETH landed on wallet management, not anything about ETH.
         var routeBySymbol: [String: (usd: Double, route: String)] = [:]
         for token in tokens {
             bySymbol[token.symbol, default: 0] += token.usd
-            if let contract = token.contract, let slug = chainSlug[token.network],
-               token.usd > (routeBySymbol[token.symbol]?.usd ?? 0) {
+            guard token.usd > (routeBySymbol[token.symbol]?.usd ?? 0),
+                  let slug = chainSlug[token.network] else { continue }
+            if let contract = token.contract {
                 routeBySymbol[token.symbol] = (token.usd, "\(slug):\(contract)")
+            } else if let wrapped = wrappedNativeContract[token.network] {
+                routeBySymbol[token.symbol] = (token.usd, "\(slug):\(wrapped)")
             }
         }
         guard !bySymbol.isEmpty else { return (true, nil) }
@@ -1559,6 +1567,22 @@ enum WalletIngest {
         // (GeckoTerminal, then Dexscreener) spell it "solana", so an SPL cell's
         // tap opens a real chart the same way an ERC-20 cell's does.
         "solana-mainnet": "solana",
+    ]
+
+    /// Each chain's wrapped-native contract (2026-07-21) — a native coin
+    /// (ETH, MATIC, SOL) holds no token address of its own, but its wrapped
+    /// form trades on the same pools at the same price, so a native
+    /// holdings cell can open a real chart through it instead of dead-ending
+    /// on the Wallet screen. `robinhood-mainnet` has no `chainSlug` entry
+    /// (no Dexscreener coverage), so it stays routeless regardless.
+    private static let wrappedNativeContract: [String: String] = [
+        "eth-mainnet": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+        "base-mainnet": "0x4200000000000000000000000000000000000006",
+        "arb-mainnet": "0x82af49447d8a07e3bd95bd0d56f35241523fbab1",
+        "opt-mainnet": "0x4200000000000000000000000000000000000006",
+        "matic-mainnet": "0x0d500b1d8e8ef31e21c99d1db9a6444d3adf1270",
+        // Base58 is case-SENSITIVE (project rule) — never lowercase this one.
+        "solana-mainnet": "So11111111111111111111111111111111111111112",
     ]
 
     /// A step-by-step trace of the holdings path for DiagnosticsScreen — the

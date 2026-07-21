@@ -2727,8 +2727,14 @@ HISTORY with the assets, not a market terminal.
 - **Holdings cells open charts** — a treemap cell carries its token's
   route ("@t:chain:address", stripped by the parser, never shown); tap
   opens the thing sheet when watched, else a quick chart sheet
-  (`TokenQuickSheet`) with one real verb: Watch. Native coins stay
-  routeless and fall back to the Wallet screen.
+  (`TokenQuickSheet`) with one real verb: Watch. Native coins (ETH,
+  MATIC, SOL) route through that chain's wrapped-native contract
+  (`WalletIngest.wrappedNativeContract`, 2026-07-21) — same price, a real
+  Dexscreener pool — rather than falling back to the Wallet screen, which
+  stopped making sense once that screen's own holdings/treemap moved to
+  the Feed (2026-07-20 surface split): tapping ETH landed on wallet
+  management, unrelated to the tapped cell. A chain with no wrapped-native
+  entry or no `chainSlug` (Robinhood) still falls back routeless.
 - **Watchlist ask + away line** — "How's my watchlist?" is a computed
   answer off TokenPulse's own curves (chip gated on watched tokens
   existing); the "While I was away?" answer appends the watchlist's
