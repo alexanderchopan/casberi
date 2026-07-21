@@ -57,11 +57,11 @@ struct WalletScreen: View {
     /// quick chart sheet when not.
     @State private var openTokenThing: Thing?
     @State private var quickToken: TokenQuickRoute?
-    /// Which watched wallet's own screen is pushed (2026-07-20) — renaming
-    /// moved there with everything else per-wallet (approvals, gas, DeFi,
-    /// Safe); the Watching row's whole tap target is now this, not a rename
-    /// prompt.
-    @State private var openWalletDetail: WalletStore.WatchedAddress.ID?
+    /// Which wallet the rename alert is editing (2026-07-20, the door purge:
+    /// manage is ONE page now — the per-wallet screen is deleted, so the row's
+    /// tap went back to being the rename prompt it was before the collapse).
+    @State private var renamingID: WalletStore.WatchedAddress.ID?
+    @State private var renameDraft = ""
     /// Whether the Chains row is expanded (2026-07-15) — collapsed by
     /// default to a one-line summary ("Ethereum, Base +3"); a set-once
     /// setting doesn't deserve six full-height rows every visit.
@@ -98,7 +98,7 @@ struct WalletScreen: View {
                 // and how? Warnings, the combined value bundle, and the recent
                 // transactions all moved to the Wallet FEED, where you look at
                 // them; per-wallet holdings/DeFi/safety stay one row down in
-                // WalletDetailScreen. What's left is watching, adding, chains,
+                // the feed's tiles and tray. What's left is watching, adding, chains,
                 // and disconnecting — a connection screen, like every other
                 // bridge's.
                 watchingSection.listRowSeparator(.hidden)
@@ -121,6 +121,21 @@ struct WalletScreen: View {
         .dsSoftTopEdge()
         .navigationTitle("Wallet")
         .navigationBarTitleDisplayMode(.large)
+        .alert("Name this wallet",
+               isPresented: Binding(get: { renamingID != nil },
+                                    set: { if !$0 { renamingID = nil } })) {
+            TextField("Name (e.g. Main, Cold)", text: $renameDraft)
+            Button("Save") {
+                if let id = renamingID {
+                    wallet.rename(id, to: renameDraft)
+                    DSHaptic.success()
+                }
+                renamingID = nil
+            }
+            Button("Cancel", role: .cancel) { renamingID = nil }
+        } message: {
+            Text("A blank name shows the address instead.")
+        }
         .toolbar {
             // Reorder/remove live behind Edit — drag to sort, red-minus to drop.
             ToolbarItem(placement: .topBarTrailing) { EditButton().tint(DS.textPrimary) }
@@ -155,9 +170,6 @@ struct WalletScreen: View {
         // wallet. Local push, matching `AppsScreen`'s own catalog-tile
         // idiom — no shell-level route needed for a destination reached
         // from exactly one place.
-        .navigationDestination(item: $openWalletDetail) { id in
-            WalletDetailScreen(addressID: id)
-        }
     }
 
     /// Reads the chain and lands new transactions — the plumbing screen's one
@@ -220,12 +232,17 @@ struct WalletScreen: View {
     private var watchingSection: some View {
         Section {
             ForEach(wallet.addresses) { addr in
-                // The whole row opens this wallet's own screen (2026-07-20)
-                // — renaming, approvals, gas, DeFi, Safe all live there now,
-                // scoped to just this wallet.
+                // Tap = rename (an alert, not a door — user, 2026-07-20: "the
+                // manage screen should really be one page with no doors").
+                // The per-wallet screen this row used to push is deleted: its
+                // remove lived on the swipe already, and its safety facts are
+                // the Worth-a-look tray's rows whenever they're true — every
+                // delegation and pending Safe queue IS a warning there, so
+                // the page held nothing the feed doesn't state better.
                 Button {
                     DSHaptic.tap()
-                    openWalletDetail = addr.id
+                    renameDraft = addr.label
+                    renamingID = addr.id
                 } label: {
                     HStack(spacing: DS.Space.s3) {
                         // The wallet's face (2026-07-15): its ENS avatar when it
@@ -249,9 +266,6 @@ struct WalletScreen: View {
                             }
                         }
                         Spacer()
-                        Image(systemName: "chevron.right")
-                            .font(.system(size: 13, weight: .semibold))
-                            .foregroundStyle(DS.textTertiary)
                     }
                     .contentShape(Rectangle())
                 }
@@ -280,7 +294,7 @@ struct WalletScreen: View {
             Text("Watching").dsText(.label12)
                 .foregroundStyle(DS.textSecondary)
         } footer: {
-            Text("Swipe a wallet to remove it. Its holdings and activity ride the feed.")
+            Text("Tap a wallet to rename it, swipe to remove it. Its holdings and activity ride the feed.")
                 .dsText(.callout15).foregroundStyle(DS.textSecondary)
         }
     }

@@ -4569,3 +4569,15 @@ Same-day correction to §137, from two screenshots: the see-all row scattered bl
 The principle §137 half-stated, now in full: **a door must open onto the thing itself — never onto another door.** Tile → list → act. If a surface's only content is a button to somewhere else, delete the surface and put the button where the person already is.
 
 VERIFIED 2026-07-20 (iPhone 17 Pro sim): tray shows three delegation rows each with inline Revoke.cash ↗; see-all renders as one centered phrase, no line. verify.sh green (10/10 survival), perf flat 457ms / 329MB.
+
+## 139. Manage is one page, no doors — the per-wallet screen is deleted (user, 2026-07-20)
+
+The last cut of the day's wallet arc (user: "the manage screen should really be one page with no doors"). `WalletDetailScreen` — already slimmed to rename + Safety + remove by §137, already half-orphaned when §138 made the tray terminal — is deleted outright, because each of its jobs had a better home that isn't a page:
+
+- **Remove** was always on the row's swipe (and Edit mode).
+- **Rename** is the row's own tap again — an alert, not a door; exactly what the tap was before the 07-20 collapse briefly made it a push. The row's chevron dies with the page it promised, and the footer names both verbs ("Tap a wallet to rename it, swipe to remove it").
+- **The safety facts** were already the Worth-a-look tray's rows whenever they're true — every delegation and every pending Safe queue IS a warning there, with the Revoke.cash action inline (§138). A page restating them neutrally held nothing the feed doesn't state better.
+
+Manage is now literally one page: identity rows (tap renames, swipe removes), Connect/paste, Chains (an inline disclosure, not a door), the honest status line, Disconnect. The wallet's whole surface count drops to five: feed, tray, combined sheet, history, manage. §137's "doors" section is superseded where it routed to the wallet screen — the ledger stands, this entry rules.
+
+VERIFIED 2026-07-20 (iPhone 17 Pro sim): row tap opens the rename alert over the one page; chains still expands inline; verify.sh green (10/10 survival), perf flat 457ms / 329MB.
