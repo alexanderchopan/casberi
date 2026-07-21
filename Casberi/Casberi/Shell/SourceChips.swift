@@ -133,7 +133,6 @@ struct SourceChips: View {
             onApps()
         } label: {
             ZStack {
-                Circle().fill(DS.gray100)
                 if let zoomNS {
                     AppsDoor().matchedTransitionSource(id: "appsDoor", in: zoomNS)
                 } else {
@@ -141,6 +140,12 @@ struct SourceChips: View {
                 }
             }
             .frame(width: 46, height: 46)
+            // Glass on the NEUTRAL chips only (2026-07-20): this strip is
+            // pinned chrome the feed scrolls under, so the doors and the "All"
+            // chip wear the floating material. A source chip keeps its own app
+            // icon — an icon IS content, and frosting one would only muddy a
+            // mark the person recognizes.
+            .dsGlass(cornerRadius: 23)
         }
         .buttonStyle(.plain)
         .accessibilityLabel("Apps")
@@ -159,9 +164,10 @@ struct SourceChips: View {
             ZStack {
                 switch label {
                 case "All":
-                    Circle().fill(DS.gray100)
                     Text("All").dsText(.label12)
                         .foregroundStyle(DS.textPrimary)
+                        .frame(width: 46, height: 46)
+                        .dsGlass(cornerRadius: 23)
                 default:
                     BridgeIcon(name: label, size: 46, circular: true)
                 }

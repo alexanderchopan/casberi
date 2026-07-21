@@ -64,6 +64,16 @@ struct FeedScreen: View {
     /// transaction rows to one watched wallet. Only meaningful on the Wallet
     /// page (each FeedScreen owns one source); nil everywhere else.
     @State private var selectedWallet: String?
+    /// The Wallet feed's live reads (2026-07-20) — Aave positions and the
+    /// warnings rolled up from them plus Safe/poisoning/delegation. Never a
+    /// landed thing: re-read each time this feed comes forward or its scope
+    /// changes, exactly as the manage screen used to hold it.
+    @State private var walletLive = WalletLiveState()
+    /// "Across your wallets" — the combined-value breakdown, opened by the
+    /// Balance tile (2026-07-20). It moved here with the balance itself: the
+    /// tile IS the combined portfolio, so it's the honest door. Only meaningful
+    /// with more than one wallet watched, which is also the sheet's own guard.
+    @State private var showCombinedWallets = false
     /// Bumped when this page lands — rows replay their shape's
     /// entrance (each shape arrives its own way, ruling 2026-07-07).
     @State private var shapeWave = 0
@@ -539,7 +549,12 @@ struct FeedScreen: View {
                     // No closing line in the Reminders shape: its state groups
                     // deliberately render a subset (Done shows same-day only), so
                     // a `visible`-count claim would disagree with the rows above.
-                    if shape != .reminders {
+                    // Wallet joined it (2026-07-20) for the same reason — it
+                    // previews five and hands off to the history page, so
+                    // "that's everything · 131 transactions" under five rows was
+                    // a flat lie. Its own "See all transactions · 131" row is
+                    // the honest close.
+                    if shape != .reminders && shape != .wallet {
                         caughtUpFooter(visible)
                     }
                 }
@@ -603,11 +618,12 @@ struct FeedScreen: View {
                 || !wallet.addresses.contains(where: { walletSameAddress($0.address, sel) }) {
                 selectedWallet = nil
             }
-            if isActive { streamBlock() }
+            if isActive { streamBlock(); loadWalletLive() }
         }
         // Scoping to a wallet (or back to All) re-paints the treemap/NFT strip
-        // for that scope; the rows and balance lede re-derive from state.
-        .onChange(of: selectedWallet) { if isActive { streamBlock() } }
+        // AND re-reads the live tiles for that scope; the rows and balance
+        // re-derive from state.
+        .onChange(of: selectedWallet) { if isActive { streamBlock(); loadWalletLive() } }
         .sheet(item: $sheetThing) { thing in
             ThingSheetView(thing: thing)
                 .navigationTransition(.zoom(sourceID: thing.id, in: zoomNS))
@@ -618,6 +634,12 @@ struct FeedScreen: View {
         }
         .sheet(item: $quickToken) { route in
             TokenQuickSheet(route: route)
+        }
+        .sheet(isPresented: $showCombinedWallets) {
+            let samples = wallet.combinedValueSamples()
+            CombinedWalletsSheet(total: samples.last?.usd ?? 0,
+                                 combined: samples,
+                                 wallets: wallet.addresses)
         }
         .translationPresentation(isPresented: $showTranslate, text: translateText)
         .confirmationDialog(
@@ -673,11 +695,19 @@ struct FeedScreen: View {
         case .photos:
             photoGridSection(visible)
         case .wallet:
+            // The reads first, then the stream (2026-07-20, the surface split):
+            // balance + warnings side by side, the holdings treemap, DeFi, and
+            // only then the transactions — capped, with a door to all of them.
+            // Everything above the rows is live state, never a landed thing.
             walletSwitcherSection
-            walletBalanceLedeSection
+            walletTilesSection
             holdingsBlockSection
-            let days = dayGroups(visible)
+            walletDeFiSection
+            let all = visible
+            let preview = Array(all.prefix(Self.walletPreviewRows))
+            let days = dayGroups(preview)
             groupedSections(days, nextEventID: nextEventID, boundary: boundaryThingID(in: days))
+            walletSeeAllSection(total: all.count)
         case .calendar:
             groupedSections(agendaGroups(visible), nextEventID: nextEventID)
         case .gmail:
@@ -922,6 +952,7 @@ struct FeedScreen: View {
         freezeBoundary()
         shapeWave += 1
         streamBlock()
+        loadWalletLive()
     }
 
     /// The person left this page — stamp what they saw, so the next visit's
@@ -1091,15 +1122,87 @@ struct FeedScreen: View {
     /// treemap — real samples off `WalletStore.combinedValueSamples()`
     /// (recorded on every real holdings fetch since a wallet was watched, not
     /// synthesized). Empty (no section) until two aligned samples exist.
+    /// How many transactions the feed previews before handing off to the
+    /// history page (2026-07-20). Five is the count that still reads as "here's
+    /// what's new" rather than a log — the reads above it are the point of this
+    /// screen, and an unbounded stream buried all four of them.
+    private static let walletPreviewRows = 5
+
+    /// Balance and Worth a look, side by side — the two questions a wallet
+    /// screen answers at a glance ("what's it worth", "is it okay").
+    ///
+    /// Rendered FLAT (§gotchas' eager-head law): a plain HStack of two shallow
+    /// tiles, no generic widget path. Either tile can be absent — no balance
+    /// until two value samples exist, no warnings tile when there's nothing
+    /// wrong — and with both absent the section renders nothing at all rather
+    /// than an empty row (the same honesty floor every section here keeps).
     @ViewBuilder
-    private var walletBalanceLedeSection: some View {
+    private var walletTilesSection: some View {
         // Scoped to the selected wallet's own value line, else the combined
         // portfolio line (prd §128). Both start honest — nil until two aligned
-        // samples exist (TokenChart.from guards ≥2), so no lede until then.
+        // samples exist (TokenChart.from guards ≥2).
         let samples = selectedWallet.map { wallet.valueSamples(forAddress: $0) }
             ?? wallet.combinedValueSamples()
-        if let chart = TokenChart.from(samples: samples) {
-            ledeSection(WalletBalanceLede(chart: chart))
+        let chart = TokenChart.from(samples: samples)
+        let warnings = walletLive.warnings
+        if chart != nil || !warnings.isEmpty {
+            Section {
+                HStack(alignment: .top, spacing: DS.Space.s2) {
+                    if let chart {
+                        WalletBalanceTile(chart: chart) {
+                            // More than one wallet: the breakdown of what this
+                            // number is made of. One wallet: that number is
+                            // already whole, so the tile opens the wallet.
+                            if wallet.addresses.count > 1, selectedWallet == nil {
+                                showCombinedWallets = true
+                            } else {
+                                HomeRoute.shared.bridgePush = .wallet
+                            }
+                        }
+                    }
+                    if !warnings.isEmpty {
+                        WalletWarningsTile(warnings: warnings) {
+                            HomeRoute.shared.bridgePush = .wallet
+                        }
+                    }
+                }
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+                .listRowInsets(EdgeInsets(top: DS.Space.s2, leading: DS.Space.s4,
+                                          bottom: 0, trailing: DS.Space.s4))
+            }
+        }
+    }
+
+    /// Aave collateral / debt / health for the wallets in scope (2026-07-20) —
+    /// moved up from the detail page so the debt side sits beside the holdings
+    /// that are its collateral. Nothing renders without a position.
+    @ViewBuilder
+    private var walletDeFiSection: some View {
+        if !walletLive.positions.isEmpty {
+            Section {
+                WalletDeFiTile(positions: walletLive.positions) {
+                    HomeRoute.shared.bridgePush = .wallet
+                }
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+                .listRowInsets(EdgeInsets(top: DS.Space.s2, leading: DS.Space.s4,
+                                          bottom: 0, trailing: DS.Space.s4))
+            }
+        }
+    }
+
+    /// The stream's door — only when there's more behind it than the preview
+    /// showed (no dead control when five rows is the whole history).
+    @ViewBuilder
+    private func walletSeeAllSection(total: Int) -> some View {
+        if total > Self.walletPreviewRows {
+            Section {
+                WalletSeeAllRow(count: total) {
+                    HomeRoute.shared.bridgePush = .walletHistory(scope: selectedWallet)
+                }
+                .dsListCardRow()
+            }
         }
     }
 
@@ -1120,6 +1223,13 @@ struct FeedScreen: View {
                                                address: addr.address)
                         }
                     }
+                    .padding(4)
+                    // Glass, by the law's own terms (2026-07-20): scoping is a
+                    // CONTROL, not content, so the switcher wears the floating
+                    // material the composer and agent bar already do — one bar
+                    // of glass for the whole strip rather than a pane per chip
+                    // (cheaper, and it reads as one object).
+                    .dsGlass(cornerRadius: 999)
                     .padding(.vertical, 2)
                 }
                 .listRowBackground(Color.clear)
@@ -1851,6 +1961,24 @@ struct FeedScreen: View {
         streamBlock()
         try? await Task.sleep(for: .milliseconds(450))
         DSHaptic.success()
+    }
+
+    /// Reads the Wallet feed's live state for the current scope. Off the Wallet
+    /// feed it clears rather than holding a stale read — the tiles are gone
+    /// from the screen anyway, and stale state would flash on return.
+    private func loadWalletLive() {
+        guard source == "Wallet" else {
+            if walletLive != WalletLiveState() { walletLive = WalletLiveState() }
+            return
+        }
+        let scope = selectedWallet
+        Task { @MainActor in
+            let state = await WalletWatch.liveState(scopeTo: scope, context: modelContext)
+            // The scope may have moved while the reads were in flight — a late
+            // answer for a wallet we've since left must not paint.
+            guard scope == selectedWallet else { return }
+            walletLive = state
+        }
     }
 
     private func streamBlock() {

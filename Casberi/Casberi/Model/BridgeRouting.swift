@@ -47,6 +47,10 @@ enum BridgeRouter {
         case appleJournal
         case appleNotes
         case token(TokenBridge)
+        /// Every wallet transaction, day by day (2026-07-20) — the page behind
+        /// the Wallet feed's "See all". Carries the feed's wallet scope so the
+        /// door doesn't silently widen it; nil is every watched wallet.
+        case walletHistory(scope: String?)
         /// A connected seat with no dedicated screen (the demo seats — Gmail,
         /// Calendar, …) — the generic detail page, never EmptyView.
         case detail(id: String)
@@ -87,6 +91,7 @@ enum BridgeRouter {
             case .appleJournal:   "journal"
             case .appleNotes:     "notes"
             case .token(let b):   b.bridgeID
+            case .walletHistory(let scope): "wallethistory:\(scope ?? "all")"
             case .detail(let id): "detail:\(id)"
             }
         }
@@ -196,6 +201,7 @@ struct BridgeDestinationView: View {
         case .appleJournal:   JournalImportScreen()
         case .appleNotes:     NotesShareScreen()
         case .token(let b):   TokenSetupScreen(bridge: b)
+        case .walletHistory(let scope): WalletHistoryScreen(scope: scope)
         case .detail(let id): BridgeDetailScreen(bridgeID: id)
         }
     }
