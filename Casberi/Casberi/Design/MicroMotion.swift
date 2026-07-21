@@ -248,6 +248,9 @@ extension View {
 /// cancel the prior clear so a second tap can't blink the glow off early.
 struct LandFlash: ViewModifier {
     let trigger: Int
+    /// The glow's hue — a jump lands in the neutral tint; a shelf COMPLETING
+    /// lands in its own category color, so the payoff wears the set's identity.
+    var tint: Color = DS.tint
     @State private var on = false
     @State private var clear: Task<Void, Never>?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -256,7 +259,7 @@ struct LandFlash: ViewModifier {
         content
             .background(alignment: .leading) {
                 RoundedRectangle(cornerRadius: DS.Radius.control, style: .continuous)
-                    .fill(DS.tint.opacity(on ? 0.14 : 0))
+                    .fill(tint.opacity(on ? 0.14 : 0))
                     .padding(.horizontal, DS.Space.s2)
                     .padding(.vertical, -DS.Space.s1)
                     .allowsHitTesting(false)
@@ -275,9 +278,52 @@ struct LandFlash: ViewModifier {
 }
 
 extension View {
-    /// One tint glow behind this view each time `trigger` bumps — a jump's
-    /// arrival, so a scroll-to doesn't land in silence.
-    func landFlash(_ trigger: Int) -> some View { modifier(LandFlash(trigger: trigger)) }
+    /// One glow behind this view each time `trigger` bumps — a jump's arrival,
+    /// so a scroll-to doesn't land in silence. `tint` colors the glow (a shelf
+    /// completing glows in its own category color).
+    func landFlash(_ trigger: Int, tint: Color = DS.tint) -> some View {
+        modifier(LandFlash(trigger: trigger, tint: tint))
+    }
+}
+
+// MARK: - Connect promote (a just-connected row lifts as it takes its seat)
+
+/// The pin-lift beat (§polish §11), reused for a store connect: the row that
+/// just connected scales up a touch and casts a soft shadow while it glides to
+/// its connected seat in the shelf, so the state change reads as a promotion
+/// rather than a silent re-sort. One shot per `token` bump, and only on the row
+/// whose name matches — the whole shelf shares one token, so the match gates
+/// it. Off under Reduce Motion (the re-sort still happens, just without the
+/// lift). `isTarget` is re-read at fire time, so a token bumped for another row
+/// never lifts this one.
+struct ConnectPromote: ViewModifier {
+    let isTarget: Bool
+    let token: Int
+    @State private var up = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    func body(content: Content) -> some View {
+        content
+            .scaleEffect(up ? 1.03 : 1)
+            .shadow(color: DS.tint.opacity(up ? 0.28 : 0),
+                    radius: up ? 12 : 0, y: up ? 4 : 0)
+            .onChange(of: token) {
+                guard !reduceMotion, token > 0, isTarget else { return }
+                withAnimation(.spring(response: 0.24, dampingFraction: 0.6)) { up = true }
+                Task { @MainActor in
+                    try? await Task.sleep(for: .milliseconds(420))
+                    withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) { up = false }
+                }
+            }
+    }
+}
+
+extension View {
+    /// A scale-and-shadow promote the moment `token` bumps for this row — the
+    /// just-connected app taking its connected seat, felt as a lift.
+    func connectPromote(isTarget: Bool, token: Int) -> some View {
+        modifier(ConnectPromote(isTarget: isTarget, token: token))
+    }
 }
 
 // MARK: - Staggered arrival (list rows land one after another)
