@@ -57,6 +57,12 @@ final class ShellChrome {
     /// restored 2026-07-14 — the tab-drop rewire had orphaned it) and the
     /// berry rain (BerryRain, user ask same day).
     var refreshPulse = 0
+    /// The hue the NEXT `refreshPulse` bump should rain in — a specific
+    /// source's own brand hue when the pull happened inside its feed (set by
+    /// FeedScreen's `.refreshable`, cleared to nil for "All") or a moment's
+    /// own source (set by MainSurface's SourceMoments drain). nil rains the
+    /// app's default berry blue (delight pass 2026-07-21).
+    var refreshHue: Color? = nil
 
     /// A thing ARRIVED while the person watched (a bridge sync, a pull, a
     /// share landing) — the source's chip does one catch bob: the capture

@@ -974,8 +974,8 @@ enum WalletIngest {
         if watched.count > 1, groups.count == watched.count {
             let combined = groups.reduce(0.0) { $0 + $1.totalUSD }
             let signature = watched.map { $0.address.lowercased() }.sorted().joined(separator: ",")
-            if WalletMoments.shared.notedNewHigh(scope: "combined:\(signature)", value: combined) {
-                WalletMoments.shared.fire(String(localized: "Across your wallets: a new high, \(TokenStats.compact(combined)) 📈"))
+            if SourceMoments.shared.notedNewHigh(scope: "wallet.combined:\(signature)", value: combined) {
+                SourceMoments.shared.fire(String(localized: "Across your wallets: a new high, \(TokenStats.compact(combined)) 📈"), source: "Wallet")
             }
         }
         return groups

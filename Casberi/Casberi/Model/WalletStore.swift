@@ -196,8 +196,8 @@ final class WalletStore {
 
     /// Appends a sample unless one landed in the last 4 hours — holdings
     /// refresh every foreground, and a line of near-identical minutes-apart
-    /// points is noise, not history. Main-actor: it fires wallet moments
-    /// (WalletMoments), and its only caller (WalletIngest) already is.
+    /// points is noise, not history. Main-actor: it fires source moments
+    /// (SourceMoments), and its only caller (WalletIngest) already is.
     @MainActor
     func recordSample(address: String, totalUSD: Double, holdings: [String: Double] = [:]) {
         // A single watched wallet's own value hitting a new high is its
@@ -207,8 +207,8 @@ final class WalletStore {
         // it fires only with exactly one wallet watched, so several wallets
         // never stack toasts. First value seeds the mark silently.
         if addresses.count == 1,
-           WalletMoments.shared.notedNewHigh(scope: address.lowercased(), value: totalUSD) {
-            WalletMoments.shared.fire(String(localized: "Your wallet hit a new high 📈"))
+           SourceMoments.shared.notedNewHigh(scope: "wallet.\(address.lowercased())", value: totalUSD) {
+            SourceMoments.shared.fire(String(localized: "Your wallet hit a new high 📈"), source: "Wallet")
         }
         var samples = valueSamples(forAddress: address)
         if let last = samples.last, Date.now.timeIntervalSince(last.at) < 4 * 3600 { return }

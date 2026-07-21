@@ -5,6 +5,11 @@ import SwiftUI
 /// treatment (done strikes through). Rows carry status (principle 6).
 struct ThingRow: View {
     let thing: Thing
+    @Environment(\.modelContext) private var modelContext
+    /// A quiet echo when this same link was already saved from another
+    /// source — the source name it first landed from, or nil (delight pass
+    /// 2026-07-21). Computed once per row identity, never on every redraw.
+    @State private var echoSource: String?
 
     private var done: Bool { thing.mark == .done }
 
@@ -12,12 +17,20 @@ struct ThingRow: View {
         HStack(spacing: DS.Space.s3) {
             KindGlyph(kind: thing.kind, size: 28)
 
-            Text(thing.title)
-                .dsText(.body17)
-                .foregroundStyle(done ? DS.textTertiary : DS.textPrimary)
-                .strikethrough(done, color: DS.textTertiary)
-                .lineLimit(1)
-                .frame(maxWidth: .infinity, alignment: .leading)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(thing.title)
+                    .dsText(.body17)
+                    .foregroundStyle(done ? DS.textTertiary : DS.textPrimary)
+                    .strikethrough(done, color: DS.textTertiary)
+                    .lineLimit(1)
+                if let echoSource {
+                    Text("Also saved from \(echoSource)")
+                        .dsText(.label12)
+                        .foregroundStyle(DS.textTertiary)
+                        .lineLimit(1)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
 
             TagPill(thing.tags.first ?? thing.kind.typeTag)
 
@@ -25,6 +38,9 @@ struct ThingRow: View {
         }
         .padding(.horizontal, DS.Space.s4)
         .padding(.vertical, DS.Space.s3)
+        .task(id: thing.id) {
+            echoSource = CrossSourceEcho.find(for: thing, context: modelContext)
+        }
     }
 }
 
