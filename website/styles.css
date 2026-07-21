@@ -678,7 +678,7 @@ footer .tagline { font-size: 16px; font-weight: 600; color: var(--ink); margin-b
   .vid-live { overflow: hidden; }
 
   /* full phone — for clips whose action lives in a bottom sheet */
-  .vid-full { width: 170px; aspect-ratio: 540/1174; max-height: none;
+  .vid-full { width: 170px; aspect-ratio: 9/16; max-height: none;
     border-radius: 22px; border-bottom: 2px solid rgba(255,255,255,.22);
     margin-top: auto; margin-bottom: 24px; box-shadow: 0 14px 34px rgba(0,0,0,.45); }
   .vid-full::before { display: none; }
