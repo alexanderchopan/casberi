@@ -48,16 +48,20 @@ struct MainSurface: View {
     /// even though it just arrived. Set-diff on the real records instead.
     @State private var seenIDs: Set<UUID>?
 
-    /// Chip order: All, then every source most-recent-first (the app you just
-    /// heard from sits up front). `things` is newest-first, so first
-    /// appearance IS the newest thing per source.
+    /// Chip order: All, then every source — most-recent-first is still the
+    /// baseline (`things` is newest-first, so first appearance IS the newest
+    /// thing per source), but a source you actually VISIT often (`ChipMemory`,
+    /// amends §131, 2026-07-21) sorts ahead of it. `sorted` is stable, so a
+    /// zero-weight tie keeps the recency order untouched — this only ever
+    /// promotes a chip you use, never reorders the rest.
     private var chipLabels: [String] {
         var seen: Set<String> = []
         var ordered: [String] = []
         for thing in feedThings where seen.insert(thing.source).inserted {
             ordered.append(thing.source)
         }
-        return ["All"] + ordered
+        let learned = ordered.sorted { ChipMemory.weight(for: $0) > ChipMemory.weight(for: $1) }
+        return ["All"] + learned
     }
 
     /// The pager's pages — every chip is a feed now (the board's own
@@ -140,6 +144,9 @@ struct MainSurface: View {
                         // its own tag.
                         if label == "All" { filter.tag = "All" }
                     }
+                    // Tap-learning (ChipMemory) counts an actual switch, not
+                    // the re-tap-to-pop branch above.
+                    ChipMemory.visited(label)
                 }
                 .padding(.top, DS.Space.s6)
                 .padding(.bottom, DS.Space.s2)
@@ -169,6 +176,14 @@ struct MainSurface: View {
             }
             .onAppear {
                 seenIDs = Set(feedThings.map(\.id))
+                #if DEBUG
+                // `-chipStats "Wallet:9,Photos:2"` seeds tap-learning counts
+                // headlessly, then this logs the computed order so a chip
+                // promotion verifies in one launch (seed Wallet high, watch
+                // it lead the sources behind All).
+                ChipMemory.seedFromLaunchArgs()
+                NSLog("[Casberi] chipLabels: %@", chipLabels.joined(separator: ", "))
+                #endif
                 // A door push that raced launch — casberi://settings arriving
                 // before the first frame — was set before this stack
                 // registered its navigationDestination, and SwiftUI drops

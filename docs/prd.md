@@ -4682,3 +4682,53 @@ Files: `Design/MicroMotion.swift` (tint on `LandFlash`, new `ConnectPromote`),
 `Screens/AppsScreen.swift`. catalog-sync stays green (no name changes). NOT yet
 verified on-sim — this session is the Linux web env with no xcodebuild; build +
 screen-sweep to run on the Mac before the checkpoint.
+
+## 144. Source chips learn the front; landing carries over (user: "how do we solve the problem? ... them wanting Wallet to be the default", 2026-07-21)
+
+User's complaint: recency-only chip order means a source you actually live in
+still drifts back the moment anything else lands, and there was no way to make
+a chip your default. Explored alternatives together (keep-at-front, drag
+reorder, a management tray, a landing-only setting, App Shortcuts) before the
+user flagged the two problems keep-at-front doesn't solve — it does nothing
+for "All" being the fixed landing, and a hand-picked front set gets messy fast
+(what happens with five kept chips?) — and asked for the zero-UI shape
+instead.
+
+Ruling: **two independent, zero-new-chrome behaviors**, no kept set, no
+management surface, nothing to configure.
+
+- **Landing carries over.** `FeedFilter.source` (`Model/FeedFilter.swift`) now
+  persists to UserDefaults on every write and reads it back in its own
+  `init()`. RootShell's launch `onAppear` no longer hardcodes it to `"All"` —
+  this amends §131's "content-first, always" to "content-first, wherever you
+  left it": persisting on every change (not just at background) means
+  whatever `source` held when the process died IS what's on disk, no
+  lifecycle hook required. A fresh install has nothing persisted yet and
+  still opens on "All" — the default is unchanged, only the override is new.
+- **The strip learns.** `Model/ChipMemory.swift` (new, same shape as
+  `AskMemory`): each real chip switch bumps a per-source visit counter,
+  decaying by half every week of neglect. `MainSurface.chipLabels` sorts by
+  this weight first, falling back to the untouched most-recent-first order on
+  a tie (`Array.sorted` is stable since Swift 5) — a source you actually use
+  anchors ahead of the recency tail; everything you've never tapped keeps
+  sorting exactly as it did before. "All" is excluded from counting — it's
+  the baseline every session starts from, not a chip competing for a slot.
+
+Deliberately NOT built: a kept/pinned front set (the mess the user flagged
+directly — an edit surface with a cap, order, and add/remove verbs for a
+five-item list), drag-to-reorder on the strip (the same three-way gesture
+arbitration class `BoardDragDriver` retired paid for three lessons on, for a
+capability tap-learning already gives for free), and a settings picker (the
+persisted-landing behavior gives the same outcome without a control to find).
+
+Probes: `-landingChip <source>|clear` seeds the persisted landing directly
+(without navigating the seeding launch, so a two-launch run — seed, relaunch
+plain — verifies the next-launch landing); `-chipStats "<source:n[,…]>"|clear`
+seeds the tap-learning counters, and every `MainSurface` mount NSLogs
+`chipLabels:` with the computed order, so a promotion verifies in one launch.
+
+Files: `Model/FeedFilter.swift`, `Model/ChipMemory.swift` (new),
+`Shell/MainSurface.swift`, `Shell/RootShell.swift`. NOT yet verified on-sim —
+this session is the Linux remote environment with no Xcode toolchain at all
+(no `xcodebuild`, no `xcrun`, no `swiftc`); build + `scripts/verify.sh` +
+the two probes above need to run on the Mac before this ships to TestFlight.

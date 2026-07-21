@@ -56,6 +56,8 @@ Or just run `scripts/verify.sh` (build + install + screen sweep + answer probe).
 All read via UserDefaults in `Shell/RootShell.swift` unless noted:
 
 - `-deeplink <casberi://url>` — open a deep link on launch.
+- `-landingChip <source>|clear` — seed the persisted chip landing (`Model/FeedFilter.swift`) directly, without navigating the seeding launch — the app now opens on whichever source chip you were last standing on (§131 amendment, 2026-07-21), not always "All", so a two-launch probe (seed here, relaunch plain) verifies the next-launch landing headlessly.
+- `-chipStats "<source:n[,…]>"|clear` — seed the source strip's tap-learning counters (`Model/ChipMemory.swift`): a chip you actually visit sorts ahead of pure most-recent-first, decaying back over a week of neglect. Every `MainSurface` mount NSLogs `chipLabels:` with the computed order, so a promotion verifies in one launch.
 - `-openThing "<title prefix>"` — open the newest thing whose title starts with the prefix (the sheet-by-content route for headless sheet checks; a UUID changes every install, a title doesn't). NSLogs `openThing:` with the match. Runs at mount, BEFORE async ingest/seed hooks land anything — on a fresh install or when pairing with an ingest probe, launch once to land, then relaunch with `-openThing`.
 - `-answerProbe "<query>"` — run the answer path headless, NSLog the result (`-probeDelay <s>` to wait first).
 - `-uiAnswerProbe "<query>"` — auto-open the composer and send through the real UI path (also read in `Shell/Composer.swift`).
