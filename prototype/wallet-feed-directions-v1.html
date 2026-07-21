@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Wallet feed — three directions</title>
+<style>
+  /* Tokens, ported from DesignTokens.swift (dark treatment — the app's default). */
+  :root {
+    --page: #000000;
+    --sheet: #111113;
+    --well: #080809;
+    --text1: #ffffff;
+    --text2: rgba(235,235,245,0.60);
+    --text3: rgba(235,235,245,0.30);
+    --tint: #1673e6;
+    --attention: #ff9f0a;
+    --confirm: #30d158;
+    --destructive: #ff453a;
+    --r-card: 10px;
+    --r-sheet: 16px;
+    --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s6: 24px;
+    --shadow: 0 10px 30px rgba(0,0,0,0.55);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #0a0a0c;
+    color: var(--text1);
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
+    letter-spacing: 0; /* design law: no letter-spacing anywhere */
+    padding: 40px 24px 80px;
+  }
+  h1 { font-size: 22px; font-weight: 700; margin-bottom: 8px; }
+  .intro { color: var(--text2); font-size: 14px; line-height: 1.5; max-width: 760px; margin-bottom: 36px; }
+  .intro b { color: var(--text1); font-weight: 600; }
+
+  .rail { display: flex; gap: 40px; flex-wrap: wrap; align-items: flex-start; justify-content: center; }
+  .col { width: 393px; }
+  .dir-title { font-size: 17px; font-weight: 700; margin-bottom: 4px; }
+  .dir-note { color: var(--text2); font-size: 13px; line-height: 1.5; margin-bottom: 14px; min-height: 78px; }
+
+  .phone {
+    width: 393px;
+    background: var(--page);
+    border-radius: 44px;
+    padding: 18px 16px 28px;
+    box-shadow: 0 0 0 1px rgba(255,255,255,0.07), 0 24px 60px rgba(0,0,0,0.6);
+    overflow: hidden;
+  }
+  .statusbar { display:flex; justify-content:space-between; padding: 2px 14px 10px; color:var(--text1); font-size:13px; font-weight:600; }
+  .navtitle { font-size: 28px; font-weight: 700; padding: 4px 4px 12px; }
+
+  /* Wallet switcher chips (pinned) */
+  .chips { display:flex; gap: var(--s2); padding: 0 2px 14px; }
+  .chip {
+    display:flex; align-items:center; gap:6px;
+    font-size: 13px; font-weight: 600; color: var(--text2);
+    background: var(--sheet); border-radius: 9999px; padding: 7px 12px;
+  }
+  .chip.on { color: #fff; background: var(--tint); }
+  .face { width:16px; height:16px; border-radius:50%; background: linear-gradient(135deg,#7dd3fc,#6366f1); }
+  .face.cold { background: linear-gradient(135deg,#fca5a5,#f59e0b); }
+
+  /* Tiles */
+  .tilerow { display:flex; gap: var(--s2); margin-bottom: var(--s2); }
+  .tile {
+    background: var(--sheet); border-radius: var(--r-sheet);
+    padding: var(--s3); flex: 1; box-shadow: var(--shadow);
+    display:flex; flex-direction:column; gap: var(--s1);
+  }
+  .cap { display:flex; align-items:center; gap:5px; font-size:12px; color: var(--text2); }
+  .cap .spacer { flex:1; }
+  .chev { color: var(--text3); font-size: 11px; }
+  .glyph { color: var(--attention); font-size: 11px; }
+  .stat { font-size: 24px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .sub { font-size: 13px; color: var(--text2); line-height: 1.35; }
+  .pill {
+    align-self:flex-start; display:flex; align-items:center; gap:4px;
+    font-size: 12px; font-weight: 600; color: var(--confirm);
+    background: rgba(48,209,88,0.14); border-radius: 9999px; padding: 3px 8px; margin-top: 2px;
+  }
+  svg.spark { display:block; width:100%; height:26px; }
+
+  /* Shared: holdings cells */
+  .cellname { font-size: 15px; font-weight: 600; }
+  .cellval { font-size: 12px; color: var(--text2); font-variant-numeric: tabular-nums; }
+  .coin {
+    width: 18px; height:18px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    font-size: 9px; font-weight: 800; color:#fff; flex:none;
+  }
+  .c-eth { background:#627eea; } .c-usdc { background:#2775ca; }
+  .c-sol { background: linear-gradient(135deg,#9945ff,#14f195); }
+  .c-jup { background:#10b981; } .c-btc { background:#f7931a; }
+  .c-efi { background:#4b5563; }
+
+  /* DeFi tile */
+  .defirow { display:flex; gap: var(--s3); padding-top: var(--s1); }
+  .defistat { flex:1; }
+  .defistat .l { font-size:12px; color: var(--text3); margin-bottom:2px; }
+  .defistat .v { font-size:16px; font-weight:600; font-variant-numeric: tabular-nums; }
+
+  /* Transactions */
+  .dayhead { font-size: 12px; color: var(--text2); padding: 16px 4px 8px; }
+  .txn {
+    background: var(--sheet); border-radius: var(--r-sheet);
+    padding: var(--s3); display:flex; align-items:center; gap: var(--s3);
+    margin-bottom: var(--s2); box-shadow: var(--shadow);
+  }
+  .txn .kg {
+    width: 34px; height: 34px; border-radius: 9px; flex:none;
+    display:flex; align-items:center; justify-content:center; font-size:15px;
+    background: var(--well);
+  }
+  .txn .t1 { font-size: 15px; font-weight: 500; }
+  .txn .t2 { font-size: 13px; color: var(--text2); margin-top:1px; }
+  .seeall {
+    text-align:center; color: var(--tint); font-size: 15px; font-weight: 600;
+    padding: 10px 0 2px;
+  }
+  .seeall .chev { color: var(--tint); }
+
+  /* ---------- Direction A: the band ---------- */
+  .a-holdhead { display:flex; align-items:baseline; gap:8px; padding: 14px 4px 10px; }
+  .a-holdhead .h { font-size: 15px; font-weight: 600; }
+  .a-holdhead .s { font-size: 13px; color: var(--text2); }
+  .band { display:flex; gap: var(--s2); height: 72px; }
+  .band .bcell {
+    background: var(--sheet); border-radius: var(--r-sheet); box-shadow: var(--shadow);
+    padding: 9px; display:flex; flex-direction:column; justify-content:space-between;
+    overflow:hidden; min-width: 0;
+  }
+  .band .brow { display:flex; align-items:center; gap:5px; min-width:0; }
+  .band .coin { width:14px; height:14px; font-size:7px; }
+  .band .bcell .cellname { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .band .more {
+    background: transparent; box-shadow: inset 0 0 0 1.5px var(--sheet);
+    align-items:center; justify-content:center; display:flex; flex-direction:row;
+    color: var(--text2); font-size: 13px; font-weight:600;
+  }
+
+  /* ---------- Direction B: one instrument ---------- */
+  .alloc { display:flex; gap: 3px; height: 12px; margin-top: 10px; border-radius: 6px; overflow:hidden; }
+  .alloc div { border-radius: 4px; }
+  .legend { display:flex; flex-wrap:wrap; gap: 6px 14px; margin-top: 10px; }
+  .legend .li { display:flex; align-items:center; gap:6px; font-size:13px; }
+  .legend .dot { width:8px; height:8px; border-radius:50%; }
+  .legend .pct { color: var(--text2); font-variant-numeric: tabular-nums; }
+  .quietrow {
+    display:flex; align-items:center; gap: var(--s2);
+    padding: 12px 6px 2px; font-size: 14px; color: var(--text1);
+  }
+  .quietrow .sub2 { color: var(--text2); font-size: 13px; }
+  .quietrow .spacer { flex:1; }
+
+  /* ---------- Direction C: smaller, denser map ---------- */
+  .cmap { position:relative; height: 150px; margin-top: 10px; }
+  .ccell {
+    position:absolute; background: var(--sheet); border-radius: var(--r-sheet);
+    box-shadow: var(--shadow); padding: 10px;
+    display:flex; flex-direction:column; justify-content:space-between; overflow:hidden;
+  }
+  .ccell .top { display:flex; align-items:center; gap:6px; }
+  .ccell .bot { display:flex; align-items:baseline; gap:6px; }
+  .microdelta { font-size: 11px; font-weight: 600; color: var(--confirm); }
+  .microdelta.down { color: var(--destructive); }
+  .ccell.wash1 { background: linear-gradient(0deg, rgba(22,115,230,0.16), rgba(22,115,230,0.16)), var(--sheet); }
+  .ccell.wash2 { background: linear-gradient(0deg, rgba(22,115,230,0.10), rgba(22,115,230,0.10)), var(--sheet); }
+  .ccell.wash3 { background: linear-gradient(0deg, rgba(22,115,230,0.06), rgba(22,115,230,0.06)), var(--sheet); }
+  .ccell.more { color: var(--text2); font-size:13px; font-weight:600; justify-content:center; align-items:center; flex-direction:row; }
+
+  @media (max-width: 1340px) { .rail { justify-content: flex-start; } }
+</style>
+</head>
+<body>
+
+<h1>Wallet feed — three directions</h1>
+<p class="intro">
+  Same structure, same content, three stylings. All three apply the new label rule — a cell wears its
+  <b>symbol</b> when one exists, its <b>name</b> only as the fallback (never both) — and all three shrink
+  the holdings read from today's 220pt hero. Everything below the holdings (DeFi, transactions) is
+  unchanged on purpose, so the variation reads cleanly.
+</p>
+
+<div class="rail">
+
+  <!-- ============ DIRECTION A ============ -->
+  <div class="col">
+    <div class="dir-title">A · The band</div>
+    <div class="dir-note">
+      The treemap flattens into one proportional row, 72pt — a third of today's height. Width is the
+      magnitude voice (same sqrt scale), cells stay the literal sheet tiles: top three, then the door.
+      The header collapses label + subline into one quiet line. The composition becomes a spine you
+      read past, not a hero you scroll through.
+    </div>
+    <div class="phone">
+      <div class="statusbar"><span>9:41</span><span>&#9679;&#9679;&#9679;</span></div>
+      <div class="navtitle">Wallet</div>
+      <div class="chips">
+        <div class="chip on">All</div>
+        <div class="chip"><span class="face"></span>Main</div>
+        <div class="chip"><span class="face cold"></span>Cold</div>
+      </div>
+
+      <div class="tilerow">
+        <div class="tile">
+          <div class="cap">Across your wallets <span class="spacer"></span><span class="chev">&#8250;</span></div>
+          <div class="stat">$19.9K</div>
+          <svg class="spark" viewBox="0 0 160 26" preserveAspectRatio="none">
+            <path d="M0 20 L14 18 L28 19 L42 14 L56 15 L70 10 L84 12 L98 8 L112 9 L126 6 L140 7 L160 4"
+                  fill="none" stroke="#30d158" stroke-width="1.8" stroke-linecap="round"/>
+          </svg>
+          <div class="pill">&#9650; 3.2% &nbsp;<span style="opacity:.7;font-weight:500">watched</span></div>
+        </div>
+        <div class="tile">
+          <div class="cap"><span class="glyph">&#9888;</span> Worth a look <span class="spacer"></span><span class="chev">&#8250;</span></div>
+          <div class="stat">2 items</div>
+          <div class="sub">1 delegation · 1 flagged transfer</div>
+        </div>
+      </div>
+
+      <div class="a-holdhead">
+        <span class="h">Holdings</span>
+        <span class="s">$19.9K across 13 tokens</span>
+      </div>
+      <div class="band">
+        <div class="bcell" style="flex: 2.9;">
+          <div class="brow"><span class="coin c-eth">E</span><span class="cellname">ETH</span></div>
+          <div class="cellval">$8.4K</div>
+        </div>
+        <div class="bcell" style="flex: 2.0;">
+          <div class="brow"><span class="coin c-usdc">U</span><span class="cellname" style="font-size:14px">USDC</span></div>
+          <div class="cellval">$4.2K</div>
+        </div>
+        <div class="bcell" style="flex: 1.55;">
+          <div class="brow"><span class="coin c-sol">S</span><span class="cellname" style="font-size:14px">SOL</span></div>
+          <div class="cellval">$2.6K</div>
+        </div>
+        <div class="bcell more" style="flex: 1.15;">+10</div>
+      </div>
+
+      <div class="tilerow" style="margin-top: var(--s2);">
+        <div class="tile">
+          <div class="cap">DeFi · Aave on Base</div>
+          <div class="defirow">
+            <div class="defistat"><div class="l">Collateral</div><div class="v">$6.2K</div></div>
+            <div class="defistat"><div class="l">Debt</div><div class="v">$1.8K</div></div>
+            <div class="defistat"><div class="l">Health</div><div class="v">2.31</div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="dayhead">Today</div>
+      <div class="txn"><div class="kg">&#8595;</div><div><div class="t1">Received 120 USDC</div><div class="t2">Base · from 0x4c…9a21</div></div></div>
+      <div class="txn"><div class="kg">&#8646;</div><div><div class="t1">Swapped 0.4 ETH &#8594; 812 USDC</div><div class="t2">Ethereum · Uniswap</div></div></div>
+      <div class="dayhead">Yesterday</div>
+      <div class="txn"><div class="kg">&#8593;</div><div><div class="t1">Sent 0.05 ETH</div><div class="t2">Ethereum · to maria.eth</div></div></div>
+      <div class="seeall">See all 42 transactions <span class="chev">&#8250;</span></div>
+    </div>
+  </div>
+
+  <!-- ============ DIRECTION B ============ -->
+  <div class="col">
+    <div class="dir-title">B · One instrument</div>
+    <div class="dir-note">
+      The balance card absorbs the composition: number, sparkline, then a slim allocation bar in the
+      tint's magnitude ladder with a symbol legend. The treemap disappears entirely — the most minimal
+      read. Warnings step down from a tile to one quiet line. One surface says everything the two
+      cards and the map said.
+    </div>
+    <div class="phone">
+      <div class="statusbar"><span>9:41</span><span>&#9679;&#9679;&#9679;</span></div>
+      <div class="navtitle">Wallet</div>
+      <div class="chips">
+        <div class="chip on">All</div>
+        <div class="chip"><span class="face"></span>Main</div>
+        <div class="chip"><span class="face cold"></span>Cold</div>
+      </div>
+
+      <div class="tile" style="margin-bottom: 0;">
+        <div class="cap">Across your wallets <span class="spacer"></span><span class="chev">&#8250;</span></div>
+        <div style="display:flex; align-items:baseline; gap:10px;">
+          <div class="stat" style="font-size:30px;">$19.9K</div>
+          <div class="pill" style="margin:0;">&#9650; 3.2%</div>
+        </div>
+        <svg class="spark" viewBox="0 0 160 26" preserveAspectRatio="none" style="height:32px;">
+          <path d="M0 22 L14 20 L28 21 L42 15 L56 17 L70 11 L84 13 L98 9 L112 10 L126 6 L140 8 L160 4"
+                fill="none" stroke="#30d158" stroke-width="1.8" stroke-linecap="round"/>
+        </svg>
+        <div class="alloc">
+          <div style="flex:42; background: rgba(22,115,230,0.85);"></div>
+          <div style="flex:21; background: rgba(22,115,230,0.55);"></div>
+          <div style="flex:13; background: rgba(22,115,230,0.38);"></div>
+          <div style="flex:6;  background: rgba(22,115,230,0.24);"></div>
+          <div style="flex:5;  background: rgba(22,115,230,0.16);"></div>
+          <div style="flex:13; background: rgba(255,255,255,0.08);"></div>
+        </div>
+        <div class="legend">
+          <div class="li"><span class="dot" style="background:rgba(22,115,230,0.85)"></span>ETH <span class="pct">42%</span></div>
+          <div class="li"><span class="dot" style="background:rgba(22,115,230,0.55)"></span>USDC <span class="pct">21%</span></div>
+          <div class="li"><span class="dot" style="background:rgba(22,115,230,0.38)"></span>SOL <span class="pct">13%</span></div>
+          <div class="li"><span class="dot" style="background:rgba(22,115,230,0.24)"></span>Ether.fi <span class="pct">6%</span></div>
+          <div class="li"><span class="dot" style="background:rgba(22,115,230,0.16)"></span>WBTC <span class="pct">5%</span></div>
+          <div class="li"><span class="dot" style="background:rgba(255,255,255,0.08)"></span>8 more <span class="pct">13%</span></div>
+        </div>
+      </div>
+
+      <div class="quietrow">
+        <span class="glyph">&#9888;</span>
+        <span>Worth a look</span>
+        <span class="sub2">1 delegation · 1 flagged transfer</span>
+        <span class="spacer"></span>
+        <span class="chev">&#8250;</span>
+      </div>
+
+      <div class="tilerow" style="margin-top: var(--s2);">
+        <div class="tile">
+          <div class="cap">DeFi · Aave on Base</div>
+          <div class="defirow">
+            <div class="defistat"><div class="l">Collateral</div><div class="v">$6.2K</div></div>
+            <div class="defistat"><div class="l">Debt</div><div class="v">$1.8K</div></div>
+            <div class="defistat"><div class="l">Health</div><div class="v">2.31</div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="dayhead">Today</div>
+      <div class="txn"><div class="kg">&#8595;</div><div><div class="t1">Received 120 USDC</div><div class="t2">Base · from 0x4c…9a21</div></div></div>
+      <div class="txn"><div class="kg">&#8646;</div><div><div class="t1">Swapped 0.4 ETH &#8594; 812 USDC</div><div class="t2">Ethereum · Uniswap</div></div></div>
+      <div class="dayhead">Yesterday</div>
+      <div class="txn"><div class="kg">&#8593;</div><div><div class="t1">Sent 0.05 ETH</div><div class="t2">Ethereum · to maria.eth</div></div></div>
+      <div class="seeall">See all 42 transactions <span class="chev">&#8250;</span></div>
+    </div>
+  </div>
+
+  <!-- ============ DIRECTION C ============ -->
+  <div class="col">
+    <div class="dir-title">C · The smaller, denser map</div>
+    <div class="dir-note">
+      The treemap stays a map — but 150pt, four cells (top 3 + "10 more"), each stating the value its
+      area encodes and, on the big cells, a 24h micro-delta. Magnitude gets a second voice: the tint's
+      sanctioned opacity ladder (DS.tint(magnitude:)) washes the cells faintly, largest brightest.
+      The least changed direction, the most information per point.
+    </div>
+    <div class="phone">
+      <div class="statusbar"><span>9:41</span><span>&#9679;&#9679;&#9679;</span></div>
+      <div class="navtitle">Wallet</div>
+      <div class="chips">
+        <div class="chip on">All</div>
+        <div class="chip"><span class="face"></span>Main</div>
+        <div class="chip"><span class="face cold"></span>Cold</div>
+      </div>
+
+      <div class="tilerow">
+        <div class="tile">
+          <div class="cap">Across your wallets <span class="spacer"></span><span class="chev">&#8250;</span></div>
+          <div class="stat">$19.9K</div>
+          <svg class="spark" viewBox="0 0 160 26" preserveAspectRatio="none">
+            <path d="M0 20 L14 18 L28 19 L42 14 L56 15 L70 10 L84 12 L98 8 L112 9 L126 6 L140 7 L160 4"
+                  fill="none" stroke="#30d158" stroke-width="1.8" stroke-linecap="round"/>
+          </svg>
+          <div class="pill">&#9650; 3.2% &nbsp;<span style="opacity:.7;font-weight:500">watched</span></div>
+        </div>
+        <div class="tile">
+          <div class="cap"><span class="glyph">&#9888;</span> Worth a look <span class="spacer"></span><span class="chev">&#8250;</span></div>
+          <div class="stat">2 items</div>
+          <div class="sub">1 delegation · 1 flagged transfer</div>
+        </div>
+      </div>
+
+      <div class="a-holdhead" style="padding-top: 8px;">
+        <span class="h">Holdings</span>
+        <span class="s">$19.9K across 13 tokens</span>
+      </div>
+      <div class="cmap">
+        <div class="ccell wash1" style="left:0; top:0; width:calc(50% - 4px); height:150px;">
+          <div class="top"><span class="coin c-eth">E</span><span class="cellname">ETH</span></div>
+          <div class="bot"><span class="cellval" style="font-size:14px; color:var(--text1); font-weight:600;">$8.4K</span><span class="microdelta">&#9650; 2.1%</span></div>
+        </div>
+        <div class="ccell wash2" style="left:calc(50% + 4px); top:0; width:calc(50% - 4px); height:88px;">
+          <div class="top"><span class="coin c-usdc">U</span><span class="cellname">USDC</span></div>
+          <div class="bot"><span class="cellval">$4.2K</span></div>
+        </div>
+        <div class="ccell wash3" style="left:calc(50% + 4px); top:96px; width:calc(27% - 4px); height:54px;">
+          <div class="top"><span class="cellname" style="font-size:13px;">SOL</span></div>
+          <div class="bot"><span class="cellval">$2.6K</span></div>
+        </div>
+        <div class="ccell more" style="left:calc(77% + 4px); top:96px; width:calc(23% - 4px); height:54px;">
+          10 more
+        </div>
+      </div>
+
+      <div class="tilerow" style="margin-top: var(--s2);">
+        <div class="tile">
+          <div class="cap">DeFi · Aave on Base</div>
+          <div class="defirow">
+            <div class="defistat"><div class="l">Collateral</div><div class="v">$6.2K</div></div>
+            <div class="defistat"><div class="l">Debt</div><div class="v">$1.8K</div></div>
+            <div class="defistat"><div class="l">Health</div><div class="v">2.31</div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="dayhead">Today</div>
+      <div class="txn"><div class="kg">&#8595;</div><div><div class="t1">Received 120 USDC</div><div class="t2">Base · from 0x4c…9a21</div></div></div>
+      <div class="txn"><div class="kg">&#8646;</div><div><div class="t1">Swapped 0.4 ETH &#8594; 812 USDC</div><div class="t2">Ethereum · Uniswap</div></div></div>
+      <div class="dayhead">Yesterday</div>
+      <div class="txn"><div class="kg">&#8593;</div><div><div class="t1">Sent 0.05 ETH</div><div class="t2">Ethereum · to maria.eth</div></div></div>
+      <div class="seeall">See all 42 transactions <span class="chev">&#8250;</span></div>
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>
