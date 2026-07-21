@@ -63,6 +63,7 @@ struct GeckoTerminalScreen: View {
         .bridgeSetupWash(name: "GeckoTerminal")
         .dsAdaptiveContentWidth()
         .dsPageBackground()
+        .dsSoftTopEdge()
         .navigationTitle("GeckoTerminal")
         .navigationBarTitleDisplayMode(.large)
         .onAppear {

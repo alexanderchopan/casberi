@@ -44,6 +44,7 @@ struct DayOneImportScreen: View {
         .bridgeSetupWash(name: "Day One")
         .dsAdaptiveContentWidth()
         .dsPageBackground()
+        .dsSoftTopEdge()
         .navigationTitle("Day One")
         .navigationBarTitleDisplayMode(.large)
         .fileImporter(isPresented: $importing,
@@ -121,6 +122,7 @@ struct JournalImportScreen: View {
         .bridgeSetupWash(name: "Apple Journal")
         .dsAdaptiveContentWidth()
         .dsPageBackground()
+        .dsSoftTopEdge()
         .navigationTitle("Apple Journal")
         .navigationBarTitleDisplayMode(.large)
         .fileImporter(isPresented: $importing,
@@ -204,6 +206,7 @@ struct NotesShareScreen: View {
         .bridgeSetupWash(name: "Apple Notes")
         .dsAdaptiveContentWidth()
         .dsPageBackground()
+        .dsSoftTopEdge()
         .navigationTitle("Apple Notes")
         .navigationBarTitleDisplayMode(.large)
     }

@@ -42,6 +42,7 @@ struct WalletDetailScreen: View {
         .scrollContentBackground(.hidden)
         .dsAdaptiveContentWidth()
         .dsPageBackground()
+        .dsSoftTopEdge()
         .navigationTitle(addr.map { $0.label.isEmpty ? $0.short : $0.label } ?? "Wallet")
         .navigationBarTitleDisplayMode(.inline)
         .onAppear { load() }

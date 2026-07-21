@@ -39,6 +39,7 @@ struct ChatGPTImportScreen: View {
         .scrollContentBackground(.hidden)
         .dsAdaptiveContentWidth()
         .dsPageBackground()
+        .dsSoftTopEdge()
         .navigationTitle("ChatGPT")
         .navigationBarTitleDisplayMode(.large)
         .fileImporter(isPresented: $importing,

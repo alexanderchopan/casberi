@@ -25,6 +25,7 @@ struct VeniceSetupScreen: View {
         .scrollContentBackground(.hidden)
         .dsAdaptiveContentWidth()
         .dsPageBackground()
+        .dsSoftTopEdge()
         .navigationTitle("Venice")
         .navigationBarTitleDisplayMode(.large)
     }

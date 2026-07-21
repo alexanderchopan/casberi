@@ -61,6 +61,7 @@ struct RSSScreen: View {
         .bridgeSetupWash(name: "RSS")
         .dsAdaptiveContentWidth()
         .dsPageBackground()
+        .dsSoftTopEdge()
         .navigationTitle("RSS")
         .navigationBarTitleDisplayMode(.large)
         .toolbar {

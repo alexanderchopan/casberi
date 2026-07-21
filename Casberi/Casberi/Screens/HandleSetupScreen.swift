@@ -408,6 +408,7 @@ struct HandleSetupScreen: View {
         .bridgeSetupWash(name: bridge.rawValue)
         .dsAdaptiveContentWidth()
         .dsPageBackground()
+        .dsSoftTopEdge()
         .navigationTitle(bridge.rawValue)
         .navigationBarTitleDisplayMode(.large)
         .onAppear {

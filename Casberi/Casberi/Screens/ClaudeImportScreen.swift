@@ -40,6 +40,7 @@ struct ClaudeImportScreen: View {
         .scrollContentBackground(.hidden)
         .dsAdaptiveContentWidth()
         .dsPageBackground()
+        .dsSoftTopEdge()
         .navigationTitle("Claude")
         .navigationBarTitleDisplayMode(.large)
         .fileImporter(isPresented: $importing,

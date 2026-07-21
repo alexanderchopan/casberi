@@ -86,7 +86,32 @@ struct MainSurface: View {
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 0) {
+            // The feeds are one pager (2026-07-16): a chip tap and a swipe are
+            // the same move, because selection binds to the SAME value the chips
+            // write — so the strip, the wash, and every deep link
+            // (casberi://feed/source/X) all keep working with no second source of
+            // truth to reconcile. Uniformly the feed now (the board's own
+            // non-swiping page retired 2026-07-20).
+            TabView(selection: $filter.source) {
+                ForEach(feedLabels, id: \.self) { label in
+                    FeedScreen(source: label,
+                               isActive: label == filter.source)
+                        .tag(label)
+                }
+            }
+            .tabViewStyle(.page(indexDisplayMode: .never))
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            // The strip FLOATS over the feed rather than sitting above it
+            // (2026-07-20). It was a VStack sibling, which meant nothing ever
+            // passed behind the chips — so the glass they wear blurred a flat
+            // color and rendered indistinguishable from a solid fill, paying a
+            // backdrop blur for nothing. `safeAreaInset` reserves the strip's
+            // height at rest (rows still start below it, untouched) while letting
+            // scrolled content travel UNDER it, which is the only thing that makes
+            // the material read as glass. Pairs with each feed's `dsSoftTopEdge()`:
+            // the scroll edge dissolves content as it goes under, so rows melt into
+            // the strip instead of colliding with it.
+            .safeAreaInset(edge: .top, spacing: 0) {
                 // The fixed navigation strip — always in reach, never scrolls
                 // away with content (the whole point of dropping the tab bar).
                 // The avatar leads it now too (2026-07-20) — the system nav
@@ -115,23 +140,6 @@ struct MainSurface: View {
                 }
                 .padding(.top, DS.Space.s6)
                 .padding(.bottom, DS.Space.s2)
-
-                // The feeds are one pager (2026-07-16): a chip tap and a
-                // swipe are the same move, because selection binds to the
-                // SAME value the chips write — so the strip, the wash, and
-                // every deep link (casberi://feed/source/X) all keep working
-                // with no second source of truth to reconcile. Uniformly the
-                // feed now (the board's own non-swiping page retired
-                // 2026-07-20).
-                TabView(selection: $filter.source) {
-                    ForEach(feedLabels, id: \.self) { label in
-                        FeedScreen(source: label,
-                                   isActive: label == filter.source)
-                            .tag(label)
-                    }
-                }
-                .tabViewStyle(.page(indexDisplayMode: .never))
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
             // The themed page behind the chip header too — the header sits
             // OUTSIDE the screens' own dsPageBackground, so in light mode the

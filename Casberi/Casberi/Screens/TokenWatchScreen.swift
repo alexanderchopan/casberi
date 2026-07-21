@@ -77,6 +77,7 @@ struct TokenWatchScreen: View {
         .bridgeSetupWash(name: "Tokens")
         .dsAdaptiveContentWidth()
         .dsPageBackground()
+        .dsSoftTopEdge()
         .navigationTitle("Tokens")
         .navigationBarTitleDisplayMode(.large)
         .toolbar {

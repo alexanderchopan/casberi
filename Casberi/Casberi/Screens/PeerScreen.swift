@@ -62,6 +62,7 @@ struct PeerScreen: View {
         .bridgeSetupWash(name: "Peer")
         .dsAdaptiveContentWidth()
         .dsPageBackground()
+        .dsSoftTopEdge()
         .navigationTitle("Peer")
         .navigationBarTitleDisplayMode(.large)
         .onAppear {

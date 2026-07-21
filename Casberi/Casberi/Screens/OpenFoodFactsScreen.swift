@@ -51,6 +51,7 @@ struct OpenFoodFactsScreen: View {
         .bridgeSetupWash(name: "Open Food Facts")
         .dsAdaptiveContentWidth()
         .dsPageBackground()
+        .dsSoftTopEdge()
         .navigationTitle("Open Food Facts")
         .navigationBarTitleDisplayMode(.large)
         .fullScreenCover(isPresented: $scanning) {

@@ -33,6 +33,7 @@ struct SpotifyScreen: View {
         .bridgeSetupWash(name: "Spotify")
         .dsAdaptiveContentWidth()
         .dsPageBackground()
+        .dsSoftTopEdge()
         .navigationTitle("Spotify")
         .navigationBarTitleDisplayMode(.large)
         .onAppear {

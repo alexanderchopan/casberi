@@ -34,6 +34,7 @@ struct SteamScreen: View {
         .bridgeSetupWash(name: "Steam")
         .dsAdaptiveContentWidth()
         .dsPageBackground()
+        .dsSoftTopEdge()
         .navigationTitle("Steam")
         .navigationBarTitleDisplayMode(.large)
         .onAppear {

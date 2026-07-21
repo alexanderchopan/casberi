@@ -85,6 +85,7 @@ struct StocktwitsScreen: View {
         .bridgeSetupWash(name: "Stocktwits")
         .dsAdaptiveContentWidth()
         .dsPageBackground()
+        .dsSoftTopEdge()
         .navigationTitle("Stocktwits")
         .navigationBarTitleDisplayMode(.large)
         .onAppear {

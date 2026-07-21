@@ -250,6 +250,7 @@ struct AppsScreen: View {
         }
         .dsAdaptiveContentWidth()
         .dsPageBackground()
+        .dsSoftTopEdge()
         .navigationTitle("Apps")
         .navigationBarTitleDisplayMode(.large)
         .navigationDestination(item: $openOffer) { name in

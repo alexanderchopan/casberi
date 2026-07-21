@@ -55,6 +55,7 @@ struct ProjectDetailScreen: View {
         .scrollIndicators(.hidden)
         .dsAdaptiveContentWidth()
         .dsPageBackground()
+        .dsSoftTopEdge()
         .navigationBarTitleDisplayMode(.inline)
         // Paint the whole composition at once — a record, not a stream (§5).
         // This screen is a zoom-transition DESTINATION (HomeScreen pushes it

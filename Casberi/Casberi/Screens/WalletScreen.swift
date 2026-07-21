@@ -135,6 +135,7 @@ struct WalletScreen: View {
         .scrollContentBackground(.hidden)
         .dsAdaptiveContentWidth()
         .dsPageBackground()
+        .dsSoftTopEdge()
         .navigationTitle("Wallet")
         .navigationBarTitleDisplayMode(.large)
         .toolbar {

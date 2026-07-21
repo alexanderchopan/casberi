@@ -61,6 +61,7 @@ struct OpenSeaScreen: View {
         .bridgeSetupWash(name: "OpenSea")
         .dsAdaptiveContentWidth()
         .dsPageBackground()
+        .dsSoftTopEdge()
         .navigationTitle("OpenSea")
         .navigationBarTitleDisplayMode(.large)
         .onAppear {
