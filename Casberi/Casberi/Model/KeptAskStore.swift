@@ -71,6 +71,14 @@ final class KeptAskStore {
         UserDefaults.standard.set(digest, forKey: Self.seenPrefix + kind)
     }
 
+    /// The digest last seen for `kind`, or nil if never seen — lets a
+    /// changed pill roll its numeric delta FROM what was seen TO what's
+    /// current (delight, 2026-07-21) instead of popping cold to the new
+    /// value.
+    func lastSeenDigest(_ kind: String) -> String? {
+        UserDefaults.standard.string(forKey: Self.seenPrefix + kind)
+    }
+
     /// The CURRENT digest for each kept kind, as of the last `refreshDigests`
     /// — cheap to hold, so `anyChanged` can read it on every AgentBar render
     /// without re-running a single composer.

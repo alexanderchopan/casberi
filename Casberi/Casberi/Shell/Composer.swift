@@ -139,6 +139,24 @@ struct Composer: View {
     /// wasteful during a streaming reveal). nil when the question doesn't
     /// match a keepable shape, or it's already kept.
     @State private var keepableAskKind: String?
+    /// One-shot: the Keep chip morphs to a checkmark for a beat before it
+    /// retires (delight, 2026-07-21) — the mint earns a felt moment instead
+    /// of just vanishing the instant it's tapped.
+    @State private var keepJustLanded = false
+    /// The first-ever kept ask earns its own line, sibling to "Your first
+    /// thing" (RootShell) — persisted so it fires exactly once per install.
+    @AppStorage("composer.firstKeptAsk.done") private var firstKeptAskDone = false
+    /// A deterministic flavor line under the greeting's corpus stat — an
+    /// anniversary or a real threshold just crossed, never invented (delight,
+    /// 2026-07-21). nil most opens; recomputed alongside `corpusSummary`.
+    @State private var greetingFlavorLine: String?
+    /// Deals one small berry shower over a genuinely large "while I was
+    /// away" haul — an arrival worth marking, the same vocabulary the wallet
+    /// pass already uses for NFT/portfolio arrivals (prd §79).
+    @State private var awayRainTrigger = 0
+    /// Guards the away rain to once per open — a follow-up re-ask of the
+    /// same away question must not replay it.
+    @State private var awayRainPlayedThisOpen = false
 
     /// The keepable text of a synthesis answer — a synthesis is one Insight
     /// carrying the prose (RootShell's proseDoc). Only that shape is worth
@@ -148,6 +166,15 @@ struct Composer: View {
         guard let insight = els.values.first(where: { $0.comp == "Insight" }) else { return nil }
         let text = insight.str(0)
         return text.count >= 40 ? text : nil
+    }
+
+    /// True when the settled doc is RootShell's honest "nothing matches"
+    /// fallback (`retrievalDoc`'s empty branch) — both its lines start
+    /// "Nothing " (genSafe strips quotes/newlines, never the leading word).
+    /// Gates the settle haptic and the away-haul rain (delight, 2026-07-21):
+    /// a real find earns the tick, a miss earns nothing.
+    private func docHasFallback(_ lines: [String]) -> Bool {
+        lines.contains { $0.contains("Insight(\"Nothing ") }
     }
 
     /// The kept-ask KIND the question would mint, or nil (docs/agent-brief.md
@@ -384,10 +411,12 @@ struct Composer: View {
         // alone; a "0 things" boast would be dishonest warmth).
         if all.isEmpty {
             corpusSummary = ""
+            greetingFlavorLine = nil
         } else {
             let sources = Set(all.map(\.source)).count
             let things = all.count.formatted()
             corpusSummary = "\(things) thing\(all.count == 1 ? "" : "s"), across \(sources) app\(sources == 1 ? "" : "s")."
+            greetingFlavorLine = Self.greetingFlavor(all: all)
         }
         // Context-aware lead (2026-07-12): if you opened the composer while
         // looking at one source's feed, its recap leads the chips — the
@@ -545,6 +574,37 @@ struct Composer: View {
         return "\(weekday) \(moment)."
     }
 
+    /// A real, deterministic flavor line under the greeting's corpus stat —
+    /// never a canned line, same register as §5's "Quiet so far today."
+    /// Two honest sources, checked in order (at most one line per open):
+    /// the corpus's actual anniversary (its oldest capture's month/day
+    /// falling today, one-plus years on), or a real count threshold just
+    /// crossed. Neither claims anything that isn't literally true of the
+    /// corpus right now.
+    private static let milestoneThresholds = [50, 100, 500, 1_000, 5_000, 10_000, 25_000, 50_000]
+    private static let milestoneSeenKey = "composer.greetingMilestoneSeen"
+
+    private static func greetingFlavor(all: [Thing], now: Date = .now) -> String? {
+        let cal = Calendar.current
+        if let oldest = all.map(\.capturedAt).min() {
+            let oldComps = cal.dateComponents([.month, .day], from: oldest)
+            let nowComps = cal.dateComponents([.month, .day], from: now)
+            let years = cal.dateComponents([.year], from: oldest, to: now).year ?? 0
+            if oldComps.month == nowComps.month, oldComps.day == nowComps.day, years >= 1 {
+                return "\(years) year\(years == 1 ? "" : "s") since your first thing."
+            }
+        }
+        let count = all.count
+        if let crossed = milestoneThresholds.last(where: { $0 <= count }) {
+            let seen = UserDefaults.standard.integer(forKey: milestoneSeenKey)
+            if crossed > seen {
+                UserDefaults.standard.set(crossed, forKey: milestoneSeenKey)
+                return "\(crossed.formatted()) things banked."
+            }
+        }
+        return nil
+    }
+
     /// One conversation turn — the question as the answer's own TITLE, then
     /// its answer. Heading weight (was subhead-muted, fixed 2026-07-20):
     /// ruling 8 calls each answer a "sovereign screen", and its question is
@@ -552,7 +612,7 @@ struct Composer: View {
     /// `.heading34` since this repeats per turn rather than leading the
     /// whole surface.
     @ViewBuilder
-    private func convoTurn<Content: View>(question: String,
+    private func convoTurn<Content: View>(question: String, animateIn: Bool = false,
                                           @ViewBuilder content: () -> Content) -> some View {
         VStack(alignment: .leading, spacing: DS.Space.s1) {
             if !question.isEmpty {
@@ -561,6 +621,14 @@ struct Composer: View {
                     .foregroundStyle(DS.textPrimary)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, DS.Space.s4)
+                    // The question lift (delight, 2026-07-21): a freshly-sent
+                    // ask rises into its header rather than popping cold —
+                    // the felt hand-off from field to answer. Settled turns
+                    // (scroll-back) never animate; this plays once, for the
+                    // turn that just became live.
+                    .transition(animateIn
+                                ? .move(edge: .bottom).combined(with: .opacity)
+                                : .identity)
             }
             content()
         }
@@ -662,6 +730,16 @@ struct Composer: View {
                         .padding(.top, 2)
                         .settleIn(delay: 0.05)
                 }
+                // A real anniversary or a real threshold just crossed — never
+                // a canned line (delight, 2026-07-21).
+                if let flavor = greetingFlavorLine {
+                    Text(flavor)
+                        .dsText(.subhead13)
+                        .foregroundStyle(DS.textTertiary)
+                        .padding(.horizontal, DS.Space.s4)
+                        .padding(.top, 1)
+                        .settleIn(delay: 0.08)
+                }
                 // The pairing line — teaches the sheet's dual nature (ask a
                 // question, or write a fact and send it out) and keeps the
                 // greeting from reading as an orphan label.
@@ -714,7 +792,7 @@ struct Composer: View {
                                 }
                             }
                             if answering {
-                                convoTurn(question: currentQuestion) {
+                                convoTurn(question: currentQuestion, animateIn: true) {
                                     VStack(alignment: .leading, spacing: DS.Space.s2) {
                                         // The librarian at work: the berry
                                         // breathes while the answer is in
@@ -724,7 +802,13 @@ struct Composer: View {
                                             CasberiMark(size: 20)
                                                 .breathing()
                                                 .padding(.horizontal, DS.Space.s4)
-                                                .transition(.opacity)
+                                                // A quick settle — scale down
+                                                // as it fades, a small "found
+                                                // it" beat rather than a flat
+                                                // vanish (delight, 2026-07-21).
+                                                .transition(.asymmetric(
+                                                    insertion: .opacity,
+                                                    removal: .scale(scale: 0.6).combined(with: .opacity)))
                                                 .accessibilityLabel("Thinking")
                                         }
                                         GenRender(id: "root", els: answerStream.els)
@@ -760,17 +844,40 @@ struct Composer: View {
                                                     // ask deserves.
                                                     let askedOften = AskMemory.askedOften(kind)
                                                     Button {
-                                                        DSHaptic.tap()
+                                                        DSHaptic.success()
                                                         KeptAskStore.shared.keep(kind, title: currentQuestion)
-                                                        keepableAskKind = nil
+                                                        if !firstKeptAskDone {
+                                                            firstKeptAskDone = true
+                                                            chrome.flash("Your first standing question — I'll keep it fresh.",
+                                                                         tone: .success)
+                                                        } else {
+                                                            chrome.flash("Kept — it'll stay fresh on your rest screen",
+                                                                         tone: .success)
+                                                        }
+                                                        // The chip morphs to its own receipt for
+                                                        // a beat before it retires (delight,
+                                                        // 2026-07-21) — Keep earns a felt moment
+                                                        // instead of just vanishing.
+                                                        withAnimation(.spring(response: 0.22, dampingFraction: 0.6)) {
+                                                            keepJustLanded = true
+                                                        }
+                                                        Task { @MainActor in
+                                                            try? await Task.sleep(for: .milliseconds(420))
+                                                            keepableAskKind = nil
+                                                            keepJustLanded = false
+                                                        }
                                                     } label: {
-                                                        Chip(text: askedOften
-                                                                ? "You ask this a lot — keep it?"
-                                                                : "Keep",
+                                                        Chip(text: keepJustLanded ? "Kept"
+                                                                : (askedOften
+                                                                   ? "You ask this a lot — keep it?"
+                                                                   : "Keep"),
                                                              style: .tint,
-                                                             glyph: askedOften ? "sparkles" : "pin.fill")
+                                                             glyph: keepJustLanded ? "checkmark"
+                                                                : (askedOften ? "sparkles" : "pin.fill"))
                                                     }
                                                     .buttonStyle(.plain)
+                                                    .scaleEffect(keepJustLanded ? 1.08 : 1)
+                                                    .disabled(keepJustLanded)
                                                 }
                                                 // Save a settled synthesis as a note
                                                 // (2026-07-12; relabelled 2026-07-19 — "Keep"
@@ -922,6 +1029,10 @@ struct Composer: View {
             inputBar
         }
         .frame(maxWidth: .infinity, alignment: .top)
+        // A genuinely large "while I was away" haul deals one small berry
+        // shower over the answer (delight, 2026-07-21) — an arrival worth
+        // marking, contained to the bubble's own bounds by the clip below.
+        .overlay { BerryRain(trigger: awayRainTrigger) }
         // Report the content's natural height so the hosting sheet hugs it.
         .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { h in
             if embedded { onHeight(h) }
@@ -1123,6 +1234,8 @@ struct Composer: View {
         keptCurrent = false
         keyedCurrent = false
         inFlight = false
+        keepJustLanded = false
+        awayRainPlayedThisOpen = false
         askGeneration += 1   // any in-flight answer Task retires silently
         path = NavigationPath()
         onLowerAgent()
@@ -1170,10 +1283,11 @@ struct Composer: View {
             let doc = await answerWithKey(q)
             // Closed, or a newer ask overtook this one — retire silently.
             guard isOpen, gen == askGeneration else { return }
-            inFlight = false
+            withAnimation(DS.Motion.standard) { inFlight = false }
             keyAvailable = AgentKey.isConfigured
             if let doc {
                 currentStreamed = true   // a keyed synthesis is keepable too
+                DSHaptic.success()   // a real keyed answer landed — the honest tick
                 answerStream.stream(doc)
             } else {
                 keyedCurrent = false     // no keyed answer arrived — no badge
@@ -1238,7 +1352,13 @@ struct Composer: View {
                                 .dsText(.callout15)
                                 .foregroundStyle(changed ? DS.textPrimary : DS.textSecondary)
                             if !digest.isEmpty {
-                                Text("· \(digest)")
+                                // A changed pill's number climbs from what
+                                // was last seen to what's current (delight,
+                                // 2026-07-21) — the roll IS the dot's promise
+                                // made visible, restoring the digit-climb the
+                                // 2026-07-20 pill unification traded away.
+                                DigestRoll(text: "· \(digest)",
+                                          previous: changed ? store.lastSeenDigest(kind).map { "· \($0)" } : nil)
                                     .dsText(.subhead13)
                                     .foregroundStyle(changed ? DS.textSecondary : DS.textTertiary)
                             }
@@ -1313,6 +1433,12 @@ struct Composer: View {
                             Image(systemName: isAway ? "sparkles" : ask.glyph)
                                 .font(.system(size: 13, weight: .semibold))
                                 .foregroundStyle(DS.tint)
+                                // The Noticed chip is the agent's one
+                                // spontaneous connection — it earns a single
+                                // sparkle as the chips settle in, so the most
+                                // surprising chip acts surprising too
+                                // (delight, 2026-07-21). Plays once per open.
+                                .symbolEffect(.bounce, value: ask.kind == "noticed" && chipsAppeared)
                             Text(isAway ? "Catch me up" : ask.title)
                                 .dsText(.callout15)
                                 .foregroundStyle(DS.textPrimary)
@@ -1619,13 +1745,18 @@ struct Composer: View {
                 turns.append(ConvoTurn(question: currentQuestion, els: answerStream.els,
                                        keyed: keyedCurrent))
             }
-            answering = true
-            currentQuestion = draft
-            keptCurrent = false
-            currentStreamed = false
-            keyedCurrent = false
+            // The question lift (delight, 2026-07-21): the header's entrance
+            // and the berry's fade-in ride the same animated commit as the
+            // rest of "a new ask just started."
+            withAnimation(DS.Motion.standard) {
+                answering = true
+                currentQuestion = draft
+                keptCurrent = false
+                currentStreamed = false
+                keyedCurrent = false
+                inFlight = true
+            }
             keepableAskKind = nil   // recomputed at settle, for THIS question
-            inFlight = true
             askGeneration += 1
             let gen = askGeneration
             let q = draft
@@ -1672,8 +1803,10 @@ struct Composer: View {
                 // Prose already painted its way in; settle on the final text.
                 // A lookup or the fallback never streamed, so reveal it with
                 // the typewriter (unchanged behaviour).
-                proseStreaming = false
-                inFlight = false
+                withAnimation(DS.Motion.standard) {
+                    proseStreaming = false
+                    inFlight = false
+                }
                 keyAvailable = AgentKey.isConfigured   // one read per settle
                 // One more fetch per settle (not per keystroke) — same
                 // precedent `computeSuggestions()` already sets for a plain
@@ -1687,6 +1820,21 @@ struct Composer: View {
                 // kind space, so an unkeepable ask has nothing to count
                 // toward.
                 if let kind = keepableAskKind { AskMemory.asked(kind) }
+                // The settle haptic is keyed to honesty (delight, 2026-07-21):
+                // real content earns the tick, the "nothing matches" fallback
+                // earns nothing — celebrating a miss would violate the
+                // honesty rule. A genuinely large away haul earns a small
+                // berry shower too, the same arrival vocabulary the wallet
+                // pass already uses (prd §79) — once per open, even across
+                // follow-up re-asks of the same question.
+                if !docHasFallback(finalDoc) {
+                    DSHaptic.success()
+                }
+                if keepableAskKind == "away", !awayRainPlayedThisOpen,
+                   let count = StatusAsk.pulse(q, things: settledThings)?.pool.count, count >= 20 {
+                    awayRainPlayedThisOpen = true
+                    awayRainTrigger += 1
+                }
                 if streamed { answerStream.paint(finalDoc) }
                 else { answerStream.stream(finalDoc) }
                 fieldFocused = true     // ready for the next follow-up
@@ -1744,6 +1892,54 @@ struct ParseCard: View {
         .padding(DS.Space.s3)
         .background(DS.fillFaint,
                     in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+    }
+}
+
+/// A digest string that rolls its leading number from a previous reading to
+/// the current one (delight, 2026-07-21) — a kept pill's "· 12" climbing to
+/// "· 19" instead of popping cold, the same `.numericText()` grammar
+/// `CountUpText` already uses elsewhere. Falls back to a plain, unanimated
+/// `Text` whenever there's no real delta to show: no previous reading, no
+/// leading number in either string, an unchanged value, or Reduce Motion —
+/// motion only plays when it's telling the truth about a real change.
+private struct DigestRoll: View {
+    let text: String
+    let previous: String?
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// nil until the roll starts, then the mid-roll value climbing to
+    /// `cur.n` — one Text node throughout, so `.numericText()` has a stable
+    /// identity to interpolate (mirrors `CountUpText`'s own shape).
+    @State private var shown: Int?
+
+    /// The FIRST number wherever it sits in the string (not necessarily the
+    /// head — digests read "· 12 new" or "$12,480 · 3 wallets"), split into
+    /// what comes before/after it. nil when there's no digit run to animate.
+    private func split(_ s: String) -> (prefix: String, n: Int, suffix: String)? {
+        guard let range = s.rangeOfCharacter(from: .decimalDigits) else { return nil }
+        var end = range.upperBound
+        while end < s.endIndex, s[end].isNumber || s[end] == "," { end = s.index(after: end) }
+        guard let n = Int(String(s[range.lowerBound..<end].filter(\.isNumber))) else { return nil }
+        return (String(s[s.startIndex..<range.lowerBound]), n, String(s[end...]))
+    }
+
+    var body: some View {
+        if !reduceMotion, let cur = split(text), let prevText = previous,
+           let prev = split(prevText), prev.n != cur.n {
+            Text("\(cur.prefix)\((shown ?? prev.n).formatted())\(cur.suffix)")
+                .contentTransition(.numericText(value: Double(shown ?? prev.n)))
+                .onAppear {
+                    shown = prev.n
+                    // A follow-up main-actor hop, same fix `ConnectBloom`
+                    // documents: setting the start value and animating the
+                    // end value in one synchronous call coalesces, so the
+                    // start frame never commits and nothing rolls.
+                    Task { @MainActor in
+                        withAnimation(DS.Motion.standard) { shown = cur.n }
+                    }
+                }
+        } else {
+            Text(text)
+        }
     }
 }
 

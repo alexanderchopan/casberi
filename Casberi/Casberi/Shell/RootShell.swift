@@ -1540,8 +1540,12 @@ struct RootShell: View {
     /// Transient chrome floating over content — it wears glass.
     private func toastView(_ text: String) -> some View {
         HStack(spacing: DS.Space.s2) {
-            // The first thing ever gets the mark (§8). Once.
-            if text == "Your first thing" { CasberiMark(size: 18) }
+            // The first thing ever gets the mark (§8). Once. The first-ever
+            // kept ask (composer delight, 2026-07-21) shares the treatment —
+            // both are "your first standing X with Casberi" moments.
+            if text == "Your first thing" || text.hasPrefix("Your first standing question") {
+                CasberiMark(size: 18)
+            }
             Text(text)
                 .dsText(.body17)
                 .foregroundStyle(DS.textPrimary)
