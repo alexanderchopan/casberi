@@ -1156,14 +1156,17 @@ struct FeedScreen: View {
     /// screen, and an unbounded stream buried all four of them.
     private static let walletPreviewRows = 5
 
-    /// Balance and Worth a look, side by side — the two questions a wallet
-    /// screen answers at a glance ("what's it worth", "is it okay").
+    /// The balance headline, then Worth a look as a quiet line beneath it
+    /// (prd §146, 2026-07-21) — the two questions a wallet screen answers at a
+    /// glance ("what's it worth", "is it okay"), the crown-feature total taking
+    /// the room's headline voice and the usually-empty warnings whispering
+    /// below.
     ///
-    /// Rendered FLAT (§gotchas' eager-head law): a plain HStack of two shallow
-    /// tiles, no generic widget path. Either tile can be absent — no balance
-    /// until two value samples exist, no warnings tile when there's nothing
-    /// wrong — and with both absent the section renders nothing at all rather
-    /// than an empty row (the same honesty floor every section here keeps).
+    /// Rendered FLAT (§gotchas' eager-head law): a plain VStack of two shallow
+    /// pieces, no generic widget path. Either can be absent — no balance until
+    /// two value samples exist, no warnings line when there's nothing wrong —
+    /// and with both absent the section renders nothing at all rather than an
+    /// empty row (the same honesty floor every section here keeps).
     @ViewBuilder
     private var walletTilesSection: some View {
         // Scoped to the selected wallet's own value line, else the combined
@@ -1175,23 +1178,26 @@ struct FeedScreen: View {
         let warnings = walletLive.warnings
         if chart != nil || !warnings.isEmpty {
             Section {
-                HStack(alignment: .top, spacing: DS.Space.s2) {
+                // The balance takes the room's headline; Worth a look drops to
+                // a quiet line beneath it (prd §146, 2026-07-21) — the two
+                // stack now rather than sitting as a matched pair of cards.
+                VStack(alignment: .leading, spacing: DS.Space.s3) {
                     if let chart {
                         // The door exists only where a breakdown exists: the
                         // multi-wallet "All" view opens the combined sheet.
                         // Scoped (or single-wallet), the treemap below already
                         // IS the composition — no door, no chevron.
                         let hasBreakdown = wallet.addresses.count > 1 && selectedWallet == nil
-                        WalletBalanceTile(chart: chart,
-                                          caption: hasBreakdown
-                                              ? String(localized: "Across your wallets")
-                                              : String(localized: "Balance"),
-                                          onOpen: hasBreakdown ? { showCombinedWallets = true } : nil)
-                            // Each tile arrives on its own clock — the balance
+                        WalletBalanceHeadline(chart: chart,
+                                              caption: hasBreakdown
+                                                  ? String(localized: "Across your wallets")
+                                                  : String(localized: "Balance"),
+                                              onOpen: hasBreakdown ? { showCombinedWallets = true } : nil)
+                            // Each piece arrives on its own clock — the balance
                             // reads off already-recorded samples (instant) while
                             // warnings/holdings/DeFi wait on live reads (2026-07-
                             // 20: "balance shows then the others pop in but looks
-                            // unintentional"). Entrance is on the TILE, not the
+                            // unintentional"). Entrance is on the PIECE, not the
                             // row, so each one's own onAppear fires the moment
                             // IT lands, in the wallet shape's own established
                             // grammar (`entranceStyle` — the same rise every
@@ -1200,7 +1206,7 @@ struct FeedScreen: View {
                             .modifier(RowEntrance(index: 0, wave: shapeWave, style: entranceStyle))
                     }
                     if !warnings.isEmpty {
-                        WalletWarningsTile(warnings: warnings) { showWorthALook = true }
+                        WalletWarningsLine(warnings: warnings) { showWorthALook = true }
                             .modifier(RowEntrance(index: 0, wave: shapeWave, style: entranceStyle))
                     }
                 }

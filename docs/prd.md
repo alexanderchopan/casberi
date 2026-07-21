@@ -4784,3 +4784,47 @@ Files: `GenUI/GenRenderer.swift` (GenTagMap + KindCountRow.parse),
 — Linux remote session, no Xcode toolchain; build + `scripts/verify.sh` and
 an eyeball of the wash opacities on-device need to happen on the Mac before
 this ships.
+
+## 146. The balance takes the headline; Worth a look drops to a line (user, 2026-07-21)
+
+Second pass on the Wallet feed, after the treemap settled (§145). From a
+three-way mockup (prototype/wallet-feed-directions-v3.html), the user: "i like
+how A puts the 'worth a look' as a line not a card."
+
+- **The combined balance becomes the room's display headline**
+  (`WalletBalanceHeadline`, replacing `WalletBalanceTile`). The crown feature
+  ("the combined wallet state is our best feature", §140) stops sharing a row
+  as a half-width card and takes the feed's headline voice: eyebrow, the big
+  money number at the sanctioned `price40` rung (§102, so it scales with
+  Dynamic Type), its honest `watched`-window delta beside it, and the sparkline
+  full-width underneath as a whisper. Set on the page — no card surface. The
+  combined-breakdown door (chevron → sheet) shows only in the multi-wallet
+  "All" view, unchanged from before.
+- **Worth a look drops from a standing card to a quiet line**
+  (`WalletWarningsLine`, replacing `WalletWarningsTile`). Warnings are usually
+  absent, and a permanent half-width card was reserving prominent space for the
+  exception; as a line it whispers when clear and speaks up with its own
+  attention glyph (red on a critical) only when something's actually there.
+  Glyph · "Worth a look" · the top warnings' summary · chevron; the whole line
+  opens the same tray. The tray behind it is unchanged.
+- The section restructures from a side-by-side `HStack` of two tiles to a
+  `VStack` of the headline then the line. Still flat (eager-head render law),
+  still absent entirely when there's neither a balance nor a warning.
+
+Files: `Screens/WalletFeedTiles.swift`, `Screens/FeedScreen.swift`. NOT
+verified on-sim (Linux session, no Xcode) — build + `scripts/verify.sh` +
+an on-device eyeball pend on the Mac.
+
+**Held: the transaction ledger (mockup B).** The same session mocked a "ledger
+stream" where each transaction row states its USD effect (+$120, −$132) and
+day headers carry the day's net. NOT built — and not a styling change: a
+Wallet transaction `Thing` carries `transferAmount` as a TOKEN amount
+("120 USDC", "0.05 ETH") and `transferDirection`, but no USD. Quoting a USD
+figure means multiplying by a price, and the only price on hand is the token's
+CURRENT price — using it for a PAST transfer would misstate a volatile token's
+then-value, which the honesty rule (§83) points directly at; a day-net can't
+even be summed across tokens without it. An honest version (token amount in the
+trailing slot, directional colour, no cross-token net) is possible but needs a
+rewrite of the shared grouped-row renderer, and the full USD version needs a
+historical-price read we don't do. Parked for the user to weigh against that
+cost rather than shipped with a fabricated number.

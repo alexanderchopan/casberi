@@ -68,15 +68,18 @@ private struct WalletTile<Content: View>: View {
     }
 }
 
-/// Balance — the portfolio number, its sparkline, and the honest delta.
-/// Nothing renders until two aligned samples exist (`TokenChart.from` guards
-/// it), so a freshly-watched wallet shows no tile rather than a flat line.
-struct WalletBalanceTile: View {
+/// Balance — the portfolio number, its sparkline, and the honest delta, as the
+/// Wallet feed's DISPLAY HEADLINE (prd §146, 2026-07-21). The combined read is
+/// the app's crown feature (user, 2026-07-20: "the combined wallet state is
+/// our best feature"), so it stops living in a half-width tile and takes the
+/// room's headline voice — set on the page (no card), the number at the
+/// sanctioned `price40` money rung, its delta beside it, the sparkline running
+/// full-width underneath as a whisper. Nothing renders until two aligned
+/// samples exist (`TokenChart.from` guards it), so a freshly-watched wallet
+/// shows no headline rather than a flat line.
+struct WalletBalanceHeadline: View {
     let chart: TokenChart
-    /// "Across your wallets" on the combined view, "Balance" scoped — the
-    /// combined read is the app's crown feature (user, 2026-07-20: "the
-    /// combined wallet state is our best feature"), so it carries its name
-    /// in daily view instead of hiding behind an anonymous tile.
+    /// "Across your wallets" on the combined view, "Balance" scoped.
     var caption: String = String(localized: "Balance")
     /// nil = no door: with one wallet (or scoped to one) the number has no
     /// further breakdown to show — the treemap below IS the composition, so a
@@ -95,22 +98,40 @@ struct WalletBalanceTile: View {
 
     var body: some View {
         Button { onOpen?() } label: {
-            WalletTile(caption: caption,
-                       showChevron: onOpen != nil) {
-                // The app's money voice ($19.9K), not a token price — this is a
-                // portfolio total, and `TokenStats.compact` is what the combined
-                // sheet and the wallet row sublines already speak. Raw
-                // `priceText` printed "$19866.64" here, which is a coin quote.
-                // The digits ROLL between values (a scope switch re-keys the
-                // number, and $20K odometer-rolling to $4.2K says "same
-                // instrument, new reading" — a swap says nothing). Direction
-                // rides the value, so the roll runs the way the money moved.
-                Text(TokenStats.compact(chart.price))
-                    .dsText(.stat24).foregroundStyle(DS.textPrimary)
-                    .monospacedDigit()
-                    .contentTransition(reduceMotion ? .identity : .numericText(value: chart.price))
-                    .lineLimit(1).minimumScaleFactor(0.6)
-                TokenChartPlot(chart: chart, accent: accent, height: 26, pulses: false)
+            VStack(alignment: .leading, spacing: DS.Space.s1) {
+                HStack(spacing: 5) {
+                    Text(caption)
+                        .dsText(.label12).foregroundStyle(DS.textSecondary)
+                        .lineLimit(1)
+                    // The door — only where a breakdown exists (the multi-wallet
+                    // "All" view). A chevron promises more behind the tap.
+                    if onOpen != nil {
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 10, weight: .semibold))
+                            .foregroundStyle(DS.textTertiary)
+                    }
+                }
+                HStack(alignment: .firstTextBaseline, spacing: DS.Space.s3) {
+                    // The app's money voice ($19.9K), not a token price — this is
+                    // a portfolio total, and `TokenStats.compact` is what the
+                    // combined sheet and the wallet row sublines already speak.
+                    // The digits ROLL between values (a scope switch re-keys the
+                    // number, and $20K odometer-rolling to $4.2K says "same
+                    // instrument, new reading"). Direction rides the value, so
+                    // the roll runs the way the money moved. `price40` is the
+                    // sanctioned big-money rung (prd §102), so it scales with
+                    // Dynamic Type like everything else.
+                    Text(TokenStats.compact(chart.price))
+                        .dsText(.price40).foregroundStyle(DS.textPrimary)
+                        .monospacedDigit()
+                        .contentTransition(reduceMotion ? .identity : .numericText(value: chart.price))
+                        .lineLimit(1).minimumScaleFactor(0.6)
+                    // "watched" — the honest window. The samples start when the
+                    // wallet was first watched, so naming any calendar period
+                    // ("this week") would claim a range the data may not cover.
+                    TokenDeltaPill(change: chart.change, label: "watched", compact: true)
+                }
+                TokenChartPlot(chart: chart, accent: accent, height: 40, pulses: false)
                     .mask(alignment: .leading) {
                         GeometryReader { geo in
                             Rectangle().frame(width: geo.size.width * drawn)
@@ -118,11 +139,10 @@ struct WalletBalanceTile: View {
                     }
                     .onAppear { draw() }
                     .onChange(of: chart.closes) { draw(redraw: true) }
-                // "watched" — the honest window. The samples start when the
-                // wallet was first watched, so naming any calendar period
-                // ("this week") would claim a range the data may not cover.
-                TokenDeltaPill(change: chart.change, label: "watched", compact: true)
+                    .padding(.top, DS.Space.s1)
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .disabled(onOpen == nil)
@@ -135,42 +155,39 @@ struct WalletBalanceTile: View {
     }
 }
 
-/// Worth a look — the security read, moved off the manage screen.
-///
-/// Leads with the top warning's OWN WORDS, not a count (user, 2026-07-20:
-/// a bare number is a mystery box). The tail says how many more, quietly.
-/// Yellow appears exactly once, as the standard warning glyph — the system's
-/// vocabulary, nothing invented.
-struct WalletWarningsTile: View {
+/// Worth a look — the security read, as a quiet inline LINE (prd §146,
+/// 2026-07-21), not a standing card. Warnings are usually absent, and a
+/// permanent half-width card was reserving prominent space for the exception;
+/// demoted to a line, it whispers when clear-of-course and only speaks up with
+/// its own attention glyph when something's actually there. Leads with the
+/// standard warning glyph (red when any warning is critical), then the words
+/// and the top warnings' summary ("1 delegation · 1 flagged transfer"); the
+/// whole line opens the tray. Which address, on which chain, is what the tray
+/// behind the tap is for (user, 2026-07-20: a 0x in a line is detail).
+struct WalletWarningsLine: View {
     let warnings: [WalletWarning]
     let onOpen: () -> Void
 
     var body: some View {
         let critical = warnings.contains { $0.severity == .critical }
         Button(action: onOpen) {
-            WalletTile(caption: String(localized: "Worth a look"),
-                       glyph: "exclamationmark.triangle.fill",
-                       glyphTint: critical ? DS.destructive : DS.attention) {
-                // The COUNT leads, in the same rounded money voice the balance
-                // beside it uses, so the two tiles read as a matched pair. The
-                // subline says what kind — "1 delegation · 1 flagged transfer".
-                // Which address, on which chain, is what the page behind the
-                // tap is for (user, 2026-07-20: a 0x in a tile is detail).
-                Text(warnings.count == 1
-                     ? String(localized: "1 item")
-                     : String(localized: "\(warnings.count) items"))
-                    .dsText(.stat24).foregroundStyle(DS.textPrimary)
-                    .monospacedDigit()
-                    // Rolls with the balance beside it on a scope switch —
-                    // the pair reads as one instrument re-keying.
-                    .contentTransition(.numericText())
-                    .lineLimit(1).minimumScaleFactor(0.6)
+            HStack(spacing: DS.Space.s2) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(critical ? DS.destructive : DS.attention)
+                Text("Worth a look")
+                    .dsText(.callout15).foregroundStyle(DS.textPrimary)
+                    .layoutPriority(1)
                 Text(WalletWatch.summary(warnings))
                     .dsText(.subhead13).foregroundStyle(DS.textSecondary)
-                    .lineLimit(3)
-                    .multilineTextAlignment(.leading)
-                    .fixedSize(horizontal: false, vertical: true)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                Spacer(minLength: 0)
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(DS.textTertiary)
             }
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
     }
