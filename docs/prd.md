@@ -4732,3 +4732,35 @@ Files: `Model/FeedFilter.swift`, `Model/ChipMemory.swift` (new),
 this session is the Linux remote environment with no Xcode toolchain at all
 (no `xcodebuild`, no `xcrun`, no `swiftc`); build + `scripts/verify.sh` +
 the two probes above need to run on the Mac before this ships to TestFlight.
+
+## 145. The wallet answer shows what the wallets DID, not just what they hold (user, 2026-07-21)
+
+User, off a screenshot of the "How's my wallet?" answer: "it's all it says and
+it's really not that great. You would expect it to tell me about approvals or
+anything else that's in the wallet." The answer was the §132 shape — value
+line + holdings treemap — which reads as a balance check, not a wallet brief.
+
+Ruling: the shared `KeptAskComposers.walletDoc` (both the kept chip and the
+typed ask, per agent-brief ruling 13) now appends two corpus-backed sections
+under the treemap:
+
+- **Token approvals** — the newest 3 approval/Permit2 things the §84 pass
+  landed (`wallet:approval:`/`wallet:permit2:` refs). Each row opens the
+  thing sheet, which already carries the §112 prepare card and the
+  Revoke.cash door — so the answer surfaces the security read the user
+  expected without walletDoc re-reading any chain state.
+- **Latest activity** — the newest 4 other Wallet/Peer things (transfers,
+  swaps, Solana moves, Peer fills), the same rows the feed shows.
+
+Both are reads over things the wallet bridges already landed — no new
+network, still deterministic, still no model (ruling 1 intact). A section
+with nothing simply doesn't render. The unreachable-wallet branch now uses
+the same builder, so a failed live read still shows the local sections under
+the honest "Couldn't reach" line. `rows()` gained widget/row id parameters
+(defaults keep every single-widget caller byte-identical) so one doc can
+stack two widgets without id collisions.
+
+Files: `Model/KeptAskComposers.swift`, `Shell/RootShell.swift`. NOT yet
+verified on-sim — this session is the Linux web env with no xcodebuild;
+build + `-answerProbe "how's my wallet"` (with `-approvalProbe <blocksBack>`
+first to land an approval) to run on the Mac before the checkpoint.

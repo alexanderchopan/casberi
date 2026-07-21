@@ -28,7 +28,7 @@ enum KeptAskComposers {
     /// shared/static ModelContext accessor in this codebase).
     static func compose(_ kind: String, things: [Thing], context: ModelContext) async -> Result? {
         if kind == "away" { return away(things) }
-        if kind == "wallet" { return await wallet() }
+        if kind == "wallet" { return await wallet(things) }
         if kind == "walletdefi" { return await walletDeFi() }
         if kind == "walletgas" { return await walletGas() }
         if kind == "walletsafe" { return await walletSafe() }
@@ -78,30 +78,60 @@ enum KeptAskComposers {
     /// Standing rule: any kept ask backed by a real visualization always
     /// shows it, never text alone (matches `RootShell.answerDocument`'s
     /// watchlist branch below, which already did this for TokenChip rows).
-    private static func wallet() async -> Result? {
+    private static func wallet(_ things: [Thing]) async -> Result? {
         guard !WalletStore.shared.addresses.isEmpty else { return nil }
         guard let line = await WalletAsk.answer() else {
+            // The corpus sections are local reads, so an unreachable LIVE
+            // read still shows what the wallet bridges already landed.
             return Result(delta: "", digest: "unreachable",
-                          doc: ["root = Stack([ins])",
-                                "ins = Insight(\"\(genSafe("Couldn't reach your wallet right now."))\")"])
+                          doc: walletDoc(line: "Couldn't reach your wallet right now.",
+                                         groups: [], things: things))
         }
         // The line itself is the honest digest — it only changes when the
         // real figure does, same idiom as the Noticed line below.
         let groups = await WalletIngest.topHoldingsByWallet()
-        return Result(delta: line, digest: line, doc: walletDoc(line: line, groups: groups))
+        return Result(delta: line, digest: line,
+                      doc: walletDoc(line: line, groups: groups, things: things))
     }
 
     /// Shared by the kept-ask composer and `RootShell.answerDocument`'s
     /// free-text wallet branch, so both never disagree about what a wallet
-    /// answer looks like.
-    static func walletDoc(line: String, groups: [WalletIngest.HoldingsGroup]) -> [String] {
-        let ids = groups.indices.map { "w\($0)" }
-        var doc = ["root = Stack([ins\(ids.isEmpty ? "" : ", " + ids.joined(separator: ", "))])",
-                   "ins = Insight(\"\(genSafe(line))\")"]
+    /// answer looks like. Beyond the value line + treemap, the answer shows
+    /// what the wallets have DONE, not just what they hold (user, 2026-07-21):
+    /// the newest landed token approvals (each row's sheet carries the
+    /// prepare card and the Revoke.cash door) and the latest activity —
+    /// transfers, swaps, Peer fills. Both are corpus reads over things the
+    /// wallet bridges already landed, so the richer answer costs no extra
+    /// network and stays deterministic.
+    static func walletDoc(line: String, groups: [WalletIngest.HoldingsGroup],
+                          things: [Thing]) -> [String] {
+        let walletThings = things.filter { $0.source == "Wallet" || $0.source == "Peer" }
+        let approvals = Array(walletThings.filter(isApproval).prefix(3))
+        let activity = Array(walletThings.filter { !isApproval($0) }.prefix(4))
+
+        var ids = groups.indices.map { "w\($0)" }
+        var sections: [String] = []
         for (i, g) in groups.enumerated() {
-            doc.append("w\(i) = TagMap(\"\(genSafe(g.label))\", \"\(genSafe(g.subline))\", [\(g.cells.joined(separator: ", "))], \"token\")")
+            sections.append("w\(i) = TagMap(\"\(genSafe(g.label))\", \"\(genSafe(g.subline))\", [\(g.cells.joined(separator: ", "))], \"token\")")
         }
-        return doc
+        if !approvals.isEmpty {
+            ids.append("ap")
+            sections += rows(approvals, title: "Token approvals", widgetID: "ap", rowPrefix: "p")
+        }
+        if !activity.isEmpty {
+            ids.append("act")
+            sections += rows(activity, title: "Latest activity", widgetID: "act", rowPrefix: "a")
+        }
+        return ["root = Stack([ins\(ids.isEmpty ? "" : ", " + ids.joined(separator: ", "))])",
+                "ins = Insight(\"\(genSafe(line))\")"] + sections
+    }
+
+    /// An approval/Permit2 thing from `WalletApprovals` — the refs that pass
+    /// carries (`wallet:approval:`/`wallet:permit2:`), vs the transfer/swap/
+    /// Solana refs the activity pass lands.
+    private static func isApproval(_ t: Thing) -> Bool {
+        let ref = t.sourceRef ?? ""
+        return ref.hasPrefix("wallet:approval:") || ref.hasPrefix("wallet:permit2:")
     }
 
     // MARK: - Aave / gas / Safe (2026-07-20)
@@ -306,11 +336,15 @@ enum KeptAskComposers {
 
     // MARK: - Shared
 
-    private static func rows(_ things: [Thing], title: String) -> [String] {
-        let ids = things.indices.map { "r\($0)" }
-        var lines = ["res = Widget(\"\(title)\", \"\(things.count)\", [\(ids.joined(separator: ", "))])"]
+    /// The id parameters exist for docs stacking more than one widget
+    /// (`walletDoc`'s approvals + activity) — the defaults keep every
+    /// single-widget caller's doc byte-identical to before.
+    private static func rows(_ things: [Thing], title: String,
+                             widgetID: String = "res", rowPrefix: String = "r") -> [String] {
+        let ids = things.indices.map { "\(rowPrefix)\($0)" }
+        var lines = ["\(widgetID) = Widget(\"\(title)\", \"\(things.count)\", [\(ids.joined(separator: ", "))])"]
         for (i, t) in things.enumerated() {
-            lines.append("r\(i) = Row(\"\(genSafe(t.title))\", \"\(t.kind.typeTag)\", \"\(t.source)\", \"\(shortTime(t.capturedAt))\", \"\(t.id.uuidString)\")")
+            lines.append("\(rowPrefix)\(i) = Row(\"\(genSafe(t.title))\", \"\(t.kind.typeTag)\", \"\(t.source)\", \"\(shortTime(t.capturedAt))\", \"\(t.id.uuidString)\")")
         }
         return lines
     }
