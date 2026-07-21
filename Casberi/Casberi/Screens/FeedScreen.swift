@@ -578,6 +578,11 @@ struct FeedScreen: View {
         // 2026-07-16 — SwiftUI keeps the outermost, so the real bridge sync
         // never ran on a pull; only the 600ms pulse stub did.
         .refreshable {
+            // A pull inside one source's own feed rains in ITS hue instead
+            // of the app's default berry blue — "All" keeps the default
+            // (delight pass 2026-07-21). Set once; both this bump and
+            // refreshFeed()'s own read the same stored hue.
+            chrome.refreshHue = source == "All" ? nil : DS.washHue(for: source)
             chrome.refreshPulse += 1   // spins the avatar door, deals the berry rain
             await refreshFeed()
         }
@@ -1127,10 +1132,13 @@ struct FeedScreen: View {
     private func calendarHeatmapSection(_ visible: [Thing], label: FeedHeatmap.Label) -> some View {
         let year = ContributionYear.from(dates: visible.map(\.capturedAt), columns: label.columns)
         if year.activeDays >= 4 {
+            let echo = OnThisDay.find(in: visible)
             Section {
                 CalendarHeatmapHero(title: label.title,
                                     subtitle: FeedHeatmap.subtitle(label, total: year.total),
-                                    year: year, minColumns: label.columns)
+                                    year: year, minColumns: label.columns,
+                                    onThisDay: echo,
+                                    onTapOnThisDay: { sheetThing = echo?.thing })
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
                     .listRowInsets(EdgeInsets())
@@ -1757,6 +1765,7 @@ struct FeedScreen: View {
                     .background(DS.tintDim, in: Capsule(style: .continuous))
             }
             .buttonStyle(.plain)
+            tryItChip
             // The empty room previews its own shape (2026-07-13) — the
             // all-feed empty state already does this with skeleton rows;
             // a shaped empty shows what ITS rows will look like: a grid
@@ -1769,6 +1778,58 @@ struct FeedScreen: View {
         .frame(maxWidth: .infinity)
         .padding(.horizontal, DS.Space.s4)
         .padding(.vertical, DS.Space.s6)
+    }
+
+    /// One tap demos a source that otherwise needs a first pick to mean
+    /// anything — the Wallet screen's "Peek at vitalik.eth" (prd §79),
+    /// generalized to every empty room that's just a search field with
+    /// nothing in it (delight pass 2026-07-21). Retires the moment anything
+    /// is watched — the empty state itself stops rendering.
+    @ViewBuilder private var tryItChip: some View {
+        if shape == .tokens {
+            tryItButton(label: "Watch ETH") {
+                guard let resolved = await TokenWatch.resolve("ETH") else { return }
+                TokenWatch.add(resolved, context: modelContext)
+                TokenWatch.registerBridge(store: bridges, context: modelContext)
+            }
+        } else if source == "Stocktwits" {
+            tryItButton(label: "Watch $AAPL") {
+                guard let resolved = await StockWatch.resolve("AAPL") else { return }
+                StockWatch.add(resolved, context: modelContext)
+                StockWatch.registerBridge(store: bridges, context: modelContext)
+            }
+        } else if source == "RSS" {
+            tryItButton(label: "Follow NASA's feed") {
+                guard RSSStore.shared.add("https://www.nasa.gov/feed/") else { return }
+                let added = await RSSIngest.refresh(context: modelContext)
+                bridges.registerConnected(id: "rss", name: "RSS",
+                    proof: (added ?? 0) > 0 ? "\(added ?? 0) posts in" : "Synced just now",
+                    can: ["Reads the feeds you follow."])
+            }
+        }
+    }
+
+    /// One chip anatomy for every try-it — the vitalik.eth capsule's exact
+    /// styling, reused instead of re-spelled per source.
+    private func tryItButton(label: String, action: @escaping () async -> Void) -> some View {
+        Button {
+            DSHaptic.tap()
+            Task { await action() }
+        } label: {
+            HStack(spacing: DS.Space.s1) {
+                Image(systemName: "sparkles")
+                    .font(.system(size: 12, weight: .semibold))
+                Text(label)
+                    .dsText(.subhead13).fontWeight(.medium)
+            }
+            .foregroundStyle(DS.tint)
+            .padding(.horizontal, DS.Space.s3)
+            .padding(.vertical, DS.Space.s2)
+            .background(DS.tint.opacity(0.12), in: Capsule(style: .continuous))
+            .contentShape(Capsule(style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .padding(.top, DS.Space.s2)
     }
 
     @ViewBuilder private var emptyShapePreview: some View {

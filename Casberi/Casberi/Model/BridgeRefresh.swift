@@ -83,12 +83,18 @@ enum BridgeRefresh {
             let s = slot(); Task { @MainActor in
                 await BridgeRefresh.stagger(s)
                 _ = await BlueskyIngest.refresh(context: context)
+                // A watched account posting again after a real quiet
+                // stretch is its own moment (delight 2026-07-21) — a
+                // read-only pass over what just landed, touching nothing
+                // in the ingest above.
+                SocialMoments.checkBlueskyReturns(context: context)
             }
         }
         if FarcasterStore.shared.connected {
             let s = slot(); Task { @MainActor in
                 await BridgeRefresh.stagger(s)
                 _ = await FarcasterIngest.refresh(context: context)
+                SocialMoments.checkFarcasterReturns(context: context)
             }
         }
         if !PinterestStore.shared.username.isEmpty {
@@ -134,7 +140,7 @@ enum BridgeRefresh {
             // holdings (records value samples, checks the combined/single new
             // high) so a moment fires from a plain foreground on Home, not only
             // from the Wallet screen. Holdings sample-throttle at 4h. The moments
-            // enqueue on WalletMoments, which MainSurface drains into the berry
+            // enqueue on SourceMoments, which MainSurface drains into the berry
             // rain + toast. Faces resolve here too, so a wallet wears its ENS
             // avatar before you ever open its screen.
             let s2 = slot(); Task { @MainActor in

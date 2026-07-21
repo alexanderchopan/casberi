@@ -102,7 +102,17 @@ enum BitrefillFetch {
         else { return }
         let node = (root["data"] as? [String: Any]) ?? root
         guard let amount = PriceFormat.parse(node["balance"] ?? node["amount"]) else { return }
+        // A refill landing is a moment (delight pass 2026-07-21): the balance
+        // rising above what it last read, never a drop (topping up isn't
+        // news the other direction) — same asymmetric shape as every other
+        // moment here. The FIRST read for an account seeds the mark silently.
+        let previous = BitrefillBalance.rawAmount
         BitrefillBalance.set(amount: amount, currency: node["currency"] as? String ?? "USD")
+        if let previous, amount > previous * 1.0001 {
+            let currency = node["currency"] as? String ?? "USD"
+            let text = String(localized: "Bitrefill balance refilled — \(PriceFormat.string(amount, currency: currency)) 💳")
+            await MainActor.run { SourceMoments.shared.fire(text, source: "Bitrefill") }
+        }
     }
 
     /// The v2 list envelope — `{"meta": …, "data": […]}` — with a fallback
@@ -171,5 +181,12 @@ enum BitrefillBalance {
         guard UserDefaults.standard.object(forKey: amountKey) != nil else { return nil }
         let amount = UserDefaults.standard.double(forKey: amountKey)
         return PriceFormat.string(amount, currency: UserDefaults.standard.string(forKey: currencyKey) ?? "USD")
+    }
+
+    /// The raw stored amount, read BEFORE a new one overwrites it — the
+    /// refill-moment check's own "previous" (nil until a first read landed).
+    static var rawAmount: Double? {
+        guard UserDefaults.standard.object(forKey: amountKey) != nil else { return nil }
+        return UserDefaults.standard.double(forKey: amountKey)
     }
 }

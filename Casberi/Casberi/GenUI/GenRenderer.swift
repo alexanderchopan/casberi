@@ -907,11 +907,49 @@ struct CalendarHeatmapHero: View {
     /// Passed through to the grid — 53 (a year) unless a windowed source
     /// (the social recent-weeks heatmap) draws fewer columns.
     var minColumns: Int = 53
+    /// A real match from the same day in a prior year (delight pass
+    /// 2026-07-21) — rides INSIDE this same card rather than competing for
+    /// the feed's one-hero-per-source slot. nil renders nothing extra.
+    var onThisDay: OnThisDay.Echo? = nil
+    var onTapOnThisDay: (() -> Void)? = nil
 
     var body: some View {
         InsightCard {
-            InsightHeader(title: title, subtitle: subtitle)
+            HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+                InsightHeader(title: title, subtitle: subtitle)
+                Spacer(minLength: DS.Space.s2)
+                // A year worth sharing (delight pass 2026-07-21) — the facts
+                // as a line, the same honest voice the card itself wears; no
+                // rendered image, just what the card already says.
+                ShareLink(item: "\(title) — \(subtitle) 🍇", subject: Text(title)) {
+                    Image(systemName: "square.and.arrow.up")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(DS.textTertiary)
+                }
+            }
             ContributionGraph(year: year, minColumns: minColumns)
+            if let onThisDay {
+                Button {
+                    DSHaptic.selection()
+                    onTapOnThisDay?()
+                } label: {
+                    HStack(spacing: DS.Space.s2) {
+                        Text(onThisDay.label)
+                            .dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                        Spacer(minLength: DS.Space.s2)
+                        Text(onThisDay.thing.title)
+                            .dsText(.subhead13).fontWeight(.semibold)
+                            .foregroundStyle(DS.textPrimary)
+                            .lineLimit(1)
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(DS.textTertiary)
+                    }
+                    .padding(.top, DS.Space.s1)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+            }
         }
     }
 }

@@ -54,9 +54,13 @@ final class TokenPulse {
             $0.source == "Tokens"
         })
         var stale: [(ref: String, chain: String, address: String)] = []
+        // Kept alongside `stale` so the new-high check below can read each
+        // ref's watch-time anchor and title without a second fetch.
+        var anchors: [String: Thing] = [:]
         for thing in (try? context.fetch(descriptor)) ?? [] {
             guard let ref = thing.sourceRef,
                   let route = TokenChart.route(from: thing.content) else { continue }
+            anchors[ref] = thing
             if let fresh = pulses[ref], fresh.fetchedAt.timeIntervalSinceNow > -900 { continue }
             if let tried = lastTried[ref], tried.timeIntervalSinceNow > -900 { continue }
             stale.append((ref, route.chain, route.address))
@@ -80,6 +84,7 @@ final class TokenPulse {
             out[ref] = Pulse(closes: chart.closes, change24h: chart.change,
                              price: chart.price, marketCap: chart.marketCap,
                              fdv: chart.fdv, fetchedAt: stamp)
+            noteGainSinceWatched(ref: ref, price: chart.price, anchor: anchors[ref])
         }
         pulses.merge(out) { _, new in new }
         // Home's watchlist tile reads this cache from a plain compose
@@ -90,5 +95,27 @@ final class TokenPulse {
         // tile's movers-first order and up/down subtitle frozen at
         // whatever they were (usually nothing) before this fetch finished.
         if !out.isEmpty { CorpusSignal.shared.bump() }
+    }
+
+    /// "SOL is up 38% since you watched it 📈" (delight pass 2026-07-21) —
+    /// the same "since you watched" anchor `TokenChartContent`'s sheet
+    /// already draws (`thing.watchPriceUsd`, the real price the moment you
+    /// added it), turned into a moment instead of a line you only see on
+    /// open. Fires ONCE ever per token, at a genuinely notable gain (25%) —
+    /// not a repeated all-time-high chase like the wallet's mark, because
+    /// this anchor never moves: re-firing at every small new high above the
+    /// SAME watch price would be noise, not news. Asymmetric by design, like
+    /// every moment here: a loss earns only the honest red pill on the row.
+    private func noteGainSinceWatched(ref: String, price: Double, anchor: Thing?) {
+        guard let anchor, let watchPrice = anchor.watchPriceUsd, watchPrice > 0,
+              price > watchPrice * 1.25
+        else { return }
+        let key = "moment.tokenGain.\(ref)"
+        guard !UserDefaults.standard.bool(forKey: key) else { return }
+        UserDefaults.standard.set(true, forKey: key)
+        let pct = Int(((price / watchPrice) - 1) * 100)
+        let name = TokensAsk.name(of: anchor.title)
+        SourceMoments.shared.fire(
+            String(localized: "\(name) is up \(pct)% since you watched it 📈"), source: "Tokens")
     }
 }

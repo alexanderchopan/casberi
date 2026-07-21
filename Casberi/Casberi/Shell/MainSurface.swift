@@ -19,11 +19,14 @@ struct MainSurface: View {
     @Environment(ShellChrome.self) private var chrome
     @Bindable private var filter = FeedFilter.shared
     @Bindable private var route = HomeRoute.shared
-    /// Wallet moments (NFT arrivals, new highs) — the data paths can't reach
-    /// the corpus-arrival watcher that fires the release rain (NFTs/holdings
-    /// aren't things), so they enqueue here and this surface deals the same
-    /// berry rain + toast (delight 2026-07-15).
-    private let walletMoments = WalletMoments.shared
+    /// Source moments (wallet new highs, token new highs, a Bitrefill refill,
+    /// a quiet account posting again) — the data paths can't reach the
+    /// corpus-arrival watcher that fires the release rain (some aren't things
+    /// at all; others are a FACT about a thing, not its landing), so they
+    /// enqueue here and this surface deals the same berry rain + toast
+    /// (delight 2026-07-15, generalized 2026-07-21 — prd "surprise & delight
+    /// in the source feeds").
+    private let sourceMoments = SourceMoments.shared
     /// Anchors the doors' zoom transitions (each room grows from its door).
     @Namespace private var doorNS
 
@@ -213,6 +216,11 @@ struct MainSurface: View {
                     chrome.refreshPulse += 1
                     chrome.flash(String(localized: "\(major.title) is out 🎉"))
                 }
+                // A source crossing a round total of things is a quiet
+                // count-up, said once (prd §36v, generalized per-source
+                // 2026-07-21) — a fact the corpus can prove, never a streak.
+                let sourceCount = feedThings.filter { $0.source == lead.source }.count
+                ThingMilestones.check(source: lead.source, count: sourceCount, chrome: chrome)
                 if firstEver {
                     UserDefaults.standard.set(true, forKey: bloomedKey)
                     let hue = DS.washHue(for: lead.source) ?? DS.tint
@@ -228,17 +236,21 @@ struct MainSurface: View {
                     }
                 }
             }
-            // A wallet moment landed (an NFT arrived, a new high) — deal the
-            // same berry rain + toast the starred-repo release uses, so every
-            // wallet celebration reads the same. The line names the moment.
-            .onChange(of: walletMoments.pulse) {
-                let lines = walletMoments.drain()
-                guard let latest = lines.last else { return }
+            // A source moment landed (a wallet or token new high, a Bitrefill
+            // refill, a quiet account posting again) — deal the same berry
+            // rain + toast the starred-repo release uses, tinted to the
+            // moment's own source hue when it names one, so every source's
+            // celebration reads the same family in its own color. The line
+            // names the moment.
+            .onChange(of: sourceMoments.pulse) {
+                let moments = sourceMoments.drain()
+                guard let latest = moments.last else { return }
                 // Rain once for the batch; name the most recent moment. A queue
                 // (not a single slot) means a moment fired while backgrounded
                 // survives here until this drain runs on foreground.
+                chrome.refreshHue = latest.source.flatMap { DS.washHue(for: $0) }
                 chrome.refreshPulse += 1
-                chrome.flash(latest)
+                chrome.flash(latest.text)
             }
             // The agent bar moved OFF MainSurface entirely (docs/agent-brief.md
             // ruling 6): it now rides RootShell's own ZStack, above EVERY
@@ -249,7 +261,7 @@ struct MainSurface: View {
             // bumps chrome.refreshPulse — the berry rain falls over the
             // content and the avatar door spins (below). Decorative only;
             // hit-testing is off inside BerryRain.
-            .overlay { BerryRain(trigger: chrome.refreshPulse) }
+            .overlay { BerryRain(trigger: chrome.refreshPulse, hue: chrome.refreshHue) }
             .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
             // The nav bar itself is hidden now (2026-07-20) — nothing lives
