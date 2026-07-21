@@ -33,10 +33,28 @@ struct FeedScreen: View {
     /// its own "New since" line away.
     let isActive: Bool
 
-    @Query(sort: \Thing.capturedAt, order: .reverse) private var things: [Thing]
+    /// Source-scoped since 2026-07-21 (perf audit): the pager keeps every
+    /// neighbor page MOUNTED (doc above), so an unfiltered `@Query` here used
+    /// to mean N+1 live full-corpus queries (one per source chip, plus
+    /// MainSurface's own) — a write to ANY thing, anywhere, re-materialized
+    /// and re-filtered the whole corpus on every one of them. Each page now
+    /// only ever observes its own source's rows; only the "All" page still
+    /// queries everything, because it genuinely shows everything.
+    @Query private var things: [Thing]
     @Environment(ShellChrome.self) private var chrome
     @Environment(BridgeStore.self) private var bridges
     @Environment(\.modelContext) private var modelContext
+
+    init(source: String, isActive: Bool) {
+        self.source = source
+        self.isActive = isActive
+        if source == "All" {
+            _things = Query(sort: \Thing.capturedAt, order: .reverse)
+        } else {
+            _things = Query(filter: #Predicate<Thing> { $0.source == source },
+                            sort: \Thing.capturedAt, order: .reverse)
+        }
+    }
 
     /// Only `tag` is read from here now — a kind filter is a cross-page state
     /// (it arrives from Home's kind bar and applies to the All room).
@@ -1209,7 +1227,11 @@ struct FeedScreen: View {
     /// treemap for the rest of this session and marks the digest seen.
     @ViewBuilder
     private var themesLedeSection: some View {
-        if let doc = HomeComposition.themesDocument(things: visible) {
+        // Computed once and shared with the collapsed row below (2026-07-21) —
+        // this used to run `projectClusters` a second time over the same
+        // `visible` set just to build the collapsed summary.
+        let clusters = HomeComposition.projectClusters(things: visible)
+        if let doc = HomeComposition.themesDocument(clusters: clusters) {
             let digest = doc.joined(separator: "\n")
             let unchanged = digest == UserDefaults.standard.string(forKey: Self.themesSeenDigestKey)
             if themesExpanded || !unchanged {
@@ -1239,7 +1261,7 @@ struct FeedScreen: View {
                         DSHaptic.selection()
                         withAnimation(DS.Motion.standard) { themesExpanded = true }
                     } label: {
-                        themesCollapsedRow
+                        themesCollapsedRow(clusters)
                     }
                     .buttonStyle(.plain)
                     .listRowBackground(Color.clear)
@@ -1252,9 +1274,8 @@ struct FeedScreen: View {
     /// The collapsed Themes row — eyebrow + a one-line cluster-count summary,
     /// same voice as `daySection`'s header (name in heading weight, the
     /// count in tertiary).
-    private var themesCollapsedRow: some View {
-        let clusters = HomeComposition.projectClusters(things: visible).prefix(6)
-        let names = clusters.map(\.name).joined(separator: ", ")
+    private func themesCollapsedRow(_ clusters: [HomeComposition.Cluster]) -> some View {
+        let names = clusters.prefix(6).map(\.name).joined(separator: ", ")
         return HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
             Text("Themes").dsText(.heading17).foregroundStyle(DS.textPrimary)
             Text(names).dsText(.subhead13).foregroundStyle(DS.textTertiary)
@@ -2362,7 +2383,7 @@ struct FeedScreen: View {
         // Wallet feed's treemap isn't served a TTL-cached read (same contract as
         // Home's pull; the cache is for the automatic fan-out, not the gesture).
         await WalletIngest.invalidateHoldingsCache()
-        BridgeRefresh.refreshAllConnected(context: modelContext, store: bridges)
+        BridgeRefresh.refreshAllConnected(context: modelContext, store: bridges, force: true)
         chrome.refreshPulse += 1   // spins the avatar door, deals the berry rain
         shapeWave += 1
         streamBlock()

@@ -25,7 +25,7 @@ enum DayOneImport {
             return Summary(failed: true)
         }
 
-        let existing = IngestSupport.existingSourceRefs(context)
+        let existing = IngestSupport.existingSourceRefs(context, source: "Day One")
 
         // IngestSupport.isoDate, not a bare ISO8601DateFormatter — Day One
         // stamps both plain and fractional-second forms, and the bare
@@ -130,7 +130,7 @@ enum JournalImport {
         }
         guard !files.isEmpty else { return Summary(failed: true) }
 
-        var existing = IngestSupport.existingSourceRefs(context)
+        var existing = IngestSupport.existingSourceRefs(context, source: "Apple Journal")
         var summary = Summary()
 
         let dated: [(date: Date, title: String, url: URL)] = files.compactMap { url in

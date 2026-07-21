@@ -193,7 +193,7 @@ enum PeerBridge {
         let addresses = await WalletIngest.resolvedAddresses(watched)
             .filter { ENS.isHexAddress($0) }
         return await syncLocked(context: context, addresses: addresses,
-                                existing: IngestSupport.existingSourceRefs(context))
+                                existing: IngestSupport.existingSourceRefs(context, source: "Peer"))
     }
 
     /// The pass body — callers must hold `running`. nil = Base unreachable.
@@ -274,7 +274,7 @@ enum PeerBridge {
             }
         }
         return await syncLocked(context: context, addresses: addresses,
-                                existing: IngestSupport.existingSourceRefs(context))
+                                existing: IngestSupport.existingSourceRefs(context, source: "Peer"))
     }
 
     // MARK: - Landing

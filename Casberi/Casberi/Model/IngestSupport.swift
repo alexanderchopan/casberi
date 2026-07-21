@@ -24,10 +24,41 @@ enum IngestSupport {
     /// replaced. A partial fetch: the predicate skips the many rows with no
     /// ref (notes, approvals), and propertiesToFetch faults in only the
     /// sourceRef column, so a refresh no longer hydrates the whole corpus.
+    /// Use the scoped `source:` overload below whenever a single bridge's
+    /// items all carry one source string — this one stays for the bridges
+    /// that genuinely dedupe ACROSS sources (Health's Strava/Apple Health
+    /// split shares one ref namespace on purpose).
     static func existingSourceRefs(_ context: ModelContext) -> Set<String> {
         var descriptor = FetchDescriptor<Thing>(predicate: #Predicate { $0.sourceRef != nil })
         descriptor.propertiesToFetch = [\.sourceRef]
         return Set(((try? context.fetch(descriptor)) ?? []).compactMap(\.sourceRef))
+    }
+
+    /// Same as above, scoped to one source string — every foreground refresh
+    /// otherwise rebuilds this set from the WHOLE corpus regardless of which
+    /// bridge is asking (2026-07-21: ~25 bridges each did this on every
+    /// activation). A Farcaster refresh only ever collides with `fc:` refs,
+    /// never a wallet transfer or an RSS entry, so scoping to the bridge's
+    /// own `source` shrinks the fetch to just that bridge's rows.
+    static func existingSourceRefs(_ context: ModelContext, source: String) -> Set<String> {
+        var descriptor = FetchDescriptor<Thing>(predicate: #Predicate {
+            $0.source == source && $0.sourceRef != nil
+        })
+        descriptor.propertiesToFetch = [\.sourceRef]
+        return Set(((try? context.fetch(descriptor)) ?? []).compactMap(\.sourceRef))
+    }
+
+    /// A single already-landed? check, scoped to one source — for a one-off
+    /// "is this already watched" gate (TokenWatch/KalshiWatch's Watch button)
+    /// where building a whole dedupe Set for one membership test was pure
+    /// waste. `fetchLimit = 1` short-circuits at the first match.
+    static func hasSourceRef(_ context: ModelContext, source: String, ref: String) -> Bool {
+        var descriptor = FetchDescriptor<Thing>(predicate: #Predicate {
+            $0.source == source && $0.sourceRef == ref
+        })
+        descriptor.fetchLimit = 1
+        descriptor.propertiesToFetch = [\.sourceRef]
+        return ((try? context.fetchCount(descriptor)) ?? 0) > 0
     }
 
     /// One source's things still missing a row thumbnail, keyed by sourceRef —
@@ -205,6 +236,19 @@ enum IngestSupport {
         return flat.count > 80 ? String(flat.prefix(80)) + "…" : flat
     }
 
+    /// One session for every bridge call, instead of `URLSession.shared`'s
+    /// 60s default timeout (2026-07-21). A single stalled endpoint used to
+    /// hold a connection up to a full minute during the foreground sweep;
+    /// callers that already knew better (LinkTitle, ProductMeta, AgentAnswer)
+    /// set their own short timeouts, but the shared JSON layer — the path
+    /// most bridges ride — never did.
+    private static let session: URLSession = {
+        let config = URLSessionConfiguration.default
+        config.timeoutIntervalForRequest = 15
+        config.waitsForConnectivity = false
+        return URLSession(configuration: config)
+    }()
+
     // MARK: - JSON over HTTP (200 with a JSON body, or nil)
 
     static func getJSON(_ url: String, auth: String? = nil,
@@ -243,7 +287,7 @@ enum IngestSupport {
         guard let u = URL(string: url) else { return (nil, 0) }
         var request = URLRequest(url: u)
         apply(auth: auth, headers: headers, to: &request)
-        guard let (data, response) = try? await URLSession.shared.data(for: request) else { return (nil, 0) }
+        guard let (data, response) = try? await session.data(for: request) else { return (nil, 0) }
         let status = (response as? HTTPURLResponse)?.statusCode ?? 0
         guard status == 200 else { return (nil, status) }
         return (try? JSONSerialization.jsonObject(with: data), status)
@@ -266,7 +310,7 @@ enum IngestSupport {
         request.httpBody = payload
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         apply(auth: auth, headers: headers, to: &request)
-        guard let (data, response) = try? await URLSession.shared.data(for: request) else { return (nil, 0) }
+        guard let (data, response) = try? await session.data(for: request) else { return (nil, 0) }
         let status = (response as? HTTPURLResponse)?.statusCode ?? 0
         guard status == 200 else { return (nil, status) }
         return (try? JSONSerialization.jsonObject(with: data), status)
@@ -299,7 +343,7 @@ enum IngestSupport {
     }
 
     private static func run(_ request: URLRequest) async -> Any? {
-        guard let (data, response) = try? await URLSession.shared.data(for: request),
+        guard let (data, response) = try? await session.data(for: request),
               (response as? HTTPURLResponse)?.statusCode == 200 else { return nil }
         return try? JSONSerialization.jsonObject(with: data)
     }

@@ -70,7 +70,7 @@ enum MailIngest {
                 host: provider.host, user: provider.address, password: password, limit: 20)
         } catch { return nil }
 
-        let existing = IngestSupport.existingSourceRefs(context)
+        let existing = IngestSupport.existingSourceRefs(context, source: provider.source)
         var added = 0
         for m in messages {
             let ref = "mail:\(provider.bridgeID):\(m.uid)"

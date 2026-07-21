@@ -60,7 +60,11 @@ struct MainSurface: View {
         for thing in feedThings where seen.insert(thing.source).inserted {
             ordered.append(thing.source)
         }
-        let learned = ordered.sorted { ChipMemory.weight(for: $0) > ChipMemory.weight(for: $1) }
+        let (counts, lastVisit) = ChipMemory.snapshot()
+        let learned = ordered.sorted {
+            ChipMemory.weight(for: $0, counts: counts, lastVisit: lastVisit)
+                > ChipMemory.weight(for: $1, counts: counts, lastVisit: lastVisit)
+        }
         return ["All"] + learned
     }
 

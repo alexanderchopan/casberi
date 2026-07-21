@@ -28,7 +28,7 @@ enum GeminiImport {
             return Summary(failed: true)
         }
 
-        let existing = IngestSupport.existingSourceRefs(context)
+        let existing = IngestSupport.existingSourceRefs(context, source: "Gemini")
 
         // Newest first, cap 500.
         let sorted = records.sorted {

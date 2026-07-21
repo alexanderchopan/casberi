@@ -9,6 +9,16 @@ import SwiftData
 /// project: in motion, saved, recent.
 struct ProjectDetailScreen: View {
     let projectName: String
+    /// REVERTED 2026-07-21: a `#Predicate<Thing> { $0.tags.contains(projectName) }`
+    /// looked like the obvious perf win here (scope the query to this
+    /// project's own tag instead of fetching everything) and compiled clean —
+    /// but crashed at runtime, SIGSEGV inside CoreData's `_NSCoreDataStringSearch`
+    /// during the live SQLite fetch (confirmed via crash report, reproduced by
+    /// opening a project). `tags` is a transformable `[String]` attribute, and
+    /// SwiftData's predicate translation for `.contains` on it isn't safe to
+    /// push down to SQL here. Filtering in Swift after an unscoped fetch — the
+    /// original shape — is the correct, safe form; don't reintroduce the
+    /// predicate without verifying against a real on-device fetch first.
     @Query(sort: \Thing.capturedAt, order: .reverse) private var things: [Thing]
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss

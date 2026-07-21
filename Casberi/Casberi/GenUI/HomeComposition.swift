@@ -66,9 +66,16 @@ enum HomeComposition {
     /// same component). Nil when no project has clustered yet — same standard
     /// `projectClusters` always held (min 2 things sharing a real tag).
     static func themesDocument(things: [Thing]) -> [String]? {
-        let projects = projectClusters(things: things)
-        guard !projects.isEmpty else { return nil }
-        let items = projects.prefix(6).map { "\($0.name) \($0.things.count)" }
+        themesDocument(clusters: projectClusters(things: things))
+    }
+
+    /// Same doc, from clusters already computed — for a caller (FeedScreen's
+    /// Themes lede, 2026-07-21) that also needs the cluster list itself for
+    /// its collapsed-row summary and would otherwise call `projectClusters`
+    /// a second time over the same things just to get it.
+    static func themesDocument(clusters: [Cluster]) -> [String]? {
+        guard !clusters.isEmpty else { return nil }
+        let items = clusters.prefix(6).map { "\($0.name) \($0.things.count)" }
         return ["root = TagMap(\(q(String(localized: "Themes"))), null, [\(items.joined(separator: ", "))])"]
     }
 

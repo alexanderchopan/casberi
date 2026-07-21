@@ -43,6 +43,20 @@ enum ChipMemory {
     /// the recency-only tail on its own, no cap and nothing to manage.
     private static let staleWindow: Double = 7 * 86400
     static func weight(for source: String) -> Int {
+        weight(for: source, counts: counts, lastVisit: lastVisit)
+    }
+
+    /// Both backing dictionaries, read once — for a caller (a sort
+    /// comparator) that would otherwise call `weight(for:)` once per
+    /// comparison, each re-deserializing both UserDefaults dictionaries from
+    /// scratch (2026-07-21 audit: an O(n log n) comparator over the chip
+    /// list did exactly that).
+    static func snapshot() -> (counts: [String: Int], lastVisit: [String: Double]) {
+        (counts, lastVisit)
+    }
+
+    /// Same weight, computed against an already-read snapshot.
+    static func weight(for source: String, counts: [String: Int], lastVisit: [String: Double]) -> Int {
         guard let raw = counts[source], let last = lastVisit[source] else { return 0 }
         let elapsed = Date.now.timeIntervalSinceReferenceDate - last
         guard elapsed > 0 else { return raw }

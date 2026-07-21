@@ -258,7 +258,7 @@ enum OpenSeaIngest {
             await fetch(chain, key: key)
         }
 
-        var existing = IngestSupport.existingSourceRefs(context)
+        var existing = IngestSupport.existingSourceRefs(context, source: "OpenSea")
         let backfill = ArtlessBackfill(context, source: "OpenSea")
         var added = 0
         var reachedAny = false

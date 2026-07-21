@@ -277,22 +277,40 @@ enum VerbDerivation {
 /// stays free of UIApplication / BridgeStore isolation and can run inside
 /// off-main GenUI composition.
 enum HandOffState {
+    /// `nonisolated(unsafe)` previously let these Sets be written on the main
+    /// actor while read from off-main GenUI composition with no protection at
+    /// all — a genuine data race (Swift's `Set` isn't thread-safe), found in a
+    /// 2026-07-21 audit. A lock is enough: writes are rare (once per
+    /// foreground) and reads are simple `.contains` checks.
+    private static let lock = NSLock()
+
     /// Custom URL schemes (from `LSApplicationQueriesSchemes`) that resolve to
     /// an installed app. A scheme not listed in Info.plist always reads absent,
     /// so the two must move together.
-    nonisolated(unsafe) static var installedSchemes: Set<String> = []
+    private static var _installedSchemes: Set<String> = []
+    static var installedSchemes: Set<String> {
+        lock.lock(); defer { lock.unlock() }
+        return _installedSchemes
+    }
     /// Lowercased names of the bridges the person has connected — the gate for
     /// "Add to <app>" hand-offs (user ruling: bridge-tied, never arbitrary).
-    nonisolated(unsafe) static var connectedBridges: Set<String> = []
+    private static var _connectedBridges: Set<String> = []
+    static var connectedBridges: Set<String> {
+        lock.lock(); defer { lock.unlock() }
+        return _connectedBridges
+    }
 
     private static let candidates = ["todoist", "googlegmail"]
 
     @MainActor static func refresh(connected: Set<String>) {
-        installedSchemes = Set(candidates.filter {
+        let schemes = Set(candidates.filter {
             guard let url = URL(string: "\($0)://") else { return false }
             return UIApplication.shared.canOpenURL(url)
         })
-        connectedBridges = connected
+        lock.lock()
+        _installedSchemes = schemes
+        _connectedBridges = connected
+        lock.unlock()
     }
 }
 

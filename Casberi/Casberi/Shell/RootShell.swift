@@ -1068,10 +1068,21 @@ struct RootShell: View {
                                 onProseDoc: @escaping ([String]) -> Void) async -> [String] {
         // A count/superlative ask is ARITHMETIC, not retrieval — computed
         // over the corpus directly, no model, always correct (2026-07-10).
-        let allThings = (try? modelContext.fetch(FetchDescriptor<Thing>(
-            sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]
-        ))) ?? []
-        let knownSources = Array(Set(allThings.map(\.source)))
+        // Memoized and LAZY (2026-07-21): this used to fetch the whole corpus
+        // unconditionally as the first line of every ask, even ones (wallet,
+        // token, apps) that never touch it. `AggregateAsk.parse`/`StatusAsk.pulse`
+        // take their corpus argument as an `@autoclosure` for the same reason —
+        // together, a plain lookup query now never materializes the corpus here.
+        var cachedAllThings: [Thing]?
+        func allThings() -> [Thing] {
+            if let cachedAllThings { return cachedAllThings }
+            let fetched = (try? modelContext.fetch(FetchDescriptor<Thing>(
+                sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]
+            ))) ?? []
+            cachedAllThings = fetched
+            return fetched
+        }
+        func knownSources() -> [String] { Array(Set(allThings().map(\.source))) }
         // A tag-vocabulary ask ("what tags do i have", "how many tags") is
         // answered from the tag SET itself — computed, never the model, always
         // correct. Runs BEFORE AggregateAsk so "how many tags" counts tags, not
@@ -1082,7 +1093,7 @@ struct RootShell: View {
             // hits so a keyed retry re-retrieves for THIS question instead of
             // silently grounding on a previous one's evidence (review 2026-07-13).
             lastAnswerHits = []
-            return tagsDoc(tagsAsk, in: allThings)
+            return tagsDoc(tagsAsk, in: allThings())
         }
         // An apps ask ("what apps do you have") is a meta-question about the
         // app set — connected seats + the catalog — answered computed, never
@@ -1094,9 +1105,9 @@ struct RootShell: View {
             lastAnswerHits = []
             return appsDoc(appsAsk)
         }
-        if let agg = AggregateAsk.parse(query, sources: knownSources) {
+        if let agg = AggregateAsk.parse(query, sources: knownSources()) {
             lastAnswerHits = []
-            let line = AggregateAsk.answer(agg, things: allThings)
+            let line = AggregateAsk.answer(agg, things: allThings())
             return ["root = Stack([ins])", "ins = Insight(\"\(genSafe(line))\")"]
         }
         // A watchlist ask ("how's my watchlist") is answered from the same
@@ -1132,7 +1143,7 @@ struct RootShell: View {
             // landed approvals + latest activity — shared with the kept-ask
             // composer via `KeptAskComposers.walletDoc` so the two paths agree.
             let groups = await WalletIngest.topHoldingsByWallet()
-            return KeptAskComposers.walletDoc(line: line, groups: groups, things: allThings)
+            return KeptAskComposers.walletDoc(line: line, groups: groups, things: allThings())
         }
         // An Aave ask ("how's my loan", "what's my health factor") — live
         // read, no model (2026-07-20). Same slot as WalletAsk, right after
@@ -1166,7 +1177,7 @@ struct RootShell: View {
         // in a recent window — the feeds' pulse. The model synthesizes over
         // that sample; everywhere else the counted pulse line answers
         // (2026-07-11).
-        if let pulse = StatusAsk.pulse(query, things: allThings) {
+        if let pulse = StatusAsk.pulse(query, things: allThings()) {
             lastAnswerHits = pulse.sample
             // The away recap's watchlist line (2026-07-14): watched tokens'
             // moves over the frozen away window, from real candles — the one
@@ -1202,9 +1213,9 @@ struct RootShell: View {
         // If the query names a tag ("about work"), the answer opens with that
         // tag's tile — tap it to open the tag's view, the same push the Home
         // treemap makes (PRD §17: a topic opens its view, not a Feed filter).
-        let tag = matchedTag(query)
+        let tag = matchedTag(query, in: allThings())
         guard OnDeviceModel.isAvailable, !hits.isEmpty else {
-            return retrievalDoc(hits, tag: tag)
+            return retrievalDoc(hits, tag: tag, in: allThings())
         }
         switch await resolvedMode(query) {
         case .lookup:
@@ -1235,15 +1246,15 @@ struct RootShell: View {
                 if !grounded.isEmpty {
                     lastAnswerHits = grounded
                     return modelDoc(insight: result.prose, hits: grounded,
-                                    picks: Array(grounded.prefix(6).indices), tag: tag)
+                                    picks: Array(grounded.prefix(6).indices), tag: tag, in: allThings())
                 }
                 // Tools found nothing the pre-retrieval didn't — fall through to
                 // compose over `hits` (the stronger semantic retriever's set).
             }
             guard let answer = await OnDeviceModel.compose(query: query, candidates: candidates(hits)) else {
-                return retrievalDoc(hits, tag: tag)   // model declined or errored — fall back
+                return retrievalDoc(hits, tag: tag, in: allThings())   // model declined or errored — fall back
             }
-            return modelDoc(insight: answer.insight, hits: hits, picks: answer.picks, tag: tag)
+            return modelDoc(insight: answer.insight, hits: hits, picks: answer.picks, tag: tag, in: allThings())
         case .synthesis:
             guard let prose = await streamSynthesis(query, over: candidates(hits),
                                                     onProseDoc: onProseDoc) else {
@@ -1456,7 +1467,7 @@ struct RootShell: View {
 
     /// Today's doc, verbatim — the record paints from the top 4 hits. The
     /// universal fallback and the empty state.
-    private func retrievalDoc(_ hits: [Thing], tag: String? = nil) -> [String] {
+    private func retrievalDoc(_ hits: [Thing], tag: String? = nil, in things: [Thing] = []) -> [String] {
         let shown = Array(hits.prefix(4))
         guard !shown.isEmpty else {
             // Say what WOULD work, not just that nothing did (2026-07-10) —
@@ -1468,7 +1479,7 @@ struct RootShell: View {
             return ["root = Stack([ins])",
                     "ins = Insight(\"\(genSafe(line))\")"]
         }
-        let tile = tagTile(tag)
+        let tile = tagTile(tag, in: things)
         var doc = ["root = Stack([\(tile == nil ? "res" : "tag, res")])"]
         if let tile { doc.append(tile) }
         return doc + groundingLines(shown, title: "Found")
@@ -1477,18 +1488,19 @@ struct RootShell: View {
     /// A tappable tile for the tag an answer is about — opens that tag's view.
     /// nil when the query names no known tag. The tile's name arg is what the
     /// tap routes on (GenProjectTile → genProjectTap → HomeRoute.openTag).
-    private func tagTile(_ tag: String?) -> String? {
+    /// Takes the corpus already fetched by the caller (2026-07-21) — this and
+    /// `matchedTag` used to each run their OWN full-corpus fetch on the common
+    /// retrieval path, on top of `answerDocument`'s own.
+    private func tagTile(_ tag: String?, in things: [Thing]) -> String? {
         guard let tag else { return nil }
-        let count = (try? modelContext.fetch(FetchDescriptor<Thing>()))?
-            .filter { $0.tags.contains { $0.caseInsensitiveCompare(tag) == .orderedSame } }
-            .count ?? 0
+        let count = things.filter { $0.tags.contains { $0.caseInsensitiveCompare(tag) == .orderedSame } }.count
         guard count > 0 else { return nil }
         return "tag = ProjectTile(\"2\", \"\(genSafe(tag))\", \"\", \"\(count) thing\(count == 1 ? "" : "s")\", \"\(count) things\", null)"
     }
 
     /// The existing tag a query names, if any — a query term (minus stopwords
     /// and kind words) that matches a tag's name exactly, case-insensitively.
-    private func matchedTag(_ query: String) -> String? {
+    private func matchedTag(_ query: String, in things: [Thing]) -> String? {
         let stops: Set<String> = ["about", "my", "the", "a", "in", "from", "for",
                                   "of", "what", "did", "i", "save", "saved", "show",
                                   "find", "me", "all", "any"]
@@ -1496,7 +1508,7 @@ struct RootShell: View {
             .components(separatedBy: CharacterSet.alphanumerics.inverted)
             .filter { !$0.isEmpty && !stops.contains($0) }
         guard !terms.isEmpty else { return nil }
-        let tags = Set((try? modelContext.fetch(FetchDescriptor<Thing>()))?.flatMap(\.tags) ?? [])
+        let tags = Set(things.flatMap(\.tags))
         // Prefer a whole-query match ("book club"), else any single term.
         if let whole = tags.first(where: { $0.caseInsensitiveCompare(terms.joined(separator: " ")) == .orderedSame }) {
             return whole
@@ -1510,10 +1522,11 @@ struct RootShell: View {
     /// the things it picked — painted from the REAL things (the model chose
     /// indices, never content), so every row is honest. No picks = just the
     /// sentence (the model said nothing fits).
-    private func modelDoc(insight: String, hits: [Thing], picks: [Int], tag: String? = nil) -> [String] {
+    private func modelDoc(insight: String, hits: [Thing], picks: [Int], tag: String? = nil,
+                         in things: [Thing] = []) -> [String] {
         let clean = genSafe(insight)
         let picked = picks.compactMap { hits.indices.contains($0) ? hits[$0] : nil }.prefix(6)
-        let tile = tagTile(tag)
+        let tile = tagTile(tag, in: things)
         guard !picked.isEmpty else {
             var doc = ["root = Stack([\(tile == nil ? "ins" : "ins, tag")])",
                        "ins = Insight(\"\(clean)\")"]

@@ -123,7 +123,7 @@ enum TokenWatch {
     @discardableResult
     static func add(_ token: Resolved, context: ModelContext) -> Thing? {
         let ref = "tokens:\(token.chain):\(token.address.lowercased())"
-        guard !IngestSupport.existingSourceRefs(context).contains(ref) else { return nil }
+        guard !IngestSupport.hasSourceRef(context, source: "Tokens", ref: ref) else { return nil }
         let thing = Thing(
             kind: .link,
             title: "\(token.name) · $\(token.symbol)",

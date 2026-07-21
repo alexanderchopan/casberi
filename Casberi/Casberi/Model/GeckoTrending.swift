@@ -234,7 +234,7 @@ enum TrendingIngest {
             (chain, await fetch(chain))
         }
 
-        var existing = IngestSupport.existingSourceRefs(context)
+        var existing = IngestSupport.existingSourceRefs(context, source: "GeckoTerminal")
         let backfill = ArtlessBackfill(context, source: "GeckoTerminal")
         var added = 0
         var reachedAny = false

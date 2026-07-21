@@ -15,7 +15,12 @@ enum AggregateAsk {
         case topSource(range: ClosedRange<Date>?, rangeWords: String?)
     }
 
-    static func parse(_ query: String, sources: [String]) -> Intent? {
+    /// `sources` is an `@autoclosure` (2026-07-21): every caller used to
+    /// materialize the full corpus just to build this list BEFORE finding
+    /// out whether the query even mentions "how many"/"most" — the two early
+    /// exits below never touch it. Deferring the argument means a plain
+    /// lookup query (the common case) never pays for it.
+    static func parse(_ query: String, sources: @autoclosure () -> [String]) -> Intent? {
         let q = query.lowercased().trimmingCharacters(in: CharacterSet(charactersIn: "?! "))
         let date = DateQuery.match(in: q)
         let rangeWords = date.map { _ in rangePhrase(in: q) }
@@ -35,7 +40,7 @@ enum AggregateAsk {
         let kind = ThingKind.allCases.first { k in
             words.contains(k.typeTag.lowercased()) || words.contains(k.typeTagPlural.lowercased())
         }
-        let source = sources.first { s in
+        let source = sources().first { s in
             let sw = s.lowercased().components(separatedBy: CharacterSet.alphanumerics.inverted)
                 .filter { !$0.isEmpty }
             return !sw.isEmpty && sw.allSatisfy(words.contains)
@@ -221,7 +226,11 @@ enum StatusAsk {
 
     /// The parsed pulse, or nil when the query isn't a status ask.
     /// `things` must arrive newest-first (the answer path's fetch order).
-    static func pulse(_ query: String, things: [Thing], now: Date = .now) -> Pulse? {
+    /// `things` is an `@autoclosure` (2026-07-21): the cue/filler-word guards
+    /// above reject the vast majority of queries before ever touching the
+    /// corpus, so the caller's fetch should only happen for an actual status
+    /// ask, not every ask that reaches this check.
+    static func pulse(_ query: String, things: @autoclosure () -> [Thing], now: Date = .now) -> Pulse? {
         // iOS smart punctuation types U+2019 — "What's new?" must match the
         // "what's new" cue whichever apostrophe the keyboard chose.
         let q = query.lowercased().replacingOccurrences(of: "\u{2019}", with: "'")
@@ -232,6 +241,7 @@ enum StatusAsk {
         if let dateWords = date?.words { words.removeAll { dateWords.contains($0) } }
         words.removeAll { filler.contains($0) }
         guard words.isEmpty else { return nil }
+        let things = things()
 
         // The librarian's window (prd §67 ⑥): an away-shaped ask grounds on
         // the FROZEN gap between last background and this foreground — not a

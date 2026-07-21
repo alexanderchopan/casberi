@@ -169,7 +169,7 @@ enum TwitchIngest {
             return nil
         }
 
-        let existing = IngestSupport.existingSourceRefs(context)
+        let existing = IngestSupport.existingSourceRefs(context, source: "Twitch")
         let backfill = ArtlessBackfill(context, source: "Twitch")
         var added = 0
         var liveNow: [String] = []
