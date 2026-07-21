@@ -861,9 +861,14 @@ struct FeedScreen: View {
         let ordered = TokenWatchOrder.shared.apply(
             visible, sourceRef: \.sourceRef,
             change24h: { TokenPulse.shared.pulse(for: $0)?.change24h })
+        // One flat run: pulsed tokens wear the fat TokenRow and stand alone
+        // (standsAlone), so merging only ever joins the still-unpulsed rows.
+        let positions = cardRunPositions(count: ordered.count,
+                                         isBreaker: { standsAlone(ordered[$0]) })
         Section {
             ForEach(Array(ordered.enumerated()), id: \.element.id) { i, thing in
-                shapedListRow(thing, index: i, nextEventID: nextEventID)
+                shapedListRow(thing, index: i, nextEventID: nextEventID,
+                              position: positions[i])
             }
         }
     }
@@ -900,15 +905,25 @@ struct FeedScreen: View {
         let dayTotals = Dictionary(days.map { ($0.0, $0.1.count) },
                                    uniquingKeysWith: { first, _ in first })
         return ForEach(groups, id: \.0) { label, rows in
+            // Bundles merge into the day card like any row-shaped thing —
+            // only a single that stands alone (consent, token) breaks the run.
+            let positions = cardRunPositions(
+                count: rows.count,
+                isBreaker: { i in
+                    if case .single(let thing) = rows[i] { return standsAlone(thing) }
+                    return false
+                },
+                isBoundary: { rows[$0].id == boundary })
             Section {
                 ForEach(Array(rows.enumerated()), id: \.element.id) { i, row in
                     if row.id == boundary { newSinceDivider }
                     switch row {
                     case .single(let thing):
-                        shapedListRow(thing, index: i, nextEventID: nextEventID)
+                        shapedListRow(thing, index: i, nextEventID: nextEventID,
+                                      position: positions[i])
                     case .bundle(let source, let word, let count, let newest):
                         bundleListRow(source: source, word: word, count: count,
-                                      newest: newest, index: i)
+                                      newest: newest, index: i, position: positions[i])
                     }
                 }
             } header: {
@@ -1003,7 +1018,8 @@ struct FeedScreen: View {
     /// opens the source's own shape (where volume is designed to live) —
     /// no swipes, nothing here is a single thing to pin or open.
     private func bundleListRow(source: String, word: String, count: Int,
-                               newest: Date, index: Int) -> some View {
+                               newest: Date, index: Int,
+                               position: RunPosition = .only) -> some View {
         BundleRow(source: source, count: count, word: word, newest: newest)
             .modifier(RowEntrance(index: index, wave: shapeWave, style: entranceStyle))
             .contentShape(Rectangle())
@@ -1011,13 +1027,7 @@ struct FeedScreen: View {
                 DSHaptic.selection()
                 withAnimation(DS.Motion.standard) { filter.source = source }
             }
-            .listRowBackground(
-                RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous)
-                    .fill(DS.surfaceSheet)
-                    .padding(.horizontal, DS.Space.s4)
-                    .padding(.vertical, DS.Space.s1)
-                    .shadow(color: DS.cardShadow, radius: 18, x: 0, y: 6)
-            )
+            .listRowBackground(dayCardBackground(position))
             // Feed rhythm (2026-07-13): back to s2 — the s3 airy read made
             // every gap the same size, so days never clustered. Rows sit
             // tight within their day; the day header carries the big gap.
@@ -1494,11 +1504,23 @@ struct FeedScreen: View {
         }
         if !doing.isEmpty { daySection("Doing", doing, nextEventID: nextEventID) }
         if !fresh.isEmpty || !stale.isEmpty {
+            // One To do card (2026-07-21): the Older toggle — or the stale
+            // rows it expands into — continues the fresh rows' surface
+            // instead of sitting under it as a flat band.
+            let hasToggle = !stale.isEmpty && !staleExpanded
+            let slots = fresh.count + (staleExpanded ? stale.count : 0) + (hasToggle ? 1 : 0)
+            let positions = cardRunPositions(count: slots)
             Section {
-                ForEach(Array(fresh.enumerated()), id: \.element.id) { i, thing in shapedListRow(thing, index: i, nextEventID: nextEventID) }
+                ForEach(Array(fresh.enumerated()), id: \.element.id) { i, thing in
+                    shapedListRow(thing, index: i, nextEventID: nextEventID,
+                                  position: positions[i])
+                }
                 if !stale.isEmpty {
                     if staleExpanded {
-                        ForEach(Array(stale.enumerated()), id: \.element.id) { i, thing in shapedListRow(thing, index: i, nextEventID: nextEventID) }
+                        ForEach(Array(stale.enumerated()), id: \.element.id) { i, thing in
+                            shapedListRow(thing, index: i, nextEventID: nextEventID,
+                                          position: positions[fresh.count + i])
+                        }
                     } else {
                         HStack {
                             Text("Older").dsText(.body17).foregroundStyle(DS.textSecondary)
@@ -1508,9 +1530,14 @@ struct FeedScreen: View {
                                 .font(.system(size: 12, weight: .semibold))
                                 .foregroundStyle(DS.textTertiary)
                         }
+                        .padding(.vertical, DS.Space.s1)
                         .contentShape(Rectangle())
                         .onTapGesture { withAnimation(DS.Motion.standard) { staleExpanded = true } }
-                        .listRowBackground(DS.surfaceSheet)
+                        .listRowBackground(dayCardBackground(positions[slots - 1]))
+                        .listRowInsets(.init(top: DS.Space.s2,
+                                             leading: DS.Space.s4 + DS.Space.s3,
+                                             bottom: DS.Space.s2,
+                                             trailing: DS.Space.s4 + DS.Space.s3))
                         .listRowSeparator(.hidden)
                     }
                 }
@@ -1559,8 +1586,69 @@ struct FeedScreen: View {
         }
     }
 
+    /// Where a row sits in its day's shared card (ruling 2026-07-21,
+    /// superseding 2026-07-13's gap-only clustering): a contiguous run of
+    /// row-shaped things within a day merges into ONE card — the §61
+    /// section-lift mechanic brought to the plain list — while the
+    /// rhythm-breakers (`standsAlone`) keep free-standing cards between
+    /// runs, and the new-since seam splits a day's card in two.
+    private enum RunPosition { case only, first, middle, last }
+
+    /// Positions for a section's rows, index-based so All's FeedRow bundles
+    /// and plain Thing arrays share one derivation. A run breaks at a
+    /// free-standing row on either side, and at the new-since boundary
+    /// (the divider renders BEFORE the boundary row, so the row above it
+    /// closes its run and the boundary row opens a fresh one).
+    private func cardRunPositions(count: Int,
+                                  isBreaker: (Int) -> Bool = { _ in false },
+                                  isBoundary: (Int) -> Bool = { _ in false }) -> [RunPosition] {
+        (0..<count).map { i -> RunPosition in
+            let starts = i == 0 || isBreaker(i) || isBreaker(i - 1) || isBoundary(i)
+            let ends = i == count - 1 || isBreaker(i) || isBreaker(i + 1) || isBoundary(i + 1)
+            switch (starts, ends) {
+            case (true, true):   return .only
+            case (true, false):  return .first
+            case (false, true):  return .last
+            case (false, false): return .middle
+            }
+        }
+    }
+
+    /// The anatomies that earn a free-standing card — shapedRow's
+    /// rhythm-breakers. Everything else (band, check, excerpt, reading,
+    /// music) merges into its day's run.
+    private func standsAlone(_ thing: Thing) -> Bool {
+        if thing.kind == .approval && thing.mark != .done { return true }  // consent card
+        if shape == .social { return true }                                // PostCard, media at width
+        if shape == .chat && thing.mark == .doing { return true }          // TakeawayCard
+        if TokenPulse.shared.pulse(for: thing) != nil { return true }      // TokenRow fat anatomy
+        return false
+    }
+
+    /// The run-aware card surface: first/last rows carry the card's rounded
+    /// shoulders and the s1 breathing edge; middle rows run square and
+    /// GAPLESS, so a row's shadow falls on the adjacent same-color fill and
+    /// vanishes (§61's measured mechanic) — only the run's outer silhouette
+    /// casts, one lifted card instead of a stack of shadowed rows.
+    private func dayCardBackground(_ position: RunPosition) -> some View {
+        let r = DS.Radius.card
+        let top = position == .first || position == .only
+        let bottom = position == .last || position == .only
+        return UnevenRoundedRectangle(topLeadingRadius: top ? r : 0,
+                                      bottomLeadingRadius: bottom ? r : 0,
+                                      bottomTrailingRadius: bottom ? r : 0,
+                                      topTrailingRadius: top ? r : 0,
+                                      style: .continuous)
+            .fill(DS.surfaceSheet)
+            .padding(.horizontal, DS.Space.s4)
+            .padding(.top, top ? DS.Space.s1 : 0)
+            .padding(.bottom, bottom ? DS.Space.s1 : 0)
+            .shadow(color: DS.cardShadow, radius: 18, x: 0, y: 6)
+    }
+
     /// The row inside a list section, with the standard list plumbing attached.
-    private func shapedListRow(_ thing: Thing, index: Int = 0, nextEventID: UUID?) -> some View {
+    private func shapedListRow(_ thing: Thing, index: Int = 0, nextEventID: UUID?,
+                               position: RunPosition = .only) -> some View {
         // AnyView: same metadata-depth insurance as GenRender (crash fix).
         return AnyView(shapedRow(thing, nextEventID: nextEventID))
             .modifier(RowEntrance(index: index, wave: shapeWave, style: entranceStyle))
@@ -1570,13 +1658,7 @@ struct FeedScreen: View {
             // V3b (2026-07-07, supersedes the kind-color wash): rows are
             // NEUTRAL cards — the translucent kind wash read as murk. Color
             // moved into the tag text: the project's own stable hue.
-            .listRowBackground(
-                RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous)
-                    .fill(DS.surfaceSheet)
-                    .padding(.horizontal, DS.Space.s4)
-                    .padding(.vertical, DS.Space.s1)
-                    .shadow(color: DS.cardShadow, radius: 18, x: 0, y: 6)
-            )
+            .listRowBackground(dayCardBackground(position))
             // Feed rhythm (2026-07-13): back to s2 — the s3 airy read made
             // every gap the same size, so days never clustered. Rows sit
             // tight within their day; the day header carries the big gap.
@@ -1923,18 +2005,23 @@ struct FeedScreen: View {
         }
     }
 
-    /// A day group as a native section: rounded sheet card, native swipes
-    /// (To do / Doing), native scroll — no gesture fights.
+    /// A day group as a native section: the day's rows share ONE sheet card
+    /// (2026-07-21 — see RunPosition), rhythm-breakers stand free between
+    /// runs, native scroll — no gesture fights.
     @ViewBuilder
     private func daySection(_ label: String, _ rows: [Thing],
                             nextEventID: UUID?,
                             boundary: UUID? = nil) -> some View {
+        let positions = cardRunPositions(count: rows.count,
+                                         isBreaker: { standsAlone(rows[$0]) },
+                                         isBoundary: { rows[$0].id == boundary })
         Section {
             // Rows dispatch by shape (shaped feeds); the swipe stays triage —
             // reads only, writes live in the sheet (ruling), Copy sheet-only.
             ForEach(Array(rows.enumerated()), id: \.element.id) { i, thing in
                 if thing.id == boundary { newSinceDivider }
-                shapedListRow(thing, index: i, nextEventID: nextEventID)
+                shapedListRow(thing, index: i, nextEventID: nextEventID,
+                              position: positions[i])
             }
         } header: {
             HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
@@ -1947,9 +2034,10 @@ struct FeedScreen: View {
             }
             .textCase(nil)
             .padding(.leading, DS.Space.s4)
-            // Days read as clusters (2026-07-13): the gap ABOVE a day header
-            // is the feed's biggest — rows within a day sit at s2, so the s6
-            // says "new day" without merging cards or drawing a line.
+            // Days read as clusters: the gap ABOVE a day header is the
+            // feed's biggest (2026-07-13), and since 2026-07-21 the day's
+            // rows also share one card — the header's s6 plus the card's own
+            // silhouette say "new day" without drawing a line.
             .padding(.top, DS.Space.s6)
             .padding(.bottom, DS.Space.s1)
         }
