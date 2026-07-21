@@ -1121,11 +1121,11 @@ struct RootShell: View {
             guard let line = await WalletAsk.answer() else {
                 return proseDoc(String(localized: "Nothing in your wallet yet — watch an address from Apps → Wallet."))
             }
-            // The real holdings treemap alongside the summary — same TagMap
-            // idiom the Wallet feed draws, shared with the kept-ask composer
-            // via `KeptAskComposers.walletDoc` so the two paths agree.
+            // The real holdings treemap alongside the summary, plus the
+            // landed approvals + latest activity — shared with the kept-ask
+            // composer via `KeptAskComposers.walletDoc` so the two paths agree.
             let groups = await WalletIngest.topHoldingsByWallet()
-            return KeptAskComposers.walletDoc(line: line, groups: groups)
+            return KeptAskComposers.walletDoc(line: line, groups: groups, things: allThings)
         }
         // An Aave ask ("how's my loan", "what's my health factor") — live
         // read, no model (2026-07-20). Same slot as WalletAsk, right after
