@@ -825,6 +825,7 @@ struct Composer: View {
                     // the full-screen agent (ruling 3) there's a whole screen
                     // to use instead.
                     .frame(maxHeight: .infinity)
+                    .dsAdaptiveContentWidth()
                     // Tapping empty space puts the keyboard away WITHOUT
                     // lowering the agent — a separate action from the ✕/⌄
                     // exits (ruling 7). Without this, the only tap that

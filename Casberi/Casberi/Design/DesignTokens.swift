@@ -122,7 +122,7 @@ enum DS {
         /// The single-column content cap on iPad (regular width class).
         /// Wide enough to read as intentional, not cramped; narrow enough
         /// that a row/text block never touches the physical screen edges.
-        static let iPadContentMaxWidth: CGFloat = 700
+        static let iPadContentMaxWidth: CGFloat = 900
     }
 
     // MARK: - Radii  (brief §8 is law; control/pill fill the gaps §8 omits)
