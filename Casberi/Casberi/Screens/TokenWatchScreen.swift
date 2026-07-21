@@ -171,7 +171,7 @@ struct TokenWatchScreen: View {
                 sortMenu
             }
         } footer: {
-            Text("Swipe a token to pin it to Home and Feed, or to stop watching it.")
+            Text("Swipe a token to stop watching it.")
                 .dsText(.callout15).foregroundStyle(DS.textTertiary)
         }
     }

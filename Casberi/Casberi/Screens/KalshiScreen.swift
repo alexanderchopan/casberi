@@ -135,7 +135,7 @@ struct KalshiScreen: View {
             Text("Watchlist").dsText(.label12)
                 .foregroundStyle(DS.textTertiary)
         } footer: {
-            Text("Swipe a market to pin it to Home and Feed, or to stop watching it.")
+            Text("Swipe a market to stop watching it.")
                 .dsText(.callout15).foregroundStyle(DS.textTertiary)
         }
     }
