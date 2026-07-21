@@ -100,6 +100,6 @@ echo "  ✓ assigned"
 echo "→ Submitting for Beta App Review…"
 SUBMIT=$(api POST "/betaAppReviewSubmissions" \
   "{\"data\":{\"type\":\"betaAppReviewSubmissions\",\"relationships\":{\"build\":{\"data\":{\"type\":\"builds\",\"id\":\"$BUILD_ID\"}}}}}")
-STATE=$(echo "$SUBMIT" | jq -r '.attributes.betaReviewState // .errors[0].detail // "unknown"')
+STATE=$(echo "$SUBMIT" | jq -r '.data.attributes.betaReviewState // .errors[0].detail // "unknown"')
 echo "  betaReviewState: $STATE"
 echo "✓ Public Beta handoff complete for build $VERSION."
