@@ -8,7 +8,7 @@ const BEATS = [
   { kick: 'CONNECT',   head: 'A read-only\ntoken.',  accent: GRN },
   { kick: 'CODE',      head: 'PRs and\nissues.',     accent: GRN },
   { kick: 'FEEDS',     head: 'Stars and\nreleases.', accent: GRN },
-  { kick: 'WRITE BACK',head: 'Comment,\nfrom here.', accent: GRN },
+  { kick: 'FINISH',    head: 'Close it,\nfrom here.', accent: GRN },
   { kick: 'ACTIVITY',  head: 'Your year,\nin green.',accent: '#39D353' },
 ];
 const INTRO = 0.45, BEAT = 1.9;
@@ -63,6 +63,12 @@ html,body{width:1080px;height:1920px;overflow:hidden;background:#EEEAE1;
 .wbox{margin-top:34px;background:#010409;border:2px solid rgba(255,255,255,.1);border-radius:20px;padding:30px 34px;font-size:36px;min-height:180px;line-height:1.35;color:#e6edf3;}
 .wcaret{display:inline-block;width:4px;height:40px;background:#e6edf3;vertical-align:-6px;margin-left:3px;}
 .wbtn{margin-top:30px;align-self:flex-start;background:${GRN};color:#04140a;font-weight:700;font-size:34px;padding:24px 50px;border-radius:20px;display:inline-block;will-change:opacity,transform;}
+.wask{margin-top:44px;font-size:46px;font-weight:750;}
+.wrow{display:flex;gap:22px;margin-top:34px;}
+.wrow .wbtn{margin-top:0;}
+.wbtn.ghost{background:rgba(255,255,255,.08);color:#e6edf3;box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.14);}
+.wnote{margin-top:40px;font-size:28px;color:#8b949e;line-height:1.45;will-change:opacity;}
+.wnote b{color:#e6edf3;}
 
 /* contribution graph */
 .gtot{font-size:40px;font-weight:650;margin-bottom:26px;}
@@ -104,9 +110,13 @@ html,body{width:1080px;height:1920px;overflow:hidden;background:#EEEAE1;
 
   <div class="comp" id="comp3">
     <div class="wtitle">Issue · dark mode contrast</div>
-    <div class="wsub">casberi/casberi · #128</div>
-    <div class="wbox" id="wbox"><span id="wtype"></span><span class="wcaret" id="wcaret"></span></div>
-    <div class="wbtn" id="wbtn">Comment</div>
+    <div class="wsub">casberi/casberi · #128 · open</div>
+    <div class="wask" id="wask">Close this issue?</div>
+    <div class="wrow">
+      <div class="wbtn ghost" id="wno">Not now</div>
+      <div class="wbtn" id="wbtn">Close issue</div>
+    </div>
+    <div class="wnote" id="wnote">A write always asks first — nothing leaves the app without your tap.</div>
   </div>
 
   <div class="comp" id="comp4">
@@ -130,7 +140,7 @@ const D=${JSON.stringify(DATA)};
 window.TOTAL=${TOTAL};
 const comps=[...document.querySelectorAll('.comp')];
 const LV=['#161b22','#0e4429','#006d32','#26a641','#39d353'];
-const CODE='WDJB-MJHT', MSG='Bumping the token contrast to 4.5:1 — PR incoming.';
+const CODE='WDJB-MJHT';
 
 // build the contribution grid: column-major (week by week), deterministic level
 const graph=document.getElementById('graph'); const cells=[];
@@ -189,9 +199,9 @@ function animateComp(i,p,t){
   } else if(i===1){ stagger('#comp1 .grow',p,0.15,0.4,26); }
   else if(i===2){ stagger('#comp2 .grow',p,0.15,0.4,26); }
   else if(i===3){
-    const n=Math.round(MSG.length*clamp01(p/0.75)); document.getElementById('wtype').textContent=MSG.slice(0,n);
-    document.getElementById('wcaret').style.opacity=(Math.floor(t*2)%2)?1:0.2;
-    const bp=clamp01((p-0.78)/0.2); const b=document.getElementById('wbtn'); b.style.opacity=bp; b.style.transform='scale('+(0.9+0.1*easeOut(bp))+')';
+    const ap=clamp01(p/0.32); const a=document.getElementById('wask'); a.style.opacity=ap; a.style.transform='translateY('+((1-easeOut(ap))*16)+'px)';
+    document.querySelectorAll('#comp3 .wrow .wbtn').forEach((b,k)=>{const bp=clamp01((p-0.34-k*0.12)/0.28); b.style.opacity=bp; b.style.transform='scale('+(0.9+0.1*back(bp))+')';});
+    document.getElementById('wnote').style.opacity=clamp01((p-0.62)/0.3);
   } else if(i===4){
     document.getElementById('gtotn').textContent=Math.round(TOTAL_CONTRIB*easeOut(p)).toLocaleString();
     cells.forEach(c=>{

@@ -151,7 +151,7 @@ html,body{width:1080px;height:1920px;overflow:hidden;background:#EEEAE1;font-fam
   <div class="comp" id="comp3">
     <div class="shd mono">LIKED SONGS</div>
     ${LIKED.map((l,i)=>`<div class="lrow" data-i="${i}"><span class="lart"><svg viewBox="0 0 24 24"><path d="M12 3v10.55A4 4 0 1 0 14 17V7h4V3h-6z"/></svg></span><div><div class="lt">${l[0]}</div><div class="lm mono">${l[1]}</div></div></div>`).join('')}
-    <div class="lnote" id="lnote">They land as things you can search and revisit. Disconnect whenever — <b>your things stay</b>.</div>
+    <div class="lnote" id="lnote">They land in your feed to search and revisit. Disconnect whenever — <b>your things stay</b>.</div>
   </div>
 
   <div class="comp" id="comp4">
