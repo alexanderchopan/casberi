@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Wallet feed — three more directions (post-treemap)</title>
+<style>
+  :root {
+    --page: #000000;
+    --sheet: #111113;
+    --well: #080809;
+    --text1: #ffffff;
+    --text2: rgba(235,235,245,0.60);
+    --text3: rgba(235,235,245,0.30);
+    --tint: #1673e6;
+    --attention: #ff9f0a;
+    --confirm: #30d158;
+    --r-sheet: 16px;
+    --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px;
+    --shadow: 0 10px 30px rgba(0,0,0,0.55);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #0a0a0c; color: var(--text1);
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
+    letter-spacing: 0;
+    padding: 40px 24px 80px;
+  }
+  h1 { font-size: 22px; font-weight: 700; margin-bottom: 8px; }
+  .intro { color: var(--text2); font-size: 14px; line-height: 1.5; max-width: 780px; margin-bottom: 36px; }
+  .intro b { color: var(--text1); font-weight: 600; }
+  .rail { display: flex; gap: 40px; flex-wrap: wrap; align-items: flex-start; justify-content: center; }
+  .col { width: 393px; }
+  .dir-title { font-size: 17px; font-weight: 700; margin-bottom: 4px; }
+  .dir-note { color: var(--text2); font-size: 13px; line-height: 1.5; margin-bottom: 14px; min-height: 118px; }
+
+  .phone {
+    width: 393px; height: 852px;
+    background: var(--page); border-radius: 44px;
+    padding: 18px 16px 0;
+    box-shadow: 0 0 0 1px rgba(255,255,255,0.07), 0 24px 60px rgba(0,0,0,0.6);
+    overflow: hidden; position: relative;
+  }
+  .fold {
+    position:absolute; left:0; right:0; bottom:0; height:64px;
+    background: linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.9) 80%);
+    pointer-events:none;
+  }
+  .statusbar { display:flex; justify-content:space-between; padding: 2px 14px 10px; font-size:13px; font-weight:600; }
+  .navtitle { font-size: 28px; font-weight: 700; padding: 4px 4px 12px; }
+
+  .chips { display:flex; gap: var(--s2); padding: 0 2px 14px; }
+  .chip {
+    display:flex; align-items:center; gap:6px;
+    font-size: 13px; font-weight: 600; color: var(--text2);
+    background: var(--sheet); border-radius: 9999px; padding: 7px 12px;
+  }
+  .chip.on { color: #fff; background: var(--tint); }
+  .face { width:16px; height:16px; border-radius:50%; background: linear-gradient(135deg,#7dd3fc,#6366f1); flex:none; }
+  .face.cold { background: linear-gradient(135deg,#fca5a5,#f59e0b); }
+
+  .tilerow { display:flex; gap: var(--s2); margin-bottom: var(--s2); }
+  .tile {
+    background: var(--sheet); border-radius: var(--r-sheet);
+    padding: var(--s3); flex: 1; box-shadow: var(--shadow);
+    display:flex; flex-direction:column; gap: var(--s1);
+  }
+  .cap { display:flex; align-items:center; gap:5px; font-size:12px; color: var(--text2); }
+  .cap .spacer { flex:1; }
+  .chev { color: var(--text3); font-size: 11px; }
+  .glyph { color: var(--attention); font-size: 11px; }
+  .stat { font-size: 24px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .sub { font-size: 13px; color: var(--text2); line-height: 1.35; }
+  .pill {
+    align-self:flex-start; display:flex; align-items:center; gap:4px;
+    font-size: 12px; font-weight: 600; color: var(--confirm);
+    background: rgba(48,209,88,0.14); border-radius: 9999px; padding: 3px 8px; margin-top: 2px;
+  }
+  svg.spark { display:block; width:100%; }
+
+  /* The settled treemap (prd 145) — identical in all three frames. */
+  .maphead { padding: 14px 4px 0; }
+  .maphead .h { font-size: 15px; font-weight: 600; }
+  .maphead .s { font-size: 15px; color: var(--text2); padding: 4px 0 12px; }
+  .map { position: relative; height: 160px; }
+  .cell {
+    position:absolute; background: var(--sheet); border-radius: var(--r-sheet);
+    box-shadow: var(--shadow); padding: var(--s3);
+    display:flex; flex-direction:column; align-items:flex-start; overflow:hidden;
+  }
+  .cell.tiny { padding: 9px; }
+  .cell .grow { flex:1; }
+  .coin {
+    width: 20px; height:20px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    font-size: 10px; font-weight: 800; color:#fff; flex:none;
+  }
+  .coin.sm { width:16px; height:16px; font-size:8px; }
+  .c-eth { background:#627eea; } .c-usdc { background:#2775ca; }
+  .c-sol { background: linear-gradient(135deg,#9945ff,#14f195); }
+  .c-btc { background:#f7931a; }
+  .sym { font-size: 17px; }
+  .sym.sm { font-size: 15px; }
+  .val { font-size: 13px; color: var(--text2); font-variant-numeric: tabular-nums; }
+  .val.big { font-size:14px; color:var(--text1); font-weight:600; }
+  .inline { display:flex; align-items:center; gap:6px; width:100%; min-width:0; }
+  .inline .sym { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .inline .val { margin-left:auto; }
+  .wash1 { background: linear-gradient(0deg, rgba(22,115,230,0.16), rgba(22,115,230,0.16)), var(--sheet); }
+  .wash2 { background: linear-gradient(0deg, rgba(22,115,230,0.11), rgba(22,115,230,0.11)), var(--sheet); }
+  .wash3 { background: linear-gradient(0deg, rgba(22,115,230,0.07), rgba(22,115,230,0.07)), var(--sheet); }
+  .wash4 { background: linear-gradient(0deg, rgba(22,115,230,0.05), rgba(22,115,230,0.05)), var(--sheet); }
+
+  .defirow { display:flex; gap: var(--s3); padding-top: var(--s1); }
+  .defistat { flex:1; }
+  .defistat .l { font-size:12px; color: var(--text3); margin-bottom:2px; }
+  .defistat .v { font-size:16px; font-weight:600; font-variant-numeric: tabular-nums; }
+
+  .dayhead { font-size: 12px; color: var(--text2); padding: 16px 4px 8px; display:flex; align-items:baseline; gap:8px; }
+  .dayhead .net { margin-left:auto; font-variant-numeric: tabular-nums; font-weight:600; }
+  .dayhead .net.up { color: var(--confirm); }
+  .txn {
+    background: var(--sheet); border-radius: var(--r-sheet);
+    padding: var(--s3); display:flex; align-items:center; gap: var(--s3);
+    margin-bottom: var(--s2); box-shadow: var(--shadow);
+  }
+  .txn .kg {
+    width: 34px; height: 34px; border-radius: 9px; flex:none;
+    display:flex; align-items:center; justify-content:center; font-size:15px;
+    background: var(--well);
+  }
+  .txn .t1 { font-size: 15px; font-weight: 500; }
+  .txn .t2 { font-size: 13px; color: var(--text2); margin-top:1px; }
+  .txn .amt { margin-left:auto; font-size:15px; font-weight:600; font-variant-numeric: tabular-nums; flex:none; }
+  .txn .amt.up { color: var(--confirm); }
+  .txn .amt .u { display:block; font-size:12px; font-weight:400; color:var(--text3); text-align:right; }
+  .pair { position:relative; width:34px; height:34px; flex:none; }
+  .pair .coin { position:absolute; width:22px; height:22px; font-size:10px; }
+  .pair .coin:first-child { top:0; left:0; }
+  .pair .coin:last-child { bottom:0; right:0; box-shadow: 0 0 0 2px var(--page); }
+  .seeall { text-align:center; color: var(--tint); font-size: 15px; font-weight: 600; padding: 10px 0 2px; }
+  .seeall .chev { color: var(--tint); }
+
+  /* Direction A — the headline */
+  .hero { padding: 2px 4px 0; }
+  .hero .eyebrow { font-size: 12px; color: var(--text2); }
+  .hero .bigrow { display:flex; align-items:baseline; gap:10px; padding: 4px 0 2px; }
+  .hero .big { font-size: 40px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .quietrow {
+    display:flex; align-items:center; gap: var(--s2);
+    padding: 12px 6px 0; font-size: 14px;
+  }
+  .quietrow .sub2 { color: var(--text2); font-size: 13px; }
+  .quietrow .spacer { flex:1; }
+
+  /* Direction C — the switcher knows */
+  .acct { display:flex; gap: var(--s2); padding: 0 0 14px; }
+  .acard {
+    background: var(--sheet); border-radius: var(--r-sheet); box-shadow: var(--shadow);
+    padding: 10px 12px; display:flex; flex-direction:column; gap:3px; min-width: 104px;
+  }
+  .acard .who { display:flex; align-items:center; gap:6px; font-size:13px; font-weight:600; color: var(--text2); }
+  .acard .amt2 { font-size: 16px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .acard.on { background: linear-gradient(0deg, rgba(22,115,230,0.18), rgba(22,115,230,0.18)), var(--sheet); }
+  .acard.on .who { color: #fff; }
+
+  @media (max-width: 1340px) { .rail { justify-content: flex-start; } }
+</style>
+</head>
+<body>
+
+<h1>Wallet feed — three more directions</h1>
+<p class="intro">
+  The treemap is settled (160pt, values, wash — it renders identically in all three frames below).
+  These push the <b>other</b> parts, one each: A gives the balance the room's headline voice,
+  B teaches the transaction stream to speak money, C teaches the wallet switcher what each wallet
+  is worth. They're independent — any could ship alone or together.
+</p>
+
+<div class="rail">
+
+  <!-- ============ DIRECTION A ============ -->
+  <div class="col">
+    <div class="dir-title">A · The headline</div>
+    <div class="dir-note">
+      The crown feature stops living in a tile. The combined balance becomes the room's display
+      headline — set directly on the page, delta beside it, the sparkline running full-width
+      underneath as a whisper. Worth a look steps down to one quiet line (it's usually empty; a
+      permanent half-width card was reserving space for an exception). The reads start at the
+      treemap; the page above it is pure voice.
+    </div>
+    <div class="phone">
+      <div class="statusbar"><span>9:41</span><span>&#9679;&#9679;&#9679;</span></div>
+      <div class="navtitle">Wallet</div>
+      <div class="chips">
+        <div class="chip on">All</div>
+        <div class="chip"><span class="face"></span>Main</div>
+        <div class="chip"><span class="face cold"></span>Cold</div>
+      </div>
+
+      <div class="hero">
+        <div class="eyebrow">Across your wallets</div>
+        <div class="bigrow">
+          <span class="big">$19.9K</span>
+          <span class="pill" style="margin:0;">&#9650; 3.2% <span style="opacity:.7;font-weight:500">watched</span></span>
+        </div>
+        <svg class="spark" viewBox="0 0 360 40" preserveAspectRatio="none" style="height:40px;">
+          <defs>
+            <linearGradient id="fade" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#30d158" stop-opacity="0.18"/>
+              <stop offset="1" stop-color="#30d158" stop-opacity="0"/>
+            </linearGradient>
+          </defs>
+          <path d="M0 34 L30 30 L60 32 L90 24 L120 26 L150 17 L180 20 L210 13 L240 15 L270 9 L300 12 L330 7 L360 4 L360 40 L0 40 Z" fill="url(#fade)"/>
+          <path d="M0 34 L30 30 L60 32 L90 24 L120 26 L150 17 L180 20 L210 13 L240 15 L270 9 L300 12 L330 7 L360 4"
+                fill="none" stroke="#30d158" stroke-width="1.8" stroke-linecap="round"/>
+        </svg>
+      </div>
+
+      <div class="quietrow">
+        <span class="glyph">&#9888;</span>
+        <span>Worth a look</span>
+        <span class="sub2">1 delegation · 1 flagged transfer</span>
+        <span class="spacer"></span>
+        <span class="chev">&#8250;</span>
+      </div>
+
+      <div class="maphead">
+        <div class="h">Holdings</div>
+        <div class="s">$19.9K across 13 tokens</div>
+      </div>
+      <div class="map">
+        <div class="cell wash1" style="left:0; top:0; width:176.5px; height:104px;">
+          <div class="inline"><span class="coin c-eth">E</span><span class="sym">ETH</span></div>
+          <div class="grow"></div><span class="val big">$8.4K</span>
+        </div>
+        <div class="cell wash2" style="left:184.5px; top:0; width:176.5px; height:104px;">
+          <div class="inline"><span class="coin c-usdc">U</span><span class="sym">USDC</span></div>
+          <div class="grow"></div><span class="val big">$4.2K</span>
+        </div>
+        <div class="cell wash3" style="left:0; top:112px; width:176.5px; height:48px; justify-content:center;">
+          <div class="inline"><span class="coin c-sol sm">S</span><span class="sym sm">SOL</span><span class="val">$2.6K</span></div>
+        </div>
+        <div class="cell tiny wash4" style="left:184.5px; top:112px; width:84.25px; height:48px; justify-content:center;">
+          <div class="inline"><span class="sym sm" style="font-size:13px;">Ether.fi</span></div>
+        </div>
+        <div class="cell tiny wash4" style="left:276.75px; top:112px; width:84.25px; height:48px; justify-content:center;">
+          <div class="inline"><span class="coin c-btc sm">B</span><span class="sym sm" style="font-size:13px;">WBTC</span></div>
+        </div>
+      </div>
+
+      <div class="tilerow" style="margin-top: var(--s3);">
+        <div class="tile">
+          <div class="cap">DeFi · Aave on Base</div>
+          <div class="defirow">
+            <div class="defistat"><div class="l">Collateral</div><div class="v">$6.2K</div></div>
+            <div class="defistat"><div class="l">Debt</div><div class="v">$1.8K</div></div>
+            <div class="defistat"><div class="l">Health</div><div class="v">2.31</div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="dayhead">Today</div>
+      <div class="txn"><div class="kg">&#8595;</div><div><div class="t1">Received 120 USDC</div><div class="t2">Base · from 0x4c…9a21</div></div></div>
+      <div class="txn"><div class="kg">&#8646;</div><div><div class="t1">Swapped 0.4 ETH &#8594; 812 USDC</div><div class="t2">Ethereum · Uniswap</div></div></div>
+      <div class="fold"></div>
+    </div>
+  </div>
+
+  <!-- ============ DIRECTION B ============ -->
+  <div class="col">
+    <div class="dir-title">B · The ledger stream</div>
+    <div class="dir-note">
+      The reads stay exactly as they are — the stream learns to speak money. Every row states its
+      USD effect in the trailing slot: receives in the confirm green (a real gain), sends in plain
+      primary ink (spending isn't an alarm), a swap shows both marks and no signed number (it moved
+      shape, not value). Day headers carry the day's honest net. The rows stop being generic thing
+      rows and become a ledger you can actually read.
+    </div>
+    <div class="phone">
+      <div class="statusbar"><span>9:41</span><span>&#9679;&#9679;&#9679;</span></div>
+      <div class="navtitle">Wallet</div>
+      <div class="chips">
+        <div class="chip on">All</div>
+        <div class="chip"><span class="face"></span>Main</div>
+        <div class="chip"><span class="face cold"></span>Cold</div>
+      </div>
+
+      <div class="tilerow">
+        <div class="tile">
+          <div class="cap">Across your wallets <span class="spacer"></span><span class="chev">&#8250;</span></div>
+          <div class="stat">$19.9K</div>
+          <svg class="spark" viewBox="0 0 160 26" preserveAspectRatio="none" style="height:26px;">
+            <path d="M0 20 L14 18 L28 19 L42 14 L56 15 L70 10 L84 12 L98 8 L112 9 L126 6 L140 7 L160 4"
+                  fill="none" stroke="#30d158" stroke-width="1.8" stroke-linecap="round"/>
+          </svg>
+          <div class="pill">&#9650; 3.2% &nbsp;<span style="opacity:.7;font-weight:500">watched</span></div>
+        </div>
+        <div class="tile">
+          <div class="cap"><span class="glyph">&#9888;</span> Worth a look <span class="spacer"></span><span class="chev">&#8250;</span></div>
+          <div class="stat">2 items</div>
+          <div class="sub">1 delegation · 1 flagged transfer</div>
+        </div>
+      </div>
+
+      <div class="maphead" style="padding-top:8px;">
+        <div class="h">Main</div>
+        <div class="s">$19.9K across 13 tokens</div>
+      </div>
+      <div class="map">
+        <div class="cell wash1" style="left:0; top:0; width:176.5px; height:104px;">
+          <div class="inline"><span class="coin c-eth">E</span><span class="sym">ETH</span></div>
+          <div class="grow"></div><span class="val big">$8.4K</span>
+        </div>
+        <div class="cell wash2" style="left:184.5px; top:0; width:176.5px; height:104px;">
+          <div class="inline"><span class="coin c-usdc">U</span><span class="sym">USDC</span></div>
+          <div class="grow"></div><span class="val big">$4.2K</span>
+        </div>
+        <div class="cell wash3" style="left:0; top:112px; width:176.5px; height:48px; justify-content:center;">
+          <div class="inline"><span class="coin c-sol sm">S</span><span class="sym sm">SOL</span><span class="val">$2.6K</span></div>
+        </div>
+        <div class="cell tiny wash4" style="left:184.5px; top:112px; width:84.25px; height:48px; justify-content:center;">
+          <div class="inline"><span class="sym sm" style="font-size:13px;">Ether.fi</span></div>
+        </div>
+        <div class="cell tiny wash4" style="left:276.75px; top:112px; width:84.25px; height:48px; justify-content:center;">
+          <div class="inline"><span class="coin c-btc sm">B</span><span class="sym sm" style="font-size:13px;">WBTC</span></div>
+        </div>
+      </div>
+
+      <div class="dayhead" style="padding-top:14px;">Today <span class="net up">net +$88</span></div>
+      <div class="txn">
+        <div class="kg">&#8595;</div>
+        <div><div class="t1">Received 120 USDC</div><div class="t2">Base · from 0x4c…9a21</div></div>
+        <div class="amt up">+$120</div>
+      </div>
+      <div class="txn">
+        <div class="pair"><span class="coin c-eth">E</span><span class="coin c-usdc">U</span></div>
+        <div><div class="t1">Swapped 0.4 ETH &#8594; 812 USDC</div><div class="t2">Ethereum · Uniswap</div></div>
+      </div>
+      <div class="dayhead">Yesterday <span class="net">net &#8722;$132</span></div>
+      <div class="txn">
+        <div class="kg">&#8593;</div>
+        <div><div class="t1">Sent 0.05 ETH</div><div class="t2">Ethereum · to maria.eth</div></div>
+        <div class="amt">&#8722;$132</div>
+      </div>
+      <div class="seeall">See all 42 transactions <span class="chev">&#8250;</span></div>
+      <div class="fold"></div>
+    </div>
+  </div>
+
+  <!-- ============ DIRECTION C ============ -->
+  <div class="col">
+    <div class="dir-title">C · The switcher knows</div>
+    <div class="dir-note">
+      Scoping stops being anonymous chips. Each wallet's switcher entry becomes a small account
+      card — face, name, and what it's worth right now — so the question the switcher answers
+      ("which wallet?") includes the fact you were switching to find. The selected card wears the
+      tint; the balance tile then drops its number-repeating job when scoped and the pair reads
+      like accounts in a bank app. Everything below is unchanged.
+    </div>
+    <div class="phone">
+      <div class="statusbar"><span>9:41</span><span>&#9679;&#9679;&#9679;</span></div>
+      <div class="navtitle">Wallet</div>
+
+      <div class="acct">
+        <div class="acard on">
+          <div class="who">All</div>
+          <div class="amt2">$19.9K</div>
+        </div>
+        <div class="acard">
+          <div class="who"><span class="face"></span>Main</div>
+          <div class="amt2">$12.4K</div>
+        </div>
+        <div class="acard">
+          <div class="who"><span class="face cold"></span>Cold</div>
+          <div class="amt2">$7.5K</div>
+        </div>
+      </div>
+
+      <div class="tilerow">
+        <div class="tile">
+          <div class="cap">Across your wallets <span class="spacer"></span><span class="chev">&#8250;</span></div>
+          <div class="stat">$19.9K</div>
+          <svg class="spark" viewBox="0 0 160 26" preserveAspectRatio="none" style="height:26px;">
+            <path d="M0 20 L14 18 L28 19 L42 14 L56 15 L70 10 L84 12 L98 8 L112 9 L126 6 L140 7 L160 4"
+                  fill="none" stroke="#30d158" stroke-width="1.8" stroke-linecap="round"/>
+          </svg>
+          <div class="pill">&#9650; 3.2% &nbsp;<span style="opacity:.7;font-weight:500">watched</span></div>
+        </div>
+        <div class="tile">
+          <div class="cap"><span class="glyph">&#9888;</span> Worth a look <span class="spacer"></span><span class="chev">&#8250;</span></div>
+          <div class="stat">2 items</div>
+          <div class="sub">1 delegation · 1 flagged transfer</div>
+        </div>
+      </div>
+
+      <div class="maphead" style="padding-top:8px;">
+        <div class="h">Holdings</div>
+        <div class="s">$19.9K across 13 tokens</div>
+      </div>
+      <div class="map">
+        <div class="cell wash1" style="left:0; top:0; width:176.5px; height:104px;">
+          <div class="inline"><span class="coin c-eth">E</span><span class="sym">ETH</span></div>
+          <div class="grow"></div><span class="val big">$8.4K</span>
+        </div>
+        <div class="cell wash2" style="left:184.5px; top:0; width:176.5px; height:104px;">
+          <div class="inline"><span class="coin c-usdc">U</span><span class="sym">USDC</span></div>
+          <div class="grow"></div><span class="val big">$4.2K</span>
+        </div>
+        <div class="cell wash3" style="left:0; top:112px; width:176.5px; height:48px; justify-content:center;">
+          <div class="inline"><span class="coin c-sol sm">S</span><span class="sym sm">SOL</span><span class="val">$2.6K</span></div>
+        </div>
+        <div class="cell tiny wash4" style="left:184.5px; top:112px; width:84.25px; height:48px; justify-content:center;">
+          <div class="inline"><span class="sym sm" style="font-size:13px;">Ether.fi</span></div>
+        </div>
+        <div class="cell tiny wash4" style="left:276.75px; top:112px; width:84.25px; height:48px; justify-content:center;">
+          <div class="inline"><span class="coin c-btc sm">B</span><span class="sym sm" style="font-size:13px;">WBTC</span></div>
+        </div>
+      </div>
+
+      <div class="tilerow" style="margin-top: var(--s3);">
+        <div class="tile">
+          <div class="cap">DeFi · Aave on Base</div>
+          <div class="defirow">
+            <div class="defistat"><div class="l">Collateral</div><div class="v">$6.2K</div></div>
+            <div class="defistat"><div class="l">Debt</div><div class="v">$1.8K</div></div>
+            <div class="defistat"><div class="l">Health</div><div class="v">2.31</div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="dayhead">Today</div>
+      <div class="txn"><div class="kg">&#8595;</div><div><div class="t1">Received 120 USDC</div><div class="t2">Base · from 0x4c…9a21</div></div></div>
+      <div class="fold"></div>
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>
