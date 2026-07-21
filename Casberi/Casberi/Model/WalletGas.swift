@@ -120,6 +120,19 @@ enum WalletGas {
         return any ? sum : nil
     }
 
+    /// The running total across ALL given addresses, summed in USD
+    /// (2026-07-20, for the "what have I spent on gas" ask) — nil when NONE
+    /// of them have spent anything yet, never a fabricated $0.
+    @MainActor
+    static func totalUSD(addresses: [String]) async -> Double? {
+        var sum = 0.0
+        var any = false
+        for address in addresses {
+            if let usd = await totalUSD(address: address) { sum += usd; any = true }
+        }
+        return any ? sum : nil
+    }
+
     /// `-gasSpentProbe YES` — NSLogs the running total per watched wallet,
     /// per chain and combined USD.
     @MainActor

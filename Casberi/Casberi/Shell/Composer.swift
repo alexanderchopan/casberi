@@ -166,6 +166,12 @@ struct Composer: View {
             kind = "watchlist"
         } else if WalletAsk.matches(question) {
             kind = "wallet"
+        } else if WalletDeFiAsk.matches(question) {
+            kind = "walletdefi"
+        } else if WalletGasAsk.matches(question) {
+            kind = "walletgas"
+        } else if SafeAsk.matches(question) {
+            kind = "walletsafe"
         } else if q.contains("away"), let pulse = StatusAsk.pulse(question, things: things),
                   !pulse.pool.isEmpty {
             kind = "away"

@@ -29,6 +29,9 @@ enum KeptAskComposers {
     static func compose(_ kind: String, things: [Thing], context: ModelContext) async -> Result? {
         if kind == "away" { return away(things) }
         if kind == "wallet" { return await wallet() }
+        if kind == "walletdefi" { return await walletDeFi() }
+        if kind == "walletgas" { return await walletGas() }
+        if kind == "walletsafe" { return await walletSafe() }
         if kind == "watchlist" { return await watchlist(context: context) }
         if kind == "overdue" { return overdue(things) }
         if kind == "noticed" { return noticed() }
@@ -99,6 +102,29 @@ enum KeptAskComposers {
             doc.append("w\(i) = TagMap(\"\(genSafe(g.label))\", \"\(genSafe(g.subline))\", [\(g.cells.joined(separator: ", "))], \"token\")")
         }
         return doc
+    }
+
+    // MARK: - Aave / gas / Safe (2026-07-20)
+
+    /// Simple `Insight`-only docs — these answer a single live number, not a
+    /// list of things, so there's no `Thing`-backed row shape to build (the
+    /// `rows()`/`TokenChip` idioms below both key off a real `Thing.id`).
+    private static func walletDeFi() async -> Result? {
+        guard let line = await WalletDeFiAsk.answer() else { return nil }
+        return Result(delta: line, digest: line,
+                      doc: ["root = Stack([ins])", "ins = Insight(\"\(genSafe(line))\")"])
+    }
+
+    private static func walletGas() async -> Result? {
+        guard let line = await WalletGasAsk.answer() else { return nil }
+        return Result(delta: line, digest: line,
+                      doc: ["root = Stack([ins])", "ins = Insight(\"\(genSafe(line))\")"])
+    }
+
+    private static func walletSafe() async -> Result? {
+        guard let line = await SafeAsk.answer() else { return nil }
+        return Result(delta: line, digest: line,
+                      doc: ["root = Stack([ins])", "ins = Insight(\"\(genSafe(line))\")"])
     }
 
     // MARK: - Watchlist

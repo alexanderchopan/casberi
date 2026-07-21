@@ -62,12 +62,25 @@ enum WalletDeFi {
         let healthFactor: Double?
     }
 
+    /// Coalesced (2026-07-20) — three independent callers (`WalletIngest
+    /// .refresh`'s sync arm, the Wallet screen's live state, the Aave kept
+    /// ask) now read this exact primitive every foreground pass; a 60s TTL
+    /// (roughly how fast a health factor actually moves) collapses them to
+    /// one real network read.
+    private static let cache = CoalescingCache<AccountData>()
+
+    private static func accountData(pool: Pool, address: String) async -> AccountData? {
+        await cache.value(key: "\(pool.network)|\(address.lowercased())", ttl: 60) {
+            await fetchAccountData(pool: pool, address: address)
+        }
+    }
+
     /// One `eth_call` to `getUserAccountData(address)` (selector `0xbf92857c`),
     /// decoding only the three of its six returned words this feature needs
     /// (collateral, debt, health factor) — the other three (available
     /// borrows, liquidation threshold, LTV) aren't read, so their basis-point
     /// scale doesn't need verifying here.
-    private static func accountData(pool: Pool, address: String) async -> AccountData? {
+    private static func fetchAccountData(pool: Pool, address: String) async -> AccountData? {
         let calldata = "0xbf92857c" + pad(address)
         guard let hex = await WalletApprovals.rpcRead(
                 network: pool.network, method: "eth_call",

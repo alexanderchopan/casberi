@@ -57,6 +57,37 @@ enum WalletSafety {
         return "0x" + s.suffix(40)
     }
 
+    /// One CURRENTLY delegated (wallet, chain) pair — live state, like
+    /// `WalletDeFi.positions`/`SafeBridge.pendingCounts`, deliberately
+    /// separate from `sync`'s land-on-change alert. A delegation isn't
+    /// inherently bad (it's how most smart-account wallets work), just worth
+    /// surfacing — the Wallet screen's warnings band reads this directly
+    /// rather than querying landed things, since a delegation that predates
+    /// the watch never lands a thing at all.
+    struct Delegation {
+        let network: String
+        let address: String
+        let delegate: String
+    }
+
+    /// Every address currently delegated, across active EVM chains — nothing
+    /// for an address with none (never a placeholder "not delegated" row).
+    static func currentDelegations(addresses: [String]) async -> [Delegation] {
+        guard !addresses.isEmpty else { return [] }
+        var out: [Delegation] = []
+        for network in activeEVMNetworks() {
+            for address in addresses {
+                guard let codeHex = await WalletApprovals.rpcRead(
+                        network: network, method: "eth_getCode",
+                        params: [address, "latest"]) as? String,
+                      let delegate = delegateAddress(from: codeHex)
+                else { continue }
+                out.append(Delegation(network: network, address: address, delegate: delegate))
+            }
+        }
+        return out
+    }
+
     /// Reads each watched wallet's current delegate per active EVM chain and
     /// lands a thing only where it CHANGED since the last pass. Rides
     /// `WalletIngest.refresh` inside its running guard, like the approvals

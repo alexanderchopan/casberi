@@ -146,30 +146,46 @@ struct BandRow: View {
             // live set says the stream is on (honesty at render: the model
             // may still hold a frame a failed or disconnected sync never
             // saw end).
-            if let avatar = identityAvatarURL {
-                // Whose post this is, when several accounts are followed.
-                RemoteThumb(urlString: avatar, size: 26, fallback: thing.source,
-                            circular: true)
-            } else if let addr = identiconAddress {
-                WalletBlockie(address: addr, size: 26)
-            } else if let sender = mailSender, SenderInitial.letter(of: sender) != nil {
-                SenderInitial(sender: sender, size: 26)
-            } else if let publisher = publisherIconURL {
-                // Where the story is FROM leads the row; its picture rides
-                // after the title (below), like a post's attached image.
-                RemoteThumb(urlString: publisher, size: 26, fallback: thing.source)
-            } else if let image = thing.previewImageURL, !image.isEmpty,
-                      thing.source != "Twitch" || live {
-                // A token's coin logo is circular in the fat row — keep the
-                // same shape while its pulse hasn't landed yet, so the coin
-                // doesn't morph squircle→circle when the price arrives.
-                RemoteThumb(urlString: image, size: 26, fallback: thing.source,
-                            perishable: thing.source == "Twitch",
-                            circular: thing.source == "Tokens")
-            } else if thing.kind == .screenshot, thing.sourceRef != nil {
-                PhotoWell(thing: thing, size: 26)
-            } else {
-                BridgeIcon(name: thing.source, size: 26)
+            Group {
+                if let avatar = identityAvatarURL {
+                    // Whose post this is, when several accounts are followed.
+                    RemoteThumb(urlString: avatar, size: 26, fallback: thing.source,
+                                circular: true)
+                } else if let addr = identiconAddress {
+                    WalletBlockie(address: addr, size: 26)
+                } else if let sender = mailSender, SenderInitial.letter(of: sender) != nil {
+                    SenderInitial(sender: sender, size: 26)
+                } else if let publisher = publisherIconURL {
+                    // Where the story is FROM leads the row; its picture rides
+                    // after the title (below), like a post's attached image.
+                    RemoteThumb(urlString: publisher, size: 26, fallback: thing.source)
+                } else if let image = thing.previewImageURL, !image.isEmpty,
+                          thing.source != "Twitch" || live {
+                    // A token's coin logo is circular in the fat row — keep the
+                    // same shape while its pulse hasn't landed yet, so the coin
+                    // doesn't morph squircle→circle when the price arrives.
+                    RemoteThumb(urlString: image, size: 26, fallback: thing.source,
+                                perishable: thing.source == "Twitch",
+                                circular: thing.source == "Tokens")
+                } else if thing.kind == .screenshot, thing.sourceRef != nil {
+                    PhotoWell(thing: thing, size: 26)
+                } else {
+                    BridgeIcon(name: thing.source, size: 26)
+                }
+            }
+            // Address-poisoning warning (2026-07-20) — the scam works at
+            // exactly this glance (a familiar-looking row, casually
+            // re-copied), so the flag rides the icon itself, not just the
+            // opened sheet (ThingSheetView's `poisoningWarning`, same glyph
+            // and color at a bigger scale).
+            .overlay(alignment: .bottomTrailing) {
+                if thing.securityFlag == "poisoning" {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(.system(size: 9))
+                        .foregroundStyle(DS.destructive)
+                        .padding(3)
+                        .background(Circle().fill(.black.opacity(0.55)))
+                }
             }
             Text(titleText)
                 .dsText(.body17)

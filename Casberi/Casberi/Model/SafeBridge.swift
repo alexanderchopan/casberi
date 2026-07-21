@@ -89,9 +89,32 @@ enum SafeBridge {
         }
     }
 
+    /// `[String: Any]` (raw JSON) isn't provably `Sendable` to the compiler
+    /// even though it's plain, immutable data passed only by value here —
+    /// this thin wrapper asserts that explicitly rather than restructuring
+    /// every raw-dictionary call site into a typed model just to cache it.
+    private struct JSONRows: @unchecked Sendable {
+        let rows: [[String: Any]]
+    }
+    /// Coalesced (2026-07-20) — the same three independent callers as
+    /// `WalletDeFi.accountData` (the sync arm, the Wallet screen's live
+    /// state, the Safe kept ask) hit this exact endpoint every foreground
+    /// pass, against Safe's 2-RPS free-tier cap. `isSafe`'s OWN cache is
+    /// untouched (a different kind of cache, for a different reason — see
+    /// its own doc comment); this only coalesces the QUEUE read.
+    private static let queueCache = CoalescingCache<JSONRows>()
+
     /// The pending (unexecuted) queue for a confirmed Safe — nil only on an
     /// unreachable read, never on "empty queue" (that's `[]`).
     private static func pendingQueue(chain: Chain, address: String) async -> [[String: Any]]? {
+        let key = "\(chain.seg)|\(address.lowercased())"
+        let boxed = await queueCache.value(key: key, ttl: 60) {
+            await fetchPendingQueue(chain: chain, address: address).map(JSONRows.init)
+        }
+        return boxed?.rows
+    }
+
+    private static func fetchPendingQueue(chain: Chain, address: String) async -> [[String: Any]]? {
         guard let root = await IngestSupport.getJSON(
                 "\(baseURL(chain.seg))/safes/\(address)/multisig-transactions/?executed=false")
                 as? [String: Any],

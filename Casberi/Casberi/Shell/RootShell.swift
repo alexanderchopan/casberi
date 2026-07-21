@@ -1127,6 +1127,33 @@ struct RootShell: View {
             let groups = await WalletIngest.topHoldingsByWallet()
             return KeptAskComposers.walletDoc(line: line, groups: groups)
         }
+        // An Aave ask ("how's my loan", "what's my health factor") — live
+        // read, no model (2026-07-20). Same slot as WalletAsk, right after
+        // it: both need a watched wallet, and "aave"/"health factor" never
+        // collides with the generic wallet words.
+        if WalletDeFiAsk.matches(query) {
+            lastAnswerHits = []
+            guard let line = await WalletDeFiAsk.answer() else {
+                return proseDoc(String(localized: "Nothing to read yet — watch an address from Apps → Wallet."))
+            }
+            return proseDoc(line)
+        }
+        // A gas ask ("what have I spent on gas") — live read, no model.
+        if WalletGasAsk.matches(query) {
+            lastAnswerHits = []
+            guard let line = await WalletGasAsk.answer() else {
+                return proseDoc(String(localized: "Nothing to read yet — watch an address from Apps → Wallet."))
+            }
+            return proseDoc(line)
+        }
+        // A Safe ask ("anything pending on my Safe") — live read, no model.
+        if SafeAsk.matches(query) {
+            lastAnswerHits = []
+            guard let line = await SafeAsk.answer() else {
+                return proseDoc(String(localized: "Nothing to read yet — watch an address from Apps → Wallet."))
+            }
+            return proseDoc(line)
+        }
         // A status ask ("tell me what's going on") names no content to score,
         // so it grounds on recency itself: the newest things from every source
         // in a recent window — the feeds' pulse. The model synthesizes over

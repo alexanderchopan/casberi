@@ -61,27 +61,28 @@ struct WalletScreen: View {
     /// quick chart sheet when not.
     @State private var openTokenThing: Thing?
     @State private var quickToken: TokenQuickRoute?
-    /// Renaming a watched wallet (2026-07-15) — the missing half of the label
-    /// story: an ENS add sets the label automatically, but a raw-hex watch
-    /// had no way to ever become "Cold" or "Trading". Tap the row's name.
-    @State private var renameTarget: WalletStore.WatchedAddress.ID?
-    @State private var renameDraft = ""
+    /// Which watched wallet's own screen is pushed (2026-07-20) — renaming
+    /// moved there with everything else per-wallet (approvals, gas, DeFi,
+    /// Safe); the Watching row's whole tap target is now this, not a rename
+    /// prompt.
+    @State private var openWalletDetail: WalletStore.WatchedAddress.ID?
     /// Each watched wallet's own USD total, watch order (2026-07-15) — the
-    /// one holdings fetch behind every surface here: the per-wallet treemap
-    /// cards, the identity legend, the allocation bar, and the row sublines
-    /// (2026-07-17; the treemaps used to ride a separate `holdingsChart()`
-    /// doc that ran the same per-wallet fetch a second time).
+    /// one holdings fetch behind every surface here: the row sublines and
+    /// (per-wallet) `WalletDetailScreen`'s own treemap.
     @State private var walletTotals: [WalletIngest.HoldingsGroup] = []
-    /// Each watched wallet's running gas total in USD, keyed by lowercased
-    /// address (2026-07-20) — nil until it has spent something since being
-    /// watched (never a fabricated $0 row).
-    @State private var gasSpent: [String: Double] = [:]
     /// Live Aave positions across watched wallets (2026-07-20) — empty for a
     /// wallet with none (never a placeholder card for "not using DeFi").
     @State private var defiPositions: [WalletDeFi.Position] = []
     /// Detected-Safe wallets' pending-signature counts, keyed lowercased
     /// (2026-07-20) — absent for a wallet that isn't a Safe anywhere.
     @State private var safePending: [String: Int] = [:]
+    /// Every currently-delegated (wallet, chain) pair (2026-07-20) — live
+    /// state for the warnings band, separate from WalletSafety's
+    /// land-on-change alert.
+    @State private var delegations: [WalletSafety.Delegation] = []
+    /// How many recent Wallet things are flagged as address-poisoning
+    /// (2026-07-20) — for the warnings band; 0 renders nothing.
+    @State private var poisoningCount: Int = 0
     /// Whether the Chains row is expanded (2026-07-15) — collapsed by
     /// default to a one-line summary ("Ethereum, Base +3"); a set-once
     /// setting doesn't deserve six full-height rows every visit.
@@ -112,6 +113,13 @@ struct WalletScreen: View {
                 // way.
                 statusSection
             } else {
+                // Warnings lead EVERYTHING (2026-07-20) — severity-ranked,
+                // above even Watching: "is my wallet okay" beats "what's it
+                // worth". Empty renders nothing, same honesty rule as the
+                // sections below.
+                if !warnings.isEmpty {
+                    warningsSection.listRowSeparator(.hidden)
+                }
                 // Watching leads (user, 2026-07-17, prd §104): the rows carry
                 // the pin control, and burying them under the treemaps and
                 // transactions made "what do I pin" a scroll hunt. Approvals
@@ -119,38 +127,17 @@ struct WalletScreen: View {
                 // the wallets it reads, not below the activity log. The
                 // 2026-07-15 "value first" ruling is served by the rows
                 // themselves now (value subline + sparkline per wallet).
+                // Approvals/gas/DeFi/Safe all moved into WalletDetailScreen
+                // (2026-07-20, the collapse) — each used to repeat every
+                // watched wallet's face+label once per feature; now they're
+                // scoped to the ONE wallet a Watching row opens.
                 watchingSection.listRowSeparator(.hidden)
-                if wallet.addresses.contains(where: { WalletApprovals.canServe($0.address) }) {
-                    approvalsSection.listRowSeparator(.hidden)
-                }
-                if wallet.addresses.contains(where: { gasSpent[$0.address.lowercased()] != nil }) {
-                    gasSection.listRowSeparator(.hidden)
-                }
-                if !defiPositions.isEmpty {
-                    defiSection.listRowSeparator(.hidden)
-                }
-                if wallet.addresses.contains(where: { safePending[$0.address.lowercased()] != nil }) {
-                    safeSection.listRowSeparator(.hidden)
-                }
                 // The combined "bundle" — total value, the allocation
                 // bar, and one merged treemap. Only when more than one
                 // wallet is watched (one wallet's own view IS its
                 // portfolio); ruling 2026-07-15, alongside the per-wallet views.
                 if wallet.addresses.count > 1, !portfolioHoldings.els.isEmpty {
                     portfolioSection.listRowSeparator(.hidden)
-                }
-                if !walletTotals.isEmpty {
-                    Section {
-                        // A face+name legend above the stack (2026-07-15) —
-                        // scan the per-wallet treemaps by identity, the same
-                        // mark the rows and combined sheet already wear,
-                        // rather than reading each card's text label.
-                        if walletTotals.count > 1 { walletIdentityLegend }
-                        ForEach(walletTotals, id: \.address) { group in
-                            holdingsMap(group)
-                        }
-                    }
-                    .listRowSeparator(.hidden)
                 }
                 if !recent.isEmpty { recentSection.listRowSeparator(.hidden) }
                 // Admin cluster: add another wallet, narrow the chains —
@@ -208,25 +195,15 @@ struct WalletScreen: View {
                                  combined: portfolioSamples,
                                  wallets: wallet.addresses)
         }
-        // Name a watched wallet — the name rides every surface that already
-        // leans on it (feed tags, treemap eyebrows, self-transfer titles).
-        .alert("Name this wallet",
-               isPresented: Binding(get: { renameTarget != nil },
-                                    set: { if !$0 { renameTarget = nil } })) {
-            TextField("Name (e.g. Main, Cold)", text: $renameDraft)
-            Button("Save") { saveRename() }
-            Button("Cancel", role: .cancel) { renameTarget = nil }
-        } message: {
-            Text("A blank name shows the address instead.")
+        // A Watching row's whole tap target (2026-07-20) — the per-wallet
+        // screen carries everything that used to be a top-level section
+        // (approvals, gas, DeFi, Safe) plus renaming, scoped to just this
+        // wallet. Local push, matching `AppsScreen`'s own catalog-tile
+        // idiom — no shell-level route needed for a destination reached
+        // from exactly one place.
+        .navigationDestination(item: $openWalletDetail) { id in
+            WalletDetailScreen(addressID: id)
         }
-    }
-
-    private func saveRename() {
-        guard let id = renameTarget else { return }
-        renameTarget = nil
-        wallet.rename(id, to: renameDraft)
-        loadValueLines()
-        DSHaptic.success()
     }
 
     // MARK: - Portfolio (combined bundle, 2026-07-15)
@@ -359,39 +336,6 @@ struct WalletScreen: View {
     /// (2026-07-15) — the same identity mark the rows and combined sheet
     /// wear, so a multi-wallet stack scans by face instead of by reading
     /// each card's text label.
-    private var walletIdentityLegend: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: DS.Space.s4) {
-                ForEach(Array(walletTotals.enumerated()), id: \.offset) { _, g in
-                    if let addr = g.address {
-                        HStack(spacing: 5) {
-                            WalletFace(address: addr, size: 16)
-                            Text(g.label).dsText(.label12).foregroundStyle(DS.textSecondary)
-                        }
-                    }
-                }
-            }
-        }
-        .listRowBackground(Color.clear)
-        .listRowSeparator(.hidden)
-        .listRowInsets(EdgeInsets(top: DS.Space.s2, leading: DS.Space.s4,
-                                  bottom: 0, trailing: DS.Space.s4))
-    }
-
-    // MARK: - Holdings treemaps (per wallet)
-
-    /// One wallet's treemap card — holdings render through the gen-UI engine
-    /// (allocation is magnitude, so the treemap is its native shape; holdings
-    /// are SYNTHESIS, not things), one card per wallet. Its own Home-pin
-    /// control retired with the board (2026-07-20) — nothing to pin to.
-    private func holdingsMap(_ group: WalletIngest.HoldingsGroup) -> some View {
-        let doc = WalletIngest.groupDocument(group).joined(separator: "\n")
-        return GenRender(id: "root", els: GenParser.parse(prefix: doc[...], isComplete: true))
-            .listRowBackground(Color.clear)
-            .listRowSeparator(.hidden)
-            .listRowInsets(EdgeInsets())
-    }
-
     // MARK: - Value history (2026-07-14)
 
     /// A row's sampled history — nil until the wallet has ≥2 sampled points
@@ -450,16 +394,20 @@ struct WalletScreen: View {
             // the summary row; new pending items land as things separately
             // inside `refreshed`.
             async let safe = SafeBridge.pendingCounts(addresses: resolvedEVM)
+            // Current EIP-7702 delegations (2026-07-20) — live state for the
+            // warnings band, not gated on "did it just change" the way
+            // WalletSafety.sync's alert is.
+            async let currentDelegs = WalletSafety.currentDelegations(addresses: resolvedEVM)
             let added = await refreshed
             walletTotals = await totals
             defiPositions = await defi
             safePending = await safe
-            // Gas spent (2026-07-20) — cheap once the running totals already
-            // sit in UserDefaults; this only re-prices them, one wrapped-
-            // native lookup per chain (cached 15 minutes).
-            for addr in wallet.addresses {
-                gasSpent[addr.address.lowercased()] = await WalletGas.totalUSD(address: addr.address)
-            }
+            delegations = await currentDelegs
+            // Address-poisoning count (2026-07-20) — a plain model fetch, no
+            // network; cheap enough to run inline rather than fan out.
+            poisoningCount = (try? modelContext.fetch(FetchDescriptor<Thing>(
+                predicate: #Predicate { $0.source == "Wallet" && $0.securityFlag == "poisoning" }
+            )))?.count ?? 0
             // The combined bundle — total + one merged treemap (nil unless
             // more than one wallet is watched).
             if let group = await portfolioDoc {
@@ -507,6 +455,83 @@ struct WalletScreen: View {
         }
     }
 
+    // MARK: - Warnings (2026-07-20)
+
+    /// One thing worth a heads-up — severity-ranked, never a placeholder for
+    /// "all clear" (the empty case renders nothing, matching every other
+    /// section here). No shared field exists across Aave/Safe/poisoning/
+    /// delegation to filter on, so this is a fresh aggregation over the live
+    /// state the screen's own `sync()` already computes each pass, not a
+    /// query for a "warning" kind that doesn't exist.
+    private struct Warning: Identifiable {
+        enum Severity { case critical, notice }
+        let id: String
+        let severity: Severity
+        let title: String
+        let subtitle: String?
+    }
+
+    private var warnings: [Warning] {
+        var out: [Warning] = []
+        for p in defiPositions where (p.healthFactor ?? .infinity) < 1.5 {
+            let chain = WalletIngest.displayName(forNetwork: p.network) ?? p.network
+            out.append(Warning(id: "defi:\(p.network):\(p.address)", severity: .critical,
+                               title: String(localized: "Aave position close to liquidation"),
+                               subtitle: "\(chain) · hf \(WalletIngest.format(p.healthFactor ?? 0))"))
+        }
+        if poisoningCount > 0 {
+            out.append(Warning(id: "poisoning", severity: .critical,
+                               title: poisoningCount == 1
+                                   ? String(localized: "1 transfer looks like address poisoning")
+                                   : String(localized: "\(poisoningCount) transfers look like address poisoning"),
+                               subtitle: nil))
+        }
+        for (address, count) in safePending where count > 0 {
+            let label = wallet.label(forAddress: address) ?? WalletStore.shortAddress(address)
+            out.append(Warning(id: "safe:\(address)", severity: .notice,
+                               title: count == 1
+                                   ? String(localized: "1 signature needed on \(label)'s Safe")
+                                   : String(localized: "\(count) signatures needed on \(label)'s Safe"),
+                               subtitle: nil))
+        }
+        for d in delegations {
+            let chain = WalletIngest.displayName(forNetwork: d.network) ?? d.network
+            let label = wallet.label(forAddress: d.address) ?? WalletStore.shortAddress(d.address)
+            out.append(Warning(id: "delegation:\(d.network):\(d.address)", severity: .notice,
+                               title: String(localized: "\(label) delegates on \(chain)"),
+                               subtitle: WalletIngest.knownLabel(for: d.delegate) ?? WalletStore.shortAddress(d.delegate)))
+        }
+        // Critical before notice; stable otherwise (insertion order per
+        // source, already deterministic).
+        return out.sorted { $0.severity == .critical && $1.severity != .critical }
+    }
+
+    private var warningsSection: some View {
+        Section {
+            ForEach(warnings) { w in
+                HStack(spacing: DS.Space.s3) {
+                    Image(systemName: w.severity == .critical
+                          ? "exclamationmark.triangle.fill" : "info.circle.fill")
+                        .font(.system(size: 15))
+                        .foregroundStyle(w.severity == .critical ? DS.destructive : DS.textSecondary)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(w.title).dsText(.body17).foregroundStyle(DS.textPrimary)
+                            .lineLimit(2)
+                        if let subtitle = w.subtitle {
+                            Text(subtitle).dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                                .lineLimit(1)
+                        }
+                    }
+                    Spacer(minLength: 0)
+                }
+                .dsListCardRow()
+            }
+        } header: {
+            Text("Worth a look").dsText(.label12)
+                .foregroundStyle(DS.textSecondary)
+        }
+    }
+
     // MARK: - Watching (add / remove / sort / pin)
 
     /// Each watched address carries its own pin now (ruling 2026-07-09): a
@@ -521,17 +546,19 @@ struct WalletScreen: View {
     private var watchingSection: some View {
         Section {
             ForEach(wallet.addresses) { addr in
-                HStack(spacing: DS.Space.s3) {
-                    // The wallet's face (2026-07-15): its ENS avatar when it
-                    // published one, else a deterministic identicon — so
-                    // watching three wallets no longer means three identical
-                    // blue icons.
-                    WalletFace(address: addr.address, size: 36)
-                    Button {
-                        DSHaptic.tap()
-                        renameDraft = addr.label
-                        renameTarget = addr.id
-                    } label: {
+                // The whole row opens this wallet's own screen (2026-07-20)
+                // — renaming, approvals, gas, DeFi, Safe all live there now,
+                // scoped to just this wallet.
+                Button {
+                    DSHaptic.tap()
+                    openWalletDetail = addr.id
+                } label: {
+                    HStack(spacing: DS.Space.s3) {
+                        // The wallet's face (2026-07-15): its ENS avatar when it
+                        // published one, else a deterministic identicon — so
+                        // watching three wallets no longer means three identical
+                        // blue icons.
+                        WalletFace(address: addr.address, size: 36)
                         VStack(alignment: .leading, spacing: 2) {
                             Text(addr.label.isEmpty ? addr.short : addr.label)
                                 .dsText(.body17).foregroundStyle(DS.textPrimary)
@@ -544,32 +571,35 @@ struct WalletScreen: View {
                                     .monospacedDigit()
                             }
                         }
-                        .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                    Spacer()
-                    // The value heartbeat, merged from the old standalone
-                    // Value section (2026-07-15) — sparkline + delta pill,
-                    // right on the row. Only once the wallet has ≥2 sampled
-                    // points.
-                    if let samples = rowSamples(addr) {
-                        let closes = samples.map(\.usd)
-                        let first = closes.first ?? 0
-                        let last = closes.last ?? 0
-                        let change = first > 0 ? (last - first) / first : 0
-                        VStack(alignment: .trailing, spacing: 4) {
-                            TokenChartPlot(chart: TokenChart(closes: closes, price: last,
-                                                             change: change),
-                                           accent: TokenChartStyle.accent(change: change, scheme: scheme),
-                                           height: 22, pulses: false)
-                                .frame(width: 40)
-                                .accessibilityHidden(true)
-                            TokenDeltaPill(change: change,
-                                           label: samples.first!.at.formatted(.dateTime.month(.abbreviated).day()),
-                                           compact: true)
+                        Spacer()
+                        // The value heartbeat, merged from the old standalone
+                        // Value section (2026-07-15) — sparkline + delta pill,
+                        // right on the row. Only once the wallet has ≥2 sampled
+                        // points.
+                        if let samples = rowSamples(addr) {
+                            let closes = samples.map(\.usd)
+                            let first = closes.first ?? 0
+                            let last = closes.last ?? 0
+                            let change = first > 0 ? (last - first) / first : 0
+                            VStack(alignment: .trailing, spacing: 4) {
+                                TokenChartPlot(chart: TokenChart(closes: closes, price: last,
+                                                                 change: change),
+                                               accent: TokenChartStyle.accent(change: change, scheme: scheme),
+                                               height: 22, pulses: false)
+                                    .frame(width: 40)
+                                    .accessibilityHidden(true)
+                                TokenDeltaPill(change: change,
+                                               label: samples.first!.at.formatted(.dateTime.month(.abbreviated).day()),
+                                               compact: true)
+                            }
                         }
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(DS.textTertiary)
                     }
+                    .contentShape(Rectangle())
                 }
+                .buttonStyle(.plain)
                 .dsListCardRow()
                 .modifier(SwipeHintNudge(active: addr.id == hintAddressID) { swipeCoachDone = true })
                 // Pin retired with the board (2026-07-20) — Remove is now the
@@ -595,147 +625,6 @@ struct WalletScreen: View {
                 .foregroundStyle(DS.textSecondary)
         } footer: {
             Text("Swipe a wallet to pin its holdings to Home and Feed.")
-                .dsText(.callout15).foregroundStyle(DS.textSecondary)
-        }
-    }
-
-    // MARK: - Approvals (2026-07-16, prd §84)
-
-    /// Each wallet's door to its Revoke.cash approvals dashboard — the read
-    /// lives here (and new approvals land as things); the WRITE (revoking is
-    /// an on-chain transaction) lives on Revoke.cash, the tool built for it,
-    /// stated plainly in the footer. EVM wallets only: Revoke.cash has no
-    /// Solana page, and a door to a 404 would be a dead control.
-    private var approvalsSection: some View {
-        Section {
-            // `canServe`, not a bare hex check — a wallet watched by ENS name
-            // stores the name, and Revoke.cash resolves names (verified live);
-            // only Solana forms have no page there.
-            ForEach(wallet.addresses.filter { WalletApprovals.canServe($0.address) }) { addr in
-                Button {
-                    DSHaptic.selection()
-                    if let url = URL(string: WalletApprovals.revokeURL(address: addr.address)) {
-                        openURL(url)
-                    }
-                } label: {
-                    HStack(spacing: DS.Space.s3) {
-                        WalletFace(address: addr.address, size: 28)
-                        Text(addr.label.isEmpty ? addr.short : addr.label)
-                            .dsText(.body17).foregroundStyle(DS.textPrimary)
-                            .lineLimit(1)
-                        Spacer()
-                        Text("Revoke.cash")
-                            .dsText(.subhead13).foregroundStyle(DS.textSecondary)
-                        Image(systemName: "arrow.up.right")
-                            .font(.system(size: 12, weight: .semibold))
-                            .foregroundStyle(DS.textTertiary)
-                    }
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .dsListCardRow()
-            }
-        } header: {
-            Text("Approvals").dsText(.label12)
-                .foregroundStyle(DS.textSecondary)
-        } footer: {
-            Text("What each wallet has allowed contracts to spend. New approvals land in your feed; review and revoke on Revoke.cash — revoking is a transaction you sign there, never in Casberi.")
-                .dsText(.callout15).foregroundStyle(DS.textSecondary)
-        }
-    }
-
-    // MARK: - Gas spent (2026-07-20)
-
-    /// Each wallet's running gas total — a fact no explorer states this way
-    /// (they show a single tx's fee, never a running sum), and one that's
-    /// honestly scoped: "since you started watching", never a fabricated
-    /// lifetime figure a fresh watch couldn't actually know.
-    private var gasSection: some View {
-        Section {
-            ForEach(wallet.addresses.filter { gasSpent[$0.address.lowercased()] != nil }) { addr in
-                HStack(spacing: DS.Space.s3) {
-                    WalletFace(address: addr.address, size: 28)
-                    Text(addr.label.isEmpty ? addr.short : addr.label)
-                        .dsText(.body17).foregroundStyle(DS.textPrimary)
-                        .lineLimit(1)
-                    Spacer()
-                    Text(TokenStats.compact(gasSpent[addr.address.lowercased()] ?? 0))
-                        .dsText(.subhead13).foregroundStyle(DS.textSecondary)
-                        .monospacedDigit()
-                }
-                .dsListCardRow()
-            }
-        } header: {
-            Text("Gas spent").dsText(.label12)
-                .foregroundStyle(DS.textSecondary)
-        } footer: {
-            Text("What each wallet has paid in network fees since you started watching it.")
-                .dsText(.callout15).foregroundStyle(DS.textSecondary)
-        }
-    }
-
-    // MARK: - DeFi positions (2026-07-20)
-
-    /// Live Aave collateral/debt/health-factor per wallet per chain —
-    /// nothing shown for a wallet with no position (the honesty rule: no
-    /// placeholder for "not using DeFi").
-    private var defiSection: some View {
-        Section {
-            ForEach(Array(defiPositions.enumerated()), id: \.offset) { _, p in
-                HStack(spacing: DS.Space.s3) {
-                    WalletFace(address: p.address, size: 28)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(wallet.label(forAddress: p.address) ?? WalletStore.shortAddress(p.address))
-                            .dsText(.body17).foregroundStyle(DS.textPrimary)
-                            .lineLimit(1)
-                        Text("\(WalletIngest.displayName(forNetwork: p.network) ?? p.network) · \(TokenStats.compact(p.totalCollateralUSD)) collateral")
-                            .dsText(.subhead13).foregroundStyle(DS.textSecondary)
-                    }
-                    Spacer()
-                    if let hf = p.healthFactor {
-                        Text(String(format: "%.2f", hf))
-                            .dsText(.body17)
-                            .foregroundStyle(hf < 1.5 ? DS.destructive : DS.textPrimary)
-                            .monospacedDigit()
-                    }
-                }
-                .dsListCardRow()
-            }
-        } header: {
-            Text("DeFi positions").dsText(.label12)
-                .foregroundStyle(DS.textSecondary)
-        } footer: {
-            Text("Aave collateral, debt, and health factor — read live from the chain. Below 1.5 is worth watching; below 1.0 risks liquidation.")
-                .dsText(.callout15).foregroundStyle(DS.textSecondary)
-        }
-    }
-
-    // MARK: - Safe (2026-07-20)
-
-    /// A detected Safe's pending-signature queue, summarized per wallet — no
-    /// door out (the Safe web app's per-chain URL prefix couldn't be
-    /// verified for every chain; see `SafeBridge`'s doc comment), just the
-    /// count and the footer's honest pointer to the person's own Safe app.
-    private var safeSection: some View {
-        Section {
-            ForEach(wallet.addresses.filter { safePending[$0.address.lowercased()] != nil }) { addr in
-                HStack(spacing: DS.Space.s3) {
-                    WalletFace(address: addr.address, size: 28)
-                    Text(addr.label.isEmpty ? addr.short : addr.label)
-                        .dsText(.body17).foregroundStyle(DS.textPrimary)
-                        .lineLimit(1)
-                    Spacer()
-                    let count = safePending[addr.address.lowercased()] ?? 0
-                    Text(count == 1 ? "1 pending" : "\(count) pending")
-                        .dsText(.subhead13).foregroundStyle(DS.textSecondary)
-                }
-                .dsListCardRow()
-            }
-        } header: {
-            Text("Safe").dsText(.label12)
-                .foregroundStyle(DS.textSecondary)
-        } footer: {
-            Text("Signatures still needed on this Safe's queued transactions. New ones land in your feed; review and sign in your Safe app — never here.")
                 .dsText(.callout15).foregroundStyle(DS.textSecondary)
         }
     }
@@ -1111,6 +1000,18 @@ struct WalletScreen: View {
             ForEach(recent) { thing in
                 HStack(spacing: DS.Space.s3) {
                     KindGlyph(kind: thing.kind, size: 28)
+                        // Same glyph/color as the feed row and the sheet's
+                        // own warning (2026-07-20) — the scam works at the
+                        // glance, so it rides here too.
+                        .overlay(alignment: .bottomTrailing) {
+                            if thing.securityFlag == "poisoning" {
+                                Image(systemName: "exclamationmark.triangle.fill")
+                                    .font(.system(size: 9))
+                                    .foregroundStyle(DS.destructive)
+                                    .padding(3)
+                                    .background(Circle().fill(.black.opacity(0.55)))
+                            }
+                        }
                     VStack(alignment: .leading, spacing: 2) {
                         Text(thing.title).dsText(.body17).foregroundStyle(DS.textPrimary)
                             .lineLimit(1)
