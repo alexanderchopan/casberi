@@ -4,7 +4,7 @@ import SwiftUI
 /// model, for a new person after the retiring coach lines are gone. Re-ruled
 /// 2026-07-16: the evergreen abstractions ("Keep tabs", "Make it yours") left
 /// a real tester not knowing what to do — now it teaches the ONE loop that
-/// matters, as four numbered steps: open the catalog → connect → pin → ask. Still no
+/// matters, as three numbered steps: connect → one feed → ask. Still no
 /// gesture-by-gesture manual; it names the catalog's place and glyph because
 /// that door is the whole game. Reached from the Settings tile to revisit any
 /// time, and wired into the onboarding tail so a new person meets it once.
@@ -24,7 +24,7 @@ import SwiftUI
 /// steps and passes off the bottom — a curtain of everything that can land,
 /// while step 1's strip sits below as the rain come to rest. Connecting
 /// happens where it always really happened: in the catalog, which the one
-/// door forward opens (the arc: apps rain down → the four steps → the
+/// door forward opens (the arc: apps rain down → the three steps → the
 /// catalog where those apps live); from Settings there is no rain and the
 /// plain Done remains.
 /// Naming (user, 2026-07-16): user-facing copy never says "store" for this
@@ -50,30 +50,31 @@ struct HowItWorksSheet: View {
         var id: String { glyph }
     }
 
-    // Four numbered steps (ruling 2026-07-16, replacing the four abstract
-    // beats): a new person must leave knowing exactly (1) where the catalog is,
-    // (2) that connecting fills the feed by itself, (3) what pinning is FOR,
-    // (4) that the composer answers questions about what they've saved.
-    // Step 1 wears the REAL Apps-door glyph (TopDoors' square.grid.2x2) so
-    // they recognize it in the shell later. Step 3's line closes the loop
-    // explicitly — "the feed always has everything" — because "keep in sight"
-    // phrasing read as if unpinned things vanish (user, 2026-07-16).
+    // Three numbered steps (user, 2026-07-20, prd §134 — down from four when
+    // the app changed under them): a new person must leave knowing exactly
+    // (1) that connecting apps — in the catalog, top left — fills the feed
+    // by itself, (2) that it is ONE feed the source chips narrow, (3) that
+    // the agent's ask bar answers questions about anything they've saved.
+    // The old separate "Open the catalog" step folded into step 1: the
+    // catalog is WHERE you connect, not its own act. Step 1 wears the REAL
+    // Apps-door glyph (TopDoors' square.grid.2x2) so they recognize it in
+    // the shell later; step 3 wears the agent bar's sparkles the same way.
+    // (History: step 3 was "Pin your favorites" until prd §131 retired
+    // pinning on 2026-07-20; the "+ button" wording died when the FAB became
+    // the agent's "Ask your things" bar in the same redesign.)
     // The titles carry no "1." prefix — the giant numeral IS the number.
     private let points: [Point] = [
         Point(glyph: "square.grid.2x2.fill", hue: .blue,
-              title: "Open the catalog",
-              line: "Top right of your feed. Apps, people, wallets, stocks — everything you can add lives there."),
-        Point(glyph: "checkmark.circle.fill", hue: .green,
-              title: "Connect things",
-              line: "Everything you connect lands in your feed, automatically."),
-        Point(glyph: "pin.fill", hue: .pink,
-              title: "Pin your favorites",
-              line: "Home is built from what you pin. The feed always has everything."),
-        // Wears the composer FAB's real glyph (a plain plus), same reason
-        // step 1 wears the catalog's grid.
-        Point(glyph: "plus", hue: .purple,
-              title: "Ask",
-              line: "Tap the + button and ask questions about anything you've saved."),
+              title: "Connect your apps",
+              line: "Open the catalog, top left of your feed. Everything you connect lands in your feed, automatically."),
+        Point(glyph: "line.3.horizontal.decrease.circle.fill", hue: .pink,
+              title: "One feed, or one app",
+              line: "Everything lands in one feed. The chips up top narrow it to a single app."),
+        // Wears the agent bar's own seat — the ask bar sits at the bottom of
+        // every feed, the same reason step 1 wears the catalog's grid.
+        Point(glyph: "sparkles", hue: .purple,
+              title: "Ask anything",
+              line: "Tap “Ask your things” at the bottom and ask about anything you've saved."),
     ]
 
     // MARK: - The onboarding rain (moved here 2026-07-16 when the connect
