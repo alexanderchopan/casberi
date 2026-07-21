@@ -117,6 +117,13 @@ enum ScheduleIngest {
             : start >= now
     }
 
+    /// Whether a thing stands for a real reminder in the system store — the
+    /// callers that promise "this writes through" (and the toasts that say
+    /// so) key off this, so a demo seed can't wear a real write's copy.
+    static func isEKBacked(_ sourceRef: String?) -> Bool {
+        sourceRef?.hasPrefix("ekreminder:") == true
+    }
+
     /// Completes (or un-completes) the real reminder behind a thing — the
     /// lightest write (shaped-feeds ruling): the check circle is the consent,
     /// tapping again is the undo. No-op (returns `true`, nothing to fail) for
@@ -127,7 +134,7 @@ enum ScheduleIngest {
     /// exactly the "fake status" the design law bans).
     @discardableResult
     static func setCompleted(_ sourceRef: String?, _ done: Bool) async -> Bool {
-        guard let ref = sourceRef, ref.hasPrefix("ekreminder:") else { return true }
+        guard let ref = sourceRef, isEKBacked(ref) else { return true }
         let id = String(ref.dropFirst("ekreminder:".count))
         let store = EKEventStore()
         guard (try? await store.requestFullAccessToReminders()) == true,
@@ -142,7 +149,10 @@ enum ScheduleIngest {
         }
     }
 
-    /// Open reminders — the list as it stands.
+    /// Open reminders — the list as it stands. New open reminders land;
+    /// already-landed things re-sync done-state, title, and due date from
+    /// the real list (completed ones never land as new — the corpus records
+    /// the list, not its archaeology).
     static func connectReminders(context: ModelContext) async -> Int? {
         let store = EKEventStore()
         guard (try? await store.requestFullAccessToReminders()) == true else { return nil }
@@ -152,11 +162,32 @@ enum ScheduleIngest {
             store.fetchReminders(matching: predicate) { cont.resume(returning: $0 ?? []) }
         }
 
-        let existing = IngestSupport.existingSourceRefs(context)
+        let existing = IngestSupport.thingsByRef(context, source: "Reminders")
         var added = 0
-        for reminder in reminders where !reminder.isCompleted {
+        for reminder in reminders {
             let ref = "ekreminder:\(reminder.calendarItemIdentifier)"
-            guard !existing.contains(ref) else { continue }
+            if let thing = existing[ref] {
+                // The real list is authoritative on refresh — a reminder
+                // completed (or reopened) in the Reminders app carries that
+                // state back here, the missing other half of the check
+                // circle's write-through; without it the two lists silently
+                // drift. Title and due-date edits follow the same way.
+                if reminder.isCompleted, thing.mark != .done {
+                    thing.mark = .done
+                } else if !reminder.isCompleted, thing.mark == .done {
+                    thing.mark = .todo
+                }
+                if let title = reminder.title, thing.title != title {
+                    thing.title = title
+                }
+                let due = reminder.dueDateComponents?.date
+                if thing.dueAt != due {
+                    thing.dueAt = due
+                    thing.content = dueLine(reminder)
+                }
+                continue
+            }
+            guard !reminder.isCompleted else { continue }
             let thing = Thing(
                 kind: .reminder,
                 title: reminder.title ?? "Reminder",

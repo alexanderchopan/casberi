@@ -1663,7 +1663,13 @@ struct FeedScreen: View {
         let wasMark = thing.mark
         thing.mark = nowDone ? .done : .todo
         modelContext.saveHonestly()
-        chrome.flash(nowDone ? "Done — tap again to undo" : "Back on the list", tone: .success)
+        // A thing with no real reminder behind it (demo seeds) marks locally
+        // only — the toast says so instead of imitating a real write.
+        let ekBacked = ScheduleIngest.isEKBacked(thing.sourceRef)
+        chrome.flash(nowDone
+            ? (ekBacked ? "Done — tap again to undo" : "Done here — not in your Reminders")
+            : (ekBacked ? "Back on the list" : "Back to to-do"),
+            tone: .success)
         let sourceRef = thing.sourceRef
         Task {
             let ok = await ScheduleIngest.setCompleted(sourceRef, nowDone)
@@ -2016,8 +2022,22 @@ struct FeedScreen: View {
             UIPasteboard.general.string = thing.content.isEmpty ? thing.title : thing.content
             chrome.flash("Copied")
         case .markDone:
+            // Write through to the real reminder like the check circle does
+            // (no-op for things that aren't EK-backed), reverting on failure
+            // — this verb used to mark locally only.
+            let wasMark = thing.mark
             thing.mark = .done
             modelContext.saveHonestly()
+            let sourceRef = thing.sourceRef
+            Task {
+                let ok = await ScheduleIngest.setCompleted(sourceRef, true)
+                guard !ok else { return }
+                await MainActor.run {
+                    thing.mark = wasMark
+                    modelContext.saveHonestly()
+                    chrome.flash("Couldn't reach Reminders — not marked", tone: .failure)
+                }
+            }
         case .translate:
             translateText = thing.postText ?? thing.content
             showTranslate = true
