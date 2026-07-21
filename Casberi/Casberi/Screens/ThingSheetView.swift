@@ -978,10 +978,23 @@ struct ThingSheetView: View {
             UIPasteboard.general.string = thing.content.isEmpty ? thing.title : thing.content
             verbResult = "Copied"
         case .markDone:
+            // Same shape as the feed's check circle: mark optimistically,
+            // write through to the real reminder, revert if that fails —
+            // this verb used to mark locally only, leaving an EK-backed
+            // reminder open in the Reminders app (honesty rule).
+            let wasMark = thing.mark
             thing.mark = .done
             modelContext.saveHonestly()
             CorpusSignal.shared.bump()
-            verbResult = "Done"
+            if await ScheduleIngest.setCompleted(thing.sourceRef, true) {
+                verbResult = "Done"
+            } else {
+                thing.mark = wasMark
+                modelContext.saveHonestly()
+                CorpusSignal.shared.bump()
+                verbResult = "Couldn't reach Reminders — not marked"
+                verbResultIsError = true
+            }
         case .translate:
             verbResult = nil
             translateText = thing.postText ?? thing.content

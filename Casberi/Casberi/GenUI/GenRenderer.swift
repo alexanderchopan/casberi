@@ -294,6 +294,15 @@ struct GenRender: View {
         case "TakeawayCard": GenTakeawayCard(el: el).mountIn()
         case "ApprovalCard": GenApprovalCard(el: el).mountIn()
 
+        // Answer-column charts (2026-07-21, prd §146) — richer generative UI
+        // for the agent's answers. Each draws a REAL visualization the answer
+        // already had the data for (agent-brief ruling 13); none invents one.
+        case "ValueSpark":   GenValueSpark(el: el).mountIn()
+        case "Bars":         GenBars(el: el).mountIn()
+        case "ChartCard":    GenChartCard(el: el).mountIn()
+        case "StatRow":      GenStatRow(el: el).mountIn()
+        case "AllocBar":     GenAllocBar(el: el).mountIn()
+
         case "Shelf":
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: DS.Space.s2) {
@@ -594,6 +603,13 @@ private struct GenWidget: View {
             case "MailRow":   GenMailRow(el: child)
             case "PostRow":   GenPostRow(el: child)
             case "TokenChip": GenTokenChip(el: child)
+            // Shaped answer rows (2026-07-21) — a wallet transfer draws its
+            // TxRow (asset mark, direction, amount) and an agenda item its
+            // AgendaRow (time rail) inside an answer Widget, instead of the
+            // generic Row. Answer-only: the board's `appChild` never emits
+            // these, so the fixed-set flatten note above still holds there.
+            case "TxRow":     GenTxRow(el: child)
+            case "AgendaRow": GenAgendaRow(el: child)
             default:          GenSkeletonRow()
             }
         } else {
@@ -2527,6 +2543,243 @@ private struct GenApprovalCard: View {
         .dsWidgetSurface()
         .padding(.horizontal, DS.Space.s4)
         .padding(.top, DS.Space.s2)
+    }
+}
+
+// MARK: - Answer-column charts (prd §146)
+
+/// Shared CSV-number parsing for the answer charts — the series a composer
+/// hands inline (a wallet's recorded value samples, per-day counts). Inline,
+/// not a pointer like `TokenChip`, because these are LOCAL facts already read
+/// (not a live fetch that could fail): the honest thing is to draw exactly
+/// what was recorded. A quoted arg keeps its commas (the parser only splits at
+/// depth 0 outside quotes), so the whole series arrives as one string.
+private func genCSVDoubles(_ s: String) -> [Double] {
+    s.split(separator: ",").compactMap { Double($0.trimmingCharacters(in: .whitespaces)) }
+}
+
+/// ValueSpark(eyebrow, subline, "v0,v1,…") — a balance sparkline over recorded
+/// value samples. Reuses `TokenChartPlot` so the wallet's own value line wears
+/// the exact anatomy a token curve does; the delta pill is computed first→last,
+/// the same math `WalletAsk.answer()`'s line uses, so the two never disagree.
+/// Fewer than two points draws nothing (a one-point "line" is a dot pretending
+/// to be a trend) — the composer only emits it once history spans.
+private struct GenValueSpark: View {
+    let el: GenEl
+    @Environment(\.colorScheme) private var scheme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var revealed = false
+
+    private var series: [Double] { genCSVDoubles(el.str(2)) }
+    private var change: Double {
+        guard let first = series.first, first > 0, let last = series.last else { return 0 }
+        return (last - first) / first
+    }
+    private var accent: Color { TokenChartStyle.accent(change: change, scheme: scheme) }
+
+    var body: some View {
+        Group {
+            if series.count >= 2 {
+                let chart = TokenChart(closes: series, price: series.last ?? 0, change: change)
+                VStack(alignment: .leading, spacing: DS.Space.s2) {
+                    HStack(spacing: DS.Space.s2) {
+                        Text(el.str(0)).dsText(.callout15).fontWeight(.semibold)
+                            .foregroundStyle(DS.textPrimary)
+                        Spacer(minLength: DS.Space.s2)
+                        TokenDeltaPill(change: change, label: "")
+                    }
+                    TokenChartPlot(chart: chart, accent: accent, height: 90, pulses: false)
+                        .mask(alignment: .leading) {
+                            GeometryReader { geo in
+                                Rectangle().frame(width: revealed ? geo.size.width : 0)
+                            }
+                        }
+                    if !el.str(1).isEmpty {
+                        Text(el.str(1)).dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(DS.Space.s4)
+                .dsWidgetSurface()
+                .padding(.horizontal, DS.Space.s4)
+                .padding(.top, DS.Space.s2)
+                .onAppear {
+                    guard !revealed else { return }
+                    if reduceMotion { revealed = true }
+                    else { withAnimation(.easeOut(duration: 0.7)) { revealed = true } }
+                }
+            }
+        }
+    }
+}
+
+/// Bars(eyebrow, subline, "c0,c1,…", "l0,l1,…") — counts over time (things
+/// saved per day, activity per day), hand-drawn as capsules so nothing draws
+/// an axis or grid (the hairline law holds on charts too). The last bar reads
+/// as "now" in full tint; earlier bars sit at a calmer opacity. An all-zero
+/// series still draws its baseline row honestly (a quiet week is a real
+/// answer, not an empty state).
+private struct GenBars: View {
+    let el: GenEl
+    private var counts: [Double] { genCSVDoubles(el.str(2)) }
+    private var labels: [String] {
+        el.str(3).split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }
+    }
+
+    var body: some View {
+        Group {
+            if !counts.isEmpty {
+                let peak = max(counts.max() ?? 1, 1)
+                VStack(alignment: .leading, spacing: DS.Space.s2) {
+                    if !el.str(0).isEmpty {
+                        Text(el.str(0)).dsText(.callout15).fontWeight(.semibold)
+                            .foregroundStyle(DS.textPrimary)
+                    }
+                    if !el.str(1).isEmpty {
+                        Text(el.str(1)).dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                    }
+                    HStack(alignment: .bottom, spacing: DS.Space.s2) {
+                        ForEach(Array(counts.enumerated()), id: \.offset) { i, c in
+                            let last = i == counts.count - 1
+                            VStack(spacing: DS.Space.s1) {
+                                Spacer(minLength: 0)
+                                Capsule(style: .continuous)
+                                    .fill(last ? DS.tint : DS.tint.opacity(0.35))
+                                    .frame(height: max(3, 64 * CGFloat(c / peak)))
+                                if i < labels.count {
+                                    Text(labels[i]).dsText(.label12)
+                                        .foregroundStyle(last ? DS.textSecondary : DS.textTertiary)
+                                        .lineLimit(1)
+                                }
+                            }
+                            .frame(maxWidth: .infinity)
+                        }
+                    }
+                    .frame(height: 84)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(DS.Space.s4)
+                .dsWidgetSurface()
+                .padding(.horizontal, DS.Space.s4)
+                .padding(.top, DS.Space.s2)
+            }
+        }
+    }
+}
+
+/// ChartCard(symbol, chain, address) — a single token's FULL scrubbable curve
+/// as an answer (the tall dose of `TokenChip`'s sparkline). Reuses
+/// `TokenChartView`, which already owns its per-range fetch, the draw-on
+/// reveal, and the press-then-drag scrub that lets a vertical scroll still win
+/// (the DragGesture-vs-ScrollView law) — so it's safe inside the answer
+/// column's ScrollView. A dead symbol falls back to a plain honest line.
+private struct GenChartCard: View {
+    let el: GenEl
+    var body: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s3) {
+            if !el.str(0).isEmpty {
+                Text(el.str(0)).dsText(.callout15).fontWeight(.semibold)
+                    .foregroundStyle(DS.textPrimary)
+            }
+            TokenChartView(chain: el.str(1), address: el.str(2)) {
+                Text("Couldn't load this chart right now.")
+                    .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(DS.Space.s4)
+        .dsWidgetSurface()
+        .padding(.horizontal, DS.Space.s4)
+        .padding(.top, DS.Space.s2)
+    }
+}
+
+/// StatRow(v0, l0, v1, l1, v2, l2) — up to three glanceable number tiles (a
+/// tile with an empty value drops out). Neutral ink by ruling: a bare count
+/// has no up/down direction to color (honesty §83) — any sign a value carries
+/// lives in its own text ("+4.0%"), never in the tile's fill.
+private struct GenStatRow: View {
+    let el: GenEl
+    private var tiles: [(value: String, label: String)] {
+        [(value: el.str(0), label: el.str(1)),
+         (value: el.str(2), label: el.str(3)),
+         (value: el.str(4), label: el.str(5))]
+            .filter { !$0.value.isEmpty }
+    }
+
+    var body: some View {
+        Group {
+            if !tiles.isEmpty {
+                HStack(spacing: DS.Space.s2) {
+                    ForEach(Array(tiles.enumerated()), id: \.offset) { _, t in
+                        VStack(alignment: .leading, spacing: DS.Space.s1) {
+                            Text(t.value).dsText(.heading22).foregroundStyle(DS.textPrimary)
+                                .monospacedDigit().lineLimit(1).minimumScaleFactor(0.7)
+                            Text(t.label).dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                                .lineLimit(1)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(DS.Space.s3)
+                        .background(DS.surfaceWell,
+                                    in: RoundedRectangle(cornerRadius: DS.Radius.widget,
+                                                         style: .continuous))
+                    }
+                }
+                .padding(.horizontal, DS.Space.s4)
+                .padding(.top, DS.Space.s2)
+            }
+        }
+    }
+}
+
+/// AllocBar(eyebrow, "label|usd,label|usd,…") — how the total splits across
+/// watched wallets, one segmented bar. Monochrome by the one-tint law: every
+/// segment is DS.tint, stepped down in opacity so proportion reads without a
+/// rainbow. Labels below name each share ("Main 60% · Cold 40%").
+private struct GenAllocBar: View {
+    let el: GenEl
+    private struct Seg { let label: String; let usd: Double }
+    private var segs: [Seg] {
+        el.str(1).split(separator: ",").compactMap { part -> Seg? in
+            let f = part.split(separator: "|", maxSplits: 1)
+            guard f.count == 2, let usd = Double(f[1].trimmingCharacters(in: .whitespaces)),
+                  usd > 0 else { return nil }
+            return Seg(label: f[0].trimmingCharacters(in: .whitespaces), usd: usd)
+        }
+    }
+
+    var body: some View {
+        let segs = segs
+        let total = segs.reduce(0) { $0 + $1.usd }
+        return Group {
+            if segs.count >= 2, total > 0 {
+                VStack(alignment: .leading, spacing: DS.Space.s2) {
+                    if !el.str(0).isEmpty {
+                        Text(el.str(0)).dsText(.callout15).fontWeight(.semibold)
+                            .foregroundStyle(DS.textPrimary)
+                    }
+                    GeometryReader { geo in
+                        HStack(spacing: 2) {
+                            ForEach(Array(segs.enumerated()), id: \.offset) { i, s in
+                                RoundedRectangle(cornerRadius: 4, style: .continuous)
+                                    .fill(DS.tint.opacity(max(0.3, 1 - Double(i) * 0.28)))
+                                    .frame(width: max(4, (geo.size.width - CGFloat(segs.count - 1) * 2)
+                                                      * CGFloat(s.usd / total)))
+                            }
+                        }
+                    }
+                    .frame(height: 14)
+                    Text(segs.map { "\($0.label) \(Int(($0.usd / total * 100).rounded()))%" }
+                        .joined(separator: " · "))
+                        .dsText(.subhead13).foregroundStyle(DS.textTertiary).lineLimit(1)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(DS.Space.s4)
+                .dsWidgetSurface()
+                .padding(.horizontal, DS.Space.s4)
+                .padding(.top, DS.Space.s2)
+            }
+        }
     }
 }
 

@@ -4733,7 +4733,220 @@ this session is the Linux remote environment with no Xcode toolchain at all
 (no `xcodebuild`, no `xcrun`, no `swiftc`); build + `scripts/verify.sh` +
 the two probes above need to run on the Mac before this ships to TestFlight.
 
-## 145. The holdings treemap goes to 160 and wears the wash (user, 2026-07-21)
+## 145. The wallet answer shows what the wallets DID, not just what they hold (user, 2026-07-21)
+
+User, off a screenshot of the "How's my wallet?" answer: "it's all it says and
+it's really not that great. You would expect it to tell me about approvals or
+anything else that's in the wallet." The answer was the §132 shape — value
+line + holdings treemap — which reads as a balance check, not a wallet brief.
+
+Ruling: the shared `KeptAskComposers.walletDoc` (both the kept chip and the
+typed ask, per agent-brief ruling 13) now appends two corpus-backed sections
+under the treemap:
+
+- **Token approvals** — the newest 3 approval/Permit2 things the §84 pass
+  landed (`wallet:approval:`/`wallet:permit2:` refs). Each row opens the
+  thing sheet, which already carries the §112 prepare card and the
+  Revoke.cash door — so the answer surfaces the security read the user
+  expected without walletDoc re-reading any chain state.
+- **Latest activity** — the newest 4 other Wallet/Peer things (transfers,
+  swaps, Solana moves, Peer fills), the same rows the feed shows.
+
+Both are reads over things the wallet bridges already landed — no new
+network, still deterministic, still no model (ruling 1 intact). A section
+with nothing simply doesn't render. The unreachable-wallet branch now uses
+the same builder, so a failed live read still shows the local sections under
+the honest "Couldn't reach" line. `rows()` gained widget/row id parameters
+(defaults keep every single-widget caller byte-identical) so one doc can
+stack two widgets without id collisions.
+
+Files: `Model/KeptAskComposers.swift`, `Shell/RootShell.swift`. NOT yet
+verified on-sim — this session is the Linux web env with no xcodebuild;
+build + `-answerProbe "how's my wallet"` (with `-approvalProbe <blocksBack>`
+first to land an approval) to run on the Mac before the checkpoint.
+
+## 146. More generative UI in the composer answers — five chart types (user: "how can we add more generative UI to the composer? Charts and things like that", → "do all these", 2026-07-21)
+
+The agent's answers spoke almost entirely in `Insight` + `Widget`/`Row`, with
+`TokenChip` and the holdings `TagMap` the only real visuals. This pass adds
+five answer-column components, each drawing a REAL visualization the answer
+already had the data for (agent-brief ruling 13 — never invents one), all
+deterministic (no model in any composer, ruling 1 intact), and each gating
+itself out when the data is thin so a sparse corpus degrades to exactly the
+old shape. New views + renderer cases in `GenUI/GenRenderer.swift`; composers
+in `Model/KeptAskComposers.swift` (+ the shared free-text paths in
+`Shell/RootShell.swift`, so kept and typed answers never disagree).
+
+- **ValueSpark(eyebrow, subline, csv)** — the wallet balance sparkline over
+  recorded `WalletStore.ValueSample` history, reusing `TokenChartPlot` so the
+  value line wears the exact anatomy a token curve does. The delta pill is
+  computed first→last, the same math `WalletAsk.answer()`'s line uses. Inline
+  series (not a pointer like TokenChip) because samples are LOCAL facts already
+  read — the honest thing is to draw what was recorded. Fewer than two points
+  emits nothing (a dot isn't a trend).
+- **Bars(eyebrow, subline, counts, labels)** — per-day capture counts over the
+  last week, hand-drawn as capsules (no axis/grid — the hairline law holds on
+  charts). Wired into the per-source and per-category recaps ("What's new in
+  GitHub?"); dropped under four items (a two-item week is a list, not a chart).
+- **ChartCard(symbol, chain, address)** — a single token's FULL scrubbable
+  curve, reusing `TokenChartView` (its press-then-drag scrub already coexists
+  with a scroll view). The watchlist ask emits it when exactly one mover is
+  shown; two or more keep the compact TokenChip list.
+- **StatRow(v0,l0,v1,l1,v2,l2)** — up to three glanceable number tiles, neutral
+  ink (a bare count has no up/down direction to color, honesty §83). The wallet
+  answer leads with **Approvals / This week / Tokens** — the approvals count is
+  what the user asked to see, at a glance above the detail rows.
+- **AllocBar(eyebrow, "label|usd,…")** — how the total splits across watched
+  wallets, one segmented bar, monochrome by the one-tint law (DS.tint stepped
+  down in opacity, never a rainbow). Only meaningful with two+ wallets.
+
+Also wired the EXISTING shaped rows into answers (they rendered at top level
+but weren't dispatched as Widget children): `GenWidget.rowContent` now also
+handles **TxRow** (a wallet transfer draws its asset mark + direction + amount,
+from `transferDirection`/`transferAmount`/`transferCounterparty`) and
+**AgendaRow** (an overdue task draws on the time rail, most-overdue leading).
+`ApprovalCard` was deliberately NOT used for the wallet approvals section — its
+Approve/Deny pills would be dead controls (honesty: Casberi never signs), so
+approvals keep the plain Row whose sheet carries the real prepare card.
+
+The enriched wallet answer, top to bottom when rich: line → balance sparkline →
+Approvals/This week/Tokens strip → holdings treemap → per-wallet split → token
+approvals → latest activity (transfers as TxRows). An unreachable live read
+still shows every LOCAL section under the honest "Couldn't reach" line.
+
+Files: `GenUI/GenRenderer.swift` (five views + cases, two rowContent cases),
+`Model/KeptAskComposers.swift`, `Shell/RootShell.swift`. catalog-sync
+unaffected (no catalog changes). NOT yet verified on-sim — this session is the
+Linux web env with no xcodebuild; build + `-answerProbe`/`-uiAnswerProbe` over
+"how's my wallet", "how's my watchlist", "what's new in <source>" and an
+overdue corpus to run on the Mac before the checkpoint.
+
+## 147. Day-cards: a day's rows share one card (user: "would look better if … items in a day are all on one card" → "do it all", 2026-07-21)
+
+The feed's rows each wore their own floating card (surfaceSheet fill + the
+ambient card shadow, s2 gaps), so a busy day read as a confetti of same-sized
+shadowed rectangles and the day structure lived only in the s6 gap above each
+header. Ruled: rows within a day now MERGE into one card — the day becomes the
+object the eye reads, the way §61's section lift already renders the ~16
+setup/import screens ("gapless same-color rows, only the section's silhouette
+casts"). This supersedes the 2026-07-13 gap-only clustering note ("without
+merging cards") — the header gap stays; the card now agrees with it.
+
+Mechanics (`Screens/FeedScreen.swift`):
+
+- **RunPosition** (only/first/middle/last) computed per section by
+  `cardRunPositions` — index-based, so All's FeedRow bundles and plain Thing
+  arrays share one derivation. `dayCardBackground` renders it: first/last rows
+  carry `UnevenRoundedRectangle` shoulders at the card radius plus the s1
+  breathing edge; middle rows run square and gapless so per-row shadows vanish
+  on the neighbouring same-color fill (§61's measured mechanic, now on the
+  plain list). Content insets unchanged — the rhythm inside the card equals
+  the old between-card rhythm.
+- **Rhythm-breakers stay free-standing** (`standsAlone`): the approval consent
+  card (the one rhythm-breaker everywhere, unchanged ruling), the social
+  PostCard (media at width — cards-in-cards would violate §8, so the social
+  room keeps individual cards entirely), the chat TakeawayCard, and the fat
+  TokenRow. A run breaks around them.
+- **The new-since seam splits the day card in two** — the divider capsule
+  renders between two closed card edges, making "since you left" a physical
+  seam, not just a floating label.
+- Applied everywhere rows render: daySection (all shaped rooms + Doing/Done/
+  Needs you/Waiting on you), All's bundledSections (bundle rows merge too),
+  the token watchlist's flat section (one run; pulsed tokens stand alone
+  anyway), and Reminders' To do section — where the "Older" collapsed toggle
+  (previously a flat full-bleed band) now closes the card as its last row,
+  and expanding it continues the same surface.
+
+NOT yet verified on-sim — this session is the Linux web env with no
+xcodebuild; build + a screen sweep (All with bundles + a breaker, a social
+room, Reminders with stale todos, a day split by the new-since divider, light
+and dark) to run on the Mac before the checkpoint.
+
+## 148. Source feeds diverge by their source's nature — grain, "new", the pile, liveness (user: "what else would you do to improve source feeds? ... think how they differ" → "do all these", 2026-07-21)
+
+Day-cards (§147) quietly assumed every source shares one rhythm. They don't —
+a source feed should read the way that source actually behaves. Four axes,
+each a self-contained change in `Screens/FeedScreen.swift` (+ `ShapedRows.swift`
+for one lede). No schema, no ingest, no catalog changes.
+
+1. **Cadence → adaptive grain.** A day is the right cluster for dense feeds,
+   but a sparse source (one Safari save a day, a wallet approval a week) became
+   a ladder of one-row day cards under big headers — §147's confetti, re-shaped
+   as headers. `chronoGroups` coarsens to "This week / Last week / <month>"
+   when the trailing history averages under ~1.5 things a day over ≥6 days;
+   above that it's a no-op, so every chronological source (`gmail`, `agent`,
+   `safari`, `bitrefill`, `oneclaw`, the plain default, and the sparse tail of
+   `social`/`notes`/`chat`) routes through it safely. Music instead uses
+   `sessionGroups` — plays <45 min apart are one sitting ("This morning",
+   "Yesterday evening"), music's real unit; a colliding label gets its start
+   clock appended so the section ForEach ids stay unique.
+
+2. **What "new" means.** The new-since seam was a bare "New since Friday". Now
+   it names what's new: a count for most feeds ("New since Friday · 4"), and
+   for Wallet — whose rows are SCANNED, not read — the FLOW instead ("2 in, 1
+   out since Friday"), the question a wallet answers. Counts run over the frozen
+   `visible`; the divider renders once, so it reads it a single time.
+   DEFERRED: Calendar "changed since you looked" — an event that MOVED is
+   currently invisible, the one real honesty gap here, but surfacing it needs
+   per-event previous-start state (Thing tracks neither an ingest timestamp nor
+   a prior value), i.e. a schema field + ingest diff. Not shipped as an untested
+   change to a core sync from the Linux web env; it's a new-field-plus-backfill
+   job for a session that can build and measure it.
+
+3. **Read-in-place vs hand-off.** A post/note is consumed in the feed; a Safari
+   save is a DOOR, and doors pile up. The `.safari` shape earns a `ReadingLede`
+   — "12 saved this month · 41 older" and the oldest one still waiting — naming
+   the pile instead of pretending the rows are read. Honesty: it says "still
+   here", never "unopened" (Thing tracks no read state), and it's facts, not a
+   count-shaming streak (§10). It yields to an auto hero so no shape stacks two
+   overviews.
+
+4. **Liveness.** The Live dot rode rows wherever they fell chronologically, but
+   a Twitch stream on RIGHT NOW is the one row whose relevance isn't time.
+   `liveFirst` floats live rows to the top of the newest group in the source's
+   own room — scoped to Twitch (the one source with a live set) and the first
+   group only, a no-op everywhere else.
+
+Recorded rulings so a later "unify" pass doesn't flatten the divergence: the
+grain, seam, pile, and live-first behaviours differ ON PURPOSE, each for its
+source's nature. NOT verified on-sim — this session is the Linux web env with
+no xcodebuild. Mac before the checkpoint: a sparse source (week/month headers),
+Music (session headers, two sittings in one morning splitting), Safari (the
+reading lede + oldest line), a Wallet feed with a mixed in/out seam, a Twitch
+feed with a live stream leading, and a dense feed (unchanged day grain) — light
+and dark.
+
+## 149. One ask per subject — the signature chip takes the context slot (user: "redundancy in the composer, we can't have that", 2026-07-21)
+
+Standing on the Wallet feed, the composer offered "What's new in Wallet?"
+(the §context recap lead, 2026-07-12) AND "How's my wallet?" (the dedicated
+wallet chip, 2026-07-15) in the same grid — two wallet asks, plus the
+organize hint also naming Wallet. Same latent collision on Tokens
+("What's new in Tokens?" + "How's my watchlist?").
+
+Ruling: one ask per subject. When the context source has its own signature
+ask, that ask takes the context lead slot and the generic recap sits out —
+the recap of the feed you're literally standing on is the weaker ask (the
+feed behind the sheet already shows what's new; the signature chip reads
+what the feed can't — live holdings, live prices). The signature chips'
+unconditional appends later in `computeSuggestions` now skip themselves
+when their kind already led (`Shell/Composer.swift`). The category sibling
+("How's my Markets stuff?") still rides the context source unchanged — it
+was already gated on being meaningfully broader (§143-era comment), which
+is this same ruling applied one level up. The organize hint keeps its slot:
+"Tag your 131 Wallet things" is an action invite, not an ask — different
+verb, not a duplicate.
+
+Mapping today: Wallet → "How's my wallet?" (still gated on a watched
+address existing, else the recap falls back honestly), Tokens → "How's my
+watchlist?". A future per-source signature ask joins the same switch.
+
+Verified on-sim headlessly: `-landingChip Wallet` then `-openComposer YES`
+logs `askTiles: hint:Wallet wallet,…` (no `context:Wallet`); `-landingChip
+Reminders` still logs `context:Reminders,category:Life,…` (recap + sibling
+intact for sources without a signature ask).
+
+## 150. The holdings treemap goes to 160 and wears the wash (user, 2026-07-21)
 
 The user, on the Wallet feed's holdings map: "the tree map doesn't even have
 to be as large as it is … why does it need to be so large, or does it?" It
@@ -4785,7 +4998,7 @@ Files: `GenUI/GenRenderer.swift` (GenTagMap + KindCountRow.parse),
 an eyeball of the wash opacities on-device need to happen on the Mac before
 this ships.
 
-## 146. The balance takes the headline; Worth a look drops to a line (user, 2026-07-21)
+## 151. The balance takes the headline; Worth a look drops to a line (user, 2026-07-21)
 
 Second pass on the Wallet feed, after the treemap settled (§145). From a
 three-way mockup (prototype/wallet-feed-directions-v3.html), the user: "i like

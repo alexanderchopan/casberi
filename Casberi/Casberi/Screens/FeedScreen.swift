@@ -225,6 +225,115 @@ struct FeedScreen: View {
         return order.map { ($0, groups[$0] ?? []) }
     }
 
+    /// Day groups, but COARSENED to week/month grain when the source lands
+    /// sparsely (ruling 2026-07-21, the day-cards sequel): a source that
+    /// drops one thing most days would otherwise become a ladder of one-row
+    /// day cards under big headers — exactly the confetti day-cards killed,
+    /// re-expressed as headers. When the trailing history averages under
+    /// ~1.5 things a day (and there's enough of it to judge), the same rows
+    /// regroup as "This week / Last week / <month>" instead. A dense feed
+    /// (social bursts, an RSS sync) stays day-grained untouched — this is a
+    /// no-op above the threshold, so every chronological source can route
+    /// through it safely.
+    private func chronoGroups(_ visible: [Thing]) -> [(String, [Thing])] {
+        coarsenIfSparse(dayGroups(visible))
+    }
+
+    /// The sparseness gate + regroup, shared by the plain day path and the
+    /// agent path (which builds its own day groups first). Judged on the
+    /// SHOWN things (dayGroups already dropped future-dated rows), so the
+    /// average matches what the feed actually renders.
+    private func coarsenIfSparse(_ days: [(String, [Thing])]) -> [(String, [Thing])] {
+        let shown = days.flatMap { $0.1 }
+        guard days.count >= 6,
+              Double(shown.count) / Double(days.count) < 1.5 else { return days }
+        return coarseGroups(shown)
+    }
+
+    /// Regroup already-ordered (newest-first) things by week, then month —
+    /// "This week", "Last week", then month names for the tail (a week grain
+    /// that ran all the way down would ladder into "3 weeks ago, 4 weeks
+    /// ago"; months are how sparse history actually reads back).
+    private func coarseGroups(_ things: [Thing]) -> [(String, [Thing])] {
+        var order: [String] = []
+        var groups: [String: [Thing]] = [:]
+        for t in things {
+            let label = coarseLabel(t.capturedAt)
+            if groups[label] == nil { order.append(label) }
+            groups[label, default: []].append(t)
+        }
+        return order.map { ($0, groups[$0] ?? []) }
+    }
+
+    private func coarseLabel(_ date: Date) -> String {
+        let cal = Self.groupingCalendar
+        if cal.isDate(date, equalTo: .now, toGranularity: .weekOfYear) {
+            return String(localized: "This week")
+        }
+        if let lastWeek = cal.date(byAdding: .weekOfYear, value: -1, to: .now),
+           cal.isDate(date, equalTo: lastWeek, toGranularity: .weekOfYear) {
+            return String(localized: "Last week")
+        }
+        if cal.isDate(date, equalTo: .now, toGranularity: .year) {
+            return date.formatted(.dateTime.month(.wide))
+        }
+        return date.formatted(.dateTime.month(.wide).year())
+    }
+
+    /// Music lands in SITTINGS, not calendar days (ruling 2026-07-21) — the
+    /// day header answers "when" but the real unit of listening is the
+    /// session. Consecutive plays less than 45 min apart cluster into one
+    /// group, labelled by its start ("This morning", "Yesterday evening",
+    /// "Mon evening"). A single session that straddles the whole day still
+    /// reads as one card; two listens hours apart split honestly.
+    private func sessionGroups(_ visible: [Thing]) -> [(String, [Thing])] {
+        let sorted = visible.sorted { $0.capturedAt > $1.capturedAt }
+        guard let first = sorted.first else { return [] }
+        let gap: TimeInterval = 45 * 60
+        var sessions: [[Thing]] = []
+        var current: [Thing] = [first]
+        for t in sorted.dropFirst() {
+            if let last = current.last,
+               last.capturedAt.timeIntervalSince(t.capturedAt) <= gap {
+                current.append(t)
+            } else {
+                sessions.append(current)
+                current = [t]
+            }
+        }
+        sessions.append(current)
+        let labelled = sessions.map { (sessionLabel($0.first!.capturedAt), $0) }
+        // groupedSections keys its ForEach on the label, so two sittings that
+        // share one ("this morning" twice, >45 min apart) would collide into
+        // one SwiftUI id. Append the start clock ONLY to a colliding label, so
+        // the common single-session case stays clean.
+        var counts: [String: Int] = [:]
+        for (label, _) in labelled { counts[label, default: 0] += 1 }
+        return labelled.map { label, rows in
+            guard (counts[label] ?? 0) > 1 else { return (label, rows) }
+            let time = rows.first!.capturedAt.formatted(date: .omitted, time: .shortened)
+            return ("\(label) · \(time)", rows)
+        }
+    }
+
+    private func sessionLabel(_ date: Date) -> String {
+        let cal = Self.groupingCalendar
+        let part: String
+        switch cal.component(.hour, from: date) {
+        case 5..<12:  part = String(localized: "morning")
+        case 12..<17: part = String(localized: "afternoon")
+        case 17..<22: part = String(localized: "evening")
+        default:      part = String(localized: "late night")
+        }
+        if cal.isDateInToday(date) {
+            return String(localized: "This \(part)")
+        }
+        if cal.isDateInYesterday(date) {
+            return String(localized: "Yesterday \(part)")
+        }
+        return "\(date.formatted(.dateTime.weekday(.abbreviated))) \(part)"
+    }
+
     // MARK: - Bundling (ruling 2026-07-09: volume compresses, never reorders)
 
     /// A feed row in the All shape: a thing, or one row standing in for a
@@ -737,29 +846,39 @@ struct FeedScreen: View {
             groupedSections(agendaGroups(visible), nextEventID: nextEventID)
         case .gmail:
             if !heroShown { waitingSection(visible, nextEventID: nextEventID) }
-            let days = dayGroups(visible)
+            let days = chronoGroups(visible)
             groupedSections(days, nextEventID: nextEventID, boundary: boundaryThingID(in: days))
         case .reminders:
             reminderSections(visible, nextEventID: nextEventID)
         case .agent:
             let approvals = pendingApprovals(visible)
             needsYouSection(approvals, nextEventID: nextEventID)
-            let days = agentDayGroups(visible, excluding: approvals)
+            let days = coarsenIfSparse(agentDayGroups(visible, excluding: approvals))
             groupedSections(days, nextEventID: nextEventID, boundary: boundaryThingID(in: days))
         case .music:
             if !heroShown { listeningLedeSection(visible) }
-            let days = dayGroups(visible)
+            // Sessions, not days (2026-07-21) — a listening sitting is music's
+            // real unit; boundary rides the same capturedAt-keyed helper.
+            let days = sessionGroups(visible)
             groupedSections(days, nextEventID: nextEventID, boundary: boundaryThingID(in: days))
         case .tokens:
             watchlistLedeSection(visible)
             watchlistSection(visible, nextEventID: nextEventID)
+        case .safari:
+            // A reading list is doors, not reads (2026-07-21) — its lede owns
+            // the return-trip guilt: how much is piling up, and the oldest
+            // thing still waiting. Rows below stay chronological (coarsened
+            // when saves are sparse, like any door source).
+            if !heroShown { readingLedeSection(visible) }
+            let days = chronoGroups(visible)
+            groupedSections(days, nextEventID: nextEventID, boundary: boundaryThingID(in: days))
         case .bitrefill:
             bitrefillLedeSection(visible)
-            let days = dayGroups(visible)
+            let days = chronoGroups(visible)
             groupedSections(days, nextEventID: nextEventID, boundary: boundaryThingID(in: days))
         case .oneclaw:
             oneclawLedeSection(visible)
-            let days = dayGroups(visible)
+            let days = chronoGroups(visible)
             groupedSections(days, nextEventID: nextEventID, boundary: boundaryThingID(in: days))
         default:
             if filter.tag != "All" && shape == .all {
@@ -775,7 +894,11 @@ struct FeedScreen: View {
                 // bundling there would collapse the whole screen into one row.
                 bundledSections(visible, nextEventID: nextEventID)
             } else {
-                let days = dayGroups(visible)
+                // Live-first in a source's own room (2026-07-21): a stream
+                // that's on RIGHT NOW is the one row whose relevance isn't
+                // chronological, so it leads its group. No-op for sources
+                // with no live set.
+                let days = liveFirst(chronoGroups(visible))
                 groupedSections(days, nextEventID: nextEventID, boundary: boundaryThingID(in: days))
             }
         }
@@ -861,9 +984,14 @@ struct FeedScreen: View {
         let ordered = TokenWatchOrder.shared.apply(
             visible, sourceRef: \.sourceRef,
             change24h: { TokenPulse.shared.pulse(for: $0)?.change24h })
+        // One flat run: pulsed tokens wear the fat TokenRow and stand alone
+        // (standsAlone), so merging only ever joins the still-unpulsed rows.
+        let positions = cardRunPositions(count: ordered.count,
+                                         isBreaker: { standsAlone(ordered[$0]) })
         Section {
             ForEach(Array(ordered.enumerated()), id: \.element.id) { i, thing in
-                shapedListRow(thing, index: i, nextEventID: nextEventID)
+                shapedListRow(thing, index: i, nextEventID: nextEventID,
+                              position: positions[i])
             }
         }
     }
@@ -900,15 +1028,25 @@ struct FeedScreen: View {
         let dayTotals = Dictionary(days.map { ($0.0, $0.1.count) },
                                    uniquingKeysWith: { first, _ in first })
         return ForEach(groups, id: \.0) { label, rows in
+            // Bundles merge into the day card like any row-shaped thing —
+            // only a single that stands alone (consent, token) breaks the run.
+            let positions = cardRunPositions(
+                count: rows.count,
+                isBreaker: { i in
+                    if case .single(let thing) = rows[i] { return standsAlone(thing) }
+                    return false
+                },
+                isBoundary: { rows[$0].id == boundary })
             Section {
                 ForEach(Array(rows.enumerated()), id: \.element.id) { i, row in
                     if row.id == boundary { newSinceDivider }
                     switch row {
                     case .single(let thing):
-                        shapedListRow(thing, index: i, nextEventID: nextEventID)
+                        shapedListRow(thing, index: i, nextEventID: nextEventID,
+                                      position: positions[i])
                     case .bundle(let source, let word, let count, let newest):
                         bundleListRow(source: source, word: word, count: count,
-                                      newest: newest, index: i)
+                                      newest: newest, index: i, position: positions[i])
                     }
                 }
             } header: {
@@ -932,7 +1070,7 @@ struct FeedScreen: View {
     private var newSinceDivider: some View {
         // A quiet capsule, not tint-colored prose (which reads as a tappable
         // link). The fill gives the boundary its line without drawing one.
-        Text("New since \(sinceLabel)")
+        Text(newSinceText)
             .dsText(.label12)
             .foregroundStyle(DS.textSecondary)
             .padding(.horizontal, DS.Space.s3)
@@ -942,6 +1080,31 @@ struct FeedScreen: View {
             .padding(.vertical, DS.Space.s1)
             .listRowBackground(Color.clear)
             .listRowSeparator(.hidden)
+    }
+
+    /// The seam's words (2026-07-21): "what's new" differs by source, so the
+    /// divider names it concretely instead of a bare "New since Friday". Most
+    /// feeds get a count ("New since Friday · 4"); a Wallet feed — whose rows
+    /// are SCANNED, not read — names the flow instead ("2 in, 1 out since
+    /// Friday"), the question a wallet actually answers. Counts run over the
+    /// frozen `visible` (things newer than the last-visit stamp); the divider
+    /// renders once per boundary, so this reads `visible` a single time.
+    private var newSinceText: String {
+        guard let newSince else { return "" }
+        let fresh = visible.filter { $0.capturedAt > newSince }
+        if shape == .wallet {
+            let inN = fresh.filter { $0.transferDirection == "received" }.count
+            let outN = fresh.filter { $0.transferDirection == "sent" }.count
+            if inN > 0 || outN > 0 {
+                var parts: [String] = []
+                if inN > 0 { parts.append(String(localized: "\(inN) in")) }
+                if outN > 0 { parts.append(String(localized: "\(outN) out")) }
+                return String(localized: "\(parts.joined(separator: ", ")) since \(sinceLabel)")
+            }
+        }
+        return fresh.isEmpty
+            ? String(localized: "New since \(sinceLabel)")
+            : String(localized: "New since \(sinceLabel) · \(fresh.count)")
     }
 
     private var sinceLabel: String {
@@ -1003,7 +1166,8 @@ struct FeedScreen: View {
     /// opens the source's own shape (where volume is designed to live) —
     /// no swipes, nothing here is a single thing to pin or open.
     private func bundleListRow(source: String, word: String, count: Int,
-                               newest: Date, index: Int) -> some View {
+                               newest: Date, index: Int,
+                               position: RunPosition = .only) -> some View {
         BundleRow(source: source, count: count, word: word, newest: newest)
             .modifier(RowEntrance(index: index, wave: shapeWave, style: entranceStyle))
             .contentShape(Rectangle())
@@ -1011,13 +1175,7 @@ struct FeedScreen: View {
                 DSHaptic.selection()
                 withAnimation(DS.Motion.standard) { filter.source = source }
             }
-            .listRowBackground(
-                RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous)
-                    .fill(DS.surfaceSheet)
-                    .padding(.horizontal, DS.Space.s4)
-                    .padding(.vertical, DS.Space.s1)
-                    .shadow(color: DS.cardShadow, radius: 18, x: 0, y: 6)
-            )
+            .listRowBackground(dayCardBackground(position))
             // Feed rhythm (2026-07-13): back to s2 — the s3 airy read made
             // every gap the same size, so days never clustered. Rows sit
             // tight within their day; the day header carries the big gap.
@@ -1468,6 +1626,43 @@ struct FeedScreen: View {
             && thing.sourceRef.map { TwitchIngest.liveRefs.contains($0) } ?? false
     }
 
+    /// Float any live rows to the top of the NEWEST group (2026-07-21) — a
+    /// stream on right now isn't a chronological row. Scoped to Twitch (the
+    /// one source with a live set) and to the first group only, so history
+    /// below stays in time order. A no-op everywhere else.
+    private func liveFirst(_ groups: [(String, [Thing])]) -> [(String, [Thing])] {
+        guard source == "Twitch", let first = groups.first,
+              first.1.contains(where: isLive) else { return groups }
+        let rows = first.1
+        var out = groups
+        out[0] = (first.0, rows.filter(isLive) + rows.filter { !isLive($0) })
+        return out
+    }
+
+    /// The reading list's lede (2026-07-21) — a saved link is a DOOR, not a
+    /// read, so the shape names the pile instead of pretending the rows are
+    /// consumed: how many landed this month, how many are older, and the
+    /// oldest one still waiting (a gentle "come back to this", never a
+    /// count-shaming streak — §10). Facts only, and no "unopened" claim the
+    /// model can't back (Thing tracks no read state) — "still here" is what's
+    /// true. Yields to an auto hero so a shape never stacks two overviews.
+    @ViewBuilder
+    private func readingLedeSection(_ visible: [Thing]) -> some View {
+        let cal = Self.groupingCalendar
+        let thisMonth = visible.filter {
+            cal.isDate($0.capturedAt, equalTo: .now, toGranularity: .month)
+        }.count
+        let older = visible.count - thisMonth
+        // Oldest still on the list, shown only once it's genuinely aged (30d+)
+        // — a fresh list has no pile to nudge about.
+        let monthAgo = Date.now.addingTimeInterval(-30 * 86_400)
+        let oldest = visible.filter { $0.capturedAt < monthAgo }
+            .min { $0.capturedAt < $1.capturedAt }
+        if visible.count >= 3 {
+            ledeSection(ReadingLede(thisMonth: thisMonth, older: older, oldest: oldest))
+        }
+    }
+
     /// Gmail: what's waiting on you, capped at two (mock G1). Doing-marked
     /// only (honesty fix 2026-07-13): the old `content.contains("?")` sniff
     /// promoted any newsletter with a question mark to "waiting on you" —
@@ -1500,11 +1695,23 @@ struct FeedScreen: View {
         }
         if !doing.isEmpty { daySection("Doing", doing, nextEventID: nextEventID) }
         if !fresh.isEmpty || !stale.isEmpty {
+            // One To do card (2026-07-21): the Older toggle — or the stale
+            // rows it expands into — continues the fresh rows' surface
+            // instead of sitting under it as a flat band.
+            let hasToggle = !stale.isEmpty && !staleExpanded
+            let slots = fresh.count + (staleExpanded ? stale.count : 0) + (hasToggle ? 1 : 0)
+            let positions = cardRunPositions(count: slots)
             Section {
-                ForEach(Array(fresh.enumerated()), id: \.element.id) { i, thing in shapedListRow(thing, index: i, nextEventID: nextEventID) }
+                ForEach(Array(fresh.enumerated()), id: \.element.id) { i, thing in
+                    shapedListRow(thing, index: i, nextEventID: nextEventID,
+                                  position: positions[i])
+                }
                 if !stale.isEmpty {
                     if staleExpanded {
-                        ForEach(Array(stale.enumerated()), id: \.element.id) { i, thing in shapedListRow(thing, index: i, nextEventID: nextEventID) }
+                        ForEach(Array(stale.enumerated()), id: \.element.id) { i, thing in
+                            shapedListRow(thing, index: i, nextEventID: nextEventID,
+                                          position: positions[fresh.count + i])
+                        }
                     } else {
                         HStack {
                             Text("Older").dsText(.body17).foregroundStyle(DS.textSecondary)
@@ -1514,9 +1721,14 @@ struct FeedScreen: View {
                                 .font(.system(size: 12, weight: .semibold))
                                 .foregroundStyle(DS.textTertiary)
                         }
+                        .padding(.vertical, DS.Space.s1)
                         .contentShape(Rectangle())
                         .onTapGesture { withAnimation(DS.Motion.standard) { staleExpanded = true } }
-                        .listRowBackground(DS.surfaceSheet)
+                        .listRowBackground(dayCardBackground(positions[slots - 1]))
+                        .listRowInsets(.init(top: DS.Space.s2,
+                                             leading: DS.Space.s4 + DS.Space.s3,
+                                             bottom: DS.Space.s2,
+                                             trailing: DS.Space.s4 + DS.Space.s3))
                         .listRowSeparator(.hidden)
                     }
                 }
@@ -1565,8 +1777,69 @@ struct FeedScreen: View {
         }
     }
 
+    /// Where a row sits in its day's shared card (ruling 2026-07-21,
+    /// superseding 2026-07-13's gap-only clustering): a contiguous run of
+    /// row-shaped things within a day merges into ONE card — the §61
+    /// section-lift mechanic brought to the plain list — while the
+    /// rhythm-breakers (`standsAlone`) keep free-standing cards between
+    /// runs, and the new-since seam splits a day's card in two.
+    private enum RunPosition { case only, first, middle, last }
+
+    /// Positions for a section's rows, index-based so All's FeedRow bundles
+    /// and plain Thing arrays share one derivation. A run breaks at a
+    /// free-standing row on either side, and at the new-since boundary
+    /// (the divider renders BEFORE the boundary row, so the row above it
+    /// closes its run and the boundary row opens a fresh one).
+    private func cardRunPositions(count: Int,
+                                  isBreaker: (Int) -> Bool = { _ in false },
+                                  isBoundary: (Int) -> Bool = { _ in false }) -> [RunPosition] {
+        (0..<count).map { i -> RunPosition in
+            let starts = i == 0 || isBreaker(i) || isBreaker(i - 1) || isBoundary(i)
+            let ends = i == count - 1 || isBreaker(i) || isBreaker(i + 1) || isBoundary(i + 1)
+            switch (starts, ends) {
+            case (true, true):   return .only
+            case (true, false):  return .first
+            case (false, true):  return .last
+            case (false, false): return .middle
+            }
+        }
+    }
+
+    /// The anatomies that earn a free-standing card — shapedRow's
+    /// rhythm-breakers. Everything else (band, check, excerpt, reading,
+    /// music) merges into its day's run.
+    private func standsAlone(_ thing: Thing) -> Bool {
+        if thing.kind == .approval && thing.mark != .done { return true }  // consent card
+        if shape == .social { return true }                                // PostCard, media at width
+        if shape == .chat && thing.mark == .doing { return true }          // TakeawayCard
+        if TokenPulse.shared.pulse(for: thing) != nil { return true }      // TokenRow fat anatomy
+        return false
+    }
+
+    /// The run-aware card surface: first/last rows carry the card's rounded
+    /// shoulders and the s1 breathing edge; middle rows run square and
+    /// GAPLESS, so a row's shadow falls on the adjacent same-color fill and
+    /// vanishes (§61's measured mechanic) — only the run's outer silhouette
+    /// casts, one lifted card instead of a stack of shadowed rows.
+    private func dayCardBackground(_ position: RunPosition) -> some View {
+        let r = DS.Radius.card
+        let top = position == .first || position == .only
+        let bottom = position == .last || position == .only
+        return UnevenRoundedRectangle(topLeadingRadius: top ? r : 0,
+                                      bottomLeadingRadius: bottom ? r : 0,
+                                      bottomTrailingRadius: bottom ? r : 0,
+                                      topTrailingRadius: top ? r : 0,
+                                      style: .continuous)
+            .fill(DS.surfaceSheet)
+            .padding(.horizontal, DS.Space.s4)
+            .padding(.top, top ? DS.Space.s1 : 0)
+            .padding(.bottom, bottom ? DS.Space.s1 : 0)
+            .shadow(color: DS.cardShadow, radius: 18, x: 0, y: 6)
+    }
+
     /// The row inside a list section, with the standard list plumbing attached.
-    private func shapedListRow(_ thing: Thing, index: Int = 0, nextEventID: UUID?) -> some View {
+    private func shapedListRow(_ thing: Thing, index: Int = 0, nextEventID: UUID?,
+                               position: RunPosition = .only) -> some View {
         // AnyView: same metadata-depth insurance as GenRender (crash fix).
         return AnyView(shapedRow(thing, nextEventID: nextEventID))
             .modifier(RowEntrance(index: index, wave: shapeWave, style: entranceStyle))
@@ -1576,13 +1849,7 @@ struct FeedScreen: View {
             // V3b (2026-07-07, supersedes the kind-color wash): rows are
             // NEUTRAL cards — the translucent kind wash read as murk. Color
             // moved into the tag text: the project's own stable hue.
-            .listRowBackground(
-                RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous)
-                    .fill(DS.surfaceSheet)
-                    .padding(.horizontal, DS.Space.s4)
-                    .padding(.vertical, DS.Space.s1)
-                    .shadow(color: DS.cardShadow, radius: 18, x: 0, y: 6)
-            )
+            .listRowBackground(dayCardBackground(position))
             // Feed rhythm (2026-07-13): back to s2 — the s3 airy read made
             // every gap the same size, so days never clustered. Rows sit
             // tight within their day; the day header carries the big gap.
@@ -1669,7 +1936,13 @@ struct FeedScreen: View {
         let wasMark = thing.mark
         thing.mark = nowDone ? .done : .todo
         modelContext.saveHonestly()
-        chrome.flash(nowDone ? "Done — tap again to undo" : "Back on the list", tone: .success)
+        // A thing with no real reminder behind it (demo seeds) marks locally
+        // only — the toast says so instead of imitating a real write.
+        let ekBacked = ScheduleIngest.isEKBacked(thing.sourceRef)
+        chrome.flash(nowDone
+            ? (ekBacked ? "Done — tap again to undo" : "Done here — not in your Reminders")
+            : (ekBacked ? "Back on the list" : "Back to to-do"),
+            tone: .success)
         let sourceRef = thing.sourceRef
         Task {
             let ok = await ScheduleIngest.setCompleted(sourceRef, nowDone)
@@ -1923,18 +2196,23 @@ struct FeedScreen: View {
         }
     }
 
-    /// A day group as a native section: rounded sheet card, native swipes
-    /// (To do / Doing), native scroll — no gesture fights.
+    /// A day group as a native section: the day's rows share ONE sheet card
+    /// (2026-07-21 — see RunPosition), rhythm-breakers stand free between
+    /// runs, native scroll — no gesture fights.
     @ViewBuilder
     private func daySection(_ label: String, _ rows: [Thing],
                             nextEventID: UUID?,
                             boundary: UUID? = nil) -> some View {
+        let positions = cardRunPositions(count: rows.count,
+                                         isBreaker: { standsAlone(rows[$0]) },
+                                         isBoundary: { rows[$0].id == boundary })
         Section {
             // Rows dispatch by shape (shaped feeds); the swipe stays triage —
             // reads only, writes live in the sheet (ruling), Copy sheet-only.
             ForEach(Array(rows.enumerated()), id: \.element.id) { i, thing in
                 if thing.id == boundary { newSinceDivider }
-                shapedListRow(thing, index: i, nextEventID: nextEventID)
+                shapedListRow(thing, index: i, nextEventID: nextEventID,
+                              position: positions[i])
             }
         } header: {
             HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
@@ -1947,9 +2225,10 @@ struct FeedScreen: View {
             }
             .textCase(nil)
             .padding(.leading, DS.Space.s4)
-            // Days read as clusters (2026-07-13): the gap ABOVE a day header
-            // is the feed's biggest — rows within a day sit at s2, so the s6
-            // says "new day" without merging cards or drawing a line.
+            // Days read as clusters: the gap ABOVE a day header is the
+            // feed's biggest (2026-07-13), and since 2026-07-21 the day's
+            // rows also share one card — the header's s6 plus the card's own
+            // silhouette say "new day" without drawing a line.
             .padding(.top, DS.Space.s6)
             .padding(.bottom, DS.Space.s1)
         }
@@ -2022,8 +2301,22 @@ struct FeedScreen: View {
             UIPasteboard.general.string = thing.content.isEmpty ? thing.title : thing.content
             chrome.flash("Copied")
         case .markDone:
+            // Write through to the real reminder like the check circle does
+            // (no-op for things that aren't EK-backed), reverting on failure
+            // — this verb used to mark locally only.
+            let wasMark = thing.mark
             thing.mark = .done
             modelContext.saveHonestly()
+            let sourceRef = thing.sourceRef
+            Task {
+                let ok = await ScheduleIngest.setCompleted(sourceRef, true)
+                guard !ok else { return }
+                await MainActor.run {
+                    thing.mark = wasMark
+                    modelContext.saveHonestly()
+                    chrome.flash("Couldn't reach Reminders — not marked", tone: .failure)
+                }
+            }
         case .translate:
             translateText = thing.postText ?? thing.content
             showTranslate = true
