@@ -36,6 +36,10 @@ struct WalletScreen: View {
     /// (the combined line, then each wallet's own line in its face's color).
     @State private var result: String?
     @State private var resultIsError = false
+    /// True when a non-error result still needs the person's eyes (the
+    /// typo'd-address nudge). Everything else whispers in Watching's header
+    /// — fine is silent (redesign 2026-07-20).
+    @State private var resultProminent = false
     /// The in-flight WalletConnect handshake — proposed, wallet opened, waiting
     /// on a human to approve over there (2026-07-16). Held as the Task rather
     /// than a Bool so a second tap can CANCEL it: the wait runs to the
@@ -66,6 +70,8 @@ struct WalletScreen: View {
     /// default to a one-line summary ("Ethereum, Base +3"); a set-once
     /// setting doesn't deserve six full-height rows every visit.
     @State private var chainsExpanded = false
+    @State private var confirmDisconnect = false
+    @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var scheme
     @Environment(\.openURL) private var openURL
     /// The one swipe lesson, shared across every screen that pins by swipe
@@ -83,6 +89,7 @@ struct WalletScreen: View {
             // views and activity follow, admin (add / chains) at the bottom.
             if wallet.addresses.isEmpty {
                 addSection.listRowSeparator(.hidden)
+                footerSection.listRowSeparator(.hidden)
                 // The empty state reports too (2026-07-16). This section used
                 // to exist only in the connected branch below, so with nothing
                 // watched yet every outcome was set and then silently dropped
@@ -102,17 +109,14 @@ struct WalletScreen: View {
                 // and disconnecting — a connection screen, like every other
                 // bridge's.
                 watchingSection.listRowSeparator(.hidden)
-                // Admin cluster: add another wallet, narrow the chains —
-                // the settings, not the point.
+                // Three cards, one idiom (user, 2026-07-20: "it looks like a
+                // bunch of stuff mashed together") — watching, add, admin.
+                // Status WHISPERS in Watching's header when all is well and
+                // becomes a row only for errors and the typo'd-address nudge.
                 addSection.listRowSeparator(.hidden)
-                chainsSection.listRowSeparator(.hidden)
+                adminSection.listRowSeparator(.hidden)
                 statusSection
-                BridgeDisconnectSection(
-                    bridgeID: "wallet", name: "Wallet",
-                    teardown: { WalletStore.shared.addresses = [] }
-                ).listRowSeparator(.hidden)
             }
-            footerSection.listRowSeparator(.hidden)
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
@@ -204,10 +208,13 @@ struct WalletScreen: View {
             let nothingFound = added == 0 && totals.allSatisfy { $0.totalUSD < 1 }
             if added > 0 {
                 result = String(localized: "\(added) new")
+                resultProminent = false
             } else if nothingFound && wallet.addresses.count == 1 {
                 result = String(localized: "No activity found on your chains yet — double-check the address, or give it a moment.")
+                resultProminent = true
             } else {
                 result = String(localized: "Connected — watching for activity.")
+                resultProminent = false
             }
             let proof = added > 0 ? "\(added) new" : "Synced just now"
             if store.registerConnected(id: "wallet", name: "Wallet", proof: proof,
@@ -291,10 +298,18 @@ struct WalletScreen: View {
             .onDelete { wallet.remove(at: $0) }
             .onMove { wallet.move(from: $0, to: $1) }
         } header: {
-            Text("Watching").dsText(.label12)
-                .foregroundStyle(DS.textSecondary)
+            HStack(alignment: .firstTextBaseline) {
+                Text("Watching").dsText(.label12)
+                    .foregroundStyle(DS.textSecondary)
+                Spacer(minLength: 0)
+                // Sync state at whisper weight — the same voice the feed's
+                // source pill uses. Trouble gets a real row (statusSection);
+                // fine gets four quiet letters here.
+                Text(quietStatus).dsText(.label12)
+                    .foregroundStyle(DS.textTertiary)
+            }
         } footer: {
-            Text("Tap a wallet to rename it, swipe to remove it. Its holdings and activity ride the feed.")
+            Text("Tap to rename · swipe to remove")
                 .dsText(.callout15).foregroundStyle(DS.textSecondary)
         }
     }
@@ -307,7 +322,13 @@ struct WalletScreen: View {
     /// into the GeckoTerminal/OpenSea checklist idiom. Default all-on;
     /// toggling narrows the reads and re-syncs. Never lets the last chain
     /// off (the store guards it).
-    private var chainsSection: some View {
+    /// The plumbing card (redesign 2026-07-20): Chains and Disconnect share
+    /// one surface at the bottom — settings, not the point — under the one
+    /// footer that states the read-only promise. Disconnect keeps
+    /// `BridgeDisconnectSection`'s exact keep-or-purge dialog; the shared
+    /// component couldn't merge into this card (a Section is a card in
+    /// insetGrouped), so the wallet carries its own copy of the same verbs.
+    private var adminSection: some View {
         Section {
             Button {
                 DSHaptic.tap()
@@ -347,15 +368,47 @@ struct WalletScreen: View {
                     .dsListCardRow()
                 }
             }
-        } header: {
-            Text("Chains").dsText(.label12)
-                .foregroundStyle(DS.textSecondary)
+            Button(role: .destructive) { confirmDisconnect = true } label: {
+                Text("Disconnect Wallet")
+                    .dsText(.body17)
+                    .frame(maxWidth: .infinity, alignment: .center)
+            }
+            .dsListCardRow()
+            .confirmationDialog("Disconnect Wallet?", isPresented: $confirmDisconnect,
+                                titleVisibility: .visible) {
+                Button("Keep its things") { disconnectWallet(purge: false) }
+                Button("Remove its things too", role: .destructive) { disconnectWallet(purge: true) }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("Stops new Wallet things from landing. What already landed stays yours unless you remove it.")
+            }
         } footer: {
-            if chainsExpanded {
-                Text("Read each watched wallet across these chains only — turn off the ones you don't use.")
-                    .dsText(.callout15).foregroundStyle(DS.textSecondary)
+            VStack(alignment: .leading, spacing: DS.Space.s2) {
+                if chainsExpanded {
+                    Text("Read each watched wallet across these chains only — turn off the ones you don't use.")
+                        .dsText(.callout15).foregroundStyle(DS.textSecondary)
+                }
+                Text("Read-only — watching can never trade or move funds. Activity is public, read across chains directly on this iPhone.")
+                    .dsText(.subhead13).foregroundStyle(DS.textSecondary)
             }
         }
+    }
+
+    private func disconnectWallet(purge: Bool) {
+        if purge {
+            let all = (try? modelContext.fetch(FetchDescriptor<Thing>())) ?? []
+            let doomed = all.filter { $0.source == "Wallet" }
+            SpotlightIndex.remove(ids: doomed.map(\.id))
+            for thing in doomed { modelContext.delete(thing) }
+            modelContext.saveHonestly()
+        }
+        // Clear the store first so a refresh racing the dismiss can't re-add
+        // the seat, then drop the seat itself (BridgeDisconnectSection's own
+        // ordering, kept verbatim).
+        WalletStore.shared.addresses = []
+        store.remove("wallet")
+        DSHaptic.tap()
+        dismiss()
     }
 
     /// "All 5" when nothing's narrowed, else the selected names ("Ethereum,
@@ -388,29 +441,46 @@ struct WalletScreen: View {
     /// the call site.
     @ViewBuilder
     private var statusSection: some View {
-        if syncing || result != nil {
-            Section {
-                BridgeSyncStatusRows(syncing: syncing,
-                                     syncingLine: String(localized: "Reading onchain activity…"),
-                                     result: result, resultIsError: resultIsError)
+        // A status ROW only when something needs eyes: an error, the
+        // typo'd-address nudge, or the empty screen's connect flow (where
+        // there's no Watching header to whisper in). The connected screen's
+        // happy path whispers in `quietStatus` instead — the green
+        // "connected" card read as noise dressed as news.
+        if wallet.addresses.isEmpty || resultIsError || resultProminent {
+            if syncing || result != nil {
+                Section {
+                    BridgeSyncStatusRows(syncing: syncing,
+                                         syncingLine: String(localized: "Reading onchain activity…"),
+                                         result: result, resultIsError: resultIsError)
+                }
+                .listRowSeparator(.hidden)
             }
-            .listRowSeparator(.hidden)
         }
+    }
+
+    /// The Watching header's trailing whisper — sync state at label weight.
+    private var quietStatus: String {
+        if syncing { return String(localized: "Syncing…") }
+        guard result != nil, !resultIsError, !resultProminent else { return "" }
+        return String(localized: "Synced just now")
     }
 
     private var addSection: some View {
         Section {
-            // The fast path leads: let the wallet hand its address over rather
-            // than making someone copy 42 hex characters between two apps
-            // (2026-07-16). The paste field below stays regardless — this is
-            // the fast path, never the only one (ruling 2026-07-16), and a
-            // hardware wallet or a wallet on another device has no other way
-            // in. Absent entirely when no project id is configured: a control
-            // that can't work doesn't appear.
-            if WalletConnectBridge.isAvailable { connectRow }
+            // The weights flip with state (redesign 2026-07-20): on the EMPTY
+            // screen, adding IS the page, so Connect leads in full prominence
+            // (the fast path — a wallet hands its address over instead of
+            // someone copying 42 hex characters; ruling 2026-07-16). On the
+            // CONNECTED screen adding is a side errand: the universal paste
+            // field leads and Connect becomes a quiet row in the same card —
+            // the blue slab outranked everything on a page it wasn't the
+            // point of. Both states: absent entirely when no project id is
+            // configured (a control that can't work doesn't appear).
+            if wallet.addresses.isEmpty, WalletConnectBridge.isAvailable { connectRow }
             BridgeFieldRow(placeholder: "Address (0x…, ENS, or .sol)", text: $newAddress,
                            buttonLabel: "Watch", keyboard: .default,
                            focus: $addressFieldFocused, action: watch)
+            if !wallet.addresses.isEmpty, WalletConnectBridge.isAvailable { connectQuietRow }
             // Nothing watched yet, nothing on the clipboard — one tap watches
             // a famous public wallet so the whole feature (holdings, activity,
             // faces, charts) demos in three seconds. Watch-only makes peeking
@@ -453,6 +523,40 @@ struct WalletScreen: View {
                     .dsText(.callout15).foregroundStyle(DS.textSecondary)
             }
         }
+    }
+
+    /// The connected screen's Connect — a row in the add card, not a slab.
+    /// Same action, same cancel-while-waiting contract as `connectRow`; only
+    /// the weight changes with the state around it.
+    private var connectQuietRow: some View {
+        Button {
+            DSHaptic.tap()
+            if connecting { cancelConnect() } else { connectWallet() }
+        } label: {
+            HStack(spacing: DS.Space.s3) {
+                if connecting {
+                    ProgressView().controlSize(.small).tint(DS.textSecondary)
+                } else {
+                    Image(systemName: "link")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(DS.tint)
+                }
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(connecting ? "Waiting for your wallet — tap to cancel"
+                                    : "Connect a wallet app")
+                        .dsText(.body17).foregroundStyle(DS.textPrimary)
+                    if !connecting {
+                        Text("Hands over the address — read-only, never signs")
+                            .dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                    }
+                }
+                Spacer(minLength: 0)
+            }
+            .contentShape(Rectangle())
+            .animation(DS.Motion.standard, value: connecting)
+        }
+        .buttonStyle(.plain)
+        .dsListCardRow()
     }
 
     /// "Connect wallet" — one tap, then approve in the wallet that opens; while

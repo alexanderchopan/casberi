@@ -60,6 +60,11 @@ private struct WalletTile<Content: View>: View {
 /// it), so a freshly-watched wallet shows no tile rather than a flat line.
 struct WalletBalanceTile: View {
     let chart: TokenChart
+    /// "Across your wallets" on the combined view, "Balance" scoped — the
+    /// combined read is the app's crown feature (user, 2026-07-20: "the
+    /// combined wallet state is our best feature"), so it carries its name
+    /// in daily view instead of hiding behind an anonymous tile.
+    var caption: String = String(localized: "Balance")
     /// nil = no door: with one wallet (or scoped to one) the number has no
     /// further breakdown to show — the treemap below IS the composition, so a
     /// chevron here would open nothing new. Only the multi-wallet "All" view
@@ -71,7 +76,7 @@ struct WalletBalanceTile: View {
 
     var body: some View {
         Button { onOpen?() } label: {
-            WalletTile(caption: String(localized: "Balance"),
+            WalletTile(caption: caption,
                        showChevron: onOpen != nil) {
                 // The app's money voice ($19.9K), not a token price — this is a
                 // portfolio total, and `TokenStats.compact` is what the combined
@@ -318,12 +323,22 @@ struct WalletSeeAllRow: View {
     let onOpen: () -> Void
 
     var body: some View {
+        // No card, no slab (user, twice: "this looks like crap / still looks
+        // bad") — a quiet inline door floating on the page itself, sized like
+        // the section labels around it. The stream above it is the content;
+        // this is just where it continues.
         Button(action: onOpen) {
-            Text("See all \(count) transactions")
-                .dsText(.body17).foregroundStyle(DS.tint)
-                .monospacedDigit()
-                .frame(maxWidth: .infinity)
-                .contentShape(Rectangle())
+            HStack(spacing: 5) {
+                Text("See all \(count) transactions")
+                    .dsText(.callout15).fontWeight(.semibold)
+                    .monospacedDigit()
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 11, weight: .semibold))
+            }
+            .foregroundStyle(DS.tint)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, DS.Space.s1)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
     }

@@ -1171,6 +1171,9 @@ struct FeedScreen: View {
                         // IS the composition — no door, no chevron.
                         let hasBreakdown = wallet.addresses.count > 1 && selectedWallet == nil
                         WalletBalanceTile(chart: chart,
+                                          caption: hasBreakdown
+                                              ? String(localized: "Across your wallets")
+                                              : String(localized: "Balance"),
                                           onOpen: hasBreakdown ? { showCombinedWallets = true } : nil)
                     }
                     if !warnings.isEmpty {
@@ -1211,7 +1214,9 @@ struct FeedScreen: View {
                     HomeRoute.shared.bridgePush = .walletHistory(scope: selectedWallet)
                 }
                 .listRowSeparator(.hidden)
-                .dsListCardRow()
+                // On the page itself, not in a card — a quiet continuation
+                // line, not another surface (user, 2026-07-20, twice).
+                .listRowBackground(Color.clear)
             }
         }
     }
