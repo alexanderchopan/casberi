@@ -1,9 +1,17 @@
 # Shipping a TestFlight build (handoff)
 
 Point any session at this file to ship a Casberi build to TestFlight the same
-way we always do. The whole process is encapsulated in `scripts/testflight.sh`
-— it bumps the build number across all targets, archives Release **unsigned**,
-then signs + uploads for App Store distribution.
+way we always do. The process has TWO scripts, both run every ship, no
+exceptions — this is not a step to wait to be asked for (user ruling
+2026-07-21):
+
+1. `scripts/testflight.sh` bumps the build number across all targets, archives
+   Release **unsigned**, then signs + uploads for App Store distribution.
+2. `scripts/testflight-public-beta.sh` waits for that build to finish
+   processing, writes tester-facing release notes, assigns it to the
+   **Casberi Public Beta** external group, and submits it for Beta App Review.
+   A ship that skips this step leaves the build sitting unassigned in App
+   Store Connect — internal-only, not what "ship" means here.
 
 ## Credentials
 
