@@ -1250,6 +1250,58 @@ struct ListeningLede: View {
     }
 }
 
+/// The reading list's lede (2026-07-21): a saved link is a DOOR, not a read,
+/// so the shape counts the pile instead of pretending the rows are consumed —
+/// how many landed this month, how many are older, and the oldest one still
+/// waiting. Facts only (§10): no streaks, no goals, and "still here" not
+/// "unopened" (Thing tracks no read state, so the model can't claim it).
+struct ReadingLede: View {
+    let thisMonth: Int
+    let older: Int
+    let oldest: Thing?
+
+    private var summary: String {
+        var parts: [String] = []
+        if thisMonth > 0 {
+            parts.append(thisMonth == 1 ? String(localized: "1 saved this month")
+                                        : String(localized: "\(thisMonth) saved this month"))
+        }
+        if older > 0 {
+            parts.append(older == 1 ? String(localized: "1 older")
+                                    : String(localized: "\(older) older"))
+        }
+        return parts.joined(separator: " · ")
+    }
+
+    /// The oldest save's domain — its identity, the same "www."-stripped host
+    /// ReadingRow shows; falls back to the title when there's no URL to read.
+    private func label(for thing: Thing) -> String {
+        let text = thing.content.isEmpty ? thing.title : thing.content
+        guard let host = Capture.detectURL(in: text)?.host() else { return thing.title }
+        return host.hasPrefix("www.") ? String(host.dropFirst(4)) : host
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s1) {
+            Text(summary.isEmpty ? String(localized: "Reading list") : summary)
+                .dsText(.body17).foregroundStyle(DS.textPrimary)
+            if let oldest {
+                HStack(spacing: DS.Space.s2) {
+                    Text("Oldest still here")
+                        .dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                    Text(label(for: oldest))
+                        .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                        .lineLimit(1)
+                    Spacer(minLength: 0)
+                    LiveTimeText(date: oldest.capturedAt)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.vertical, DS.Space.s2)
+    }
+}
+
 /// Bitrefill's lede: the account balance the API last reported, with this
 /// month's order count beside it. Facts only — no spend prompts, and no
 /// "unused"/"expires" claims the API can't back (BitrefillBridge's ceiling).

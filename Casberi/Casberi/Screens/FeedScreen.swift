@@ -225,6 +225,115 @@ struct FeedScreen: View {
         return order.map { ($0, groups[$0] ?? []) }
     }
 
+    /// Day groups, but COARSENED to week/month grain when the source lands
+    /// sparsely (ruling 2026-07-21, the day-cards sequel): a source that
+    /// drops one thing most days would otherwise become a ladder of one-row
+    /// day cards under big headers — exactly the confetti day-cards killed,
+    /// re-expressed as headers. When the trailing history averages under
+    /// ~1.5 things a day (and there's enough of it to judge), the same rows
+    /// regroup as "This week / Last week / <month>" instead. A dense feed
+    /// (social bursts, an RSS sync) stays day-grained untouched — this is a
+    /// no-op above the threshold, so every chronological source can route
+    /// through it safely.
+    private func chronoGroups(_ visible: [Thing]) -> [(String, [Thing])] {
+        coarsenIfSparse(dayGroups(visible))
+    }
+
+    /// The sparseness gate + regroup, shared by the plain day path and the
+    /// agent path (which builds its own day groups first). Judged on the
+    /// SHOWN things (dayGroups already dropped future-dated rows), so the
+    /// average matches what the feed actually renders.
+    private func coarsenIfSparse(_ days: [(String, [Thing])]) -> [(String, [Thing])] {
+        let shown = days.flatMap { $0.1 }
+        guard days.count >= 6,
+              Double(shown.count) / Double(days.count) < 1.5 else { return days }
+        return coarseGroups(shown)
+    }
+
+    /// Regroup already-ordered (newest-first) things by week, then month —
+    /// "This week", "Last week", then month names for the tail (a week grain
+    /// that ran all the way down would ladder into "3 weeks ago, 4 weeks
+    /// ago"; months are how sparse history actually reads back).
+    private func coarseGroups(_ things: [Thing]) -> [(String, [Thing])] {
+        var order: [String] = []
+        var groups: [String: [Thing]] = [:]
+        for t in things {
+            let label = coarseLabel(t.capturedAt)
+            if groups[label] == nil { order.append(label) }
+            groups[label, default: []].append(t)
+        }
+        return order.map { ($0, groups[$0] ?? []) }
+    }
+
+    private func coarseLabel(_ date: Date) -> String {
+        let cal = Self.groupingCalendar
+        if cal.isDate(date, equalTo: .now, toGranularity: .weekOfYear) {
+            return String(localized: "This week")
+        }
+        if let lastWeek = cal.date(byAdding: .weekOfYear, value: -1, to: .now),
+           cal.isDate(date, equalTo: lastWeek, toGranularity: .weekOfYear) {
+            return String(localized: "Last week")
+        }
+        if cal.isDate(date, equalTo: .now, toGranularity: .year) {
+            return date.formatted(.dateTime.month(.wide))
+        }
+        return date.formatted(.dateTime.month(.wide).year())
+    }
+
+    /// Music lands in SITTINGS, not calendar days (ruling 2026-07-21) — the
+    /// day header answers "when" but the real unit of listening is the
+    /// session. Consecutive plays less than 45 min apart cluster into one
+    /// group, labelled by its start ("This morning", "Yesterday evening",
+    /// "Mon evening"). A single session that straddles the whole day still
+    /// reads as one card; two listens hours apart split honestly.
+    private func sessionGroups(_ visible: [Thing]) -> [(String, [Thing])] {
+        let sorted = visible.sorted { $0.capturedAt > $1.capturedAt }
+        guard let first = sorted.first else { return [] }
+        let gap: TimeInterval = 45 * 60
+        var sessions: [[Thing]] = []
+        var current: [Thing] = [first]
+        for t in sorted.dropFirst() {
+            if let last = current.last,
+               last.capturedAt.timeIntervalSince(t.capturedAt) <= gap {
+                current.append(t)
+            } else {
+                sessions.append(current)
+                current = [t]
+            }
+        }
+        sessions.append(current)
+        let labelled = sessions.map { (sessionLabel($0.first!.capturedAt), $0) }
+        // groupedSections keys its ForEach on the label, so two sittings that
+        // share one ("this morning" twice, >45 min apart) would collide into
+        // one SwiftUI id. Append the start clock ONLY to a colliding label, so
+        // the common single-session case stays clean.
+        var counts: [String: Int] = [:]
+        for (label, _) in labelled { counts[label, default: 0] += 1 }
+        return labelled.map { label, rows in
+            guard (counts[label] ?? 0) > 1 else { return (label, rows) }
+            let time = rows.first!.capturedAt.formatted(date: .omitted, time: .shortened)
+            return ("\(label) · \(time)", rows)
+        }
+    }
+
+    private func sessionLabel(_ date: Date) -> String {
+        let cal = Self.groupingCalendar
+        let part: String
+        switch cal.component(.hour, from: date) {
+        case 5..<12:  part = String(localized: "morning")
+        case 12..<17: part = String(localized: "afternoon")
+        case 17..<22: part = String(localized: "evening")
+        default:      part = String(localized: "late night")
+        }
+        if cal.isDateInToday(date) {
+            return String(localized: "This \(part)")
+        }
+        if cal.isDateInYesterday(date) {
+            return String(localized: "Yesterday \(part)")
+        }
+        return "\(date.formatted(.dateTime.weekday(.abbreviated))) \(part)"
+    }
+
     // MARK: - Bundling (ruling 2026-07-09: volume compresses, never reorders)
 
     /// A feed row in the All shape: a thing, or one row standing in for a
@@ -737,29 +846,39 @@ struct FeedScreen: View {
             groupedSections(agendaGroups(visible), nextEventID: nextEventID)
         case .gmail:
             if !heroShown { waitingSection(visible, nextEventID: nextEventID) }
-            let days = dayGroups(visible)
+            let days = chronoGroups(visible)
             groupedSections(days, nextEventID: nextEventID, boundary: boundaryThingID(in: days))
         case .reminders:
             reminderSections(visible, nextEventID: nextEventID)
         case .agent:
             let approvals = pendingApprovals(visible)
             needsYouSection(approvals, nextEventID: nextEventID)
-            let days = agentDayGroups(visible, excluding: approvals)
+            let days = coarsenIfSparse(agentDayGroups(visible, excluding: approvals))
             groupedSections(days, nextEventID: nextEventID, boundary: boundaryThingID(in: days))
         case .music:
             if !heroShown { listeningLedeSection(visible) }
-            let days = dayGroups(visible)
+            // Sessions, not days (2026-07-21) — a listening sitting is music's
+            // real unit; boundary rides the same capturedAt-keyed helper.
+            let days = sessionGroups(visible)
             groupedSections(days, nextEventID: nextEventID, boundary: boundaryThingID(in: days))
         case .tokens:
             watchlistLedeSection(visible)
             watchlistSection(visible, nextEventID: nextEventID)
+        case .safari:
+            // A reading list is doors, not reads (2026-07-21) — its lede owns
+            // the return-trip guilt: how much is piling up, and the oldest
+            // thing still waiting. Rows below stay chronological (coarsened
+            // when saves are sparse, like any door source).
+            if !heroShown { readingLedeSection(visible) }
+            let days = chronoGroups(visible)
+            groupedSections(days, nextEventID: nextEventID, boundary: boundaryThingID(in: days))
         case .bitrefill:
             bitrefillLedeSection(visible)
-            let days = dayGroups(visible)
+            let days = chronoGroups(visible)
             groupedSections(days, nextEventID: nextEventID, boundary: boundaryThingID(in: days))
         case .oneclaw:
             oneclawLedeSection(visible)
-            let days = dayGroups(visible)
+            let days = chronoGroups(visible)
             groupedSections(days, nextEventID: nextEventID, boundary: boundaryThingID(in: days))
         default:
             if filter.tag != "All" && shape == .all {
@@ -775,7 +894,11 @@ struct FeedScreen: View {
                 // bundling there would collapse the whole screen into one row.
                 bundledSections(visible, nextEventID: nextEventID)
             } else {
-                let days = dayGroups(visible)
+                // Live-first in a source's own room (2026-07-21): a stream
+                // that's on RIGHT NOW is the one row whose relevance isn't
+                // chronological, so it leads its group. No-op for sources
+                // with no live set.
+                let days = liveFirst(chronoGroups(visible))
                 groupedSections(days, nextEventID: nextEventID, boundary: boundaryThingID(in: days))
             }
         }
@@ -947,7 +1070,7 @@ struct FeedScreen: View {
     private var newSinceDivider: some View {
         // A quiet capsule, not tint-colored prose (which reads as a tappable
         // link). The fill gives the boundary its line without drawing one.
-        Text("New since \(sinceLabel)")
+        Text(newSinceText)
             .dsText(.label12)
             .foregroundStyle(DS.textSecondary)
             .padding(.horizontal, DS.Space.s3)
@@ -957,6 +1080,31 @@ struct FeedScreen: View {
             .padding(.vertical, DS.Space.s1)
             .listRowBackground(Color.clear)
             .listRowSeparator(.hidden)
+    }
+
+    /// The seam's words (2026-07-21): "what's new" differs by source, so the
+    /// divider names it concretely instead of a bare "New since Friday". Most
+    /// feeds get a count ("New since Friday · 4"); a Wallet feed — whose rows
+    /// are SCANNED, not read — names the flow instead ("2 in, 1 out since
+    /// Friday"), the question a wallet actually answers. Counts run over the
+    /// frozen `visible` (things newer than the last-visit stamp); the divider
+    /// renders once per boundary, so this reads `visible` a single time.
+    private var newSinceText: String {
+        guard let newSince else { return "" }
+        let fresh = visible.filter { $0.capturedAt > newSince }
+        if shape == .wallet {
+            let inN = fresh.filter { $0.transferDirection == "received" }.count
+            let outN = fresh.filter { $0.transferDirection == "sent" }.count
+            if inN > 0 || outN > 0 {
+                var parts: [String] = []
+                if inN > 0 { parts.append(String(localized: "\(inN) in")) }
+                if outN > 0 { parts.append(String(localized: "\(outN) out")) }
+                return String(localized: "\(parts.joined(separator: ", ")) since \(sinceLabel)")
+            }
+        }
+        return fresh.isEmpty
+            ? String(localized: "New since \(sinceLabel)")
+            : String(localized: "New since \(sinceLabel) · \(fresh.count)")
     }
 
     private var sinceLabel: String {
@@ -1470,6 +1618,43 @@ struct FeedScreen: View {
     private func isLive(_ thing: Thing) -> Bool {
         thing.source == "Twitch"
             && thing.sourceRef.map { TwitchIngest.liveRefs.contains($0) } ?? false
+    }
+
+    /// Float any live rows to the top of the NEWEST group (2026-07-21) — a
+    /// stream on right now isn't a chronological row. Scoped to Twitch (the
+    /// one source with a live set) and to the first group only, so history
+    /// below stays in time order. A no-op everywhere else.
+    private func liveFirst(_ groups: [(String, [Thing])]) -> [(String, [Thing])] {
+        guard source == "Twitch", let first = groups.first,
+              first.1.contains(where: isLive) else { return groups }
+        let rows = first.1
+        var out = groups
+        out[0] = (first.0, rows.filter(isLive) + rows.filter { !isLive($0) })
+        return out
+    }
+
+    /// The reading list's lede (2026-07-21) — a saved link is a DOOR, not a
+    /// read, so the shape names the pile instead of pretending the rows are
+    /// consumed: how many landed this month, how many are older, and the
+    /// oldest one still waiting (a gentle "come back to this", never a
+    /// count-shaming streak — §10). Facts only, and no "unopened" claim the
+    /// model can't back (Thing tracks no read state) — "still here" is what's
+    /// true. Yields to an auto hero so a shape never stacks two overviews.
+    @ViewBuilder
+    private func readingLedeSection(_ visible: [Thing]) -> some View {
+        let cal = Self.groupingCalendar
+        let thisMonth = visible.filter {
+            cal.isDate($0.capturedAt, equalTo: .now, toGranularity: .month)
+        }.count
+        let older = visible.count - thisMonth
+        // Oldest still on the list, shown only once it's genuinely aged (30d+)
+        // — a fresh list has no pile to nudge about.
+        let monthAgo = Date.now.addingTimeInterval(-30 * 86_400)
+        let oldest = visible.filter { $0.capturedAt < monthAgo }
+            .min { $0.capturedAt < $1.capturedAt }
+        if visible.count >= 3 {
+            ledeSection(ReadingLede(thisMonth: thisMonth, older: older, oldest: oldest))
+        }
     }
 
     /// Gmail: what's waiting on you, capped at two (mock G1). Doing-marked

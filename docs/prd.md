@@ -4861,3 +4861,57 @@ NOT yet verified on-sim — this session is the Linux web env with no
 xcodebuild; build + a screen sweep (All with bundles + a breaker, a social
 room, Reminders with stale todos, a day split by the new-since divider, light
 and dark) to run on the Mac before the checkpoint.
+
+## 148. Source feeds diverge by their source's nature — grain, "new", the pile, liveness (user: "what else would you do to improve source feeds? ... think how they differ" → "do all these", 2026-07-21)
+
+Day-cards (§147) quietly assumed every source shares one rhythm. They don't —
+a source feed should read the way that source actually behaves. Four axes,
+each a self-contained change in `Screens/FeedScreen.swift` (+ `ShapedRows.swift`
+for one lede). No schema, no ingest, no catalog changes.
+
+1. **Cadence → adaptive grain.** A day is the right cluster for dense feeds,
+   but a sparse source (one Safari save a day, a wallet approval a week) became
+   a ladder of one-row day cards under big headers — §147's confetti, re-shaped
+   as headers. `chronoGroups` coarsens to "This week / Last week / <month>"
+   when the trailing history averages under ~1.5 things a day over ≥6 days;
+   above that it's a no-op, so every chronological source (`gmail`, `agent`,
+   `safari`, `bitrefill`, `oneclaw`, the plain default, and the sparse tail of
+   `social`/`notes`/`chat`) routes through it safely. Music instead uses
+   `sessionGroups` — plays <45 min apart are one sitting ("This morning",
+   "Yesterday evening"), music's real unit; a colliding label gets its start
+   clock appended so the section ForEach ids stay unique.
+
+2. **What "new" means.** The new-since seam was a bare "New since Friday". Now
+   it names what's new: a count for most feeds ("New since Friday · 4"), and
+   for Wallet — whose rows are SCANNED, not read — the FLOW instead ("2 in, 1
+   out since Friday"), the question a wallet answers. Counts run over the frozen
+   `visible`; the divider renders once, so it reads it a single time.
+   DEFERRED: Calendar "changed since you looked" — an event that MOVED is
+   currently invisible, the one real honesty gap here, but surfacing it needs
+   per-event previous-start state (Thing tracks neither an ingest timestamp nor
+   a prior value), i.e. a schema field + ingest diff. Not shipped as an untested
+   change to a core sync from the Linux web env; it's a new-field-plus-backfill
+   job for a session that can build and measure it.
+
+3. **Read-in-place vs hand-off.** A post/note is consumed in the feed; a Safari
+   save is a DOOR, and doors pile up. The `.safari` shape earns a `ReadingLede`
+   — "12 saved this month · 41 older" and the oldest one still waiting — naming
+   the pile instead of pretending the rows are read. Honesty: it says "still
+   here", never "unopened" (Thing tracks no read state), and it's facts, not a
+   count-shaming streak (§10). It yields to an auto hero so no shape stacks two
+   overviews.
+
+4. **Liveness.** The Live dot rode rows wherever they fell chronologically, but
+   a Twitch stream on RIGHT NOW is the one row whose relevance isn't time.
+   `liveFirst` floats live rows to the top of the newest group in the source's
+   own room — scoped to Twitch (the one source with a live set) and the first
+   group only, a no-op everywhere else.
+
+Recorded rulings so a later "unify" pass doesn't flatten the divergence: the
+grain, seam, pile, and live-first behaviours differ ON PURPOSE, each for its
+source's nature. NOT verified on-sim — this session is the Linux web env with
+no xcodebuild. Mac before the checkpoint: a sparse source (week/month headers),
+Music (session headers, two sittings in one morning splitting), Safari (the
+reading lede + oldest line), a Wallet feed with a mixed in/out seam, a Twitch
+feed with a live stream leading, and a dense feed (unchanged day grain) — light
+and dark.
