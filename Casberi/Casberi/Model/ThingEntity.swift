@@ -22,7 +22,10 @@ struct ThingEntity: AppEntity, IndexedEntity {
     static var defaultQuery = ThingEntityQuery()
 
     var displayRepresentation: DisplayRepresentation {
-        DisplayRepresentation(title: "\(title)", subtitle: "\(subtitle)")
+        // The kind's own SF Symbol (KindGlyph's mapping) — Spotlight, Shortcuts,
+        // and Visual Intelligence result cards show a mark, not a bare row.
+        DisplayRepresentation(title: "\(title)", subtitle: "\(subtitle)",
+                              image: .init(systemName: kind.symbol))
     }
 
     var attributeSet: CSSearchableItemAttributeSet {
@@ -66,5 +69,26 @@ struct ThingEntityQuery: EntityStringQuery {
     func entities(matching string: String) async throws -> [ThingEntity] {
         let hits = try IntentCorpus.match(string, limit: 25)
         return hits.map(ThingEntity.init)
+    }
+}
+
+/// Tapping a thing anywhere the SYSTEM shows it as an entity — Spotlight's
+/// semantic results, a Shortcuts value, an iOS 26 Visual Intelligence card —
+/// opens its sheet in the app. Routed through the same `casberi://thing/<id>`
+/// deep link the widgets use, so the system tap and the widget tap land on
+/// one proven path instead of two.
+struct OpenThingIntent: OpenIntent {
+    static let title: LocalizedStringResource = "Open Thing"
+    static let description = IntentDescription("Opens a thing in Casberi.")
+
+    @Parameter(title: "Thing")
+    var target: ThingEntity
+
+    func perform() async throws -> some IntentResult & OpensIntent {
+        // A UUID string is plain hex-and-dashes — this URL always parses; the
+        // feed is the fallback only the type system asks for.
+        let url = URL(string: "casberi://thing/\(target.id.uuidString)")
+            ?? URL(string: "casberi://feed")!
+        return .result(opensIntent: OpenURLIntent(url))
     }
 }

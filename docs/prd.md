@@ -5070,3 +5070,49 @@ Consequences:
   watched wallet moving), the answer is the widget, the away answer, or the
   feed's attention glyphs — surfaces the user comes to, not ones that come to
   the user.
+
+## 153. Semantic Spotlight + Visual Intelligence — the corpus answers system search (2026-07-21)
+
+Two upgrades in one cut, both riding surfaces the user comes to (§152 — no
+notifications; these are pull, not push):
+
+**Spotlight, upgraded from text rows to entities.** `ThingEntity` had conformed
+to `IndexedEntity` since 2026-07-17, but conformance alone donates nothing —
+no code ever associated entities with the indexed items, so the semantic index
+that Siri and Apple Intelligence ground on never received the corpus, only the
+plain `CSSearchableItem` text rows. `SpotlightIndex.index` now calls
+`associateAppEntity(ThingEntity(thing), priority: 0)` on every item it writes
+— same watermark reconcile, same inline-at-save path, one new line where the
+item is built, so both index surfaces stay in lockstep by construction.
+Entities also wear the kind's own SF Symbol now (`ThingKind.symbol` in the
+`DisplayRepresentation`), so Spotlight/Shortcuts/VI cards show a mark, not a
+bare row.
+
+**`OpenThingIntent` (an `OpenIntent`)** — tapping a thing anywhere the system
+shows it as an entity opens its sheet in-app, routed through the existing
+`casberi://thing/<id>` deep link (one proven path, not a second navigation
+mechanism). Required plumbing for Visual Intelligence taps; free utility in
+Shortcuts.
+
+**Visual Intelligence (iOS 26)** — `Model/VisualIntelligenceSearch.swift`:
+an `IntentValueQuery` over `SemanticContentDescriptor` returns matching
+`ThingEntity` cards when the person points the camera at something or circles
+it in a screenshot. On-brand for a screenshot-heavy corpus: the thing you
+saved about an espresso machine surfaces when you're looking at one.
+
+Honesty rulings baked in:
+- **Labels only, pixel buffer unused on purpose.** The corpus has no
+  image-similarity index; matching the system's own words for the scene is
+  honest, pretending to match pixels would not be. If a real visual index
+  (e.g. embedding screenshots) lands later, revisit.
+- **A label with no usable term (>2 chars) is dropped, not passed through** —
+  `IntentCorpus.match` treats an empty term list as "everything, newest
+  first" (the Search intent's deliberate browse fallback), which here would
+  dump the whole corpus into every camera frame.
+
+Verification: `-viProbe "<label,label>"` runs the same matcher headlessly and
+NSLogs the hits (VI's camera UI can't be driven on the sim). Verified
+2026-07-21: seeded "Ring demo" surfaced for label "ring" alongside honest
+content matches for "machine"; the launch reconcile exercised the association
+path crash-free. The end-to-end VI surface itself needs a real device with
+Apple Intelligence — untested there; the probe covers the app's half.

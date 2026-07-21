@@ -30,10 +30,18 @@ enum SpotlightIndex {
     static func index(_ things: [Thing]) {
         guard !things.isEmpty else { return }
         let items = things.map { thing in
-            CSSearchableItem(
+            let attrs = attributeSet(for: thing)
+            // The association is what makes `ThingEntity: IndexedEntity` real
+            // (2026-07-21): conformance alone donates nothing — until the
+            // entity rides an indexed item, the semantic index Siri/Apple
+            // Intelligence ground on never receives the corpus, only the
+            // plain-text rows. Same uniqueIdentifier as the entity id, so a
+            // tapped result and OpenThingIntent agree on which thing it is.
+            attrs.associateAppEntity(ThingEntity(thing), priority: 0)
+            return CSSearchableItem(
                 uniqueIdentifier: thing.id.uuidString,
                 domainIdentifier: domain,
-                attributeSet: attributeSet(for: thing)
+                attributeSet: attrs
             )
         }
         CSSearchableIndex.default().indexSearchableItems(items)

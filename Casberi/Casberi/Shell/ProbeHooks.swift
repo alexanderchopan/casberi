@@ -1091,6 +1091,19 @@ enum ProbeHooks {
             context.saveHonestly()
             NSLog("Insight demo: seeded %d things (Reddit leaderboard + OpenSea mosaic)", landed)
         },
+        // `-viProbe "<label,label>"` runs the Visual Intelligence label→corpus
+        // matcher headlessly — the exact function the iOS 26 system query
+        // calls (VI's own camera UI can't be driven on the sim). NSLogs the
+        // matched titles, so "does looking at X surface the right things"
+        // verifies in one launch.
+        Hook(key: "viProbe") { spec, _ in
+            let labels = spec.split(separator: ",")
+                .map { $0.trimmingCharacters(in: .whitespaces) }
+            let hits = VisualCorpusMatch.things(for: labels)
+            NSLog("viProbe: %d hit(s) for [%@]: %@", hits.count,
+                  labels.joined(separator: ", "),
+                  hits.isEmpty ? "—" : hits.map(\.title).joined(separator: " · "))
+        },
     ]
 }
 

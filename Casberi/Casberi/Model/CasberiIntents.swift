@@ -149,11 +149,22 @@ struct AskCasberiIntent: AppIntent {
 /// agree on what a query reaches.
 enum IntentCorpus {
     static func match(_ query: String, limit: Int) throws -> [Thing] {
+        try match(query, in: corpus(), limit: limit)
+    }
+
+    /// One fetch of the whole corpus, newest first — callers matching several
+    /// queries in a row (the Visual Intelligence labels) fetch once and run
+    /// the in-memory variant below per query, instead of opening a fresh
+    /// container per label.
+    static func corpus() throws -> [Thing] {
         let container = try SharedStore.extensionContainer()
         let context = ModelContext(container)
-        let things = (try? context.fetch(FetchDescriptor<Thing>(
+        return (try? context.fetch(FetchDescriptor<Thing>(
             sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]
         ))) ?? []
+    }
+
+    static func match(_ query: String, in things: [Thing], limit: Int) -> [Thing] {
         let terms = query.lowercased()
             .trimmingCharacters(in: CharacterSet(charactersIn: "? "))
             .split(separator: " ").map(String.init)
