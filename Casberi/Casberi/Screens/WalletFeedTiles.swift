@@ -188,20 +188,24 @@ struct WalletDeFiTile: View {
 }
 
 
-/// The page behind the Worth-a-look tile (2026-07-20) — the tile summarizes
-/// by count and kind; this tray IS the items. Every row that has somewhere
-/// real to go wears a door: a flagged transfer opens its own sheet, a Safe or
-/// delegation warning opens the owning wallet's screen (where the Revoke.cash
-/// door and delegate identity live). A liquidation row states chain + health
-/// factor and carries no chevron — acting on an Aave position happens on
-/// Aave, and the row already says everything this app can honestly say.
+/// The page behind the Worth-a-look tile — and the LAST page (2026-07-20,
+/// same-day correction; user: "you can't have worth a look pull up a sheet
+/// that then says to go look somewhere else"). The first cut routed rows to
+/// the wallet's screen, whose only added value was a Revoke.cash button —
+/// tile → tray → page → external, two hops too many. Rows are TERMINAL now:
+/// each states the whole fact, and where one real action exists it sits on
+/// the row itself — a flagged transfer opens its sheet, a delegation opens
+/// that wallet's Revoke.cash page directly (the exact door the wallet screen
+/// offers, minus the detour). Safe and liquidation rows carry no control:
+/// signing happens in the Safe app and acting on Aave happens on Aave, and
+/// the row already says everything this app can honestly say.
 struct WalletWorthALookTray: View {
     let warnings: [WalletWarning]
     /// The flagged transfers behind a poisoning warning — each becomes its
     /// own row with a door to its sheet, instead of one dead aggregate line.
     let flagged: [Thing]
-    let onOpenWallet: (String) -> Void
     let onOpenThing: (Thing) -> Void
+    @Environment(\.openURL) private var openURL
 
     private var listed: [WalletWarning] { warnings.filter { $0.kind != .poisoning } }
     private var rowCount: Int { listed.count + flagged.count }
@@ -223,13 +227,21 @@ struct WalletWorthALookTray: View {
         }
     }
 
+    /// The one real action a delegation warning has: that wallet's Revoke.cash
+    /// page — the same URL the wallet screen's Approvals row opens.
+    private func revokeAction(_ w: WalletWarning) -> URL? {
+        guard w.kind == .delegation, let address = w.address,
+              WalletApprovals.canServe(address) else { return nil }
+        return URL(string: WalletApprovals.revokeURL(address: address))
+    }
+
     @ViewBuilder
     private func warningRow(_ w: WalletWarning) -> some View {
-        let hasDoor = w.address != nil && (w.kind == .safe || w.kind == .delegation)
+        let action = revokeAction(w)
         Button {
-            if let address = w.address, hasDoor {
+            if let action {
                 DSHaptic.selection()
-                onOpenWallet(address)
+                openURL(action)
             }
         } label: {
             HStack(spacing: DS.Space.s3) {
@@ -247,8 +259,9 @@ struct WalletWorthALookTray: View {
                     }
                 }
                 Spacer(minLength: 0)
-                if hasDoor {
-                    Image(systemName: "chevron.right")
+                if action != nil {
+                    Text("Revoke.cash").dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                    Image(systemName: "arrow.up.right")
                         .font(.system(size: 12, weight: .semibold))
                         .foregroundStyle(DS.textTertiary)
                 }
@@ -257,7 +270,7 @@ struct WalletWorthALookTray: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .disabled(!hasDoor)
+        .disabled(action == nil)
     }
 
     private func flaggedRow(_ thing: Thing) -> some View {
@@ -295,25 +308,22 @@ struct WalletWorthALookTray: View {
 }
 
 /// The stream's door: five rows above, everything behind this (2026-07-20).
-/// Names its own count so the door says what's behind it rather than "more".
+/// One centered phrase carrying its own count — the first cut scattered blue
+/// text, a gray number, and a chevron across the row's full width, which read
+/// as three strays rather than one door (user: "this looks like crap"). The
+/// centered single-verb form is the app's own terminal-action grammar
+/// ("Stop watching this wallet", "Disconnect Wallet").
 struct WalletSeeAllRow: View {
     let count: Int
     let onOpen: () -> Void
 
     var body: some View {
         Button(action: onOpen) {
-            HStack(spacing: DS.Space.s2) {
-                Text("See all transactions")
-                    .dsText(.body17).foregroundStyle(DS.tint)
-                Spacer(minLength: 0)
-                Text("\(count)")
-                    .dsText(.subhead13).foregroundStyle(DS.textSecondary)
-                    .monospacedDigit()
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(DS.textTertiary)
-            }
-            .contentShape(Rectangle())
+            Text("See all \(count) transactions")
+                .dsText(.body17).foregroundStyle(DS.tint)
+                .monospacedDigit()
+                .frame(maxWidth: .infinity)
+                .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
     }

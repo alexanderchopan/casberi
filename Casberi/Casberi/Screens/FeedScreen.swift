@@ -650,14 +650,6 @@ struct FeedScreen: View {
             WalletWorthALookTray(
                 warnings: walletLive.warnings,
                 flagged: walletLive.flagged,
-                onOpenWallet: { address in
-                    showWorthALook = false
-                    if let w = wallet.addresses.first(where: {
-                        WalletWatch.sameAddress($0.address, address)
-                    }) {
-                        HomeRoute.shared.bridgePush = .walletDetail(id: w.id)
-                    }
-                },
                 onOpenThing: { thing in
                     showWorthALook = false
                     sheetThing = thing
@@ -1218,6 +1210,7 @@ struct FeedScreen: View {
                 WalletSeeAllRow(count: total) {
                     HomeRoute.shared.bridgePush = .walletHistory(scope: selectedWallet)
                 }
+                .listRowSeparator(.hidden)
                 .dsListCardRow()
             }
         }

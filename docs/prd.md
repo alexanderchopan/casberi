@@ -4557,3 +4557,15 @@ The §135 split shipped with three debts, all found by walking their taps: every
 **The bug the purge exposed — recorded because the failure mode generalizes:** the §135 block cuts had accidentally deleted `WalletScreen.sync()`, and the `sync()` call left in onAppear KEPT COMPILING by resolving to POSIX `sync(2)` — two green builds were flushing disk buffers instead of reading chains, landing nothing and never registering the seat, with no diagnostic. Restored slim (land + honest status line + seat registration; the old body's warning/portfolio fan-out lives in `WalletWatch.liveState` now). Lesson: when deleting a member whose name shadows a libc symbol (`sync`, `write`, `close`, `open`, `send`…), grep for remaining callers — the compiler will not save you.
 
 VERIFIED 2026-07-20 (iPhone 17 Pro sim, end to end): tile → tray (three delegation rows) → door → vitalik.eth's slimmed page (identity + Safety + remove, nothing else); switcher stays pinned with the treemap dissolving under it; manage shows identity rows and the restored sync's "Connected — watching for activity" line. verify.sh green (cold-launch survival gated), perf flat at 459ms / 329MB.
+
+## 138. Worth-a-look rows are terminal; the see-all door is one phrase (user, 2026-07-20)
+
+Same-day correction to §137, from two screenshots: the see-all row scattered blue text, a gray count, and a chevron across the full row width over a visible List separator ("this looks like crap"), and the Worth-a-look tray's rows deferred to the wallet screen, whose only added value was a Revoke.cash button ("you can't have worth a look pull up a sheet that then says to go look somewhere else").
+
+**Tray rows are TERMINAL now.** Each states the whole fact; where one real action exists it sits on the row itself — a flagged transfer opens its sheet, a delegation row carries "Revoke.cash ↗" directly (the exact URL the wallet screen's Approvals row opens, minus the detour). Safe and liquidation rows carry no control: signing happens in the Safe app, acting on Aave happens on Aave, and the row already says everything this app can honestly say. The `.walletDetail` route died with its only consumer — the manage stack is reached from manage alone now.
+
+**The see-all door is one centered phrase** — "See all 131 transactions" — in the app's own terminal-action grammar ("Stop watching this wallet", "Disconnect Wallet"), separator hidden (the no-lines law; List hands out separators by default and every new row must opt out — second time this same miss shipped in one day, WalletHistoryScreen was the first).
+
+The principle §137 half-stated, now in full: **a door must open onto the thing itself — never onto another door.** Tile → list → act. If a surface's only content is a button to somewhere else, delete the surface and put the button where the person already is.
+
+VERIFIED 2026-07-20 (iPhone 17 Pro sim): tray shows three delegation rows each with inline Revoke.cash ↗; see-all renders as one centered phrase, no line. verify.sh green (10/10 survival), perf flat 457ms / 329MB.
