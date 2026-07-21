@@ -96,23 +96,54 @@ enum KeptAskComposers {
 
     /// Shared by the kept-ask composer and `RootShell.answerDocument`'s
     /// free-text wallet branch, so both never disagree about what a wallet
-    /// answer looks like. Beyond the value line + treemap, the answer shows
-    /// what the wallets have DONE, not just what they hold (user, 2026-07-21):
-    /// the newest landed token approvals (each row's sheet carries the
-    /// prepare card and the Revoke.cash door) and the latest activity —
-    /// transfers, swaps, Peer fills. Both are corpus reads over things the
-    /// wallet bridges already landed, so the richer answer costs no extra
-    /// network and stays deterministic.
+    /// answer looks like. A whole wallet brief now, not a balance check
+    /// (user, 2026-07-21): the value line, the balance SPARKLINE over recorded
+    /// samples (ValueSpark), a glance StatRow (approvals / activity / tokens),
+    /// the holdings treemap, a per-wallet split (AllocBar) when more than one
+    /// is watched, then what the wallets have DONE — the newest token approvals
+    /// (each row's sheet carries the prepare card and the Revoke.cash door) and
+    /// the latest activity, transfers drawn as TxRows. Every section is a read
+    /// over local samples or things the bridges already landed — no extra
+    /// network, still deterministic — and each gates itself out when thin, so a
+    /// fresh wallet degrades to exactly the old line + treemap.
     static func walletDoc(line: String, groups: [WalletIngest.HoldingsGroup],
                           things: [Thing]) -> [String] {
         let walletThings = things.filter { $0.source == "Wallet" || $0.source == "Peer" }
-        let approvals = Array(walletThings.filter(isApproval).prefix(3))
-        let activity = Array(walletThings.filter { !isApproval($0) }.prefix(4))
+        let allApprovals = walletThings.filter(isApproval)
+        let allActivity = walletThings.filter { !isApproval($0) }
+        let approvals = Array(allApprovals.prefix(3))
+        let activity = Array(allActivity.prefix(4))
 
-        var ids = groups.indices.map { "w\($0)" }
+        var ids: [String] = []
         var sections: [String] = []
+
+        // The balance sparkline, from this wallet's (or the combined) recorded
+        // value samples — the one fact the line summarizes but couldn't show.
+        if let spark = valueSparkLine() {
+            ids.append("spark")
+            sections.append(spark)
+        }
+        // A glance strip — approvals is what the user asked to see, so it leads.
+        // "This week" is genuinely recent (not the all-time transfer count,
+        // which would be "recent" in name only); tokens is what's held now.
+        let now = Date.now
+        let recentActivity = allActivity.filter { $0.capturedAt >= now.addingTimeInterval(-7 * 86_400) }.count
+        let tokenCount = groups.reduce(0) { $0 + $1.tokenCount }
+        if !allApprovals.isEmpty || !allActivity.isEmpty {
+            ids.append("stat")
+            sections.append("stat = StatRow(\"\(allApprovals.count)\", \"approvals\", \"\(recentActivity)\", \"this week\", \"\(tokenCount)\", \"tokens\")")
+        }
         for (i, g) in groups.enumerated() {
+            ids.append("w\(i)")
             sections.append("w\(i) = TagMap(\"\(genSafe(g.label))\", \"\(genSafe(g.subline))\", [\(g.cells.joined(separator: ", "))], \"token\")")
+        }
+        // How the total splits across wallets — only meaningful with two+.
+        if groups.count >= 2 {
+            let segs = groups
+                .map { "\(allocSafe($0.label))|\(Int($0.totalUSD))" }
+                .joined(separator: ",")
+            ids.append("alloc")
+            sections.append("alloc = AllocBar(\"\(String(localized: "Across your wallets"))\", \"\(segs)\")")
         }
         if !approvals.isEmpty {
             ids.append("ap")
@@ -120,10 +151,45 @@ enum KeptAskComposers {
         }
         if !activity.isEmpty {
             ids.append("act")
-            sections += rows(activity, title: "Latest activity", widgetID: "act", rowPrefix: "a")
+            sections += activityRows(activity, title: "Latest activity")
         }
         return ["root = Stack([ins\(ids.isEmpty ? "" : ", " + ids.joined(separator: ", "))])",
                 "ins = Insight(\"\(genSafe(line))\")"] + sections
+    }
+
+    /// The `ValueSpark` doc line for the watched wallets — the combined series
+    /// when more than one is watched, that single wallet's otherwise. nil (no
+    /// section) with fewer than two samples: a one-point line is a dot claiming
+    /// a trend. The subline names the anchor date, matching the value line's
+    /// "since Jul 18".
+    private static func valueSparkLine() -> String? {
+        let store = WalletStore.shared
+        guard !store.addresses.isEmpty else { return nil }
+        let samples = store.addresses.count > 1
+            ? store.combinedValueSamples()
+            : store.valueSamples(forAddress: store.addresses[0].address)
+        guard samples.count >= 2, let first = samples.first else { return nil }
+        let csv = samples.map { String(format: "%.2f", $0.usd) }.joined(separator: ",")
+        let since = first.at.formatted(.dateTime.month(.abbreviated).day())
+        return "spark = ValueSpark(\"\(String(localized: "Balance"))\", \"\(String(localized: "since \(since)"))\", \"\(csv)\")"
+    }
+
+    /// Latest-activity rows: a transfer draws its `TxRow` (asset mark,
+    /// direction, amount, counterparty), everything else (swaps, Peer fills,
+    /// Solana moves) keeps the generic `Row` on its title. One Widget hosting
+    /// both, which `GenWidget.rowContent` now dispatches.
+    private static func activityRows(_ things: [Thing], title: String) -> [String] {
+        let ids = things.indices.map { "a\($0)" }
+        var lines = ["act = Widget(\"\(title)\", \"\(things.count)\", [\(ids.joined(separator: ", "))])"]
+        for (i, t) in things.enumerated() {
+            if let dir = t.transferDirection, !dir.isEmpty {
+                let action = dir == "received" ? "Received" : "Sent"
+                lines.append("a\(i) = TxRow(\"\(action)\", \"\(genSafe(t.transferAmount ?? ""))\", \"\(genSafe(t.transferCounterparty ?? ""))\")")
+            } else {
+                lines.append("a\(i) = Row(\"\(genSafe(t.title))\", \"\(t.kind.typeTag)\", \"\(t.source)\", \"\(shortTime(t.capturedAt))\", \"\(t.id.uuidString)\")")
+            }
+        }
+        return lines
     }
 
     /// An approval/Permit2 thing from `WalletApprovals` — the refs that pass
@@ -132,6 +198,14 @@ enum KeptAskComposers {
     private static func isApproval(_ t: Thing) -> Bool {
         let ref = t.sourceRef ?? ""
         return ref.hasPrefix("wallet:approval:") || ref.hasPrefix("wallet:permit2:")
+    }
+
+    /// A wallet label safe for the AllocBar segment grammar — its `,` and `|`
+    /// are the field/segment separators, so strip them (a name never needs
+    /// them; a short address never has them).
+    private static func allocSafe(_ s: String) -> String {
+        genSafe(s).replacingOccurrences(of: "|", with: " ")
+            .replacingOccurrences(of: ",", with: " ")
     }
 
     // MARK: - Aave / gas / Safe (2026-07-20)
@@ -184,6 +258,15 @@ enum KeptAskComposers {
         let shown = moves.prefix(6).compactMap { m in
             TokenChart.route(from: m.thing.content).map { (move: m, route: $0) }
         }
+        // One mover earns the FULL scrubbable curve (ChartCard), not a lone
+        // chip — the same tall-vs-compact dose split TokenChart draws
+        // everywhere else (2026-07-21). Two or more keep the chip list.
+        if shown.count == 1 {
+            let s = shown[0]
+            return ["root = Stack([ins, chart])",
+                    "ins = Insight(\"\(genSafe(line))\")",
+                    "chart = ChartCard(\"\(genSafe(s.move.symbol))\", \"\(s.route.chain)\", \"\(s.route.address)\")"]
+        }
         var doc = ["root = Stack([ins\(shown.isEmpty ? "" : ", res")])",
                    "ins = Insight(\"\(genSafe(line))\")"]
         if !shown.isEmpty {
@@ -213,9 +296,24 @@ enum KeptAskComposers {
         let sorted = overdue.sorted { ($0.dueAt ?? .now) < ($1.dueAt ?? .now) }
         let delta = "\(overdue.count), \(overdue.count == 1 ? "1 thing" : "\(overdue.count) things") late"
         let line = "\(overdue.count) thing\(overdue.count == 1 ? "" : "s") overdue."
+        // AgendaRow, not the generic Row — an overdue task has a due date, so
+        // it draws on the time rail (the most-overdue leads, emphasized).
         return Result(delta: delta, digest: "\(overdue.count)",
                       doc: ["root = Stack([ins, res])", "ins = Insight(\"\(genSafe(line))\")"]
-                          + rows(Array(sorted.prefix(4)), title: "Overdue"))
+                          + agendaRows(Array(sorted.prefix(4)), title: "Overdue"))
+    }
+
+    /// Agenda rows for date-bearing things — the due date on the time rail,
+    /// the title beside it, the first row emphasized ("next" — start here).
+    private static func agendaRows(_ things: [Thing], title: String) -> [String] {
+        let ids = things.indices.map { "r\($0)" }
+        var lines = ["res = Widget(\"\(title)\", \"\(things.count)\", [\(ids.joined(separator: ", "))])"]
+        for (i, t) in things.enumerated() {
+            let when = (t.dueAt ?? t.capturedAt).formatted(.dateTime.month(.abbreviated).day())
+            let state = i == 0 ? "next" : ""
+            lines.append("r\(i) = AgendaRow(\"\(genSafe(when))\", \"\(genSafe(t.title))\", \"\(t.source)\", \"\(state)\")")
+        }
+        return lines
     }
 
     // MARK: - Show <tag>
@@ -254,8 +352,8 @@ enum KeptAskComposers {
         }
         let line = "\(pool.count) thing\(pool.count == 1 ? "" : "s") from \(source) \(windowWords)."
         return Result(delta: "\(pool.count) things", digest: "\(pool.count)",
-                      doc: ["root = Stack([ins, res])", "ins = Insight(\"\(genSafe(line))\")"]
-                          + rows(Array(pool.prefix(6)), title: "From \(source)"))
+                      doc: recapDoc(line: line, pool: pool,
+                                    barsEyebrow: "This week", rowsTitle: "From \(source)"))
     }
 
     // MARK: - What's up with my <category>
@@ -284,8 +382,43 @@ enum KeptAskComposers {
         }
         let line = "\(pool.count) thing\(pool.count == 1 ? "" : "s") from your \(category) apps \(windowWords)."
         return Result(delta: "\(pool.count) things", digest: "\(pool.count)",
-                      doc: ["root = Stack([ins, res])", "ins = Insight(\"\(genSafe(line))\")"]
-                          + rows(Array(pool.prefix(6)), title: category))
+                      doc: recapDoc(line: line, pool: pool,
+                                    barsEyebrow: "This week", rowsTitle: category))
+    }
+
+    /// A recap document: the summary line, a `Bars` chart of when the pool's
+    /// things landed over the last week (dropped when too few to shape), then
+    /// the rows. Shared by the per-source and per-category recaps so they can't
+    /// drift. `dailyBars` counts in-memory over `capturedAt` — no model.
+    private static func recapDoc(line: String, pool: [Thing],
+                                 barsEyebrow: String, rowsTitle: String) -> [String] {
+        let bars = dailyBars(pool, eyebrow: barsEyebrow)
+        let ids = bars == nil ? "ins, res" : "ins, bars, res"
+        var doc = ["root = Stack([\(ids)])", "ins = Insight(\"\(genSafe(line))\")"]
+        if let bars { doc.append(bars) }
+        return doc + rows(Array(pool.prefix(6)), title: rowsTitle)
+    }
+
+    /// A `Bars` doc line — how many of `things` were captured on each of the
+    /// last seven days, labeled by narrow weekday. nil when too few to shape
+    /// (a two-item week reads as a list, not a chart). Deterministic,
+    /// in-memory over `capturedAt`.
+    private static func dailyBars(_ things: [Thing], eyebrow: String) -> String? {
+        guard things.count >= 4 else { return nil }
+        let days = 7
+        let cal = Calendar.current
+        let today = cal.startOfDay(for: .now)
+        var counts = [Int](repeating: 0, count: days)
+        for t in things {
+            let day = cal.startOfDay(for: t.capturedAt)
+            let delta = cal.dateComponents([.day], from: day, to: today).day ?? 999
+            if delta >= 0, delta < days { counts[days - 1 - delta] += 1 }
+        }
+        let labels = (0..<days).map { i -> String in
+            let day = cal.date(byAdding: .day, value: -(days - 1 - i), to: today) ?? today
+            return day.formatted(.dateTime.weekday(.narrow))
+        }
+        return "bars = Bars(\"\(genSafe(eyebrow))\", \"\", \"\(counts.map(String.init).joined(separator: ","))\", \"\(labels.joined(separator: ","))\")"
     }
 
     // MARK: - Kept search
