@@ -1,11 +1,13 @@
 import SwiftUI
 import SwiftData
 
-/// The one surface (2026-07-13, drastic restructure): Home and Feed stopped
-/// being separate tabs. The app is a single scrolling destination with a fixed
-/// chip header — Pinned (your board) leads, then All, then every source. The
-/// body under the header swaps between the board (Pinned) and the feed
-/// (everything else); the composer is a FAB the shell floats over this.
+/// The one surface (2026-07-13, drastic restructure; the Pinned board
+/// retired 2026-07-20, docs/agent-brief.md rulings 11-12): the app is a
+/// single scrolling destination with a fixed chip header — All leads, then
+/// every source. Content-first, always: the per-app glance job the board
+/// used to carry moved to the agent's own kept-ask chips; this surface is
+/// uniformly the feed now. The agent's bar floats over this from RootShell's
+/// own ZStack (not this surface's — it rides every screen this app pushes).
 ///
 /// This container owns the ONE `NavigationStack` and the shared management
 /// doors (avatar → Settings, grid → Apps) so they can't drift between screens
@@ -17,11 +19,14 @@ struct MainSurface: View {
     @Environment(ShellChrome.self) private var chrome
     @Bindable private var filter = FeedFilter.shared
     @Bindable private var route = HomeRoute.shared
-    /// Wallet moments (NFT arrivals, new highs) — the data paths can't reach
-    /// the corpus-arrival watcher that fires the release rain (NFTs/holdings
-    /// aren't things), so they enqueue here and this surface deals the same
-    /// berry rain + toast (delight 2026-07-15).
-    private let walletMoments = WalletMoments.shared
+    /// Source moments (wallet new highs, token new highs, a Bitrefill refill,
+    /// a quiet account posting again) — the data paths can't reach the
+    /// corpus-arrival watcher that fires the release rain (some aren't things
+    /// at all; others are a FACT about a thing, not its landing), so they
+    /// enqueue here and this surface deals the same berry rain + toast
+    /// (delight 2026-07-15, generalized 2026-07-21 — prd "surprise & delight
+    /// in the source feeds").
+    private let sourceMoments = SourceMoments.shared
     /// Anchors the doors' zoom transitions (each room grows from its door).
     @Namespace private var doorNS
 
@@ -43,59 +48,90 @@ struct MainSurface: View {
     /// even though it just arrived. Set-diff on the real records instead.
     @State private var seenIDs: Set<UUID>?
 
-    /// Chip order: Pinned, All, then every source most-recent-first (the app you
-    /// just heard from sits up front). `things` is newest-first, so first
-    /// appearance IS the newest thing per source.
+    /// Chip order: All, then every source — most-recent-first is still the
+    /// baseline (`things` is newest-first, so first appearance IS the newest
+    /// thing per source), but a source you actually VISIT often (`ChipMemory`,
+    /// amends §131, 2026-07-21) sorts ahead of it. `sorted` is stable, so a
+    /// zero-weight tie keeps the recency order untouched — this only ever
+    /// promotes a chip you use, never reorders the rest.
     private var chipLabels: [String] {
         var seen: Set<String> = []
         var ordered: [String] = []
         for thing in feedThings where seen.insert(thing.source).inserted {
             ordered.append(thing.source)
         }
-        return ["Pinned", "All"] + ordered
+        let learned = ordered.sorted { ChipMemory.weight(for: $0) > ChipMemory.weight(for: $1) }
+        return ["All"] + learned
     }
 
-    private var showingBoard: Bool { filter.source == "Pinned" }
-
-    /// A shaped feed wears its source's hue (B ruling 2026-07-10): the whole
-    /// top of the screen — status bar, doors, chip strip, then the feed's own
-    /// header — sits on the source's wash hue, fading out as the day groups
-    /// begin. Lives here (not inside FeedScreen) because the chip strip and
-    /// status bar are OUTSIDE the feed's own view, on this shared surface
-    /// (bug, 2026-07-14: the wash used to start at the feed's List, leaving
-    /// the chips and status bar flat black above it). One recipe, no per-hue
-    /// tuning — `DS.washHue` normalizes the brand hex (2026-07-13; the old
-    /// mix-toward-black turned yellows olive and near-black marks to smudge)
-    /// — and nil (no wash) for Pinned/All/a hueless source, honestly.
-    ///
-    /// Rendered as a BACKGROUND now, and BOLD (user ruling 2026-07-13,
-    /// "bold like Cash App"): the hue is the solid field the content sits
-    /// ON — full-strength at the crown, flowing into the page color — not a
-    /// translucent film laid over the rows. The old overlay approach (which
-    /// existed because FeedScreen's opaque page paint hid a background wash)
-    /// is retired the right way: a SHAPED feed skips its own opaque coat
-    /// (`FeedScreen` checks the same `washHue`), so this field genuinely
-    /// shows through behind the rows instead of tinting them from above.
-    @ViewBuilder private var shapeWash: some View {
-        if let hue = DS.washHue(for: filter.source) {
-            LinearGradient(stops: [
-                .init(color: hue, location: 0),
-                .init(color: hue, location: 0.4),
-                .init(color: hue.opacity(0), location: 1),
-            ], startPoint: .top, endPoint: .bottom)
-                .frame(height: 620)
-                .frame(maxHeight: .infinity, alignment: .top)
-                .transition(.opacity)
-                .id(filter.source)   // crossfade between hues, not a smear
+    /// The pager's pages — every chip is a feed now (the board's own
+    /// non-swiping page retired with it, 2026-07-20).
+    private var feedLabels: [String] {
+        var labels = chipLabels
+        // The selected source ALWAYS gets a page, even with nothing in it.
+        // The chip row is built from things that exist, but `filter.source` is
+        // written unvalidated — a deep link (casberi://feed/source/Gmail), a
+        // bridge connected but not yet synced, or deleting the last thing from
+        // the room you're standing in all name a source with no chip. Without
+        // this, the selection matches no `.tag`, and a TabView with an
+        // unmatched selection quietly renders a DIFFERENT page: the Gmail wash
+        // painted over the All feed, no chip lit, and the honest "Nothing from
+        // Gmail yet" empty state unreachable (measured 2026-07-16).
+        if !labels.contains(filter.source) {
+            labels.append(filter.source)
         }
+        return labels
     }
+
+    // The per-source brand-hue wash that once flooded this surface is gone
+    // (user ruling 2026-07-18: full ink). A feed's identity lives in its chip
+    // and icon, not a borrowed brand-color field — the wash read as decoration
+    // over the content, and hues like Calendar's red collided with the
+    // alert/loss meaning red carries elsewhere. The feed now sits on the
+    // neutral `DS.themedPage` like the board does. (`DS.washHue` stays for the
+    // sheet/detail/setup surfaces, which still wear a source's identity.)
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 0) {
+            // The feeds are one pager (2026-07-16): a chip tap and a swipe are
+            // the same move, because selection binds to the SAME value the chips
+            // write — so the strip, the wash, and every deep link
+            // (casberi://feed/source/X) all keep working with no second source of
+            // truth to reconcile. Uniformly the feed now (the board's own
+            // non-swiping page retired 2026-07-20).
+            TabView(selection: $filter.source) {
+                ForEach(feedLabels, id: \.self) { label in
+                    FeedScreen(source: label,
+                               isActive: label == filter.source)
+                        .tag(label)
+                }
+            }
+            .tabViewStyle(.page(indexDisplayMode: .never))
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            // The strip FLOATS over the feed rather than sitting above it
+            // (2026-07-20). It was a VStack sibling, which meant nothing ever
+            // passed behind the chips — so the glass they wear blurred a flat
+            // color and rendered indistinguishable from a solid fill, paying a
+            // backdrop blur for nothing. `safeAreaInset` reserves the strip's
+            // height at rest (rows still start below it, untouched) while letting
+            // scrolled content travel UNDER it, which is the only thing that makes
+            // the material read as glass. Pairs with each feed's `dsSoftTopEdge()`:
+            // the scroll edge dissolves content as it goes under, so rows melt into
+            // the strip instead of colliding with it.
+            .safeAreaInset(edge: .top, spacing: 0) {
                 // The fixed navigation strip — always in reach, never scrolls
                 // away with content (the whole point of dropping the tab bar).
-                SourceChips(labels: chipLabels, active: filter.source) { label in
+                // The avatar leads it now too (2026-07-20) — the system nav
+                // bar it used to sit in alone is hidden below, so this strip
+                // owns the top of the screen outright; the extra top padding
+                // (was s2) is that vacated space becoming air, not bigger
+                // chips (the 56pt Stories size is a 2026-07-10 ruling, not
+                // being revisited here).
+                SourceChips(labels: chipLabels, active: filter.source,
+                            onApps: { route.push = .apps },
+                            onSettings: { route.push = .settings },
+                            refreshSpin: chrome.refreshPulse,
+                            zoomNS: doorNS) { label in
                     if label == filter.source {
                         // Re-tapping the chip you're already on pops back to
                         // root (the old per-tab habit) instead of doing nothing.
@@ -104,24 +140,16 @@ struct MainSurface: View {
                     }
                     withAnimation(DS.Motion.standard) {
                         filter.source = label
-                        // Leaving the board for the feed clears any stray kind
-                        // filter so "All" means all; entering the board is
-                        // source-only. A specific source keeps its own tag.
-                        if label == "Pinned" || label == "All" { filter.tag = "All" }
+                        // Entering "All" means all; a specific source keeps
+                        // its own tag.
+                        if label == "All" { filter.tag = "All" }
                     }
+                    // Tap-learning (ChipMemory) counts an actual switch, not
+                    // the re-tap-to-pop branch above.
+                    ChipMemory.visited(label)
                 }
-                .padding(.top, DS.Space.s2)
+                .padding(.top, DS.Space.s6)
                 .padding(.bottom, DS.Space.s2)
-
-                // The body under the header — the board, or the feed.
-                Group {
-                    if showingBoard {
-                        HomeScreen()
-                    } else {
-                        FeedScreen()
-                    }
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
             // The themed page behind the chip header too — the header sits
             // OUTSIDE the screens' own dsPageBackground, so in light mode the
@@ -131,11 +159,7 @@ struct MainSurface: View {
             // screens already render the theme photo themselves, and a second
             // full render here would be pure waste under an opaque layer.
             .background {
-                ZStack(alignment: .top) {
-                    DS.themedPage
-                    shapeWash
-                }
-                .ignoresSafeArea()
+                DS.themedPage.ignoresSafeArea()
             }
             // The first-thing bloom — a new app's first landing washes its
             // hue across the header for a beat, then fades. The one moment
@@ -152,6 +176,14 @@ struct MainSurface: View {
             }
             .onAppear {
                 seenIDs = Set(feedThings.map(\.id))
+                #if DEBUG
+                // `-chipStats "Wallet:9,Photos:2"` seeds tap-learning counts
+                // headlessly, then this logs the computed order so a chip
+                // promotion verifies in one launch (seed Wallet high, watch
+                // it lead the sources behind All).
+                ChipMemory.seedFromLaunchArgs()
+                NSLog("[Casberi] chipLabels: %@", chipLabels.joined(separator: ", "))
+                #endif
                 // A door push that raced launch — casberi://settings arriving
                 // before the first frame — was set before this stack
                 // registered its navigationDestination, and SwiftUI drops
@@ -199,6 +231,11 @@ struct MainSurface: View {
                     chrome.refreshPulse += 1
                     chrome.flash(String(localized: "\(major.title) is out 🎉"))
                 }
+                // A source crossing a round total of things is a quiet
+                // count-up, said once (prd §36v, generalized per-source
+                // 2026-07-21) — a fact the corpus can prove, never a streak.
+                let sourceCount = feedThings.filter { $0.source == lead.source }.count
+                ThingMilestones.check(source: lead.source, count: sourceCount, chrome: chrome)
                 if firstEver {
                     UserDefaults.standard.set(true, forKey: bloomedKey)
                     let hue = DS.washHue(for: lead.source) ?? DS.tint
@@ -214,47 +251,41 @@ struct MainSurface: View {
                     }
                 }
             }
-            // A wallet moment landed (an NFT arrived, a new high) — deal the
-            // same berry rain + toast the starred-repo release uses, so every
-            // wallet celebration reads the same. The line names the moment.
-            .onChange(of: walletMoments.pulse) {
-                let lines = walletMoments.drain()
-                guard let latest = lines.last else { return }
+            // A source moment landed (a wallet or token new high, a Bitrefill
+            // refill, a quiet account posting again) — deal the same berry
+            // rain + toast the starred-repo release uses, tinted to the
+            // moment's own source hue when it names one, so every source's
+            // celebration reads the same family in its own color. The line
+            // names the moment.
+            .onChange(of: sourceMoments.pulse) {
+                let moments = sourceMoments.drain()
+                guard let latest = moments.last else { return }
                 // Rain once for the batch; name the most recent moment. A queue
                 // (not a single slot) means a moment fired while backgrounded
                 // survives here until this drain runs on foreground.
+                chrome.refreshHue = latest.source.flatMap { DS.washHue(for: $0) }
                 chrome.refreshPulse += 1
-                chrome.flash(latest)
+                chrome.flash(latest.text)
             }
-            // The FAB rides the ROOT surface only (2026-07-13 polish): pushed
-            // rooms (Apps, Settings, a token form) slide over it — a compose
-            // button isn't theirs. RootShell still owns the composer sheet.
-            .overlay(alignment: .bottomTrailing) {
-                ComposerFAB {
-                    DSHaptic.tap()
-                    chrome.openComposer()
-                }
-                .padding(.horizontal, DS.Space.s4)
-                .padding(.bottom, DS.Space.s2)
-            }
+            // The agent bar moved OFF MainSurface entirely (docs/agent-brief.md
+            // ruling 6): it now rides RootShell's own ZStack, above EVERY
+            // screen this app can push (Apps, Settings, a bridge setup form),
+            // not just this one's root — the FAB used to stop at MainSurface's
+            // edge on purpose; the bar deliberately doesn't.
             // Refresh delight (2026-07-14): every pull on this one surface
             // bumps chrome.refreshPulse — the berry rain falls over the
             // content and the avatar door spins (below). Decorative only;
             // hit-testing is off inside BerryRain.
-            .overlay { BerryRain(trigger: chrome.refreshPulse) }
+            .overlay { BerryRain(trigger: chrome.refreshPulse, hue: chrome.refreshHue) }
             .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackgroundVisibility(.hidden, for: .navigationBar)
-            .toolbar {
-                // The shared doors — one place now, not duplicated onto two
-                // tab roots. Any pull-to-refresh spins the avatar (the old
-                // Home-only rule died with the tabs; restored 2026-07-14
-                // after the tab-drop rewire orphaned the trigger).
-                TopDoors(onSettings: { route.push = .settings },
-                         onApps: { route.push = .apps },
-                         refreshSpin: chrome.refreshPulse,
-                         zoomNS: doorNS)
-            }
+            // The nav bar itself is hidden now (2026-07-20) — nothing lives
+            // in it anymore. The avatar (was the sole trailing toolbar item,
+            // `TopDoors`) joined the catalogue door as a fixed leading chip
+            // in `SourceChips` above; that strip owns the top of the screen
+            // outright. First `.toolbar(.hidden, for:)` in this codebase —
+            // there was nothing to hide FROM before this move.
+            .toolbar(.hidden, for: .navigationBar)
             .navigationDestination(item: $route.push) { push in
                 switch push {
                 case .apps:
@@ -264,6 +295,14 @@ struct MainSurface: View {
                     SettingsScreen()
                         .navigationTransition(.zoom(sourceID: "settingsDoor", in: doorNS))
                 }
+            }
+            // The ONE bridge-screen registration for the whole stack (see
+            // `HomeRoute.bridgePush`) — Feed's Manage, an Apps tile's
+            // capsule, and a product page's Connect/Open all push through
+            // this single binding regardless of how deep they sit, so the
+            // pushed screen always gets a correct back chevron.
+            .navigationDestination(item: $route.bridgePush) { dest in
+                BridgeDestinationView(destination: dest)
             }
         }
         .tint(DS.tint)

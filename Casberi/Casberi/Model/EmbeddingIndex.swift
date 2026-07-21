@@ -19,14 +19,20 @@ enum EmbeddingIndex {
     static var isAvailable: Bool { model != nil }
 
     /// The text an answer would match on — the title carries most of the
-    /// signal; a short body slice adds substance. Capped: a sentence embedding
-    /// wants a sentence, not a document, and long inputs cost more for no gain.
+    /// signal; a short body slice adds substance, and a link's fetched article
+    /// text (`enrichedText`) carries what the title alone never could. Capped:
+    /// a sentence embedding wants a sentence, not a document, and long inputs
+    /// cost more for no gain — but 800 leaves room for a link's lede past its
+    /// title (raised from 500, 2026-07-15).
     static func indexText(for thing: Thing) -> String {
         let body = thing.content.trimmingCharacters(in: .whitespacesAndNewlines)
-        let joined = body.isEmpty || body == thing.title
-            ? thing.title
-            : "\(thing.title). \(body)"
-        return String(joined.prefix(500))
+        var parts = [thing.title]
+        if !body.isEmpty, body != thing.title { parts.append(body) }
+        if let extra = thing.enrichedText?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !extra.isEmpty {
+            parts.append(extra)
+        }
+        return String(parts.joined(separator: ". ").prefix(800))
     }
 
     /// An embedding vector for arbitrary text, as Float. nil when the model is
@@ -121,7 +127,7 @@ enum EmbeddingIndex {
                 // can't hold the main thread long enough to drop a frame.
                 if i % 8 == 7 { await Task.yield() }
             }
-            try? context.save()
+            context.saveHonestly()
             total += batch.count
             await Task.yield()
         }

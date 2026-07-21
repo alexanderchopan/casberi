@@ -85,14 +85,14 @@ enum StockWatch {
             sourceRef: ref
         )
         context.insert(thing)
-        try? context.save()
+        context.saveHonestly()
         SpotlightIndex.index([thing])
         let symbol = stock.symbol
         Task { @MainActor in
             guard let price = await StockChart.fetch(ticker: symbol, range: .day)?.price
             else { return }
             thing.watchPriceUsd = price
-            try? context.save()
+            context.saveHonestly()
         }
         return thing
     }
@@ -128,7 +128,7 @@ enum StockWatch {
         guard !watches.isEmpty else { return }
         SpotlightIndex.remove(ids: watches.map(\.id))
         for thing in watches { context.delete(thing) }
-        try? context.save()
+        context.saveHonestly()
     }
 
     /// Registers (or clears) the Stocktwits seat with the live watched count.
@@ -268,7 +268,7 @@ enum StocktwitsIngest {
                 added += 1
             }
         }
-        if added > 0 { try? context.save() }
+        if added > 0 { context.saveHonestly() }
         return reachedAny ? added : nil
     }
 }

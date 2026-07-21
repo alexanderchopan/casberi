@@ -1,4 +1,5 @@
 import SwiftUI
+import SwiftData
 import Photos
 import LinkPresentation
 import AVFoundation
@@ -38,6 +39,10 @@ struct ThingContentView: View {
                 KalshiMarketContent(series: route.series, event: route.event)
             } else if let ticker = StockChart.route(from: thing.content) {
                 StockChartContent(thing: thing, ticker: ticker)
+            } else if thing.source == "GitHub", thing.sourceRef?.hasPrefix("gh:release:") == true {
+                // A release leads with its preview, then its own notes —
+                // read live, since `enrichedText` is retrieval-only.
+                GitHubReleaseContent(thing: thing)
             } else if thing.source == "GitHub", thing.starCount != nil || thing.repoLanguage != nil {
                 // A starred / watched repo leads with its preview, then the
                 // language dot and the "since you starred" line.
@@ -63,7 +68,17 @@ struct ThingContentView: View {
                 StoredArtContent(urlString: art)
             }
         case .chat:
-            if !thing.content.isEmpty { ChatBubbles(text: thing.content) }
+            // A post/cast is not a conversation — it's one person's words,
+            // its pictures, what it quotes, and how it landed. Its own read
+            // (2026-07-16); the ChatBubbles path stayed for the imports
+            // (ChatGPT, Claude) whose content really is a transcript. Before
+            // this, a post rendered its `content` as bubbles — and a post's
+            // content is its PERMALINK, so the sheet showed a URL in a bubble.
+            if SocialThread.isSocial(thing.source) {
+                SocialPostContent(thing: thing)
+            } else if !thing.content.isEmpty {
+                ChatBubbles(text: thing.content)
+            }
         case .voice:
             VoiceContent(transcript: thing.content, sourceRef: thing.sourceRef,
                          audio: thing.audio)
@@ -275,16 +290,22 @@ private struct LinkPreviewCard: View {
         if let stored = storedImageURL, let storedURL = URL(string: stored),
            let (data, _) = try? await URLSession.shared.data(from: storedURL),
            let art = UIImage(data: data) {
-            image = art
+            // The card only ever paints this into a 140pt banner — downsample
+            // off-main so a full-resolution CDN image doesn't sit decoded in
+            // memory for a fraction of its rendered size.
+            image = await art.dsDownsampled(maxSide: 280)
         }
         let provider = LPMetadataProvider()
         guard let metadata = try? await provider.startFetchingMetadata(for: url) else { return }
         title = metadata.title
         guard image == nil, let imageProvider = metadata.imageProvider else { return }
-        image = await withCheckedContinuation { continuation in
+        let fetched: UIImage? = await withCheckedContinuation { continuation in
             _ = imageProvider.loadObject(ofClass: UIImage.self) { object, _ in
                 continuation.resume(returning: object as? UIImage)
             }
+        }
+        if let fetched {
+            image = await fetched.dsDownsampled(maxSide: 280)
         }
     }
 }
@@ -326,7 +347,24 @@ private struct StoredArtContent: View {
         guard let url = URL(string: urlString),
               let (data, _) = try? await URLSession.shared.data(from: url),
               let ui = UIImage(data: data) else { return }
-        image = ui
+        // Rendered at most 280pt tall (`frame(maxHeight: 280)` above); no
+        // reason to hold a full-resolution decode for that.
+        image = await ui.dsDownsampled(maxSide: 560)
+    }
+}
+
+private extension UIImage {
+    /// Off-main downsample to fit within `maxSide` pixels — the same
+    /// technique `RemoteImageLoader` uses for remote images (ShapedRows.swift),
+    /// applied here to locally-decoded bytes so a detail sheet doesn't hold a
+    /// full-resolution bitmap just to paint a small fixed-size banner/card.
+    func dsDownsampled(maxSide: CGFloat) async -> UIImage {
+        guard size.width > maxSide || size.height > maxSide else { return self }
+        return await withCheckedContinuation { cont in
+            prepareThumbnail(of: CGSize(width: maxSide, height: maxSide)) {
+                cont.resume(returning: $0 ?? self)
+            }
+        }
     }
 }
 
@@ -514,11 +552,26 @@ private struct ScheduleCard: View {
 /// the token; a stat the pair doesn't report simply isn't shown).
 /// Illiquid/dead tokens have no pool anywhere, so it falls back to the
 /// plain link, never an empty chart.
+///
+/// A token discovered elsewhere — GeckoTerminal trending, a pasted
+/// Dexscreener link — draws the exact same chart (trending is discovery,
+/// watching stays the Tokens bridge's explicit tap), so it also carries the
+/// one-verb Watch row (2026-07-15) — the same door TokenQuickSheet already
+/// offers a held-but-unwatched wallet holding, here for any token thing.
 private struct TokenChartContent: View {
     let thing: Thing
     let chain: String
     let address: String
     @State private var stats: TokenStats?
+    @Environment(\.modelContext) private var modelContext
+    // Optional on purpose (2026-07-17): this content mounts from sheet
+    // chains that don't all carry the store (the deep-link/-openThing sheet
+    // hangs outside RootShell's `.environment(bridges)`), and the REQUIRED
+    // form is a mount-time fatal — the sheet crashed the app before the
+    // first frame. Missing store only skips bridge registration on Watch.
+    @Environment(BridgeStore.self) private var store: BridgeStore?
+    @State private var resolved: TokenWatch.Resolved?
+    @State private var watchedTitle: String?
 
     /// The watch-time anchor — only when the record really carries one
     /// (tokens watched before the field stay anchorless, honestly).
@@ -528,48 +581,142 @@ private struct TokenChartContent: View {
         return (p, thing.capturedAt)
     }
 
+    /// This IS the watchlist's own thing — the row below already says so via
+    /// its "since you watched" anchor, so a second Watch verb would be a
+    /// dead control on the one place it can never apply.
+    private var offersWatch: Bool { thing.source != "Tokens" }
+
     var body: some View {
         VStack(alignment: .leading, spacing: DS.Space.s4) {
-            TokenChartView(chain: chain, address: address, since: since) {
+            TokenChartView(chain: chain, address: address, since: since, hero: true) {
                 // No pool (dead/illiquid) — the plain link, honestly.
                 if let url = URL(string: "https://dexscreener.com/\(chain)/\(address)") {
                     LinkPreviewCard(url: url)
                 }
             }
             statStrip
+            if offersWatch { watchRow }
         }
         .padding(.horizontal, DS.Space.s4)
         .padding(.bottom, DS.Space.s3)
         .task { stats = await TokenStats.fetch(chain: chain, address: address) }
+        .task {
+            guard offersWatch else { return }
+            let route = TokenQuickRoute(chain: chain, address: address)
+            if let already = route.watchedThing(in: modelContext) {
+                watchedTitle = already.title
+            } else {
+                resolved = await TokenWatch.search(address).first { $0.id == route.id }
+            }
+        }
     }
 
-    /// The market's shape in four quiet numbers — cells only for stats the
-    /// pair actually reported.
+    /// One real verb: Watch — the same one-tap door TokenQuickSheet offers a
+    /// held-but-unwatched holding, styled to sit inline among this content's
+    /// other quiet cards rather than as a full sheet row.
+    @ViewBuilder private var watchRow: some View {
+        if let watchedTitle {
+            // The settled state wears the same full-width capsule the verb
+            // did — quiet fill, confirm check — so watching doesn't snap the
+            // layout, and it stays a label, not a control.
+            HStack(spacing: DS.Space.s2) {
+                Image(systemName: "checkmark")
+                    .font(.system(size: 15, weight: .bold))
+                    .foregroundStyle(DS.confirm)
+                Text("Watching \(watchedTitle)")
+                    .dsText(.callout15).fontWeight(.semibold)
+                    .foregroundStyle(DS.textSecondary)
+                    .lineLimit(1)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 14)
+            .background(DS.fillFaint, in: Capsule(style: .continuous))
+        } else if let resolved {
+            // The one verb, at full Cash-App weight (Big money, 2026-07-17):
+            // a tint-filled capsule spanning the sheet.
+            Button {
+                DSHaptic.tap()
+                if let watched = TokenWatch.add(resolved, context: modelContext) {
+                    DSHaptic.success()
+                    watchedTitle = watched.title
+                    if let store {
+                        TokenWatch.registerBridge(store: store, context: modelContext)
+                    }
+                } else {
+                    watchedTitle = "\(resolved.name) · $\(resolved.symbol)"
+                }
+            } label: {
+                Text("Watch this token")
+                    .dsText(.body17).fontWeight(.bold)
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(DS.tint, in: Capsule(style: .continuous))
+                    .contentShape(Capsule(style: .continuous))
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    /// The market's shape, re-ranked (Big money, 2026-07-17): the two
+    /// biggest facts — market cap and 24h volume, in rank order — lead as
+    /// bold cards; whatever else the pair reported follows in the SAME
+    /// two-column grid as smaller cards (user checkpoint 2026-07-17: the
+    /// free-floating chips broke the block's cohesion — demotion is scale,
+    /// not a different anatomy). Still cells only for stats actually
+    /// reported: a token with no cap leads with what it HAS (FDV honestly
+    /// labeled FDV), never an invented number.
     @ViewBuilder private var statStrip: some View {
         if let stats {
             let cells: [(String, Double)] = [
-                ("Liquidity", stats.liquidityUsd), ("24h volume", stats.volume24h),
-                ("FDV", stats.fdv), ("Market cap", stats.marketCap),
+                ("Market cap", stats.marketCap), ("24h volume", stats.volume24h),
+                ("FDV", stats.fdv), ("Liquidity", stats.liquidityUsd),
             ].compactMap { label, value in value.map { (label, $0) } }
-            HStack(alignment: .top, spacing: DS.Space.s3) {
-                ForEach(cells, id: \.0) { label, value in
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(LocalizedStringKey(label))
-                            .dsText(.label12).foregroundStyle(DS.textTertiary)
-                            .lineLimit(1)
-                        Text(TokenStats.compact(value))
-                            .dsText(.callout15).foregroundStyle(DS.textPrimary)
-                            .monospacedDigit()
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.7)
+            let lead = cells.prefix(2)
+            let rest = cells.dropFirst(2)
+            VStack(spacing: DS.Space.s2) {
+                if !lead.isEmpty {
+                    HStack(alignment: .top, spacing: DS.Space.s2) {
+                        ForEach(lead, id: \.0) { label, value in
+                            statCard(label: label, value: value, lead: true)
+                        }
+                        // A lone cell keeps its half-width column — three
+                        // reported stats must not turn the grid ragged.
+                        if lead.count == 1 { Color.clear.frame(maxWidth: .infinity, maxHeight: 1) }
                     }
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                if !rest.isEmpty {
+                    HStack(alignment: .top, spacing: DS.Space.s2) {
+                        ForEach(rest, id: \.0) { label, value in
+                            statCard(label: label, value: value, lead: false)
+                        }
+                        if rest.count == 1 { Color.clear.frame(maxWidth: .infinity, maxHeight: 1) }
+                    }
                 }
             }
-            .padding(DS.Space.s3)
-            .background(DS.fillFaint,
-                        in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
         }
+    }
+
+    /// One card anatomy for every stat — the tile radius, a full s4 pad, the
+    /// value in the rounded money voice. Lead wears stat24; the rest demote
+    /// to price16 in the same seat.
+    private func statCard(label: String, value: Double, lead: Bool) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(LocalizedStringKey(label))
+                .dsText(.label12).foregroundStyle(DS.textTertiary)
+                .lineLimit(1)
+            Text(TokenStats.compact(value))
+                .dsText(lead ? .stat24 : .price16)
+                .foregroundStyle(DS.textPrimary)
+                .monospacedDigit()
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(DS.Space.s4)
+        .background(DS.fillFaint,
+                    in: RoundedRectangle(cornerRadius: DS.Radius.widget,
+                                         style: .continuous))
     }
 }
 
@@ -620,11 +767,7 @@ private struct GitHubStarContent: View {
 
     /// "owner/repo" parsed from the repo's html_url.
     private var repoPath: String? {
-        guard let url = URL(string: thing.content),
-              (url.host ?? "").contains("github.com") else { return nil }
-        let parts = url.pathComponents.filter { $0 != "/" }
-        guard parts.count >= 2 else { return nil }
-        return "\(parts[0])/\(parts[1])"
+        GitHubFeedFetch.repoPath(fromWebURL: thing.content)
     }
 
     var body: some View {
@@ -712,6 +855,37 @@ private struct GitHubStarContent: View {
         "Vue": Color(hex: "#41B883"),         "Zig": Color(hex: "#EC915C"),
         "Solidity": Color(hex: "#AA6746"),    "Nix": Color(hex: "#7E7EFF"),
     ]
+}
+
+/// A release: its link preview, then its own notes — read fresh when the
+/// sheet opens (2026-07-16), the `enrichedText`-is-retrieval-only rule means
+/// this can't be stored, so it follows the star-count/social-engagement
+/// precedent instead: live, and simply absent if the fetch can't reach it.
+private struct GitHubReleaseContent: View {
+    let thing: Thing
+    @State private var notes: String?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s3) {
+            if let url = URL(string: thing.content) {
+                LinkPreviewCard(url: url, storedImageURL: thing.previewImageURL)
+            }
+            if let notes {
+                Text(notes)
+                    .dsText(.callout15).foregroundStyle(DS.textSecondary)
+                    .lineLimit(10)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding(.horizontal, DS.Space.s4)
+        .padding(.bottom, DS.Space.s3)
+        .task { await load() }
+    }
+
+    private func load() async {
+        guard let token = TokenVault.get(TokenBridge.github.tokenKey) else { return }
+        notes = await GitHubFeedFetch.releaseBody(thing: thing, token: token)
+    }
 }
 
 /// A Kalshi market's odds, drawn natively — the KalshiMarketView read: a

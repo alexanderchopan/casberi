@@ -53,7 +53,9 @@ struct ProjectDetailScreen: View {
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .scrollIndicators(.hidden)
+        .dsAdaptiveContentWidth()
         .dsPageBackground()
+        .dsSoftTopEdge()
         .navigationBarTitleDisplayMode(.inline)
         // Paint the whole composition at once — a record, not a stream (§5).
         // This screen is a zoom-transition DESTINATION (HomeScreen pushes it
@@ -76,12 +78,11 @@ struct ProjectDetailScreen: View {
         // 2026-07-07 — every project already sits on Home's map, so a pin
         // that only re-sorted it was a second pin system. Thing pins remain.)
         .toolbar {
-            Button("Rename") {
+            Button("Rename tag") {
                 newName = projectName
                 renaming = true
             }
             .tint(DS.tint)
-            .accessibilityLabel("Rename tag")
         }
         .alert("Rename \(projectName)", isPresented: $renaming) {
             TextField("New name", text: $newName)
@@ -106,7 +107,7 @@ struct ProjectDetailScreen: View {
                 .map { $0 == projectName ? name : $0 }
                 .filter { seen.insert($0.lowercased()).inserted }
         }
-        try? modelContext.save()
+        modelContext.saveHonestly()
         DSHaptic.success()
         dismiss()
     }

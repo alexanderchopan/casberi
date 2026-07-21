@@ -61,12 +61,53 @@ enum SharedStore {
         try make(cloudKit: .none)
     }
 
+    /// Non-nil once the app has fallen back from the real corpus (a bad open
+    /// that survived retries). RootShell flashes this once at launch instead
+    /// of the app crash-looping — see `CasberiApp.init`'s degrade ladder.
+    /// Written before any SwiftUI view exists, so it's a static, not state.
+    nonisolated(unsafe) private(set) static var degradeReason: String?
+
+    /// The open-failure recovery ladder (S0: the app must always launch).
+    /// A `ModelContainer(for:)` failure almost always means the on-disk store
+    /// no longer matches the compiled schema — most commonly a non-lightweight
+    /// `Thing` change shipped without a new `ThingSchemaVN` stage (see
+    /// `ThingSchemaVersioning.swift`). Rather than `fatalError` (a crash-loop
+    /// for every install until a fix ships), retry with CloudKit off — a
+    /// CloudKit-specific mirroring fault shouldn't take down a local-only
+    /// open — and if even that fails, open an ephemeral in-memory store so
+    /// the app still launches (empty, but alive); the real store file is
+    /// left untouched on disk for a future fixed build to recover.
+    static func containerWithFallback() -> ModelContainer {
+        do {
+            return try container()
+        } catch let primaryError {
+            NSLog("[Casberi] primary store open failed, retrying without CloudKit: \(primaryError)")
+            do {
+                let made = try make(cloudKit: .none)
+                degradeReason = "iCloud sync couldn't open — your things are here, but sync is off until the next update."
+                return made
+            } catch let localError {
+                NSLog("[Casberi] local fallback store open ALSO failed, using an ephemeral store: \(localError)")
+                degradeReason = "Your things couldn't load this launch — nothing was lost, but they won't show until the next update."
+                return ephemeralContainer()
+            }
+        }
+    }
+
+    private static func ephemeralContainer() -> ModelContainer {
+        let config = ModelConfiguration(isStoredInMemoryOnly: true)
+        // In-memory only, no disk/CloudKit/group container involved — this
+        // is the guaranteed-success leaf of the ladder above, so force-try
+        // is the honest signature (nothing left to fall back to).
+        return try! ModelContainer(for: Thing.self, configurations: config)
+    }
+
     private static func make(cloudKit: ModelConfiguration.CloudKitDatabase) throws -> ModelContainer {
         let groupURL = FileManager.default
             .containerURL(forSecurityApplicationGroupIdentifier: appGroup)
         let config = groupURL != nil
             ? ModelConfiguration(groupContainer: .identifier(appGroup), cloudKitDatabase: cloudKit)
             : ModelConfiguration(cloudKitDatabase: cloudKit)
-        return try ModelContainer(for: Thing.self, configurations: config)
+        return try ModelContainer(for: Thing.self, migrationPlan: ThingMigrationPlan.self, configurations: config)
     }
 }

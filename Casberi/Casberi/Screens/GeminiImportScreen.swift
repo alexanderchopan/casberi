@@ -33,14 +33,14 @@ struct GeminiImportScreen: View {
             stepsSection.listRowSeparator(.hidden)
             importSection.listRowSeparator(.hidden)
             if !recent.isEmpty {
-                PinToHomeButton(source: "Gemini", inSection: true)
-                    .listRowSeparator(.hidden)
                 recentSection.listRowSeparator(.hidden)
             }
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
+        .dsAdaptiveContentWidth()
         .dsPageBackground()
+        .dsSoftTopEdge()
         .navigationTitle("Gemini")
         .navigationBarTitleDisplayMode(.large)
         .fileImporter(isPresented: $importing,

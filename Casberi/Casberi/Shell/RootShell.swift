@@ -15,18 +15,21 @@ struct RootShell: View {
     @State private var chrome = ShellChrome()
     @State private var draft = ""
     @State private var composerOpen = false
-    /// The Actions sheet's height — the composer reports its content height so
-    /// the sheet hugs it (grows on its own when an answer streams in).
-    @State private var actionsHeight: CGFloat = 360
+    /// Session-scoped only, never persisted — the bar's pulse (ruling 6)
+    /// stops once the agent has been raised AT ALL this launch. Distinct
+    /// from `KeptAskStore`'s own per-ask, persisted "seen" dot.
+    @State private var agentEverOpened = false
     @State private var deepLinkThing: Thing?
+    /// `casberi://person/<Source>/<handle>` — the profile card, by name.
+    @State private var deepLinkPerson: SocialProfile?
     @AppStorage("onboarded") private var onboarded = false
-    /// After onboarding completes, the "How it works" greeting shows a new
-    /// person once (2026-07-11) — swapped in as a SECOND STEP inside the same
-    /// full-screen cover (not a sheet presented after the cover dismisses),
-    /// so the feed never flashes underneath between the two (2026-07-13 fix:
-    /// the old onDismiss handoff had a visible gap where the cover had
-    /// already revealed the feed before the sheet slid up).
-    @State private var onboardingHowItWorks = false
+    /// Set by the onboarding CTA, consumed by the cover's onDismiss: the
+    /// catalog push must wait until the cover is fully DOWN. Pushing while
+    /// the cover still stood raced its dismissal, and SwiftUI intermittently
+    /// drops a navigationDestination push made under a presented cover — the
+    /// same drop class as `-openSettings` at launch (audit 2026-07-13); the
+    /// user saw it as "Browse the catalog sometimes doesn't work" (2026-07-17).
+    @State private var landInCatalog = false
     @AppStorage("privacy.hidePreviews") private var hidePreviews = true
     @AppStorage("firstThingSaved") private var firstThingSaved = false
     @Environment(\.scenePhase) private var scenePhase
@@ -35,8 +38,28 @@ struct RootShell: View {
     /// Sam?") searches inside it instead of the whole corpus (2026-07-10).
     @State private var lastAnswerHits: [Thing] = []
     @State private var redactNow = false
+    /// The bar↔surface morph (2026-07-20) — shared between `AgentBar` and
+    /// `Composer`'s `glassNamespace`, both keying `matchedGeometryEffect` to
+    /// the same `"agentMorph"` id.
+    @Namespace private var agentMorph
 
     var body: some View {
+        // THROWAWAY (2026-07-19): `-summonProto YES` swaps the whole shell for
+        // the direction-F prototype. A full swap rather than a cover so the
+        // real shell's chrome can't leak into it — delete this branch and
+        // `SummonPrototype.swift` together when the experiment is settled.
+        if UserDefaults.standard.bool(forKey: "summonProto") {
+            // `dsColorScheme()` is not optional here: the branch sits ABOVE the
+            // shell's own `.preferredColorScheme`, so without it every adaptive
+            // token resolves against light traits and `DS.textPrimary` paints
+            // black on the dark page (i.e. invisible).
+            SummonPrototype().dsColorScheme()
+        } else {
+            shell
+        }
+    }
+
+    private var shell: some View {
         ZStack(alignment: .bottom) {
             // The themed page — the same field each screen paints for itself
             // (NavigationStack's backing is opaque, so photo rendering lives
@@ -73,11 +96,50 @@ struct RootShell: View {
                 .zIndex(2)
             }
 
+            // The agent's bar (docs/agent-brief.md ruling 6) — hosted HERE,
+            // not on MainSurface, so it rides every screen this app can push
+            // (Apps, Settings, a bridge setup form), not just MainSurface's
+            // own root the way the FAB it replaces used to. The berry
+            // breathes while some kept ask changed and the agent hasn't been
+            // raised yet THIS LAUNCH (a plain, session-scoped flag — distinct
+            // from `KeptAskStore`'s own PER-ASK persisted "seen" dot, which
+            // renders on the pills once risen, not here).
+            // Hidden entirely once risen (2026-07-20) — `agentMorph` needs
+            // exactly one side of the matched pair present at a time, and a
+            // bar sitting inert under the risen sheet was dead weight anyway.
+            if !composerOpen {
+                AgentBar(hasUnseenSignal: KeptAskStore.shared.anyChanged && !agentEverOpened,
+                         morphNS: agentMorph) {
+                    DSHaptic.tap()
+                    composerOpen = true
+                }
+                .padding(.horizontal, DS.Space.s4)
+                .padding(.bottom, DS.Space.s2)
+                .transition(.opacity)
+            }
+
+            // The agent, full screen (ruling 3 — never a sheet/tray). Grows
+            // out of the bar's own frame (2026-07-20, `agentMorph` — the
+            // "now-playing bar" morph the design is named after): the outer
+            // shape is `matchedGeometryEffect`-paired with `AgentBar`'s via
+            // `Composer`'s `glassNamespace`, so the sheet's bounds visibly
+            // interpolate from the small capsule to full screen instead of
+            // sliding up as an unrelated sheet. Content still needs its own
+            // fade-in since the frame match alone doesn't animate opacity.
+            if composerOpen {
+                ZStack {
+                    DS.page.ignoresSafeArea()
+                    agentSurface
+                }
+                .transition(.opacity)
+                .zIndex(3)
+            }
         }
-        // The FAB moved onto MainSurface's root content (2026-07-13 polish):
-        // it belongs to Home/Feed, so pushed rooms (Apps, Settings, a setup
-        // form) slide over it instead of wearing a compose button that isn't
-        // theirs. The sheet stays here.
+        .animation(DS.Motion.standard, value: composerOpen)
+        // The bar rides RootShell's OWN ZStack now (2026-07-19 — it replaced
+        // the FAB, which used to live on MainSurface's root content
+        // specifically so pushed rooms could slide over it; the bar
+        // deliberately does the opposite, per ruling 6).
         .onChange(of: chrome.composerRequest) { _, _ in
             composerOpen = true
         }
@@ -107,6 +169,22 @@ struct RootShell: View {
                 // yet embedded — a bounded background sweep, so Ask can retrieve
                 // by meaning, not just shared words.
                 EmbeddingIndex.backfill(context: modelContext)
+                // The "Noticed" line's real trigger (docs/agent-brief.md
+                // ruling 10 — a gap the original ruling didn't name):
+                // `HomeInsightStore.refresh` used to fire from ONLY
+                // HomeScreen's own compose cycle, so a person who lands on
+                // "All" a whole session (increasingly the common case under
+                // content-first landing) never got a fresh line — same call,
+                // same signature-gate, just a second trigger point, never
+                // duplicated logic. Also refreshes the kept-ask digest cache
+                // (`KeptAskStore.anyChanged`) the bar's pulse reads from, so
+                // that stays current without recomputing on every render.
+                Task { @MainActor in
+                    let surfaced = Corpus.surfaced((try? modelContext.fetch(FetchDescriptor<Thing>(
+                        sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]))) ?? [])
+                    HomeInsightStore.shared.refresh(from: surfaced)
+                    await KeptAskStore.shared.refreshDigests(things: surfaced, context: modelContext)
+                }
                 // Resnapshot hand-off state so the thing sheet's "Add to <app>"
                 // verbs only show apps the person connected AND has installed.
                 HandOffState.refresh(connected: Set(
@@ -148,10 +226,16 @@ struct RootShell: View {
                 }
             }
         }
-        // The composer is a sheet the FAB opens — no tab to remember and
-        // return to now; dismissing just closes it over whatever's on screen.
-        .sheet(isPresented: $composerOpen) {
-            actionsSheet
+        // The agent is a full-screen ZStack layer now (docs/agent-brief.md
+        // ruling 3), rendered above in `shell`'s own ZStack — no more sheet.
+        // A fresh composer open is a fresh answer conversation — drop the prior
+        // transcript so one conversation's turns never bleed into the next
+        // (ConversationModel). Follow-ups WITHIN this open carry context.
+        .onChange(of: composerOpen) { _, open in
+            if open {
+                OnDeviceModel.resetConversation()
+                agentEverOpened = true
+            }
         }
         // A surface requested an ask (the weekend cover) — open the composer;
         // it consumes the query once it mounts (prd 54).
@@ -175,14 +259,20 @@ struct RootShell: View {
         // the newest thing's sheet (the widget-tap route).
         .onOpenURL { route($0) }
         .onAppear {
-            // Landing (2026-07-13): a curator who's pinned something lands on
-            // their board — they know what they want. Someone with nothing
-            // pinned yet (new, or never curated) lands on the whole record
-            // instead of an empty board. Deep links and debug hooks below can
+            // Landing (2026-07-13, simplified 2026-07-20 — the Pinned board
+            // retired, docs/agent-brief.md rulings 11-12; amended 2026-07-21):
+            // content-first was "always All" until here — now the app opens
+            // wherever you were last standing (`FeedFilter.source` persists
+            // on every write, read back in its own `init`), so this no
+            // longer resets it. A fresh install has nothing persisted yet
+            // and still opens on "All". Deep links and debug hooks below can
             // still override this within the same launch.
-            let hasPins = !HomePinnedSources.shared.sources.isEmpty
-                || WalletStore.shared.addresses.contains(where: \.pinnedToHome)
-            FeedFilter.shared.source = hasPins ? "Pinned" : "All"
+            // Honesty rule: if CasberiApp had to degrade the store open this
+            // launch (SharedStore.containerWithFallback), say so once instead
+            // of silently showing an empty/unsynced corpus.
+            if let reason = SharedStore.degradeReason {
+                chrome.flash(reason, tone: .failure, seconds: 4)
+            }
             #if DEBUG
             // Perf pass: log init→ready (first content appearance) once per
             // process. `ready` = this onAppear, i.e. the first frame's view tree
@@ -260,8 +350,7 @@ struct RootShell: View {
                         // "Tokens" now, not "Dexscreener" — its chart blends three
                         // vendors (commit a2618a2). Things captured before the rename
                         // kept the old source and "dexscreener:" sourceRef prefix, so
-                        // the feed still headed them "Dexscreener". Rewrite both, and
-                        // carry the rename across any Home pin.
+                        // the feed still headed them "Dexscreener". Rewrite both.
                         let staleTokens = (try? modelContext.fetch(FetchDescriptor<Thing>(
                             predicate: #Predicate { $0.source == "Dexscreener" }
                         ))) ?? []
@@ -271,9 +360,8 @@ struct RootShell: View {
                                 thing.sourceRef = "tokens:" + String(ref.dropFirst("dexscreener:".count))
                             }
                         }
-                        HomePinnedSources.shared.rename("Dexscreener", to: "Tokens")
                     }
-                    try? modelContext.save()
+                    modelContext.saveHonestly()
                     UserDefaults.standard.set(migrationsCurrent, forKey: migrationsKey)
                 }
             }
@@ -291,17 +379,34 @@ struct RootShell: View {
             // UserDefaults; routes without the system open-in dialog.
             #if DEBUG
             NSLog("[Casberi] On-device model: %@", OnDeviceModel.availabilityLine)
+            // `-landingChip <source>` (or `clear`) seeds the persisted
+            // landing directly, without navigating this launch — a
+            // two-launch probe (seed here, relaunch plain) verifies the
+            // next-launch landing headlessly via MainSurface's `chipLabels:`
+            // / the active chip on mount.
+            FeedFilter.seedLandingFromLaunchArgs()
             if let raw = UserDefaults.standard.string(forKey: "deeplink"),
                let url = URL(string: raw) {
                 UserDefaults.standard.removeObject(forKey: "deeplink")
                 route(url)
             }
-            // `-openSettings YES` pushes Settings. Lives HERE (not
-            // HomeScreen's onAppear, where it was born): since the
-            // one-surface shell, HomeScreen only mounts when the landing
-            // chip is "Pinned", so on an unpinned install the hook never
-            // fired and the launch landed on Home (audit 2026-07-13). This
-            // onAppear runs after the whole tree mounts — same proven
+            // `-openThing "<title prefix>"` opens the newest thing whose title
+            // starts with the prefix — the sheet-by-content route for headless
+            // sheet checks (a UUID changes every install; a title doesn't).
+            if let prefix = UserDefaults.standard.string(forKey: "openThing"),
+               !prefix.isEmpty {
+                let all = (try? modelContext.fetch(FetchDescriptor<Thing>(
+                    sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]
+                ))) ?? []
+                deepLinkThing = all.first { $0.title.hasPrefix(prefix) }
+                NSLog("[Casberi] openThing: %@",
+                      deepLinkThing?.title ?? "no match for \(prefix)")
+            }
+            // `-openSettings YES` pushes Settings. Lives HERE, not a screen's
+            // own onAppear — content-first landing is now the ONLY landing
+            // (the Pinned board it used to have to out-race retired
+            // 2026-07-20), so there's only ever one surface to time against.
+            // This onAppear runs after the whole tree mounts — same proven
             // timing as the `-deeplink` hook above.
             if UserDefaults.standard.bool(forKey: "openSettings") {
                 HomeRoute.shared.push = .settings
@@ -347,15 +452,20 @@ struct RootShell: View {
                     NSLog("[Casberi] answerProbe(\"%@\") %dms →\n%@", q, ms, doc.joined(separator: "\n"))
                 }
             }
-            // Debug hook: `-comingUpProbe YES` logs the "Coming up" lane over
-            // the current corpus (upcoming events + due reminders, soonest
-            // first) so the Home card's contents verify headlessly.
-            if UserDefaults.standard.bool(forKey: "comingUpProbe") {
-                let things = (try? modelContext.fetch(FetchDescriptor<Thing>())) ?? []
-                let items = ComingUp.items(from: things)
-                NSLog("[Casberi] comingUpProbe → %d:\n%@", items.count,
-                      items.map { "\($0.thing.kind.typeTag) · \($0.thing.title) — \(ComingUp.label(for: $0))" }
-                          .joined(separator: "\n"))
+            // Debug hook: `-homeInsightProbe YES` runs the on-device "Noticed"
+            // line over the current corpus (bypassing the cache), logging the
+            // candidates fed, the raw model text, and the post-guard result, so
+            // the line's voice/quality/decline-rate can be sampled headlessly.
+            if UserDefaults.standard.bool(forKey: "homeInsightProbe") {
+                let delay = UserDefaults.standard.double(forKey: "probeDelay")
+                Task { @MainActor in
+                    if delay > 0 { try? await Task.sleep(for: .seconds(delay)) }
+                    let all = (try? modelContext.fetch(FetchDescriptor<Thing>())) ?? []
+                    let surfaced = Corpus.surfaced(all)
+                        .sorted { $0.capturedAt > $1.capturedAt }
+                    let line = await HomeInsightStore.shared.debugProbe(from: surfaced)
+                    NSLog("[Casberi] homeInsightProbe result → %@", line ?? "NONE (declined)")
+                }
             }
             // Debug hooks for the BYO-key path: `-byokKey <key>` stores a key
             // headlessly — an optional "provider:" prefix picks the agent
@@ -387,6 +497,24 @@ struct RootShell: View {
                           doc?.joined(separator: "\n") ?? "nil (key/network failed — composer words it)")
                 }
             }
+            // Debug hook: `-keepAskProbe "<kind>:<title>"` keeps that kind
+            // headlessly (or `clear`); `KeptAskStore.seedFromLaunchArgs()` does
+            // the keep itself. Then run its composer over the real corpus and
+            // log the result, so the persistence + digest machinery verifies
+            // without tapping through the UI.
+            KeptAskStore.seedFromLaunchArgs()
+            if !KeptAskStore.shared.order.isEmpty {
+                Task { @MainActor in
+                    let all = (try? modelContext.fetch(FetchDescriptor<Thing>(
+                        sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]))) ?? []
+                    for kind in KeptAskStore.shared.order {
+                        let result = await KeptAskComposers.compose(kind, things: all, context: modelContext)
+                        NSLog("[Casberi] keepAskProbe compose(\"%@\") → delta=\"%@\" digest=\"%@\"\n%@",
+                              kind, result?.delta ?? "nil", result?.digest ?? "nil",
+                              result?.doc.joined(separator: "\n") ?? "(no composer for this kind)")
+                    }
+                }
+            }
             // Debug hook: open the composer so `-uiAnswerProbe` (handled in the
             // composer) can drive a real send for an on-screen answer.
             if UserDefaults.standard.string(forKey: "uiAnswerProbe") != nil
@@ -410,6 +538,33 @@ struct RootShell: View {
                 Task { @MainActor in
                     let title = await LinkTitle.fetch(url)
                     NSLog("LinkTitle probe: %@", title ?? "FAILED")
+                }
+            }
+            // Debug hook: `-linkBodyProbe <url>` exercises the readable-body
+            // fetch headlessly — NSLogs the lede that would land in a saved
+            // link's `enrichedText` for the answer path to reach.
+            if let raw = UserDefaults.standard.string(forKey: "linkBodyProbe"),
+               let url = URL(string: raw) {
+                Task { @MainActor in
+                    let body = await LinkTitle.fetchReadable(url)
+                    NSLog("[Casberi] linkBodyProbe(%@) → %@", raw,
+                          body ?? "FAILED (nothing readable)")
+                }
+            }
+            // Debug hook: `-toolAnswer "<query>"` runs the tool-calling agent
+            // path (AnswerTools) in isolation — the model searches the corpus
+            // via tools and answers, logging the prose and the ids it grounded
+            // on. nil where the model is unavailable (the honest fallback the
+            // default lookup path takes to the scoring doc).
+            if let q = UserDefaults.standard.string(forKey: "toolAnswer") {
+                Task { @MainActor in
+                    let snap = toolSnapshot()
+                    if let r = await AnswerTools.answer(query: q, corpus: snap) {
+                        NSLog("[Casberi] toolAnswer(\"%@\") → %@\n  grounded on %d things: %@",
+                              q, r.prose, r.hitIDs.count, r.hitIDs.joined(separator: ", "))
+                    } else {
+                        NSLog("[Casberi] toolAnswer(\"%@\") → nil (model unavailable/declined — expected on sim)", q)
+                    }
                 }
             }
             // Debug hook: `-mcpProbe "<query>"` exercises the MCP tool layer
@@ -442,39 +597,47 @@ struct RootShell: View {
             }
         }
         .sheet(item: $deepLinkThing) { thing in
-            ThingSheetView(thing: thing)
+            rootPresented(ThingSheetView(thing: thing))
+        }
+        .sheet(item: $deepLinkPerson) { person in
+            rootPresented(SocialProfileCard(profile: person))
         }
         .fullScreenCover(isPresented: Binding(
-            get: { !onboarded }, set: { if !$0 { onboarded = true; onboardingHowItWorks = false } }
-        )) {
-            // Onboarding (option 4, 2026-07-07): the mini store connects the
-            // three real bridges for REAL, and that's the whole tour — no
-            // demo mode, no sample things. The dream lives on the store
-            // pages as engine-rendered previews. Landing is the record ("All"
-            // chip): the connects just filled it, and a brand-new person has
-            // nothing pinned yet. The "How it works" greeting is a second
-            // step of this SAME cover (below), not a separate presentation —
-            // it swaps in in place, so the feed is never revealed until the
-            // person taps Done on the greeting.
-            Group {
-                if onboardingHowItWorks {
-                    // Its own Done button calls the environment's dismiss(),
-                    // which resolves to this cover's binding and exits both
-                    // steps at once.
-                    HowItWorksSheet()
-                } else {
-                    OnboardingView(store: bridges) { _ in
-                        FeedFilter.shared.source = "All"
-                        onboardingHowItWorks = true
-                    }
-                }
-            }
-            // fullScreenCover hosts its content in a separate presentation
-            // that doesn't reliably inherit `\.locale` from the presenter
-            // (unlike `.sheet`) — reapply so first-run copy honors the
-            // language override too.
-            .environment(\.locale, LanguageStore.shared.locale)
+            get: { !onboarded }, set: { if !$0 { onboarded = true } }
+        ), onDismiss: {
+            guard landInCatalog else { return }
+            landInCatalog = false
+            FeedFilter.shared.source = "All"
+            HomeRoute.shared.push = .apps
+        }) {
+            // Onboarding is ONE screen (re-ruled 2026-07-16 — the connect
+            // screen died): the "How it works" greeting, wearing the rain
+            // itself. Its one door forward lands IN the catalog, which is
+            // where connecting actually happens now — the arc is apps rain
+            // down → the four steps → the catalog where those apps live, so
+            // step 1 is fulfilled the moment the cover lifts. The record
+            // ("All" chip) waits one back-swipe beneath it.
+            rootPresented(HowItWorksSheet(onOpenCatalog: {
+                landInCatalog = true
+                onboarded = true
+            }))
         }
+    }
+
+    /// Everything the shell hands its own tree, re-applied to a ROOT-PRESENTED
+    /// sheet or cover — whose content hangs OUTSIDE the chain those modifiers
+    /// wrap (fullScreenCover doesn't even reliably inherit `\.locale`). One
+    /// door for all of it, because per-sheet hand-wiring is exactly how the
+    /// token sheet crashed on 2026-07-17: the thing sheet had been handed
+    /// chrome-adjacent pieces but not bridges, and a required
+    /// `@Environment(BridgeStore.self)` under it was a mount-time fatal. Any
+    /// new root sheet/cover goes through here; any new shell-wide environment
+    /// object gets added HERE, not to individual sheets.
+    private func rootPresented(_ content: some View) -> some View {
+        content
+            .environment(bridges)
+            .environment(chrome)
+            .environment(\.locale, LanguageStore.shared.locale)
     }
 
     /// casberi:// routing — one place, used by onOpenURL and the debug hook.
@@ -484,9 +647,9 @@ struct RootShell: View {
         // below.
         HomeRoute.shared.push = nil
         switch url.host() {
-        // casberi://home is back-compat (the app was a Home tab once) — it
-        // now lands on the board.
-        case "home":    FeedFilter.shared.source = "Pinned"; FeedFilter.shared.tag = "All"
+        // casberi://home is back-compat (the app was a Home tab, then a
+        // board) — it now lands on the All feed, ruling 11.
+        case "home":    FeedFilter.shared.source = "All"; FeedFilter.shared.tag = "All"
         case "feed":
             FeedFilter.shared.source = "All"
             FeedFilter.shared.tag = "All"
@@ -505,6 +668,16 @@ struct RootShell: View {
             HomeRoute.shared.push = .apps
         case "settings":
             HomeRoute.shared.push = .settings
+        // casberi://person/<Source>/<handle> — the profile card for one person
+        // on one network (2026-07-16). In the app it's reached by tapping a
+        // face; this is the same card by name, so the screen sweep can reach it
+        // headlessly like every other surface.
+        case "person":
+            let parts = url.pathComponents.filter { $0 != "/" }
+            if parts.count == 2, SocialThread.isSocial(parts[0]) {
+                deepLinkPerson = SocialProfile(source: parts[0], handle: parts[1],
+                                               displayName: nil, bio: nil, avatarURL: nil)
+            }
         case "thing":
             FeedFilter.shared.source = "All"
             let part = url.pathComponents.filter { $0 != "/" }.first
@@ -523,38 +696,52 @@ struct RootShell: View {
 
     // MARK: - Screens
 
-    /// The Actions sheet: the composer, always open — ask a question or say what
-    /// to do — with its tools. Presented at 1/2, expandable to 3/4. Same wiring
-    /// the floating composer used.
-    private var actionsSheet: some View {
+    /// The agent, full screen (docs/agent-brief.md ruling 3) — the composer's
+    /// entire existing pipeline (byok, Organize, lastAnswerHits, GenStream),
+    /// unchanged, now hosted as a persistent ZStack layer instead of a sheet.
+    private var agentSurface: some View {
         Composer(isOpen: .constant(true), draft: $draft, embedded: true,
-                 onHeight: { actionsHeight = min(max($0, 220), 720) },
                  onCommit: saveDraft, onCommitVoice: saveVoice,
                  answer: answerDocument,
                  answerWithKey: keyedAnswerDocument,
                  tagCandidates: projectTags,
                  knownSources: { bridges.bridges.map(\.name) },
-                 contextSource: { nil },
+                 // Fixed 2026-07-20 — this was hardcoded nil, silently
+                 // dropping the "meets you where you are" lead chip since
+                 // the agent shell was built. FeedFilter.shared.source is
+                 // the same active-chip signal MainSurface itself binds
+                 // against; "All" is a safe sentinel that never collides
+                 // with a real source name.
+                 contextSource: { FeedFilter.shared.source == "All" ? nil : FeedFilter.shared.source },
                  onNavigate: navigate,
                  onKeepAnswer: keepAnswer,
-                 glassNamespace: nil)
+                 glassNamespace: agentMorph,
+                 resolveThing: { idString in
+                     guard let uuid = UUID(uuidString: idString) else { return nil }
+                     return (try? modelContext.fetch(FetchDescriptor<Thing>(
+                         predicate: #Predicate { $0.id == uuid })))?.first
+                 },
+                 onLowerAgent: { composerOpen = false })
             .environment(\.genProjectTap) { name in
-                // Sentinels ("@wallet", "@token:…") are surface routes, not
-                // tags — from the composer they'd open a bogus tag view
+                // The apps answer's catalog door: "@apps" routes to the Apps
+                // page here too (same marker the quiet-day invite uses on
+                // Home) — a card that did nothing inside the composer would
+                // be a dead control (honesty rule).
+                if name == "@apps" {
+                    composerOpen = false
+                    HomeRoute.shared.push = .apps
+                    return
+                }
+                // Other sentinels ("@wallet", "@token:…") are surface routes,
+                // not tags — from the composer they'd open a bogus tag view
                 // literally named "@token:…"; an unknown sentinel does
-                // nothing (HomeScreen's own rule).
+                // nothing.
                 guard !name.hasPrefix("@") else { return }
                 HomeRoute.shared.push = nil
                 composerOpen = false
-                FeedFilter.shared.source = "Pinned"
+                FeedFilter.shared.source = "All"
                 HomeRoute.shared.openTag = name
             }
-            // Hug the content — the sheet grows/shrinks with what's inside, so
-            // there's no stranded empty space. Drag up to full for a long answer.
-            .presentationDetents([.height(actionsHeight), .large])
-            .presentationDragIndicator(.visible)
-            .presentationCornerRadius(DS.Radius.sheet)
-            .presentationBackground(DS.surfaceSheet)
     }
 
     // MARK: - Capture (rung 1 write: the composer saves to us)
@@ -571,7 +758,7 @@ struct RootShell: View {
         composerOpen = false
         switch intent {
         case .tag(let name):
-            FeedFilter.shared.source = "Pinned"
+            FeedFilter.shared.source = "All"
             HomeRoute.shared.openTag = name
         case .source(let source):
             FeedFilter.shared.source = source
@@ -586,9 +773,8 @@ struct RootShell: View {
         guard let thing = Capture.thing(from: draft) else { return }
         thing.tags.append(contentsOf: tags)   // parse-card candidates ride in
         modelContext.insert(thing)
-        try? modelContext.save()
+        modelContext.saveHonestly()
         SpotlightIndex.index([thing])
-        DSHaptic.success()
         land(thing)
         // A pasted URL saves instantly with its address as its face; the real
         // page title arrives a beat later (best-effort, never blocks the save).
@@ -601,9 +787,8 @@ struct RootShell: View {
     private func saveDropped(_ text: String) {
         guard let thing = Capture.thing(from: text) else { return }
         modelContext.insert(thing)
-        try? modelContext.save()
+        modelContext.saveHonestly()
         SpotlightIndex.index([thing])
-        DSHaptic.success()
         land(thing, undoable: true)
         Task { @MainActor in await LinkTitle.enrich(thing, context: modelContext) }
     }
@@ -620,7 +805,7 @@ struct RootShell: View {
         descriptor.fetchLimit = 1
         guard let newest = try? modelContext.fetch(descriptor).first else { return }
         newest.tags = newest.tags
-        try? modelContext.save()
+        modelContext.saveHonestly()
         SpotlightIndex.index([newest])
         CorpusSignal.shared.bump()
     }
@@ -644,9 +829,8 @@ struct RootShell: View {
             try? FileManager.default.removeItem(at: url)
         }
         modelContext.insert(thing)
-        try? modelContext.save()
+        modelContext.saveHonestly()
         SpotlightIndex.index([thing])
-        DSHaptic.success()
         land(thing)
     }
 
@@ -659,31 +843,33 @@ struct RootShell: View {
         let title = firstLine.count > 80 ? String(firstLine.prefix(80)) + "…" : firstLine
         let thing = Thing(kind: .note, title: title, content: text, source: "You")
         modelContext.insert(thing)
-        try? modelContext.save()
+        modelContext.saveHonestly()
         SpotlightIndex.index([thing])
-        DSHaptic.success()
-        chrome.flash("Kept — it's in your things")
+        chrome.flash("Kept — it's in your things", tone: .success)
     }
 
     /// Every save ends here (§1): toast, and — unless the person is already
     /// watching the record (any feed shape), where the new row IS the
     /// arrival — the proxy-card flight to the "All" chip. The very first
-    /// thing ever gets its own toast and always flies (§8). Haptic stays at
-    /// commit, in the callers.
+    /// thing ever gets its own toast and always flies (§8). The toast's
+    /// `.success` tone carries the haptic, so every caller's commit is felt
+    /// exactly once, here.
     private func land(_ thing: Thing, undoable: Bool = false) {
         let first = !firstThingSaved
         if first { firstThingSaved = true }
 
         if undoable && !first {
             let id = thing.id
-            chrome.flash("Saved", action: .init(label: "Undo") {
+            chrome.flash("Saved", tone: .success, action: .init(label: "Undo") {
                 undoCapture(id: id)
             }, seconds: 4)
         } else {
-            chrome.flash(first ? "Your first thing" : "Saved")
+            chrome.flash(first ? "Your first thing" : "Saved", tone: .success)
         }
 
-        if FeedFilter.shared.source == "Pinned" || first {
+        // "Watching the record" used to mean either feed shape (Pinned or
+        // All); the board retired 2026-07-20, so All is the one shape left.
+        if FeedFilter.shared.source == "All" || first {
             chrome.flight = ShellChrome.Flight(kind: thing.kind, title: thing.title)
         }
     }
@@ -695,7 +881,7 @@ struct RootShell: View {
         ))) ?? []
         guard let thing = all.first else { return }
         modelContext.delete(thing)
-        try? modelContext.save()
+        modelContext.saveHonestly()
         SpotlightIndex.remove(ids: [id])
         withAnimation(DS.Motion.standard) {
             chrome.toast = nil
@@ -763,6 +949,50 @@ struct RootShell: View {
         }
     }
 
+    /// "what apps do you have" — the app set, computed. Connected seats speak
+    /// first (names, plus an honest attention count); a catalog ask answers by
+    /// size with a taste of names. Every variant carries the catalog door —
+    /// the same "@apps" card the quiet day's slot uses — so the answer opens
+    /// the real Apps surface instead of dead-ending in prose.
+    private func appsDoc(_ ask: AppsAsk.Intent) -> [String] {
+        let seats = bridges.bridges
+        let shelf = BridgeCatalog.offers.filter(\.connectable)
+        let emptyLine = "No apps connected yet — the catalog has \(shelf.count) ready to connect."
+        let line: String
+        switch ask {
+        case .count:
+            line = seats.isEmpty
+                ? emptyLine
+                : "You've connected \(seats.count) of the \(shelf.count) apps in the catalog."
+        case .connected:
+            if seats.isEmpty {
+                line = emptyLine
+            } else {
+                var l = "You've connected \(seats.count) app\(seats.count == 1 ? "" : "s") — \(naturalList(seats.map(\.name)))."
+                let needs = bridges.attentionCount
+                if needs > 0 { l += " \(needs) need\(needs == 1 ? "s" : "") attention." }
+                line = l
+            }
+        case .catalog:
+            var l = "The catalog has \(shelf.count) apps to connect — \(shelf.prefix(3).map(\.name).joined(separator: ", ")), and more."
+            if !seats.isEmpty { l += " You've connected \(seats.count)." }
+            line = l
+        }
+        return ["root = Stack([ins, door])",
+                "ins = Insight(\"\(genSafe(line))\")",
+                "door = AppsInvite(\"\(genSafe(String(localized: "Browse the catalog")))\", \"\")"]
+    }
+
+    /// Names as a sentence — "A, B, and C", folding overflow into "N more"
+    /// (a 20-seat answer should scan, not scroll).
+    private func naturalList(_ names: [String], max: Int = 6) -> String {
+        var parts = Array(names.prefix(max))
+        if names.count > parts.count { parts.append("\(names.count - parts.count) more") }
+        guard parts.count > 1 else { return parts.first ?? "" }
+        return parts.dropLast().joined(separator: ", ")
+            + (parts.count == 2 ? " and " : ", and ") + parts.last!
+    }
+
     /// A tag name safe as a bare TagMap cell label — a comma or bracket would
     /// break the cell list's grammar, and the trailing count is its own token.
     private func tagMapLabel(_ tag: String) -> String {
@@ -780,15 +1010,22 @@ struct RootShell: View {
     /// is the safer default.
     private enum AnswerMode { case lookup, synthesis }
 
+    /// True when the ask carries an explicit retrieval verb — an unambiguous
+    /// lookup signal, so routing can take the fast heuristic and skip the
+    /// model round-trip (`resolvedMode`). These win outright, even over a
+    /// temporal cue ("what did I save this week" is still a lookup).
+    private func hasLookupVerb(_ query: String) -> Bool {
+        let q = query.lowercased().replacingOccurrences(of: "\u{2019}", with: "'")
+        let lookupVerbs = ["find", "search", "show", "save", "saved",
+                           "where", "which", "list", "look up"]
+        return lookupVerbs.contains(where: q.contains)
+    }
+
     private func answerMode(_ query: String) -> AnswerMode {
         // Smart punctuation types U+2019 — "what's my week" must match the
         // "what's my" cue whichever apostrophe the keyboard chose.
         let q = query.lowercased().replacingOccurrences(of: "\u{2019}", with: "'")
-        // A retrieval verb is a strong lookup signal — it wins outright, even
-        // over a temporal cue ("what did I save this week" is still a lookup).
-        let lookupVerbs = ["find", "search", "show", "save", "saved",
-                           "where", "which", "list", "look up"]
-        if lookupVerbs.contains(where: q.contains) { return .lookup }
+        if hasLookupVerb(query) { return .lookup }
         // Otherwise a reflection/summary cue routes to prose. The status
         // cues ride along so a content-qualified status ask ("what's
         // happening with bitcoin") streams prose like its bare form would —
@@ -803,6 +1040,19 @@ struct RootShell: View {
                              "did i miss"]
         if synthesisCues.contains(where: q.contains) { return .synthesis }
         return .lookup
+    }
+
+    /// The routing decision, model-refined (2026-07-15). An explicit retrieval
+    /// verb is unambiguous — take the fast heuristic, no model call. Otherwise
+    /// the on-device model routes (its read beats any hand-enumerated cue list);
+    /// when it's unavailable or declines, the keyword heuristic stands in —
+    /// zero regression on non-Apple-Intelligence devices.
+    private func resolvedMode(_ query: String) async -> AnswerMode {
+        if hasLookupVerb(query) { return .lookup }
+        if let plan = await QueryPlan.make(query) {
+            return plan.synthesis ? .synthesis : .lookup
+        }
+        return answerMode(query)
     }
 
     /// The answer path. The scoring engine always runs first and grounds the
@@ -834,6 +1084,16 @@ struct RootShell: View {
             lastAnswerHits = []
             return tagsDoc(tagsAsk, in: allThings)
         }
+        // An apps ask ("what apps do you have") is a meta-question about the
+        // app set — connected seats + the catalog — answered computed, never
+        // the model. Before AggregateAsk so "how many apps" counts apps, not
+        // things, and before retrieval so "apps"/"have" never become search
+        // terms and surface noise (the bug: this ask fell through to the
+        // term-scored retriever and answered with unrelated things, 2026-07-17).
+        if let appsAsk = AppsAsk.parse(query) {
+            lastAnswerHits = []
+            return appsDoc(appsAsk)
+        }
         if let agg = AggregateAsk.parse(query, sources: knownSources) {
             lastAnswerHits = []
             let line = AggregateAsk.answer(agg, things: allThings)
@@ -854,21 +1114,52 @@ struct RootShell: View {
                     ? "Nothing on your watchlist yet — watch a token from Apps → Tokens."
                     : "Couldn't read your watchlist's prices right now — check your connection.")
             }
-            // Rows only for moves whose thing still routes to a chart — a
-            // dangling ref under a bigger count would overstate what's shown.
-            let shown = moves.prefix(6).compactMap { m in
-                TokenChart.route(from: m.thing.content).map { (move: m, route: $0) }
+            // TokenChip rows alongside the summary — `KeptAskComposers.watchlistDoc`
+            // so a typed ask and the kept "How's my watchlist?" chip can never
+            // disagree about what's shown.
+            return KeptAskComposers.watchlistDoc(line: TokensAsk.line(moves), moves: moves)
+        }
+        // A wallet ask ("how's my wallet") is answered from the live holdings
+        // and the forward-only value line — computed, no model (2026-07-15).
+        // Before StatusAsk on purpose: the word "wallet" names the holdings, not
+        // the feeds' pulse.
+        if WalletAsk.matches(query) {
+            lastAnswerHits = []
+            guard let line = await WalletAsk.answer() else {
+                return proseDoc(String(localized: "Nothing in your wallet yet — watch an address from Apps → Wallet."))
             }
-            var doc = ["root = Stack([ins\(shown.isEmpty ? "" : ", res")])",
-                       "ins = Insight(\"\(genSafe(TokensAsk.line(moves)))\")"]
-            if !shown.isEmpty {
-                let ids = shown.indices.map { "t\($0)" }
-                doc.append("res = Widget(\"\(String(localized: "Watchlist"))\", \"\(shown.count)\", [\(ids.joined(separator: ", "))])")
-                for (i, s) in shown.enumerated() {
-                    doc.append("t\(i) = TokenChip(\"\(genSafe(s.move.symbol))\", \"\(s.route.chain)\", \"\(s.route.address)\", \"\(s.move.thing.id.uuidString)\", \"\")")
-                }
+            // The real holdings treemap alongside the summary, plus the
+            // landed approvals + latest activity — shared with the kept-ask
+            // composer via `KeptAskComposers.walletDoc` so the two paths agree.
+            let groups = await WalletIngest.topHoldingsByWallet()
+            return KeptAskComposers.walletDoc(line: line, groups: groups, things: allThings)
+        }
+        // An Aave ask ("how's my loan", "what's my health factor") — live
+        // read, no model (2026-07-20). Same slot as WalletAsk, right after
+        // it: both need a watched wallet, and "aave"/"health factor" never
+        // collides with the generic wallet words.
+        if WalletDeFiAsk.matches(query) {
+            lastAnswerHits = []
+            guard let line = await WalletDeFiAsk.answer() else {
+                return proseDoc(String(localized: "Nothing to read yet — watch an address from Apps → Wallet."))
             }
-            return doc
+            return proseDoc(line)
+        }
+        // A gas ask ("what have I spent on gas") — live read, no model.
+        if WalletGasAsk.matches(query) {
+            lastAnswerHits = []
+            guard let line = await WalletGasAsk.answer() else {
+                return proseDoc(String(localized: "Nothing to read yet — watch an address from Apps → Wallet."))
+            }
+            return proseDoc(line)
+        }
+        // A Safe ask ("anything pending on my Safe") — live read, no model.
+        if SafeAsk.matches(query) {
+            lastAnswerHits = []
+            guard let line = await SafeAsk.answer() else {
+                return proseDoc(String(localized: "Nothing to read yet — watch an address from Apps → Wallet."))
+            }
+            return proseDoc(line)
         }
         // A status ask ("tell me what's going on") names no content to score,
         // so it grounds on recency itself: the newest things from every source
@@ -883,24 +1174,25 @@ struct RootShell: View {
             // Started here, awaited only when the doc is assembled, so the
             // candle fetches ride under the model's own synthesis time.
             let context = modelContext
-            let tokenLineTask: Task<String?, Never>? =
-                (pulse.windowWords == "while you were away")
-                ? AppVisit.away.map { away in
-                    Task { await TokensAsk.awayLine(window: away, context: context) }
-                }
-                : nil
+            let awayWindow = (pulse.windowWords == "while you were away") ? AppVisit.away : nil
+            let tokenLineTask: Task<String?, Never>? = awayWindow.map { away in
+                Task { await TokensAsk.awayLine(window: away, context: context) }
+            }
             func tokenLine() async -> String? {
                 guard let tokenLineTask else { return nil }
                 return await tokenLineTask.value
             }
+            // The wallet's own away line (2026-07-15) — the value's move over the
+            // window, read from local samples (no network), so it needs no task.
+            let walletLine = awayWindow.flatMap { WalletAsk.awayLine(window: $0) }
             guard !pulse.pool.isEmpty else {
-                return appendingInsight(await tokenLine(), to: proseDoc(StatusAsk.line(pulse)))
+                return appendingInsight(await tokenLine(), walletLine, to: proseDoc(StatusAsk.line(pulse)))
             }
             if let prose = await streamSynthesis(query, over: candidates(pulse.sample),
                                                  onProseDoc: onProseDoc) {
-                return appendingInsight(await tokenLine(), to: proseDoc(prose))
+                return appendingInsight(await tokenLine(), walletLine, to: proseDoc(prose))
             }
-            return appendingInsight(await tokenLine(), to: pulseDoc(pulse))
+            return appendingInsight(await tokenLine(), walletLine, to: pulseDoc(pulse))
         }
         // A follow-up ("which ones were from sam") searches the LAST
         // answer's grounding, not the whole corpus (2026-07-10).
@@ -914,8 +1206,40 @@ struct RootShell: View {
         guard OnDeviceModel.isAvailable, !hits.isEmpty else {
             return retrievalDoc(hits, tag: tag)
         }
-        switch answerMode(query) {
+        switch await resolvedMode(query) {
         case .lookup:
+            // The fast COMPOSE path is the default: it answers over the
+            // keyword+semantic retriever's set, which ranks BETTER than the
+            // agent's keyword-only tools and returns in ~half the time. The
+            // tool-calling AGENT only earns its extra latency when that retrieval
+            // came back THIN — a couple of hits — where its whole-corpus,
+            // multi-hop search has room to round the answer out (gate added
+            // 2026-07-15; the count is the qualifying-hit count, so a bare
+            // kind/date list — many hits — correctly stays on the fast path). A
+            // FOLLOW-UP ("which of those…") always stays on compose so
+            // "those"/"them" keep meaning the last answer's things — the agent
+            // searches everything and has no such anchor. Both ground on real
+            // things (honesty rail): tool hits map back to real rows, and the
+            // model never invents one. Threshold is a one-line tunable — raise
+            // it to lean on the agent, lower it to lean on speed.
+            let followUp = isFollowUp(query) && !lastAnswerHits.isEmpty
+            let retrievalThin = hits.count < 4
+            #if DEBUG
+            NSLog("[Casberi] lookup route: %d hits, followUp=%@ → %@", hits.count,
+                  followUp ? "yes" : "no",
+                  (!followUp && retrievalThin) ? "agent" : "compose")
+            #endif
+            if !followUp, retrievalThin,
+               let result = await AnswerTools.answer(query: query, corpus: toolSnapshot()) {
+                let grounded = things(forIDs: result.hitIDs)
+                if !grounded.isEmpty {
+                    lastAnswerHits = grounded
+                    return modelDoc(insight: result.prose, hits: grounded,
+                                    picks: Array(grounded.prefix(6).indices), tag: tag)
+                }
+                // Tools found nothing the pre-retrieval didn't — fall through to
+                // compose over `hits` (the stronger semantic retriever's set).
+            }
             guard let answer = await OnDeviceModel.compose(query: query, candidates: candidates(hits)) else {
                 return retrievalDoc(hits, tag: tag)   // model declined or errored — fall back
             }
@@ -931,13 +1255,17 @@ struct RootShell: View {
 
     /// The BYO-key retry (prd §67) — the same question over the SAME evidence
     /// the on-device answer saw (`lastAnswerHits`), synthesized by the person's
-    /// own agent key (Claude, ChatGPT, Gemini, or Venice), device→API direct.
+    /// own agent key (Claude, ChatGPT, Gemini, Venice, or Bankr), device→API
+    /// direct.
     /// nil means the key or the network failed and the composer words that; an
     /// empty grounding gets an honest line instead, because a stronger model
     /// can't change what's here.
     private func keyedAnswerDocument(_ query: String) async -> [String]? {
         let hits = lastAnswerHits.isEmpty ? retrieve(query) : lastAnswerHits
-        guard !hits.isEmpty else {
+        // Bankr answers from the wallet and live markets too, so an empty
+        // corpus match still asks; every other agent only re-reads the same
+        // evidence, so an empty match gets the honest line instead.
+        guard !hits.isEmpty || AgentKey.active == .bankr else {
             return proseDoc("Nothing in your things matches that — a bigger model can't change what's here.")
         }
         guard let prose = await AgentAnswer.synthesize(query: query,
@@ -945,6 +1273,36 @@ struct RootShell: View {
             return nil
         }
         return proseDoc(prose)
+    }
+
+    /// The corpus flattened to a plain `Sendable` snapshot for the tool-calling
+    /// agent (AnswerTools) — the newest 2000 things, so a tool's `call` never
+    /// reaches SwiftData off its actor. Same evidence shape (title/kind/source/
+    /// when + excerpt) the single-shot candidates use.
+    private func toolSnapshot() -> [AnswerTools.Snapshot] {
+        var descriptor = FetchDescriptor<Thing>(
+            sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
+        descriptor.fetchLimit = 2000
+        let all = (try? modelContext.fetch(descriptor)) ?? []
+        return all.map { t in
+            AnswerTools.Snapshot(id: t.id.uuidString, title: t.title,
+                                 kind: t.kind.typeTag, source: t.source,
+                                 when: shortTime(t.capturedAt), text: answerSnippet(t))
+        }
+    }
+
+    /// Real things for the ids the tool-calling agent surfaced, in the tool's
+    /// SURFACED order (relevance, most relevant first) — the honesty rail: an
+    /// agent answer's grounding rows are the real things its tools returned,
+    /// never invented. Ids that no longer resolve (a thing deleted mid-answer)
+    /// are dropped.
+    private func things(forIDs ids: [String]) -> [Thing] {
+        let wanted = ids.compactMap { UUID(uuidString: $0) }
+        guard !wanted.isEmpty else { return [] }
+        let fetched = (try? modelContext.fetch(
+            FetchDescriptor<Thing>(predicate: #Predicate { wanted.contains($0.id) }))) ?? []
+        let byID = Dictionary(fetched.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
+        return wanted.compactMap { byID[$0] }
     }
 
     /// Retrieved things flattened for the model — the one place the mapping
@@ -958,19 +1316,25 @@ struct RootShell: View {
     }
 
     /// A short, single-line excerpt of a thing's body for the model — the
-    /// substance the title alone can't carry (a note's text, a chat's gist).
-    /// Empty when the body adds nothing over the title: missing, a duplicate
-    /// of the title, or a bare URL (source + title already stand for a link).
-    /// Capped so 16 candidates still fit the on-device context window.
+    /// substance the title alone can't carry (a note's text, a chat's gist, a
+    /// saved link's fetched article). Empty when nothing adds over the title.
+    /// For a bare-URL link the body IS the URL (no prose), so it falls through
+    /// to `enrichedText` — the page's own lede — when the fetch landed one.
+    /// Capped at 300 so 16 candidates still fit the on-device context window.
     private func answerSnippet(_ thing: Thing) -> String {
-        let body = thing.content.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !body.isEmpty, body != thing.title else { return "" }
-        // A bare link carries no prose the title doesn't already imply.
-        if body.lowercased().hasPrefix("http"), !body.contains(" ") { return "" }
+        let rawBody = thing.content.trimmingCharacters(in: .whitespacesAndNewlines)
+        // A bare link carries no prose the title doesn't already imply — reach
+        // for the fetched article text instead.
+        let bodyIsBareURL = rawBody.lowercased().hasPrefix("http") && !rawBody.contains(" ")
+        var body = (rawBody.isEmpty || rawBody == thing.title || bodyIsBareURL) ? "" : rawBody
+        if body.isEmpty, let extra = thing.enrichedText?.trimmingCharacters(in: .whitespacesAndNewlines) {
+            body = extra
+        }
+        guard !body.isEmpty else { return "" }
         let flat = body.replacingOccurrences(of: "\n", with: " ")
             .replacingOccurrences(of: "\t", with: " ")
         let squeezed = flat.replacingOccurrences(of: "  ", with: " ")
-        return squeezed.count > 180 ? String(squeezed.prefix(180)) + "…" : squeezed
+        return squeezed.count > 300 ? String(squeezed.prefix(300)) + "…" : squeezed
     }
 
     /// Streams the model's grounded synthesis, painting each snapshot through
@@ -999,19 +1363,25 @@ struct RootShell: View {
          "ins = Insight(\"\(genSafe(text))\")"]
     }
 
-    /// Tacks a computed line under an answer doc as its own Insight — the
-    /// away recap's watchlist line rides whatever the answer path produced
-    /// (prose, the counted pulse, or the honest empty). nil passes through.
-    private func appendingInsight(_ line: String?, to doc: [String]) -> [String] {
-        guard let line,
+    /// Tacks computed lines under an answer doc as their own Insights — the
+    /// away recap's watchlist and wallet lines ride whatever the answer path
+    /// produced (prose, the counted pulse, or the honest empty). nil lines are
+    /// skipped; each real one gets its own uniquely-named ref so two can splice
+    /// without colliding.
+    private func appendingInsight(_ lines: String?..., to doc: [String]) -> [String] {
+        let real = lines.compactMap { $0 }
+        guard !real.isEmpty,
               let i = doc.firstIndex(where: { $0.hasPrefix("root = Stack([") }),
               doc[i].hasSuffix("])")
         else { return doc }
         var out = doc
+        let refs = real.indices.map { "extraIns\($0)" }
         // Splice before the closing "])" — suffix surgery, so a root whose
         // ref list ever nests its own brackets can't be corrupted mid-line.
-        out[i] = String(out[i].dropLast(2)) + ", extraIns])"
-        out.append("extraIns = Insight(\"\(genSafe(line))\")")
+        out[i] = String(out[i].dropLast(2)) + ", " + refs.joined(separator: ", ") + "])"
+        for (j, line) in real.enumerated() {
+            out.append("\(refs[j]) = Insight(\"\(genSafe(line))\")")
+        }
         return out
     }
 
@@ -1053,11 +1423,6 @@ struct RootShell: View {
             + groundingLines(shown, title: "From your feeds")
     }
 
-    /// The scoring engine — retrieval only. Matches are scored, not just found:
-    /// title hits outweigh tag hits outweigh content hits, fresh things float,
-    /// and kind words in the person's own words filter ("screenshots about
-    /// work" searches screenshots for work). Returns the ranked grounding set
-    /// (top 10 — a wider net for the model than the 4 the fallback paints).
     /// Pronoun-shaped questions lean on what was just answered.
     private func isFollowUp(_ query: String) -> Bool {
         let q = " \(query.lowercased()) "
@@ -1066,116 +1431,27 @@ struct RootShell: View {
         }
     }
 
+    /// Resolves the corpus to score, then delegates the actual scoring to
+    /// `Retriever.rank` (2026-07-20 extraction — that engine is now shared
+    /// with a kept-ask "search" composer, so both re-run identically). A
+    /// follow-up passes its narrowed `pool` straight through; otherwise this
+    /// fetches the newest 2000 things (raised from 500, 2026-07-15: the older
+    /// cap made anything past the recent 500 invisible to answers even
+    /// though it carried an embedding). Scoring is linear over this set and
+    /// runs on the Ask path, so it stays bounded — but 2000 covers a heavy
+    /// corpus without a felt cost.
     private func retrieve(_ query: String, in pool: [Thing]? = nil) -> [Thing] {
-        var terms = query.lowercased()
-            .trimmingCharacters(in: CharacterSet(charactersIn: "? "))
-            .split(separator: " ").map(String.init)
-
-        // A kind word is a filter, not a search term.
-        var kindFilter: ThingKind?
-        terms.removeAll { term in
-            if let kind = ThingKind.allCases.first(where: {
-                $0.typeTag.lowercased() == term || $0.typeTagPlural.lowercased() == term
-            }) {
-                kindFilter = kind
-                return true
-            }
-            return false
-        }
-        let stops: Set<String> = ["about", "my", "the", "a", "in", "from", "for", "of",
-                                  "what", "whats", "what's", "landed", "on", "happened",
-                                  "is", "are", "was", "were", "do", "does", "did", "i",
-                                  "me", "you", "your", "who", "how", "when", "where",
-                                  "why", "which", "it", "and", "or", "to", "with"]
-        terms.removeAll { stops.contains($0) }
-
-        // A date phrase ("today", "last week", "thursday") is a WHEN filter,
-        // not a text term — things outside the range drop out entirely.
-        let dateMatch = DateQuery.match(in: query)
-        if let dateMatch { terms.removeAll { dateMatch.words.contains($0) } }
-
-        let usingPool = pool != nil
-        let all: [Thing]
+        let corpus: [Thing]
         if let pool {
-            all = pool
+            corpus = pool
         } else {
             var descriptor = FetchDescriptor<Thing>(
                 sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]
             )
-            descriptor.fetchLimit = 500
-            all = (try? modelContext.fetch(descriptor)) ?? []
+            descriptor.fetchLimit = 2000
+            corpus = (try? modelContext.fetch(descriptor)) ?? []
         }
-        // Semantic widening: near-synonyms of the query's words, scored
-        // BELOW exact matches — "car stuff" reaches "vehicle" titles.
-        let expanded = SemanticExpand.expand(terms)
-
-        // Sentence-level semantic match (2026-07-12): embed the natural-language
-        // ask and score each thing by cosine to its stored vector — so a query
-        // can reach a thing that shares NO words with it. The whole ASK is
-        // embedded (a sentence embedding wants a sentence — the stripped keyword
-        // fragments below would degrade it), only its trailing "?" trimmed.
-        // Skipped for follow-up pool refinements and bare kind/date lists (no
-        // words to carry meaning), and a no-op when the on-device embedding
-        // model is unavailable — the keyword engine then stands alone (zero
-        // regression). The query norm is computed once, not per thing.
-        let ask = query.trimmingCharacters(in: CharacterSet(charactersIn: "? ").union(.whitespaces))
-        let queryVec: [Float]? = (!usingPool && !terms.isEmpty)
-            ? EmbeddingIndex.vector(for: ask) : nil
-        let queryNorm = queryVec.map(EmbeddingIndex.norm) ?? 0
-        // Similarity above the boost floor refines ranking; but a thing with NO
-        // keyword score must clear the higher QUALIFY floor to answer at all —
-        // so a loosely-related recent thing can't ride the freshness bonus into
-        // a false answer, and the honest "nothing matches" path survives. The
-        // lift is normalized 0…1 above the boost floor and weighted so a strong
-        // meaning-match rivals a title hit (+3).
-        let semanticBoostFloor = 0.55
-        let semanticQualifyFloor = 0.62
-        let semanticWeight = 3.0
-
-        // Whole words, not substrings (2026-07-10): "what is my name" used
-        // to match the "is" inside "Lisbon" and answer with nonsense — a
-        // term now has to BE a word somewhere in the thing.
-        func words(_ s: String) -> Set<String> {
-            Set(s.lowercased().components(separatedBy: CharacterSet.alphanumerics.inverted)
-                .filter { !$0.isEmpty })
-        }
-        return all.compactMap { thing -> (Thing, Double)? in
-            if let kindFilter, thing.kind != kindFilter { return nil }
-            if let dateMatch, !dateMatch.range.contains(thing.capturedAt) { return nil }
-            let title = words(thing.title)
-            let tags = words(thing.tags.joined(separator: " "))
-            let content = words(thing.content)
-            var score = 0.0
-            for term in terms {
-                if title.contains(term) { score += 3 }
-                if tags.contains(term) { score += 2 }
-                if content.contains(term) { score += 1 }
-            }
-            for term in expanded {
-                if title.contains(term) { score += 1.5 }
-                if tags.contains(term) { score += 1 }
-                if content.contains(term) { score += 0.5 }
-            }
-            // Semantic lift: meaning-match adds to the score and can qualify a
-            // thing that shares no words at all — but only a STRONG match
-            // (>= qualify floor) may answer without a keyword hit.
-            if let queryVec, let data = thing.embedding, !data.isEmpty {
-                let sim = EmbeddingIndex.similarity(query: queryVec, queryNorm: queryNorm, packed: data)
-                if sim >= semanticBoostFloor, score > 0 || sim >= semanticQualifyFloor {
-                    score += semanticWeight * (sim - semanticBoostFloor) / (1 - semanticBoostFloor)
-                }
-            }
-            // A bare kind query ("screenshots?") lists that kind; a bare date
-            // query ("what landed today?") lists the day.
-            if terms.isEmpty && (kindFilter != nil || dateMatch != nil) { score = 1 }
-            guard score > 0 else { return nil }
-            let age = Date.now.timeIntervalSince(thing.capturedAt)
-            score += max(0, 1 - age / (7 * 86_400))   // fresh floats, capped +1
-            return (thing, score)
-        }
-        .sorted { $0.1 > $1.1 }
-        .prefix(10)
-        .map(\.0)
+        return Retriever.rank(query, in: corpus, isPoolRefinement: pool != nil)
     }
 
     /// Today's doc, verbatim — the record paints from the top 4 hits. The
@@ -1271,8 +1547,12 @@ struct RootShell: View {
     /// Transient chrome floating over content — it wears glass.
     private func toastView(_ text: String) -> some View {
         HStack(spacing: DS.Space.s2) {
-            // The first thing ever gets the mark (§8). Once.
-            if text == "Your first thing" { CasberiMark(size: 18) }
+            // The first thing ever gets the mark (§8). Once. The first-ever
+            // kept ask (composer delight, 2026-07-21) shares the treatment —
+            // both are "your first standing X with Casberi" moments.
+            if text == "Your first thing" || text.hasPrefix("Your first standing question") {
+                CasberiMark(size: 18)
+            }
             Text(text)
                 .dsText(.body17)
                 .foregroundStyle(DS.textPrimary)

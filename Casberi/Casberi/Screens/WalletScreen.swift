@@ -22,34 +22,56 @@ private let walletRecentDescriptor: FetchDescriptor<Thing> = {
 /// server.
 struct WalletScreen: View {
     @Bindable private var wallet = WalletStore.shared
+    /// Which chains are read (2026-07-15) — the person can narrow the five to
+    /// the ones they care about; toggling re-syncs.
+    @Bindable private var chainStore = WalletChainStore.shared
     @State private var newAddress = ""
     @FocusState private var addressFieldFocused: Bool
-    /// Holdings render through the gen-UI engine — allocation is magnitude, so
-    /// the treemap is its native shape (holdings are SYNTHESIS, not things).
-    /// Both holdings and activity are live from Alchemy — no server.
     @Environment(\.modelContext) private var modelContext
     @Environment(BridgeStore.self) private var store
     @State private var syncing = false
-    @State private var holdings = GenStream()
     /// The combined "bundle" treemap across every watched wallet (2026-07-15) —
     /// shown alongside the per-wallet charts when more than one is watched.
-    @State private var portfolioHoldings = GenStream()
-    @State private var portfolioTotal: Double = 0
-    @State private var portfolioSamples: [WalletStore.ValueSample] = []
     /// The combined "Across your wallets" sheet — the full decomposed read
     /// (the combined line, then each wallet's own line in its face's color).
-    @State private var showCombinedSheet = false
     @State private var result: String?
     @State private var resultIsError = false
-    /// Per-wallet value history (2026-07-14) — the locally-sampled USD line,
-    /// forward-only from the day watching began.
-    @State private var valueLines: [(id: UUID, label: String, samples: [WalletStore.ValueSample])] = []
-    /// Per-wallet NFT shelves — Alchemy's NFT read, spam filtered.
-    @State private var nftGroups: [WalletIngest.NFTGroup] = []
+    /// True when a non-error result still needs the person's eyes (the
+    /// typo'd-address nudge). Everything else whispers in Watching's header
+    /// — fine is silent (redesign 2026-07-20).
+    @State private var resultProminent = false
+    /// The in-flight WalletConnect handshake — proposed, wallet opened, waiting
+    /// on a human to approve over there (2026-07-16). Held as the Task rather
+    /// than a Bool so a second tap can CANCEL it: the wait runs to the
+    /// proposal's 5-minute expiry, and a person who opened their wallet, chose
+    /// not to approve, and came back must not find a stuck button and no way
+    /// out. Separate from `syncing` — that one means "reading chains", this one
+    /// means "waiting on your wallet", and collapsing them puts the wrong line
+    /// on screen.
+    @State private var connectTask: Task<Void, Never>?
+    /// Bumped on every start and every cancel, so an in-flight handshake can
+    /// tell whether it's still the CURRENT one. Cancellation only lands at the
+    /// next suspension point — a cancelled handshake sitting in the relay
+    /// round-trip can take a second to unwind — so without this, "cancel, then
+    /// tap Connect again" lets the dying task's cleanup clear the new task's
+    /// handle and write the new task's outcome.
+    @State private var connectGeneration = 0
+    private var connecting: Bool { connectTask != nil }
     /// A tapped holdings cell: the token's thing sheet when watched, the
     /// quick chart sheet when not.
     @State private var openTokenThing: Thing?
     @State private var quickToken: TokenQuickRoute?
+    /// Which wallet the rename alert is editing (2026-07-20, the door purge:
+    /// manage is ONE page now — the per-wallet screen is deleted, so the row's
+    /// tap went back to being the rename prompt it was before the collapse).
+    @State private var renamingID: WalletStore.WatchedAddress.ID?
+    @State private var renameDraft = ""
+    /// Whether the Chains row is expanded (2026-07-15) — collapsed by
+    /// default to a one-line summary ("Ethereum, Base +3"); a set-once
+    /// setting doesn't deserve six full-height rows every visit.
+    @State private var chainsExpanded = false
+    @State private var confirmDisconnect = false
+    @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var scheme
     @Environment(\.openURL) private var openURL
     /// The one swipe lesson, shared across every screen that pins by swipe
@@ -61,71 +83,72 @@ struct WalletScreen: View {
 
     var body: some View {
         List {
-            addSection.listRowSeparator(.hidden)
-            // The pin lives on each address row now (2026-07-09) — one
-            // switch per wallet, right where you'd reach for it, instead of
-            // a single toggle below that couldn't say WHICH wallet it meant
-            // once more than one was watched.
-            if !wallet.addresses.isEmpty { watchingSection.listRowSeparator(.hidden) }
-            // The combined "bundle" leads the holdings — total net worth and one
-            // merged treemap — with the per-wallet charts below it. Only when
-            // more than one wallet is watched (one wallet's own view IS its
-            // portfolio); ruling 2026-07-15, alongside the per-wallet views.
-            if wallet.addresses.count > 1, !portfolioHoldings.els.isEmpty {
-                portfolioSection.listRowSeparator(.hidden)
+            // Empty state: the add field and the vitalik chip ARE the
+            // screen — nothing to lead with yet. Connected state: the
+            // watched wallets and their approvals lead (prd §104), value
+            // views and activity follow, admin (add / chains) at the bottom.
+            if wallet.addresses.isEmpty {
+                addSection.listRowSeparator(.hidden)
+                footerSection.listRowSeparator(.hidden)
+                // The empty state reports too (2026-07-16). This section used
+                // to exist only in the connected branch below, so with nothing
+                // watched yet every outcome was set and then silently dropped
+                // — a mistyped ENS name answered with nothing at all, in the
+                // exact state where a first-time typo is likeliest. Found while
+                // wiring Connect, whose "no wallet app" line vanished the same
+                // way.
+                statusSection
+            } else {
+                // THIS SCREEN IS THE PLUMBING (2026-07-20, the surface split —
+                // user: "isn't that supposed to be for just the app
+                // connection?"). It answers one question: what am I watching,
+                // and how? Warnings, the combined value bundle, and the recent
+                // transactions all moved to the Wallet FEED, where you look at
+                // them; per-wallet holdings/DeFi/safety stay one row down in
+                // the feed's tiles and tray. What's left is watching, adding, chains,
+                // and disconnecting — a connection screen, like every other
+                // bridge's.
+                watchingSection.listRowSeparator(.hidden)
+                // Three cards, one idiom (user, 2026-07-20: "it looks like a
+                // bunch of stuff mashed together") — watching, add, admin.
+                // Status WHISPERS in Watching's header when all is well and
+                // becomes a row only for errors and the typo'd-address nudge.
+                addSection.listRowSeparator(.hidden)
+                adminSection.listRowSeparator(.hidden)
+                statusSection
             }
-            if !wallet.addresses.isEmpty, !holdings.els.isEmpty {
-                Section {
-                    GenRender(id: "root", els: holdings.els)
-                        .listRowBackground(Color.clear)
-                        .listRowSeparator(.hidden)
-                        .listRowInsets(EdgeInsets())
-                }
-                .listRowSeparator(.hidden)
-            }
-            if !wallet.addresses.isEmpty, !valueLines.isEmpty {
-                valueSection.listRowSeparator(.hidden)
-            }
-            if !wallet.addresses.isEmpty, !nftGroups.isEmpty {
-                nftSection.listRowSeparator(.hidden)
-            }
-            if syncing || result != nil {
-                Section {
-                    BridgeSyncStatusRows(syncing: syncing, syncingLine: String(localized: "Reading onchain activity…"),
-                                        result: result, resultIsError: resultIsError)
-                }
-                .listRowSeparator(.hidden)
-            }
-            if !recent.isEmpty { recentSection.listRowSeparator(.hidden) }
-            if !wallet.addresses.isEmpty {
-                BridgeDisconnectSection(
-                    bridgeID: "wallet", name: "Wallet",
-                    teardown: { WalletStore.shared.addresses = [] }
-                ).listRowSeparator(.hidden)
-            }
-            footerSection.listRowSeparator(.hidden)
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
+        .dsAdaptiveContentWidth()
         .dsPageBackground()
+        .dsSoftTopEdge()
         .navigationTitle("Wallet")
         .navigationBarTitleDisplayMode(.large)
+        .alert("Name this wallet",
+               isPresented: Binding(get: { renamingID != nil },
+                                    set: { if !$0 { renamingID = nil } })) {
+            TextField("Name (e.g. Main, Cold)", text: $renameDraft)
+            Button("Save") {
+                if let id = renamingID {
+                    wallet.rename(id, to: renameDraft)
+                    DSHaptic.success()
+                }
+                renamingID = nil
+            }
+            Button("Cancel", role: .cancel) { renamingID = nil }
+        } message: {
+            Text("A blank name shows the address instead.")
+        }
         .toolbar {
             // Reorder/remove live behind Edit — drag to sort, red-minus to drop.
             ToolbarItem(placement: .topBarTrailing) { EditButton().tint(DS.textPrimary) }
         }
         .onAppear {
-            loadValueLines()
             if !wallet.addresses.isEmpty {
                 sync()
                 Task { await wallet.loadAvatars() }
             }
-        }
-        // A dropped wallet's shelves leave with it, not on the next sync.
-        .onChange(of: wallet.addresses) {
-            let kept = Set(wallet.addresses.map(\.address))
-            nftGroups.removeAll { !kept.contains($0.address) }
-            loadValueLines()
         }
         // A tapped holdings cell (2026-07-14): the token's own chart — its
         // thing sheet when watched, the quick sheet when it's just held.
@@ -145,260 +168,54 @@ struct WalletScreen: View {
         .sheet(item: $quickToken) { route in
             TokenQuickSheet(route: route)
         }
-        .sheet(isPresented: $showCombinedSheet) {
-            CombinedWalletsSheet(total: portfolioTotal,
-                                 combined: portfolioSamples,
-                                 wallets: wallet.addresses)
-        }
+        // A Watching row's whole tap target (2026-07-20) — the per-wallet
+        // screen carries everything that used to be a top-level section
+        // (approvals, gas, DeFi, Safe) plus renaming, scoped to just this
+        // wallet. Local push, matching `AppsScreen`'s own catalog-tile
+        // idiom — no shell-level route needed for a destination reached
+        // from exactly one place.
     }
 
-    // MARK: - Portfolio (combined bundle, 2026-07-15)
-
-    /// The combined view across every watched wallet: net-worth headline,
-    /// combined net-worth line (when history exists), and one merged treemap.
-    /// Additive — the per-wallet charts still follow below, so which wallet
-    /// holds what is never lost (ruling 2026-07-15, revising 2026-07-09's
-    /// separate-only holdings).
-    private var portfolioSection: some View {
-        Section {
-            Button {
-                DSHaptic.tap()
-                showCombinedSheet = true
-            } label: {
-                HStack(alignment: .center, spacing: DS.Space.s3) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        // "Combined value", not "Net worth" (ruling 2026-07-15,
-                        // softening §71): the frame is your history with what you
-                        // watch, not a terminal — and it's only these watched
-                        // wallets' onchain value, never a claim about your whole
-                        // net worth.
-                        Text("Combined value")
-                            .dsText(.subhead13).foregroundStyle(DS.textSecondary)
-                        Text(TokenStats.compact(portfolioTotal))
-                            .dsText(.heading22).foregroundStyle(DS.textPrimary)
-                            .monospacedDigit()
-                    }
-                    Spacer()
-                    if portfolioSamples.count >= 2 {
-                        let closes = portfolioSamples.map(\.usd)
-                        let first = closes.first ?? 0
-                        let last = closes.last ?? 0
-                        let change = first > 0 ? (last - first) / first : 0
-                        VStack(alignment: .trailing, spacing: 4) {
-                            TokenChartPlot(chart: TokenChart(closes: closes, price: last,
-                                                             change: change),
-                                           accent: TokenChartStyle.accent(up: change >= 0,
-                                                                          scheme: scheme),
-                                           height: 30, pulses: false)
-                                .frame(width: 84)
-                            TokenDeltaPill(
-                                change: change,
-                                label: "since \(portfolioSamples.first!.at.formatted(.dateTime.month(.abbreviated).day()))",
-                                compact: true)
-                        }
-                    }
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(DS.textTertiary)
-                }
-            }
-            .buttonStyle(.plain)
-            .dsListCardRow()
-            if !portfolioHoldings.els.isEmpty {
-                GenRender(id: "root", els: portfolioHoldings.els)
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
-                    .listRowInsets(EdgeInsets())
-            }
-        } header: {
-            Text("Across your wallets").dsText(.label12)
-                .foregroundStyle(DS.textSecondary)
-        } footer: {
-            Text("Everything you watch, together — read on this iPhone, no account, watch-only.")
-                .dsText(.callout15).foregroundStyle(DS.textSecondary)
-        }
-    }
-
-    // MARK: - Value history (2026-07-14)
-
-    /// The USD closes for a row's sparkline — nil until the wallet has ≥2
-    /// sampled points (a single dot isn't a line).
-    private func rowSpark(_ addr: WalletStore.WatchedAddress) -> [Double]? {
-        let s = wallet.valueSamples(forAddress: addr.address)
-        guard s.count >= 2 else { return nil }
-        return s.map(\.usd)
-    }
-
-    private func loadValueLines() {
-        valueLines = wallet.addresses.compactMap { addr in
-            let samples = wallet.valueSamples(forAddress: addr.address)
-            guard samples.count >= 2 else { return nil }
-            return (addr.id, addr.label.isEmpty ? addr.short : addr.label, samples)
-        }
-        // The combined net-worth line only exists with more than one wallet;
-        // with one, the per-wallet line above already IS the portfolio.
-        portfolioSamples = wallet.addresses.count > 1 ? wallet.combinedValueSamples() : []
-    }
-
-    /// Each wallet's sampled USD line — drawn with the token plot idiom
-    /// (no pulse: samples land as you visit, nothing is live-streaming).
-    private var valueSection: some View {
-        Section {
-            ForEach(valueLines, id: \.id) { line in
-                let closes = line.samples.map(\.usd)
-                let first = closes.first ?? 0
-                let last = closes.last ?? 0
-                let change = first > 0 ? (last - first) / first : 0
-                HStack(spacing: DS.Space.s3) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(line.label)
-                            .dsText(.body17).foregroundStyle(DS.textPrimary)
-                            .lineLimit(1)
-                        Text(TokenStats.compact(last))
-                            .dsText(.subhead13).foregroundStyle(DS.textSecondary)
-                            .monospacedDigit()
-                    }
-                    Spacer()
-                    TokenChartPlot(chart: TokenChart(closes: closes, price: last,
-                                                     change: change),
-                                   accent: TokenChartStyle.accent(up: change >= 0,
-                                                                  scheme: scheme),
-                                   height: 30, pulses: false)
-                        .frame(width: 84)
-                    TokenDeltaPill(
-                        change: change,
-                        label: "since \(line.samples.first!.at.formatted(.dateTime.month(.abbreviated).day()))",
-                        compact: true)
-                }
-                .dsListCardRow()
-            }
-        } header: {
-            Text("Value").dsText(.label12)
-                .foregroundStyle(DS.textSecondary)
-        } footer: {
-            Text("Sampled as you use Casberi, and quietly in the background — history builds from the day you started watching, never back-filled.")
-                .dsText(.callout15).foregroundStyle(DS.textSecondary)
-        }
-    }
-
-    // MARK: - NFTs (2026-07-14)
-
-    /// The wallet's pieces, one shelf per wallet that holds any — a tap
-    /// opens the piece on OpenSea (read-only browse, like every link out).
-    private var nftSection: some View {
-        Section {
-            ForEach(nftGroups, id: \.address) { group in
-                VStack(alignment: .leading, spacing: DS.Space.s2) {
-                    if nftGroups.count > 1 {
-                        Text(group.label)
-                            .dsText(.subhead13).foregroundStyle(DS.textSecondary)
-                    }
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: DS.Space.s3) {
-                            ForEach(group.nfts) { nft in
-                                nftCell(nft)
-                            }
-                        }
-                    }
-                    nftHomeControl(for: group)
-                }
-                .listRowBackground(Color.clear)
-                .listRowInsets(EdgeInsets(top: DS.Space.s2, leading: DS.Space.s4,
-                                          bottom: DS.Space.s2, trailing: 0))
-            }
-        } header: {
-            Text("NFTs").dsText(.label12)
-                .foregroundStyle(DS.textSecondary)
-        }
-    }
-
-    /// The strip's Home control (ruling 2026-07-14): a pinned wallet's NFTs
-    /// ride Home by default — this row removes/restores them, HERE, on the
-    /// wallet's own screen (where every Home-presence verb lives). Unpinned
-    /// wallets show no control: their strip isn't on Home to begin with.
-    @ViewBuilder
-    private func nftHomeControl(for group: WalletIngest.NFTGroup) -> some View {
-        if let entry = wallet.addresses.first(where: {
-            $0.address.lowercased() == group.address.lowercased()
-        }), entry.pinnedToHome {
-            Button {
-                DSHaptic.tap()
-                wallet.setNFTStrip(hidden: !entry.nftStripHidden, address: entry.address)
-            } label: {
-                HStack(spacing: DS.Space.s1) {
-                    Image(systemName: entry.nftStripHidden ? "pin" : "pin.slash")
-                        .font(.system(size: 11, weight: .medium))
-                    Text(entry.nftStripHidden ? "Show on Home" : "On Home · remove")
-                        .dsText(.subhead13)
-                }
-                .foregroundStyle(DS.textSecondary)
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-        }
-    }
-
-    private func nftCell(_ nft: WalletIngest.WalletNFT) -> some View {
-        Button {
-            guard let url = nft.openseaURL else { return }
-            DSHaptic.selection()
-            openURL(url)
-        } label: {
-            VStack(alignment: .leading, spacing: DS.Space.s1) {
-                AsyncImage(url: URL(string: nft.imageURL)) { phase in
-                    if let image = phase.image {
-                        image.resizable().scaledToFill()
-                    } else {
-                        DS.fillFaint
-                    }
-                }
-                .frame(width: 96, height: 96)
-                .clipShape(RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
-                Text(nft.name)
-                    .dsText(.label12).foregroundStyle(DS.textSecondary)
-                    .lineLimit(1)
-                    .frame(width: 96, alignment: .leading)
-            }
-        }
-        .buttonStyle(.plain)
-    }
-
+    /// Reads the chain and lands new transactions — the plumbing screen's one
+    /// job on appear. RESTORED 2026-07-20: the surface split's block cuts
+    /// accidentally deleted this member, and the `sync()` call in onAppear
+    /// kept compiling by resolving to POSIX `sync(2)` — two green builds were
+    /// flushing disk buffers instead of reading chains, with no compiler
+    /// diagnostic to catch it. The fan-out the old body did for the warnings
+    /// band and portfolio bundle lives in `WalletWatch.liveState` (the feed's
+    /// tiles) now; what belongs here is landing, the honest status line, and
+    /// the seat registration.
     private func sync() {
         guard !syncing else { return }
         syncing = true
         Task {
-            // Three independent reads — overlapped, so the screen pays the
-            // slowest one, not the sum (transfers + holdings + NFTs each
-            // chain their own round-trips).
-            async let refreshed = WalletIngest.refresh(context: modelContext)
-            async let holdingsDoc = WalletIngest.holdingsChart()
-            async let portfolioDoc = WalletIngest.combinedHoldings()
-            async let nfts = WalletIngest.nftsByWallet()
-            let added = await refreshed
-            if let doc = await holdingsDoc { holdings.paint(doc) }
-            // The combined bundle — total + one merged treemap (nil unless
-            // more than one wallet is watched).
-            if let group = await portfolioDoc {
-                portfolioTotal = group.totalUSD
-                portfolioHoldings.paint(WalletIngest.groupDocument(group))
-            } else {
-                portfolioTotal = 0
-                portfolioHoldings.paint([])
-            }
-            loadValueLines()   // the holdings fetch may have landed a sample
-            nftGroups = await nfts
+            let added = await WalletIngest.refresh(context: modelContext)
+            // Holdings, only as a BOOLEAN — the typo'd-address nudge below
+            // needs "nothing found anywhere", and the coalesced holdings
+            // cache makes the read cheap. Never displayed here: the reads
+            // live on the feed (user ruling, 2026-07-20).
+            let totals = await WalletIngest.topHoldingsByWallet()
             syncing = false
             // A bridge only registers "connected" once it actually reached
-            // Alchemy — a bad key or offline device must never claim success
-            // (review 2026-07-08: this fired unconditionally, so a dead key
-            // showed "connected" in Apps with nothing ever landing in Feed).
+            // the chain — a bad key or offline device must never claim
+            // success (review 2026-07-08).
             guard let added else {
                 result = String(localized: "Couldn't reach the chain — check your connection.")
                 resultIsError = true
                 return
             }
             resultIsError = false
-            result = added > 0 ? String(localized: "\(added) new") : String(localized: "Connected — watching for activity.")
+            let nothingFound = added == 0 && totals.allSatisfy { $0.totalUSD < 1 }
+            if added > 0 {
+                result = String(localized: "\(added) new")
+                resultProminent = false
+            } else if nothingFound && wallet.addresses.count == 1 {
+                result = String(localized: "No activity found on your chains yet — double-check the address, or give it a moment.")
+                resultProminent = true
+            } else {
+                result = String(localized: "Connected — watching for activity.")
+                resultProminent = false
+            }
             let proof = added > 0 ? "\(added) new" : "Synced just now"
             if store.registerConnected(id: "wallet", name: "Wallet", proof: proof,
                                        can: ["Reads your wallet's activity.",
@@ -422,68 +239,53 @@ struct WalletScreen: View {
     private var watchingSection: some View {
         Section {
             ForEach(wallet.addresses) { addr in
-                HStack(spacing: DS.Space.s3) {
-                    // The wallet's face (2026-07-15): its ENS avatar when it
-                    // published one, else a deterministic identicon — so
-                    // watching three wallets no longer means three identical
-                    // blue icons.
-                    WalletFace(address: addr.address, size: 36)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(addr.label.isEmpty ? addr.short : addr.label)
-                            .dsText(.body17).foregroundStyle(DS.textPrimary)
-                        if !addr.label.isEmpty {
-                            Text(addr.short).dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                // Tap = rename (an alert, not a door — user, 2026-07-20: "the
+                // manage screen should really be one page with no doors").
+                // The per-wallet screen this row used to push is deleted: its
+                // remove lived on the swipe already, and its safety facts are
+                // the Worth-a-look tray's rows whenever they're true — every
+                // delegation and pending Safe queue IS a warning there, so
+                // the page held nothing the feed doesn't state better.
+                Button {
+                    DSHaptic.tap()
+                    renameDraft = addr.label
+                    renamingID = addr.id
+                } label: {
+                    HStack(spacing: DS.Space.s3) {
+                        // The wallet's face (2026-07-15): its ENS avatar when it
+                        // published one, else a deterministic identicon — so
+                        // watching three wallets no longer means three identical
+                        // blue icons.
+                        WalletFace(address: addr.address, size: 36)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(addr.label.isEmpty ? addr.short : addr.label)
+                                .dsText(.body17).foregroundStyle(DS.textPrimary)
+                                .lineLimit(1)
+                            // The address, always — identity, not a read
+                            // (user, 2026-07-20: the value subline and
+                            // sparkline these rows carried were holdings on
+                            // the plumbing screen; the feed's Balance tile is
+                            // where value lives now).
+                            if !addr.label.isEmpty {
+                                Text(addr.short).dsText(.subhead13)
+                                    .foregroundStyle(DS.textSecondary)
+                                    .monospacedDigit()
+                            }
                         }
+                        Spacer()
                     }
-                    Spacer()
-                    // A glanceable value heartbeat (2026-07-15) — the same
-                    // split Tokens uses: a bare sparkline on the row, the full
-                    // read with numbers in the Value section below. Only once
-                    // the wallet has ≥2 sampled points.
-                    if let closes = rowSpark(addr) {
-                        let change = closes.first.map { $0 > 0 ? (closes.last! - $0) / $0 : 0 } ?? 0
-                        TokenChartPlot(chart: TokenChart(closes: closes, price: closes.last ?? 0,
-                                                         change: change),
-                                       accent: TokenChartStyle.accent(up: change >= 0, scheme: scheme),
-                                       height: 22, pulses: false)
-                            .frame(width: 48)
-                            .accessibilityHidden(true)
-                    }
-                    // A visible pin control on every row (user, 2026-07-14):
-                    // wallets pin per-ADDRESS (you might watch three and pin
-                    // one), so the toggle lives on the row rather than as the
-                    // source-level PinToHomeButton every other app screen
-                    // carries above its list. Tap to pin/unpin; the trailing
-                    // swipe still does the same — one verb, two ways.
-                    Button {
-                        DSHaptic.tap()
-                        wallet.togglePin(addr.id)
-                    } label: {
-                        Image(systemName: addr.pinnedToHome ? "pin.fill" : "pin")
-                            .font(.system(size: 14))
-                            .foregroundStyle(addr.pinnedToHome ? DS.tint : DS.textTertiary)
-                            .frame(width: 32, height: 32)
-                            .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
+                    .contentShape(Rectangle())
                 }
+                .buttonStyle(.plain)
                 .dsListCardRow()
                 .modifier(SwipeHintNudge(active: addr.id == hintAddressID) { swipeCoachDone = true })
-                // The pin swipe is the SAME GESTURE everywhere (2026-07-10,
-                // user: it was leading here, trailing in Feed — one verb,
-                // two directions): trailing edge, Feed's edge.
-                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                    // Full swipe = pin (Feed's grammar). An explicit trailing
-                    // group replaces the system delete, so Remove rides here
-                    // too — Edit mode's red minus still works.
-                    Button {
-                        DSHaptic.tap()
-                        wallet.togglePin(addr.id)
-                    } label: {
-                        Label(addr.pinnedToHome ? "Unpin" : "Pin",
-                              systemImage: addr.pinnedToHome ? "pin.slash" : "pin")
-                    }
-                    .tint(DS.tint)
+                // Pin retired with the board (2026-07-20) — Remove is now the
+                // swipe group's ONLY action. `allowsFullSwipe` was true when
+                // a full swipe meant Pin (Feed's own reversible grammar); left
+                // true here it would let a full swipe delete a watched wallet
+                // by accident, so it drops to false now that Remove is all
+                // that's left.
+                .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                     Button(role: .destructive) {
                         if let i = wallet.addresses.firstIndex(where: { $0.id == addr.id }) {
                             wallet.remove(at: IndexSet(integer: i))
@@ -496,12 +298,135 @@ struct WalletScreen: View {
             .onDelete { wallet.remove(at: $0) }
             .onMove { wallet.move(from: $0, to: $1) }
         } header: {
-            Text("Watching").dsText(.label12)
-                .foregroundStyle(DS.textSecondary)
+            HStack(alignment: .firstTextBaseline) {
+                Text("Watching").dsText(.label12)
+                    .foregroundStyle(DS.textSecondary)
+                Spacer(minLength: 0)
+                // Sync state at whisper weight — the same voice the feed's
+                // source pill uses. Trouble gets a real row (statusSection);
+                // fine gets four quiet letters here.
+                Text(quietStatus).dsText(.label12)
+                    .foregroundStyle(DS.textTertiary)
+            }
         } footer: {
-            Text("Swipe a wallet to pin its holdings to Home and Feed.")
+            Text("Tap to rename · swipe to remove")
                 .dsText(.callout15).foregroundStyle(DS.textSecondary)
         }
+    }
+
+    // MARK: - Chains (2026-07-15)
+
+    /// Which chains to read across every watched wallet — collapsed to a
+    /// one-line summary by default (2026-07-15: six full-height checkmark
+    /// rows was a lot of ceremony for a set-once setting); tap to expand
+    /// into the GeckoTerminal/OpenSea checklist idiom. Default all-on;
+    /// toggling narrows the reads and re-syncs. Never lets the last chain
+    /// off (the store guards it).
+    /// The plumbing card (redesign 2026-07-20): Chains and Disconnect share
+    /// one surface at the bottom — settings, not the point — under the one
+    /// footer that states the read-only promise. Disconnect keeps
+    /// `BridgeDisconnectSection`'s exact keep-or-purge dialog; the shared
+    /// component couldn't merge into this card (a Section is a card in
+    /// insetGrouped), so the wallet carries its own copy of the same verbs.
+    private var adminSection: some View {
+        Section {
+            Button {
+                DSHaptic.tap()
+                withAnimation(.easeInOut(duration: 0.2)) { chainsExpanded.toggle() }
+            } label: {
+                HStack(spacing: DS.Space.s3) {
+                    Text("Chains")
+                        .dsText(.body17).foregroundStyle(DS.textPrimary)
+                    Spacer()
+                    Text(chainsSummary)
+                        .dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                    Image(systemName: chainsExpanded ? "chevron.down" : "chevron.right")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(DS.textTertiary)
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .dsListCardRow()
+            if chainsExpanded {
+                ForEach(WalletChainStore.selectable, id: \.id) { chain in
+                    Button {
+                        toggleChain(chain.id)
+                    } label: {
+                        HStack(spacing: DS.Space.s3) {
+                            Text(chain.name)
+                                .dsText(.body17).foregroundStyle(DS.textPrimary)
+                            Spacer()
+                            if chainStore.isSelected(chain.id) {
+                                Image(systemName: "checkmark")
+                                    .dsText(.body17).foregroundStyle(DS.tint)
+                            }
+                        }
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .dsListCardRow()
+                }
+            }
+            Button(role: .destructive) { confirmDisconnect = true } label: {
+                Text("Disconnect Wallet")
+                    .dsText(.body17)
+                    .frame(maxWidth: .infinity, alignment: .center)
+            }
+            .dsListCardRow()
+            .confirmationDialog("Disconnect Wallet?", isPresented: $confirmDisconnect,
+                                titleVisibility: .visible) {
+                Button("Keep its things") { disconnectWallet(purge: false) }
+                Button("Remove its things too", role: .destructive) { disconnectWallet(purge: true) }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("Stops new Wallet things from landing. What already landed stays yours unless you remove it.")
+            }
+        } footer: {
+            VStack(alignment: .leading, spacing: DS.Space.s2) {
+                if chainsExpanded {
+                    Text("Read each watched wallet across these chains only — turn off the ones you don't use.")
+                        .dsText(.callout15).foregroundStyle(DS.textSecondary)
+                }
+                Text("Read-only — watching can never trade or move funds. Activity is public, read across chains directly on this iPhone.")
+                    .dsText(.subhead13).foregroundStyle(DS.textSecondary)
+            }
+        }
+    }
+
+    private func disconnectWallet(purge: Bool) {
+        if purge {
+            let all = (try? modelContext.fetch(FetchDescriptor<Thing>())) ?? []
+            let doomed = all.filter { $0.source == "Wallet" }
+            SpotlightIndex.remove(ids: doomed.map(\.id))
+            for thing in doomed { modelContext.delete(thing) }
+            modelContext.saveHonestly()
+        }
+        // Clear the store first so a refresh racing the dismiss can't re-add
+        // the seat, then drop the seat itself (BridgeDisconnectSection's own
+        // ordering, kept verbatim).
+        WalletStore.shared.addresses = []
+        store.remove("wallet")
+        DSHaptic.tap()
+        dismiss()
+    }
+
+    /// "All 5" when nothing's narrowed, else the selected names ("Ethereum,
+    /// Base +3" past two) — the collapsed row's one-line fact.
+    private var chainsSummary: String {
+        let selected = WalletChainStore.selectable.filter { chainStore.isSelected($0.id) }
+        if selected.count == WalletChainStore.selectable.count { return "All \(selected.count)" }
+        let names = selected.map(\.name)
+        if names.count <= 2 { return names.joined(separator: ", ") }
+        return "\(names[0]), \(names[1]) +\(names.count - 2)"
+    }
+
+    private func toggleChain(_ id: String) {
+        DSHaptic.tap()
+        chainStore.toggle(id)
+        // Re-read holdings and activity over the new chain set, and rebuild the
+        // value lines the dropped chain may have fed.
+        sync()
     }
 
     /// The row that plays the swipe demo — the first watched address, once
@@ -511,11 +436,51 @@ struct WalletScreen: View {
         return wallet.addresses.first?.id
     }
 
+    /// What just happened — the spinner while chains are read, then the outcome
+    /// line. Rendered in BOTH the empty and connected states; see the note at
+    /// the call site.
+    @ViewBuilder
+    private var statusSection: some View {
+        // A status ROW only when something needs eyes: an error, the
+        // typo'd-address nudge, or the empty screen's connect flow (where
+        // there's no Watching header to whisper in). The connected screen's
+        // happy path whispers in `quietStatus` instead — the green
+        // "connected" card read as noise dressed as news.
+        if wallet.addresses.isEmpty || resultIsError || resultProminent {
+            if syncing || result != nil {
+                Section {
+                    BridgeSyncStatusRows(syncing: syncing,
+                                         syncingLine: String(localized: "Reading onchain activity…"),
+                                         result: result, resultIsError: resultIsError)
+                }
+                .listRowSeparator(.hidden)
+            }
+        }
+    }
+
+    /// The Watching header's trailing whisper — sync state at label weight.
+    private var quietStatus: String {
+        if syncing { return String(localized: "Syncing…") }
+        guard result != nil, !resultIsError, !resultProminent else { return "" }
+        return String(localized: "Synced just now")
+    }
+
     private var addSection: some View {
         Section {
-            BridgeFieldRow(placeholder: "Address (0x… or ENS)", text: $newAddress,
+            // The weights flip with state (redesign 2026-07-20): on the EMPTY
+            // screen, adding IS the page, so Connect leads in full prominence
+            // (the fast path — a wallet hands its address over instead of
+            // someone copying 42 hex characters; ruling 2026-07-16). On the
+            // CONNECTED screen adding is a side errand: the universal paste
+            // field leads and Connect becomes a quiet row in the same card —
+            // the blue slab outranked everything on a page it wasn't the
+            // point of. Both states: absent entirely when no project id is
+            // configured (a control that can't work doesn't appear).
+            if wallet.addresses.isEmpty, WalletConnectBridge.isAvailable { connectRow }
+            BridgeFieldRow(placeholder: "Address (0x…, ENS, or .sol)", text: $newAddress,
                            buttonLabel: "Watch", keyboard: .default,
                            focus: $addressFieldFocused, action: watch)
+            if !wallet.addresses.isEmpty, WalletConnectBridge.isAvailable { connectQuietRow }
             // Nothing watched yet, nothing on the clipboard — one tap watches
             // a famous public wallet so the whole feature (holdings, activity,
             // faces, charts) demos in three seconds. Watch-only makes peeking
@@ -545,22 +510,236 @@ struct WalletScreen: View {
                                           bottom: 0, trailing: DS.Space.s4))
             }
         } header: {
-            Text("Watch an address").dsText(.label12)
+            // "Add a wallet", not "Watch an address": with Connect leading the
+            // section, the header has to name both ways in — connecting hands
+            // an address over, it doesn't type one.
+            Text("Add a wallet").dsText(.label12)
                 .foregroundStyle(DS.textSecondary)
         } footer: {
             if wallet.addresses.isEmpty {
-                Text("Paste a wallet address or ENS name — its holdings and activity land in your feed.")
+                Text(WalletConnectBridge.isAvailable
+                     ? "Connect your wallet to hand its address over, or paste any address, ENS, or .sol name — holdings and activity land in your feed. Connecting asks for nothing but the address."
+                     : "Paste a wallet address, an ENS name, or a .sol name — its holdings and activity land in your feed.")
                     .dsText(.callout15).foregroundStyle(DS.textSecondary)
             }
         }
     }
 
+    /// The connected screen's Connect — a row in the add card, not a slab.
+    /// Same action, same cancel-while-waiting contract as `connectRow`; only
+    /// the weight changes with the state around it.
+    private var connectQuietRow: some View {
+        Button {
+            DSHaptic.tap()
+            if connecting { cancelConnect() } else { connectWallet() }
+        } label: {
+            HStack(spacing: DS.Space.s3) {
+                if connecting {
+                    ProgressView().controlSize(.small).tint(DS.textSecondary)
+                } else {
+                    Image(systemName: "link")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(DS.tint)
+                }
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(connecting ? "Waiting for your wallet — tap to cancel"
+                                    : "Connect a wallet app")
+                        .dsText(.body17).foregroundStyle(DS.textPrimary)
+                    if !connecting {
+                        Text("Hands over the address — read-only, never signs")
+                            .dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                    }
+                }
+                Spacer(minLength: 0)
+            }
+            .contentShape(Rectangle())
+            .animation(DS.Motion.standard, value: connecting)
+        }
+        .buttonStyle(.plain)
+        .dsListCardRow()
+    }
+
+    /// "Connect wallet" — one tap, then approve in the wallet that opens; while
+    /// waiting, the same button cancels.
+    ///
+    /// Never disabled, so there's no disabled background to get wrong (prd
+    /// §83): waiting is a state you can leave, not a state that locks the
+    /// screen. The label says so rather than leaving "tap again to cancel" as
+    /// folklore — a control whose only exit is invisible is a dead control
+    /// wearing a spinner.
+    private var connectRow: some View {
+        Button {
+            DSHaptic.tap()
+            if connecting { cancelConnect() } else { connectWallet() }
+        } label: {
+            HStack(spacing: DS.Space.s2) {
+                if connecting {
+                    ProgressView().controlSize(.small).tint(.white)
+                } else {
+                    Image(systemName: "wallet.bifold")
+                        .font(.system(size: 15, weight: .semibold))
+                }
+                Text(connecting ? "Waiting for your wallet — cancel" : "Connect wallet")
+                    .dsText(.callout15).fontWeight(.semibold)
+            }
+            .foregroundStyle(.white)
+            .frame(maxWidth: .infinity)
+            .frame(height: 44)
+            .background(DS.tint, in: Capsule(style: .continuous))
+            .contentShape(Capsule(style: .continuous))
+            .animation(DS.Motion.standard, value: connecting)
+        }
+        .buttonStyle(.plain)
+        .listRowBackground(Color.clear)
+        .listRowInsets(EdgeInsets(top: DS.Space.s1, leading: DS.Space.s4,
+                                  bottom: DS.Space.s2, trailing: DS.Space.s4))
+    }
+
+    private func cancelConnect() {
+        connectGeneration &+= 1   // orphans the in-flight task before it unwinds
+        connectTask?.cancel()
+        connectTask = nil
+        result = nil
+    }
+
+    private func connectWallet() {
+        result = nil
+        connectGeneration &+= 1
+        let generation = connectGeneration
+        connectTask = Task { @MainActor in
+            // Only clear the handle if it's still OURS — a task orphaned by a
+            // cancel or by a newer tap must not clear the current one's.
+            defer { if connectGeneration == generation { connectTask = nil } }
+
+            let outcome: Result<WalletConnectBridge.ConnectOutcome, Error>
+            do {
+                outcome = .success(try await WalletConnectBridge.connect(open: openWalletApp))
+            } catch {
+                outcome = .failure(error)
+            }
+
+            // One staleness gate over BOTH arms. A cancelled or superseded
+            // handshake says nothing at all: the person cancelled it, they
+            // know, and every line below would be a lie about a handshake
+            // they already abandoned — cancellation surfaces as `.timedOut`
+            // ("nothing came back from your wallet"), and a cancel landing
+            // mid-teardown surfaces as `.tearDownFailed`, which would accuse
+            // their wallet of holding a session open.
+            guard connectGeneration == generation, !Task.isCancelled else { return }
+
+            switch outcome {
+            case .success(.connected(let found)):
+                watchConnected(found)
+            case .success(.noWalletApp):
+                resultIsError = true
+                result = String(localized: "No wallet app on this iPhone — paste the address instead.")
+            case .success(.timedOut):
+                resultIsError = true
+                result = String(localized: "Nothing came back from your wallet — approve the request there, or paste the address instead.")
+            case .failure(WalletConnectBridge.ConnectError.tearDownFailed):
+                // The one failure this whole design exists to catch, so it says
+                // so out loud instead of quietly watching the address: a
+                // session survived the read, and until it's gone the screen's
+                // read-only promise is false.
+                resultIsError = true
+                result = String(localized: "Connected, but the session wouldn't close — open your wallet and disconnect Casberi. Nothing was watched.")
+            case .failure(WalletConnectBridge.ConnectError.keychainUnavailable(let status)):
+                // The keychain preflight failed — the handshake never started
+                // (the SDK would have crashed on this exact write). The code
+                // rides along because it's the one fact that diagnoses this
+                // from a screenshot.
+                resultIsError = true
+                result = String(localized: "This device's keychain refused the handshake (code \(status)) — paste the address instead.")
+            case .failure:
+                resultIsError = true
+                result = String(localized: "Couldn't reach your wallet — paste the address instead.")
+            }
+        }
+    }
+
+    /// Hand the `wc:` URI to whichever wallet claims the scheme, and report
+    /// whether one actually did.
+    ///
+    /// `canOpenURL` FIRST, and it — not the open's own result — is what the
+    /// answer rests on. Measured 2026-07-16, both ways of asking afterwards
+    /// lie: `UIApplication.open`'s completion and SwiftUI's `openURL` each
+    /// reported success for a `wc:` URI that no installed app claimed, while
+    /// LaunchServices failed it a beat later in its own daemon
+    /// (`LSApplicationWorkspaceErrorDomain Code=115`, visible only in the
+    /// device log). Believing that Bool left the screen waiting five minutes
+    /// on a wallet that never opened. `canOpenURL` is synchronous, asks the
+    /// installed-app registry directly, and needs exactly one
+    /// `LSApplicationQueriesSchemes` entry — `wc`, which every WalletConnect
+    /// wallet registers — so it does not rot as wallets come and go.
+    ///
+    /// The open still happens and its result is still ANDed in: a false there
+    /// is rare but real (a wallet mid-uninstall), and this is a path where
+    /// claiming more than we know is the whole thing we're avoiding.
+    @MainActor
+    private func openWalletApp(_ url: URL) async -> Bool {
+        guard UIApplication.shared.canOpenURL(url) else { return false }
+        return await withCheckedContinuation { continuation in
+            UIApplication.shared.open(url, options: [:]) { opened in
+                continuation.resume(returning: opened)
+            }
+        }
+    }
+
+    /// Watch whatever the settled session handed over. A wallet may share
+    /// several accounts at once; all of them are addresses the person chose to
+    /// give us, so all of them are watched rather than silently taking the
+    /// first. Labels stay empty — the wallet sends a raw account, and the row
+    /// is renameable.
+    private func watchConnected(_ found: [WalletConnectBridge.ConnectedAccount]) {
+        var addedAny = false
+        for account in found {
+            // A Solana wallet can only be read on Solana; adding one with that
+            // chain switched off would watch an address that can never show
+            // anything. Same rule the paste path applies to a `.sol` name —
+            // except the family is read off the session here rather than
+            // sniffed from the address, and the account names the chain it
+            // needs rather than this screen restating the id.
+            if let network = account.requiredNetworkID {
+                WalletChainStore.shared.ensureEnabled(network)
+            }
+            // `add` returns false on a duplicate — kept in the body rather
+            // than a `where` clause, which would hide the mutation.
+            if wallet.add(account.address, label: "") { addedAny = true }
+        }
+        guard addedAny else {
+            resultIsError = true
+            result = found.isEmpty
+                ? String(localized: "Your wallet approved but shared no address — paste it instead.")
+                : String(localized: "Already watching that address.")
+            return
+        }
+        resultIsError = false
+        DSHaptic.success()
+        sync()
+    }
+
     private func watch() {
         let input = newAddress.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !input.isEmpty else { return }
-        // An ENS name (vitalik.eth) resolves to hex now — the address is what
-        // the APIs read; the name rides along as the row's label.
-        if ENS.looksLikeName(input) {
+        // A name (vitalik.eth, toly.sol) resolves to an address — the address is
+        // what the APIs read; the name rides along as the row's label. `.sol` is
+        // tried FIRST: `ENS.looksLikeName` takes any dotted string, so it would
+        // otherwise send toly.sol to the ENS resolver, which answers with a null
+        // address rather than an error.
+        if SNS.looksLikeName(input) {
+            Task {
+                guard let address = await SNS.resolve(input) else {
+                    resultIsError = true
+                    result = String(localized: "Couldn't resolve \(input) — check the name, or paste the address.")
+                    return
+                }
+                // A Solana wallet can only be read on Solana; adding one with
+                // that chain switched off would watch an address that can never
+                // show anything.
+                WalletChainStore.shared.ensureEnabled("solana-mainnet")
+                addWatched(address: address, label: input)
+            }
+        } else if ENS.looksLikeName(input) {
             Task {
                 guard let hex = await ENS.resolve(input) else {
                     resultIsError = true
@@ -570,6 +749,7 @@ struct WalletScreen: View {
                 addWatched(address: hex, label: input)
             }
         } else {
+            if SNS.isAddress(input) { WalletChainStore.shared.ensureEnabled("solana-mainnet") }
             addWatched(address: input, label: "")
         }
     }
@@ -585,32 +765,6 @@ struct WalletScreen: View {
         resultIsError = false
         DSHaptic.success()
         sync()
-    }
-
-    // MARK: - What's landed
-
-    private var recentSection: some View {
-        Section {
-            ForEach(recent) { thing in
-                HStack(spacing: DS.Space.s3) {
-                    KindGlyph(kind: thing.kind, size: 28)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(thing.title).dsText(.body17).foregroundStyle(DS.textPrimary)
-                            .lineLimit(1)
-                        Text(walletLabel(thing) ?? thing.content)
-                            .dsText(.subhead13).foregroundStyle(DS.textSecondary)
-                            .lineLimit(1)
-                    }
-                    Spacer()
-                    Text(shortTime(thing.capturedAt))
-                        .dsText(.subhead13).foregroundStyle(DS.textSecondary)
-                }
-                .dsListCardRow()
-            }
-        } header: {
-            Text("Recent").dsText(.label12)
-                .foregroundStyle(DS.textSecondary)
-        }
     }
 
     private var footerSection: some View {

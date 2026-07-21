@@ -21,6 +21,61 @@ struct ContributionYear {
     let total: Int
     let weeks: [ContributionWeek]
 
+    /// A calendar of daily counts built from raw dates — the same 53×7 grid the
+    /// GitHub graph draws, but sourced from any corpus (journal entries, workouts,
+    /// screenshots) instead of GitHub's own API. Buckets each date into the
+    /// trailing `columns` weeks ending this week (locale first-weekday aligned),
+    /// and ramps intensity by the day's share of the busiest day — so the grid
+    /// reads as a consistency-over-time story for whatever the source is.
+    static func from(dates: [Date], calendar: Calendar = .current,
+                     now: Date = .now, columns: Int = 53) -> ContributionYear {
+        let startOfToday = calendar.startOfDay(for: now)
+        // Days elapsed since this week began (respecting the locale's first day).
+        let weekday = calendar.component(.weekday, from: startOfToday)
+        let offsetIntoWeek = (weekday - calendar.firstWeekday + 7) % 7
+        guard let startOfThisWeek = calendar.date(byAdding: .day, value: -offsetIntoWeek, to: startOfToday),
+              let gridStart = calendar.date(byAdding: .day, value: -7 * (columns - 1), to: startOfThisWeek)
+        else { return ContributionYear(total: 0, weeks: []) }
+
+        var counts = [Int](repeating: 0, count: columns * 7)
+        var total = 0
+        for date in dates {
+            let day = calendar.startOfDay(for: date)
+            guard let diff = calendar.dateComponents([.day], from: gridStart, to: day).day,
+                  diff >= 0, diff < counts.count else { continue }
+            counts[diff] += 1
+            total += 1
+        }
+
+        let busiest = counts.max() ?? 0
+        func level(_ c: Int) -> Int {
+            guard c > 0, busiest > 0 else { return 0 }
+            switch Double(c) / Double(busiest) {
+            case ..<0.25: return 1
+            case ..<0.5:  return 2
+            case ..<0.75: return 3
+            default:      return 4
+            }
+        }
+
+        var weeks: [ContributionWeek] = []
+        weeks.reserveCapacity(columns)
+        for col in 0..<columns {
+            let days = (0..<7).map { row -> ContributionDay in
+                let c = counts[col * 7 + row]
+                return ContributionDay(count: c, level: level(c))
+            }
+            weeks.append(ContributionWeek(days: days))
+        }
+        return ContributionYear(total: total, weeks: weeks)
+    }
+
+    /// Distinct days with at least one contribution — the grid needs a few lit
+    /// cells to read as a heatmap rather than a loading skeleton.
+    var activeDays: Int {
+        weeks.reduce(0) { $0 + $1.days.filter { $0.count > 0 }.count }
+    }
+
     /// GitHub's contributionLevel enum → the 0…4 intensity the grid draws.
     static func level(_ raw: String?) -> Int {
         switch raw {

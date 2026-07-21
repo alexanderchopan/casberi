@@ -15,7 +15,7 @@ import SwiftData
 enum SpotifyAuth {
 
     /// From developer.spotify.com/dashboard — empty means the bridge is off.
-    static let clientID = ""
+    static let clientID = "2f82c5e3bf3a4c10aa39ecb9f5cc0825"
     static let redirectURI = "casberi://spotify-auth"
     static var ready: Bool { !clientID.isEmpty }
 
@@ -190,7 +190,7 @@ enum SpotifyIngest {
             SpotlightIndex.index([thing])
             added += 1
         }
-        if added > 0 { try? context.save() }
+        if added > 0 { context.saveHonestly() }
         return added
     }
 }

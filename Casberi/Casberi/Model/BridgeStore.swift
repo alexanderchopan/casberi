@@ -124,8 +124,6 @@ struct BridgeApp: Identifiable, Codable {
               can: ["Reads your reminders.", "Adds reminders when you ask."]),
         .init(id: "pho",   name: "Photos",    status: .paused,    statusLine: "Not connected",
               can: ["Reads screenshots you take."]),
-        .init(id: "claw",  name: "OpenClaw",  status: .connected, statusLine: "Listening · 3 agents",
-              can: ["Brings in what your agents make.", "Their state lands in your feed.", "Approvals reach you here."]),
         // Claude chats, imported from the official export (PRD S9 "import"
         // grade) — one chat thing per conversation, kept findable.
         .init(id: "claude", name: "Claude", status: .connected, statusLine: "Synced 1h ago",

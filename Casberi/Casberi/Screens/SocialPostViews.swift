@@ -1,0 +1,611 @@
+import SwiftUI
+import SwiftData
+
+/// The social post's own read (2026-07-16) — what a cast/post shows once it's
+/// more than a row. Before this, a post's sheet rendered its `content` through
+/// the chat path, and a post's content is its PERMALINK: the sheet showed a URL
+/// in a speech bubble, and the words of anything longer than the 80-character
+/// title were simply absent from the app.
+///
+/// The words themselves are the sheet's HERO (ThingSheetView draws `postText`
+/// in the title slot — a post is prose, and prose is the point). What's left is
+/// everything around them: the pictures, the post it quotes, and how it landed.
+/// Source-neutral throughout — Bluesky and Farcaster answer the same shapes, so
+/// nothing here learns a network's name.
+struct SocialPostContent: View {
+    let thing: Thing
+    /// Read LIVE when the sheet opens (`SocialThread.engagement`) — a count is
+    /// only true at the moment it's read. nil until it answers; the STORED
+    /// snapshot stands in meanwhile (below), and where there's neither, the
+    /// line simply isn't there: no spinner, no zeroes standing in for unknowns.
+    @State private var engagement: SocialEngagement?
+
+    /// What the last sync stored. Bluesky's AppView hydrates counts on every
+    /// post view, so they cost nothing at ingest and are already on the record
+    /// when the sheet opens — the line renders in the first frame instead of
+    /// popping in a beat later. Farcaster's node reports no totals, so it
+    /// stores none and the line waits for the live read.
+    ///
+    /// Stale by construction (it's a snapshot of a moving number), which is
+    /// exactly why the live read replaces it the moment it lands.
+    private var stored: SocialEngagement? {
+        let e = SocialEngagement(
+            likes: thing.likeCount.map { SocialCount(value: $0) },
+            reposts: thing.repostCount.map { SocialCount(value: $0) },
+            replies: thing.replyCount.map { SocialCount(value: $0) })
+        return e.isEmpty ? nil : e
+    }
+
+    private var images: [String] {
+        // Posts landed before `imageURLs` existed carry only the row's single
+        // thumb — show that rather than nothing, until a refresh heals them.
+        thing.imageURLs.isEmpty
+            ? [thing.previewImageURL].compactMap { $0 } : thing.imageURLs
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s3) {
+            photos
+            if let quote = thing.quote {
+                SocialQuoteCard(card: quote, source: thing.source)
+            }
+            // Live when it lands, the sync's snapshot until then.
+            if let shown = engagement ?? stored {
+                SocialEngagementLine(engagement: shown)
+            }
+        }
+        .padding(.horizontal, DS.Space.s4)
+        .padding(.bottom, DS.Space.s3)
+        .task {
+            engagement = await SocialThread.engagement(for: thing)
+        }
+    }
+
+    /// One picture fills the width, the way a screenshot's does — it IS the
+    /// post. Several ride a strip that scrolls sideways inside its own lane, so
+    /// a four-photo post keeps all four and the page never scrolls horizontally.
+    @ViewBuilder private var photos: some View {
+        if images.count == 1 {
+            SocialPhoto(urlString: images[0], height: 280)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        } else if images.count > 1 {
+            ScrollView(.horizontal) {
+                HStack(spacing: DS.Space.s2) {
+                    ForEach(images, id: \.self) { url in
+                        SocialPhoto(urlString: url, height: 200, width: 200)
+                    }
+                }
+            }
+            .scrollIndicators(.hidden)
+        }
+    }
+}
+
+/// A post's picture at reading size — RemoteImageLoader does the fetch, decode,
+/// and downsample (a wall of full-res post images would otherwise decode at
+/// display size on every pass). A dead URL renders nothing rather than a gray
+/// hole: no image is better than a broken one (the RemoteThumb ruling).
+struct SocialPhoto: View {
+    let urlString: String
+    var height: CGFloat
+    var width: CGFloat? = nil
+    @State private var image: UIImage?
+    @State private var failed = false
+
+    var body: some View {
+        Group {
+            if let image {
+                Color.clear
+                    .frame(width: width, height: height)
+                    .overlay(Image(uiImage: image).resizable().scaledToFill())
+                    .clipped()
+                    .clipShape(RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+            } else if !failed {
+                RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous)
+                    .fill(DS.fillFaint)
+                    .frame(width: width, height: height)
+            }
+        }
+        .task(id: urlString) { await load() }
+    }
+
+    private func load() async {
+        // The strip renders at most 280pt; ask for 2× that in pixels so it
+        // stays sharp on a 3× screen without holding a full-res decode.
+        switch await RemoteImageLoader.load(urlString: urlString, targetSide: 560) {
+        case .image(let ui, _): image = ui
+        case .dead:             failed = true
+        case .transientFailure: break   // retry on the next appearance
+        }
+    }
+}
+
+/// The post this post QUOTES — both networks' signature form, dropped at ingest
+/// until 2026-07-16, so a quote-post read as a bare, contextless line. A
+/// recessed card inside the body: a smaller face, the handle, the words. A tap
+/// walks into it in-app (its own thread, its own quote); the face opens the
+/// person.
+struct SocialQuoteCard: View {
+    let card: SocialCard
+    let source: String
+    @State private var walking = false
+
+    var body: some View {
+        Button {
+            walking = true
+        } label: {
+            VStack(alignment: .leading, spacing: DS.Space.s2) {
+                HStack(spacing: DS.Space.s2) {
+                    if let avatar = card.avatarURL {
+                        RemoteThumb(urlString: avatar, size: 20, fallback: source, circular: true)
+                    } else {
+                        BridgeIcon(name: source, size: 20, circular: true)
+                    }
+                    Text("@\(SocialThread.shortHandle(card.handle))")
+                        .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                    Spacer(minLength: 0)
+                }
+                Text(card.text)
+                    .dsText(.callout15).foregroundStyle(DS.textSecondary)
+                    // A quote is context, not the point — it shows enough to
+                    // know what's being answered and stops. The tap has the rest.
+                    .lineLimit(6)
+                    .multilineTextAlignment(.leading)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(DS.Space.s3)
+            .background(DS.fillFaint,
+                        in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .sheet(isPresented: $walking) {
+            SocialPostSheet(post: card, source: source)
+        }
+    }
+}
+
+/// How a post landed, in the numbers its own network reports (2026-07-16).
+/// Quiet, glyph-led, monospaced — the "since you starred" line's voice. A count
+/// the network didn't report has no cell: an absent number and a reported zero
+/// are different facts, and the honesty rule needs them to stay different.
+struct SocialEngagementLine: View {
+    let engagement: SocialEngagement
+
+    var body: some View {
+        HStack(spacing: DS.Space.s4) {
+            cell("heart", engagement.likes)
+            cell("arrow.2.squarepath", engagement.reposts)
+            cell("bubble.left", engagement.replies)
+            Spacer(minLength: 0)
+        }
+    }
+
+    @ViewBuilder private func cell(_ glyph: String, _ count: SocialCount?) -> some View {
+        if let count {
+            HStack(spacing: 5) {
+                Image(systemName: glyph)
+                    .dsText(.label12).foregroundStyle(DS.textTertiary)
+                Text(count.text)
+                    .dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                    .monospacedDigit()
+            }
+        }
+    }
+}
+
+/// A post opened IN-APP (2026-07-16) — the thread walker. Tapping a reply used
+/// to kick you to the browser, which ended the session in Casberi and made the
+/// Replies section a preview of somewhere else. Now a reply, or a quoted post,
+/// opens here: its face, its words, its own replies — and those push again, so
+/// a conversation can be walked as deep as it goes without leaving.
+///
+/// A walked post is NOT a thing: it isn't in the corpus, it earns no row, and
+/// nothing about it is saved. It's a read, which is why it needs no consent —
+/// the same standing the Replies section already had.
+struct SocialPostSheet: View {
+    let post: SocialCard
+    let source: String
+    /// The walk. The stack owns it, so every post in the thread — however deep
+    /// — pushes onto the same path and the back chevron unwinds it.
+    @State private var path: [SocialCard] = []
+
+    var body: some View {
+        NavigationStack(path: $path) {
+            SocialPostThread(post: post, source: source, open: { path.append($0) })
+                .navigationDestination(for: SocialCard.self) { card in
+                    SocialPostThread(post: card, source: source, open: { path.append($0) })
+                }
+        }
+        .presentationDetents([.medium, .large])
+        .presentationDragIndicator(.visible)
+        .presentationCornerRadius(DS.Radius.sheet)
+        .presentationBackground(Color.black)
+        .colorScheme(.dark)
+    }
+}
+
+/// One post in the walker: who, the words, its replies. The ink ground paints
+/// INSIDE the scroll container — a layer behind a NavigationStack never shows
+/// through its opaque backing (the gotcha this codebase already paid for).
+struct SocialPostThread: View {
+    let post: SocialCard
+    let source: String
+    /// Where a tapped reply goes — the enclosing stack pushes it.
+    var open: (SocialCard) -> Void
+    @State private var replies: [SocialReply] = []
+    @State private var profile: SocialProfile?
+    @Environment(\.openURL) private var openURL
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: DS.Space.s4) {
+                Button {
+                    profile = SocialProfile(source: source, handle: post.handle,
+                                            displayName: nil, bio: nil,
+                                            avatarURL: post.avatarURL)
+                } label: {
+                    HStack(spacing: DS.Space.s2) {
+                        if let avatar = post.avatarURL {
+                            RemoteThumb(urlString: avatar, size: 26, fallback: source,
+                                        circular: true)
+                        } else {
+                            BridgeIcon(name: source, size: 26, circular: true)
+                        }
+                        Text("@\(SocialThread.shortHandle(post.handle))")
+                            .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                        Spacer(minLength: 0)
+                    }
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                Text(post.text)
+                    .dsText(.body17).foregroundStyle(DS.textPrimary)
+                    .fixedSize(horizontal: false, vertical: true)
+                if let url = post.url.flatMap(URL.init) {
+                    Button { openURL(url) } label: {
+                        Text("Open on \(source)")
+                            .dsText(.callout15).foregroundStyle(DS.tint)
+                    }
+                    .buttonStyle(.plain)
+                }
+                if !replies.isEmpty {
+                    SocialRepliesSection(replies: replies, source: source, open: open)
+                }
+            }
+            .padding(.horizontal, DS.Space.s4)
+            .padding(.vertical, DS.Space.s6)
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .scrollIndicators(.hidden)
+        .background(Color.black)
+        .navigationBarTitleDisplayMode(.inline)
+        .sheet(item: $profile) { p in
+            SocialProfileCard(profile: p)
+        }
+        .task {
+            guard let ref = post.ref else { return }
+            replies = await SocialThread.replies(source: source, ref: ref, handle: post.handle)
+        }
+    }
+}
+
+/// The conversation under a post — read-only context in the spec table's quiet
+/// clothes: a face, the handle, the words. The header counts the thread
+/// ("Replies · 8"), the rows arrive one after another (the feed's stagger). A
+/// tap on a reply WALKS INTO it (2026-07-16, was: opened the browser); a tap on
+/// its face opens the person. Shared by the thing sheet and the walker, so a
+/// reply reads the same however deep you are.
+struct SocialRepliesSection: View {
+    let replies: [SocialReply]
+    let source: String
+    /// Where a tapped reply goes. The thing sheet opens the walker; the walker
+    /// pushes onto its own stack. The section doesn't know or care which.
+    var open: (SocialCard) -> Void
+    @State private var profile: SocialProfile?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s3) {
+            // Honest count: the fetch caps at replyCap, so a thread AT the cap
+            // may hold more — say "8+", never a false total (honesty rule).
+            Text(replies.count < SocialThread.replyCap
+                 ? "Replies · \(replies.count)"
+                 : "Replies · \(replies.count)+")
+                .dsText(.label12).foregroundStyle(DS.textTertiary)
+            ForEach(Array(replies.enumerated()), id: \.element.id) { i, reply in
+                row(reply).staggerIn(index: min(i, 8))
+            }
+        }
+        .padding(DS.Space.s4)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(DS.fillFaint,
+                    in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+        .sheet(item: $profile) { p in
+            SocialProfileCard(profile: p)
+        }
+    }
+
+    @ViewBuilder
+    private func row(_ reply: SocialReply) -> some View {
+        HStack(alignment: .top, spacing: DS.Space.s2) {
+            avatarButton(reply)
+            // The words open the reply's own thread. A reply with no protocol
+            // ref (nothing to read a thread by) stays plain text rather than
+            // wearing a tap that would go nowhere — no dead controls.
+            if reply.ref != nil {
+                Button { open(reply.card) } label: { words(reply) }
+                    .buttonStyle(.plain)
+            } else {
+                words(reply)
+            }
+            Spacer(minLength: 0)
+        }
+    }
+
+    /// The face — tappable into the profile card only for the sources it
+    /// actually supports (Watch, "elsewhere" search). GitHub's comment
+    /// thread rides this same section (2026-07-16) but isn't a social
+    /// source (`SocialThread.isSocial`); its avatar stays a plain icon
+    /// rather than opening a card whose only verb (Watch) can never
+    /// succeed and would flash a fabricated "Already watching" (honesty
+    /// rule — no dead controls, no fake status).
+    @ViewBuilder
+    private func avatarButton(_ reply: SocialReply) -> some View {
+        if SocialThread.isSocial(source) {
+            Button {
+                profile = SocialProfile(source: source, handle: reply.handle,
+                                        displayName: nil, bio: nil, avatarURL: reply.avatarURL)
+            } label: { avatarIcon(reply) }
+            .buttonStyle(.plain)
+        } else {
+            avatarIcon(reply)
+        }
+    }
+
+    @ViewBuilder
+    private func avatarIcon(_ reply: SocialReply) -> some View {
+        if let avatar = reply.avatarURL {
+            RemoteThumb(urlString: avatar, size: 20, fallback: source, circular: true)
+        } else {
+            BridgeIcon(name: source, size: 20, circular: true)
+        }
+    }
+
+    private func words(_ reply: SocialReply) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text("@\(SocialThread.shortHandle(reply.handle))")
+                .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+            Text(reply.text)
+                .dsText(.callout15).foregroundStyle(DS.textPrimary)
+                .multilineTextAlignment(.leading)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .contentShape(Rectangle())
+    }
+}
+
+/// The person behind a face (2026-07-16) — reached by tapping any avatar: a
+/// row's author, a reply's author, a quoted post's author. Face, name, bio, and
+/// ONE real verb: Watch. That's what turns a mention or a reply from a dead end
+/// into a door — someone talks to you, you tap them, you watch them, and their
+/// posts land from then on. The same tap the setup screen's finder offers,
+/// available wherever a person appears.
+///
+/// The card fetches the profile itself: the tap only knows a handle, and both
+/// bridges cache profiles per launch, so opening one for someone already in
+/// your feed costs nothing.
+struct SocialProfileCard: View {
+    let profile: SocialProfile
+    @Environment(\.modelContext) private var modelContext
+    /// OPTIONAL on purpose (2026-07-16). This card opens from anywhere a face
+    /// appears — a feed row's sheet, a reply, a quote, a deep link — and those
+    /// sheets are presented from view chains that sit OUTSIDE RootShell's
+    /// `.environment(chrome)`. A non-optional `@Environment(ShellChrome.self)`
+    /// TRAPS when the object isn't in scope, so the first deep link to this
+    /// card crashed the app on presentation. Optional resolves to nil instead.
+    ///
+    /// Losing the toast where chrome is absent costs nothing the person needs:
+    /// the Watch row itself flips to "Watching @x" — the card states its own
+    /// outcome, which is the real confirmation. The toast is the echo.
+    @Environment(ShellChrome.self) private var chrome: ShellChrome?
+    @State private var loaded: SocialProfile?
+    @State private var watched = false
+    @State private var elsewhere: [UserSearch.Hit] = []
+    @State private var searchedElsewhere = false
+
+    /// The fetched profile once it lands, else what the tap already knew — so
+    /// the card is never empty while the network answers.
+    private var shown: SocialProfile { loaded ?? profile }
+
+    var body: some View {
+        DSTray(title: shown.title, height: 460) {
+            VStack(alignment: .leading, spacing: DS.Space.s4) {
+                header
+                if let bio = shown.bio, !bio.isEmpty {
+                    Text(bio)
+                        .dsText(.callout15).foregroundStyle(DS.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                watchRow
+                if profile.source == "Farcaster", watched {
+                    walletRow
+                }
+                elsewhereSection
+                Spacer(minLength: 0)
+            }
+        }
+        .task {
+            watched = SocialPeople.isWatched(handle: profile.handle, source: profile.source)
+            loaded = await SocialPeople.profile(handle: profile.handle, source: profile.source)
+        }
+    }
+
+    private var header: some View {
+        HStack(spacing: DS.Space.s3) {
+            if let avatar = shown.avatarURL {
+                RemoteThumb(urlString: avatar, size: 56, fallback: shown.source, circular: true)
+            } else {
+                BridgeIcon(name: shown.source, size: 56, circular: true)
+            }
+            VStack(alignment: .leading, spacing: 2) {
+                Text("@\(shown.shortHandle)")
+                    .dsText(.body17).foregroundStyle(DS.textSecondary)
+                Text(shown.source)
+                    .dsText(.label12).foregroundStyle(DS.textTertiary)
+            }
+            Spacer(minLength: 0)
+        }
+    }
+
+    /// One verb. Watching already? The row says so and does nothing — a second
+    /// Watch would be a dead control on the one person it can never apply to.
+    @ViewBuilder private var watchRow: some View {
+        if watched {
+            HStack(spacing: DS.Space.s2) {
+                Image(systemName: "checkmark")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(DS.confirm)
+                Text("Watching @\(shown.shortHandle)")
+                    .dsText(.callout15).foregroundStyle(DS.textSecondary)
+                Spacer(minLength: 0)
+            }
+            .padding(DS.Space.s3)
+            .background(DS.fillFaint,
+                        in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+        } else {
+            Button {
+                watch()
+            } label: {
+                HStack(spacing: DS.Space.s2) {
+                    Image(systemName: "eye")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(DS.textSecondary)
+                    Text("Watch @\(shown.shortHandle)")
+                        .dsText(.callout15).foregroundStyle(DS.textPrimary)
+                    Spacer(minLength: 0)
+                }
+                .padding(DS.Space.s3)
+                .background(DS.fillFaint,
+                            in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    /// The wallet↔Farcaster join, here as well as on the setup row — you meet
+    /// someone in a thread, you can watch what they hold. Watch-only, so
+    /// peeking is legitimate (the standing wallet ruling).
+    private var walletRow: some View {
+        Button {
+            watchWallet()
+        } label: {
+            HStack(spacing: DS.Space.s2) {
+                Image(systemName: "wallet.pass")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(DS.textSecondary)
+                Text("Watch their wallet")
+                    .dsText(.callout15).foregroundStyle(DS.textPrimary)
+                Spacer(minLength: 0)
+            }
+            .padding(DS.Space.s3)
+            .background(DS.fillFaint,
+                        in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    /// "Are they on the other network too?" — a SEARCH, never a claim. Nothing
+    /// links a Farcaster username to a Bluesky handle, so asserting a match
+    /// would be a guess wearing a fact's clothes. The card runs the same
+    /// people-search the setup field runs and hands over the hits; which one is
+    /// really them — if any — is the person's call, and their tap watches it.
+    @ViewBuilder private var elsewhereSection: some View {
+        if let other = SocialPeople.otherSource(profile.source) {
+            VStack(alignment: .leading, spacing: DS.Space.s2) {
+                if !searchedElsewhere {
+                    Button {
+                        findElsewhere()
+                    } label: {
+                        HStack(spacing: DS.Space.s2) {
+                            Image(systemName: "magnifyingglass")
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundStyle(DS.textSecondary)
+                            Text("Look for them on \(other)")
+                                .dsText(.callout15).foregroundStyle(DS.textPrimary)
+                            Spacer(minLength: 0)
+                        }
+                        .padding(DS.Space.s3)
+                        .background(DS.fillFaint,
+                                    in: RoundedRectangle(cornerRadius: DS.Radius.card,
+                                                         style: .continuous))
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                } else if elsewhere.isEmpty {
+                    Text("No \(other) account by that name.")
+                        .dsText(.callout15).foregroundStyle(DS.textTertiary)
+                } else {
+                    Text("\(other) accounts by that name — tap to watch one.")
+                        .dsText(.label12).foregroundStyle(DS.textTertiary)
+                    ForEach(elsewhere) { hit in
+                        BridgeSearchResultRow(
+                            imageURL: hit.avatarURL, fallbackIcon: other,
+                            title: hit.displayName,
+                            subtitle: "@\(SocialThread.shortHandle(hit.handle))",
+                            action: { watchElsewhere(hit, on: other) })
+                    }
+                }
+            }
+        }
+    }
+
+    private func watch() {
+        guard SocialPeople.watch(shown) else {
+            chrome?.flash(String(localized: "Already watching @\(shown.shortHandle)."))
+            watched = true
+            return
+        }
+        watched = true
+        chrome?.flash(String(localized: "Watching @\(shown.shortHandle)."), tone: .success)
+        Task { await SocialPeople.sync(source: shown.source, context: modelContext) }
+    }
+
+    private func watchWallet() {
+        Task {
+            let verified = await FarcasterIngest.verifiedEthAddresses(username: shown.handle)
+            let already = Set(WalletStore.shared.addresses.map { $0.address.lowercased() })
+            guard let address = verified.first(where: { !already.contains($0) }) else {
+                if verified.isEmpty {
+                    chrome?.flash(String(localized: "No verified wallet for @\(shown.shortHandle)."), tone: .failure)
+                } else {
+                    chrome?.flash(String(localized: "Already watching @\(shown.shortHandle)'s wallet."))
+                }
+                return
+            }
+            WalletStore.shared.add(address, label: "@\(shown.handle)")
+            chrome?.flash(String(localized: "Watching @\(shown.shortHandle)'s wallet."), tone: .success)
+        }
+    }
+
+    private func findElsewhere() {
+        Task {
+            elsewhere = await SocialPeople.findElsewhere(profile.handle, from: profile.source)
+            searchedElsewhere = true
+        }
+    }
+
+    private func watchElsewhere(_ hit: UserSearch.Hit, on other: String) {
+        let picked = SocialProfile(source: other, handle: hit.handle,
+                                   displayName: hit.displayName, bio: nil,
+                                   avatarURL: hit.avatarURL, fid: hit.fid)
+        guard SocialPeople.watch(picked) else {
+            chrome?.flash(String(localized: "Already watching that account."))
+            return
+        }
+        chrome?.flash(String(localized: "Watching @\(picked.shortHandle) on \(other)."), tone: .success)
+        Task { await SocialPeople.sync(source: other, context: modelContext) }
+    }
+}

@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import Translation
 
 /// Feed — the record paints (M3), and it is ENTIRELY a feed (re-ruling
 /// 2026-07-04): source chips, machine presence, then rows. The type chart
@@ -18,55 +19,106 @@ import SwiftData
 /// (the consent card). Day groups, pins, swipes, the sheet, and write-confirm
 /// all survive inside shapes.
 struct FeedScreen: View {
+    /// The source this feed IS (2026-07-16, the pager): each page owns one
+    /// source for its whole life instead of the whole screen re-reading the
+    /// shared filter. `FeedFilter.shared.source` is still the truth for WHICH
+    /// page is up — it's the pager's selection — but a page's own shape,
+    /// query, and boundary are this.
+    let source: String
+    /// Whether this page is the one in front. A pager keeps its neighbours
+    /// MOUNTED, so `onAppear` stopped meaning "the person is looking at this"
+    /// — every per-visit effect (the boundary freeze, the entrance wave, the
+    /// synthesis stream, chrome minimizing) gates on this
+    /// instead, or a page swiped PAST would burn its arrival unseen and stamp
+    /// its own "New since" line away.
+    let isActive: Bool
+
     @Query(sort: \Thing.capturedAt, order: .reverse) private var things: [Thing]
     @Environment(ShellChrome.self) private var chrome
     @Environment(BridgeStore.self) private var bridges
     @Environment(\.modelContext) private var modelContext
 
+    /// Only `tag` is read from here now — a kind filter is a cross-page state
+    /// (it arrives from Home's kind bar and applies to the All room).
     @State private var filter = FeedFilter.shared
     @State private var sheetThing: Thing?
     /// A tapped holdings cell whose token isn't watched — its quick chart
     /// (2026-07-14). Watched ones open their thing via sheetThing.
     @State private var quickToken: TokenQuickRoute?
     @State private var confirming: (Verb, Thing)?
+    /// Translate verb, swipe-triggered — same system sheet as ThingSheetView's.
+    @State private var showTranslate = false
+    @State private var translateText = ""
     @State private var staleExpanded = false
     @State private var blockStream = GenStream()
+    // GitHub's contribution graph rides the TOP of its own source feed (moved
+    // off Home, 2026-07-18): the green-squares year is a GitHub thing, so it
+    // belongs where GitHub lives. Self-fetching @Observable store, same one the
+    // graph always used; the hero only paints once a real year with
+    // contributions has landed (an empty grid is a skeleton, not content).
+    @State private var githubGraph = GitHubGraphStore.shared
     @Bindable private var wallet = WalletStore.shared
-    @State private var pushedBridge: BridgeRouter.Destination?
-    // First-run teaching (option 4: no demo mode — this lives in the real
-    // app and retires on first use, forever).
-    @AppStorage("coach.swipe.done") private var swipeCoachDone = false
-    /// Bumped when the source chip changes — rows replay their shape's
+    /// The wallet the Wallet feed is scoped to (prd §128) — nil is "All", the
+    /// combined view. Set by the switcher chip strip at the top of the wallet
+    /// feed; scopes the balance lede, holdings treemap, NFT strip, and the
+    /// transaction rows to one watched wallet. Only meaningful on the Wallet
+    /// page (each FeedScreen owns one source); nil everywhere else.
+    @State private var selectedWallet: String?
+    /// The Wallet feed's live reads (2026-07-20) — Aave positions and the
+    /// warnings rolled up from them plus Safe/poisoning/delegation. Never a
+    /// landed thing: re-read each time this feed comes forward or its scope
+    /// changes, exactly as the manage screen used to hold it.
+    @State private var walletLive = WalletLiveState()
+    /// "Across your wallets" — the combined-value breakdown, opened by the
+    /// Balance tile (2026-07-20). It moved here with the balance itself: the
+    /// tile IS the combined portfolio, so it's the honest door. Only meaningful
+    /// with more than one wallet watched, which is also the sheet's own guard.
+    @State private var showCombinedWallets = false
+    /// The Worth-a-look tray — the page behind the warnings tile
+    /// (2026-07-20: the tile's tap used to push the MANAGE screen, which no
+    /// longer shows warnings at all — a door to the wrong room).
+    @State private var showWorthALook = false
+    /// The wallet switcher's selection fill — ONE capsule that slides from
+    /// the old chip to the new (the source chips' own ruling, 2026-07-14:
+    /// "selection is an object traveling, not two states blinking").
+    @Namespace private var walletSwitcherNS
+    /// Bumped when this page lands — rows replay their shape's
     /// entrance (each shape arrives its own way, ruling 2026-07-07).
     @State private var shapeWave = 0
-    /// Eases 1 → 0 on each source switch: the app's hue floods down over the
-    /// feed for a beat, then recedes as the shaped rows compose beneath it —
-    /// the color arriving, so a switch reads as "entering this app's feed"
-    /// (delight, 2026-07-12) instead of a quiet crossfade behind the content.
-    @State private var flood: CGFloat = 0
-    /// The last time the person left each feed — one timestamp per source
-    /// (All included; "feed.lastSeen" is All's original key, so nothing
-    /// migrates), no per-thing read state. Each room's boundary freezes the
-    /// FIRST time it lands during a visit and holds for the whole visit
-    /// (ruling 2026-07-09: the divider never moves while you look at it —
-    /// a chip bounce out and back must not erase it), and every room visited
-    /// is stamped only when the screen goes away. onDisappear reads the
-    /// visited SET, not `filter.source`: switching to the Pinned chip swaps
-    /// this screen out with the shared filter already reading "Pinned",
-    /// which would stamp a junk key and skip the real room (review
-    /// 2026-07-13).
+    /// The last time the person left THIS feed ("feed.lastSeen" is All's
+    /// original key, so nothing migrates), no per-thing read state. The
+    /// boundary freezes when the page lands and holds for the whole visit
+    /// (ruling 2026-07-09: the divider never moves while you look at it — a
+    /// bounce out and back must not erase it), and stamps when the page is
+    /// left. The old per-source dictionary + visited SET are gone with the
+    /// pager (2026-07-16): one screen used to serve every room, so it had to
+    /// remember which rooms it had been; a page IS its room and can only ever
+    /// stamp its own key. That also retires the 2026-07-13 bug those guards
+    /// existed for (the shared filter reading "Pinned" while this screen went
+    /// away, stamping a junk key) — this page never sees another room's name.
     @State private var newSince: Date?
-    @State private var visitFrozen: [String: Date?] = [:]
-    @State private var visitedSources: Set<String> = []
+    @State private var visitFrozen = false
+    /// A tapped Themes cell (2026-07-18, the All feed's own treemap) — the
+    /// same project detail door Home's map already opened.
+    @State private var openProject: ProjectRoute?
+    /// Themes stays expanded for the rest of THIS session once tapped open
+    /// (2026-07-20) — session-only by design; a fresh mount re-checks the
+    /// digest and may collapse again.
+    @State private var themesExpanded = false
+    private static let themesSeenDigestKey = "feed.themesSeenDigest"
+    struct ProjectRoute: Identifiable, Hashable {
+        let name: String
+        var id: String { name }
+    }
     @Namespace private var zoomNS
-    /// prd 43h: Reduce Motion is law — the hand-rolled moves (the switch flood,
-    /// row entrances) fall back to plain state changes under it.
+    /// prd 43h: Reduce Motion is law — the hand-rolled moves (row entrances)
+    /// fall back to plain state changes under it.
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.openURL) private var openURL
 
     /// The shape a source takes when its chip is in force.
     private enum Shape {
-        case all, photos, wallet, calendar, gmail, chat, social, reminders, agent, safari, notes, you, music, tokens, plain
+        case all, photos, wallet, calendar, gmail, chat, social, reminders, agent, safari, notes, you, music, tokens, bitrefill, oneclaw, plain
         init(source: String) {
             switch source {
             case "All":                 self = .all
@@ -74,7 +126,7 @@ struct FeedScreen: View {
             case "Wallet":              self = .wallet
             case "Calendar", "Cal.com", "Calendly": self = .calendar
             case "Gmail", "iCloud Mail": self = .gmail
-            case "ChatGPT", "Claude", "Gemini", "Slack": self = .chat
+            case "ChatGPT", "Claude", "Gemini": self = .chat
             // Posts read as posts in their own room (2026-07-13) — split from
             // .chat: a saved conversation is a snippet row, a post is a card.
             case "Farcaster", "Bluesky": self = .social
@@ -86,11 +138,13 @@ struct FeedScreen: View {
             case "You", "Voice":        self = .you
             case "Apple Music", "Spotify": self = .music
             case "Tokens":              self = .tokens
+            case "Bitrefill":           self = .bitrefill
+            case "1Claw":               self = .oneclaw
             default:                    self = .plain
             }
         }
     }
-    private var shape: Shape { Shape(source: filter.source) }
+    private var shape: Shape { Shape(source: source) }
 
 
     /// How this shape's rows arrive: the agenda slides in from the leading
@@ -117,15 +171,27 @@ struct FeedScreen: View {
 
     private var visible: [Thing] {
         feedThings.filter { thing in
-            (filter.source == "All" || thing.source == filter.source)
+            (source == "All" || thing.source == source)
                 && (filter.tag == "All" || thing.tags.contains(filter.tag))
+                && walletScopeAllows(thing)
         }
     }
-    private var isFiltered: Bool { filter.source != "All" || filter.tag != "All" }
+
+    /// The Wallet feed's per-wallet scope (prd §128) — everything passes in
+    /// "All" (selectedWallet nil, and it's never set off the Wallet page); when
+    /// scoped, only transactions from that watched wallet. Matched through
+    /// `WalletStore.scopeMatches` (2026-07-20): things are stamped with the
+    /// RESOLVED hex while the scope is the WATCHED spelling, so the old raw
+    /// compare emptied an ENS/SNS-watched wallet's scoped feed entirely.
+    private func walletScopeAllows(_ thing: Thing) -> Bool {
+        guard let scope = selectedWallet else { return true }
+        return wallet.scopeMatches(thing.walletAddress, scope: scope)
+    }
+    private var isFiltered: Bool { source != "All" || filter.tag != "All" }
     private var filterLabel: String {
         let tagLabel = filter.tag == "All" ? nil
             : (ThingKind.from(typeTag: filter.tag)?.typeTagPlural ?? filter.tag)
-        return [filter.source == "All" ? nil : filter.source, tagLabel]
+        return [source == "All" ? nil : source, tagLabel]
             .compactMap { $0 }.joined(separator: " · ")
     }
 
@@ -134,27 +200,138 @@ struct FeedScreen: View {
     /// Voice, Safari) owns no control panel, so it gets no door. Paused seats
     /// aren't "connected", so they don't either.
     private var activeSourceBridge: BridgeApp? {
-        guard filter.source != "All" else { return nil }
-        return bridges.bridges.first { $0.name == filter.source && $0.status != .paused }
+        guard source != "All" else { return nil }
+        return bridges.bridges.first { $0.name == source && $0.status != .paused }
     }
 
-    /// The one row that teaches the swipe (demo only, once): it nudges left,
-    /// a pin peeks out, it settles back. Motion, not a tooltip.
-    private var hintThingID: UUID? {
-        guard !swipeCoachDone else { return nil }
-        return visible.first(where: { $0.kind != .approval })?.id
-    }
-
-    /// Day groups, newest day first ("Today", "Yesterday", then dated).
-    private var dayGroups: [(String, [Thing])] {
+    /// Day groups, newest day first ("Today", "Yesterday", then dated). A feed
+    /// is history — it reads from today back. A reminder/event lands with
+    /// `capturedAt` set to when it's DUE, so a future-dated thing sorts newest
+    /// by raw time and would LEAD the feed — a Wednesday sitting above Today
+    /// (user, 2026-07-19). What's still ahead lives on Home's "Coming up" lane,
+    /// not here, so future days are dropped from the walk; the feed starts on
+    /// Today. (Timed things still to come LATER today stay under Today — the
+    /// day, not the clock, is what leads.)
+    private func dayGroups(_ visible: [Thing]) -> [(String, [Thing])] {
+        let today = Self.groupingCalendar.startOfDay(for: .now)
         var order: [String] = []
         var groups: [String: [Thing]] = [:]
-        for thing in visible {
+        for thing in visible
+        where Self.groupingCalendar.startOfDay(for: thing.capturedAt) <= today {
             let label = dayLabel(thing.capturedAt)
             if groups[label] == nil { order.append(label) }
             groups[label, default: []].append(thing)
         }
         return order.map { ($0, groups[$0] ?? []) }
+    }
+
+    /// Day groups, but COARSENED to week/month grain when the source lands
+    /// sparsely (ruling 2026-07-21, the day-cards sequel): a source that
+    /// drops one thing most days would otherwise become a ladder of one-row
+    /// day cards under big headers — exactly the confetti day-cards killed,
+    /// re-expressed as headers. When the trailing history averages under
+    /// ~1.5 things a day (and there's enough of it to judge), the same rows
+    /// regroup as "This week / Last week / <month>" instead. A dense feed
+    /// (social bursts, an RSS sync) stays day-grained untouched — this is a
+    /// no-op above the threshold, so every chronological source can route
+    /// through it safely.
+    private func chronoGroups(_ visible: [Thing]) -> [(String, [Thing])] {
+        coarsenIfSparse(dayGroups(visible))
+    }
+
+    /// The sparseness gate + regroup, shared by the plain day path and the
+    /// agent path (which builds its own day groups first). Judged on the
+    /// SHOWN things (dayGroups already dropped future-dated rows), so the
+    /// average matches what the feed actually renders.
+    private func coarsenIfSparse(_ days: [(String, [Thing])]) -> [(String, [Thing])] {
+        let shown = days.flatMap { $0.1 }
+        guard days.count >= 6,
+              Double(shown.count) / Double(days.count) < 1.5 else { return days }
+        return coarseGroups(shown)
+    }
+
+    /// Regroup already-ordered (newest-first) things by week, then month —
+    /// "This week", "Last week", then month names for the tail (a week grain
+    /// that ran all the way down would ladder into "3 weeks ago, 4 weeks
+    /// ago"; months are how sparse history actually reads back).
+    private func coarseGroups(_ things: [Thing]) -> [(String, [Thing])] {
+        var order: [String] = []
+        var groups: [String: [Thing]] = [:]
+        for t in things {
+            let label = coarseLabel(t.capturedAt)
+            if groups[label] == nil { order.append(label) }
+            groups[label, default: []].append(t)
+        }
+        return order.map { ($0, groups[$0] ?? []) }
+    }
+
+    private func coarseLabel(_ date: Date) -> String {
+        let cal = Self.groupingCalendar
+        if cal.isDate(date, equalTo: .now, toGranularity: .weekOfYear) {
+            return String(localized: "This week")
+        }
+        if let lastWeek = cal.date(byAdding: .weekOfYear, value: -1, to: .now),
+           cal.isDate(date, equalTo: lastWeek, toGranularity: .weekOfYear) {
+            return String(localized: "Last week")
+        }
+        if cal.isDate(date, equalTo: .now, toGranularity: .year) {
+            return date.formatted(.dateTime.month(.wide))
+        }
+        return date.formatted(.dateTime.month(.wide).year())
+    }
+
+    /// Music lands in SITTINGS, not calendar days (ruling 2026-07-21) — the
+    /// day header answers "when" but the real unit of listening is the
+    /// session. Consecutive plays less than 45 min apart cluster into one
+    /// group, labelled by its start ("This morning", "Yesterday evening",
+    /// "Mon evening"). A single session that straddles the whole day still
+    /// reads as one card; two listens hours apart split honestly.
+    private func sessionGroups(_ visible: [Thing]) -> [(String, [Thing])] {
+        let sorted = visible.sorted { $0.capturedAt > $1.capturedAt }
+        guard let first = sorted.first else { return [] }
+        let gap: TimeInterval = 45 * 60
+        var sessions: [[Thing]] = []
+        var current: [Thing] = [first]
+        for t in sorted.dropFirst() {
+            if let last = current.last,
+               last.capturedAt.timeIntervalSince(t.capturedAt) <= gap {
+                current.append(t)
+            } else {
+                sessions.append(current)
+                current = [t]
+            }
+        }
+        sessions.append(current)
+        let labelled = sessions.map { (sessionLabel($0.first!.capturedAt), $0) }
+        // groupedSections keys its ForEach on the label, so two sittings that
+        // share one ("this morning" twice, >45 min apart) would collide into
+        // one SwiftUI id. Append the start clock ONLY to a colliding label, so
+        // the common single-session case stays clean.
+        var counts: [String: Int] = [:]
+        for (label, _) in labelled { counts[label, default: 0] += 1 }
+        return labelled.map { label, rows in
+            guard (counts[label] ?? 0) > 1 else { return (label, rows) }
+            let time = rows.first!.capturedAt.formatted(date: .omitted, time: .shortened)
+            return ("\(label) · \(time)", rows)
+        }
+    }
+
+    private func sessionLabel(_ date: Date) -> String {
+        let cal = Self.groupingCalendar
+        let part: String
+        switch cal.component(.hour, from: date) {
+        case 5..<12:  part = String(localized: "morning")
+        case 12..<17: part = String(localized: "afternoon")
+        case 17..<22: part = String(localized: "evening")
+        default:      part = String(localized: "late night")
+        }
+        if cal.isDateInToday(date) {
+            return String(localized: "This \(part)")
+        }
+        if cal.isDateInYesterday(date) {
+            return String(localized: "Yesterday \(part)")
+        }
+        return "\(date.formatted(.dateTime.weekday(.abbreviated))) \(part)"
     }
 
     // MARK: - Bundling (ruling 2026-07-09: volume compresses, never reorders)
@@ -194,6 +371,15 @@ struct FeedScreen: View {
             // sparkline (TokenPulse) — collapsing 3+ into "Tokens · N things"
             // silently drops every one of them.
             && t.source != "Tokens"
+            // And Bitrefill orders: each wears the product's own artwork and a
+            // "name · $value" title (prd §103). They're deliberate purchases,
+            // low volume — not machine bulk — so a gift-card spree stays
+            // legible row by row instead of "Bitrefill · N things".
+            && t.source != "Bitrefill"
+            // And 1Claw grants: policies are typically created together, so
+            // they share a created_at day — bundled, the grant table the
+            // bridge exists to show collapses into "1Claw · N links".
+            && t.source != "1Claw"
     }
 
     /// 3+ bundleable things from one source in one day collapse into a
@@ -251,41 +437,21 @@ struct FeedScreen: View {
         // inside that one stack. Its own inner push (a bridge control panel)
         // stays here; Apps/Settings moved up to the shell.
         feedList
-            .navigationDestination(item: $pushedBridge) { BridgeDestinationView(destination: $0) }
             // Re-tapping the active chip pops this surface's own pushed
             // screens and sheets back to root (the old per-tab pop habit).
             .onChange(of: chrome.popHome) {
                 sheetThing = nil
-                pushedBridge = nil
+                HomeRoute.shared.bridgePush = nil
                 confirming = nil
             }
-    }
-
-    /// The switch flood (delight, 2026-07-12): the source's hue sweeps down
-    /// over the feed and fades out as you land on its chip. Top-heavy and
-    /// brief so it never buries the rows — `flood` eases 1 → 0 in ~0.5s — and
-    /// it's the color moment the quiet background crossfade lacked. Absent for
-    /// All (no identity hue) and under Reduce Motion (`flood` never rises).
-    @ViewBuilder private var switchFlood: some View {
-        if let hue = DS.washHue(for: filter.source) {
-            // A TOP-BAND kiss, not a full-bleed veil: it reinforces the resting
-            // wash's zone and clears well before the rows, so even a dark-hued
-            // source is a brief tint at the crown, never a screen-wide dim.
-            LinearGradient(colors: [hue.opacity(0.34), .clear],
-                           startPoint: .top, endPoint: .bottom)
-                .frame(height: 300)
-                .frame(maxWidth: .infinity, alignment: .top)
-                .opacity(flood)
-                .ignoresSafeArea(edges: .top)
-                .allowsHitTesting(false)
-        }
     }
 
     /// A slim, tappable strip above a single source's shaped feed: the app, its
     /// live status. Tapping opens the app's control panel through the router —
     /// the dedicated screen when the bridge has one (Tokens' watchlist,
     /// Wallet's addresses), the generic detail page otherwise. It rides
-    /// `pushedBridge` — the same channel a Wallet row already uses. (2026-07-11:
+    /// `HomeRoute.shared.bridgePush` — the same channel a Wallet row already
+    /// uses. (2026-07-11:
     /// this hardcoded `.detail`, so Tokens' Feed header opened a page with
     /// no way to watch a second token.)
     ///
@@ -302,7 +468,7 @@ struct FeedScreen: View {
         HStack(spacing: DS.Space.s2) {
         Button {
             DSHaptic.selection()
-            pushedBridge = BridgeRouter.destination(forID: bridge.id)
+            HomeRoute.shared.bridgePush = BridgeRouter.destination(forID: bridge.id)
         } label: {
             HStack(spacing: DS.Space.s2) {
                 Circle()
@@ -320,20 +486,24 @@ struct FeedScreen: View {
                 // opens the same setup screen) rather than a second stacked row
                 // (user, 2026-07-12). Compose sources keep their own row instead
                 // — that action leaves for another app, a genuinely other place.
+                Rectangle()
+                    .fill(DS.textTertiary.opacity(0.3))
+                    .frame(width: 1, height: 12)
                 if showAddHint {
-                    Rectangle()
-                        .fill(DS.textTertiary.opacity(0.3))
-                        .frame(width: 1, height: 12)
                     Image(systemName: "plus")
                         .font(.system(size: 12, weight: .semibold))
                         .foregroundStyle(DS.tint)
                 } else {
-                    // Quieted, not gone (2026-07-14): a light hint that this
-                    // capsule leads somewhere, without the bold
-                    // settings-navigation weight of a chevron-only row.
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 11, weight: .regular))
-                        .foregroundStyle(DS.textTertiary)
+                    // Names the destination (2026-07-15, user: the quiet
+                    // chevron read as pure status, not a control — this
+                    // capsule already says "connected", so tapping it felt
+                    // unclear). "Manage" not "Settings": that word is
+                    // already claimed by the global Settings screen, and
+                    // these panels are add/remove/disconnect surfaces, not
+                    // toggle panes.
+                    Text("Manage")
+                        .dsText(.subhead13).fontWeight(.medium)
+                        .foregroundStyle(DS.tint)
                 }
             }
             .padding(.horizontal, DS.Space.s3)
@@ -373,6 +543,21 @@ struct FeedScreen: View {
         // is clearly its own thing below it.
         .padding(.top, DS.Space.s8)
         .padding(.bottom, DS.Space.s2)
+    }
+
+    /// The GitHub source feed's lede — "Your year in code · N contributions"
+    /// and the green-squares grid, drawn on device and cached in
+    /// `GitHubGraphStore` (the same store, and reusing `ContributionGraph`, that
+    /// the retired Home tile used). Paints only for a real year with
+    /// contributions (an empty grid is a skeleton, not content); the fetch that
+    /// seeds that year runs from the List's own `.task` (see feedList), not
+    /// here — a conditionally-empty view's `.task` wouldn't fire.
+    @ViewBuilder private var githubGraphHero: some View {
+        if let year = githubGraph.year, year.total > 0 {
+            CalendarHeatmapHero(title: "Your year in code",
+                                subtitle: "\(year.total.formatted()) contributions",
+                                year: year)
+        }
     }
 
     private var feedList: some View {
@@ -440,6 +625,13 @@ struct FeedScreen: View {
                     sourceHeader(bridge, showAddHint: showsAddHint,
                                  headerCompose: composeAction)
                 }
+                // GitHub's source feed leads with its contribution graph (moved
+                // off Home, 2026-07-18). Gated on the source STRING, not the
+                // BridgeStore seat — the graph belongs to GitHub's token
+                // (`GitHubGraphStore` self-fetches with it), so it rides the
+                // GitHub feed whenever it's the filter; the hero self-checks for
+                // a landed year and takes no room otherwise.
+                if source == "GitHub" { githubGraphHero }
             }
             .listRowBackground(Color.clear)
             .listRowSeparator(.hidden)
@@ -450,24 +642,38 @@ struct FeedScreen: View {
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
                     .listRowInsets(EdgeInsets())
-            } else if visible.isEmpty {
-                Group { filteredEmptyState }
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
-                    .listRowInsets(EdgeInsets())
             } else {
-                // A pin is a HOME pin only (ruling 2026-07-10): the Feed's
-                // own Pinned section doubled what Home already shows and
-                // cluttered the record — pinned things now ride the feed in
-                // their natural chronological place. The holdings module
-                // lives on Home too (same-day amendment) — in Feed it shows
-                // only in the Wallet chip's own shape, never leading All.
-                shapedSections
-                // No closing line in the Reminders shape: its state groups
-                // deliberately render a subset (Done shows same-day only), so
-                // a `visible`-count claim would disagree with the rows above.
-                if shape != .reminders {
-                    caughtUpFooter
+                // Derived ONCE per render and threaded into everything below
+                // — the day groups, ledes, and per-row hint/next-event ids
+                // all share this one filter pass instead of each re-deriving
+                // it from `feedThings` (the Feed-freeze rule, perf pass
+                // 2026-07-13, extended to `visible` itself).
+                let visible = self.visible
+                if visible.isEmpty {
+                    Group { filteredEmptyState }
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
+                        .listRowInsets(EdgeInsets())
+                } else {
+                    let nextID = nextEventID(visible)
+                    // A pin is a HOME pin only (ruling 2026-07-10): the Feed's
+                    // own Pinned section doubled what Home already shows and
+                    // cluttered the record — pinned things now ride the feed in
+                    // their natural chronological place. The holdings module
+                    // lives on Home too (same-day amendment) — in Feed it shows
+                    // only in the Wallet chip's own shape, never leading All.
+                    shapedSections(visible, nextEventID: nextID)
+                    // No closing line in the Reminders shape: its state groups
+                    // deliberately render a subset (Done shows same-day only), so
+                    // a `visible`-count claim would disagree with the rows above.
+                    // Wallet joined it (2026-07-20) for the same reason — it
+                    // previews five and hands off to the history page, so
+                    // "that's everything · 131 transactions" under five rows was
+                    // a flat lie. Its own "See all transactions · 131" row is
+                    // the honest close.
+                    if shape != .reminders && shape != .wallet {
+                        caughtUpFooter(visible)
+                    }
                 }
             }
 
@@ -477,64 +683,97 @@ struct FeedScreen: View {
                 .listRowSeparator(.hidden)
         }
         .listStyle(.plain)
-        .refreshable { await refreshFeed() }
+        // ONE pull, both outcomes. This List carried TWO `.refreshable` until
+        // 2026-07-16 — SwiftUI keeps the outermost, so the real bridge sync
+        // never ran on a pull; only the 600ms pulse stub did.
+        .refreshable {
+            // A pull inside one source's own feed rains in ITS hue instead
+            // of the app's default berry blue — "All" keeps the default
+            // (delight pass 2026-07-21). Set once; both this bump and
+            // refreshFeed()'s own read the same stored hue.
+            chrome.refreshHue = source == "All" ? nil : DS.washHue(for: source)
+            chrome.refreshPulse += 1   // spins the avatar door, deals the berry rain
+            await refreshFeed()
+        }
         .animation(DS.Motion.standard, value: things.count)   // new things rise in
         .scrollContentBackground(.hidden)
-        .overlay(alignment: .top) { switchFlood }
-        // A SHAPED feed sits directly on MainSurface's bold hue field (user
-        // ruling 2026-07-13, Cash-App bold): painting the opaque page here
-        // would hide it — the very bug that once forced the wash to be an
-        // overlay. Pinned/All/hueless keep the normal page coat.
-        .background {
-            if DS.washHue(for: filter.source) == nil {
-                DSPageBackground()
-            }
-        }
+        .dsAdaptiveContentWidth()
+        // Seed/refresh the contribution year from a RELIABLE always-present spot
+        // (the conditionally-empty hero's own `.task` doesn't fire until a year
+        // lands — chicken-and-egg). `source` is fixed per feed instance, so this
+        // runs once when the GitHub feed appears; `refreshIfStale` self-guards.
+        .task { if source == "GitHub" { await githubGraph.refreshIfStale() } }
+        // Every feed sits on the neutral themed page — ink, no per-source hue
+        // field (user ruling 2026-07-18: the borrowed brand wash read as
+        // decoration, not information; the chip already names the source).
+        .background { DSPageBackground() }
         .environment(\.defaultMinListHeaderHeight, 0)
         .scrollIndicators(.hidden)
-        .minimizesChrome(chrome)
+        .minimizesChrome(chrome, active: isActive)
+        .safeAreaInset(edge: .top, spacing: 0) { walletSwitcherBar }
         .dsSoftTopEdge()
-        .refreshable {
-            // Pull to refresh runs sync (M1 CloudKit half wires in here).
-            chrome.refreshPulse += 1   // spins the avatar door, deals the berry rain
-            try? await Task.sleep(for: .milliseconds(600))
-        }
-        // The one synthesis block a shaped source earns streams through the
-        // engine when its chip lands (skeleton entrance, same as Home).
+        // Arrival is `isActive`, not `onAppear` (2026-07-16, the pager): a
+        // mounted neighbour appears without ever being looked at, so landing
+        // effects hang off the front page changing, and leaving stamps the
+        // boundary on the way out.
         .onAppear {
-            streamBlock()
             #if DEBUG
-            // `-feedSource Zerion` lands on that chip for screenshots.
-            if let src = UserDefaults.standard.string(forKey: "feedSource") {
+            // `-feedSource Zerion` lands on that chip for screenshots. From
+            // the front page only — three mounted pages would each write it.
+            if isActive, let src = UserDefaults.standard.string(forKey: "feedSource") {
                 filter.source = src
             }
             #endif
-            // Freeze the boundary for this visit; leaving re-stamps it.
-            // (After the DEBUG hook, so a forced chip reads its own stamp
-            // and All is never marked visited by a hooked launch.)
-            freezeBoundary(for: filter.source)
+            if isActive { land() }
         }
-        .onDisappear { visitedSources.forEach(stampSeen) }
-        .onChange(of: filter.source) { _, new in
-            freezeBoundary(for: new)
-            shapeWave += 1
-            // The hue floods in, then recedes as the shaped rows compose.
-            if !reduceMotion {
-                flood = 1
-                withAnimation(.easeOut(duration: 0.55)) { flood = 0 }
-            }
-            streamBlock()
+        .onDisappear { if visitFrozen { leave() } }
+        .onChange(of: isActive) { _, now in
+            if now { land() } else { leave() }
         }
         // Adding/removing a watched wallet re-fetches the Wallet chip's
-        // holdings block while it's in force.
-        .onChange(of: wallet.addresses) { streamBlock() }
+        // holdings block — only on the page in force; a background Wallet
+        // page has no reason to re-hit Alchemy.
+        .onChange(of: wallet.addresses) {
+            // A scope whose wallet dropped (or the list fell back to one)
+            // returns to All rather than stranding the feed on a gone wallet.
+            if let sel = selectedWallet,
+               wallet.addresses.count <= 1
+                || !wallet.addresses.contains(where: { walletSameAddress($0.address, sel) }) {
+                selectedWallet = nil
+            }
+            if isActive { streamBlock(); loadWalletLive() }
+        }
+        // Scoping to a wallet (or back to All) re-paints the treemap/NFT strip
+        // AND re-reads the live tiles for that scope; the rows and balance
+        // re-derive from state.
+        .onChange(of: selectedWallet) { if isActive { streamBlock(); loadWalletLive() } }
         .sheet(item: $sheetThing) { thing in
             ThingSheetView(thing: thing)
                 .navigationTransition(.zoom(sourceID: thing.id, in: zoomNS))
         }
+        .navigationDestination(item: $openProject) { route in
+            ProjectDetailScreen(projectName: route.name)
+                .navigationTransition(.zoom(sourceID: route.name, in: zoomNS))
+        }
         .sheet(item: $quickToken) { route in
             TokenQuickSheet(route: route)
         }
+        .sheet(isPresented: $showCombinedWallets) {
+            let samples = wallet.combinedValueSamples()
+            CombinedWalletsSheet(total: samples.last?.usd ?? 0,
+                                 combined: samples,
+                                 wallets: wallet.addresses)
+        }
+        .sheet(isPresented: $showWorthALook) {
+            WalletWorthALookTray(
+                warnings: walletLive.warnings,
+                flagged: walletLive.flagged,
+                onOpenThing: { thing in
+                    showWorthALook = false
+                    sheetThing = thing
+                })
+        }
+        .translationPresentation(isPresented: $showTranslate, text: translateText)
         .confirmationDialog(
             confirming.map { "\($0.0.label): \($0.1.title)?" } ?? "",
             isPresented: Binding(get: { confirming != nil },
@@ -550,50 +789,117 @@ struct FeedScreen: View {
 
     // MARK: - Shaped sections (one source in force = its native shape)
 
+    /// Takes the render's one `visible` derivation (and the hint/next-event
+    /// ids computed alongside it) and threads them into every shape branch —
+    /// none of the branches below re-derive `visible` themselves.
     @ViewBuilder
-    private var shapedSections: some View {
+    private func shapedSections(_ visible: [Thing], nextEventID: UUID?) -> some View {
         // The new-since divider rides every chronological shape now
         // (2026-07-13) — each source's feed keeps its own last-visit stamp.
         // Photos (a grid), Calendar (future-first) and Reminders (state
         // groups) aren't chronological top-to-bottom, so no line there.
+        //
+        // A per-source feed overview leads the rows — derived from THIS feed's
+        // own things (the same `visible`), above whatever shape they take below.
+        // Each source qualifies for at most one: a habit heatmap, a ranked-bars
+        // leaderboard, a distribution bar, or a thumbnail mosaic. All render only
+        // when the real data is there (guards live in FeedHeatmap / FeedInsight).
+        // Derived once and reused: `heroShown` lets a shape's own recap lede
+        // (music's "today", Gmail's "waiting") yield so a feed never stacks two
+        // overview cards — the lede's records still ride the rows below.
+        let heatmapLabel = FeedHeatmap.label(for: source)
+        let leaderboard = heatmapLabel == nil ? FeedInsight.leaderboard(source: source, things: visible) : nil
+        let distribution = heatmapLabel == nil && leaderboard == nil
+            ? FeedInsight.distribution(source: source, things: visible) : nil
+        let mosaic = heatmapLabel == nil && leaderboard == nil && distribution == nil
+            ? FeedInsight.mosaic(source: source, things: visible) : nil
+        let heroShown = heatmapLabel != nil || leaderboard != nil || distribution != nil || mosaic != nil
+        if let heatmapLabel {
+            calendarHeatmapSection(visible, label: heatmapLabel)
+        } else if let leaderboard {
+            insightSection { LeaderboardHero(board: leaderboard) }
+        } else if let distribution {
+            insightSection { DistributionHero(dist: distribution) }
+        } else if let mosaic {
+            insightSection { ImageMosaicHero(mosaic: mosaic) }
+        }
         switch shape {
         case .photos:
-            photoGridSection
+            photoGridSection(visible)
         case .wallet:
+            // The reads first, then the stream (2026-07-20, the surface split):
+            // balance + warnings side by side, the holdings treemap, DeFi, and
+            // only then the transactions — capped, with a door to all of them.
+            // Everything above the rows is live state, never a landed thing.
+            // (The wallet switcher isn't here: it PINS over the stream via
+            // safeAreaInset — a scoping control has to stay reachable when
+            // you're deep in the transactions it scopes.)
+            walletTilesSection
             holdingsBlockSection
-            let days = dayGroups
-            groupedSections(days, boundary: boundaryThingID(in: days))
+            walletDeFiSection
+            let all = visible
+            let preview = Array(all.prefix(Self.walletPreviewRows))
+            let days = dayGroups(preview)
+            groupedSections(days, nextEventID: nextEventID, boundary: boundaryThingID(in: days))
+            walletSeeAllSection(total: all.count)
         case .calendar:
-            groupedSections(agendaGroups)
+            groupedSections(agendaGroups(visible), nextEventID: nextEventID)
         case .gmail:
-            waitingSection
-            let days = dayGroups
-            groupedSections(days, boundary: boundaryThingID(in: days))
+            if !heroShown { waitingSection(visible, nextEventID: nextEventID) }
+            let days = chronoGroups(visible)
+            groupedSections(days, nextEventID: nextEventID, boundary: boundaryThingID(in: days))
         case .reminders:
-            reminderSections
+            reminderSections(visible, nextEventID: nextEventID)
         case .agent:
-            needsYouSection
-            let days = agentDayGroups
-            groupedSections(days, boundary: boundaryThingID(in: days))
+            let approvals = pendingApprovals(visible)
+            needsYouSection(approvals, nextEventID: nextEventID)
+            let days = coarsenIfSparse(agentDayGroups(visible, excluding: approvals))
+            groupedSections(days, nextEventID: nextEventID, boundary: boundaryThingID(in: days))
         case .music:
-            listeningLedeSection
-            let days = dayGroups
-            groupedSections(days, boundary: boundaryThingID(in: days))
+            if !heroShown { listeningLedeSection(visible) }
+            // Sessions, not days (2026-07-21) — a listening sitting is music's
+            // real unit; boundary rides the same capturedAt-keyed helper.
+            let days = sessionGroups(visible)
+            groupedSections(days, nextEventID: nextEventID, boundary: boundaryThingID(in: days))
         case .tokens:
-            watchlistLedeSection
-            let days = dayGroups
-            groupedSections(days, boundary: boundaryThingID(in: days))
+            watchlistLedeSection(visible)
+            watchlistSection(visible, nextEventID: nextEventID)
+        case .safari:
+            // A reading list is doors, not reads (2026-07-21) — its lede owns
+            // the return-trip guilt: how much is piling up, and the oldest
+            // thing still waiting. Rows below stay chronological (coarsened
+            // when saves are sparse, like any door source).
+            if !heroShown { readingLedeSection(visible) }
+            let days = chronoGroups(visible)
+            groupedSections(days, nextEventID: nextEventID, boundary: boundaryThingID(in: days))
+        case .bitrefill:
+            bitrefillLedeSection(visible)
+            let days = chronoGroups(visible)
+            groupedSections(days, nextEventID: nextEventID, boundary: boundaryThingID(in: days))
+        case .oneclaw:
+            oneclawLedeSection(visible)
+            let days = chronoGroups(visible)
+            groupedSections(days, nextEventID: nextEventID, boundary: boundaryThingID(in: days))
         default:
             if filter.tag != "All" && shape == .all {
-                daySection(filterLabel, visible)
+                daySection(filterLabel, visible, nextEventID: nextEventID)
             } else if shape == .all {
+                // The Themes treemap leads the unfiltered All room (2026-07-18,
+                // moved off Home) — a cross-source overview, so it only makes
+                // sense over the WHOLE corpus, not a kind-filtered slice (the
+                // `if` branch above).
+                themesLedeSection
                 // All is where volume floods — bundles + the new-since
                 // divider live here. A single source's shape IS that source;
                 // bundling there would collapse the whole screen into one row.
-                bundledSections
+                bundledSections(visible, nextEventID: nextEventID)
             } else {
-                let days = dayGroups
-                groupedSections(days, boundary: boundaryThingID(in: days))
+                // Live-first in a source's own room (2026-07-21): a stream
+                // that's on RIGHT NOW is the one row whose relevance isn't
+                // chronological, so it leads its group. No-op for sources
+                // with no live set.
+                let days = liveFirst(chronoGroups(visible))
+                groupedSections(days, nextEventID: nextEventID, boundary: boundaryThingID(in: days))
             }
         }
     }
@@ -612,7 +918,7 @@ struct FeedScreen: View {
     /// Music's lede: today's listening, covers lapped, count honest (the
     /// distinct songs that landed today — recently-played dedupes per song).
     @ViewBuilder
-    private var listeningLedeSection: some View {
+    private func listeningLedeSection(_ visible: [Thing]) -> some View {
         let today = visible.filter { Self.groupingCalendar.isDateInToday($0.capturedAt) }
         if !today.isEmpty {
             ledeSection(ListeningLede(
@@ -625,7 +931,7 @@ struct FeedScreen: View {
     /// pulses the rows wear, so the summary can never disagree with the rows.
     /// Two watched tokens minimum: one token's row already says everything.
     @ViewBuilder
-    private var watchlistLedeSection: some View {
+    private func watchlistLedeSection(_ visible: [Thing]) -> some View {
         let pulses = visible.compactMap { TokenPulse.shared.pulse(for: $0) }
         if pulses.count >= 2 {
             // Flat (exactly 0) is neither up nor down — "2 up" for two
@@ -633,6 +939,60 @@ struct FeedScreen: View {
             ledeSection(WatchlistLede(
                 up: pulses.filter { $0.change24h > 0 }.count,
                 down: pulses.filter { $0.change24h < 0 }.count))
+        }
+    }
+
+    /// Bitrefill's lede: the account at a glance — the balance its API last
+    /// reported, and how many orders landed this month (from the same rows
+    /// below, so the two can't disagree). Connected-only: a disconnected
+    /// seat must not wear yesterday's balance as if it were current.
+    @ViewBuilder
+    private func bitrefillLedeSection(_ visible: [Thing]) -> some View {
+        if TokenBridge.bitrefill.connected, let balance = BitrefillBalance.formatted {
+            let month = visible.filter {
+                BitrefillFetch.isOrderRef($0.sourceRef)
+                    && Self.groupingCalendar.isDate($0.capturedAt, equalTo: .now,
+                                                    toGranularity: .month)
+            }.count
+            ledeSection(BitrefillLede(balance: balance, monthCount: month))
+        }
+    }
+
+    /// 1Claw's lede: the key's reach at a glance — the vault count its API
+    /// last reported, and how many grants landed as rows below (counted from
+    /// the same rows, so the two can't disagree). Connected-only: a
+    /// disconnected seat must not wear yesterday's reach as if it were
+    /// current.
+    @ViewBuilder
+    private func oneclawLedeSection(_ visible: [Thing]) -> some View {
+        if TokenBridge.oneclaw.connected, let vaults = OneClawAccess.formatted {
+            let grants = visible.filter { OneClawFetch.isGrantRef($0.sourceRef) }.count
+            ledeSection(OneClawLede(vaults: vaults, grantCount: grants))
+        }
+    }
+
+    /// The watchlist's OWN order, not chronology (2026-07-15) — day headers
+    /// answer "when did I watch this", a question that stops mattering once
+    /// there's more than a couple of tokens; what you actually want is what
+    /// MOVED, or the order you dragged it into (TokenWatchOrder — the same
+    /// shared choice the settings screen and Home's tile read). One flat
+    /// section, no day breaks; the "new since" divider drops with it — it's
+    /// a chronological-feed idea, and this list may no longer read top to
+    /// bottom by time.
+    @ViewBuilder
+    private func watchlistSection(_ visible: [Thing], nextEventID: UUID?) -> some View {
+        let ordered = TokenWatchOrder.shared.apply(
+            visible, sourceRef: \.sourceRef,
+            change24h: { TokenPulse.shared.pulse(for: $0)?.change24h })
+        // One flat run: pulsed tokens wear the fat TokenRow and stand alone
+        // (standsAlone), so merging only ever joins the still-unpulsed rows.
+        let positions = cardRunPositions(count: ordered.count,
+                                         isBreaker: { standsAlone(ordered[$0]) })
+        Section {
+            ForEach(Array(ordered.enumerated()), id: \.element.id) { i, thing in
+                shapedListRow(thing, index: i, nextEventID: nextEventID,
+                              position: positions[i])
+            }
         }
     }
 
@@ -656,27 +1016,37 @@ struct FeedScreen: View {
         }
     }
 
-    private var bundledSections: some View {
+    private func bundledSections(_ visible: [Thing], nextEventID: UUID?) -> some View {
         // Derive ONCE per render, then share — the day bundles, each day's true
         // total, and the new-since boundary. Read inside the row/header loops
         // (as `newBoundaryID` and `dayGroups.first(where:)` were) they rebuilt
         // the whole chain per row/section — the Feed freeze (perf pass
         // 2026-07-13).
-        let days = dayGroups
+        let days = dayGroups(visible)
         let groups = bundle(days)
         let boundary = boundaryID(in: groups)
         let dayTotals = Dictionary(days.map { ($0.0, $0.1.count) },
                                    uniquingKeysWith: { first, _ in first })
         return ForEach(groups, id: \.0) { label, rows in
+            // Bundles merge into the day card like any row-shaped thing —
+            // only a single that stands alone (consent, token) breaks the run.
+            let positions = cardRunPositions(
+                count: rows.count,
+                isBreaker: { i in
+                    if case .single(let thing) = rows[i] { return standsAlone(thing) }
+                    return false
+                },
+                isBoundary: { rows[$0].id == boundary })
             Section {
                 ForEach(Array(rows.enumerated()), id: \.element.id) { i, row in
                     if row.id == boundary { newSinceDivider }
                     switch row {
                     case .single(let thing):
-                        shapedListRow(thing, index: i)
+                        shapedListRow(thing, index: i, nextEventID: nextEventID,
+                                      position: positions[i])
                     case .bundle(let source, let word, let count, let newest):
                         bundleListRow(source: source, word: word, count: count,
-                                      newest: newest, index: i)
+                                      newest: newest, index: i, position: positions[i])
                     }
                 }
             } header: {
@@ -700,7 +1070,7 @@ struct FeedScreen: View {
     private var newSinceDivider: some View {
         // A quiet capsule, not tint-colored prose (which reads as a tappable
         // link). The fill gives the boundary its line without drawing one.
-        Text("New since \(sinceLabel)")
+        Text(newSinceText)
             .dsText(.label12)
             .foregroundStyle(DS.textSecondary)
             .padding(.horizontal, DS.Space.s3)
@@ -710,6 +1080,31 @@ struct FeedScreen: View {
             .padding(.vertical, DS.Space.s1)
             .listRowBackground(Color.clear)
             .listRowSeparator(.hidden)
+    }
+
+    /// The seam's words (2026-07-21): "what's new" differs by source, so the
+    /// divider names it concretely instead of a bare "New since Friday". Most
+    /// feeds get a count ("New since Friday · 4"); a Wallet feed — whose rows
+    /// are SCANNED, not read — names the flow instead ("2 in, 1 out since
+    /// Friday"), the question a wallet actually answers. Counts run over the
+    /// frozen `visible` (things newer than the last-visit stamp); the divider
+    /// renders once per boundary, so this reads `visible` a single time.
+    private var newSinceText: String {
+        guard let newSince else { return "" }
+        let fresh = visible.filter { $0.capturedAt > newSince }
+        if shape == .wallet {
+            let inN = fresh.filter { $0.transferDirection == "received" }.count
+            let outN = fresh.filter { $0.transferDirection == "sent" }.count
+            if inN > 0 || outN > 0 {
+                var parts: [String] = []
+                if inN > 0 { parts.append(String(localized: "\(inN) in")) }
+                if outN > 0 { parts.append(String(localized: "\(outN) out")) }
+                return String(localized: "\(parts.joined(separator: ", ")) since \(sinceLabel)")
+            }
+        }
+        return fresh.isEmpty
+            ? String(localized: "New since \(sinceLabel)")
+            : String(localized: "New since \(sinceLabel) · \(fresh.count)")
     }
 
     private var sinceLabel: String {
@@ -737,27 +1132,42 @@ struct FeedScreen: View {
                                   forKey: lastSeenKey(for: source))
     }
 
-    /// Lands on a room: its boundary freezes on FIRST arrival this visit and
-    /// re-reads from the frozen copy after — a bounce out to another chip and
-    /// back can't move the line. Pinned isn't a feed room (the board swaps
-    /// this screen out), so it never freezes or stamps.
-    private func freezeBoundary(for source: String) {
-        guard source != "Pinned" else { return }
-        visitedSources.insert(source)
-        if let frozen = visitFrozen[source] {
-            newSince = frozen
-        } else {
-            let stamp = lastSeen(for: source)
-            visitFrozen[source] = stamp
-            newSince = stamp
-        }
+    /// This page came to the front: freeze its boundary for the visit, replay
+    /// the shape's entrance, stream its synthesis block. Every one of these is
+    /// an ARRIVAL — spending them on a mounted-but-unseen neighbour would hand
+    /// the person a page whose moment already happened.
+    private func land() {
+        freezeBoundary()
+        shapeWave += 1
+        streamBlock()
+        loadWalletLive()
+    }
+
+    /// The person left this page — stamp what they saw, so the next visit's
+    /// "New since" line is honest, and let the boundary freeze afresh then.
+    private func leave() {
+        stampSeen(source)
+        visitFrozen = false
+    }
+
+    /// The boundary freezes on arrival and holds for the whole visit — a
+    /// bounce out to another page and back can't move the line (ruling
+    /// 2026-07-09). All tracks `AppVisit.away` instead of a per-page stamp
+    /// (2026-07-20) — the same "since you left the app" window the agent's
+    /// own "While I was away?" chip already names; there's no single page
+    /// for the whole corpus to have left.
+    private func freezeBoundary() {
+        guard !visitFrozen else { return }
+        visitFrozen = true
+        newSince = source == "All" ? AppVisit.away?.lowerBound : lastSeen(for: source)
     }
 
     /// A bundle in the list: same card treatment as a thing row; the tap
     /// opens the source's own shape (where volume is designed to live) —
     /// no swipes, nothing here is a single thing to pin or open.
     private func bundleListRow(source: String, word: String, count: Int,
-                               newest: Date, index: Int) -> some View {
+                               newest: Date, index: Int,
+                               position: RunPosition = .only) -> some View {
         BundleRow(source: source, count: count, word: word, newest: newest)
             .modifier(RowEntrance(index: index, wave: shapeWave, style: entranceStyle))
             .contentShape(Rectangle())
@@ -765,13 +1175,7 @@ struct FeedScreen: View {
                 DSHaptic.selection()
                 withAnimation(DS.Motion.standard) { filter.source = source }
             }
-            .listRowBackground(
-                RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous)
-                    .fill(DS.surfaceSheet)
-                    .padding(.horizontal, DS.Space.s4)
-                    .padding(.vertical, DS.Space.s1)
-                    .shadow(color: DS.cardShadow, radius: 18, x: 0, y: 6)
-            )
+            .listRowBackground(dayCardBackground(position))
             // Feed rhythm (2026-07-13): back to s2 — the s3 airy read made
             // every gap the same size, so days never clustered. Rows sit
             // tight within their day; the day header carries the big gap.
@@ -784,10 +1188,306 @@ struct FeedScreen: View {
 
     @ViewBuilder
     private func groupedSections(_ groups: [(String, [Thing])],
+                                 nextEventID: UUID?,
                                  boundary: UUID? = nil) -> some View {
         ForEach(groups, id: \.0) { label, rows in
-            daySection(label, rows, boundary: boundary)
+            daySection(label, rows, nextEventID: nextEventID, boundary: boundary)
         }
+    }
+
+    /// The cross-source Themes treemap (2026-07-18: moved off Home — "should
+    /// it go on all?" — a cross-source overview belongs on the cross-source
+    /// feed, the same split that already sent the Wallet treemap to the
+    /// Wallet feed). Synchronous, off the SAME `visible` the rows below draw
+    /// from (no separate query, so the two can't disagree) — no GenStream
+    /// needed, unlike the wallet block, which waits on a real network fetch.
+    ///
+    /// Collapses to one line once you've already seen these exact clusters
+    /// (2026-07-20) — a digest of cluster name+count compared against a
+    /// locally-stamped "last seen" digest (its own key, NOT `KeptAskStore`,
+    /// which is scoped to kept ASKS specifically). Tapping expands the full
+    /// treemap for the rest of this session and marks the digest seen.
+    @ViewBuilder
+    private var themesLedeSection: some View {
+        if let doc = HomeComposition.themesDocument(things: visible) {
+            let digest = doc.joined(separator: "\n")
+            let unchanged = digest == UserDefaults.standard.string(forKey: Self.themesSeenDigestKey)
+            if themesExpanded || !unchanged {
+                let els = GenParser.parse(prefix: digest[...], isComplete: true)
+                Section {
+                    GenRender(id: "root", els: els)
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
+                        .listRowInsets(EdgeInsets())
+                        .environment(\.genProjectTap) { name in
+                            openProject = ProjectRoute(name: name)
+                        }
+                        .onAppear {
+                            // Pin expanded for the rest of this mount too —
+                            // without this, stamping the digest here would
+                            // make the NEXT body re-eval (any unrelated
+                            // state change, still the same visit) read
+                            // `unchanged` true and collapse out from under
+                            // someone mid-visit.
+                            themesExpanded = true
+                            UserDefaults.standard.set(digest, forKey: Self.themesSeenDigestKey)
+                        }
+                }
+            } else {
+                Section {
+                    Button {
+                        DSHaptic.selection()
+                        withAnimation(DS.Motion.standard) { themesExpanded = true }
+                    } label: {
+                        themesCollapsedRow
+                    }
+                    .buttonStyle(.plain)
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+                }
+            }
+        }
+    }
+
+    /// The collapsed Themes row — eyebrow + a one-line cluster-count summary,
+    /// same voice as `daySection`'s header (name in heading weight, the
+    /// count in tertiary).
+    private var themesCollapsedRow: some View {
+        let clusters = HomeComposition.projectClusters(things: visible).prefix(6)
+        let names = clusters.map(\.name).joined(separator: ", ")
+        return HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+            Text("Themes").dsText(.heading17).foregroundStyle(DS.textPrimary)
+            Text(names).dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                .lineLimit(1).truncationMode(.tail)
+            Spacer(minLength: 0)
+            Image(systemName: "chevron.down")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(DS.textTertiary)
+        }
+        .padding(.horizontal, DS.Space.s4)
+        .padding(.vertical, DS.Space.s3)
+    }
+
+    /// The list-row chrome every insight hero mounts in (clear background, no
+    /// separator, edge-to-edge — the card owns its own padding).
+    @ViewBuilder
+    private func insightSection<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
+        Section {
+            content()
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+                .listRowInsets(EdgeInsets())
+        }
+    }
+
+    /// A source's own consistency heatmap (2026-07-18) — the same green-squares
+    /// grid the GitHub feed leads with, here derived from the feed's own things:
+    /// each thing's `capturedAt` bucketed into the trailing year. Synchronous,
+    /// off the SAME `visible` the rows draw from (no separate query). Renders
+    /// only once a few days are lit, so a near-empty grid can't read as a
+    /// loading skeleton.
+    @ViewBuilder
+    private func calendarHeatmapSection(_ visible: [Thing], label: FeedHeatmap.Label) -> some View {
+        let year = ContributionYear.from(dates: visible.map(\.capturedAt), columns: label.columns)
+        if year.activeDays >= 4 {
+            let echo = OnThisDay.find(in: visible)
+            Section {
+                CalendarHeatmapHero(title: label.title,
+                                    subtitle: FeedHeatmap.subtitle(label, total: year.total),
+                                    year: year, minColumns: label.columns,
+                                    onThisDay: echo,
+                                    onTapOnThisDay: { sheetThing = echo?.thing })
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+                    .listRowInsets(EdgeInsets())
+            }
+        }
+    }
+
+    /// The portfolio's own value-history line (2026-07-18), leading the
+    /// treemap — real samples off `WalletStore.combinedValueSamples()`
+    /// (recorded on every real holdings fetch since a wallet was watched, not
+    /// synthesized). Empty (no section) until two aligned samples exist.
+    /// How many transactions the feed previews before handing off to the
+    /// history page (2026-07-20). Five is the count that still reads as "here's
+    /// what's new" rather than a log — the reads above it are the point of this
+    /// screen, and an unbounded stream buried all four of them.
+    private static let walletPreviewRows = 5
+
+    /// Balance and Worth a look, side by side — the two questions a wallet
+    /// screen answers at a glance ("what's it worth", "is it okay").
+    ///
+    /// Rendered FLAT (§gotchas' eager-head law): a plain HStack of two shallow
+    /// tiles, no generic widget path. Either tile can be absent — no balance
+    /// until two value samples exist, no warnings tile when there's nothing
+    /// wrong — and with both absent the section renders nothing at all rather
+    /// than an empty row (the same honesty floor every section here keeps).
+    @ViewBuilder
+    private var walletTilesSection: some View {
+        // Scoped to the selected wallet's own value line, else the combined
+        // portfolio line (prd §128). Both start honest — nil until two aligned
+        // samples exist (TokenChart.from guards ≥2).
+        let samples = selectedWallet.map { wallet.valueSamples(forAddress: $0) }
+            ?? wallet.combinedValueSamples()
+        let chart = TokenChart.from(samples: samples)
+        let warnings = walletLive.warnings
+        if chart != nil || !warnings.isEmpty {
+            Section {
+                HStack(alignment: .top, spacing: DS.Space.s2) {
+                    if let chart {
+                        // The door exists only where a breakdown exists: the
+                        // multi-wallet "All" view opens the combined sheet.
+                        // Scoped (or single-wallet), the treemap below already
+                        // IS the composition — no door, no chevron.
+                        let hasBreakdown = wallet.addresses.count > 1 && selectedWallet == nil
+                        WalletBalanceTile(chart: chart,
+                                          caption: hasBreakdown
+                                              ? String(localized: "Across your wallets")
+                                              : String(localized: "Balance"),
+                                          onOpen: hasBreakdown ? { showCombinedWallets = true } : nil)
+                            // Each tile arrives on its own clock — the balance
+                            // reads off already-recorded samples (instant) while
+                            // warnings/holdings/DeFi wait on live reads (2026-07-
+                            // 20: "balance shows then the others pop in but looks
+                            // unintentional"). Entrance is on the TILE, not the
+                            // row, so each one's own onAppear fires the moment
+                            // IT lands, in the wallet shape's own established
+                            // grammar (`entranceStyle` — the same rise every
+                            // transaction row below already uses) instead of a
+                            // silent, jarring insert.
+                            .modifier(RowEntrance(index: 0, wave: shapeWave, style: entranceStyle))
+                    }
+                    if !warnings.isEmpty {
+                        WalletWarningsTile(warnings: warnings) { showWorthALook = true }
+                            .modifier(RowEntrance(index: 0, wave: shapeWave, style: entranceStyle))
+                    }
+                }
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+                .listRowInsets(EdgeInsets(top: DS.Space.s2, leading: DS.Space.s4,
+                                          bottom: 0, trailing: DS.Space.s4))
+            }
+        }
+    }
+
+    /// Aave collateral / debt / health for the wallets in scope (2026-07-20) —
+    /// moved up from the detail page so the debt side sits beside the holdings
+    /// that are its collateral. Nothing renders without a position.
+    @ViewBuilder
+    private var walletDeFiSection: some View {
+        if !walletLive.positions.isEmpty {
+            Section {
+                WalletDeFiTile(positions: walletLive.positions)
+                    // Same reveal the balance/warnings tiles and holdings
+                    // treemap wear — DeFi is usually the last of the four live
+                    // reads to land, so it gets the deepest stagger.
+                    .modifier(RowEntrance(index: 2, wave: shapeWave, style: entranceStyle))
+                    .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+                .listRowInsets(EdgeInsets(top: DS.Space.s2, leading: DS.Space.s4,
+                                          bottom: 0, trailing: DS.Space.s4))
+            }
+        }
+    }
+
+    /// The stream's door — only when there's more behind it than the preview
+    /// showed (no dead control when five rows is the whole history).
+    @ViewBuilder
+    private func walletSeeAllSection(total: Int) -> some View {
+        if total > Self.walletPreviewRows {
+            Section {
+                WalletSeeAllRow(count: total) {
+                    HomeRoute.shared.bridgePush = .walletHistory(scope: selectedWallet)
+                }
+                .listRowSeparator(.hidden)
+                // On the page itself, not in a card — a quiet continuation
+                // line, not another surface (user, 2026-07-20, twice).
+                .listRowBackground(Color.clear)
+            }
+        }
+    }
+
+    /// The wallet switcher (prd §128) — an "All" chip then one chip per watched
+    /// wallet, each wearing its `WalletFace` and, when selected, its signature
+    /// tint. Scopes the whole Wallet feed (balance, treemap, NFTs, rows) to one
+    /// wallet; only shown with more than one watched. Fill-only selection (no
+    /// lines, per the design law). Mirrors the Wallet screen's own switcher.
+    ///
+    /// PINNED, not a List section (2026-07-20, prd §136's own rule applied to
+    /// itself): as a section it scrolled away with the content it scopes —
+    /// unreachable exactly when you're deep in the stream wondering whose
+    /// transaction that was — and its glass had nothing moving behind it.
+    /// As a `safeAreaInset` bar it floats under the shell's chip strip, the
+    /// stream travels beneath it, and the material finally earns its blur.
+    @ViewBuilder
+    private var walletSwitcherBar: some View {
+        if source == "Wallet", wallet.addresses.count > 1 {
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: DS.Space.s2) {
+                    walletSwitcherChip(label: "All", address: nil)
+                    ForEach(wallet.addresses) { addr in
+                        walletSwitcherChip(label: addr.label.isEmpty ? addr.short : addr.label,
+                                           address: addr.address)
+                    }
+                }
+                .padding(4)
+                // Glass, by the law's own terms: scoping is a CONTROL, so the
+                // switcher wears the floating material — one bar of glass for
+                // the whole strip rather than a pane per chip.
+                .dsGlass(cornerRadius: 999)
+                .padding(.horizontal, DS.Space.s4)
+                .padding(.vertical, DS.Space.s2)
+            }
+            .scrollIndicators(.hidden)
+        }
+    }
+
+    private func walletSwitcherChip(label: String, address: String?) -> some View {
+        let isOn = walletChipIsOn(address)
+        let tint = address.map(WalletFace.tint) ?? DS.tint
+        return Button {
+            DSHaptic.selection()
+            withAnimation(DS.Motion.standard) { selectedWallet = address }
+        } label: {
+            HStack(spacing: 5) {
+                if let address { WalletFace(address: address, size: 18) }
+                Text(label)
+                    .dsText(.subhead13)
+                    .fontWeight(isOn ? .semibold : .regular)
+                    .foregroundStyle(isOn ? DS.textPrimary : DS.textSecondary)
+                    .lineLimit(1)
+            }
+            .padding(.horizontal, DS.Space.s3)
+            .padding(.vertical, DS.Space.s2)
+            // The selection fill is ONE object that travels chip to chip on a
+            // scope switch (matched geometry), tinting itself to the landing
+            // wallet's own hue mid-flight — identity color doing the work.
+            // Unselected chips keep their static faint fill underneath.
+            .background {
+                ZStack {
+                    Capsule(style: .continuous).fill(DS.fillFaint)
+                    if isOn {
+                        Capsule(style: .continuous).fill(tint.opacity(0.18))
+                            .matchedGeometryEffect(id: "walletSwitcherSelection",
+                                                   in: walletSwitcherNS)
+                    }
+                }
+            }
+            .contentShape(Capsule(style: .continuous))
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func walletChipIsOn(_ address: String?) -> Bool {
+        guard let address else { return selectedWallet == nil }
+        guard let sel = selectedWallet else { return false }
+        return walletSameAddress(sel, address)
+    }
+
+    /// Hex compares case-insensitively (EIP-55 case is a checksum), base58
+    /// exactly (Solana case is identity) — the switcher's address equality.
+    private func walletSameAddress(_ a: String, _ b: String) -> Bool {
+        ENS.isHexAddress(a) ? a.lowercased() == b.lowercased() : a == b
     }
 
     /// The wallet leads with holdings — real, from Alchemy (WalletIngest),
@@ -799,6 +1499,11 @@ struct FeedScreen: View {
         if !blockStream.els.isEmpty {
             Section {
                 GenRender(id: "root", els: blockStream.els)
+                    // The SECTION's own arrival, not the cells' — GenTagMap
+                    // already stages its cells once mounted; this is what
+                    // stops the whole treemap from hard-popping in the moment
+                    // the holdings read lands (2026-07-20, wallet streaming fix).
+                    .modifier(RowEntrance(index: 1, wave: shapeWave, style: entranceStyle))
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
                     .listRowInsets(EdgeInsets())
@@ -816,7 +1521,7 @@ struct FeedScreen: View {
                                 quickToken = route
                             }
                         } else if name == "@wallet" {
-                            pushedBridge = .wallet
+                            HomeRoute.shared.bridgePush = .wallet
                         }
                     }
             }
@@ -825,7 +1530,7 @@ struct FeedScreen: View {
 
     /// Photos: one continuous grid — day labels are overlay pills on the first
     /// photo of each day, never section breaks (mock P1).
-    private var photoGridSection: some View {
+    private func photoGridSection(_ visible: [Thing]) -> some View {
         Section {
             let items = visible
             // Hand-rolled row-chunking, NOT LazyVGrid: on iOS 26,
@@ -886,7 +1591,7 @@ struct FeedScreen: View {
 
     /// Calendar reads forward: Today and upcoming days ascending, then the
     /// past, event-time order within each day (mock C2).
-    private var agendaGroups: [(String, [Thing])] {
+    private func agendaGroups(_ visible: [Thing]) -> [(String, [Thing])] {
         let cal = Calendar.current
         let today = cal.startOfDay(for: .now)
         var buckets: [Date: [Thing]] = [:]
@@ -903,7 +1608,7 @@ struct FeedScreen: View {
     /// The next upcoming event — its ROW carries the emphasis (no hero).
     /// Events only: in the All shape other kinds share the list, and only
     /// an event's capture time means "starts at".
-    private var nextEventID: UUID? {
+    private func nextEventID(_ visible: [Thing]) -> UUID? {
         visible.filter { $0.kind == .event && $0.capturedAt > .now }
             .min { $0.capturedAt < $1.capturedAt }?.id
     }
@@ -915,19 +1620,53 @@ struct FeedScreen: View {
             && thing.sourceRef.map { TwitchIngest.liveRefs.contains($0) } ?? false
     }
 
+    /// Float any live rows to the top of the NEWEST group (2026-07-21) — a
+    /// stream on right now isn't a chronological row. Scoped to Twitch (the
+    /// one source with a live set) and to the first group only, so history
+    /// below stays in time order. A no-op everywhere else.
+    private func liveFirst(_ groups: [(String, [Thing])]) -> [(String, [Thing])] {
+        guard source == "Twitch", let first = groups.first,
+              first.1.contains(where: isLive) else { return groups }
+        let rows = first.1
+        var out = groups
+        out[0] = (first.0, rows.filter(isLive) + rows.filter { !isLive($0) })
+        return out
+    }
+
+    /// The reading list's lede (2026-07-21) — a saved link is a DOOR, not a
+    /// read, so the shape names the pile instead of pretending the rows are
+    /// consumed: how many landed this month, how many are older, and the
+    /// oldest one still waiting (a gentle "come back to this", never a
+    /// count-shaming streak — §10). Facts only, and no "unopened" claim the
+    /// model can't back (Thing tracks no read state) — "still here" is what's
+    /// true. Yields to an auto hero so a shape never stacks two overviews.
+    @ViewBuilder
+    private func readingLedeSection(_ visible: [Thing]) -> some View {
+        let cal = Self.groupingCalendar
+        let thisMonth = visible.filter {
+            cal.isDate($0.capturedAt, equalTo: .now, toGranularity: .month)
+        }.count
+        let older = visible.count - thisMonth
+        // Oldest still on the list, shown only once it's genuinely aged (30d+)
+        // — a fresh list has no pile to nudge about.
+        let monthAgo = Date.now.addingTimeInterval(-30 * 86_400)
+        let oldest = visible.filter { $0.capturedAt < monthAgo }
+            .min { $0.capturedAt < $1.capturedAt }
+        if visible.count >= 3 {
+            ledeSection(ReadingLede(thisMonth: thisMonth, older: older, oldest: oldest))
+        }
+    }
+
     /// Gmail: what's waiting on you, capped at two (mock G1). Doing-marked
     /// only (honesty fix 2026-07-13): the old `content.contains("?")` sniff
     /// promoted any newsletter with a question mark to "waiting on you" —
     /// fake status. The section now shows only what the person marked
     /// in motion, and earns back a smarter derivation later.
-    private var waiting: [Thing] {
-        visible.filter { $0.mark == .doing }.prefix(2).map { $0 }
-    }
-
     @ViewBuilder
-    private var waitingSection: some View {
+    private func waitingSection(_ visible: [Thing], nextEventID: UUID?) -> some View {
+        let waiting = visible.filter { $0.mark == .doing }.prefix(2).map { $0 }
         if !waiting.isEmpty {
-            daySection("Waiting on you", waiting)
+            daySection("Waiting on you", waiting, nextEventID: nextEventID)
         }
     }
 
@@ -939,7 +1678,7 @@ struct FeedScreen: View {
     /// Reminders: state groups — Doing, To do (stale todos collapse), Done
     /// (same-day only).
     @ViewBuilder
-    private var reminderSections: some View {
+    private func reminderSections(_ visible: [Thing], nextEventID: UUID?) -> some View {
         let doing = visible.filter { $0.mark == .doing }
         let todos = visible.filter { $0.mark == .todo || $0.mark == .none }
         let weekAgo = Date.now.addingTimeInterval(-7 * 86_400)
@@ -948,13 +1687,25 @@ struct FeedScreen: View {
         let doneToday = visible.filter {
             $0.mark == .done && Calendar.current.isDateInToday($0.capturedAt)
         }
-        if !doing.isEmpty { daySection("Doing", doing) }
+        if !doing.isEmpty { daySection("Doing", doing, nextEventID: nextEventID) }
         if !fresh.isEmpty || !stale.isEmpty {
+            // One To do card (2026-07-21): the Older toggle — or the stale
+            // rows it expands into — continues the fresh rows' surface
+            // instead of sitting under it as a flat band.
+            let hasToggle = !stale.isEmpty && !staleExpanded
+            let slots = fresh.count + (staleExpanded ? stale.count : 0) + (hasToggle ? 1 : 0)
+            let positions = cardRunPositions(count: slots)
             Section {
-                ForEach(Array(fresh.enumerated()), id: \.element.id) { i, thing in shapedListRow(thing, index: i) }
+                ForEach(Array(fresh.enumerated()), id: \.element.id) { i, thing in
+                    shapedListRow(thing, index: i, nextEventID: nextEventID,
+                                  position: positions[i])
+                }
                 if !stale.isEmpty {
                     if staleExpanded {
-                        ForEach(Array(stale.enumerated()), id: \.element.id) { i, thing in shapedListRow(thing, index: i) }
+                        ForEach(Array(stale.enumerated()), id: \.element.id) { i, thing in
+                            shapedListRow(thing, index: i, nextEventID: nextEventID,
+                                          position: positions[fresh.count + i])
+                        }
                     } else {
                         HStack {
                             Text("Older").dsText(.body17).foregroundStyle(DS.textSecondary)
@@ -964,9 +1715,14 @@ struct FeedScreen: View {
                                 .font(.system(size: 12, weight: .semibold))
                                 .foregroundStyle(DS.textTertiary)
                         }
+                        .padding(.vertical, DS.Space.s1)
                         .contentShape(Rectangle())
                         .onTapGesture { withAnimation(DS.Motion.standard) { staleExpanded = true } }
-                        .listRowBackground(DS.surfaceSheet)
+                        .listRowBackground(dayCardBackground(positions[slots - 1]))
+                        .listRowInsets(.init(top: DS.Space.s2,
+                                             leading: DS.Space.s4 + DS.Space.s3,
+                                             bottom: DS.Space.s2,
+                                             trailing: DS.Space.s4 + DS.Space.s3))
                         .listRowSeparator(.hidden)
                     }
                 }
@@ -974,25 +1730,27 @@ struct FeedScreen: View {
                 Text("To do").dsText(.heading17).foregroundStyle(DS.textPrimary).textCase(nil)
             }
         }
-        if !doneToday.isEmpty { daySection("Done", doneToday) }
+        if !doneToday.isEmpty { daySection("Done", doneToday, nextEventID: nextEventID) }
     }
 
     /// OpenClaw: pending asks lead as consent cards; the groups below
     /// carry runs and jobs with their status ticks.
-    private var pendingApprovals: [Thing] {
+    private func pendingApprovals(_ visible: [Thing]) -> [Thing] {
         visible.filter { $0.kind == .approval && $0.mark != .done }
     }
 
     @ViewBuilder
-    private var needsYouSection: some View {
-        if !pendingApprovals.isEmpty {
-            daySection("Needs you", pendingApprovals)
+    private func needsYouSection(_ approvals: [Thing], nextEventID: UUID?) -> some View {
+        if !approvals.isEmpty {
+            daySection("Needs you", approvals, nextEventID: nextEventID)
         }
     }
 
-    /// Day groups minus the approvals already shown above.
-    private var agentDayGroups: [(String, [Thing])] {
-        let shown = Set(pendingApprovals.map(\.id))
+    /// Day groups minus the approvals already shown above. Takes the
+    /// approvals the caller already derived (`pendingApprovals`) instead of
+    /// recomputing them a second time in the same render.
+    private func agentDayGroups(_ visible: [Thing], excluding approvals: [Thing]) -> [(String, [Thing])] {
+        let shown = Set(approvals.map(\.id))
         var order: [String] = []
         var groups: [String: [Thing]] = [:]
         for thing in visible where !shown.contains(thing.id) {
@@ -1013,27 +1771,79 @@ struct FeedScreen: View {
         }
     }
 
+    /// Where a row sits in its day's shared card (ruling 2026-07-21,
+    /// superseding 2026-07-13's gap-only clustering): a contiguous run of
+    /// row-shaped things within a day merges into ONE card — the §61
+    /// section-lift mechanic brought to the plain list — while the
+    /// rhythm-breakers (`standsAlone`) keep free-standing cards between
+    /// runs, and the new-since seam splits a day's card in two.
+    private enum RunPosition { case only, first, middle, last }
+
+    /// Positions for a section's rows, index-based so All's FeedRow bundles
+    /// and plain Thing arrays share one derivation. A run breaks at a
+    /// free-standing row on either side, and at the new-since boundary
+    /// (the divider renders BEFORE the boundary row, so the row above it
+    /// closes its run and the boundary row opens a fresh one).
+    private func cardRunPositions(count: Int,
+                                  isBreaker: (Int) -> Bool = { _ in false },
+                                  isBoundary: (Int) -> Bool = { _ in false }) -> [RunPosition] {
+        (0..<count).map { i -> RunPosition in
+            let starts = i == 0 || isBreaker(i) || isBreaker(i - 1) || isBoundary(i)
+            let ends = i == count - 1 || isBreaker(i) || isBreaker(i + 1) || isBoundary(i + 1)
+            switch (starts, ends) {
+            case (true, true):   return .only
+            case (true, false):  return .first
+            case (false, true):  return .last
+            case (false, false): return .middle
+            }
+        }
+    }
+
+    /// The anatomies that earn a free-standing card — shapedRow's
+    /// rhythm-breakers. Everything else (band, check, excerpt, reading,
+    /// music) merges into its day's run.
+    private func standsAlone(_ thing: Thing) -> Bool {
+        if thing.kind == .approval && thing.mark != .done { return true }  // consent card
+        if shape == .social { return true }                                // PostCard, media at width
+        if shape == .chat && thing.mark == .doing { return true }          // TakeawayCard
+        if TokenPulse.shared.pulse(for: thing) != nil { return true }      // TokenRow fat anatomy
+        return false
+    }
+
+    /// The run-aware card surface: first/last rows carry the card's rounded
+    /// shoulders and the s1 breathing edge; middle rows run square and
+    /// GAPLESS, so a row's shadow falls on the adjacent same-color fill and
+    /// vanishes (§61's measured mechanic) — only the run's outer silhouette
+    /// casts, one lifted card instead of a stack of shadowed rows.
+    private func dayCardBackground(_ position: RunPosition) -> some View {
+        let r = DS.Radius.card
+        let top = position == .first || position == .only
+        let bottom = position == .last || position == .only
+        return UnevenRoundedRectangle(topLeadingRadius: top ? r : 0,
+                                      bottomLeadingRadius: bottom ? r : 0,
+                                      bottomTrailingRadius: bottom ? r : 0,
+                                      topTrailingRadius: top ? r : 0,
+                                      style: .continuous)
+            .fill(DS.surfaceSheet)
+            .padding(.horizontal, DS.Space.s4)
+            .padding(.top, top ? DS.Space.s1 : 0)
+            .padding(.bottom, bottom ? DS.Space.s1 : 0)
+            .shadow(color: DS.cardShadow, radius: 18, x: 0, y: 6)
+    }
+
     /// The row inside a list section, with the standard list plumbing attached.
-    private func shapedListRow(_ thing: Thing, index: Int = 0) -> some View {
+    private func shapedListRow(_ thing: Thing, index: Int = 0, nextEventID: UUID?,
+                               position: RunPosition = .only) -> some View {
         // AnyView: same metadata-depth insurance as GenRender (crash fix).
-        return AnyView(shapedRow(thing))
+        return AnyView(shapedRow(thing, nextEventID: nextEventID))
             .modifier(RowEntrance(index: index, wave: shapeWave, style: entranceStyle))
-            .modifier(SwipeHintNudge(active: thing.id == hintThingID) {
-                swipeCoachDone = true
-            })
             .contentShape(Rectangle())
             .matchedTransitionSource(id: thing.id, in: zoomNS)
             .onTapGesture { openThing(thing) }
             // V3b (2026-07-07, supersedes the kind-color wash): rows are
             // NEUTRAL cards — the translucent kind wash read as murk. Color
             // moved into the tag text: the project's own stable hue.
-            .listRowBackground(
-                RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous)
-                    .fill(DS.surfaceSheet)
-                    .padding(.horizontal, DS.Space.s4)
-                    .padding(.vertical, DS.Space.s1)
-                    .shadow(color: DS.cardShadow, radius: 18, x: 0, y: 6)
-            )
+            .listRowBackground(dayCardBackground(position))
             // Feed rhythm (2026-07-13): back to s2 — the s3 airy read made
             // every gap the same size, so days never clustered. Rows sit
             // tight within their day; the day header carries the big gap.
@@ -1043,47 +1853,31 @@ struct FeedScreen: View {
                                  trailing: DS.Space.s4 + DS.Space.s3))
             .listRowSeparator(.hidden)
             // One gesture, one meaning: TAP opens the sheet — tags and verbs
-            // live there — and SWIPE is the real hand-off: Open IN THE SOURCE
-            // APP, only when the thing has a destination (calshow://, the link,
-            // photos-redirect://…). Pinning left the swipe entirely (ruling
-            // 2026-07-12): a pin is per-APP now, placed from the app's own
-            // screen, not a per-item Feed gesture. Share joined the trailing
-            // edge (2026-07-13, user): it sits ahead of Open so a full swipe
-            // still hands off to the source app unchanged — full swipe is
-            // gated to ONLY when Open exists, so a thing with no destination
-            // (a voice note, a chat import) doesn't get Share fired by a full
-            // swipe that used to do nothing.
-            .swipeActions(edge: .trailing, allowsFullSwipe: openVerb(for: thing) != nil) {
+            // live there. The row's OTHER verbs ride a long-press (ruling
+            // 2026-07-16, supersedes the both-edge swipe of 2026-07-15): the
+            // feed pages between sources now, and a horizontal pan can only
+            // belong to one thing. Measured before ruling — a `TabView(.page)`
+            // pan claims 100% of horizontal drags, at every drag length, even
+            // at the last page where it merely rubber-bands and the row still
+            // never opens. So the swipe wasn't degraded, it was unreachable;
+            // long-press is what's left, and it's what the Home board has used
+            // for Open/Unpin all along (`GenRenderer.pinnedRowActions`).
+            .contextMenu {
                 if let openVerb = openVerb(for: thing) {
                     Button {
                         run(openVerb, on: thing)
                     } label: {
-                        Label("Open", systemImage: "arrow.up.right")
+                        Label("Open in app", systemImage: "arrow.up.right")
                     }
-                    .tint(DS.gray600)
                 }
                 ThingShareLink(thing: thing) {
                     Label("Share", systemImage: "square.and.arrow.up")
-                }
-                .tint(DS.tint)
-            }
-            // The hand-off earns its own edge too (2026-07-10, user):
-            // full-swipe RIGHT opens in the source app — the second button
-            // on the left-swipe stays for one-handed reach either way.
-            .swipeActions(edge: .leading, allowsFullSwipe: true) {
-                if let openVerb = openVerb(for: thing) {
-                    Button {
-                        run(openVerb, on: thing)
-                    } label: {
-                        Label("Open", systemImage: "arrow.up.right")
-                    }
-                    .tint(DS.confirm)
                 }
             }
     }
 
     @ViewBuilder
-    private func shapedRow(_ thing: Thing) -> some View {
+    private func shapedRow(_ thing: Thing, nextEventID: UUID?) -> some View {
         // Approval is the one rhythm-breaker everywhere: the consent card.
         if thing.kind == .approval, thing.mark != .done {
             ApprovalCard(thing: thing,
@@ -1111,74 +1905,117 @@ struct FeedScreen: View {
             default:
                 // Perishables show their clock everywhere (ruling 2026-07-09):
                 // the next event's countdown and a stream's Live state ride
-                // the row in All too, not just in their source's shape —
-                // and a watched token its 24h pulse (Option A, 2026-07-10).
-                BandRow(thing: thing,
-                        emphasized: thing.id == nextEventID,
-                        live: isLive(thing),
-                        pulse: TokenPulse.shared.pulse(for: thing))
+                // the row in All too, not just in their source's shape. A
+                // watched token whose pulse has landed wears the fat anatomy
+                // (TokenRow, prd §102) everywhere too; until it lands, the
+                // plain band + timestamp — never a faked price.
+                if let pulse = TokenPulse.shared.pulse(for: thing) {
+                    TokenRow(thing: thing, pulse: pulse)
+                } else {
+                    BandRow(thing: thing,
+                            emphasized: thing.id == nextEventID,
+                            live: isLive(thing))
+                }
             }
         }
     }
 
     /// The check circle IS the consent for the lightest write; tapping again
-    /// is the undo (shaped-feeds ruling).
+    /// is the undo (shaped-feeds ruling). The local mark flips optimistically
+    /// (the tap needs to feel instant), but if the real reminder's write
+    /// fails, it's reverted and the toast corrects itself — a check mark
+    /// that silently doesn't stick is the "fake status" the design law bans.
     private func toggleReminder(_ thing: Thing) {
         let nowDone = thing.mark != .done
+        let wasMark = thing.mark
         thing.mark = nowDone ? .done : .todo
-        try? modelContext.save()
-        DSHaptic.success()
-        chrome.flash(nowDone ? "Done — tap again to undo" : "Back on the list")
-        Task { await ScheduleIngest.setCompleted(thing.sourceRef, nowDone) }
+        modelContext.saveHonestly()
+        // A thing with no real reminder behind it (demo seeds) marks locally
+        // only — the toast says so instead of imitating a real write.
+        let ekBacked = ScheduleIngest.isEKBacked(thing.sourceRef)
+        chrome.flash(nowDone
+            ? (ekBacked ? "Done — tap again to undo" : "Done here — not in your Reminders")
+            : (ekBacked ? "Back on the list" : "Back to to-do"),
+            tone: .success)
+        let sourceRef = thing.sourceRef
+        Task {
+            let ok = await ScheduleIngest.setCompleted(sourceRef, nowDone)
+            guard !ok else { return }
+            await MainActor.run {
+                thing.mark = wasMark
+                modelContext.saveHonestly()
+                chrome.flash("Couldn't reach Reminders — not marked", tone: .failure)
+            }
+        }
     }
 
     // MARK: - Pieces
 
-    /// Empty Feed — the surface's own choreography with skeletons; the copy
-    /// points to the first action (brief §7 empty states).
+    /// Empty Feed — the rain come to rest (2026-07-16, replacing the quiet
+    /// line + skeleton rows: skeletons mean "loading" everywhere, so an
+    /// empty state wearing them forever read as stuck, not promising). The
+    /// headline speaks in the display tier (the Home cover's voice), one
+    /// door opens the catalog, and the settled pile is the onboarding rain
+    /// landed HERE — every tile a real offer that opens its own product
+    /// page, so the pile is honest by construction. Rendered FLAT (plain
+    /// stacks, no Widget/Row path) — this sits in the eager feed body,
+    /// where tree depth is the launch-crash class.
     private var emptyState: some View {
-        // The berry draws itself on; the composer is already on screen. One
-        // line, one door: an empty feed's next move is connecting an app.
-        VStack(spacing: DS.Space.s3) {
-            QuietStateView(line: "Things you capture land here.")
+        VStack(alignment: .leading, spacing: 0) {
+            Text("Let's fill this feed.")
+                .dsText(.heading34).fontWeight(.heavy)
+                .foregroundStyle(DS.textPrimary)
+                .settleIn()
+            Text("Connect an app and things start landing on their own.")
+                .dsText(.body17).foregroundStyle(DS.textSecondary)
+                .padding(.top, DS.Space.s2)
+                .settleIn(delay: 0.05)
             Button {
                 DSHaptic.selection()
                 HomeRoute.shared.push = .apps
             } label: {
-                Text("Browse apps")
-                    .dsText(.callout15).fontWeight(.semibold)
-                    .foregroundStyle(DS.tint)
-                    .padding(.horizontal, DS.Space.s4)
-                    .frame(height: 36)
-                    .background(DS.tintDim, in: Capsule(style: .continuous))
+                HStack(spacing: DS.Space.s1) {
+                    Text("Open the catalog")
+                        .dsText(.callout15).fontWeight(.semibold)
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 12, weight: .semibold))
+                }
+                .foregroundStyle(DS.tint)
+                .padding(.horizontal, DS.Space.s4)
+                .frame(height: 36)
+                .background(DS.tintDim, in: Capsule(style: .continuous))
             }
             .buttonStyle(.plain)
-
-            // The shape of what's coming — a day header and skeleton rows
-            // that stagger in the way the real feed will.
-            VStack(alignment: .leading, spacing: DS.Space.s2) {
-                Text("Today")
-                    .dsText(.heading17).foregroundStyle(DS.textTertiary)
-                    .settleIn(delay: 0.15)
-                ForEach(0..<3, id: \.self) { i in
-                    GenSkeletonRow()
-                        .staggerIn(index: i + 4)
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, DS.Space.s4)
-            .padding(.top, DS.Space.s6)
+            .padding(.top, DS.Space.s4)
+            .settleIn(delay: 0.1)
+            // The other doors, named — the copy used to CLAIM capture
+            // without teaching a single capture verb.
+            Text("Or paste a link, share into Casberi, or snap a screenshot — those land here too.")
+                .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                .padding(.top, DS.Space.s3)
+                .settleIn(delay: 0.15)
+            Spacer(minLength: DS.Space.s6)
+            EmptyFeedPile()
         }
-        .frame(maxWidth: .infinity)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, DS.Space.s4)
         .padding(.top, DS.Space.s6)
+        // The pile rests at the FOOT of the screen (the rain lands where the
+        // floor is): the row takes a fixed drop and the Spacer above hands
+        // the slack to the pile. A plain minHeight, not
+        // `containerRelativeFrame` — inside this List that modifier reported
+        // a container shorter than the viewport and always floored (measured
+        // 2026-07-16). On an oversized-type layout the Spacer collapses and
+        // the row grows past the minimum instead of crowding.
+        .frame(minHeight: 540, alignment: .top)
     }
 
     /// A filter with no matches: the filtered app's own icon, a plain line,
     /// and one way back. Never a bare "Nothing matches."
     private var filteredEmptyState: some View {
         VStack(spacing: DS.Space.s3) {
-            if filter.source != "All" {
-                BridgeIcon(name: filter.source, size: 44)
+            if source != "All" {
+                BridgeIcon(name: source, size: 44)
             } else if let kind = ThingKind.from(typeTag: filter.tag) {
                 KindGlyph(kind: kind, size: 44)
             }
@@ -1201,11 +2038,12 @@ struct FeedScreen: View {
                     .background(DS.tintDim, in: Capsule(style: .continuous))
             }
             .buttonStyle(.plain)
+            tryItChip
             // The empty room previews its own shape (2026-07-13) — the
             // all-feed empty state already does this with skeleton rows;
             // a shaped empty shows what ITS rows will look like: a grid
             // for Photos, rows for everything else.
-            if filter.source != "All" {
+            if source != "All" {
                 emptyShapePreview
                     .padding(.top, DS.Space.s6)
             }
@@ -1213,6 +2051,58 @@ struct FeedScreen: View {
         .frame(maxWidth: .infinity)
         .padding(.horizontal, DS.Space.s4)
         .padding(.vertical, DS.Space.s6)
+    }
+
+    /// One tap demos a source that otherwise needs a first pick to mean
+    /// anything — the Wallet screen's "Peek at vitalik.eth" (prd §79),
+    /// generalized to every empty room that's just a search field with
+    /// nothing in it (delight pass 2026-07-21). Retires the moment anything
+    /// is watched — the empty state itself stops rendering.
+    @ViewBuilder private var tryItChip: some View {
+        if shape == .tokens {
+            tryItButton(label: "Watch ETH") {
+                guard let resolved = await TokenWatch.resolve("ETH") else { return }
+                TokenWatch.add(resolved, context: modelContext)
+                TokenWatch.registerBridge(store: bridges, context: modelContext)
+            }
+        } else if source == "Stocktwits" {
+            tryItButton(label: "Watch $AAPL") {
+                guard let resolved = await StockWatch.resolve("AAPL") else { return }
+                StockWatch.add(resolved, context: modelContext)
+                StockWatch.registerBridge(store: bridges, context: modelContext)
+            }
+        } else if source == "RSS" {
+            tryItButton(label: "Follow NASA's feed") {
+                guard RSSStore.shared.add("https://www.nasa.gov/feed/") else { return }
+                let added = await RSSIngest.refresh(context: modelContext)
+                bridges.registerConnected(id: "rss", name: "RSS",
+                    proof: (added ?? 0) > 0 ? "\(added ?? 0) posts in" : "Synced just now",
+                    can: ["Reads the feeds you follow."])
+            }
+        }
+    }
+
+    /// One chip anatomy for every try-it — the vitalik.eth capsule's exact
+    /// styling, reused instead of re-spelled per source.
+    private func tryItButton(label: String, action: @escaping () async -> Void) -> some View {
+        Button {
+            DSHaptic.tap()
+            Task { await action() }
+        } label: {
+            HStack(spacing: DS.Space.s1) {
+                Image(systemName: "sparkles")
+                    .font(.system(size: 12, weight: .semibold))
+                Text(label)
+                    .dsText(.subhead13).fontWeight(.medium)
+            }
+            .foregroundStyle(DS.tint)
+            .padding(.horizontal, DS.Space.s3)
+            .padding(.vertical, DS.Space.s2)
+            .background(DS.tint.opacity(0.12), in: Capsule(style: .continuous))
+            .contentShape(Capsule(style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .padding(.top, DS.Space.s2)
     }
 
     @ViewBuilder private var emptyShapePreview: some View {
@@ -1224,6 +2114,49 @@ struct FeedScreen: View {
                         .fill(DS.gray100)
                         .frame(height: 90)
                         .staggerIn(index: i + 3)
+                }
+            }
+        case .wallet:
+            // A skeleton treemap mosaic — echoes the Wallet feed's real
+            // holdings treemap (uneven tile sizes, not a uniform grid).
+            RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous)
+                .fill(DS.surfaceSheet)
+                .frame(height: 160)
+                .overlay {
+                    HStack(spacing: DS.Space.s2) {
+                        VStack(spacing: DS.Space.s2) {
+                            RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous)
+                                .fill(DS.gray100).frame(height: 88)
+                            RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous)
+                                .fill(DS.gray100)
+                        }
+                        VStack(spacing: DS.Space.s2) {
+                            RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous)
+                                .fill(DS.gray100)
+                            RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous)
+                                .fill(DS.gray100).frame(height: 56)
+                        }
+                        .frame(width: 72)
+                    }
+                    .padding(DS.Space.s3)
+                }
+                .staggerIn(index: 3)
+        case .calendar:
+            // A skeleton agenda band — each row a tinted strip, echoing
+            // BandRow's own field-of-color shape.
+            VStack(spacing: DS.Space.s2) {
+                ForEach(0..<3, id: \.self) { i in
+                    HStack(spacing: DS.Space.s3) {
+                        Circle().fill(DS.gray100).frame(width: 24, height: 24)
+                        Capsule().fill(DS.gray100).frame(height: 12)
+                        Spacer(minLength: DS.Space.s2)
+                        Capsule().fill(DS.gray100).frame(width: 40, height: 12)
+                    }
+                    .padding(.horizontal, DS.Space.s3)
+                    .padding(.vertical, DS.Space.s3)
+                    .background(DS.gray100.opacity(0.4),
+                                in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+                    .staggerIn(index: i + 3)
                 }
             }
         default:
@@ -1238,9 +2171,9 @@ struct FeedScreen: View {
 
     private var emptyLine: String {
         let tagLabel = ThingKind.from(typeTag: filter.tag)?.typeTagPlural ?? filter.tag
-        switch (filter.source != "All", filter.tag != "All") {
-        case (true, true):   return "Nothing from \(filter.source) under \(tagLabel) yet."
-        case (true, false):  return "Nothing from \(filter.source) yet."
+        switch (source != "All", filter.tag != "All") {
+        case (true, true):   return "Nothing from \(source) under \(tagLabel) yet."
+        case (true, false):  return "Nothing from \(source) yet."
         case (false, true):  return "No \(tagLabel.lowercased()) yet."
         default:             return "Nothing here yet."
         }
@@ -1251,23 +2184,29 @@ struct FeedScreen: View {
     /// which had nothing more than an explorer link to show (ruling 2026-07-09).
     private func openThing(_ thing: Thing) {
         if thing.source == "Wallet" {
-            pushedBridge = .wallet
+            HomeRoute.shared.bridgePush = .wallet
         } else {
             sheetThing = thing
         }
     }
 
-    /// A day group as a native section: rounded sheet card, native swipes
-    /// (To do / Doing), native scroll — no gesture fights.
+    /// A day group as a native section: the day's rows share ONE sheet card
+    /// (2026-07-21 — see RunPosition), rhythm-breakers stand free between
+    /// runs, native scroll — no gesture fights.
     @ViewBuilder
     private func daySection(_ label: String, _ rows: [Thing],
+                            nextEventID: UUID?,
                             boundary: UUID? = nil) -> some View {
+        let positions = cardRunPositions(count: rows.count,
+                                         isBreaker: { standsAlone(rows[$0]) },
+                                         isBoundary: { rows[$0].id == boundary })
         Section {
             // Rows dispatch by shape (shaped feeds); the swipe stays triage —
             // reads only, writes live in the sheet (ruling), Copy sheet-only.
             ForEach(Array(rows.enumerated()), id: \.element.id) { i, thing in
                 if thing.id == boundary { newSinceDivider }
-                shapedListRow(thing, index: i)
+                shapedListRow(thing, index: i, nextEventID: nextEventID,
+                              position: positions[i])
             }
         } header: {
             HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
@@ -1280,9 +2219,10 @@ struct FeedScreen: View {
             }
             .textCase(nil)
             .padding(.leading, DS.Space.s4)
-            // Days read as clusters (2026-07-13): the gap ABOVE a day header
-            // is the feed's biggest — rows within a day sit at s2, so the s6
-            // says "new day" without merging cards or drawing a line.
+            // Days read as clusters: the gap ABOVE a day header is the
+            // feed's biggest (2026-07-13), and since 2026-07-21 the day's
+            // rows also share one card — the header's s6 plus the card's own
+            // silhouette say "new day" without drawing a line.
             .padding(.top, DS.Space.s6)
             .padding(.bottom, DS.Space.s1)
         }
@@ -1293,7 +2233,7 @@ struct FeedScreen: View {
     /// The social room says "posts": its things are kind .chat (the ingest's
     /// container), but nobody calls a Bluesky post a chat.
     private func countLabel(_ rows: [Thing]) -> String {
-        guard filter.source != "All" else { return "\(rows.count)" }
+        guard source != "All" else { return "\(rows.count)" }
         if shape == .social {
             return rows.count == 1 ? "1 post" : "\(rows.count) posts"
         }
@@ -1309,12 +2249,12 @@ struct FeedScreen: View {
     /// naming what you just read to the end of. Doubles as an honest corpus
     /// count — facts only, no streaks (§10). Speaks the same unit as the day
     /// headers ("6 events", not "6 things") via the one countLabel rule.
-    private var caughtUpFooter: some View {
-        // One `visible` derivation for the whole line (the Feed-freeze rule).
-        let rows = visible
-        return Text(filter.source == "All"
+    /// Takes the render's `visible` (the Feed-freeze rule) instead of
+    /// re-deriving it.
+    private func caughtUpFooter(_ rows: [Thing]) -> some View {
+        Text(source == "All"
              ? "That's everything · \(rows.count == 1 ? "1 thing" : "\(rows.count) things")"
-             : "That's everything from \(filter.source) · \(countLabel(rows))")
+             : "That's everything from \(source) · \(countLabel(rows))")
             .dsText(.subhead13)
             .foregroundStyle(DS.textTertiary)
             .frame(maxWidth: .infinity)
@@ -1341,37 +2281,39 @@ struct FeedScreen: View {
             Task {
                 do {
                     try await HandOff.addToCalendar(thing)
-                    DSHaptic.success()
-                    chrome.flash("On your calendar")
-                } catch { chrome.flash(error.localizedDescription) }
+                    chrome.flash("On your calendar", tone: .success)
+                } catch { chrome.flash(error.localizedDescription, tone: .failure) }
             }
         case .addToReminders:
             Task {
                 do {
                     try await HandOff.addToReminders(thing)
-                    DSHaptic.success()
-                    chrome.flash("On your list")
-                } catch { chrome.flash(error.localizedDescription) }
+                    chrome.flash("On your list", tone: .success)
+                } catch { chrome.flash(error.localizedDescription, tone: .failure) }
             }
         case .copyText:
             UIPasteboard.general.string = thing.content.isEmpty ? thing.title : thing.content
             chrome.flash("Copied")
         case .markDone:
+            // Write through to the real reminder like the check circle does
+            // (no-op for things that aren't EK-backed), reverting on failure
+            // — this verb used to mark locally only.
+            let wasMark = thing.mark
             thing.mark = .done
-            try? modelContext.save()
-        case .bridgeWrite(let write):
-            // Unreachable from swipes (they surface only the open hand-off —
-            // writes live in the sheet), but the confirm-then-perform shape
-            // holds if a future surface routes one here.
+            modelContext.saveHonestly()
+            let sourceRef = thing.sourceRef
             Task {
-                let outcome = await BridgeWrites.perform(write)
-                if outcome.ok {
-                    thing.mark = .done
-                    try? modelContext.save()
-                    DSHaptic.success()
+                let ok = await ScheduleIngest.setCompleted(sourceRef, true)
+                guard !ok else { return }
+                await MainActor.run {
+                    thing.mark = wasMark
+                    modelContext.saveHonestly()
+                    chrome.flash("Couldn't reach Reminders — not marked", tone: .failure)
                 }
-                chrome.flash(outcome.line)
             }
+        case .translate:
+            translateText = thing.postText ?? thing.content
+            showTranslate = true
         case .approve:
             // An MCP client asked to save a thing (PRD §34) — the approval
             // carries the payload; the tap is what commits it. Consent → write.
@@ -1379,25 +2321,23 @@ struct FeedScreen: View {
                let real = Capture.thing(from: thing.content, source: thing.source) {
                 modelContext.insert(real)
                 thing.mark = .done
-                try? modelContext.save()
+                modelContext.saveHonestly()
                 SpotlightIndex.index([real])
-                DSHaptic.success()
-                chrome.flash("Saved")
+                chrome.flash("Saved", tone: .success)
             } else {
                 withAnimation(DS.Motion.standard) {
                     thing.mark = .done
-                    try? modelContext.save()
+                    modelContext.saveHonestly()
                 }
-                DSHaptic.success()
                 // Honesty: the answer is recorded on the thing. Nothing is
                 // sent anywhere — no agent transport exists yet (2026-07-10;
                 // the old copy claimed a gateway was told).
-                chrome.flash("Approved")
+                chrome.flash("Approved", tone: .success)
             }
         case .deny:
             withAnimation(DS.Motion.standard) {
                 thing.mark = .done
-                try? modelContext.save()
+                modelContext.saveHonestly()
             }
             chrome.flash("Denied")
         }
@@ -1418,6 +2358,10 @@ struct FeedScreen: View {
     /// records paint, so the delight is the cascade, not a typewriter. A short
     /// beat lets the pull read before it lands with a soft thud.
     private func refreshFeed() async {
+        // A deliberate pull re-fetches live — clear the holdings cache so the
+        // Wallet feed's treemap isn't served a TTL-cached read (same contract as
+        // Home's pull; the cache is for the automatic fan-out, not the gesture).
+        await WalletIngest.invalidateHoldingsCache()
         BridgeRefresh.refreshAllConnected(context: modelContext, store: bridges)
         chrome.refreshPulse += 1   // spins the avatar door, deals the berry rain
         shapeWave += 1
@@ -1426,16 +2370,47 @@ struct FeedScreen: View {
         DSHaptic.success()
     }
 
+    /// Reads the Wallet feed's live state for the current scope. Off the Wallet
+    /// feed it clears rather than holding a stale read — the tiles are gone
+    /// from the screen anyway, and stale state would flash on return.
+    private func loadWalletLive() {
+        guard source == "Wallet" else {
+            if walletLive != WalletLiveState() { walletLive = WalletLiveState() }
+            return
+        }
+        let scope = selectedWallet
+        Task { @MainActor in
+            let state = await WalletWatch.liveState(scopeTo: scope, context: modelContext)
+            // The scope may have moved while the reads were in flight — a late
+            // answer for a wallet we've since left must not paint.
+            guard scope == selectedWallet else { return }
+            // Animated on purpose (2026-07-20, wallet streaming fix): this
+            // lands SECONDS after the balance tile (live chain reads vs a
+            // local sample file), and an unanimated set hard-popped the
+            // warnings/DeFi tiles into place — "looks unintentional". The
+            // animation carries the LAYOUT (rows sliding to make room);
+            // each tile's own RowEntrance carries its reveal.
+            withAnimation(DS.Motion.standard) { walletLive = state }
+        }
+    }
+
     private func streamBlock() {
-        guard filter.source == "Wallet" else {
+        guard source == "Wallet" else {
             if !blockStream.els.isEmpty { blockStream.paint([]) }
             return
         }
+        // The treemap paints as soon as holdings land. Scoped to the selected
+        // wallet when the feed is (prd §128) — the doc generator filters its
+        // groups to that address; nil paints all.
+        let scope = selectedWallet
         Task { @MainActor in
-            if let doc = await WalletIngest.holdingsChart() {
-                blockStream.paint(doc)
+            if let doc = await WalletIngest.holdingsChart(scopeTo: scope) {
+                // Same animated landing as `loadWalletLive` — the treemap is
+                // the tallest late-arriving block, so ITS unanimated insert
+                // was the most jarring of the pops.
+                withAnimation(DS.Motion.standard) { blockStream.paint(doc) }
             } else if !blockStream.els.isEmpty {
-                blockStream.paint([])
+                withAnimation(DS.Motion.standard) { blockStream.paint([]) }
             }
         }
     }
@@ -1489,5 +2464,102 @@ struct RowEntrance: ViewModifier {
         withAnimation(DS.Motion.standard.delay(Double(min(index, 12)) * style.step)) {
             shown = true
         }
+    }
+}
+
+// MARK: - Empty-feed pile (the rain come to rest)
+
+/// The settled pile of app tiles at the foot of the empty feed — the
+/// onboarding rain's third act (HowItWorksSheet rains them past, its step-1
+/// strip shows them settled; here they rest where things will land). On
+/// first appearance the tiles fall in and settle — gravity is an ease-IN,
+/// the house rule — then the caption fades up. Every tile is a door to that
+/// offer's product page in the catalog (no dead controls), routed through
+/// HomeRoute.openOffer so the push survives the .apps hop.
+private struct EmptyFeedPile: View {
+    /// Hand-curated subset of the catalog — every name MUST resolve to a
+    /// real BridgeCatalog offer (scripts/catalog-sync.sh checks this array
+    /// by name, like the other decorative marquees). First six are the back
+    /// row; the last six draw over them as the front row.
+    static let pileApps = ["Notion", "Strava", "ChatGPT", "Photos",
+                           "Wallet", "Reddit",
+                           "Gmail", "GitHub", "Farcaster", "Bluesky",
+                           "Claude", "YouTube"]
+
+    /// Deterministic per-tile jitter — no randomness in a view body; the
+    /// same pile settles identically every launch (and the screen sweep
+    /// sees one design).
+    private static let tilt:  [Double]  = [-5, 3, -2, 6, -4, 2,
+                                           -6, 4, -3, 5, -2, 3]
+    private static let restY: [CGFloat] = [3, -2, 4, 0, 2, -1,
+                                           3, 1, -2, 2, 0, 3]
+
+    /// How far above their rest the tiles wait — past the top of the screen
+    /// from the pile's mid-page seat, so the fall crosses the headline the
+    /// way the onboarding rain crosses the steps (no clip window: a clipped
+    /// fall showed only its last inches, and the window's headroom read as
+    /// a dead gap under the caption).
+    private static let fallFrom: CGFloat = 700
+
+    /// False = the tiles wait above the screen · true = they have landed.
+    @State private var fell = false
+    /// prd 43h: Reduce Motion is law — under it the pile is simply there,
+    /// settled, no 700pt fall (nil animation makes the flip instant).
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        VStack(spacing: DS.Space.s3) {
+            Text("Tap any app to add it")
+                .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                .opacity(fell ? 1 : 0)
+                .animation(reduceMotion ? nil : .easeOut(duration: 0.3).delay(1.5),
+                           value: fell)
+            // Two rows nestled brick-wise: the back row smaller and shifted
+            // half a pitch — depth and irregularity, a pile not a grid.
+            VStack(spacing: -10) {
+                row(0..<6, size: 44).offset(x: 24)
+                row(6..<12, size: 52)
+            }
+        }
+        .onAppear {
+            fell = true
+            #if DEBUG
+            // `-pileTap "<Offer name>"` — fire a tile's tap after the fall,
+            // the headless check of the tile → product-page arc.
+            if let name = UserDefaults.standard.string(forKey: "pileTap") {
+                Task { @MainActor in
+                    try? await Task.sleep(for: .seconds(1.5))
+                    NSLog("pileTap: \(name)")
+                    HomeRoute.shared.openOffer = name
+                    HomeRoute.shared.push = .apps
+                }
+            }
+            #endif
+        }
+    }
+
+    private func row(_ range: Range<Int>, size: CGFloat) -> some View {
+        HStack(spacing: DS.Space.s2) {
+            ForEach(range, id: \.self) { i in
+                tile(Self.pileApps[i], index: i, size: size)
+            }
+        }
+    }
+
+    private func tile(_ name: String, index i: Int, size: CGFloat) -> some View {
+        Button {
+            DSHaptic.selection()
+            HomeRoute.shared.openOffer = name
+            HomeRoute.shared.push = .apps
+        } label: {
+            BridgeIcon(name: name, size: size)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(Text(name))
+        .rotationEffect(.degrees(fell ? Self.tilt[i] : Self.tilt[i] * 0.4))
+        .offset(y: fell ? Self.restY[i] : -Self.fallFrom)
+        .animation(reduceMotion ? nil
+                                : .easeIn(duration: 0.55).delay(0.35 + Double(i) * 0.05),
+                   value: fell)
     }
 }

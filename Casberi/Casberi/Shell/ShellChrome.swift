@@ -57,6 +57,12 @@ final class ShellChrome {
     /// restored 2026-07-14 — the tab-drop rewire had orphaned it) and the
     /// berry rain (BerryRain, user ask same day).
     var refreshPulse = 0
+    /// The hue the NEXT `refreshPulse` bump should rain in — a specific
+    /// source's own brand hue when the pull happened inside its feed (set by
+    /// FeedScreen's `.refreshable`, cleared to nil for "All") or a moment's
+    /// own source (set by MainSurface's SourceMoments drain). nil rains the
+    /// app's default berry blue (delight pass 2026-07-21).
+    var refreshHue: Color? = nil
 
     /// A thing ARRIVED while the person watched (a bridge sync, a pull, a
     /// share landing) — the source's chip does one catch bob: the capture
@@ -78,7 +84,20 @@ final class ShellChrome {
         }
     }
 
-    func flash(_ text: String, action: ToastAction? = nil, seconds: Double = 2) {
+    /// A toast's outcome — `.success`/`.failure` fire the matching haptic
+    /// (§ Haptics: the buzz rides WITH the words, never alone) so a call site
+    /// can't buzz success and forget to say so, or fail silently. `.neutral`
+    /// (the default) is for toasts that aren't reporting a write's outcome
+    /// (an informational note, a read, a reversible toggle) — those keep
+    /// whatever haptic their own gesture already fired, if any.
+    enum Tone { case neutral, success, failure }
+
+    func flash(_ text: String, tone: Tone = .neutral, action: ToastAction? = nil, seconds: Double = 2) {
+        switch tone {
+        case .neutral: break
+        case .success: DSHaptic.success()
+        case .failure: DSHaptic.failure()
+        }
         // Replacing an in-flight toast crossfades (id change), never stacks.
         withAnimation(DS.Motion.standard) {
             toast = text
@@ -98,10 +117,16 @@ final class ShellChrome {
 
 extension View {
     /// Attach to a screen's ScrollView: reports scroll direction to the shell.
-    func minimizesChrome(_ chrome: ShellChrome) -> some View {
+    /// `active: false` mutes the observer without unmounting it — the feed
+    /// pager keeps neighbour pages alive (2026-07-16), and three scroll
+    /// observers writing one shared `chrome.minimized` means an off-screen
+    /// page settling at offset 0 can un-minimize the chrome while you scroll
+    /// the visible one.
+    func minimizesChrome(_ chrome: ShellChrome, active: Bool = true) -> some View {
         onScrollGeometryChange(for: CGFloat.self) {
             $0.contentOffset.y
         } action: { old, new in
+            guard active else { return }
             guard abs(new - old) > 4 else { return }   // ignore jitter
             let down = new > old && new > 60
             if chrome.minimized != down {

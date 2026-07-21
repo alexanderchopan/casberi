@@ -128,4 +128,13 @@ enum TokensAsk {
         guard let dollar = title.range(of: "$", options: .backwards) else { return title }
         return String(title[dollar.upperBound...])
     }
+
+    /// The name half of the same format — everything before the " · $TICKER"
+    /// tail; the whole title when the format doesn't match. Companion to
+    /// `symbol(of:)` (2026-07-17, the fat feed row) so the separator lives in
+    /// this file only, never re-split at a call site.
+    static func name(of title: String) -> String {
+        guard let sep = title.range(of: " · $", options: .backwards) else { return title }
+        return String(title[..<sep.lowerBound])
+    }
 }

@@ -8,15 +8,21 @@ import SwiftUI
 struct BerryRain: View {
     /// ShellChrome.refreshPulse — each bump deals one shower.
     let trigger: Int
+    /// A source's own brand hue (ShellChrome.refreshHue), read once per
+    /// shower — a refresh inside that source's feed, or a moment that names
+    /// one, rains in ITS color instead of the app's default berry blue
+    /// (delight pass 2026-07-21: color still only ever carries identity).
+    var hue: Color? = nil
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// The pulse currently falling (0 = idle, nothing in the tree).
     @State private var shower = 0
+    @State private var showerHue: Color?
 
     var body: some View {
         GeometryReader { geo in
             if shower > 0 {
-                ForEach(Self.deal(seed: shower)) { drop in
+                ForEach(Self.deal(seed: shower, hue: showerHue)) { drop in
                     FallingBerry(drop: drop, size: geo.size)
                 }
             }
@@ -25,6 +31,7 @@ struct BerryRain: View {
         .onChange(of: trigger) {
             guard !reduceMotion, trigger > 0 else { return }
             shower = trigger
+            showerHue = hue
             // Clear after the slowest drop lands — the tree goes back to empty.
             Task { @MainActor in
                 try? await Task.sleep(for: .seconds(1.9))
@@ -44,8 +51,11 @@ struct BerryRain: View {
 
     /// Deterministic per shower (a seeded LCG, never system randomness) so a
     /// mid-fall body re-evaluation deals the SAME drops — SwiftUI identity
-    /// holds and nothing teleports.
-    fileprivate static func deal(seed: Int) -> [Drop] {
+    /// holds and nothing teleports. A source hue swaps in for the default
+    /// berry blues, mixed full/dim the same way so the shape of the shower
+    /// never changes, only its color.
+    fileprivate static func deal(seed: Int, hue: Color? = nil) -> [Drop] {
+        let palette = hue.map { [$0, $0.opacity(0.8), $0.opacity(0.6), $0.opacity(0.9)] } ?? berry
         var state = UInt64(bitPattern: Int64(seed)) &* 2654435761 | 1
         func next() -> Double {
             state = state &* 6364136223846793005 &+ 1442695040888963407
@@ -58,7 +68,7 @@ struct BerryRain: View {
                  delay: next() * 0.35,
                  duration: 0.9 + next() * 0.5,
                  sway: CGFloat(next() * 44 - 22),
-                 color: berry[Int(next() * 4) % 4])
+                 color: palette[Int(next() * 4) % 4])
         }
     }
 }

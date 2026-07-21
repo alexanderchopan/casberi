@@ -43,6 +43,54 @@ print -P "%F{green}✓ installed%f"
 
 mkdir -p "$OUT"
 
+# ── 2.5 Cold-launch survival loop ───────────────────────────────────
+# The first-frame stack-overflow class (CLAUDE.md: recurred 2026-07-10 /
+# 07-13 / 07-15) is INTERMITTENT and worst on the first launch after
+# `simctl install` — one green launch proves nothing. Reinstall + cold
+# launch LAUNCH_CYCLES times (default 10, the confidence bar from the
+# 07-10 fix) and require the first-frame marker (launchTimer, the same
+# line perf.sh times) on every cycle. A cycle with no marker fails the
+# run: pid dead = the crash class; pid alive = frozen before first frame
+# (the 07-15 symptom). LAUNCH_CYCLES=0 skips (e.g. quick doc-only runs).
+CYCLES=${LAUNCH_CYCLES:-10}
+if (( CYCLES > 0 )); then
+  step "Cold-launch survival ($CYCLES cycles)"
+  SURV="$OUT/launch-survival.log"
+  CRASHDIR="$HOME/Library/Logs/DiagnosticReports"
+  IPS_BEFORE=$(find "$CRASHDIR" -maxdepth 1 -name 'Casberi-*.ips' 2>/dev/null | wc -l | tr -d ' ')
+  # One stream for the whole loop; cycle i waits for the i-th marker line.
+  xcrun simctl spawn "$DEVICE" log stream \
+    --predicate 'process == "Casberi" AND eventMessage CONTAINS "launchTimer"' \
+    --style compact > "$SURV" 2>/dev/null &
+  SURVPID=$!
+  sleep 1
+  for (( i=1; i<=CYCLES; i++ )); do
+    xcrun simctl terminate "$DEVICE" "$BUNDLE" 2>/dev/null || true
+    xcrun simctl install "$DEVICE" "$APP" || { kill $SURVPID 2>/dev/null; fail "reinstall failed (cycle $i)"; }
+    PID=$(xcrun simctl launch "$DEVICE" "$BUNDLE" -onboarded YES 2>/dev/null | awk -F': ' '{print $NF}')
+    READY=""
+    for (( t=0; t<15; t++ )); do
+      sleep 1
+      # Match the timing line, not log stream's predicate-echo header.
+      (( $(grep -Ec 'launchTimer.*[0-9]+ms' "$SURV" 2>/dev/null || true) >= i )) && { READY=1; break; }
+    done
+    if [[ -z "$READY" ]]; then
+      kill $SURVPID 2>/dev/null || true
+      if [[ -n "${PID:-}" ]] && kill -0 "$PID" 2>/dev/null; then
+        fail "cold-launch cycle $i: no first frame in 15s, pid $PID still alive — frozen at launch"
+      else
+        fail "cold-launch cycle $i: process died before first frame — the launch-crash class (check $CRASHDIR)"
+      fi
+    fi
+  done
+  kill $SURVPID 2>/dev/null || true
+  IPS_AFTER=$(find "$CRASHDIR" -maxdepth 1 -name 'Casberi-*.ips' 2>/dev/null | wc -l | tr -d ' ')
+  if (( IPS_AFTER > IPS_BEFORE )); then
+    fail "cold-launch loop passed but $((IPS_AFTER - IPS_BEFORE)) new Casberi crash report(s) in $CRASHDIR"
+  fi
+  print -P "%F{green}✓ cold-launch survival ($CYCLES/$CYCLES)%f"
+fi
+
 # ── 3. Screen sweep via deeplink hook ───────────────────────────────
 sweep() {  # sweep <name> <casberi-url>
   xcrun simctl terminate "$DEVICE" "$BUNDLE" 2>/dev/null || true

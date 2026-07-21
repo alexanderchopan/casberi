@@ -1,0 +1,197 @@
+// Smart accounts / preparing surface promo — live-animated.
+// node render.js clip-smartaccounts-live.html --size=1080x1920
+// Grounded in Model/WalletPrepare.swift + Screens/ApprovalPrepareCard.swift
+//   (branch claude/smart-accounts-apple-compliance-gcn53m, commit 95f3916, prd §111/§112):
+//   THE LINE: "Casberi READS on-chain state and PREPARES transactions, and a
+//     signature always happens somewhere else (a wallet app, Revoke.cash)."
+//   v1 = approvals. The card computes, all from keyless reads:
+//     1. the grant's LIVE state (allowance/isApprovedForAll) read NOW
+//        "Still active — Uniswap can still spend this token"
+//     2. the encoded revoke tx (approve(spender,0) / setApprovalForAll(op,false))
+//     3. the fee (eth_estimateGas × eth_gasPrice), "~0.00042 ETH", omitted when unreadable
+//   Two doors: "Revoke on Revoke.cash" + "Copy revoke transaction"
+//   Footer: "A transaction you sign there — never in Casberi."
+//   The close from READS alone: "No longer active — this approval has been revoked."
+// UNVERIFIED against live signing per the commit — this clip is for when it ships.
+const fs=require('fs'), path=require('path');
+const AC='#3B6EF6', SIGN='#F0A020', GRN='#3fb950', RED='#E5484D';
+const BEATS=[
+  {kick:'THE LINE', head:'Prepare here.\nSign elsewhere.', accent:AC},
+  {kick:'LIVE',     head:'Is it still\nactive?',           accent:AC},
+  {kick:'FEE',      head:'What revoking\ncosts.',          accent:AC},
+  {kick:'PREPARED', head:'Ready for\nany wallet.',         accent:AC},
+  {kick:'CLOSED',   head:'It closes\nitself.',             accent:AC},
+];
+const INTRO=0.45,BEAT=2.0,OUT_AT=INTRO+BEATS.length*BEAT,TOTAL=OUT_AT+1.9;
+const DATA=BEATS.map((b,i)=>({kick:b.kick,head:b.head,accent:b.accent}));
+
+const html=`<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;transition:none!important}
+html,body{width:1080px;height:1920px;overflow:hidden;background:#EEEAE1;font-family:-apple-system,"Helvetica Neue","SF Pro Display",system-ui,sans-serif;-webkit-font-smoothing:antialiased;}
+.mono{font-family:ui-monospace,"SF Mono","Menlo",monospace;}
+.stage{position:absolute;inset:0;overflow:hidden;background:#EEEAE1;}
+.grain{position:absolute;inset:0;opacity:.5;background-image:radial-gradient(circle at 20% 30%, rgba(0,0,0,.03) 0 1px, transparent 1px),radial-gradient(circle at 70% 65%, rgba(0,0,0,.025) 0 1px, transparent 1px);background-size:7px 7px, 9px 9px;}
+.mast{position:absolute;left:70px;right:70px;top:74px;display:flex;justify-content:space-between;font-size:27px;letter-spacing:.16em;color:#14110d;font-weight:600;}
+.rule{position:absolute;left:70px;right:70px;top:126px;height:3px;background:#14110d;transform-origin:left;}
+.wm{position:absolute;right:20px;top:150px;font-size:280px;line-height:.82;white-space:nowrap;text-align:right;font-weight:800;letter-spacing:-.04em;opacity:.08;will-change:opacity,transform;}
+.kick{position:absolute;left:74px;top:238px;font-size:32px;letter-spacing:.14em;font-weight:600;will-change:transform,opacity;}
+.head{position:absolute;left:70px;top:284px;right:70px;font-size:112px;line-height:.94;font-weight:800;letter-spacing:-.045em;color:#14110d;white-space:pre-line;will-change:transform,opacity;}
+.foot{position:absolute;left:74px;right:74px;bottom:70px;display:flex;justify-content:space-between;font-size:26px;letter-spacing:.12em;color:#14110d;font-weight:600;}
+.wipe{position:absolute;top:-12%;left:0;width:135%;height:124%;transform:skewX(-9deg) translateX(160%);will-change:transform;}
+.comp{position:absolute;left:120px;top:820px;width:840px;height:820px;border-radius:34px;overflow:hidden;box-shadow:34px 40px 0 rgba(20,17,13,.13), inset 0 0 0 1px rgba(255,255,255,.05), 0 30px 70px rgba(20,17,13,.26);opacity:0;will-change:transform,opacity;transform-origin:center top;padding:52px;color:#fff;background:#0a0d16;}
+.shd{font-size:28px;letter-spacing:.14em;color:rgba(255,255,255,.5);margin-bottom:24px;display:flex;align-items:center;justify-content:space-between;}
+/* the line — two sides */
+.split{display:flex;align-items:stretch;gap:0;margin-top:10px;height:300px;}
+.side{flex:1;border-radius:24px;padding:38px 32px;display:flex;flex-direction:column;will-change:opacity,transform;}
+.sidL{background:rgba(59,110,246,.12);box-shadow:inset 0 0 0 2px rgba(59,110,246,.4);}
+.sidR{background:rgba(240,160,32,.1);box-shadow:inset 0 0 0 2px rgba(240,160,32,.36);}
+.sk{font-size:23px;letter-spacing:.12em;margin-bottom:20px;}
+.skL{color:${AC};} .skR{color:${SIGN};}
+.sitem{font-size:32px;font-weight:600;padding:14px 0;color:rgba(255,255,255,.9);}
+.sx{font-size:26px;color:rgba(255,255,255,.4);padding:14px 0;text-decoration:line-through;text-decoration-color:rgba(255,255,255,.25);}
+.divider{width:70px;flex:none;display:flex;align-items:center;justify-content:center;font-size:40px;color:rgba(255,255,255,.3);will-change:opacity;}
+.lnote{margin-top:34px;font-size:28px;color:rgba(255,255,255,.5);line-height:1.45;will-change:opacity;}
+.lnote b{color:#fff;}
+/* generic approval card */
+.acard{background:#05070d;border-radius:24px;padding:38px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.08);}
+.atop{display:flex;align-items:center;gap:22px;margin-bottom:6px;}
+.atile{width:74px;height:74px;border-radius:18px;flex:none;background:rgba(255,72,77,.16);color:${RED};display:flex;align-items:center;justify-content:center;font-size:34px;font-weight:800;}
+.aname{font-size:36px;font-weight:700;} .asub{font-size:24px;color:rgba(255,255,255,.4);margin-top:5px;}
+.stat{margin-top:30px;display:flex;align-items:center;gap:18px;font-size:32px;font-weight:650;will-change:opacity,transform;}
+.stat .pd{width:16px;height:16px;border-radius:50%;flex:none;}
+.stat.on{color:${SIGN};} .stat.off{color:${GRN};}
+.snote{margin-top:32px;font-size:27px;color:rgba(255,255,255,.5);line-height:1.45;will-change:opacity;}
+.snote b{color:#fff;}
+/* fee */
+.feebox{margin-top:20px;background:#05070d;border-radius:22px;padding:40px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.08);}
+.feek{font-size:26px;letter-spacing:.1em;color:rgba(255,255,255,.4);}
+.feev{font-size:78px;font-weight:800;margin-top:14px;letter-spacing:-.02em;}
+.feem{font-size:26px;color:rgba(255,255,255,.4);margin-top:14px;}
+.feem .mono{color:${AC};}
+.fnote{margin-top:32px;font-size:27px;color:rgba(255,255,255,.5);line-height:1.45;will-change:opacity;}
+.fnote b{color:#fff;}
+/* hand-off doors */
+.door{display:flex;align-items:center;gap:24px;background:#05070d;border-radius:20px;padding:30px 32px;margin-bottom:20px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.08);will-change:opacity,transform;}
+.door .di{width:56px;height:56px;border-radius:14px;flex:none;display:flex;align-items:center;justify-content:center;font-size:28px;}
+.door .dl{font-size:34px;font-weight:650;} .door .da{margin-left:auto;font-size:26px;color:rgba(255,255,255,.35);}
+.tx{background:#05070d;border-radius:16px;padding:22px 24px;margin-bottom:22px;font-size:22px;line-height:1.5;color:rgba(255,255,255,.55);box-shadow:inset 0 0 0 1px rgba(255,255,255,.06);will-change:opacity;}
+.tx .k{color:rgba(255,255,255,.35);} .tx .s{color:${AC};}
+.hnote{margin-top:12px;font-size:28px;color:${SIGN};line-height:1.4;font-weight:600;will-change:opacity;}
+/* closed */
+.cbig{margin-top:14px;background:#05070d;border-radius:24px;padding:48px 40px;box-shadow:inset 0 0 0 1px rgba(63,185,80,.3);text-align:center;will-change:opacity,transform;}
+.cbig .ci{width:96px;height:96px;border-radius:50%;background:${GRN};color:#04140a;display:flex;align-items:center;justify-content:center;font-size:54px;margin:0 auto 26px;will-change:transform;}
+.cbig .ct{font-size:40px;font-weight:750;color:${GRN};line-height:1.15;}
+.flow{margin-top:34px;display:flex;align-items:center;gap:16px;font-size:25px;color:rgba(255,255,255,.5);flex-wrap:wrap;will-change:opacity;}
+.flow b{color:#fff;font-weight:700;} .flow .ar{color:rgba(255,255,255,.3);}
+.cnote2{margin-top:24px;font-size:26px;color:rgba(255,255,255,.45);line-height:1.4;will-change:opacity;}
+.outro{position:absolute;inset:0;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;padding:0 74px;opacity:0;will-change:opacity;}
+.outro .b{font-size:200px;font-weight:800;letter-spacing:-.05em;color:#14110d;line-height:.9;}
+.outro .u{font-size:34px;letter-spacing:.1em;color:#14110d;margin-top:40px;font-weight:600;} .outro .u b{color:${AC};}
+</style></head><body>
+<div class="stage">
+  <div class="grain"></div>
+  <div class="mast mono"><span>CASBERI</span><span>PREPARING SURFACE</span></div>
+  <div class="rule" id="rule"></div>
+  <div class="wm" id="wm">01</div>
+
+  <div class="comp" id="comp0">
+    <div class="shd mono"><span>THE LINE</span></div>
+    <div class="split">
+      <div class="side sidL" id="sidL"><div class="sk skL mono">IN CASBERI</div><div class="sitem">Read the chain</div><div class="sitem">Prepare the tx</div><div class="sitem">Estimate the fee</div></div>
+      <div class="divider" id="div">→</div>
+      <div class="side sidR" id="sidR"><div class="sk skR mono">SOMEWHERE ELSE</div><div class="sitem" style="color:${SIGN}">Sign it</div><div class="sx">never in the app</div></div>
+    </div>
+    <div class="lnote" id="lnote">Casberi reads on-chain state and prepares the transaction. <b>A signature always happens somewhere else</b> — a wallet, Revoke.cash.</div>
+  </div>
+
+  <div class="comp" id="comp1">
+    <div class="shd mono"><span>GRANT · READ LIVE</span></div>
+    <div class="acard">
+      <div class="atop"><span class="atile">U</span><div><div class="aname">Uniswap</div><div class="asub mono">USDC · unlimited</div></div></div>
+      <div class="stat on" id="stat1"><span class="pd" style="background:${SIGN}"></span><span id="statTxt">Still active — Uniswap can still spend this token</span></div>
+    </div>
+    <div class="snote" id="snote">Read from the chain <b>right now</b> — not from the record. An old event can't know you already revoked; a live read can.</div>
+  </div>
+
+  <div class="comp" id="comp2">
+    <div class="shd mono"><span>UNISWAP · USDC ALLOWANCE</span></div>
+    <div class="feebox">
+      <div class="feek mono">FEE TO REVOKE</div>
+      <div class="feev mono" id="feev">~0.00000 ETH</div>
+      <div class="feem">estimateGas <span class="mono">×</span> gasPrice, live</div>
+    </div>
+    <div class="fnote" id="fnote">Quoted in the chain's own coin. If the estimate can't be read, it's <b>left off</b> — never invented.</div>
+  </div>
+
+  <div class="comp" id="comp3">
+    <div class="shd mono"><span>THE PREPARED TRANSACTION</span></div>
+    <div class="tx mono" id="tx"><span class="k">to</span>  0xA0b8…eB48<br><span class="k">data</span> <span class="s">0x095ea7b3</span>…0000<br><span class="k">value</span> 0x0</div>
+    <div class="door" data-i="0"><span class="di" style="background:rgba(59,110,246,.16);color:${AC}">⧉</span><span class="dl">Copy revoke transaction</span><span class="da mono">for any wallet</span></div>
+    <div class="door" data-i="1"><span class="di" style="background:rgba(229,72,77,.16);color:${RED}">↗</span><span class="dl">Or open Revoke.cash</span></div>
+    <div class="hnote" id="hnote">Encoded, ready to sign — in your wallet, never in Casberi.</div>
+  </div>
+
+  <div class="comp" id="comp4">
+    <div class="shd mono"><span>AFTER YOU SIGN, ELSEWHERE</span></div>
+    <div class="cbig" id="cbig"><div class="ci" id="ci">✓</div><div class="ct">No longer active —<br>this approval has been revoked.</div></div>
+    <div class="flow" id="flow"><b>You revoke</b> in your wallet <span class="ar">→</span> Casberi <b>reads the chain again</b> <span class="ar">→</span> the card flips</div>
+    <div class="cnote2" id="cnote2">From reads alone. No callback, no server told it — the chain did.</div>
+  </div>
+
+  <div class="kick mono" id="kick"></div>
+  <div class="head" id="head"></div>
+  <div class="foot mono"><span>casberi.app</span><span>—</span></div>
+  <div class="wipe" id="wipe"></div>
+  <div class="outro" id="outro"><div class="b">Casberi</div><div class="u mono"><b>casberi.app</b></div></div>
+</div>
+<script>
+const clamp01=v=>Math.max(0,Math.min(1,v)),easeOut=p=>1-Math.pow(1-p,3),back=p=>{const c=1.7;return 1+(c+1)*Math.pow(p-1,3)+c*Math.pow(p-1,2);};
+const INTRO=${INTRO},BEAT=${BEAT},OUT_AT=${OUT_AT},N=${BEATS.length};
+const D=${JSON.stringify(DATA)};window.TOTAL=${TOTAL};
+const comps=[...document.querySelectorAll('.comp')];
+window.seek=function(t){
+  let active=Math.max(0,Math.min(N-1,Math.floor((t-INTRO)/BEAT)));
+  const bs=INTRO+active*BEAT, local=t-bs, acc=D[active].accent, pIn=clamp01((local-0.28)/1.35);
+  let coverAcc=acc,wipeX=200;const bounds=[];for(let k=1;k<N;k++)bounds.push({t:INTRO+k*BEAT,c:D[k].accent});bounds.push({t:OUT_AT,c:'#14110d'});
+  for(const b of bounds){const p=(t-(b.t-0.34))/0.68;if(p>=0&&p<=1){wipeX=(1-p)*135-p*135*1.15;coverAcc=b.c;}}
+  const wp=document.getElementById('wipe');wp.style.background=coverAcc;wp.style.transform='skewX(-9deg) translateX('+wipeX+'%)';
+  document.getElementById('rule').style.transform='scaleX('+easeOut(clamp01(t/0.6))+')';
+  const wm=document.getElementById('wm');wm.textContent=D[active].kick;wm.style.fontSize=Math.max(90,Math.min(320,900/(0.6*D[active].kick.length)))+'px';wm.style.color=acc;wm.style.opacity=0.09*clamp01(local/0.4);wm.style.transform='translateY('+((1-easeOut(clamp01(local/0.5)))*30)+'px)';
+  const ki=document.getElementById('kick');ki.textContent=D[active].kick;ki.style.color=acc;const kin=clamp01(local/0.4);ki.style.opacity=easeOut(kin);ki.style.transform='translateX('+((1-easeOut(kin))*-40)+'px)';
+  const he=document.getElementById('head');he.textContent=D[active].head;const hin=clamp01((local-0.06)/0.5);he.style.opacity=clamp01(local/0.2);he.style.transform='translateY('+((1-back(hin))*80)+'px)';
+  
+  comps.forEach((c,i)=>{const cbs=INTRO+i*BEAT,cl=t-cbs,cin=clamp01((cl-0.12)/0.6);const beatEnd=INTRO+(i+1)*BEAT,outp=clamp01((t-(beatEnd-0.3))/0.4);let op=(i===active?1:0)*clamp01(cl/0.15);if(t>OUT_AT)op*=(1-clamp01((t-OUT_AT)/0.25));const y=(1-back(cin))*180+outp*200+Math.sin(t*0.9+i)*5;const rot=(-2.2)+(1-easeOut(cin))*-5+outp*4;c.style.opacity=op;c.style.transform='translateY('+y+'px) rotate('+rot+'deg)';});
+  animateComp(active,pIn,t);
+  const fo=(t>OUT_AT)?(1-clamp01((t-OUT_AT)/0.25)):1;['kick','head'].forEach(id=>{const e=document.getElementById(id);e.style.opacity=Math.min(+e.style.opacity||1,fo);});
+  document.getElementById('outro').style.opacity=easeOut(clamp01((t-(OUT_AT+0.25))/0.5));
+};
+function animateComp(i,p,t){
+  if(i===0){
+    const lp=clamp01(p/0.34);document.getElementById('sidL').style.opacity=lp;document.getElementById('sidL').style.transform='translateX('+((1-easeOut(lp))*-30)+'px)';
+    const rp=clamp01((p-0.28)/0.34);document.getElementById('sidR').style.opacity=rp;document.getElementById('sidR').style.transform='translateX('+((1-easeOut(rp))*30)+'px)';
+    document.getElementById('div').style.opacity=clamp01((p-0.24)/0.2);
+    document.getElementById('lnote').style.opacity=clamp01((p-0.56)/0.3);
+  } else if(i===1){
+    const s=document.getElementById('stat1');const sp=clamp01((p-0.22)/0.34);s.style.opacity=sp;s.style.transform='translateY('+((1-back(sp))*18)+'px)';
+    // live-read pulse on the status dot
+    const pd=s.querySelector('.pd');const pulse=sp>0.9?(0.6+0.4*Math.abs(Math.sin(t*4))):1;pd.style.opacity=pulse;pd.style.boxShadow='0 0 '+(14*pulse)+'px ${SIGN}';
+    document.getElementById('snote').style.opacity=clamp01((p-0.56)/0.3);
+  } else if(i===2){
+    const cp=clamp01(p/0.55);const fee=(0.00042*easeOut(cp));
+    document.getElementById('feev').textContent='~'+fee.toFixed(5)+' ETH';
+    document.getElementById('fnote').style.opacity=clamp01((p-0.6)/0.3);
+  } else if(i===3){
+    document.getElementById('tx').style.opacity=clamp01((p-0.1)/0.3);
+    document.querySelectorAll('#comp3 .door').forEach((r,k)=>{const rp=clamp01((p-0.32-k*0.15)/0.3);r.style.opacity=rp;r.style.transform='translateX('+((1-easeOut(rp))*-30)+'px)';});
+    document.getElementById('hnote').style.opacity=clamp01((p-0.72)/0.24);
+  } else if(i===4){
+    const cp=clamp01(p/0.4);const c=document.getElementById('cbig');c.style.opacity=cp;c.style.transform='translateY('+((1-back(cp))*30)+'px)';
+    document.getElementById('ci').style.transform='scale('+(0.4+0.6*back(clamp01((p-0.15)/0.4)))+')';
+    document.getElementById('flow').style.opacity=clamp01((p-0.5)/0.3);
+    document.getElementById('cnote2').style.opacity=clamp01((p-0.66)/0.28);
+  }
+}
+window.seek(0);
+</script></body></html>`;
+fs.writeFileSync(path.join(__dirname,'clip-smartaccounts-live.html'),html);
+console.log('wrote clip-smartaccounts-live.html',(html.length/1024).toFixed(0)+'KB',TOTAL.toFixed(1)+'s');

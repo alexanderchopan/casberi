@@ -28,8 +28,6 @@ struct TwitchScreen: View {
             BridgeSetupHeader(name: "Twitch")
             connectSection.listRowSeparator(.hidden)
             if !recent.isEmpty {
-                PinToHomeButton(source: "Twitch", inSection: true)
-                    .listRowSeparator(.hidden)
                 RecentThingsSection(header: "Live lately", things: recent)
                     .listRowSeparator(.hidden)
             }
@@ -37,7 +35,10 @@ struct TwitchScreen: View {
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
+        .bridgeSetupWash(name: "Twitch")
+        .dsAdaptiveContentWidth()
         .dsPageBackground()
+        .dsSoftTopEdge()
         .navigationTitle("Twitch")
         .navigationBarTitleDisplayMode(.large)
         .onAppear {

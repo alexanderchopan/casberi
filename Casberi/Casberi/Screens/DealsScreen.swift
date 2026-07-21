@@ -28,7 +28,6 @@ struct DealsScreen: View {
         List {
             BridgeSetupHeader(name: "Deals")
             sourcesSection.listRowSeparator(.hidden)
-            if deals.connected { pinToHomeSection.listRowSeparator(.hidden) }
             if !recent.isEmpty {
                 RecentThingsSection(header: "Latest deals", things: recent, titleLines: 1)
                     .listRowSeparator(.hidden)
@@ -38,7 +37,6 @@ struct DealsScreen: View {
                     bridgeID: "deals", name: "Deals",
                     teardown: {
                         DealsStore.shared.disconnect()
-                        HomePinnedSources.shared.clear("Deals")
                     }
                 ).listRowSeparator(.hidden)
             }
@@ -46,7 +44,10 @@ struct DealsScreen: View {
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
+        .bridgeSetupWash(name: "Deals")
+        .dsAdaptiveContentWidth()
         .dsPageBackground()
+        .dsSoftTopEdge()
         .navigationTitle("Deals")
         .navigationBarTitleDisplayMode(.large)
         .onAppear {
@@ -86,32 +87,6 @@ struct DealsScreen: View {
             }
         } footer: {
             Text("Turn on a source and its newest deals — each already priced in the headline — land in your feed as products. Read-only.")
-                .dsText(.callout15).foregroundStyle(DS.textTertiary)
-        }
-    }
-
-    private var pinnedToHome: Bool { HomePinnedSources.shared.isPinned("Deals") }
-
-    private var pinToHomeSection: some View {
-        Section {
-            Button {
-                HomePinnedSources.shared.toggle("Deals")
-                CorpusSignal.shared.bump()
-                DSHaptic.tap()
-            } label: {
-                HStack(spacing: DS.Space.s2) {
-                    Image(systemName: pinnedToHome ? "pin.fill" : "pin")
-                    Text(pinnedToHome ? "Pinned to Home" : "Pin to Home")
-                }
-                .dsText(.body17).foregroundStyle(pinnedToHome ? DS.tint : DS.textPrimary)
-                .frame(maxWidth: .infinity).frame(height: 44)
-                .background(pinnedToHome ? DS.tintDim : DS.gray100,
-                            in: Capsule(style: .continuous))
-            }
-            .buttonStyle(.plain)
-            .listRowBackground(Color.clear)
-        } footer: {
-            Text("The latest deals ride a strip on Home.")
                 .dsText(.callout15).foregroundStyle(DS.textTertiary)
         }
     }

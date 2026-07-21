@@ -109,7 +109,7 @@ enum Organize {
             }
             let to = toRaw.trimmingCharacters(in: .whitespaces)
             let matched = all.filter { $0.tags.contains(from) }
-            let headline = "Rename \(from) to \(to) — \(matched.count) thing\(matched.count == 1 ? "" : "s")"
+            let headline = "Rename tag \(from) to \(to) — \(matched.count) thing\(matched.count == 1 ? "" : "s")"
             return OrganizeProposal(command: .rename(from: from, to: to),
                                     headline: headline, things: matched, blocked: nil)
         }
@@ -132,7 +132,7 @@ enum Organize {
                 thing.tags = thing.tags.map { $0 == from ? to : $0 }
             }
         }
-        try? context.save()
+        context.saveHonestly()
         SpotlightIndex.index(proposal.things)
         // Home composes from tags — a rename/retag leaves count unchanged, so
         // signal the composition to repaint (else Home still shows the old tag).
@@ -147,7 +147,7 @@ enum Organize {
         }
         let undo = { @MainActor in
             for (thing, tags) in before { thing.tags = tags }
-            try? context.save()
+            context.saveHonestly()
             SpotlightIndex.index(before.map(\.0))
             CorpusSignal.shared.bump()
         }

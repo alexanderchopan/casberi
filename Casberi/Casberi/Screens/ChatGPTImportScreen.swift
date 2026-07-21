@@ -32,14 +32,14 @@ struct ChatGPTImportScreen: View {
             stepsSection.listRowSeparator(.hidden)
             importSection.listRowSeparator(.hidden)
             if !recent.isEmpty {
-                PinToHomeButton(source: "ChatGPT", inSection: true)
-                    .listRowSeparator(.hidden)
                 recentSection.listRowSeparator(.hidden)
             }
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
+        .dsAdaptiveContentWidth()
         .dsPageBackground()
+        .dsSoftTopEdge()
         .navigationTitle("ChatGPT")
         .navigationBarTitleDisplayMode(.large)
         .fileImporter(isPresented: $importing,

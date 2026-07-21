@@ -289,7 +289,7 @@ enum OpenSeaIngest {
                 added += 1
             }
         }
-        if added > 0 || backfill.any { try? context.save() }
+        if added > 0 || backfill.any { context.saveHonestly() }
         return reachedAny ? added : nil
     }
 }

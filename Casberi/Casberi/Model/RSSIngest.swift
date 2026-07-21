@@ -233,7 +233,7 @@ enum RSSIngest {
                 added += 1
             }
         }
-        if added > 0 || backfill.any || touched { try? context.save() }
+        if added > 0 || backfill.any || touched { context.saveHonestly() }
         // Every feed unreachable is a failed sync, not "up to date".
         return reachedAny ? added : nil
     }

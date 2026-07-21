@@ -9,14 +9,32 @@
 <meta property="og:description" content="Everything Casberi does, in one place.">
 <meta property="og:type" content="website">
 <link rel="icon" href="icons/casberi-logo.png">
-<link rel="stylesheet" href="styles.css?v=20260714f">
+<link rel="stylesheet" href="styles.css?v=202607201645">
 <style>
-  .feat-head { padding: 46px 0 18px; }
-  .feat-head h1 { font-family: ui-rounded, -apple-system, sans-serif; font-size: clamp(30px, 4.4vw, 44px);
-    font-weight: 800; letter-spacing: -0.02em; margin: 0 0 8px; }
-  .feat-head p { color: var(--muted); font-size: 16px; margin: 0; }
+  .feat-hero { display: grid; grid-template-columns: 1fr 320px; gap: 60px; align-items: center; padding: 50px 0 6px; }
+  .feat-head h1 { font-family: ui-rounded, -apple-system, sans-serif; font-size: clamp(30px, 4.4vw, 46px);
+    font-weight: 800; letter-spacing: -0.02em; margin: 0 0 12px; line-height: 1.05; }
+  .feat-head p { color: var(--muted); font-size: 17px; line-height: 1.55; margin: 0; max-width: 46ch; }
+  .feat-head .cta-row { justify-content: flex-start; }
 
-  .feat-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 34px; padding: 26px 0 70px; }
+  .feat-hero-video { justify-self: center; }
+  .feat-hero-video .reel { max-width: 260px; margin: 0; }
+  .feat-hero-video .reel-cap { margin: 12px auto 0; max-width: 260px; }
+
+  .scroll-cue { display: flex; flex-direction: column; align-items: center; gap: 8px;
+    margin: 46px auto 6px; color: var(--faint); }
+  .scroll-cue span { font-size: 12.5px; letter-spacing: .05em; }
+  .scroll-cue svg { width: 20px; height: 20px; animation: cue-bob 1.8s ease-in-out infinite; }
+  @keyframes cue-bob { 0%, 100% { transform: translateY(0); opacity: .55; } 50% { transform: translateY(7px); opacity: 1; } }
+  @media (prefers-reduced-motion: reduce) { .scroll-cue svg { animation: none; } }
+
+  @media (max-width: 860px) {
+    .feat-hero { grid-template-columns: 1fr; gap: 30px; padding-top: 40px; }
+    .feat-hero-video { justify-self: center; }
+    .feat-hero-video .reel { max-width: 220px; }
+  }
+
+  .feat-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 34px; padding: 10px 0 70px; }
   @media (max-width: 1080px) { .feat-grid { grid-template-columns: repeat(3, 1fr); } }
   @media (max-width: 720px)  { .feat-grid { grid-template-columns: repeat(2, 1fr); } }
   @media (max-width: 460px)  { .feat-grid { grid-template-columns: 1fr; } }
@@ -57,10 +75,28 @@
 </div>
 
 <div class="wrap">
-  <header class="feat-head">
-    <h1>Everything Casberi does</h1>
-    <p>Every feature, one line each. Tap any of them for how it works.</p>
-  </header>
+  <div class="feat-hero">
+    <header class="feat-head">
+      <h1>Everything Casberi does</h1>
+      <p>One private feed for everything you follow, with an on-device agent that keeps tabs — no account, nothing leaves your phone.</p>
+      <div class="cta-row">
+        <a class="cta" href="https://testflight.apple.com/join/xBD4tYZh">Get it on TestFlight</a>
+        <a class="cta ghost" href="docs.html">Read the docs</a>
+      </div>
+    </header>
+
+    <div class="feat-hero-video">
+      <div class="reel">
+        <video src="videos/casberi-reel.mp4?v=6" poster="videos/casberi-reel-poster.jpg?v=6" preload="metadata" autoplay muted loop playsinline></video>
+      </div>
+      <p class="reel-cap">Every feature, in twenty seconds — silent, on loop.</p>
+    </div>
+  </div>
+
+  <div class="scroll-cue">
+    <span>Every feature below</span>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v14M6 13l6 6 6-6"/></svg>
+  </div>
 
   <div class="feat-grid">
     <div class="feat-col">
@@ -76,10 +112,9 @@
 
     <div class="feat-col">
       <h2>Keep tabs</h2>
-      <a class="item" href="docs.html#pinned"><b>Pin your favorites</b><span>Build a board, arranged your way.</span></a>
-      <a class="item" href="docs.html#pinned"><b>Coming up</b><span>Your board leads with what&rsquo;s next &mdash; upcoming events and due reminders, soonest first.</span></a>
+      <a class="item" href="docs.html#action-button"><b>Keep an ask</b><span>A question you keep &mdash; it updates as your things change.</span></a>
       <a class="item" href="docs.html#take-action"><b>While you were away</b><span>Come back to one chip that sums up what landed while you were gone.</span></a>
-      <a class="item" href="docs.html#open"><b>Act on items</b><span>From your feed: open, pin, or share, in the app it came from.</span></a>
+      <a class="item" href="docs.html#open"><b>Act on items</b><span>From your feed: open, or share, in the app it came from.</span></a>
       <a class="item" href="docs.html#open"><b>Tag your things</b><span>Group without folders. One thing, many tags.</span></a>
       <a class="item" href="docs.html#feed"><b>Apps take shape</b><span>Calendar reads like an agenda, Photos becomes a grid, a wallet leads with its balance.</span></a>
       <a class="item" href="docs.html#feed"><b>Across your wallets</b><span>Watch a few wallets and see them as one &mdash; a combined view over everything you hold.</span></a>
@@ -100,7 +135,6 @@
     <div class="feat-col">
       <h2>Make it yours</h2>
       <a class="item" href="docs.html#settings"><b>Avatar</b><span>Your photo, up top.</span></a>
-      <a class="item" href="docs.html#settings"><b>Background</b><span>A color or a picture of yours, behind your board.</span></a>
       <a class="item" href="docs.html#settings"><b>Language</b><span>English, Espa&ntilde;ol, &#20013;&#25991;, &#26085;&#26412;&#35486;, &#54620;&#44397;&#50612;.</span></a>
       <a class="item" href="docs.html#settings"><b>Data</b><span>Lives on your phone, syncs only if you turn it on. Export, import &mdash; and two clear wipes: your things, or Casberi&rsquo;s access.</span></a>
     </div>
@@ -112,7 +146,7 @@
       <a class="item" href="privacy.html"><b>Privacy</b><span>What is stored, where, and what Casberi never does.</span></a>
       <a class="item" href="llms-full.txt"><b>For AI agents</b><span>The full docs as plain text — llms.txt inside.</span></a>
       <a class="feat-promo" href="docs.html#how-to-use">
-        <img src="videos/clip2-keep-tabs-poster.jpg" alt="">
+        <img src="videos/clip2-keep-tabs-poster.jpg?v=8" alt="">
         <div>
           <b>See it for yourself</b>
           <span>The whole app in three short clips, straight from the simulator.</span>
@@ -125,8 +159,9 @@
 
 <footer>
   <div class="wrap">
-    <p class="tagline">Your apps, one feed. Ask anything, organize everything. No account required.</p>
-    <p>&copy; 2026 Casberi &middot; <a href="/">Home</a> &middot; <a href="docs.html">Docs</a> &middot; <a href="privacy.html">Privacy</a></p>
+    <p class="tagline">One place for your apps, with an agent that keeps tabs on what matters. No account, no server, all on device.</p>
+    <p>&copy; 2026 Casberi &middot; <a href="/">Home</a> &middot; <a href="docs.html">Docs</a> &middot; <a href="privacy.html">Privacy</a> &middot; <a href="brand.html">Brand</a> &middot; <a href="mailto:privacy@casberi.app">Contact</a> &middot; <a href="https://x.com/casberi_app">@casberi_app</a></p>
+    <p>Made by <a href="https://linktr.ee/alexanderchopan">Alexander Chopan</a> &middot; <a href="https://www.linkedin.com/in/alexanderchopan">LinkedIn</a> &middot; <a href="https://x.com/alexanderchopan">X</a></p>
   </div>
 </footer>
 

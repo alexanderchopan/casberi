@@ -57,35 +57,6 @@ struct CasberiBerryShape: Shape {
     }
 }
 
-/// The mark drawing itself: a 900ms trim-path stroke in tertiary, settling
-/// into the full-color mark. Plays once per appearance.
-struct CasberiMarkDrawOn: View {
-    var size: CGFloat = 44
-    @State private var progress: CGFloat = 0
-    @State private var filled = false
-
-    var body: some View {
-        ZStack {
-            CasberiBerryShape()
-                .trim(from: 0, to: progress)
-                .stroke(DS.textTertiary, lineWidth: 1.5)
-                .opacity(filled ? 0 : 1)
-            CasberiMark(size: size)
-                .opacity(filled ? 1 : 0)
-        }
-        .frame(width: size, height: size)
-        .onAppear {
-            withAnimation(.timingCurve(0.32, 0.72, 0, 1, duration: 0.9)) {
-                progress = 1
-            }
-            Task {
-                try? await Task.sleep(for: .milliseconds(900))
-                withAnimation(DS.Motion.standard) { filled = true }
-            }
-        }
-    }
-}
-
 /// The mark on its own field, avatar-shaped — the app's face sitting where
 /// a person's photo will. The field is the icon's: black in dark, white in
 /// light, so the berry always reads.

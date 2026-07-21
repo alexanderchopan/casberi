@@ -210,7 +210,7 @@ enum AppleMusicIngest {
             SpotlightIndex.index([thing])
             added += 1
         }
-        if added > 0 || patched > 0 { try? context.save() }
+        if added > 0 || patched > 0 { context.saveHonestly() }
         return added
     }
 

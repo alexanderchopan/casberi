@@ -131,6 +131,57 @@ enum TagsAsk {
     }
 }
 
+/// Apps asks (2026-07-17) — "what apps do you have", "which apps are
+/// connected", "how many apps". A meta-question about the app SET itself —
+/// the connected seats and the catalog — not a search for content. It used
+/// to fall into the term-scored retriever, which read the literal words
+/// ("apps", "have") as search terms and surfaced noise — the answer read as
+/// nonsense. Answered from BridgeStore + BridgeCatalog directly: computed,
+/// no model, always correct (the TagsAsk move, applied to apps).
+enum AppsAsk {
+    enum Intent {
+        /// "what apps are connected", "what apps do i have" — the seats.
+        case connected
+        /// "what apps do you have", "which apps can i connect" — the catalog.
+        case catalog
+        /// "how many apps …" — the counted line.
+        case count
+    }
+
+    /// nil unless the WHOLE question is about the app set. Phrase-gated on
+    /// purpose: "anything new from my apps" is a status ask and "which app
+    /// sent the most" is arithmetic over sources (both handled elsewhere) —
+    /// neither should list the catalog.
+    static func parse(_ raw: String) -> Intent? {
+        let q = raw.lowercased()
+            .replacingOccurrences(of: "\u{2019}", with: "'")
+            .trimmingCharacters(in: CharacterSet(charactersIn: "?!. "))
+        // A superlative over sources is AggregateAsk's ("which app sent the most").
+        guard !q.contains("most") else { return nil }
+        guard q.contains("apps") || q.contains("what's connected")
+                || q.contains("whats connected") || q.contains("what is connected")
+        else { return nil }
+        if q.contains("how many") { return .count }
+        // The person's own set first — "connected"/"do i have" ask about the
+        // seats, not the shelf. "can i connect" stays a catalog ask: it asks
+        // what's possible, not what's done.
+        let connectedCues = ["connected", "do i have", "have i got", "i have",
+                             "did i add", "have i added", "am i using",
+                             "what are my apps", "which of my apps",
+                             "list my apps", "show my apps", "show me my apps",
+                             "see my apps"]
+        if connectedCues.contains(where: q.contains),
+           !q.contains("can i connect"), !q.contains("could i connect") {
+            return .connected
+        }
+        let catalogCues = ["what apps", "which apps", "do you have",
+                           "do you support", "do you offer", "can i connect",
+                           "could i connect", "can i add", "are available",
+                           "are there", "catalog"]
+        return catalogCues.contains(where: q.contains) ? .catalog : nil
+    }
+}
+
 /// Status asks (2026-07-11) — "tell me what's going on", "catch me up",
 /// "anything new?". The ask names no content, so the term-scored retriever
 /// would ground it on nothing (or on noise — a title that happens to say

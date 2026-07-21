@@ -24,8 +24,6 @@ struct SteamScreen: View {
             stepsSection.listRowSeparator(.hidden)
             fieldsSection.listRowSeparator(.hidden)
             if !recent.isEmpty {
-                PinToHomeButton(source: "Steam", inSection: true)
-                    .listRowSeparator(.hidden)
                 RecentThingsSection(header: "Games", things: recent)
                     .listRowSeparator(.hidden)
             }
@@ -33,7 +31,10 @@ struct SteamScreen: View {
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
+        .bridgeSetupWash(name: "Steam")
+        .dsAdaptiveContentWidth()
         .dsPageBackground()
+        .dsSoftTopEdge()
         .navigationTitle("Steam")
         .navigationBarTitleDisplayMode(.large)
         .onAppear {

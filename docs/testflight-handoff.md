@@ -15,33 +15,38 @@ secret, never committed):
 |---|---|---|
 | `ASC_KEY_ID` | yes | `TR287WZD72` |
 | `ASC_ISSUER_ID` | yes | `2152ec98-0a7c-477a-9c4a-e1c478a3a106` |
-| `.p8` private key | **NO — never commit** | you stage it at `/tmp/asc.p8` each ship |
+| `.p8` private key | **NO — never commit** | login Keychain, `dev-keys.sh` name `asc-p8` (see below) |
 | `teamID` | already in `exportOptions.plist` | `35428TQK3S` |
 
-Only the `.p8` grants upload access, and it's worthless to anyone without the
-matching private key. So the one manual step per ship is putting your
-`AuthKey_TR287WZD72.p8` at `/tmp/asc.p8`. The script deletes it after upload,
-which is why it won't be there next time.
+Only the `.p8` grants upload access. It lives in the macOS **login Keychain**
+under `casberi-dev.asc-p8`, managed by `scripts/dev-keys.sh` (2026-07-16 —
+this replaced the paste-a-`cp`-line-per-ship ritual).
 
 ## Who does what (the whole ritual)
 
-**The user's ONLY job is to stage the key.** Paste exactly this one line in a
-terminal — nothing else is needed from the user:
+**The user's job is a ONE-TIME store, not a per-ship step.** If (and only if)
+`scripts/dev-keys.sh list` doesn't show `asc-p8` yet, the user runs this once
+in a terminal, then never again:
 
 ```sh
-cp "/Users/alexanderchopan/Downloads/AuthKey_TR287WZD72.p8" /tmp/asc.p8
+~/Developer/casberi/scripts/dev-keys.sh set-file asc-p8 ~/Downloads/AuthKey_TR287WZD72.p8
 ```
 
-(Your `.p8` lives in `~/Downloads`. If you keep it elsewhere, change the source
-path — the destination is always `/tmp/asc.p8`.)
+(Adjust the source path if the `.p8` lives elsewhere. Legacy fallback if the
+Keychain copy is somehow gone AND the user can't re-store it:
+`cp ~/Downloads/AuthKey_TR287WZD72.p8 /tmp/asc.p8` staged manually, as before.)
 
-**Claude does everything else** once the user says the key is staged: commit the
-intended work, bump + commit the build number, and run the ship via the Bash
-tool. Claude never copies or reads the `.p8` — it only runs the script, which
-reads the key from `/tmp/asc.p8`. The command Claude runs (from the canonical
-repo, or a clean isolated worktree to exclude another session's WIP):
+**Claude does everything, including staging the key** — a ship needs nothing
+from the user once `asc-p8` is stored: commit the intended work, bump + commit
+the build number, stage the key from the Keychain, and run the ship via the
+Bash tool. Claude never reads or prints the key material — `get-file` writes
+it straight to `/tmp/asc.p8` (mode 600) and the script reads it from there.
+The commands Claude runs (from the canonical repo, or a clean isolated
+worktree to exclude another session's WIP):
 
 ```sh
+~/Developer/casberi/scripts/dev-keys.sh get-file asc-p8 /tmp/asc.p8
+
 ASC_KEY_ID=TR287WZD72 \
 ASC_ISSUER_ID=2152ec98-0a7c-477a-9c4a-e1c478a3a106 \
 ASC_KEY_PATH=/tmp/asc.p8 \
@@ -51,7 +56,9 @@ SKIP_BUMP=1 \
 
 - `SKIP_BUMP=1` reuses the already-committed build number. Omit it to let the
   script bump the number itself (then commit the bump afterward — step 4).
-- After `✓ Uploaded`, Claude wipes the key: `rm -f /tmp/asc.p8`.
+- After `✓ Uploaded`, Claude wipes the staged copy: `rm -f /tmp/asc.p8` (the
+  script also deletes it itself; belt and braces). The Keychain copy persists
+  for the next ship — do NOT delete `asc-p8` from the Keychain.
 
 ## Steps (what Claude prepares before that command)
 

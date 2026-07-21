@@ -76,7 +76,7 @@ enum ContactsIngest {
         }
         if !landed.isEmpty {
             SpotlightIndex.index(landed)
-            try? context.save()
+            context.saveHonestly()
         }
         return landed.count
     }

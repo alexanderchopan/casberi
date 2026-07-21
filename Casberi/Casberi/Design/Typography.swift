@@ -36,6 +36,15 @@ extension DSTextStyle {
     static let label12   = DSTextStyle(size: 12, weight: .medium,   tracking: 0,    lineHeight: 16, relative: .caption1)
     static let tab10     = DSTextStyle(size: 10, weight: .medium,   tracking: 0,    lineHeight: 12, relative: .caption2)
     static let mono12    = DSTextStyle(size: 12, weight: .regular,  tracking: 0,    lineHeight: 16, relative: .caption1, monospaced: true)
+
+    // The Big money rungs (prd §102, 2026-07-17) — token money's three
+    // deliberate off-ramp sizes: the sheet's hero price, its stat cards, the
+    // fat feed row's price. Display-tier rounded bold, and routed through
+    // this ramp precisely so they SCALE with Dynamic Type like everything
+    // else (raw `.font(.system(size:))` froze while neighbors grew).
+    static let price40 = DSTextStyle(size: 40, weight: .bold, tracking: 0, lineHeight: 44, relative: .largeTitle, rounded: true)
+    static let stat24  = DSTextStyle(size: 24, weight: .bold, tracking: 0, lineHeight: 28, relative: .title2, rounded: true)
+    static let price16 = DSTextStyle(size: 16, weight: .bold, tracking: 0, lineHeight: 20, relative: .callout, rounded: true)
 }
 
 private struct DSTextModifier: ViewModifier {

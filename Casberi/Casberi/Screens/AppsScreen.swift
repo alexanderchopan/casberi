@@ -17,8 +17,9 @@ struct AppsScreen: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var pairing = false
-    @State private var storyID: String?
-    @State private var setupRoute: BridgeRouter.Destination?
+    /// The card body's door — a tap (not a swipe) pushes this offer's
+    /// product page via `navigationDestination`.
+    @State private var openOffer: String?
     @State private var query = ""
     /// The connect payoff (delight): every Connect on this screen — story
     /// card OR shelf capsule — ends the same way the product page's does,
@@ -35,32 +36,40 @@ struct AppsScreen: View {
     /// Bumped when a jump chip lands on a shelf — the header flashes once so
     /// the tap has an arrival, not just a silent scroll.
     @State private var shelfLand: [String: Int] = [:]
+    /// Bumped when a category's LAST addable app connects — the shelf header
+    /// glows once in the category's own color and a toast names the set now
+    /// complete. Its own trigger (not `shelfLand`) so the completion glow wears
+    /// the category color while a jump stays neutral tint.
+    @State private var shelfComplete: [String: Int] = [:]
+    /// The app that just connected, by any path — the shelf row wearing this
+    /// name lifts as it takes its connected seat. `connectLiftToken` fires one
+    /// lift; the name gates which row.
+    @State private var justConnectedName: String?
+    @State private var connectLiftToken = 0
+    /// Connect-count milestones (5 / 10 / 25 seats): the highest threshold
+    /// already celebrated, persisted so each fires once, forever. Seeded to the
+    /// highest passed threshold on appear so a user who arrives past one never
+    /// gets a late toast.
+    @AppStorage("apps.connectMilestone.reached") private var connectMilestoneReached = 0
+    /// "Because of what you keep" — corpus-derived Discover seats, read once per
+    /// appearance (a plain fetch, counted in memory; never per frame).
+    @State private var tasteReasons: [CatalogTaste.Reason] = []
     #if DEBUG
     @State private var probe: AppsProbe?
     #endif
 
     // MARK: - Categories (merge map over Offer.group — Browse + chart filter ONLY,
-    // never vertical section headers)
+    // never vertical section headers). Lives in `BridgeCatalog` now
+    // (2026-07-20) — the ruled single source of truth — so the agent's
+    // `category:<name>` kept-ask kind reads the exact same mapping. Kept as
+    // a thin local alias so this file's call sites don't all need renaming.
 
-    private static let categories: [(name: String, exemplar: String, groups: Set<String>)] = [
-        ("Onchain", "Wallet",      ["Wallet", "NFTs", "Onchain"]),
-        ("Life",    "Photos",      ["Photos", "Schedule", "Fitness"]),
-        ("Notes",   "Apple Notes", ["Notes"]),
-        ("Social",  "Bluesky",     ["Network"]),
-        ("Agents",  "Claude",      ["Agent", "Machines"]),
-        ("Mail",    "Gmail",       ["Mail"]),
-        ("Work",    "GitHub",      ["Work"]),
-        ("Reading", "Readwise",    ["Reading", "Saves"]),
-        ("Media",   "Spotify",     ["Watching", "Listening", "Games", "Images"]),
-        ("Shopping", "Shopify",    ["Shopping"]),
-        // Markets rides LAST (user ruling 2026-07-13, tightened same day):
-        // Onchain leads the catalog; prediction markets are a tail interest,
-        // not the front door — the shelf closes the store.
-        ("Markets", "Kalshi",      ["Markets"]),
-    ]
+    private static var categories: [(name: String, exemplar: String, groups: Set<String>)] {
+        BridgeCatalog.categories
+    }
 
     private func category(of offer: BridgeCatalog.Offer) -> String {
-        Self.categories.first { $0.groups.contains(offer.group) }?.name ?? "Life"
+        BridgeCatalog.category(of: offer)
     }
 
     /// "Because you connected" — connecting one app suggests its natural
@@ -119,7 +128,8 @@ struct AppsScreen: View {
         enum Kind { case bridge(BridgeCatalog.Offer), pair }
         let kind: Kind
         /// An eyebrow override — the adjacency reason ("Goes with GitHub").
-        /// Nil falls back to the offer's own hook (its qualifier, else "New").
+        /// Nil falls back to the offer's own qualifier; an offer with NEITHER
+        /// holds no seat (reason-or-no-seat, ruling 2026-07-16 — "New" died).
         var eyebrow: String? = nil
         var id: String {
             switch kind { case .bridge(let o): o.name; case .pair: "pair" }
@@ -138,9 +148,20 @@ struct AppsScreen: View {
         var seen = Set<String>()
         func add(_ offer: BridgeCatalog.Offer, eyebrow: String? = nil) {
             guard !seen.contains(offer.name), !active.contains(offer.name),
-                  offer.connectable else { return }
+                  offer.connectable,
+                  // Reason or no seat: the eyebrow must state something
+                  // computable — an adjacency or the offer's own qualifier.
+                  (eyebrow ?? offer.qualifier) != nil else { return }
             seen.insert(offer.name)
             out.append(Story(kind: .bridge(offer), eyebrow: eyebrow))
+        }
+        // (0) Just added — a genuinely-new offer (a real `added` date inside
+        // the week) leads: the freshest news the catalog has, and now
+        // COMPUTABLE, so the eyebrow is honest where the old "New" badge was
+        // pure assertion (the reason "New" was retired 2026-07-16 — a date
+        // brings it back legitimately).
+        for offer in BridgeCatalog.offers where offer.isNew() {
+            add(offer, eyebrow: "Just added")
         }
         // (1) Featured tracking bridges lead, in the order listed — unless
         // already connected (then they're in the strip, not the store).
@@ -156,6 +177,19 @@ struct AppsScreen: View {
                 }
             }
         }
+        // (2b) Because of what you keep — a real capture habit points at the
+        // bridge that would keep more of it (many links → Readwise, or RSS if
+        // Readwise is already connected). The first OPEN candidate in each
+        // signal takes the seat; `add`'s not-connected guard falls the loop
+        // through to the next.
+        for reason in tasteReasons {
+            for name in CatalogTaste.candidates(for: reason.offerName) {
+                guard let offer = BridgeCatalog.offers.first(where: { $0.name == name }) else { continue }
+                let before = out.count
+                add(offer, eyebrow: reason.eyebrow)
+                if out.count > before { break }
+            }
+        }
         // (3) Pair-a-client when no client is paired (replaces pairEntryRow).
         if MCPPairing.transportReady {
             let clientPaired = store.bridges.contains { $0.name == "Claude" && $0.status == .connected }
@@ -165,6 +199,10 @@ struct AppsScreen: View {
         for entry in ranked where entry.tier <= 1 && entry.offer.connectable {
             add(entry.offer)
         }
+        // A stable order on purpose — the daily rotation seeds the DECK's
+        // index once per mount (see DiscoverDeck.onAppear). Rotating this
+        // array per evaluation reshuffled the deck under a live index at
+        // midnight and whenever the seat count changed (review, 2026-07-16).
         return Array(out.prefix(4))
     }
 
@@ -175,9 +213,23 @@ struct AppsScreen: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: DS.Space.s6) {
                     if query.isEmpty {
-                        if !stories.isEmpty {
-                            storyCarousel
-                            pageDots
+                        let cards = stories
+                        if !cards.isEmpty {
+                            DiscoverDeck(
+                                stories: cards,
+                                onOpen: { openOffer = $0.name },
+                                onConnect: { offer in
+                                    // Setup bridges (paste an address/token/
+                                    // handle) route to their setup screen;
+                                    // only the system-permission bridges
+                                    // connect in one tap — the chart's split.
+                                    if offer.needsSetup {
+                                        HomeRoute.shared.bridgePush = BridgeRouter.destination(forOffer: offer.name)
+                                    } else {
+                                        attemptConnect(offer)
+                                    }
+                                },
+                                onPair: { pairing = true })
                         }
                         jumpChips(proxy)
                         categoryShelves
@@ -188,6 +240,32 @@ struct AppsScreen: View {
                 .padding(.vertical, DS.Space.s4)
                 .padding(.bottom, ShellMetrics.bottomInset)
             }
+            #if DEBUG
+            .onAppear {
+                // `-appsShelf "<Category>[:page]"` — scroll the catalog to a
+                // shelf and set its pager, headlessly (screenshot runs have no
+                // scroll gesture; same route as a jump-chip tap).
+                guard let spec = UserDefaults.standard.string(forKey: "appsShelf") else { return }
+                let parts = spec.split(separator: ":", maxSplits: 1)
+                let name = String(parts[0])
+                let page = parts.count > 1 ? (Int(parts[1]) ?? 0) : 0
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                    proxy.scrollTo("shelf-" + name, anchor: .top)
+                    // Set the pager AFTER the shelf's own ScrollView has
+                    // initialised — it writes 0 back through the binding on
+                    // first layout, which eats a value set at mount.
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+                        shelfPage[name] = page
+                        // Re-anchor: setting the pager re-lays the shelf out
+                        // and drifts the vertical offset off the header.
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+                            proxy.scrollTo("shelf-" + name, anchor: .top)
+                            NSLog("appsShelf: \(name) page \(page)")
+                        }
+                    }
+                }
+            }
+            #endif
         }
         .scrollIndicators(.hidden)
         .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .automatic),
@@ -203,19 +281,38 @@ struct AppsScreen: View {
         // 0 → first connected bridge deals the rain. A user who already has
         // connections has passed the milestone; mark it done on appear so it
         // never fires late.
-        .onAppear { if connectedCount > 0 { storeFirstConnectDone = true } }
+        .onAppear {
+            if connectedCount > 0 { storeFirstConnectDone = true }
+            // Seed the connect-count milestone to the highest already-passed
+            // threshold so arriving past one never fires a late toast.
+            let passed = Self.connectMilestones.filter { $0 <= connectedCount }.max() ?? 0
+            if passed > connectMilestoneReached { connectMilestoneReached = passed }
+            // Read the corpus once for the taste-driven Discover seats.
+            tasteReasons = CatalogTaste.reasons(context: modelContext)
+        }
         .onChange(of: connectedCount) { old, new in
             guard !storeFirstConnectDone, old == 0, new > 0 else { return }
             storeFirstConnectDone = true
             firstConnectPulse += 1
         }
+        // The store's shape after any connect/disconnect — drives the promote
+        // lift (which row just took its seat), the count milestones, and the
+        // shelf-completed glow. Keyed on the NAMES (not just the count) so the
+        // just-connected row can be identified.
+        .onChange(of: connectedNames) { old, new in
+            handleConnectChange(old: old, new: new)
+        }
+        .dsAdaptiveContentWidth()
         .dsPageBackground()
+        .dsSoftTopEdge()
         .navigationTitle("Apps")
         .navigationBarTitleDisplayMode(.large)
-        .sheet(isPresented: $pairing) { PairClientSheet() }
-        .navigationDestination(item: $setupRoute) { dest in
-            BridgeDestinationView(destination: dest)
+        .navigationDestination(item: $openOffer) { name in
+            if let offer = BridgeCatalog.offers.first(where: { $0.name == name }) {
+                AppDetailScreen(offer: offer)
+            }
         }
+        .sheet(isPresented: $pairing) { PairClientSheet() }
         #if DEBUG
         .navigationDestination(item: $probe) { p in
             switch p {
@@ -228,6 +325,17 @@ struct AppsScreen: View {
         }
         #endif
         .onAppear {
+            // A tile on the empty feed's pile landed here wanting its
+            // product page — same double-push the `-openApp` probe proved.
+            // Resolve before pushing: navigationDestination's `if let` falls
+            // through to EmptyView, so an unresolvable name (a renamed offer
+            // outrunning the pile array) would push a blank screen.
+            if let name = HomeRoute.shared.openOffer {
+                HomeRoute.shared.openOffer = nil
+                if BridgeCatalog.offers.contains(where: { $0.name == name }) {
+                    openOffer = name
+                }
+            }
             #if DEBUG
             if UserDefaults.standard.bool(forKey: "openPair") { pairing = true }
             if UserDefaults.standard.bool(forKey: "openWallet") { probe = .wallet }
@@ -235,7 +343,7 @@ struct AppsScreen: View {
             // `-openSetup "<Offer name>"` pushes a bridge's setup screen
             // directly — the token/handle field screens have no deep link.
             if let name = UserDefaults.standard.string(forKey: "openSetup") {
-                setupRoute = BridgeRouter.destination(forOffer: name)
+                HomeRoute.shared.bridgePush = BridgeRouter.destination(forOffer: name)
             }
             #endif
         }
@@ -255,15 +363,47 @@ struct AppsScreen: View {
         }
     }
 
+    /// A query that looks like a site or newsletter — a dot (a domain), or a
+    /// word that names web-publishing. RSS follows most of these, so the miss
+    /// becomes a connect path instead of a dead end.
+    private func looksLikeSite(_ q: String) -> Bool {
+        let s = q.lowercased()
+        if s.contains(".") { return true }
+        return ["feed", "blog", "newsletter", "rss", "substack", "site", "website"]
+            .contains { s.contains($0) }
+    }
+
+    /// The RSS offer as an addable row — nil if RSS is already connected (then
+    /// there's nothing to suggest).
+    private var rssSuggestion: Ranked? {
+        ranked.first { $0.offer.name == "RSS" && $0.tier == 1 }
+    }
+
     @ViewBuilder
     private var searchResults: some View {
         let hits = searchHits
         if hits.isEmpty {
-            Text("No apps match \(Text(query).fontWeight(.semibold)).")
-                .dsText(.body17).foregroundStyle(DS.textSecondary)
-                .frame(maxWidth: .infinity, alignment: .center)
-                .padding(.top, DS.Space.s8)
-                .padding(.horizontal, DS.Space.s4)
+            VStack(spacing: DS.Space.s4) {
+                Text("No apps match \(Text(query).fontWeight(.semibold)).")
+                    .dsText(.body17).foregroundStyle(DS.textSecondary)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding(.horizontal, DS.Space.s4)
+                // A website-looking query has an answer even when no app name
+                // matches: RSS follows most sites. Honest — the row's own
+                // Connect opens RSS's real setup.
+                if looksLikeSite(query), let rss = rssSuggestion {
+                    VStack(alignment: .leading, spacing: DS.Space.s2) {
+                        Text("RSS can follow most sites.")
+                            .dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                            .padding(.horizontal, DS.Space.s4)
+                        VStack(spacing: DS.Space.s1) { appRow(rss) }
+                            .padding(.vertical, DS.Space.s1)
+                            .dsCard()
+                            .padding(.horizontal, DS.Space.s4)
+                    }
+                }
+            }
+            .padding(.top, DS.Space.s8)
         } else {
             VStack(spacing: DS.Space.s1) {
                 ForEach(Array(hits.enumerated()), id: \.element.id) { i, entry in
@@ -284,7 +424,7 @@ struct AppsScreen: View {
     private func attemptConnect(_ offer: BridgeCatalog.Offer) {
         BridgeConnect.connect(offer, store: store, context: modelContext) { ok in
             if ok { celebrateConnect(offer) }
-            else { chrome.flash("Couldn't connect \(offer.name).") }
+            else { chrome.flash("Couldn't connect \(offer.name).", tone: .failure) }
         }
     }
 
@@ -294,10 +434,12 @@ struct AppsScreen: View {
     /// (The first-connect berry rain is dealt by `connectedCount`'s watcher,
     /// not here — it must fire for setup-screen connects too.)
     private func celebrateConnect(_ offer: BridgeCatalog.Offer) {
-        DSHaptic.success()
-        connectHue = DS.brandHue(for: offer.name) ?? DS.tint
+        // Glyph-colored marks bloom their glyph (Tokens' green) — a
+        // near-black tile hue is no payoff (BridgeGlyph.signalColor's rule).
+        connectHue = BridgeGlyph.glyphTint(for: offer.name)
+            ?? DS.brandHue(for: offer.name) ?? DS.tint
         connectToken += 1
-        chrome.flash(BridgeConnect.landingMessage(offer.name))
+        chrome.flash(BridgeConnect.landingMessage(offer.name), tone: .success)
     }
 
     /// Connected, healthy bridges — the count whose 0 → 1 transition is the
@@ -306,81 +448,291 @@ struct AppsScreen: View {
         store.bridges.filter { $0.status != .paused }.count
     }
 
-    // MARK: - Story carousel (the ONE brand-gradient license)
+    /// The connected-seat count milestones — quiet count-up toasts, the sibling
+    /// of §36v's "N things banked." at the catalog. First-connect is its own
+    /// berry-rain moment; these mark the collection filling out.
+    private static let connectMilestones = [5, 10, 25]
 
-    private var storyCarousel: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(alignment: .top, spacing: DS.Space.s3) {
-                ForEach(stories) { story in
-                    storyCard(story)
-                        .containerRelativeFrame(.horizontal) { length, _ in length - 12 }
-                        .frame(maxHeight: .infinity, alignment: .topLeading)
-                        // Coverflow depth (delight, 2026-07-12): a card turns and
-                        // recedes a touch as it leaves center, so the marquee has
-                        // dimension instead of sliding flat. Off under Reduce Motion.
-                        .scrollTransition(.interactive, axis: .horizontal) { content, phase in
-                            content
-                                .scaleEffect(reduceMotion || phase.isIdentity ? 1 : 0.94)
-                                .opacity(reduceMotion || phase.isIdentity ? 1 : 0.8)
-                                .rotation3DEffect(.degrees(reduceMotion ? 0 : phase.value * -5),
-                                                  axis: (x: 0, y: 1, z: 0), perspective: 0.5)
-                        }
-                        .id(story.id)
-                }
-            }
-            .fixedSize(horizontal: false, vertical: true)
-            .scrollTargetLayout()
-        }
-        .scrollTargetBehavior(.viewAligned)
-        .scrollPosition(id: $storyID)
-        .contentMargins(.horizontal, DS.Space.s4, for: .scrollContent)
+    /// The connected bridges' names, sorted — a stable value whose changes name
+    /// exactly which seat filled or emptied.
+    private var connectedNames: [String] {
+        store.bridges.filter { $0.status != .paused }.map(\.name).sorted()
     }
 
-    @ViewBuilder
-    private func storyCard(_ story: Story) -> some View {
-        switch story.kind {
-        case .bridge(let offer):
-            // The eyebrow rotates off the offer's own hook — the adjacency
-            // reason if it has one, else its honest qualifier ("No account" /
-            // "One tap" / "Import"), else "New". A card that says "New"
-            // forever stops being read; a card that says why it's here sells.
-            storyCardBody(
-                eyebrow: story.eyebrow ?? offer.qualifier ?? "New",
-                headline: offer.tagline,
-                iconName: offer.name,
-                name: offer.name,
-                brand: DS.legibleCardFill(for: offer.name),
-                verb: .connect,
-                previewName: offer.name
-            ) {
-                // Setup bridges (paste an address/token/handle) route to their
-                // setup screen; only the system-permission bridges connect in
-                // one tap, same split the chart uses.
-                if offer.needsSetup {
-                    setupRoute = BridgeRouter.destination(forOffer: offer.name)
-                } else {
-                    attemptConnect(offer)
-                }
+    /// Connectable-but-not-connected offers per category, for a given set of
+    /// connected names — the "still addable" count whose fall to zero completes
+    /// a shelf.
+    private func addableByCategory(connected: Set<String>) -> [String: Int] {
+        var out: [String: Int] = [:]
+        for offer in BridgeCatalog.offers
+        where offer.connectable && !connected.contains(offer.name) {
+            out[category(of: offer), default: 0] += 1
+        }
+        return out
+    }
+
+    /// A category's identity color — its exemplar's glyph color, for the
+    /// shelf-completed glow.
+    private func categoryColor(_ name: String) -> Color {
+        let exemplar = Self.categories.first { $0.name == name }?.exemplar ?? name
+        return BridgeGlyph.color(for: exemplar)
+    }
+
+    /// One connect/disconnect reconciled into the three store-shape moments:
+    /// the just-connected row's promote lift, the count milestones, and a
+    /// completed shelf's glow. All read from the name delta so every connect
+    /// path (one-tap AND setup-screen) lands here identically.
+    private func handleConnectChange(old: [String], new: [String]) {
+        let added = Set(new).subtracting(Set(old))
+        // (4) Promote-lift the row that just took its seat.
+        if let name = added.first {
+            justConnectedName = name
+            connectLiftToken += 1
+        }
+        // (2) Count milestones — fire the highest newly-crossed threshold once.
+        if new.count > old.count {
+            let crossed = Self.connectMilestones
+                .filter { $0 <= new.count && $0 > connectMilestoneReached }
+                .max()
+            if let t = crossed {
+                connectMilestoneReached = t
+                chrome.flash("\(t) apps connected.", tone: .success)
             }
-        case .pair:
-            storyCardBody(
-                eyebrow: "Pair a client",
-                headline: "Let Claude reach your things",
-                iconName: "Claude",
-                name: "Claude",
-                brand: DS.tint,
-                verb: .pair
-            ) { pairing = true }
+        }
+        // (1) Shelf completed — a category whose last addable app just
+        // connected glows in its own color and the toast names the set. Only a
+        // real set (≥2 connectable offers) earns the moment; a lone-app
+        // category completing is trivial.
+        let before = addableByCategory(connected: Set(old))
+        let after = addableByCategory(connected: Set(new))
+        for cat in Self.categories {
+            guard (before[cat.name] ?? 0) > 0, (after[cat.name] ?? 0) == 0 else { continue }
+            let total = BridgeCatalog.offers.filter {
+                $0.connectable && category(of: $0) == cat.name
+            }.count
+            guard total >= 2 else { continue }
+            shelfComplete[cat.name, default: 0] += 1
+            chrome.flash("\(cat.name) — all connected.", tone: .success)
         }
     }
+
+    // MARK: - Discover deck (the ONE brand-gradient license, dealt like cards)
+
+    /// A real deck (ruling 2026-07-16): the front card swipes AWAY — either
+    /// direction — and the next rises from underneath while the dealt card
+    /// slides to the bottom of the stack (browsing, not consuming: the deck
+    /// recycles). The cards behind peek above the front, scaled back. The
+    /// swipe is UIKit (`DeckPanCatcher`), never a SwiftUI DragGesture — the
+    /// §gotchas scroll-arbitration lesson, measured again here.
+    ///
+    /// A child view ON PURPOSE: it owns the drag state, so a dragged frame
+    /// re-renders these three cards — not the whole store (with `dragX` on
+    /// the screen, every shelf row re-diffed per frame).
+    private struct DiscoverDeck: View {
+        let stories: [Story]
+        /// The card body's door — push this offer's product page.
+        let onOpen: (BridgeCatalog.Offer) -> Void
+        /// The capsule's verb — connect (or route to setup).
+        let onConnect: (BridgeCatalog.Offer) -> Void
+        let onPair: () -> Void
+
+        @Environment(\.accessibilityReduceMotion) private var reduceMotion
+        @State private var deckIndex = 0
+        @State private var dragX: CGFloat = 0
+        /// A deal in flight — the completion owns the state swap; new drags
+        /// wait, so a fast second fling can't double-advance the index or
+        /// stomp the spring mid-flight (review, 2026-07-16).
+        @State private var dealing = false
+        @State private var seeded = false
+        /// Measured card width — the fly-off distance derives from it (a
+        /// hardcoded 640 left wide layouts swapping state on-screen).
+        @State private var cardWidth: CGFloat = 360
+
+        /// The deck's feel constants, together because they must agree: a
+        /// release commits past `commit`; the under-card fully rises by
+        /// `rise` — which must stay below every fly distance so the risen
+        /// card is already in place when the completion swaps state.
+        private enum Feel {
+            static let commit: CGFloat = 160
+            static let rise: CGFloat = 240
+        }
+
+        /// The front card's index — clamped, because connecting the front
+        /// card shrinks `stories` under a live index.
+        private var top: Int { min(deckIndex, stories.count - 1) }
+
+        var body: some View {
+            VStack(spacing: DS.Space.s6) {
+                deck
+                // The deck's honest count — "1 of 4" states the real number
+                // of live seats (replaced the page dots).
+                Text("\(top + 1) of \(stories.count)")
+                    .dsText(.label12).foregroundStyle(DS.textTertiary)
+                    .monospacedDigit()
+                    .contentTransition(.numericText())
+                    .frame(maxWidth: .infinity)
+                    .animation(DS.Motion.standard, value: top)
+            }
+            .onAppear {
+                // The daily deal: which card opens FRONT rotates by
+                // day-of-year — the store opens stocked, never stuck on one
+                // pitch. Seeds the INDEX once per mount; rotating the seat
+                // array per evaluation (the first build) reshuffled the deck
+                // under a live index at midnight and whenever the seat count
+                // changed.
+                guard !seeded else { return }
+                seeded = true
+                dragX = 0
+                let day = Calendar.current.ordinality(of: .day, in: .year, for: Date()) ?? 0
+                if stories.count > 1 { deckIndex = day % stories.count }
+            }
+        }
+
+        private var deck: some View {
+            let count = stories.count
+            // How far the front card has left — the next card rises to meet it.
+            let progress = min(1, abs(dragX) / Feel.rise)
+            // The FRONT card alone defines the deck's layout; the unders hang
+            // off it as backgrounds (a ZStack of flexible-height cards
+            // measured short of what the front card painted — border probe,
+            // 2026-07-16). And because `.offset`/`.rotationEffect` are
+            // render-time, backgrounds added after them stay at the layout
+            // position while the front card flies — exactly the deck's
+            // geometry.
+            return storyCard(stories[top], parallax: reduceMotion ? 0 : dragX * 0.08)
+                .offset(x: dragX)
+                .rotationEffect(.degrees(reduceMotion ? 0 : Double(dragX / 28)),
+                                anchor: .bottom)
+                .background {
+                    if count > 1 {
+                        underCard(stories[(top + 1) % count], depth: 1, progress: progress)
+                    }
+                }
+                .background {
+                    if count > 2 {
+                        underCard(stories[(top + 2) % count], depth: 2, progress: progress)
+                    }
+                }
+                .overlay {
+                    DeckPanCatcher(
+                        onChanged: { x in if !dealing { dragX = x } },
+                        onEnded: { t, predicted in
+                            guard !dealing else { return }
+                            // Commit on where the card IS when that's already
+                            // past the line — a slow far drag with a wobbly
+                            // release must not snap back, and must deal the
+                            // way it sits (never boomerang). Otherwise the
+                            // fling decides.
+                            let travel = abs(t) > Feel.commit ? t : predicted
+                            if abs(travel) > Feel.commit, count > 1 {
+                                deal(direction: travel > 0 ? 1 : -1)
+                            } else {
+                                withAnimation(DS.Motion.standard) { dragX = 0 }
+                            }
+                        })
+                }
+                .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { cardWidth = $0 }
+                // VoiceOver can't pan — the deck advances as a named action,
+                // and the inert under-cards stay out of the tree (they'd read
+                // as duplicate cards whose activation point hit-tests the
+                // FRONT card).
+                .accessibilityAction(named: Text("Next card")) {
+                    if count > 1 { deal(direction: -1) }
+                }
+                // Headroom for the peeking under-cards (they offset upward
+                // out of the front card's bounds).
+                .padding(.top, count > 1 ? DS.Space.s4 : 0)
+                .padding(.horizontal, DS.Space.s4)
+        }
+
+        /// A card waiting under the front one — peeking above it, scaled back
+        /// by its depth, rising as the front card is dragged away. Inert.
+        private func underCard(_ story: Story, depth: Int, progress: CGFloat) -> some View {
+            let lift = CGFloat(depth) - progress
+            return storyCard(story)
+                .scaleEffect(1 - 0.05 * lift)
+                .offset(y: -10 * lift)
+                .allowsHitTesting(false)
+                .accessibilityHidden(true)
+        }
+
+        /// Deals the front card: it flies off past its own measured width,
+        /// the next rises in the same spring (progress saturates well before
+        /// the fly distance), and the COMPLETION swaps state with no
+        /// animation — the risen card is already sitting exactly where the
+        /// front slot will draw it, so the only visible change is the dealt
+        /// card joining the bottom of the deck. Completion-based on purpose:
+        /// a fixed asyncAfter raced the spring and a fast second swipe.
+        private func deal(direction: CGFloat) {
+            guard stories.count > 1, !dealing else { return }
+            // The commit past the line is felt — a selection tick, so dealing a
+            // card reads like dealing (§36v: haptics finish the motion).
+            DSHaptic.selection()
+            if reduceMotion {
+                advance()
+                return
+            }
+            dealing = true
+            withAnimation(.spring(response: 0.32, dampingFraction: 0.78),
+                          completionCriteria: .logicallyComplete) {
+                dragX = direction * (cardWidth + 100)
+            } completion: {
+                advance()
+                dealing = false
+            }
+        }
+
+        private func advance() {
+            let count = stories.count
+            guard count > 0 else { return }
+            deckIndex = (top + 1) % count
+            dragX = 0
+        }
+
+        @ViewBuilder
+        private func storyCard(_ story: Story, parallax: CGFloat = 0) -> some View {
+            switch story.kind {
+            case .bridge(let offer):
+                // The eyebrow is the seat's reason — the adjacency if it has
+                // one, else the offer's honest qualifier ("No account" / "One
+                // tap" / "Import"). `stories` guarantees one exists; "New"
+                // died with the reason-or-no-seat rule.
+                storyCardBody(
+                    eyebrow: story.eyebrow ?? offer.qualifier ?? "",
+                    headline: offer.tagline,
+                    iconName: offer.name,
+                    name: offer.name,
+                    brand: DS.legibleCardFill(for: offer.name),
+                    verb: .connect,
+                    destination: offer,
+                    parallax: parallax
+                ) { onConnect(offer) }
+            case .pair:
+                storyCardBody(
+                    eyebrow: "Pair a client",
+                    headline: "Let Claude reach your things",
+                    iconName: "Claude",
+                    name: "Claude",
+                    brand: DS.tint,
+                    verb: .pair,
+                    parallax: parallax
+                ) { onPair() }
+            }
+        }
 
     /// LAYOUT LAW: content + token padding define the card — no fixed heights,
     /// nothing absolutely positioned, no clipping. The padding is the edge.
+    ///
+    /// The card is a TEASER now (ruling 2026-07-16): reason, headline, verb —
+    /// the demo left the card and lives on the product page (and the peek),
+    /// where the same preview document renders at full contrast. One
+    /// document, one home; the card is the door.
     private func storyCardBody(eyebrow: String, headline: String, iconName: String,
                                name: String, brand: Color, verb: CapsuleVerb,
-                               previewName: String? = nil,
-                               action: @escaping () -> Void) -> some View {
-        VStack(alignment: .leading, spacing: DS.Space.s3) {
+                               destination: BridgeCatalog.Offer? = nil,
+                               parallax: CGFloat = 0,
+                               action: @escaping () -> Void) -> some View { // in DiscoverDeck
+        let card = VStack(alignment: .leading, spacing: DS.Space.s3) {
             Text(LocalizedStringKey(eyebrow))
                 .dsText(.label12)
                 .foregroundStyle(.white.opacity(0.7))
@@ -390,107 +742,76 @@ struct AppsScreen: View {
                 .lineLimit(2)
                 .minimumScaleFactor(0.7)
                 .fixedSize(horizontal: false, vertical: true)
-            // App-Store presence: the card breathes — the headline sits high,
-            // the footer sits low. The middle band ghosts what lands (the
-            // same sample rows the product page previews, 2026-07-13 polish:
-            // a flat color field between headline and footer read as
-            // unfinished, not as air). Offers without a preview keep the air.
-            // Only a real offer's card ghosts samples (the pair card's
-            // iconName is "Claude", whose import doc would leak an unrelated
-            // takeaway here — cross-file review catch, 2026-07-13).
-            let samples = previewName.map { StorePreview.samples(for: $0) } ?? []
-            if samples.isEmpty {
-                Spacer(minLength: DS.Space.s8)
-            } else {
-                Spacer(minLength: DS.Space.s2)
-                VStack(alignment: .leading, spacing: DS.Space.s2) {
-                    // Named a preview (honesty rule): fabricated sample rows
-                    // are licensed on store surfaces ONLY under explicit
-                    // preview framing — unlabeled, they read as real synced
-                    // content next to a live Connect verb.
-                    Text("Preview")
-                        .dsText(.label12)
-                        .foregroundStyle(.white.opacity(0.6))
-                    ForEach(Array(samples.enumerated()), id: \.offset) { idx, sample in
-                        HStack(spacing: DS.Space.s2) {
-                            // A social sample leads with its author's real
-                            // avatar (the face is the identity, same as the
-                            // feed row); every other kind keeps the dot.
-                            if let avatar = sample.avatarURL {
-                                RemoteThumb(urlString: avatar, size: 22, circular: true)
-                            } else {
-                                Circle().fill(.white.opacity(0.4))
-                                    .frame(width: 6, height: 6)
-                            }
-                            Text(sample.title)
-                                .dsText(.subhead13)
-                                .foregroundStyle(.white.opacity(0.92))
-                                .lineLimit(1)
-                        }
-                        .padding(.horizontal, DS.Space.s3)
-                        .frame(minHeight: 30)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(.white.opacity(0.14), in: Capsule(style: .continuous))
-                        // The sample rows assemble one after another the first
-                        // time the card appears — the store demoing the
-                        // product's own "things landing" cadence, played once.
-                        .staggerIn(index: idx + 1, step: 0.08)
-                    }
-                }
-                Spacer(minLength: DS.Space.s2)
-            }
+            Spacer(minLength: DS.Space.s6)
             HStack(spacing: DS.Space.s2) {
                 BridgeIcon(name: iconName, size: 32)
                 Text(name).dsText(.callout15).foregroundStyle(.white)
                 Spacer()
-                Button(action: action) {
-                    Text(LocalizedStringKey(verb.label))
-                        .dsText(.label12).foregroundStyle(brand)
-                        .padding(.horizontal, DS.Space.s4)
-                        .frame(minHeight: 32)
-                        .background(.white, in: Capsule(style: .continuous))
-                }
-                .buttonStyle(.plain)
+                // Reserves the verb's seat inside the tappable card so the
+                // overlaid live capsule never covers the name.
+                capsuleLabel(verb, brand: brand).hidden()
             }
         }
         .padding(DS.Space.s4)
-        .frame(maxWidth: .infinity, minHeight: 220, alignment: .topLeading)
+        .frame(maxWidth: .infinity, alignment: .topLeading)
         .background {
             // The one brand-gradient license, now with depth: the app's own
             // glyph ghosts huge across the bottom-trailing corner, bleeding
             // off the edge, so a feature card reads as inhabited instead of a
             // flat color field. White-on-hue keeps the single-gradient rule.
-            ZStack(alignment: .bottomTrailing) {
-                LinearGradient(colors: [brand, brand.opacity(0.65)],
-                               startPoint: .topLeading, endPoint: .bottomTrailing)
-                Image(systemName: BridgeGlyph.symbol(for: iconName))
-                    .font(.system(size: 150, weight: .semibold))
-                    .foregroundStyle(.white.opacity(0.10))
-                    .rotationEffect(.degrees(-12))
-                    .offset(x: 44, y: 40)
-            }
-            .clipShape(RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+            //
+            // Opaque on purpose: the deck stacks cards, so a translucent
+            // gradient (the old carousel's brand.opacity(0.65)) would let
+            // the card beneath bleed through. Mixing toward black keeps the
+            // same fade with a solid surface.
+            //
+            // The glyph rides an OVERLAY of the gradient, never a ZStack
+            // sibling: a rigid 150pt image in the background's ZStack made
+            // the whole background TALLER than the card wherever the card's
+            // content ran shorter than the glyph, and the gradient painted
+            // past both edges (measured with a border probe on the Pro Max,
+            // 2026-07-16 — the old minHeight 220 had been hiding it).
+            LinearGradient(colors: [brand, brand.mix(with: .black, by: 0.35)],
+                           startPoint: .topLeading, endPoint: .bottomTrailing)
+                .overlay(alignment: .bottomTrailing) {
+                    Image(systemName: BridgeGlyph.symbol(for: iconName))
+                        .font(.system(size: 150, weight: .semibold))
+                        .foregroundStyle((BridgeGlyph.glyphTint(for: iconName) ?? .white).opacity(0.10))
+                        .rotationEffect(.degrees(-12))
+                        // The ghost glyph drifts a touch against the drag — the
+                        // card gains cheap depth as it's pulled (the front card
+                        // passes its live `dragX`; under-cards pass 0).
+                        .offset(x: 44 + parallax, y: 40)
+                }
+                .clipShape(RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+        }
+        .contentShape(RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+
+        // The whole card is a door: body → product page (where the demo is);
+        // the capsule alone fires the verb. The pair card has no page — its
+        // body and capsule share one action. A TapGesture on purpose, NOT a
+        // Button/NavigationLink: a button activates on release even after the
+        // finger dragged, so a deck swipe would ALSO open the page (measured
+        // on the sim, 2026-07-16); a tap gesture fails on movement.
+        return ZStack(alignment: .bottomTrailing) {
+            card
+                .onTapGesture {
+                    DSHaptic.selection()
+                    if let destination { onOpen(destination) } else { action() }
+                }
+            Button(action: action) { capsuleLabel(verb, brand: brand) }
+                .buttonStyle(.plain)
+                .padding(DS.Space.s4)
         }
     }
 
-    private var pageDots: some View {
-        // Clamp to a live story: connecting the centered card drops it from
-        // `stories` while `storyID` still holds its id, which would leave every
-        // dot inactive until the next scroll. Fall back to the first card.
-        let ids = stories.map(\.id)
-        let current = storyID.flatMap { ids.contains($0) ? $0 : nil } ?? stories.first?.id
-        return HStack(spacing: DS.Space.s2) {
-            ForEach(stories) { story in
-                let active = story.id == current
-                // The active dot stretches into a short pill (the iOS idiom) —
-                // the carousel reads as inhabited, not a row of equal dots.
-                Capsule(style: .continuous)
-                    .fill(active ? DS.tint : DS.gray300)
-                    .frame(width: active ? 18 : 7, height: 7)
-            }
-        }
-        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: current)
-        .frame(maxWidth: .infinity)
+    private func capsuleLabel(_ verb: CapsuleVerb, brand: Color) -> some View {
+        Text(LocalizedStringKey(verb.label))
+            .dsText(.label12).foregroundStyle(brand)
+            .padding(.horizontal, DS.Space.s4)
+            .frame(minHeight: 32)
+            .background(.white, in: Capsule(style: .continuous))
+    }
     }
 
     // MARK: - Category shelves (the catalog's spine — one section per category)
@@ -593,11 +914,13 @@ struct AppsScreen: View {
             }
             .buttonStyle(.plain)
             .landFlash(shelfLand[name] ?? 0)
+            .landFlash(shelfComplete[name] ?? 0, tint: categoryColor(name))
         } else {
             Text(LocalizedStringKey(name))
                 .dsText(.heading22).foregroundStyle(DS.textPrimary)
                 .padding(.horizontal, DS.Space.s4)
                 .landFlash(shelfLand[name] ?? 0)
+                .landFlash(shelfComplete[name] ?? 0, tint: categoryColor(name))
         }
     }
 
@@ -689,24 +1012,28 @@ struct AppsScreen: View {
                             .dsText(.body17).fontWeight(.semibold)
                             .foregroundStyle(soon ? DS.textSecondary : DS.textPrimary)
                             .lineLimit(1)
-                        HStack(spacing: DS.Space.s2) {
-                            // The honest hook the taglines can't carry — a fact
-                            // the app already ships (a keyless connect, a single
-                            // permission, a one-time import), badged only on a
-                            // row you can still add. Connected rows keep their
-                            // live status subline instead.
-                            if entry.tier == 1, let q = entry.offer.qualifier {
-                                Text(LocalizedStringKey(q))
-                                    .dsText(.label12).foregroundStyle(DS.textSecondary)
-                                    .padding(.horizontal, DS.Space.s2)
-                                    .frame(minHeight: 20)
-                                    .background(DS.fillFaint, in: Capsule(style: .continuous))
+                        // The qualifier badge died here (user, 2026-07-16:
+                        // "'no account' repeatedly under the names... extra
+                        // text the user doesn't need") — every addable row
+                        // wearing one made it wallpaper. The qualifier still
+                        // serves as a Discover eyebrow, where ONE card states
+                        // its reason.
+                        //
+                        // A connected row's subline is its live status line
+                        // ("3 games in") — rolled up through the numeric-text
+                        // count-up so the proof arrives rather than sitting
+                        // (the same grammar the setup screen's result wears).
+                        // The other tiers stay plain, localizable copy.
+                        Group {
+                            if entry.tier == 2 {
+                                CountUpText(text: subline(entry))
+                            } else {
+                                Text(LocalizedStringKey(subline(entry)))
                             }
-                            Text(LocalizedStringKey(subline(entry)))
-                                .dsText(.subhead13)
-                                .foregroundStyle(entry.tier == 0 ? DS.attention : DS.textTertiary)
-                                .lineLimit(1)
                         }
+                        .dsText(.subhead13)
+                        .foregroundStyle(entry.tier == 0 ? DS.attention : DS.textTertiary)
+                        .lineLimit(1)
                     }
                     Spacer(minLength: 0)
                 }
@@ -726,7 +1053,7 @@ struct AppsScreen: View {
                 enabled: entry.tier == 1 && StorePreview.doc(for: entry.offer.name) != nil,
                 onConnect: {
                     if entry.offer.needsSetup {
-                        setupRoute = BridgeRouter.destination(forOffer: entry.offer.name)
+                        HomeRoute.shared.bridgePush = BridgeRouter.destination(forOffer: entry.offer.name)
                     } else {
                         attemptConnect(entry.offer)
                     }
@@ -735,6 +1062,9 @@ struct AppsScreen: View {
         }
         .padding(.horizontal, DS.Space.s4)
         .padding(.vertical, DS.Space.s2)
+        // The just-connected row lifts as the shelf re-sorts it into its
+        // connected seat — a promotion you can feel, not a silent re-order.
+        .connectPromote(isTarget: entry.offer.name == justConnectedName, token: connectLiftToken)
     }
 
     /// Sublines are honest states or the tagline — never marketing fluff.
@@ -753,13 +1083,13 @@ struct AppsScreen: View {
             // Broken connection — Fix opens management, where Reconnect lives.
             if let bridge = entry.bridge {
                 VerbCapsule(verb: .fix) {
-                    setupRoute = BridgeRouter.destination(forID: bridge.id)
+                    HomeRoute.shared.bridgePush = BridgeRouter.destination(forID: bridge.id)
                 }
             }
         case 2:
             if let bridge = entry.bridge {
                 VerbCapsule(verb: .open) {
-                    setupRoute = BridgeRouter.destination(forID: bridge.id)
+                    HomeRoute.shared.bridgePush = BridgeRouter.destination(forID: bridge.id)
                 }
             }
         case 1:
@@ -767,7 +1097,7 @@ struct AppsScreen: View {
                 // Setup bridges collect input first — Connect opens their
                 // screen; the connect happens there, with proof.
                 VerbCapsule(verb: .connect) {
-                    setupRoute = BridgeRouter.destination(forOffer: entry.offer.name)
+                    HomeRoute.shared.bridgePush = BridgeRouter.destination(forOffer: entry.offer.name)
                 }
             } else {
                 VerbCapsule(verb: .connect) { attemptConnect(entry.offer) }
@@ -785,6 +1115,130 @@ struct AppsScreen: View {
         }
     }
     #endif
+}
+
+
+// MARK: - Deck pan (UIKit)
+
+/// The deck's swipe input. A SwiftUI DragGesture here — plain OR
+/// simultaneous, any minimumDistance — beats the enclosing UIScrollView's
+/// pan, and the page stops scrolling from a finger that lands on the card
+/// (measured on the sim 2026-07-16; the same class of failure as the old Home
+/// board's drag-to-reorder, fixed the same way — one UIKit recognizer on the
+/// enclosing scroll view). This pan begins ONLY
+/// for a clearly horizontal pull that starts inside the marker's bounds;
+/// vertical and diagonal drags fail it instantly, so the scroll keeps them.
+/// The marker itself never eats touches (`isUserInteractionEnabled = false`)
+/// — the card's tap and the Connect capsule keep working.
+private struct DeckPanCatcher: UIViewRepresentable {
+    let onChanged: (CGFloat) -> Void
+    let onEnded: (_ translation: CGFloat, _ predictedEnd: CGFloat) -> Void
+
+    func makeUIView(context: Context) -> Marker {
+        let v = Marker()
+        v.backgroundColor = .clear
+        v.isUserInteractionEnabled = false
+        v.onChanged = onChanged
+        v.onEnded = onEnded
+        return v
+    }
+
+    func updateUIView(_ v: Marker, context: Context) {
+        v.onChanged = onChanged
+        v.onEnded = onEnded
+    }
+
+    /// Delivers callbacks from its OWN touch handlers — never target-action:
+    /// a stock recognizer added to SwiftUI's UIScrollView transitions state
+    /// correctly, but its target-action fires only intermittently — SwiftUI's
+    /// gesture environment eats the dispatch (the old Home board's
+    /// drag-to-reorder lesson, 2026-07-13; CLAUDE.md gotchas). Setting
+    /// `state` still feeds UIKit's exclusivity machinery, so the scroll
+    /// pan is cancelled when this begins and vice versa.
+    final class Pan: UIPanGestureRecognizer {
+        var deliver: ((UIGestureRecognizer.State, CGFloat, CGFloat) -> Void)?
+
+        override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent) {
+            super.touchesMoved(touches, with: event)
+            if state == .began || state == .changed {
+                deliver?(.changed, translation(in: view).x, velocity(in: view).x)
+            }
+        }
+
+        override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent) {
+            let wasActive = state == .began || state == .changed
+            let t = translation(in: view).x
+            let v = velocity(in: view).x
+            super.touchesEnded(touches, with: event)
+            if wasActive { deliver?(.ended, t, v) }
+        }
+
+        override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent) {
+            let wasActive = state == .began || state == .changed
+            super.touchesCancelled(touches, with: event)
+            if wasActive { deliver?(.cancelled, 0, 0) }
+        }
+    }
+
+    final class Marker: UIView, UIGestureRecognizerDelegate {
+        var onChanged: ((CGFloat) -> Void)?
+        var onEnded: ((CGFloat, CGFloat) -> Void)?
+        private var pan: Pan?
+        private weak var host: UIScrollView?
+
+        override func didMoveToWindow() {
+            super.didMoveToWindow()
+            guard window != nil, pan == nil else { return }
+            // The nearest enclosing scroll view IS the page's vertical
+            // scroller today — the jump chips' and shelves' horizontal
+            // scrollers are siblings, never ancestors. Re-check this walk if
+            // the deck ever gains a scrollable ancestor of its own.
+            var v: UIView? = superview
+            while v != nil, !(v is UIScrollView) { v = v?.superview }
+            guard let scroll = v as? UIScrollView else { return }
+            let g = Pan()
+            g.delegate = self
+            g.deliver = { [weak self] state, t, vel in
+                guard let self else { return }
+                switch state {
+                case .changed:
+                    self.onChanged?(t)
+                case .ended:
+                    // A quarter second of the release velocity — enough
+                    // prediction to let a short fast fling deal the card.
+                    self.onEnded?(t, t + vel * 0.25)
+                default:
+                    self.onEnded?(0, 0)
+                }
+            }
+            scroll.addGestureRecognizer(g)
+            pan = g
+            host = scroll
+        }
+
+        override func willMove(toWindow newWindow: UIWindow?) {
+            // Unmounting (search hides the deck) must not leave a dead
+            // recognizer on the scroll view — and a deck unmounted MID-DRAG
+            // never sends finger-up, so settle first or the card leaks a
+            // half-dragged offset into the next mount.
+            if newWindow == nil, let g = pan {
+                if g.state == .began || g.state == .changed { onEnded?(0, 0) }
+                host?.removeGestureRecognizer(g)
+                pan = nil
+            }
+            super.willMove(toWindow: newWindow)
+        }
+
+        override func gestureRecognizerShouldBegin(_ g: UIGestureRecognizer) -> Bool {
+            guard g === pan, let p = pan else { return true }
+            // The under-cards peek ABOVE the marker's frame — a swipe that
+            // starts on the peek is still a deck swipe.
+            guard bounds.insetBy(dx: 0, dy: -DS.Space.s6)
+                .contains(g.location(in: self)) else { return false }
+            let v = p.velocity(in: p.view)
+            return abs(v.x) > abs(v.y) * 1.2
+        }
+    }
 }
 
 

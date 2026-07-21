@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		CB000000000000000000001B /* ShareExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = CB0000000000000000000012 /* ShareExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		CC000000000000000000002B /* CasberiWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = CC0000000000000000000022 /* CasberiWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		CE0000000000000000000001 /* WalletConnect in Frameworks */ = {isa = PBXBuildFile; productRef = CE0000000000000000000002 /* WalletConnect */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -25,6 +26,13 @@
 			proxyType = 1;
 			remoteGlobalIDString = CC0000000000000000000023;
 			remoteInfo = CasberiWidgets;
+		};
+		CD000000000000000000003C /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = CA0000000000000000000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = CA0000000000000000000005;
+			remoteInfo = Casberi;
 		};
 /* End PBXContainerItemProxy section */
 
@@ -47,6 +55,7 @@
 		CA0000000000000000000004 /* Casberi.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Casberi.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		CB0000000000000000000012 /* ShareExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ShareExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		CC0000000000000000000022 /* CasberiWidgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = CasberiWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		CD0000000000000000000032 /* CasberiTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CasberiTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -103,6 +112,11 @@
 			path = CasberiWidgets;
 			sourceTree = "<group>";
 		};
+		CD0000000000000000000031 /* CasberiTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = CasberiTests;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -110,6 +124,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				CE0000000000000000000001 /* WalletConnect in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -127,6 +142,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		CD0000000000000000000038 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -137,6 +159,7 @@
 				CB0000000000000000000010 /* Shared */,
 				CB0000000000000000000011 /* ShareExtension */,
 				CC0000000000000000000021 /* CasberiWidgets */,
+				CD0000000000000000000031 /* CasberiTests */,
 				CA0000000000000000000003 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -147,6 +170,7 @@
 				CA0000000000000000000004 /* Casberi.app */,
 				CB0000000000000000000012 /* ShareExtension.appex */,
 				CC0000000000000000000022 /* CasberiWidgets.appex */,
+				CD0000000000000000000032 /* CasberiTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -174,6 +198,9 @@
 				CB0000000000000000000010 /* Shared */,
 			);
 			name = Casberi;
+			packageProductDependencies = (
+				CE0000000000000000000002 /* WalletConnect */,
+			);
 			productName = Casberi;
 			productReference = CA0000000000000000000004 /* Casberi.app */;
 			productType = "com.apple.product-type.application";
@@ -220,6 +247,27 @@
 			productReference = CC0000000000000000000022 /* CasberiWidgets.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
+		CD0000000000000000000033 /* CasberiTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = CD0000000000000000000034 /* Build configuration list for PBXNativeTarget "CasberiTests" */;
+			buildPhases = (
+				CD0000000000000000000037 /* Sources */,
+				CD0000000000000000000038 /* Frameworks */,
+				CD0000000000000000000039 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				CD000000000000000000003D /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				CD0000000000000000000031 /* CasberiTests */,
+			);
+			name = CasberiTests;
+			productName = CasberiTests;
+			productReference = CD0000000000000000000032 /* CasberiTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -239,6 +287,10 @@
 					CC0000000000000000000023 = {
 						CreatedOnToolsVersion = 26.5;
 					};
+					CD0000000000000000000033 = {
+						CreatedOnToolsVersion = 26.5;
+						TestTargetID = CA0000000000000000000005;
+					};
 				};
 			};
 			buildConfigurationList = CA0000000000000000000007 /* Build configuration list for PBXProject "Casberi" */;
@@ -254,6 +306,9 @@
 			);
 			mainGroup = CA0000000000000000000002;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				CE0000000000000000000003 /* XCRemoteSwiftPackageReference "reown-swift" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = CA0000000000000000000003 /* Products */;
 			projectDirPath = "";
@@ -262,6 +317,7 @@
 				CA0000000000000000000005 /* Casberi */,
 				CB0000000000000000000013 /* ShareExtension */,
 				CC0000000000000000000023 /* CasberiWidgets */,
+				CD0000000000000000000033 /* CasberiTests */,
 			);
 		};
 /* End PBXProject section */
@@ -282,6 +338,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		CC0000000000000000000029 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		CD0000000000000000000039 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -312,6 +375,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		CD0000000000000000000037 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -324,6 +394,11 @@
 			isa = PBXTargetDependency;
 			target = CC0000000000000000000023 /* CasberiWidgets */;
 			targetProxy = CC000000000000000000002C /* PBXContainerItemProxy */;
+		};
+		CD000000000000000000003D /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = CA0000000000000000000005 /* Casberi */;
+			targetProxy = CD000000000000000000003C /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -456,12 +531,13 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = Casberi/Casberi.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 71;
+				CURRENT_PROJECT_VERSION = 101;
 				DEVELOPMENT_TEAM = 35428TQK3S;
 				ENABLE_DEBUG_DYLIB = NO;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Casberi/Info.plist;
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_CFBundleDisplayName = Casberi;
 				INFOPLIST_KEY_NSAppleMusicUsageDescription = "Casberi reads what you've recently played so it lands in your feed.";
 				INFOPLIST_KEY_NSCameraUsageDescription = "Casberi scans a product's barcode so its item lands in your feed.";
@@ -470,6 +546,8 @@
 				INFOPLIST_KEY_NSContactsUsageDescription = "Casberi reads your contacts so the people you know become findable — search-only, never shown in your feed.";
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "Casberi reads your workouts so they land in your feed.";
 				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "Casberi only reads your workouts so they land in your feed — it never writes to Health.";
+				INFOPLIST_KEY_NSHomeKitUsageDescription = "Casberi reads your home's accessories — locks, doors, sensors — so their state lands as things.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Casberi reads your location once to show today's weather in Coming up — never in the background.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Casberi records your voice notes when you tap the mic.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Casberi reads screenshots you take so they land as things.";
 				INFOPLIST_KEY_NSRemindersFullAccessUsageDescription = "Casberi adds reminders to your list when you ask.";
@@ -484,7 +562,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.1;
+				MARKETING_VERSION = 1.0;
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-Wl,-stack_size,0x800000",
@@ -504,12 +582,13 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = Casberi/Casberi.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 71;
+				CURRENT_PROJECT_VERSION = 101;
 				DEVELOPMENT_TEAM = 35428TQK3S;
 				ENABLE_DEBUG_DYLIB = NO;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Casberi/Info.plist;
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_CFBundleDisplayName = Casberi;
 				INFOPLIST_KEY_NSAppleMusicUsageDescription = "Casberi reads what you've recently played so it lands in your feed.";
 				INFOPLIST_KEY_NSCameraUsageDescription = "Casberi scans a product's barcode so its item lands in your feed.";
@@ -518,6 +597,8 @@
 				INFOPLIST_KEY_NSContactsUsageDescription = "Casberi reads your contacts so the people you know become findable — search-only, never shown in your feed.";
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "Casberi reads your workouts so they land in your feed.";
 				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "Casberi only reads your workouts so they land in your feed — it never writes to Health.";
+				INFOPLIST_KEY_NSHomeKitUsageDescription = "Casberi reads your home's accessories — locks, doors, sensors — so their state lands as things.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Casberi reads your location once to show today's weather in Coming up — never in the background.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Casberi records your voice notes when you tap the mic.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Casberi reads screenshots you take so they land as things.";
 				INFOPLIST_KEY_NSRemindersFullAccessUsageDescription = "Casberi adds reminders to your list when you ask.";
@@ -532,7 +613,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.1;
+				MARKETING_VERSION = 1.0;
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-Wl,-stack_size,0x800000",
@@ -551,7 +632,7 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = ShareExtension/ShareExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 71;
+				CURRENT_PROJECT_VERSION = 101;
 				DEVELOPMENT_TEAM = 35428TQK3S;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = ShareExtension/Info.plist;
@@ -561,7 +642,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 0.1;
+				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.casberi.app.ShareExtension;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -577,7 +658,7 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = ShareExtension/ShareExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 71;
+				CURRENT_PROJECT_VERSION = 101;
 				DEVELOPMENT_TEAM = 35428TQK3S;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = ShareExtension/Info.plist;
@@ -587,7 +668,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 0.1;
+				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.casberi.app.ShareExtension;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -603,7 +684,7 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = CasberiWidgets/CasberiWidgets.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 71;
+				CURRENT_PROJECT_VERSION = 101;
 				DEVELOPMENT_TEAM = 35428TQK3S;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = CasberiWidgets/Info.plist;
@@ -613,7 +694,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 0.1;
+				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.casberi.app.CasberiWidgets;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -629,7 +710,7 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = CasberiWidgets/CasberiWidgets.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 71;
+				CURRENT_PROJECT_VERSION = 101;
 				DEVELOPMENT_TEAM = 35428TQK3S;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = CasberiWidgets/Info.plist;
@@ -639,13 +720,49 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 0.1;
+				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.casberi.app.CasberiWidgets;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		CD0000000000000000000035 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 101;
+				DEVELOPMENT_TEAM = 35428TQK3S;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.casberi.app.CasberiTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Casberi.app/Casberi";
+			};
+			name = Debug;
+		};
+		CD0000000000000000000036 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 101;
+				DEVELOPMENT_TEAM = 35428TQK3S;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.casberi.app.CasberiTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Casberi.app/Casberi";
 			};
 			name = Release;
 		};
@@ -688,7 +805,35 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
+		CD0000000000000000000034 /* Build configuration list for PBXNativeTarget "CasberiTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				CD0000000000000000000035 /* Debug */,
+				CD0000000000000000000036 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		CE0000000000000000000003 /* XCRemoteSwiftPackageReference "reown-swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/reown-com/reown-swift";
+			requirement = {
+				kind = exactVersion;
+				version = 2.3.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		CE0000000000000000000002 /* WalletConnect */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = CE0000000000000000000003 /* XCRemoteSwiftPackageReference "reown-swift" */;
+			productName = WalletConnect;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = CA0000000000000000000001 /* Project object */;
 }

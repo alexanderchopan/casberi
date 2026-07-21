@@ -24,6 +24,11 @@ enum ThingKind: String, Codable, CaseIterable {
     // A discrete item with a price and a store, so it fits the feed like a link
     // does; its own kind gives shopping a bag glyph and a "Products" pile.
     case product
+    // HomeKit (2026-07-17) — a home accessory's live state (a lock, a door, a
+    // sensor). Search-only, like Contacts: HomeKit has no historical-event
+    // API, so a home's accessories land as a handful of reference things kept
+    // current in place, not a growing feed of "the same door again."
+    case accessory
 
     /// Set form for treemap cells ("Events" is the pile; "Event" is the thing).
     var typeTagPlural: String {
@@ -53,6 +58,7 @@ enum ThingKind: String, Codable, CaseIterable {
         case .transaction: return "Transaction"
         case .contact:    return "Contact"
         case .product:    return "Product"
+        case .accessory:  return "Accessory"
         }
     }
 }
@@ -63,7 +69,7 @@ enum ThingKind: String, Codable, CaseIterable {
 /// would bury the day's real captures. One rule, read by every surface that
 /// shows the corpus, so a search-only source is declared in exactly one place.
 enum Corpus {
-    static let searchOnlySources: Set<String> = ["Contacts"]
+    static let searchOnlySources: Set<String> = ["Contacts", "HomeKit"]
 
     /// The things a surface (Feed, Home) should show — the corpus minus the
     /// search-only sources.
@@ -86,6 +92,32 @@ struct Provenance: Codable, Hashable {
     var agent: String?
     var run: String?
     var machine: String?
+}
+
+/// A post referenced BY a thing — the cast it quotes, or the cast it replies
+/// under (2026-07-16). One shape for both: a face, a handle, the words, and
+/// the permalink a tap follows. Stored as a Codable value on the model, the
+/// way `Provenance` is — a quote is one compound fact, not four loose columns.
+///
+/// `text` is the referenced post's FULL text, not a title line: the card that
+/// renders it clamps at read time (a quote is context, so it shows a few lines
+/// and stops), and clamping at ingest would throw away words the sheet may
+/// later want.
+struct SocialCard: Codable, Hashable, Identifiable {
+    /// Computed, so it never enters the encoded form — the protocol ref when
+    /// there is one, else whatever else distinguishes this card.
+    var id: String { ref ?? url ?? "\(handle):\(text)" }
+
+    var handle: String
+    var text: String
+    var avatarURL: String?
+    /// The web permalink — what Open follows.
+    var url: String?
+    /// The PROTOCOL ref, in `Thing.sourceRef` form ("fc:<hash>",
+    /// "bsky:<at-uri>") — what reading this post's own replies needs, so a tap
+    /// can walk the thread in-app. The web permalink can't stand in: a
+    /// Farcaster one carries only the first 10 characters of the hash.
+    var ref: String? = nil
 }
 
 /// The one container. Notes, screenshots, chats, events, links — and later
@@ -136,6 +168,54 @@ final class Thing {
     /// (2026-07-09). Optional + default nil keeps CloudKit mirroring happy;
     /// nil for every non-Wallet thing.
     var walletAddress: String? = nil
+    /// The OTHER side of a Wallet transaction, lowercased hex (2026-07-15) — who
+    /// it came from when received, where it went when sent. The title names this
+    /// counterparty when it resolves to something (a watched wallet, a known
+    /// contract, ENS, or a name the person gave it), but the raw hex was
+    /// discarded after the title was written, so the thing sheet had nothing to
+    /// bind a "name this address" verb to. Persisting it lets the person label a
+    /// counterparty from the sheet (CounterpartyLabels), enriching future
+    /// transfers. Optional + default nil keeps CloudKit mirroring happy; nil for
+    /// native-coin transfers with no counterparty and every non-Wallet thing.
+    var counterpartyAddress: String? = nil
+    /// A Wallet transfer's direction as DATA — `"sent"` or `"received"`
+    /// (2026-07-16). The stage (`TransferStage`) used to parse the verb back
+    /// out of the title sentence; the title stays the display string, this is
+    /// the fact it was built from. A raw string, not an enum, so an unknown
+    /// future value from a newer synced device degrades to the title-parse
+    /// fallback instead of failing the decode. Optional + default nil keeps
+    /// CloudKit mirroring happy; nil for swaps and self-moves (two legs, no
+    /// single direction), for every non-Wallet thing, and for transfers
+    /// landed before this field — those keep parsing the title.
+    var transferDirection: String? = nil
+    /// The moved amount as the title leads with it — `"0.9962 ETH"` (just
+    /// `"ETH"` when the value was unreadable, mirroring the title). Set
+    /// beside `transferDirection`; same nils.
+    var transferAmount: String? = nil
+    /// The venue a Solana move rode (`"Jupiter"`) — a WHERE, not a who: the
+    /// program that executed it, never a renameable counterparty (that clause
+    /// lives in `transferCounterparty` and `counterpartyAddress`). nil for
+    /// EVM transfers (their " on …" clause is the counterparty) and
+    /// everything else.
+    var transferVenue: String? = nil
+    /// The counterparty's display name as the title carries it — `"Uniswap"`,
+    /// `"Mom"`, a swap's router (2026-07-16). Exactly two writers, the same
+    /// two that write the title's clause: ingest (the resolved name, nil when
+    /// nameless) and the rename flow (`retitleWalletThings` sets this beside
+    /// the rewritten title), so the field can never trail a rename. nil for
+    /// every non-Wallet thing and for transfers landed before this field —
+    /// those parse the title.
+    var transferCounterparty: String? = nil
+    /// A wallet safety signal on a landed transfer (2026-07-20) — today only
+    /// `"poisoning"`: an incoming transfer whose counterparty address fuzzily
+    /// mimics one this wallet has actually sent to (same leading/trailing hex,
+    /// different address), the address-poisoning scam's whole mechanism. The
+    /// thing still lands honestly as a transfer; this only adds the warning.
+    /// A raw string, not an enum, so an unknown future value from a newer
+    /// synced device degrades to "no warning shown" instead of failing the
+    /// decode. Optional + default nil keeps CloudKit mirroring happy; nil for
+    /// every non-Wallet thing and for every transfer that isn't flagged.
+    var securityFlag: String? = nil
     /// The account a social post came from — the Bluesky/Farcaster handle
     /// that authored it. When more than one account of a source is watched,
     /// the row leads with that author's avatar and names them, the way a
@@ -151,18 +231,37 @@ final class Thing {
     /// retrieve by MEANING, not just shared words. Derived by a lazy foreground
     /// sweep (`EmbeddingIndex`), never at the capture sites, so every bridge,
     /// CloudKit-synced thing, and the pre-existing corpus gets embedded alike.
-    /// Kept INLINE (not externalStorage): ~2KB, and retrieval reads every
-    /// vector each query — a per-thing file read would be far slower. Optional +
-    /// default nil keeps CloudKit mirroring happy and marks a thing as
-    /// not-yet-indexed; an empty `Data` means "indexed, but unembeddable".
-    var embedding: Data? = nil
+    /// externalStorage (2026-07-15, reversed from the original inline choice):
+    /// every `@Query` on `Thing` — including Home/Feed, which never read this
+    /// field — was hydrating this ~2KB blob on EVERY row, because SwiftData
+    /// eagerly loads inline attributes. That made it the single biggest
+    /// amplifier of launch/recompose cost as the corpus grows. Retrieval
+    /// (`EmbeddingIndex`, capped at 2000 things) now pays a per-thing file
+    /// read instead — worse in isolation, but it only runs on an Ask, not on
+    /// every Home/Feed paint. Optional + default nil keeps CloudKit mirroring
+    /// happy and marks a thing as not-yet-indexed; an empty `Data` means
+    /// "indexed, but unembeddable".
+    @Attribute(.externalStorage) var embedding: Data? = nil
+
+    /// Extracted supplementary text for RETRIEVAL ONLY (2026-07-15) — a saved
+    /// link's readable article body, or the substance a thin title can't carry.
+    /// Never shown as a tag, a title, or a feed row; read only by
+    /// `EmbeddingIndex.indexText` (so the vector reflects what a thing is
+    /// ABOUT), the retriever's content scan, and `answerSnippet` (so the model
+    /// sees the substance, not just the title). `content` still holds the
+    /// thing's own bytes — a link's URL, a note's text — so open/route logic is
+    /// untouched. Setting this clears `embedding` so the sweep re-indexes on the
+    /// richer text. Optional + default nil keeps CloudKit mirroring happy; nil
+    /// until an enrichment pass reaches the thing.
+    var enrichedText: String? = nil
 
     /// A reminder's own due date, structured (2026-07-14) — the deadline the
     /// "Coming up" lane sorts on. A reminder's `capturedAt` is its CREATION
     /// time, so its deadline can't ride that field; events carry their deadline
     /// as `capturedAt` (the start) and leave this nil. Set after init by
     /// `ScheduleIngest.connectReminders` from `dueDateComponents`; nil for a
-    /// reminder with no due date and for every non-reminder thing. Optional +
+    /// reminder with no due date. A 1Claw grant's `expires_at` lands here too
+    /// (a real structured deadline); other things leave it nil. Optional +
     /// default nil keeps CloudKit mirroring happy.
     var dueAt: Date? = nil
 
@@ -203,6 +302,56 @@ final class Thing {
     /// The ISO 4217 code (`USD`, `GBP`) `priceValue` is denominated in — so a
     /// re-formatted price never guesses the currency. nil when unknown.
     var priceCurrency: String? = nil
+
+    // MARK: - Social posts (2026-07-16)
+
+    /// A post's FULL text — the cast/post exactly as written (2026-07-16). The
+    /// `title` is still the one-line 80-char clamp every row and search reads,
+    /// and `content` still holds the web permalink (so Open/Share/route logic
+    /// is untouched) — but a post longer than its title used to be
+    /// unrecoverable: the sheet rendered `content`, i.e. a URL string, and the
+    /// words were simply gone from the app. This carries them. nil for every
+    /// non-social thing, and for posts landed before this field (the refresh
+    /// backfills the ones still in the page).
+    var postText: String? = nil
+
+    /// WHY a social post is here, when it isn't simply "an account you watch
+    /// posted it": `"liked"` (they liked it — the save verb) or `"mention"`
+    /// (it names them). nil = authored by a watched account, the plain case.
+    /// A raw string, not an enum, so an unknown future value from a synced
+    /// device degrades to "no marker" instead of failing the decode.
+    var socialContext: String? = nil
+
+    /// The channel/feed a post arrived through — a Farcaster channel name
+    /// (`design`) or a Bluesky custom feed's display name. Orthogonal to
+    /// `socialContext`: a mention can arrive in a channel. nil when the post
+    /// came from an account directly.
+    var channelName: String? = nil
+
+    /// A post's engagement at LAST SYNC (2026-07-16) — what the network's own
+    /// public API reported, never derived or estimated. These go stale between
+    /// syncs, which is why the sheet states them as a quiet line and not a live
+    /// number. nil (not 0) when the source didn't report it: a zero means "none",
+    /// an absent value means "we don't know", and the honesty rule needs those
+    /// to stay different.
+    var likeCount: Int? = nil
+    var repostCount: Int? = nil
+    var replyCount: Int? = nil
+
+    /// The post this one QUOTES — both networks' signature form, dropped at
+    /// ingest until now (a quote-post read as a bare, contextless line).
+    var quote: SocialCard? = nil
+
+    /// The post this one REPLIES under — so the sheet can say "Replying to
+    /// @…" and a landed mention (usually a reply) carries the thing it
+    /// answers. nil for a top-level post.
+    var parent: SocialCard? = nil
+
+    /// EVERY image the post carries, in order (2026-07-16). `previewImageURL`
+    /// stays the row's single 26pt thumb (the band's rhythm holds); this is
+    /// what the sheet lays out, so a four-photo post stops losing three of
+    /// them. Empty for a text-only post and for everything non-social.
+    var imageURLs: [String] = []
 
     init(
         id: UUID = UUID(),

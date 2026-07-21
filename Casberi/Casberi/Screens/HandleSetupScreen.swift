@@ -205,7 +205,7 @@ enum HandleBridge: String {
 
     var canLine: String {
         switch self {
-        case .bluesky:   "Reads public posts and mentions."
+        case .bluesky:   "Reads public posts — accounts, feeds, mentions."
         case .farcaster: "Reads public casts — accounts, channels, likes."
         case .pinterest: "Reads your public pins."
         default:         feedKind!.canLine
@@ -251,8 +251,8 @@ enum HandleBridge: String {
     /// The line under the watched-accounts list, explaining its toggles.
     var watchFooter: String? {
         switch self {
-        case .farcaster: "Likes lands casts an account likes — like it there, it's saved here. Mentions lands casts naming them."
-        case .bluesky:   "Mentions lands posts that name them — replies and quotes included."
+        case .farcaster: "Likes — also saves the casts an account has liked. Mentions — also saves casts that name them."
+        case .bluesky:   "Mentions — also saves posts that name them, replies and quotes included."
         default:         nil
         }
     }
@@ -261,11 +261,16 @@ enum HandleBridge: String {
     /// multi bridges, the first watched account stands in.
     var currentName: String { names.first ?? "" }
 
-    /// Connected at all — for Farcaster a followed CHANNEL with no account
-    /// still counts (it syncs, it can disconnect); everywhere else the
-    /// account list is the whole story.
+    /// Connected at all — for Farcaster a followed CHANNEL, and for Bluesky a
+    /// followed FEED (2026-07-16), still counts with no account at all: it
+    /// syncs, it can disconnect. Everywhere else the account list is the whole
+    /// story.
     var isConnected: Bool {
-        self == .farcaster ? FarcasterStore.shared.connected : !names.isEmpty
+        switch self {
+        case .farcaster: FarcasterStore.shared.connected
+        case .bluesky:   BlueskyStore.shared.connected
+        default:         !names.isEmpty
+        }
     }
 
     /// Teardown only (the single Pinterest path + Disconnect): an empty name
@@ -311,6 +316,7 @@ struct HandleSetupScreen: View {
 
     @Environment(\.modelContext) private var modelContext
     @Environment(BridgeStore.self) private var store
+    @Environment(ShellChrome.self) private var chrome
     @State private var nameField = ""
     @State private var syncing = false
     @State private var result: String?
@@ -339,9 +345,17 @@ struct HandleSetupScreen: View {
     @State private var channelField = ""
     @State private var channelSyncing = false
     @State private var channelError: String?
+    /// Bluesky feed search results, awaiting a pick — a feed has no typeable
+    /// name, so the search IS the entry gesture (2026-07-16).
+    @State private var feedHits: [BlueskyStore.Feed] = []
     /// A chip toggled (or channel followed) while a sync is in flight —
     /// the finished sync runs once more instead of silently dropping it.
     @State private var resyncQueued = false
+
+    /// The account whose follow graph the import sheet is showing, or nil
+    /// (2026-07-16) — the handle doubles as the sheet's item, so opening it
+    /// for a second account can't show the first one's list.
+    @State private var followImport: FollowImportTarget?
 
     /// People matching what's typed so far — the field doubles as a finder
     /// on the bridges with public search. Cleared on add and on emptying.
@@ -367,20 +381,8 @@ struct HandleSetupScreen: View {
             if bridge == .farcaster {
                 channelsSection.listRowSeparator(.hidden)
             }
-            // Pin to Home (and its auto-social inverse) sits above the recent
-            // list — the same spot every app screen puts it (user, 2026-07-14),
-            // so it's never a long scroll away. Every connected account is
-            // pinnable (ruling 2026-07-12) — except the auto-social ones
-            // (Bluesky/Farcaster), which show by default and carry the inverse
-            // "Show on Home" toggle instead. Shown once the account has landed
-            // a thing — an empty source composes no tile, so its pin would be a
-            // dead control.
-            if !bridge.currentName.isEmpty, !recent.isEmpty,
-               !HomePinnedSources.autoSocial.contains(bridge.rawValue) {
-                pinToHomeSection.listRowSeparator(.hidden)
-            }
-            if bridge.isConnected, HomePinnedSources.autoSocial.contains(bridge.rawValue) {
-                showOnHomeSection.listRowSeparator(.hidden)
+            if bridge == .bluesky {
+                feedsSection.listRowSeparator(.hidden)
             }
             if !recent.isEmpty {
                 RecentThingsSection(header: bridge.recentHeader, things: recent,
@@ -388,7 +390,7 @@ struct HandleSetupScreen: View {
                     .listRowSeparator(.hidden)
             }
             if showHomeHint {
-                seeOnHomeSection.listRowSeparator(.hidden)
+                seeInFeedSection.listRowSeparator(.hidden)
             }
             if bridge.isConnected {
                 BridgeDisconnectSection(
@@ -396,7 +398,6 @@ struct HandleSetupScreen: View {
                     teardown: {
                         bridge.setName("")
                         accountNames = []
-                        HomePinnedSources.shared.clear(bridge.rawValue)
                     }
                 ).listRowSeparator(.hidden)
             }
@@ -404,7 +405,10 @@ struct HandleSetupScreen: View {
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
+        .bridgeSetupWash(name: bridge.rawValue)
+        .dsAdaptiveContentWidth()
         .dsPageBackground()
+        .dsSoftTopEdge()
         .navigationTitle(bridge.rawValue)
         .navigationBarTitleDisplayMode(.large)
         .onAppear {
@@ -428,79 +432,33 @@ struct HandleSetupScreen: View {
                 hits = found
             }
         }
-    }
-
-    /// Pin to Home (prd 58, Goal 4) — the board grows from the catalog:
-    /// connecting an account can end here, without waiting for it to earn
-    /// a card the automatic way. Same verb, both directions, as Wallet's
-    /// own per-address pin.
-    private var pinnedToHome: Bool { HomePinnedSources.shared.isPinned(bridge.rawValue) }
-
-    private var pinToHomeSection: some View {
-        Section {
-            Button {
-                HomePinnedSources.shared.toggle(bridge.rawValue)
-                CorpusSignal.shared.bump()
-                DSHaptic.tap()
-            } label: {
-                HStack(spacing: DS.Space.s2) {
-                    Image(systemName: pinnedToHome ? "pin.fill" : "pin")
-                    Text(pinnedToHome ? "Pinned to Home" : "Pin to Home")
-                    Spacer()
-                }
-                .dsText(.body17).foregroundStyle(pinnedToHome ? DS.tint : DS.textPrimary)
+        .sheet(item: $followImport) { target in
+            FollowImportSheet(source: target.source, handle: target.handle) { added in
+                guard added > 0 else { return }
+                accountNames = bridge.names
+                Task { await sync() }   // their posts land now, not next foreground
             }
-            .buttonStyle(.plain)
         }
     }
 
-    /// Show on Home — the inverse of "Pin to Home" for auto-social sources
-    /// (Bluesky/Farcaster): their latest post shows by default, so this brings
-    /// back a card the person removed (long-press → Remove from Home, or this
-    /// toggle) rather than opting one in. Management lives on the source's own
-    /// screen, per ruling 58a.
-    private var shownOnHome: Bool { !HomePinnedSources.shared.isHidden(bridge.rawValue) }
-
-    private var showOnHomeSection: some View {
-        Section {
-            Button {
-                // shownOnHome true means visible → hide; false means hidden → show.
-                HomePinnedSources.shared.setHidden(bridge.rawValue, shownOnHome)
-                CorpusSignal.shared.bump()
-                DSHaptic.tap()
-            } label: {
-                HStack(spacing: DS.Space.s2) {
-                    Image(systemName: shownOnHome ? "pin.fill" : "pin.slash")
-                    Text(shownOnHome ? "On Home" : "Show on Home")
-                    Spacer()
-                }
-                .dsText(.body17).foregroundStyle(shownOnHome ? DS.tint : DS.textPrimary)
-            }
-            .buttonStyle(.plain)
-        } footer: {
-            Text(shownOnHome
-                 ? "Your latest \(bridge.rawValue) post shows on Home. Turn this off — or long-press the card — to remove it."
-                 : "Removed from Home. Turn this on to show your latest \(bridge.rawValue) post again.")
-                .dsText(.callout15).foregroundStyle(DS.textTertiary)
-        }
-    }
-
-    /// Close the loop (delight 2026-07-14): the first connect ends with a
-    /// one-tap way to the board where the new card just landed — so a person
-    /// sees where their connection went, instead of guessing. Pops the Apps
-    /// stack and lands the feed on Pinned, exactly like casberi://home.
-    private var seeOnHomeSection: some View {
+    /// Close the loop (delight 2026-07-14, repointed 2026-07-20 — the board
+    /// this used to open onto is gone): the first connect ends with a
+    /// one-tap way to the feed the new card just landed in — so a person
+    /// sees where their connection went, instead of guessing. Every
+    /// connected source always has a feed now (no more pin/hide to gate on),
+    /// so this fires unconditionally on connect (see the call site below).
+    private var seeInFeedSection: some View {
         Section {
             Button {
                 showHomeHint = false
-                FeedFilter.shared.source = "Pinned"
+                FeedFilter.shared.source = bridge.rawValue
                 FeedFilter.shared.tag = "All"
                 HomeRoute.shared.push = nil
                 DSHaptic.tap()
             } label: {
                 HStack(spacing: DS.Space.s2) {
-                    Image(systemName: "house")
-                    Text("See it on Home")
+                    Image(systemName: "list.bullet")
+                    Text("See in Feed")
                     Spacer()
                     Image(systemName: "arrow.right")
                         .font(.system(size: 13, weight: .semibold))
@@ -582,6 +540,27 @@ struct HandleSetupScreen: View {
                     }
                     .padding(.top, DS.Space.s1)
                 }
+                HStack(spacing: DS.Space.s2) {
+                    // The wallet↔Farcaster join (2026-07-15): watch this
+                    // account's verified onchain wallet — its holdings and
+                    // activity land like any watched address. Farcaster only
+                    // (Bluesky has no onchain verification); watch-only, so
+                    // peeking is legitimate.
+                    if bridge == .farcaster {
+                        rowCapsule("wallet.pass", "Watch their wallet") {
+                            watchWallet(for: account.key)
+                        }
+                    }
+                    // Their follow graph as a picker (2026-07-16, prd 87).
+                    // Both networks publish it keylessly, so on YOUR OWN
+                    // watched account this is "bring in who I follow" — with
+                    // no new notion of who you are, and no sign-in.
+                    rowCapsule("person.2", "Who they follow") {
+                        followImport = FollowImportTarget(source: bridge.rawValue,
+                                                          handle: account.key)
+                    }
+                }
+                .padding(.top, DS.Space.s1)
             }
             Spacer()
         }
@@ -594,6 +573,45 @@ struct HandleSetupScreen: View {
         }
         .dsListCardRow()
         .listRowSeparator(.hidden)
+    }
+
+    /// The account row's quiet action, in chip clothes — the same capsule
+    /// anatomy the watch chips wear, minus the lit state (these DO a thing
+    /// rather than hold one).
+    private func rowCapsule(_ icon: String, _ label: String,
+                            action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: DS.Space.s1) {
+                Image(systemName: icon)
+                    .font(.system(size: 11, weight: .medium))
+                Text(LocalizedStringKey(label)).dsText(.label12)
+            }
+            .foregroundStyle(DS.textTertiary)
+            .padding(.horizontal, DS.Space.s3)
+            .frame(height: 28)
+            .background(DS.gray100, in: Capsule(style: .continuous))
+        }
+        .buttonStyle(.plain)
+    }
+
+    /// Resolves a watched Farcaster account's verified wallet and watches it —
+    /// the first address not already watched, labeled with the handle. Reports
+    /// the outcome honestly (no verified wallet, already watching, or watching).
+    private func watchWallet(for username: String) {
+        Task {
+            let verified = await FarcasterIngest.verifiedEthAddresses(username: username)
+            let alreadyWatched = Set(WalletStore.shared.addresses.map { $0.address.lowercased() })
+            guard let address = verified.first(where: { !alreadyWatched.contains($0) }) else {
+                if verified.isEmpty {
+                    chrome.flash(String(localized: "No verified wallet for @\(username)."), tone: .failure)
+                } else {
+                    chrome.flash(String(localized: "Already watching @\(username)'s wallet."))
+                }
+                return
+            }
+            WalletStore.shared.add(address, label: "@\(username)")
+            chrome.flash(String(localized: "Watching @\(username)'s wallet."), tone: .success)
+        }
     }
 
     /// A lit-or-quiet capsule: on wears the tint, off stays gray — a switch
@@ -656,6 +674,82 @@ struct HandleSetupScreen: View {
             Text("A channel is a topic feed — /design, /base — followed by name, same as a person.")
                 .dsText(.callout15).foregroundStyle(DS.textTertiary)
         }
+    }
+
+    /// Followed feeds (Bluesky only, 2026-07-16) — the answer to the question
+    /// prd §75 deliberately held: Bluesky's channels. It has no global channel
+    /// names to type, so its topical lanes are custom FEEDS, addressed by
+    /// at-uri and found by search. That difference is the whole design: where
+    /// Farcaster's field takes "/design" and resolves it, this one takes
+    /// "science" and shows you what's there — the same finder gesture the name
+    /// field above already uses for people. Once followed, a feed behaves
+    /// exactly like a channel: its posts land beside the people's.
+    private var feedsSection: some View {
+        Section {
+            VStack(alignment: .leading, spacing: DS.Space.s2) {
+                BridgeFieldRow(placeholder: "science", text: $channelField,
+                               buttonLabel: "Find", action: searchFeeds)
+                ForEach(feedHits) { feed in
+                    BridgeSearchResultRow(
+                        imageURL: feed.imageURL, fallbackIcon: bridge.rawValue,
+                        title: feed.name, subtitle: String(localized: "Feed"),
+                        action: { followFeed(feed) })
+                }
+                BridgeSyncStatusRows(syncing: channelSyncing,
+                                     syncingLine: String(localized: "Finding feeds…"),
+                                     result: channelError, resultIsError: true)
+            }
+            .dsListCardRow()
+            ForEach(BlueskyStore.shared.feeds) { feed in
+                HStack(spacing: DS.Space.s3) {
+                    if let image = feed.imageURL {
+                        RemoteThumb(urlString: image, size: 28,
+                                    fallback: bridge.rawValue, circular: true)
+                    } else {
+                        BridgeIcon(name: bridge.rawValue, size: 28, circular: true)
+                    }
+                    Text(feed.name).dsText(.body17).foregroundStyle(DS.textPrimary)
+                    Spacer()
+                }
+                .swipeActions(edge: .trailing) {
+                    Button(role: .destructive) {
+                        BlueskyStore.shared.removeFeed(feed.uri)
+                        DSHaptic.tap()
+                    } label: { Label("Remove", systemImage: "minus.circle") }
+                }
+                .dsListCardRow()
+                .listRowSeparator(.hidden)
+            }
+        } header: {
+            Text("Feeds").dsText(.label12).foregroundStyle(DS.textTertiary)
+        } footer: {
+            Text("A feed is a topic lane someone curates — search a subject, follow one, its posts land beside the people's.")
+                .dsText(.callout15).foregroundStyle(DS.textTertiary)
+        }
+    }
+
+    private func searchFeeds() {
+        let query = channelField.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !query.isEmpty, !channelSyncing else { return }
+        channelSyncing = true
+        channelError = nil
+        feedHits = []
+        Task {
+            let found = await BlueskyIngest.searchFeeds(query)
+            channelSyncing = false
+            feedHits = found
+            if found.isEmpty {
+                channelError = String(localized: "No feeds by that name.")
+            }
+        }
+    }
+
+    private func followFeed(_ feed: BlueskyStore.Feed) {
+        BlueskyStore.shared.addFeed(feed)
+        feedHits = []
+        channelField = ""
+        DSHaptic.tap()
+        Task { await sync() }
     }
 
     private func followChannel() {
@@ -790,7 +884,9 @@ struct HandleSetupScreen: View {
             DSHaptic.success()
             withAnimation(DS.Motion.standard) {
                 connectFlip += 1
-                if landsOnHome { showHomeHint = true }
+                // Every connected source always has its own feed now (no
+                // pin/hide to gate on) — the hint fires unconditionally.
+                showHomeHint = true
             }
         }
     }
@@ -809,11 +905,4 @@ struct HandleSetupScreen: View {
         return faces
     }
 
-    /// Whether landing on Home would actually show this source — the auto
-    /// socials show by default, others only once pinned. Keeps the "See it on
-    /// Home" hint from pointing at a board that wouldn't show the new card.
-    private var landsOnHome: Bool {
-        HomePinnedSources.autoSocial.contains(bridge.rawValue)
-            || HomePinnedSources.shared.isPinned(bridge.rawValue)
-    }
 }

@@ -36,34 +36,6 @@
         }
       }
     },
-    "%@ connected": {
-      "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "%@ を接続しました"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "%@ 연결됨"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "%@ 已连接"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "%@ conectado"
-          }
-        }
-      }
-    },
     "%@ fills your week — %lld things across %lld app%@.": {
       "localizations": {
         "en": {
@@ -447,34 +419,6 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "全部在订阅流"
-          }
-        }
-      }
-    },
-    "All of this lands here. Start with three.": {
-      "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "すべてがここに集まります。まずは3つから。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "이 모든 게 여기에 담겨요. 세 개로 시작하세요."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "这一切都会落在这里。先从三个开始。"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "Todo esto llega aquí. Empieza con tres."
           }
         }
       }
@@ -982,34 +926,6 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "Conectar %@"
-          }
-        }
-      }
-    },
-    "Connect one to continue": {
-      "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "続けるには1つ接続してください"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "계속하려면 하나를 연결하세요"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "连接一个以继续"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "Conecta una para continuar"
           }
         }
       }
@@ -1965,34 +1881,6 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "Recién llegado"
-          }
-        }
-      }
-    },
-    "just now": {
-      "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "たった今"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "방금"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "刚刚"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "ahora mismo"
           }
         }
       }
@@ -3539,30 +3427,30 @@
         }
       }
     },
-    "Rename everywhere…": {
+    "Rename tag everywhere…": {
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "すべてで名前変更…"
+            "value": "タグをすべてで名前変更…"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "모든 곳에서 이름 변경…"
+            "value": "모든 곳에서 태그 이름 변경…"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "在所有位置重命名…"
+            "value": "在所有位置重命名标签…"
           }
         },
         "es": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Renombrar en todas partes…"
+            "value": "Renombrar etiqueta en todas partes…"
           }
         }
       }
@@ -3900,34 +3788,6 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "Haz una captura de esta pantalla y envíala: cada línea es un resultado real de este dispositivo."
-          }
-        }
-      }
-    },
-    "See your feed": {
-      "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "フィードを見る"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "피드 보기"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "查看你的订阅流"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "Ver tu feed"
           }
         }
       }
@@ -4967,90 +4827,6 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "Tu cuenta"
-          }
-        }
-      }
-    },
-    "Your apps, one feed.": {
-      "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "あなたのアプリを、ひとつのフィードに。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "여러 앱, 하나의 피드."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "你的所有应用，汇成一条订阅流。"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "Tus apps, un solo feed."
-          }
-        }
-      }
-    },
-    "Your feed": {
-      "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "あなたのフィード"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "내 피드"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "你的订阅流"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "Tu feed"
-          }
-        }
-      }
-    },
-    "Your feed · flowing": {
-      "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "あなたのフィード · 流れています"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "내 피드 · 흐르는 중"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "你的订阅流 · 流动中"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "Tu feed · fluyendo"
           }
         }
       }
@@ -7545,34 +7321,6 @@
         }
       }
     },
-    "%@ is in": {
-      "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@ を取り込みました"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@ 들어옴"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@ 已导入"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@ está dentro"
-          }
-        }
-      }
-    },
     "%lld live now": {
       "localizations": {
         "ja": {
@@ -7625,34 +7373,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "%lld correos dentro"
-          }
-        }
-      }
-    },
-    "%@ needs permission — try again anytime": {
-      "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@ には許可が必要です — いつでもやり直せます"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@에 권한이 필요해요 — 언제든 다시 시도하세요"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@ 需要授权 — 可随时重试"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@ necesita permiso — inténtalo de nuevo cuando quieras"
           }
         }
       }
@@ -12109,34 +11829,6 @@
         }
       }
     },
-    "Your events are in": {
-      "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "イベントを取り込みました"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "이벤트가 들어왔어요"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "你的事件已进来"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tus eventos están dentro"
-          }
-        }
-      }
-    },
     "Your fitness": {
       "localizations": {
         "ja": {
@@ -12245,34 +11937,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Tu música"
-          }
-        }
-      }
-    },
-    "Your lists are in": {
-      "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "リストを取り込みました"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "목록이 들어왔어요"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "你的清单已进来"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tus listas están dentro"
           }
         }
       }
@@ -12613,34 +12277,6 @@
         }
       }
     },
-    "Your screenshots, flowing in": {
-      "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "スクリーンショットが流れ込みます"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "내 스크린샷, 흘러 들어와요"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "你的屏幕截图，源源涌入"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tus capturas, entrando"
-          }
-        }
-      }
-    },
     "Your watching": {
       "localizations": {
         "ja": {
@@ -12693,34 +12329,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Tu trabajo"
-          }
-        }
-      }
-    },
-    "Your workouts are in": {
-      "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ワークアウトを取り込みました"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "운동이 들어왔어요"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "你的锻炼已进来"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tus entrenamientos están dentro"
           }
         }
       }
