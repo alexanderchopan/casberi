@@ -5116,3 +5116,31 @@ NSLogs the hits (VI's camera UI can't be driven on the sim). Verified
 content matches for "machine"; the launch reconcile exercised the association
 path crash-free. The end-to-end VI surface itself needs a real device with
 Apple Intelligence — untested there; the probe covers the app's half.
+
+## 154. Handoff features don't make the cut (user, 2026-07-21)
+
+A full survey of "transact through someone else's rails" extensions was
+considered and CUT wholesale — user: "none of these really move the needle
+... they would just water down the app." Declined, with the reasons found in
+the discussion, so none of these get re-pitched without new evidence:
+
+- **Pay links / EIP-681 URIs** ("pay back jesse.base.eth") — mechanically
+  elegant, audience-thin; person-to-person crypto payments are rare behavior,
+  and iOS custom-scheme handling can't even pick which wallet opens.
+- **QR payment cards** — dead on arrival on mobile: you can't scan your own
+  screen. (Receiving-side QR is a different, thinner feature; also cut.)
+- **Wallet "Open in" deep links** on token things — the WalletConnect
+  session's peer metadata does name the user's wallet, and the `canOpenURL`
+  pattern is proven in-app, but the payoff doesn't justify the surface.
+- **Kalshi market handoff, Bitrefill top-up links** — trivial builds, small
+  wins; not worth the added chrome.
+- **Fiat splits** (Venmo/Cash App prefilled links) — gated on an identity
+  problem we'd have to build (nobody's $cashtag is in the corpus), and Apple
+  Cash, the split rail iPhone users actually use, has no API.
+
+What SURVIVES: prd 112 exactly as it stands — the approval prepare card
+(reads, previews, revoke calldata, fee quote; signatures always elsewhere)
+is a bounded surface, not the seed of a general "actions" layer. The Peer
+capture-only pattern (settled fills landing as things) also stands — capture
+is the app's job; initiating is not. If a future feature wants a handoff
+button, it argues against this ruling first.
