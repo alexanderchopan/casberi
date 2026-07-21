@@ -11,7 +11,7 @@ const BEATS = [
 ];
 const INTRO=0.45, BEAT=1.95, OUT_AT=INTRO+BEATS.length*BEAT, TOTAL=OUT_AT+1.9;
 const DATA=BEATS.map((b,i)=>({kick:b.kick, head:b.head, accent:b.accent}));
-const TOOLS=[['Note','#E3B341'],['Message','#2DA44E'],['Email','#E8452B'],['Event','#E8452B'],['Reminder','#F5A524'],['Search','#2E63FF']];
+const TOOLS=['Note','Message','Email','Event','Reminder','Search','ChatGPT','Claude'];
 
 const html=`<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><style>
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;transition:none!important}
@@ -39,8 +39,10 @@ html,body{width:1080px;height:1920px;overflow:hidden;background:#EEEAE1;font-fam
 .sdot{width:44px;height:44px;border-radius:13px;flex:none;}
 .sm{margin-left:auto;font-size:26px;color:rgba(255,255,255,.5);}
 .shd{font-size:30px;color:rgba(255,255,255,.5);letter-spacing:.06em;margin-bottom:6px;}
-.tgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:26px;margin-top:8px;}
-.ttile{aspect-ratio:1.4;border-radius:26px;display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-end;padding:26px;font-size:34px;font-weight:650;color:#fff;will-change:opacity,transform;box-shadow:0 12px 30px rgba(0,0,0,.3);}
+.ochips{display:flex;flex-wrap:wrap;gap:20px;margin-top:8px;}
+.ochip{font-size:34px;font-weight:600;padding:22px 40px;border-radius:100px;background:rgba(255,255,255,.08);color:#fff;box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.12);will-change:opacity,transform;}
+.onote{margin-top:38px;font-size:28px;color:rgba(255,255,255,.5);line-height:1.45;will-change:opacity;}
+.onote b{color:#fff;}
 .pv{display:flex;flex-direction:column;gap:30px;}
 .plock{width:120px;height:120px;border-radius:30px;background:${AC}22;display:flex;align-items:center;justify-content:center;color:${AC};font-size:64px;}
 .pbig{font-size:56px;font-weight:750;line-height:1.05;}
@@ -80,7 +82,9 @@ html,body{width:1080px;height:1920px;overflow:hidden;background:#EEEAE1;font-fam
   </div>
 
   <div class="comp" id="comp3">
-    <div class="tgrid">${TOOLS.map((t,i)=>`<div class="ttile" data-i="${i}" style="background:${t[1]}">${t[0]}</div>`).join('')}</div>
+    <div class="shd mono">OPEN IN</div>
+    <div class="ochips">${TOOLS.map((t,i)=>`<div class="ochip" data-i="${i}">${t}</div>`).join('')}</div>
+    <div class="onote" id="onote">From an answer, jump straight to the app that finishes the job — a <b>note</b>, a <b>message</b>, an <b>event</b>, or a bigger model.</div>
   </div>
 
   <div class="comp" id="comp4">
@@ -135,7 +139,7 @@ function animateComp(i,p,t){
     document.querySelectorAll('#comp0 .acite span').forEach((s,k)=>{const cp=clamp01((p-0.84-k*0.05)/0.14);s.style.opacity=cp;s.style.transform='translateY('+((1-easeOut(cp))*12)+'px)';});
   } else if(i===1){ stagger('#comp1 .srow',p,0.12,0.36,22); const m=document.getElementById('ansmeta'); m.style.opacity=clamp01((p-0.6)/0.3); m.textContent='6 things · on-device · 0.8s'; }
   else if(i===2){ stagger('#comp2 .srow',p,0.13,0.36,22); }
-  else if(i===3){ document.querySelectorAll('#comp3 .ttile').forEach((s,k)=>{const cp=clamp01((p-k*0.08)/0.4);s.style.opacity=cp;s.style.transform='scale('+(0.6+0.4*back(cp))+') translateY('+((1-easeOut(cp))*20)+'px)';}); }
+  else if(i===3){ document.querySelectorAll('#comp3 .ochip').forEach((s,k)=>{const cp=clamp01((p-k*0.06)/0.28);s.style.opacity=cp;s.style.transform='scale('+(0.85+0.15*back(cp))+')';}); document.getElementById('onote').style.opacity=clamp01((p-0.6)/0.3); }
   else if(i===4){ document.querySelectorAll('#comp4 .pchk').forEach((r,k)=>{const rp=clamp01((p-0.2-k*0.16)/0.35);r.style.opacity=rp;r.style.transform='translateX('+((1-easeOut(rp))*-30)+'px)';}); }
 }
 window.seek(0);
