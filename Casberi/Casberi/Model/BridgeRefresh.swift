@@ -21,7 +21,21 @@ enum BridgeRefresh {
         try? await Task.sleep(for: .milliseconds(slot * 40))
     }
 
-    static func refreshAllConnected(context: ModelContext, store: BridgeStore) {
+    /// When the whole sweep last ran — a rapid background→active bounce
+    /// (a notification glance, Face ID, control center) used to re-fire all
+    /// ~25 bridges every time (2026-07-21: no cooldown existed at all). The
+    /// per-bridge `running` guards only stop a bridge overlapping ITSELF;
+    /// they never stopped back-to-back sweeps. Mirrors the min-interval gate
+    /// `GitHubGraphStore.refreshIfStale`/`KalshiWatch` already use per-store.
+    private static var lastSweep: Date?
+    private static let minSweepInterval: TimeInterval = 45
+
+    /// `force: true` (pull-to-refresh) always runs live, matching the
+    /// gesture's own contract of bypassing every other TTL/cache in the
+    /// refresh path — only the automatic scenePhase-driven sweep is gated.
+    static func refreshAllConnected(context: ModelContext, store: BridgeStore, force: Bool = false) {
+        if !force, let last = lastSweep, Date.now.timeIntervalSince(last) < minSweepInterval { return }
+        lastSweep = .now
         var nextSlot = 0
         func slot() -> Int { defer { nextSlot += 1 }; return nextSlot }
         // The native-framework bridges (Photos/Calendar/Reminders/Health/

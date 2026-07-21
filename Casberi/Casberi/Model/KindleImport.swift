@@ -32,7 +32,7 @@ enum KindleImport {
         // Entries are separated by a line of ten equals signs.
         let blocks = text.components(separatedBy: "==========")
         var summary = Summary()
-        var seen = IngestSupport.existingSourceRefs(context)
+        var seen = IngestSupport.existingSourceRefs(context, source: "Kindle")
         var parsedAny = false
         var added = 0
 

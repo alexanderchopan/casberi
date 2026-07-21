@@ -42,7 +42,7 @@ enum ScreenshotIngest {
         }
         #endif
 
-        let existing = IngestSupport.existingSourceRefs(context)
+        let existing = IngestSupport.existingSourceRefs(context, source: "Photos")
 
         var added = 0
         assets.enumerateObjects { asset, _, _ in

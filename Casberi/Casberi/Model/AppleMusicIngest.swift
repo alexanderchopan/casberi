@@ -88,7 +88,7 @@ enum AppleMusicIngest {
             return nil
         }
 
-        let existing = IngestSupport.existingSourceRefs(context)
+        let existing = IngestSupport.existingSourceRefs(context, source: "Apple Music")
         // Stored rows still wearing the glyph. The recent feed's own items
         // don't reliably carry usable art — library plays come back with no
         // artwork, or with a musickit:// library URL (field report

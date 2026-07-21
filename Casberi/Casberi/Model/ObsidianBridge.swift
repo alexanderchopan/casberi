@@ -92,7 +92,7 @@ enum ObsidianIngest {
         }
         notes.sort { $0.modified > $1.modified }
 
-        let existing = IngestSupport.existingSourceRefs(context)
+        let existing = IngestSupport.existingSourceRefs(context, source: "Obsidian")
         let base = vault.standardizedFileURL.path
         var added = 0
 

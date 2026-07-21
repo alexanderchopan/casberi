@@ -231,7 +231,7 @@ enum StocktwitsIngest {
             (sym, await fetchStream(sym))
         }
 
-        var existing = IngestSupport.existingSourceRefs(context)
+        var existing = IngestSupport.existingSourceRefs(context, source: "Stocktwits")
         var added = 0
         var reachedAny = false
 

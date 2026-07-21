@@ -156,7 +156,7 @@ enum WalletIngest {
         // `reachedAny` stays false, and the holdings path is what speaks.
         let evmAddresses = evmOnly(addresses)
 
-        let existing = IngestSupport.existingSourceRefs(context)
+        let existing = IngestSupport.existingSourceRefs(context, source: "Wallet")
         // The cross-provider safety net for the Zerion cutover (2026-07-19):
         // a transfer Alchemy already landed carries a stable `content`
         // permalink (`chain.explorer + hash`) independent of whatever ref

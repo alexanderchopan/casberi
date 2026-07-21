@@ -30,7 +30,7 @@ enum ClaudeImport {
             return Summary(failed: true)
         }
 
-        let existing = IngestSupport.existingSourceRefs(context)
+        let existing = IngestSupport.existingSourceRefs(context, source: "Claude")
 
         // Newest first (by last-updated), cap 500.
         let sorted = conversations.sorted {

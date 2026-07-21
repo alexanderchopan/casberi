@@ -81,7 +81,7 @@ enum SteamIngest {
               let response = root["response"] as? [String: Any] else { return nil }
         let games = (response["games"] as? [[String: Any]]) ?? []   // none is a real answer
 
-        let existing = IngestSupport.existingSourceRefs(context)
+        let existing = IngestSupport.existingSourceRefs(context, source: "Steam")
         var added = 0
         var backfilled = false
 

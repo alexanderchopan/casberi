@@ -131,7 +131,7 @@ enum DealsIngest {
             await fetch(source)
         }
 
-        var existing = IngestSupport.existingSourceRefs(context)
+        var existing = IngestSupport.existingSourceRefs(context, source: "Deals")
         let backfill = ArtlessBackfill(context, source: "Deals")
         var added = 0
         var reachedAny = false

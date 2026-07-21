@@ -223,7 +223,7 @@ enum ShopifyIngest {
             await fetch(entry.shop.host, currency: entry.currency)
         }
 
-        var existing = IngestSupport.existingSourceRefs(context)
+        var existing = IngestSupport.existingSourceRefs(context, source: "Shopify")
         let landed = IngestSupport.thingsByRef(context, source: "Shopify")
         let backfill = ArtlessBackfill(context, source: "Shopify")
         var added = 0

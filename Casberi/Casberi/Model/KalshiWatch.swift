@@ -142,7 +142,7 @@ enum KalshiWatch {
     @discardableResult
     static func add(_ market: Resolved, context: ModelContext) -> Thing? {
         let ref = "kalshi:\(market.ticker)"
-        guard !IngestSupport.existingSourceRefs(context).contains(ref) else { return nil }
+        guard !IngestSupport.hasSourceRef(context, source: "Kalshi", ref: ref) else { return nil }
         let thing = Thing(
             kind: .link,
             title: market.title,

@@ -155,7 +155,7 @@ enum RedditIngest {
               let listing = (root["data"] as? [String: Any])?["children"] as? [[String: Any]]
         else { return nil }
 
-        let existing = IngestSupport.existingSourceRefs(context)
+        let existing = IngestSupport.existingSourceRefs(context, source: "Reddit")
         let backfill = ArtlessBackfill(context, source: "Reddit")
         var added = 0
         for child in listing {

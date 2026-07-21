@@ -301,7 +301,7 @@ enum WalletApprovals {
         let held = await WalletIngest.heldPricedContractsByOwner(addresses: addresses)
         let owned = await WalletIngest.ownedNFTContracts(addresses: addresses)
         return await syncLocked(context: context, addresses: addresses,
-                                existing: IngestSupport.existingSourceRefs(context),
+                                existing: IngestSupport.existingSourceRefs(context, source: "Wallet"),
                                 heldByOwner: held, ownedNFTs: owned)
     }
 

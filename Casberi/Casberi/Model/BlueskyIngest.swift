@@ -229,7 +229,7 @@ enum BlueskyIngest {
         healed = false
         defer { running = false }
 
-        var existing = IngestSupport.existingSourceRefs(context)
+        var existing = IngestSupport.existingSourceRefs(context, source: "Bluesky")
         let landed = IngestSupport.thingsByRef(context, source: "Bluesky")
         let backfill = ArtlessBackfill(context, source: "Bluesky")
         var added = 0

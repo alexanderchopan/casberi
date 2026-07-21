@@ -372,7 +372,7 @@ enum FeedFollowIngest {
         running.insert(kind.source)
         defer { running.remove(kind.source) }
 
-        var existing = IngestSupport.existingSourceRefs(context)
+        var existing = IngestSupport.existingSourceRefs(context, source: kind.source)
         let backfill = ArtlessBackfill(context, source: kind.source)
         var added = 0
         // Retroactive authorHandle backfill (2026-07-18): items that landed

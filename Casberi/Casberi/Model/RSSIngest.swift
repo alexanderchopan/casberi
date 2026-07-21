@@ -144,7 +144,7 @@ enum RSSIngest {
         running = true
         defer { running = false }
 
-        var existing = IngestSupport.existingSourceRefs(context)
+        var existing = IngestSupport.existingSourceRefs(context, source: "RSS")
         let landed = IngestSupport.thingsByRef(context, source: "RSS")
         let backfill = ArtlessBackfill(context, source: "RSS")
         var added = 0

@@ -54,7 +54,7 @@ enum PinterestIngest {
         // A wrong username serves an HTML page, not a feed — nothing parses.
         guard !parsed.items.isEmpty || !parsed.title.isEmpty else { return nil }
 
-        let existing = IngestSupport.existingSourceRefs(context)
+        let existing = IngestSupport.existingSourceRefs(context, source: "Pinterest")
         let backfill = ArtlessBackfill(context, source: "Pinterest")
         var added = 0
 

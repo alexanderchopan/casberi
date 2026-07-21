@@ -53,7 +53,7 @@ enum ContactsIngest {
             return nil
         }
 
-        let existing = IngestSupport.existingSourceRefs(context)
+        let existing = IngestSupport.existingSourceRefs(context, source: "Contacts")
         // An address book runs to thousands — collect the new things and index
         // Spotlight once at the end, rather than a call per contact.
         var landed: [Thing] = []

@@ -356,7 +356,7 @@ enum FarcasterIngest {
         healed = false
         defer { running = false }
 
-        var existing = IngestSupport.existingSourceRefs(context)
+        var existing = IngestSupport.existingSourceRefs(context, source: "Farcaster")
         let landed = IngestSupport.thingsByRef(context, source: "Farcaster")
         let backfill = ArtlessBackfill(context, source: "Farcaster")
         var added = 0

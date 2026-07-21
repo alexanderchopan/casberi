@@ -166,6 +166,7 @@ enum AgentAnswer {
             request = URLRequest(url: URL(string: "https://api.bankr.bot/agent/job/casberi-key-check")!)
             request.setValue(key, forHTTPHeaderField: "X-API-Key")
         }
+        request.timeoutInterval = 15
         guard let (_, response) = try? await URLSession.shared.data(for: request),
               let http = response as? HTTPURLResponse else { return false }
         if provider == .bankr { return http.statusCode == 404 || http.statusCode == 200 }

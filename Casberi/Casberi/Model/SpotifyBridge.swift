@@ -164,7 +164,7 @@ enum SpotifyIngest {
             auth: "Bearer \(token)") as? [String: Any],
               let items = root["items"] as? [[String: Any]] else { return nil }
 
-        let existing = IngestSupport.existingSourceRefs(context)
+        let existing = IngestSupport.existingSourceRefs(context, source: "Spotify")
         var added = 0
 
         for item in items {

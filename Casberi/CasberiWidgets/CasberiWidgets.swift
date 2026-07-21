@@ -135,7 +135,12 @@ struct HeroProvider: TimelineProvider {
                              title: String(localized: "Your things, one place"), subline: "Casberi")
         }
         let context = ModelContext(container)
-        let things = (try? context.fetch(FetchDescriptor<Thing>())) ?? []
+        // The widget extension runs in a tight (~30MB) memory budget — an
+        // unbounded fetch hydrated every Thing, inline strings and all
+        // (2026-07-21 audit). Only tags/capturedAt/source ever get read below.
+        var descriptor = FetchDescriptor<Thing>()
+        descriptor.propertiesToFetch = [\.tags, \.capturedAt, \.source]
+        let things = (try? context.fetch(descriptor)) ?? []
         guard !things.isEmpty else {
             return HeroEntry(date: .now, eyebrow: String(localized: "Now"),
                              title: String(localized: "Your things go here"),

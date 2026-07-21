@@ -102,9 +102,9 @@ enum EmbeddingIndex {
     }
 
     /// Embed things with no vector yet — newest first, so what a person just
-    /// captured becomes semantically searchable soonest. Bounded batches with
-    /// yields keep the main context responsive; loops until the store drains.
-    /// Returns the count embedded. Awaited directly by the headless probe.
+    /// captured becomes semantically searchable soonest. Loops until the
+    /// store drains. Returns the count embedded. Awaited directly by the
+    /// headless probe.
     @MainActor
     @discardableResult
     static func indexPending(context: ModelContext) async -> Int {
@@ -118,19 +118,32 @@ enum EmbeddingIndex {
             descriptor.fetchLimit = batchSize
             let batch = (try? context.fetch(descriptor)) ?? []
             if batch.isEmpty { break }
-            for (i, thing) in batch.enumerated() {
-                // Stamp an empty vector for unembeddable text so the sweep
-                // doesn't re-select the thing forever.
-                thing.embedding = vector(for: indexText(for: thing)).map(pack) ?? Data()
-                // `NLEmbedding.vector` is a real inference call (a few ms) —
-                // yield mid-batch so a first-launch sweep over a big import
-                // can't hold the main thread long enough to drop a frame.
-                if i % 8 == 7 { await Task.yield() }
+            // `NLEmbedding.vector` is a real inference call (a few ms each) —
+            // 32 of them used to run inline on the main actor, mid-batch
+            // yields notwithstanding (2026-07-21 audit). The model itself
+            // needs no SwiftData/main-actor access, only reading the source
+            // Things and writing the vectors back does — so only the text
+            // extraction and the final assignment+save touch the main actor;
+            // the actual inference runs off it, and the main actor merely
+            // awaits (suspends, doesn't block) while it happens.
+            let texts = batch.map(indexText(for:))
+            let packed = await packedVectors(for: texts)
+            for (thing, data) in zip(batch, packed) {
+                thing.embedding = data
             }
             context.saveHonestly()
             total += batch.count
             await Task.yield()
         }
         return total
+    }
+
+    /// Off-main-actor inference for a batch of texts — see `indexPending`.
+    /// Stamps an empty vector for unembeddable text so the sweep doesn't
+    /// re-select the thing forever.
+    private static func packedVectors(for texts: [String]) async -> [Data] {
+        await Task.detached(priority: .utility) {
+            texts.map { vector(for: $0).map(pack) ?? Data() }
+        }.value
     }
 }
