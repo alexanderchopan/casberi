@@ -31,6 +31,7 @@ struct SpotifyScreen: View {
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
         .bridgeSetupWash(name: "Spotify")
+        .dsAdaptiveContentWidth()
         .dsPageBackground()
         .navigationTitle("Spotify")
         .navigationBarTitleDisplayMode(.large)

@@ -75,6 +75,7 @@ struct TokenWatchScreen: View {
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
         .bridgeSetupWash(name: "Tokens")
+        .dsAdaptiveContentWidth()
         .dsPageBackground()
         .navigationTitle("Tokens")
         .navigationBarTitleDisplayMode(.large)

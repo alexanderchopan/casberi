@@ -37,6 +37,7 @@ struct ChatGPTImportScreen: View {
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
+        .dsAdaptiveContentWidth()
         .dsPageBackground()
         .navigationTitle("ChatGPT")
         .navigationBarTitleDisplayMode(.large)

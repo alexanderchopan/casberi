@@ -222,6 +222,7 @@ struct AppsScreen: View {
             storeFirstConnectDone = true
             firstConnectPulse += 1
         }
+        .dsAdaptiveContentWidth()
         .dsPageBackground()
         .navigationTitle("Apps")
         .navigationBarTitleDisplayMode(.large)

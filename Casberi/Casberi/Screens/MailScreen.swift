@@ -39,6 +39,7 @@ struct MailScreen: View {
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
         .bridgeSetupWash(name: provider.source)
+        .dsAdaptiveContentWidth()
         .dsPageBackground()
         .navigationTitle(provider.rawValue)
         .navigationBarTitleDisplayMode(.large)

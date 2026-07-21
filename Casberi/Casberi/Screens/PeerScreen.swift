@@ -60,6 +60,7 @@ struct PeerScreen: View {
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
         .bridgeSetupWash(name: "Peer")
+        .dsAdaptiveContentWidth()
         .dsPageBackground()
         .navigationTitle("Peer")
         .navigationBarTitleDisplayMode(.large)

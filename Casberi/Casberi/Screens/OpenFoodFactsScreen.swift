@@ -49,6 +49,7 @@ struct OpenFoodFactsScreen: View {
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
         .bridgeSetupWash(name: "Open Food Facts")
+        .dsAdaptiveContentWidth()
         .dsPageBackground()
         .navigationTitle("Open Food Facts")
         .navigationBarTitleDisplayMode(.large)

@@ -53,6 +53,7 @@ struct ProjectDetailScreen: View {
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .scrollIndicators(.hidden)
+        .dsAdaptiveContentWidth()
         .dsPageBackground()
         .navigationBarTitleDisplayMode(.inline)
         // Paint the whole composition at once — a record, not a stream (§5).

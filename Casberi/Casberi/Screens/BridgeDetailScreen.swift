@@ -125,6 +125,7 @@ struct BridgeDetailScreen: View {
                 .padding(.bottom, ShellMetrics.bottomInset)
             }
             .scrollIndicators(.hidden)
+            .dsAdaptiveContentWidth()
             .dsPageBackground()
             .onAppear { loadRecent(source: bridge.name) }
             .navigationTitle(bridge.name)

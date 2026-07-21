@@ -560,6 +560,7 @@ struct FeedScreen: View {
         }
         .animation(DS.Motion.standard, value: things.count)   // new things rise in
         .scrollContentBackground(.hidden)
+        .dsAdaptiveContentWidth()
         // Seed/refresh the contribution year from a RELIABLE always-present spot
         // (the conditionally-empty hero's own `.task` doesn't fire until a year
         // lands — chicken-and-egg). `source` is fixed per feed instance, so this

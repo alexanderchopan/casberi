@@ -154,6 +154,7 @@ struct HowItWorksSheet: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
             .scrollIndicators(.hidden)
+            .dsAdaptiveContentWidth()
             .dsPageBackground()
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

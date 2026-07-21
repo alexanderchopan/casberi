@@ -172,10 +172,37 @@ struct DSPageBackground: View {
     }
 }
 
+/// Caps content to a fixed column on iPad (regular width) so rows and text
+/// stop touching the physical screen edges — iPhone (compact width) is
+/// untouched. No multi-column layout: this only narrows and centers the
+/// SAME single-column content each screen already draws. Backgrounds stay
+/// full-bleed (apply this BEFORE `.dsPageBackground()` in the modifier
+/// chain, so the background paints the full width behind the centered
+/// content, not just the narrowed column).
+private struct AdaptiveContentWidth: ViewModifier {
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    func body(content: Content) -> some View {
+        if horizontalSizeClass == .regular {
+            content
+                .frame(maxWidth: DS.Layout.iPadContentMaxWidth)
+                .frame(maxWidth: .infinity)
+        } else {
+            content
+        }
+    }
+}
+
 extension View {
     /// Every full screen wears this instead of `.background(DS.page)`.
     func dsPageBackground() -> some View {
         background { DSPageBackground() }
+    }
+
+    /// iPad-only content-width cap (see `AdaptiveContentWidth`). A no-op on
+    /// iPhone. Apply to the screen's own content root (its List/ScrollView),
+    /// immediately before `.dsPageBackground()` where that screen has one.
+    func dsAdaptiveContentWidth() -> some View {
+        modifier(AdaptiveContentWidth())
     }
 
     /// The person's mode, restated. The root shell already sets this, but a

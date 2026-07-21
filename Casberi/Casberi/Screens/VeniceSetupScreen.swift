@@ -23,6 +23,7 @@ struct VeniceSetupScreen: View {
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
+        .dsAdaptiveContentWidth()
         .dsPageBackground()
         .navigationTitle("Venice")
         .navigationBarTitleDisplayMode(.large)

@@ -67,6 +67,7 @@ struct AppDetailScreen: View {
         .connectBloom(hue: BridgeGlyph.glyphTint(for: offer.name)
                           ?? DS.brandHue(for: offer.name) ?? DS.tint,
                       token: connectToken)
+        .dsAdaptiveContentWidth()
         .dsPageBackground()
         .navigationTitle(offer.name)
         .navigationBarTitleDisplayMode(.inline)

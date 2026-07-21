@@ -93,6 +93,7 @@ struct TokenSetupScreen: View {
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
         .bridgeSetupWash(name: bridge.rawValue)
+        .dsAdaptiveContentWidth()
         .dsPageBackground()
         .navigationTitle(bridge.rawValue)
         .navigationBarTitleDisplayMode(.large)

@@ -38,6 +38,7 @@ struct SettingsScreen: View {
             .scrollIndicators(.hidden)
         .minimizesChrome(chrome)
         .dsSoftTopEdge()
+            .dsAdaptiveContentWidth()
             .dsPageBackground()
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.large)

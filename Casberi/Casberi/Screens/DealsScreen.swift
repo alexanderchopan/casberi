@@ -45,6 +45,7 @@ struct DealsScreen: View {
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
         .bridgeSetupWash(name: "Deals")
+        .dsAdaptiveContentWidth()
         .dsPageBackground()
         .navigationTitle("Deals")
         .navigationBarTitleDisplayMode(.large)

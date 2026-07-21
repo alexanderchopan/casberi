@@ -38,6 +38,7 @@ struct ClaudeImportScreen: View {
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
+        .dsAdaptiveContentWidth()
         .dsPageBackground()
         .navigationTitle("Claude")
         .navigationBarTitleDisplayMode(.large)

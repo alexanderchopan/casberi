@@ -59,6 +59,7 @@ struct RSSScreen: View {
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
         .bridgeSetupWash(name: "RSS")
+        .dsAdaptiveContentWidth()
         .dsPageBackground()
         .navigationTitle("RSS")
         .navigationBarTitleDisplayMode(.large)

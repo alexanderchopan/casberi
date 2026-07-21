@@ -79,6 +79,7 @@ struct CombinedWalletsSheet: View {
                 }
                 .padding(DS.Space.s4)
             }
+            .dsAdaptiveContentWidth()
             .dsPageBackground()
             .navigationTitle("Across your wallets")
             .navigationBarTitleDisplayMode(.inline)

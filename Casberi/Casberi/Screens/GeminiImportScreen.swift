@@ -38,6 +38,7 @@ struct GeminiImportScreen: View {
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
+        .dsAdaptiveContentWidth()
         .dsPageBackground()
         .navigationTitle("Gemini")
         .navigationBarTitleDisplayMode(.large)

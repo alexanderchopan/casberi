@@ -148,6 +148,7 @@ struct WalletScreen: View {
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
+        .dsAdaptiveContentWidth()
         .dsPageBackground()
         .navigationTitle("Wallet")
         .navigationBarTitleDisplayMode(.large)

@@ -40,6 +40,7 @@ struct DiagnosticsScreen: View {
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
+        .dsAdaptiveContentWidth()
         .dsPageBackground()
         .navigationTitle("Diagnostics")
         .navigationBarTitleDisplayMode(.large)

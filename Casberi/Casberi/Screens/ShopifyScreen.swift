@@ -50,6 +50,7 @@ struct ShopifyScreen: View {
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
         .bridgeSetupWash(name: "Shopify")
+        .dsAdaptiveContentWidth()
         .dsPageBackground()
         .navigationTitle("Shopify")
         .navigationBarTitleDisplayMode(.large)

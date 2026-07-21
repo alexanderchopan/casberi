@@ -38,6 +38,7 @@ struct KindleImportScreen: View {
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
         .bridgeSetupWash(name: "Kindle")
+        .dsAdaptiveContentWidth()
         .dsPageBackground()
         .navigationTitle("Kindle")
         .navigationBarTitleDisplayMode(.large)
