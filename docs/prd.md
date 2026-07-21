@@ -4820,3 +4820,44 @@ unaffected (no catalog changes). NOT yet verified on-sim — this session is the
 Linux web env with no xcodebuild; build + `-answerProbe`/`-uiAnswerProbe` over
 "how's my wallet", "how's my watchlist", "what's new in <source>" and an
 overdue corpus to run on the Mac before the checkpoint.
+
+## 147. Day-cards: a day's rows share one card (user: "would look better if … items in a day are all on one card" → "do it all", 2026-07-21)
+
+The feed's rows each wore their own floating card (surfaceSheet fill + the
+ambient card shadow, s2 gaps), so a busy day read as a confetti of same-sized
+shadowed rectangles and the day structure lived only in the s6 gap above each
+header. Ruled: rows within a day now MERGE into one card — the day becomes the
+object the eye reads, the way §61's section lift already renders the ~16
+setup/import screens ("gapless same-color rows, only the section's silhouette
+casts"). This supersedes the 2026-07-13 gap-only clustering note ("without
+merging cards") — the header gap stays; the card now agrees with it.
+
+Mechanics (`Screens/FeedScreen.swift`):
+
+- **RunPosition** (only/first/middle/last) computed per section by
+  `cardRunPositions` — index-based, so All's FeedRow bundles and plain Thing
+  arrays share one derivation. `dayCardBackground` renders it: first/last rows
+  carry `UnevenRoundedRectangle` shoulders at the card radius plus the s1
+  breathing edge; middle rows run square and gapless so per-row shadows vanish
+  on the neighbouring same-color fill (§61's measured mechanic, now on the
+  plain list). Content insets unchanged — the rhythm inside the card equals
+  the old between-card rhythm.
+- **Rhythm-breakers stay free-standing** (`standsAlone`): the approval consent
+  card (the one rhythm-breaker everywhere, unchanged ruling), the social
+  PostCard (media at width — cards-in-cards would violate §8, so the social
+  room keeps individual cards entirely), the chat TakeawayCard, and the fat
+  TokenRow. A run breaks around them.
+- **The new-since seam splits the day card in two** — the divider capsule
+  renders between two closed card edges, making "since you left" a physical
+  seam, not just a floating label.
+- Applied everywhere rows render: daySection (all shaped rooms + Doing/Done/
+  Needs you/Waiting on you), All's bundledSections (bundle rows merge too),
+  the token watchlist's flat section (one run; pulsed tokens stand alone
+  anyway), and Reminders' To do section — where the "Older" collapsed toggle
+  (previously a flat full-bleed band) now closes the card as its last row,
+  and expanding it continues the same surface.
+
+NOT yet verified on-sim — this session is the Linux web env with no
+xcodebuild; build + a screen sweep (All with bundles + a breaker, a social
+room, Reminders with stale todos, a day split by the new-since divider, light
+and dark) to run on the Mac before the checkpoint.
