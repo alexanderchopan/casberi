@@ -4915,3 +4915,33 @@ Music (session headers, two sittings in one morning splitting), Safari (the
 reading lede + oldest line), a Wallet feed with a mixed in/out seam, a Twitch
 feed with a live stream leading, and a dense feed (unchanged day grain) — light
 and dark.
+
+## 149. One ask per subject — the signature chip takes the context slot (user: "redundancy in the composer, we can't have that", 2026-07-21)
+
+Standing on the Wallet feed, the composer offered "What's new in Wallet?"
+(the §context recap lead, 2026-07-12) AND "How's my wallet?" (the dedicated
+wallet chip, 2026-07-15) in the same grid — two wallet asks, plus the
+organize hint also naming Wallet. Same latent collision on Tokens
+("What's new in Tokens?" + "How's my watchlist?").
+
+Ruling: one ask per subject. When the context source has its own signature
+ask, that ask takes the context lead slot and the generic recap sits out —
+the recap of the feed you're literally standing on is the weaker ask (the
+feed behind the sheet already shows what's new; the signature chip reads
+what the feed can't — live holdings, live prices). The signature chips'
+unconditional appends later in `computeSuggestions` now skip themselves
+when their kind already led (`Shell/Composer.swift`). The category sibling
+("How's my Markets stuff?") still rides the context source unchanged — it
+was already gated on being meaningfully broader (§143-era comment), which
+is this same ruling applied one level up. The organize hint keeps its slot:
+"Tag your 131 Wallet things" is an action invite, not an ask — different
+verb, not a duplicate.
+
+Mapping today: Wallet → "How's my wallet?" (still gated on a watched
+address existing, else the recap falls back honestly), Tokens → "How's my
+watchlist?". A future per-source signature ask joins the same switch.
+
+Verified on-sim headlessly: `-landingChip Wallet` then `-openComposer YES`
+logs `askTiles: hint:Wallet wallet,…` (no `context:Wallet`); `-landingChip
+Reminders` still logs `context:Reminders,category:Life,…` (recap + sibling
+intact for sources without a signature ask).

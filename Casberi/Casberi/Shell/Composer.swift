@@ -423,8 +423,23 @@ struct Composer: View {
         // composer meets you where you are. Only when that source actually has
         // things to synthesize (honesty rule: a chip must answer).
         if let src = contextSource(), all.contains(where: { $0.source == src }) {
-            out.append(AskOption(kind: "context", title: "What's new in \(src)?",
-                                 glyph: "app.badge", memoryKey: "context:\(src)"))
+            // A source with its own signature ask leads with THAT ask, not the
+            // generic recap (user ruling 2026-07-21, prd §149: one ask per
+            // subject — standing on the Wallet feed, "What's new in Wallet?"
+            // recaps the feed already behind the sheet while "How's my
+            // wallet?" reads what the feed can't, and the grid can't afford
+            // both). The signature chips' own appends below skip themselves
+            // once one has led here.
+            if src == "Wallet", !WalletStore.shared.addresses.isEmpty {
+                out.append(AskOption(kind: "wallet", title: "How's my wallet?",
+                                     glyph: "wallet.bifold"))
+            } else if src == "Tokens" {
+                out.append(AskOption(kind: "watchlist", title: "How's my watchlist?",
+                                     glyph: "chart.line.uptrend.xyaxis"))
+            } else {
+                out.append(AskOption(kind: "context", title: "What's new in \(src)?",
+                                     glyph: "app.badge", memoryKey: "context:\(src)"))
+            }
             // A category sibling (2026-07-20) — only when it's a meaningfully
             // BROADER ask than the single-source lead above (more than one
             // source in the category), else it would just repeat the same
@@ -470,14 +485,16 @@ struct Composer: View {
         // The watchlist chip (2026-07-14): watched tokens are the corpus' one
         // LIVE number — teach that the composer reads them. Gated on the same
         // things TokensAsk answers from, so the chip always answers.
-        if all.contains(where: { $0.source == "Tokens" }) {
+        if all.contains(where: { $0.source == "Tokens" }),
+           !out.contains(where: { $0.kind == "watchlist" }) {
             out.append(AskOption(kind: "watchlist", title: "How's my watchlist?",
                                  glyph: "chart.line.uptrend.xyaxis"))
         }
         // The wallet chip (2026-07-15): gated on a watched address existing, so
         // WalletAsk always has holdings to answer with — the chip can't drift
         // from the ask it triggers.
-        if !WalletStore.shared.addresses.isEmpty {
+        if !WalletStore.shared.addresses.isEmpty,
+           !out.contains(where: { $0.kind == "wallet" }) {
             out.append(AskOption(kind: "wallet", title: "How's my wallet?",
                                  glyph: "wallet.bifold"))
         }
