@@ -1175,9 +1175,21 @@ struct FeedScreen: View {
                                               ? String(localized: "Across your wallets")
                                               : String(localized: "Balance"),
                                           onOpen: hasBreakdown ? { showCombinedWallets = true } : nil)
+                            // Each tile arrives on its own clock — the balance
+                            // reads off already-recorded samples (instant) while
+                            // warnings/holdings/DeFi wait on live reads (2026-07-
+                            // 20: "balance shows then the others pop in but looks
+                            // unintentional"). Entrance is on the TILE, not the
+                            // row, so each one's own onAppear fires the moment
+                            // IT lands, in the wallet shape's own established
+                            // grammar (`entranceStyle` — the same rise every
+                            // transaction row below already uses) instead of a
+                            // silent, jarring insert.
+                            .modifier(RowEntrance(index: 0, wave: shapeWave, style: entranceStyle))
                     }
                     if !warnings.isEmpty {
                         WalletWarningsTile(warnings: warnings) { showWorthALook = true }
+                            .modifier(RowEntrance(index: 0, wave: shapeWave, style: entranceStyle))
                     }
                 }
                 .listRowBackground(Color.clear)
@@ -1196,6 +1208,10 @@ struct FeedScreen: View {
         if !walletLive.positions.isEmpty {
             Section {
                 WalletDeFiTile(positions: walletLive.positions)
+                    // Same reveal the balance/warnings tiles and holdings
+                    // treemap wear — DeFi is usually the last of the four live
+                    // reads to land, so it gets the deepest stagger.
+                    .modifier(RowEntrance(index: 2, wave: shapeWave, style: entranceStyle))
                     .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
                 .listRowInsets(EdgeInsets(top: DS.Space.s2, leading: DS.Space.s4,
@@ -1301,6 +1317,11 @@ struct FeedScreen: View {
         if !blockStream.els.isEmpty {
             Section {
                 GenRender(id: "root", els: blockStream.els)
+                    // The SECTION's own arrival, not the cells' — GenTagMap
+                    // already stages its cells once mounted; this is what
+                    // stops the whole treemap from hard-popping in the moment
+                    // the holdings read lands (2026-07-20, wallet streaming fix).
+                    .modifier(RowEntrance(index: 1, wave: shapeWave, style: entranceStyle))
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
                     .listRowInsets(EdgeInsets())
@@ -1993,7 +2014,13 @@ struct FeedScreen: View {
             // The scope may have moved while the reads were in flight — a late
             // answer for a wallet we've since left must not paint.
             guard scope == selectedWallet else { return }
-            walletLive = state
+            // Animated on purpose (2026-07-20, wallet streaming fix): this
+            // lands SECONDS after the balance tile (live chain reads vs a
+            // local sample file), and an unanimated set hard-popped the
+            // warnings/DeFi tiles into place — "looks unintentional". The
+            // animation carries the LAYOUT (rows sliding to make room);
+            // each tile's own RowEntrance carries its reveal.
+            withAnimation(DS.Motion.standard) { walletLive = state }
         }
     }
 
@@ -2008,9 +2035,12 @@ struct FeedScreen: View {
         let scope = selectedWallet
         Task { @MainActor in
             if let doc = await WalletIngest.holdingsChart(scopeTo: scope) {
-                blockStream.paint(doc)
+                // Same animated landing as `loadWalletLive` — the treemap is
+                // the tallest late-arriving block, so ITS unanimated insert
+                // was the most jarring of the pops.
+                withAnimation(DS.Motion.standard) { blockStream.paint(doc) }
             } else if !blockStream.els.isEmpty {
-                blockStream.paint([])
+                withAnimation(DS.Motion.standard) { blockStream.paint([]) }
             }
         }
     }
