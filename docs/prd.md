@@ -5041,3 +5041,32 @@ trailing slot, directional colour, no cross-token net) is possible but needs a
 rewrite of the shared grouped-row renderer, and the full USD version needs a
 historical-price read we don't do. Parked for the user to weigh against that
 cost rather than shipped with a fabricated number.
+
+## 152. No notifications — ever, as a product identity (user, 2026-07-21)
+
+**Ruling (user, verbatim rationale): "i dont' want to add notifications because
+then we become annoying and the apps we source are already notifying a user."**
+
+Casberi sends NO notifications — not push, not local, not even a single opt-in
+daily digest (one was floated in build-104 planning and declined). The sourced
+apps (social networks, calendars, wallets, feeds) already own the interrupt;
+Casberi's whole value is being the quiet place their output lands, read on the
+user's own schedule. Becoming a second notifier would make the app part of the
+noise it exists to absorb.
+
+Consequences:
+
+- The "presence outside the app" direction (kept asks on the widget, wider
+  background refresh, Smart Stack relevance) proceeds WITHOUT the notification
+  leg — widgets and the lock screen are the calm delivery surfaces; they show
+  state when glanced at, they never demand a glance.
+- `UNUserNotificationCenter` stays out of the codebase entirely (it has never
+  been imported; keep it that way). No permission prompt for notifications
+  should ever appear.
+- The one standing exception-shaped thing we have — the voice-recording Live
+  Activity — is fine: it reflects an action the user is currently taking, not
+  an interrupt we initiated.
+- If a future feature seems to "need" a notification (an approval landing, a
+  watched wallet moving), the answer is the widget, the away answer, or the
+  feed's attention glyphs — surfaces the user comes to, not ones that come to
+  the user.
