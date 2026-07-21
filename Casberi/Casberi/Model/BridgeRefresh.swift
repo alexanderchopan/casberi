@@ -30,10 +30,13 @@ enum BridgeRefresh {
         // landed (report 2026-07-09). Their ingest calls already dedupe on
         // sourceRef exactly like every polling bridge ("reconnects and
         // refreshes are cheap" — HealthIngest's own doc comment); they were
-        // just never wired into the foreground refresh. Re-requesting an
-        // already-decided system permission resolves instantly, no repeat
-        // prompt — gated on BridgeStore so a never-connected bridge is
-        // never silently asked.
+        // just never wired into the foreground refresh. Calendar/Reminders
+        // re-present the system dialog on every foreground if you call the
+        // request API again unconditionally (field report 2026-07-13) — the
+        // refresh path below must go through a bare re-scan that checks
+        // authorizationStatus first, same fix already applied to
+        // AppleMusicIngest/ContactsIngest — gated on BridgeStore so a
+        // never-connected bridge is never silently asked.
         func connected(_ id: String) -> Bool {
             store.bridges.contains { $0.id == id && $0.status == .connected }
         }
@@ -48,13 +51,13 @@ enum BridgeRefresh {
         if connected("cal") {
             let s = slot(); Task { @MainActor in
                 await BridgeRefresh.stagger(s)
-                _ = await ScheduleIngest.connectCalendar(context: context)
+                _ = await ScheduleIngest.refreshCalendar(context: context)
             }
         }
         if connected("rem") {
             let s = slot(); Task { @MainActor in
                 await BridgeRefresh.stagger(s)
-                _ = await ScheduleIngest.connectReminders(context: context)
+                _ = await ScheduleIngest.refreshReminders(context: context)
             }
         }
         let healthOn = connected("hlt"), stravaOn = connected("strava")

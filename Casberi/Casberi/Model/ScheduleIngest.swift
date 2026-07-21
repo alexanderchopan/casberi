@@ -32,7 +32,19 @@ enum ScheduleIngest {
     static func connectCalendar(context: ModelContext) async -> Int? {
         let store = EKEventStore()
         guard (try? await store.requestFullAccessToEvents()) == true else { return nil }
+        return await ingestEvents(store: store, context: context)
+    }
 
+    /// The bare re-scan BridgeRefresh uses — runs only when access is already
+    /// granted, so it never re-presents the permission dialog on every
+    /// foreground (field report 2026-07-13: same bug the Music/Contacts
+    /// refresh paths already had fixed).
+    static func refreshCalendar(context: ModelContext) async -> Int? {
+        guard EKEventStore.authorizationStatus(for: .event) == .fullAccess else { return nil }
+        return await ingestEvents(store: EKEventStore(), context: context)
+    }
+
+    private static func ingestEvents(store: EKEventStore, context: ModelContext) async -> Int? {
         let start = Date.now.addingTimeInterval(-7 * 86_400)
         let end = Date.now.addingTimeInterval(forwardWindow)
         let predicate = store.predicateForEvents(withStart: start, end: end, calendars: nil)
@@ -156,7 +168,18 @@ enum ScheduleIngest {
     static func connectReminders(context: ModelContext) async -> Int? {
         let store = EKEventStore()
         guard (try? await store.requestFullAccessToReminders()) == true else { return nil }
+        return await ingestReminders(store: store, context: context)
+    }
 
+    /// The bare re-scan BridgeRefresh uses — runs only when access is already
+    /// granted, so it never re-presents the permission dialog on every
+    /// foreground (field report 2026-07-13, same bug as connectCalendar).
+    static func refreshReminders(context: ModelContext) async -> Int? {
+        guard EKEventStore.authorizationStatus(for: .reminder) == .fullAccess else { return nil }
+        return await ingestReminders(store: EKEventStore(), context: context)
+    }
+
+    private static func ingestReminders(store: EKEventStore, context: ModelContext) async -> Int? {
         let predicate = store.predicateForReminders(in: nil)
         let reminders: [EKReminder] = await withCheckedContinuation { cont in
             store.fetchReminders(matching: predicate) { cont.resume(returning: $0 ?? []) }
