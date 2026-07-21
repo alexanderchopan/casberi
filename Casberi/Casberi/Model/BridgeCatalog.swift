@@ -21,6 +21,22 @@ enum BridgeCatalog {
         /// mini store: that screen is one-tap connects only.
         var needsSetup: Bool = false
 
+        /// The day this offer joined the catalog (nil = it has always been
+        /// here / predates the stamp). This is what makes "Just added" HONEST
+        /// where the old "New" badge was pure assertion (ruling 2026-07-16):
+        /// a computable date, so a genuinely-recent offer can earn a Discover
+        /// seat and the badge retires itself when the date ages out. Only
+        /// stamp an offer the day it actually lands.
+        var added: Date? = nil
+
+        /// True when this offer joined within the last week — the window the
+        /// Discover deck reads for a "Just added" seat. Time-relative on
+        /// purpose: a stamped offer stops being new on its own, no cleanup.
+        func isNew(asOf now: Date = Date()) -> Bool {
+            guard let added else { return false }
+            return now.timeIntervalSince(added) < 7 * 24 * 60 * 60
+        }
+
         /// A one-word honest hook for the row badge and the story eyebrow —
         /// derived from HOW the bridge connects, never marketing. "One tap"
         /// (a system-permission bridge — a single grant, no fields), "No
@@ -41,6 +57,15 @@ enum BridgeCatalog {
             if imports.contains(name) { return "Import" }
             return nil
         }
+    }
+
+    /// A catalog date at midnight UTC — the join key for `Offer.added`. Only
+    /// used for the "Just added" window, so day granularity is enough.
+    static func day(_ year: Int, _ month: Int, _ day: Int) -> Date {
+        var c = DateComponents()
+        c.year = year; c.month = month; c.day = day
+        c.timeZone = TimeZone(identifier: "UTC")
+        return Calendar(identifier: .gregorian).date(from: c) ?? Date(timeIntervalSince1970: 0)
     }
 
     /// Grouped by what they're worth, verb taglines (S25).
@@ -85,7 +110,7 @@ enum BridgeCatalog {
         // watched list.
         Offer(name: "Peer",        tagline: "Your Peer trades, as they settle",      group: "Markets",   connectable: true,
               summary: "Peer trades settle onchain into your own wallet — connect and each fill lands in your feed as it settles: which token, how much, and the payment app that paid for it (\"Bought 25 USDC with Venmo on Peer\"). Read from the public chain for the wallets you already watch; Peer's zero-knowledge design keeps your Venmo or PayPal side private, so the chain never shows it and neither does Casberi. No account, no key, read-only: nothing here ever starts a trade.",
-              needsSetup: true),
+              needsSetup: true, added: day(2026, 7, 17)),
         Offer(name: "GeckoTerminal", tagline: "Trending tokens, per chain",          group: "Markets",   connectable: true,
               summary: "Pick the chains you care about and the tokens trending on each — GeckoTerminal's own ranking, by 24-hour volume and price move — land in your feed as links. No account, no key: fetched straight from GeckoTerminal's public API by this iPhone. Read-only public price data; nothing here buys, sells, or trades. Each trending row opens to its live on-device chart.",
               needsSetup: true),
@@ -96,7 +121,7 @@ enum BridgeCatalog {
         // account — orders and receipts — not a market you watch.
         Offer(name: "Bitrefill",   tagline: "Your gift cards, in reach",             group: "Shopping",  connectable: true,
               summary: "What you buy on Bitrefill lands in your feed — gift cards wearing their own artwork, phone top-ups, eSIMs, balance refills — with your balance at the top of the Bitrefill feed. Connects with an API key from Bitrefill's developer settings — it stays in this iPhone's Keychain. Read-only by conduct: nothing here ever buys, pays, or spends your balance.",
-              needsSetup: true),
+              needsSetup: true, added: day(2026, 7, 17)),
         Offer(name: "Shopify",     tagline: "Follow any store's new drops",          group: "Shopping",  connectable: true,
               summary: "Follow any Shopify store — paste its web address and its newest products, restocks, and sale prices land in your feed as things, opening back on the store's own page. Fetched straight from the store's public catalog by this iPhone: no account, no sign-in, read-only — nothing here checks out or pays. Some big stores block automated reads; those it can't follow, it says so.",
               needsSetup: true),
@@ -117,7 +142,7 @@ enum BridgeCatalog {
         // a secret's value is.
         Offer(name: "1Claw",       tagline: "What your agent's key can reach",       group: "Agent",     connectable: true,
               summary: "1Claw is a vault that holds your AI agents' secrets behind human-granted permissions. Paste an agent's API key and its actual reach lands in your feed — every vault it can see, and each grant's secret paths and permissions, straight from 1Claw's own records. Names and permissions only, read straight from this iPhone: nothing here ever reads a secret's value, signs, or spends.",
-              needsSetup: true),
+              needsSetup: true, added: day(2026, 7, 17)),
         Offer(name: "OpenClaw",    tagline: "Your agents' work lands here",          group: "Machines",  connectable: false,
               summary: "What your agents make — jobs, runs, outputs — lands in your feed with full provenance, and their approvals reach you here."),
         Offer(name: "GitHub",      tagline: "Stars, releases, issues — your GitHub", group: "Work",      connectable: true,

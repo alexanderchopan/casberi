@@ -4599,3 +4599,54 @@ The manage screen, even after §139's door purge, still read as "a bunch of stuf
 **Verification note, since this round hit a real false alarm:** the first `verify.sh` run after this change failed cold-launch survival at cycle 8 (froze, no first frame in 15s) and perf spiked to 3272ms/24767ms. A same-code re-run reproduced the freeze at cycle 1. Bisected by stashing the diff and running the identical HEAD~1 code — it ALSO froze under `LAUNCH_CYCLES=10`, which ruled out this change as the cause; a `simctl shutdown`+`boot` (clearing ~70 cumulative install/cold-launch cycles' worth of simulator state from one long session) let HEAD~1 pass 4/4 clean, and the restored diff then passed 10/10 with perf back to 437ms. Lesson for future long sessions: a mid-session survival-loop failure is not automatically a code regression — check whether the SIMULATOR has degraded (reboot it) before assuming the diff broke launch, especially after dozens of manual installs in one sitting.
 
 VERIFIED 2026-07-20 (iPhone 17 Pro sim, post-reboot): manage renders as three cards with the whisper header; see-all renders as one inline door; the feed's Balance tile reads "Across your wallets" on the combined view. verify.sh green (10/10 survival); perf 437ms / 329MB, matching the pre-this-round baseline.
+
+## 141. The app catalog surprise-&-delight pass (user: "how can we surprise and delight in the app catalog?" → "do it all", 2026-07-21)
+
+A delight pass over the Apps catalog, sibling to §79's Wallet pass —
+everything honest (a moment only ever marks something real), deterministic,
+and off under Reduce Motion. Nine items, all riding existing machinery so no
+new design law is needed. Ships:
+
+- **Shelf completed.** When a category's LAST addable app connects, its shelf
+  header glows once in the category's own color (`landFlash` gained a `tint:`)
+  and a toast names the set — "Work — all connected." Only a real set (≥2
+  connectable offers) earns it; a lone-app category completing is trivial.
+- **Connect-count milestones.** Crossing 5 / 10 / 25 connected seats flashes a
+  quiet "N apps connected." — the catalog's sibling of §36v's "N things
+  banked." Persisted (`apps.connectMilestone.reached`), seeded to the highest
+  passed threshold on appear so arriving past one never fires late.
+  First-connect keeps its berry rain; these are toast-only.
+- **Connected rows roll their number.** A tier-2 subline ("3 games in") is now
+  drawn through `CountUpText` so the proof counts up rather than sitting — the
+  same grammar the setup-screen result wears.
+- **Promote-lift on connect.** The just-connected row scales + shadows as the
+  shelf re-sorts it into its connected seat (`connectPromote`, the §11 pin-lift
+  reused). Keyed on the name delta from `connectedNames`, so every connect path
+  (one-tap AND setup-screen) drives it identically.
+- **Corpus-aware Discover seats (`CatalogTaste`).** Adjacency already reads as
+  the store knowing your SETUP ("Goes with GitHub"); this reads what's in your
+  CORPUS and suggests the bridge that keeps more of it — many links → Readwise
+  (or RSS if Readwise is taken), many screenshots → Photos, many chats →
+  Claude/ChatGPT, etc. Every eyebrow is a real count (≥5 of a kind) over a
+  plain fetch, counted in memory (the §36v rule: enums never enter a
+  `#Predicate`). Silent when the corpus is too thin to read.
+- **"Just added" seats.** `Offer` gained an `added: Date?`; an offer inside the
+  week earns a Discover seat eyebrowed "Just added". This is what makes "New"
+  HONEST again where the 2026-07-16 reason-or-no-seat rule retired it as an
+  assertion — a date is computable and ages itself out. Stamped on the genuine
+  2026-07-17 additions (Peer, Bitrefill, 1Claw).
+- **Haptics on the deal.** The Discover deck's card commit fires a selection
+  tick — dealing a card now reads like dealing (§36v: haptics finish motion).
+- **Glyph parallax mid-drag.** The ghost brand glyph on the front card drifts a
+  touch against `dragX` for cheap depth as the card is pulled (the deck already
+  owns that state, so no extra re-render).
+- **Helpful no-match search.** A website-looking query ("something.com", or a
+  word like "newsletter"/"substack") with no app match now offers RSS — "RSS
+  can follow most sites." — with the real addable row inline, turning a dead
+  end into a connect path.
+
+Files: `Design/MicroMotion.swift` (tint on `LandFlash`, new `ConnectPromote`),
+`Model/BridgeCatalog.swift` (`added`/`isNew`), `Model/CatalogTaste.swift` (new),
+`Screens/AppsScreen.swift`. catalog-sync stays green (no name changes). NOT yet
+verified on-sim — this session is the Linux web env with no xcodebuild; build +
+screen-sweep to run on the Mac before the checkpoint.

@@ -36,6 +36,24 @@ struct AppsScreen: View {
     /// Bumped when a jump chip lands on a shelf — the header flashes once so
     /// the tap has an arrival, not just a silent scroll.
     @State private var shelfLand: [String: Int] = [:]
+    /// Bumped when a category's LAST addable app connects — the shelf header
+    /// glows once in the category's own color and a toast names the set now
+    /// complete. Its own trigger (not `shelfLand`) so the completion glow wears
+    /// the category color while a jump stays neutral tint.
+    @State private var shelfComplete: [String: Int] = [:]
+    /// The app that just connected, by any path — the shelf row wearing this
+    /// name lifts as it takes its connected seat. `connectLiftToken` fires one
+    /// lift; the name gates which row.
+    @State private var justConnectedName: String?
+    @State private var connectLiftToken = 0
+    /// Connect-count milestones (5 / 10 / 25 seats): the highest threshold
+    /// already celebrated, persisted so each fires once, forever. Seeded to the
+    /// highest passed threshold on appear so a user who arrives past one never
+    /// gets a late toast.
+    @AppStorage("apps.connectMilestone.reached") private var connectMilestoneReached = 0
+    /// "Because of what you keep" — corpus-derived Discover seats, read once per
+    /// appearance (a plain fetch, counted in memory; never per frame).
+    @State private var tasteReasons: [CatalogTaste.Reason] = []
     #if DEBUG
     @State private var probe: AppsProbe?
     #endif
@@ -137,6 +155,14 @@ struct AppsScreen: View {
             seen.insert(offer.name)
             out.append(Story(kind: .bridge(offer), eyebrow: eyebrow))
         }
+        // (0) Just added — a genuinely-new offer (a real `added` date inside
+        // the week) leads: the freshest news the catalog has, and now
+        // COMPUTABLE, so the eyebrow is honest where the old "New" badge was
+        // pure assertion (the reason "New" was retired 2026-07-16 — a date
+        // brings it back legitimately).
+        for offer in BridgeCatalog.offers where offer.isNew() {
+            add(offer, eyebrow: "Just added")
+        }
         // (1) Featured tracking bridges lead, in the order listed — unless
         // already connected (then they're in the strip, not the store).
         for name in Self.featuredStories {
@@ -149,6 +175,19 @@ struct AppsScreen: View {
                 if let offer = BridgeCatalog.offers.first(where: { $0.name == suggestion }) {
                     add(offer, eyebrow: "Goes with \(bridge.name)")
                 }
+            }
+        }
+        // (2b) Because of what you keep — a real capture habit points at the
+        // bridge that would keep more of it (many links → Readwise, or RSS if
+        // Readwise is already connected). The first OPEN candidate in each
+        // signal takes the seat; `add`'s not-connected guard falls the loop
+        // through to the next.
+        for reason in tasteReasons {
+            for name in CatalogTaste.candidates(for: reason.offerName) {
+                guard let offer = BridgeCatalog.offers.first(where: { $0.name == name }) else { continue }
+                let before = out.count
+                add(offer, eyebrow: reason.eyebrow)
+                if out.count > before { break }
             }
         }
         // (3) Pair-a-client when no client is paired (replaces pairEntryRow).
@@ -242,11 +281,26 @@ struct AppsScreen: View {
         // 0 → first connected bridge deals the rain. A user who already has
         // connections has passed the milestone; mark it done on appear so it
         // never fires late.
-        .onAppear { if connectedCount > 0 { storeFirstConnectDone = true } }
+        .onAppear {
+            if connectedCount > 0 { storeFirstConnectDone = true }
+            // Seed the connect-count milestone to the highest already-passed
+            // threshold so arriving past one never fires a late toast.
+            let passed = Self.connectMilestones.filter { $0 <= connectedCount }.max() ?? 0
+            if passed > connectMilestoneReached { connectMilestoneReached = passed }
+            // Read the corpus once for the taste-driven Discover seats.
+            tasteReasons = CatalogTaste.reasons(context: modelContext)
+        }
         .onChange(of: connectedCount) { old, new in
             guard !storeFirstConnectDone, old == 0, new > 0 else { return }
             storeFirstConnectDone = true
             firstConnectPulse += 1
+        }
+        // The store's shape after any connect/disconnect — drives the promote
+        // lift (which row just took its seat), the count milestones, and the
+        // shelf-completed glow. Keyed on the NAMES (not just the count) so the
+        // just-connected row can be identified.
+        .onChange(of: connectedNames) { old, new in
+            handleConnectChange(old: old, new: new)
         }
         .dsAdaptiveContentWidth()
         .dsPageBackground()
@@ -309,15 +363,47 @@ struct AppsScreen: View {
         }
     }
 
+    /// A query that looks like a site or newsletter — a dot (a domain), or a
+    /// word that names web-publishing. RSS follows most of these, so the miss
+    /// becomes a connect path instead of a dead end.
+    private func looksLikeSite(_ q: String) -> Bool {
+        let s = q.lowercased()
+        if s.contains(".") { return true }
+        return ["feed", "blog", "newsletter", "rss", "substack", "site", "website"]
+            .contains { s.contains($0) }
+    }
+
+    /// The RSS offer as an addable row — nil if RSS is already connected (then
+    /// there's nothing to suggest).
+    private var rssSuggestion: Ranked? {
+        ranked.first { $0.offer.name == "RSS" && $0.tier == 1 }
+    }
+
     @ViewBuilder
     private var searchResults: some View {
         let hits = searchHits
         if hits.isEmpty {
-            Text("No apps match \(Text(query).fontWeight(.semibold)).")
-                .dsText(.body17).foregroundStyle(DS.textSecondary)
-                .frame(maxWidth: .infinity, alignment: .center)
-                .padding(.top, DS.Space.s8)
-                .padding(.horizontal, DS.Space.s4)
+            VStack(spacing: DS.Space.s4) {
+                Text("No apps match \(Text(query).fontWeight(.semibold)).")
+                    .dsText(.body17).foregroundStyle(DS.textSecondary)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding(.horizontal, DS.Space.s4)
+                // A website-looking query has an answer even when no app name
+                // matches: RSS follows most sites. Honest — the row's own
+                // Connect opens RSS's real setup.
+                if looksLikeSite(query), let rss = rssSuggestion {
+                    VStack(alignment: .leading, spacing: DS.Space.s2) {
+                        Text("RSS can follow most sites.")
+                            .dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                            .padding(.horizontal, DS.Space.s4)
+                        VStack(spacing: DS.Space.s1) { appRow(rss) }
+                            .padding(.vertical, DS.Space.s1)
+                            .dsCard()
+                            .padding(.horizontal, DS.Space.s4)
+                    }
+                }
+            }
+            .padding(.top, DS.Space.s8)
         } else {
             VStack(spacing: DS.Space.s1) {
                 ForEach(Array(hits.enumerated()), id: \.element.id) { i, entry in
@@ -360,6 +446,74 @@ struct AppsScreen: View {
     /// store's first-connect milestone.
     private var connectedCount: Int {
         store.bridges.filter { $0.status != .paused }.count
+    }
+
+    /// The connected-seat count milestones — quiet count-up toasts, the sibling
+    /// of §36v's "N things banked." at the catalog. First-connect is its own
+    /// berry-rain moment; these mark the collection filling out.
+    private static let connectMilestones = [5, 10, 25]
+
+    /// The connected bridges' names, sorted — a stable value whose changes name
+    /// exactly which seat filled or emptied.
+    private var connectedNames: [String] {
+        store.bridges.filter { $0.status != .paused }.map(\.name).sorted()
+    }
+
+    /// Connectable-but-not-connected offers per category, for a given set of
+    /// connected names — the "still addable" count whose fall to zero completes
+    /// a shelf.
+    private func addableByCategory(connected: Set<String>) -> [String: Int] {
+        var out: [String: Int] = [:]
+        for offer in BridgeCatalog.offers
+        where offer.connectable && !connected.contains(offer.name) {
+            out[category(of: offer), default: 0] += 1
+        }
+        return out
+    }
+
+    /// A category's identity color — its exemplar's glyph color, for the
+    /// shelf-completed glow.
+    private func categoryColor(_ name: String) -> Color {
+        let exemplar = Self.categories.first { $0.name == name }?.exemplar ?? name
+        return BridgeGlyph.color(for: exemplar)
+    }
+
+    /// One connect/disconnect reconciled into the three store-shape moments:
+    /// the just-connected row's promote lift, the count milestones, and a
+    /// completed shelf's glow. All read from the name delta so every connect
+    /// path (one-tap AND setup-screen) lands here identically.
+    private func handleConnectChange(old: [String], new: [String]) {
+        let added = Set(new).subtracting(Set(old))
+        // (4) Promote-lift the row that just took its seat.
+        if let name = added.first {
+            justConnectedName = name
+            connectLiftToken += 1
+        }
+        // (2) Count milestones — fire the highest newly-crossed threshold once.
+        if new.count > old.count {
+            let crossed = Self.connectMilestones
+                .filter { $0 <= new.count && $0 > connectMilestoneReached }
+                .max()
+            if let t = crossed {
+                connectMilestoneReached = t
+                chrome.flash("\(t) apps connected.", tone: .success)
+            }
+        }
+        // (1) Shelf completed — a category whose last addable app just
+        // connected glows in its own color and the toast names the set. Only a
+        // real set (≥2 connectable offers) earns the moment; a lone-app
+        // category completing is trivial.
+        let before = addableByCategory(connected: Set(old))
+        let after = addableByCategory(connected: Set(new))
+        for cat in Self.categories {
+            guard (before[cat.name] ?? 0) > 0, (after[cat.name] ?? 0) == 0 else { continue }
+            let total = BridgeCatalog.offers.filter {
+                $0.connectable && category(of: $0) == cat.name
+            }.count
+            guard total >= 2 else { continue }
+            shelfComplete[cat.name, default: 0] += 1
+            chrome.flash("\(cat.name) — all connected.", tone: .success)
+        }
     }
 
     // MARK: - Discover deck (the ONE brand-gradient license, dealt like cards)
@@ -445,7 +599,7 @@ struct AppsScreen: View {
             // render-time, backgrounds added after them stay at the layout
             // position while the front card flies — exactly the deck's
             // geometry.
-            return storyCard(stories[top])
+            return storyCard(stories[top], parallax: reduceMotion ? 0 : dragX * 0.08)
                 .offset(x: dragX)
                 .rotationEffect(.degrees(reduceMotion ? 0 : Double(dragX / 28)),
                                 anchor: .bottom)
@@ -511,6 +665,9 @@ struct AppsScreen: View {
         /// a fixed asyncAfter raced the spring and a fast second swipe.
         private func deal(direction: CGFloat) {
             guard stories.count > 1, !dealing else { return }
+            // The commit past the line is felt — a selection tick, so dealing a
+            // card reads like dealing (§36v: haptics finish the motion).
+            DSHaptic.selection()
             if reduceMotion {
                 advance()
                 return
@@ -533,7 +690,7 @@ struct AppsScreen: View {
         }
 
         @ViewBuilder
-        private func storyCard(_ story: Story) -> some View {
+        private func storyCard(_ story: Story, parallax: CGFloat = 0) -> some View {
             switch story.kind {
             case .bridge(let offer):
                 // The eyebrow is the seat's reason — the adjacency if it has
@@ -547,7 +704,8 @@ struct AppsScreen: View {
                     name: offer.name,
                     brand: DS.legibleCardFill(for: offer.name),
                     verb: .connect,
-                    destination: offer
+                    destination: offer,
+                    parallax: parallax
                 ) { onConnect(offer) }
             case .pair:
                 storyCardBody(
@@ -556,7 +714,8 @@ struct AppsScreen: View {
                     iconName: "Claude",
                     name: "Claude",
                     brand: DS.tint,
-                    verb: .pair
+                    verb: .pair,
+                    parallax: parallax
                 ) { onPair() }
             }
         }
@@ -571,6 +730,7 @@ struct AppsScreen: View {
     private func storyCardBody(eyebrow: String, headline: String, iconName: String,
                                name: String, brand: Color, verb: CapsuleVerb,
                                destination: BridgeCatalog.Offer? = nil,
+                               parallax: CGFloat = 0,
                                action: @escaping () -> Void) -> some View { // in DiscoverDeck
         let card = VStack(alignment: .leading, spacing: DS.Space.s3) {
             Text(LocalizedStringKey(eyebrow))
@@ -618,7 +778,10 @@ struct AppsScreen: View {
                         .font(.system(size: 150, weight: .semibold))
                         .foregroundStyle((BridgeGlyph.glyphTint(for: iconName) ?? .white).opacity(0.10))
                         .rotationEffect(.degrees(-12))
-                        .offset(x: 44, y: 40)
+                        // The ghost glyph drifts a touch against the drag — the
+                        // card gains cheap depth as it's pulled (the front card
+                        // passes its live `dragX`; under-cards pass 0).
+                        .offset(x: 44 + parallax, y: 40)
                 }
                 .clipShape(RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
         }
@@ -751,11 +914,13 @@ struct AppsScreen: View {
             }
             .buttonStyle(.plain)
             .landFlash(shelfLand[name] ?? 0)
+            .landFlash(shelfComplete[name] ?? 0, tint: categoryColor(name))
         } else {
             Text(LocalizedStringKey(name))
                 .dsText(.heading22).foregroundStyle(DS.textPrimary)
                 .padding(.horizontal, DS.Space.s4)
                 .landFlash(shelfLand[name] ?? 0)
+                .landFlash(shelfComplete[name] ?? 0, tint: categoryColor(name))
         }
     }
 
@@ -853,10 +1018,22 @@ struct AppsScreen: View {
                         // wearing one made it wallpaper. The qualifier still
                         // serves as a Discover eyebrow, where ONE card states
                         // its reason.
-                        Text(LocalizedStringKey(subline(entry)))
-                            .dsText(.subhead13)
-                            .foregroundStyle(entry.tier == 0 ? DS.attention : DS.textTertiary)
-                            .lineLimit(1)
+                        //
+                        // A connected row's subline is its live status line
+                        // ("3 games in") — rolled up through the numeric-text
+                        // count-up so the proof arrives rather than sitting
+                        // (the same grammar the setup screen's result wears).
+                        // The other tiers stay plain, localizable copy.
+                        Group {
+                            if entry.tier == 2 {
+                                CountUpText(text: subline(entry))
+                            } else {
+                                Text(LocalizedStringKey(subline(entry)))
+                            }
+                        }
+                        .dsText(.subhead13)
+                        .foregroundStyle(entry.tier == 0 ? DS.attention : DS.textTertiary)
+                        .lineLimit(1)
                     }
                     Spacer(minLength: 0)
                 }
@@ -885,6 +1062,9 @@ struct AppsScreen: View {
         }
         .padding(.horizontal, DS.Space.s4)
         .padding(.vertical, DS.Space.s2)
+        // The just-connected row lifts as the shelf re-sorts it into its
+        // connected seat — a promotion you can feel, not a silent re-order.
+        .connectPromote(isTarget: entry.offer.name == justConnectedName, token: connectLiftToken)
     }
 
     /// Sublines are honest states or the tagline — never marketing fluff.
