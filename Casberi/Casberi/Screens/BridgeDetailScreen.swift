@@ -1,8 +1,8 @@
 import SwiftUI
 import SwiftData
 
-/// A bridge's detail — the app, what it can do (sentences), its recent things,
-/// and its controls: Reconnect when broken, Pause/Resume, Remove with
+/// A bridge's detail — the app, what it can do (sentences), a one-line proof
+/// it's delivering, and its controls: Reconnect when broken, Pause/Resume, Remove with
 /// keep-or-purge. No "ask before acting" switch: every bridge is read-only
 /// today (nothing writes back to a source), so a writes toggle would be a
 /// dead control — it returns, gated to a real write, when agent writes ship.
@@ -13,23 +13,24 @@ struct BridgeDetailScreen: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
     @State private var confirmRemove = false
-    @State private var sheetThing: Thing?
 
     private var bridge: BridgeApp? {
         store.bridges.first { $0.id == bridgeID }
     }
-    /// This bridge's three most recent things — cached on appearance rather than
-    /// re-fetched twice on every body pass. The predicate is per-bridge, so this
-    /// is the cache path rather than a static @Query.
-    @State private var recent: [Thing] = []
+    /// This bridge's single most recent thing — a receipt, not content (the
+    /// feed already holds the full record, one "All in Feed" tap away). Was
+    /// three full rows; from the feed's own "Manage" capsule that read as a
+    /// second, worse copy of the feed you'd just scrolled (user, 2026-07-21).
+    /// Cached on appearance rather than re-fetched twice on every body pass.
+    @State private var recent: Thing?
 
     private func loadRecent(source name: String) {
         var descriptor = FetchDescriptor<Thing>(
             predicate: #Predicate { $0.source == name },
             sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]
         )
-        descriptor.fetchLimit = 3
-        recent = (try? modelContext.fetch(descriptor)) ?? []
+        descriptor.fetchLimit = 1
+        recent = (try? modelContext.fetch(descriptor))?.first
     }
 
     var body: some View {
@@ -64,40 +65,35 @@ struct BridgeDetailScreen: View {
                         }
                     }
 
-                    // Recent = EVIDENCE, not content: three receipts that the
-                    // bridge delivers (connect ends in proof). The rows open;
-                    // the full record is one hop away in Feed.
-                    if !recent.isEmpty {
+                    // Recent = a receipt, not content: proof the bridge is
+                    // actually delivering (connect ends in proof), never a
+                    // second copy of the feed. Tapping goes straight to the
+                    // real record — this page is about the connection, not
+                    // the things.
+                    if let recent {
                         section("Recent") {
-                            ForEach(recent) { thing in
-                                Button {
-                                    sheetThing = thing
-                                } label: {
-                                    HStack(spacing: DS.Space.s3) {
-                                        KindGlyph(kind: thing.kind, size: 24)
-                                        Text(thing.title)
-                                            .dsText(.body17).foregroundStyle(DS.textPrimary)
-                                            .lineLimit(1)
-                                        Spacer()
-                                        // The time is what makes a receipt.
-                                        Text(ProjectDetailScreen.shortTime(thing.capturedAt))
-                                            .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-                                    }
-                                    .padding(.horizontal, DS.Space.s4)
-                                    .padding(.vertical, DS.Space.s3)
-                                    .contentShape(Rectangle())
-                                }
-                                .buttonStyle(.plain)
-                            }
                             Button {
                                 FeedFilter.shared.source = bridge.name
                                 FeedFilter.shared.tag = "All"
                                 if let url = URL(string: "casberi://feed") { openURL(url) }
                             } label: {
-                                Text("All in Feed")
-                                    .dsText(.subhead13).foregroundStyle(DS.tint)
-                                    .padding(.horizontal, DS.Space.s4)
-                                    .padding(.vertical, DS.Space.s3)
+                                HStack(spacing: DS.Space.s3) {
+                                    KindGlyph(kind: recent.kind, size: 24)
+                                    VStack(alignment: .leading, spacing: 1) {
+                                        Text("Last delivered")
+                                            .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                                        Text(recent.title)
+                                            .dsText(.body17).foregroundStyle(DS.textPrimary)
+                                            .lineLimit(1)
+                                    }
+                                    Spacer()
+                                    Image(systemName: "chevron.right")
+                                        .font(.system(size: 13, weight: .semibold))
+                                        .foregroundStyle(DS.textTertiary)
+                                }
+                                .padding(.horizontal, DS.Space.s4)
+                                .padding(.vertical, DS.Space.s3)
+                                .contentShape(Rectangle())
                             }
                             .buttonStyle(.plain)
                         }
@@ -131,9 +127,6 @@ struct BridgeDetailScreen: View {
             .onAppear { loadRecent(source: bridge.name) }
             .navigationTitle(bridge.name)
             .navigationBarTitleDisplayMode(.inline)
-            .sheet(item: $sheetThing) { thing in
-                ThingSheetView(thing: thing)
-            }
             .confirmationDialog("Remove \(bridge.name)?",
                                 isPresented: $confirmRemove, titleVisibility: .visible) {
                 Button("Keep its things") {
