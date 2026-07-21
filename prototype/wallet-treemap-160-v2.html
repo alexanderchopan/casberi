@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Wallet treemap — 220 vs 160</title>
+<style>
+  :root {
+    --page: #000000;
+    --sheet: #111113;
+    --well: #080809;
+    --text1: #ffffff;
+    --text2: rgba(235,235,245,0.60);
+    --text3: rgba(235,235,245,0.30);
+    --tint: #1673e6;
+    --attention: #ff9f0a;
+    --confirm: #30d158;
+    --r-sheet: 16px;
+    --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px;
+    --shadow: 0 10px 30px rgba(0,0,0,0.55);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #0a0a0c; color: var(--text1);
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
+    letter-spacing: 0;
+    padding: 40px 24px 80px;
+  }
+  h1 { font-size: 22px; font-weight: 700; margin-bottom: 8px; }
+  .intro { color: var(--text2); font-size: 14px; line-height: 1.5; max-width: 780px; margin-bottom: 36px; }
+  .intro b { color: var(--text1); font-weight: 600; }
+  .rail { display: flex; gap: 40px; flex-wrap: wrap; align-items: flex-start; justify-content: center; }
+  .col { width: 393px; }
+  .dir-title { font-size: 17px; font-weight: 700; margin-bottom: 4px; }
+  .dir-note { color: var(--text2); font-size: 13px; line-height: 1.5; margin-bottom: 14px; min-height: 98px; }
+
+  /* Fixed-height frame: what fits above the fold is the argument. */
+  .phone {
+    width: 393px; height: 852px;
+    background: var(--page); border-radius: 44px;
+    padding: 18px 16px 0;
+    box-shadow: 0 0 0 1px rgba(255,255,255,0.07), 0 24px 60px rgba(0,0,0,0.6);
+    overflow: hidden; position: relative;
+  }
+  .fold {
+    position:absolute; left:0; right:0; bottom:0; height:64px;
+    background: linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.9) 80%);
+    pointer-events:none;
+  }
+  .statusbar { display:flex; justify-content:space-between; padding: 2px 14px 10px; font-size:13px; font-weight:600; }
+  .navtitle { font-size: 28px; font-weight: 700; padding: 4px 4px 12px; }
+  .chips { display:flex; gap: var(--s2); padding: 0 2px 14px; }
+  .chip {
+    display:flex; align-items:center; gap:6px;
+    font-size: 13px; font-weight: 600; color: var(--text2);
+    background: var(--sheet); border-radius: 9999px; padding: 7px 12px;
+  }
+  .chip.on { color: #fff; background: var(--tint); }
+  .face { width:16px; height:16px; border-radius:50%; background: linear-gradient(135deg,#7dd3fc,#6366f1); }
+  .face.cold { background: linear-gradient(135deg,#fca5a5,#f59e0b); }
+
+  .tilerow { display:flex; gap: var(--s2); margin-bottom: var(--s2); }
+  .tile {
+    background: var(--sheet); border-radius: var(--r-sheet);
+    padding: var(--s3); flex: 1; box-shadow: var(--shadow);
+    display:flex; flex-direction:column; gap: var(--s1);
+  }
+  .cap { display:flex; align-items:center; gap:5px; font-size:12px; color: var(--text2); }
+  .cap .spacer { flex:1; }
+  .chev { color: var(--text3); font-size: 11px; }
+  .glyph { color: var(--attention); font-size: 11px; }
+  .stat { font-size: 24px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .sub { font-size: 13px; color: var(--text2); line-height: 1.35; }
+  .pill {
+    align-self:flex-start; display:flex; align-items:center; gap:4px;
+    font-size: 12px; font-weight: 600; color: var(--confirm);
+    background: rgba(48,209,88,0.14); border-radius: 9999px; padding: 3px 8px; margin-top: 2px;
+  }
+  svg.spark { display:block; width:100%; height:26px; }
+
+  /* Map header — the app's real one: eyebrow (wallet label) + subline. */
+  .maphead { padding: 14px 4px 0; }
+  .maphead .h { font-size: 15px; font-weight: 600; }
+  .maphead .s { font-size: 15px; color: var(--text2); padding: 4px 0 12px; }
+
+  /* Treemap geometry — the real 5-cell template on a 4×3 unit grid. */
+  .map { position: relative; }
+  .cell {
+    position:absolute; background: var(--sheet); border-radius: var(--r-sheet);
+    box-shadow: var(--shadow); padding: var(--s3);
+    display:flex; flex-direction:column; align-items:flex-start; overflow:hidden;
+  }
+  .cell .grow { flex: 1; }
+  .coin {
+    width: 20px; height:20px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    font-size: 10px; font-weight: 800; color:#fff; flex:none;
+  }
+  .coin.sm { width:16px; height:16px; font-size:8px; }
+  .c-eth { background:#627eea; } .c-usdc { background:#2775ca; }
+  .c-sol { background: linear-gradient(135deg,#9945ff,#14f195); }
+  .c-btc { background:#f7931a; }
+  .sym { font-size: 17px; font-weight: 400; margin-top: 4px; }
+  .sym.sm { font-size: 15px; margin-top: 0; }
+  .val { font-size: 13px; color: var(--text2); font-variant-numeric: tabular-nums; }
+  .inline { display:flex; align-items:center; gap:6px; width:100%; min-width:0; }
+  .cell.tiny { padding: 9px; }
+  .cell.tiny .inline { gap: 5px; }
+  .inline .sym.sm { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .inline .val { margin-left:auto; }
+  .microdelta { font-size: 11px; font-weight: 600; color: var(--confirm); }
+  .valrow { display:flex; align-items:baseline; gap:6px; }
+  .valrow .val.big { font-size:14px; color:var(--text1); font-weight:600; }
+  .wash1 { background: linear-gradient(0deg, rgba(22,115,230,0.16), rgba(22,115,230,0.16)), var(--sheet); }
+  .wash2 { background: linear-gradient(0deg, rgba(22,115,230,0.11), rgba(22,115,230,0.11)), var(--sheet); }
+  .wash3 { background: linear-gradient(0deg, rgba(22,115,230,0.07), rgba(22,115,230,0.07)), var(--sheet); }
+  .wash4 { background: linear-gradient(0deg, rgba(22,115,230,0.05), rgba(22,115,230,0.05)), var(--sheet); }
+
+  .defirow { display:flex; gap: var(--s3); padding-top: var(--s1); }
+  .defistat { flex:1; }
+  .defistat .l { font-size:12px; color: var(--text3); margin-bottom:2px; }
+  .defistat .v { font-size:16px; font-weight:600; font-variant-numeric: tabular-nums; }
+
+  .dayhead { font-size: 12px; color: var(--text2); padding: 16px 4px 8px; }
+  .txn {
+    background: var(--sheet); border-radius: var(--r-sheet);
+    padding: var(--s3); display:flex; align-items:center; gap: var(--s3);
+    margin-bottom: var(--s2); box-shadow: var(--shadow);
+  }
+  .txn .kg {
+    width: 34px; height: 34px; border-radius: 9px; flex:none;
+    display:flex; align-items:center; justify-content:center; font-size:15px;
+    background: var(--well);
+  }
+  .txn .t1 { font-size: 15px; font-weight: 500; }
+  .txn .t2 { font-size: 13px; color: var(--text2); margin-top:1px; }
+
+  @media (max-width: 1340px) { .rail { justify-content: flex-start; } }
+</style>
+</head>
+<body>
+
+<h1>The existing treemap, smaller — 220 vs 160</h1>
+<p class="intro">
+  Same map, same 5-cell template, same sheet tiles. The frames are fixed at phone height, so what the
+  60pt buys is visible: at 160 the DeFi tile and the first transaction come <b>above the fold</b>.
+  160 is the height the map already uses inside agent answers ("same data, denser read") — this makes
+  the feed match it. Both smaller frames state each cell's value (option C's density); the 1-unit
+  cells lay the icon inline with the symbol, which is what makes 160 fit. Labels are symbol-first,
+  name only as the fallback (Ether.fi).
+</p>
+
+<div class="rail">
+
+  <!-- ============ TODAY (220) ============ -->
+  <div class="col">
+    <div class="dir-title">Today · 220pt</div>
+    <div class="dir-note">
+      The current render: icon stacked over symbol, no values, 220pt tall — a height inherited from
+      the Home-board module era, sized for tag maps whose cells also carry a "N things" count line.
+      Token cells never show that line, so the map is holding room it doesn't use. The fold cuts
+      mid-DeFi; the first transaction is below it.
+    </div>
+    <div class="phone">
+      <div class="statusbar"><span>9:41</span><span>&#9679;&#9679;&#9679;</span></div>
+      <div class="navtitle">Wallet</div>
+      <div class="chips">
+        <div class="chip on">All</div>
+        <div class="chip"><span class="face"></span>Main</div>
+        <div class="chip"><span class="face cold"></span>Cold</div>
+      </div>
+      <div class="tilerow">
+        <div class="tile">
+          <div class="cap">Across your wallets <span class="spacer"></span><span class="chev">&#8250;</span></div>
+          <div class="stat">$19.9K</div>
+          <svg class="spark" viewBox="0 0 160 26" preserveAspectRatio="none">
+            <path d="M0 20 L14 18 L28 19 L42 14 L56 15 L70 10 L84 12 L98 8 L112 9 L126 6 L140 7 L160 4"
+                  fill="none" stroke="#30d158" stroke-width="1.8" stroke-linecap="round"/>
+          </svg>
+          <div class="pill">&#9650; 3.2% &nbsp;<span style="opacity:.7;font-weight:500">watched</span></div>
+        </div>
+        <div class="tile">
+          <div class="cap"><span class="glyph">&#9888;</span> Worth a look <span class="spacer"></span><span class="chev">&#8250;</span></div>
+          <div class="stat">2 items</div>
+          <div class="sub">1 delegation · 1 flagged transfer</div>
+        </div>
+      </div>
+
+      <div class="maphead">
+        <div class="h">Main</div>
+        <div class="s">$19.9K across 13 tokens</div>
+      </div>
+      <!-- 220pt map: uw=(361-24)/4=84.25, uh=(220-16)/3=68 -->
+      <div class="map" style="height:220px;">
+        <div class="cell" style="left:0; top:0; width:176.5px; height:144px;">
+          <span class="coin c-eth">E</span><span class="sym">ETH</span>
+        </div>
+        <div class="cell" style="left:184.5px; top:0; width:176.5px; height:144px;">
+          <span class="coin c-usdc">U</span><span class="sym">USDC</span>
+        </div>
+        <div class="cell" style="left:0; top:152px; width:176.5px; height:68px;">
+          <span class="coin c-sol">S</span><span class="sym">SOL</span>
+        </div>
+        <div class="cell" style="left:184.5px; top:152px; width:84.25px; height:68px;">
+          <span class="sym" style="font-size:14px; margin-top:0;">Ether.fi</span>
+        </div>
+        <div class="cell" style="left:276.75px; top:152px; width:84.25px; height:68px;">
+          <span class="coin c-btc sm">B</span><span class="sym sm">WBTC</span>
+        </div>
+      </div>
+
+      <div class="tilerow" style="margin-top: var(--s3);">
+        <div class="tile">
+          <div class="cap">DeFi · Aave on Base</div>
+          <div class="defirow">
+            <div class="defistat"><div class="l">Collateral</div><div class="v">$6.2K</div></div>
+            <div class="defistat"><div class="l">Debt</div><div class="v">$1.8K</div></div>
+            <div class="defistat"><div class="l">Health</div><div class="v">2.31</div></div>
+          </div>
+        </div>
+      </div>
+      <div class="dayhead">Today</div>
+      <div class="txn"><div class="kg">&#8595;</div><div><div class="t1">Received 120 USDC</div><div class="t2">Base · from 0x4c…9a21</div></div></div>
+      <div class="fold"></div>
+    </div>
+  </div>
+
+  <!-- ============ RECOMMENDED (160, plain) ============ -->
+  <div class="col">
+    <div class="dir-title">Recommended · 160pt, values stated</div>
+    <div class="dir-note">
+      The same map at the height it already earns in agent answers. C's density lands here: every cell
+      states the value its area encodes; the big cells keep icon-over-symbol, the 1-unit cells go
+      inline. Tiles stay the plain sheet surface — the 2026-07-10 ruling ("tiles are literally the
+      Settings-tile surface") holds. DeFi and the first transaction now sit above the fold.
+    </div>
+    <div class="phone">
+      <div class="statusbar"><span>9:41</span><span>&#9679;&#9679;&#9679;</span></div>
+      <div class="navtitle">Wallet</div>
+      <div class="chips">
+        <div class="chip on">All</div>
+        <div class="chip"><span class="face"></span>Main</div>
+        <div class="chip"><span class="face cold"></span>Cold</div>
+      </div>
+      <div class="tilerow">
+        <div class="tile">
+          <div class="cap">Across your wallets <span class="spacer"></span><span class="chev">&#8250;</span></div>
+          <div class="stat">$19.9K</div>
+          <svg class="spark" viewBox="0 0 160 26" preserveAspectRatio="none">
+            <path d="M0 20 L14 18 L28 19 L42 14 L56 15 L70 10 L84 12 L98 8 L112 9 L126 6 L140 7 L160 4"
+                  fill="none" stroke="#30d158" stroke-width="1.8" stroke-linecap="round"/>
+          </svg>
+          <div class="pill">&#9650; 3.2% &nbsp;<span style="opacity:.7;font-weight:500">watched</span></div>
+        </div>
+        <div class="tile">
+          <div class="cap"><span class="glyph">&#9888;</span> Worth a look <span class="spacer"></span><span class="chev">&#8250;</span></div>
+          <div class="stat">2 items</div>
+          <div class="sub">1 delegation · 1 flagged transfer</div>
+        </div>
+      </div>
+
+      <div class="maphead">
+        <div class="h">Main</div>
+        <div class="s">$19.9K across 13 tokens</div>
+      </div>
+      <!-- 160pt map: uh=(160-16)/3=48 -->
+      <div class="map" style="height:160px;">
+        <div class="cell" style="left:0; top:0; width:176.5px; height:104px;">
+          <div class="inline"><span class="coin c-eth">E</span><span class="sym" style="margin-top:0;">ETH</span></div>
+          <div class="grow"></div>
+          <div class="valrow"><span class="val big">$8.4K</span></div>
+        </div>
+        <div class="cell" style="left:184.5px; top:0; width:176.5px; height:104px;">
+          <div class="inline"><span class="coin c-usdc">U</span><span class="sym" style="margin-top:0;">USDC</span></div>
+          <div class="grow"></div>
+          <div class="valrow"><span class="val big">$4.2K</span></div>
+        </div>
+        <div class="cell" style="left:0; top:112px; width:176.5px; height:48px; justify-content:center;">
+          <div class="inline"><span class="coin c-sol sm">S</span><span class="sym sm">SOL</span><span class="val">$2.6K</span></div>
+        </div>
+        <div class="cell tiny" style="left:184.5px; top:112px; width:84.25px; height:48px; justify-content:center;">
+          <div class="inline"><span class="sym sm" style="font-size:13px;">Ether.fi</span></div>
+        </div>
+        <div class="cell tiny" style="left:276.75px; top:112px; width:84.25px; height:48px; justify-content:center;">
+          <div class="inline"><span class="coin c-btc sm">B</span><span class="sym sm" style="font-size:13px;">WBTC</span></div>
+        </div>
+      </div>
+
+      <div class="tilerow" style="margin-top: var(--s3);">
+        <div class="tile">
+          <div class="cap">DeFi · Aave on Base</div>
+          <div class="defirow">
+            <div class="defistat"><div class="l">Collateral</div><div class="v">$6.2K</div></div>
+            <div class="defistat"><div class="l">Debt</div><div class="v">$1.8K</div></div>
+            <div class="defistat"><div class="l">Health</div><div class="v">2.31</div></div>
+          </div>
+        </div>
+      </div>
+      <div class="dayhead">Today</div>
+      <div class="txn"><div class="kg">&#8595;</div><div><div class="t1">Received 120 USDC</div><div class="t2">Base · from 0x4c…9a21</div></div></div>
+      <div class="txn"><div class="kg">&#8646;</div><div><div class="t1">Swapped 0.4 ETH &#8594; 812 USDC</div><div class="t2">Ethereum · Uniswap</div></div></div>
+      <div class="fold"></div>
+    </div>
+  </div>
+
+  <!-- ============ OPTIONAL (160 + wash) ============ -->
+  <div class="col">
+    <div class="dir-title">Optional · same, with C's wash</div>
+    <div class="dir-note">
+      Identical geometry and density, plus C's faint tint-magnitude wash (the token layer's own
+      DS.tint(magnitude:), largest brightest). Fair warning: this revisits the 2026-07-10 ruling that
+      killed colored fills on these cells ("read as noise") — it's here so you can rule on it with the
+      smaller map in front of you, not by memory of the bigger one.
+    </div>
+    <div class="phone">
+      <div class="statusbar"><span>9:41</span><span>&#9679;&#9679;&#9679;</span></div>
+      <div class="navtitle">Wallet</div>
+      <div class="chips">
+        <div class="chip on">All</div>
+        <div class="chip"><span class="face"></span>Main</div>
+        <div class="chip"><span class="face cold"></span>Cold</div>
+      </div>
+      <div class="tilerow">
+        <div class="tile">
+          <div class="cap">Across your wallets <span class="spacer"></span><span class="chev">&#8250;</span></div>
+          <div class="stat">$19.9K</div>
+          <svg class="spark" viewBox="0 0 160 26" preserveAspectRatio="none">
+            <path d="M0 20 L14 18 L28 19 L42 14 L56 15 L70 10 L84 12 L98 8 L112 9 L126 6 L140 7 L160 4"
+                  fill="none" stroke="#30d158" stroke-width="1.8" stroke-linecap="round"/>
+          </svg>
+          <div class="pill">&#9650; 3.2% &nbsp;<span style="opacity:.7;font-weight:500">watched</span></div>
+        </div>
+        <div class="tile">
+          <div class="cap"><span class="glyph">&#9888;</span> Worth a look <span class="spacer"></span><span class="chev">&#8250;</span></div>
+          <div class="stat">2 items</div>
+          <div class="sub">1 delegation · 1 flagged transfer</div>
+        </div>
+      </div>
+
+      <div class="maphead">
+        <div class="h">Main</div>
+        <div class="s">$19.9K across 13 tokens</div>
+      </div>
+      <div class="map" style="height:160px;">
+        <div class="cell wash1" style="left:0; top:0; width:176.5px; height:104px;">
+          <div class="inline"><span class="coin c-eth">E</span><span class="sym" style="margin-top:0;">ETH</span></div>
+          <div class="grow"></div>
+          <div class="valrow"><span class="val big">$8.4K</span></div>
+        </div>
+        <div class="cell wash2" style="left:184.5px; top:0; width:176.5px; height:104px;">
+          <div class="inline"><span class="coin c-usdc">U</span><span class="sym" style="margin-top:0;">USDC</span></div>
+          <div class="grow"></div>
+          <div class="valrow"><span class="val big">$4.2K</span></div>
+        </div>
+        <div class="cell wash3" style="left:0; top:112px; width:176.5px; height:48px; justify-content:center;">
+          <div class="inline"><span class="coin c-sol sm">S</span><span class="sym sm">SOL</span><span class="val">$2.6K</span></div>
+        </div>
+        <div class="cell tiny wash4" style="left:184.5px; top:112px; width:84.25px; height:48px; justify-content:center;">
+          <div class="inline"><span class="sym sm" style="font-size:13px;">Ether.fi</span></div>
+        </div>
+        <div class="cell tiny wash4" style="left:276.75px; top:112px; width:84.25px; height:48px; justify-content:center;">
+          <div class="inline"><span class="coin c-btc sm">B</span><span class="sym sm" style="font-size:13px;">WBTC</span></div>
+        </div>
+      </div>
+
+      <div class="tilerow" style="margin-top: var(--s3);">
+        <div class="tile">
+          <div class="cap">DeFi · Aave on Base</div>
+          <div class="defirow">
+            <div class="defistat"><div class="l">Collateral</div><div class="v">$6.2K</div></div>
+            <div class="defistat"><div class="l">Debt</div><div class="v">$1.8K</div></div>
+            <div class="defistat"><div class="l">Health</div><div class="v">2.31</div></div>
+          </div>
+        </div>
+      </div>
+      <div class="dayhead">Today</div>
+      <div class="txn"><div class="kg">&#8595;</div><div><div class="t1">Received 120 USDC</div><div class="t2">Base · from 0x4c…9a21</div></div></div>
+      <div class="txn"><div class="kg">&#8646;</div><div><div class="t1">Swapped 0.4 ETH &#8594; 812 USDC</div><div class="t2">Ethereum · Uniswap</div></div></div>
+      <div class="fold"></div>
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>
