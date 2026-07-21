@@ -78,6 +78,10 @@ struct FeedScreen: View {
     /// (2026-07-20: the tile's tap used to push the MANAGE screen, which no
     /// longer shows warnings at all — a door to the wrong room).
     @State private var showWorthALook = false
+    /// The wallet switcher's selection fill — ONE capsule that slides from
+    /// the old chip to the new (the source chips' own ruling, 2026-07-14:
+    /// "selection is an object traveling, not two states blinking").
+    @Namespace private var walletSwitcherNS
     /// Bumped when this page lands — rows replay their shape's
     /// entrance (each shape arrives its own way, ruling 2026-07-07).
     @State private var shapeWave = 0
@@ -175,13 +179,13 @@ struct FeedScreen: View {
 
     /// The Wallet feed's per-wallet scope (prd §128) — everything passes in
     /// "All" (selectedWallet nil, and it's never set off the Wallet page); when
-    /// scoped, only transactions from that watched wallet. `Thing.walletAddress`
-    /// equals the stored `WatchedAddress.address`, so hex compares
-    /// case-insensitively and base58 exactly (Solana case is identity).
+    /// scoped, only transactions from that watched wallet. Matched through
+    /// `WalletStore.scopeMatches` (2026-07-20): things are stamped with the
+    /// RESOLVED hex while the scope is the WATCHED spelling, so the old raw
+    /// compare emptied an ENS/SNS-watched wallet's scoped feed entirely.
     private func walletScopeAllows(_ thing: Thing) -> Bool {
         guard let scope = selectedWallet else { return true }
-        guard let wa = thing.walletAddress else { return false }
-        return ENS.isHexAddress(scope) ? wa.lowercased() == scope.lowercased() : wa == scope
+        return wallet.scopeMatches(thing.walletAddress, scope: scope)
     }
     private var isFiltered: Bool { source != "All" || filter.tag != "All" }
     private var filterLabel: String {
@@ -1289,8 +1293,20 @@ struct FeedScreen: View {
             }
             .padding(.horizontal, DS.Space.s3)
             .padding(.vertical, DS.Space.s2)
-            .background(isOn ? tint.opacity(0.18) : DS.fillFaint,
-                        in: Capsule(style: .continuous))
+            // The selection fill is ONE object that travels chip to chip on a
+            // scope switch (matched geometry), tinting itself to the landing
+            // wallet's own hue mid-flight — identity color doing the work.
+            // Unselected chips keep their static faint fill underneath.
+            .background {
+                ZStack {
+                    Capsule(style: .continuous).fill(DS.fillFaint)
+                    if isOn {
+                        Capsule(style: .continuous).fill(tint.opacity(0.18))
+                            .matchedGeometryEffect(id: "walletSwitcherSelection",
+                                                   in: walletSwitcherNS)
+                    }
+                }
+            }
             .contentShape(Capsule(style: .continuous))
         }
         .buttonStyle(.plain)

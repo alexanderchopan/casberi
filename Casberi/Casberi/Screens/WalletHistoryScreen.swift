@@ -35,10 +35,9 @@ struct WalletHistoryScreen: View {
 
     private var visible: [Thing] {
         guard let scope else { return all }
-        return all.filter { t in
-            guard let a = t.walletAddress else { return false }
-            return WalletWatch.sameAddress(a, scope)
-        }
+        // Through the resolution cache, not a raw compare — things carry the
+        // resolved hex, the scope is the watched spelling (2026-07-20).
+        return all.filter { wallet.scopeMatches($0.walletAddress, scope: scope) }
     }
 
     /// Day groups, newest first — the same grammar the feed's stream uses, so

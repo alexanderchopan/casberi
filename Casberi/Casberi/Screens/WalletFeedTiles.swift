@@ -26,6 +26,11 @@ private struct WalletTile<Content: View>: View {
     var showChevron = true
     @ViewBuilder var content: Content
 
+    /// Flipped once on appear so the glyph bounces exactly one beat as the
+    /// tile lands — attention paid, never nagged. `.symbolEffect` is the
+    /// system's own vocabulary and honors Reduce Motion by itself.
+    @State private var glyphBeat = false
+
     var body: some View {
         VStack(alignment: .leading, spacing: DS.Space.s1) {
             HStack(spacing: 5) {
@@ -33,6 +38,14 @@ private struct WalletTile<Content: View>: View {
                     Image(systemName: glyph)
                         .font(.system(size: 11, weight: .semibold))
                         .foregroundStyle(glyphTint)
+                        .symbolEffect(.bounce, options: .nonRepeating, value: glyphBeat)
+                        .onAppear {
+                            // A breath after the tile's own entrance settles,
+                            // so the beat reads as punctuation, not collision.
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+                                glyphBeat = true
+                            }
+                        }
                 }
                 Text(caption)
                     .dsText(.label12).foregroundStyle(DS.textSecondary)
@@ -71,6 +84,12 @@ struct WalletBalanceTile: View {
     /// gets the combined-breakdown sheet behind it.
     let onOpen: (() -> Void)?
     @Environment(\.colorScheme) private var scheme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// The sparkline's draw-on: 0 → 1 sweeps a mask left to right, so the
+    /// line draws itself the way the value accrued — time, moving. Reset
+    /// whenever the data itself changes (a scope switch is a new line, and
+    /// a new line deserves its own draw).
+    @State private var drawn: CGFloat = 0
 
     private var accent: Color { TokenChartStyle.accent(change: chart.change, scheme: scheme) }
 
@@ -82,11 +101,23 @@ struct WalletBalanceTile: View {
                 // portfolio total, and `TokenStats.compact` is what the combined
                 // sheet and the wallet row sublines already speak. Raw
                 // `priceText` printed "$19866.64" here, which is a coin quote.
+                // The digits ROLL between values (a scope switch re-keys the
+                // number, and $20K odometer-rolling to $4.2K says "same
+                // instrument, new reading" — a swap says nothing). Direction
+                // rides the value, so the roll runs the way the money moved.
                 Text(TokenStats.compact(chart.price))
                     .dsText(.stat24).foregroundStyle(DS.textPrimary)
                     .monospacedDigit()
+                    .contentTransition(reduceMotion ? .identity : .numericText(value: chart.price))
                     .lineLimit(1).minimumScaleFactor(0.6)
                 TokenChartPlot(chart: chart, accent: accent, height: 26, pulses: false)
+                    .mask(alignment: .leading) {
+                        GeometryReader { geo in
+                            Rectangle().frame(width: geo.size.width * drawn)
+                        }
+                    }
+                    .onAppear { draw() }
+                    .onChange(of: chart.closes) { draw(redraw: true) }
                 // "watched" — the honest window. The samples start when the
                 // wallet was first watched, so naming any calendar period
                 // ("this week") would claim a range the data may not cover.
@@ -95,6 +126,12 @@ struct WalletBalanceTile: View {
         }
         .buttonStyle(.plain)
         .disabled(onOpen == nil)
+    }
+
+    private func draw(redraw: Bool = false) {
+        guard !reduceMotion else { drawn = 1; return }
+        if redraw { drawn = 0 }
+        withAnimation(.easeOut(duration: 0.8).delay(redraw ? 0.05 : 0.25)) { drawn = 1 }
     }
 }
 
@@ -124,6 +161,9 @@ struct WalletWarningsTile: View {
                      : String(localized: "\(warnings.count) items"))
                     .dsText(.stat24).foregroundStyle(DS.textPrimary)
                     .monospacedDigit()
+                    // Rolls with the balance beside it on a scope switch —
+                    // the pair reads as one instrument re-keying.
+                    .contentTransition(.numericText())
                     .lineLimit(1).minimumScaleFactor(0.6)
                 Text(WalletWatch.summary(warnings))
                     .dsText(.subhead13).foregroundStyle(DS.textSecondary)
@@ -186,6 +226,7 @@ struct WalletDeFiTile: View {
                 .lineLimit(1)
             Text(value).dsText(.price16).foregroundStyle(tint)
                 .monospacedDigit()
+                .contentTransition(.numericText())
                 .lineLimit(1).minimumScaleFactor(0.6)
         }
         .frame(maxWidth: .infinity, alignment: .leading)

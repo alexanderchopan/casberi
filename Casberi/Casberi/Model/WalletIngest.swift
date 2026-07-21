@@ -568,9 +568,19 @@ enum WalletIngest {
         for a in raw {
             if ENS.isHexAddress(a) || SNS.isAddress(a) { out.append(a) }
             else if SNS.looksLikeName(a) {
-                if let sol = await SNS.resolve(a) { out.append(sol) }
+                if let sol = await SNS.resolve(a) {
+                    out.append(sol)
+                    await MainActor.run { WalletStore.shared.noteResolution(a, resolved: sol) }
+                }
             }
-            else if let hex = await ENS.resolve(a) { out.append(hex) }
+            else if let hex = await ENS.resolve(a) {
+                out.append(hex)
+                // Every resolution feeds the store's cache (2026-07-20) — the
+                // scoped feed, history page, and row labels all need to match
+                // a landed thing's RESOLVED hex back to the WATCHED spelling,
+                // and this loop is the one place both forms meet.
+                await MainActor.run { WalletStore.shared.noteResolution(a, resolved: hex) }
+            }
         }
         return out
     }

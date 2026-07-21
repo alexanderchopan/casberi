@@ -221,14 +221,55 @@ final class WalletStore {
     }
 
     /// The name a Wallet transaction's row shows when more than one address
-    /// is watched — matched by exact address string (an ENS-named watch
-    /// won't match its resolved hex form; the row simply carries no label
-    /// then, never a wrong one).
+    /// is watched. Matched by exact string OR through the resolution cache —
+    /// an ENS/SNS-named watch lands its things stamped with the RESOLVED hex
+    /// (WalletIngest resolves before reading), so a raw compare missed every
+    /// one of them. The old behavior ("no label then, never a wrong one") was
+    /// an accepted degradation for a label; the same mismatch silently
+    /// EMPTIED the scoped feed, which forced the real fix (2026-07-20).
     func label(forAddress address: String?) -> String? {
         guard let address, addresses.count > 1,
-              let match = addresses.first(where: { $0.address.lowercased() == address.lowercased() })
+              let match = addresses.first(where: {
+                  WalletWatch.sameAddress($0.address, address)
+                      || resolvedForm(of: $0.address).map { WalletWatch.sameAddress($0, address) } == true
+              })
         else { return nil }
         return match.label.isEmpty ? match.short : match.label
+    }
+
+    // MARK: - Resolution cache (2026-07-20)
+
+    /// watched spelling → resolved on-chain address ("vitalik.eth" →
+    /// "0xd8dA…6045"), filled as `WalletIngest.resolvedAddresses` runs — so
+    /// by the time any landed thing exists to filter, its wallet's resolution
+    /// has been seen at least once. Persisted: a fresh launch filters
+    /// correctly before its first network read.
+    @ObservationIgnored
+    private var resolutions: [String: String] =
+        UserDefaults.standard.dictionary(forKey: "wallet.resolutions") as? [String: String] ?? [:]
+
+    func noteResolution(_ watched: String, resolved: String) {
+        guard watched != resolved, resolutions[watched] != resolved else { return }
+        resolutions[watched] = resolved
+        UserDefaults.standard.set(resolutions, forKey: "wallet.resolutions")
+    }
+
+    func resolvedForm(of watched: String) -> String? {
+        resolutions[watched]
+    }
+
+    /// Does a landed thing's stamped address belong to the given scope?
+    /// Things carry the RESOLVED hex; a scope is the WATCHED spelling — so
+    /// this matches raw-vs-raw first (a hex-watched wallet), then through
+    /// the cache (an ENS/SNS-watched one). The bug this fixes: scoping the
+    /// feed to "vitalik.eth" compared the name against stamped hex, matched
+    /// nothing, and showed "Nothing from Wallet yet" over a corpus full of
+    /// that wallet's own transactions (caught on camera, 2026-07-20).
+    func scopeMatches(_ stored: String?, scope: String) -> Bool {
+        guard let stored else { return false }
+        if WalletWatch.sameAddress(stored, scope) { return true }
+        if let hex = resolvedForm(of: scope), WalletWatch.sameAddress(stored, hex) { return true }
+        return false
     }
 
     private init() {
