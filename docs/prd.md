@@ -4732,3 +4732,55 @@ Files: `Model/FeedFilter.swift`, `Model/ChipMemory.swift` (new),
 this session is the Linux remote environment with no Xcode toolchain at all
 (no `xcodebuild`, no `xcrun`, no `swiftc`); build + `scripts/verify.sh` +
 the two probes above need to run on the Mac before this ships to TestFlight.
+
+## 145. The holdings treemap goes to 160 and wears the wash (user, 2026-07-21)
+
+The user, on the Wallet feed's holdings map: "the tree map doesn't even have
+to be as large as it is … why does it need to be so large, or does it?" It
+didn't. 220 was inherited from the Home-board module era — sized for tag maps
+whose cells stack icon + label + a "N things" count line. Token cells never
+show that count line, so the wallet map held vertical room it never used, and
+the map already renders at 160 inside agent answers ("same data, denser
+read", 2026-07-20). The user: "if it is smaller in the composer it can be in
+our feed too."
+
+Ruled from three side-by-side mockups (prototype/wallet-treemap-160-v2.html —
+today's 220, a 160 with values stated, and a 160 with values + the tint
+magnitude wash): **the wash version.** "I like c the best."
+
+- **Token maps are 160pt everywhere** (`GenTagMap.boardHeight`): the default
+  220 stays for tag/theme/source maps; token mode joins the agent-answer
+  height. Bloomed-large 320 and small-tile 150 are unchanged.
+- **Cells state the value their area encodes.** The cell ref grows a
+  space-free " @v:$8.4K" marker (`TokenStats.compact`, built in
+  `WalletIngest.holdings`, sliced by `KindCountRow.parse` like " @t:").
+  Placement: bottom of a ≥2-unit-tall cell in primary ink, trailing secondary
+  on a wide 1-unit cell, dropped on a 1×1 (no room — the area still speaks).
+- **1-unit token cells go inline** (icon beside symbol, vertically centered)
+  — at 160 a ~48pt cell can't stack a 20pt icon over a 17pt label, and the
+  inline row is what makes the height work.
+- **Token cells wear the magnitude wash** — `DS.tint(magnitude:)` at the
+  cell's true USD share (weights are sqrt-scaled, so the share squares the
+  weight back). A ~45% position washes at ~0.16 opacity, a sliver at ~0.07.
+  This deliberately AMENDS the 2026-07-10 "tiles are literally the
+  Settings-tile surface, no hue wash" ruling FOR TOKEN MODE ONLY — re-ruled
+  by the user with the smaller map in front of them, not by memory of the
+  bigger one. Tag/theme/source maps stay plain sheet tiles; 2026-07-10 still
+  governs them.
+- **Labels are symbol-first, name as the fallback, never both** (the same
+  session's first ruling): both holdings readers now fall back to the
+  metadata NAME when a token registered no ticker — `fungible_info.name` on
+  the Zerion path, `tokenMetadata.name` on the Alchemy path — where before a
+  symbol-less token silently dropped out of the map. `TokenIcon` renders
+  nothing for an unmatched label, so name cells go text-only (the honest
+  fallback it already had).
+- Deliberately NOT built: the mockup's per-cell 24h micro-deltas — honest
+  per-token change isn't in the holdings payload, and inventing a second
+  fetch fan-out for a garnish isn't worth it until something else needs the
+  same read.
+
+Files: `GenUI/GenRenderer.swift` (GenTagMap + KindCountRow.parse),
+`Model/WalletIngest.swift`, `Model/ZerionAPI.swift`. NOT yet verified on-sim
+— Linux remote session, no Xcode toolchain; build + `scripts/verify.sh` and
+an eyeball of the wash opacities on-device need to happen on the Mac before
+this ships.

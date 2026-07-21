@@ -117,7 +117,12 @@ enum ZerionAPI {
                   let network = networkFor[zid] else { continue }
 
             let info = attrs["fungible_info"] as? [String: Any]
-            guard let symbol = (info?["symbol"] as? String).flatMap({ $0.isEmpty ? nil : $0 }),
+            // Symbol first, name as the fallback (the label rule, user
+            // 2026-07-21) — a token without a registered ticker used to drop
+            // out of the holdings entirely; the Alchemy path applies the same
+            // fallback from its tokenMetadata.
+            guard let symbol = (info?["symbol"] as? String).flatMap({ $0.isEmpty ? nil : $0 })
+                    ?? (info?["name"] as? String).flatMap({ $0.isEmpty ? nil : $0 }),
                   let quantity = attrs["quantity"] as? [String: Any],
                   let amount = doubleValue(quantity["float"]), amount > 0 else { continue }
 

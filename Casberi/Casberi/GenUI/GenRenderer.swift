@@ -1920,10 +1920,17 @@ private struct GenTagMap: View {
     /// real module yet (nothing to size), so it carries no pin.
     /// Inside an agent ANSWER the map tightens to 160 (2026-07-20): feed
     /// proportions at the answer column's width left the big cells mostly
-    /// empty air — same data, denser read.
+    /// empty air — same data, denser read. Token maps (the wallet's holdings)
+    /// are 160 EVERYWHERE now (prd §145, 2026-07-21, user: "why does it need
+    /// to be so large?") — 220 was inherited from the Home-board module era,
+    /// sized for tag maps whose cells also stack a "N things" count line;
+    /// token cells never show that line, so the map was holding room it
+    /// never used. One height with the answer column, on purpose.
     private var boardHeight: CGFloat {
         if inAgentAnswer { return 160 }
-        return span == .small ? 150 : (large ? 320 : 220)
+        if span == .small { return 150 }
+        if large { return 320 }
+        return iconMode == "token" ? 160 : 220
     }
 
     var body: some View {
@@ -2004,52 +2011,35 @@ private struct GenTagMap: View {
                 let h = uh * CGFloat(f.3) + gap * CGFloat(f.3 - 1)
                 let on = !animated || settled
                 // An icon rides above the name in "source" (an exact bridge,
-                // via BridgeIcon — no fetch, never wrong) or "token" mode (a
-                // logo URL that arrived with the cell, or none at all rather
+                // via BridgeIcon — no fetch, never wrong) or beside it in
+                // "token" mode (a bundled local mark, or none at all rather
                 // than a wrong one). A project cell carries neither — see
                 // GenTagMap's iconMode doc.
-                let label = VStack(alignment: .leading, spacing: DS.Space.s1) {
-                    if iconMode == "source" {
-                        BridgeIcon(name: item.tag, size: 20)
-                    } else if iconMode == "token" {
-                        TokenIcon(symbol: item.tag, size: 20)
-                    }
-                    Text(item.tag)
-                        .dsText(.body17)
-                        // Plain primary ink, exactly like a Settings tile's
-                        // title (2026-07-10, user) — colored label inks were
-                        // tried the same day and read as noise.
-                        .foregroundStyle(preview ? DS.textTertiary : DS.textPrimary)
-                        .lineLimit(item.tag.contains(" ") ? 2 : 1)
-                        .minimumScaleFactor(0.4)
-                        .allowsTightening(true)
-                    // The count fills the tile's empty field with the fact it
-                    // already encodes as area (a name floating in a void read
-                    // as unfinished). Token cells skip it — their N is a
-                    // sizing value, not a thing count — and 1-unit-tall cells
-                    // skip it too (no vertical room; the line would draw past
-                    // the tile onto its neighbor).
-                    if !preview, iconMode != "token", f.3 >= 2 {
-                        Text(item.n == 1 ? "1 thing" : "\(item.n) things")
-                            .dsText(.subhead13)
-                            .foregroundStyle(DS.textSecondary)
-                            .lineLimit(1)
-                    }
-                }
-                    .padding(DS.Space.s3)
+                let label = cellLabel(item: item, frame: f)
+                    .padding(iconMode == "token" && f.3 < 2 ? DS.Space.s2 : DS.Space.s3)
                     .frame(width: w, height: h, alignment: .topLeading)
                     .background {
                         // Tiles are CARDS, literally (2026-07-10, user):
                         // the exact sheet surface the Settings tiles and
-                        // Pinned card use — no hue wash at all. Magnitude
-                        // is size, the treemap's real voice; identity is
-                        // the label ink and the token/bridge icons. The
-                        // preview breathes the surface itself: shape
-                        // without claiming substance.
-                        DS.surfaceSheet
-                            .opacity((preview ? (breathe ? 0.55 : 0.85) : 1)
-                                     * (isWeekend && animated && !on ? 0 : 1))
-                            .clipShape(RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+                        // Pinned card use. Magnitude is size, the treemap's
+                        // real voice; identity is the label ink and the
+                        // token/bridge icons. TOKEN cells additionally wear
+                        // the sanctioned magnitude wash (prd §145, 2026-07-21
+                        // — the user re-ruled with the smaller map in front
+                        // of them, amending 2026-07-10's no-wash ruling for
+                        // this mode only): DS.tint(magnitude:) at the cell's
+                        // true USD share, largest brightest. The preview
+                        // breathes the surface itself: shape without
+                        // claiming substance.
+                        ZStack {
+                            DS.surfaceSheet
+                            if iconMode == "token", !preview {
+                                DS.tint(magnitude: usdShare(of: item))
+                            }
+                        }
+                        .opacity((preview ? (breathe ? 0.55 : 0.85) : 1)
+                                 * (isWeekend && animated && !on ? 0 : 1))
+                        .clipShape(RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
                     }
                 Group {
                     if preview {
@@ -2098,6 +2088,97 @@ private struct GenTagMap: View {
         isWeekend
             ? DS.Motion.standard.delay(Double(order) * 0.35 / 3)
             : DS.Motion.standard.delay(Double(order) * 0.035)
+    }
+
+    /// One cell's content. Token cells changed shape with the 160pt map
+    /// (prd §145, 2026-07-21): a 1-unit-tall cell (~48pt) can't stack a 20pt
+    /// icon over a 17pt label anymore, so the icon goes INLINE with the
+    /// symbol — which is also what makes the smaller map fit at all. Cells
+    /// state the value their area encodes (the "@v:" ref marker): bottom of
+    /// a tall cell, trailing on a wide 1-unit cell, dropped on a 1×1 (no
+    /// room — the area still speaks). Tag/source cells keep the stacked
+    /// layout and the "N things" count line unchanged.
+    @ViewBuilder
+    private func cellLabel(item: KindCountRow.Item, frame f: (Int, Int, Int, Int)) -> some View {
+        if iconMode == "token" {
+            if f.3 >= 2 {
+                VStack(alignment: .leading, spacing: 0) {
+                    HStack(spacing: DS.Space.s2) {
+                        TokenIcon(symbol: item.tag, size: 20)
+                        Text(item.tag)
+                            .dsText(.body17)
+                            .foregroundStyle(preview ? DS.textTertiary : DS.textPrimary)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.4)
+                            .allowsTightening(true)
+                    }
+                    Spacer(minLength: 0)
+                    if !preview, let value = item.value {
+                        Text(value)
+                            .dsText(.subhead13).fontWeight(.semibold)
+                            .foregroundStyle(DS.textPrimary)
+                            .monospacedDigit()
+                            .lineLimit(1)
+                    }
+                }
+                .frame(maxHeight: .infinity)
+            } else {
+                HStack(spacing: DS.Space.s2) {
+                    TokenIcon(symbol: item.tag, size: 16)
+                    Text(item.tag)
+                        .dsText(.callout15)
+                        .foregroundStyle(preview ? DS.textTertiary : DS.textPrimary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.4)
+                        .allowsTightening(true)
+                    if !preview, f.2 >= 2, let value = item.value {
+                        Spacer(minLength: 0)
+                        Text(value)
+                            .dsText(.subhead13)
+                            .foregroundStyle(DS.textSecondary)
+                            .monospacedDigit()
+                            .lineLimit(1)
+                    }
+                }
+                .frame(maxHeight: .infinity, alignment: .center)
+            }
+        } else {
+            VStack(alignment: .leading, spacing: DS.Space.s1) {
+                if iconMode == "source" {
+                    BridgeIcon(name: item.tag, size: 20)
+                }
+                Text(item.tag)
+                    .dsText(.body17)
+                    // Plain primary ink, exactly like a Settings tile's
+                    // title (2026-07-10, user) — colored label inks were
+                    // tried the same day and read as noise.
+                    .foregroundStyle(preview ? DS.textTertiary : DS.textPrimary)
+                    .lineLimit(item.tag.contains(" ") ? 2 : 1)
+                    .minimumScaleFactor(0.4)
+                    .allowsTightening(true)
+                // The count fills the tile's empty field with the fact it
+                // already encodes as area (a name floating in a void read
+                // as unfinished). 1-unit-tall cells skip it (no vertical
+                // room; the line would draw past the tile onto its neighbor).
+                if !preview, f.3 >= 2 {
+                    Text(item.n == 1 ? "1 thing" : "\(item.n) things")
+                        .dsText(.subhead13)
+                        .foregroundStyle(DS.textSecondary)
+                        .lineLimit(1)
+                }
+            }
+        }
+    }
+
+    /// The cell's true USD share of the whole map — the wash's magnitude.
+    /// Cell weights are sqrt-scaled (`WalletIngest.treemapWeight`), so
+    /// squaring undoes it: n² is proportional to the position's USD value.
+    /// Through DS.tint(magnitude:) a ~45% position washes at ~0.16 opacity
+    /// and a sliver at ~0.07 — the ladder the approved mockup wore.
+    private func usdShare(of item: KindCountRow.Item) -> Double {
+        let total = items.reduce(0.0) { $0 + Double($1.n) * Double($1.n) }
+        guard total > 0 else { return 0 }
+        return Double(item.n) * Double(item.n) / total
     }
 
 }
@@ -2456,7 +2537,7 @@ private struct GenApprovalCard: View {
 /// are navigation. Used by `GenKindPills` (page ink) — the old Home cover's
 /// own kind-chip variant retired with the board, 2026-07-20.
 private struct KindCountRow: View {
-    struct Item { let tag: String; let n: Int; var route: String? = nil }
+    struct Item { let tag: String; let n: Int; var route: String? = nil; var value: String? = nil }
     let items: [Item]
     var ink: Color = DS.textPrimary
     @Environment(\.openURL) private var openURL
@@ -2468,23 +2549,33 @@ private struct KindCountRow: View {
     /// counts, so nothing real is lost); bare tags elsewhere still count 1.
     /// A trailing " @t:chain:address" (holdings cells, 2026-07-14) is a
     /// route, never shown — it lets the cell's tap open that token's chart.
-    /// Sliced off the raw string (not re-tokenized) so every other ref keeps
-    /// the old invariant: a bare ref renders exactly as written.
+    /// " @v:$8.4K" (prd §145, 2026-07-21) is a display value the token cells
+    /// SHOW — compact money form, guaranteed space-free by its builder.
+    /// Both are sliced off the raw string (not re-tokenized) so every other
+    /// ref keeps the old invariant: a bare ref renders exactly as written.
     static func parse(_ raw: [String], cap: Int = 5, requireCount: Bool = false) -> [Item] {
         raw.prefix(cap).compactMap { r in
             var body = r
             var route: String? = nil
-            if let at = r.range(of: " @t:", options: .backwards),
-               case let tail = r[at.upperBound...],
+            var value: String? = nil
+            if let at = body.range(of: " @t:", options: .backwards),
+               case let tail = body[at.upperBound...],
                !tail.isEmpty, !tail.contains(" ") {
                 route = String(tail)
-                body = String(r[..<at.lowerBound])
+                body = String(body[..<at.lowerBound])
+            }
+            if let at = body.range(of: " @v:", options: .backwards),
+               case let tail = body[at.upperBound...],
+               !tail.isEmpty, !tail.contains(" ") {
+                value = String(tail)
+                body = String(body[..<at.lowerBound])
             }
             let parts = body.split(separator: " ")
             if let last = parts.last, let n = Int(last) {
-                return Item(tag: parts.dropLast().joined(separator: " "), n: n, route: route)
+                return Item(tag: parts.dropLast().joined(separator: " "), n: n,
+                            route: route, value: value)
             }
-            return requireCount ? nil : Item(tag: body, n: 1, route: route)
+            return requireCount ? nil : Item(tag: body, n: 1, route: route, value: value)
         }
     }
 

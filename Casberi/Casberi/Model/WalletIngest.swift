@@ -1051,11 +1051,15 @@ enum WalletIngest {
         // symbol (TokenIcon) — Alchemy's own logo field turned out null for
         // nearly everything, so the cell string carries no icon data. A routed
         // cell trails "@t:chain:address" (stripped by KindCountRow.parse, never
-        // shown) so a tap can open that token's chart.
+        // shown) so a tap can open that token's chart. "@v:" carries the
+        // position's display value (prd §145, 2026-07-21): the cell states the
+        // number its area encodes — the area says "big", the number says how
+        // big. Compact form only, so the marker never contains a space (the
+        // parser slices it as one token).
         let cells = bySymbol.sorted { $0.value > $1.value }.prefix(5)
             .map { sym, usd in
                 let route = routeBySymbol[sym].map { " @t:\($0.route)" } ?? ""
-                return "\(sym) \(treemapWeight(usd))\(route)"
+                return "\(sym) \(treemapWeight(usd)) @v:\(TokenStats.compact(usd))\(route)"
             }
         return (true, (cells, bySymbol.values.reduce(0, +), bySymbol.count, bySymbol))
     }
@@ -1281,13 +1285,18 @@ enum WalletIngest {
                 for t in tokens {
                     let md = t["tokenMetadata"] as? [String: Any]
                     let mdSymbol = (md?["symbol"] as? String).flatMap { $0.isEmpty ? nil : $0 }
+                    // A token that never registered a ticker still has a name —
+                    // the label rule (user, 2026-07-21): symbol when one exists,
+                    // name as the fallback, never both. Before this, a
+                    // symbol-less token was dropped from the map entirely.
+                    let mdName = (md?["name"] as? String).flatMap { $0.isEmpty ? nil : $0 }
                     let network = (t["network"] as? String) ?? ""
                     // Native coin has no tokenAddress and no symbol — name it by
                     // chain. NOT lowercased: an EVM contract is case-insensitive
                     // hex, but a Solana mint is base58, where case IS the address.
                     let contract = t["tokenAddress"] as? String
                     let isNative = contract == nil
-                    guard let symbol = mdSymbol ?? (isNative ? native[network]?.symbol : nil),
+                    guard let symbol = mdSymbol ?? (isNative ? native[network]?.symbol : nil) ?? mdName,
                           let balHex = t["tokenBalance"] as? String else { continue }
                     let decimals = (md?["decimals"] as? Int)
                         ?? (isNative ? native[network]?.decimals : nil)
