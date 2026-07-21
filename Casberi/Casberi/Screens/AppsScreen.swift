@@ -229,7 +229,7 @@ struct AppsScreen: View {
             #endif
         }
         .scrollIndicators(.hidden)
-        .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always),
+        .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .automatic),
                     prompt: "Search apps")
         // The connect payoff blooms the app's hue over the whole store, then
         // recedes — the same beat the product page gives, now on every Connect.
