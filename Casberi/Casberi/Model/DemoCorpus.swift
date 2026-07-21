@@ -233,13 +233,6 @@ enum DemoCorpus {
                   tags: ["Invoices"],
                   provenance: Provenance(app: "OpenClaw", agent: "claude-code",
                                          run: nil, machine: "mac-studio")),
-            // S10 — the agent's ask, waiting. The thing IS the consent
-            // surface: Approve/Deny are its verbs (sheet and swipe).
-            Thing(kind: .approval, title: "Deploy the staging build",
-                  content: "wants to run: deploy --env staging",
-                  source: "OpenClaw", capturedAt: ago(hours: 0.3),
-                  provenance: Provenance(app: "OpenClaw", agent: "claude-code",
-                                         run: "run_9c11", machine: "mac-studio")),
         ]
     }
 }
