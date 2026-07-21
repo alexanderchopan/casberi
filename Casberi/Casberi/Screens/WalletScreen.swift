@@ -62,23 +62,6 @@ struct WalletScreen: View {
     /// Safe); the Watching row's whole tap target is now this, not a rename
     /// prompt.
     @State private var openWalletDetail: WalletStore.WatchedAddress.ID?
-    /// Each watched wallet's own USD total, watch order (2026-07-15) — the
-    /// one holdings fetch behind every surface here: the row sublines and
-    /// (per-wallet) `WalletDetailScreen`'s own treemap.
-    @State private var walletTotals: [WalletIngest.HoldingsGroup] = []
-    /// Live Aave positions across watched wallets (2026-07-20) — empty for a
-    /// wallet with none (never a placeholder card for "not using DeFi").
-    @State private var defiPositions: [WalletDeFi.Position] = []
-    /// Detected-Safe wallets' pending-signature counts, keyed lowercased
-    /// (2026-07-20) — absent for a wallet that isn't a Safe anywhere.
-    @State private var safePending: [String: Int] = [:]
-    /// Every currently-delegated (wallet, chain) pair (2026-07-20) — live
-    /// state for the warnings band, separate from WalletSafety's
-    /// land-on-change alert.
-    @State private var delegations: [WalletSafety.Delegation] = []
-    /// How many recent Wallet things are flagged as address-poisoning
-    /// (2026-07-20) — for the warnings band; 0 renders nothing.
-    @State private var poisoningCount: Int = 0
     /// Whether the Chains row is expanded (2026-07-15) — collapsed by
     /// default to a one-line summary ("Ethereum, Base +3"); a set-once
     /// setting doesn't deserve six full-height rows every visit.
@@ -177,29 +160,50 @@ struct WalletScreen: View {
         }
     }
 
-    // MARK: - Value history (2026-07-14)
-
-    /// A row's sampled history — nil until the wallet has ≥2 sampled points
-    /// (a single dot isn't a line).
-    private func rowSamples(_ addr: WalletStore.WatchedAddress) -> [WalletStore.ValueSample]? {
-        let s = wallet.valueSamples(forAddress: addr.address)
-        guard s.count >= 2 else { return nil }
-        return s
-    }
-
-    /// A watched wallet's live USD total, from the same fetch that feeds the
-    /// row sublines — nil until the first sync lands (no stale "$0" flash).
-    private func walletValue(for address: String) -> Double? {
-        walletTotals.first { $0.address?.lowercased() == address.lowercased() }?.totalUSD
-    }
-
-    /// The row's subline: the wallet's live value once known — more useful
-    /// than repeating the address a second time. Falls back to the address
-    /// (only when a label already occupies the name line above it) until
-    /// the first sync lands, and to nothing when there's neither.
-    private func rowSubline(_ addr: WalletStore.WatchedAddress) -> String? {
-        if let usd = walletValue(for: addr.address) { return TokenStats.compact(usd) }
-        return addr.label.isEmpty ? nil : addr.short
+    /// Reads the chain and lands new transactions — the plumbing screen's one
+    /// job on appear. RESTORED 2026-07-20: the surface split's block cuts
+    /// accidentally deleted this member, and the `sync()` call in onAppear
+    /// kept compiling by resolving to POSIX `sync(2)` — two green builds were
+    /// flushing disk buffers instead of reading chains, with no compiler
+    /// diagnostic to catch it. The fan-out the old body did for the warnings
+    /// band and portfolio bundle lives in `WalletWatch.liveState` (the feed's
+    /// tiles) now; what belongs here is landing, the honest status line, and
+    /// the seat registration.
+    private func sync() {
+        guard !syncing else { return }
+        syncing = true
+        Task {
+            let added = await WalletIngest.refresh(context: modelContext)
+            // Holdings, only as a BOOLEAN — the typo'd-address nudge below
+            // needs "nothing found anywhere", and the coalesced holdings
+            // cache makes the read cheap. Never displayed here: the reads
+            // live on the feed (user ruling, 2026-07-20).
+            let totals = await WalletIngest.topHoldingsByWallet()
+            syncing = false
+            // A bridge only registers "connected" once it actually reached
+            // the chain — a bad key or offline device must never claim
+            // success (review 2026-07-08).
+            guard let added else {
+                result = String(localized: "Couldn't reach the chain — check your connection.")
+                resultIsError = true
+                return
+            }
+            resultIsError = false
+            let nothingFound = added == 0 && totals.allSatisfy { $0.totalUSD < 1 }
+            if added > 0 {
+                result = String(localized: "\(added) new")
+            } else if nothingFound && wallet.addresses.count == 1 {
+                result = String(localized: "No activity found on your chains yet — double-check the address, or give it a moment.")
+            } else {
+                result = String(localized: "Connected — watching for activity.")
+            }
+            let proof = added > 0 ? "\(added) new" : "Synced just now"
+            if store.registerConnected(id: "wallet", name: "Wallet", proof: proof,
+                                       can: ["Reads your wallet's activity.",
+                                             "Read-only — never trades or moves funds."]) {
+                DSHaptic.success()
+            }
+        }
     }
 
     // MARK: - Watching (add / remove / sort / pin)
@@ -233,36 +237,18 @@ struct WalletScreen: View {
                             Text(addr.label.isEmpty ? addr.short : addr.label)
                                 .dsText(.body17).foregroundStyle(DS.textPrimary)
                                 .lineLimit(1)
-                            // The value once known (2026-07-15) — more useful
-                            // than repeating the address a second time; the
-                            // Value section used to carry this separately.
-                            if let subline = rowSubline(addr) {
-                                Text(subline).dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                            // The address, always — identity, not a read
+                            // (user, 2026-07-20: the value subline and
+                            // sparkline these rows carried were holdings on
+                            // the plumbing screen; the feed's Balance tile is
+                            // where value lives now).
+                            if !addr.label.isEmpty {
+                                Text(addr.short).dsText(.subhead13)
+                                    .foregroundStyle(DS.textSecondary)
                                     .monospacedDigit()
                             }
                         }
                         Spacer()
-                        // The value heartbeat, merged from the old standalone
-                        // Value section (2026-07-15) — sparkline + delta pill,
-                        // right on the row. Only once the wallet has ≥2 sampled
-                        // points.
-                        if let samples = rowSamples(addr) {
-                            let closes = samples.map(\.usd)
-                            let first = closes.first ?? 0
-                            let last = closes.last ?? 0
-                            let change = first > 0 ? (last - first) / first : 0
-                            VStack(alignment: .trailing, spacing: 4) {
-                                TokenChartPlot(chart: TokenChart(closes: closes, price: last,
-                                                                 change: change),
-                                               accent: TokenChartStyle.accent(change: change, scheme: scheme),
-                                               height: 22, pulses: false)
-                                    .frame(width: 40)
-                                    .accessibilityHidden(true)
-                                TokenDeltaPill(change: change,
-                                               label: samples.first!.at.formatted(.dateTime.month(.abbreviated).day()),
-                                               compact: true)
-                            }
-                        }
                         Image(systemName: "chevron.right")
                             .font(.system(size: 13, weight: .semibold))
                             .foregroundStyle(DS.textTertiary)

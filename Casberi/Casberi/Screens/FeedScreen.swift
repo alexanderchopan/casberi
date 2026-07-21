@@ -74,6 +74,10 @@ struct FeedScreen: View {
     /// tile IS the combined portfolio, so it's the honest door. Only meaningful
     /// with more than one wallet watched, which is also the sheet's own guard.
     @State private var showCombinedWallets = false
+    /// The Worth-a-look tray — the page behind the warnings tile
+    /// (2026-07-20: the tile's tap used to push the MANAGE screen, which no
+    /// longer shows warnings at all — a door to the wrong room).
+    @State private var showWorthALook = false
     /// Bumped when this page lands — rows replay their shape's
     /// entrance (each shape arrives its own way, ruling 2026-07-07).
     @State private var shapeWave = 0
@@ -588,6 +592,7 @@ struct FeedScreen: View {
         .environment(\.defaultMinListHeaderHeight, 0)
         .scrollIndicators(.hidden)
         .minimizesChrome(chrome, active: isActive)
+        .safeAreaInset(edge: .top, spacing: 0) { walletSwitcherBar }
         .dsSoftTopEdge()
         // Arrival is `isActive`, not `onAppear` (2026-07-16, the pager): a
         // mounted neighbour appears without ever being looked at, so landing
@@ -640,6 +645,23 @@ struct FeedScreen: View {
             CombinedWalletsSheet(total: samples.last?.usd ?? 0,
                                  combined: samples,
                                  wallets: wallet.addresses)
+        }
+        .sheet(isPresented: $showWorthALook) {
+            WalletWorthALookTray(
+                warnings: walletLive.warnings,
+                flagged: walletLive.flagged,
+                onOpenWallet: { address in
+                    showWorthALook = false
+                    if let w = wallet.addresses.first(where: {
+                        WalletWatch.sameAddress($0.address, address)
+                    }) {
+                        HomeRoute.shared.bridgePush = .walletDetail(id: w.id)
+                    }
+                },
+                onOpenThing: { thing in
+                    showWorthALook = false
+                    sheetThing = thing
+                })
         }
         .translationPresentation(isPresented: $showTranslate, text: translateText)
         .confirmationDialog(
@@ -699,7 +721,9 @@ struct FeedScreen: View {
             // balance + warnings side by side, the holdings treemap, DeFi, and
             // only then the transactions — capped, with a door to all of them.
             // Everything above the rows is live state, never a landed thing.
-            walletSwitcherSection
+            // (The wallet switcher isn't here: it PINS over the stream via
+            // safeAreaInset — a scoping control has to stay reachable when
+            // you're deep in the transactions it scopes.)
             walletTilesSection
             holdingsBlockSection
             walletDeFiSection
@@ -1149,21 +1173,16 @@ struct FeedScreen: View {
             Section {
                 HStack(alignment: .top, spacing: DS.Space.s2) {
                     if let chart {
-                        WalletBalanceTile(chart: chart) {
-                            // More than one wallet: the breakdown of what this
-                            // number is made of. One wallet: that number is
-                            // already whole, so the tile opens the wallet.
-                            if wallet.addresses.count > 1, selectedWallet == nil {
-                                showCombinedWallets = true
-                            } else {
-                                HomeRoute.shared.bridgePush = .wallet
-                            }
-                        }
+                        // The door exists only where a breakdown exists: the
+                        // multi-wallet "All" view opens the combined sheet.
+                        // Scoped (or single-wallet), the treemap below already
+                        // IS the composition — no door, no chevron.
+                        let hasBreakdown = wallet.addresses.count > 1 && selectedWallet == nil
+                        WalletBalanceTile(chart: chart,
+                                          onOpen: hasBreakdown ? { showCombinedWallets = true } : nil)
                     }
                     if !warnings.isEmpty {
-                        WalletWarningsTile(warnings: warnings) {
-                            HomeRoute.shared.bridgePush = .wallet
-                        }
+                        WalletWarningsTile(warnings: warnings) { showWorthALook = true }
                     }
                 }
                 .listRowBackground(Color.clear)
@@ -1181,10 +1200,8 @@ struct FeedScreen: View {
     private var walletDeFiSection: some View {
         if !walletLive.positions.isEmpty {
             Section {
-                WalletDeFiTile(positions: walletLive.positions) {
-                    HomeRoute.shared.bridgePush = .wallet
-                }
-                .listRowBackground(Color.clear)
+                WalletDeFiTile(positions: walletLive.positions)
+                    .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
                 .listRowInsets(EdgeInsets(top: DS.Space.s2, leading: DS.Space.s4,
                                           bottom: 0, trailing: DS.Space.s4))
@@ -1211,32 +1228,33 @@ struct FeedScreen: View {
     /// tint. Scopes the whole Wallet feed (balance, treemap, NFTs, rows) to one
     /// wallet; only shown with more than one watched. Fill-only selection (no
     /// lines, per the design law). Mirrors the Wallet screen's own switcher.
+    ///
+    /// PINNED, not a List section (2026-07-20, prd §136's own rule applied to
+    /// itself): as a section it scrolled away with the content it scopes —
+    /// unreachable exactly when you're deep in the stream wondering whose
+    /// transaction that was — and its glass had nothing moving behind it.
+    /// As a `safeAreaInset` bar it floats under the shell's chip strip, the
+    /// stream travels beneath it, and the material finally earns its blur.
     @ViewBuilder
-    private var walletSwitcherSection: some View {
-        if wallet.addresses.count > 1 {
-            Section {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: DS.Space.s2) {
-                        walletSwitcherChip(label: "All", address: nil)
-                        ForEach(wallet.addresses) { addr in
-                            walletSwitcherChip(label: addr.label.isEmpty ? addr.short : addr.label,
-                                               address: addr.address)
-                        }
+    private var walletSwitcherBar: some View {
+        if source == "Wallet", wallet.addresses.count > 1 {
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: DS.Space.s2) {
+                    walletSwitcherChip(label: "All", address: nil)
+                    ForEach(wallet.addresses) { addr in
+                        walletSwitcherChip(label: addr.label.isEmpty ? addr.short : addr.label,
+                                           address: addr.address)
                     }
-                    .padding(4)
-                    // Glass, by the law's own terms (2026-07-20): scoping is a
-                    // CONTROL, not content, so the switcher wears the floating
-                    // material the composer and agent bar already do — one bar
-                    // of glass for the whole strip rather than a pane per chip
-                    // (cheaper, and it reads as one object).
-                    .dsGlass(cornerRadius: 999)
-                    .padding(.vertical, 2)
                 }
-                .listRowBackground(Color.clear)
-                .listRowSeparator(.hidden)
-                .listRowInsets(EdgeInsets(top: DS.Space.s2, leading: DS.Space.s4,
-                                          bottom: 0, trailing: DS.Space.s4))
+                .padding(4)
+                // Glass, by the law's own terms: scoping is a CONTROL, so the
+                // switcher wears the floating material — one bar of glass for
+                // the whole strip rather than a pane per chip.
+                .dsGlass(cornerRadius: 999)
+                .padding(.horizontal, DS.Space.s4)
+                .padding(.vertical, DS.Space.s2)
             }
+            .scrollIndicators(.hidden)
         }
     }
 

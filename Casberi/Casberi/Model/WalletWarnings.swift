@@ -38,6 +38,10 @@ struct WalletWarning: Identifiable, Equatable {
     let kind: Kind
     let title: String
     let subtitle: String?
+    /// The WATCHED address this warning belongs to (the person's own spelling
+    /// — "vitalik.eth", not the resolved hex), so a door can route to that
+    /// wallet's screen. nil when the warning spans wallets (poisoning).
+    let address: String?
 }
 
 /// The live, never-landed wallet state the feed's tiles draw: Aave positions
@@ -49,9 +53,14 @@ struct WalletWarning: Identifiable, Equatable {
 struct WalletLiveState: Equatable {
     var positions: [WalletDeFi.Position] = []
     var warnings: [WalletWarning] = []
+    /// The address-poisoning things behind the poisoning warning — carried so
+    /// the Worth-a-look tray can list each flagged transfer as its own row
+    /// with a door to its sheet, instead of a dead aggregate line.
+    var flagged: [Thing] = []
 
     static func == (a: WalletLiveState, b: WalletLiveState) -> Bool {
         a.warnings == b.warnings
+            && a.flagged.map(\.id) == b.flagged.map(\.id)
             && a.positions.count == b.positions.count
             && zip(a.positions, b.positions).allSatisfy {
                 $0.address == $1.address && $0.network == $1.network
@@ -77,8 +86,19 @@ enum WalletWatch {
         let targets = scope.map { s in watched.filter { sameAddress($0, s) } } ?? watched
         guard !targets.isEmpty else { return WalletLiveState() }
 
-        let resolved = await WalletIngest.resolvedAddresses(targets)
-            .filter { ENS.isHexAddress($0) }
+        // Resolved one target at a time ON PURPOSE: `resolvedAddresses` skips
+        // a name that fails to resolve, so zipping its batch output against
+        // the input list would mis-pair every owner after the failure. Each
+        // warning needs to know WHOSE it is (the door routes to that wallet),
+        // and a wrong owner is worse than a slow loop over 1–5 wallets.
+        var resolved: [String] = []
+        var owner: [String: String] = [:]   // resolved (lowercased) → watched spelling
+        for target in targets {
+            guard let hex = await WalletIngest.resolvedAddresses([target])
+                .first(where: { ENS.isHexAddress($0) }) else { continue }
+            resolved.append(hex)
+            owner[hex.lowercased()] = target
+        }
         guard !resolved.isEmpty else { return WalletLiveState() }
 
         async let defi = WalletDeFi.positions(addresses: resolved)
@@ -95,17 +115,21 @@ enum WalletWatch {
         let flagged = (try? context.fetch(FetchDescriptor<Thing>(
             predicate: #Predicate { $0.source == "Wallet" && $0.securityFlag == "poisoning" }
         ))) ?? []
-        let poisoningCount = scope == nil
-            ? flagged.count
-            : flagged.filter { t in
-                guard let a = t.walletAddress else { return false }
-                return targets.contains { sameAddress($0, a) }
-            }.count
+        let poisoningCount = scope == nil ? flagged.count : flagged.filter { t in
+            guard let a = t.walletAddress else { return false }
+            return targets.contains { sameAddress($0, a) }
+        }.count
 
+        let inScope = scope == nil ? flagged : flagged.filter { t in
+            guard let a = t.walletAddress else { return false }
+            return targets.contains { sameAddress($0, a) }
+        }
         return WalletLiveState(
             positions: positions,
             warnings: warnings(positions: positions, safePending: safePending,
-                               delegations: delegations, poisoningCount: poisoningCount))
+                               delegations: delegations, poisoningCount: poisoningCount,
+                               owner: owner),
+            flagged: inScope)
     }
 
     /// Hex compares case-insensitively (EIP-55 case is a checksum), base58
@@ -121,7 +145,8 @@ enum WalletWatch {
     static func warnings(positions: [WalletDeFi.Position],
                          safePending: [String: Int],
                          delegations: [WalletSafety.Delegation],
-                         poisoningCount: Int) -> [WalletWarning] {
+                         poisoningCount: Int,
+                         owner: [String: String] = [:]) -> [WalletWarning] {
         let wallet = WalletStore.shared
         var out: [WalletWarning] = []
         for p in positions where (p.healthFactor ?? .infinity) < 1.5 {
@@ -129,7 +154,8 @@ enum WalletWatch {
             out.append(WalletWarning(id: "defi:\(p.network):\(p.address)", severity: .critical,
                                      kind: .liquidation,
                                      title: String(localized: "Aave position close to liquidation"),
-                                     subtitle: "\(chain) · hf \(WalletIngest.format(p.healthFactor ?? 0))"))
+                                     subtitle: "\(chain) · hf \(WalletIngest.format(p.healthFactor ?? 0))",
+                                     address: owner[p.address.lowercased()]))
         }
         if poisoningCount > 0 {
             out.append(WalletWarning(id: "poisoning", severity: .critical,
@@ -137,7 +163,7 @@ enum WalletWatch {
                                      title: poisoningCount == 1
                                          ? String(localized: "1 transfer looks like address poisoning")
                                          : String(localized: "\(poisoningCount) transfers look like address poisoning"),
-                                     subtitle: nil))
+                                     subtitle: nil, address: nil))
         }
         for (address, count) in safePending.sorted(by: { $0.key < $1.key }) where count > 0 {
             let label = wallet.label(forAddress: address) ?? WalletStore.shortAddress(address)
@@ -146,7 +172,8 @@ enum WalletWatch {
                                      title: count == 1
                                          ? String(localized: "1 signature needed on \(label)'s Safe")
                                          : String(localized: "\(count) signatures needed on \(label)'s Safe"),
-                                     subtitle: nil))
+                                     subtitle: nil,
+                                     address: owner[address.lowercased()] ?? address))
         }
         for d in delegations {
             let chain = WalletIngest.displayName(forNetwork: d.network) ?? d.network
@@ -155,7 +182,8 @@ enum WalletWatch {
                                      kind: .delegation,
                                      title: String(localized: "\(label) delegates on \(chain)"),
                                      subtitle: WalletIngest.knownLabel(for: d.delegate)
-                                         ?? WalletStore.shortAddress(d.delegate)))
+                                         ?? WalletStore.shortAddress(d.delegate),
+                                     address: owner[d.address.lowercased()] ?? d.address))
         }
         return out.sorted { $0.severity == .critical && $1.severity != .critical }
     }

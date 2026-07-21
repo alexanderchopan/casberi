@@ -1,13 +1,17 @@
 import SwiftUI
 import SwiftData
 
-/// One watched wallet's own screen (2026-07-20) — the collapse: approvals,
-/// gas, Aave, and Safe used to each earn a top-level `Section` on
-/// `WalletScreen`, repeating every watched wallet's face+label once per
-/// feature. Here they're scoped to the ONE wallet this screen is about,
-/// reached by tapping its row in Watching. Self-sufficient — does its own
-/// fetch on appear rather than threading state down from `WalletScreen`,
-/// the same shape `ThingSheetView`'s prepare/queue cards already follow.
+/// One watched wallet's own screen — its CONNECTION, not its contents
+/// (2026-07-20, second pass; user: "the manage screen should only be about
+/// connecting wallets and disconnecting them"). The first pass moved the
+/// per-wallet reads here from `WalletScreen`'s top level; this pass moves the
+/// reads out of the manage stack entirely — the holdings treemap, the value
+/// sparkline, and the gas line all belonged to the feed's tiles and treemap,
+/// and showing them here made two of everything. What's left is what only
+/// this screen can do: rename, the safety facts (approvals door, delegation,
+/// Safe queue — the rows the Worth-a-look tray's doors land on), and remove.
+/// Self-sufficient — does its own fetch on appear rather than threading state
+/// down, the same shape `ThingSheetView`'s prepare/queue cards follow.
 struct WalletDetailScreen: View {
     @Bindable private var wallet = WalletStore.shared
     let addressID: WalletStore.WatchedAddress.ID
@@ -18,9 +22,6 @@ struct WalletDetailScreen: View {
 
     @State private var renameDraft = ""
     @State private var renaming = false
-    @State private var holdings: WalletIngest.HoldingsGroup?
-    @State private var gasUSD: Double?
-    @State private var positions: [WalletDeFi.Position] = []
     @State private var pendingCount: Int?
     @State private var delegation: WalletSafety.Delegation?
 
@@ -32,8 +33,6 @@ struct WalletDetailScreen: View {
         List {
             if let addr {
                 headerSection(addr)
-                if let holdings { holdingsMap(holdings) }
-                if !positions.isEmpty { defiSection }
                 safetySection(addr)
                 removeSection(addr)
             }
@@ -65,14 +64,8 @@ struct WalletDetailScreen: View {
             // branching is needed here.
             let resolved = await WalletIngest.resolvedAddresses([addr.address])
                 .filter { ENS.isHexAddress($0) }
-            async let totals = WalletIngest.topHoldingsByWallet()
-            async let gas = WalletGas.totalUSD(address: addr.address)
-            async let defi = WalletDeFi.positions(addresses: resolved)
             async let safe = SafeBridge.pendingCounts(addresses: resolved)
             async let currentDelegs = WalletSafety.currentDelegations(addresses: resolved)
-            holdings = await totals.first { $0.address?.lowercased() == addr.address.lowercased() }
-            gasUSD = await gas
-            positions = await defi
             pendingCount = (await safe)[addr.address.lowercased()]
             delegation = (await currentDelegs).first
         }
@@ -84,29 +77,7 @@ struct WalletDetailScreen: View {
         DSHaptic.success()
     }
 
-    // MARK: - Header
-
-    private func rowSamples(_ addr: WalletStore.WatchedAddress) -> [WalletStore.ValueSample]? {
-        let s = wallet.valueSamples(forAddress: addr.address)
-        guard s.count >= 2 else { return nil }
-        return s
-    }
-
-    /// Value + gas in one line — the fact no explorer states this way (they
-    /// show a single tx's fee, never a running sum), honestly scoped ("since
-    /// you started watching", never a fabricated lifetime figure).
-    private func subline(_ addr: WalletStore.WatchedAddress) -> String? {
-        var parts: [String] = []
-        if let holdings {
-            parts.append(holdings.tokenCount == 1
-                ? "\(TokenStats.compact(holdings.totalUSD)) across 1 token"
-                : "\(TokenStats.compact(holdings.totalUSD)) across \(holdings.tokenCount) tokens")
-        } else if !addr.label.isEmpty {
-            parts.append(addr.short)
-        }
-        if let gasUSD { parts.append("\(TokenStats.compact(gasUSD)) gas") }
-        return parts.isEmpty ? nil : parts.joined(separator: " · ")
-    }
+    // MARK: - Header (identity + rename — the reads live on the feed)
 
     private func headerSection(_ addr: WalletStore.WatchedAddress) -> some View {
         Section {
@@ -121,8 +92,12 @@ struct WalletDetailScreen: View {
                         Text(addr.label.isEmpty ? addr.short : addr.label)
                             .dsText(.body17).foregroundStyle(DS.textPrimary)
                             .lineLimit(1)
-                        if let subline = subline(addr) {
-                            Text(subline).dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                        // The address, always — identity, not a read. The
+                        // value/gas subline and the sparkline moved to the
+                        // feed's Balance tile with the rest of the reads.
+                        if !addr.label.isEmpty {
+                            Text(addr.short).dsText(.subhead13)
+                                .foregroundStyle(DS.textSecondary)
                                 .monospacedDigit()
                         }
                     }
@@ -130,61 +105,8 @@ struct WalletDetailScreen: View {
                 }
                 .buttonStyle(.plain)
                 Spacer()
-                if let samples = rowSamples(addr) {
-                    let closes = samples.map(\.usd)
-                    let first = closes.first ?? 0
-                    let last = closes.last ?? 0
-                    let change = first > 0 ? (last - first) / first : 0
-                    VStack(alignment: .trailing, spacing: 4) {
-                        TokenChartPlot(chart: TokenChart(closes: closes, price: last, change: change),
-                                       accent: TokenChartStyle.accent(change: change, scheme: scheme),
-                                       height: 22, pulses: false)
-                            .frame(width: 40)
-                            .accessibilityHidden(true)
-                        TokenDeltaPill(change: change,
-                                       label: samples.first!.at.formatted(.dateTime.month(.abbreviated).day()),
-                                       compact: true)
-                    }
-                }
             }
             .dsListCardRow()
-        }
-    }
-
-    // MARK: - Holdings treemap (this wallet only)
-
-    private func holdingsMap(_ group: WalletIngest.HoldingsGroup) -> some View {
-        let doc = WalletIngest.groupDocument(group).joined(separator: "\n")
-        return GenRender(id: "root", els: GenParser.parse(prefix: doc[...], isComplete: true))
-            .listRowBackground(Color.clear)
-            .listRowSeparator(.hidden)
-            .listRowInsets(EdgeInsets())
-    }
-
-    // MARK: - DeFi (this wallet only)
-
-    private var defiSection: some View {
-        Section {
-            ForEach(Array(positions.enumerated()), id: \.offset) { _, p in
-                HStack(spacing: DS.Space.s3) {
-                    Text(WalletIngest.displayName(forNetwork: p.network) ?? p.network)
-                        .dsText(.body17).foregroundStyle(DS.textPrimary)
-                    Spacer()
-                    if let hf = p.healthFactor {
-                        Text(String(format: "%.2f", hf))
-                            .dsText(.body17)
-                            .foregroundStyle(hf < 1.5 ? DS.destructive : DS.textPrimary)
-                            .monospacedDigit()
-                    }
-                }
-                .dsListCardRow()
-            }
-        } header: {
-            Text("DeFi positions").dsText(.label12)
-                .foregroundStyle(DS.textSecondary)
-        } footer: {
-            Text("Aave collateral, debt, and health factor — read live from the chain. Below 1.5 is worth watching; below 1.0 risks liquidation.")
-                .dsText(.callout15).foregroundStyle(DS.textSecondary)
         }
     }
 
