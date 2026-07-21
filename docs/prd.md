@@ -4708,3 +4708,59 @@ Files: `Model/KeptAskComposers.swift`, `Shell/RootShell.swift`. NOT yet
 verified on-sim — this session is the Linux web env with no xcodebuild;
 build + `-answerProbe "how's my wallet"` (with `-approvalProbe <blocksBack>`
 first to land an approval) to run on the Mac before the checkpoint.
+
+## 145. More generative UI in the composer answers — five chart types (user: "how can we add more generative UI to the composer? Charts and things like that", → "do all these", 2026-07-21)
+
+The agent's answers spoke almost entirely in `Insight` + `Widget`/`Row`, with
+`TokenChip` and the holdings `TagMap` the only real visuals. This pass adds
+five answer-column components, each drawing a REAL visualization the answer
+already had the data for (agent-brief ruling 13 — never invents one), all
+deterministic (no model in any composer, ruling 1 intact), and each gating
+itself out when the data is thin so a sparse corpus degrades to exactly the
+old shape. New views + renderer cases in `GenUI/GenRenderer.swift`; composers
+in `Model/KeptAskComposers.swift` (+ the shared free-text paths in
+`Shell/RootShell.swift`, so kept and typed answers never disagree).
+
+- **ValueSpark(eyebrow, subline, csv)** — the wallet balance sparkline over
+  recorded `WalletStore.ValueSample` history, reusing `TokenChartPlot` so the
+  value line wears the exact anatomy a token curve does. The delta pill is
+  computed first→last, the same math `WalletAsk.answer()`'s line uses. Inline
+  series (not a pointer like TokenChip) because samples are LOCAL facts already
+  read — the honest thing is to draw what was recorded. Fewer than two points
+  emits nothing (a dot isn't a trend).
+- **Bars(eyebrow, subline, counts, labels)** — per-day capture counts over the
+  last week, hand-drawn as capsules (no axis/grid — the hairline law holds on
+  charts). Wired into the per-source and per-category recaps ("What's new in
+  GitHub?"); dropped under four items (a two-item week is a list, not a chart).
+- **ChartCard(symbol, chain, address)** — a single token's FULL scrubbable
+  curve, reusing `TokenChartView` (its press-then-drag scrub already coexists
+  with a scroll view). The watchlist ask emits it when exactly one mover is
+  shown; two or more keep the compact TokenChip list.
+- **StatRow(v0,l0,v1,l1,v2,l2)** — up to three glanceable number tiles, neutral
+  ink (a bare count has no up/down direction to color, honesty §83). The wallet
+  answer leads with **Approvals / This week / Tokens** — the approvals count is
+  what the user asked to see, at a glance above the detail rows.
+- **AllocBar(eyebrow, "label|usd,…")** — how the total splits across watched
+  wallets, one segmented bar, monochrome by the one-tint law (DS.tint stepped
+  down in opacity, never a rainbow). Only meaningful with two+ wallets.
+
+Also wired the EXISTING shaped rows into answers (they rendered at top level
+but weren't dispatched as Widget children): `GenWidget.rowContent` now also
+handles **TxRow** (a wallet transfer draws its asset mark + direction + amount,
+from `transferDirection`/`transferAmount`/`transferCounterparty`) and
+**AgendaRow** (an overdue task draws on the time rail, most-overdue leading).
+`ApprovalCard` was deliberately NOT used for the wallet approvals section — its
+Approve/Deny pills would be dead controls (honesty: Casberi never signs), so
+approvals keep the plain Row whose sheet carries the real prepare card.
+
+The enriched wallet answer, top to bottom when rich: line → balance sparkline →
+Approvals/This week/Tokens strip → holdings treemap → per-wallet split → token
+approvals → latest activity (transfers as TxRows). An unreachable live read
+still shows every LOCAL section under the honest "Couldn't reach" line.
+
+Files: `GenUI/GenRenderer.swift` (five views + cases, two rowContent cases),
+`Model/KeptAskComposers.swift`, `Shell/RootShell.swift`. catalog-sync
+unaffected (no catalog changes). NOT yet verified on-sim — this session is the
+Linux web env with no xcodebuild; build + `-answerProbe`/`-uiAnswerProbe` over
+"how's my wallet", "how's my watchlist", "what's new in <source>" and an
+overdue corpus to run on the Mac before the checkpoint.
