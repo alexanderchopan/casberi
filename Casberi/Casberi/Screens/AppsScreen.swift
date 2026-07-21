@@ -201,6 +201,32 @@ struct AppsScreen: View {
                 .padding(.vertical, DS.Space.s4)
                 .padding(.bottom, ShellMetrics.bottomInset)
             }
+            #if DEBUG
+            .onAppear {
+                // `-appsShelf "<Category>[:page]"` — scroll the catalog to a
+                // shelf and set its pager, headlessly (screenshot runs have no
+                // scroll gesture; same route as a jump-chip tap).
+                guard let spec = UserDefaults.standard.string(forKey: "appsShelf") else { return }
+                let parts = spec.split(separator: ":", maxSplits: 1)
+                let name = String(parts[0])
+                let page = parts.count > 1 ? (Int(parts[1]) ?? 0) : 0
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                    proxy.scrollTo("shelf-" + name, anchor: .top)
+                    // Set the pager AFTER the shelf's own ScrollView has
+                    // initialised — it writes 0 back through the binding on
+                    // first layout, which eats a value set at mount.
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+                        shelfPage[name] = page
+                        // Re-anchor: setting the pager re-lays the shelf out
+                        // and drifts the vertical offset off the header.
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+                            proxy.scrollTo("shelf-" + name, anchor: .top)
+                            NSLog("appsShelf: \(name) page \(page)")
+                        }
+                    }
+                }
+            }
+            #endif
         }
         .scrollIndicators(.hidden)
         .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always),
