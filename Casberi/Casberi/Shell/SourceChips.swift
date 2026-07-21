@@ -2,19 +2,36 @@ import SwiftUI
 
 /// The shell's one navigation strip (2026-07-13, drastic restructure): the app
 /// is a single scrolling surface, and this chip row IS how you move through it.
-/// The tab bar is gone — Pinned leads (your curated board), then All (the whole
-/// feed), then every source most-recent-first. Tapping a chip swaps the surface
-/// under a fixed header, so the strip never scrolls out of reach the way Feed's
-/// old in-list chip row did.
+/// The tab bar is gone — All leads (the whole feed), then every source
+/// most-recent-first. Tapping a chip swaps the surface under a fixed header,
+/// so the strip never scrolls out of reach the way Feed's old in-list chip
+/// row did. (The Pinned board that used to lead retired 2026-07-20,
+/// docs/agent-brief.md rulings 11-12 — content-first, always.)
 ///
 /// Stories-sized (ruling 2026-07-10): 56pt icon-only circles — the brand logo
 /// IS the chip. The active chip wears the blue ink ring; a source whose
 /// connection needs you wears an orange one. No labels (labels made the row
-/// scroll, ruling 2026-07-09) — Pinned wears a pin glyph, All keeps its word.
+/// scroll, ruling 2026-07-09) — All keeps its word, every source wears its
+/// own brand mark.
 struct SourceChips: View {
-    /// The full ordered label list — "Pinned", "All", then real sources.
+    /// The full ordered label list — "All", then real sources.
     let labels: [String]
     let active: String
+    /// Opens the app catalogue (user 2026-07-17: its door moved OUT of the
+    /// top-right cluster and INTO the head of this strip — "add a source"
+    /// belongs with your sources).
+    var onApps: () -> Void = {}
+    /// Opens Settings — the avatar joined this strip too (2026-07-20,
+    /// Stories-style: your own face leads, fixed, ahead of the catalogue
+    /// door). The system nav bar it used to live in alone is hidden now.
+    var onSettings: () -> Void = {}
+    /// Pull-to-refresh spin, threaded through to the avatar exactly as it
+    /// was when it lived in the toolbar.
+    var refreshSpin: Int = 0
+    /// The zoom anchor BOTH fixed doors grow out of — the catalogue's
+    /// "appsDoor" transition and the avatar's "settingsDoor" transition
+    /// share one namespace under different ids, same as before the move.
+    var zoomNS: Namespace.ID? = nil
     let onTap: (String) -> Void
 
     @Environment(BridgeStore.self) private var bridges
@@ -24,26 +41,114 @@ struct SourceChips: View {
     /// (the old tab lozenge's grammar, motion pass 2026-07-11).
     @Namespace private var chipRingNS
 
+    // Leading-dissolve geometry (user, 2026-07-19; widened 2026-07-20 when
+    // the avatar joined as a SECOND fixed leading icon ahead of the
+    // catalogue door): avatar sits at `s4`, 46 wide; the catalogue door
+    // sits `iconGap` past it, also 46 wide. The strip runs UNDER both and
+    // is masked — fully clear where an icon covers a chip, a short ramp
+    // back to solid just past the second icon, then solid the rest of the
+    // way. `stripInset` sets the first chip to rest right where the ramp
+    // ends, so nothing is dimmed at rest. Tune `fadeRamp` for a softer/
+    // tighter melt.
+    private static let avatarWidth: CGFloat = 46
+    private static let catalogueWidth: CGFloat = 46
+    private static let iconGap: CGFloat = DS.Space.s3
+    private static let catalogueTrailingEdge: CGFloat =
+        DS.Space.s4 + avatarWidth + iconGap + catalogueWidth
+    private static let fadeClear: CGFloat = catalogueTrailingEdge - 8
+    private static let fadeRamp: CGFloat = 24
+    private static let stripInset: CGFloat = fadeClear + fadeRamp
+
     var body: some View {
-        // ScrollViewReader keeps the ACTIVE chip visible — a deep link
-        // (casberi://feed/source/Zerion) can select a chip past the fold, and a
-        // filter you can't see reads as no filter at all.
-        ScrollViewReader { proxy in
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: DS.Space.s3) {
-                    ForEach(labels, id: \.self) { label in
-                        chip(label)
+        // The scroll strip runs the full width, UNDER the fixed app icon; the
+        // leading fade mask dissolves each chip as it reaches the icon, so chips
+        // melt INTO the catalogue button instead of being sheared off at a hard
+        // clip line (user, 2026-07-19 — "disappear into it, not into a hard
+        // line on the source chips").
+        ZStack(alignment: .leading) {
+            // ScrollViewReader keeps the ACTIVE chip visible — a deep link
+            // (casberi://feed/source/Zerion) can select a chip past the fold,
+            // and a filter you can't see reads as no filter at all.
+            ScrollViewReader { proxy in
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: DS.Space.s3) {
+                        ForEach(labels, id: \.self) { label in
+                            chip(label)
+                        }
                     }
+                    // Clears the fixed app icon at rest; the strip slides left
+                    // beneath it — and through the fade — as you scroll.
+                    .padding(.leading, Self.stripInset)
+                    .padding(.trailing, DS.Space.s4)
                 }
-                .padding(.horizontal, DS.Space.s4)
+                .onAppear {
+                    if active != "All" { proxy.scrollTo(active, anchor: .center) }
+                }
+                .onChange(of: active) { _, now in
+                    withAnimation(DS.Motion.standard) { proxy.scrollTo(now, anchor: .center) }
+                }
             }
-            .onAppear {
-                if active != "All" { proxy.scrollTo(active, anchor: .center) }
+            .mask(alignment: .leading) { leadingFade }
+
+            // Avatar, then the catalogue — BOTH anchor the HEAD of the strip,
+            // FIXED outside the scroll (avatar joined 2026-07-20; the
+            // catalogue's own fixed placement dates to user 2026-07-17):
+            // neither is a filter, and both must stay in reach as the active
+            // source chip re-centers below. They ride ON TOP so chips vanish
+            // into them.
+            HStack(spacing: Self.iconGap) {
+                avatarChip
+                catalogueChip
             }
-            .onChange(of: active) { _, now in
-                withAnimation(DS.Motion.standard) { proxy.scrollTo(now, anchor: .center) }
-            }
+            .padding(.leading, DS.Space.s4)
         }
+    }
+
+    /// The avatar door — Settings. Stories-style: your own face leads the
+    /// strip (2026-07-20), the same "add a source"-adjacent fixed placement
+    /// the catalogue door already had. `AvatarChip` (`TopDoors.swift`) owns
+    /// the actual door/bounce/spin — this just wires this screen's params.
+    @ViewBuilder private var avatarChip: some View {
+        AvatarChip(onSettings: onSettings, refreshSpin: refreshSpin, zoomNS: zoomNS)
+    }
+
+    /// The leading dissolve: transparent where the app icon sits, a soft ramp
+    /// back to opaque just past it, opaque across the rest of the strip.
+    private var leadingFade: some View {
+        HStack(spacing: 0) {
+            Color.clear.frame(width: Self.fadeClear)
+            LinearGradient(colors: [.clear, .black],
+                           startPoint: .leading, endPoint: .trailing)
+                .frame(width: Self.fadeRamp)
+            Rectangle().fill(.black)
+        }
+    }
+
+    /// The app-catalogue door — the same `AppsDoor` grid glyph (and its
+    /// attention state) it wore in the top-right, now the strip's first chip in
+    /// the neutral circle Pinned/All share. The store still zooms out of it.
+    @ViewBuilder private var catalogueChip: some View {
+        Button {
+            DSHaptic.selection()
+            onApps()
+        } label: {
+            ZStack {
+                if let zoomNS {
+                    AppsDoor().matchedTransitionSource(id: "appsDoor", in: zoomNS)
+                } else {
+                    AppsDoor()
+                }
+            }
+            .frame(width: 46, height: 46)
+            // Glass on the NEUTRAL chips only (2026-07-20): this strip is
+            // pinned chrome the feed scrolls under, so the doors and the "All"
+            // chip wear the floating material. A source chip keeps its own app
+            // icon — an icon IS content, and frosting one would only muddy a
+            // mark the person recognizes.
+            .dsGlass(cornerRadius: 23)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Apps")
     }
 
     @ViewBuilder
@@ -58,17 +163,11 @@ struct SourceChips: View {
         } label: {
             ZStack {
                 switch label {
-                case "Pinned":
-                    // Your curated board — the literal gesture we ask for, so
-                    // it wears the literal glyph (user, 2026-07-13).
-                    Circle().fill(DS.gray100)
-                    Image(systemName: "pin.fill")
-                        .font(.system(size: 18, weight: .semibold))
-                        .foregroundStyle(DS.textPrimary)
                 case "All":
-                    Circle().fill(DS.gray100)
                     Text("All").dsText(.label12)
                         .foregroundStyle(DS.textPrimary)
+                        .frame(width: 46, height: 46)
+                        .dsGlass(cornerRadius: 23)
                 default:
                     BridgeIcon(name: label, size: 46, circular: true)
                 }
@@ -96,13 +195,10 @@ struct SourceChips: View {
                 // object traveling, not two states blinking); orange = the
                 // connection needs you (health lives where you live).
                 if isActive {
-                    // On a shaped feed the page IS the source's color — the
-                    // active chip would melt into its own field, so the ring
-                    // goes white to cut the space between them (user ruling
-                    // 2026-07-13). Tint everywhere else.
-                    let ringColor: Color =
-                        DS.washHue(for: active) != nil ? .white : DS.tint
-                    let ring = Circle().strokeBorder(ringColor, lineWidth: 2.5)
+                    // The active ring is always tint now — the feed sits on the
+                    // neutral ink page (user ruling 2026-07-18: full ink), so
+                    // there's no source-hue field for a tint ring to melt into.
+                    let ring = Circle().strokeBorder(DS.tint, lineWidth: 2.5)
                     if reduceMotion {
                         ring
                     } else {

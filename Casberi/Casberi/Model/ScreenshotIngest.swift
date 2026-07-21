@@ -59,7 +59,7 @@ enum ScreenshotIngest {
             context.insert(thing)
             added += 1
         }
-        if added > 0 { try? context.save() }
+        if added > 0 { context.saveHonestly() }
         return added
     }
 
@@ -127,7 +127,7 @@ enum ScreenshotIngest {
             }
         }
         if thumbed > 0 || ocred > 0 || removed > 0 {
-            try? context.save()
+            context.saveHonestly()
             SpotlightIndex.remove(ids: removedIDs)
             SpotlightIndex.index(reindex)
         }

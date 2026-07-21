@@ -10,15 +10,20 @@ import SwiftData
 struct TokenQuickRoute: Identifiable, Equatable {
     let chain: String
     let address: String
+    /// The ticker the holdings cell already knew, carried through so the
+    /// sheet names the token before (and without) a live resolve. Never
+    /// part of `id` — identity is chain+address alone.
+    var symbol: String? = nil
     var id: String { "\(chain):\(address.lowercased())" }
 
-    /// Parses a GenTagMap cell's "@token:chain:address" sentinel, or nil.
+    /// Parses a GenTagMap cell's "@token:chain:address[:symbol]" sentinel, or nil.
     static func from(sentinel name: String) -> TokenQuickRoute? {
         guard name.hasPrefix("@token:") else { return nil }
         let parts = name.dropFirst("@token:".count)
-            .split(separator: ":", maxSplits: 1).map(String.init)
-        guard parts.count == 2 else { return nil }
-        return TokenQuickRoute(chain: parts[0], address: parts[1])
+            .split(separator: ":", maxSplits: 2).map(String.init)
+        guard parts.count >= 2 else { return nil }
+        let symbol = parts.count >= 3 && !parts[2].isEmpty ? parts[2] : nil
+        return TokenQuickRoute(chain: parts[0], address: parts[1], symbol: symbol)
     }
 
     /// The watched thing this route points at, when the token is on the
@@ -54,7 +59,7 @@ struct TokenQuickSheet: View {
                 }
                 .padding(.horizontal, DS.Space.s4)
                 .padding(.top, DS.Space.s6)
-                Text(resolved.map { "\($0.name) · $\($0.symbol)" } ?? shortAddress)
+                Text(headerTitle)
                     .dsText(.heading34).foregroundStyle(DS.textPrimary)
                     .padding(.horizontal, DS.Space.s4)
                     .padding(.top, DS.Space.s3)
@@ -125,6 +130,15 @@ struct TokenQuickSheet: View {
     }
 
     private var shortAddress: String { WalletStore.shortAddress(route.address) }
+
+    /// A live resolve gives us `Name · $SYMBOL`; before it lands we still
+    /// show the ticker the holding carried in; only a token with neither
+    /// (no cell symbol, unresolved) falls back to the short address.
+    private var headerTitle: String {
+        if let resolved { return "\(resolved.name) · $\(resolved.symbol)" }
+        if let symbol = route.symbol { return "$\(symbol)" }
+        return shortAddress
+    }
 
     /// One real verb: Watch. Once it lands (or the token was already
     /// watched), the row states the fact instead — never a dead control.

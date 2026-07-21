@@ -37,6 +37,20 @@ enum IngestSupport {
     /// (the Apple Music pattern, 2026-07-10).
     /// Every landed thing for a source, keyed by ref — for backfilling fields
     /// onto rows that already exist (an avatar the first sync didn't carry).
+    /// Every landed thing's `content` for one source — a stable identity
+    /// (`chain.explorer + hash` for a wallet transfer) INDEPENDENT of
+    /// whatever `sourceRef` scheme landed it. Added 2026-07-19 for the
+    /// Zerion/Alchemy wallet-activity cutover: a transfer Alchemy already
+    /// landed under its own opaque `uniqueId`-based ref must not re-land a
+    /// second time under a new Zerion-sourced ref the day Zerion becomes
+    /// primary — the ref sets differ by construction, but the permalink
+    /// they'd both produce for the same real transaction doesn't.
+    static func existingContent(_ context: ModelContext, source: String) -> Set<String> {
+        var descriptor = FetchDescriptor<Thing>(predicate: #Predicate { $0.source == source })
+        descriptor.propertiesToFetch = [\.content]
+        return Set(((try? context.fetch(descriptor)) ?? []).map(\.content))
+    }
+
     static func thingsByRef(_ context: ModelContext, source: String) -> [String: Thing] {
         let descriptor = FetchDescriptor<Thing>(predicate: #Predicate { $0.source == source })
         var map: [String: Thing] = [:]
@@ -95,6 +109,69 @@ enum IngestSupport {
         return s
     }
 
+    /// A token logo from a market API (GeckoTerminal/Dexscreener), minus its
+    /// "no logo here" sentinels — the flow serves a literal "missing" or a
+    /// shared `dexscreener-icon.png` placeholder for a token with no real face,
+    /// and a wrong mark is worse than none. Normalizes the survivor to https.
+    /// Shared by GeckoTrending's trending feed and TokenWatch's logo fallback.
+    static func tokenLogoURL(_ raw: Any?) -> String? {
+        guard let s = raw as? String, !s.isEmpty, s != "missing",
+              !s.contains("dexscreener-icon.png") else { return nil }
+        return imageURL(s)
+    }
+
+    // MARK: - ERC-20 ABI decoding
+
+    /// Decodes an `eth_call` return for `symbol()`/`name()` — ERC-20 has no
+    /// enforced return type, and two encodings appear in the wild: the
+    /// standard ABI dynamic `string` (an offset word, a length word, then the
+    /// UTF8 payload) and, on some pre-standard tokens, a raw `bytes32` (ASCII,
+    /// right-padded with zero bytes, no length prefix at all). Tries the
+    /// dynamic decode first — assumes the near-universal single-return-value
+    /// offset of 0x20, true for every real compiler's output — and falls back
+    /// to reading the first word as padded ASCII when that doesn't parse.
+    /// Added 2026-07-19 for the keyless symbol/decimals read that replaced
+    /// `alchemy_getTokenMetadata` in the approvals and Peer bridges. nil on a
+    /// reverted call, malformed data, or an empty result — a token whose name
+    /// can't be read falls back to its short hex, never a guess.
+    static func decodeABIString(_ hex: String) -> String? {
+        var s = hex.lowercased(); if s.hasPrefix("0x") { s.removeFirst(2) }
+        guard s.count >= 128 else { return abiWord0AsASCII(s) }
+        let lenStart = s.index(s.startIndex, offsetBy: 64)
+        let lenEnd = s.index(lenStart, offsetBy: 64)
+        if let len = Int(s[lenStart..<lenEnd], radix: 16), len > 0, len < 200 {
+            let available = s.distance(from: lenEnd, to: s.endIndex)
+            let dataEnd = s.index(lenEnd, offsetBy: min(len * 2, available))
+            if dataEnd > lenEnd, let bytes = hexBytes(String(s[lenEnd..<dataEnd])),
+               let str = String(bytes: bytes, encoding: .utf8), !str.isEmpty {
+                return str
+            }
+        }
+        return abiWord0AsASCII(s)
+    }
+
+    /// The bytes32 fallback: the call's first 32-byte word, trimmed at the
+    /// first zero byte (right-padding) and decoded as UTF8.
+    private static func abiWord0AsASCII(_ s: String) -> String? {
+        guard s.count >= 64, let bytes = hexBytes(String(s.prefix(64))) else { return nil }
+        let trimmed = bytes.prefix { $0 != 0 }
+        guard let str = String(bytes: trimmed, encoding: .utf8), !str.isEmpty else { return nil }
+        return str
+    }
+
+    private static func hexBytes(_ hex: String) -> [UInt8]? {
+        guard hex.count % 2 == 0 else { return nil }
+        var bytes: [UInt8] = []
+        var idx = hex.startIndex
+        while idx < hex.endIndex {
+            let next = hex.index(idx, offsetBy: 2)
+            guard let b = UInt8(hex[idx..<next], radix: 16) else { return nil }
+            bytes.append(b)
+            idx = next
+        }
+        return bytes
+    }
+
     // MARK: - Dates
 
     private static let iso: ISO8601DateFormatter = {
@@ -109,6 +186,11 @@ enum IngestSupport {
         f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         return f
     }()
+
+    /// The reverse of `isoDate` — for a caller that needs to hand a `Date`
+    /// back into a raw-dictionary shape another parser expects as an ISO
+    /// string (the Zerion→Alchemy-shaped transfer mapping, 2026-07-19).
+    static func isoString(_ date: Date) -> String { iso.string(from: date) }
 
     static func isoDate(_ raw: Any?) -> Date? {
         guard let s = raw as? String else { return nil }
@@ -148,6 +230,63 @@ enum IngestSupport {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         apply(auth: auth, headers: headers, to: &request)
         return await run(request)
+    }
+
+    /// Like `getJSON`, but also hands back the HTTP status — for a caller
+    /// that needs to tell "genuinely not found" (404) from "unreachable" (a
+    /// transport failure, 0) apart, the same distinction `postJSONStatus`
+    /// draws for a POST (2026-07-20, the Safe multisig bridge's "is this
+    /// address a Safe at all" detection, which must never cache a transient
+    /// outage as a permanent "no").
+    static func getJSONStatus(_ url: String, auth: String? = nil,
+                              headers: [String: String] = [:]) async -> (json: Any?, status: Int) {
+        guard let u = URL(string: url) else { return (nil, 0) }
+        var request = URLRequest(url: u)
+        apply(auth: auth, headers: headers, to: &request)
+        guard let (data, response) = try? await URLSession.shared.data(for: request) else { return (nil, 0) }
+        let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+        guard status == 200 else { return (nil, status) }
+        return (try? JSONSerialization.jsonObject(with: data), status)
+    }
+
+    /// Like `postJSON`, but hands back the HTTP status alongside the decoded
+    /// body so a caller can back off on a 429 (rate limit) or a transient 5xx
+    /// instead of treating every non-200 as a permanent failure (2026-07-17:
+    /// the shipped Alchemy key is shared across all users on the free tier, so
+    /// the holdings fetch needs to distinguish "rate-limited, retry" from
+    /// "unreachable, give up"). `status` is 0 on a transport error (no
+    /// response at all — offline, DNS, connection reset). The body is nil
+    /// unless the status was 200, exactly like `postJSON`.
+    static func postJSONStatus(_ url: String, auth: String? = nil, body: [String: Any],
+                               headers: [String: String] = [:]) async -> (json: Any?, status: Int) {
+        guard let u = URL(string: url),
+              let payload = try? JSONSerialization.data(withJSONObject: body) else { return (nil, 0) }
+        var request = URLRequest(url: u)
+        request.httpMethod = "POST"
+        request.httpBody = payload
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        apply(auth: auth, headers: headers, to: &request)
+        guard let (data, response) = try? await URLSession.shared.data(for: request) else { return (nil, 0) }
+        let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+        guard status == 200 else { return (nil, status) }
+        return (try? JSONSerialization.jsonObject(with: data), status)
+    }
+
+    /// A JSON-RPC BATCH: an ARRAY of calls in one request, answered with an
+    /// array of results (2026-07-16, Solana activity). `postJSON` above takes a
+    /// dictionary body and so can't express this — and the batch is the whole
+    /// reason a Solana wallet costs two requests rather than eleven: ten
+    /// `getTransaction` calls come back in a single ~0.4s round trip.
+    static func postJSONArray(_ url: String, auth: String? = nil, body: [[String: Any]],
+                              headers: [String: String] = [:]) async -> [[String: Any]]? {
+        guard let u = URL(string: url),
+              let payload = try? JSONSerialization.data(withJSONObject: body) else { return nil }
+        var request = URLRequest(url: u)
+        request.httpMethod = "POST"
+        request.httpBody = payload
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        apply(auth: auth, headers: headers, to: &request)
+        return await run(request) as? [[String: Any]]
     }
 
     private static func apply(auth: String?, headers: [String: String],

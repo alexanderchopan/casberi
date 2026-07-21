@@ -15,6 +15,8 @@ enum TokenBridge: String, CaseIterable, Identifiable {
     case calendly = "Calendly"
     case notion   = "Notion"
     case linear   = "Linear"
+    case bitrefill = "Bitrefill"
+    case oneclaw  = "1Claw"
 
     var id: String { rawValue }
 
@@ -29,6 +31,8 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         case .calendly: "calendly"
         case .notion:   "notion"
         case .linear:   "linear"
+        case .bitrefill: "bitrefill"
+        case .oneclaw:  "oneclaw"
         }
     }
 
@@ -70,6 +74,14 @@ enum TokenBridge: String, CaseIterable, Identifiable {
             "Open Linear → Settings → Security & access → Personal API keys.",
             "Create a key — read access is enough.",
             "Copy it and paste it below."]
+        case .bitrefill: [
+            "Open bitrefill.com/account/developers in a browser.",
+            "In the API Keys tab, create a key — any name works.",
+            "Copy it and paste it below."]
+        case .oneclaw: [
+            "Open 1claw.xyz in a browser and sign in.",
+            "Create an agent (or open one) and copy its API key — it starts with ocv_.",
+            "Paste it below."]
         }
     }
 
@@ -83,6 +95,8 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         case .calendly: "Personal access token"
         case .notion:   "ntn_…"
         case .linear:   "lin_api_…"
+        case .bitrefill: "API key"
+        case .oneclaw:  "ocv_…"
         }
     }
 
@@ -97,19 +111,35 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         case .calendly: "meetings"
         case .notion:   "pages"
         case .linear:   "issues"
+        case .bitrefill: "orders"
+        case .oneclaw:  "grants"
         }
     }
 
     var canLine: String {
         switch self {
         case .readwise: "Reads your highlights."
-        case .github:   "Reads the GitHub feeds you pick — issues, stars, releases, gists, contributions, watched repos."
+        case .github:   "Reads the GitHub feeds you pick — issues, notifications, stars, releases, gists, contributions, watched repos — plus any repos you watch privately, never touching your GitHub account."
         case .todoist:  "Reads your open tasks."
         case .raindrop: "Reads your bookmarks."
         case .calcom:   "Reads your bookings."
         case .calendly: "Reads your scheduled meetings."
         case .notion:   "Reads the pages you connect."
         case .linear:   "Reads issues assigned to you."
+        case .bitrefill: "Reads your orders, refills, and balance — nothing here ever buys, pays, or spends."
+        case .oneclaw:  "Reads which vaults and secret paths the key can reach — names and permissions only. Nothing here ever reads a secret's value, signs, or spends."
+        }
+    }
+
+    /// Bridge-specific teardown beyond the token itself — a hook the remove
+    /// path calls so a bridge that caches non-thing state (a reading, not a
+    /// Thing) drops it when disconnected, and a reconnected DIFFERENT account
+    /// never wears the prior one's cache. Most bridges hold nothing extra.
+    func onRemove() {
+        switch self {
+        case .bitrefill: BitrefillBalance.clear()
+        case .oneclaw:   OneClawAccess.clear()
+        default:         break
         }
     }
 }
@@ -129,7 +159,7 @@ enum TokenIngest {
         running.insert(bridge)
         defer { running.remove(bridge) }
 
-        guard let incoming = await fetch(bridge, token: token) else { return nil }
+        guard let incoming = await fetch(bridge, token: token, context: context) else { return nil }
 
         var existing = IngestSupport.existingSourceRefs(context)
         // One backfill per source string the items actually carry — no
@@ -151,22 +181,25 @@ enum TokenIngest {
             SpotlightIndex.index([item])
             added += 1
         }
-        if added > 0 || backfills.values.contains(where: \.any) { try? context.save() }
+        if added > 0 || backfills.values.contains(where: \.any) { context.saveHonestly() }
         return added
     }
 
     // MARK: - Per-app fetches (each is one or two GETs against the app's own API)
 
-    private static func fetch(_ bridge: TokenBridge, token: String) async -> [Thing]? {
+    @MainActor
+    private static func fetch(_ bridge: TokenBridge, token: String, context: ModelContext) async -> [Thing]? {
         switch bridge {
         case .readwise: await readwise(token)
-        case .github:   await github(token)
+        case .github:   await github(token, context: context)
         case .todoist:  await todoist(token)
         case .raindrop: await raindrop(token)
         case .calcom:   await calcom(token)
         case .calendly: await calendly(token)
         case .notion:   await notion(token)
         case .linear:   await linear(token)
+        case .bitrefill: await BitrefillFetch.things(token: token)
+        case .oneclaw:  await OneClawFetch.things(token: token, context: context)
         }
     }
 
@@ -202,10 +235,12 @@ enum TokenIngest {
     }
 
     /// GitHub — the feeds the person turned on (Stars, New releases, Gists,
-    /// Contributions, Watched repos, and the original Issues & PRs). Each is a
+    /// Contributions, Watched repos, Notifications, and the original Issues &
+    /// PRs), plus any repos watched directly (`GitHubRepoWatch`). Each is a
     /// GET or two against GitHub's own API; `GitHubFeedFetch` builds the things.
-    private static func github(_ token: String) async -> [Thing]? {
-        await GitHubFeedFetch.all(token: token)
+    @MainActor
+    private static func github(_ token: String, context: ModelContext) async -> [Thing]? {
+        await GitHubFeedFetch.all(token: token, context: context)
     }
 
     /// Todoist — open tasks, newest 30.

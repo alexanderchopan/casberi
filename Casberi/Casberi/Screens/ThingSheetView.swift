@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import Translation
 
 /// The thing sheet (M4, redesigned 2026-07-07 — "Ink with Gallery grafted
 /// in", user's pick): ink-black ground, no cards. The source's hue washes
@@ -32,16 +33,32 @@ struct ThingSheetView: View {
     @State private var renameTarget: String?
     @State private var renameDraft = ""
     @State private var deleteTarget: String?
+    /// Naming a wallet transaction's counterparty (2026-07-15) — the address
+    /// being named, and the draft. The label enriches every FUTURE transfer
+    /// with that counterparty (CounterpartyLabels).
+    @State private var counterpartyTarget: String?
+    @State private var counterpartyDraft = ""
     /// The TAGS row opens the full editor (chips, rename, delete) in place.
     @State private var editingTags = false
-    /// The hue wash pours in on open (delight 2026-07-13) — once per sheet.
-    @State private var washPoured = false
     /// A post/cast's thread (2026-07-14) — fetched live from the source's
     /// public API when the sheet opens a social thing (Bluesky or Farcaster);
     /// the section renders only when replies exist (no dead section, no
     /// spinner theater).
     @State private var replies: [SocialReply] = []
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// Walking the thread in-app (2026-07-16) — the parent this post answers,
+    /// opened as a post sheet rather than kicked out to the browser.
+    @State private var walkingTo: SocialCard?
+    /// The person behind a tapped face — the profile card.
+    @State private var profileTarget: SocialProfile?
+    /// An approval thing's prepare card (prd §112) — the grant's LIVE state,
+    /// the fee to revoke, the doors out. Fetched on open like replies; the
+    /// section renders only when the check answered.
+    @State private var approvalCheck: WalletPrepare.Check?
+    @State private var safeCheck: SafeBridge.Check?
+    /// Translate verb (2026-07-17): the system Translation sheet, shown over
+    /// the thing's own words — no custom UI, Apple's picker does the rest.
+    @State private var showTranslate = false
+    @State private var translateText = ""
     /// Seeded by the record's shape (2026-07-13 polish): a TALL thing (media
     /// or a long body) still opens FULL-height so its verbs never start
     /// below the fold — the original `.large` ruling, kept for the case that
@@ -56,8 +73,16 @@ struct ThingSheetView: View {
             || !(thing.previewImageURL ?? "").isEmpty
             || TokenChart.route(from: thing.content) != nil
             || StockChart.route(from: thing.content) != nil
+            // A quoted post is a card the height of a small paragraph — the
+            // same "tall thing" the detent rule was written for, so it opens
+            // full-height rather than starting its verbs below the fold.
+            || thing.quote != nil
+        // A social post's `content` is its permalink — always short — so the
+        // length test has to read the POST, else a 900-character cast opened
+        // half-height with its own words below the fold (2026-07-16).
+        let bodyLength = max(thing.content.count, (thing.postText ?? "").count)
         _detent = State(initialValue:
-            hasMedia || thing.content.count > 280 ? .large : .medium)
+            hasMedia || bodyLength > 280 ? .large : .medium)
     }
 
     var body: some View {
@@ -71,35 +96,112 @@ struct ThingSheetView: View {
                     .padding(.horizontal, DS.Space.s4)
                     .padding(.top, DS.Space.s6)
                     .settleIn()
-                Text(thing.title)
-                    .dsText(.heading34).foregroundStyle(DS.textPrimary)
-                    .padding(.horizontal, DS.Space.s4)
-                    .padding(.top, DS.Space.s3)
-                    .settleIn(delay: 0.06)
+                if let parent = thing.parent {
+                    replyingToRow(parent)
+                        .padding(.horizontal, DS.Space.s4)
+                        .padding(.top, DS.Space.s2)
+                        .settleIn(delay: 0.04)
+                }
+                // The stage (B1, 2026-07-16): a wallet transfer or a screenshot
+                // leads with a HERO that depicts the thing — parties + signed
+                // amount, or the image in a floating frame — and its verbs
+                // become the dial. Everything else keeps the title-led layout.
+                let stage = self.stage
+                let framedShot = stage == nil && thing.kind == .screenshot
+                if let stage {
+                    TransferStageView(thing: thing, stage: stage,
+                                      onNameCounterparty: nameCounterpartyAction)
+                        .padding(.horizontal, DS.Space.s4)
+                        .padding(.top, DS.Space.s6)
+                        .settleIn(delay: 0.06)
+                    if thing.securityFlag == "poisoning" {
+                        poisoningWarning
+                            .padding(.horizontal, DS.Space.s4)
+                            .padding(.top, DS.Space.s3)
+                            .settleIn(delay: 0.08)
+                    }
+                    VerbDial(thing: thing, verbs: walletVerbs,
+                             onVerb: runVerb, onName: nameCounterpartyAction)
+                        .padding(.top, DS.Space.s6)
+                        .settleIn(delay: 0.12)
+                    dialResult
+                } else if framedShot {
+                    // The framed exception (B1c): facts stand bare on the wash;
+                    // pixels recess into a frame that floats on it — the image
+                    // sits IN the source's color without the color ever touching
+                    // its pixels. The title drops below at reading size: for a
+                    // screenshot the picture is the identity, the words the
+                    // caption.
+                    ThingContentView(thing: thing)
+                        .shadow(color: DS.cardShadow, radius: 18, y: 10)
+                        .padding(.top, DS.Space.s3)
+                        .settleIn(delay: 0.06)
+                    Text(thing.title)
+                        .dsText(.heading22).foregroundStyle(DS.textPrimary)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.horizontal, DS.Space.s4)
+                        .padding(.top, DS.Space.s2)
+                        .settleIn(delay: 0.1)
+                    VerbDial(thing: thing, verbs: VerbDerivation.verbs(for: thing),
+                             onVerb: runVerb, onName: nil)
+                        .padding(.top, DS.Space.s6)
+                        .settleIn(delay: 0.14)
+                    dialResult
+                } else {
+                    titleBlock
+                        .padding(.horizontal, DS.Space.s4)
+                        .padding(.top, DS.Space.s3)
+                        .settleIn(delay: 0.06)
+                }
                 // Events speak through WHEN below; and when the content is
                 // just the title again (a short note with no body beyond its
                 // own headline), showing it twice reads as a stutter.
-                let contentShown = thing.kind != .event
+                // A social post always shows content — its pictures, what it
+                // quotes, how it landed — and its `content` is a permalink, so
+                // the title-stutter test never applied to it anyway.
+                let contentShown = stage == nil && !framedShot
+                    && (isSocialPost || (thing.kind != .event
                     && thing.content.trimmingCharacters(in: .whitespacesAndNewlines)
-                        != thing.title.trimmingCharacters(in: .whitespacesAndNewlines)
+                        != thing.title.trimmingCharacters(in: .whitespacesAndNewlines)))
                 if contentShown {
                     ThingContentView(thing: thing)
                         .padding(.top, DS.Space.s3)
                         .settleIn(delay: 0.12)
                 }
-                specTable(contentShown: contentShown)
+                // The stage already shows the counterparty (with its pencil),
+                // so its spec table drops the Who row instead of repeating it.
+                specTable(contentShown: contentShown, showsWho: stage == nil)
                     .padding(.horizontal, DS.Space.s4)
                     .padding(.top, DS.Space.s6)
                     .settleIn(delay: 0.18)
+                if let check = approvalCheck {
+                    ApprovalPrepareCard(thing: thing, check: check)
+                        .padding(.horizontal, DS.Space.s4)
+                        .padding(.top, DS.Space.s3)
+                }
+                if let check = safeCheck {
+                    SafeQueueCard(check: check)
+                        .padding(.horizontal, DS.Space.s4)
+                        .padding(.top, DS.Space.s3)
+                }
                 if editingTags {
                     tagsField
                         .padding(.top, DS.Space.s3)
                         .id("tags")
                 }
-                actionRows
-                    .padding(.top, DS.Space.s6)
+                if stage == nil && !framedShot {
+                    actionRows
+                        .padding(.top, DS.Space.s6)
+                }
                 if !replies.isEmpty {
-                    repliesSection
+                    // One replies renderer (2026-07-16) — the thing sheet and
+                    // the in-app walker show a reply identically, however deep
+                    // you are. Here a tap OPENS the walker (this sheet has no
+                    // navigation stack of its own); inside the walker the same
+                    // tap pushes. The section doesn't know which — it just
+                    // reports the card.
+                    SocialRepliesSection(replies: replies, source: thing.source,
+                                         open: { walkingTo = $0 })
                         .padding(.horizontal, DS.Space.s4)
                         .padding(.top, DS.Space.s4)
                 }
@@ -109,43 +211,12 @@ struct ThingSheetView: View {
             .padding(.bottom, DS.Space.s6)
         }
         .scrollIndicators(.hidden)
-        .background(alignment: .top) {
-            // The source's hue washes down from the top and fades into the
-            // ink (ruling 2026-07-10, user: "it's gorgeous"). One fixed
-            // recipe — 45% into clear over 260pt, no per-hue tuning — and
-            // it sits UNDER the content as atmosphere: no ink ever depends
-            // on it for contrast, which is why this wash lives while the
-            // treemap fills and the banner died. Hueless sources (your own
-            // notes, unknown apps) stay pure ink: the gray fallback is a
-            // fill, not an identity.
-            if let hue = DS.washHue(for: thing.source) {
-                // Bold, not a film (user ruling 2026-07-13): the crown IS
-                // the source's color, flowing into the sheet's ink.
-                LinearGradient(stops: [
-                    .init(color: hue, location: 0),
-                    .init(color: hue, location: 0.3),
-                    .init(color: hue.opacity(0), location: 1),
-                ], startPoint: .top, endPoint: .bottom)
-                    .frame(height: 300)
-                    // The pour (delight 2026-07-13): the bleed slides down
-                    // into place as the sheet opens — a bleed that literally
-                    // bleeds in. Once per open; instant under Reduce Motion.
-                    .opacity(washPoured ? 1 : 0)
-                    .offset(y: washPoured ? 0 : -140)
-                    .frame(maxHeight: .infinity, alignment: .top)
-                    // TOP only: the wash bleeds under the notch, but ignoring
-                    // the BOTTOM edge too let the scroll content run under the
-                    // home indicator, clipping the last actions on hue'd sheets.
-                    .ignoresSafeArea(edges: .top)
-                    .onAppear {
-                        if reduceMotion { washPoured = true } else {
-                            withAnimation(.easeOut(duration: 0.35).delay(0.05)) {
-                                washPoured = true
-                            }
-                        }
-                    }
-            }
-        }
+        // The source's hue wash that once poured down the crown is gone (user
+        // ruling 2026-07-18: full ink, matching the feed). The wash read as
+        // borrowed identity — and on a plain sheet it flooded the spec table,
+        // muddying the When/From/Tags labels the "no ink depends on it" claim
+        // said it wouldn't. Identity lives in the source glyph and row now; the
+        // sheet is pure ink, like the photo viewer it already is below.
         // Ink: the sheet is black in both modes, like a photo viewer — its
         // controls render dark regardless of the app's theme.
         .presentationBackground(Color.black)
@@ -156,6 +227,13 @@ struct ThingSheetView: View {
         .onAppear {
             streamRelated()
             Task { replies = await SocialThread.replies(for: thing) }
+            // The gate is a string check — non-approval things spend nothing.
+            if WalletPrepare.applies(to: thing) {
+                Task { approvalCheck = await WalletPrepare.check(for: thing) }
+            }
+            if SafeBridge.applies(to: thing) {
+                Task { safeCheck = await SafeBridge.check(for: thing) }
+            }
             if focusTags {
                 // Land in the tag editor — the swipe's whole point.
                 editingTags = true
@@ -180,6 +258,140 @@ struct ThingSheetView: View {
                 Button("Cancel", role: .cancel) { confirmingVerb = nil }
             }
         }
+        // Name this counterparty — the name rides every future transfer with it.
+        .alert("Name this address",
+               isPresented: Binding(get: { counterpartyTarget != nil },
+                                    set: { if !$0 { counterpartyTarget = nil } })) {
+            TextField("Name (e.g. Mom)", text: $counterpartyDraft)
+            Button("Save") { nameCounterparty() }
+            Button("Cancel", role: .cancel) { counterpartyTarget = nil }
+        } message: {
+            Text("Your name for this address rides every future transfer with it. A blank name clears it.")
+        }
+        // Walking the thread in-app (2026-07-16) — the parent this post
+        // answers, or a reply under it. A read: no consent gate, the standing
+        // rule for the thread section it grew out of.
+        .sheet(item: $walkingTo) { card in
+            SocialPostSheet(post: card, source: thing.source)
+        }
+        // The person behind a tapped face — theirs to watch from here.
+        .sheet(item: $profileTarget) { p in
+            SocialProfileCard(profile: p)
+        }
+        // Translate: the system sheet, over the thing's own words.
+        .translationPresentation(isPresented: $showTranslate, text: translateText)
+    }
+
+    /// Stores (or clears) the person's label for the counterparty address, then
+    /// rewrites every already-landed transfer that carries it — so naming an
+    /// address updates your whole history with it, not just what comes next.
+    /// (Only transfers that stored the counterparty hex can be rewritten — ones
+    /// landed before that field existed are left as they are.)
+    private func nameCounterparty() {
+        guard let address = counterpartyTarget else { return }
+        counterpartyTarget = nil
+        CounterpartyLabels.shared.setLabel(counterpartyDraft, for: address)
+        // The display name after the change: the user's label, else whatever
+        // else resolves it (a known contract, a watched handle), else nil —
+        // clearing a label reverts the historical titles to that.
+        retitleWalletThings(counterparty: address, to: WalletIngest.knownLabel(for: address))
+        DSHaptic.success()
+    }
+
+    /// Rewrites the counterparty clause of every landed Wallet transfer whose
+    /// stored counterparty matches — to `name`, or stripped when `name` is nil.
+    /// The clause lives twice, and both writes happen here: the title's words,
+    /// and `transferCounterparty` (the structured copy TransferStage reads) —
+    /// updating one without the other is how a stage would drift from its row.
+    private func retitleWalletThings(counterparty: String, to name: String?) {
+        let addr = counterparty.lowercased()
+        let all = (try? modelContext.fetch(
+            FetchDescriptor<Thing>(predicate: #Predicate { $0.source == "Wallet" }))) ?? []
+        var changed = false
+        for t in all where t.counterpartyAddress?.lowercased() == addr {
+            if let rebuilt = Self.retitled(t.title, to: name), rebuilt != t.title {
+                t.title = rebuilt
+                changed = true
+            }
+            if t.transferCounterparty != name {
+                t.transferCounterparty = name
+                changed = true
+            }
+        }
+        if changed {
+            modelContext.saveHonestly()
+            CorpusSignal.shared.bump()   // Home/Feed compose a doc, not a live @Query
+        }
+    }
+
+    /// Swaps (or strips) a transfer title's trailing counterparty clause. The
+    /// only " from "/" to "/" on " in a wallet title is that clause — amounts
+    /// are numbers and assets are space-less symbols — so the last one is safe
+    /// to replace. A nameless title gains a clause from its verb; a "Moved …"
+    /// self-transfer (named from watched-wallet labels, not this) is left alone.
+    static func retitled(_ title: String, to name: String?) -> String? {
+        for delim in [" from ", " to ", " on "] {
+            if let r = title.range(of: delim, options: .backwards) {
+                if let name { return String(title[..<r.upperBound]) + name }
+                return String(title[..<r.lowerBound])   // strip the clause
+            }
+        }
+        guard let name else { return nil }
+        if title.hasPrefix("Received") { return title + " from " + name }
+        if title.hasPrefix("Sent")     { return title + " to " + name }
+        if title.hasPrefix("Swapped")  { return title + " on " + name }
+        return nil
+    }
+
+    // MARK: - Title (a post's words ARE the title, 2026-07-16)
+
+    /// Everything else leads with a headline. A post leads with the POST: its
+    /// full text, in the title's slot, because a cast IS its words — and the
+    /// 80-character title is a row's clamp, not the thing itself. Rendering the
+    /// clamp here and the full text below would stutter; rendering only the
+    /// clamp is what lost the words in the first place.
+    ///
+    /// The size follows the length, the way every social client's does: a
+    /// one-liner gets the full display size and the drama that comes with it,
+    /// a paragraph steps down to a size you can actually read a paragraph in.
+    /// Both are the type ramp — hierarchy by size, no other trick (design law).
+    @ViewBuilder private var titleBlock: some View {
+        if isSocialPost {
+            let words = postWords
+            Text(words)
+                .dsText(words.count > 100 ? .heading22 : .heading34)
+                .foregroundStyle(DS.textPrimary)
+                .fixedSize(horizontal: false, vertical: true)
+        } else {
+            Text(thing.title)
+                .dsText(.heading34).foregroundStyle(DS.textPrimary)
+        }
+    }
+
+    /// The post's own words — the full text when the record carries it, else
+    /// the title (posts landed before `postText` existed, until a refresh heals
+    /// them). Never a permalink.
+    private var postWords: String {
+        let full = (thing.postText ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        return full.isEmpty ? thing.title : full
+    }
+
+    /// The post this one answers — "Replying to @alice", above the words, where
+    /// every client puts it. A tap walks into the parent in-app.
+    private func replyingToRow(_ parent: SocialCard) -> some View {
+        Button {
+            walkingTo = parent
+        } label: {
+            HStack(spacing: DS.Space.s1) {
+                Image(systemName: "arrowshape.turn.up.left")
+                    .dsText(.label12).foregroundStyle(DS.textTertiary)
+                Text("Replying to @\(SocialThread.shortHandle(parent.handle))")
+                    .dsText(.label12).foregroundStyle(DS.textTertiary)
+                Spacer(minLength: 0)
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: - Eyebrow (source icon · kind · age)
@@ -191,9 +403,22 @@ struct ThingSheetView: View {
             // network). The feed rows lead with faces; the sheet should too
             // (2026-07-14). Everything else keeps the source mark + kind tag.
             if isSocialPost, let avatar = thing.authorAvatarURL, !avatar.isEmpty {
-                RemoteThumb(urlString: avatar, size: 18, fallback: thing.source, circular: true)
-                    .coinFlip(trigger: thing.id)
-                Text("@\(authorShortHandle) · \(shortTime(thing.capturedAt)) ago")
+                // The face is a door to the person (2026-07-16) — tap it and
+                // you can watch them, wherever you met them.
+                Button {
+                    profileTarget = SocialProfile(
+                        source: thing.source, handle: thing.authorHandle ?? "",
+                        displayName: nil, bio: nil, avatarURL: avatar)
+                } label: {
+                    RemoteThumb(urlString: avatar, size: 18, fallback: thing.source, circular: true)
+                        .coinFlip(trigger: thing.id)
+                }
+                .buttonStyle(.plain)
+                // WHY this post is here rides the sentence when there's a
+                // reason worth stating ("@dwr · in /design · 2h ago") — a
+                // liked cast, a channel cast, and your own post used to read
+                // identically (2026-07-16).
+                Text(eyebrowLine)
                     .dsText(.label12)
                     .foregroundStyle(DS.textTertiary)
             } else {
@@ -224,9 +449,18 @@ struct ThingSheetView: View {
         SocialThread.shortHandle(thing.authorHandle ?? "")
     }
 
+    /// "@dwr · in /design · 2h ago" — who, why (when there's a why), when.
+    private var eyebrowLine: String {
+        let age = "\(shortTime(thing.capturedAt)) ago"
+        guard let why = SocialThread.contextPhrase(for: thing) else {
+            return "@\(authorShortHandle) · \(age)"
+        }
+        return "@\(authorShortHandle) · \(why) · \(age)"
+    }
+
     // MARK: - Spec table (Gallery's graft — labels change per kind)
 
-    private func specTable(contentShown: Bool) -> some View {
+    private func specTable(contentShown: Bool, showsWho: Bool = true) -> some View {
         VStack(alignment: .leading, spacing: DS.Space.s3) {
             if thing.kind == .event, !thing.content.isEmpty {
                 specRow("When", thing.content)
@@ -250,6 +484,13 @@ struct ThingSheetView: View {
                 specRow("By", "\(agent)\(thing.provenance.machine.map { " on \($0)" } ?? "")")
             }
             specRow("From", PlaceWords.line(for: thing))
+            // A wallet transfer's counterparty — the other side of the trade,
+            // nameable ("this is Mom"). Only when the hex was captured (native
+            // sends have none) (2026-07-15).
+            if showsWho, thing.source == "Wallet",
+               let cp = thing.counterpartyAddress, !cp.isEmpty {
+                counterpartyRow(cp)
+            }
             tagsRow
         }
         // One quiet card (2026-07-13 polish): the bare rows floated in the
@@ -274,6 +515,31 @@ struct ThingSheetView: View {
                 .lineLimit(2)
             Spacer(minLength: 0)
         }
+    }
+
+    /// The counterparty's name (yours if set, else a known contract / watched
+    /// handle, else the short hex) with a pencil — tap to name it. What you name
+    /// it here rides every future transfer with this address.
+    private func counterpartyRow(_ address: String) -> some View {
+        Button {
+            nameCounterpartyAction?()   // the one entry into the naming flow
+        } label: {
+            HStack(alignment: .firstTextBaseline, spacing: 0) {
+                Text("Who")
+                    .dsText(.label12).foregroundStyle(DS.textTertiary)
+                    .frame(width: 80, alignment: .leading)
+                Text(WalletIngest.knownLabel(for: address) ?? WalletStore.shortAddress(address))
+                    .dsText(.callout15).foregroundStyle(DS.textPrimary)
+                    .lineLimit(1)
+                Image(systemName: "square.and.pencil")
+                    .font(.system(size: 12))
+                    .foregroundStyle(DS.textTertiary)
+                    .padding(.leading, DS.Space.s2)
+                Spacer(minLength: 0)
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
     }
 
     /// Tags as a text line — your own tags wear their hue; the "+" opens the
@@ -308,30 +574,89 @@ struct ThingSheetView: View {
         return line.font(.system(size: 15))
     }
 
+    // MARK: - The dial's wiring (stage sheets — B1, 2026-07-16)
+
+    /// The transfer's parsed hero, when this thing earns one — the ONE
+    /// decision point the stage layout reads.
+    /// Address-poisoning warning (2026-07-20) — a one-line flag, not a card:
+    /// the transfer already lands honestly, this only says its counterparty
+    /// looks like a copy of one the wallet has actually used.
+    private var poisoningWarning: some View {
+        HStack(alignment: .top, spacing: DS.Space.s2) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.system(size: 13))
+                .foregroundStyle(DS.destructive)
+            Text("Looks like a copy of an address you've used — this is a different wallet.")
+                .dsText(.subhead13).foregroundStyle(DS.destructive)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    private var stage: TransferStage? { TransferStage(thing) }
+
+    /// A wallet transfer's dial verbs: Open (the explorer link, when the
+    /// record carries one) and Copy. Name and Share ride the dial's own slots.
+    private var walletVerbs: [Verb] {
+        var out: [Verb] = []
+        if let url = Capture.detectURL(in: thing.content) {
+            out.append(Verb(label: "Open", icon: "arrow.up.right", action: .openURL(url)))
+        }
+        out.append(Verb(label: "Copy link", icon: "doc.on.doc", action: .copyText))
+        return out
+    }
+
+    /// The one verb gate, both layouts: reads pass, writes confirm.
+    private func runVerb(_ verb: Verb) {
+        if verb.isWrite {
+            confirmingVerb = verb
+        } else {
+            Task { await perform(verb) }
+        }
+    }
+
+    /// The naming flow, when there's an address to name — nil keeps the
+    /// stage's face plain and the Name disc absent (no dead controls).
+    private var nameCounterpartyAction: (() -> Void)? {
+        guard let cp = thing.counterpartyAddress, !cp.isEmpty else { return nil }
+        return {
+            counterpartyDraft = CounterpartyLabels.shared.label(for: cp) ?? ""
+            counterpartyTarget = cp
+        }
+    }
+
+    /// The verb outcome, honesty-styled — ONE text both layouts place, so a
+    /// bridge's no reads the same wherever the verb lived.
+    @ViewBuilder private var verbOutcome: some View {
+        if let verbResult {
+            Text(verbResult)
+                .dsText(.subhead13)
+                .foregroundStyle(verbResultIsError ? DS.attention : DS.confirm)
+        }
+    }
+
+    /// The outcome under the dial — centered, where the discs are.
+    private var dialResult: some View {
+        verbOutcome
+            .frame(maxWidth: .infinity)
+            .padding(.top, DS.Space.s2)
+    }
+
     // MARK: - Actions (quiet text rows — verbs, then Pin, then Share)
 
     private var actionRows: some View {
         VStack(alignment: .leading, spacing: 0) {
             ForEach(VerbDerivation.verbs(for: thing)) { verb in
                 Button {
-                    if verb.isWrite {
-                        confirmingVerb = verb   // writes confirm
-                    } else {
-                        Task { await perform(verb) }   // reads pass
-                    }
+                    runVerb(verb)   // reads pass; writes confirm
                 } label: {
                     actionRow(icon: verb.icon, label: verb.label)
                 }
                 .buttonStyle(.plain)
             }
             shareRow
-            if let verbResult {
-                Text(verbResult)
-                    .dsText(.subhead13)
-                    .foregroundStyle(verbResultIsError ? DS.attention : DS.confirm)
-                    .padding(.horizontal, DS.Space.s4)
-                    .padding(.top, DS.Space.s2)
-            }
+            verbOutcome
+                .padding(.horizontal, DS.Space.s4)
+                .padding(.top, DS.Space.s2)
         }
     }
 
@@ -442,7 +767,7 @@ struct ThingSheetView: View {
                 Button("Remove from this thing", systemImage: "xmark.circle") {
                     remove(tag: tag)
                 }
-                Button("Rename everywhere…", systemImage: "pencil") {
+                Button("Rename tag everywhere…", systemImage: "pencil") {
                     renameDraft = tag
                     renameTarget = tag
                 }
@@ -481,7 +806,7 @@ struct ThingSheetView: View {
         for t in all where t.tags.contains(old) {
             t.tags = t.tags.map { $0 == old ? new : $0 }
         }
-        try? modelContext.save()
+        modelContext.saveHonestly()
         // A retag changes projectClusters but not things.count — Home composes
         // a doc, not a live @Query, so nudge it to recompose (the same signal
         // HomeScreen already listens on).
@@ -495,7 +820,7 @@ struct ThingSheetView: View {
         for t in all where t.tags.contains(tag) {
             t.tags.removeAll { $0 == tag }
         }
-        try? modelContext.save()
+        modelContext.saveHonestly()
         CorpusSignal.shared.bump()
         DSHaptic.success()
     }
@@ -504,7 +829,7 @@ struct ThingSheetView: View {
         let t = tag.trimmingCharacters(in: .whitespaces)
         guard !t.isEmpty, !thing.tags.contains(where: { $0.lowercased() == t.lowercased() }) else { return }
         thing.tags.append(t)
-        try? modelContext.save()
+        modelContext.saveHonestly()
         CorpusSignal.shared.bump()
     }
 
@@ -512,61 +837,8 @@ struct ThingSheetView: View {
         // The type tag stays — it's assigned at ingestion, not user-managed.
         guard tag != thing.kind.typeTag else { return }
         thing.tags.removeAll { $0 == tag }
-        try? modelContext.save()
+        modelContext.saveHonestly()
         CorpusSignal.shared.bump()
-    }
-
-    // MARK: - Replies (a post's thread, 2026-07-14)
-
-    /// The conversation under a post/cast — read-only context in the spec
-    /// table's quiet-card clothes: a face, the handle, the words. The header
-    /// counts the thread ("Replies · 8"), the rows arrive one after another
-    /// (the feed's stagger), and a tap opens that reply on the network.
-    private var repliesSection: some View {
-        VStack(alignment: .leading, spacing: DS.Space.s3) {
-            // Honest count: the fetch caps at replyCap, so a thread AT the cap
-            // may hold more — say "8+", never a false total (honesty rule).
-            Text(replies.count < SocialThread.replyCap
-                 ? "Replies · \(replies.count)"
-                 : "Replies · \(replies.count)+")
-                .dsText(.label12).foregroundStyle(DS.textTertiary)
-            ForEach(Array(replies.enumerated()), id: \.element.id) { i, reply in
-                replyRow(reply).staggerIn(index: min(i, 8))
-            }
-        }
-        .padding(DS.Space.s4)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(DS.fillFaint,
-                    in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
-    }
-
-    @ViewBuilder
-    private func replyRow(_ reply: SocialReply) -> some View {
-        let row = HStack(alignment: .top, spacing: DS.Space.s2) {
-            if let avatar = reply.avatarURL {
-                RemoteThumb(urlString: avatar, size: 20,
-                            fallback: thing.source, circular: true)
-            } else {
-                BridgeIcon(name: thing.source, size: 20, circular: true)
-            }
-            VStack(alignment: .leading, spacing: 2) {
-                Text("@\(reply.handle)")
-                    .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-                Text(reply.text)
-                    .dsText(.callout15).foregroundStyle(DS.textPrimary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            Spacer(minLength: 0)
-        }
-        .contentShape(Rectangle())
-        // A tap opens that reply on the network — a read, so it passes
-        // without the write-confirm (swipe-verbs-are-reads rule).
-        if let url = reply.url.flatMap(URL.init) {
-            Button { openURL(url) } label: { row }
-                .buttonStyle(.plain)
-        } else {
-            row
-        }
     }
 
     // MARK: - Related shelf (streams last)
@@ -706,36 +978,39 @@ struct ThingSheetView: View {
             UIPasteboard.general.string = thing.content.isEmpty ? thing.title : thing.content
             verbResult = "Copied"
         case .markDone:
+            // Same shape as the feed's check circle: mark optimistically,
+            // write through to the real reminder, revert if that fails —
+            // this verb used to mark locally only, leaving an EK-backed
+            // reminder open in the Reminders app (honesty rule).
+            let wasMark = thing.mark
             thing.mark = .done
-            try? modelContext.save()
+            modelContext.saveHonestly()
             CorpusSignal.shared.bump()
-            verbResult = "Done"
+            if await ScheduleIngest.setCompleted(thing.sourceRef, true) {
+                verbResult = "Done"
+            } else {
+                thing.mark = wasMark
+                modelContext.saveHonestly()
+                CorpusSignal.shared.bump()
+                verbResult = "Couldn't reach Reminders — not marked"
+                verbResultIsError = true
+            }
+        case .translate:
+            verbResult = nil
+            translateText = thing.postText ?? thing.content
+            showTranslate = true
         case .approve:
             // Demo bridge: the decision lands locally; the gateway wire is M5.
             thing.mark = .done
-            try? modelContext.save()
+            modelContext.saveHonestly()
             CorpusSignal.shared.bump()
             DSHaptic.success()
             verbResult = "Approved — sent to your gateway"
         case .deny:
             thing.mark = .done
-            try? modelContext.save()
+            modelContext.saveHonestly()
             CorpusSignal.shared.bump()
             verbResult = "Denied — your gateway was told"
-        case .bridgeWrite(let write):
-            // The consent already happened (this runs from the confirm
-            // dialog); the API's answer is reported as it came.
-            let outcome = await BridgeWrites.perform(write)
-            verbResult = outcome.line
-            verbResultIsError = !outcome.ok
-            if outcome.ok {
-                // The write landed at the source — the mirror settles too,
-                // so the verb retires and the row reads done.
-                thing.mark = .done
-                try? modelContext.save()
-                CorpusSignal.shared.bump()
-                DSHaptic.success()
-            }
         }
     }
 

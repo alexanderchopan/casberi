@@ -43,8 +43,6 @@ struct KalshiScreen: View {
             BridgeSetupHeader(name: "Kalshi")
             addSection.listRowSeparator(.hidden)
             if !watched.isEmpty {
-                PinToHomeButton(source: "Kalshi", inSection: true)
-                    .listRowSeparator(.hidden)
                 watchlistSection.listRowSeparator(.hidden)
             }
             if !watched.isEmpty {
@@ -58,7 +56,10 @@ struct KalshiScreen: View {
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
+        .bridgeSetupWash(name: "Kalshi")
+        .dsAdaptiveContentWidth()
         .dsPageBackground()
+        .dsSoftTopEdge()
         .navigationTitle("Kalshi")
         .navigationBarTitleDisplayMode(.large)
         .onAppear { loadWatched() }
@@ -135,7 +136,7 @@ struct KalshiScreen: View {
             Text("Watchlist").dsText(.label12)
                 .foregroundStyle(DS.textTertiary)
         } footer: {
-            Text("Swipe a market to pin it to Home and Feed, or to stop watching it.")
+            Text("Swipe a market to stop watching it.")
                 .dsText(.callout15).foregroundStyle(DS.textTertiary)
         }
     }
@@ -152,7 +153,7 @@ struct KalshiScreen: View {
         let dropped = offsets.map { watched[$0] }
         SpotlightIndex.remove(ids: dropped.map(\.id))
         for thing in dropped { modelContext.delete(thing) }
-        try? modelContext.save()
+        modelContext.saveHonestly()
         DSHaptic.tap()
         loadWatched()
         register()

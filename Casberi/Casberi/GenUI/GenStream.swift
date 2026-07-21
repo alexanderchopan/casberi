@@ -25,6 +25,10 @@ final class GenStream {
     private var boundaries: Set<Int> = []
     private var cursor = 0
     private var task: Task<Void, Never>?
+    /// `GenParser.parseIncremental`'s carry-forward cache — valid only for
+    /// the CURRENT `doc`; reset alongside it in `stream(_:)`/`paint(_:)`.
+    private var parseCache: GenEls = [:]
+    private var parseCacheCompleteLines = 0
 
     /// Starts (or restarts) streaming a document.
     func stream(_ lines: [String]) {
@@ -35,14 +39,15 @@ final class GenStream {
         progress = 0
         streaming = true
         completed = false
+        parseCache = [:]
+        parseCacheCompleteLines = 0
 
         // Section boundaries: offset after each `root`/Widget/Shelf line.
         boundaries = []
         var offset = 0
         for line in lines {
             offset += line.count + 1
-            if line.hasPrefix("root") || line.contains("Widget") || line.contains("Shelf")
-                || line.contains("ComingUp") {
+            if line.hasPrefix("root") || line.contains("Widget") || line.contains("Shelf") {
                 boundaries.insert(offset)
             }
         }
@@ -79,13 +84,16 @@ final class GenStream {
         cursor = doc.count
         streaming = false
         completed = true
+        parseCache = [:]
+        parseCacheCompleteLines = 0
         publish()
     }
 
     private func publish() {
         let prefix = doc.prefix(cursor)
         progress = cursor
-        els = GenParser.parse(prefix: prefix, isComplete: cursor >= doc.count)
+        els = GenParser.parseIncremental(prefix: prefix, isComplete: cursor >= doc.count,
+                                         cache: &parseCache, cachedCompleteLines: &parseCacheCompleteLines)
     }
 
     deinit { task?.cancel() }

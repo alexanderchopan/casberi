@@ -19,6 +19,13 @@ struct TokenSetupScreen: View {
     @State private var result: String?
     @State private var resultIsError = false
 
+    /// GitHub only — watching a repo directly, privately (2026-07-16): unlike
+    /// a star or subscribe, it never touches the GitHub account.
+    @State private var watchField = ""
+    @State private var watching = false
+    @State private var watchResult: String?
+    @State private var watchResultIsError = false
+
     /// GitHub's feed selection — one connection, several streams the person
     /// turns on (the wallet's holdings/NFTs idea, generalized). Only read on
     /// the GitHub branch; harmless to bind for every bridge.
@@ -30,9 +37,16 @@ struct TokenSetupScreen: View {
     private enum DevicePhase { case idle, requesting, waiting(GitHubDeviceFlow.Code) }
     @State private var devicePhase: DevicePhase = .idle
     @State private var pollTask: Task<Void, Never>?
+    /// Bumped when the device code is copied — the copy button briefly reads
+    /// "Copied" so the tap is acknowledged.
+    @State private var codeCopied = false
     private var deviceFlowOffered: Bool {
         bridge == .github && GitHubDeviceFlow.isAvailable
     }
+    /// The manual token path, folded behind a disclosure when sign-in is
+    /// offered — it's the fallback, and two full-weight paths made the screen
+    /// a wall (mock review 2026-07-16). Paste-only bridges show it plainly.
+    @State private var manualPathOpen = false
 
     /// This bridge's things — cached per appearance and after each sync, rather
     /// than re-fetched twice on every body pass. The source is per-bridge, so
@@ -45,20 +59,43 @@ struct TokenSetupScreen: View {
 
     var body: some View {
         List {
-            BridgeSetupHeader(name: bridge.rawValue)
-            if deviceFlowOffered { signInSection }
-            stepsSection
-            tokenSection
-            if bridge == .github && bridge.connected { feedsSection }
-            if !recent.isEmpty {
-                PinToHomeButton(source: bridge.rawValue, inSection: true)
+            BridgeSetupHeader(name: bridge.rawValue, connected: bridge.connected)
+            if deviceFlowOffered {
+                // Sign-in is THE path; the token hunt folds away behind a
+                // disclosure so the screen leads with one action instead of
+                // two competing ones (mock review 2026-07-16). The proof and
+                // error rows surface beside sign-in while the manual path —
+                // whose card normally carries them — is folded.
+                signInSection
+                if !manualPathOpen { statusSection }
+                manualPathToggleSection
+            }
+            if manualPathOpen || !deviceFlowOffered {
+                stepsSection
+                tokenSection
+            }
+            if bridge == .github && bridge.connected {
+                feedsSection
+                watchSection
+            }
+            if recent.isEmpty {
+                // Only before the connect: a connected bridge whose sync
+                // landed nothing must not wear "when you connect" (honesty
+                // rule; review 2026-07-16).
+                if !bridge.connected {
+                    GhostPreviewSection(name: bridge.rawValue)
+                }
+            } else {
                 RecentThingsSection(header: "Landed", things: recent)
             }
             if bridge.connected { removeSection }
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
+        .bridgeSetupWash(name: bridge.rawValue)
+        .dsAdaptiveContentWidth()
         .dsPageBackground()
+        .dsSoftTopEdge()
         .navigationTitle(bridge.rawValue)
         .navigationBarTitleDisplayMode(.large)
         .onAppear {
@@ -99,15 +136,34 @@ struct TokenSetupScreen: View {
                     }
                 case .waiting(let code):
                     // The code is the whole moment — big, spaced by GitHub's
-                    // own hyphen, one tap to copy in case Safari loses it.
-                    Text(code.userCode)
-                        .font(.system(size: 34, weight: .bold, design: .monospaced))
-                        .foregroundStyle(DS.textPrimary)
-                        .frame(maxWidth: .infinity)
-                        .onTapGesture {
-                            UIPasteboard.general.string = code.userCode
-                            DSHaptic.tap()
+                    // own hyphen, sitting in a well with an explicit Copy button
+                    // so it plainly reads as "copy this and paste it on GitHub"
+                    // (the bare tap-to-copy went unnoticed; user, 2026-07-15).
+                    HStack(spacing: DS.Space.s3) {
+                        Text(code.userCode)
+                            .font(.system(size: 34, weight: .bold, design: .monospaced))
+                            .foregroundStyle(DS.textPrimary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .minimumScaleFactor(0.6)
+                            .lineLimit(1)
+                        Button(action: { copyCode(code.userCode) }) {
+                            HStack(spacing: DS.Space.s1) {
+                                Image(systemName: codeCopied ? "checkmark" : "doc.on.doc")
+                                    .font(.system(size: 13, weight: .semibold))
+                                Text(codeCopied ? "Copied" : "Copy").dsText(.subhead13).fontWeight(.semibold)
+                            }
+                            .foregroundStyle(codeCopied ? DS.confirm : DS.tint)
+                            .padding(.horizontal, DS.Space.s3)
+                            .frame(height: 34)
+                            .background(DS.gray100, in: Capsule(style: .continuous))
+                            .contentShape(Capsule(style: .continuous))
                         }
+                        .buttonStyle(.plain)
+                    }
+                    .padding(DS.Space.s3)
+                    .frame(maxWidth: .infinity)
+                    .background(DS.surfaceWell,
+                                in: RoundedRectangle(cornerRadius: DS.Radius.control, style: .continuous))
                     Text("Enter this code on GitHub — approval lands the token here by itself.")
                         .dsText(.subhead13).foregroundStyle(DS.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
@@ -139,7 +195,7 @@ struct TokenSetupScreen: View {
             Text("Sign in").dsText(.label12)
                 .foregroundStyle(DS.textTertiary)
         } footer: {
-            Text("Sign-in grants repo, profile, and gist access — enough for every feed you pick. Casberi only reads on its own; any write — like closing an issue — asks first, every time.")
+            Text("Sign-in grants repo, profile, and gist access — GitHub's smallest scope that reaches private issues and PRs. Casberi only reads — it never writes back to GitHub.")
                 .dsText(.callout15).foregroundStyle(DS.textTertiary)
         }
     }
@@ -150,7 +206,7 @@ struct TokenSetupScreen: View {
         result = nil
         pollTask = Task { @MainActor in
             guard let code = await GitHubDeviceFlow.start() else {
-                finishDeviceFlow(error: String(localized: "GitHub didn't answer — try again, or paste a token below."))
+                finishDeviceFlow(error: String(localized: "GitHub didn't answer — try again, or get a token by hand."))
                 return
             }
             withAnimation(DS.Motion.standard) { devicePhase = .waiting(code) }
@@ -183,6 +239,16 @@ struct TokenSetupScreen: View {
         }
     }
 
+    private func copyCode(_ code: String) {
+        UIPasteboard.general.string = code
+        DSHaptic.tap()
+        withAnimation(DS.Motion.standard) { codeCopied = true }
+        Task { @MainActor in
+            try? await Task.sleep(for: .seconds(2))
+            withAnimation(DS.Motion.standard) { codeCopied = false }
+        }
+    }
+
     private func finishDeviceFlow(error: String) {
         withAnimation(DS.Motion.standard) { devicePhase = .idle }
         result = error
@@ -194,6 +260,38 @@ struct TokenSetupScreen: View {
         pollTask = nil
         if case .idle = devicePhase {} else {
             withAnimation(DS.Motion.standard) { devicePhase = .idle }
+        }
+    }
+
+    /// The sync proof and honest failures, surfaced beside sign-in while the
+    /// manual path (whose card normally carries these rows) is folded away.
+    private var statusSection: some View {
+        Section {
+            BridgeSyncStatusRows(syncing: syncing,
+                                 syncingLine: String(localized: "Fetching your \(bridge.noun)…"),
+                                 result: result, resultIsError: resultIsError)
+        }
+    }
+
+    /// The fold: one quiet row that opens the token-by-hand path.
+    private var manualPathToggleSection: some View {
+        Section {
+            Button {
+                withAnimation(DS.Motion.standard) { manualPathOpen.toggle() }
+            } label: {
+                HStack(spacing: DS.Space.s3) {
+                    Text("Prefer a token by hand?")
+                        .dsText(.body17).foregroundStyle(DS.textPrimary)
+                    Spacer()
+                    Image(systemName: "chevron.down")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(DS.textTertiary)
+                        .rotationEffect(.degrees(manualPathOpen ? 180 : 0))
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .dsListCardRow()
         }
     }
 
@@ -221,8 +319,7 @@ struct TokenSetupScreen: View {
             }
             .dsListCardRow()
         } header: {
-            // With sign-in above, the token hunt reads as the fallback it is.
-            Text(deviceFlowOffered ? "Or get a token by hand" : "Get your token")
+            Text("Get your token")
                 .dsText(.label12)
                 .foregroundStyle(DS.textTertiary)
         }
@@ -256,32 +353,39 @@ struct TokenSetupScreen: View {
     /// person each turns on; toggling re-syncs so a newly-chosen feed lands
     /// now, not next foreground.
     private var feedsSection: some View {
+        // One list row holding every feed (a VStack) — separate rows leak a
+        // hairline between them that survives .listRowSeparator(.hidden) (the
+        // first-post-header-separator gotcha stepsSection documents). Design
+        // law: no hairlines, zero exceptions.
         Section {
-            ForEach(GitHubFeed.allCases) { feed in
-                Button {
-                    githubFeeds.toggle(feed)
-                    DSHaptic.tap()
-                    Task { await sync() }
-                } label: {
-                    HStack(alignment: .firstTextBaseline, spacing: DS.Space.s3) {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(feed.title)
-                                .dsText(.body17).foregroundStyle(DS.textPrimary)
-                            Text(feed.blurb)
-                                .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-                                .fixedSize(horizontal: false, vertical: true)
+            VStack(alignment: .leading, spacing: 0) {
+                ForEach(GitHubFeed.allCases) { feed in
+                    Button {
+                        githubFeeds.toggle(feed)
+                        DSHaptic.tap()
+                        Task { await sync() }
+                    } label: {
+                        HStack(alignment: .firstTextBaseline, spacing: DS.Space.s3) {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(feed.title)
+                                    .dsText(.body17).foregroundStyle(DS.textPrimary)
+                                Text(feed.blurb)
+                                    .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                            Spacer(minLength: DS.Space.s2)
+                            if githubFeeds.isOn(feed) {
+                                Image(systemName: "checkmark")
+                                    .dsText(.body17).foregroundStyle(DS.tint)
+                            }
                         }
-                        Spacer(minLength: DS.Space.s2)
-                        if githubFeeds.isOn(feed) {
-                            Image(systemName: "checkmark")
-                                .dsText(.body17).foregroundStyle(DS.tint)
-                        }
+                        .contentShape(Rectangle())
                     }
-                    .contentShape(Rectangle())
+                    .buttonStyle(.plain)
+                    .padding(.vertical, DS.Space.s1)
                 }
-                .buttonStyle(.plain)
-                .dsListCardRow()
             }
+            .dsListCardRow()
         } header: {
             Text("Feeds").dsText(.label12).foregroundStyle(DS.textTertiary)
         } footer: {
@@ -290,10 +394,59 @@ struct TokenSetupScreen: View {
         }
     }
 
+    /// GitHub only — watch a repo without starring or subscribing to it on
+    /// GitHub itself (2026-07-16). The watch lands as a thing immediately;
+    /// deleting it in the sheet unwatches it (feed swipes stay read-only).
+    private var watchSection: some View {
+        Section {
+            VStack(alignment: .leading, spacing: DS.Space.s2) {
+                BridgeFieldRow(placeholder: String(localized: "owner/repo or a GitHub URL"),
+                               text: $watchField, buttonLabel: String(localized: "Watch"),
+                               action: watchRepo)
+                BridgeSyncStatusRows(syncing: watching,
+                                     syncingLine: String(localized: "Looking it up…"),
+                                     result: watchResult, resultIsError: watchResultIsError)
+            }
+            .dsListCardRow()
+        } header: {
+            Text("Watch a repo").dsText(.label12).foregroundStyle(DS.textTertiary)
+        } footer: {
+            Text("Private to this iPhone — unlike a star or subscribe, watching here never touches your GitHub account. New releases land the way starred repos' do.")
+                .dsText(.callout15).foregroundStyle(DS.textTertiary)
+        }
+    }
+
+    private func watchRepo() {
+        let q = watchField.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !q.isEmpty, !watching, let token = TokenVault.get(bridge.tokenKey) else { return }
+        DSHaptic.tap()
+        watching = true
+        watchResultIsError = false
+        Task {
+            let resolved = await GitHubRepoWatch.resolve(q, token: token)
+            watching = false
+            guard let resolved else {
+                watchResult = String(localized: "Couldn't find that repo on GitHub.")
+                watchResultIsError = true
+                return
+            }
+            guard let thing = GitHubRepoWatch.add(resolved, context: modelContext) else {
+                watchResult = String(localized: "\(resolved.fullName) is already watched.")
+                watchResultIsError = true
+                return
+            }
+            watchField = ""
+            watchResult = String(localized: "Watching \(thing.title)")
+            loadRecent()
+            await sync()
+        }
+    }
+
     private var removeSection: some View {
         Section {
             Button("Remove token", role: .destructive) {
                 TokenVault.delete(bridge.tokenKey)
+                bridge.onRemove()
                 store.bridges.removeAll { $0.id == bridge.bridgeID }
                 result = String(localized: "Token removed — your things stay.")
                 resultIsError = false
@@ -310,6 +463,11 @@ struct TokenSetupScreen: View {
     private func connect() {
         let token = tokenField.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !token.isEmpty else { return }
+        // Pasting over an existing token is a reconnect: drop the prior key's
+        // cached readings (balance, vault reach) BEFORE storing, or a paste
+        // whose first sync fails leaves the new key wearing the old key's
+        // numbers as if they were its own.
+        bridge.onRemove()
         TokenVault.set(token, for: bridge.tokenKey)
         tokenField = ""
         DSHaptic.tap()
@@ -339,6 +497,11 @@ struct TokenSetupScreen: View {
                     // retry a dead token on every foreground.
                     TokenVault.delete(bridge.tokenKey)
                     result = String(localized: "That token didn't work — check it (and your connection) and paste again.")
+                    // "Paste again" must point at a visible field — if the
+                    // manual path is folded (a device-flow connect that failed
+                    // on its first sync), unfold it so the error and the field
+                    // share the screen (review 2026-07-16).
+                    withAnimation(DS.Motion.standard) { manualPathOpen = true }
                 } else {
                     // A background re-sync of an already-connected bridge failed. The
                     // user didn't just paste anything, so don't accuse the empty field

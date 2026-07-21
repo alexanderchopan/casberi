@@ -52,12 +52,10 @@ enum WalletBackgroundRefresh {
             state.complete(task, success: false)
         }
         state.work = Task { @MainActor in
-            // The same reads a foreground does: holdings (records the sample,
-            // checks the combined/single new high) and NFTs (checks arrivals).
-            // Any moment they detect queues on WalletMoments and shows on the
-            // next foreground.
+            // The same read a foreground does: holdings (records the sample,
+            // checks the combined/single new high). Any moment it detects queues
+            // on SourceMoments and shows on the next foreground.
             _ = await WalletIngest.topHoldingsByWallet()
-            _ = await WalletIngest.nftsByWallet()
             state.complete(task, success: !Task.isCancelled)
         }
     }

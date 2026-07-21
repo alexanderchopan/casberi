@@ -116,7 +116,7 @@ enum SteamIngest {
             SpotlightIndex.index([thing])
             added += 1
         }
-        if added > 0 || backfilled { try? context.save() }
+        if added > 0 || backfilled { context.saveHonestly() }
         return added
     }
 

@@ -16,39 +16,6 @@ final class WalletStore {
         /// A name the person gave it ("Main", "Cold") — optional, address shows if empty.
         var label: String
         var address: String
-        /// Holdings on Home and Feed (ruling 2026-07-09): per WALLET, not one
-        /// switch for everything watched — two watched addresses are usually
-        /// two different purposes, and a person may only want one of them
-        /// showing. Same idea as a Feed pin ("keep this in view"), scoped to
-        /// the address it's swiped on.
-        var pinnedToHome: Bool = false
-        /// A pinned wallet's NFT strip rides Home by default (ruling
-        /// 2026-07-14); long-press → "Remove from Home" sets this, per
-        /// wallet, and re-pinning the wallet resets it (fresh pin, fresh
-        /// default).
-        var nftStripHidden: Bool = false
-
-        enum CodingKeys: String, CodingKey {
-            case id, label, address, pinnedToHome, nftStripHidden
-        }
-
-        init(id: UUID = UUID(), label: String, address: String, pinnedToHome: Bool = false) {
-            self.id = id
-            self.label = label
-            self.address = address
-            self.pinnedToHome = pinnedToHome
-        }
-
-        /// Custom decode: older persisted data has no `pinnedToHome` /
-        /// `nftStripHidden` keys — they default rather than failing to decode.
-        init(from decoder: Decoder) throws {
-            let c = try decoder.container(keyedBy: CodingKeys.self)
-            id = try c.decode(UUID.self, forKey: .id)
-            label = try c.decode(String.self, forKey: .label)
-            address = try c.decode(String.self, forKey: .address)
-            pinnedToHome = try c.decodeIfPresent(Bool.self, forKey: .pinnedToHome) ?? false
-            nftStripHidden = try c.decodeIfPresent(Bool.self, forKey: .nftStripHidden) ?? false
-        }
 
         /// "0x1a2B…4f4f" — the row form.
         var short: String { WalletStore.shortAddress(address) }
@@ -75,6 +42,25 @@ final class WalletStore {
                 // prior watch period whose history was already wiped (the same
                 // "re-watching starts honest, at zero" rule the history obeys).
                 UserDefaults.standard.removeObject(forKey: "wallet.high.\(old.address.lowercased())")
+                // The approval block cursors leave too (prd §84) — a stale
+                // cursor would back-fill the unwatched gap into the feed on
+                // re-watch, instead of the silent fresh-baseline seed.
+                WalletApprovals.clearCursors(address: old.address)
+                // The Peer fill cursor leaves with the watch for the same
+                // reason (prd §113).
+                PeerBridge.clearCursor(address: old.address)
+                // The EIP-7702 delegation baseline leaves too (2026-07-20) —
+                // a re-watch should seed fresh, not compare against a
+                // delegate state from a prior, unrelated watch period.
+                WalletSafety.clearDelegation(address: old.address)
+                // The gas-spent running total leaves too (2026-07-20) — a
+                // re-watch starts the count at zero, honest about what it can
+                // actually know.
+                WalletGas.clearTotals(address: old.address)
+                // The Safe-detection cache leaves too (2026-07-20) — also
+                // the only way to recover from a negative result still
+                // inside its TTL.
+                SafeBridge.clearCache(address: old.address)
             }
         }
     }
@@ -88,6 +74,12 @@ final class WalletStore {
     struct ValueSample: Codable {
         let at: Date
         let usd: Double
+        /// The wallet's top positions by USD at this moment (symbol → USD),
+        /// snapshotted so the combined sheet can attribute a move to a token
+        /// ("mostly ETH", 2026-07-15). Optional — samples from before this field
+        /// decode with nil (synthesized Codable uses decodeIfPresent for
+        /// optionals), so attribution only draws once enough new samples carry it.
+        var holdings: [String: Double]? = nil
     }
 
     private static func historyKey(_ address: String) -> String {
@@ -167,12 +159,47 @@ final class WalletStore {
         }
     }
 
+    /// The combined move attributed by TOKEN (2026-07-15) — each symbol's USD
+    /// change from the first aligned moment to the last, summed across wallets,
+    /// biggest swing first. The combined sheet's "What moved" read: "ETH +$310,
+    /// USDC −$4". Forward-only and honest like every sample it's built from —
+    /// only samples that carry a per-token snapshot count, so it stays empty
+    /// until enough of those exist, and it aligns on the wallets' first snapshot
+    /// so a composition change can't masquerade as a move (§77's rule, applied
+    /// per token). Deltas under $1 drop as noise.
+    func combinedHoldingsDeltas() -> [(symbol: String, delta: Double)] {
+        let lines = addresses
+            .map { valueSamples(forAddress: $0.address).filter { $0.holdings != nil } }
+            .filter { !$0.isEmpty }
+        guard !lines.isEmpty,
+              let start = lines.compactMap({ $0.first?.at }).max(),
+              let end = lines.compactMap({ $0.last?.at }).max(),
+              end > start
+        else { return [] }
+        func merged(at moment: Date) -> [String: Double] {
+            var total: [String: Double] = [:]
+            for samples in lines {
+                guard let s = samples.last(where: { $0.at <= moment }),
+                      let h = s.holdings else { continue }
+                for (sym, usd) in h { total[sym, default: 0] += usd }
+            }
+            return total
+        }
+        let firstMap = merged(at: start)
+        let lastMap = merged(at: end)
+        let symbols = Set(firstMap.keys).union(lastMap.keys)
+        return symbols
+            .map { (symbol: $0, delta: (lastMap[$0] ?? 0) - (firstMap[$0] ?? 0)) }
+            .filter { abs($0.delta) >= 1 }
+            .sorted { abs($0.delta) > abs($1.delta) }
+    }
+
     /// Appends a sample unless one landed in the last 4 hours — holdings
     /// refresh every foreground, and a line of near-identical minutes-apart
-    /// points is noise, not history. Main-actor: it fires wallet moments
-    /// (WalletMoments), and its only caller (WalletIngest) already is.
+    /// points is noise, not history. Main-actor: it fires source moments
+    /// (SourceMoments), and its only caller (WalletIngest) already is.
     @MainActor
-    func recordSample(address: String, totalUSD: Double) {
+    func recordSample(address: String, totalUSD: Double, holdings: [String: Double] = [:]) {
         // A single watched wallet's own value hitting a new high is its
         // moment (delight 2026-07-15; the combined high covers the multi-
         // wallet case — WalletIngest). The mark is checked every fetch, not
@@ -180,12 +207,13 @@ final class WalletStore {
         // it fires only with exactly one wallet watched, so several wallets
         // never stack toasts. First value seeds the mark silently.
         if addresses.count == 1,
-           WalletMoments.shared.notedNewHigh(scope: address.lowercased(), value: totalUSD) {
-            WalletMoments.shared.fire(String(localized: "Your wallet hit a new high 📈"))
+           SourceMoments.shared.notedNewHigh(scope: "wallet.\(address.lowercased())", value: totalUSD) {
+            SourceMoments.shared.fire(String(localized: "Your wallet hit a new high 📈"), source: "Wallet")
         }
         var samples = valueSamples(forAddress: address)
         if let last = samples.last, Date.now.timeIntervalSince(last.at) < 4 * 3600 { return }
-        samples.append(ValueSample(at: .now, usd: totalUSD))
+        samples.append(ValueSample(at: .now, usd: totalUSD,
+                                   holdings: holdings.isEmpty ? nil : holdings))
         if samples.count > 240 { samples.removeFirst(samples.count - 240) }
         if let data = try? JSONEncoder().encode(samples) {
             UserDefaults.standard.set(data, forKey: Self.historyKey(address))
@@ -193,14 +221,55 @@ final class WalletStore {
     }
 
     /// The name a Wallet transaction's row shows when more than one address
-    /// is watched — matched by exact address string (an ENS-named watch
-    /// won't match its resolved hex form; the row simply carries no label
-    /// then, never a wrong one).
+    /// is watched. Matched by exact string OR through the resolution cache —
+    /// an ENS/SNS-named watch lands its things stamped with the RESOLVED hex
+    /// (WalletIngest resolves before reading), so a raw compare missed every
+    /// one of them. The old behavior ("no label then, never a wrong one") was
+    /// an accepted degradation for a label; the same mismatch silently
+    /// EMPTIED the scoped feed, which forced the real fix (2026-07-20).
     func label(forAddress address: String?) -> String? {
         guard let address, addresses.count > 1,
-              let match = addresses.first(where: { $0.address.lowercased() == address.lowercased() })
+              let match = addresses.first(where: {
+                  WalletWatch.sameAddress($0.address, address)
+                      || resolvedForm(of: $0.address).map { WalletWatch.sameAddress($0, address) } == true
+              })
         else { return nil }
         return match.label.isEmpty ? match.short : match.label
+    }
+
+    // MARK: - Resolution cache (2026-07-20)
+
+    /// watched spelling → resolved on-chain address ("vitalik.eth" →
+    /// "0xd8dA…6045"), filled as `WalletIngest.resolvedAddresses` runs — so
+    /// by the time any landed thing exists to filter, its wallet's resolution
+    /// has been seen at least once. Persisted: a fresh launch filters
+    /// correctly before its first network read.
+    @ObservationIgnored
+    private var resolutions: [String: String] =
+        UserDefaults.standard.dictionary(forKey: "wallet.resolutions") as? [String: String] ?? [:]
+
+    func noteResolution(_ watched: String, resolved: String) {
+        guard watched != resolved, resolutions[watched] != resolved else { return }
+        resolutions[watched] = resolved
+        UserDefaults.standard.set(resolutions, forKey: "wallet.resolutions")
+    }
+
+    func resolvedForm(of watched: String) -> String? {
+        resolutions[watched]
+    }
+
+    /// Does a landed thing's stamped address belong to the given scope?
+    /// Things carry the RESOLVED hex; a scope is the WATCHED spelling — so
+    /// this matches raw-vs-raw first (a hex-watched wallet), then through
+    /// the cache (an ENS/SNS-watched one). The bug this fixes: scoping the
+    /// feed to "vitalik.eth" compared the name against stamped hex, matched
+    /// nothing, and showed "Nothing from Wallet yet" over a corpus full of
+    /// that wallet's own transactions (caught on camera, 2026-07-20).
+    func scopeMatches(_ stored: String?, scope: String) -> Bool {
+        guard let stored else { return false }
+        if WalletWatch.sameAddress(stored, scope) { return true }
+        if let hex = resolvedForm(of: scope), WalletWatch.sameAddress(stored, hex) { return true }
+        return false
     }
 
     private init() {
@@ -215,13 +284,28 @@ final class WalletStore {
         }
     }
 
+    /// The form two watched addresses are COMPARED in — never the form one is
+    /// stored in.
+    ///
+    /// Normalises per family, and the asymmetry is load-bearing (2026-07-16).
+    /// An EVM address is hex whose case is an EIP-55 checksum, not identity:
+    /// the same wallet arrives cased differently from different sources and
+    /// must collapse to one row. A Solana address is base58, where case IS
+    /// identity — lowercasing it can fold two genuinely different wallets
+    /// together and silently discard the second. So lowercase only what is
+    /// provably hex, and leave everything else exactly as it came.
+    private static func dedupeKey(_ address: String) -> String {
+        ENS.isHexAddress(address) ? address.lowercased() : address
+    }
+
     /// Adds a pasted address. Light validation only — an address is public
     /// data and a bad one simply never produces things.
     @discardableResult
     func add(_ raw: String, label: String = "") -> Bool {
         let addr = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        let key = Self.dedupeKey(addr)
         guard addr.count >= 6,
-              !addresses.contains(where: { $0.address.lowercased() == addr.lowercased() })
+              !addresses.contains(where: { Self.dedupeKey($0.address) == key })
         else { return false }
         addresses.append(WatchedAddress(label: label, address: addr))
         return true
@@ -235,24 +319,15 @@ final class WalletStore {
         addresses.move(fromOffsets: source, toOffset: destination)
     }
 
-    /// Flips one address's pin — scoped to that wallet, never the whole list.
-    /// Pinning ON resets the NFT strip to its default (a fresh pin brings the
-    /// full presence back; removal was scoped to the previous pin).
-    func togglePin(_ id: WatchedAddress.ID) {
+    /// Renames a watched wallet — the missing half of the label story: an
+    /// ENS add sets the label automatically, but a raw-hex watch had no way
+    /// to ever become "Cold" or "Trading" (a real gap in a multi-wallet
+    /// world, where every surface — feed tags, treemap eyebrows, self-
+    /// transfer titles — leans on this label the moment more than one
+    /// wallet is watched). Empty clears back to the address-only display.
+    func rename(_ id: WatchedAddress.ID, to label: String) {
         guard let i = addresses.firstIndex(where: { $0.id == id }) else { return }
-        addresses[i].pinnedToHome.toggle()
-        if addresses[i].pinnedToHome { addresses[i].nftStripHidden = false }
-    }
-
-    /// Shows/hides a pinned wallet's NFT strip on Home — the Wallet screen's
-    /// own control (the reachable verb: the board's drag driver pre-empts
-    /// long-press menus there), plus the strip's long-press remove for
-    /// whenever that arbitration is fixed.
-    func setNFTStrip(hidden: Bool, address: String) {
-        guard let i = addresses.firstIndex(where: {
-            $0.address.lowercased() == address.lowercased()
-        }) else { return }
-        addresses[i].nftStripHidden = hidden
+        addresses[i].label = label.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     private func persist() {

@@ -33,13 +33,21 @@
 	     installed (canOpenURL). Without the scheme here the check always returns
 	     false, so the honest verb/tile would never appear. todoist → thing-sheet
 	     "Add to Todoist"; chatgpt/claude → the + tray tool launcher (open the
-	     app, never a website). -->
+	     app, never a website). wc → the Wallet screen's Connect button: EVERY
+	     WalletConnect wallet registers `wc:`, so one entry covers all of them
+	     and none need naming here. It is the only reliable read of "is a wallet
+	     installed" — measured 2026-07-16, both `UIApplication.open`'s completion
+	     and SwiftUI's `openURL` report SUCCESS for an unhandled `wc:` URI while
+	     LaunchServices fails it asynchronously in its own daemon
+	     (LSApplicationWorkspaceErrorDomain 115 in the log), so the opened-Bool
+	     cannot tell "no wallet" from "opened fine". -->
 	<key>LSApplicationQueriesSchemes</key>
 	<array>
 		<string>todoist</string>
 		<string>chatgpt</string>
 		<string>claude</string>
 		<string>googlegmail</string>
+		<string>wc</string>
 	</array>
 </dict>
 </plist>

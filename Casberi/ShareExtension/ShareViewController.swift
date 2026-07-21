@@ -58,7 +58,7 @@ final class ShareViewController: UIViewController {
         guard let container = try? SharedStore.extensionContainer() else { return false }
         let context = ModelContext(container)
         context.insert(thing)
-        guard (try? context.save()) != nil else { return false }
+        guard (context.saveHonestly()) != nil else { return false }
         // Leave the app a note: its @Query views never hear another
         // process's save (SwiftData; Apple forums thread 764290), so a
         // capture landed here stayed invisible until relaunch. The shell

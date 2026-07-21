@@ -25,13 +25,13 @@ struct CasberiApp: App {
         #if DEBUG
         _ = LaunchClock.start   // stamp the earliest app-code moment
         #endif
-        do {
-            // The store lives in the app group so the share extension writes
-            // to the same corpus (S3: every capture surface routes here).
-            container = try SharedStore.container()
-        } catch {
-            fatalError("Could not create ModelContainer: \(error)")
-        }
+        // The store lives in the app group so the share extension writes to
+        // the same corpus (S3: every capture surface routes here).
+        // `containerWithFallback` degrades (CloudKit off, then in-memory)
+        // rather than crash-looping if the on-disk store can't open — S0:
+        // the app must always launch. `SharedStore.degradeReason` is non-nil
+        // when that happened; RootShell flashes it once at first appearance.
+        container = SharedStore.containerWithFallback()
         // The demo corpus seeds only in debug, never for a fresh user (real
         // users start empty — the empty states are the product too).
         if DemoState.seedsDemoData {

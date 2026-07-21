@@ -16,8 +16,8 @@ Last updated: July 13, 2026
 
 ### Keep tabs
 
-- Pin your favorites — Build a board, arranged your way.
-- Act on items — From your feed: open, pin, or share, in the app it came from.
+- Keep an ask — Ask a question, keep it — it updates as your things change.
+- Act on items — From your feed: open, or share, in the app it came from.
 - Tag your things — Group without folders. One thing, many tags.
 
 ### Take action
@@ -34,7 +34,7 @@ Last updated: July 13, 2026
 
 ### The short version
 
-Connect your apps and everything lands in one private feed on your phone — no account, ever. Pin what matters and tag what's yours, then act on things in the apps they came from. One button asks, organizes, and jumps to your tools. And it's yours to shape: avatar, background, language, and where your data lives.
+Connect your apps and everything lands in one private feed on your phone — no account, ever. Tag what's yours and keep the asks you care about, then act on things in the apps they came from. One button asks, organizes, and jumps to your tools. And it's yours to shape: avatar, language, and where your data lives.
 
 ### The situation
 
@@ -117,7 +117,7 @@ Some things are missing on purpose. There's no separate actions or to-do tab —
 
 #### One screen
 
-Casberi is one screen — no tabs to learn, no account to make. Open it and it's yours. A row of chips across the top stays put wherever you scroll: Pinned (your board), All (everything you've saved), then one chip for each app you've connected — the app you just heard from sits up front. Tap a chip to switch. Down in the corner, a single round button — your Action button — is where everything you do lives. And two small doors up top: your avatar opens Settings, the grid opens your apps.
+Casberi is one screen — no tabs to learn, no account to make. Open it and it's yours. A row of chips across the top stays put wherever you scroll: All (everything you've saved), then one chip for each app you've connected — the app you just heard from sits up front. Tap a chip to switch. Down in the corner, a single round button — your Action button — is where everything you do lives. And two small doors up top: your avatar opens Settings, the grid opens your apps.
 
 #### Apps
 
@@ -125,17 +125,13 @@ Open Apps from the grid icon. Your connected apps sit at the top; below is a sto
 
 ### Keep tabs
 
-#### Pinned — your board
-
-Pin anything and it shows up here as a card. Drag cards to arrange them, and tap a pin to grow a card bigger. It's the one screen that's just yours — a wallet's balance, a trip's plans, your recent chats, laid out the way you like.
-
 #### All & your apps
 
 Tap All to see everything, newest first. Tap an app's chip to see just that app — and the feed takes its shape: Calendar reads like an agenda, Photos becomes a grid, a wallet leads with its balance. Everything you keep tabs on, in one place.
 
 #### Open a thing, act on it
 
-Tap any row to open it. From there you do the thing where it belongs — open it in the app it came from, pin it to your board, or share it. Tags group things without folders — one thing can carry many; add or remove them right there. Some rows let you act in place: start a new email from Gmail, a new event from Calendar, tick a reminder off for real. Casberi keeps tabs; your own apps do the work.
+Tap any row to open it. From there you do the thing where it belongs — open it in the app it came from, or share it. Tags group things without folders — one thing can carry many; add or remove them right there. Some rows let you act in place: start a new email from Gmail, a new event from Calendar, tick a reminder off for real. Casberi keeps tabs; your own apps do the work.
 
 ### Take action
 
@@ -154,7 +150,7 @@ You can also paste something to save it, or tap the mic and talk.
 
 #### Settings
 
-Behind your avatar: your photo, a background for your board, your data (all on your phone — export or delete anytime), diagnostics, language, and light or dark. No account, no sign-in — there was never anything to sign up for.
+Behind your avatar: your photo, your data (all on your phone — export or delete anytime), diagnostics, language, and light or dark. No account, no sign-in — there was never anything to sign up for.
 
 ## Questions, answered
 

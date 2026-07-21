@@ -24,12 +24,6 @@ struct BandRow: View {
     /// Honest by construction: the caller derives it from the source's own
     /// current-live set, never from the row's age.
     var live: Bool = false
-    /// A watched token's last 24h (Option A ruling 2026-07-10) — the right
-    /// stack carries a sparkline over the signed change instead of
-    /// time-over-tag (a watchlist row's timestamp says only "watched N days
-    /// ago"; its 24h is what you actually glance for). The caller derives
-    /// it from TokenPulse, so only Tokens rows ever carry one.
-    var pulse: TokenPulse.Pulse? = nil
     @Environment(\.colorScheme) private var scheme
 
     private var done: Bool { thing.mark == .done }
@@ -40,10 +34,25 @@ struct BandRow: View {
     /// indistinguishable stream.
     private var project: String? {
         if let tag = thing.tags.first(where: { ThingKind.from(typeTag: $0) == nil }) { return tag }
+        // Which watched wallet a transaction came from, when more than one is
+        // watched — keyed on the FIELD (walletAddress), not the source name,
+        // so every wallet-riding seat (Wallet, Peer, the next one) carries
+        // the label without joining a case list (review 2026-07-17).
+        if let wallet = WalletStore.shared.label(forAddress: thing.walletAddress) {
+            return wallet
+        }
         switch thing.source {
-        case "Wallet":    return WalletStore.shared.label(forAddress: thing.walletAddress)
-        case "Bluesky":   return BlueskyStore.shared.rowLabel(for: thing.authorHandle)
-        case "Farcaster": return FarcasterStore.shared.rowLabel(for: thing.authorHandle)
+        // WHY a post is here beats WHO posted it in this slot (2026-07-16): a
+        // liked cast, a channel cast, and your own post used to read
+        // identically, and the row already leads with the author's FACE — so
+        // the word that differentiates is "Liked", "/design", "Mentions you",
+        // not the handle a second time. A post with no such reason (an account
+        // you watch simply posted) falls through to the handle rule, unchanged.
+        case "Bluesky", "Farcaster":
+            if let why = SocialThread.contextLabel(for: thing) { return why }
+            return thing.source == "Bluesky"
+                ? BlueskyStore.shared.rowLabel(for: thing.authorHandle)
+                : FarcasterStore.shared.rowLabel(for: thing.authorHandle)
         // The publisher names itself in the trailing slot — BBC News,
         // TechCrunch — the icon's word twin, the way a social row names its
         // account. Empty on rows that landed before the name was captured.
@@ -137,26 +146,46 @@ struct BandRow: View {
             // live set says the stream is on (honesty at render: the model
             // may still hold a frame a failed or disconnected sync never
             // saw end).
-            if let avatar = identityAvatarURL {
-                // Whose post this is, when several accounts are followed.
-                RemoteThumb(urlString: avatar, size: 26, fallback: thing.source,
-                            circular: true)
-            } else if let addr = identiconAddress {
-                WalletBlockie(address: addr, size: 26)
-            } else if let sender = mailSender, SenderInitial.letter(of: sender) != nil {
-                SenderInitial(sender: sender, size: 26)
-            } else if let publisher = publisherIconURL {
-                // Where the story is FROM leads the row; its picture rides
-                // after the title (below), like a post's attached image.
-                RemoteThumb(urlString: publisher, size: 26, fallback: thing.source)
-            } else if let image = thing.previewImageURL, !image.isEmpty,
-                      thing.source != "Twitch" || live {
-                RemoteThumb(urlString: image, size: 26, fallback: thing.source,
-                            perishable: thing.source == "Twitch")
-            } else if thing.kind == .screenshot, thing.sourceRef != nil {
-                PhotoWell(thing: thing, size: 26)
-            } else {
-                BridgeIcon(name: thing.source, size: 26)
+            Group {
+                if let avatar = identityAvatarURL {
+                    // Whose post this is, when several accounts are followed.
+                    RemoteThumb(urlString: avatar, size: 26, fallback: thing.source,
+                                circular: true)
+                } else if let addr = identiconAddress {
+                    WalletBlockie(address: addr, size: 26)
+                } else if let sender = mailSender, SenderInitial.letter(of: sender) != nil {
+                    SenderInitial(sender: sender, size: 26)
+                } else if let publisher = publisherIconURL {
+                    // Where the story is FROM leads the row; its picture rides
+                    // after the title (below), like a post's attached image.
+                    RemoteThumb(urlString: publisher, size: 26, fallback: thing.source)
+                } else if let image = thing.previewImageURL, !image.isEmpty,
+                          thing.source != "Twitch" || live {
+                    // A token's coin logo is circular in the fat row — keep the
+                    // same shape while its pulse hasn't landed yet, so the coin
+                    // doesn't morph squircle→circle when the price arrives.
+                    RemoteThumb(urlString: image, size: 26, fallback: thing.source,
+                                perishable: thing.source == "Twitch",
+                                circular: thing.source == "Tokens")
+                } else if thing.kind == .screenshot, thing.sourceRef != nil {
+                    PhotoWell(thing: thing, size: 26)
+                } else {
+                    BridgeIcon(name: thing.source, size: 26)
+                }
+            }
+            // Address-poisoning warning (2026-07-20) — the scam works at
+            // exactly this glance (a familiar-looking row, casually
+            // re-copied), so the flag rides the icon itself, not just the
+            // opened sheet (ThingSheetView's `poisoningWarning`, same glyph
+            // and color at a bigger scale).
+            .overlay(alignment: .bottomTrailing) {
+                if thing.securityFlag == "poisoning" {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(.system(size: 9))
+                        .foregroundStyle(DS.destructive)
+                        .padding(3)
+                        .background(Circle().fill(.black.opacity(0.55)))
+                }
             }
             Text(titleText)
                 .dsText(.body17)
@@ -180,13 +209,7 @@ struct BandRow: View {
                 RemoteThumb(urlString: art, size: 26, fallback: thing.source)
             }
             VStack(alignment: .trailing, spacing: 1) {
-                if let pulse {
-                    Sparkline(closes: pulse.closes, up: pulse.change24h >= 0)
-                    Text(Self.deltaText(pulse.change24h))
-                        .font(.system(size: 11, weight: .semibold))
-                        .monospacedDigit()
-                        .foregroundStyle(pulse.change24h >= 0 ? DS.confirm : DS.destructive)
-                } else if live {
+                if live {
                     HStack(spacing: 4) {
                         Circle().fill(DS.confirm).frame(width: 6, height: 6)
                         Text("Live").dsText(.label12).foregroundStyle(DS.confirm)
@@ -196,8 +219,7 @@ struct BandRow: View {
                 } else {
                     LiveTimeText(date: thing.capturedAt)
                 }
-                // The signed change occupies the tag line on a pulsed row.
-                if pulse == nil, let project {
+                if let project {
                     Text(project)
                         .font(.system(size: 11, weight: .medium))
                         .foregroundStyle(projectInk)
@@ -207,18 +229,86 @@ struct BandRow: View {
         }
         .padding(.vertical, DS.Space.s2)
     }
+}
 
-    /// "+4.2%" / "-7.8%" — one decimal; sign is the point.
-    private static func deltaText(_ change: Double) -> String {
-        String(format: "%+.1f%%", change * 100)
+
+/// The fat token row (prd §102, 2026-07-17, approved mock; supersedes Option
+/// A's sparkline-in-the-band): the coin leads at 38pt, the name sits over
+/// "SYMBOL · $94.1B cap", and the right stack is the live price in the
+/// rounded display voice over a solid state pill. The pill carries direction
+/// alone, number-first, so color is never the only voice; no timestamp (a
+/// watchlist row's "watched N days ago" was already ruled noise, 2026-07-15).
+/// Its own struct like MusicRow/CheckRow/ExcerptRow — the caller (FeedScreen's
+/// shapedRow) mounts it only when a pulse EXISTS and falls back to the plain
+/// band + timestamp until one lands, so this view never fakes a price.
+struct TokenRow: View {
+    let thing: Thing
+    let pulse: TokenPulse.Pulse
+
+    var body: some View {
+        HStack(spacing: DS.Space.s3) {
+            if let image = thing.previewImageURL, !image.isEmpty {
+                RemoteThumb(urlString: image, size: 38, fallback: thing.source,
+                            circular: true)
+            } else {
+                BridgeIcon(name: thing.source, size: 38)
+            }
+            VStack(alignment: .leading, spacing: 1) {
+                Text(tokenName)
+                    .dsText(.body17).fontWeight(.semibold)
+                    .foregroundStyle(DS.textPrimary)
+                    .lineLimit(1)
+                if let vitals {
+                    Text(vitals)
+                        .dsText(.label12).foregroundStyle(DS.textSecondary)
+                        .monospacedDigit()
+                        .lineLimit(1)
+                }
+            }
+            Spacer(minLength: DS.Space.s2)
+            VStack(alignment: .trailing, spacing: 3) {
+                Text(TokenChartStyle.priceText(pulse.price))
+                    .dsText(.price16)
+                    .foregroundStyle(DS.textPrimary)
+                    .monospacedDigit()
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+                TokenDeltaPill(change: pulse.change24h, label: "",
+                               compact: true, solid: true)
+            }
+        }
+        .padding(.vertical, DS.Space.s2)
+    }
+
+    /// "Solana" out of "Solana · $SOL" — via the format's one parser
+    /// (`TokensAsk.name/symbol`), never re-split here (review 2026-07-17: a
+    /// third inline parser had already drifted from the canonical one).
+    private var tokenName: String { TokensAsk.name(of: thing.title) }
+
+    /// "SOL · $94.1B cap" — the symbol plus the market size the pulse
+    /// carried. FDV stands in, labeled as FDV, when the source reported no
+    /// cap; neither reported → the symbol stands alone; no symbol either →
+    /// no line (never an invented number).
+    private var vitals: String? {
+        let parsed = TokensAsk.symbol(of: thing.title)
+        let symbol: String? = parsed == thing.title ? nil : parsed
+        let size: String? = if let cap = pulse.marketCap {
+            "\(TokenStats.compact(cap)) cap"
+        } else if let fdv = pulse.fdv {
+            "\(TokenStats.compact(fdv)) FDV"
+        } else { nil }
+        let joined = [symbol, size].compactMap(\.self).joined(separator: " · ")
+        return joined.isEmpty ? nil : joined
     }
 }
 
 
-/// The 24h price line a token row wears (Option A, 2026-07-10): 2pt round
-/// stroke, no axes, no dots — the signed percent beneath carries the number,
-/// the line carries the shape. Green up / red down is state (the color law's
-/// third permitted job), matching the confirm/destructive family.
+/// The 24h price line (Option A, 2026-07-10): 2pt round stroke, no axes, no
+/// dots — the signed percent beneath carries the number, the line carries
+/// the shape. Green up / red down is state (the color law's third permitted
+/// job), matching the confirm/destructive family. Feed rows retired it for
+/// the fat token anatomy (TokenRow, 2026-07-17); TokenWatchScreen's
+/// management rows still wear it.
 struct Sparkline: View {
     let closes: [Double]
     let up: Bool
@@ -1155,6 +1245,134 @@ struct ListeningLede: View {
             Text(count == 1 ? "1 song today" : "\(count) songs today")
                 .dsText(.body17).foregroundStyle(DS.textPrimary)
             Spacer(minLength: 0)
+        }
+        .padding(.vertical, DS.Space.s2)
+    }
+}
+
+/// The reading list's lede (2026-07-21): a saved link is a DOOR, not a read,
+/// so the shape counts the pile instead of pretending the rows are consumed —
+/// how many landed this month, how many are older, and the oldest one still
+/// waiting. Facts only (§10): no streaks, no goals, and "still here" not
+/// "unopened" (Thing tracks no read state, so the model can't claim it).
+struct ReadingLede: View {
+    let thisMonth: Int
+    let older: Int
+    let oldest: Thing?
+
+    private var summary: String {
+        var parts: [String] = []
+        if thisMonth > 0 {
+            parts.append(thisMonth == 1 ? String(localized: "1 saved this month")
+                                        : String(localized: "\(thisMonth) saved this month"))
+        }
+        if older > 0 {
+            parts.append(older == 1 ? String(localized: "1 older")
+                                    : String(localized: "\(older) older"))
+        }
+        return parts.joined(separator: " · ")
+    }
+
+    /// The oldest save's domain — its identity, the same "www."-stripped host
+    /// ReadingRow shows; falls back to the title when there's no URL to read.
+    private func label(for thing: Thing) -> String {
+        let text = thing.content.isEmpty ? thing.title : thing.content
+        guard let host = Capture.detectURL(in: text)?.host() else { return thing.title }
+        return host.hasPrefix("www.") ? String(host.dropFirst(4)) : host
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s1) {
+            Text(summary.isEmpty ? String(localized: "Reading list") : summary)
+                .dsText(.body17).foregroundStyle(DS.textPrimary)
+            if let oldest {
+                HStack(spacing: DS.Space.s2) {
+                    Text("Oldest still here")
+                        .dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                    Text(label(for: oldest))
+                        .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                        .lineLimit(1)
+                    Spacer(minLength: 0)
+                    LiveTimeText(date: oldest.capturedAt)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.vertical, DS.Space.s2)
+    }
+}
+
+/// Bitrefill's lede: the account balance the API last reported, with this
+/// month's order count beside it. Facts only — no spend prompts, and no
+/// "unused"/"expires" claims the API can't back (BitrefillBridge's ceiling).
+struct BitrefillLede: View {
+    let balance: String
+    let monthCount: Int
+
+    var body: some View {
+        HStack(spacing: DS.Space.s2) {
+            Text("Balance")
+                .dsText(.body17).foregroundStyle(DS.textPrimary)
+            Spacer(minLength: 0)
+            if monthCount > 0 {
+                Text(monthCount == 1 ? "1 order this month" : "\(monthCount) orders this month")
+                    .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+            }
+            Text(balance)
+                .dsText(.body17).fontWeight(.semibold)
+                .foregroundStyle(DS.textPrimary)
+        }
+        .padding(.vertical, DS.Space.s2)
+    }
+}
+
+/// 1Claw's lede: the key's reach — how many vaults its API last reported,
+/// with the grant-row count beside it. Facts only: no "secure"/"exposed"
+/// judgments, and no claims about grants the key couldn't read.
+struct OneClawLede: View {
+    let vaults: String
+    let grantCount: Int
+
+    var body: some View {
+        HStack(spacing: DS.Space.s2) {
+            Text("Access")
+                .dsText(.body17).foregroundStyle(DS.textPrimary)
+            Spacer(minLength: 0)
+            if grantCount > 0 {
+                Text(grantCount == 1 ? "1 grant" : "\(grantCount) grants")
+                    .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+            }
+            Text(vaults)
+                .dsText(.body17).fontWeight(.semibold)
+                .foregroundStyle(DS.textPrimary)
+        }
+        .padding(.vertical, DS.Space.s2)
+    }
+}
+
+/// Wallet's lede: the portfolio's own balance line (2026-07-18: "should the
+/// wallet source feed show sparkline / balance line? do we have that data?"
+/// — yes, `WalletStore.ValueSample` already samples every real holdings
+/// fetch). A real chart, not invented: empty until two aligned samples exist,
+/// the same honesty floor `combinedValueSamples()` keeps — a freshly-watched
+/// wallet shows the treemap alone until its history has a second point.
+struct WalletBalanceLede: View {
+    let chart: TokenChart
+    @Environment(\.colorScheme) private var scheme
+
+    private var accent: Color { TokenChartStyle.accent(change: chart.change, scheme: scheme) }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+            HStack(spacing: DS.Space.s2) {
+                Text("Balance")
+                    .dsText(.body17).foregroundStyle(DS.textPrimary)
+                Spacer(minLength: 0)
+                Text(TokenChartStyle.priceText(chart.price))
+                    .dsText(.body17).fontWeight(.semibold).foregroundStyle(DS.textPrimary)
+                TokenDeltaPill(change: chart.change, label: "watched", compact: true)
+            }
+            TokenChartPlot(chart: chart, accent: accent, height: 40, pulses: false)
         }
         .padding(.vertical, DS.Space.s2)
     }

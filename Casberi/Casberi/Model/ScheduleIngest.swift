@@ -8,16 +8,16 @@ import SwiftData
 /// ends in proof — things land. Dedupe rides sourceRef.
 enum ScheduleIngest {
 
-    /// How far ahead calendar events are pulled — the "Coming up" lane's
-    /// horizon (ComingUp.window). Re-ruling 2026-07-14: the feed used to stop
-    /// at the end of today ("the calendar owns the future"); it now reaches a
-    /// week ahead so imminent events can surface on Home as things. Past events
-    /// still start a week back, so the window is a rolling ±7 days.
+    /// How far ahead calendar events are pulled. Re-ruling 2026-07-14: the feed
+    /// used to stop at the end of today ("the calendar owns the future"); it
+    /// now reaches a week ahead so imminent events can surface as things. Past
+    /// events still start a week back, so the window is a rolling ±7 days.
     static let forwardWindow: TimeInterval = 7 * 86_400
 
-    /// Events from a week back through a week ahead — the past feeds the record,
-    /// the next seven days feed the "Coming up" card (re-ruling 2026-07-14).
-    /// BridgeRefresh re-runs this each foreground, so the forward window rolls.
+    /// Events from a week back through a week ahead — the past feeds the
+    /// record, the next seven days feed imminent-event things (re-ruling
+    /// 2026-07-14). BridgeRefresh re-runs this each foreground, so the
+    /// forward window rolls.
     ///
     /// Recurring events (2026-07-14): EventKit hands every occurrence of a
     /// recurring event the SAME `eventIdentifier`, so a daily meeting arrives as
@@ -32,7 +32,19 @@ enum ScheduleIngest {
     static func connectCalendar(context: ModelContext) async -> Int? {
         let store = EKEventStore()
         guard (try? await store.requestFullAccessToEvents()) == true else { return nil }
+        return await ingestEvents(store: store, context: context)
+    }
 
+    /// The bare re-scan BridgeRefresh uses — runs only when access is already
+    /// granted, so it never re-presents the permission dialog on every
+    /// foreground (field report 2026-07-13: same bug the Music/Contacts
+    /// refresh paths already had fixed).
+    static func refreshCalendar(context: ModelContext) async -> Int? {
+        guard EKEventStore.authorizationStatus(for: .event) == .fullAccess else { return nil }
+        return await ingestEvents(store: EKEventStore(), context: context)
+    }
+
+    private static func ingestEvents(store: EKEventStore, context: ModelContext) async -> Int? {
         let start = Date.now.addingTimeInterval(-7 * 86_400)
         let end = Date.now.addingTimeInterval(forwardWindow)
         let predicate = store.predicateForEvents(withStart: start, end: end, calendars: nil)
@@ -84,7 +96,7 @@ enum ScheduleIngest {
             context.insert(thing)
             added += 1
         }
-        try? context.save()
+        context.saveHonestly()
         return added
     }
 
@@ -117,36 +129,88 @@ enum ScheduleIngest {
             : start >= now
     }
 
+    /// Whether a thing stands for a real reminder in the system store — the
+    /// callers that promise "this writes through" (and the toasts that say
+    /// so) key off this, so a demo seed can't wear a real write's copy.
+    static func isEKBacked(_ sourceRef: String?) -> Bool {
+        sourceRef?.hasPrefix("ekreminder:") == true
+    }
+
     /// Completes (or un-completes) the real reminder behind a thing — the
     /// lightest write (shaped-feeds ruling): the check circle is the consent,
-    /// tapping again is the undo. No-op for things that aren't EK-backed
-    /// (demo corpus) — those just mark locally.
-    static func setCompleted(_ sourceRef: String?, _ done: Bool) async {
-        guard let ref = sourceRef, ref.hasPrefix("ekreminder:") else { return }
+    /// tapping again is the undo. No-op (returns `true`, nothing to fail) for
+    /// things that aren't EK-backed (demo corpus) — those just mark locally.
+    /// Returns whether the real reminder actually changed, so the caller can
+    /// tell the truth instead of an optimistic toast that outlives a failed
+    /// write (honesty rule — a check mark that silently doesn't stick is
+    /// exactly the "fake status" the design law bans).
+    @discardableResult
+    static func setCompleted(_ sourceRef: String?, _ done: Bool) async -> Bool {
+        guard let ref = sourceRef, isEKBacked(ref) else { return true }
         let id = String(ref.dropFirst("ekreminder:".count))
         let store = EKEventStore()
         guard (try? await store.requestFullAccessToReminders()) == true,
               let reminder = store.calendarItem(withIdentifier: id) as? EKReminder
-        else { return }
+        else { return false }
         reminder.isCompleted = done
-        try? store.save(reminder, commit: true)
+        do {
+            try store.save(reminder, commit: true)
+            return true
+        } catch {
+            return false
+        }
     }
 
-    /// Open reminders — the list as it stands.
+    /// Open reminders — the list as it stands. New open reminders land;
+    /// already-landed things re-sync done-state, title, and due date from
+    /// the real list (completed ones never land as new — the corpus records
+    /// the list, not its archaeology).
     static func connectReminders(context: ModelContext) async -> Int? {
         let store = EKEventStore()
         guard (try? await store.requestFullAccessToReminders()) == true else { return nil }
+        return await ingestReminders(store: store, context: context)
+    }
 
+    /// The bare re-scan BridgeRefresh uses — runs only when access is already
+    /// granted, so it never re-presents the permission dialog on every
+    /// foreground (field report 2026-07-13, same bug as connectCalendar).
+    static func refreshReminders(context: ModelContext) async -> Int? {
+        guard EKEventStore.authorizationStatus(for: .reminder) == .fullAccess else { return nil }
+        return await ingestReminders(store: EKEventStore(), context: context)
+    }
+
+    private static func ingestReminders(store: EKEventStore, context: ModelContext) async -> Int? {
         let predicate = store.predicateForReminders(in: nil)
         let reminders: [EKReminder] = await withCheckedContinuation { cont in
             store.fetchReminders(matching: predicate) { cont.resume(returning: $0 ?? []) }
         }
 
-        let existing = IngestSupport.existingSourceRefs(context)
+        let existing = IngestSupport.thingsByRef(context, source: "Reminders")
         var added = 0
-        for reminder in reminders where !reminder.isCompleted {
+        for reminder in reminders {
             let ref = "ekreminder:\(reminder.calendarItemIdentifier)"
-            guard !existing.contains(ref) else { continue }
+            if let thing = existing[ref] {
+                // The real list is authoritative on refresh — a reminder
+                // completed (or reopened) in the Reminders app carries that
+                // state back here, the missing other half of the check
+                // circle's write-through; without it the two lists silently
+                // drift. Title and due-date edits follow the same way.
+                if reminder.isCompleted, thing.mark != .done {
+                    thing.mark = .done
+                } else if !reminder.isCompleted, thing.mark == .done {
+                    thing.mark = .todo
+                }
+                if let title = reminder.title, thing.title != title {
+                    thing.title = title
+                }
+                let due = reminder.dueDateComponents?.date
+                if thing.dueAt != due {
+                    thing.dueAt = due
+                    thing.content = dueLine(reminder)
+                }
+                continue
+            }
+            guard !reminder.isCompleted else { continue }
             let thing = Thing(
                 kind: .reminder,
                 title: reminder.title ?? "Reminder",
@@ -161,7 +225,7 @@ enum ScheduleIngest {
             context.insert(thing)
             added += 1
         }
-        try? context.save()
+        context.saveHonestly()
         return added
     }
 

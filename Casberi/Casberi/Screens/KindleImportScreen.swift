@@ -31,15 +31,16 @@ struct KindleImportScreen: View {
             }
             .listRowSeparator(.hidden)
             if !recent.isEmpty {
-                PinToHomeButton(source: "Kindle", inSection: true)
-                    .listRowSeparator(.hidden)
                 RecentThingsSection(header: "Imported", things: Array(recent))
                     .listRowSeparator(.hidden)
             }
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
+        .bridgeSetupWash(name: "Kindle")
+        .dsAdaptiveContentWidth()
         .dsPageBackground()
+        .dsSoftTopEdge()
         .navigationTitle("Kindle")
         .navigationBarTitleDisplayMode(.large)
         .fileImporter(isPresented: $importing,

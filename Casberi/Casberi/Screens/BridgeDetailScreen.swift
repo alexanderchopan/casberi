@@ -18,10 +18,6 @@ struct BridgeDetailScreen: View {
     private var bridge: BridgeApp? {
         store.bridges.first { $0.id == bridgeID }
     }
-    private var pinnedToHome: Bool {
-        guard let bridge else { return false }
-        return HomePinnedSources.shared.isPinned(bridge.name)
-    }
     /// This bridge's three most recent things — cached on appearance rather than
     /// re-fetched twice on every body pass. The predicate is per-bridge, so this
     /// is the cache path rather than a static @Query.
@@ -68,14 +64,6 @@ struct BridgeDetailScreen: View {
                         }
                     }
 
-                    // Pin to Home sits right after the capabilities and before
-                    // the evidence list — the same spot every app screen puts
-                    // it (user, 2026-07-14). Shown only once the app has landed
-                    // a thing; pinning an empty source composes no tile.
-                    if !recent.isEmpty {
-                        PinToHomeButton(source: bridge.name)
-                    }
-
                     // Recent = EVIDENCE, not content: three receipts that the
                     // bridge delivers (connect ends in proof). The rows open;
                     // the full record is one hop away in Feed.
@@ -115,17 +103,6 @@ struct BridgeDetailScreen: View {
                         }
                     }
 
-                    // Pin to Home — the board grows from the catalog: pinning
-                    // an app places its tile (its recent things, in the app's
-                    // shape) on Home. Every connected app is pinnable now (ruling
-                    // 2026-07-12: pinning is per-APP, not per-item); one verb,
-                    // both directions. Shown only once the app has landed a thing
-                    // — pinning an empty source is a dead control (it composes no
-                    // tile). The corpus bump recomposes Home while this is on top.
-                    if !recent.isEmpty {
-                        PinToHomeButton(source: bridge.name)
-                    }
-
                     // Controls — words say what happens.
                     HStack(spacing: DS.Space.s3) {
                         Button(bridge.status == .paused ? "Resume" : "Pause") {
@@ -148,7 +125,9 @@ struct BridgeDetailScreen: View {
                 .padding(.bottom, ShellMetrics.bottomInset)
             }
             .scrollIndicators(.hidden)
+            .dsAdaptiveContentWidth()
             .dsPageBackground()
+            .dsSoftTopEdge()
             .onAppear { loadRecent(source: bridge.name) }
             .navigationTitle(bridge.name)
             .navigationBarTitleDisplayMode(.inline)
@@ -158,11 +137,9 @@ struct BridgeDetailScreen: View {
             .confirmationDialog("Remove \(bridge.name)?",
                                 isPresented: $confirmRemove, titleVisibility: .visible) {
                 Button("Keep its things") {
-                    HomePinnedSources.shared.clear(bridge.name)
                     store.remove(bridge.id); dismiss()
                 }
                 Button("Remove its things too", role: .destructive) {
-                    HomePinnedSources.shared.clear(bridge.name)
                     purgeThings(from: bridge.name)
                     store.remove(bridge.id); dismiss()
                 }
@@ -204,6 +181,6 @@ struct BridgeDetailScreen: View {
         for thing in purged {
             modelContext.delete(thing)
         }
-        try? modelContext.save()
+        modelContext.saveHonestly()
     }
 }

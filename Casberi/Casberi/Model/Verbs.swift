@@ -15,14 +15,14 @@ struct Verb: Identifiable {
         case markDone                 // rung 1 mark
         case approve                  // S10: the person's yes — IS the consent
         case deny                     // S10: the person's no
-        case bridgeWrite(BridgeWrite) // write BACK to the bridge (prd §67 ③)
+        case translate                // read: system Translation sheet over the thing's own text
     }
     let label: String
     let icon: String
     let action: Action
     var isWrite: Bool {
         switch action {
-        case .addToCalendar, .addToReminders, .bridgeWrite: return true
+        case .addToCalendar, .addToReminders: return true
         default: return false
         }
     }
@@ -36,7 +36,7 @@ struct Verb: Identifiable {
         case .markDone:       return "Done"
         case .approve:        return "Approve"
         case .deny:           return "Deny"
-        case .bridgeWrite:    return "Do it"
+        case .translate:      return "Translate"
         }
     }
     var id: String { label }
@@ -57,17 +57,6 @@ enum VerbDerivation {
     /// one utility. Reads pass; writes confirm.
     static func verbs(for thing: Thing) -> [Verb] {
         var out: [Verb] = []
-
-        // 0 — the write-back, when the thing's own bridge can take one
-        // (prd §67 ③: Complete in Todoist, Close on GitHub). It LEADS: acting
-        // on the thing at its source is the strongest verb a thing can carry.
-        // Feed swipes never see it (they surface only the open hand-off);
-        // in the sheet it confirms first, like every write.
-        if let write = BridgeWrites.write(for: thing) {
-            let face = BridgeWrites.label(for: write)
-            out.append(Verb(label: face.label, icon: face.icon,
-                            action: .bridgeWrite(write)))
-        }
 
         // 1 — the kind's primary verb.
         switch thing.kind {
@@ -119,6 +108,9 @@ enum VerbDerivation {
                             action: .addToReminders))
             if let v = externalVerb(for: thing, apps: [.todoist]) { out.append(v) }
             out.append(Verb(label: "Copy text", icon: "doc.on.doc", action: .copyText))
+            if !(thing.postText ?? thing.content).isEmpty {
+                out.append(Verb(label: "Translate", icon: "character.bubble", action: .translate))
+            }
         case .chat, .mail, .file, .voice:
             // A social post opens its own thread on the network — the specific
             // permalink (thing.content), so it lands on the cast, not the
@@ -130,6 +122,11 @@ enum VerbDerivation {
                                 action: .openURL(url)))
             }
             out.append(Verb(label: "Copy text", icon: "doc.on.doc", action: .copyText))
+            // The full body — a post's own words (postText), else whatever
+            // the kind carries as its text (a transcript, a mail body).
+            if !(thing.postText ?? thing.content).isEmpty {
+                out.append(Verb(label: "Translate", icon: "character.bubble", action: .translate))
+            }
         default:
             break
         }
@@ -367,6 +364,7 @@ enum PlaceWords {
         case .transaction: return "in your wallet"
         case .contact:     return "in your contacts"
         case .product:     return "from a store you follow"
+        case .accessory:   return "in your home"
         default:           return "in your things"
         }
     }

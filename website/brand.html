@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Casberi — Brand</title>
+<meta name="description" content="The Casberi brand kit — the berry mark, the name, color, type, and downloadable assets.">
+<meta property="og:title" content="Casberi — Brand">
+<meta property="og:description" content="The Casberi brand kit — the berry mark, the name, color, type, and downloadable assets.">
+<meta property="og:type" content="article">
+<link rel="icon" href="icons/casberi-logo.png">
+<link rel="stylesheet" href="styles.css?v=202607201645">
+<style>
+  /* ---------- brand page styles (page-scoped) ---------- */
+  .brand-page h1, .brand-page h2, .brand-page h3,
+  .brand-page .deck, .mode-tile figcaption b, .sw b, .ramp-row b,
+  .dl-btn, .rulecard b {
+    font-family: ui-rounded, -apple-system, BlinkMacSystemFont, "SF Pro Rounded", "Segoe UI", Roboto, sans-serif;
+  }
+  .brand-page { max-width: 700px; margin: 0 auto; padding-bottom: 40px; }
+  .brand-hero { padding: 44px 0 8px; }
+  .brand-hero h1 {
+    font-size: clamp(38px, 7vw, 64px);
+    line-height: 1.02; font-weight: 850; color: var(--ink); text-wrap: balance;
+  }
+  .brand-hero p.sub { font-size: 18px; color: var(--muted); max-width: 600px; margin-top: 18px; }
+  .brand-page section { margin-top: 64px; padding: 0; }
+  .brand-page h2 { font-size: 27px; font-weight: 800; color: var(--ink); margin-bottom: 6px; }
+  .brand-page .deck { font-size: 15.5px; color: var(--muted); margin-bottom: 22px; max-width: 620px; }
+  .brand-page p { font-size: 15.5px; color: var(--muted); }
+  .brand-page p b, .brand-page li b { color: var(--ink); font-weight: 700; }
+
+  /* --- the name --- */
+  .say { font-size: 22px; color: var(--ink); font-weight: 700; margin-bottom: 10px; }
+  .say span { color: var(--blue-bright); }
+  .name-rules { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 18px; }
+  .name-rules span {
+    font-size: 13.5px; font-weight: 650; padding: 8px 15px; border-radius: 999px;
+    background: var(--surface); color: var(--ink);
+  }
+  .name-rules span.no { color: var(--faint); text-decoration: line-through; text-decoration-color: var(--berry); }
+
+  /* --- the mark --- */
+  .mode-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin: 6px 0 20px; }
+  @media (max-width: 560px) { .mode-grid { grid-template-columns: 1fr; } }
+  .mode-tile { margin: 0; }
+  .mode-tile .art {
+    border-radius: 22.37%; overflow: hidden; aspect-ratio: 1; display: block;
+    box-shadow: 0 8px 28px rgba(0,0,0,.45);
+  }
+  .mode-tile .art svg { display: block; width: 100%; height: 100%; }
+  .mode-tile figcaption { margin-top: 12px; font-size: 13px; color: var(--faint); line-height: 1.45; }
+  .mode-tile figcaption b { display: block; font-size: 13.5px; color: var(--ink); font-weight: 700; }
+  .rulecards { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 20px; }
+  @media (max-width: 560px) { .rulecards { grid-template-columns: 1fr; } }
+  .rulecard { background: var(--surface); border-radius: var(--radius-sm); padding: 16px 18px; }
+  .rulecard b { display: block; font-size: 14px; color: var(--ink); font-weight: 750; margin-bottom: 4px; }
+  .rulecard p { font-size: 13.5px; color: var(--muted); line-height: 1.5; }
+
+  /* --- color --- */
+  .sw-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 22px; }
+  @media (max-width: 560px) { .sw-grid { grid-template-columns: repeat(2, 1fr); } }
+  .sw {
+    border: 0; text-align: left; cursor: pointer; padding: 0; background: none;
+    font-family: inherit; border-radius: var(--radius-sm); overflow: hidden;
+    background: var(--surface); transition: transform .18s ease;
+  }
+  .sw:hover { transform: translateY(-2px); }
+  .sw .chip { display: block; height: 64px; }
+  .sw .meta { display: block; padding: 10px 12px 12px; }
+  .sw b { display: block; font-size: 13px; color: var(--ink); font-weight: 700; }
+  .sw code {
+    font-size: 12px; color: var(--faint);
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  .sw.copied code { color: var(--confirm); }
+  .sw-label { font-size: 12.5px; font-weight: 650; color: var(--faint); margin: 0 0 10px; }
+  .copy-hint { font-size: 12.5px; color: var(--faint); margin-top: -8px; margin-bottom: 22px; }
+
+  /* --- type --- */
+  .ramp { background: var(--surface); border-radius: var(--radius); padding: 26px 26px 20px; margin-bottom: 20px; }
+  .ramp-row { display: flex; align-items: baseline; gap: 18px; padding: 7px 0; }
+  .ramp-row b { color: var(--ink); line-height: 1.15;
+    font-family: ui-rounded, -apple-system, BlinkMacSystemFont, "SF Pro Rounded", sans-serif; }
+  .ramp-row.plain b { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+  .ramp-row code {
+    font-size: 12px; color: var(--faint); white-space: nowrap;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  .type-rules { list-style: none; display: grid; gap: 10px; margin-top: 18px; }
+  .type-rules li { font-size: 14.5px; color: var(--muted); padding-left: 22px; position: relative; line-height: 1.55; }
+  .type-rules li::before { content: ""; position: absolute; left: 4px; top: 9px; width: 7px; height: 7px; border-radius: 50%; background: var(--blue-bright); }
+
+  /* --- shape --- */
+  .shape-row { display: flex; gap: 18px; align-items: flex-end; flex-wrap: wrap; margin: 18px 0 20px; }
+  .shape-demo { text-align: center; }
+  .shape-demo .box { width: 92px; height: 92px; background: var(--surface-2); margin: 0 auto; }
+  .shape-demo .box.r10 { border-radius: 10px; }
+  .shape-demo .box.r16 { border-radius: 16px; }
+  .shape-demo .box.ricon { border-radius: 22.37%; }
+  .shape-demo small { display: block; margin-top: 10px; font-size: 12.5px; color: var(--faint); }
+
+  /* --- downloads --- */
+  .dl-row { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 18px; }
+  .dl-btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-size: 14.5px; font-weight: 700; color: #fff; background: var(--blue);
+    border-radius: 999px; padding: 12px 22px;
+    transition: background .18s ease, transform .18s ease;
+  }
+  .dl-btn:hover { background: var(--blue-bright); text-decoration: none; transform: translateY(-1px); }
+  .dl-btn.quiet { background: var(--surface); color: var(--ink); }
+  .dl-btn.quiet:hover { background: var(--surface-2); }
+  .dl-note { font-size: 12.5px; color: var(--faint); margin-top: 14px; }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <nav>
+    <a class="brand" href="/">
+      <img class="brandmark" src="icons/casberi-logo.png" alt="">
+      Casberi
+    </a>
+    <div class="nav-links">
+      <a href="/">Home</a>
+      <a href="features.html">Features</a>
+      <a href="docs.html">Docs</a>
+      <a href="privacy.html">Privacy</a>
+    </div>
+  </nav>
+</div>
+
+<div class="wrap brand-page">
+
+  <header class="brand-hero">
+    <h1>The Casberi brand.</h1>
+    <p class="sub">The berry mark, the name, the color, and the type — everything here is final art and fair game for press, reviews, and integrations. Please don't redraw any of it.</p>
+  </header>
+
+  <section id="name">
+    <h2>The name</h2>
+    <p class="deck">Casberi is cache + berry — one container that holds many things.</p>
+    <p class="say">Say it <span>kaz-BEHR-ee</span> — the raspberry stress pattern.</p>
+    <p>The front syllable carries <b>cache</b> (and a little <i>casa</i> — home); the tail carries the berry sound without the berry spelling. It's written like a name: one capital, no internal caps.</p>
+    <div class="name-rules">
+      <span>Casberi</span>
+      <span class="no">CasBerry</span>
+      <span class="no">Casberry</span>
+      <span class="no">CASBERI</span>
+      <span class="no">casberi</span>
+    </div>
+  </section>
+
+  <section id="mark">
+    <h2>The mark</h2>
+    <p class="deck">A berry built from seven opaque drupelets in one hue. Light enters from the top-left and fades across the cluster — many things, one container.</p>
+
+    <div class="mode-grid">
+      <figure class="mode-tile">
+        <span class="art"><svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Casberi mark, dark mode"><rect width="1024" height="1024" fill="#000000"/><circle cx="598" cy="708" r="108" fill="rgb(2,26,51)"/><circle cx="684" cy="548" r="108" fill="rgb(3,42,82)"/><circle cx="426" cy="708" r="108" fill="rgb(3,42,82)"/><circle cx="512" cy="548" r="108" fill="rgb(5,59,115)"/><circle cx="598" cy="388" r="108" fill="rgb(6,79,153)"/><circle cx="340" cy="548" r="108" fill="rgb(6,79,153)"/><circle cx="426" cy="388" r="108" fill="rgb(10,132,255)"/></svg></span>
+        <figcaption><b>Dark</b>Black ground, blue mark. The default.</figcaption>
+      </figure>
+      <figure class="mode-tile">
+        <span class="art"><svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Casberi mark, light mode"><rect width="1024" height="1024" fill="#FFFFFF"/><circle cx="598" cy="708" r="108" fill="rgb(206,230,255)"/><circle cx="684" cy="548" r="108" fill="rgb(177,216,255)"/><circle cx="426" cy="708" r="108" fill="rgb(177,216,255)"/><circle cx="512" cy="548" r="108" fill="rgb(145,200,255)"/><circle cx="598" cy="388" r="108" fill="rgb(108,181,255)"/><circle cx="340" cy="548" r="108" fill="rgb(108,181,255)"/><circle cx="426" cy="388" r="108" fill="rgb(10,132,255)"/></svg></span>
+        <figcaption><b>Light</b>White ground, blue mark. For light surfaces.</figcaption>
+      </figure>
+      <figure class="mode-tile">
+        <span class="art"><svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Casberi mark, tinted mode"><rect width="1024" height="1024" fill="#000000"/><circle cx="598" cy="708" r="108" fill="rgb(51,51,51)"/><circle cx="684" cy="548" r="108" fill="rgb(82,82,82)"/><circle cx="426" cy="708" r="108" fill="rgb(82,82,82)"/><circle cx="512" cy="548" r="108" fill="rgb(115,115,115)"/><circle cx="598" cy="388" r="108" fill="rgb(153,153,153)"/><circle cx="340" cy="548" r="108" fill="rgb(153,153,153)"/><circle cx="426" cy="388" r="108" fill="rgb(255,255,255)"/></svg></span>
+        <figcaption><b>Tinted</b>Grayscale luminance master — iOS applies the user's tint.</figcaption>
+      </figure>
+    </div>
+
+    <div class="rulecards">
+      <div class="rulecard">
+        <b>One hue, seven tones</b>
+        <p>Every drupelet is a solid pre-mixed step of #0A84FF toward the ground. No gradients, no alpha, no second hue.</p>
+      </div>
+      <div class="rulecard">
+        <b>Front occludes back</b>
+        <p>Drupelets draw dimmest-first so the bright front ones cover the back — the way a real berry sits.</p>
+      </div>
+      <div class="rulecard">
+        <b>Square canvas, no baked radius</b>
+        <p>The corners here are display-only. iOS applies the superellipse mask; ship the square art.</p>
+      </div>
+      <div class="rulecard">
+        <b>Don't redraw it</b>
+        <p>The files below are final art, legible down to 29px. No recoloring, restyling, mascots, or wordmark lockups.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="principles">
+    <h2>Principles</h2>
+    <p class="deck">Six rules govern every Casberi surface — the app, the site, and anything wearing the mark. None of them have exceptions.</p>
+    <div class="rulecards">
+      <div class="rulecard">
+        <b>Color earns its place</b>
+        <p>Color carries identity, state, or magnitude — never decoration. One tint does all the interactive work; a second hue must mean something.</p>
+      </div>
+      <div class="rulecard">
+        <b>Nothing draws a line</b>
+        <p>No hairlines, no dividers, no borders. Surfaces separate by spacing, tone, and a soft ambient shadow — zero exceptions.</p>
+      </div>
+      <div class="rulecard">
+        <b>Honest, or absent</b>
+        <p>No dead controls, no fake status, no placeholder numbers. A value is live or it isn't shown; a disabled control looks disabled.</p>
+      </div>
+      <div class="rulecard">
+        <b>Plain words</b>
+        <p>Copy speaks like a person — no sync, scope, token, or OAuth where a person reads it. Sentence case, always.</p>
+      </div>
+      <div class="rulecard">
+        <b>One animation per moment</b>
+        <p>Motion is 250&nbsp;ms on Apple's sheet curve, and each moment gets one move. Delight is a single well-placed gesture, not a shimmer on everything.</p>
+      </div>
+      <div class="rulecard">
+        <b>Infrastructure, not a mascot</b>
+        <p>The agent has no face, no name, no persona. The berry is a container, not a character — it never gets eyes.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="color">
+    <h2>Color</h2>
+    <p class="deck">One blue does the interactive work everywhere; the berry is the delight accent. In the app, color carries identity, state, or magnitude — never decoration.</p>
+
+    <p class="sw-label">Brand</p>
+    <div class="sw-grid">
+      <button class="sw" data-hex="#1673E6"><span class="chip" style="background:#1673e6"></span><span class="meta"><b>Casberi blue</b><code>#1673E6</code></span></button>
+      <button class="sw" data-hex="#3B8CF0"><span class="chip" style="background:#3b8cf0"></span><span class="meta"><b>Blue, bright</b><code>#3B8CF0</code></span></button>
+      <button class="sw" data-hex="#0A84FF"><span class="chip" style="background:#0a84ff"></span><span class="meta"><b>App tint</b><code>#0A84FF</code></span></button>
+      <button class="sw" data-hex="#E0345C"><span class="chip" style="background:#e0345c"></span><span class="meta"><b>Berry</b><code>#E0345C</code></span></button>
+    </div>
+
+    <p class="sw-label">State</p>
+    <div class="sw-grid">
+      <button class="sw" data-hex="#30D158"><span class="chip" style="background:#30d158"></span><span class="meta"><b>Confirm</b><code>#30D158</code></span></button>
+      <button class="sw" data-hex="#FF9F0A"><span class="chip" style="background:#ff9f0a"></span><span class="meta"><b>Attention</b><code>#FF9F0A</code></span></button>
+      <button class="sw" data-hex="#FF453A"><span class="chip" style="background:#ff453a"></span><span class="meta"><b>Destructive</b><code>#FF453A</code></span></button>
+      <button class="sw" data-hex="#111113"><span class="chip" style="background:#111113"></span><span class="meta"><b>Sheet surface</b><code>#111113</code></span></button>
+    </div>
+
+    <p class="sw-label">Kind hues — each kind of thing wears its own color</p>
+    <div class="sw-grid">
+      <button class="sw" data-hex="#FFD60A"><span class="chip" style="background:#ffd60a"></span><span class="meta"><b>Note</b><code>#FFD60A</code></span></button>
+      <button class="sw" data-hex="#0A84FF"><span class="chip" style="background:#0a84ff"></span><span class="meta"><b>Link</b><code>#0A84FF</code></span></button>
+      <button class="sw" data-hex="#30D158"><span class="chip" style="background:#30d158"></span><span class="meta"><b>Screenshot</b><code>#30D158</code></span></button>
+      <button class="sw" data-hex="#BF5AF2"><span class="chip" style="background:#bf5af2"></span><span class="meta"><b>Chat</b><code>#BF5AF2</code></span></button>
+      <button class="sw" data-hex="#FF453A"><span class="chip" style="background:#ff453a"></span><span class="meta"><b>Event</b><code>#FF453A</code></span></button>
+      <button class="sw" data-hex="#FF9F0A"><span class="chip" style="background:#ff9f0a"></span><span class="meta"><b>Reminder</b><code>#FF9F0A</code></span></button>
+      <button class="sw" data-hex="#FF375F"><span class="chip" style="background:#ff375f"></span><span class="meta"><b>Voice</b><code>#FF375F</code></span></button>
+      <button class="sw" data-hex="#64D2FF"><span class="chip" style="background:#64d2ff"></span><span class="meta"><b>Mail</b><code>#64D2FF</code></span></button>
+    </div>
+    <p class="copy-hint">Tap any swatch to copy its hex.</p>
+  </section>
+
+  <section id="type">
+    <h2>Type</h2>
+    <p class="deck">System faces only — SF Rounded for the display tier, SF Pro for functional text. Hierarchy is carried by size and weight alone.</p>
+
+    <div class="ramp">
+      <div class="ramp-row"><b style="font-size:34px; font-weight:800">Display 34</b><code>SF Rounded 800</code></div>
+      <div class="ramp-row"><b style="font-size:22px; font-weight:750">Title 22</b><code>SF Rounded 750</code></div>
+      <div class="ramp-row plain"><b style="font-size:17px; font-weight:600">Body 17</b><code>SF Pro 600</code></div>
+      <div class="ramp-row plain"><b style="font-size:15px; font-weight:500">Subhead 15</b><code>SF Pro 500</code></div>
+      <div class="ramp-row plain"><b style="font-size:13px; font-weight:500">Footnote 13</b><code>SF Pro 500</code></div>
+      <div class="ramp-row plain"><b style="font-size:12px; font-weight:600">Caption 12</b><code>SF Pro 600</code></div>
+    </div>
+
+    <ul class="type-rules">
+      <li><b>Sentence case, always.</b> Headers are words: "Getting started" — never "GETTING STARTED" or spaced-out eyebrow caps.</li>
+      <li><b>No letter-spacing.</b> Kerning tricks are banned; the ramp carries hierarchy by size and weight.</li>
+      <li><b>Plain words.</b> Copy avoids sync, scope, token, connector, and OAuth wherever a person reads it — and the Apps surface is always "the catalog", never a store.</li>
+    </ul>
+  </section>
+
+  <section id="shape">
+    <h2>Shape</h2>
+    <p class="deck">Three radii cover everything, and nothing draws a line — surfaces separate by spacing, tone, and a soft ambient shadow. No hairlines, zero exceptions.</p>
+    <div class="shape-row">
+      <div class="shape-demo"><div class="box r10"></div><small>Cards — 10</small></div>
+      <div class="shape-demo"><div class="box r16"></div><small>Sheets — 16</small></div>
+      <div class="shape-demo"><div class="box ricon"></div><small>App icons — 22.37%</small></div>
+    </div>
+    <p>The page ground is black; content sits on one sheet surface (<code style="font-family:ui-monospace,Menlo,monospace; font-size:13px">#111113</code> dark, white light). Motion is 250&nbsp;ms on Apple's sheet curve — one animation per moment.</p>
+  </section>
+
+  <section id="downloads">
+    <h2>Downloads</h2>
+    <p class="deck">Vector sources and 1024&nbsp;px PNG masters for all three modes, plus a plain-text version of the rules.</p>
+    <div class="dl-row">
+      <a class="dl-btn" href="brand/casberi-brand-kit.zip" download>Download the kit (.zip)</a>
+      <a class="dl-btn quiet" href="brand/casberi-mark-dark.svg" download>Dark SVG</a>
+      <a class="dl-btn quiet" href="brand/casberi-mark-light.svg" download>Light SVG</a>
+      <a class="dl-btn quiet" href="brand/casberi-mark-tinted.svg" download>Tinted SVG</a>
+    </div>
+    <p class="dl-note">The zip holds all six mark files (SVG + PNG per mode) and the README. Questions about usage — reach out from the address on the <a href="privacy.html">privacy page</a>.</p>
+  </section>
+
+</div>
+
+<footer>
+  <div class="wrap">
+    <p class="tagline">One place for your apps, with an agent that keeps tabs on what matters. No account, no server, all on device.</p>
+    <p>© 2026 Casberi · <a href="/">Home</a> · <a href="docs.html">Docs</a> · <a href="privacy.html">Privacy</a> · <a href="mailto:privacy@casberi.app">Contact</a> · <a href="https://x.com/casberi_app">@casberi_app</a></p>
+    <p>Made by <a href="https://linktr.ee/alexanderchopan">Alexander Chopan</a> · <a href="https://www.linkedin.com/in/alexanderchopan">LinkedIn</a> · <a href="https://x.com/alexanderchopan">X</a></p>
+  </div>
+</footer>
+
+<script>
+  document.querySelectorAll('.sw').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      function done() {
+        var code = btn.querySelector('code'), was = code.textContent;
+        if (was === 'Copied') return;
+        btn.classList.add('copied'); code.textContent = 'Copied';
+        setTimeout(function () { btn.classList.remove('copied'); code.textContent = was; }, 1200);
+      }
+      function fallback() {
+        var ta = document.createElement('textarea');
+        ta.value = btn.dataset.hex; ta.style.position = 'fixed'; ta.style.opacity = '0';
+        document.body.appendChild(ta); ta.select();
+        try { document.execCommand('copy'); done(); } catch (e) {}
+        document.body.removeChild(ta);
+      }
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(btn.dataset.hex).then(done, fallback);
+      } else { fallback(); }
+    });
+  });
+</script>
+
+</body>
+</html>

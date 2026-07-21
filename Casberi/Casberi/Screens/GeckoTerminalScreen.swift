@@ -33,10 +33,18 @@ struct GeckoTerminalScreen: View {
 
     var body: some View {
         List {
-            BridgeSetupHeader(name: "GeckoTerminal")
+            BridgeSetupHeader(name: "GeckoTerminal", connected: gecko.connected)
             chainsSection.listRowSeparator(.hidden)
-            if gecko.connected { pinToHomeSection.listRowSeparator(.hidden) }
-            if !recent.isEmpty {
+            if recent.isEmpty {
+                // Only before the first chain: a ghost captioned "when you
+                // switch a chain on" under an ON toggle would be fake status
+                // (honesty rule; review 2026-07-16).
+                if !gecko.connected {
+                    GhostPreviewSection(name: "GeckoTerminal",
+                                        replaceLine: "The real movers replace this when you switch a chain on.")
+                        .listRowSeparator(.hidden)
+                }
+            } else {
                 RecentThingsSection(header: gecko.trendingHeader, things: recent, titleLines: 1)
                     .listRowSeparator(.hidden)
             }
@@ -45,7 +53,6 @@ struct GeckoTerminalScreen: View {
                     bridgeID: "geckoterminal", name: "GeckoTerminal",
                     teardown: {
                         TrendingStore.shared.disconnect()
-                        HomePinnedSources.shared.clear("GeckoTerminal")
                     }
                 ).listRowSeparator(.hidden)
             }
@@ -53,7 +60,10 @@ struct GeckoTerminalScreen: View {
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
+        .bridgeSetupWash(name: "GeckoTerminal")
+        .dsAdaptiveContentWidth()
         .dsPageBackground()
+        .dsSoftTopEdge()
         .navigationTitle("GeckoTerminal")
         .navigationBarTitleDisplayMode(.large)
         .onAppear {
@@ -68,24 +78,29 @@ struct GeckoTerminalScreen: View {
 
     private var chainsSection: some View {
         Section {
-            ForEach(TrendingChain.allCases) { chain in
-                Button {
-                    toggle(chain)
-                } label: {
-                    HStack(spacing: DS.Space.s3) {
+            // A switch, not an appearing checkmark — the row IS the connect
+            // verb here (the OpenSea ruling, mock review 2026-07-16). One list
+            // row holding every chain — separate rows leak a hairline that
+            // survives .listRowSeparator(.hidden). Design law: no hairlines.
+            VStack(spacing: 0) {
+                ForEach(TrendingChain.allCases) { chain in
+                    Toggle(isOn: Binding(
+                        get: { gecko.isWatching(chain) },
+                        // Guard on the committed value: a same-value commit
+                        // must not invert the watch behind the switch.
+                        set: { on in
+                            guard on != gecko.isWatching(chain) else { return }
+                            toggle(chain)
+                        }
+                    )) {
                         Text(chain.display)
                             .dsText(.body17).foregroundStyle(DS.textPrimary)
-                        Spacer()
-                        if gecko.isWatching(chain) {
-                            Image(systemName: "checkmark")
-                                .dsText(.body17).foregroundStyle(DS.tint)
-                        }
                     }
-                    .contentShape(Rectangle())
+                    .tint(DS.tint)
+                    .padding(.vertical, DS.Space.s1)
                 }
-                .buttonStyle(.plain)
-                .dsListCardRow()
             }
+            .dsListCardRow()
         } header: {
             HStack {
                 Text("Chains").dsText(.label12).foregroundStyle(DS.textTertiary)
@@ -97,35 +112,7 @@ struct GeckoTerminalScreen: View {
                 }
             }
         } footer: {
-            Text("Watch a chain and its current top movers land as links, newest first. Read-only.")
-                .dsText(.callout15).foregroundStyle(DS.textTertiary)
-        }
-    }
-
-    // MARK: - Pin to Home
-
-    private var pinnedToHome: Bool { HomePinnedSources.shared.isPinned("GeckoTerminal") }
-
-    private var pinToHomeSection: some View {
-        Section {
-            Button {
-                HomePinnedSources.shared.toggle("GeckoTerminal")
-                CorpusSignal.shared.bump()
-                DSHaptic.tap()
-            } label: {
-                HStack(spacing: DS.Space.s2) {
-                    Image(systemName: pinnedToHome ? "pin.fill" : "pin")
-                    Text(pinnedToHome ? "Pinned to Home" : "Pin to Home")
-                }
-                .dsText(.body17).foregroundStyle(pinnedToHome ? DS.tint : DS.textPrimary)
-                .frame(maxWidth: .infinity).frame(height: 44)
-                .background(pinnedToHome ? DS.tintDim : DS.gray100,
-                            in: Capsule(style: .continuous))
-            }
-            .buttonStyle(.plain)
-            .listRowBackground(Color.clear)
-        } footer: {
-            Text("The trending movers ride a strip on Home.")
+            Text("Switch a chain on and watching starts — its current top movers land as links, newest first. Read-only.")
                 .dsText(.callout15).foregroundStyle(DS.textTertiary)
         }
     }

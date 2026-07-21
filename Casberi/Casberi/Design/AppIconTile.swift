@@ -53,11 +53,13 @@ extension DS {
         case "day one":             return Color.fixed("#44c0ff")   // Day One blue
         case "safari":              return Color.fixed("#1d9bf6")
         case "wallet":              return Color.fixed("#2461ff")
+        case "peer":                return Color.fixed("#4b47f6")   // an indigo in their family — approximate; re-sample when bundling the official mark
         case "kalshi":              return Color.fixed("#4fae7b")   // their green (matches the bundled logo)
         case "opensea":             return Color.fixed("#2081e2")   // OpenSea's marine blue
         case "geckoterminal":       return Color.fixed("#7556f6")   // the gecko's purple (sampled from the bundled icon)
-        case "tokens":              return Color.fixed("#f5a623")   // coin gold — this app's own mark, not a vendor's (2026-07-13 rename)
+        case "tokens":              return Color.fixed("#0b0b0b")   // ink — the mark is a green chart on black (user ruling 2026-07-17; the near-zero saturation makes washHue nil, so the token sheet is pure ink ON PURPOSE — a gold/green wash fought the chart's own red)
         case "venice":              return Color.fixed("#0e2942")   // sampled from their deep-blue mark
+        case "bankr":               return Color.fixed("#a78bfa")   // the terminal's lavender field (sampled from the bundled icon)
         case "openclaw":            return Color.fixed("#e5342e")   // the agents' red (user, 2026-07-12)
         case "voice":               return Color.fixed("#ff375f")   // the voice kind's own pink
         case "apple health":        return Color.fixed("#ff2d55")
@@ -85,12 +87,16 @@ extension DS {
         case "deals":               return Color.fixed("#e0245e")   // a sale-tag crimson
         case "open food facts":     return Color.fixed("#7cb342")   // a fresh grocery green
         case "stocktwits":          return Color.fixed("#008fff")   // their azure (icon-sampled)
+        case "bitrefill":           return Color.fixed("#002b28")   // their dark teal (icon-sampled)
+        case "1claw":               return Color.fixed("#990029")   // their crimson (docs-sampled)
+        case "homekit":             return Color.fixed("#8e8e93")   // the accessory kind's own gray (KindGlyph.swift)
         default:                    return nil
         }
     }
 
-    /// The brand hue normalized for the WASH surfaces — the feed's shape
-    /// wash, the switch flood, the thing sheet, the app detail page. Raw
+    /// The brand hue normalized for the WASH surfaces — the app detail page,
+    /// the bridge setup header, the token quick sheet (the feed AND the thing
+    /// sheet dropped their washes, user ruling 2026-07-18: full ink). Raw
     /// brand hexes aren't a designed ramp: RGB-mixing them toward black
     /// shifted yellows to olive and browns, and left the near-black marks
     /// (Steam, Venice) as colorless smudges (user, 2026-07-13). Still one

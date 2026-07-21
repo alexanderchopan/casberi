@@ -45,10 +45,24 @@ struct Composer: View {
     var onNavigate: (NavigateIntent) -> Void = { _ in }
     /// Keep a synthesis answer — lands it as a note in the feed so the recap
     /// isn't ephemeral. The composer hands over the answer's plain text.
+    /// Labelled "Save as a note" on the button (docs/agent-brief.md, the
+    /// 2026-07-19 rename): "Keep" itself is reserved for minting a standing
+    /// kept-ask chip — a different verb now, see `onKeep` below.
     var onKeepAnswer: (String) -> Void = { _ in }
     /// The shell's glass namespace — pill and bubble share one glass identity,
     /// so open/close is a morph of the same substance, not a swap.
     var glassNamespace: Namespace.ID? = nil
+    /// Resolves a thing id to a real `Thing` for the agent's own drill-down
+    /// (docs/agent-brief.md ruling 8 — the Stack session model: tapping
+    /// content inside an answer PUSHES a thing-view rather than presenting a
+    /// sheet). nil ids, or ids that no longer resolve, render nothing.
+    var resolveThing: (String) -> Thing? = { _ in nil }
+    /// Lowers the agent (docs/agent-brief.md ruling 9: staying is the
+    /// default; a bare tap never ejects you — this is the ONE thing "Open in
+    /// app" from inside a pushed thing-view is allowed to do to the agent
+    /// itself). Called at the end of every `close()`, so both new exits (✕,
+    /// ⌄) and every pre-existing close path lower the agent uniformly.
+    var onLowerAgent: () -> Void = {}
 
     @Environment(\.modelContext) private var modelContext
     @Environment(ShellChrome.self) private var chrome
@@ -63,21 +77,25 @@ struct Composer: View {
     /// the specifics you can tap.
     @State private var placeholderIndex = 0
     private let invitations = [
-        "Ask anything. Organize everything.",
+        "Ask, or say what to do",
         "What did I save this week?",
-        "Find that thing I pasted.",
-        "Recap my month.",
-        "Tag everything from an app.",
+        "Find that thing I pasted",
+        "Recap my month",
+        "Tag everything from an app",
     ]
     /// Flips true just after the bubble opens so the ask chips stagger in
     /// rather than snapping (delight, 2026-07-12).
     @State private var chipsAppeared = false
-    /// The tool tile currently launching — pops it up and fades it as its app
-    /// takes over, so the hand-off reads physical (delight, 2026-07-12).
-    @State private var launchingTool: String?
-
+    /// The date NSDataDetector found in the draft (nil when none) — feeds the
+    /// Send-to band's receipt line and Calendar's calshow timestamp.
+    @State private var detectedDate: Date?
     @FocusState private var fieldFocused: Bool
     @State private var answerStream = GenStream()
+    /// The agent's own navigation trail (ruling 8 — the Stack session model).
+    /// A thing id pushed here opens a real generative thing-view; the ✕/⌄
+    /// exits and the top-trailing ✕ button only show at `path.isEmpty` (the
+    /// agent's own root) — a pushed screen's system back chevron pops it.
+    @State private var path = NavigationPath()
     /// The composer is a CONVERSATION now (2026-07-12): each answered ask
     /// becomes a turn that stays in view, so you can keep asking follow-ups
     /// without re-opening — the Q&A stacks until you close.
@@ -115,6 +133,30 @@ struct Composer: View {
     /// chip gate can't afford a Keychain round-trip per render (typing a
     /// follow-up re-renders per keystroke).
     @State private var keyAvailable = false
+    /// The kept-ask KIND the current question would mint, computed once per
+    /// settled answer (same reason `keyAvailable` is settle-cached, not a
+    /// per-render computed property: a corpus fetch per render would be
+    /// wasteful during a streaming reveal). nil when the question doesn't
+    /// match a keepable shape, or it's already kept.
+    @State private var keepableAskKind: String?
+    /// One-shot: the Keep chip morphs to a checkmark for a beat before it
+    /// retires (delight, 2026-07-21) — the mint earns a felt moment instead
+    /// of just vanishing the instant it's tapped.
+    @State private var keepJustLanded = false
+    /// The first-ever kept ask earns its own line, sibling to "Your first
+    /// thing" (RootShell) — persisted so it fires exactly once per install.
+    @AppStorage("composer.firstKeptAsk.done") private var firstKeptAskDone = false
+    /// A deterministic flavor line under the greeting's corpus stat — an
+    /// anniversary or a real threshold just crossed, never invented (delight,
+    /// 2026-07-21). nil most opens; recomputed alongside `corpusSummary`.
+    @State private var greetingFlavorLine: String?
+    /// Deals one small berry shower over a genuinely large "while I was
+    /// away" haul — an arrival worth marking, the same vocabulary the wallet
+    /// pass already uses for NFT/portfolio arrivals (prd §79).
+    @State private var awayRainTrigger = 0
+    /// Guards the away rain to once per open — a follow-up re-ask of the
+    /// same away question must not replay it.
+    @State private var awayRainPlayedThisOpen = false
 
     /// The keepable text of a synthesis answer — a synthesis is one Insight
     /// carrying the prose (RootShell's proseDoc). Only that shape is worth
@@ -124,6 +166,114 @@ struct Composer: View {
         guard let insight = els.values.first(where: { $0.comp == "Insight" }) else { return nil }
         let text = insight.str(0)
         return text.count >= 40 ? text : nil
+    }
+
+    /// True when the settled doc is RootShell's honest "nothing matches"
+    /// fallback (`retrievalDoc`'s empty branch) — both its lines start
+    /// "Nothing " (genSafe strips quotes/newlines, never the leading word).
+    /// Gates the settle haptic and the away-haul rain (delight, 2026-07-21):
+    /// a real find earns the tick, a miss earns nothing.
+    private func docHasFallback(_ lines: [String]) -> Bool {
+        lines.contains { $0.contains("Insight(\"Nothing ") }
+    }
+
+    /// The kept-ask KIND the question would mint, or nil (docs/agent-brief.md
+    /// ruling 1). A PURE pattern-match against the same recognizers
+    /// `RootShell.answerDocument` checks before any model call — by
+    /// construction this can never reach the model, which is the "no LLM in
+    /// the kept-ask path" guarantee made structural rather than conventional.
+    /// Scoped to exactly the kinds `KeptAskComposers` implements — offering a
+    /// kind with no real composer would be a dead control once kept (honesty
+    /// rule).
+    private func recognizeKeptAskKind(_ question: String, in things: [Thing]) -> String? {
+        guard !question.isEmpty else { return nil }
+        let q = question.lowercased()
+        var kind: String?
+        if TokensAsk.matches(question) {
+            kind = "watchlist"
+        } else if WalletAsk.matches(question) {
+            kind = "wallet"
+        } else if WalletDeFiAsk.matches(question) {
+            kind = "walletdefi"
+        } else if WalletGasAsk.matches(question) {
+            kind = "walletgas"
+        } else if SafeAsk.matches(question) {
+            kind = "walletsafe"
+        } else if q.contains("away"), let pulse = StatusAsk.pulse(question, things: things),
+                  !pulse.pool.isEmpty {
+            kind = "away"
+        } else if q.hasPrefix("show "),
+                  let tag = tagPool.first(where: { q == "show \($0.lowercased())" }) {
+            kind = "showtag:\(tag)"
+        } else if q.contains("overdue"),
+                  things.contains(where: { $0.mark != .done && ($0.source == "Reminders" || $0.source == "Todoist")
+                                            && ($0.dueAt ?? .distantFuture) < .now }) {
+            kind = "overdue"
+        } else if let name = namedTopicPhrase(q),
+                  let source = Set(things.map(\.source)).first(where: { $0.lowercased() == name }) {
+            kind = "context:\(source)"
+        } else if let name = namedTopicPhrase(q),
+                  let cat = BridgeCatalog.categories.first(where: { $0.name.lowercased() == name })?.name,
+                  categoryHasThings(cat, in: things) {
+            // The catalog's OWN category vocabulary (2026-07-20) — "how's my
+            // Markets stuff?" answers the same way a per-source recap does,
+            // just spanning every source the category owns. "Onchain" is
+            // deliberately NOT a match here — that category was dissolved
+            // 2026-07-17 (Markets absorbed it); Wallet/Markets are its real
+            // successors.
+            kind = "category:\(cat)"
+        } else if TagsAsk.parse(question) == nil, AppsAsk.parse(question) == nil,
+                  AggregateAsk.parse(question, sources: Array(Set(things.map(\.source)))) == nil,
+                  StatusAsk.pulse(question, things: things) == nil,
+                  !Retriever.rank(question, in: things, isPoolRefinement: false).isEmpty {
+            // Kept SEARCHES (docs/agent-brief.md ruling 13, 2026-07-20) — any
+            // free-text ask that actually retrieved something becomes
+            // keepable. The exclusions above matter: `answerDocument` checks
+            // TagsAsk/AppsAsk/AggregateAsk/StatusAsk BEFORE the general
+            // retriever, so a question one of those would have answered
+            // must never mint a `search:` kind — its kept re-run (retrieval
+            // rows) would silently disagree with what the live answer
+            // actually showed (an arithmetic line, a status pulse, …).
+            kind = "search:\(q.trimmingCharacters(in: CharacterSet(charactersIn: "? ")))"
+        }
+        guard let kind, !KeptAskStore.shared.isKept(kind) else { return nil }
+        return kind
+    }
+
+    /// "what's new in <name>" / "how's my <name>" / "what's up with my
+    /// <name>" (and casual variants) — the bare name after the phrase,
+    /// lowercased and trimmed, or nil if none match. Shared by both the
+    /// source-context matcher and the category matcher below; matching
+    /// against a REAL source or category happens at each call site (this
+    /// only strips the phrase). Widened 2026-07-20 — the strict "what's new
+    /// in" prefix missed how people actually ask ("what's up w/ my X stuff").
+    private func namedTopicPhrase(_ q: String) -> String? {
+        let prefixes = ["what's new in ", "whats new in ",
+                        "what's up with my ", "whats up with my ",
+                        "how's my ", "hows my "]
+        for prefix in prefixes where q.hasPrefix(prefix) {
+            var name = String(q.dropFirst(prefix.count))
+                .trimmingCharacters(in: CharacterSet(charactersIn: "? "))
+                .trimmingCharacters(in: .whitespaces)
+            // "...Markets STUFF?" — casual phrasing tacks a generic filler
+            // noun onto the real topic name; strip it so "markets stuff"
+            // matches the bare category/source name "markets".
+            for filler in [" stuff", " things", " activity"] where name.hasSuffix(filler) {
+                name = String(name.dropLast(filler.count))
+            }
+            return name
+        }
+        return nil
+    }
+
+    /// True when some real thing sits in a source the category owns — the
+    /// same honesty gate `contextRecap`'s "must have things from this
+    /// source" check applies at the per-source level.
+    private func categoryHasThings(_ category: String, in things: [Thing]) -> Bool {
+        let sources = Set(BridgeCatalog.offers
+            .filter { BridgeCatalog.category(of: $0) == category }
+            .map(\.name))
+        return things.contains { sources.contains($0.source) }
     }
     /// A typed organize command's pending change — rendered as a card, the
     /// write waits for Apply (typed words never write silently).
@@ -141,8 +291,24 @@ struct Composer: View {
 
     /// Empty-field ask suggestions — derived from the live corpus on open
     /// (re-ruling 2026-07-08: the dead GENERIC chips stay dead; these are
-    /// asks the corpus can actually answer right now).
-    @State private var suggestions: [String] = []
+    /// asks the corpus can actually answer right now). `kind` is the ask's
+    /// stable identity, `glyph` is assigned where the ask is created (no
+    /// parallel switch to forget), and `memoryKey` keys the decay counters
+    /// (see AskMemory) — kind:qualifier where one kind wears many faces,
+    /// so "Show recipes" neglect never pre-demotes "Show travel".
+    private struct AskOption {
+        let kind: String
+        let title: String
+        let glyph: String
+        let memoryKey: String
+        init(kind: String, title: String, glyph: String, memoryKey: String? = nil) {
+            self.kind = kind
+            self.title = title
+            self.glyph = glyph
+            self.memoryKey = memoryKey ?? kind
+        }
+    }
+    @State private var suggestions: [AskOption] = []
     /// The away window's real count — the librarian chip rolls up to it
     /// (delight 2026-07-13); set beside the gate that shows the chip.
     @State private var awayLanded = 0
@@ -150,6 +316,11 @@ struct Composer: View {
     /// whole store, and computed-per-keystroke it made typing pay a corpus
     /// fetch per character (review 2026-07-08).
     @State private var tagPool: [String] = []
+    /// The rest-screen greeting's stat line ("2,481 things, across 14
+    /// apps."), ruling 4 — snapshotted once per open alongside `tagPool`
+    /// (same corpus walk `computeSuggestions()` already pays for, not a
+    /// second one).
+    @State private var corpusSummary = ""
 
     /// One corpus-derived nudge toward the tag command ("Tag your 6
     /// Farcaster things"). Unlike ask chips, tap PREFILLS the command —
@@ -164,17 +335,6 @@ struct Composer: View {
     /// typing, answering, recording, or a proposal all stop it.
     private var cyclingActive: Bool {
         isOpen && !hasDraft && !answering && !isRecording && proposal == nil && !reduceMotion
-    }
-
-    /// A tool tile's press: it gives under the finger and springs back —
-    /// the app-icon feel (delight, 2026-07-12).
-    private struct TilePress: ButtonStyle {
-        func makeBody(configuration: Configuration) -> some View {
-            configuration.label
-                .scaleEffect(configuration.isPressed ? 0.90 : 1)
-                .animation(.spring(response: 0.28, dampingFraction: 0.6),
-                           value: configuration.isPressed)
-        }
     }
 
     /// One ask chip's staggered rise-in on open (delight, 2026-07-12).
@@ -230,18 +390,69 @@ struct Composer: View {
     /// Builds the ask chips from what the corpus can answer TODAY. Empty
     /// corpus → no chips (the field is the invitation).
     private func computeSuggestions() {
+        #if DEBUG
+        // `-askStats "<key>:<n>[,…]|clear"` — seed the decay counters
+        // headlessly (see AskMemory; self-guarded to once per launch), so
+        // demotion verifies in one launch.
+        AskMemory.seedFromLaunchArgs()
+        // `-asksMade "<key>:<n>[,…]|clear"` — seed the proactive-minting
+        // counter the same way, so the "keep it?" upgrade verifies in one
+        // launch too.
+        AskMemory.seedMadeFromLaunchArgs()
+        #endif
         tagPool = tagCandidates()   // one corpus walk per open, not per keystroke
-        var out: [String] = []
+        var out: [AskOption] = []
         // One plain fetch, filtered in memory — a #Predicate can't compare
         // the Codable ThingKind enum (it throws at runtime, and try? made
         // the miss silent).
         let all = (try? modelContext.fetch(FetchDescriptor<Thing>())) ?? []
+        // The greeting's stat line (ruling 4) — real counts off the fetch
+        // just paid for. Empty corpus = empty line (the greeting stands
+        // alone; a "0 things" boast would be dishonest warmth).
+        if all.isEmpty {
+            corpusSummary = ""
+            greetingFlavorLine = nil
+        } else {
+            let sources = Set(all.map(\.source)).count
+            let things = all.count.formatted()
+            corpusSummary = "\(things) thing\(all.count == 1 ? "" : "s"), across \(sources) app\(sources == 1 ? "" : "s")."
+            greetingFlavorLine = Self.greetingFlavor(all: all)
+        }
         // Context-aware lead (2026-07-12): if you opened the composer while
         // looking at one source's feed, its recap leads the chips — the
         // composer meets you where you are. Only when that source actually has
         // things to synthesize (honesty rule: a chip must answer).
         if let src = contextSource(), all.contains(where: { $0.source == src }) {
-            out.append("What's new in \(src)?")
+            // A source with its own signature ask leads with THAT ask, not the
+            // generic recap (user ruling 2026-07-21, prd §149: one ask per
+            // subject — standing on the Wallet feed, "What's new in Wallet?"
+            // recaps the feed already behind the sheet while "How's my
+            // wallet?" reads what the feed can't, and the grid can't afford
+            // both). The signature chips' own appends below skip themselves
+            // once one has led here.
+            if src == "Wallet", !WalletStore.shared.addresses.isEmpty {
+                out.append(AskOption(kind: "wallet", title: "How's my wallet?",
+                                     glyph: "wallet.bifold"))
+            } else if src == "Tokens" {
+                out.append(AskOption(kind: "watchlist", title: "How's my watchlist?",
+                                     glyph: "chart.line.uptrend.xyaxis"))
+            } else {
+                out.append(AskOption(kind: "context", title: "What's new in \(src)?",
+                                     glyph: "app.badge", memoryKey: "context:\(src)"))
+            }
+            // A category sibling (2026-07-20) — only when it's a meaningfully
+            // BROADER ask than the single-source lead above (more than one
+            // source in the category), else it would just repeat the same
+            // question in different words.
+            if let offer = BridgeCatalog.offers.first(where: { $0.name == src }) {
+                let cat = BridgeCatalog.category(of: offer)
+                let sourcesInCat = Set(BridgeCatalog.offers
+                    .filter { BridgeCatalog.category(of: $0) == cat }.map(\.name))
+                if sourcesInCat.count > 1, all.contains(where: { sourcesInCat.contains($0.source) }) {
+                    out.append(AskOption(kind: "category", title: "How's my \(cat) stuff?",
+                                         glyph: "square.grid.2x2", memoryKey: "category:\(cat)"))
+                }
+            }
         }
         let dayStart = Calendar.current.startOfDay(for: .now)
         // The feeds' pulse (2026-07-11): "What's going on?" synthesizes the
@@ -256,7 +467,8 @@ struct Composer: View {
         let awayCount = StatusAsk.pulse("while i was away", things: all)?.pool.count ?? 0
         awayLanded = awayCount
         if awayCount >= 3 {
-            out.insert("While I was away?", at: 0)
+            out.insert(AskOption(kind: "away", title: "While I was away?",
+                                 glyph: "sparkles"), at: 0)
         }
         let pulseChip = StatusAsk.pulse("what's going on", things: all)
             .map { $0.pool.count >= 2 } ?? false
@@ -265,29 +477,57 @@ struct Composer: View {
         if awayCount >= 3 {
             // covered by "While I was away?"
         } else if pulseChip {
-            out.append("What's going on?")
+            out.append(AskOption(kind: "pulse", title: "What's going on?", glyph: "bolt"))
         } else if all.contains(where: { $0.capturedAt >= dayStart }) {
-            out.append("What landed today?")
+            out.append(AskOption(kind: "today", title: "What landed today?",
+                                 glyph: "tray.and.arrow.down"))
         }
         // The watchlist chip (2026-07-14): watched tokens are the corpus' one
         // LIVE number — teach that the composer reads them. Gated on the same
         // things TokensAsk answers from, so the chip always answers.
-        if all.contains(where: { $0.source == "Tokens" }) {
-            out.append("How's my watchlist?")
+        if all.contains(where: { $0.source == "Tokens" }),
+           !out.contains(where: { $0.kind == "watchlist" }) {
+            out.append(AskOption(kind: "watchlist", title: "How's my watchlist?",
+                                 glyph: "chart.line.uptrend.xyaxis"))
         }
-        // The chips teach what the composer can DO (2026-07-10) — counting
-        // stayed a secret power until the chips showed it. Only asks the corpus
-        // can honestly answer right now. (Pinning left the composer 2026-07-12:
-        // it's per-APP now, placed from the app's own screen, not a phrase.)
-        let weekStart = Calendar.current.dateInterval(of: .weekOfYear, for: .now)?.start ?? dayStart
-        if all.contains(where: { $0.kind == .link && $0.capturedAt >= weekStart }) {
-            out.append("How many links this week?")
+        // The wallet chip (2026-07-15): gated on a watched address existing, so
+        // WalletAsk always has holdings to answer with — the chip can't drift
+        // from the ask it triggers.
+        if !WalletStore.shared.addresses.isEmpty,
+           !out.contains(where: { $0.kind == "wallet" }) {
+            out.append(AskOption(kind: "wallet", title: "How's my wallet?",
+                                 glyph: "wallet.bifold"))
         }
-        if let top = tagPool.first {
-            out.append("Show \(top)")
+        // Only asks the corpus can honestly answer right now. (Pinning left
+        // the composer 2026-07-12: it's per-APP now, placed from the app's own
+        // screen, not a phrase. "How many links this week?" died 2026-07-16 —
+        // ruling: nobody cares; counting stays a typed power, never a tile.)
+        // Top TWO tags now (was one, 2026-07-20) — a chip vocabulary as wide
+        // as the corpus means more than one tag gets a one-tap path to kept.
+        for tag in tagPool.prefix(2) {
+            out.append(AskOption(kind: "showtag", title: "Show \(tag)",
+                                 glyph: "tag", memoryKey: "showtag:\(tag)"))
+        }
+        // The overdue chip (2026-07-20) — mirrors KeptAskComposers.overdue's
+        // own filter (light duplication, same precedent as elsewhere in this
+        // function) so the tile can't offer what its composer would call
+        // empty.
+        if all.contains(where: { $0.mark != .done && ($0.source == "Reminders" || $0.source == "Todoist")
+                                  && ($0.dueAt ?? .distantFuture) < .now }) {
+            out.append(AskOption(kind: "overdue", title: "What's overdue?",
+                                 glyph: "exclamationmark.circle"))
+        }
+        // The Noticed chip (2026-07-20) — the board's old "Noticed" card had
+        // no home after the board retired (prd §131); this is its one way
+        // back in. Tile-only: there's no natural typed trigger for a
+        // spontaneous connection, so it's never in `recognizeKeptAskKind`.
+        if let noticed = HomeInsightStore.shared.line, !noticed.isEmpty {
+            out.append(AskOption(kind: "noticed", title: "Noticed",
+                                 glyph: "sparkle"))
         }
         if !all.isEmpty {
-            out.append("What's this week?")
+            out.append(AskOption(kind: "week", title: "What's this week?",
+                                 glyph: "calendar"))
         }
         // The organize invite (ruling 2026-07-10): the source with the most
         // things still wearing only their type tag (≥3) earns the nudge.
@@ -306,20 +546,106 @@ struct Composer: View {
             // change identity between opens.
             .max { ($0.value.total, $1.key) < ($1.value.total, $0.key) }
             .map { OrganizeHint(source: $0.key, count: $0.value.total) }
-        suggestions = Array(out.prefix(organizeHint == nil ? 3 : 2))
+        // Already-kept asks lead as their own pills now (docs/agent-brief.md
+        // ruling 4/5, `keptAskPills`) — offering one here too would show the
+        // same question twice, once as a curated pill and once as a
+        // suggestion (user ruling 2026-07-19: both coexist, but never for
+        // the SAME ask).
+        out.removeAll { KeptAskStore.shared.isKept($0.memoryKey) }
+        // Tap-learning decay (ruling 2026-07-16, prd 95): an ask offered ten
+        // opens without a tap steps behind the next qualifier — demoted by
+        // a stable partition, never filtered, so a short grid still fills
+        // with it. A tap resets its counter; exemptions (the away chip is
+        // timely, not evergreen) live in AskMemory. The organize invite has
+        // its own slot and gate.
+        let ranked = out.filter { !AskMemory.neglected($0.memoryKey) }
+                   + out.filter { AskMemory.neglected($0.memoryKey) }
+        // Fill the 2×2 grid: three asks beside the organize invite when it's
+        // earned, four when it isn't — the tiles read whole either way.
+        suggestions = Array(ranked.prefix(organizeHint == nil ? 4 : 3))
+        // A handed-off ask (a status chip's question) fills the field the
+        // moment the sheet settles — the tiles never had a chance to be
+        // tapped, so that open must not count against them.
+        if chrome.askRequest == nil {
+            AskMemory.shown(suggestions.map(\.memoryKey))
+        }
+        #if DEBUG
+        NSLog("[Casberi] askTiles: %@%@",
+              organizeHint.map { "hint:\($0.source) " } ?? "",
+              suggestions.map(\.memoryKey).joined(separator: ","))
+        #endif
     }
 
-    /// One conversation turn — the muted question, then its answer.
+    /// "Saturday morning." — the day and its moment, ruled as the greeting's
+    /// first line (docs/agent-brief.md ruling 4). The weekday comes from the
+    /// current calendar/locale; the moment splits the day the way people
+    /// actually say it (morning until noon, afternoon until 6, evening
+    /// after) — no "Good ..." prefix, the period IS the warmth.
+    private func timeGreeting(now: Date = .now) -> String {
+        let weekday = now.formatted(.dateTime.weekday(.wide))
+        let hour = Calendar.current.component(.hour, from: now)
+        let moment = hour < 5 ? String(localized: "night")
+                   : hour < 12 ? String(localized: "morning")
+                   : hour < 18 ? String(localized: "afternoon")
+                   : String(localized: "evening")
+        return "\(weekday) \(moment)."
+    }
+
+    /// A real, deterministic flavor line under the greeting's corpus stat —
+    /// never a canned line, same register as §5's "Quiet so far today."
+    /// Two honest sources, checked in order (at most one line per open):
+    /// the corpus's actual anniversary (its oldest capture's month/day
+    /// falling today, one-plus years on), or a real count threshold just
+    /// crossed. Neither claims anything that isn't literally true of the
+    /// corpus right now.
+    private static let milestoneThresholds = [50, 100, 500, 1_000, 5_000, 10_000, 25_000, 50_000]
+    private static let milestoneSeenKey = "composer.greetingMilestoneSeen"
+
+    private static func greetingFlavor(all: [Thing], now: Date = .now) -> String? {
+        let cal = Calendar.current
+        if let oldest = all.map(\.capturedAt).min() {
+            let oldComps = cal.dateComponents([.month, .day], from: oldest)
+            let nowComps = cal.dateComponents([.month, .day], from: now)
+            let years = cal.dateComponents([.year], from: oldest, to: now).year ?? 0
+            if oldComps.month == nowComps.month, oldComps.day == nowComps.day, years >= 1 {
+                return "\(years) year\(years == 1 ? "" : "s") since your first thing."
+            }
+        }
+        let count = all.count
+        if let crossed = milestoneThresholds.last(where: { $0 <= count }) {
+            let seen = UserDefaults.standard.integer(forKey: milestoneSeenKey)
+            if crossed > seen {
+                UserDefaults.standard.set(crossed, forKey: milestoneSeenKey)
+                return "\(crossed.formatted()) things banked."
+            }
+        }
+        return nil
+    }
+
+    /// One conversation turn — the question as the answer's own TITLE, then
+    /// its answer. Heading weight (was subhead-muted, fixed 2026-07-20):
+    /// ruling 8 calls each answer a "sovereign screen", and its question is
+    /// that screen's title — one step down from the greeting's own
+    /// `.heading34` since this repeats per turn rather than leading the
+    /// whole surface.
     @ViewBuilder
-    private func convoTurn<Content: View>(question: String,
+    private func convoTurn<Content: View>(question: String, animateIn: Bool = false,
                                           @ViewBuilder content: () -> Content) -> some View {
         VStack(alignment: .leading, spacing: DS.Space.s1) {
             if !question.isEmpty {
                 Text(question)
-                    .dsText(.subhead13).fontWeight(.semibold)
-                    .foregroundStyle(DS.textSecondary)
+                    .dsText(.heading17)
+                    .foregroundStyle(DS.textPrimary)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, DS.Space.s4)
+                    // The question lift (delight, 2026-07-21): a freshly-sent
+                    // ask rises into its header rather than popping cold —
+                    // the felt hand-off from field to answer. Settled turns
+                    // (scroll-back) never animate; this plays once, for the
+                    // turn that just became live.
+                    .transition(animateIn
+                                ? .move(edge: .bottom).combined(with: .opacity)
+                                : .identity)
             }
             content()
         }
@@ -335,18 +661,57 @@ struct Composer: View {
     }
 
     var body: some View {
-        // At rest the composer is the FAB on the tab bar's axis (amendment:
-        // the full-width rest pill died — simpler shell, more reading room).
-        // Engaged, it takes the surface: same glass, morphed.
-        Group {
-            if isOpen { openBubble }
+        // The agent's own Stack (ruling 8): a real NavigationStack, not a
+        // sheet — tapping content inside an answer pushes a generative
+        // thing-view; the system back chevron pops it. genThingOpen is the
+        // SAME environment hook Home's pinned rows already use (GenRenderer),
+        // so every existing doc shape gets tap-to-drill-down for free.
+        NavigationStack(path: $path) {
+            Group {
+                if isOpen { openBubble }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            // Opens UNFOCUSED (2026-07-12): the tray leads with the field's
+            // invitation and the ask chips visible — tapping the field is
+            // what raises the keyboard to ask.
+            .overlay(alignment: .topTrailing) {
+                // ✕ — the first exit (ruling 7). Only at the agent's own
+                // root; a pushed thing-view relies on its system back chevron.
+                if path.isEmpty {
+                    Button {
+                        close()
+                    } label: {
+                        Image(systemName: "xmark")
+                            .dsText(.subhead13)
+                            .foregroundStyle(DS.textSecondary)
+                            .padding(10)
+                            .background(DS.fillFaint, in: Circle())
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.top, DS.Space.s3)
+                    .padding(.trailing, DS.Space.s4)
+                }
+            }
+            .navigationDestination(for: String.self) { id in
+                // Real generative thing-view — the real `ThingSheetView`,
+                // reused as-is rather than a slimmer push-only variant (it
+                // already dispatches every kind; a lighter copy would drift).
+                // "Open in app" (its own existing verb machinery,
+                // VerbDerivation) is the one thing allowed to lower the
+                // agent from inside pushed content (ruling 9) — wrapping its
+                // openURL environment is a plain SwiftUI hook, zero
+                // ThingSheetView changes needed.
+                if let thing = resolveThing(id) {
+                    ThingSheetView(thing: thing)
+                        .environment(\.openURL, OpenURLAction { url in
+                            openURL(url)
+                            onLowerAgent()
+                            return .handled
+                        })
+                }
+            }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        // Opens UNFOCUSED (2026-07-12): the tray leads with the field's
-        // invitation, the ask chips, and the tool grid all visible — tapping
-        // the field is what raises the keyboard to ask. Auto-focusing hid the
-        // tools behind the keyboard, biasing the surface toward "ask" when it's
-        // now "ask OR jump to a tool".
+        .environment(\.genThingOpen) { id in path.append(id) }
     }
 
     // MARK: - Open
@@ -358,20 +723,50 @@ struct Composer: View {
             // sheet its warmth (design pass 2026-07-12, "B: greeting-led").
             // Hidden once a conversation is underway: the answer is the header.
             if embedded, turns.isEmpty, !answering, proposal == nil {
-                Text("What now?")
-                    .dsText(.heading22)
+                // The greeting, as RULED (docs/agent-brief.md ruling 4,
+                // built 2026-07-20 — the static "What now?" that shipped
+                // first was a placeholder for this): the day and its moment
+                // ("Saturday morning."), then the corpus as one warm stat
+                // ("2,481 things, across 14 apps."). Deterministic, real,
+                // recomputed each open — never a canned line.
+                Text(timeGreeting())
+                    .dsText(.heading34)
                     .foregroundStyle(DS.textPrimary)
-                    .padding(.horizontal, DS.Space.s4)
+                    .padding(.leading, DS.Space.s4)
+                    // Clears the ✕ pinned top-trailing — "Wednesday
+                    // afternoon." at display scale runs the full width and
+                    // collided with it (caught on sim, 2026-07-20).
+                    .padding(.trailing, 64)
                     .padding(.top, DS.Space.s2)
                     .settleIn()
-                // The pairing line — teaches the sheet's dual nature (jump OR
-                // ask) and keeps the greeting from reading as an orphan label.
-                Text("Jump to a tool, or ask below.")
+                if !corpusSummary.isEmpty {
+                    Text(corpusSummary)
+                        .dsText(.callout15)
+                        .foregroundStyle(DS.textSecondary)
+                        .padding(.horizontal, DS.Space.s4)
+                        .padding(.top, 2)
+                        .settleIn(delay: 0.05)
+                }
+                // A real anniversary or a real threshold just crossed — never
+                // a canned line (delight, 2026-07-21).
+                if let flavor = greetingFlavorLine {
+                    Text(flavor)
+                        .dsText(.subhead13)
+                        .foregroundStyle(DS.textTertiary)
+                        .padding(.horizontal, DS.Space.s4)
+                        .padding(.top, 1)
+                        .settleIn(delay: 0.08)
+                }
+                // The pairing line — teaches the sheet's dual nature (ask a
+                // question, or write a fact and send it out) and keeps the
+                // greeting from reading as an orphan label.
+                Text("Ask about your things, or write something and send it to another app.")
                     .dsText(.subhead13)
                     .foregroundStyle(DS.textTertiary)
+                    .fixedSize(horizontal: false, vertical: true)
                     .padding(.horizontal, DS.Space.s4)
-                    .padding(.top, 2)
-                    .settleIn(delay: 0.06)
+                    .padding(.top, DS.Space.s2)
+                    .settleIn(delay: 0.1)
             }
             // The content sizes to ITSELF (no filling scroll) so the sheet can
             // hug it — no stranded empty space. The answer conversation carries
@@ -380,13 +775,6 @@ struct Composer: View {
 
             // Ask chips moved DOWN to sit by the input (2026-07-12) — rendered
             // as `askChips` just above the bottom bar, near where you compose.
-
-            // The finite tool launcher — a fixed grid of jumps to the person's
-            // OWN tools, shown while the field is empty (the "ask OR jump"
-            // surface). Hidden the moment you start composing.
-            if isOpen && !hasDraft && !answering && !isRecording, proposal == nil {
-                toolGrid
-            }
 
             // Tag completions — your real tags finish the word being typed.
             if !tagMatches.isEmpty {
@@ -415,12 +803,13 @@ struct Composer: View {
                                 convoTurn(question: turn.question) {
                                     VStack(alignment: .leading, spacing: DS.Space.s1) {
                                         GenRender(id: "root", els: turn.els)
+                                            .environment(\.genAgentAnswerContext, true)
                                         if turn.keyed { keyedBadge }
                                     }
                                 }
                             }
                             if answering {
-                                convoTurn(question: currentQuestion) {
+                                convoTurn(question: currentQuestion, animateIn: true) {
                                     VStack(alignment: .leading, spacing: DS.Space.s2) {
                                         // The librarian at work: the berry
                                         // breathes while the answer is in
@@ -430,7 +819,13 @@ struct Composer: View {
                                             CasberiMark(size: 20)
                                                 .breathing()
                                                 .padding(.horizontal, DS.Space.s4)
-                                                .transition(.opacity)
+                                                // A quick settle — scale down
+                                                // as it fades, a small "found
+                                                // it" beat rather than a flat
+                                                // vanish (delight, 2026-07-21).
+                                                .transition(.asymmetric(
+                                                    insertion: .opacity,
+                                                    removal: .scale(scale: 0.6).combined(with: .opacity)))
                                                 .accessibilityLabel("Thinking")
                                         }
                                         GenRender(id: "root", els: answerStream.els)
@@ -441,16 +836,72 @@ struct Composer: View {
                                             // answer only, so a scroll-back
                                             // never replays it.
                                             .environment(\.genCitationGlint, true)
+                                            .environment(\.genAgentAnswerContext, true)
                                         // A keyed answer says so, always — the
                                         // badge is the honesty rule applied to
                                         // where the answer was made.
                                         if keyedCurrent, !inFlight { keyedBadge }
                                         if !proseStreaming, !inFlight {
                                             HStack(spacing: DS.Space.s2) {
-                                                // Keep a settled synthesis (2026-07-12):
-                                                // lands the recap as a note so it isn't
-                                                // ephemeral. The consent tap IS the keep,
-                                                // like the parse card's save-on-send.
+                                                // The standing-ask verb (docs/agent-brief.md
+                                                // ruling 5/12): mints a KEPT ASK — a pill on
+                                                // the agent's rest screen that recomposes
+                                                // fresh every open, wearing a dot when its
+                                                // answer changed. Only offered when the
+                                                // question matches a real, deterministic
+                                                // composer (KeptAskComposers) — no dead
+                                                // control once kept.
+                                                if let kind = keepableAskKind {
+                                                    // Proactive minting (2026-07-20): asked
+                                                    // often enough (AskMemory.askedOften, the
+                                                    // neglect counter's inverse), the quiet
+                                                    // pill upgrades to a prompt that names WHY
+                                                    // — same action, same component, just the
+                                                    // label earning the attention a repeated
+                                                    // ask deserves.
+                                                    let askedOften = AskMemory.askedOften(kind)
+                                                    Button {
+                                                        DSHaptic.success()
+                                                        KeptAskStore.shared.keep(kind, title: currentQuestion)
+                                                        if !firstKeptAskDone {
+                                                            firstKeptAskDone = true
+                                                            chrome.flash("Your first standing question — I'll keep it fresh.",
+                                                                         tone: .success)
+                                                        } else {
+                                                            chrome.flash("Kept — it'll stay fresh on your rest screen",
+                                                                         tone: .success)
+                                                        }
+                                                        // The chip morphs to its own receipt for
+                                                        // a beat before it retires (delight,
+                                                        // 2026-07-21) — Keep earns a felt moment
+                                                        // instead of just vanishing.
+                                                        withAnimation(.spring(response: 0.22, dampingFraction: 0.6)) {
+                                                            keepJustLanded = true
+                                                        }
+                                                        Task { @MainActor in
+                                                            try? await Task.sleep(for: .milliseconds(420))
+                                                            keepableAskKind = nil
+                                                            keepJustLanded = false
+                                                        }
+                                                    } label: {
+                                                        Chip(text: keepJustLanded ? "Kept"
+                                                                : (askedOften
+                                                                   ? "You ask this a lot — keep it?"
+                                                                   : "Keep"),
+                                                             style: .tint,
+                                                             glyph: keepJustLanded ? "checkmark"
+                                                                : (askedOften ? "sparkles" : "pin.fill"))
+                                                    }
+                                                    .buttonStyle(.plain)
+                                                    .scaleEffect(keepJustLanded ? 1.08 : 1)
+                                                    .disabled(keepJustLanded)
+                                                }
+                                                // Save a settled synthesis as a note
+                                                // (2026-07-12; relabelled 2026-07-19 — "Keep"
+                                                // above is a different verb now): lands the
+                                                // recap in the corpus so it isn't ephemeral.
+                                                // The consent tap IS the save, like the parse
+                                                // card's save-on-send.
                                                 if !keptCurrent, currentStreamed,
                                                    let text = keepableText(answerStream.els) {
                                                     Button {
@@ -458,7 +909,7 @@ struct Composer: View {
                                                         keptCurrent = true
                                                         onKeepAnswer(text)
                                                     } label: {
-                                                        Chip(text: "Keep this", style: .tint,
+                                                        Chip(text: "Save as a note", style: .tint,
                                                              glyph: "tray.and.arrow.down")
                                                     }
                                                     .buttonStyle(.plain)
@@ -478,6 +929,14 @@ struct Composer: View {
                                                 }
                                             }
                                             .padding(.horizontal, DS.Space.s4)
+                                            // One settled VERB ROW (2026-07-20):
+                                            // clear air above and below so
+                                            // Keep / Save / Try-with-key read
+                                            // as the answer's own action band,
+                                            // not trailing content stuck to
+                                            // the last row.
+                                            .padding(.top, DS.Space.s3)
+                                            .padding(.bottom, DS.Space.s2)
                                         }
                                     }
                                 }
@@ -486,7 +945,21 @@ struct Composer: View {
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
                     }
-                    .frame(maxHeight: 300)
+                    // The 300pt cap made sense hugging a SHEET's height; on
+                    // the full-screen agent (ruling 3) there's a whole screen
+                    // to use instead.
+                    .frame(maxHeight: .infinity)
+                    .dsAdaptiveContentWidth()
+                    // Tapping empty space puts the keyboard away WITHOUT
+                    // lowering the agent — a separate action from the ✕/⌄
+                    // exits (ruling 7). Without this, the only tap that
+                    // reached past the keyboard was wired to lowering the
+                    // whole agent, so asking something and wanting to just
+                    // SEE the answer meant leaving the agent entirely to get
+                    // there (found and fixed in the throwaway prototype,
+                    // ported verbatim). Buttons inside (Keep, chips, a
+                    // drill-down row) still take their own tap first.
+                    .onTapGesture { fieldFocused = false }
                     .onChange(of: answerStream.progress) { _, _ in
                         withAnimation(DS.Motion.standard) { proxy.scrollTo("bottom", anchor: .bottom) }
                     }
@@ -557,13 +1030,26 @@ struct Composer: View {
               .frame(maxWidth: .infinity, alignment: .leading)
               .padding(.top, DS.Space.s3)
 
+            // Kept asks (docs/agent-brief.md ruling 4/5) — the standing
+            // questions someone chose to keep, leading the empty-field chips
+            // as B1 pills wearing their own one-line signal. The existing
+            // ranked/decayed suggestion grid still follows for asks not yet
+            // kept (user ruling 2026-07-19: both coexist).
+            keptAskPills
             // Chips sit right by the input — asks/commands you can fire from
-            // where you compose (moved down 2026-07-12).
+            // where you compose (moved down 2026-07-12). The two bands are
+            // mutually exclusive: askChips while the field is empty, takeChips
+            // once there's typed text to carry out.
             askChips
+            takeChips
             // The input, pinned to the bottom — a friendly rounded bar.
             inputBar
         }
         .frame(maxWidth: .infinity, alignment: .top)
+        // A genuinely large "while I was away" haul deals one small berry
+        // shower over the answer (delight, 2026-07-21) — an arrival worth
+        // marking, contained to the bubble's own bounds by the clip below.
+        .overlay { BerryRain(trigger: awayRainTrigger) }
         // Report the content's natural height so the hosting sheet hugs it.
         .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { h in
             if embedded { onHeight(h) }
@@ -591,16 +1077,64 @@ struct Composer: View {
         .background(embedded ? Color.clear : DS.surfaceSheet.opacity(0.97), in: bubbleShape)
         .clipShape(embedded ? AnyShape(Rectangle()) : AnyShape(bubbleShape))
         .scaleEffect(embedded ? 1 : (isOpen ? 1 : 0.3), anchor: .bottomTrailing)
+        // The bar→surface morph (2026-07-20, `glassNamespace`) — a PLAIN
+        // frame interpolation, deliberately NOT another glass-pipeline morph
+        // (see the lesson just above: prd 44/52 both tried tying the open
+        // animation to `glassEffect`/`glassEffectID` and broke on real
+        // devices twice, because a glitched glass morph took the content
+        // down with it). `matchedGeometryEffect` never touches glass
+        // compositing — it only interpolates this container's own frame
+        // from `AgentBar`'s last position, while the ink background above
+        // and the content within render normally throughout. Embedded only —
+        // the non-embedded bubble already has its own scale-driven open.
+        .modifier(MorphMatch(ns: embedded ? glassNamespace : nil))
         .task(id: isOpen) {
             if isOpen {
                 computeSuggestions()
+                // Kept asks share AskMemory's own decay counters with the
+                // suggestion tiles (ruling 5: "ignored asks decay dim") —
+                // bumped once per open here, exactly how computeSuggestions()
+                // bumps the tiles it actually shows. Never double-counted:
+                // a kept kind is always excluded from `suggestions` (see
+                // computeSuggestions()'s `KeptAskStore.shared.isKept` filter),
+                // so a given key's counter only ever moves from one side.
+                if !KeptAskStore.shared.order.isEmpty {
+                    AskMemory.shown(KeptAskStore.shared.order)
+                }
+                // Kept asks' signal dots refresh on open too (not just on
+                // foreground, docs/agent-brief.md Step 5) — the same
+                // granularity AskMemory's own decay counters already use
+                // (recomputed per open, never per keystroke). Fired
+                // DETACHED, not awaited inline — a network-backed kept ask
+                // (wallet/watchlist) can take several real seconds, and that
+                // must never delay the chip-reveal animation below. Cheap,
+                // synchronous kinds (away/showtag) update near-instantly
+                // anyway; `KeptAskStore` is @Observable, so `keptAskPills`
+                // simply re-renders whenever `currentDigests` lands, exactly
+                // `HomeInsightStore`'s own "kick async, repaint on arrival"
+                // shape.
+                Task { @MainActor in
+                    let all = (try? modelContext.fetch(FetchDescriptor<Thing>())) ?? []
+                    await KeptAskStore.shared.refreshDigests(things: all, context: modelContext)
+                }
                 // Reset then reveal so the ask chips stagger in on each open.
                 chipsAppeared = false
                 try? await Task.sleep(for: .milliseconds(90))
                 chipsAppeared = true
+                #if DEBUG
+                // `-composerDraft "<text>"` pre-fills the field on open —
+                // headless reach for the typed state (the Open-in chips)
+                // for screenshots and the screen sweep.
+                if draft.isEmpty,
+                   let text = UserDefaults.standard.string(forKey: "composerDraft"),
+                   !text.isEmpty {
+                    fillDraft(text)
+                }
+                #endif
             }
             await consumeAskRequest()
             await autoSendIfProbed()
+            await pushIfProbed()
         }
         // The empty invitation cycles while the field is genuinely idle.
         .task(id: cyclingActive) {
@@ -608,7 +1142,9 @@ struct Composer: View {
             while !Task.isCancelled {
                 try? await Task.sleep(for: .seconds(3))
                 if Task.isCancelled { break }
-                placeholderIndex = (placeholderIndex + 1) % invitations.count
+                withAnimation(DS.Motion.standard) {
+                    placeholderIndex = (placeholderIndex + 1) % invitations.count
+                }
             }
         }
     }
@@ -672,6 +1208,28 @@ struct Composer: View {
         #endif
     }
 
+    /// DEBUG hook: `-agentThingProbe "<title prefix>"` pushes the agent's own
+    /// Stack straight to a real thing's drill-down (`resolveThing` → the same
+    /// `genThingOpen` path a tapped row takes) — the headless route to verify
+    /// the NavigationStack push + real `ThingSheetView` render without a
+    /// keyboard or a tap (mirrors RootShell's own `-openThing` title-prefix
+    /// match, since a UUID changes every install but a title doesn't).
+    private func pushIfProbed() async {
+        #if DEBUG
+        guard isOpen, path.isEmpty,
+              let prefix = UserDefaults.standard.string(forKey: "agentThingProbe"),
+              !prefix.isEmpty else { return }
+        let all = (try? modelContext.fetch(FetchDescriptor<Thing>(
+            sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]))) ?? []
+        guard let match = all.first(where: { $0.title.hasPrefix(prefix) }) else {
+            NSLog("[Casberi] agentThingProbe: no match for \"%@\"", prefix)
+            return
+        }
+        NSLog("[Casberi] agentThingProbe: pushing \"%@\" (%@)", match.title, match.id.uuidString)
+        path.append(match.id.uuidString)
+        #endif
+    }
+
     // MARK: - Actions
 
     /// Names what pasting would capture — "Paste link" beats "Paste" when the
@@ -693,7 +1251,11 @@ struct Composer: View {
         keptCurrent = false
         keyedCurrent = false
         inFlight = false
+        keepJustLanded = false
+        awayRainPlayedThisOpen = false
         askGeneration += 1   // any in-flight answer Task retires silently
+        path = NavigationPath()
+        onLowerAgent()
     }
 
     /// The small honest mark a keyed answer wears — where it was made, stated
@@ -727,6 +1289,9 @@ struct Composer: View {
             keyedCurrent = true
             keptCurrent = false
             currentStreamed = false
+            // keepableAskKind is NOT reset here: askWithKey() re-asks the
+            // SAME currentQuestion, so the kind commit() already recognized
+            // for it is still correct throughout the retry.
         }
         askGeneration += 1
         let gen = askGeneration
@@ -735,10 +1300,11 @@ struct Composer: View {
             let doc = await answerWithKey(q)
             // Closed, or a newer ask overtook this one — retire silently.
             guard isOpen, gen == askGeneration else { return }
-            inFlight = false
+            withAnimation(DS.Motion.standard) { inFlight = false }
             keyAvailable = AgentKey.isConfigured
             if let doc {
                 currentStreamed = true   // a keyed synthesis is keepable too
+                DSHaptic.success()   // a real keyed answer landed — the honest tick
                 answerStream.stream(doc)
             } else {
                 keyedCurrent = false     // no keyed answer arrived — no badge
@@ -748,64 +1314,169 @@ struct Composer: View {
         }
     }
 
+    // MARK: - Kept-ask pills (docs/agent-brief.md ruling 4/5 — B1)
+
+    /// The standing questions someone chose to keep, as pill chips — a
+    /// FAMILIAR pattern (over a plainer list) and DIFFERENTIATED from the
+    /// app's own rows (user ruling 2026-07-19: chips are agent-language,
+    /// rows/cards are app-language). Changed-first sort; a dot only when the
+    /// kept ask's current digest doesn't match what was last seen (never a
+    /// model judgment — a plain string compare, `KeptAskStore.changed`).
+    /// Ruling 5's other half, wired in now: a pill nobody's tapped in
+    /// `AskMemory.neglectThreshold` opens decay-dims, same counters the
+    /// empty-composer suggestion tiles already use — `computeSuggestions()`
+    /// excludes kept kinds, so a key's counter only ever moves from one side.
+    /// A pill whose answer just changed never dims, even if it was neglected
+    /// before — a fresh signal is worth noticing regardless of history.
+    @ViewBuilder
+    private var keptAskPills: some View {
+        if isOpen, !hasDraft, !answering, !isRecording, proposal == nil,
+           !KeptAskStore.shared.order.isEmpty {
+            let sorted = KeptAskStore.shared.order.sorted { a, b in
+                let store = KeptAskStore.shared
+                let changedA = store.changed(a, digest: store.currentDigests[a] ?? "")
+                let changedB = store.changed(b, digest: store.currentDigests[b] ?? "")
+                return changedA != changedB ? changedA && !changedB
+                                            : (store.titles[a] ?? "") < (store.titles[b] ?? "")
+            }
+            FlowRow(spacing: DS.Space.s2) {
+                ForEach(sorted, id: \.self) { kind in
+                    let store = KeptAskStore.shared
+                    let digest = store.currentDigests[kind] ?? ""
+                    let title = store.titles[kind] ?? kind
+                    let changed = store.changed(kind, digest: digest)
+                    let neglected = !changed && AskMemory.neglected(kind)
+                    Button {
+                        DSHaptic.selection()
+                        store.markSeen(kind, digest: digest)
+                        AskMemory.tapped(kind)
+                        draft = title
+                        commit()
+                    } label: {
+                        // Hero treatment (2026-07-20): these pills ARE the
+                        // board's replacement — the standing per-app glance
+                        // surface — so they earn real presence: callout-size
+                        // title, roomier padding, and a CHANGED pill wears a
+                        // full tint wash (not just its dot) so a live signal
+                        // reads as a filled element against the steady gray
+                        // of its unchanged neighbors. Still text-only chips
+                        // (ruling 5's tripwire: never a thumbnail).
+                        HStack(spacing: DS.Space.s2) {
+                            if changed {
+                                Circle().fill(DS.tint).frame(width: 7, height: 7)
+                            }
+                            Text(title)
+                                .dsText(.callout15)
+                                .foregroundStyle(changed ? DS.textPrimary : DS.textSecondary)
+                            if !digest.isEmpty {
+                                // A changed pill's number climbs from what
+                                // was last seen to what's current (delight,
+                                // 2026-07-21) — the roll IS the dot's promise
+                                // made visible, restoring the digit-climb the
+                                // 2026-07-20 pill unification traded away.
+                                DigestRoll(text: "· \(digest)",
+                                          previous: changed ? store.lastSeenDigest(kind).map { "· \($0)" } : nil)
+                                    .dsText(.subhead13)
+                                    .foregroundStyle(changed ? DS.textSecondary : DS.textTertiary)
+                            }
+                        }
+                        .opacity(neglected ? 0.55 : 1)
+                        .padding(.horizontal, DS.Space.s4)
+                        .padding(.vertical, DS.Space.s3)
+                        .background(changed ? AnyShapeStyle(DS.tintDim) : AnyShapeStyle(DS.gray100),
+                                    in: RoundedRectangle(cornerRadius: DS.Radius.control,
+                                                         style: .continuous))
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal, DS.Space.s4)
+            .padding(.top, DS.Space.s3)
+        }
+    }
+
     // MARK: - Ask chips + input bar (chat grammar: by the bottom)
 
-    /// The ask chips — asks the corpus can answer now, plus the organize invite
-    /// — shown while the field is empty, right above the input.
+    /// The ask chips — asks the corpus can answer now, plus the organize
+    /// invite, as `FlowRow` pills while the field is empty. Unified with
+    /// `keptAskPills` (2026-07-20, user: "your chips design was better")
+    /// — was a 2×2 `AskTile` grid; now the SAME pill vocabulary the kept
+    /// asks above already wear, so the whole rest screen reads as one
+    /// language instead of two. Every specific query is unchanged; the ONE
+    /// trade made explicit: the away chip's rolling-digit-climb delight
+    /// (`AskTile.rollCount`) is gone, replaced by the same static "· N"
+    /// digest suffix every kept pill already shows. The organize invite
+    /// keeps its sole solid-tint treatment — the row's one accent, per the
+    /// one-tint law.
     @ViewBuilder
     private var askChips: some View {
         if isOpen && !hasDraft && !answering && !isRecording,
            proposal == nil, !suggestions.isEmpty || organizeHint != nil {
             let hintLead = organizeHint != nil ? 1 : 0
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: DS.Space.s2) {
-                    if let hint = organizeHint {
-                        Button {
-                            DSHaptic.selection()
-                            fillDraft("tag \(hint.source.lowercased()) as ")
-                            fieldFocused = true
-                        } label: {
-                            Chip(text: "Tag your \(hint.count) \(hint.source) things",
-                                 style: .tint, glyph: "tag")
+            FlowRow(spacing: DS.Space.s2) {
+                if let hint = organizeHint {
+                    Button {
+                        DSHaptic.selection()
+                        fillDraft("tag \(hint.source.lowercased()) as ")
+                        fieldFocused = true
+                    } label: {
+                        HStack(spacing: DS.Space.s2) {
+                            Image(systemName: "tag")
+                                .font(.system(size: 13, weight: .semibold))
+                            Text("Tag your \(hint.count) \(hint.source) things")
+                                .dsText(.callout15)
                         }
-                        .buttonStyle(.plain)
-                        .modifier(ChipEntrance(index: 0, shown: chipsAppeared, reduceMotion: reduceMotion))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, DS.Space.s4)
+                        .padding(.vertical, DS.Space.s3)
+                        .background(DS.tint, in: RoundedRectangle(cornerRadius: DS.Radius.control,
+                                                                   style: .continuous))
                     }
-                    // Two suggestions, no more — the chips whisper "you could
-                    // ask" beside the field; a wall of them fought the tiles
-                    // for attention (v2 pass, 2026-07-12).
-                    ForEach(Array(suggestions.prefix(2).enumerated()), id: \.offset) { i, ask in
-                        Button {
-                            DSHaptic.selection()
-                            draft = ask
-                            commit()
-                        } label: {
-                            // The librarian's chip rolls its real count up
-                            // as it appears — "14 things while I was away"
-                            // arriving digit by digit (delight 2026-07-13).
-                            // The tap still sends the canonical ask.
-                            if ask.hasPrefix("While I was away"), awayLanded >= 3 {
-                                AwayRollChip(count: awayLanded)
-                            } else {
-                                Chip(text: ask, style: .neutral, glyph: "sparkle")
+                    .buttonStyle(.plain)
+                    .modifier(ChipEntrance(index: 0, shown: chipsAppeared, reduceMotion: reduceMotion))
+                }
+                ForEach(Array(suggestions.enumerated()), id: \.offset) { i, ask in
+                    // The tap still sends the CANONICAL "While I was away?"
+                    // ask regardless of the pill's display label — matching
+                    // the tile version's own distinction.
+                    let isAway = ask.kind == "away" && awayLanded >= 3
+                    Button {
+                        DSHaptic.selection()
+                        if !isAway { AskMemory.tapped(ask.memoryKey) }
+                        draft = ask.title
+                        commit()
+                    } label: {
+                        HStack(spacing: DS.Space.s2) {
+                            Image(systemName: isAway ? "sparkles" : ask.glyph)
+                                .font(.system(size: 13, weight: .semibold))
+                                .foregroundStyle(DS.tint)
+                                // The Noticed chip is the agent's one
+                                // spontaneous connection — it earns a single
+                                // sparkle as the chips settle in, so the most
+                                // surprising chip acts surprising too
+                                // (delight, 2026-07-21). Plays once per open.
+                                .symbolEffect(.bounce, value: ask.kind == "noticed" && chipsAppeared)
+                            Text(isAway ? "Catch me up" : ask.title)
+                                .dsText(.callout15)
+                                .foregroundStyle(DS.textPrimary)
+                            if isAway {
+                                Text("· \(awayLanded)")
+                                    .dsText(.subhead13)
+                                    .foregroundStyle(DS.textTertiary)
                             }
                         }
-                        .buttonStyle(.plain)
-                        .modifier(ChipEntrance(index: i + hintLead, shown: chipsAppeared, reduceMotion: reduceMotion))
+                        .padding(.horizontal, DS.Space.s4)
+                        .padding(.vertical, DS.Space.s3)
+                        .background(DS.gray100, in: RoundedRectangle(cornerRadius: DS.Radius.control,
+                                                                      style: .continuous))
                     }
+                    .buttonStyle(.plain)
+                    .modifier(ChipEntrance(index: i + hintLead, shown: chipsAppeared, reduceMotion: reduceMotion))
                 }
-                .padding(.horizontal, DS.Space.s4)
             }
-            // A soft trailing fade so a clipped chip reads as "more to scroll",
-            // not cut off mid-word.
-            .mask(
-                LinearGradient(stops: [.init(color: .black, location: 0),
-                                       .init(color: .black, location: 0.88),
-                                       .init(color: .clear, location: 1)],
-                               startPoint: .leading, endPoint: .trailing)
-            )
-            // Clear air between the tool card and the chips — the chips are a
-            // separate band (ask), not stuck to the tools (jump).
+            .padding(.horizontal, DS.Space.s4)
+            // Clear air between the greeting and the chips — a separate
+            // band (ask), not stuck to the header.
             .padding(.top, DS.Space.s4)
             .padding(.bottom, DS.Space.s2)
         }
@@ -817,6 +1488,26 @@ struct Composer: View {
     /// something to send — a soft rounded bar so the surface feels inviting.
     private var inputBar: some View {
         HStack(spacing: DS.Space.s2) {
+            // ⌄ — the second exit (ruling 7): the thing that raised the
+            // agent lowers it. Only ever visible at the agent's own root —
+            // this bar is part of `openBubble`, which a NavigationStack push
+            // hides behind the pushed screen automatically. A bare glyph, no
+            // drawn circle (fix 2026-07-20) — the mic is the one true
+            // circular button beside the field now; ruling 7 already has
+            // this exit "on trial" against ✕, so it reads as the lighter of
+            // the two.
+            Button {
+                close()
+            } label: {
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(DS.textTertiary)
+                    .frame(width: 32, height: 36)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Lower")
+
             Button {
                 if isRecording { commit() }   // the live mic is STOP + keep
                 else { DSHaptic.tap(); Task { await voice.start() } }
@@ -831,9 +1522,20 @@ struct Composer: View {
             .accessibilityLabel(isRecording ? "Stop and keep" : "Record a voice note")
 
             TextField("", text: $draft, axis: .vertical)
+                // The invitation cycles through what the composer can DO —
+                // ask, find, recap, tag — so the empty field teaches its
+                // range instead of reading as one dead line (wired to the
+                // long-standing `invitations` cycle, 2026-07-16). While a doc
+                // is up, it reads "Ask about this…" instead (ruling 8: a
+                // follow-up grounds in the current answer, via the SAME
+                // `lastAnswerHits` mechanism the answer closures already use).
                 .placeholder(when: !hasDraft) {
-                    Text("Ask, or say what to do")
+                    Text(answering || !turns.isEmpty ? String(localized: "Ask about this…")
+                                                     : invitations[placeholderIndex])
                         .dsText(.body17).foregroundStyle(DS.textTertiary)
+                        .lineLimit(1)
+                        .id(placeholderIndex)
+                        .transition(.opacity)
                 }
                 .dsText(.body17)
                 .foregroundStyle(DS.textPrimary)
@@ -854,27 +1556,40 @@ struct Composer: View {
                     if prefilled { prefilled = false }
                     else if new.count - old.count > 8 { pasted = true }
                     if new.isEmpty { pasted = false }
+                    detectDraftDate()
                 }
                 .lineLimit(1...5)
 
             // The send dot is ALWAYS present — grey and waiting when the field
             // is empty (tap = focus the field), springing to tint the moment
             // there's something to send. A visible affordance beats a control
-            // that pops out of nowhere (v2 pass, 2026-07-12).
+            // that pops out of nowhere (v2 pass, 2026-07-12). With typed text
+            // it wears the word "Ask" (2026-07-16): the verb was invisible,
+            // and "does typing save?" was a real question — the label answers
+            // it. A live recording keeps the bare arrow: stopping SAVES the
+            // voice note, and an "Ask" label there would lie.
             Button {
                 if hasDraft || isRecording { commit() } else { fieldFocused = true }
             } label: {
-                Image(systemName: "arrow.up")
-                    .font(.system(size: 15, weight: .bold))
-                    .foregroundStyle(hasDraft || isRecording ? .white : DS.textTertiary)
-                    .frame(width: 32, height: 32)
-                    .background(hasDraft || isRecording ? AnyShapeStyle(DS.tint)
-                                                        : AnyShapeStyle(DS.fillFaint),
-                                in: Circle())
-                    .symbolEffect(.bounce, value: hasDraft || isRecording)
+                HStack(spacing: DS.Space.s1) {
+                    if hasDraft && !isRecording {
+                        Text("Ask")
+                            .dsText(.label12).fontWeight(.semibold)
+                    }
+                    Image(systemName: "arrow.up")
+                        .font(.system(size: hasDraft && !isRecording ? 12 : 15, weight: .bold))
+                        .symbolEffect(.bounce, value: hasDraft || isRecording)
+                }
+                .foregroundStyle(hasDraft || isRecording ? .white : DS.textTertiary)
+                .padding(.horizontal, hasDraft && !isRecording ? DS.Space.s3 : 0)
+                .frame(minWidth: 32)
+                .frame(height: 32)
+                .background(hasDraft || isRecording ? AnyShapeStyle(DS.tint)
+                                                    : AnyShapeStyle(DS.fillFaint),
+                            in: Capsule(style: .continuous))
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("Send")
+            .accessibilityLabel(hasDraft && !isRecording ? "Ask" : "Send")
         }
         .padding(.leading, DS.Space.s2)
         .padding(.trailing, DS.Space.s2)
@@ -889,114 +1604,106 @@ struct Composer: View {
         .padding(.bottom, DS.Space.s3)
     }
 
-    // MARK: - Tool launcher (jumps to the person's own tools)
+    // MARK: - Send to (the typed text leaves with the jump)
 
-    /// The tiles to show — a `probe` tile (ChatGPT/Claude) only appears when its
-    /// app is installed, so a tile never opens a website instead of the app.
-    private var visibleTools: [QuickTool] {
-        #if DEBUG
-        // `-forceTools YES` shows probe-gated tiles in the simulator, where
-        // third-party apps can't be installed (screenshot/video staging only).
-        if UserDefaults.standard.bool(forKey: "forceTools") { return QuickTool.all }
-        #endif
-        return QuickTool.all.filter { !$0.probe || UIApplication.shared.canOpenURL($0.url) }
+    /// A question is the Ask button's job — the Send-to band sits out so the
+    /// one honest exit is obvious. Conservative: a trailing "?" or a leading
+    /// question word.
+    private var draftIsQuestion: Bool {
+        let text = draft.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        if text.hasSuffix("?") { return true }
+        let first = text.split(separator: " ").first.map(String.init) ?? ""
+        return ["what", "who", "when", "where", "why", "how", "how's",
+                "did", "does", "do", "is", "are", "can", "show", "find"].contains(first)
     }
 
-    private var toolGrid: some View {
-        // No label — the tiles are self-evident (the "Your tools" caption was
-        // an orphan). Columns adapt to the count so no row is ever ragged:
-        // 6 tools (no AI apps) → 3×2, 8 (both installed) → 4×2; only the rare
-        // 7 leaves a short second row. The grid sits on an ELEVATED card —
-        // depth by tone and shadow, never by line (the ladder, 2026-07-12) —
-        // and the tiles rise in with the ask chips' stagger.
-        let tools = visibleTools
-        let cols = tools.count <= 6 ? 3 : 4
-        return LazyVGrid(
-            columns: Array(repeating: GridItem(.flexible(), spacing: DS.Space.s2), count: cols),
-            spacing: DS.Space.s4
-        ) {
-            ForEach(Array(tools.enumerated()), id: \.element.id) { i, tool in
-                Button { runTool(tool) } label: {
-                    VStack(spacing: DS.Space.s2) {
-                        toolIcon(tool)
-                            // The launch pop — the tapped tile springs up and
-                            // fades as its app takes over the screen.
-                            .scaleEffect(launchingTool == tool.id ? 1.22 : 1)
-                            .opacity(launchingTool == tool.id ? 0.55 : 1)
-                        Text(LocalizedStringKey(tool.label))
-                            .dsText(.subhead13)
-                            .foregroundStyle(DS.textSecondary)
-                            .lineLimit(1)
-                    }
-                }
-                .buttonStyle(TilePress())
-                .modifier(ChipEntrance(index: i, shown: chipsAppeared, reduceMotion: reduceMotion))
-            }
-        }
-        .padding(.vertical, DS.Space.s4)
-        .padding(.horizontal, DS.Space.s2)
-        .background(DS.background100,
-                    in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
-        .shadow(color: DS.cardShadow, radius: 18, x: 0, y: 6)
-        .padding(.horizontal, DS.Space.s4)
-        .padding(.top, DS.Space.s4)
-    }
-
-    /// A tool's face: the real brand mark when one is bundled (ChatGPT, Claude
-    /// — they coin-flip in, the bridge icons' own delight), else the app-icon
-    /// treatment — a solid brand-color squircle, white glyph, a whisper of top
-    /// sheen. The washy tint fills died with the v2 pass (2026-07-12): solid
-    /// reads as an app, tint read as a stain, worst in dark.
+    /// The "Send to" chips (2026-07-16, third form of this band — see
+    /// TakeTool): shown the moment there's typed text that isn't a question,
+    /// in the ask chips' slot — the two bands are the field's two exits, and
+    /// only one is ever visible. What you typed is a FACT bound for another
+    /// app; the text rides the jump (Messages/Mail body, Google query,
+    /// Calendar at the detected date) or the clipboard where no URL carries
+    /// it (the flash says so). A found date earns a receipt line — proof the
+    /// Calendar jump will land on the right day.
     @ViewBuilder
-    private func toolIcon(_ tool: QuickTool) -> some View {
-        let shape = RoundedRectangle(cornerRadius: DS.Radius.appIcon(50), style: .continuous)
-        if let ui = UIImage(named: "brand-\(tool.id)") {
-            Image(uiImage: ui)
-                .resizable()
-                .scaledToFill()
-                .frame(width: 50, height: 50)
-                .clipShape(shape)
-                .coinFlip(trigger: chipsAppeared)
-        } else {
-            shape
-                .fill(tool.tint)
-                .overlay(
-                    shape.fill(LinearGradient(colors: [.white.opacity(0.16), .clear],
-                                              startPoint: .top, endPoint: .center))
-                )
-                .overlay(
-                    Image(systemName: tool.symbol)
-                        .font(.system(size: 21, weight: .semibold))
-                        .foregroundStyle(.white)
-                )
-                .frame(width: 50, height: 50)
+    private var takeChips: some View {
+        if isOpen && hasDraft && !answering && !isRecording, proposal == nil,
+           !draftIsQuestion {
+            VStack(alignment: .leading, spacing: DS.Space.s1) {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: DS.Space.s2) {
+                        Text("Send to")
+                            .dsText(.subhead13)
+                            .foregroundStyle(DS.textTertiary)
+                        // Chunkier pills than the shell Chip — the same bold
+                        // grammar as the ask tiles (option A, 2026-07-16), so
+                        // the field's two exits read as one design.
+                        ForEach(TakeTool.all) { tool in
+                            Button { runTake(tool) } label: {
+                                HStack(spacing: DS.Space.s2) {
+                                    Image(systemName: tool.glyph)
+                                        .font(.system(size: 14, weight: .medium))
+                                        .foregroundStyle(DS.tint)
+                                    Text(tool.label)
+                                        .dsText(.callout15).fontWeight(.semibold)
+                                        .foregroundStyle(DS.textPrimary)
+                                }
+                                .padding(.horizontal, DS.Space.s3 + 2)
+                                .frame(height: 40)
+                                .background(DS.gray100, in: Capsule(style: .continuous))
+                            }
+                            .buttonStyle(PressSpring())
+                        }
+                    }
+                    .padding(.horizontal, DS.Space.s4)
+                }
+                if let date = detectedDate {
+                    Text("Found a time: \(date.formatted(.dateTime.weekday(.wide).month(.abbreviated).day().hour().minute()))")
+                        .dsText(.label12)
+                        .foregroundStyle(DS.textTertiary)
+                        .padding(.horizontal, DS.Space.s4)
+                }
+            }
+            .padding(.top, DS.Space.s4)
+            .padding(.bottom, DS.Space.s2)
         }
     }
 
-    /// A tool tile jumps out to that app and closes the composer — nothing
-    /// lands in Casberi (the ruling: people create in their own tools).
-    private func runTool(_ tool: QuickTool) {
-        // The hand-off is physical: the tile POPS like a home-screen icon
-        // opening — a heavier tap and a spring-up mask the app switch, so
-        // jumping to your tool reads as a deliberate throw, not a silent
-        // close (delight, 2026-07-12). Reduce Motion takes the instant path.
-        guard !reduceMotion else { DSHaptic.tap(); openURL(tool.url); close(); return }
+    /// Re-reads the draft for a date (NSDataDetector) — called on each edit.
+    /// Cheap at typing cadence; cached in `detectedDate` so the band and the
+    /// Calendar jump read one value.
+    private func detectDraftDate() {
+        let text = draft.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty,
+              let detector = try? NSDataDetector(types: NSTextCheckingResult.CheckingType.date.rawValue) else {
+            detectedDate = nil
+            return
+        }
+        let range = NSRange(text.startIndex..., in: text)
+        detectedDate = detector.firstMatch(in: text, range: range)?.date
+    }
+
+    /// A Send-to chip jumps out to that app with the typed text and closes
+    /// the composer — it never writes there and nothing lands in Casberi
+    /// (rulings: people create in their own tools; we jump, we don't write).
+    /// Where no URL can carry the text, the chip copies it first and the
+    /// flash says exactly that (honesty rule: no silent blank jump).
+    private func runTake(_ tool: TakeTool) {
+        let text = draft.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty, let url = tool.makeURL(text, detectedDate) else { return }
         DSHaptic.tap()
-        withAnimation(.spring(response: 0.24, dampingFraction: 0.5)) {
-            launchingTool = tool.id
+        if tool.copiesFirst {
+            UIPasteboard.general.string = text
+            chrome.flash("Copied — paste it in \(tool.label)")
         }
-        Task {
-            try? await Task.sleep(for: .milliseconds(170))
-            openURL(tool.url)
-            close()
-        }
+        openURL(url)
+        close()
     }
 
     private func applyProposal(_ proposal: OrganizeProposal) {
         guard proposal.canApply else { return }
         let (summary, undo) = Organize.apply(proposal, context: modelContext)
-        DSHaptic.success()
-        chrome.flash(summary, action: .init(label: "Undo", run: undo))
+        chrome.flash(summary, tone: .success, action: .init(label: "Undo", run: undo))
         close()
     }
 
@@ -1055,19 +1762,29 @@ struct Composer: View {
                 turns.append(ConvoTurn(question: currentQuestion, els: answerStream.els,
                                        keyed: keyedCurrent))
             }
-            answering = true
-            currentQuestion = draft
-            keptCurrent = false
-            currentStreamed = false
-            keyedCurrent = false
-            inFlight = true
+            // The question lift (delight, 2026-07-21): the header's entrance
+            // and the berry's fade-in ride the same animated commit as the
+            // rest of "a new ask just started."
+            withAnimation(DS.Motion.standard) {
+                answering = true
+                currentQuestion = draft
+                keptCurrent = false
+                currentStreamed = false
+                keyedCurrent = false
+                inFlight = true
+            }
+            keepableAskKind = nil   // recomputed at settle, for THIS question
             askGeneration += 1
             let gen = askGeneration
             let q = draft
             draft = ""              // clear the field so a follow-up is ready
-            answerStream.paint(OnDeviceModel.isAvailable
-                               ? ["root = Stack([w])", "w = Insight(\"Thinking…\")"]
-                               : [])
+            // No placeholder doc while in flight (fix 2026-07-20): the old
+            // `Insight("Thinking…")` painted the answer card's full tintDim
+            // chrome around a word — an empty-looking navy card. The
+            // breathing berry beside the question header (rendered whenever
+            // `inFlight`, just above the GenRender) is the whole loading
+            // state now; the first real content to appear IS the answer.
+            answerStream.paint([])
             Task { @MainActor in
                 // Organize-ish wording the strict parser missed ("put
                 // everything about lisbon under Trip") — the model fills the
@@ -1103,9 +1820,38 @@ struct Composer: View {
                 // Prose already painted its way in; settle on the final text.
                 // A lookup or the fallback never streamed, so reveal it with
                 // the typewriter (unchanged behaviour).
-                proseStreaming = false
-                inFlight = false
+                withAnimation(DS.Motion.standard) {
+                    proseStreaming = false
+                    inFlight = false
+                }
                 keyAvailable = AgentKey.isConfigured   // one read per settle
+                // One more fetch per settle (not per keystroke) — same
+                // precedent `computeSuggestions()` already sets for a plain
+                // corpus-wide read.
+                let settledThings = (try? modelContext.fetch(FetchDescriptor<Thing>())) ?? []
+                keepableAskKind = recognizeKeptAskKind(q, in: settledThings)
+                // Proactive minting (2026-07-20): count each keepable ask
+                // actually made, so a question asked often can upgrade its
+                // quiet Keep pill to a "you ask this a lot" prompt. Counted
+                // ONLY for keepable kinds — the counter's key space IS the
+                // kind space, so an unkeepable ask has nothing to count
+                // toward.
+                if let kind = keepableAskKind { AskMemory.asked(kind) }
+                // The settle haptic is keyed to honesty (delight, 2026-07-21):
+                // real content earns the tick, the "nothing matches" fallback
+                // earns nothing — celebrating a miss would violate the
+                // honesty rule. A genuinely large away haul earns a small
+                // berry shower too, the same arrival vocabulary the wallet
+                // pass already uses (prd §79) — once per open, even across
+                // follow-up re-asks of the same question.
+                if !docHasFallback(finalDoc) {
+                    DSHaptic.success()
+                }
+                if keepableAskKind == "away", !awayRainPlayedThisOpen,
+                   let count = StatusAsk.pulse(q, things: settledThings)?.pool.count, count >= 20 {
+                    awayRainPlayedThisOpen = true
+                    awayRainTrigger += 1
+                }
                 if streamed { answerStream.paint(finalDoc) }
                 else { answerStream.stream(finalDoc) }
                 fieldFocused = true     // ready for the next follow-up
@@ -1166,49 +1912,51 @@ struct ParseCard: View {
     }
 }
 
-/// The composer at rest — a glass circle on the tab bar's axis. Tap and the
-/// same glass morphs into the bubble (shared glassEffectID). The ask glyph,
-/// no menu: one tap, one surface.
-struct ComposerFAB: View {
-    var glassNamespace: Namespace.ID?
-    var action: () -> Void
-    @Environment(ShellChrome.self) private var chrome
-    /// The tap bounces the plus (Telegram grammar, same as the tab icons).
-    @State private var bounce = 0
+/// A digest string that rolls its leading number from a previous reading to
+/// the current one (delight, 2026-07-21) — a kept pill's "· 12" climbing to
+/// "· 19" instead of popping cold, the same `.numericText()` grammar
+/// `CountUpText` already uses elsewhere. Falls back to a plain, unanimated
+/// `Text` whenever there's no real delta to show: no previous reading, no
+/// leading number in either string, an unchanged value, or Reduce Motion —
+/// motion only plays when it's telling the truth about a real change.
+private struct DigestRoll: View {
+    let text: String
+    let previous: String?
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// nil until the roll starts, then the mid-roll value climbing to
+    /// `cur.n` — one Text node throughout, so `.numericText()` has a stable
+    /// identity to interpolate (mirrors `CountUpText`'s own shape).
+    @State private var shown: Int?
+
+    /// The FIRST number wherever it sits in the string (not necessarily the
+    /// head — digests read "· 12 new" or "$12,480 · 3 wallets"), split into
+    /// what comes before/after it. nil when there's no digit run to animate.
+    private func split(_ s: String) -> (prefix: String, n: Int, suffix: String)? {
+        guard let range = s.rangeOfCharacter(from: .decimalDigits) else { return nil }
+        var end = range.upperBound
+        while end < s.endIndex, s[end].isNumber || s[end] == "," { end = s.index(after: end) }
+        guard let n = Int(String(s[range.lowerBound..<end].filter(\.isNumber))) else { return nil }
+        return (String(s[s.startIndex..<range.lowerBound]), n, String(s[end...]))
+    }
 
     var body: some View {
-        let side: CGFloat = chrome.minimized ? 48 : 56
-        Button {
-            bounce += 1
-            action()
-        } label: {
-            // Plus, not a magnifier: the button's job is the capture habit
-            // (Journal's glass + is the system precedent). The bubble teaches
-            // ask once open.
-            Image(systemName: "plus")
-                .font(.system(size: 22, weight: .medium))
-                .symbolEffect(.bounce, value: bounce)
-                .foregroundStyle(DS.textPrimary)
-                .frame(width: side, height: side)
-                .contentShape(Circle())
+        if !reduceMotion, let cur = split(text), let prevText = previous,
+           let prev = split(prevText), prev.n != cur.n {
+            Text("\(cur.prefix)\((shown ?? prev.n).formatted())\(cur.suffix)")
+                .contentTransition(.numericText(value: Double(shown ?? prev.n)))
+                .onAppear {
+                    shown = prev.n
+                    // A follow-up main-actor hop, same fix `ConnectBloom`
+                    // documents: setting the start value and animating the
+                    // end value in one synchronous call coalesces, so the
+                    // start frame never commits and nothing rolls.
+                    Task { @MainActor in
+                        withAnimation(DS.Motion.standard) { shown = cur.n }
+                    }
+                }
+        } else {
+            Text(text)
         }
-        .buttonStyle(FABPress())
-        .dsGlass(cornerRadius: DS.Radius.pill, glassID: "composer", in: glassNamespace)
-        .accessibilityLabel("Ask or save")
-    }
-}
-
-/// The FAB's press (2026-07-10): `.plain` had NO down-state — the button was
-/// dead under the finger until release. Now it squishes and the plus tilts
-/// 45° toward the × it's about to become as the glass morphs into the
-/// composer; dragging off springs it back untouched.
-private struct FABPress: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .scaleEffect(configuration.isPressed ? 0.86 : 1)
-            .rotationEffect(.degrees(configuration.isPressed ? 45 : 0))
-            .animation(.spring(duration: 0.3, bounce: 0.55),
-                       value: configuration.isPressed)
     }
 }
 
@@ -1234,43 +1982,6 @@ struct Chip: View {
     }
 }
 
-/// The librarian chip with its count rolling in — the digits climb to the
-/// real away total right after the chip lands (numericText, once). Tapping
-/// it sends the canonical "While I was away?" via the enclosing button.
-struct AwayRollChip: View {
-    let count: Int
-    @State private var shown = 0
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
-    var body: some View {
-        HStack(spacing: DS.Space.s1) {
-            Image(systemName: "sparkle").font(.system(size: 12))
-            Text("\(shown) things while I was away")
-                .dsText(.label12)
-                .contentTransition(.numericText(value: Double(shown)))
-        }
-        .foregroundStyle(DS.textPrimary)
-        .padding(.horizontal, DS.Space.s3)
-        .frame(height: 28)
-        .background(DS.gray100, in: Capsule(style: .continuous))
-        .onAppear {
-            if reduceMotion { shown = count } else {
-                withAnimation(.spring(response: 0.9, dampingFraction: 0.9).delay(0.35)) {
-                    shown = count
-                }
-            }
-        }
-        // The suggestions rebuild while the composer is open — a grown away
-        // pool re-rolls to the new count instead of going stale (review
-        // catch 2026-07-13).
-        .onChange(of: count) { _, new in
-            withAnimation(reduceMotion ? nil : .spring(response: 0.6, dampingFraction: 0.9)) {
-                shown = new
-            }
-        }
-        .accessibilityLabel("\(count) things while I was away")
-    }
-}
 
 // MARK: - Placeholder helper
 
@@ -1329,5 +2040,43 @@ private struct OrganizeProposalCard: View {
         .padding(DS.Space.s3)
         .background(DS.surfaceSheet,
                     in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+    }
+}
+
+/// A minimal wrapping row — kept-ask pills flow onto several lines and
+/// SwiftUI has no built-in for it at this deployment target.
+private struct FlowRow: Layout {
+    var spacing: CGFloat = 8
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let maxW = proposal.width ?? .infinity
+        var x: CGFloat = 0, y: CGFloat = 0, lineH: CGFloat = 0
+        for s in subviews {
+            let sz = s.sizeThatFits(.unspecified)
+            if x + sz.width > maxW, x > 0 {
+                x = 0
+                y += lineH + spacing
+                lineH = 0
+            }
+            x += sz.width + spacing
+            lineH = max(lineH, sz.height)
+        }
+        return CGSize(width: maxW, height: y + lineH)
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize,
+                       subviews: Subviews, cache: inout ()) {
+        var x = bounds.minX, y = bounds.minY, lineH: CGFloat = 0
+        for s in subviews {
+            let sz = s.sizeThatFits(.unspecified)
+            if x + sz.width > bounds.maxX, x > bounds.minX {
+                x = bounds.minX
+                y += lineH + spacing
+                lineH = 0
+            }
+            s.place(at: CGPoint(x: x, y: y), proposal: ProposedViewSize(sz))
+            x += sz.width + spacing
+            lineH = max(lineH, sz.height)
+        }
     }
 }

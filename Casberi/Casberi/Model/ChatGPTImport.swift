@@ -58,7 +58,7 @@ enum ChatGPTImport {
             SpotlightIndex.index([thing])
             summary.imported += 1
         }
-        if summary.imported > 0 { try? context.save() }
+        if summary.imported > 0 { context.saveHonestly() }
         return summary
     }
 

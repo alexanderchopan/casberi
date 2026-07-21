@@ -29,11 +29,11 @@ enum GitHubDeviceFlow {
     static var isAvailable: Bool { !clientID.isEmpty }
 
     /// `repo` because GitHub's classic OAuth has no read-only repo scope —
-    /// it's the smallest scope that reaches private issues/PRs (and the one
-    /// the write-back verbs of prd §67 goal ③ will need, each still gated
-    /// behind its own consent tap). `gist` reaches your secret gists (the
-    /// Gists feed), `read:user` your profile and events. The setup copy states
-    /// this plainly.
+    /// it's the smallest scope that reaches private issues/PRs. Casberi never
+    /// uses the write half of it: there is no write-back verb anywhere in the
+    /// app (ruling 2026-07-15 — prd §67 goal ③ dropped; see BridgeWrites'
+    /// removal). `gist` reaches your secret gists (the Gists feed), `read:user`
+    /// your profile and events. The setup copy states this plainly.
     static let scope = "repo read:user gist"
 
     struct Code {

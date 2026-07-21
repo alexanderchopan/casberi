@@ -10,7 +10,6 @@ struct AppDetailScreen: View {
     let offer: BridgeCatalog.Offer
     @Environment(BridgeStore.self) private var store
     @Environment(\.modelContext) private var modelContext
-    @State private var openBridge: BridgeRouter.Destination?
     @State private var previewStream = GenStream()
     /// The connect payoff (delight, 2026-07-12): bumping this blooms the app's
     /// hue over the page via the shared `.connectBloom` — "connect ends in
@@ -23,7 +22,10 @@ struct AppDetailScreen: View {
     private var connected: Bool {
         bridge != nil && bridge?.status != .paused
     }
-    private var brand: Color { BridgeGlyph.color(for: offer.name) }
+    // signalColor, not the tile hue: this paints the inline feed icon, where
+    // Tokens' near-black tile would vanish on the dark page (its identity
+    // there is the glyph's green). The wash keeps asking DS.washHue itself.
+    private var brand: Color { BridgeGlyph.signalColor(for: offer.name) }
 
     /// The app's identity hue washed down from the top — nil for a hueless
     /// app (the gray fallback is a fill, not an identity: same ruling the
@@ -60,8 +62,14 @@ struct AppDetailScreen: View {
         // recipe, under the content; hueless apps stay pure page, honestly.
         .background(alignment: .top) { brandWash }
         // The connect payoff blooms over the content, then recedes.
-        .connectBloom(hue: DS.brandHue(for: offer.name) ?? DS.tint, token: connectToken)
+        // The payoff must carry light — Tokens blooms its glyph green, not
+        // its near-black tile (signalColor's whole point).
+        .connectBloom(hue: BridgeGlyph.glyphTint(for: offer.name)
+                          ?? DS.brandHue(for: offer.name) ?? DS.tint,
+                      token: connectToken)
+        .dsAdaptiveContentWidth()
         .dsPageBackground()
+        .dsSoftTopEdge()
         .navigationTitle(offer.name)
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
@@ -69,9 +77,6 @@ struct AppDetailScreen: View {
             if !connected, let doc = StorePreview.doc(for: offer.name) {
                 previewStream.stream(doc)
             }
-        }
-        .navigationDestination(item: $openBridge) { dest in
-            BridgeDestinationView(destination: dest)
         }
     }
 
@@ -103,18 +108,18 @@ struct AppDetailScreen: View {
                 // A broken setup bridge (mail/wallet/token) is fixed by redoing
                 // its setup, not the one-tap connect path.
                 if offer.needsSetup {
-                    openBridge = BridgeRouter.destination(forOffer: offer.name)
+                    HomeRoute.shared.bridgePush = BridgeRouter.destination(forOffer: offer.name)
                 } else {
                     doConnect()
                 }
             }
         } else if connected {
             VerbCapsule(verb: .open) {
-                if let id = bridge?.id { openBridge = BridgeRouter.destination(forID: id) }
+                if let id = bridge?.id { HomeRoute.shared.bridgePush = BridgeRouter.destination(forID: id) }
             }
         } else if offer.connectable {
             if offer.needsSetup {
-                VerbCapsule(verb: .connect) { openBridge = BridgeRouter.destination(forOffer: offer.name) }
+                VerbCapsule(verb: .connect) { HomeRoute.shared.bridgePush = BridgeRouter.destination(forOffer: offer.name) }
             } else {
                 VerbCapsule(verb: .connect) {
                     doConnect()
@@ -132,10 +137,12 @@ struct AppDetailScreen: View {
     /// reaches the store, so the button flips to Open on its own.
     private func doConnect() {
         BridgeConnect.connect(offer, store: store, context: modelContext) { ok in
-            guard ok else { chrome.flash("Couldn't connect \(offer.name)."); return }
-            DSHaptic.success()
+            guard ok else {
+                chrome.flash("Couldn't connect \(offer.name).", tone: .failure)
+                return
+            }
             connectToken += 1
-            chrome.flash(BridgeConnect.landingMessage(offer.name))
+            chrome.flash(BridgeConnect.landingMessage(offer.name), tone: .success)
         }
     }
 

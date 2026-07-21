@@ -56,8 +56,6 @@ struct StocktwitsScreen: View {
             BridgeSetupHeader(name: "Stocktwits")
             addSection.listRowSeparator(.hidden)
             if !watched.isEmpty {
-                PinToHomeButton(source: "Stocktwits", inSection: true)
-                    .listRowSeparator(.hidden)
                 watchlistSection.listRowSeparator(.hidden)
             }
             if !posts.isEmpty {
@@ -76,7 +74,6 @@ struct StocktwitsScreen: View {
                 BridgeDisconnectSection(bridgeID: "stocktwits", name: "Stocktwits",
                                         teardown: {
                                             StockWatch.unwatchAll(context: modelContext)
-                                            HomePinnedSources.shared.clear("Stocktwits")
                                             load()
                                         })
                     .listRowSeparator(.hidden)
@@ -85,7 +82,10 @@ struct StocktwitsScreen: View {
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
+        .bridgeSetupWash(name: "Stocktwits")
+        .dsAdaptiveContentWidth()
         .dsPageBackground()
+        .dsSoftTopEdge()
         .navigationTitle("Stocktwits")
         .navigationBarTitleDisplayMode(.large)
         .onAppear {
@@ -211,7 +211,7 @@ struct StocktwitsScreen: View {
         let dropped = offsets.map { watched[$0] }
         SpotlightIndex.remove(ids: dropped.map(\.id))
         for thing in dropped { modelContext.delete(thing) }
-        try? modelContext.save()
+        modelContext.saveHonestly()
         DSHaptic.tap()
         load()
         StockWatch.registerBridge(store: store, context: modelContext)

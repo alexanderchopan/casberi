@@ -70,7 +70,7 @@ enum KindleImport {
         summary.imported = added
         // A file with no parseable entries isn't a Kindle export — say so.
         summary.failed = !parsedAny && added == 0
-        if added > 0 { try? context.save() }
+        if added > 0 { context.saveHonestly() }
         return summary
     }
 

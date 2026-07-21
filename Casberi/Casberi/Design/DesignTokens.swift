@@ -116,6 +116,15 @@ enum DS {
         static let s8: CGFloat = 32
     }
 
+    // MARK: - Layout (iPad content width — see `dsAdaptiveContentWidth()`)
+
+    enum Layout {
+        /// The single-column content cap on iPad (regular width class).
+        /// Wide enough to read as intentional, not cramped; narrow enough
+        /// that a row/text block never touches the physical screen edges.
+        static let iPadContentMaxWidth: CGFloat = 900
+    }
+
     // MARK: - Radii  (brief §8 is law; control/pill fill the gaps §8 omits)
 
     enum Radius {

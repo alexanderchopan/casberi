@@ -8,50 +8,6 @@ import Foundation
 /// honest and expected.
 enum StorePreview {
 
-    /// One ghosted sample line for the story card's middle band — the title
-    /// text, plus a social account's avatar URL when the row is a `PostRow`
-    /// (Bluesky/Farcaster), so the pill can lead with a face the way the real
-    /// feed row does.
-    struct Sample: Hashable {
-        let title: String
-        let avatarURL: String?
-    }
-
-    /// Up to two sample rows for an offer — the story card's middle band
-    /// ghosts what lands, parsed from the same preview doc the product page
-    /// streams so the story and the page never disagree. Cached: the
-    /// carousel's interactive scroll re-evaluates card bodies every frame,
-    /// and the parse is constant per offer.
-    private static var sampleCache: [String: [Sample]] = [:]
-    static func samples(for name: String) -> [Sample] {
-        if let hit = sampleCache[name] { return hit }
-        var rows: [Sample] = []
-        for line in doc(for: name) ?? [] {
-            guard rows.count < 2 else { break }
-            let quotes = line.split(separator: "\"").enumerated()
-                .filter { $0.offset % 2 == 1 }.map { String($0.element) }
-            if line.contains("PostRow(\"") {
-                // PostRow(handle, text, avatarURL, …) — the same "handle: text"
-                // the Row form ghosted, now with the author's real avatar
-                // leading (the URL is arg 3; empty falls through to no face).
-                if quotes.count >= 2 {
-                    let url = quotes.count >= 3 && !quotes[2].isEmpty ? quotes[2] : nil
-                    rows.append(Sample(title: "\(quotes[0]): \(quotes[1])", avatarURL: url))
-                }
-            } else if line.contains("TxRow(\"") {
-                // TxRow(verb, body, context) — the verb alone ("Swapped")
-                // reads as a broken placeholder; the body is the story.
-                if quotes.count >= 2 { rows.append(Sample(title: "\(quotes[0]) \(quotes[1])", avatarURL: nil)) }
-            } else if line.contains("Row(\"") {
-                if let t = quotes.first { rows.append(Sample(title: t, avatarURL: nil)) }
-            } else if line.contains("TakeawayCard(") || line.contains("ApprovalCard(") {
-                if quotes.count >= 2 { rows.append(Sample(title: quotes[1], avatarURL: nil)) }
-            }
-        }
-        sampleCache[name] = rows
-        return rows
-    }
-
     /// The preview document for an offer, or nil when a preview would add
     /// nothing (connectable apps show real things instead; Venice lands no
     /// things — its key powers answers, so the tagline row speaks for it).
@@ -115,11 +71,6 @@ enum StorePreview {
             "w = Widget(\"Pages\", null, [r1])",
             "r1 = Row(\"Q3 planning notes\", \"Note\", \"Notion\", \"1d\")",
         ]
-        case "X": [
-            "root = Stack([w])",
-            "w = Widget(\"Bookmarked\", null, [r1])",
-            "r1 = Row(\"Thread: on-device models in 2026\", \"Link\", \"X\", \"5h\")",
-        ]
         case "Reddit": [
             "root = Stack([w])",
             "w = Widget(\"Saved\", null, [r1])",
@@ -170,10 +121,6 @@ enum StorePreview {
             "r1 = Row(\"Renew passport\", \"Reminder\", \"Todoist\", \"today\")",
             "r2 = Row(\"Send the invoice\", \"Reminder\", \"Todoist\", \"Fri\")",
         ]
-        case "Slack": [
-            "root = Stack([c])",
-            "c = TakeawayCard(\"#DESIGN\", \"Decision: ship the new feed rows\", \"Maya: let's go with the color tags — sign-off attached.\")",
-        ]
         case "Raindrop": [
             "root = Stack([w])",
             "w = Widget(\"Saved\", null, [r1, r2])",
@@ -204,8 +151,8 @@ enum StorePreview {
         case "Farcaster": [
             "root = Stack([w])",
             "w = Widget(\"Accounts and channels\", null, [r1, r2])",
-            "r1 = PostRow(\"dwr\", \"base fees at all-time low\", \"https://imagedelivery.net/BXluQx4ige9GuW0Ia56BHw/bc698287-5adc-4cc5-a503-de16963ed900/original\", \"\", \"\")",
-            "r2 = PostRow(\"v\", \"shipping in /dev today\", \"https://imagedelivery.net/BXluQx4ige9GuW0Ia56BHw/e3d80f99-f7c0-4b04-dcad-557593d85500/original\", \"\", \"\")",
+            "r1 = PostRow(\"vitalik.eth\", \"Looks like the options thing is happening already!\", \"https://media.firefly.land/lens/126a045e-f7bb-44cc-80b1-2bd63ce9be58.png\", \"\", \"\")",
+            "r2 = PostRow(\"clanker\", \"you have my attention\", \"https://imagedelivery.net/BXluQx4ige9GuW0Ia56BHw/f770987a-9c3a-45fd-eee3-2c0b182f8700/original\", \"\", \"\")",
         ]
         case "OpenSea": [
             "root = Stack([w])",

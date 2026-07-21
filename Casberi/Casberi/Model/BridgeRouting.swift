@@ -15,6 +15,7 @@ enum BridgeRouter {
     enum Destination: Identifiable, Hashable {
         case wallet
         case tokens
+        case peer
         case kalshi
         case stocktwits
         case openSea
@@ -29,12 +30,14 @@ enum BridgeRouter {
         case claude
         case gemini
         case venice
+        case bankr
         case bluesky
         case farcaster
         case pinterest
         case steam
         case obsidian
         case twitch
+        case spotify
         case substack
         case reddit
         case youtube
@@ -44,6 +47,10 @@ enum BridgeRouter {
         case appleJournal
         case appleNotes
         case token(TokenBridge)
+        /// Every wallet transaction, day by day (2026-07-20) — the page behind
+        /// the Wallet feed's "See all". Carries the feed's wallet scope so the
+        /// door doesn't silently widen it; nil is every watched wallet.
+        case walletHistory(scope: String?)
         /// A connected seat with no dedicated screen (the demo seats — Gmail,
         /// Calendar, …) — the generic detail page, never EmptyView.
         case detail(id: String)
@@ -52,6 +59,7 @@ enum BridgeRouter {
             switch self {
             case .wallet:         "wallet"
             case .tokens:         "tokens"
+            case .peer:           "peer"
             case .kalshi:         "kalshi"
             case .stocktwits:     "stocktwits"
             case .openSea:        "opensea"
@@ -66,12 +74,14 @@ enum BridgeRouter {
             case .claude:         "claude"
             case .gemini:         "gemini"
             case .venice:         "venice"
+            case .bankr:          "bankr"
             case .bluesky:        "bsky"
             case .farcaster:      "fc"
             case .pinterest:      "pinterest"
             case .steam:          "steam"
             case .obsidian:       "obsidian"
             case .twitch:         "twitch"
+            case .spotify:        "spotify"
             case .substack:       "substack"
             case .reddit:         "reddit"
             case .youtube:        "youtube"
@@ -81,6 +91,7 @@ enum BridgeRouter {
             case .appleJournal:   "journal"
             case .appleNotes:     "notes"
             case .token(let b):   b.bridgeID
+            case .walletHistory(let scope): "wallethistory:\(scope ?? "all")"
             case .detail(let id): "detail:\(id)"
             }
         }
@@ -98,6 +109,7 @@ enum BridgeRouter {
     private static let rows: [Row] = [
         Row(offer: "Wallet",    id: "wallet", destination: .wallet),
         Row(offer: "Tokens",    id: "tokens", destination: .tokens),
+        Row(offer: "Peer",      id: "peer",   destination: .peer),
         Row(offer: "Kalshi",     id: "kalshi",     destination: .kalshi),
         Row(offer: "Stocktwits", id: "stocktwits", destination: .stocktwits),
         Row(offer: "OpenSea",    id: "opensea",    destination: .openSea),
@@ -112,12 +124,14 @@ enum BridgeRouter {
         Row(offer: "Claude",    id: "claude", destination: .claude),
         Row(offer: "Gemini",    id: "gemini", destination: .gemini),
         Row(offer: "Venice",    id: "venice", destination: .venice),
+        Row(offer: "Bankr",     id: "bankr",  destination: .bankr),
         Row(offer: "Bluesky",   id: "bsky",   destination: .bluesky),
         Row(offer: "Farcaster", id: "fc",     destination: .farcaster),
         Row(offer: "Pinterest", id: "pinterest", destination: .pinterest),
         Row(offer: "Steam",     id: "steam",  destination: .steam),
         Row(offer: "Obsidian",  id: "obsidian", destination: .obsidian),
         Row(offer: "Twitch",    id: "twitch", destination: .twitch),
+        Row(offer: "Spotify",   id: "spotify", destination: .spotify),
         Row(offer: "Substack",  id: "substack", destination: .substack),
         Row(offer: "Reddit",    id: "reddit",   destination: .reddit),
         Row(offer: "YouTube",   id: "youtube",  destination: .youtube),
@@ -155,6 +169,7 @@ struct BridgeDestinationView: View {
         switch destination {
         case .wallet:         WalletScreen()
         case .tokens:         TokenWatchScreen()
+        case .peer:           PeerScreen()
         case .kalshi:         KalshiScreen()
         case .stocktwits:     StocktwitsScreen()
         case .openSea:        OpenSeaScreen()
@@ -169,12 +184,14 @@ struct BridgeDestinationView: View {
         case .claude:         ClaudeImportScreen()
         case .gemini:         GeminiImportScreen()
         case .venice:         VeniceSetupScreen()
+        case .bankr:          BankrSetupScreen()
         case .bluesky:        HandleSetupScreen(bridge: .bluesky)
         case .farcaster:      HandleSetupScreen(bridge: .farcaster)
         case .pinterest:      HandleSetupScreen(bridge: .pinterest)
         case .steam:          SteamScreen()
         case .obsidian:       ObsidianScreen()
         case .twitch:         TwitchScreen()
+        case .spotify:        SpotifyScreen()
         case .substack:       HandleSetupScreen(bridge: .substack)
         case .reddit:         HandleSetupScreen(bridge: .reddit)
         case .youtube:        HandleSetupScreen(bridge: .youtube)
@@ -184,6 +201,7 @@ struct BridgeDestinationView: View {
         case .appleJournal:   JournalImportScreen()
         case .appleNotes:     NotesShareScreen()
         case .token(let b):   TokenSetupScreen(bridge: b)
+        case .walletHistory(let scope): WalletHistoryScreen(scope: scope)
         case .detail(let id): BridgeDetailScreen(bridgeID: id)
         }
     }

@@ -35,6 +35,13 @@ final class FarcasterStore {
         /// Watch MENTIONS of them — casts naming this account land, so
         /// "while I was away" can answer with who talked to you.
         var mentions = false
+        /// The Ethereum addresses this fid has verified onchain (2026-07-15) —
+        /// resolved once from the keyless node's `verificationsByFid`, cached
+        /// like the fid. Powers the wallet↔Farcaster join: "Watch their wallet"
+        /// on the account row, and naming a watched account's wallet in a
+        /// transfer ("from @dwr"). Empty until resolved or when the fid verified
+        /// none.
+        var verifiedAddresses: [String] = []
 
         init(username: String, fid: Int = 0) {
             self.username = username
@@ -53,6 +60,7 @@ final class FarcasterStore {
             avatarURL = try c.decodeIfPresent(String.self, forKey: .avatarURL)
             likes = try c.decodeIfPresent(Bool.self, forKey: .likes) ?? false
             mentions = try c.decodeIfPresent(Bool.self, forKey: .mentions) ?? false
+            verifiedAddresses = try c.decodeIfPresent([String].self, forKey: .verifiedAddresses) ?? []
         }
     }
 
@@ -107,6 +115,26 @@ final class FarcasterStore {
         return true
     }
 
+    /// Adds many at once, deduped, persisting ONCE — the follow import lands
+    /// hundreds, and `accounts` persists on every mutation, so appending in a
+    /// loop would re-encode the whole growing list per person. Each carries
+    /// the fid the graph read already knew, so the import also skips the
+    /// name→fid lookup the first sync would otherwise pay PER account.
+    /// Returns how many were new.
+    @discardableResult
+    func add(contentsOf raws: [(name: String, fid: Int?)]) -> Int {
+        var known = Set(accounts.map(\.username))
+        var fresh: [Account] = []
+        for raw in raws {
+            let n = Self.normalize(raw.name)
+            guard !n.isEmpty, known.insert(n).inserted else { continue }
+            fresh.append(Account(username: n, fid: raw.fid ?? 0))
+        }
+        guard !fresh.isEmpty else { return 0 }
+        accounts.append(contentsOf: fresh)
+        return fresh.count
+    }
+
     func remove(_ username: String) { accounts.removeAll { $0.username == username } }
 
     /// Teardown clears the whole connection — people and channels both.
@@ -151,6 +179,24 @@ final class FarcasterStore {
     func setMentions(_ on: Bool, for username: String) {
         guard let i = accounts.firstIndex(where: { $0.username == username }) else { return }
         accounts[i].mentions = on
+    }
+
+    /// Caches an fid's verified onchain addresses (lowercased), once resolved —
+    /// the same run-once-then-remember discipline as the fid and profile.
+    func setVerifiedAddresses(_ addresses: [String], for username: String) {
+        guard let i = accounts.firstIndex(where: { $0.username == username }) else { return }
+        accounts[i].verifiedAddresses = addresses.map { $0.lowercased() }
+    }
+
+    /// The "@handle" of a watched account that verified this address, if any —
+    /// consulted by `WalletIngest.counterpartyNames` so a transfer to/from a
+    /// watched Farcaster account's own wallet reads "from @dwr". Only over
+    /// WATCHED accounts (the reverse index we already hold), never a lookup.
+    func handle(forAddress address: String) -> String? {
+        let a = address.lowercased()
+        guard let match = accounts.first(where: { $0.verifiedAddresses.contains(a) })
+        else { return nil }
+        return "@\(match.username)"
     }
 
     @discardableResult
@@ -240,6 +286,62 @@ enum FarcasterIngest {
     }
     @MainActor private static var profiles: [Int: Profile] = [:]
 
+    // MARK: - Verified wallets (the wallet↔Farcaster join, 2026-07-15)
+
+    /// The Ethereum addresses this fid verified onchain (lowercased) — the
+    /// keyless node's `verificationsByFid`. Only Ethereum verifications (a
+    /// 0x/42-hex address) are kept; a Solana verification isn't an EVM wallet we
+    /// read. Empty when the fid verified none or the fetch failed.
+    static func verifiedEthAddresses(fid: Int) async -> [String] {
+        guard let root = await IngestSupport.getJSON(
+            "\(node)/v1/verificationsByFid?fid=\(fid)") as? [String: Any],
+              let messages = root["messages"] as? [[String: Any]] else { return [] }
+        var out: [String] = []
+        for m in messages {
+            guard let data = m["data"] as? [String: Any] else { continue }
+            // The body key changed as the protocol went multi-chain — accept both.
+            let body = (data["verificationAddEthAddressBody"] as? [String: Any])
+                ?? (data["verificationAddAddressBody"] as? [String: Any])
+            guard let address = body?["address"] as? String else { continue }
+            let a = address.lowercased()
+            guard ENS.isHexAddress(a), !out.contains(a) else { continue }
+            out.append(a)
+        }
+        return out
+    }
+
+    /// name → fid, via the keyless node's username proof. The one place that
+    /// lookup lives (2026-07-16) — the refresh, the thread reader, the wallet
+    /// join, and the profile card all resolve through here, and a watched
+    /// account's cached fid short-circuits it.
+    @MainActor
+    static func fid(forName raw: String) async -> Int? {
+        let name = FarcasterStore.normalize(raw)
+        guard !name.isEmpty else { return nil }
+        if let cached = FarcasterStore.shared.accounts
+            .first(where: { $0.username == name })?.fid, cached != 0 {
+            return cached
+        }
+        guard let proof = await IngestSupport.getJSON(
+            "\(node)/v1/userNameProofByName?name=\(name)") as? [String: Any],
+              let resolved = proof["fid"] as? Int else { return nil }
+        FarcasterStore.shared.setFid(resolved, for: name)   // no-op if unwatched
+        return resolved
+    }
+
+    /// The verified wallets for a watched username — cached on the account, else
+    /// resolved (its fid first if needed) and cached. Backs "Watch their wallet".
+    @MainActor
+    static func verifiedEthAddresses(username: String) async -> [String] {
+        let store = FarcasterStore.shared
+        guard let account = store.accounts.first(where: { $0.username == username }) else { return [] }
+        if !account.verifiedAddresses.isEmpty { return account.verifiedAddresses }
+        guard let fid = await fid(forName: account.username) else { return [] }
+        let verified = await verifiedEthAddresses(fid: fid)
+        if !verified.isEmpty { store.setVerifiedAddresses(verified, for: account.username) }
+        return verified
+    }
+
     /// Resolves each username (once), fetches recent casts — plus likes and
     /// mentions where those are watched, and every followed channel's feed —
     /// and lands new ones as chat things. Returns the new count, or nil when
@@ -251,6 +353,7 @@ enum FarcasterIngest {
             return store.connected ? 0 : nil
         }
         running = true
+        healed = false
         defer { running = false }
 
         var existing = IngestSupport.existingSourceRefs(context)
@@ -261,14 +364,7 @@ enum FarcasterIngest {
         var anyResolved = false
 
         for account in store.accounts {
-            var fid = account.fid
-            if fid == 0 {
-                guard let proof = await IngestSupport.getJSON(
-                    "\(node)/v1/userNameProofByName?name=\(account.username)") as? [String: Any],
-                      let resolved = proof["fid"] as? Int else { continue }
-                fid = resolved
-                store.setFid(fid, for: account.username)
-            }
+            guard let fid = await fid(forName: account.username) else { continue }
 
             guard let root = await IngestSupport.getJSON(
                 "\(node)/v1/castsByFid?fid=\(fid)&pageSize=30&reverse=true") as? [String: Any],
@@ -284,6 +380,14 @@ enum FarcasterIngest {
                 || who.avatarURL != account.avatarURL {
                 store.setProfile(who, for: account.username)
             }
+            // Cache this account's verified wallets once (the wallet↔Farcaster
+            // join) — so a transfer to/from a watched account's own wallet reads
+            // "from @dwr", and "Watch their wallet" is instant. Only when empty,
+            // like the fid.
+            if account.verifiedAddresses.isEmpty {
+                let verified = await verifiedEthAddresses(fid: fid)
+                if !verified.isEmpty { store.setVerifiedAddresses(verified, for: account.username) }
+            }
             // Backfill the face onto EVERY existing cast of theirs that
             // predates the field, so the whole feed wears faces, not just
             // casts landed since (2026-07-10, user: they expected the
@@ -298,29 +402,29 @@ enum FarcasterIngest {
             }
 
             added += await landPage(messages, topLevelOnly: true, existing: &existing,
-                                    backfill: backfill, context: context)
+                                    landed: landed, backfill: backfill, context: context)
 
             if account.likes {
-                added += await landLikes(fid: fid, existing: &existing,
+                added += await landLikes(fid: fid, existing: &existing, landed: landed,
                                          backfill: backfill, context: context)
             }
             if account.mentions {
-                added += await landMentions(of: fid, existing: &existing,
+                added += await landMentions(of: fid, existing: &existing, landed: landed,
                                             backfill: backfill, context: context)
             }
         }
 
         for channel in store.channels {
-            let landed = await landChannel(channel, existing: &existing,
-                                           backfill: backfill, context: context)
-            if let landed {
+            let count = await landChannel(channel, existing: &existing, landed: landed,
+                                          backfill: backfill, context: context)
+            if let count {
                 anyResolved = true
-                added += landed
+                added += count
             }
         }
 
         guard anyResolved else { return nil }
-        if added > 0 || backfill.any || touched { try? context.save() }
+        if added > 0 || backfill.any || touched || healed { context.saveHonestly() }
         return added
     }
 
@@ -330,6 +434,7 @@ enum FarcasterIngest {
     /// the LIKE's time (when it entered your attention), not the cast's.
     @MainActor
     private static func landLikes(fid: Int, existing: inout Set<String>,
+                                  landed: [String: Thing],
                                   backfill: ArtlessBackfill, context: ModelContext) async -> Int {
         guard let root = await IngestSupport.getJSON(
             "\(node)/v1/reactionsByFid?fid=\(fid)&reaction_type=Like&pageSize=25&reverse=true")
@@ -354,10 +459,14 @@ enum FarcasterIngest {
                 as? [String: Any]
         }
         await prefetchProfiles(targets.map(\.fid))
+        await prefetchCards(casts.compactMap { $0 }.flatMap(referencedCasts))
         var added = 0
         for (target, cast) in zip(targets, casts) {
             guard let cast else { continue }
-            if await land(cast: cast, capturedAt: target.liked, existing: &existing,
+            // "Liked" is the marker this cast wears — you liked it there, so
+            // it's here; the row can say so instead of reading as your own post.
+            if await land(cast: cast, capturedAt: target.liked, why: "liked",
+                          existing: &existing, landed: landed,
                           backfill: backfill, context: context) {
                 added += 1
             }
@@ -370,11 +479,12 @@ enum FarcasterIngest {
     /// landed thing.
     @MainActor
     private static func landMentions(of fid: Int, existing: inout Set<String>,
+                                     landed: [String: Thing],
                                      backfill: ArtlessBackfill, context: ModelContext) async -> Int {
         guard let root = await IngestSupport.getJSON(
             "\(node)/v1/castsByMention?fid=\(fid)&pageSize=25&reverse=true") as? [String: Any],
               let messages = root["messages"] as? [[String: Any]] else { return 0 }
-        return await landPage(messages, existing: &existing,
+        return await landPage(messages, why: "mention", existing: &existing, landed: landed,
                               backfill: backfill, context: context)
     }
 
@@ -382,7 +492,8 @@ enum FarcasterIngest {
     /// node didn't answer (so a channels-only refresh can still say so).
     @MainActor
     private static func landChannel(_ channel: FarcasterStore.Channel,
-                                    existing: inout Set<String>, backfill: ArtlessBackfill,
+                                    existing: inout Set<String>, landed: [String: Thing],
+                                    backfill: ArtlessBackfill,
                                     context: ModelContext) async -> Int? {
         var comps = URLComponents(string: "\(node)/v1/castsByParent")!
         comps.queryItems = [URLQueryItem(name: "url", value: channel.url),
@@ -393,7 +504,8 @@ enum FarcasterIngest {
               let messages = root["messages"] as? [[String: Any]] else { return nil }
         // castsByParent serves DOUBLE the asked pageSize (verified live:
         // 25 → 50) — cap here so a channel sync stays a page, not a flood.
-        return await landPage(Array(messages.prefix(25)), existing: &existing,
+        return await landPage(Array(messages.prefix(25)), channel: channel.name,
+                              existing: &existing, landed: landed,
                               backfill: backfill, context: context)
     }
 
@@ -403,20 +515,43 @@ enum FarcasterIngest {
     /// never pays one serial profile round-trip per cast.
     @MainActor
     private static func landPage(_ messages: [[String: Any]], topLevelOnly: Bool = false,
-                                 existing: inout Set<String>, backfill: ArtlessBackfill,
+                                 why: String? = nil, channel: String? = nil,
+                                 existing: inout Set<String>, landed: [String: Thing],
+                                 backfill: ArtlessBackfill,
                                  context: ModelContext) async -> Int {
         var fids: [Int] = []
+        var refs: [(fid: Int, hash: String)] = []
         for message in messages {
-            guard let hash = message["hash"] as? String, !existing.contains("fc:\(hash)"),
+            guard let hash = message["hash"] as? String,
                   let data = message["data"] as? [String: Any],
                   let body = data["castAddBody"] as? [String: Any] else { continue }
-            if let fid = data["fid"] as? Int { fids.append(fid) }
-            fids.append(contentsOf: (body["mentions"] as? [Int]) ?? [])
+            let ref = "fc:\(hash)"
+            let isNew = !existing.contains(ref)
+            if isNew {
+                if let fid = data["fid"] as? Int { fids.append(fid) }
+                fids.append(contentsOf: (body["mentions"] as? [Int]) ?? [])
+            }
+            // A cast being HEALED needs its quote/parent warmed too, not just a
+            // new one: heal calls quoteCard/parentCard, and an unwarmed card is
+            // a serial castById inside the landing loop. Once the heal fills
+            // them the cast stops asking, so this is a one-pass cost — but on
+            // an existing corpus that one pass was ~30 sequential round-trips.
+            if isNew || landed[ref].map({ $0.quote == nil || $0.parent == nil }) == true {
+                refs.append(contentsOf: referencedCasts(message))
+            }
         }
         await prefetchProfiles(fids)
+        // The casts these ones QUOTE or REPLY UNDER (2026-07-16). Snapchain
+        // serves raw protocol data — a quote/parent is a bare {fid, hash} ref,
+        // not a hydrated post — so each costs a lookup. One capped fan-out
+        // here, then the landing loop reads the cache; and the ref dedupe
+        // above means the steady state is zero of these (the same argument
+        // the likes flow makes): only a first sync pays.
+        await prefetchCards(refs)
         var added = 0
         for message in messages {
-            if await land(cast: message, topLevelOnly: topLevelOnly, existing: &existing,
+            if await land(cast: message, topLevelOnly: topLevelOnly, why: why,
+                          channel: channel, existing: &existing, landed: landed,
                           backfill: backfill, context: context) {
                 added += 1
             }
@@ -430,8 +565,10 @@ enum FarcasterIngest {
     /// the next refresh retries it (its permalink needs the username).
     @MainActor
     private static func land(cast message: [String: Any], topLevelOnly: Bool = false,
-                             capturedAt: Date? = nil,
-                             existing: inout Set<String>, backfill: ArtlessBackfill,
+                             capturedAt: Date? = nil, why: String? = nil,
+                             channel: String? = nil,
+                             existing: inout Set<String>, landed: [String: Thing],
+                             backfill: ArtlessBackfill,
                              context: ModelContext) async -> Bool {
         guard let hash = message["hash"] as? String,
               let data = message["data"] as? [String: Any],
@@ -443,9 +580,10 @@ enum FarcasterIngest {
             return false   // casts, not replies (the mirror's rule)
         }
         let ref = "fc:\(hash)"
-        let image = imageEmbed(body)
+        let images = imageEmbeds(body)
         guard !existing.contains(ref) else {
-            backfill.patch(ref, image: image)
+            backfill.patch(ref, image: images.first)
+            await heal(landed[ref], body: body, images: images, why: why, channel: channel)
             return false
         }
         guard let author = await profile(fid: casterFid),
@@ -454,22 +592,81 @@ enum FarcasterIngest {
         let short = String(hash.prefix(10))
         let when = capturedAt
             ?? (data["timestamp"] as? Double).map { epoch.addingTimeInterval($0) }
+        let full = await splicingMentions(into: text, body: body)
         let thing = Thing(
             kind: .chat,
-            title: IngestSupport.titleLine(await splicingMentions(into: text, body: body)),
+            title: IngestSupport.titleLine(full),
             content: "https://farcaster.xyz/\(username)/\(short)",
             source: "Farcaster",
             capturedAt: when ?? .now,
             sourceRef: ref
         )
-        thing.previewImageURL = IngestSupport.imageURL(image)
+        thing.postText = full
+        thing.imageURLs = images.compactMap(IngestSupport.imageURL)
+        thing.previewImageURL = thing.imageURLs.first
         thing.authorHandle = username
         thing.authorAvatarURL = author.avatarURL
+        thing.socialContext = why
+        thing.channelName = channel
+        thing.quote = await quoteCard(body)
+        thing.parent = await parentCard(body)
         context.insert(thing)
         SpotlightIndex.index([thing])
         existing.insert(ref)
         return true
     }
+
+    /// Fills the enrichment fields on a cast that landed BEFORE they existed
+    /// (2026-07-16). A cast already in the corpus dedupes out of the landing
+    /// path, so without this the full text, the extra images, and the quote
+    /// card would only ever reach casts landed from today on — and the feed
+    /// would read as half-enriched for weeks. Each refresh sees each account's
+    /// recent page, so the recent past heals itself in a pass or two; casts
+    /// older than the page keep their title alone, honestly.
+    ///
+    /// Only ever FILLS a gap — an already-set field is never rewritten, so a
+    /// heal can't clobber what a good sync landed.
+    @MainActor
+    private static func heal(_ thing: Thing?, body: [String: Any], images: [String],
+                             why: String?, channel: String?) async {
+        guard let thing else { return }
+        // WHY it's here heals too — else the marker would only ever reach casts
+        // landed from today on, and a corpus that already holds your likes and
+        // your channels would show none of them. Accurate, not a guess: this
+        // cast really did just come back from that channel's feed, or from your
+        // likes. A cast can reach us both ways (your own cast, also in /design);
+        // first write wins, and either answer is true.
+        if thing.socialContext == nil, let why {
+            thing.socialContext = why
+            healed = true
+        }
+        if thing.channelName == nil, let channel {
+            thing.channelName = channel
+            healed = true
+        }
+        if thing.postText == nil, let text = body["text"] as? String, !text.isEmpty {
+            thing.postText = await splicingMentions(into: text, body: body)
+            healed = true
+        }
+        if thing.imageURLs.isEmpty, !images.isEmpty {
+            thing.imageURLs = images.compactMap(IngestSupport.imageURL)
+            healed = true
+        }
+        if thing.quote == nil, let quote = await quoteCard(body) {
+            thing.quote = quote
+            healed = true
+        }
+        if thing.parent == nil, let parent = await parentCard(body) {
+            thing.parent = parent
+            healed = true
+        }
+    }
+
+    /// True once `heal` filled a gap this pass — joins the refresh's save
+    /// condition, so a pass that ONLY healed (landed nothing new, the steady
+    /// state) still persists what it filled. Reset at each refresh; the
+    /// `running` guard makes the pass single-flight, so one flag is safe.
+    @MainActor private static var healed = false
 
     // MARK: - Channels: name → parent URL
 
@@ -506,15 +703,6 @@ enum FarcasterIngest {
 
     // MARK: - Replies (the sheet's thread context, 2026-07-14)
 
-    /// A Farcaster thing's replies — fetched live when the sheet opens,
-    /// shown only when there are any.
-    @MainActor
-    static func replies(for thing: Thing, limit: Int = 8) async -> [SocialReply] {
-        guard thing.source == "Farcaster", let ref = thing.sourceRef, ref.hasPrefix("fc:"),
-              let handle = thing.authorHandle, !handle.isEmpty else { return [] }
-        return await replies(handle: handle, hash: String(ref.dropFirst(3)), limit: limit)
-    }
-
     /// The thread under one cast, oldest first, capped. The author's fid
     /// comes from the store when watched, else one name lookup. Threads
     /// fetched this launch are cached — reopening a sheet costs nothing.
@@ -522,14 +710,7 @@ enum FarcasterIngest {
     static func replies(handle: String, hash: String, limit: Int = 8) async -> [SocialReply] {
         let key = "\(handle):\(hash)"
         if let cached = threads[key] { return cached }
-        var fid = FarcasterStore.shared.accounts
-            .first(where: { $0.username == handle })?.fid ?? 0
-        if fid == 0 {
-            guard let proof = await IngestSupport.getJSON(
-                "\(node)/v1/userNameProofByName?name=\(handle)") as? [String: Any],
-                  let resolved = proof["fid"] as? Int else { return [] }
-            fid = resolved
-        }
+        guard let fid = await fid(forName: handle) else { return [] }
         guard let root = await IngestSupport.getJSON(
             "\(node)/v1/castsByParent?fid=\(fid)&hash=\(hash)&pageSize=\(limit)")
                 as? [String: Any],
@@ -550,7 +731,8 @@ enum FarcasterIngest {
                 id: replyHash, handle: username, avatarURL: author.avatarURL,
                 text: await splicingMentions(into: text, body: body),
                 when: (data["timestamp"] as? Double).map { epoch.addingTimeInterval($0) },
-                url: "https://farcaster.xyz/\(username)/\(String(replyHash.prefix(10)))"))
+                url: "https://farcaster.xyz/\(username)/\(String(replyHash.prefix(10)))",
+                ref: "fc:\(replyHash)"))
             if replies.count == limit { break }   // the node serves 2× the asked page
         }
         threads[key] = replies   // a node miss returned [] above, uncached — it retries
@@ -627,11 +809,14 @@ enum FarcasterIngest {
         return String(decoding: bytes, as: UTF8.self)
     }
 
-    /// A cast's first image embed. Snapchain serves raw protocol data — no
-    /// hydrated thumbs — so only URLs that are plainly images qualify:
-    /// Farcaster's own image CDN, or a file extension that says so. A cast
-    /// embedding an article link keeps the chat glyph.
-    private static func imageEmbed(_ body: [String: Any]) -> String? {
+    /// EVERY image a cast embeds, in order (2026-07-16 — it used to keep only
+    /// the first, so a four-photo cast lost three). Snapchain serves raw
+    /// protocol data — no hydrated thumbs — so only URLs that are plainly
+    /// images qualify: Farcaster's own image CDN, or a file extension that says
+    /// so. A cast embedding an article link contributes none and keeps the chat
+    /// glyph.
+    private static func imageEmbeds(_ body: [String: Any]) -> [String] {
+        var out: [String] = []
         for embed in (body["embeds"] as? [[String: Any]]) ?? [] {
             guard let url = embed["url"] as? String else { continue }
             let lower = url.lowercased()
@@ -640,9 +825,134 @@ enum FarcasterIngest {
             let path = URL(string: lower)?.path ?? lower
             if lower.contains("imagedelivery.net")
                 || [".jpg", ".jpeg", ".png", ".gif", ".webp"].contains(where: path.hasSuffix) {
-                return url
+                out.append(url)
             }
         }
+        return out
+    }
+
+    // MARK: - Quotes and parents (2026-07-16)
+
+    /// The {fid, hash} of every cast this one points at — the cast it replies
+    /// under, plus any it quotes. What `landPage` warms before it lands.
+    private static func referencedCasts(_ message: [String: Any]) -> [(fid: Int, hash: String)] {
+        guard let body = (message["data"] as? [String: Any])?["castAddBody"] as? [String: Any]
+        else { return [] }
+        var out: [(fid: Int, hash: String)] = []
+        if let parent = castID(body["parentCastId"]) { out.append(parent) }
+        for embed in (body["embeds"] as? [[String: Any]]) ?? [] {
+            if let quoted = castID(embed["castId"]) { out.append(quoted) }
+        }
+        return out
+    }
+
+    /// A protocol cast reference — `{fid, hash}` — or nil for the NSNull the
+    /// node sends on a top-level cast.
+    private static func castID(_ raw: Any?) -> (fid: Int, hash: String)? {
+        guard let dict = raw as? [String: Any],
+              let fid = dict["fid"] as? Int,
+              let hash = dict["hash"] as? String, !hash.isEmpty else { return nil }
+        return (fid, hash)
+    }
+
+    /// The cast this one quotes — a cast embed, the signature form Farcaster
+    /// carried and Casberi dropped until now (a quote-post read as a bare,
+    /// contextless line). The FIRST quoted cast: a cast can technically embed
+    /// two, but the sheet shows one card, and picking the first matches what
+    /// every Farcaster client renders.
+    @MainActor
+    private static func quoteCard(_ body: [String: Any]) async -> SocialCard? {
+        for embed in (body["embeds"] as? [[String: Any]]) ?? [] {
+            if let id = castID(embed["castId"]),
+               let card = await card(fid: id.fid, hash: id.hash) { return card }
+        }
         return nil
+    }
+
+    /// The cast this one replies under — so the sheet can say "Replying to @…"
+    /// and a landed mention (usually a reply) carries what it answers.
+    @MainActor
+    private static func parentCard(_ body: [String: Any]) async -> SocialCard? {
+        guard let id = castID(body["parentCastId"]) else { return nil }
+        return await card(fid: id.fid, hash: id.hash)
+    }
+
+    /// One referenced cast as a card — its author's face and name off the
+    /// profile cache, its words spliced. Cached per launch by "fid:hash", so a
+    /// thread where twenty casts quote the same one costs one lookup.
+    @MainActor
+    static func card(fid: Int, hash: String) async -> SocialCard? {
+        let key = "\(fid):\(hash)"
+        if let cached = cards[key] { return cached }
+        guard let root = await IngestSupport.getJSON(
+            "\(node)/v1/castById?fid=\(fid)&hash=\(hash)") as? [String: Any],
+              let data = root["data"] as? [String: Any],
+              let body = data["castAddBody"] as? [String: Any],
+              let text = body["text"] as? String,
+              let author = await profile(fid: fid),
+              let username = author.username, !username.isEmpty else { return nil }
+        let card = SocialCard(
+            handle: username,
+            text: await splicingMentions(into: text, body: body),
+            avatarURL: author.avatarURL,
+            url: "https://farcaster.xyz/\(username)/\(String(hash.prefix(10)))",
+            // The FULL hash, not the permalink's 10-char prefix — this is what
+            // reading the card's own thread needs. Without it, walking into a
+            // Farcaster quote or parent dead-ends on a post with no replies,
+            // while the same tap on Bluesky works.
+            ref: "fc:\(hash)")
+        cards[key] = card
+        return card
+    }
+
+    /// Referenced casts fetched this launch, keyed "fid:hash". A miss returns
+    /// nil uncached, so the next pass retries it (the profile cache's rule).
+    @MainActor private static var cards: [String: SocialCard] = [:]
+
+    /// Warms the card cache for a batch of refs, a few at a time — the
+    /// boundedGather shape `prefetchProfiles` uses, for the same reason.
+    @MainActor
+    private static func prefetchCards(_ refs: [(fid: Int, hash: String)]) async {
+        var seen = Set<String>()
+        let missing = refs.filter { ref in
+            let key = "\(ref.fid):\(ref.hash)"
+            return cards[key] == nil && seen.insert(key).inserted
+        }
+        guard !missing.isEmpty else { return }
+        _ = await IngestSupport.boundedGather(missing, maxConcurrent: 4) { ref in
+            await card(fid: ref.fid, hash: ref.hash)
+        }
+    }
+
+    // MARK: - Engagement (2026-07-16)
+
+    /// A cast's likes and recasts, counted from the keyless node. Snapchain
+    /// reports no totals — it serves the reaction MESSAGES — so each count is
+    /// the size of one page, and a full page means "at least this many"
+    /// (`atLeast`), never a fabricated total. Fetched live when the sheet opens,
+    /// not stored at ingest: a count is only true at the moment it's read, and
+    /// one cast at a time is a fetch the ingest can't afford per page.
+    @MainActor
+    static func engagement(for thing: Thing) async -> SocialEngagement? {
+        guard thing.source == "Farcaster", let ref = thing.sourceRef, ref.hasPrefix("fc:"),
+              let handle = thing.authorHandle,
+              let fid = await fid(forName: handle) else { return nil }
+        let hash = String(ref.dropFirst(3))
+        async let likes = reactions(type: "Like", fid: fid, hash: hash)
+        async let recasts = reactions(type: "Recast", fid: fid, hash: hash)
+        let e = SocialEngagement(likes: await likes, reposts: await recasts, replies: nil)
+        return e.isEmpty ? nil : e
+    }
+
+    /// One reaction type's count for a cast, capped at a page.
+    private static let reactionPage = 100
+
+    @MainActor
+    private static func reactions(type: String, fid: Int, hash: String) async -> SocialCount? {
+        guard let root = await IngestSupport.getJSON(
+            "\(node)/v1/reactionsByCast?target_fid=\(fid)&target_hash=\(hash)"
+            + "&reaction_type=\(type)&pageSize=\(reactionPage)") as? [String: Any],
+              let messages = root["messages"] as? [[String: Any]] else { return nil }
+        return SocialCount(value: messages.count, atLeast: messages.count >= reactionPage)
     }
 }

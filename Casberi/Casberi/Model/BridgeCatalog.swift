@@ -21,6 +21,22 @@ enum BridgeCatalog {
         /// mini store: that screen is one-tap connects only.
         var needsSetup: Bool = false
 
+        /// The day this offer joined the catalog (nil = it has always been
+        /// here / predates the stamp). This is what makes "Just added" HONEST
+        /// where the old "New" badge was pure assertion (ruling 2026-07-16):
+        /// a computable date, so a genuinely-recent offer can earn a Discover
+        /// seat and the badge retires itself when the date ages out. Only
+        /// stamp an offer the day it actually lands.
+        var added: Date? = nil
+
+        /// True when this offer joined within the last week — the window the
+        /// Discover deck reads for a "Just added" seat. Time-relative on
+        /// purpose: a stamped offer stops being new on its own, no cleanup.
+        func isNew(asOf now: Date = Date()) -> Bool {
+            guard let added else { return false }
+            return now.timeIntervalSince(added) < 7 * 24 * 60 * 60
+        }
+
         /// A one-word honest hook for the row badge and the story eyebrow —
         /// derived from HOW the bridge connects, never marketing. "One tap"
         /// (a system-permission bridge — a single grant, no fields), "No
@@ -31,7 +47,7 @@ enum BridgeCatalog {
         /// already carries live status).
         var qualifier: String? {
             if connectable && !needsSetup { return "One tap" }
-            let keyless: Set<String> = ["Wallet", "Tokens", "Reddit", "YouTube",
+            let keyless: Set<String> = ["Wallet", "Tokens", "Peer", "Reddit", "YouTube",
                 "RSS", "Substack", "Podcasts", "Pinterest", "Farcaster",
                 "Bluesky", "OpenSea", "Kalshi", "Shopify", "GeckoTerminal", "Deals",
                 "Open Food Facts", "Stocktwits"]
@@ -43,6 +59,15 @@ enum BridgeCatalog {
         }
     }
 
+    /// A catalog date at midnight UTC — the join key for `Offer.added`. Only
+    /// used for the "Just added" window, so day granularity is enough.
+    static func day(_ year: Int, _ month: Int, _ day: Int) -> Date {
+        var c = DateComponents()
+        c.year = year; c.month = month; c.day = day
+        c.timeZone = TimeZone(identifier: "UTC")
+        return Calendar(identifier: .gregorian).date(from: c) ?? Date(timeIntervalSince1970: 0)
+    }
+
     /// Grouped by what they're worth, verb taglines (S25).
     static let offers: [Offer] = [
         Offer(name: "Photos",      tagline: "Screenshots, straight to your feed",            group: "Photos",    connectable: true,
@@ -52,7 +77,7 @@ enum BridgeCatalog {
         Offer(name: "Reminders",   tagline: "Lists stay in reach",                   group: "Schedule",  connectable: true,
               summary: "Your reminders join your things and stay findable, and Casberi can add one to your list when you ask."),
         Offer(name: "Wallet",      tagline: "Track any wallet's activity",          group: "Wallet",    connectable: true,
-              summary: "Paste a wallet address and its onchain activity — received, sent, tokens in and out, across chains — lands in your feed like anything else. Read-only, public data, no server. Watching an address can never trade or move funds.",
+              summary: "Paste a wallet address — 0x…, an ENS name, or a .sol name — and its onchain activity (received, sent, swapped, tokens in and out) lands in your feed like anything else, across Ethereum, Base, Arbitrum, Optimism, Polygon and Solana. It also watches over the wallet itself: new token approvals (through Permit2 too), a wallet that starts delegating its control, and transfers that look like address-poisoning scams all surface as things worth a look — alongside what you've paid in gas and any Aave or Safe signatures that need attention. Read-only, public data, no server. Watching an address can never trade or move funds.",
               needsSetup: true),
         Offer(name: "Gmail",       tagline: "Your inbox, findable",                  group: "Mail",      connectable: true,
               summary: "Your recent mail becomes findable things. Connects over IMAP with a Google app password — your real password is never shared, and it's read-only. Needs 2-Step Verification on your Google account.",
@@ -69,7 +94,7 @@ enum BridgeCatalog {
         Offer(name: "Gemini",      tagline: "Import your chats, keep them findable", group: "Agent",     connectable: true,
               summary: "A one-time import of your Gemini history via Google Takeout, kept searchable alongside your things. (No live read — Google doesn't offer one; this is your export, backfilled.)",
               needsSetup: true),
-        Offer(name: "Tokens",      tagline: "Track any token",                       group: "Wallet",    connectable: true,
+        Offer(name: "Tokens",      tagline: "Track any token",                       group: "Markets",   connectable: true,
               summary: "Watch any token — paste its address or a link and its live price chart lands in your feed, drawn on your iPhone. Public price data only; nothing about you leaves the device.",
               needsSetup: true),
         Offer(name: "Kalshi",      tagline: "Watch real-event odds",                 group: "Markets",   connectable: true,
@@ -78,12 +103,25 @@ enum BridgeCatalog {
         Offer(name: "Stocktwits",  tagline: "Watch any stock",                      group: "Markets",   connectable: true,
               summary: "Watch any stock — search a ticker and the takes traders post about it on Stocktwits land in your feed, each wearing its author's own bullish or bearish call. The stock's live price chart draws on this iPhone from public market data. No account, no key, read-only: nothing here trades, and a watched ticker can never see your portfolio.",
               needsSetup: true),
-        Offer(name: "GeckoTerminal", tagline: "Trending tokens, per chain",          group: "Onchain",   connectable: true,
+        // Markets by ruling (user, 2026-07-17 — corrected from Onchain the
+        // same day). Peer rides the Wallet bridge the way Strava rides Apple
+        // Health (prd §113): no account exists to connect — trades settle
+        // into the person's own wallet, so the seat is a switch over the
+        // watched list.
+        Offer(name: "Peer",        tagline: "Your Peer trades, as they settle",      group: "Markets",   connectable: true,
+              summary: "Peer trades settle onchain into your own wallet — connect and each fill lands in your feed as it settles: which token, how much, and the payment app that paid for it (\"Bought 25 USDC with Venmo on Peer\"). Read from the public chain for the wallets you already watch; Peer's zero-knowledge design keeps your Venmo or PayPal side private, so the chain never shows it and neither does Casberi. No account, no key, read-only: nothing here ever starts a trade.",
+              needsSetup: true, added: day(2026, 7, 17)),
+        Offer(name: "GeckoTerminal", tagline: "Trending tokens, per chain",          group: "Markets",   connectable: true,
               summary: "Pick the chains you care about and the tokens trending on each — GeckoTerminal's own ranking, by 24-hour volume and price move — land in your feed as links. No account, no key: fetched straight from GeckoTerminal's public API by this iPhone. Read-only public price data; nothing here buys, sells, or trades. Each trending row opens to its live on-device chart.",
               needsSetup: true),
         Offer(name: "OpenSea",     tagline: "New NFT drops in your feed",            group: "NFTs",      connectable: true,
               summary: "Watch the chains you care about and their newest NFT collections land in your feed as links — the ones with real artwork, not the empty test contracts. Fetched straight from OpenSea's public API, read-only: nothing here buys, sells, or bids.",
               needsSetup: true),
+        // Shopping, not Markets (2026-07-17): Bitrefill is your own commerce
+        // account — orders and receipts — not a market you watch.
+        Offer(name: "Bitrefill",   tagline: "Your gift cards, in reach",             group: "Shopping",  connectable: true,
+              summary: "What you buy on Bitrefill lands in your feed — gift cards wearing their own artwork, phone top-ups, eSIMs, balance refills — with your balance at the top of the Bitrefill feed. Connects with an API key from Bitrefill's developer settings — it stays in this iPhone's Keychain. Read-only by conduct: nothing here ever buys, pays, or spends your balance.",
+              needsSetup: true, added: day(2026, 7, 17)),
         Offer(name: "Shopify",     tagline: "Follow any store's new drops",          group: "Shopping",  connectable: true,
               summary: "Follow any Shopify store — paste its web address and its newest products, restocks, and sale prices land in your feed as things, opening back on the store's own page. Fetched straight from the store's public catalog by this iPhone: no account, no sign-in, read-only — nothing here checks out or pays. Some big stores block automated reads; those it can't follow, it says so.",
               needsSetup: true),
@@ -96,6 +134,15 @@ enum BridgeCatalog {
         Offer(name: "Venice",      tagline: "Private answers with your key",         group: "Agent",     connectable: true,
               summary: "Venice keeps chats on your own device by design, so there's nothing to read in — instead, your Venice key powers \"Try with your key\": any answer re-runs on Venice's private API, straight from this iPhone, only when you tap.",
               needsSetup: true),
+        Offer(name: "Bankr",       tagline: "Answers that know your wallet",        group: "Agent",     connectable: true,
+              summary: "Bankr is an agent with a wallet, so its answers can weigh what you hold and what the market is doing — not just what you saved. Your Bankr key powers \"Try with your key\": any answer re-runs on Bankr, straight from this iPhone, only when you tap. Make it a read-only key: every question says answer only, and nothing here trades, sends, or swaps.",
+              needsSetup: true),
+        // 1Claw is the agents' vault (2026-07-17, prd 111): grants, not
+        // secrets — the feed answers "what can this key reach", never what
+        // a secret's value is.
+        Offer(name: "1Claw",       tagline: "What your agent's key can reach",       group: "Agent",     connectable: true,
+              summary: "1Claw is a vault that holds your AI agents' secrets behind human-granted permissions. Paste an agent's API key and its actual reach lands in your feed — every vault it can see, and each grant's secret paths and permissions, straight from 1Claw's own records. Names and permissions only, read straight from this iPhone: nothing here ever reads a secret's value, signs, or spends.",
+              needsSetup: true, added: day(2026, 7, 17)),
         Offer(name: "OpenClaw",    tagline: "Your agents' work lands here",          group: "Machines",  connectable: false,
               summary: "What your agents make — jobs, runs, outputs — lands in your feed with full provenance, and their approvals reach you here."),
         Offer(name: "GitHub",      tagline: "Stars, releases, issues — your GitHub", group: "Work",      connectable: true,
@@ -115,8 +162,9 @@ enum BridgeCatalog {
               needsSetup: true),
         Offer(name: "Apple Music", tagline: "What you play stays in reach",          group: "Listening", connectable: true,
               summary: "What you've recently played lands in your feed, opening back in Apple Music. Uses Apple's own MusicKit with your permission — read-only, nothing added to your library. Everything stays on this iPhone."),
-        Offer(name: "Spotify",     tagline: "Liked songs join your things",          group: "Listening", connectable: false,
-              summary: "Your liked songs become things you can find and revisit alongside everything else."),
+        Offer(name: "Spotify",     tagline: "Liked songs join your things",          group: "Listening", connectable: true,
+              summary: "Your liked songs become things you can find and revisit alongside everything else. Connects with Spotify's own sign-in — PKCE, entirely on this iPhone, no server holds a secret.",
+              needsSetup: true),
         Offer(name: "Apple Health", tagline: "Workouts land in your feed",           group: "Fitness",   connectable: true,
               summary: "Your workouts join your things — a run shows up next to the plan that inspired it. Everything stays on this iPhone: HealthKit never touches a server."),
         Offer(name: "Strava",      tagline: "Every activity, one record",            group: "Fitness",   connectable: true,
@@ -130,8 +178,6 @@ enum BridgeCatalog {
         Offer(name: "Todoist",     tagline: "Tasks beside your lists",               group: "Schedule",  connectable: true,
               summary: "Your open tasks join your things alongside Reminders. Connects with the API token from Todoist settings — it stays in this iPhone's Keychain.",
               needsSetup: true),
-        Offer(name: "Slack",       tagline: "Messages worth keeping",                group: "Work",      connectable: false,
-              summary: "The messages you save land as findable things — decisions and links stop drowning in channels."),
         Offer(name: "Pinterest",   tagline: "Your pins, in your feed",               group: "Images",    connectable: true,
               summary: "Your recent public pins land in your feed as links — what you saved on Pinterest joins everything else. Connects with just your username through Pinterest's own public feed: no password, nothing stored but the name. Public boards only.",
               needsSetup: true),
@@ -153,17 +199,15 @@ enum BridgeCatalog {
         Offer(name: "RSS",         tagline: "Any site with a feed",                  group: "Reading",   connectable: true,
               summary: "Follow any site that publishes a feed — new posts land in your feed as links, fetched by this iPhone directly. No account, no algorithm in between.",
               needsSetup: true),
-        // Onchain, not Social (user ruling 2026-07-14, matching the website's
-        // shelving): Farcaster is the onchain network — it browses with
-        // Wallet/Tokens/OpenSea, and its detail eyebrow says so.
-        Offer(name: "Farcaster",   tagline: "Track any Farcaster account",           group: "Onchain",   connectable: true,
+        // Social, with Bluesky (user ruling 2026-07-17, reversing the
+        // 2026-07-14 "onchain network" shelving): Farcaster is a social account
+        // first — it browses beside Bluesky, and its detail eyebrow says so.
+        Offer(name: "Farcaster",   tagline: "Track any Farcaster account",           group: "Network",   connectable: true,
               summary: "An open social protocol — casts are public, so this connects with just a username: your own or anyone's, plus /channels by name. An account's likes and mentions can land too. No password, nothing stored but the name.",
               needsSetup: true),
         Offer(name: "Bluesky",     tagline: "Track any Bluesky account",             group: "Network",   connectable: true,
               summary: "Built on an open protocol — posts are public, so this connects with just a handle: your own or anyone's, and mentions of them can land too. No password, nothing stored but the name. Likes arrive with sign-in, later.",
               needsSetup: true),
-        Offer(name: "X",           tagline: "Bookmarks become findable",             group: "Network",   connectable: false,
-              summary: "The posts you bookmarked stop disappearing — they land in your feed, findable later."),
         Offer(name: "Steam",       tagline: "What you play, in your feed",           group: "Games",     connectable: true,
               summary: "Recently played games land in your feed, linking to their store pages. Connects with a free Steam Web API key and your public profile name — the key stays in this iPhone's Keychain. Read-only.",
               needsSetup: true),
@@ -184,6 +228,8 @@ enum BridgeCatalog {
               needsSetup: true),
         Offer(name: "Contacts",    tagline: "The people you know, findable",         group: "People",    connectable: true,
               summary: "Your contacts become findable people — a name you're looking for turns up with everything it connects to. Search-only: they never crowd your feed. Everything stays on this iPhone — Contacts never touches a server. Read-only."),
+        Offer(name: "HomeKit",     tagline: "Your home's accessories, at a glance",  group: "Home",      connectable: true,
+              summary: "Your HomeKit accessories — locks, doors, sensors — land as things you can find, kept current while the app is open. Search-only: they never crowd your feed. Read-only — Casberi never controls anything."),
     ]
 
     /// Group order for the catalog screen (insertion order of first member).
@@ -195,6 +241,36 @@ enum BridgeCatalog {
             buckets[offer.group, default: []].append(offer)
         }
         return order.map { ($0, buckets[$0] ?? []) }
+    }
+
+    // MARK: - Categories (merge map over Offer.group — Browse + chart filter
+    // ONLY, never vertical section headers). Moved here from AppsScreen
+    // (2026-07-20) so the agent's `category:<name>` kept-ask kind reads the
+    // SAME mapping the catalog page shows — the whole point of this being
+    // the ruled single source of truth.
+    static let categories: [(name: String, exemplar: String, groups: Set<String>)] = [
+        // The finance pair LEADS the catalog (user ruling 2026-07-17): the
+        // "Onchain" category is dissolved — Markets is the front door, gathering
+        // the watch-a-market bridges (Tokens, OpenSea, GeckoTerminal join
+        // Kalshi, Stocktwits, Peer); Wallet stands on its own right behind it.
+        ("Markets", "Kalshi",      ["Markets", "NFTs"]),
+        ("Wallet",  "Wallet",      ["Wallet"]),
+        // "People" (Contacts) joins Life explicitly (2026-07-20) — it always
+        // landed here via the fallback below, this just says so honestly.
+        ("Life",    "Photos",      ["Photos", "Schedule", "Fitness", "People"]),
+        ("Home",    "HomeKit",     ["Home"]),
+        ("Notes",   "Apple Notes", ["Notes"]),
+        ("Social",  "Bluesky",     ["Network"]),
+        ("Agents",  "Claude",      ["Agent", "Machines"]),
+        ("Mail",    "Gmail",       ["Mail"]),
+        ("Work",    "GitHub",      ["Work"]),
+        ("Reading", "Readwise",    ["Reading", "Saves"]),
+        ("Media",   "Spotify",     ["Watching", "Listening", "Games", "Images"]),
+        ("Shopping", "Shopify",    ["Shopping"]),
+    ]
+
+    static func category(of offer: Offer) -> String {
+        categories.first { $0.groups.contains(offer.group) }?.name ?? "Life"
     }
 
     /// Offers not yet among the person's bridges — what the Apps page lists

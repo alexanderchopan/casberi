@@ -38,13 +38,16 @@ struct KalshiMarket {
         guard let market,
               let ticker = market["ticker"] as? String,
               let title = market["title"] as? String,
-              let prob = num(market["last_price_dollars"])
+              // A market whose book has emptied quotes nothing; the card takes
+              // its honest unavailable fallback rather than print a stale
+              // `last_price` as live odds (prd §83 ②).
+              let prob = KalshiWatch.liveProbability(market)
         else { return nil }
         return KalshiMarket(
             ticker: ticker, title: title,
             subtitle: (market["yes_sub_title"] as? String) ?? "",
             probability: prob,
-            previousProbability: num(market["previous_price_dollars"]),
+            previousProbability: KalshiWatch.previousProbability(market),
             status: (market["status"] as? String) ?? "active",
             closeTime: IngestSupport.isoDate(market["close_time"]))
     }

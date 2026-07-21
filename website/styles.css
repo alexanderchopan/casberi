@@ -70,31 +70,32 @@ nav { display: flex; align-items: center; justify-content: space-between; paddin
 .ai-calendly  { background: #006bff; }
 .ai-todoist   { background: #e44332; }
 .ai-wallet    { background: #2962ef; }
+.ai-peer      { background: #4b47f6; }
 .ai-gmail     { background: #fff; color: #ea4335; }
 .ai-icloud    { background: #3693f3; font-size: 18px; }
 .ai-chatgpt   { background: #fff; }
 .ai-gemini    { background: #fff; }
-.ai-chatgpt img, .ai-slack img, .ai-gemini img { width: 58%; height: 58%; }
+.ai-chatgpt img, .ai-gemini img { width: 58%; height: 58%; }
 .ai.tilefull { background: none; overflow: hidden; }
 .ai.tilefull img { width: 100%; height: 100%; border-radius: inherit; object-fit: cover; }
 .ai-claude    { background: #d97757; font-size: 18px; }
-.ai-tokens    { background: #f5a623; }
+.ai-tokens    { background: #0b0b0b; }
 .ai-kalshi    { background: #4fae7b; }
 .ai-stocktwits { background: #008fff; }
 .ai-opensea   { background: #2081e2; }
 .ai-geckoterminal { background: #272053; }
 .ai-venice    { background: #18181b; }
+.ai-bankr     { background: #a78bfa; }
+.ai-1claw     { background: #990029; }
 .ai-openclaw  { background: #475569; font-size: 15px; }
 .ai-github    { background: #24292f; font-size: 16px; }
 .ai-linear    { background: #5e6ad2; }
 .ai-notion    { background: #fff; color: #111; }
-.ai-x         { background: #000; }
 .ai-reddit    { background: #ff4500; }
 .ai-youtube   { background: #ff0000; font-size: 17px; }
 .ai-music     { background: linear-gradient(160deg, #fb5c74, #fa233b); font-size: 22px; }
 .ai-spotify   { background: #1db954; font-size: 22px; }
 .ai-telegram  { background: #229ed9; font-size: 18px; }
-.ai-slack     { background: #fff; }
 .ai-readwise  { background: #1e3a8a; font-size: 24px; }
 .ai-raindrop  { background: #2f80ed; }
 .ai-rss       { background: #f26522; font-size: 24px; }
@@ -108,24 +109,26 @@ nav { display: flex; align-items: center; justify-content: space-between; paddin
 .ai-substack  { background: #ff6719; }
 .ai-podcasts  { background: linear-gradient(160deg, #d669ff, #822cbf); }
 .ai-contacts  { background: #34c759; }
+.ai-homekit   { background: linear-gradient(160deg, #8e8e93, #48484a); }
 .ai-kindle    { background: linear-gradient(160deg, #4a4f57, #23272e); }
 .ai-shopify   { background: #5e8e3e; }
 .ai-deals     { background: #e0245e; }
+.ai-bitrefill { background: #002b28; }
 .ai-openfoodfacts { background: #7cb342; }
 .ai-more      { background: var(--surface-2); color: var(--muted); }
 .ai-more span { font-size: 20px; font-weight: 800; letter-spacing: -1px; line-height: 1; }
 
 /* ---------- Hero + icon rain (ALL the apps, bouncy) ---------- */
-header.hero { text-align: center; padding: 12px 0 64px; }
+header.hero { text-align: center; padding: 8px 0 40px; }
 .brandmark { width: 30px; height: 30px; border-radius: 8px; display: block; }
 .rain {
-  display: flex; flex-wrap: wrap; gap: 12px; row-gap: 14px;
+  display: flex; flex-wrap: wrap; gap: 10px; row-gap: 10px;
   justify-content: center;
-  padding: 22px 0 26px;
-  max-width: 760px; margin: 0 auto;   /* wraps 31 icons into even rows (11/11/9) */
+  padding: 8px 0 12px;
+  max-width: 880px; margin: 0 auto;   /* wide, low marquee so the hero CTA clears the fold */
 }
 .rain .ai {
-  width: 56px; height: 56px; border-radius: 15px; font-size: 22px;
+  width: 44px; height: 44px; border-radius: 12px; font-size: 17px;
   animation: fall 1s both;
 }
 @media (max-width: 600px) {
@@ -150,7 +153,7 @@ header.hero { text-align: center; padding: 12px 0 64px; }
 }
 
 .hero h1 {
-  font-size: clamp(52px, 11vw, 132px);
+  font-size: clamp(40px, 7.5vw, 88px);
   line-height: 0.92;
   font-weight: 850;
   letter-spacing: -0.04em;
@@ -175,7 +178,7 @@ header.hero { text-align: center; padding: 12px 0 64px; }
 }
 .cta {
   display: inline-block;
-  margin-top: 32px;
+  margin-top: 22px;
   background: var(--blue);
   color: #fff;
   font-weight: 600;
@@ -470,14 +473,15 @@ p.lede strong { color: var(--ink); font-weight: 600; }
 }
 .priv-chips span::before { content: "✓  "; color: var(--confirm); font-weight: 800; }
 .hero .hero-line {
-  font-size: clamp(17px, 2.2vw, 21px);
+  font-size: clamp(18px, 2.5vw, 25px);
   line-height: 1.5;
-  color: var(--muted);
-  max-width: 560px;
-  margin: 24px auto 0;
+  color: #c9cdd6;
+  font-weight: 600;
+  max-width: 640px;
+  margin: 16px auto 0;
   text-wrap: balance;
 }
-.hero .hero-chips { margin-top: 28px; max-width: 720px; margin-left: auto; margin-right: auto; }
+.hero .hero-chips { margin-top: 18px; max-width: 720px; margin-left: auto; margin-right: auto; }
 
 /* ---------- FAQ ---------- */
 .faq { max-width: 720px; margin: 28px auto 0; display: grid; gap: 10px; }
@@ -515,9 +519,9 @@ footer .tagline { font-size: 16px; font-weight: 600; color: var(--ink); margin-b
 
 /* ---------- Casberi tile: lands last, centered under the rain ---------- */
 .ai-casberi { background: #000; overflow: hidden; }
-.rain-target { display: flex; justify-content: center; padding: 0 0 14px; }
+.rain-target { display: flex; justify-content: center; padding: 0 0 4px; }
 .rain-target .ai-casberi {
-  width: 74px; height: 74px; border-radius: 20px;
+  width: 52px; height: 52px; border-radius: 14px;
   animation: fall 1s both;
   animation-delay: 1.5s;       /* after every app has landed */
   box-shadow: 0 16px 40px rgba(0,0,0,.45);
@@ -674,7 +678,7 @@ footer .tagline { font-size: 16px; font-weight: 600; color: var(--ink); margin-b
   .vid-live { overflow: hidden; }
 
   /* full phone — for clips whose action lives in a bottom sheet */
-  .vid-full { width: 170px; aspect-ratio: 540/1174; max-height: none;
+  .vid-full { width: 170px; aspect-ratio: 9/16; max-height: none;
     border-radius: 22px; border-bottom: 2px solid rgba(255,255,255,.22);
     margin-top: auto; margin-bottom: 24px; box-shadow: 0 14px 34px rgba(0,0,0,.45); }
   .vid-full::before { display: none; }
@@ -683,6 +687,7 @@ footer .tagline { font-size: 16px; font-weight: 600; color: var(--ink); margin-b
 
   /* closing settings row — same card language as the grids above */
   .yours-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  .yours-grid.two { grid-template-columns: repeat(2, 1fr); margin-top: 12px; }
   @media (max-width: 900px) { .yours-grid { grid-template-columns: repeat(2, 1fr); } }
   @media (max-width: 480px) { .yours-grid { grid-template-columns: 1fr; } }
 
@@ -701,7 +706,7 @@ footer .tagline { font-size: 16px; font-weight: 600; color: var(--ink); margin-b
   .b-small:hover { transform: translateY(-3px); }
   .b-small svg { transition: transform .3s cubic-bezier(.34,1.56,.64,1); transform-origin: 50% 60%; }
   .b-small:hover svg { transform: scale(1.25) rotate(-8deg); }
-  .yours-grid .b-small:nth-child(3):hover svg { transform: rotate(360deg) scale(1.15); transition: transform .7s cubic-bezier(.3,.7,.3,1); }
+  .yours-grid.two .b-small:nth-child(1):hover svg { transform: rotate(360deg) scale(1.15); transition: transform .7s cubic-bezier(.3,.7,.3,1); }
 
   .hello { font-style: normal; font-weight: 650; color: var(--blue-bright); font-size: 13px;
     display: inline-block; min-width: 86px; transition: opacity .25s; }
@@ -744,7 +749,7 @@ footer .tagline { font-size: 16px; font-weight: 600; color: var(--ink); margin-b
   }
 
 /* Make-it-yours live cards: cycling avatars and banner colors (2026-07-13) */
-.avatar-stack { position: relative; width: 38px; height: 38px; flex: none; }
+.avatar-stack { position: relative; width: 64px; height: 64px; flex: none; }
 .avatar-stack img { position: absolute; inset: 0; width: 100%; height: 100%;
   border-radius: 50%; background: rgba(255,255,255,.08);
   opacity: 0; transform: scale(.8); transition: opacity .45s ease, transform .45s cubic-bezier(.34,1.56,.64,1); }
@@ -804,3 +809,11 @@ footer .tagline { font-size: 16px; font-weight: 600; color: var(--ink); margin-b
 .scard .sblock.t2 { background: rgba(175,120,255,.16); }
 .scard .sblock.t3 { background: rgba(80,200,180,.16); }
 .scard .sblock.t4 { background: rgba(255,180,90,.14); }
+
+/* Features page — sizzle reel */
+.reel { max-width: 340px; margin: 34px auto 12px; border-radius: 30px; overflow: hidden;
+  aspect-ratio: 1080 / 1920; background: var(--surface);
+  box-shadow: 0 30px 70px rgba(0,0,0,.5), 0 0 0 1px rgba(255,255,255,.06); }
+.reel video { width: 100%; height: 100%; object-fit: cover; display: block; }
+.reel-cap { text-align: center; color: var(--muted); font-size: 14.5px; margin: 0 auto 44px; }
+@media (max-width: 520px) { .reel { max-width: 300px; } }

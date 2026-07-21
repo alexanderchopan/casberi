@@ -23,8 +23,6 @@ struct ObsidianScreen: View {
             BridgeSetupHeader(name: "Obsidian")
             vaultSection.listRowSeparator(.hidden)
             if !recent.isEmpty {
-                PinToHomeButton(source: "Obsidian", inSection: true)
-                    .listRowSeparator(.hidden)
                 RecentThingsSection(header: "Notes", things: recent)
                     .listRowSeparator(.hidden)
             }
@@ -32,7 +30,10 @@ struct ObsidianScreen: View {
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
+        .bridgeSetupWash(name: "Obsidian")
+        .dsAdaptiveContentWidth()
         .dsPageBackground()
+        .dsSoftTopEdge()
         .navigationTitle("Obsidian")
         .navigationBarTitleDisplayMode(.large)
         .fileImporter(isPresented: $picking, allowedContentTypes: [.folder]) { outcome in

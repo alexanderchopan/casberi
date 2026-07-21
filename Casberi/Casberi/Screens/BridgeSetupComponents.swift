@@ -34,17 +34,22 @@ struct BridgeSetupHeader: View {
     var body: some View {
         Section {
             // The screen's large nav title already says the name — the header
-            // adds the face and the promise, not a second name.
-            HStack(alignment: .top, spacing: DS.Space.s3) {
+            // adds the face and the promise, not a second name. The promise is
+            // the offer's TAGLINE, not its summary: the person just read the
+            // summary on the product page they arrived from, and repeating it
+            // here was the family's biggest copy redundancy (mock review
+            // 2026-07-16). Primary color — it's the one line the screen wants
+            // read, and an all-gray pre-connect screen read as disabled.
+            HStack(alignment: .center, spacing: DS.Space.s3) {
                 BridgeIcon(name: name, size: 60)
                     .settleIn()
                     .coinFlip(trigger: flipTrigger)
-                if let line = blurb ?? BridgeCatalog.offers.first(where: { $0.name == name })?.summary {
+                if let line = blurb ?? BridgeCatalog.offers.first(where: { $0.name == name })?.tagline {
                     // The catalog copy is stored as English key strings; treat
                     // each as a LocalizedStringKey so it resolves from the
                     // active .lproj and switches live with the language.
                     Text(LocalizedStringKey(line))
-                        .dsText(.body17).foregroundStyle(DS.textSecondary)
+                        .dsText(.body17).foregroundStyle(DS.textPrimary)
                         .fixedSize(horizontal: false, vertical: true)
                         .settleIn(delay: 0.06)
                 }
@@ -66,6 +71,86 @@ struct BridgeSetupHeader: View {
                                       bottom: DS.Space.s2, trailing: DS.Space.s1))
         }
         .listRowSeparator(.hidden)
+    }
+}
+
+extension View {
+    /// A faint wash of the app's hue down from a setup screen's top — a hint
+    /// of the brand, so arriving from the product page's bold wash doesn't
+    /// drop to a bare gray form (mock review 2026-07-16). Deliberately about
+    /// a third of the product page's strength, and it fades out above the
+    /// action area: the connected header wash and the connect bloom stay the
+    /// reward, and primary controls never sit on brand color (two near-match
+    /// blues read as a mistake). Hueless apps get nothing — the same ruling
+    /// every wash follows.
+    func bridgeSetupWash(name: String) -> some View {
+        background(alignment: .top) {
+            if let hue = DS.washHue(for: name) {
+                LinearGradient(colors: [hue.opacity(0.30), hue.opacity(0)],
+                               startPoint: .top, endPoint: .bottom)
+                    .frame(height: 300)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                    .ignoresSafeArea(edges: .top)
+            }
+        }
+    }
+}
+
+/// What lands, before anything has — the product page's preview doc rendered
+/// on the setup screen too, so the payoff stays in view while the person does
+/// the connecting instead of dead space below the fold (mock review
+/// 2026-07-16). Ghosted and inert — dimmed, untappable, clearly not yet real —
+/// and the caller drops it once real things land, so the first sync visibly
+/// upgrades the screen. Offers without a preview doc render nothing.
+struct GhostPreviewSection: View {
+    /// The caption's verb — "connect" by default; a screen whose connect verb
+    /// differs says its own ("follow a feed", "switch a chain on"). Callers
+    /// must gate this section on NOT-connected as well as nothing-landed: a
+    /// connected bridge whose sync landed nothing would otherwise wear a
+    /// caption telling the person to do the thing they already did (honesty
+    /// rule — the product page gates its preview on `!connected` the same way).
+    let replaceLine: String
+    /// Resolved once — `doc(for:)` builds a fresh array per call, and body
+    /// re-evaluates every stream tick, so looking it up in body would pay
+    /// that allocation ~30ms apart for the whole entrance.
+    private let doc: [String]?
+    @State private var stream = GenStream()
+
+    init(name: String, replaceLine: String = "Your real things replace this when you connect.") {
+        self.replaceLine = replaceLine
+        self.doc = StorePreview.doc(for: name)
+    }
+
+    var body: some View {
+        if let doc {
+            Section {
+                // The VStack wrapper is load-bearing: before the stream lands
+                // its first element, GenRender is an EmptyView — and onAppear
+                // never fires on an EmptyView, so a bare GenRender would wait
+                // forever for a stream nothing starts.
+                VStack(alignment: .leading, spacing: 0) {
+                    GenRender(id: "root", els: stream.els)
+                }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .allowsHitTesting(false)
+                    .opacity(0.55)
+                    .listRowBackground(Color.clear)
+                    .listRowInsets(EdgeInsets())
+                    .listRowSeparator(.hidden)
+                    .onAppear {
+                        // Stream once; a scroll-back re-appear keeps the
+                        // finished render instead of replaying the entrance.
+                        guard stream.els.isEmpty else { return }
+                        stream.stream(doc)
+                    }
+            } header: {
+                Text("What lands — a preview")
+                    .dsText(.label12).foregroundStyle(DS.textTertiary)
+            } footer: {
+                Text(LocalizedStringKey(replaceLine))
+                    .dsText(.callout15).foregroundStyle(DS.textTertiary)
+            }
+        }
     }
 }
 
@@ -104,6 +189,10 @@ struct BridgeFieldRow: View {
 
     var body: some View {
         HStack(spacing: DS.Space.s2) {
+            // A recessed well behind the typeable area so the field reads as a
+            // text box you can tap into — not flat card-colored placeholder that
+            // people mistook for a disabled control (user, 2026-07-15). The
+            // `surfaceWell` fill sits below the sheet, the same recess GenUI uses.
             HStack(spacing: 0) {
                 if let prefix {
                     Text(prefix)
@@ -121,6 +210,11 @@ struct BridgeFieldRow: View {
                         .layoutPriority(1)
                 }
             }
+            .padding(.horizontal, DS.Space.s3)
+            .frame(minHeight: 44)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(DS.surfaceWell,
+                        in: RoundedRectangle(cornerRadius: DS.Radius.control, style: .continuous))
             Button(LocalizedStringKey(buttonLabel), action: action)
                 .dsText(.callout15).fontWeight(.semibold)
                 .foregroundStyle(text.isEmpty ? DS.textTertiary : .white)
@@ -187,8 +281,8 @@ struct BridgeSyncStatusRows: View {
                     if resultIsError {
                         Text(result)
                             .shake(on: shakes)
-                            .onAppear { shakes += 1 }
-                            .onChange(of: result) { if resultIsError { shakes += 1 } }
+                            .onAppear { shakes += 1; DSHaptic.failure() }
+                            .onChange(of: result) { if resultIsError { shakes += 1; DSHaptic.failure() } }
                     } else {
                         CountUpText(text: result)
                     }
@@ -218,6 +312,24 @@ func debouncedSearch<T>(_ query: String, minLength: Int = 2,
     return Task.isCancelled ? nil : found
 }
 
+/// A remote logo that falls back to a bridge glyph when there's no URL — both
+/// circular. The leading face shared by a finder's search rows and the
+/// watchlist rows the hits become (a token hit and the thing it turns into wear
+/// one face, one shape).
+struct BridgeLogo: View {
+    let imageURL: String?
+    let fallbackIcon: String
+    var size: CGFloat = 28
+
+    var body: some View {
+        if let imageURL, !imageURL.isEmpty {
+            RemoteThumb(urlString: imageURL, size: size, fallback: fallbackIcon, circular: true)
+        } else {
+            BridgeIcon(name: fallbackIcon, size: size, circular: true)
+        }
+    }
+}
+
 /// A tappable search-result row — a face or logo, a two-line name+handle
 /// stack, and a tap that connects it. Shared by every finder field.
 struct BridgeSearchResultRow: View {
@@ -230,12 +342,7 @@ struct BridgeSearchResultRow: View {
     var body: some View {
         Button(action: action) {
             HStack(spacing: DS.Space.s3) {
-                if let imageURL {
-                    RemoteThumb(urlString: imageURL, size: 28,
-                                fallback: fallbackIcon, circular: true)
-                } else {
-                    BridgeIcon(name: fallbackIcon, size: 28, circular: true)
-                }
+                BridgeLogo(imageURL: imageURL, fallbackIcon: fallbackIcon)
                 VStack(alignment: .leading, spacing: 0) {
                     Text(title).dsText(.body17).foregroundStyle(DS.textPrimary)
                         .lineLimit(1)

@@ -90,6 +90,22 @@ enum GenParser {
     private static let completeLine = /^(\w+) = (\w+)\((.*)\)$/
     private static let partialLine  = /^(\w+) = (\w+)\((.*)$/
 
+    /// A single COMPLETE line → its (id, GenEl), or nil if it doesn't match
+    /// the line grammar. Pulled out of `parse` so `parseIncremental` can
+    /// apply it to only the lines that need it.
+    private static func parseCompleteLine(_ line: String) -> (String, GenEl)? {
+        guard let m = line.firstMatch(of: completeLine) else { return nil }
+        return (String(m.1), GenEl(comp: String(m.2), args: parseArgs(String(m.3))))
+    }
+
+    /// A single PARTIAL (still-streaming) line → its (id, GenEl), or nil.
+    private static func parsePartialLine(_ line: String) -> (String, GenEl)? {
+        guard let m = line.firstMatch(of: partialLine) else { return nil }
+        var argStr = String(m.3)
+        if argStr.hasSuffix(")") { argStr = String(argStr.dropLast()) }
+        return (String(m.1), GenEl(comp: String(m.2), args: parseArgs(argStr)))
+    }
+
     /// Parses a prefix of the document into the element map. The last line is
     /// treated as partial unless the prefix is the whole document — a partial
     /// line still mounts its component (the mount law).
@@ -99,17 +115,40 @@ enum GenParser {
         let completeCount = isComplete ? lines.count : lines.count - 1
 
         for i in 0..<max(0, completeCount) {
-            if let m = String(lines[i]).firstMatch(of: completeLine) {
-                els[String(m.1)] = GenEl(comp: String(m.2), args: parseArgs(String(m.3)))
-            }
+            if let (id, el) = parseCompleteLine(String(lines[i])) { els[id] = el }
         }
         if completeCount < lines.count, completeCount >= 0 {
-            let last = String(lines[completeCount])
-            if let m = last.firstMatch(of: partialLine) {
-                var argStr = String(m.3)
-                if argStr.hasSuffix(")") { argStr = String(argStr.dropLast()) }
-                els[String(m.1)] = GenEl(comp: String(m.2), args: parseArgs(argStr))
+            if let (id, el) = parsePartialLine(String(lines[completeCount])) { els[id] = el }
+        }
+        return els
+    }
+
+    /// Same result as `parse(prefix:isComplete:)`, but for a caller that
+    /// re-parses a MONOTONICALLY GROWING prefix on every call (GenStream's
+    /// typewriter tick, ~every 30ms) — `parse` re-ran the complete-line regex
+    /// over every already-completed line on every single tick, O(doc²) over a
+    /// rich document's stream lifetime. A completed line's GenEl never
+    /// changes once complete (the mount law only lets the LAST line still be
+    /// partial), so `cache`/`cachedCompleteLines` let the caller carry
+    /// forward what was already parsed — each line's regex match then runs
+    /// exactly once for the whole stream, not once per tick. Safe only
+    /// across calls for the SAME document with a growing `prefix`; reset both
+    /// `inout` params to `[:]`/`0` whenever the document itself changes
+    /// (`GenStream` does this in `stream(_:)` and `paint(_:)`).
+    static func parseIncremental(prefix: Substring, isComplete: Bool,
+                                  cache: inout GenEls, cachedCompleteLines: inout Int) -> GenEls {
+        let lines = prefix.split(separator: "\n", omittingEmptySubsequences: false)
+        let completeCount = isComplete ? lines.count : lines.count - 1
+
+        if completeCount > cachedCompleteLines {
+            for i in cachedCompleteLines..<completeCount {
+                if let (id, el) = parseCompleteLine(String(lines[i])) { cache[id] = el }
             }
+            cachedCompleteLines = completeCount
+        }
+        var els = cache
+        if completeCount < lines.count, completeCount >= 0 {
+            if let (id, el) = parsePartialLine(String(lines[completeCount])) { els[id] = el }
         }
         return els
     }
