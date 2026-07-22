@@ -40,6 +40,13 @@ enum FeedInsight {
             return counted(things, title: "Where you save from", unit: ("bookmark", "bookmarks"), key: domain)
         case "Substack":
             return counted(things, title: "Your publications", unit: ("post", "posts"), key: handle)
+        // RSS names its publisher in the same `authorHandle` slot Substack and
+        // Podcasts use (RSSIngest stamps the feed's title there), so "where my
+        // reading comes from" is the identical read — it was simply never
+        // wired (2026-07-22). A reader following one feed falls through to the
+        // mosaic below, same as a Substack reader with one publication.
+        case "RSS":
+            return counted(things, title: "Your publishers", unit: ("story", "stories"), key: handle)
         case "Podcasts":
             return counted(things, title: "Your shows", unit: ("episode", "episodes"), key: handle)
         case "Steam":
@@ -172,6 +179,7 @@ enum FeedInsight {
         case "Podcasts":    title = "Latest episodes"; unit = ("episode", "episodes")
         case "Substack":    title = "Latest posts";   unit = ("post", "posts")
         case "Deals":       title = "Fresh deals";    unit = ("deal", "deals")
+        case "RSS":         title = "Latest stories"; unit = ("story", "stories")
         default: return nil
         }
         var urls: [String] = []
