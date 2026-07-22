@@ -5808,6 +5808,295 @@ mosaic of dead frames would claim streams are on. Its head-worthy fact is
 In three lines: one head parcel per feed, always boxed, always an aggregate
 derived from the feed's own things; rows own recency; a single item reaches
 the head only while it's live.
+
+## 165. The whisper carries the day brief (user: "ooh i like the idea of the whisper capsule with the headline. lets do that", 2026-07-22) — VERIFIED
+
+Ruling 6 of docs/agent-brief.md sketched the whisper as optional and
+flag-gated ("one glass whisper capsule above the bar with the top changed
+signal"). This ruling makes it real, with a different payload: not the top
+changed kept-ask signal, but **the day brief's headline** — "Your Wednesday ·
+14 new, wallet +1.5%" — shown on the **first foreground of a calendar day**
+only. The context was a landing-surface discussion (should the app open on
+the agent with a day summary?): agent-first was declined as re-litigating
+ruling 2 (content-first open) and rebuilding the §131 board one abstraction
+up; the whisper is the settled middle — the app still opens into your things,
+and the day greets you from the floating layer, one tap from the agent.
+
+**Deterministic by construction** (`Model/DayBrief.swift`) — ruling 1's spine
+guarantee extended to the launch path: every fragment is a fact already held.
+Two fragments today, fixed order: the landed count since the frozen away
+window (or since midnight when no window froze), and the wallet delta off
+`WalletStore.combinedValueSamples()` — the CACHED line, synchronous, no
+network read on the launch path. Honest skips are the design: no landed
+things and no wallet movement → `headline()` returns nil and the whisper
+simply never shows; a wallet history younger than ~20h can't speak at day
+scale → no wallet fragment; a move that rounds to flat has no direction (§83)
+→ no fragment, no sign.
+
+**Conduct:** shows at most once per calendar day (`whisper.lastShownDay`
+stamp), suppressed until onboarded, dies the moment the agent rises by ANY
+path (its job is done), and never returns until a new day has something to
+say. Tap = raise the agent, same move as the bar's own. The rest surface
+(greeting + kept-ask pills) is the tap's landing FOR NOW — it upgrades to the
+Today answer once the daily-summary design is ruled (three mockups delivered
+alongside this build; the user rules next). No badge, no count on the bar
+itself — the whisper is its own line, per ruling 6's no-badges-ever.
+
+Placement: `WhisperCapsule` (in `Shell/AgentBar.swift`) rides a VStack above
+`AgentBar` in RootShell's floating layer — glass is lawful there (§8). The
+compose rides the SAME foreground corpus walk that refreshes kept-ask
+digests (`RootShell.refreshWhisper`), never its own fetch.
+
+VERIFIED 2026-07-22 (iPhone 17 Pro sim, udid-pinned — three sims were booted):
+`-whisperProbe YES -awayGap 720 -onboarded YES` logged `whisper: Your
+Wednesday · 52 new` and rendered the capsule above the bar; relaunch WITHOUT
+the probe logged nothing (the day stamp held); a headless tap on the capsule
+raised the agent to its rest state; ✕ lowered back to the feed exactly, bar
+present, whisper gone. Wallet-fragment path exercised in code review only
+(this sim watches no wallet with ≥20h history) — pairs with
+`-seedWalletHistory` when a live check is wanted. Hook: `-whisperProbe YES`
+bypasses the day stamp; logs "(nothing to say)" when the brief is honestly
+empty. Found in passing, spun off: the rest greeting truncates on
+"Wednesday morning." (longest weekday vs the ✕ button's row).
+
+## 166. The Today brief — the mosaic, with the agent's own read on top (user: "definitely prefer B the signal board… lets build b2 with b3 synthesis card", 2026-07-22) — VERIFIED
+
+The screen the whisper capsule (§165) opens. Three directions were mocked; the
+user picked the **signal board (B2)** and asked for the **synthesis card (B3)**
+folded in, plus a ruling that reshapes every module in it.
+
+**The module doctrine (the ruling).** Verbatim: *"counts of things rarely
+matter except transactions maybe, why b/c people don't care how many they get,
+they get dozens a day, they care what it is."* So a module is never a tally.
+Every module is exactly one of four shapes: a **visualization**, the **most
+recent thing itself**, **what's next**, or a **synthesis card**. Counts survive
+in exactly one place — money moving, where the count IS the event ("1
+transaction — Swapped 0.5 ETH → 1,240 USDC"). This ruling also reached back
+into §165's whisper: its headline now leads with a NAMED subject ("mara.eth
+mentioned you", "1 transaction") and falls back to a bare count only when
+nothing nameable landed.
+
+**What composes** (`Model/TodayBrief.swift`, deterministic — ruling 1's spine
+guarantee, no model on this path):
+1. **The synthesis card** (B3) — up to three observations, each a pattern that
+   actually fired: a mention gathering replies (reply count ≥ 3), a dominant
+   topic across the day's reads (one significant word carried by 3+ titles,
+   counted once per title) with the ONE read that isn't about it promoted as
+   the outlier, the day-scoped wallet attribution ("ETH did the lifting"), and
+   a watchlist leader (≥3% only). **No branch pads**: a patternless day emits
+   no `DayNotes` line at all and the brief starts at the hero. Three strong
+   lines read as intelligence; three padded ones read as a horoscope.
+2. **The money hero** — the fused visualization B2's mock led with: combined
+   total, day-move pill, holdings treemap and balance line SIDE BY SIDE, then
+   what settled. Fused because the wallet is the only always-on aggregate, so
+   it alone earns both shapes; every other module carries one.
+3. **The pair** — `MoversTile` (watchlist, real direction in real color, "flat"
+   uncolored per §83) beside `NextTile` (the nearest DEADLINE).
+4. **The leads** — the mention rendered as the real post (`PostRow`), and the
+   one read worth opening: the topic outlier when a topic exists, else the
+   newest. Residue is NAMED, never counted ("the rest keeps circling Samsung").
+5. **The hour strip** — `Bars` over the window, the one module that answers
+   "when did this arrive" rather than "what is it".
+
+**Deliberate scoping decisions.** `NextTile` reads deadlines (`dueAt`) only,
+never calendar events — folding events in would rebuild the day-planner lane
+§101 cut. "Reading" excludes Markets/Wallet sources by the catalog's own
+category vocabulary: a watched token lands as `.link` (its content is a
+Dexscreener URL, which is what makes its sheet draw a chart), so an unfiltered
+`kind == .link` filed "dogwifhat · $WIF" under Reading and let it win the topic
+outlier (caught on-device).
+
+**Three paths, one composer** (the §132 principle): the whisper's tap
+(`chrome.askRequest = TodayBrief.title`), a typed "how's my day", and a kept
+`today` pill all route through `KeptAskComposers.compose("today", …)`. The
+kept pill's digest IS the whisper's own fragment set, so the pill's trailing
+signal and the capsule that teased the screen always agree, and the changed-dot
+fires on exactly the days the headline would have changed.
+
+**New GenUI components** (`GenRenderer.swift`): `DayNotes`/`DayNote`,
+`MoneyHero`, `TilePair`, `MoversTile`, `NextTile`. `DayNote` has no dispatch
+case of its own — it renders flat as a child of `DayNotes`, the discipline
+`GenWidget.rowContent` already keeps for the eager-depth reason. `TilePair` is
+NOT `Bento`: Bento is a two-column `LazyVGrid`, so a day offering one tile
+rendered a half-width card beside an empty column (caught on-device); an HStack
+degrades honestly. Both tiles stretch to the taller one.
+
+`WalletStore.holdingsDeltas(forAddress:)` gained an additive `since:` — the
+start moves forward to the last snapshot at or before that date but never
+earlier than the cross-wallet alignment point, so the day-scoped attribution
+keeps §77's guarantee that a composition change can't masquerade as a move.
+
+VERIFIED 2026-07-22 (iPhone 17 Pro sim, udid-pinned; `-todayProbe`,
+`-uiAnswerProbe`, `-whisperProbe`, `-seedWalletHistory`, `-watchToken`): the
+composer logged the full doc with every module chosen; the rendered brief shows
+the synthesis card (topic + wallet attribution), the hero ($164, +10.1% pill,
+ETH/RAIN cells, green line, transaction subline), both tiles equal-height, the
+Reading card with the outlier promoted, and the hour strip labelled 7 PM → 8 AM.
+Tapping the whisper capsule raised the agent straight into this brief. Four
+bugs found and fixed on-device along the way: the Bento empty column, blank
+`Bars` labels being dropped by `split(separator:)` (they bunched both stamps
+under the first two bars — blanks are a SPACE now), a clamped title's ellipsis
+colliding with a sentence period ("…."), and the whisper line truncating its
+wallet fragment (the headline is budgeted now, and a lead that doesn't fit
+yields to its own short form — "1 transaction" beats "Swapped 0.5…").
+
+### 165a. The whisper names itself (user: "user wont know that is a daily synthesis, they will think it is just a single notification for a transaction", 2026-07-22) — VERIFIED
+
+§165 shipped the whisper as a PILL: a tint dot beside one line of facts ("Your
+Wednesday · 1 transaction, wallet +10.1%"). That is notification grammar — a
+dot plus a sentence reads as "an event happened", so a daily synthesis was
+indistinguishable from a single transaction alert. Naming the weekday inside
+the sentence wasn't enough: it scanned as part of the fact, not as a label for
+the artifact.
+
+Three changes, each doing one job:
+- **The brief is NAMED, on its own line** — "Your Wednesday brief" above the
+  facts, so what the thing IS reads before what's in it. The two-part shape
+  (`DayBrief.Whisper` = title + detail) is what makes it a digest rather than
+  an item.
+- **The unread dot becomes the agent's own mark** (`CasberiMark`) — it says who
+  this is from, not merely that it's new. The dot could only ever say "new".
+- **A trailing chevron** — it opens something. A capsule with no affordance
+  reads as a passive banner.
+
+Shape follows: the pill becomes a `DS.Radius.control` card (still floating-layer
+glass, still one tap). Moving the weekday out of the fact line also widened the
+detail budget (46 → 40 chars for the facts alone, which is MORE room than
+before since the ~17-character "Your Wednesday · " prefix is gone), so a lead
+that used to be squeezed out now often fits.
+
+`DayBrief.detail` is now the single source for the fact line, and the kept
+`today` pill's digest reads it directly — which retired §166's original
+string-stripping hack (the digest used to be the headline with the weekday
+prefix removed by `replacingOccurrences`). The whisper's TITLE is deliberately
+not in the digest: a pill already reading "How's my day?" doesn't need "Your
+Wednesday brief" repeated after it.
+
+VERIFIED 2026-07-22 (iPhone 17 Pro sim): the capsule renders the berry mark,
+"Your Wednesday brief" in primary ink, "1 transaction, wallet +10.1%" in
+secondary, and the chevron; tapping it still raises the agent straight into the
+Today brief. VoiceOver reads the two lines as one element with the hint "Opens
+your day".
+
+## 167. The brief's design pass — six corrections (user: "how would you improve the design of what we have done so far", then "make all six", 2026-07-22) — VERIFIED
+
+A refinement pass over §165a/§166 as shipped, driven off the real screenshots
+rather than the mockups. One principle behind all six: **every promise the
+surface makes gets kept in pixels.** No new features; each item closes a gap
+between what the composer already knew and what the screen actually said.
+
+**1. The brief owns its name.** The capsule promised "Your Wednesday brief"
+and opened a screen titled "How's my day?" — the typed question. That is
+§165a's own lesson (name the artifact) failing one screen deeper. The answer
+header now renders a MASTHEAD when `TodayBrief.matches(question)`: an eyebrow
+naming the window ("Wednesday, July 22 · since 8:17 pm" — dropped when the
+window IS the calendar day, rather than stating the obvious) over the same
+words the capsule used. Lives in `Composer.convoTurn`, not the doc, so
+scrolled-back turns render identically.
+
+**2. The whisper is seated, and its figure wears its direction.** Two
+full-width glass slabs stacked read as one confusing double-bar; the capsule
+is inset a step narrower than the bar, so the floating layer has hierarchy
+(bar = furniture, whisper = today's delivery). `DayBrief.Whisper` now carries
+`lead` and `walletPct` SEPARATELY — a single pre-joined string gave the view
+no way to find the figure inside it, so a gain and a loss read identically.
+`DayBrief.detail` (the kept pill's digest) is now derived from the same
+`Whisper`, so the two can't drift.
+
+**3. The hero's cells state their magnitude.** The doc's cells already carry a
+value (`@v:$92`, `KindCountRow.Item.value`) and the compact map dropped it —
+a treemap whose entire point is magnitude, refusing to say the magnitude it
+holds. Cells show symbol over value; the sparkline gained its own "since Jul
+21" anchor (the job `ValueSpark`'s subline already does elsewhere).
+
+**4. The settled transaction is a row, not a caption.** "1 transaction —
+Swapped 0.5 ETH → 1,240 USDC" was tertiary text that opened nothing while
+naming a real thing. It draws as a real row now — kind glyph, title, meta
+("your only transaction · settled 8:32 pm"), chevron, tappable to the thing.
+Dead-looking text that should be live is an honesty bug, not a style choice.
+The plural and empty cases have no single thing to name, so they keep the
+plain subline.
+
+**5. Agent voice gets one grammar, and leads get room.** The synthesis card
+moved from `dsWidgetSurface` to the `DS.tintDim` surface `Insight` already
+wears — tinted surface = the agent talking, ink cards = your things; on a plain
+card it was indistinguishable from the modules it summarizes. Signed
+percentages inside a note render in their own accent (`GenSignedText`, which
+colors only what the composer already wrote and leaves a flat 0.0% in body ink
+per §83), and a note naming a real thing wears a chevron. The two lead modules
+gained real components: `LeadRow` (thumbnail, two-line title, meta) and
+`LeadPost` (avatar, author, the words, a meta line carrying replies + what's
+behind it). The first cut used the ordinary one-line `Row`, which showed the
+thing while cutting off what it is — against the brief's own doctrine. Feed
+rows elsewhere keep their one-line discipline on purpose: a lead is one item
+GIVEN ROOM, which is the whole meaning of promoting it.
+
+**6. The residue has somewhere to go, and the clock a midpoint.** "The rest
+keeps circling Samsung" was a plain subline naming a topic the reader then had
+no way to see. New `AskMore(label, query)` hands the agent that query through a
+new `genAskRequest` environment hook — ruling 9 (a bare tap never ejects) plus
+ruling 8 (a new ask pushes a fresh answer onto the Stack), so the session model
+already had the right move. Its label is deliberately "See the rest", NOT the
+topic again: the synthesis note above already said "keeps circling Samsung",
+and naming it here put the word on screen three times. The hour strip gained a
+MIDPOINT label — with ends alone, an overnight window's long quiet stretch is
+unreadable. `GenBars`' own geometry was left untouched (it's shared with the
+recap answers); only the label set changed. The synthesis note's outlier clamp
+went 48 → 60 so an ordinary headline stops cutting mid-phrase directly above
+the Reading card showing the same headline in full.
+
+VERIFIED 2026-07-22 (iPhone 17 Pro sim): masthead, tinted synthesis card with
+green +10.1% and chevron, hero cells with values, "since Jul 21", the
+transaction row, both tiles, the `LeadRow` with its loaded thumbnail and
+two-line title, "See the rest ›", and the three-anchor hour strip all render;
+tapping "See the rest" asked "Samsung" and pushed a fresh turn onto the Stack
+(3 reads found) without leaving the agent. Debug lesson paid for: the
+`todayProbe` doc was logged as ONE multi-line message and the log reader
+truncated it mid-document, hiding an unresolved ref for a full debugging round
+— it logs one `todayDoc|` line per doc line now. Also re-learned: the answer's
+provenance badge and Keep pill appear BEFORE the typewriter finishes painting,
+so a screenshot taken too early shows skeleton rows and reads as a bug; wait
+~20s or the stream is still arriving.
+
+## 168. The brief paints like generative UI — the stream paces by document size (user: "will the daily brief render like generative UI? i'd like it to", 2026-07-22) — VERIFIED
+
+It always WAS generative UI structurally: `TodayBrief` composes a real GenUI
+document, the answer path sends it through `answerStream.stream(…)` (not
+`paint`), so components mount progressively as their lines arrive and declared-
+but-unresolved children draw skeletons — the mount law, exactly as §5 of the
+build brief specifies. What it didn't do was *feel* like it.
+
+**The cadence was tuned for a sentence, not a composition.** `GenStream` stepped
+2–6 characters per 30ms tick — about 133 chars/second. A short prose answer is
+~200 characters, so it assembles in under two seconds. The Today brief is
+~1,400, and a single `MoneyHero` line is ~400 of them, so it took over TEN
+seconds to finish painting. Worse, most of that time bought nothing visible: a
+component mounts on its line's FIRST token (the mount law again) and its value
+CSV and treemap cells render no incremental change, so the typewriter was
+spending seconds on characters that moved no pixels.
+
+**The step now scales with the document**: `step = max(2, min(18, total / 90))`.
+Under ~270 characters that floors at 2 and the step stays exactly the old 2–6,
+so nothing about existing prose answers changes; a long document steps WIDER
+rather than taking longer. The per-boundary pause (150–400ms after a `root`/
+`Widget`/`Shelf` line) is untouched — that pause is what gives the assembly its
+section-by-section rhythm, and it's the part worth keeping. The brief now lands
+in roughly 1.5–2 seconds, still visibly building module by module.
+
+**One streaming artifact fixed in passing.** `KindCountRow.parse` only strips a
+COMPLETE `@v:value` / `@t:route` marker, so mid-stream a treemap cell read
+" @v" with no colon yet and the whole raw token became the cell's label — the
+hero visibly flashed "ETH 95 @v" while its cells arrived. A trailing fragment
+that opens " @", carries no space, and is too short to be a real marker is now
+dropped until the rest lands. This helps every streamed `TagMap`, not just the
+brief's hero.
+
+VERIFIED 2026-07-22 (iPhone 17 Pro sim, frame series at 0.45s): the masthead
+appears first with the berry breathing under it while the live wallet/token
+reads run (the honest in-flight state), then the document assembles top-down —
+synthesis card, hero, tile pair, reading lead, hour strip — complete in about
+1.5–2s, with no raw-token flash in the treemap cells.
+
 ## 169. The address book — naming is free, watching is the upgrade (user: "lets imagine a user wants to track N wallets but just their addresses and names", 2026-07-21)
 
 The app had TWO naming systems that never met. `WalletStore` held the labels of

@@ -27,6 +27,7 @@ enum KeptAskComposers {
     /// already calls `TokensAsk.moves(context:)`/`.watched(_:)` — there is no
     /// shared/static ModelContext accessor in this codebase).
     static func compose(_ kind: String, things: [Thing], context: ModelContext) async -> Result? {
+        if kind == "today" { return await TodayBrief.compose(things: things, context: context) }
         if kind == "away" { return away(things) }
         if kind == "wallet" { return await wallet(things) }
         if kind == "walletdefi" { return await walletDeFi() }

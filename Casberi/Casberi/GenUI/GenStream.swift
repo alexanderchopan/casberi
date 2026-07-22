@@ -53,13 +53,25 @@ final class GenStream {
         }
 
         let total = doc.count
+        // The tick SCALES with the document (2026-07-22). The 2–6 chars/tick
+        // cadence was tuned for a short prose answer; a richly composed
+        // document (the Today brief: ~1,400 characters, and a single
+        // `MoneyHero` line is ~400 of them) took over ten seconds to finish
+        // painting — and most of that was spent on characters that produce NO
+        // visible change, because a component mounts on its line's first
+        // token and its value CSV/treemap cells render nothing incrementally.
+        // Pacing by length keeps the assembling-before-your-eyes feel while
+        // bounding how long it takes: a short answer's step stays exactly 2–6
+        // (`total/90` floors at 2 under ~270 chars, so nothing about today's
+        // prose changes), and a long one steps wider instead of slower.
+        let step = max(2, min(18, total / 90))
         task = Task { @MainActor [weak self] in
             // Was 400ms — read as a beat too long before anything appears
             // (report 2026-07-09). 150ms still separates the entrance from
             // the tab switch/launch that triggered it, just tighter.
             try? await Task.sleep(for: .milliseconds(150))
             while let self, !Task.isCancelled, self.cursor < total {
-                self.cursor = min(self.cursor + Int.random(in: 2...6), total)
+                self.cursor = min(self.cursor + Int.random(in: step...(step + 4)), total)
                 self.publish()
                 if self.cursor >= total { break }
                 let nearBoundary = self.boundaries.contains {

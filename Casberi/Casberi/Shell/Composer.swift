@@ -226,7 +226,13 @@ struct Composer: View {
         guard !question.isEmpty else { return nil }
         let q = question.lowercased()
         var kind: String?
-        if TokensAsk.matches(question) {
+        if TodayBrief.matches(question), !things.isEmpty {
+            // Gated on a non-empty corpus for the same reason every other
+            // recognizer is gated on its own answer existing — keeping a
+            // "How's my day?" that can only ever say "nothing landed" would
+            // be a dead pill.
+            kind = "today"
+        } else if TokensAsk.matches(question) {
             kind = "watchlist"
         } else if WalletAsk.matches(question) {
             kind = "wallet"
@@ -688,9 +694,29 @@ struct Composer: View {
                                           @ViewBuilder content: () -> Content) -> some View {
         VStack(alignment: .leading, spacing: DS.Space.s1) {
             if !question.isEmpty {
-                Text(question)
-                    .dsText(.heading17)
-                    .foregroundStyle(DS.textPrimary)
+                Group {
+                    // The Today brief wears a MASTHEAD, not the typed question
+                    // (2026-07-22). The whisper capsule promises "Your
+                    // Wednesday brief"; landing on a screen titled "How's my
+                    // day?" broke that continuity — §165a's lesson (name the
+                    // artifact) applied one screen deeper. The eyebrow states
+                    // the window the brief actually covers, which no other
+                    // answer needs to say.
+                    if TodayBrief.matches(question) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(briefWindowLine())
+                                .dsText(.subhead13)
+                                .foregroundStyle(DS.textTertiary)
+                            Text(DayBrief.title())
+                                .dsText(.heading22)
+                                .foregroundStyle(DS.textPrimary)
+                        }
+                    } else {
+                        Text(question)
+                            .dsText(.heading17)
+                            .foregroundStyle(DS.textPrimary)
+                    }
+                }
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, DS.Space.s4)
                     // The question lift (delight, 2026-07-21): a freshly-sent
@@ -704,6 +730,31 @@ struct Composer: View {
             }
             content()
         }
+    }
+
+    /// A follow-up asked from INSIDE an answer (the Today brief's residue
+    /// line). Sends through the same `commit()` every other ask uses, so it
+    /// pushes a fresh answer onto the agent's Stack (ruling 8) instead of
+    /// ejecting anywhere — `fillDraft`, not a raw `draft` write, so the paste
+    /// heuristic can't read the programmatic set as a capture.
+    private func askFromAnswer(_ query: String) {
+        guard !query.trimmingCharacters(in: .whitespaces).isEmpty else { return }
+        DSHaptic.selection()
+        fillDraft(query)
+        commit()
+    }
+
+    /// "Wednesday, July 22 · since 9:40 pm" — the brief's eyebrow. Names the
+    /// window the brief measured, which is the one thing a reader can't infer
+    /// from the modules themselves (an overnight window and a since-midnight
+    /// one produce the same-looking screen from very different spans). Drops
+    /// the "since" clause when the window IS the calendar day, rather than
+    /// stating the obvious.
+    private func briefWindowLine() -> String {
+        let now = Date.now
+        let date = now.formatted(.dateTime.weekday(.wide).month(.wide).day())
+        guard let away = AppVisit.away else { return date }
+        return date + " · " + String(localized: "since \(away.lowerBound.formatted(.dateTime.hour().minute()))")
     }
 
     // The bubble's asymmetric corners: 24 / 24 / 10 / 24 (TL/TR/BR/BL).
@@ -867,6 +918,7 @@ struct Composer: View {
                                     VStack(alignment: .leading, spacing: DS.Space.s1) {
                                         GenRender(id: "root", els: turn.els)
                                             .environment(\.genAgentAnswerContext, true)
+                                            .environment(\.genAskRequest, askFromAnswer)
                                         if !turn.failed {
                                             provenanceBadge(keyed: turn.keyed,
                                                             searchedWeb: turn.searchedWeb,
@@ -904,6 +956,7 @@ struct Composer: View {
                                             // never replays it.
                                             .environment(\.genCitationGlint, true)
                                             .environment(\.genAgentAnswerContext, true)
+                                            .environment(\.genAskRequest, askFromAnswer)
                                         // A keyed answer says so, always — the
                                         // badge is the honesty rule applied to
                                         // where the answer was made.
@@ -974,10 +1027,14 @@ struct Composer: View {
                                                         // which sends your things off this
                                                         // iPhone and spends your own money) can
                                                         // be the thing that stands out.
+                                                        // A composed SCREEN gets a verb that
+                                                        // names it (2026-07-22) — a bare "Keep"
+                                                        // under the day brief undersold what
+                                                        // keeping would do.
                                                         Chip(text: keepJustLanded ? "Kept"
                                                                 : (askedOften
                                                                    ? "You ask this a lot — keep it?"
-                                                                   : "Keep"),
+                                                                   : (kind == "today" ? "Keep this brief" : "Keep")),
                                                              style: (keepJustLanded || askedOften) ? .tint : .neutral,
                                                              glyph: keepJustLanded ? "checkmark"
                                                                 : (askedOften ? "sparkles" : "pin.fill"))

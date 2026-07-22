@@ -19,6 +19,11 @@ struct RootShell: View {
     /// stops once the agent has been raised AT ALL this launch. Distinct
     /// from `KeptAskStore`'s own per-ask, persisted "seen" dot.
     @State private var agentEverOpened = false
+    /// The whisper capsule's line (prd §165) — non-nil only between the
+    /// first foreground of a day that has something to say and the agent's
+    /// next rise. The once-a-day gate is persisted (`whisper.lastShownDay`);
+    /// this is just the visible text.
+    @State private var whisper: DayBrief.Whisper?
     @State private var deepLinkThing: Thing?
     /// `casberi://person/<Source>/<handle>` — the profile card, by name.
     @State private var deepLinkPerson: SocialProfile?
@@ -63,6 +68,37 @@ struct RootShell: View {
         } else {
             shell
         }
+    }
+
+    /// The whisper's once-a-day gate (prd §165): compose the day brief on
+    /// the first foreground of a calendar day, show it only when it has
+    /// something to say, never twice in one day. Suppressed until onboarded
+    /// (the cover is up; a whisper under it would be dead chrome).
+    /// `-whisperProbe YES` bypasses the day stamp so the capsule verifies
+    /// headlessly (pair with `-awayGap <hours>` for the landed count and
+    /// `-seedWalletHistory` for the wallet fragment).
+    @MainActor
+    private func refreshWhisper(things: [Thing]) {
+        guard onboarded else { return }
+        var force = false
+        #if DEBUG
+        force = UserDefaults.standard.bool(forKey: "whisperProbe")
+        #endif
+        let today = Date.now.formatted(.iso8601.year().month().day())
+        let dayKey = "whisper.lastShownDay"
+        guard force || UserDefaults.standard.string(forKey: dayKey) != today
+        else { return }
+        guard let composed = DayBrief.whisper(things: things) else {
+            #if DEBUG
+            if force { NSLog("[Casberi] whisper: (nothing to say)") }
+            #endif
+            return
+        }
+        UserDefaults.standard.set(today, forKey: dayKey)
+        withAnimation(DS.Motion.standard) { whisper = composed }
+        #if DEBUG
+        NSLog("[Casberi] whisper: %@ | %@", composed.title, composed.detail)
+        #endif
     }
 
     private var shell: some View {
@@ -114,10 +150,35 @@ struct RootShell: View {
             // exactly one side of the matched pair present at a time, and a
             // bar sitting inert under the risen sheet was dead weight anyway.
             if !composerOpen {
-                AgentBar(hasUnseenSignal: KeptAskStore.shared.anyChanged && !agentEverOpened,
-                         morphNS: agentMorph) {
-                    DSHaptic.tap()
-                    composerOpen = true
+                VStack(spacing: DS.Space.s2) {
+                    // The whisper rides ABOVE the bar (prd §165) — the day
+                    // brief's headline, first open of the day only. Tap
+                    // raises the agent, same move as the bar's own.
+                    if let whisper {
+                        WhisperCapsule(title: whisper.title, lead: whisper.lead,
+                                       walletPct: whisper.walletPct) {
+                            DSHaptic.tap()
+                            // The capsule's promise kept (prd §166): the tap
+                            // lands on the Today brief itself, not the rest
+                            // state — the headline it teased, opened. Routed
+                            // through `chrome.askRequest` (the same door the
+                            // weekend cover already uses), so the whisper, a
+                            // typed "how's my day", and a kept pill all reach
+                            // the one composer.
+                            chrome.askRequest = TodayBrief.title
+                            composerOpen = true
+                        }
+                        // Inset a step narrower than the bar (2026-07-22) —
+                        // see WhisperCapsule's own note: stacked full-width
+                        // glass read as a double-bar.
+                        .padding(.horizontal, DS.Space.s3)
+                        .transition(.opacity.combined(with: .move(edge: .bottom)))
+                    }
+                    AgentBar(hasUnseenSignal: KeptAskStore.shared.anyChanged && !agentEverOpened,
+                             morphNS: agentMorph) {
+                        DSHaptic.tap()
+                        composerOpen = true
+                    }
                 }
                 .padding(.horizontal, DS.Space.s4)
                 .padding(.bottom, DS.Space.s2)
@@ -190,6 +251,9 @@ struct RootShell: View {
                         sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]))) ?? [])
                     HomeInsightStore.shared.refresh(from: surfaced)
                     await KeptAskStore.shared.refreshDigests(things: surfaced, context: modelContext)
+                    // The whisper's compose rides the same corpus walk this
+                    // Task already paid for — never its own fetch.
+                    refreshWhisper(things: surfaced)
                 }
                 // Resnapshot hand-off state so the thing sheet's "Add to <app>"
                 // verbs only show apps the person connected AND has installed.
@@ -241,6 +305,9 @@ struct RootShell: View {
             if open {
                 OnDeviceModel.resetConversation()
                 agentEverOpened = true
+                // The whisper's job is done however the agent rose — it
+                // never returns until a new day has something to say.
+                whisper = nil
             }
         }
         // A surface requested an ask (the weekend cover) — open the composer;
@@ -525,6 +592,29 @@ struct RootShell: View {
                         NSLog("[Casberi] keepAskProbe compose(\"%@\") → delta=\"%@\" digest=\"%@\"\n%@",
                               kind, result?.delta ?? "nil", result?.digest ?? "nil",
                               result?.doc.joined(separator: "\n") ?? "(no composer for this kind)")
+                    }
+                }
+            }
+            // Debug hook: `-todayProbe YES` composes the Today brief (prd
+            // §166) over the real corpus and logs the whole doc — every module
+            // it chose and every observation that fired — so the composer
+            // verifies without a tap. Pair with `-awayGap <hours>` to widen
+            // the window a headless run measures.
+            if UserDefaults.standard.bool(forKey: "todayProbe") {
+                Task { @MainActor in
+                    let all = Corpus.surfaced((try? modelContext.fetch(FetchDescriptor<Thing>(
+                        sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]))) ?? [])
+                    let landed = DayBrief.landed(all)
+                    let result = await KeptAskComposers.compose("today", things: all,
+                                                               context: modelContext)
+                    NSLog("[Casberi] todayProbe: landed=%d headline=\"%@\" digest=\"%@\"",
+                          landed.count, DayBrief.headline(things: all) ?? "(nil)",
+                          result?.digest ?? "nil")
+                    // One NSLog PER LINE — a joined multi-line message gets
+                    // truncated by the log reader mid-document, which hid an
+                    // unresolved ref for a whole debugging round (2026-07-22).
+                    for line in result?.doc ?? ["(no doc)"] {
+                        NSLog("[Casberi] todayDoc| %@", line)
                     }
                 }
             }
@@ -1122,6 +1212,19 @@ struct RootShell: View {
             lastAnswerHits = []
             let line = AggregateAsk.answer(agg, things: allThings())
             return ["root = Stack([ins])", "ins = Insight(\"\(genSafe(line))\")"]
+        }
+        // "How's my day?" — the Today brief (prd §166), the screen the whisper
+        // capsule opens. Answers THROUGH the composer itself so the typed ask,
+        // the kept pill, and the whisper's tap can never drift (the §132
+        // principle). Before the wallet/watchlist branches: this ask spans
+        // them, and its own words ("today", "my day") never collide with
+        // theirs.
+        if TodayBrief.matches(query) {
+            lastAnswerHits = []
+            if let result = await KeptAskComposers.compose("today", things: allThings(),
+                                                          context: modelContext) {
+                return result.doc
+            }
         }
         // A watchlist ask ("how's my watchlist") is answered from the same
         // 24h curves the feed pulse draws — computed, current, no model

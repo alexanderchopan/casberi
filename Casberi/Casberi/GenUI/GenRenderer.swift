@@ -37,6 +37,16 @@ extension EnvironmentValues {
         get { self[GenThingOpenKey.self] }
         set { self[GenThingOpenKey.self] = newValue }
     }
+    /// Ask a follow-up FROM inside an answer (2026-07-22) — the Today brief's
+    /// residue line ("The rest keeps circling Samsung ›") hands the agent a
+    /// query rather than ejecting to a filtered feed. Ruling 9: staying is the
+    /// default, and ruling 8 already says a new ask pushes a fresh answer onto
+    /// the Stack, so this reuses the session model instead of inventing a
+    /// list-push destination. nil outside the agent.
+    var genAskRequest: ((String) -> Void)? {
+        get { self[GenAskRequestKey.self] }
+        set { self[GenAskRequestKey.self] = newValue }
+    }
     /// A pinned row's "Open in app" — the real hand-off to the thing's
     /// source (calshow://, the link, …). nil outside Home.
     var genThingHandoff: ((String) -> Void)? {
@@ -174,6 +184,9 @@ private struct GenThingOpenKey: EnvironmentKey {
 private struct GenThingHandoffKey: EnvironmentKey {
     static let defaultValue: ((String) -> Void)? = nil
 }
+private struct GenAskRequestKey: EnvironmentKey {
+    static let defaultValue: ((String) -> Void)? = nil
+}
 private struct GenAppRemoveKey: EnvironmentKey {
     static let defaultValue: (() -> Void)? = nil
 }
@@ -302,6 +315,19 @@ struct GenRender: View {
         case "ChartCard":    GenChartCard(el: el).mountIn()
         case "StatRow":      GenStatRow(el: el).mountIn()
         case "AllocBar":     GenAllocBar(el: el).mountIn()
+
+        // The Today brief's own modules (2026-07-22, prd §166) — the mosaic
+        // (B2) with the synthesis card (B3). `DayNote` has no case of its
+        // own: it only ever renders as a child of `DayNotes`, flat, the way
+        // a Widget's rows do.
+        case "DayNotes":     GenDayNotes(el: el, els: els).mountIn()
+        case "MoneyHero":    GenMoneyHero(el: el).mountIn()
+        case "TilePair":     GenTilePair(el: el, els: els).mountIn()
+        case "MoversTile":   GenMoversTile(el: el).mountIn()
+        case "NextTile":     GenNextTile(el: el).mountIn()
+        case "LeadRow":      GenLeadRow(el: el).mountIn()
+        case "LeadPost":     GenLeadPost(el: el).mountIn()
+        case "AskMore":      GenAskMore(el: el).mountIn()
 
         case "Shelf":
             ScrollView(.horizontal, showsIndicators: false) {
@@ -621,6 +647,12 @@ private struct GenWidget: View {
             // these, so the fixed-set flatten note above still holds there.
             case "TxRow":     GenTxRow(el: child)
             case "AgendaRow": GenAgendaRow(el: child)
+            // The Today brief's promoted rows (2026-07-22) — answer-only,
+            // like TxRow/AgendaRow above; the board's `appChild` never emits
+            // these, so the fixed-set flatten note still holds.
+            case "LeadRow":   GenLeadRow(el: child)
+            case "LeadPost":  GenLeadPost(el: child)
+            case "AskMore":   GenAskMore(el: child)
             default:          GenSkeletonRow()
             }
         } else {
@@ -2852,6 +2884,579 @@ private struct GenAllocBar: View {
     }
 }
 
+// MARK: - Today brief (prd §166 — the mosaic's own modules)
+
+/// DayNotes([noteRefs]) — the Today brief's synthesis card: the agent's read
+/// of the day, two or three observations, each a deterministic pattern that
+/// actually fired (`TodayBrief.observations`). The card never pads: a day with
+/// no pattern emits no `DayNotes` line at all, so this view always has
+/// something real to say.
+///
+/// Children render FLAT (the eager-head lesson, CLAUDE.md): the note lines
+/// dispatch directly rather than through GenRender → AnyView → mountIn, the
+/// same discipline `GenWidget.rowContent` already keeps.
+private struct GenDayNotes: View {
+    let el: GenEl
+    let els: GenEls
+
+    var body: some View {
+        let refs = el.refs(0).filter { els[$0]?.comp == "DayNote" }
+        Group {
+            if !refs.isEmpty {
+                VStack(alignment: .leading, spacing: DS.Space.s3) {
+                    ForEach(refs, id: \.self) { ref in
+                        if let child = els[ref] { GenDayNoteLine(el: child) }
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(DS.Space.s4)
+                // The TINTED surface `Insight` already wears everywhere else
+                // (2026-07-22), not a plain card: one grammar for agent voice
+                // — tinted surface = the agent talking, ink cards = your
+                // things. On `dsWidgetSurface` the synthesis card was
+                // indistinguishable from the modules it's summarizing.
+                .background(DS.tintDim,
+                            in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+                .padding(.horizontal, DS.Space.s4)
+                .padding(.top, DS.Space.s2)
+            }
+        }
+    }
+}
+
+/// DayNote(glyph, text, thingID) — one observation. The glyph is the source's
+/// own SF mark, in tint; the sentence carries the fact. A note that names a
+/// real thing opens it (staying inside the agent, ruling 9); one that doesn't
+/// is plain text, never a dead control.
+private struct GenDayNoteLine: View {
+    let el: GenEl
+    @Environment(\.genThingOpen) private var thingOpen
+    @Environment(\.colorScheme) private var scheme
+
+    var body: some View {
+        let id = el.str(2)
+        let line = HStack(alignment: .top, spacing: DS.Space.s3) {
+            Image(systemName: el.str(0).isEmpty ? "sparkles" : el.str(0))
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(DS.tint)
+                .frame(width: 20)
+                .padding(.top, 2)
+                .accessibilityHidden(true)
+            GenSignedText(el.str(1), scheme: scheme)
+                .dsText(.callout15)
+                .foregroundStyle(DS.textPrimary)
+                .fixedSize(horizontal: false, vertical: true)
+            Spacer(minLength: 0)
+            // A note that opens a real thing SAYS so (honesty rule: a live
+            // control must look live). One that names no thing carries no
+            // chevron rather than a dead one.
+            if !id.isEmpty {
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(DS.textTertiary)
+                    .padding(.top, 3)
+                    .accessibilityHidden(true)
+            }
+        }
+        if id.isEmpty {
+            line
+        } else {
+            Button { thingOpen?(id) } label: { line }
+                .buttonStyle(.plain)
+        }
+    }
+}
+
+/// A sentence whose signed percentages wear their own direction — "+10.1%" in
+/// the gain accent, "−3.2%" in the loss accent, the rest in the caller's ink.
+/// Deterministic and local: it colors what the composer already wrote, and
+/// never invents a figure. A value that rounds to flat (`0.0%`) keeps the
+/// body ink, per §83 — no direction, no color.
+private func GenSignedText(_ s: String, scheme: ColorScheme) -> Text {
+    var out = Text("")
+    var buffer = ""
+    func flushPlain() {
+        if !buffer.isEmpty { out = out + Text(buffer); buffer = "" }
+    }
+    // Split on spaces and color any token that IS a signed percentage. Token
+    // granularity keeps this honest — a percentage embedded in a longer word
+    // is left alone rather than half-colored.
+    let parts = s.split(separator: " ", omittingEmptySubsequences: false)
+    for (i, part) in parts.enumerated() {
+        let token = String(part)
+        let trimmed = token.trimmingCharacters(in: CharacterSet(charactersIn: ".,;:!?"))
+        if let pct = signedPercent(trimmed), abs(pct) >= 0.05 {
+            flushPlain()
+            let tail = token.dropFirst(trimmed.count)
+            out = out + Text(trimmed)
+                .foregroundStyle(TokenChartStyle.accent(change: pct / 100, scheme: scheme))
+                .fontWeight(.semibold)
+            if !tail.isEmpty { out = out + Text(String(tail)) }
+        } else {
+            buffer += token
+        }
+        if i < parts.count - 1 { buffer += " " }
+    }
+    flushPlain()
+    return out
+}
+
+/// "+10.1%" / "−3.2%" → the number, or nil when the token isn't one.
+private func signedPercent(_ token: String) -> Double? {
+    guard token.hasSuffix("%"), let first = token.first,
+          first == "+" || first == "-" || first == "\u{2212}" else { return nil }
+    let body = token.dropLast()
+        .replacingOccurrences(of: "\u{2212}", with: "-")   // real minus sign
+    return Double(body)
+}
+
+/// MoneyHero(total, delta, "v0,v1,…", subline, [cells]) — the Today brief's
+/// one fused visualization (direction B2's hero): the combined total and its
+/// day move, then the holdings treemap and the balance line SIDE BY SIDE, then
+/// what actually settled.
+///
+/// Fused rather than stacked on purpose — the wallet is the only always-on
+/// aggregate in the brief, so it earns both shapes at once, while every other
+/// module carries exactly one. The compact treemap here draws the same cells
+/// (and the same `TokenHue` washes at the same squared magnitude) the full
+/// `TagMap` draws elsewhere, so the small read and the big one can't disagree
+/// about which holding is largest.
+private struct GenMoneyHero: View {
+    let el: GenEl
+    @Environment(\.colorScheme) private var scheme
+    @Environment(\.genThingOpen) private var thingOpen
+
+    private var items: [KindCountRow.Item] { KindCountRow.parse(el.refs(4), cap: 4) }
+    private var series: [Double] { genCSVDoubles(el.str(2)) }
+    /// The day move as a fraction, parsed back off the composed "+1.5%" — the
+    /// pill and the line's accent both key off it, so an empty delta simply
+    /// shows neither rather than claiming flatness.
+    private var change: Double? {
+        let raw = el.str(1).replacingOccurrences(of: "%", with: "")
+        guard !raw.isEmpty, let pct = Double(raw) else { return nil }
+        return pct / 100
+    }
+
+    /// The same squared weighting `GenTagMap.usdShare` uses, so a cell's wash
+    /// intensity is identical in both maps.
+    private func share(_ item: KindCountRow.Item) -> Double {
+        let total = items.reduce(0.0) { $0 + Double($1.n) * Double($1.n) }
+        guard total > 0 else { return 0 }
+        return Double(item.n) * Double(item.n) / total
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s3) {
+            HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+                Text(el.str(0))
+                    .dsText(.stat24)
+                    .foregroundStyle(DS.textPrimary)
+                    .monospacedDigit()
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
+                Spacer(minLength: DS.Space.s2)
+                if let change { TokenDeltaPill(change: change, label: "") }
+            }
+            HStack(alignment: .bottom, spacing: DS.Space.s3) {
+                treemap
+                    .frame(maxWidth: .infinity)
+                if series.count >= 2 {
+                    let c = change ?? 0
+                    VStack(alignment: .trailing, spacing: 2) {
+                        TokenChartPlot(chart: TokenChart(closes: series,
+                                                         price: series.last ?? 0,
+                                                         change: c),
+                                       accent: TokenChartStyle.accent(change: c, scheme: scheme),
+                                       height: heroHeight - 14, pulses: false)
+                        // The line's own anchor — the same job ValueSpark's
+                        // subline does ("since Jul 18"). Without it the curve
+                        // claims a span it never states.
+                        if !el.str(5).isEmpty {
+                            Text(el.str(5))
+                                .dsText(.label11)
+                                .foregroundStyle(DS.textTertiary)
+                                .lineLimit(1)
+                        }
+                    }
+                    .frame(maxWidth: .infinity)
+                }
+            }
+            .frame(height: heroHeight)
+            // What settled. A NAMED transaction is a real thing, so it draws
+            // as a real row — glyph, title, meta, chevron — not as tertiary
+            // caption text (2026-07-22: dead-looking text that opens something
+            // is an honesty bug, not a style choice). Only the no-single-
+            // transaction cases fall back to the plain subline.
+            if !el.str(6).isEmpty {
+                Button { thingOpen?(el.str(8)) } label: {
+                    HStack(spacing: DS.Space.s3) {
+                        KindGlyph(kind: .transaction, size: 28)
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text(el.str(6))
+                                .dsText(.callout15)
+                                .foregroundStyle(DS.textPrimary)
+                                .lineLimit(1)
+                            if !el.str(7).isEmpty {
+                                Text(el.str(7))
+                                    .dsText(.subhead13)
+                                    .foregroundStyle(DS.textTertiary)
+                                    .lineLimit(1)
+                            }
+                        }
+                        Spacer(minLength: DS.Space.s2)
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(DS.textTertiary)
+                            .accessibilityHidden(true)
+                    }
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .disabled(el.str(8).isEmpty)
+            } else if !el.str(3).isEmpty {
+                Text(el.str(3))
+                    .dsText(.subhead13)
+                    .foregroundStyle(DS.textTertiary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(DS.Space.s4)
+        .dsWidgetSurface()
+        .padding(.horizontal, DS.Space.s4)
+        .padding(.top, DS.Space.s2)
+    }
+
+    private var heroHeight: CGFloat { 84 }
+
+    /// The compact map: the largest holding takes the left column, the rest
+    /// stack beside it. Deliberately not the 4×3 template `GenTagMap` tiles —
+    /// at this height a six-cell grid renders unreadable slivers.
+    @ViewBuilder private var treemap: some View {
+        let items = items
+        if items.isEmpty {
+            EmptyView()
+        } else {
+            HStack(spacing: DS.Space.s1) {
+                cell(items[0])
+                if items.count > 1 {
+                    VStack(spacing: DS.Space.s1) {
+                        ForEach(Array(items.dropFirst().prefix(3).enumerated()), id: \.offset) { _, item in
+                            cell(item)
+                        }
+                    }
+                    .frame(maxWidth: .infinity)
+                }
+            }
+        }
+    }
+
+    private func cell(_ item: KindCountRow.Item) -> some View {
+        // The cell SHOWS its value (2026-07-22). The doc's cells already carry
+        // one (`@v:$92` — `KindCountRow.Item.value`), and dropping it left
+        // large empty rectangles labelled only by symbol: a treemap whose
+        // whole point is magnitude, refusing to state the magnitude it has.
+        VStack(alignment: .leading, spacing: 0) {
+            Spacer(minLength: 0)
+            Text(item.tag)
+                .dsText(.label12)
+                .foregroundStyle(DS.textPrimary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+            if let value = item.value, !value.isEmpty {
+                Text(value)
+                    .dsText(.label11)
+                    .foregroundStyle(DS.textSecondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+            }
+        }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
+            .padding(.horizontal, DS.Space.s2)
+            .padding(.vertical, DS.Space.s1)
+            .background {
+                ZStack {
+                    DS.surfaceSheet
+                    if let wash = TokenHue.wash(for: item.tag, share: share(item)) {
+                        wash
+                    } else {
+                        DS.tint(magnitude: share(item))
+                    }
+                }
+                .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+            }
+    }
+}
+
+/// LeadRow(title, meta, imageURL, thingID) — one item PROMOTED: thumbnail,
+/// the title on up to two full lines, meta beneath.
+///
+/// The brief's doctrine is "the thing itself, not a count" — but the first cut
+/// used the ordinary one-line `Row` for its promoted read, which showed the
+/// thing while cutting off what it is ("Apple is reportedly testing a MacB…",
+/// caught on-device 2026-07-22). Feed rows elsewhere keep their one-line
+/// discipline on purpose; a lead is one item GIVEN ROOM, which is the entire
+/// meaning of promoting it.
+private struct GenLeadRow: View {
+    let el: GenEl
+    @Environment(\.genThingOpen) private var thingOpen
+
+    var body: some View {
+        Button { thingOpen?(el.str(3)) } label: {
+            HStack(alignment: .top, spacing: DS.Space.s3) {
+                if !el.str(2).isEmpty {
+                    RemoteThumb(urlString: el.str(2), size: 48, fallback: el.str(0))
+                }
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(el.str(0))
+                        .dsText(.callout15).fontWeight(.semibold)
+                        .foregroundStyle(DS.textPrimary)
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
+                    if !el.str(1).isEmpty {
+                        Text(el.str(1))
+                            .dsText(.subhead13)
+                            .foregroundStyle(DS.textTertiary)
+                            .lineLimit(1)
+                    }
+                }
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, DS.Space.s4)
+            .padding(.vertical, DS.Space.s2)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .disabled(el.str(3).isEmpty)
+    }
+}
+
+/// LeadPost(author, text, avatarURL, meta, thingID) — the social lead: the
+/// post that names you, given the same room `LeadRow` gives a read. Distinct
+/// from `PostRow` (which stays exactly as the board and the widget rows use
+/// it) because it adds the meta line the brief needs — "12 replies · 2 more
+/// mentions behind it" — and because a lead's words earn two lines.
+private struct GenLeadPost: View {
+    let el: GenEl
+    @Environment(\.genThingOpen) private var thingOpen
+
+    var body: some View {
+        Button { thingOpen?(el.str(4)) } label: {
+            HStack(alignment: .top, spacing: DS.Space.s3) {
+                RemoteThumb(urlString: el.str(2), size: 32, fallback: el.str(0), circular: true)
+                VStack(alignment: .leading, spacing: 2) {
+                    if !el.str(0).isEmpty {
+                        Text(el.str(0))
+                            .dsText(.subhead13)
+                            .foregroundStyle(DS.textSecondary)
+                            .lineLimit(1)
+                    }
+                    Text(el.str(1))
+                        .dsText(.callout15)
+                        .foregroundStyle(DS.textPrimary)
+                        .lineLimit(3)
+                        .fixedSize(horizontal: false, vertical: true)
+                    if !el.str(3).isEmpty {
+                        Text(el.str(3))
+                            .dsText(.subhead13)
+                            .foregroundStyle(DS.textTertiary)
+                            .lineLimit(1)
+                            .padding(.top, 2)
+                    }
+                }
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, DS.Space.s4)
+            .padding(.vertical, DS.Space.s2)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .disabled(el.str(4).isEmpty)
+    }
+}
+
+/// AskMore(label, query) — the residue, with somewhere to go. "The rest keeps
+/// circling Samsung ›" hands the agent that query rather than ejecting to a
+/// filtered feed: ruling 9 (staying is the default; a bare tap never ejects)
+/// plus ruling 8 (a new ask pushes a fresh answer onto the Stack), so the
+/// session model already had the right move and this just uses it.
+private struct GenAskMore: View {
+    let el: GenEl
+    @Environment(\.genAskRequest) private var askRequest
+
+    var body: some View {
+        Group {
+            // No handler (outside the agent) = no control, rather than a
+            // control that does nothing — the honesty rule's oldest clause.
+            if let askRequest, !el.str(1).isEmpty {
+                Button { askRequest(el.str(1)) } label: {
+                    HStack(spacing: DS.Space.s1) {
+                        Text(el.str(0))
+                            .dsText(.subhead13)
+                            .foregroundStyle(DS.tint)
+                            .multilineTextAlignment(.leading)
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(DS.tint)
+                            .accessibilityHidden(true)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, DS.Space.s4)
+                    .padding(.vertical, DS.Space.s2)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+            }
+        }
+    }
+}
+
+/// TilePair([tileRefs]) — the brief's glanceable pair, side by side.
+///
+/// NOT `Bento` (which is what this was first built on, caught on-device
+/// 2026-07-22): Bento is a two-column `LazyVGrid`, so a day offering only ONE
+/// tile — no watchlist watched, or nothing due — rendered a half-width card
+/// beside an empty column, which reads as a layout bug rather than as "there
+/// is one thing here". An HStack of equal-width children degrades honestly
+/// instead: one tile simply spans the row.
+private struct GenTilePair: View {
+    let el: GenEl
+    let els: GenEls
+
+    var body: some View {
+        let refs = el.refs(0).filter { els[$0] != nil }
+        Group {
+            if !refs.isEmpty {
+                HStack(alignment: .top, spacing: DS.Space.s3) {
+                    ForEach(refs, id: \.self) { ref in
+                        if let child = els[ref] {
+                            switch child.comp {
+                            case "MoversTile": GenMoversTile(el: child)
+                            case "NextTile":   GenNextTile(el: child)
+                            default:           EmptyView()
+                            }
+                        }
+                    }
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.horizontal, DS.Space.s4)
+                .padding(.top, DS.Space.s2)
+            }
+        }
+    }
+}
+
+/// MoversTile(label, "SYM|+4.2%,SYM|flat,…") — the watchlist at a glance, as
+/// one half of the brief's tile pair.
+///
+/// Unlike `StatRow`'s deliberately neutral counts, a price move HAS a
+/// direction, so it wears one: gains and losses take the chart accent. A move
+/// that rounds to flat is composed as the word "flat" upstream and reads in
+/// tertiary ink — §83: no sign and no color for a change that rounds to zero.
+private struct GenMoversTile: View {
+    let el: GenEl
+    @Environment(\.colorScheme) private var scheme
+
+    private struct Move { let symbol: String; let value: String }
+    private var moves: [Move] {
+        el.str(1).split(separator: ",").compactMap { part in
+            let f = part.split(separator: "|", maxSplits: 1)
+            guard f.count == 2 else { return nil }
+            return Move(symbol: f[0].trimmingCharacters(in: .whitespaces),
+                        value: f[1].trimmingCharacters(in: .whitespaces))
+        }
+    }
+
+    private func ink(_ value: String) -> Color {
+        guard let pct = Double(value.replacingOccurrences(of: "%", with: "")) else {
+            return DS.textTertiary        // "flat" — no direction, no color
+        }
+        return TokenChartStyle.accent(change: pct / 100, scheme: scheme)
+    }
+
+    var body: some View {
+        let moves = moves
+        return Group {
+            if !moves.isEmpty {
+                VStack(alignment: .leading, spacing: DS.Space.s2) {
+                    Text(el.str(0))
+                        .dsText(.subhead13)
+                        .foregroundStyle(DS.textTertiary)
+                    ForEach(Array(moves.enumerated()), id: \.offset) { _, m in
+                        HStack(spacing: DS.Space.s2) {
+                            Text(m.symbol)
+                                .dsText(.callout15)
+                                .foregroundStyle(DS.textPrimary)
+                                .lineLimit(1)
+                            Spacer(minLength: DS.Space.s2)
+                            Text(m.value)
+                                .dsText(.callout15).fontWeight(.semibold)
+                                .foregroundStyle(ink(m.value))
+                                .monospacedDigit()
+                        }
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(DS.Space.s4)
+                // Both tiles stretch to the taller one (the same rule
+                // `soloTileChrome` keeps for paired board tiles) — a short
+                // card beside a tall one reads as a rendering fault, not as
+                // "this one has less to say".
+                .frame(maxHeight: .infinity, alignment: .topLeading)
+                .dsWidgetSurface()
+            }
+        }
+    }
+}
+
+/// NextTile(label, title, when, alert, thingID) — what's next, as the tile
+/// pair's other half. Deadlines only (never calendar events — see
+/// `TodayBrief.nextTile` for why that scoping is a ruling, not an omission).
+/// The alert line carries the overdue tail in the loss accent; empty when
+/// nothing is late.
+private struct GenNextTile: View {
+    let el: GenEl
+    @Environment(\.colorScheme) private var scheme
+    @Environment(\.genThingOpen) private var thingOpen
+
+    var body: some View {
+        let id = el.str(4)
+        let card = VStack(alignment: .leading, spacing: DS.Space.s1) {
+            Text(el.str(0))
+                .dsText(.subhead13)
+                .foregroundStyle(DS.textTertiary)
+            Text(el.str(1))
+                .dsText(.callout15).fontWeight(.semibold)
+                .foregroundStyle(DS.textPrimary)
+                .lineLimit(2)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.top, DS.Space.s1)
+            Text(el.str(2))
+                .dsText(.subhead13)
+                .foregroundStyle(DS.textSecondary)
+                .lineLimit(1)
+            if !el.str(3).isEmpty {
+                Text(el.str(3))
+                    .dsText(.subhead13)
+                    .foregroundStyle(TokenChartStyle.accent(change: -1, scheme: scheme))
+                    .lineLimit(1)
+                    .padding(.top, DS.Space.s1)
+            }
+            Spacer(minLength: 0)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(DS.Space.s4)
+        .frame(maxHeight: .infinity, alignment: .topLeading)
+        .dsWidgetSurface()
+        if id.isEmpty {
+            card
+        } else {
+            Button { thingOpen?(id) } label: { card }
+                .buttonStyle(.plain)
+        }
+    }
+}
+
 // MARK: - Kind pills (replaces KindBar on Home — identity color, one row)
 
 /// One row of kind-count chips — hue capsule, glyph in the kind's color,
@@ -2891,6 +3496,19 @@ private struct KindCountRow: View {
                !tail.isEmpty, !tail.contains(" ") {
                 value = String(tail)
                 body = String(body[..<at.lowerBound])
+            }
+            // A marker that hasn't finished ARRIVING yet (2026-07-22). Both
+            // strips above require a complete `@x:value`, so mid-stream a cell
+            // reads " @v" or " @v:" and the whole raw token became the label —
+            // the Today brief's hero visibly flashed "ETH 95 @v" while its
+            // treemap cells streamed in. Anything trailing that opens " @",
+            // carries no space, and is too short to be a real marker is a
+            // half-arrived one: drop it until the rest lands.
+            if let at = body.range(of: " @", options: .backwards) {
+                let tail = body[at.lowerBound...]
+                if !tail.dropFirst().contains(" "), tail.count <= 4 {
+                    body = String(body[..<at.lowerBound])
+                }
             }
             let parts = body.split(separator: " ")
             if let last = parts.last, let n = Int(last) {
