@@ -86,6 +86,16 @@ enum BridgeCatalog {
         Offer(name: "0xBow Privacy Pools", tagline: "Know when your deposit clears",       group: "Wallet",    connectable: true,
               summary: "Privacy Pools (by 0xBow) lets you move crypto with privacy and a compliance screen: you deposit, their screening reviews it, and once cleared you can withdraw to a fresh address privately. Connect and your deposits land in your feed — and Casberi tells you the moment a deposit clears review and is ready to withdraw privately, or if it's declined. That's the wait people otherwise keep checking a website for. Read from Ethereum's public chain and 0xBow's public API for the wallets you already watch. No account, no key, read-only: nothing here deposits, withdraws, or moves funds.",
               needsSetup: true, added: day(2026, 7, 21)),
+        // Wallet group by ruling (user, 2026-07-21): the balances MERGE into
+        // the combined portfolio, so an exchange belongs beside the wallets
+        // whose total it joins — not in Markets, which is where things you
+        // watch rather than own live.
+        Offer(name: "Coinbase",    tagline: "Your exchange balance, in your total",  group: "Wallet",    connectable: true,
+              summary: "Most people's crypto isn't all onchain. Connect Coinbase and your balances there join your watched wallets in one combined total and one map, so the number finally covers everything you hold. Connecting takes a view-only API key — and Casberi asks Coinbase what that key is allowed to do before storing it, handing it back if it can trade or move money. Read-only: no order, withdrawal or transfer is reachable from the app at all.",
+              needsSetup: true, added: day(2026, 7, 21)),
+        Offer(name: "Kraken",      tagline: "Your exchange balance, in your total",  group: "Wallet",    connectable: true,
+              summary: "Most people's crypto isn't all onchain. Connect Kraken and your balances there join your watched wallets in one combined total and one map, so the number finally covers everything you hold. Connecting takes an API key with query permissions only — and Casberi asks Kraken what that key is allowed to do before storing it, handing it back if it can trade, withdraw, or manage withdrawal addresses. Read-only: no order, withdrawal or transfer is reachable from the app at all.",
+              needsSetup: true, added: day(2026, 7, 21)),
         Offer(name: "Gmail",       tagline: "Your inbox, findable",                  group: "Mail",      connectable: true,
               summary: "Your recent mail becomes findable things. Connects over IMAP with a Google app password — your real password is never shared, and it's read-only. Needs 2-Step Verification on your Google account.",
               needsSetup: true),

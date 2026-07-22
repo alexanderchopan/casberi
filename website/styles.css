@@ -84,6 +84,12 @@ nav { display: flex; align-items: center; justify-content: space-between; paddin
 .ai-kalshi    { background: #4fae7b; }
 .ai-stocktwits { background: #008fff; }
 .ai-opensea   { background: #2081e2; }
+/* Read-only exchange seats (prd 163). Coinbase is a white mark on brand
+   blue. Kraken's own mark is purple with a transparent ground, so it takes a
+   WHITE tile rather than a full-bleed one — dropped onto the near-black page
+   it would otherwise float with no tile at all (checked in the browser). */
+.ai-coinbase  { background: #0052ff; }
+.ai-kraken    { background: #fff; }
 .ai-geckoterminal { background: #272053; }
 .ai-venice    { background: #18181b; }
 .ai-bankr     { background: #a78bfa; }

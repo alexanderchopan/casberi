@@ -1,7 +1,7 @@
 import Foundation
 import CryptoKit
 
-/// Read-only exchange balances (2026-07-21, prd §162).
+/// Read-only exchange balances (2026-07-21, prd §163).
 ///
 /// The blind spot this closes: most people's crypto is not all onchain. A
 /// portfolio built only from watched addresses is quietly wrong for anyone

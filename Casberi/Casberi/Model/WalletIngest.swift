@@ -1019,7 +1019,7 @@ enum WalletIngest {
         // history still samples (topHoldingsByWallet's recordSample side effect)
         // regardless of what the feed is currently showing.
         if let address { groups = groups.filter { scopeMatch($0.address, address) } }
-        // Connected exchanges merge into the COMBINED read only (prd §162). A
+        // Connected exchanges merge into the COMBINED read only (prd §163). A
         // feed scoped to one wallet is answering "what does THIS address hold",
         // and folding a Kraken balance into that would make the scope a lie.
         let exchange = address == nil ? await ExchangeBridge.pricedBalances() : []

@@ -17,6 +17,7 @@ enum BridgeRouter {
         case tokens
         case peer
         case privacyPools
+        case exchange(ExchangeBridge.Venue)
         case kalshi
         case stocktwits
         case openSea
@@ -62,6 +63,9 @@ enum BridgeRouter {
             case .tokens:         "tokens"
             case .peer:           "peer"
             case .privacyPools:   "privacypools"
+            // The venue's own raw value IS the seat id ("kraken", "coinbase"),
+            // so the Row above and this can't drift apart.
+            case .exchange(let venue): venue.rawValue
             case .kalshi:         "kalshi"
             case .stocktwits:     "stocktwits"
             case .openSea:        "opensea"
@@ -113,6 +117,11 @@ enum BridgeRouter {
         Row(offer: "Tokens",    id: "tokens", destination: .tokens),
         Row(offer: "Peer",      id: "peer",   destination: .peer),
         Row(offer: "0xBow Privacy Pools", id: "privacypools", destination: .privacyPools),
+        // Read-only exchange seats (prd §163) — Wallet group by ruling: their
+        // balances merge into the combined total, so they belong beside the
+        // wallets they join.
+        Row(offer: "Coinbase",  id: "coinbase", destination: .exchange(.coinbase)),
+        Row(offer: "Kraken",    id: "kraken",   destination: .exchange(.kraken)),
         Row(offer: "Kalshi",     id: "kalshi",     destination: .kalshi),
         Row(offer: "Stocktwits", id: "stocktwits", destination: .stocktwits),
         Row(offer: "OpenSea",    id: "opensea",    destination: .openSea),
@@ -189,6 +198,7 @@ struct BridgeDestinationView: View {
         case .gemini:         GeminiImportScreen()
         case .venice:         VeniceSetupScreen()
         case .bankr:          BankrSetupScreen()
+        case .exchange(let venue): ExchangeSetupScreen(venue: venue)
         case .bluesky:        HandleSetupScreen(bridge: .bluesky)
         case .farcaster:      HandleSetupScreen(bridge: .farcaster)
         case .pinterest:      HandleSetupScreen(bridge: .pinterest)

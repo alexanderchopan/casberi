@@ -68,7 +68,7 @@ struct WalletPortfolio: Equatable {
     /// within a single wallet, applied one level up. Routes can differ per
     /// wallet (the same symbol held on two chains) and the biggest stake is
     /// the one a tap should open.
-    /// `exchange` carries any connected venue's priced balances (prd §162,
+    /// `exchange` carries any connected venue's priced balances (prd §163,
     /// user ruling 2026-07-21: they MERGE — a portfolio built only from watched
     /// addresses is quietly wrong for anyone whose main holding sits on an
     /// exchange). A venue joins as a `Holder` beside the wallets, so the

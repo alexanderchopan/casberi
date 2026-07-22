@@ -5679,3 +5679,92 @@ would silently corrupt every label and the poll would match nothing.
 Verified end to end on a real depositor wallet: two same-day deposits landed
 with real amounts, both their approvals landed as alerts, a re-run deduped to
 zero, and the corpus dupe probe stayed clean.
+
+## 163. Read-only exchange seats — the balance that isn't onchain (user: "i think it should merge and that doesn't change wallet room's can never trade", 2026-07-21)
+
+Most people's crypto is not all onchain. A portfolio built only from watched
+addresses is quietly wrong for anyone whose main holding sits on an exchange,
+which makes this the largest remaining gap in the crown feature §155 named.
+Coinbase and Kraken connect with a view-only API key.
+
+**Ruling 1 — they MERGE.** §155 already settled that the combined read IS what
+the wallet room is, so an exchange balance joins the same total and the same
+treemap rather than living in a sidecar. A venue appears as a `Holder` beside
+the wallets, so §155.3's "Held in" read answers *which of my places holds this*
+instead of *which of my addresses* — and every share, the token count and the
+concentration line come out right for free, because all three already compute
+over the merged positions.
+
+Three boundaries the ruling implies:
+- A venue does NOT count toward `walletCount`. That number backs the phrase
+  "in M wallets" and an exchange is not a wallet; inflating it would be the
+  honesty rule's own failure mode, a true-sounding number that isn't counting
+  what it says. The combined map now offers itself on more than one PLACE.
+- Merging happens on the COMBINED read only. A feed scoped to one wallet (§128)
+  answers "what does THIS address hold"; folding a Kraken balance in would make
+  the scope a lie.
+- Either source alone is a real portfolio. Someone whose crypto is all on an
+  exchange has one, and the old empty-groups guard would have painted the empty
+  state over a balance we had successfully read.
+
+**Ruling 2 — it does NOT change "watching can never trade or move funds", and
+the reason matters.** An earlier draft of this feature claimed the promise came
+to rest on the key's scope once a credential existed. The user rejected that
+framing outright ("how would someone be able to trade, we don't even have a
+wallet") and was right. The promise holds for the reason it always did: the app
+has NO capability to trade — no `personal_sign`, no `eth_sendTransaction`, no
+signing path anywhere, WalletConnect proposes `methods: []` (§84), and no
+order/withdrawal/transfer endpoint is reachable from the exchange code at all.
+A key changes none of that.
+
+The permission check still earns its place, for a narrower reason: **blast
+radius**. An API key is a bearer credential, usable by whoever holds it
+regardless of what this code does, so a key that can withdraw turns a keychain
+leak or a bad backup from a privacy problem into a funds-loss one. Casberi asks
+the exchange what the key may do BEFORE storing it, and a key that can move
+money is never written to the device. It also catches the likelier case: people
+reuse the trading key they already had.
+
+Recorded because it was argued and corrected, so the overstatement isn't
+re-derived: the check is least privilege, not self-restraint.
+
+**The gate fails closed.** Unreachable check, unparseable answer, or a
+permission string we don't recognise all mean refuse — deny-by-unknown, so a
+permission the exchange adds next year can't slip through an allowlist that
+ignored it. Coinbase answers `can_view`/`can_trade`/`can_transfer`; Kraken a
+permissions array from `GetApiKeyInfo`, documented to require no permissions
+itself, so it works on the most restricted key a person can make.
+
+One consequence of ruling 2 was behavioural, not cosmetic: `can_receive` was
+disqualifying at first on the reasoning that it is "a funds-movement right".
+Receiving is inbound and cannot lose anyone money, so refusing it bought
+nothing and could have rejected perfectly safe view keys with an undiagnosable
+error. Only trade and transfer disqualify. A check must refuse a real power,
+not a named one.
+
+**Catalog: the Wallet group** (user), because the balances merge into the
+wallet room's own total — not Markets, which is where things you watch rather
+than own live.
+
+Two smaller rulings inside the build:
+- Prices are the bid/ask MIDPOINT from Kraken's keyless public book, never the
+  last trade — §83's honesty rule about stale quotes, applied to a new surface.
+  An unpriceable holding is dropped rather than counted at zero, which would
+  shrink the total and make the treemap misstate shares.
+- Deposit/withdraw history rides `query-ledger`, never Kraken's Deposit/Withdraw
+  permissions — those gate the transfers themselves, so "enable Withdraw to see
+  your history" would hand over the exact power being checked for.
+
+VERIFIED without any exchange key, which is the point — the crypto is asserted
+against published ground truth rather than a live call. Kraken's `API-Sign`
+reproduces its OFFICIAL published worked example byte-for-byte; the Coinbase
+JWT is a real ES256 token that verifies against its own public key and emits
+raw r‖s rather than the DER every JWT verifier rejects. Live keyless pricing
+confirmed across BTC/ETH/SOL/USDC/USDT/XTZ/DOGE. Website shelf, brand CSS and
+cache-busters shipped the same session; catalog-sync green.
+
+STILL UNVERIFIED: no live authenticated call has ever run — with no exchange
+key available, the success path (a good key connecting and landing balances)
+and the refusal path (a trade-capable key actually being turned away) are both
+unexercised. Store a read-only Kraken key via `scripts/dev-keys.sh` and run the
+connect flow before this ships to anyone.
