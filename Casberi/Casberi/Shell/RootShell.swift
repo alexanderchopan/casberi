@@ -37,6 +37,12 @@ struct RootShell: View {
     /// The last answer's grounding — a follow-up ("which ones were from
     /// Sam?") searches inside it instead of the whole corpus (2026-07-10).
     @State private var lastAnswerHits: [Thing] = []
+    /// A keyed conversation's prior turns (2026-07-21) — threaded into the
+    /// next "Try with your key" so a keyed follow-up is understood in
+    /// context, the same way the on-device model's own session is. Clears
+    /// when the agent lowers (`onLowerAgent`), same lifecycle as every other
+    /// per-conversation composer state.
+    @State private var keyedHistory: [AgentTurn] = []
     @State private var redactNow = false
     /// The bar↔surface morph (2026-07-20) — shared between `AgentBar` and
     /// `Composer`'s `glassNamespace`, both keying `matchedGeometryEffect` to
@@ -721,7 +727,7 @@ struct RootShell: View {
                      return (try? modelContext.fetch(FetchDescriptor<Thing>(
                          predicate: #Predicate { $0.id == uuid })))?.first
                  },
-                 onLowerAgent: { composerOpen = false })
+                 onLowerAgent: { composerOpen = false; keyedHistory = [] })
             .environment(\.genProjectTap) { name in
                 // The apps answer's catalog door: "@apps" routes to the Apps
                 // page here too (same marker the quiet-day invite uses on
@@ -1267,11 +1273,20 @@ struct RootShell: View {
     /// The BYO-key retry (prd §67) — the same question over the SAME evidence
     /// the on-device answer saw (`lastAnswerHits`), synthesized by the person's
     /// own agent key (Claude, ChatGPT, Gemini, Venice, or Bankr), device→API
-    /// direct.
+    /// direct. `onProseDoc` paints each growing chunk as it streams in, the
+    /// same live contract `answer`/`streamSynthesis` already give the
+    /// composer (2026-07-21) — defaulted so the headless `-byokProbe` hook
+    /// needs no change.
+    ///
     /// nil means the key or the network failed and the composer words that; an
     /// empty grounding gets an honest line instead, because a stronger model
-    /// can't change what's here.
-    private func keyedAnswerDocument(_ query: String) async -> [String]? {
+    /// can't change what's here. A non-empty `keyedHistory` (a keyed
+    /// follow-up within the same open conversation) threads prior turns in;
+    /// a landed answer whose model named which things it drew on paints the
+    /// same grounded "Found" row the on-device lookup path does, via
+    /// `modelDoc` — plain prose when it named none.
+    private func keyedAnswerDocument(_ query: String,
+                                     onProseDoc: @escaping ([String]) -> Void = { _ in }) async -> [String]? {
         let hits = lastAnswerHits.isEmpty ? retrieve(query) : lastAnswerHits
         // Bankr answers from the wallet and live markets too, so an empty
         // corpus match still asks; every other agent only re-reads the same
@@ -1279,11 +1294,20 @@ struct RootShell: View {
         guard !hits.isEmpty || AgentKey.active == .bankr else {
             return proseDoc("Nothing in your things matches that — a bigger model can't change what's here.")
         }
-        guard let prose = await AgentAnswer.synthesize(query: query,
-                                                       candidates: candidates(hits)) else {
+        guard let result = await AgentAnswer.synthesize(
+            query: query, candidates: candidates(hits), history: keyedHistory,
+            onPartial: { partial in onProseDoc(self.proseDoc(partial)) }
+        ) else {
             return nil
         }
-        return proseDoc(prose)
+        keyedHistory.append(AgentTurn(question: query, answer: result.text))
+        let picks = result.picks.filter { hits.indices.contains($0) }
+        // No `tag:`/`in:` here — `keyedAnswerDocument` never resolves a topic
+        // tile the way the on-device lookup route does, and `modelDoc` skips
+        // that tile entirely whenever `tag` is nil, so there's no corpus
+        // fetch to make for it.
+        guard !picks.isEmpty else { return proseDoc(result.text) }
+        return modelDoc(insight: result.text, hits: hits, picks: picks)
     }
 
     /// The corpus flattened to a plain `Sendable` snapshot for the tool-calling
@@ -1322,7 +1346,8 @@ struct RootShell: View {
         things.map {
             OnDeviceModel.Candidate(title: $0.title, kind: $0.kind.typeTag,
                                     source: $0.source, when: shortTime($0.capturedAt),
-                                    note: answerSnippet($0))
+                                    note: answerSnippet($0),
+                                    imageData: $0.kind == .screenshot ? $0.previewImageData : nil)
         }
     }
 

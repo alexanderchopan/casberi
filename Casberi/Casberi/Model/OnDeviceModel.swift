@@ -59,6 +59,12 @@ enum OnDeviceModel {
         /// Without this the model can only restate titles, which reads as a
         /// generic inventory rather than an answer about what's IN the things.
         var note: String = ""
+        /// A screenshot's own downscaled picture (already-encoded JPEG,
+        /// ~480pt, q0.7 — `Thing.previewImageData`), 2026-07-21. nil for
+        /// every other kind. Only the BYO-key vision path reads this — the
+        /// on-device model and `numberedCandidates` stay text-only, so it
+        /// carries no @Guide/prompt weight there.
+        var imageData: Data? = nil
     }
 
     /// The model's answer, grounded strictly on the candidates it was handed:

@@ -88,7 +88,7 @@ struct VeniceSetupScreen: View {
             .dsListCardRow()
             BridgeSyncStatusRows(result: result, resultIsError: resultIsError)
         } footer: {
-            Text("Nothing reads in — Venice keeps chats on your device by design. Your key powers \"Try with your key\": any answer re-runs on Venice, straight from this iPhone, only when you tap. The key lives in the Keychain, goes only to Venice itself, and Venice bills you directly. It also appears in Settings → Your key.")
+            Text("Nothing reads in — Venice keeps chats on your device by design. Your key powers \"Try with your key\": any answer re-runs on Venice, straight from this iPhone, only when you tap. It also remembers a chat's earlier answers, and can lean on live web search when your saved things fall short — screenshots stay text-only. The key lives in the Keychain, goes only to Venice itself, and Venice bills you directly. It also appears in Settings → Your key.")
                 .dsText(.subhead13).foregroundStyle(DS.textTertiary)
         }
     }
@@ -112,7 +112,8 @@ struct VeniceSetupScreen: View {
                 result = String(localized: "Connected — answers now offer \"Try with your key\" on Venice.")
                 store.registerConnected(id: "venice", name: "Venice",
                                         proof: String(localized: "Key in the Keychain"),
-                                        can: ["Answers with your key — only when you tap."])
+                                        can: ["Answers with your key — only when you tap.",
+                                              "Remembers a chat's earlier answers, and can search the web."])
             } else {
                 resultIsError = true
                 result = String(localized: "Venice didn't accept that key — check it and try again.")

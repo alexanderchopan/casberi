@@ -84,6 +84,52 @@ enum AgentProvider: String, CaseIterable, Identifiable {
         case .bankr:     "bankr-agent"
         }
     }
+
+    /// Whether this agent can look at a screenshot's own picture, not just
+    /// its OCR'd text (2026-07-21). Claude, ChatGPT, and Gemini are
+    /// multimodal on the models above; Venice's pinned model is text-only
+    /// and Bankr answers from the wallet, not the corpus — both stay
+    /// honestly text-only rather than silently dropping a photo. Stated on
+    /// the connect screens, never assumed.
+    var seesImages: Bool {
+        switch self {
+        case .anthropic, .openai, .google: true
+        case .venice, .bankr: false
+        }
+    }
+
+    /// Whether a keyed answer may also draw on live web search, not only
+    /// the things saved here (2026-07-21) — a real divergence from "grounded
+    /// in your things," so it's named on the connect screens. ChatGPT's
+    /// search needs a different API (the Responses API, not the chat
+    /// endpoint this app calls) and isn't wired up yet; Bankr already
+    /// grounds on live markets its own way and doesn't need a second path.
+    var searchesWeb: Bool {
+        switch self {
+        case .anthropic, .google, .venice: true
+        case .openai, .bankr: false
+        }
+    }
+
+    /// What this agent can additionally do, beyond a plain text answer —
+    /// shown on the connect screens so a person picks (or expects) the right
+    /// thing (2026-07-21). Every provider here remembers a keyed
+    /// conversation's prior turns except Bankr, which answers each prompt
+    /// fresh off the wallet and live markets instead of the chat so far.
+    /// nil means nothing more to say — Bankr's own explainer already covers
+    /// its divergence.
+    var capabilityLine: String? {
+        switch self {
+        case .anthropic, .google:
+            "Also sees your screenshots' own pictures, remembers this chat's answers so far, and can search the web when your things fall short."
+        case .openai:
+            "Also sees your screenshots' own pictures, and remembers this chat's answers so far."
+        case .venice:
+            "Remembers this chat's answers so far, and can search the web when your things fall short — screenshots stay text-only."
+        case .bankr:
+            nil
+        }
+    }
 }
 
 /// The stored keys — per provider, with one ACTIVE provider that keyed
@@ -129,6 +175,25 @@ enum AgentKey {
         guard let key = TokenVault.get(provider.vaultKey), key.count > 4 else { return "" }
         return "…" + key.suffix(4)
     }
+}
+
+/// One exchange in a keyed conversation (2026-07-21) — the question exactly
+/// as it was sent, and the prose that came back. A follow-up ("which of
+/// those was from march?") threads prior turns into the next request the
+/// same way the on-device model's own session does, so "those" still means
+/// something.
+struct AgentTurn: Sendable {
+    let question: String
+    let answer: String
+}
+
+/// A keyed answer: the prose, plus which numbered candidates it actually
+/// drew on (validated indices into the candidates it was given) — empty when
+/// the provider didn't point at specific things, in which case the caller
+/// shows plain prose instead of a grounded row.
+struct AgentAnswerResult: Sendable {
+    let text: String
+    let picks: [Int]
 }
 
 /// The device→provider call itself. Same contract as the on-device model:
@@ -177,10 +242,27 @@ enum AgentAnswer {
     /// person's key, under the SAME shared instructions/prompt the on-device
     /// model answers with (OnDeviceModel.synthesisInstructions/Prompt) — the
     /// key buys a stronger model, not a different contract (prd §67). Runs
-    /// on the active provider. The one divergence is length: the big model
-    /// may run a few sentences. (Bankr carries two more, documented on
-    /// `bankrAnswer` — async job flow, wallet/market grounding.)
-    static func synthesize(query: String, candidates: [OnDeviceModel.Candidate]) async -> String? {
+    /// on the active provider.
+    ///
+    /// Three divergences from the on-device contract, all sanctioned
+    /// 2026-07-21 and all named on the connect screens: `history` threads a
+    /// keyed conversation's prior turns so a follow-up is understood in
+    /// context; a candidate whose provider `seesImages` sends the
+    /// screenshot's own picture alongside its OCR'd text, not just the text;
+    /// a provider that `searchesWeb` may lean on live search when the saved
+    /// things fall short, told explicitly to prefer them first. `onPartial`
+    /// — when given — is called with the growing prose as it streams in, the
+    /// same live-paint contract `OnDeviceModel.synthesisStream` already
+    /// gives the composer; nil means the caller only wants the final text
+    /// (the headless `-byokProbe` hook).
+    ///
+    /// (Bankr carries its own two divergences, documented on `bankrAnswer` —
+    /// async job flow, wallet/market grounding — and answers through neither
+    /// of the three above: no history, no images, no search tool, since its
+    /// whole answer already isn't bound to the candidate list.)
+    static func synthesize(query: String, candidates: [OnDeviceModel.Candidate],
+                           history: [AgentTurn] = [],
+                           onPartial: ((String) -> Void)? = nil) async -> AgentAnswerResult? {
         guard let provider = AgentKey.active,
               let key = TokenVault.get(provider.vaultKey) else { return nil }
 
@@ -188,46 +270,104 @@ enum AgentAnswer {
         // through an async job (submit → poll), and it may ground on the
         // wallet and live markets — so an empty candidate list still asks.
         if provider == .bankr {
-            return await bankrAnswer(query: query, candidates: candidates, key: key)
+            guard let text = await bankrAnswer(query: query, candidates: candidates, key: key) else { return nil }
+            return AgentAnswerResult(text: text, picks: [])
         }
         guard !candidates.isEmpty else { return nil }
 
-        let system = OnDeviceModel.synthesisInstructions(length: "a few plain sentences")
-        let prompt = OnDeviceModel.synthesisPrompt(query: query, candidates: candidates)
+        var system = OnDeviceModel.synthesisInstructions(length: "a few plain sentences") + pickInstructions
+        if provider.searchesWeb { system += webSearchGuidance }
+
+        // First turn sends the full prompt (instructions + numbered
+        // candidates); a follow-up sends just the bare question — the
+        // candidates and grounding rule already live in `history`'s first
+        // exchange and the (unchanged) system prompt.
+        let userText = history.isEmpty
+            ? OnDeviceModel.synthesisPrompt(query: query, candidates: candidates)
+            : query
+
+        let images: [(index: Int, data: Data)] = provider.seesImages
+            ? Array(candidates.enumerated().compactMap { i, c in c.imageData.map { (i, $0) } }.prefix(6))
+            : []
+
+        // Strip the "PICKS: …" marker line from every partial paint too, so
+        // it never flashes in the live answer before settling.
+        let liveOnPartial: ((String) -> Void)? = onPartial.map { forward in
+            { raw in forward(extractPicks(from: raw, candidateCount: candidates.count).text) }
+        }
 
         var request: URLRequest
+        let parse: ([String: Any]) -> StreamDelta
         switch provider {
         case .anthropic:
             request = URLRequest(url: URL(string: "https://api.anthropic.com/v1/messages")!)
             request.setValue(key, forHTTPHeaderField: "x-api-key")
             request.setValue("2023-06-01", forHTTPHeaderField: "anthropic-version")
-            request.httpBody = try? JSONSerialization.data(withJSONObject: [
+            var body: [String: Any] = [
                 "model": provider.model,
                 "max_tokens": 1024,
                 "system": system,
-                "messages": [["role": "user", "content": prompt]],
-            ])
+                "stream": true,
+                "messages": anthropicMessages(history: history, userText: userText, images: images),
+            ]
+            if provider.searchesWeb {
+                body["tools"] = [["type": "web_search_20260209", "name": "web_search"]]
+            }
+            request.httpBody = try? JSONSerialization.data(withJSONObject: body)
+            parse = anthropicDelta
         case .openai, .venice:
             // One OpenAI-compatible shape covers both — Venice's API speaks it.
             let base = provider == .openai ? "https://api.openai.com/v1"
                                            : "https://api.venice.ai/api/v1"
             request = URLRequest(url: URL(string: "\(base)/chat/completions")!)
             request.setValue("Bearer \(key)", forHTTPHeaderField: "Authorization")
-            request.httpBody = try? JSONSerialization.data(withJSONObject: [
+            var messages: [[String: Any]] = [["role": "system", "content": system]]
+            for turn in history {
+                messages.append(["role": "user", "content": turn.question])
+                messages.append(["role": "assistant", "content": turn.answer])
+            }
+            messages.append(["role": "user", "content": openAIUserContent(userText, images: images)])
+            var body: [String: Any] = [
                 "model": provider.model,
                 "max_tokens": 1024,
-                "messages": [["role": "system", "content": system],
-                             ["role": "user", "content": prompt]],
-            ])
+                "stream": true,
+                "messages": messages,
+            ]
+            // Venice's own extension — a bare "search" boolean/flag on the
+            // usual chat-completions body, no separate tool declaration.
+            // (ChatGPT never reaches here with searchesWeb true — Anthropic's
+            // and Gemini's own tool declarations are the search path there.)
+            if provider == .venice {
+                body["venice_parameters"] = ["enable_web_search": "on"]
+            }
+            request.httpBody = try? JSONSerialization.data(withJSONObject: body)
+            parse = openAIDelta
         case .google:
             request = URLRequest(url: URL(string:
-                "https://generativelanguage.googleapis.com/v1beta/models/\(provider.model):generateContent")!)
+                "https://generativelanguage.googleapis.com/v1beta/models/\(provider.model):streamGenerateContent?alt=sse")!)
             request.setValue(key, forHTTPHeaderField: "x-goog-api-key")
-            request.httpBody = try? JSONSerialization.data(withJSONObject: [
+            var contents: [[String: Any]] = []
+            for turn in history {
+                contents.append(["role": "user", "parts": [["text": turn.question]]])
+                contents.append(["role": "model", "parts": [["text": turn.answer]]])
+            }
+            var userParts: [[String: Any]] = [["text": userText]]
+            for (index, data) in images {
+                userParts.append(["text": "Photo for #\(index + 1):"])
+                userParts.append(["inline_data": ["mime_type": "image/jpeg", "data": data.base64EncodedString()]])
+            }
+            contents.append(["role": "user", "parts": userParts])
+            var body: [String: Any] = [
                 "system_instruction": ["parts": [["text": system]]],
-                "contents": [["role": "user", "parts": [["text": prompt]]]],
+                "contents": contents,
                 "generationConfig": ["maxOutputTokens": 1024],
-            ])
+            ]
+            if provider.searchesWeb {
+                let searchTool: [String: Any] = ["google_search": [String: Any]()]
+                body["tools"] = [searchTool]
+            }
+            request.httpBody = try? JSONSerialization.data(withJSONObject: body)
+            parse = geminiDelta
         case .bankr:
             return nil // unreachable — bankr returned above
         }
@@ -235,46 +375,208 @@ enum AgentAnswer {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.timeoutInterval = 90
 
-        guard let (data, response) = try? await URLSession.shared.data(for: request),
-              let http = response as? HTTPURLResponse else {
-            NSLog("[Casberi] AgentAnswer(%@): network failure", provider.rawValue)
+        guard let raw = await streamText(request, onPartial: liveOnPartial, parse: parse) else {
+            NSLog("[Casberi] AgentAnswer(%@): no answer", provider.rawValue)
             return nil
         }
-        guard http.statusCode == 200,
-              let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
-            NSLog("[Casberi] AgentAnswer(%@): HTTP %d", provider.rawValue, http.statusCode)
-            return nil
-        }
-        let text = extractText(root, provider: provider)?
-            .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        return text.isEmpty ? nil : text
+        let (text, picks) = extractPicks(from: raw, candidateCount: candidates.count)
+        return text.isEmpty ? nil : AgentAnswerResult(text: text, picks: picks)
     }
 
-    /// Each provider's response shape, reduced to the answer text — or nil
-    /// when the 200 carried a refusal instead of an answer.
-    private static func extractText(_ root: [String: Any], provider: AgentProvider) -> String? {
-        switch provider {
-        case .anthropic:
-            // A refusal is a valid 200 — treat it as "no answer", never as text.
-            if let stop = root["stop_reason"] as? String, stop == "refusal" { return nil }
-            guard let content = root["content"] as? [[String: Any]] else { return nil }
-            return content
-                .filter { ($0["type"] as? String) == "text" }
-                .compactMap { $0["text"] as? String }
-                .joined()
-        case .openai, .venice:
-            guard let choices = root["choices"] as? [[String: Any]],
-                  let message = choices.first?["message"] as? [String: Any] else { return nil }
-            if let refusal = message["refusal"] as? String, !refusal.isEmpty { return nil }
-            return message["content"] as? String
-        case .google:
-            guard let candidates = root["candidates"] as? [[String: Any]],
-                  let content = candidates.first?["content"] as? [String: Any],
-                  let parts = content["parts"] as? [[String: Any]] else { return nil }
-            return parts.compactMap { $0["text"] as? String }.joined()
-        case .bankr:
-            return nil // bankr's answer text is read off its job, not here
+    // MARK: - The "PICKS: …" marker — structured grounding without a
+    // separate structured-output API per provider
+
+    /// Appended to the shared synthesis instructions: asks the model to name,
+    /// on its own trailing line, which numbered candidates its answer drew
+    /// on — the same `{insight, picks}` shape the on-device `compose()` path
+    /// gets from Apple's structured generation (`GroundedAnswerLayout`), but
+    /// as one plain marker line instead of a per-provider JSON schema/tool
+    /// call. Works identically (and streams cleanly) on all four network
+    /// providers, so BYOK answers can paint the same grounded "Found" row
+    /// the on-device lookup path already does, not just prose.
+    private static let pickInstructions = """
+
+
+        After you answer, on its own new line, write exactly "PICKS: " \
+        followed by the 1-based numbers of the numbered things above that \
+        your answer actually draws on, most relevant first, comma-separated \
+        — for example "PICKS: 2, 5". Write "PICKS: none" if none apply. \
+        Nothing may follow that line.
+        """
+
+    /// Appended only for a provider that `searchesWeb` — the one line that
+    /// changes the grounding contract, so it says so plainly to the model
+    /// too: the saved things come first, search only fills real gaps.
+    private static let webSearchGuidance = """
+         You may also use live web search when it would meaningfully improve \
+        the answer, but always prefer and lean on the things listed above \
+        first — they are what the person actually saved.
+        """
+
+    /// Splits the model's own "PICKS: 2, 5" marker line off the end of the
+    /// answer — the prose with that line (and the blank line before it)
+    /// removed, and the 0-based indices it named, validated against the
+    /// candidate count. No marker, or nothing parseable → no picks, the
+    /// whole text stays prose (the caller shows it plain, same as before
+    /// this existed).
+    private static func extractPicks(from text: String, candidateCount: Int) -> (text: String, picks: [Int]) {
+        let lines = text.components(separatedBy: "\n")
+        guard let markerIndex = lines.lastIndex(where: {
+            $0.trimmingCharacters(in: .whitespaces).uppercased().hasPrefix("PICKS:")
+        }) else {
+            return (text.trimmingCharacters(in: .whitespacesAndNewlines), [])
         }
+        let marker = lines[markerIndex].trimmingCharacters(in: .whitespaces)
+        let value = marker.dropFirst("PICKS:".count).trimmingCharacters(in: .whitespaces)
+        let picks: [Int] = value.uppercased() == "NONE" ? [] : value
+            .split(separator: ",")
+            .compactMap { Int($0.trimmingCharacters(in: .whitespaces)) }
+            .map { $0 - 1 }
+            .filter { $0 >= 0 && $0 < candidateCount }
+        let prose = lines[..<markerIndex].joined(separator: "\n")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        return (prose.isEmpty ? text.trimmingCharacters(in: .whitespacesAndNewlines) : prose, picks)
+    }
+
+    // MARK: - Streaming transport
+
+    /// What one SSE line's parsed JSON means to the caller — an incremental
+    /// chunk of prose to append, a refusal that abandons the whole answer,
+    /// or an event type this parser doesn't care about.
+    private enum StreamDelta {
+        case text(String)
+        case refused
+        case ignore
+    }
+
+    /// Reads one provider's SSE response line by line, accumulating text via
+    /// `parse`'s per-line JSON and calling `onPartial` with the running
+    /// total after each chunk. Returns the final accumulated text, or nil on
+    /// a network failure, a non-200 status, or a `.refused` delta. One
+    /// implementation for all three streaming providers (Anthropic,
+    /// OpenAI-shaped, Gemini) — only `parse` differs.
+    private static func streamText(_ request: URLRequest,
+                                   onPartial: ((String) -> Void)?,
+                                   parse: @escaping ([String: Any]) -> StreamDelta) async -> String? {
+        guard let (bytes, response) = try? await URLSession.shared.bytes(for: request) else {
+            NSLog("[Casberi] AgentAnswer: network failure")
+            return nil
+        }
+        guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
+            let status = (response as? HTTPURLResponse)?.statusCode ?? -1
+            NSLog("[Casberi] AgentAnswer: HTTP %d", status)
+            return nil
+        }
+        var text = ""
+        var refused = false
+        do {
+            for try await line in bytes.lines {
+                guard line.hasPrefix("data:") else { continue }
+                let payload = line.dropFirst(5).trimmingCharacters(in: .whitespaces)
+                guard payload != "[DONE]", !payload.isEmpty,
+                      let data = payload.data(using: .utf8),
+                      let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+                else { continue }
+                switch parse(json) {
+                case .text(let chunk):
+                    text += chunk
+                    onPartial?(text)
+                case .refused:
+                    refused = true
+                case .ignore:
+                    continue
+                }
+            }
+        } catch {
+            // A connection dropped mid-stream — whatever text arrived stands;
+            // the accumulated total below is what the caller gets.
+        }
+        return refused ? nil : text
+    }
+
+    /// Anthropic's SSE shape: `content_block_delta` events carry the text;
+    /// a `message_delta` whose `stop_reason` is "refusal" is a valid 200
+    /// that must not be read as an answer.
+    private static func anthropicDelta(_ json: [String: Any]) -> StreamDelta {
+        let type = json["type"] as? String
+        if type == "content_block_delta",
+           let delta = json["delta"] as? [String: Any],
+           delta["type"] as? String == "text_delta",
+           let t = delta["text"] as? String {
+            return .text(t)
+        }
+        if type == "message_delta",
+           let delta = json["delta"] as? [String: Any],
+           delta["stop_reason"] as? String == "refusal" {
+            return .refused
+        }
+        return .ignore
+    }
+
+    /// The OpenAI-compatible chat-completions SSE shape (ChatGPT and
+    /// Venice): each chunk's `choices[0].delta.content` is the next slice of
+    /// text; a populated `delta.refusal` is a refusal, never text.
+    private static func openAIDelta(_ json: [String: Any]) -> StreamDelta {
+        guard let choices = json["choices"] as? [[String: Any]],
+              let delta = choices.first?["delta"] as? [String: Any] else { return .ignore }
+        if let refusal = delta["refusal"] as? String, !refusal.isEmpty { return .refused }
+        if let content = delta["content"] as? String, !content.isEmpty { return .text(content) }
+        return .ignore
+    }
+
+    /// Gemini's `streamGenerateContent?alt=sse` shape: each chunk carries
+    /// its own incremental `candidates[0].content.parts[].text`; a populated
+    /// `promptFeedback.blockReason` (no candidates at all) is a refusal.
+    private static func geminiDelta(_ json: [String: Any]) -> StreamDelta {
+        if let feedback = json["promptFeedback"] as? [String: Any],
+           feedback["blockReason"] != nil {
+            return .refused
+        }
+        guard let candidates = json["candidates"] as? [[String: Any]],
+              let content = candidates.first?["content"] as? [String: Any],
+              let parts = content["parts"] as? [[String: Any]] else { return .ignore }
+        let t = parts.compactMap { $0["text"] as? String }.joined()
+        return t.isEmpty ? .ignore : .text(t)
+    }
+
+    // MARK: - Per-provider message bodies
+
+    /// Anthropic's `messages` array: prior turns as plain user/assistant
+    /// pairs, then the current turn — a single text block, or (when the
+    /// candidate list carries screenshots this agent can see) a text block
+    /// per photo labelled by the candidate it belongs to, so the model can
+    /// tell which picture goes with which numbered thing.
+    private static func anthropicMessages(history: [AgentTurn], userText: String,
+                                          images: [(index: Int, data: Data)]) -> [[String: Any]] {
+        var messages: [[String: Any]] = []
+        for turn in history {
+            messages.append(["role": "user", "content": turn.question])
+            messages.append(["role": "assistant", "content": turn.answer])
+        }
+        var content: [[String: Any]] = [["type": "text", "text": userText]]
+        for (index, data) in images {
+            content.append(["type": "text", "text": "Photo for #\(index + 1):"])
+            content.append(["type": "image",
+                            "source": ["type": "base64", "media_type": "image/jpeg",
+                                      "data": data.base64EncodedString()]])
+        }
+        messages.append(["role": "user", "content": content])
+        return messages
+    }
+
+    /// The OpenAI-compatible `content` value for the current turn — a bare
+    /// string when there are no photos to attach (ChatGPT with no
+    /// screenshots, or Venice, which stays text-only), else the multi-part
+    /// array shape both ChatGPT and Venice's API accept.
+    private static func openAIUserContent(_ text: String, images: [(index: Int, data: Data)]) -> Any {
+        guard !images.isEmpty else { return text }
+        var parts: [[String: Any]] = [["type": "text", "text": text]]
+        for (index, data) in images {
+            parts.append(["type": "text", "text": "Photo for #\(index + 1):"])
+            parts.append(["type": "image_url",
+                          "image_url": ["url": "data:image/jpeg;base64,\(data.base64EncodedString())"]])
+        }
+        return parts
     }
 
     // MARK: - Bankr (async job: submit the prompt, poll until it answers)

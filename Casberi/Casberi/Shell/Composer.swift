@@ -28,10 +28,13 @@ struct Composer: View {
     /// never call it and just return the doc to reveal at once.
     var answer: (_ query: String, _ onProseDoc: @escaping ([String]) -> Void) async -> [String] = { _, _ in [] }
     /// The BYO-key retry (prd §67): answers the same question with the person's
-    /// own Anthropic key, device→API direct. nil when the key or the network
-    /// failed — the composer words that honestly. The verb only shows when a
-    /// key is configured; it never fires on its own.
-    var answerWithKey: (_ query: String) async -> [String]? = { _ in nil }
+    /// own agent key, device→API direct. Streams: while the answer is coming
+    /// in, `onProseDoc` is called with each growing snapshot so it paints
+    /// live, the same contract `answer` gives for the on-device path
+    /// (2026-07-21). nil when the key or the network failed — the composer
+    /// words that honestly. The verb only shows when a key is configured; it
+    /// never fires on its own.
+    var answerWithKey: (_ query: String, _ onProseDoc: @escaping ([String]) -> Void) async -> [String]? = { _, _ in nil }
     /// Candidate project tags for the parse card, from the corpus.
     var tagCandidates: () -> [String] = { [] }
     /// The connected sources ("Gmail", "Steam") — navigation asks match them.
@@ -1297,15 +1300,29 @@ struct Composer: View {
         let gen = askGeneration
         answerStream.paint(["root = Stack([w])", "w = Insight(\"Asking with your key…\")"])
         Task { @MainActor in
-            let doc = await answerWithKey(q)
+            // Prose arrives live over the network now (2026-07-21) — paint
+            // each growing snapshot the same way the on-device path does
+            // (commit()'s onProseDoc), with the same stale-ask guard.
+            var streamed = false
+            let doc = await answerWithKey(q) { partialDoc in
+                guard gen == askGeneration else { return }
+                streamed = true
+                currentStreamed = true   // a real synthesis — keepable
+                proseStreaming = true
+                answerStream.paint(partialDoc)
+            }
             // Closed, or a newer ask overtook this one — retire silently.
             guard isOpen, gen == askGeneration else { return }
-            withAnimation(DS.Motion.standard) { inFlight = false }
+            withAnimation(DS.Motion.standard) { proseStreaming = false; inFlight = false }
             keyAvailable = AgentKey.isConfigured
             if let doc {
                 currentStreamed = true   // a keyed synthesis is keepable too
                 DSHaptic.success()   // a real keyed answer landed — the honest tick
-                answerStream.stream(doc)
+                // Prose already painted its way in live; settle on the final
+                // doc instantly (it may add a grounded "Found" row after the
+                // prose). A doc that never streamed (an early failure before
+                // any text arrived) still gets the typewriter reveal.
+                if streamed { answerStream.paint(doc) } else { answerStream.stream(doc) }
             } else {
                 keyedCurrent = false     // no keyed answer arrived — no badge
                 answerStream.stream(["root = Stack([w])",

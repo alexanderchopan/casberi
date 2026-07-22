@@ -146,7 +146,7 @@ struct AccountDetailSheet: View {
     private var sheetHeight: CGFloat {
         switch detail {
         case .data: 530   // two wipes now — things and access, one row each
-        case .key: 460
+        case .key: 500   // +40 for the per-agent capability line (2026-07-21)
         }
     }
 
@@ -200,6 +200,15 @@ struct AccountDetailSheet: View {
             Text("With your key saved, every answer offers \"Try with your key\" — the question and the few matched things go straight from this iPhone to the agent's provider, only when you tap. They bill your key directly.")
                 .dsText(.subhead13).foregroundStyle(DS.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
+            // What THIS agent adds beyond a plain text answer — changes with
+            // the picker below it, so the choice is informed before a key is
+            // even saved (honesty rule: capability copy per agent, not one
+            // line pretending they're all the same).
+            if let capability = keyProvider.capabilityLine {
+                Text(capability)
+                    .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
             Picker("Agent", selection: $keyProvider) {
                 ForEach(AgentProvider.allCases) { provider in
                     Text(provider.agent).tag(provider)
