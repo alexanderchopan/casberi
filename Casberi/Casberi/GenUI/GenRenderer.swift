@@ -1859,8 +1859,10 @@ private struct GenVoiceTile: View {
 /// TagMap(eyebrow, subline, ["Label N", ...], iconMode) — treemap of flat
 /// sheet-surface cards (2026-07-10, user: the tiles are LITERALLY the
 /// Settings-tile surface; colored fills and colored label inks were both
-/// tried the same day and read as noise). Magnitude is size alone;
-/// identity is the white label and the token/bridge icons.
+/// tried the same day and read as noise). Magnitude is size plus the §145
+/// neutral tint wash (token maps first, extended to every map 2026-07-21 —
+/// one hue, opacity by share, never a per-cell palette); identity is the
+/// white label and the token/bridge icons.
 private struct GenTagMap: View {
     let id: String
     let el: GenEl

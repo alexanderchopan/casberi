@@ -372,18 +372,21 @@ struct FeedScreen: View {
     /// source's bulk arrivals that day.
     private enum FeedRow: Identifiable {
         case single(Thing)
-        case bundle(source: String, word: String, count: Int, newest: Date)
+        /// `art`: up to three member preview-image URLs, newest first — the
+        /// bundle's own pictures (2026-07-21), so "Shopify · 100 products"
+        /// can show what actually arrived instead of one brand glyph.
+        case bundle(source: String, word: String, count: Int, newest: Date, art: [String])
         var id: String {
             switch self {
             case .single(let t): t.id.uuidString
-            case .bundle(let source, _, _, let newest):
+            case .bundle(let source, _, _, let newest, _):
                 "bundle-\(source)-\(newest.timeIntervalSince1970)"
             }
         }
         var date: Date {
             switch self {
             case .single(let t): t.capturedAt
-            case .bundle(_, _, _, let newest): newest
+            case .bundle(_, _, _, let newest, _): newest
             }
         }
     }
@@ -436,8 +439,16 @@ struct FeedScreen: View {
                     let kinds = Set(members.map(\.kind))
                     let word = kinds.count == 1
                         ? kinds.first!.typeTagPlural.lowercased() : "things"
+                    // The bundle's own pictures — the first three members
+                    // that actually carry art, in feed order (newest first,
+                    // since dayThings is).
+                    let art = members.compactMap { m -> String? in
+                        guard let a = m.previewImageURL, !a.isEmpty else { return nil }
+                        return a
+                    }.prefix(3)
                     rows.append(.bundle(source: t.source, word: word,
-                                        count: members.count, newest: t.capturedAt))
+                                        count: members.count, newest: t.capturedAt,
+                                        art: Array(art)))
                 } else {
                     rows.append(.single(t))
                 }
@@ -1104,9 +1115,9 @@ struct FeedScreen: View {
                     case .single(let thing):
                         shapedListRow(thing, index: i, nextEventID: nextEventID,
                                       position: positions[i])
-                    case .bundle(let source, let word, let count, let newest):
+                    case .bundle(let source, let word, let count, let newest, let art):
                         bundleListRow(source: source, word: word, count: count,
-                                      newest: newest, index: i, position: positions[i])
+                                      newest: newest, art: art, index: i, position: positions[i])
                     }
                 }
             } header: {
@@ -1226,9 +1237,9 @@ struct FeedScreen: View {
     /// opens the source's own shape (where volume is designed to live) —
     /// no swipes, nothing here is a single thing to pin or open.
     private func bundleListRow(source: String, word: String, count: Int,
-                               newest: Date, index: Int,
+                               newest: Date, art: [String] = [], index: Int,
                                position: RunPosition = .only) -> some View {
-        BundleRow(source: source, count: count, word: word, newest: newest)
+        BundleRow(source: source, count: count, word: word, newest: newest, art: art)
             .modifier(RowEntrance(index: index, wave: shapeWave, style: entranceStyle))
             .contentShape(Rectangle())
             .onTapGesture {

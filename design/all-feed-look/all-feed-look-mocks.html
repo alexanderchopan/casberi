@@ -1,0 +1,325 @@
+<title>All feed — three treatments</title>
+<style>
+  /* Review page for dark app screens — deliberately single-theme, matching
+     design/wallet-look/wallet-look-mocks.html (same series, same reviewer). */
+  :root {
+    --page: #0a0b0f;
+    --ink: #f2f4f8;
+    --muted: #99a1b4;
+    --faint: #626b80;
+    --tint: #2461ff;          /* Casberi's own blue — All's identity */
+    --tint-wash: #3a76ff;
+    --confirm: #32d74b;
+    --attention: #ff9f0a;
+    --card: #16181f;
+    --money: ui-rounded, -apple-system, system-ui, sans-serif;
+    --text: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+    /* ProjectHue stand-ins for the theme cells */
+    --hue-sale: #ff9f0a; --hue-work: #5e9eff; --hue-casberi: #ff6482;
+    --hue-lisbon: #ff8a5c; --hue-fitness: #4cd964;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { background: var(--page); }
+  body {
+    font-family: var(--text); color: var(--ink);
+    background:
+      radial-gradient(900px 420px at 18% -8%, rgba(36, 97, 255, .10), transparent 62%),
+      var(--page);
+    padding: 48px 28px 72px;
+  }
+  .wrap { max-width: 1180px; margin: 0 auto; }
+
+  header { max-width: 720px; margin-bottom: 40px; }
+  .eyebrow { font-size: 12px; font-weight: 600; color: var(--tint-wash); margin-bottom: 10px; }
+  h1 {
+    font-size: clamp(26px, 3.6vw, 38px); font-weight: 800;
+    letter-spacing: -.02em; line-height: 1.08; text-wrap: balance; margin-bottom: 14px;
+  }
+  header p { font-size: 15px; line-height: 1.55; color: var(--muted); max-width: 62ch; }
+  header p b { color: var(--ink); font-weight: 600; }
+
+  .row {
+    display: flex; flex-wrap: wrap; gap: 34px;
+    align-items: flex-start; justify-content: center; margin-bottom: 56px;
+  }
+  .option { width: 316px; }
+  .phone {
+    width: 316px; border-radius: 44px; padding: 9px; background: #16181d;
+    box-shadow: 0 30px 70px rgba(0,0,0,.55), 0 2px 8px rgba(0,0,0,.4);
+  }
+  .screen {
+    border-radius: 36px; overflow: hidden; background: #000;
+    position: relative; padding: 18px 16px 22px;
+  }
+  .caption { margin-top: 20px; padding: 0 6px; }
+  .caption h2 { font-size: 17px; font-weight: 700; letter-spacing: -.01em; margin-bottom: 6px; }
+  .caption h2 span { color: var(--faint); font-weight: 600; }
+  .caption p { font-size: 13.5px; line-height: 1.55; color: var(--muted); }
+  .caption .risk { display: block; margin-top: 8px; font-size: 12.5px; color: var(--faint); }
+
+  /* ---------- shared in-screen components ---------- */
+  .chips { display: flex; gap: 6px; margin-bottom: 18px; }
+  .chip {
+    display: flex; align-items: center; justify-content: center;
+    width: 30px; height: 30px; border-radius: 50%;
+    font-size: 11px; font-weight: 600; color: var(--muted);
+    background: rgba(255,255,255,.06);
+  }
+  .chip.on { color: var(--ink); box-shadow: 0 0 0 2px var(--tint); }
+  .chip.b1 { background: #2461ff; } .chip.b2 { background: #e33e30; }
+  .chip.b3 { background: #4d8f43; } .chip.b4 { background: #f5f5f7; }
+
+  .dayCaption { font-size: 11.5px; font-weight: 600; color: var(--muted); margin-bottom: 4px; }
+  .dayCaption span { color: var(--faint); }
+  .balRow { display: flex; align-items: baseline; gap: 10px; }
+  .big {
+    font-family: var(--money); font-weight: 800; font-size: 46px;
+    letter-spacing: -.01em; line-height: 1.05; font-variant-numeric: tabular-nums;
+  }
+  .big small { font-size: 20px; font-weight: 700; color: var(--muted); margin-left: 2px; }
+  .pill {
+    font-family: var(--money); font-size: 11.5px; font-weight: 700;
+    padding: 3px 9px; border-radius: 999px;
+    color: var(--tint-wash); background: rgba(58, 118, 255, .14);
+  }
+  .mover { font-size: 12px; color: var(--faint); margin-top: 5px; }
+  .spark { display: block; width: 100%; height: 46px; margin-top: 10px; }
+
+  .themesTitle { font-size: 14.5px; font-weight: 700; margin: 14px 0 2px; }
+  .themesSub { font-size: 12px; color: var(--muted); margin-bottom: 10px; }
+
+  .dayHead { display: flex; align-items: baseline; gap: 8px; margin: 16px 0 7px; }
+  .dayHead b { font-size: 15px; font-weight: 700; }
+  .dayHead span {
+    font-family: var(--money); font-size: 11px; font-weight: 700; color: var(--faint);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .rows { background: var(--card); border-radius: 14px; padding: 2px 10px; }
+  .r { display: flex; align-items: center; gap: 9px; padding: 8px 0; }
+  .r .g {
+    width: 26px; height: 26px; border-radius: 8px; flex: none;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; color: #fff; background: rgba(255,255,255,.08);
+  }
+  .g.wallet { background: #2461ff; } .g.cal { background: #e33e30; }
+  .g.shop { background: #4d8f43; } .g.gpt { background: #f5f5f7; color: #111; }
+  .g.claw { background: #8b1e1e; } .g.mail { background: #b6392f; }
+  .r .t { font-size: 12.5px; line-height: 1.3; min-width: 0; }
+  .r .t em { font-style: normal; color: var(--muted); }
+  .r .t span { display: block; font-size: 10.5px; color: var(--faint); margin-top: 1px; }
+  .r .n {
+    margin-left: auto; font-family: var(--money); font-size: 13px; font-weight: 700;
+    font-variant-numeric: tabular-nums; color: var(--muted); flex: none;
+  }
+  .r .n small { display: block; font-size: 9.5px; font-weight: 600; color: var(--faint); text-align: right; }
+  .r .n.soon { color: var(--attention); }
+
+  /* ---------- A: the headline ---------- */
+  .t-a .screen {
+    background:
+      linear-gradient(180deg, rgba(58, 118, 255, .26) 0%, rgba(58, 118, 255, .09) 18%, rgba(58, 118, 255, 0) 36%),
+      #000;
+  }
+  .themeLine { font-size: 12px; color: var(--muted); margin: 12px 0 2px; }
+  .themeLine b { color: var(--ink); font-weight: 600; }
+  .themeLine span { color: var(--faint); }
+
+  /* ---------- B: pictures lead ---------- */
+  .t-b .screen {
+    background:
+      linear-gradient(180deg, rgba(58, 118, 255, .16) 0%, rgba(58, 118, 255, 0) 22%), #000;
+  }
+  .mosaic {
+    display: grid; grid-template-columns: 1.6fr 1fr; grid-template-rows: 62px 62px;
+    gap: 5px; margin: 8px 0 4px;
+  }
+  .shot { border-radius: 12px; position: relative; overflow: hidden; }
+  .shot.lead { grid-row: 1 / 3; }
+  .shot.s1 { background: linear-gradient(135deg, #2a2f3d, #4a5568 60%, #2d3340); }
+  .shot.s2 { background: linear-gradient(160deg, #4d3b2a, #7a5c38 70%, #3d2f22); }
+  .shot.s3 { background: linear-gradient(145deg, #24343c, #3f5e6b 65%, #1e2b31); }
+  .shot .tag {
+    position: absolute; left: 7px; bottom: 6px;
+    font-size: 9.5px; font-weight: 600; color: rgba(255,255,255,.92);
+    background: rgba(0,0,0,.45); padding: 2px 7px; border-radius: 999px;
+  }
+  .mosaicSub { font-size: 11px; color: var(--faint); margin-bottom: 6px; }
+
+  /* ---------- C: themes own their color ---------- */
+  .t-c .screen {
+    background:
+      linear-gradient(180deg, rgba(58, 118, 255, .16) 0%, rgba(58, 118, 255, 0) 22%), #000;
+  }
+  .map {
+    display: grid; gap: 6px; grid-template-columns: repeat(4, 1fr);
+    grid-template-rows: 52px 50px; margin-bottom: 8px;
+  }
+  .cell {
+    border-radius: 14px; padding: 8px 9px; background: var(--card);
+    display: flex; flex-direction: column; justify-content: space-between;
+    overflow: hidden;
+  }
+  .cell b { font-size: 12px; font-weight: 700; }
+  .cell i {
+    font-style: normal; font-family: var(--money); font-size: 11px; font-weight: 700;
+    color: var(--muted); font-variant-numeric: tabular-nums;
+  }
+  .cell.sale { grid-area: 1 / 1 / 2 / 3; background: linear-gradient(135deg, rgba(255,159,10,.34), rgba(255,159,10,.12)); }
+  .cell.work { grid-area: 1 / 3 / 2 / 5; background: linear-gradient(135deg, rgba(94,158,255,.34), rgba(94,158,255,.12)); }
+  .cell.casb { grid-area: 2 / 1 / 3 / 3; background: linear-gradient(135deg, rgba(255,100,130,.30), rgba(255,100,130,.11)); }
+  .cell.lisb { grid-area: 2 / 3 / 3 / 4; background: linear-gradient(135deg, rgba(255,138,92,.30), rgba(255,138,92,.11)); }
+  .cell.fit  { grid-area: 2 / 4 / 3 / 5; background: linear-gradient(135deg, rgba(76,217,100,.28), rgba(76,217,100,.10)); }
+  .cell.sale b { font-size: 13px; } .cell.work b { font-size: 13px; }
+  .conc { font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+  .conc span { color: var(--faint); }
+
+  /* ---------- shared moves + law ---------- */
+  .shared { max-width: 900px; margin: 0 auto; }
+  .shared h3 { font-size: 15px; font-weight: 700; margin-bottom: 14px; }
+  .moves {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 12px; margin-bottom: 30px;
+  }
+  .move { background: rgba(255,255,255,.035); border-radius: 16px; padding: 14px 16px; }
+  .move b { display: block; font-size: 13.5px; font-weight: 700; margin-bottom: 4px; }
+  .move p { font-size: 12.5px; line-height: 1.5; color: var(--muted); }
+  .law { font-size: 12.5px; line-height: 1.6; color: var(--faint); max-width: 74ch; }
+  .law b { color: var(--muted); font-weight: 600; }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .option { animation: rise .5s ease-out backwards; }
+    .option:nth-child(2) { animation-delay: .08s; }
+    .option:nth-child(3) { animation-delay: .16s; }
+    @keyframes rise { from { opacity: 0; transform: translateY(14px); } }
+  }
+</style>
+
+<div class="wrap">
+<header>
+  <div class="eyebrow">Casberi · the All room</div>
+  <h1>All, in the wallet's voice</h1>
+  <p>Today's All feed is a collapsed Themes line over uniform 17-pt rows — every fact lives <b>inside a sentence</b>, so nothing is loud, nothing is pictorial, and the screenshot never says oooh. The wallet room already found the fix: a number with confidence, quiet captions, a line with body, facts trailing the stream. These three frames re-aim that exact vocabulary at the corpus. <b>Same components — day cards, bundles, band rows, the Themes map — only the temperature changes.</b></p>
+</header>
+
+<div class="row">
+
+  <!-- ============ A: THE DAY WEARS A HEADLINE ============ -->
+  <div class="option t-a">
+    <div class="phone"><div class="screen">
+      <div class="chips">
+        <div class="chip on">All</div><div class="chip b1">◧</div>
+        <div class="chip b2">▤</div><div class="chip b3">◨</div><div class="chip b4">◩</div>
+      </div>
+      <div class="dayCaption">Your things <span>· Monday</span></div>
+      <div class="balRow"><div class="big">23<small>today</small></div><div class="pill">4 sources</div></div>
+      <div class="mover">Mostly Wallet · 17 transactions</div>
+      <svg class="spark" viewBox="0 0 284 46" preserveAspectRatio="none">
+        <defs><linearGradient id="gp" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#3a76ff" stop-opacity=".30"/>
+          <stop offset="1" stop-color="#3a76ff" stop-opacity="0"/>
+        </linearGradient></defs>
+        <path d="M0,38 C24,36 40,30 62,33 S104,20 128,26 S168,8 196,14 S248,30 284,22 L284,46 L0,46 Z" fill="url(#gp)"/>
+        <path d="M0,38 C24,36 40,30 62,33 S104,20 128,26 S168,8 196,14 S248,30 284,22" fill="none" stroke="#3a76ff" stroke-width="2.2" stroke-linecap="round"/>
+        <circle cx="284" cy="22" r="3.4" fill="#3a76ff"/>
+      </svg>
+      <div class="themeLine"><b>Themes</b> · Sale, Work, Casberi, Lisbon trip <span>›</span></div>
+      <div class="dayHead"><b>Today</b><span>23</span></div>
+      <div class="rows">
+        <div class="r"><div class="g wallet">◧</div><div class="t">Wallet<span>6m ago</span></div><div class="n">17<small>transactions</small></div></div>
+        <div class="r"><div class="g cal">▤</div><div class="t">Dinner with Sam<span>Calendar</span></div><div class="n soon">7:00 PM</div></div>
+        <div class="r"><div class="g shop">◨</div><div class="t">Shopify<span>8h ago</span></div><div class="n">4<small>products</small></div></div>
+      </div>
+      <div class="dayHead"><b>Yesterday</b><span>125</span></div>
+      <div class="rows">
+        <div class="r"><div class="g shop">◨</div><div class="t">Shopify<span>New arrivals</span></div><div class="n">100<small>products</small></div></div>
+        <div class="r"><div class="g gpt">✳</div><div class="t">Trip plan: Lisbon<span>ChatGPT · <em>Lisbon trip</em></span></div><div class="n">1d</div></div>
+      </div>
+    </div></div>
+    <div class="caption">
+      <h2>A · The day wears a headline <span>— Cash App's move</span></h2>
+      <p>The corpus gets what the balance got: today's count at 46-pt rounded, a sources pill, a "Mostly Wallet" attribution line, and a 14-day capture pulse drawn with real body — in Casberi's own blue, because volume has no win or lose (never green or red). Counts leave the sentence for the trailing slot as rounded figures.</p>
+      <span class="risk">Risk: lowest — it's the wallet balance block re-aimed, and every number is a count the feed already computes.</span>
+    </div>
+  </div>
+
+  <!-- ============ B: PICTURES LEAD ============ -->
+  <div class="option t-b">
+    <div class="phone"><div class="screen">
+      <div class="chips">
+        <div class="chip on">All</div><div class="chip b1">◧</div>
+        <div class="chip b2">▤</div><div class="chip b3">◨</div><div class="chip b4">◩</div>
+      </div>
+      <div class="dayCaption">Your things <span>· Monday</span></div>
+      <div class="balRow"><div class="big" style="font-size:34px">23<small>today</small></div><div class="pill">4 sources</div></div>
+      <div class="mosaic">
+        <div class="shot lead s1"><span class="tag">Saturday's match</span></div>
+        <div class="shot s2"><span class="tag">Crewneck · $45</span></div>
+        <div class="shot s3"><span class="tag">Klean Kanteen</span></div>
+      </div>
+      <div class="mosaicSub">Today in pictures · 6 things with images</div>
+      <div class="dayHead"><b>Today</b><span>23</span></div>
+      <div class="rows">
+        <div class="r"><div class="g wallet">◧</div><div class="t">Wallet<span>6m ago</span></div><div class="n">17<small>transactions</small></div></div>
+        <div class="r"><div class="g cal">▤</div><div class="t">Dinner with Sam<span>Calendar</span></div><div class="n soon">7:00 PM</div></div>
+        <div class="r"><div class="g shop">◨</div><div class="t">Shopify<span>8h ago</span></div><div class="n">4<small>products</small></div></div>
+      </div>
+      <div class="dayHead"><b>Yesterday</b><span>125</span></div>
+      <div class="rows">
+        <div class="r"><div class="g shop">◨</div><div class="t">Shopify<span>New arrivals</span></div><div class="n">100<small>products</small></div></div>
+        <div class="r"><div class="g mail">▣</div><div class="t">Gmail<span>Inbox</span></div><div class="n">4<small>things</small></div></div>
+      </div>
+    </div></div>
+    <div class="caption">
+      <h2>B · Pictures lead <span>— Flipboard's move</span></h2>
+      <p>The day's own imagery becomes the cover: a mosaic of what actually landed — the screenshot, the product shots — drawn by the mosaic hero the per-source feeds already own, promoted to the All room. Content is the decoration; the headline steps down a rung to make room.</p>
+      <span class="risk">Risk: needs the honesty guard the source mosaics already have — renders only when ≥3 real images exist that day, else frame A's layout stands.</span>
+    </div>
+  </div>
+
+  <!-- ============ C: THEMES OWN THEIR COLOR ============ -->
+  <div class="option t-c">
+    <div class="phone"><div class="screen">
+      <div class="chips">
+        <div class="chip on">All</div><div class="chip b1">◧</div>
+        <div class="chip b2">▤</div><div class="chip b3">◨</div><div class="chip b4">◩</div>
+      </div>
+      <div class="dayCaption">Your things <span>· Monday</span></div>
+      <div class="balRow"><div class="big" style="font-size:34px">23<small>today</small></div><div class="pill">4 sources</div></div>
+      <div class="themesTitle">Themes</div>
+      <div class="themesSub">2,481 things · what they're about</div>
+      <div class="map">
+        <div class="cell sale"><b>Sale</b><i>214</i></div>
+        <div class="cell work"><b>Work</b><i>186</i></div>
+        <div class="cell casb"><b>Casberi</b><i>92</i></div>
+        <div class="cell lisb"><b>Lisbon</b><i>41</i></div>
+        <div class="cell fit"><b>Fitness</b><i>28</i></div>
+      </div>
+      <div class="conc">Sale grew most this week <span>· All themes ›</span></div>
+      <div class="dayHead"><b>Today</b><span>23</span></div>
+      <div class="rows">
+        <div class="r"><div class="g wallet">◧</div><div class="t">Wallet<span>6m ago</span></div><div class="n">17<small>transactions</small></div></div>
+        <div class="r"><div class="g cal">▤</div><div class="t">Dinner with Sam<span>Calendar</span></div><div class="n soon">7:00 PM</div></div>
+        <div class="r"><div class="g claw">◆</div><div class="t">OpenClaw<span>Agent</span></div><div class="n">4<small>things</small></div></div>
+      </div>
+    </div></div>
+    <div class="caption">
+      <h2>C · Themes own their color <span>— identity everywhere</span></h2>
+      <p>The Themes map stops hiding in a collapsed line: expanded by default, each cell wearing its project's own hue as a wash, sized by count — the wallet treemap's grammar with ProjectHue doing the identity work it was minted for. Uber's part is the hierarchy around it: day headers louder, counts quieter, chrome silent.</p>
+      <span class="risk">Risk: same re-litigation as wallet treatment C — colored fills were once ruled noise, but that ruling predates the magnitude wash. One reviewer should rule both rooms the same day so the two maps agree.</span>
+    </div>
+  </div>
+
+</div>
+
+<div class="shared">
+  <h3>Moves shared by all three (independent of which frame wins)</h3>
+  <div class="moves">
+    <div class="move"><b>Counts leave the sentence</b><p>"Wallet · 17 transactions" becomes Wallet with 17 trailing in rounded tabular figures — the wallet's "amounts join the stream" move, applied to every bundle row. The next event's time rides the same slot in attention amber.</p></div>
+    <div class="move"><b>The day gets a number</b><p>Day headers carry their count as a quiet figure beside the word, not inside it — "Today · 23" reads as a fact, and yesterday's 125 explains itself before you scroll.</p></div>
+    <div class="move"><b>Captions get quieter</b><p>Source names and sublines drop a step in size and ink. The gap between loud (numbers, titles) and quiet (labels) is the whole hierarchy, and today's gap is too small.</p></div>
+    <div class="move"><b>One hero, still</b><p>The existing rule survives every frame: headline, mosaic, and expanded map never stack — each frame picks its one overview, and the guard that keeps two heroes off a source feed keeps them off All.</p></div>
+  </div>
+  <p class="law"><b>What the law keeps in every frame:</b> no hairlines, sentence case, glass only on the floating layer, and hue doing only its two jobs — identity (Casberi's blue for the pulse, a source's brand tile, a theme's ProjectHue) and state (the amber "next up", green and red staying reserved for money direction). Every number on every screen is a count the feed already computes; nothing is invented, ranked, or scored.</p>
+</div>
+</div>

@@ -837,10 +837,17 @@ struct SenderInitial: View {
 
 // MARK: - Bundle — machine bulk, compressed (ruling 2026-07-09)
 
-/// One row standing for a source's bulk arrivals in a day — "Wallet · 14
-/// transactions". Same band anatomy, count in the title, newest time on the
-/// right. Compression, never ranking: the rows still exist, one tap away in
-/// the source's own shape (the Reminders "Older" collapse, applied to volume).
+/// One row standing for a source's bulk arrivals in a day. Compression,
+/// never ranking: the rows still exist, one tap away in the source's own
+/// shape (the Reminders "Older" collapse, applied to volume).
+///
+/// Re-voiced 2026-07-21 (the wallet-look pass, user: "improving the feed
+/// look itself"): the count leaves the sentence for the trailing slot in
+/// rounded tabular figures — the wallet stream's "amounts join the stream"
+/// move, applied to the All feed's own quantities — and a bundle whose
+/// members carry pictures leads with a fan of them (what actually arrived)
+/// instead of one brand glyph. Facts unchanged: source, count, unit word,
+/// newest time — only where each one stands.
 struct BundleRow: View {
     let source: String
     let count: Int
@@ -848,16 +855,43 @@ struct BundleRow: View {
     /// "things" when mixed.
     let word: String
     let newest: Date
+    /// Up to three member preview images, newest first — [] falls back to
+    /// the brand glyph.
+    var art: [String] = []
 
     var body: some View {
         HStack(spacing: DS.Space.s3) {
-            BridgeIcon(name: source, size: 26)
-            Text("\(source) · \(count) \(word)")
-                .dsText(.body17)
-                .foregroundStyle(DS.textPrimary)
-                .lineLimit(1)
-                .frame(maxWidth: .infinity, alignment: .leading)
-            LiveTimeText(date: newest)
+            if art.isEmpty {
+                BridgeIcon(name: source, size: 26)
+            } else {
+                // The fan: newest on top, each a step behind — the same 26pt
+                // leading seat every band row keeps, grown only by the
+                // overlap, so the row's rhythm holds.
+                ZStack(alignment: .leading) {
+                    ForEach(Array(art.enumerated().reversed()), id: \.offset) { i, url in
+                        RemoteThumb(urlString: url, size: 26, fallback: source)
+                            .offset(x: CGFloat(i) * 10)
+                    }
+                }
+                .frame(width: 26 + CGFloat(art.count - 1) * 10, alignment: .leading)
+            }
+            VStack(alignment: .leading, spacing: 1) {
+                Text(source)
+                    .dsText(.body17)
+                    .foregroundStyle(DS.textPrimary)
+                    .lineLimit(1)
+                LiveTimeText(date: newest)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            VStack(alignment: .trailing, spacing: 0) {
+                Text("\(count)")
+                    .dsText(.price16)
+                    .foregroundStyle(DS.textPrimary)
+                    .monospacedDigit()
+                Text(word)
+                    .dsText(.label11)
+                    .foregroundStyle(DS.textTertiary)
+            }
         }
         .padding(.vertical, DS.Space.s2)
     }
