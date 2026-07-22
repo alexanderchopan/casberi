@@ -15,6 +15,16 @@ import SwiftUI
 /// (`TokenChartStyle.accent` already refuses to colour a flat change), the
 /// warning glyph is the one `DS.attention` mark, and nothing else is tinted.
 
+/// The wallet room's card recipe, in one place (prd §160, 2026-07-21) — every
+/// card in this room is TRANSLUCENT so the crown pour (§159) travels under it
+/// instead of being punched out. Shared by the balance card, the holdings
+/// card, and the DeFi tiles below, because a room of cards at two different
+/// opacities reads as a bug (caught on screen the moment Aave and Morpho
+/// landed beside the two new cards).
+enum WalletCardStyle {
+    static let fill = 0.82
+}
+
 /// One tile's shell — the shared anatomy so the two never drift: caption row
 /// with an optional glyph and a chevron, then the tile's own body.
 private struct WalletTile<Content: View>: View {
@@ -64,7 +74,7 @@ private struct WalletTile<Content: View>: View {
         // sizes to the taller one; this makes the shorter one fill it.
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .padding(DS.Space.s3)
-        .dsWidgetSurface()
+        .dsWidgetSurface(fillOpacity: WalletCardStyle.fill)
     }
 }
 
@@ -347,9 +357,9 @@ struct WalletDeFiTile: View {
         WalletTile(caption: caption, showChevron: false) {
             HStack(alignment: .top, spacing: DS.Space.s3) {
                 stat(String(localized: "Collateral"),
-                     "$\(WalletIngest.format(collateral))", tint: DS.textPrimary)
+                     TokenStats.compact(collateral), tint: DS.textPrimary)
                 stat(String(localized: "Debt"),
-                     "$\(WalletIngest.format(debt))", tint: DS.textPrimary)
+                     TokenStats.compact(debt), tint: DS.textPrimary)
                 // The label says "at risk" when the number is (2026-07-21):
                 // orange alone meant nothing to anyone who doesn't know where
                 // Aave's margin sits, and this is the one stat here that is
@@ -417,13 +427,13 @@ struct WalletMorphoTile: View {
                     // when there's genuinely no priced collateral to state.
                     if collateral > 0 {
                         stat(String(localized: "Collateral"),
-                             "$\(WalletIngest.format(collateral))", tint: DS.textPrimary)
+                             TokenStats.compact(collateral), tint: DS.textPrimary)
                     } else if deposits > 0 {
                         stat(String(localized: "Deposits"),
-                             "$\(WalletIngest.format(deposits))", tint: DS.textPrimary)
+                             TokenStats.compact(deposits), tint: DS.textPrimary)
                     }
                     stat(String(localized: "Debt"),
-                         "$\(WalletIngest.format(debt))", tint: DS.textPrimary)
+                         TokenStats.compact(debt), tint: DS.textPrimary)
                     stat((health ?? .infinity) < 1.5
                             ? String(localized: "Health · at risk") : String(localized: "Health"),
                          health.map { WalletIngest.format($0) } ?? String(localized: "No debt"),
@@ -431,7 +441,7 @@ struct WalletMorphoTile: View {
                 } else {
                     // Earning face — deposits, and an honest "No debt".
                     stat(String(localized: "Deposits"),
-                         "$\(WalletIngest.format(deposits))", tint: DS.textPrimary)
+                         TokenStats.compact(deposits), tint: DS.textPrimary)
                     stat(String(localized: "Debt"),
                          String(localized: "None"), tint: DS.textPrimary)
                 }

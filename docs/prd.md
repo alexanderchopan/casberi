@@ -5567,6 +5567,22 @@ Craft the ruling required:
   becomes the card's inner gutter, so the cells nest without a second inset;
   the map keeps its own card-cells (a card of cards, as approved on the mock).
 
+**Amendment, same day (the DeFi tiles):** Aave and Morpho were ALREADY cards —
+they share `WalletTile`, which has worn `dsWidgetSurface` since the 2026-07-20
+split — so §160 didn't need to box them. It needed to make them MATCH. Two
+defects showed the moment they rendered beside the two new cards, both caught
+on screen against a live wallet ($43.3M collateral / $39.4M debt / health 1.04
+on Aave, plus a Morpho book on the same address):
+
+1. **Opacity parity.** The DeFi tiles were opaque while the balance and
+   holdings cards were translucent — a room of cards at two opacities reads as
+   a bug. `WalletCardStyle.fill` is now the single constant all four share.
+2. **The money voice.** The tiles printed `WalletIngest.format` — full grouped
+   digits ("$43,315,267") — while every other number in the room speaks
+   `TokenStats.compact` ("$3.2M"). At eight figures the full number also
+   cramped its column. Money is compact now; the HEALTH FACTOR keeps
+   `format` (1.04 is not money, and rounding it would hide the risk).
+
 VERIFIED on the dedicated sim, dark and light: the pour still reads at the
 crown and between the parcels, cells keep their brand washes inside the
 holdings card, and the light page renders the two cards as white parcels on
