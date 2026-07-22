@@ -794,6 +794,13 @@ struct Composer: View {
                     // collided with it (caught on sim, 2026-07-20).
                     .padding(.trailing, 64)
                     .padding(.top, DS.Space.s2)
+                    // The longest weekday+moment pairs ("Wednesday
+                    // morning.") still don't fit the line reserved above at
+                    // full display size — scale down rather than truncate
+                    // (the type ramp still carries hierarchy; this is fit,
+                    // not a new size step). Caught on sim, 2026-07-22.
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
                     .settleIn()
                 if !corpusSummary.isEmpty {
                     Text(corpusSummary)
