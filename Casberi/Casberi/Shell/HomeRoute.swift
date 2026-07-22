@@ -32,4 +32,26 @@ final class HomeRoute {
     /// `.apps` push above has mounted the stack.
     var openOffer: String?
     private init() {}
+
+    /// Open a shell door (Apps / Settings) so it PUSHES every time.
+    ///
+    /// `navigationDestination(item: $push)` does not reliably reset `push` to
+    /// nil after an interactive swipe-back dismiss (a documented SwiftUI issue,
+    /// worse under a `.zoom` transition — see the same drop class called out in
+    /// `RootShell`'s onboarding-CTA and launch re-land notes). When `push` is
+    /// left STALE at `.apps`, a bare `push = .apps` equals the current value and
+    /// SwiftUI, seeing no change, does nothing — so the catalogue button reads
+    /// as dead until some other path happens to clear the route. That is the
+    /// reported "pressing the app catalogue button isn't working every time":
+    /// it isn't a missed tap, it's a no-op set.
+    ///
+    /// Force a fresh nil→value edge instead: clear now, set one runloop later so
+    /// SwiftUI always sees a real change and pushes. Harmless when `push` is
+    /// already nil (the clear is a no-op; the deferred set still pushes), and
+    /// the destination's zoom transition plays regardless of which runloop set
+    /// it (the same deferred-set the `-openAppsDelay` hook already relies on).
+    @MainActor func present(_ target: Push) {
+        push = nil
+        Task { @MainActor in push = target }
+    }
 }
