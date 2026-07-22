@@ -1019,10 +1019,19 @@ enum WalletIngest {
         // history still samples (topHoldingsByWallet's recordSample side effect)
         // regardless of what the feed is currently showing.
         if let address { groups = groups.filter { scopeMatch($0.address, address) } }
-        guard !groups.isEmpty else { return nil }
-        let portfolio = WalletPortfolio.from(groups: groups)
+        // Connected exchanges merge into the COMBINED read only (prd §162). A
+        // feed scoped to one wallet is answering "what does THIS address hold",
+        // and folding a Kraken balance into that would make the scope a lie.
+        let exchange = address == nil ? await ExchangeBridge.pricedBalances() : []
+        // Either source alone is a real portfolio — someone whose crypto is all
+        // on an exchange still has one, and returning nil would paint the empty
+        // state over a balance we successfully read.
+        guard !groups.isEmpty || !exchange.isEmpty else { return nil }
+        let portfolio = WalletPortfolio.from(groups: groups, exchange: exchange)
 
-        if address == nil, groups.count > 1, !portfolio.isEmpty {
+        // More than one PLACE, not more than one wallet — a single wallet plus
+        // a connected exchange is exactly the case this feature exists for.
+        if address == nil, groups.count + (exchange.isEmpty ? 0 : 1) > 1, !portfolio.isEmpty {
             // "What you hold", not "Across your wallets" — the balance headline
             // directly above already owns that phrase (verified on screen
             // 2026-07-21: the two stacked read as one thing said twice). The

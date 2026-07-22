@@ -68,10 +68,34 @@ struct WalletPortfolio: Equatable {
     /// within a single wallet, applied one level up. Routes can differ per
     /// wallet (the same symbol held on two chains) and the biggest stake is
     /// the one a tap should open.
-    static func from(groups: [WalletIngest.HoldingsGroup]) -> WalletPortfolio {
+    /// `exchange` carries any connected venue's priced balances (prd §162,
+    /// user ruling 2026-07-21: they MERGE — a portfolio built only from watched
+    /// addresses is quietly wrong for anyone whose main holding sits on an
+    /// exchange). A venue joins as a `Holder` beside the wallets, so the
+    /// "Held in" read answers "which of my places holds this" rather than
+    /// "which of my addresses" — and every share, the token count and the
+    /// concentration line are computed over the merged set for free.
+    ///
+    /// It does NOT count toward `walletCount`: that number backs the phrase
+    /// "in M wallets", and an exchange is not a wallet. Saying otherwise would
+    /// be the honesty rule's own failure mode — a true-sounding number that
+    /// isn't counting what it says.
+    static func from(groups: [WalletIngest.HoldingsGroup],
+                     exchange: [(symbol: String, usd: Double, venue: ExchangeBridge.Venue)] = [])
+    -> WalletPortfolio {
         var usdBySymbol: [String: Double] = [:]
         var holdersBySymbol: [String: [Holder]] = [:]
         var routeBySymbol: [String: (usd: Double, route: String)] = [:]
+
+        for holding in exchange where holding.usd > 0 {
+            usdBySymbol[holding.symbol, default: 0] += holding.usd
+            // The venue's own name is both the id and the label — there is no
+            // address, and inventing a fake one would put a "name this address"
+            // verb on something that isn't one.
+            holdersBySymbol[holding.symbol, default: []]
+                .append(Holder(address: holding.venue.rawValue,
+                               label: holding.venue.display, usd: holding.usd))
+        }
 
         for group in groups {
             let label = group.label

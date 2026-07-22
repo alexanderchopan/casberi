@@ -272,6 +272,80 @@ enum ExchangeBridge {
             .replacingOccurrences(of: "=", with: "")
     }
 
+    // MARK: - Pricing
+
+    /// USD for a set of symbols, from Kraken's KEYLESS public ticker — one
+    /// request for every symbol, no account, and it prices BOTH venues (a
+    /// balance is the same asset wherever it sits).
+    ///
+    /// The price is the **bid/ask midpoint**, never `c` (last trade). §83 is
+    /// explicit: a last trade can be stale and quoting it is the dishonest
+    /// read; the live book's own bracket is the honest one. A book missing
+    /// either side prices nothing rather than half of something — the same
+    /// empty-bracket rule that ruling already records.
+    ///
+    /// **Keyed off the ANSWER, not the request** (measured 2026-07-21): asking
+    /// for `ETHUSD` returns a result keyed `XETHZUSD`, and `XBTUSD` returns
+    /// `XXBTZUSD` — Kraken answers in its own canonical pair names. Reading the
+    /// response by the string we asked with finds nothing at all. This is the
+    /// same lesson `WalletIngest` records for Jupiter's token search.
+    /// Two keyless requests, deliberately: `AssetPairs` says which asset each
+    /// returned pair is FOR, and `Ticker` says what it costs.
+    ///
+    /// The second request is not laziness — it is the fix for a bug this code
+    /// had twice. Splitting the pair NAME to recover the base looks trivial and
+    /// cannot be made correct: "XTZUSD" is Tezos, whose symbol ends in Z, so
+    /// stripping the `ZUSD` quote yields "XT"; and "USDTZUSD" is USDT with a
+    /// `ZUSD` quote and no `X` prefix, defeating the refinement that fixed
+    /// Tezos. Measured against `AssetPairs`, "SOLUSD" ALSO has quote `ZUSD` —
+    /// the name simply doesn't encode the boundary. Kraken declares `base`
+    /// itself, so the answer is asked for rather than parsed.
+    static func krakenPrices(symbols: Set<String>) async -> [String: Double] {
+        // USD is already USD; asking would be a pair that doesn't exist.
+        let wanted = symbols.filter { $0 != "USD" }
+        guard !wanted.isEmpty else { return [:] }
+        // Kraken wants XBT in a pair name even though it answers XXBT.
+        let pairs = wanted.map { ($0 == "BTC" ? "XBT" : $0) + "USD" }
+            .sorted().joined(separator: ",")
+        async let basesCall = krakenResult("AssetPairs", pairs: pairs)
+        async let tickerCall = krakenResult("Ticker", pairs: pairs)
+        let (bases, ticker) = await (basesCall, tickerCall)
+        guard let bases, let ticker else { return [:] }
+
+        var out: [String: Double] = [:]
+        for (returnedPair, raw) in ticker {
+            guard let quote = raw as? [String: Any],
+                  let base = ((bases[returnedPair] as? [String: Any])?["base"]) as? String,
+                  let ask = Double(((quote["a"] as? [Any])?.first as? String) ?? ""),
+                  let bid = Double(((quote["b"] as? [Any])?.first as? String) ?? ""),
+                  ask > 0, bid > 0 else { continue }
+            out[normalizeKrakenAsset(base)] = (ask + bid) / 2
+        }
+        return out
+    }
+
+    private static func krakenResult(_ endpoint: String, pairs: String) async -> [String: Any]? {
+        guard let url = URL(string: "https://api.kraken.com/0/public/\(endpoint)?pair=\(pairs)"),
+              let root = await IngestSupport.getJSON(url) as? [String: Any]
+        else { return nil }
+        return root["result"] as? [String: Any]
+    }
+
+    /// Every connected venue's balances, priced. A holding the book can't
+    /// price is DROPPED rather than counted at zero — a zero would quietly
+    /// shrink the combined total and make the treemap lie about shares.
+    static func pricedBalances() async -> [(symbol: String, usd: Double, venue: Venue)] {
+        let held = await allBalances()
+        guard !held.isEmpty else { return [] }
+        let prices = await krakenPrices(symbols: Set(held.map(\.symbol)))
+        return held.compactMap { holding in
+            // A fiat balance is its own value; everything else needs a book.
+            let unit = holding.symbol == "USD" ? 1 : prices[holding.symbol]
+            guard let unit, unit > 0 else { return nil }
+            return (holding.symbol, holding.amount * unit, holding.venue)
+        }
+    }
+
     // MARK: - Connect
 
     /// Verifies first, stores only on `.readOnly`. The order is the whole
