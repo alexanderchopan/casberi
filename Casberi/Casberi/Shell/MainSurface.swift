@@ -91,9 +91,42 @@ struct MainSurface: View {
     // (user ruling 2026-07-18: full ink). A feed's identity lives in its chip
     // and icon, not a borrowed brand-color field — the wash read as decoration
     // over the content, and hues like Calendar's red collided with the
-    // alert/loss meaning red carries elsewhere. The feed now sits on the
-    // neutral `DS.themedPage` like the board does. (`DS.washHue` stays for the
+    // alert/loss meaning red carries elsewhere. (`DS.washHue` stays for the
     // sheet/detail/setup surfaces, which still wear a source's identity.)
+    //
+    // What replaced it (prd §159, 2026-07-21, user: "the app could permanently
+    // have that blue pour up there instead of black"): a PERMANENT crown pour
+    // in Casberi's OWN tint — one owned color, everywhere, always, which is
+    // the boldness §129 itself endorsed ("Cash App is bold in ONE color that's
+    // *theirs*") and none of what it retired (nothing borrowed, nothing
+    // per-source, nothing deciding per screen). Scoped to a wallet, the Wallet
+    // feed re-tints it to that wallet's face color through `chrome.pourHue` —
+    // identity as information, the switcher capsule's own grammar at room
+    // scale.
+    //
+    // It lives HERE, not on the feed pages, because the first cut lived on the
+    // page and taught why that can't work (user screenshot, 2026-07-21): the
+    // chip strip floats over the pager on a `safeAreaInset`, so a page-level
+    // field stops at the page's edge and the strip zone stays flat black — a
+    // hard seam exactly on the no-hairlines law. The shell owns the crown; the
+    // field must too.
+    private var crownPour: some View {
+        let hue = chrome.pourHue ?? DS.tint
+        // Photo themes force the dark treatment (DS.themedPage's own rule);
+        // only a true light page halves the dose — the same field that reads
+        // as atmosphere on ink reads as a stain on white.
+        let light = ThemeStore.shared.isLight && ThemeStore.shared.backgroundPhoto == nil
+        return LinearGradient(stops: [
+            .init(color: hue.opacity(light ? 0.16 : 0.30), location: 0),
+            .init(color: hue.opacity(light ? 0.05 : 0.10), location: 0.5),
+            .init(color: hue.opacity(0), location: 1),
+        ], startPoint: .top, endPoint: .bottom)
+            .frame(height: 500)
+            .frame(maxHeight: .infinity, alignment: .top)
+            // A scope switch re-tints the crown as one move with the switcher
+            // capsule's slide — not a hard swap.
+            .animation(DS.Motion.standard, value: chrome.pourHue)
+    }
 
     var body: some View {
         NavigationStack {
@@ -163,7 +196,11 @@ struct MainSurface: View {
             // screens already render the theme photo themselves, and a second
             // full render here would be pure waste under an opaque layer.
             .background {
-                DS.themedPage.ignoresSafeArea()
+                ZStack(alignment: .top) {
+                    DS.themedPage
+                    crownPour
+                }
+                .ignoresSafeArea()
             }
             // The first-thing bloom — a new app's first landing washes its
             // hue across the header for a beat, then fades. The one moment

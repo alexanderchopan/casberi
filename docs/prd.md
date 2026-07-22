@@ -5402,3 +5402,37 @@ disabled") extended to ink: when there's no action, don't render a control.
 `С` — a homograph spoof, rendered faithfully and unflagged. The app detects
 address poisoning but not symbol spoofing; same attack, different field. The
 money column raises the stakes by setting symbols large.
+
+## 159. The crown pour goes permanent, and up to the shell (user, 2026-07-21)
+
+Same-day correction to §158's pour, from a screenshot: "is this how we want
+wallet to look w/ a hard black line and all that black over the source chips?
+i think the app could permanently have that blue pour up there instead of
+black." Two rulings in one:
+
+**Where it lives.** The page-level pour produced exactly the seam the
+screenshot shows — the chip strip floats over the pager on a `safeAreaInset`,
+so a field painted by the feed page stops at the page's edge and the strip
+zone stays flat black: a hard line, on the no-hairlines law. The pour moved UP
+to `MainSurface`'s background (over `DS.themedPage`, under everything,
+ignoring safe areas), which is where the retired `shapeWash` always lived —
+that mechanism solved this layering in 2026-07-14 ("the wash used to start at
+the feed's List, leaving the chips flat black above it"). The feed pages STOP
+painting their own opaque coat (it would slide black between the shell's field
+and the content); only a chosen background PHOTO still renders per-screen,
+covering the pour on purpose — the person's own atmosphere wins.
+
+**When it shows: always.** Not a wallet-room exception anymore — the crown
+pour is PERMANENT, app-wide, in Casberi's own tint. This is §129's own
+endorsed shape ("Cash App is bold in ONE color that's *theirs*") and none of
+what §129 retired: nothing borrowed, nothing per-source, nothing deciding
+screen by screen. One owned color, always there, half dose on a light page.
+The Wallet feed keeps its one privilege through `ShellChrome.pourHue`: scoped
+to a wallet, the crown re-tints to that wallet's face color (set on landing
+and on scope switch; every page's landing writes the field, so a stale hue
+can't outlive its room).
+
+VERIFIED on a dedicated sim (a THIRD device — two Claude sessions were
+fighting over `booted`, per the CLAUDE.md gotcha): dark reads as one
+continuous field from status bar through chips into ink, light reads as sky,
+no seam in either.

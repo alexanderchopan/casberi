@@ -39,6 +39,14 @@ final class ShellChrome {
     /// "re-tap to pop" habit, now the "re-tap the active chip" habit).
     var popHome = 0
 
+    /// The crown pour's hue override (prd §159, 2026-07-21). nil = Casberi's
+    /// own tint, the permanent field; the Wallet feed sets a scoped wallet's
+    /// face tint here while you stand in that wallet, so the whole crown —
+    /// chips included — re-tints to the identity you're inside. Written by
+    /// the active feed page, rendered by MainSurface; always reset by the
+    /// next page's landing, so a stale hue can't outlive its room.
+    var pourHue: Color?
+
     /// A surface asked the composer to run an ask (the weekend cover's week
     /// synthesis, prd 54) — RootShell opens the bubble on set; the composer
     /// consumes the query and sends it through the real answer path.

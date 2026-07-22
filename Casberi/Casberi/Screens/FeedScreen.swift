@@ -144,9 +144,6 @@ struct FeedScreen: View {
     /// fall back to plain state changes under it.
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.openURL) private var openURL
-    /// Read for the wallet pour's dose — the same field is half-strength on
-    /// the light page (see `walletPour`).
-    @Environment(\.colorScheme) private var colorScheme
 
     /// The shape a source takes when its chip is in force.
     private enum Shape {
@@ -755,20 +752,17 @@ struct FeedScreen: View {
         // lands — chicken-and-egg). `source` is fixed per feed instance, so this
         // runs once when the GitHub feed appears; `refreshIfStale` self-guards.
         .task { if source == "GitHub" { await githubGraph.refreshIfStale() } }
-        // The wallet room's pour (prd §158, 2026-07-21) — the ONE exception to
-        // §129's full-ink rule, and it exists inside that ruling's own
-        // reasoning rather than against it. §129 retired the per-source wash
-        // because the hue was the SOURCE's brand — "borrowed identity, not
-        // owned" — and noted what Cash App actually does: bold in ONE color
-        // that's *theirs*. So this pours Casberi's own tint, not Wallet's
-        // brand blue; and scoped to a wallet it pours THAT wallet's face tint,
-        // where the color is information (which wallet am I standing in) and
-        // not decoration. Every other feed stays ink.
-        .background(alignment: .top) { walletPour }
-        // Every other feed sits on the neutral themed page — ink, no per-source
-        // hue field (user ruling 2026-07-18: the borrowed brand wash read as
-        // decoration, not information; the chip already names the source).
-        .background { DSPageBackground() }
+        // The page coat moved UP to the shell (prd §159, 2026-07-21): the crown
+        // pour lives in MainSurface's background so it can run behind the chip
+        // strip, and painting the opaque themed coat again HERE would slide
+        // black between that field and the content — the exact hard seam the
+        // first, page-level cut of the pour produced (§158's version, retired
+        // the same day). Only a chosen background PHOTO still renders
+        // per-screen: it's the person's own atmosphere, covers the pour on
+        // purpose, and DSPageBackground's scrim is part of its treatment.
+        .background {
+            if ThemeStore.shared.backgroundPhoto != nil { DSPageBackground() }
+        }
         .environment(\.defaultMinListHeaderHeight, 0)
         .scrollIndicators(.hidden)
         .minimizesChrome(chrome, active: isActive)
@@ -808,7 +802,14 @@ struct FeedScreen: View {
         // Scoping to a wallet (or back to All) re-paints the treemap/NFT strip
         // AND re-reads the live tiles for that scope; the rows and balance
         // re-derive from state.
-        .onChange(of: selectedWallet) { if isActive { streamBlock(); loadWalletLive() } }
+        .onChange(of: selectedWallet) {
+            if isActive {
+                streamBlock(); loadWalletLive()
+                // A scope switch retints the crown mid-flight with the
+                // switcher capsule (prd §159).
+                chrome.pourHue = selectedWallet.map(WalletFace.tint)
+            }
+        }
         .sheet(item: $sheetThing) { thing in
             ThingSheetView(thing: thing)
                 .navigationTransition(.zoom(sourceID: thing.id, in: zoomNS))
@@ -1212,6 +1213,12 @@ struct FeedScreen: View {
         shapeWave += 1
         streamBlock()
         loadWalletLive()
+        // Every landing writes the crown pour's hue (prd §159): the scoped
+        // wallet's face tint when you're standing inside one, else nil —
+        // Casberi's own blue. Written unconditionally, not just by the Wallet
+        // page, so arriving on ANY page resets a scoped tint the wallet page
+        // left behind; no leave() bookkeeping to race the pager's ordering.
+        chrome.pourHue = source == "Wallet" ? selectedWallet.map(WalletFace.tint) : nil
     }
 
     /// The person left this page — stamp what they saw, so the next visit's
@@ -1481,37 +1488,6 @@ struct FeedScreen: View {
     /// inventing one at the left edge would claim it caused a move the line
     /// never saw. Capped at the most recent ten — beyond that the punctuation
     /// becomes a second series and the line stops being readable.
-    /// The wallet room's atmosphere (prd §158, 2026-07-21) — a soft field at
-    /// the crown of the feed, gone by the time the transaction rows begin, so
-    /// nothing reads ON it. The money room is the one surface in the app you
-    /// come to for a FEELING about a number, not to browse a list, and it was
-    /// the only room whose screenshot had no color in it at all.
-    ///
-    /// Its hue is the scoped wallet's own face tint, else Casberi's tint — see
-    /// the call site for why it is never Wallet's brand blue. Light mode takes
-    /// roughly half the dose: the same color that reads as atmosphere on ink
-    /// reads as a stain on white.
-    @ViewBuilder
-    private var walletPour: some View {
-        if source == "Wallet" {
-            let hue = selectedWallet.map(WalletFace.tint) ?? DS.tint
-            let top = colorScheme == .light ? 0.16 : 0.30
-            let mid = colorScheme == .light ? 0.05 : 0.10
-            LinearGradient(stops: [
-                .init(color: hue.opacity(top), location: 0),
-                .init(color: hue.opacity(mid), location: 0.45),
-                .init(color: hue.opacity(0), location: 1),
-            ], startPoint: .top, endPoint: .bottom)
-            .frame(height: 340)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-            .ignoresSafeArea(edges: .top)
-            .allowsHitTesting(false)
-            // Switching wallets re-tints the room — the same identity color
-            // the switcher's own capsule carries mid-flight.
-            .animation(DS.Motion.standard, value: selectedWallet)
-        }
-    }
-
     private func walletMarks(dates: [Date], things: [Thing]) -> [TokenChartMark] {
         guard dates.count >= 2, let first = dates.first, let last = dates.last else { return [] }
         return things
