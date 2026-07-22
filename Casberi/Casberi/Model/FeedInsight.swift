@@ -157,6 +157,21 @@ enum FeedInsight {
         case "Pinterest":   title = "Your pins";     unit = ("pin", "pins")
         case "Shopify":     title = "New arrivals";  unit = ("product", "products")
         case "YouTube":     title = "Latest uploads"; unit = ("video", "videos")
+        // The media sources with stable art whose head could go missing
+        // (2026-07-21, prd §164). Deals had NO head at all. Steam, Podcasts,
+        // and Substack have leaderboards — which outrank the mosaic in the
+        // dispatch order but refuse to render under two groups, so for
+        // someone following a single show/publication/game these are the
+        // fallback head where the feed previously led with nothing. Twitch
+        // is EXCLUDED on purpose — its previewImageURL is a live stream
+        // frame, perishable by the same honesty rule that keeps it off stale
+        // rows; a mosaic of dead frames would claim streams are on. Twitch's
+        // head-worthy fact is "live right now", which live-first ordering
+        // already carries.
+        case "Steam":       title = "Recently played"; unit = ("game", "games")
+        case "Podcasts":    title = "Latest episodes"; unit = ("episode", "episodes")
+        case "Substack":    title = "Latest posts";   unit = ("post", "posts")
+        case "Deals":       title = "Fresh deals";    unit = ("deal", "deals")
         default: return nil
         }
         var urls: [String] = []

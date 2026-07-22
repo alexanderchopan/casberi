@@ -5768,3 +5768,43 @@ key available, the success path (a good key connecting and landing balances)
 and the refusal path (a trade-capable key actually being turned away) are both
 unexercised. Store a read-only Kraken key via `scripts/dev-keys.sh` and run the
 connect flow before this ships to anyone.
+
+## 164. The feed-head doctrine — one boxed aggregate; rows own recency (user: "how should we think about these visualizations", 2026-07-21)
+
+Asked while extending §160's parcels: should the All feed's Themes map be
+boxed like the wallet map, and should media feeds lead with a hero of their
+most recent item? The first is yes and shipped (the Themes card wears the
+exact holdings-card recipe — same widget surface, same fill, same gutter; it
+was the last head read floating bare). The second is no, and the reasoning is
+the doctrine:
+
+**The head card answers the source's STANDING question; the rows answer
+"what's new." The head must never duplicate row one.** Every head that exists
+passes this test by being an AGGREGATE — a fact no single row can say:
+
+- consistency over time → the heatmap (GitHub, journaling, social, chats)
+- composition → the treemap (holdings, Themes)
+- ranking → the leaderboard (senders, subreddits, artists)
+- mood → the distribution bar (Stocktwits)
+- texture of what's arriving → the mosaic (OpenSea, Pinterest, Shopify,
+  YouTube — and from today Deals, which had no head at all, plus Steam,
+  Podcasts, and Substack as the FALLBACK head their leaderboards leave open:
+  a leaderboard refuses to render under two groups, so a single followed
+  show/publication/game previously led with nothing)
+
+A most-recent-item hero fails by definition: the most recent item IS the
+first row, one glance below. Promoting it reads the same fact twice and
+spends the screen's best real estate doing it. The mosaic is the honest form
+of that instinct — the newest items' art, plural, as texture rather than one
+item ranked over the rest by nothing but its timestamp.
+
+**The one exception: live beats aggregate.** A single item may claim the head
+only while it is a LIVE STATE rather than a landed thing (a Twitch stream on
+right now) — which is why Twitch is deliberately NOT in the mosaic set: its
+`previewImageURL` is a live frame, perishable by the honesty rule, and a
+mosaic of dead frames would claim streams are on. Its head-worthy fact is
+"live now", which live-first ordering already carries.
+
+In three lines: one head parcel per feed, always boxed, always an aggregate
+derived from the feed's own things; rows own recency; a single item reaches
+the head only while it's live.
