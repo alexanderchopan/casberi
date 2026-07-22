@@ -1,0 +1,408 @@
+<title>Wallet look — three treatments</title>
+<style>
+  /* Review page for dark app screens — deliberately single-theme. */
+  :root {
+    --page: #0a0b0f;          /* blue-biased near-black, the app's own temperature */
+    --ink: #f2f4f8;
+    --muted: #99a1b4;
+    --faint: #626b80;
+    --wallet: #2461ff;        /* AppIconTile brandHue("wallet") */
+    --wallet-wash: #3a76ff;   /* washHue recipe: sat ≥.65, brightness clamped */
+    --confirm: #32d74b;
+    --destructive: #ff453a;
+    --attention: #ff9f0a;
+    --card: #16181f;          /* dsWidgetSurface approximation */
+    --money: ui-rounded, -apple-system, system-ui, sans-serif;
+    --text: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { background: var(--page); }
+  body {
+    font-family: var(--text);
+    color: var(--ink);
+    background:
+      radial-gradient(900px 420px at 18% -8%, rgba(36, 97, 255, .10), transparent 62%),
+      var(--page);
+    padding: 48px 28px 72px;
+  }
+
+  .wrap { max-width: 1180px; margin: 0 auto; }
+
+  header { max-width: 720px; margin-bottom: 40px; }
+  .eyebrow {
+    font-size: 12px; font-weight: 600; color: var(--wallet-wash);
+    margin-bottom: 10px;
+  }
+  h1 {
+    font-size: clamp(26px, 3.6vw, 38px); font-weight: 800;
+    letter-spacing: -.02em; line-height: 1.08; text-wrap: balance;
+    margin-bottom: 14px;
+  }
+  header p { font-size: 15px; line-height: 1.55; color: var(--muted); max-width: 62ch; }
+  header p b { color: var(--ink); font-weight: 600; }
+
+  /* ---------- the three frames ---------- */
+  .row {
+    display: flex; flex-wrap: wrap; gap: 34px;
+    align-items: flex-start; justify-content: center;
+    margin-bottom: 56px;
+  }
+  .option { width: 316px; }
+
+  .phone {
+    width: 316px; border-radius: 44px; padding: 9px;
+    background: #16181d;
+    box-shadow: 0 30px 70px rgba(0, 0, 0, .55), 0 2px 8px rgba(0,0,0,.4);
+  }
+  .screen {
+    border-radius: 36px; overflow: hidden; background: #000;
+    position: relative; padding: 18px 16px 22px;
+  }
+
+  .caption { margin-top: 20px; padding: 0 6px; }
+  .caption h2 {
+    font-size: 17px; font-weight: 700; letter-spacing: -.01em;
+    margin-bottom: 6px;
+  }
+  .caption h2 span { color: var(--faint); font-weight: 600; }
+  .caption p { font-size: 13.5px; line-height: 1.55; color: var(--muted); }
+  .caption .risk { display: block; margin-top: 8px; font-size: 12.5px; color: var(--faint); }
+
+  /* ---------- shared in-screen components ---------- */
+  .switcher { display: flex; gap: 6px; margin-bottom: 18px; }
+  .chip {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 12.5px; font-weight: 500; color: var(--muted);
+    background: rgba(255,255,255,.05);
+    padding: 6px 12px; border-radius: 999px;
+  }
+  .chip.on { color: var(--ink); font-weight: 600; }
+  .face { width: 16px; height: 16px; border-radius: 50%; flex: none; }
+  .face.main { background: radial-gradient(circle at 30% 30%, #7d9bff, #4a56d2); }
+  .face.trading { background: radial-gradient(circle at 30% 30%, #6fe3a5, #2e9e63); }
+
+  .balCaption {
+    font-size: 11.5px; font-weight: 600; color: var(--muted);
+    margin-bottom: 4px;
+  }
+  .balCaption span { color: var(--faint); }
+  .balRow { display: flex; align-items: baseline; gap: 10px; }
+  .balance {
+    font-family: var(--money); font-weight: 800; font-size: 46px;
+    letter-spacing: -.01em; line-height: 1.05;
+    font-variant-numeric: tabular-nums;
+  }
+  .pill {
+    font-family: var(--money); font-size: 11.5px; font-weight: 700;
+    padding: 3px 9px; border-radius: 999px;
+    color: var(--confirm); background: rgba(50, 215, 75, .13);
+  }
+  .pill.solid { color: #04180a; background: var(--confirm); }
+  .mover { font-size: 12px; color: var(--faint); margin-top: 5px; }
+
+  .spark { display: block; width: 100%; height: 52px; margin-top: 10px; }
+
+  .ranges { display: flex; gap: 4px; margin-top: 8px; }
+  .ranges i {
+    font-style: normal; font-size: 10.5px; font-weight: 600;
+    color: var(--faint); padding: 3px 9px; border-radius: 999px;
+  }
+  .ranges i.on { color: var(--ink); background: rgba(255,255,255,.07); }
+
+  .worth {
+    display: flex; align-items: center; gap: 7px;
+    font-size: 13px; margin: 16px 0 18px;
+  }
+  .worth b { font-weight: 600; }
+  .worth span { color: var(--muted); font-size: 12px; }
+  .worth .tri { color: var(--attention); font-size: 12px; }
+  .worth .chev { margin-left: auto; color: var(--faint); font-size: 11px; }
+
+  .mapTitle { font-size: 14.5px; font-weight: 700; margin-bottom: 2px; }
+  .mapSub { font-size: 12px; color: var(--muted); margin-bottom: 10px; }
+
+  .map {
+    display: grid; gap: 6px;
+    grid-template-columns: repeat(4, 1fr);
+    grid-template-rows: 52px 52px 50px;
+    margin-bottom: 8px;
+  }
+  .cell {
+    background: var(--card); border-radius: 14px; padding: 8px 9px;
+    display: flex; flex-direction: column; justify-content: space-between;
+    position: relative; overflow: hidden;
+  }
+  .cell .sym { font-size: 12px; font-weight: 700; display: flex; gap: 5px; align-items: center; }
+  .cell .val {
+    font-family: var(--money); font-size: 11px; font-weight: 700;
+    color: var(--muted); font-variant-numeric: tabular-nums;
+  }
+  .cell.eth  { grid-area: 1 / 1 / 3 / 3; }
+  .cell.usdc { grid-area: 1 / 3 / 3 / 5; }
+  .cell.sol  { grid-area: 3 / 1 / 4 / 3; flex-direction: row; align-items: center; }
+  .cell.wbtc { grid-area: 3 / 3 / 4 / 4; }
+  .cell.link { grid-area: 3 / 4 / 4 / 5; }
+  .cell.eth .sym, .cell.usdc .sym { font-size: 14px; }
+  .cell.eth .val, .cell.usdc .val { font-size: 13px; color: var(--ink); }
+  .cell.sol .val { margin-left: auto; }
+  .cell.wbtc .val, .cell.link .val { font-size: 10px; }
+  .coin {
+    width: 17px; height: 17px; border-radius: 50%; flex: none;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 9px; font-weight: 800; color: #fff;
+    background: #3d4353;
+  }
+
+  .conc { font-size: 12px; color: var(--muted); margin-bottom: 16px; }
+  .conc span { color: var(--faint); }
+
+  .defi {
+    background: var(--card); border-radius: 14px; padding: 10px 12px;
+    display: flex; gap: 18px; margin-bottom: 16px;
+  }
+  .defi div b {
+    display: block; font-size: 10px; font-weight: 600; color: var(--faint);
+    margin-bottom: 2px;
+  }
+  .defi div i {
+    font-style: normal; font-family: var(--money); font-size: 13px; font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .dayLabel { font-size: 11px; font-weight: 600; color: var(--faint); margin: 0 0 7px; }
+  .tx { display: flex; align-items: center; gap: 9px; padding: 6px 0; }
+  .tx .g {
+    width: 26px; height: 26px; border-radius: 9px; flex: none;
+    background: rgba(255,255,255,.06);
+    display: flex; align-items: center; justify-content: center; font-size: 12px;
+  }
+  .tx .t { font-size: 12.5px; line-height: 1.3; }
+  .tx .t span { display: block; font-size: 10.5px; color: var(--faint); margin-top: 1px; }
+  .tx .amt {
+    margin-left: auto; font-family: var(--money); font-size: 12px; font-weight: 700;
+    font-variant-numeric: tabular-nums; color: var(--muted);
+  }
+  .tx .amt.up { color: var(--confirm); }
+  .seeAll {
+    text-align: center; font-size: 12.5px; font-weight: 600;
+    color: var(--wallet-wash); margin-top: 10px;
+  }
+
+  /* ---------- treatment A: the pour ---------- */
+  .t-a .screen {
+    background:
+      linear-gradient(180deg, rgba(58, 118, 255, .34) 0%, rgba(58, 118, 255, .13) 17%, rgba(58, 118, 255, 0) 36%),
+      #000;
+  }
+
+  /* ---------- treatment B: money weather ---------- */
+  .t-b .weather {
+    margin: -18px -16px 0; padding: 18px 16px 4px;
+    background: linear-gradient(180deg, rgba(50, 215, 75, .30) 0%, rgba(50, 215, 75, .10) 55%, rgba(50, 215, 75, 0) 100%);
+  }
+  .t-b .balance { font-size: 50px; }
+
+  /* ---------- treatment C: identity everywhere ---------- */
+  .t-c .screen {
+    background:
+      linear-gradient(180deg, rgba(58, 118, 255, .22) 0%, rgba(58, 118, 255, 0) 26%),
+      #000;
+  }
+  .t-c .cell.eth  { background: linear-gradient(135deg, rgba(98, 126, 234, .38), rgba(98, 126, 234, .14)); }
+  .t-c .cell.usdc { background: linear-gradient(135deg, rgba(39, 117, 202, .38), rgba(39, 117, 202, .14)); }
+  .t-c .cell.sol  { background: linear-gradient(135deg, rgba(153, 69, 255, .32), rgba(20, 241, 149, .10)); }
+  .t-c .cell.wbtc { background: linear-gradient(135deg, rgba(240, 146, 66, .36), rgba(240, 146, 66, .12)); }
+  .t-c .cell.link { background: linear-gradient(135deg, rgba(42, 93, 218, .38), rgba(42, 93, 218, .14)); }
+  .t-c .coin.c-eth  { background: #627eea; }
+  .t-c .coin.c-usdc { background: #2775ca; }
+  .t-c .coin.c-sol  { background: linear-gradient(135deg, #9945ff, #14f195); }
+  .t-c .coin.c-wbtc { background: #f09242; }
+  .t-c .coin.c-link { background: #2a5ada; }
+  .t-c .chip.on.main-on { background: rgba(93, 118, 255, .22); }
+  .t-c .face { width: 19px; height: 19px; }
+
+  /* ---------- shared moves + law ---------- */
+  .shared { max-width: 900px; margin: 0 auto; }
+  .shared h3 { font-size: 15px; font-weight: 700; margin-bottom: 14px; }
+  .moves {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 12px; margin-bottom: 30px;
+  }
+  .move {
+    background: rgba(255,255,255,.035); border-radius: 16px; padding: 14px 16px;
+  }
+  .move b { display: block; font-size: 13.5px; font-weight: 700; margin-bottom: 4px; }
+  .move p { font-size: 12.5px; line-height: 1.5; color: var(--muted); }
+  .law { font-size: 12.5px; line-height: 1.6; color: var(--faint); max-width: 74ch; }
+  .law b { color: var(--muted); font-weight: 600; }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .option { animation: rise .5s ease-out backwards; }
+    .option:nth-child(2) { animation-delay: .08s; }
+    .option:nth-child(3) { animation-delay: .16s; }
+    @keyframes rise { from { opacity: 0; transform: translateY(14px); } }
+  }
+</style>
+
+<div class="wrap">
+<header>
+  <div class="eyebrow">Casberi · wallet room</div>
+  <h1>Same components, three temperatures</h1>
+  <p>Every hue in today's wallet room is a 16-pt face or a delta pill — the rest is white ink on black, which is why the screenshot never says <b>oooh</b>. The app already owns the fix: the thing sheet's wash pour, each wallet's face tint, the state green. These three frames dose those existing voices differently. <b>Nothing moves; only the temperature changes.</b></p>
+</header>
+
+<div class="row">
+
+  <!-- ============ A: THE POUR ============ -->
+  <div class="option t-a">
+    <div class="phone"><div class="screen">
+      <div class="switcher">
+        <div class="chip on">All</div>
+        <div class="chip"><span class="face main"></span>Main</div>
+        <div class="chip"><span class="face trading"></span>Trading</div>
+      </div>
+      <div class="balCaption">Across your wallets <span>›</span></div>
+      <div class="balRow"><div class="balance">$19.9K</div><div class="pill">+3.1% · 7d</div></div>
+      <div class="mover">Mostly ETH · +$310</div>
+      <svg class="spark" viewBox="0 0 284 52" preserveAspectRatio="none">
+        <defs><linearGradient id="ga" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#32d74b" stop-opacity=".30"/>
+          <stop offset="1" stop-color="#32d74b" stop-opacity="0"/>
+        </linearGradient></defs>
+        <path d="M0,40 C30,36 48,42 72,33 S120,35 148,26 S196,30 224,15 S262,12 284,8 L284,52 L0,52 Z" fill="url(#ga)"/>
+        <path d="M0,40 C30,36 48,42 72,33 S120,35 148,26 S196,30 224,15 S262,12 284,8" fill="none" stroke="#32d74b" stroke-width="2.2" stroke-linecap="round"/>
+        <circle cx="112" cy="31" r="3" fill="#32d74b" opacity=".85"/>
+        <circle cx="205" cy="20" r="3" fill="#32d74b" opacity=".85"/>
+        <circle cx="284" cy="8" r="3.4" fill="#32d74b"/>
+      </svg>
+      <div class="ranges"><i class="on">7d</i><i>30d</i><i>watched</i></div>
+      <div class="worth"><span class="tri">▲</span><b>Worth a look</b><span>1 delegation</span><span class="chev">›</span></div>
+      <div class="mapTitle">What you hold</div>
+      <div class="mapSub">$19.9K across 13 tokens in 2 wallets</div>
+      <div class="map">
+        <div class="cell eth"><div class="sym"><span class="coin">Ξ</span>ETH</div><div class="val">$12.4K</div></div>
+        <div class="cell usdc"><div class="sym"><span class="coin">$</span>USDC</div><div class="val">$3.1K</div></div>
+        <div class="cell sol"><div class="sym"><span class="coin">S</span>SOL</div><div class="val">$1.9K</div></div>
+        <div class="cell wbtc"><div class="sym">WBTC</div><div class="val">$1.2K</div></div>
+        <div class="cell link"><div class="sym">LINK</div><div class="val">$780</div></div>
+      </div>
+      <div class="conc">ETH is 62% of everything <span>· Where it's held ›</span></div>
+      <div class="dayLabel">Today</div>
+      <div class="tx"><div class="g">↓</div><div class="t">Received 0.4 ETH from jesse.eth<span>Ethereum · 2h ago</span></div><div class="amt up">+$1,020</div></div>
+      <div class="tx"><div class="g">⇄</div><div class="t">Swapped 500 USDC → 0.19 ETH on Uniswap<span>Base · 6h ago</span></div><div class="amt">$500</div></div>
+      <div class="seeAll">See all 143 transactions ›</div>
+    </div></div>
+    <div class="caption">
+      <h2>A · The pour <span>— identity, once</span></h2>
+      <p>The room borrows the token sheet's exact vocabulary: Wallet's own blue poured from the top, gone by a third of the way down. One move, zero new rules.</p>
+      <span class="risk">Risk: lowest — the wash pour is already shipped grammar. Scoped to one wallet, the pour takes that wallet's face tint instead.</span>
+    </div>
+  </div>
+
+  <!-- ============ B: MONEY WEATHER ============ -->
+  <div class="option t-b">
+    <div class="phone"><div class="screen">
+      <div class="weather">
+        <div class="switcher">
+          <div class="chip on">All</div>
+          <div class="chip"><span class="face main"></span>Main</div>
+          <div class="chip"><span class="face trading"></span>Trading</div>
+        </div>
+        <div class="balCaption">Across your wallets <span>›</span></div>
+        <div class="balRow"><div class="balance">$19.9K</div><div class="pill solid">+3.1%</div></div>
+        <div class="mover">Mostly ETH · +$310</div>
+        <svg class="spark" viewBox="0 0 284 52" preserveAspectRatio="none">
+          <defs><linearGradient id="gb" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#32d74b" stop-opacity=".42"/>
+            <stop offset="1" stop-color="#32d74b" stop-opacity="0"/>
+          </linearGradient></defs>
+          <path d="M0,40 C30,36 48,42 72,33 S120,35 148,26 S196,30 224,15 S262,12 284,8 L284,52 L0,52 Z" fill="url(#gb)"/>
+          <path d="M0,40 C30,36 48,42 72,33 S120,35 148,26 S196,30 224,15 S262,12 284,8" fill="none" stroke="#32d74b" stroke-width="2.6" stroke-linecap="round"/>
+          <circle cx="112" cy="31" r="3" fill="#32d74b" opacity=".85"/>
+          <circle cx="205" cy="20" r="3" fill="#32d74b" opacity=".85"/>
+          <circle cx="284" cy="8" r="4" fill="#32d74b"/>
+        </svg>
+        <div class="ranges"><i class="on">7d</i><i>30d</i><i>watched</i></div>
+      </div>
+      <div class="worth"><span class="tri">▲</span><b>Worth a look</b><span>1 delegation</span><span class="chev">›</span></div>
+      <div class="mapTitle">What you hold</div>
+      <div class="mapSub">$19.9K across 13 tokens in 2 wallets</div>
+      <div class="map">
+        <div class="cell eth"><div class="sym"><span class="coin">Ξ</span>ETH</div><div class="val">$12.4K</div></div>
+        <div class="cell usdc"><div class="sym"><span class="coin">$</span>USDC</div><div class="val">$3.1K</div></div>
+        <div class="cell sol"><div class="sym"><span class="coin">S</span>SOL</div><div class="val">$1.9K</div></div>
+        <div class="cell wbtc"><div class="sym">WBTC</div><div class="val">$1.2K</div></div>
+        <div class="cell link"><div class="sym">LINK</div><div class="val">$780</div></div>
+      </div>
+      <div class="conc">ETH is 62% of everything <span>· Where it's held ›</span></div>
+      <div class="dayLabel">Today</div>
+      <div class="tx"><div class="g">↓</div><div class="t">Received 0.4 ETH from jesse.eth<span>Ethereum · 2h ago</span></div><div class="amt up">+$1,020</div></div>
+      <div class="tx"><div class="g">⇄</div><div class="t">Swapped 500 USDC → 0.19 ETH on Uniswap<span>Base · 6h ago</span></div><div class="amt">$500</div></div>
+      <div class="seeAll">See all 143 transactions ›</div>
+    </div></div>
+    <div class="caption">
+      <h2>B · Money weather <span>— state, loud</span></h2>
+      <p>Cash App's move: the day's direction floods the headline region, edge to edge. Green on an up week, red on a down one, plain ink when flat — color as state is already a sanctioned job, this is just the full dose.</p>
+      <span class="risk">Risk: a red room on a down week is honest but heavy. The flood must refuse to paint on a flat change, same as the pill.</span>
+    </div>
+  </div>
+
+  <!-- ============ C: IDENTITY EVERYWHERE ============ -->
+  <div class="option t-c">
+    <div class="phone"><div class="screen">
+      <div class="switcher">
+        <div class="chip on main-on">All</div>
+        <div class="chip"><span class="face main"></span>Main</div>
+        <div class="chip"><span class="face trading"></span>Trading</div>
+      </div>
+      <div class="balCaption">Across your wallets <span>›</span></div>
+      <div class="balRow"><div class="balance">$19.9K</div><div class="pill">+3.1% · 7d</div></div>
+      <div class="mover">Mostly ETH · +$310</div>
+      <svg class="spark" viewBox="0 0 284 52" preserveAspectRatio="none">
+        <defs><linearGradient id="gc" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#32d74b" stop-opacity=".30"/>
+          <stop offset="1" stop-color="#32d74b" stop-opacity="0"/>
+        </linearGradient></defs>
+        <path d="M0,40 C30,36 48,42 72,33 S120,35 148,26 S196,30 224,15 S262,12 284,8 L284,52 L0,52 Z" fill="url(#gc)"/>
+        <path d="M0,40 C30,36 48,42 72,33 S120,35 148,26 S196,30 224,15 S262,12 284,8" fill="none" stroke="#32d74b" stroke-width="2.2" stroke-linecap="round"/>
+        <circle cx="112" cy="31" r="3" fill="#32d74b" opacity=".85"/>
+        <circle cx="205" cy="20" r="3" fill="#32d74b" opacity=".85"/>
+        <circle cx="284" cy="8" r="3.4" fill="#32d74b"/>
+      </svg>
+      <div class="ranges"><i class="on">7d</i><i>30d</i><i>watched</i></div>
+      <div class="worth"><span class="tri">▲</span><b>Worth a look</b><span>1 delegation</span><span class="chev">›</span></div>
+      <div class="mapTitle">What you hold</div>
+      <div class="mapSub">$19.9K across 13 tokens in 2 wallets</div>
+      <div class="map">
+        <div class="cell eth"><div class="sym"><span class="coin c-eth">Ξ</span>ETH</div><div class="val">$12.4K</div></div>
+        <div class="cell usdc"><div class="sym"><span class="coin c-usdc">$</span>USDC</div><div class="val">$3.1K</div></div>
+        <div class="cell sol"><div class="sym"><span class="coin c-sol">S</span>SOL</div><div class="val">$1.9K</div></div>
+        <div class="cell wbtc"><div class="sym"><span class="coin c-wbtc">₿</span></div><div class="val">$1.2K</div></div>
+        <div class="cell link"><div class="sym"><span class="coin c-link">⬡</span></div><div class="val">$780</div></div>
+      </div>
+      <div class="conc">ETH is 62% of everything <span>· Where it's held ›</span></div>
+      <div class="dayLabel">Today</div>
+      <div class="tx"><div class="g">↓</div><div class="t">Received 0.4 ETH from jesse.eth<span>Ethereum · 2h ago</span></div><div class="amt up">+$1,020</div></div>
+      <div class="tx"><div class="g">⇄</div><div class="t">Swapped 500 USDC → 0.19 ETH on Uniswap<span>Base · 6h ago</span></div><div class="amt">$500</div></div>
+      <div class="seeAll">See all 143 transactions ›</div>
+    </div></div>
+    <div class="caption">
+      <h2>C · Identity everywhere <span>— tokens own their color</span></h2>
+      <p>A gentler pour, and the treemap becomes the photograph: each token wears its own brand hue as the cell's wash — ETH indigo, USDC blue, SOL's gradient, WBTC orange. Identity color doing identity work, which is the color law's first job.</p>
+      <span class="risk">Risk: re-litigates 2026-07-10 ("colored fills read as noise") — but that ruling predates the magnitude wash and judged flat fills, not brand-hue gradients. Needs your eyes, which is what this frame is for.</span>
+    </div>
+  </div>
+
+</div>
+
+<div class="shared">
+  <h3>Moves shared by all three (independent of the ruling)</h3>
+  <div class="moves">
+    <div class="move"><b>The number grows a rung</b><p>46–50pt rounded instead of 40. Cash App's whole personality is numerals with confidence; ours are already SF Rounded — they're just shy.</p></div>
+    <div class="move"><b>Captions get quieter</b><p>The labels around the money drop a step in size and ink. Hierarchy comes from the gap between loud and quiet, and today's gap is too small.</p></div>
+    <div class="move"><b>The line gets body</b><p>2.2–2.6pt stroke, a real area fill, a bigger live endpoint. The current hairline-weight sparkline under a 40pt number reads like an afterthought.</p></div>
+    <div class="move"><b>Amounts join the stream</b><p>Transaction rows carry their USD trailing in rounded tabular figures — green only on receive. The stream starts reading like money instead of log lines.</p></div>
+  </div>
+  <p class="law"><b>What the law keeps in every frame:</b> no hairlines, sentence case, glass only on the floating layer, and hue doing only its two jobs — identity (Wallet's blue, a wallet's face tint, a token's brand color) and state (the delta's green and red, refusing flat). None of these frames adds decorative color; they turn up voices the app already sanctions.</p>
+</div>
+</div>

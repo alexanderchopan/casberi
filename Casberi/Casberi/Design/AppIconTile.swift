@@ -91,6 +91,8 @@ extension DS {
         case "stocktwits":          return Color.fixed("#008fff")   // their azure (icon-sampled)
         case "bitrefill":           return Color.fixed("#002b28")   // their dark teal (icon-sampled)
         case "privacy":             return Color.fixed("#232320")   // their near-black (icon-sampled)
+        case "coinbase":            return Color.fixed("#0052ff")   // their official brand blue
+        case "kraken":              return Color.fixed("#773bf5")   // their mascot's purple (icon-sampled)
         case "1claw":               return Color.fixed("#990029")   // their crimson (docs-sampled)
         case "homekit":             return Color.fixed("#8e8e93")   // the accessory kind's own gray (KindGlyph.swift)
         default:                    return nil

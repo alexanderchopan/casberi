@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mock A — What you can do with</title>
+<link rel="stylesheet" href="styles.css">
+<style>
+/* ---------- Option A: the capability rail ----------
+   One full-width row per family, alternating sides. Reads like the existing
+   bento sections but the copy is OUTCOMES, not gestures. */
+.cd-rail { padding: 40px 0 0; }
+.cd-row {
+  display: grid; grid-template-columns: 1fr 300px; gap: 44px;
+  align-items: center;
+  padding: 54px 0;
+}
+.cd-row + .cd-row { border-top: 1px solid rgba(255,255,255,.06); }
+.cd-row.flip { grid-template-columns: 300px 1fr; }
+.cd-row.flip .cd-copy { grid-column: 2; grid-row: 1; }
+.cd-row.flip .cd-stage { grid-column: 1; grid-row: 1; }
+@media (max-width: 800px) {
+  .cd-row, .cd-row.flip { grid-template-columns: 1fr; gap: 26px; }
+  .cd-row.flip .cd-copy, .cd-row.flip .cd-stage { grid-column: auto; grid-row: auto; }
+}
+
+.cd-kicker {
+  font-size: 12.5px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase;
+  color: var(--faint); margin-bottom: 8px;
+}
+.cd-copy h3 {
+  font-size: clamp(26px, 3.4vw, 36px); font-weight: 800; letter-spacing: -.022em;
+  line-height: 1.08; margin-bottom: 12px; max-width: 460px;
+}
+.cd-copy > p { font-size: 15.5px; color: var(--muted); max-width: 470px; margin-bottom: 20px; }
+
+/* the three outcomes — the "what you can do" list */
+.cd-list { display: flex; flex-direction: column; gap: 12px; max-width: 480px; }
+.cd-item { display: flex; gap: 12px; align-items: flex-start; }
+.cd-item i {
+  flex: none; width: 22px; height: 22px; border-radius: 7px; margin-top: 2px;
+  background: rgba(59,140,240,.14); color: var(--blue-bright);
+  display: flex; align-items: center; justify-content: center;
+  font-style: normal; font-size: 12px; font-weight: 800;
+}
+.cd-item b { font-size: 15px; font-weight: 700; display: block; }
+.cd-item span { font-size: 13.5px; color: var(--muted); line-height: 1.5; }
+
+/* the app strip — which apps this family covers */
+.cd-apps { display: flex; gap: 7px; margin-top: 22px; align-items: center; flex-wrap: wrap; }
+.cd-apps .ai { width: 34px; height: 34px; border-radius: 10px; font-size: 14px; }
+.cd-apps em { font-style: normal; font-size: 13px; color: var(--faint); margin-left: 4px; }
+
+/* clip placeholder */
+.cd-stage { display: flex; justify-content: center; }
+.ph {
+  width: 260px; aspect-ratio: 9/16; border-radius: 26px;
+  border: 8px solid #0b0c10; background: #171a21;
+  background-image: repeating-linear-gradient(135deg, rgba(255,255,255,.035) 0 10px, transparent 10px 20px);
+  box-shadow: 0 22px 50px rgba(0,0,0,.5);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 8px; text-align: center; padding: 20px;
+}
+.ph b { font-size: 12px; letter-spacing: .16em; text-transform: uppercase; color: var(--faint); font-weight: 800; }
+.ph span { font-size: 14px; color: var(--muted); line-height: 1.45; }
+.ph .dur { font-size: 11.5px; color: #495060; font-family: ui-monospace, "SF Mono", Menlo, monospace; }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <p style="padding:40px 0 0;font:600 13px/1 ui-monospace,Menlo,monospace;letter-spacing:.12em;color:#5b6270;text-transform:uppercase">Mock A · capability rail</p>
+
+  <!-- sits directly under the existing "All of this lands here." transition -->
+  <p class="m-transition in">All of this lands here. <b>Here’s what it becomes.</b></p>
+
+  <section class="m-section in" id="cando">
+    <p class="m-eyebrow">What you can do</p>
+    <h2 class="m-h2">Four things Casberi does that nothing else does.</h2>
+    <p style="font-size:16.5px;color:var(--muted);max-width:600px;margin:-14px 0 4px">
+      Connecting is the easy part. This is what having it all in one place actually buys you.
+    </p>
+
+    <div class="cd-rail">
+
+      <!-- ── WALLETS ── -->
+      <div class="cd-row">
+        <div class="cd-copy">
+          <p class="cd-kicker">Wallets</p>
+          <h3>See everything you hold, without holding the keys.</h3>
+          <p>Watch any address — Ethereum, Base, Solana, ENS and .sol names. Watch-only, always: Casberi can never trade, sign, or move funds.</p>
+          <div class="cd-list">
+            <div class="cd-item"><i>1</i><div><b>One combined balance</b><span>Every wallet, every chain, one number — and a map of what’s inside it.</span></div></div>
+            <div class="cd-item"><i>2</i><div><b>Activity reads like sentences</b><span>“Bought 25 USDC with Venmo.” Not a hash and a hex blob.</span></div></div>
+            <div class="cd-item"><i>3</i><div><b>Catch a risky approval</b><span>New token approvals surface with the live allowance read. Casberi prepares it — you sign in your own wallet.</span></div></div>
+          </div>
+          <div class="cd-apps">
+            <div class="ai" style="background:#2E63FF">W</div>
+            <div class="ai" style="background:#111">P</div>
+            <div class="ai" style="background:#8247e5">S</div>
+            <div class="ai" style="background:#2081e2">O</div>
+            <div class="ai" style="background:#00c389">G</div>
+            <em>Wallet · Peer · Solana · OpenSea · GeckoTerminal</em>
+          </div>
+        </div>
+        <div class="cd-stage">
+          <div class="ph"><b>Clip</b><span>Wallets<br>placeholder</span><span class="dur">~12s · silent loop</span></div>
+        </div>
+      </div>
+
+      <!-- ── AGENTS ── -->
+      <div class="cd-row flip">
+        <div class="cd-copy">
+          <p class="cd-kicker">Agents</p>
+          <h3>Ask your own things, not the whole internet.</h3>
+          <p>Bring your own key — Claude, ChatGPT, Gemini, Venice, Bankr — or use the on-device model. Your corpus is the context.</p>
+          <div class="cd-list">
+            <div class="cd-item"><i>1</i><div><b>Answers with receipts</b><span>Every answer paints the things it came from. Tap one, you’re there.</span></div></div>
+            <div class="cd-item"><i>2</i><div><b>Keep a question</b><span>A standing ask that re-answers itself as new things land.</span></div></div>
+            <div class="cd-item"><i>3</i><div><b>Nothing leaves without you</b><span>No key, no cloud — the on-device model answers with nothing sent anywhere.</span></div></div>
+          </div>
+          <div class="cd-apps">
+            <div class="ai" style="background:#d97757">C</div>
+            <div class="ai" style="background:#10a37f">G</div>
+            <div class="ai" style="background:#4285f4">G</div>
+            <div class="ai" style="background:#000">V</div>
+            <em>Claude · ChatGPT · Gemini · Venice · Bankr</em>
+          </div>
+        </div>
+        <div class="cd-stage">
+          <div class="ph"><b>Clip</b><span>Agents<br>placeholder</span><span class="dur">~12s · silent loop</span></div>
+        </div>
+      </div>
+
+      <!-- ── MEDIA ── -->
+      <div class="cd-row">
+        <div class="cd-copy">
+          <p class="cd-kicker">Media apps</p>
+          <h3>The stuff you liked, somewhere you can find it again.</h3>
+          <p>Songs, videos, screenshots, saves. It lands, it’s readable, and it’s searchable — months later.</p>
+          <div class="cd-list">
+            <div class="cd-item"><i>1</i><div><b>Screenshots become words</b><span>Read on-device, so “that recipe I screenshotted” actually finds it.</span></div></div>
+            <div class="cd-item"><i>2</i><div><b>Every save in one river</b><span>Liked songs, watched videos, saved pins — side by side, in time.</span></div></div>
+            <div class="cd-item"><i>3</i><div><b>Ask across all of it</b><span>“What was I listening to in June?” — answered from your own history.</span></div></div>
+          </div>
+          <div class="cd-apps">
+            <div class="ai" style="background:#1db954">S</div>
+            <div class="ai" style="background:#ff0000">Y</div>
+            <div class="ai" style="background:#e60023">P</div>
+            <div class="ai" style="background:#9146ff">T</div>
+            <div class="ai" style="background:#1b2838">S</div>
+            <em>Spotify · YouTube · Pinterest · Twitch · Steam · Photos</em>
+          </div>
+        </div>
+        <div class="cd-stage">
+          <div class="ph"><b>Clip</b><span>Media apps<br>placeholder</span><span class="dur">~12s · silent loop</span></div>
+        </div>
+      </div>
+
+      <!-- ── FEED ── -->
+      <div class="cd-row flip">
+        <div class="cd-copy">
+          <p class="cd-kicker">Feed apps</p>
+          <h3>Stop opening nine apps to find out what happened.</h3>
+          <p>Work, social, mail, calendar, reading. One feed, in time order — and one chip to narrow it to any single app.</p>
+          <div class="cd-list">
+            <div class="cd-item"><i>1</i><div><b>While you were away</b><span>One ask, and the agent tells you what moved since you last opened it.</span></div></div>
+            <div class="cd-item"><i>2</i><div><b>Each app keeps its shape</b><span>Calendar reads like an agenda, Photos like a grid, GitHub like a release.</span></div></div>
+            <div class="cd-item"><i>3</i><div><b>Act without leaving</b><span>Close the issue, open the thread — and a write always asks first.</span></div></div>
+          </div>
+          <div class="cd-apps">
+            <div class="ai" style="background:#24292f">G</div>
+            <div class="ai" style="background:#5e6ad2">L</div>
+            <div class="ai" style="background:#000">N</div>
+            <div class="ai" style="background:#0285ff">B</div>
+            <div class="ai" style="background:#855dcd">F</div>
+            <div class="ai" style="background:#ea4335">M</div>
+            <em>GitHub · Linear · Notion · Bluesky · Farcaster · Gmail</em>
+          </div>
+        </div>
+        <div class="cd-stage">
+          <div class="ph"><b>Clip</b><span>Feed apps<br>placeholder</span><span class="dur">~12s · silent loop</span></div>
+        </div>
+      </div>
+
+    </div>
+    <a class="docs-link" href="docs.html">See it all in the docs →</a>
+  </section>
+
+  <div style="height:120px"></div>
+</div>
+
+</body>
+</html>

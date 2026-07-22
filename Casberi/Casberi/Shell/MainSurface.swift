@@ -328,6 +328,9 @@ struct MainSurface: View {
             // there was nothing to hide FROM before this move.
             .toolbar(.hidden, for: .navigationBar)
             .navigationDestination(item: $route.push) { push in
+                #if DEBUG
+                let _ = NSLog("[Casberi] destBuild: %@", push.rawValue)
+                #endif
                 switch push {
                 case .apps:
                     AppsScreen()

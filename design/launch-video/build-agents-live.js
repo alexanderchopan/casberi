@@ -1,0 +1,267 @@
+// Agents promo — FEATURE-COMPLETE (2026-07-21): every group from the Agents
+// brief gets its own beat. The UI is REBUILT as live HTML/CSS/SVG (no
+// screenshots) — text streams, badges swap, rows stagger in. Wrapped in the
+// same editorial frame as every other clip. List rows only — no decorative
+// chip/pill bars (lesson from the Wallets clip: they read as clutter, not
+// content). Deterministic → node render.js clip-agents-live.html --size=1080x1920
+const fs = require('fs');
+const path = require('path');
+
+const BLUE = '#2E63FF', AMBER = '#E8912A', GRN = '#3fb950';
+
+const BEATS = [
+  { kick: 'ON-DEVICE',      head: 'Free, and\non your phone.',          accent: BLUE,  dur: 2.6 },
+  { kick: 'THE MOMENT',     head: 'Ask once.\nGo deeper.',              accent: BLUE,  dur: 3.6 },
+  { kick: 'FIVE AGENTS',    head: 'Bring your\nown key.',               accent: BLUE,  dur: 2.7 },
+  { kick: 'YOUR KEY',       head: 'Verified\nbefore saved.',            accent: BLUE,  dur: 2.3 },
+  { kick: 'JUST SHIPPED',   head: 'Every keyed\nanswer, upgraded.',     accent: AMBER, dur: 2.8 },
+  { kick: 'TRUST',          head: 'Honest,\nby design.',                accent: GRN,   dur: 2.6 },
+  { kick: 'BEYOND THE APP', head: 'Reaches in,\nwithout opening it.',   accent: BLUE,  dur: 2.4 },
+];
+const INTRO = 0.45;
+const durs = BEATS.map(b => b.dur);
+const STARTS = []; { let acc = INTRO; for (const d of durs) { STARTS.push(acc); acc += d; } }
+const OUT_AT = STARTS[STARTS.length - 1] + durs[durs.length - 1];
+const TOTAL = OUT_AT + 1.9;
+const DATA = BEATS.map(b => ({ kick: b.kick, head: b.head, accent: b.accent }));
+
+const lrows = items => items.map((r, i) =>
+  `<div class="lrow" data-i="${i}"><b class="dot"></b><div><div class="lt">${r[0]}</div><div class="ls">${r[1]}</div></div></div>`).join('');
+
+const html = `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;transition:none!important}
+html,body{width:1080px;height:1920px;overflow:hidden;background:#EEEAE1;
+  font-family:-apple-system,"Helvetica Neue","SF Pro Display",system-ui,sans-serif;-webkit-font-smoothing:antialiased;}
+.mono{font-family:ui-monospace,"SF Mono","Menlo",monospace;}
+.stage{position:absolute;inset:0;overflow:hidden;background:#EEEAE1;}
+.grain{position:absolute;inset:0;opacity:.5;
+  background-image:radial-gradient(circle at 20% 30%, rgba(0,0,0,.03) 0 1px, transparent 1px),radial-gradient(circle at 70% 65%, rgba(0,0,0,.025) 0 1px, transparent 1px);
+  background-size:7px 7px, 9px 9px;}
+.mast{position:absolute;left:70px;right:70px;top:74px;display:flex;justify-content:space-between;font-size:27px;letter-spacing:.16em;color:#14110d;font-weight:600;}
+.rule{position:absolute;left:70px;right:70px;top:126px;height:3px;background:#14110d;transform-origin:left;}
+.wm{position:absolute;right:20px;top:150px;font-size:280px;line-height:.82;white-space:nowrap;text-align:right;font-weight:800;letter-spacing:-.04em;opacity:.08;will-change:opacity,transform;}
+.kick{position:absolute;left:74px;top:238px;font-size:32px;letter-spacing:.14em;font-weight:600;will-change:transform,opacity;}
+.head{position:absolute;left:70px;top:284px;right:70px;font-size:126px;line-height:.96;font-weight:800;letter-spacing:-.045em;color:#14110d;white-space:pre-line;will-change:transform,opacity;}
+.foot{position:absolute;left:74px;right:74px;bottom:70px;display:flex;justify-content:space-between;font-size:26px;letter-spacing:.12em;color:#14110d;font-weight:600;}
+.wipe{position:absolute;top:-12%;left:0;width:135%;height:124%;transform:skewX(-9deg) translateX(160%);will-change:transform;}
+
+.comp{position:absolute;left:120px;top:840px;width:840px;height:800px;border-radius:34px;overflow:hidden;
+  box-shadow:34px 40px 0 rgba(20,17,13,.13), 0 30px 70px rgba(20,17,13,.26);opacity:0;will-change:transform,opacity;
+  transform-origin:center top;padding:52px;color:#fff;}
+.comp.blue{background:linear-gradient(160deg,#2E63FF,#1B49D6);}
+.comp.amber{background:linear-gradient(160deg,#F0A93A,#D97913);}
+.comp.grn{background:linear-gradient(160deg,#0f2e1c,#0a1a10);}
+.comp.dark{background:#0d0e13;}
+
+.lhead{font-size:34px;font-weight:650;margin-bottom:22px;}
+.lrow{display:flex;align-items:flex-start;gap:20px;padding:18px 0;border-top:2px solid rgba(255,255,255,.08);will-change:opacity,transform;}
+.lrow:first-of-type{border-top:none;}
+.dot{width:12px;height:12px;border-radius:50%;background:rgba(255,255,255,.5);flex:none;margin-top:10px;}
+.lt{font-size:30px;font-weight:700;}
+.ls{font-size:23px;color:rgba(255,255,255,.6);margin-top:4px;line-height:1.4;}
+
+.pledge{display:flex;align-items:flex-start;gap:18px;margin-top:30px;padding-top:28px;border-top:2px solid rgba(255,255,255,.12);will-change:opacity,transform;}
+.pledge .dot{background:#8effc0;margin-top:9px;}
+.pledge p{font-size:26px;line-height:1.5;color:rgba(255,255,255,.85);}
+.pledge b{color:#fff;}
+
+.abar{display:flex;align-items:center;gap:16px;background:rgba(255,255,255,.1);border-radius:100px;padding:20px 28px;margin-bottom:26px;}
+.acur{width:3px;height:26px;background:#fff;opacity:.9;}
+.atxt{font-size:27px;font-weight:600;flex:1;}
+.badge{display:inline-flex;align-items:center;gap:10px;font-size:21px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;
+  padding:9px 18px;border-radius:100px;background:rgba(255,255,255,.14);margin-bottom:16px;will-change:opacity,transform;}
+.badge .bdot{width:9px;height:9px;border-radius:50%;background:#8effc0;}
+.stream{font-size:27px;line-height:1.55;color:rgba(255,255,255,.92);min-height:130px;will-change:opacity;}
+.foundrow{display:flex;align-items:center;gap:16px;margin-top:18px;padding:16px 18px;border-radius:16px;background:rgba(255,255,255,.08);
+  font-size:23px;font-weight:600;will-change:opacity,transform;}
+.foundrow .fi{width:34px;height:34px;border-radius:9px;background:rgba(255,255,255,.16);flex:none;}
+.ctabtn{display:inline-block;margin-top:22px;padding:16px 30px;border-radius:100px;background:#fff;color:#1B49D6;
+  font-size:25px;font-weight:750;will-change:opacity,transform;}
+.pickrow{display:flex;align-items:center;gap:14px;margin-top:14px;font-size:22px;color:rgba(255,255,255,.72);will-change:opacity,transform;}
+.pickrow .pi{width:28px;height:28px;border-radius:8px;flex:none;}
+
+.outro{position:absolute;inset:0;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;padding:0 74px;opacity:0;will-change:opacity;}
+.outro .big{font-size:200px;font-weight:800;letter-spacing:-.05em;color:#14110d;line-height:.9;}
+.outro .u{font-size:34px;letter-spacing:.1em;color:#14110d;margin-top:40px;font-weight:600;}
+.outro .u b{color:#2E63FF;}
+</style></head><body>
+<div class="stage">
+  <div class="grain"></div>
+  <div class="mast mono"><span>CASBERI</span><span>AGENTS</span></div>
+  <div class="rule" id="rule"></div>
+  <div class="wm" id="wm">01</div>
+
+  <div class="comp dark" id="comp0">
+    <div class="lhead">The free agent, on-device</div>
+    ${lrows([
+      ['Runs entirely on-device', 'no network call, no cost, nothing leaves the phone'],
+      ['Synthesizes across things', '“what was my week about” — not just a list back at you'],
+      ['Streams live as it writes', 'and remembers follow-ups within the conversation'],
+    ])}
+    <div class="pledge"><b class="dot"></b><p><b>Grounded, strictly.</b> It never invents a thing, never invents a fact — and points at exactly which saved things it drew on, as a real tappable row.</p></div>
+  </div>
+
+  <div class="comp blue" id="comp1">
+    <div class="abar"><div class="acur"></div><div class="atxt" id="atxt">what was my week about</div></div>
+    <div class="badge" id="badge"><span class="bdot"></span><span id="badgetxt">On-device · Free</span></div>
+    <div class="stream" id="stream"></div>
+    <div class="foundrow" id="found1"><div class="fi"></div><span>Found: 3 things — Photos, Calendar, Notes</span></div>
+    <div class="ctabtn" id="ctabtn">Try with Claude →</div>
+    <div class="foundrow" id="found2" style="display:none"><div class="fi"></div><span>Screenshot · chili oil noodles.jpg</span></div>
+    <div class="pickrow" id="pick1" style="display:none"><div class="pi" style="background:rgba(255,255,255,.18)"></div><span>Picks under this answer, ready to open</span></div>
+  </div>
+
+  <div class="comp blue" id="comp2">
+    <div class="lhead">Bring any of five</div>
+    ${lrows([
+      ['Claude, ChatGPT, Gemini', 'the strongest general-purpose models'],
+      ['Venice', 'privacy-first by design — nothing reads in at all'],
+      ['Bankr', 'the one with a wallet — weighs what you hold, hard-locked to “answer only”'],
+    ])}
+  </div>
+
+  <div class="comp blue" id="comp3">
+    <div class="lhead">Nothing leaves until you tap</div>
+    ${lrows([
+      ['No Casberi server, ever', 'your device talks straight to the provider — they bill you directly'],
+      ['Checked before it’s saved', 'the key is verified against the provider first — no dead key claiming a capability it doesn’t have'],
+      ['Lives in the iPhone Keychain', 'not in Casberi’s reach'],
+    ])}
+  </div>
+
+  <div class="comp amber" id="comp4">
+    <div class="lhead">Every keyed answer, now</div>
+    ${lrows([
+      ['Streams live', 'the same real-time paint as the on-device answer'],
+      ['Sees your screenshots’ actual pictures', 'not just the OCR’d text — Claude, ChatGPT, Gemini'],
+      ['Points at exactly what it used', 'the same tappable Found row — Claude, ChatGPT, Venice'],
+      ['Can search the live web', 'when your things fall short — always told to prefer your own first'],
+    ])}
+  </div>
+
+  <div class="comp grn" id="comp5">
+    <div class="lhead">The trust story</div>
+    ${lrows([
+      ['A refusal is worded honestly', 'never faked as a real answer'],
+      ['Every keyed answer wears a badge', '“Answered with your key” — always visible'],
+      ['Settings state it plainly', 'what each agent can and can’t do, before you connect it'],
+      ['“Delete access” clears every key', 'in one tap — your things never move'],
+    ])}
+  </div>
+
+  <div class="comp blue" id="comp6">
+    <div class="lhead">Reaches in, without opening it</div>
+    ${lrows([
+      ['Siri & Shortcuts', '“Ask Casberi” and “Search Casberi” are real system intents'],
+      ['Visual Intelligence', 'point the camera — it matches against what you’ve saved'],
+      ['Spotlight', 'system search surfaces your corpus semantically, not just by title'],
+    ])}
+  </div>
+
+  <div class="kick mono" id="kick"></div>
+  <div class="head" id="head"></div>
+  <div class="foot mono"><span>casberi.app</span><span>—</span></div>
+  <div class="wipe" id="wipe"></div>
+  <div class="outro" id="outro"><div class="big">Casberi</div><div class="u mono"><b>casberi.app</b></div></div>
+</div>
+<script>
+const clamp01=v=>Math.max(0,Math.min(1,v));
+const easeOut=p=>1-Math.pow(1-p,3);
+const back=p=>{const c=1.7;return 1+(c+1)*Math.pow(p-1,3)+c*Math.pow(p-1,2);};
+const INTRO=${INTRO}, N=${BEATS.length}, OUT_AT=${OUT_AT};
+const DUR=${JSON.stringify(durs)};
+const START=${JSON.stringify(STARTS)};
+const D=${JSON.stringify(DATA)};
+window.TOTAL=${TOTAL};
+const comps=[...document.querySelectorAll('.comp')];
+
+function activeAt(t){ for(let i=N-1;i>=0;i--) if(t>=START[i]) return i; return 0; }
+function staggerRows(sel,p,stagger,dur,dx){
+  document.querySelectorAll(sel).forEach((r,k)=>{
+    const rp=clamp01((p-k*stagger)/dur);
+    r.style.opacity=rp; r.style.transform='translateX('+((1-easeOut(rp))*(dx||-40))+'px)';
+  });
+}
+
+window.seek=function(t){
+  const active=activeAt(t);
+  const bs=START[active], local=t-bs, dur=DUR[active], acc=D[active].accent;
+  const pIn=clamp01((local-0.26)/Math.max(0.5,dur-0.45));
+
+  let coverAcc=acc, wipeX=200;
+  const bounds=[]; for(let k=1;k<N;k++) bounds.push({t:START[k],c:D[k].accent}); bounds.push({t:OUT_AT,c:'#14110d'});
+  for(const b of bounds){const p=(t-(b.t-0.34))/0.68; if(p>=0&&p<=1){wipeX=(1-p)*135-p*135*1.15;coverAcc=b.c;}}
+  const wp=document.getElementById('wipe'); wp.style.background=coverAcc; wp.style.transform='skewX(-9deg) translateX('+wipeX+'%)';
+
+  document.getElementById('rule').style.transform='scaleX('+easeOut(clamp01(t/0.6))+')';
+  const wm=document.getElementById('wm'); wm.textContent=D[active].kick;
+  wm.style.fontSize=Math.max(70,Math.min(320,900/(0.6*D[active].kick.length)))+'px';
+  wm.style.color=acc; wm.style.opacity=0.09*clamp01(local/0.4); wm.style.transform='translateY('+((1-easeOut(clamp01(local/0.5)))*30)+'px)';
+
+  const ki=document.getElementById('kick'); ki.textContent=D[active].kick; ki.style.color=acc;
+  const kin=clamp01(local/0.4); ki.style.opacity=easeOut(kin); ki.style.transform='translateX('+((1-easeOut(kin))*-40)+'px)';
+
+  const he=document.getElementById('head'); he.textContent=D[active].head;
+  const hin=clamp01((local-0.06)/0.5); he.style.opacity=clamp01(local/0.2); he.style.transform='translateY('+((1-back(hin))*80)+'px)';
+
+  comps.forEach((c,i)=>{
+    const cbs=START[i], cl=t-cbs, cin=clamp01((cl-0.12)/0.6);
+    const beatEnd=START[i]+DUR[i], outp=clamp01((t-(beatEnd-0.3))/0.4);
+    let op=(i===active?1:0)*clamp01(cl/0.15);
+    if(t>OUT_AT) op*=(1-clamp01((t-OUT_AT)/0.25));
+    const y=(1-back(cin))*180 + outp*200 + Math.sin(t*0.9+i)*5;
+    const rot=(-2.2)+(1-easeOut(cin))*-5+outp*4;
+    c.style.opacity=op; c.style.transform='translateY('+y+'px) rotate('+rot+'deg)';
+  });
+
+  animateComp(active, pIn);
+
+  const fo=(t>OUT_AT)?(1-clamp01((t-OUT_AT)/0.25)):1;
+  ['kick','head'].forEach(id=>{const e=document.getElementById(id);e.style.opacity=Math.min(+e.style.opacity||1,fo);});
+  document.getElementById('outro').style.opacity=easeOut(clamp01((t-(OUT_AT+0.25))/0.5));
+};
+
+const ASK='what was my week about';
+const STREAM1='Three saves this week look connected: a recipe screenshot, a Tuesday dinner event, and a note titled “grocery list.”';
+const STREAM2='Looking at the actual screenshot — that’s chili oil noodles. The dinner event and the grocery list both point the same way.';
+
+function animateComp(i,p){
+  if(i===0){
+    staggerRows('#comp0 .lrow', p, 0.13, 0.32, -40);
+    const pl=document.querySelector('#comp0 .pledge'); if(pl){const pp=clamp01((p-0.62)/0.32); pl.style.opacity=pp; pl.style.transform='translateY('+((1-easeOut(pp))*14)+'px)';}
+  } else if(i===1){
+    const a=clamp01(p/0.16); document.getElementById('atxt').textContent=ASK.slice(0, Math.round(ASK.length*a));
+    const b=document.getElementById('badge'), bt=document.getElementById('badgetxt');
+    const bp=clamp01((p-0.18)/0.12); b.style.opacity=bp;
+    const s1=clamp01((p-0.26)/0.22);
+    if(p<0.55){ bt.textContent='On-device · Free'; document.getElementById('stream').textContent=STREAM1.slice(0, Math.round(STREAM1.length*easeOut(s1))); }
+    const f1=document.getElementById('found1'); const f1p=clamp01((p-0.42)/0.12); f1.style.opacity=f1p; f1.style.transform='translateY('+((1-easeOut(f1p))*14)+'px)';
+    const cb=document.getElementById('ctabtn'); const cbIn=clamp01((p-0.5)/0.12); const cbOut=1-clamp01((p-0.6)/0.1);
+    const cbp=cbIn*cbOut; cb.style.opacity=cbp; cb.style.transform='scale('+(0.85+0.15*back(cbIn))+')';
+    if(p>=0.55){
+      bt.textContent='Answered with your key · Claude'; b.style.background='rgba(217,119,87,.35)';
+      const s2=clamp01((p-0.62)/0.28);
+      document.getElementById('stream').textContent=STREAM2.slice(0, Math.round(STREAM2.length*easeOut(s2)));
+    }
+    const f2=document.getElementById('found2'), pk=document.getElementById('pick1');
+    if(p>0.6){ f2.style.display='flex'; const f2p=clamp01((p-0.72)/0.16); f2.style.opacity=f2p; f2.style.transform='translateY('+((1-easeOut(f2p))*14)+'px)'; }
+    else f2.style.display='none';
+    if(p>0.6){ pk.style.display='flex'; const pkp=clamp01((p-0.85)/0.15); pk.style.opacity=pkp; pk.style.transform='translateY('+((1-easeOut(pkp))*14)+'px)'; }
+    else pk.style.display='none';
+  } else if(i===2){
+    staggerRows('#comp2 .lrow', p, 0.15, 0.35, -40);
+  } else if(i===3){
+    staggerRows('#comp3 .lrow', p, 0.15, 0.35, -40);
+  } else if(i===4){
+    staggerRows('#comp4 .lrow', p, 0.13, 0.32, -40);
+  } else if(i===5){
+    staggerRows('#comp5 .lrow', p, 0.13, 0.32, -40);
+  } else if(i===6){
+    staggerRows('#comp6 .lrow', p, 0.15, 0.35, -40);
+  }
+}
+window.seek(0);
+</script></body></html>`;
+
+fs.writeFileSync(path.join(__dirname, 'clip-agents-live.html'), html);
+console.log('wrote clip-agents-live.html', (html.length / 1024).toFixed(0) + 'KB', TOTAL.toFixed(1) + 's', BEATS.length + ' beats');

@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mock B — What you can do with</title>
+<link rel="stylesheet" href="styles.css">
+<style>
+/* ---------- The switcher ----------
+   Four tabs over ONE stage. The tab row alone summarises what the app covers;
+   clicking swaps the clip + copy. Each panel is a lede (headline, the promise,
+   the clip) over a detail grid that lists the surface in full. */
+.sw { margin-top: 8px; }
+
+/* tab row */
+.sw-tabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 22px; }
+@media (max-width: 720px) { .sw-tabs { grid-template-columns: repeat(2, 1fr); } }
+.sw-tab {
+  text-align: left; cursor: pointer; border: 0;
+  background: var(--surface); color: var(--ink);
+  border-radius: var(--radius-sm); padding: 16px 16px 15px;
+  font-family: inherit; position: relative; overflow: hidden;
+  transition: background .2s ease, transform .22s cubic-bezier(.34,1.56,.64,1);
+}
+.sw-tab:hover { transform: translateY(-3px); }
+.sw-tab .t-ico { display: flex; gap: 4px; margin-bottom: 10px; }
+.sw-tab .t-ico .ai { width: 26px; height: 26px; border-radius: 8px; font-size: 11px; }
+.sw-tab b { display: block; font-size: 16px; font-weight: 750; letter-spacing: -.01em; }
+.sw-tab span { display: block; font-size: 12.5px; color: var(--muted); margin-top: 2px; line-height: 1.4; }
+.sw-tab::after {
+  content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 3px;
+  background: var(--blue-bright); transform: scaleX(0); transform-origin: left;
+  transition: transform .3s cubic-bezier(.3,.7,.3,1);
+}
+.sw-tab.on { background: var(--surface-2); }
+.sw-tab.on::after { transform: scaleX(1); }
+.sw-tab.on span { color: var(--blue-bright); }
+
+/* stage */
+.sw-stage {
+  display: grid; grid-template-columns: 1fr 250px; gap: 34px 44px; align-items: start;
+  background: var(--surface); border-radius: var(--radius); padding: 42px 42px 38px 46px;
+  position: relative; overflow: hidden;
+}
+.sw-stage .glow {
+  position: absolute; width: 460px; height: 460px; right: -120px; top: -160px;
+  background: radial-gradient(circle, rgba(59,140,240,.16), transparent 66%);
+  pointer-events: none;
+}
+@media (max-width: 800px) {
+  .sw-stage { grid-template-columns: 1fr; padding: 28px; gap: 26px; }
+}
+
+.sw-panel { display: none; }
+.sw-panel.on { display: contents; }
+
+.sw-copy { position: relative; z-index: 1; padding-top: 6px; }
+.sw-copy h3 {
+  font-size: clamp(25px, 3.2vw, 34px); font-weight: 800; letter-spacing: -.022em;
+  line-height: 1.1; margin-bottom: 14px; max-width: 470px;
+}
+.sw-copy > p { font-size: 15.5px; color: var(--muted); max-width: 490px; }
+.sw-copy > p + p { margin-top: 12px; }
+.sw-copy b { color: var(--ink); font-weight: 650; }
+
+/* the one line that is the differentiator — set apart, not shouted */
+.sw-pledge {
+  margin-top: 20px; padding: 14px 16px; border-radius: var(--radius-sm);
+  background: rgba(52,199,123,.07); border-left: 2px solid var(--confirm);
+  font-size: 14px; color: var(--muted); line-height: 1.55; max-width: 490px;
+}
+.sw-pledge b { color: var(--confirm); font-weight: 700; }
+
+.sw-shot { display: flex; justify-content: center; position: relative; z-index: 1; }
+.ph {
+  width: 212px; aspect-ratio: 9/16; border-radius: 24px;
+  border: 8px solid #0b0c10; background: #171a21;
+  background-image: repeating-linear-gradient(135deg, rgba(255,255,255,.035) 0 10px, transparent 10px 20px);
+  box-shadow: 0 22px 50px rgba(0,0,0,.5);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 8px; text-align: center; padding: 20px;
+}
+.ph b { font-size: 12px; letter-spacing: .16em; text-transform: uppercase; color: var(--faint); font-weight: 800; }
+.ph span { font-size: 14px; color: var(--muted); line-height: 1.45; }
+.ph .dur { font-size: 11.5px; color: #495060; font-family: ui-monospace, "SF Mono", Menlo, monospace; }
+
+/* ---- the detail grid: everything the surface actually does ---- */
+.sw-detail {
+  grid-column: 1 / -1; position: relative; z-index: 1;
+  margin-top: 8px; padding-top: 30px; border-top: 1px solid rgba(255,255,255,.07);
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 26px 34px;
+}
+@media (max-width: 900px) { .sw-detail { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 620px) { .sw-detail { grid-template-columns: 1fr; } }
+
+.sw-grp h4 {
+  font-size: 12.5px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase;
+  color: var(--blue-bright); margin-bottom: 10px;
+}
+.sw-grp ul { list-style: none; display: flex; flex-direction: column; gap: 9px; }
+.sw-grp li { font-size: 13.5px; color: var(--muted); line-height: 1.5; padding-left: 14px; position: relative; }
+.sw-grp li::before {
+  content: ""; position: absolute; left: 0; top: 8px;
+  width: 5px; height: 5px; border-radius: 50%; background: rgba(154,163,178,.45);
+}
+.sw-grp li b { color: var(--ink); font-weight: 650; }
+.sw-grp li i { font-style: normal; color: var(--faint); }
+.sw-grp code {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 12.5px;
+  color: var(--ink); background: rgba(255,255,255,.06); padding: 1px 5px; border-radius: 5px;
+}
+/* a group that runs wide (prose-ish lists) */
+.sw-grp.wide { grid-column: span 2; }
+@media (max-width: 620px) { .sw-grp.wide { grid-column: auto; } }
+
+/* the flat inventory line — many nouns, no room for a sentence each */
+.sw-inv { font-size: 13.5px; color: var(--muted); line-height: 1.75; }
+.sw-inv b { color: var(--ink); font-weight: 650; }
+
+.sw-chains {
+  grid-column: 1 / -1; margin-top: 4px; padding-top: 20px;
+  border-top: 1px solid rgba(255,255,255,.07);
+  font-size: 13.5px; color: var(--faint); line-height: 1.6;
+}
+.sw-chains b { color: var(--muted); font-weight: 650; }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <p style="padding:40px 0 0;font:600 13px/1 ui-monospace,Menlo,monospace;letter-spacing:.12em;color:#5b6270;text-transform:uppercase">Mock B · switcher · wallet content in full</p>
+
+  <p class="m-transition in">All of this lands here. <b>Here’s what it becomes.</b></p>
+
+  <section class="m-section in" id="cando">
+    <p class="m-eyebrow">What you can do</p>
+    <h2 class="m-h2">Pick what you’d connect. See what it buys you.</h2>
+
+    <div class="sw">
+      <div class="sw-tabs">
+        <button class="sw-tab on" data-p="wallets">
+          <div class="t-ico"><div class="ai" style="background:#2E63FF">W</div><div class="ai" style="background:#111">P</div><div class="ai" style="background:#8247e5">S</div></div>
+          <b>Wallets</b><span>Balances, activity, risk</span>
+        </button>
+        <button class="sw-tab" data-p="agents">
+          <div class="t-ico"><div class="ai" style="background:#d97757">C</div><div class="ai" style="background:#10a37f">G</div><div class="ai" style="background:#4285f4">G</div></div>
+          <b>Agents</b><span>Ask your own things</span>
+        </button>
+        <button class="sw-tab" data-p="media">
+          <div class="t-ico"><div class="ai" style="background:#1db954">S</div><div class="ai" style="background:#ff0000">Y</div><div class="ai" style="background:#e60023">P</div></div>
+          <b>Media apps</b><span>Saves you can find again</span>
+        </button>
+        <button class="sw-tab" data-p="feed">
+          <div class="t-ico"><div class="ai" style="background:#24292f">G</div><div class="ai" style="background:#5e6ad2">L</div><div class="ai" style="background:#0285ff">B</div></div>
+          <b>Feed apps</b><span>Nine apps, one river</span>
+        </button>
+      </div>
+
+      <div class="sw-stage">
+        <div class="glow"></div>
+
+        <!-- ══════════════ WALLETS ══════════════ -->
+        <div class="sw-panel on" id="p-wallets">
+          <div class="sw-copy">
+            <h3>Your history with what you watch.</h3>
+            <p>Not a portfolio app. Not a market terminal. Watch any address — <code style="font-family:ui-monospace,Menlo,monospace;font-size:14px">0x…</code>, an ENS name, a <b>.sol</b>, a basename — and what it does over time becomes yours to read.</p>
+            <div class="sw-pledge">
+              <b>Read-only and structural, not promised.</b> Watching an address can never trade or move funds. WalletConnect proposes <b>zero methods and zero events</b> and tears the session down immediately. Every call is made straight from your iPhone — no server.
+            </div>
+          </div>
+          <div class="sw-shot"><div class="ph"><b>Clip</b><span>Wallets<br>placeholder</span><span class="dur">~14s · silent loop</span></div></div>
+
+          <div class="sw-detail">
+
+            <div class="sw-grp">
+              <h4>Getting in</h4>
+              <ul>
+                <li><b>Paste anything</b> — an address, ENS, <code>.sol</code>, or a basename. <code>.sol</code> is tried first, so <code>toly.sol</code> resolves to a real wallet.</li>
+                <li><b>Connect a wallet app</b> — hands over the address, read-only, never signs.</li>
+                <li><b>Peek at a public wallet</b> — one tap to watch a famous address, then it retires forever.</li>
+                <li><b>From a Farcaster profile</b> — “Watch their wallet” resolves the verified address.</li>
+              </ul>
+            </div>
+
+            <div class="sw-grp">
+              <h4>The combined portfolio</h4>
+              <ul>
+                <li><b>Across your wallets</b> — one total, digits rolling like an odometer between values, with a pill naming the window it covers.</li>
+                <li><b>A sparkline that draws itself</b>, with transaction marks on the line — tap one and its sheet opens.</li>
+                <li><b>“Mostly ETH · +$310”</b> — why it moved, not just that it did.</li>
+                <li><b>7d / 30d / watched</b> — offered only when the record reaches back that far.</li>
+              </ul>
+            </div>
+
+            <div class="sw-grp">
+              <h4>What you hold</h4>
+              <ul>
+                <li><b>A treemap</b> — top holdings as cards sized by value, staggering in. Tap a cell for that token’s live chart, drawn on-device.</li>
+                <li><b>“ETH is 62% of everything”</b> — opens <b>Where it’s held</b>: every position, its share, and the wallets holding it.</li>
+                <li><b>Across-your-wallets sheet</b> — a “Made of” band chart in each wallet’s own color, and “What moved” by token.</li>
+                <li><b>Wallet switcher</b> — one chip per wallet; the selection slides between them, morphing into the destination’s color.</li>
+              </ul>
+            </div>
+
+            <div class="sw-grp wide">
+              <h4>What lands in your feed</h4>
+              <p class="sw-inv">
+                Every one of these arrives as an ordinary thing, searchable from Spotlight:
+                <b>received and sent transfers</b> · self-transfers between your own wallets · <b>swaps</b> ·
+                Solana transfers and swaps · <b>token approvals and revokes</b> · NFT operator grants ·
+                <b>Peer fills</b> (“Bought 25 USDC with Venmo”) · delegation changes ·
+                <b>Aave liquidation-risk alerts</b> · Safe pending signatures.
+              </p>
+              <ul style="margin-top:12px">
+                <li><b>Transaction sheets are depicted, not described</b> — two faces with the amount flowing between them; both legs of a swap, both your own marks for a move.</li>
+                <li><b>Counterparties get names</b> — your own label, then a watched Farcaster handle, then another watched wallet, then known contracts, then reverse ENS. <i>The title never carries a raw hash.</i></li>
+              </ul>
+            </div>
+
+            <div class="sw-grp">
+              <h4>Worth a look</h4>
+              <p class="sw-inv" style="margin-bottom:10px">A quiet line that whispers when it’s clear and speaks up when it isn’t — <i>“1 delegation · 1 flagged transfer.”</i></p>
+              <ul>
+                <li><b>Token approvals</b> — new grants land as things; the row opens that wallet’s Revoke.cash page.</li>
+                <li><b>Address poisoning</b> — an incoming transfer mimicking an address you’ve <i>sent to</i> gets flagged: “Looks like a copy of an address you’ve used.” It never hides the transfer.</li>
+                <li><b>EIP-7702 delegation</b> — your wallet starting to delegate its control lands as a thing.</li>
+                <li><b>Aave health factor</b> — collateral, debt, health, and an alert on a new crossing below 1.5.</li>
+                <li><b>Safe multisig</b> — “2 of 3 signatures collected.”</li>
+                <li><b>The approval prepare card</b> — re-reads the grant’s live state, quotes the revoke fee, and hands you copyable transaction JSON. <i>A transaction you sign there — never in Casberi.</i></li>
+              </ul>
+            </div>
+
+            <div class="sw-grp">
+              <h4>Ask it, in plain language</h4>
+              <p class="sw-inv" style="margin-bottom:10px">All computed live from your own things. No model, no guessing.</p>
+              <ul>
+                <li><b>“How’s my wallet”</b> — a full brief: sparkline, approvals, activity, tokens, treemap, allocation, newest things.</li>
+                <li><b>“How’s my watchlist”</b></li>
+                <li><b>“How’s my Aave loan”</b> · <b>“health factor”</b></li>
+                <li><b>“What have I spent on gas”</b></li>
+                <li><b>“Anything pending on my Safe”</b></li>
+                <li>And the away recap: <i>“Your wallets are up 3.1% while you were away.”</i></li>
+              </ul>
+            </div>
+
+            <div class="sw-grp">
+              <h4>A wallet is a color</h4>
+              <ul>
+                <li>One seed drives a wallet’s <b>identicon and its tint</b> — and that hue carries through the switcher chip, the sheet’s bands, the allocation tray, and every held row.</li>
+                <li><b>ENS avatars</b> replace identicons when published.</li>
+                <li><b>A new high rains berries</b> in the wallet’s own hue — “Across your wallets: a new high, $19.9K.” Baselines seed silently; drawdowns never fire.</li>
+              </ul>
+            </div>
+
+            <p class="sw-chains">
+              <b>Chains:</b> Ethereum · Base · Arbitrum · Optimism · Polygon · Solana · Robinhood Chain —
+              and each address is routed only to the chains its shape can live on.
+            </p>
+          </div>
+        </div>
+
+        <!-- ══════════════ AGENTS (placeholder content) ══════════════ -->
+        <div class="sw-panel" id="p-agents">
+          <div class="sw-copy">
+            <h3>Ask your own things, not the whole internet.</h3>
+            <p>Bring your own key — Claude, ChatGPT, Gemini, Venice, Bankr — or use the on-device model. Your corpus is the context.</p>
+            <div class="sw-pledge"><b>Placeholder.</b> Same treatment as Wallets once you hand me the agent brief.</div>
+          </div>
+          <div class="sw-shot"><div class="ph"><b>Clip</b><span>Agents<br>placeholder</span><span class="dur">~14s · silent loop</span></div></div>
+          <div class="sw-detail">
+            <div class="sw-grp"><h4>Answers with receipts</h4><ul><li>Every answer paints the things it came from. Tap one, you’re there.</li></ul></div>
+            <div class="sw-grp"><h4>Keep a question</h4><ul><li>A standing ask that re-answers itself as new things land.</li></ul></div>
+            <div class="sw-grp"><h4>Nothing leaves without you</h4><ul><li>No key, no cloud — the on-device model answers with nothing sent anywhere.</li></ul></div>
+          </div>
+        </div>
+
+        <!-- ══════════════ MEDIA (placeholder content) ══════════════ -->
+        <div class="sw-panel" id="p-media">
+          <div class="sw-copy">
+            <h3>The stuff you liked, somewhere you can find it again.</h3>
+            <p>Songs, videos, screenshots, saves. It lands, it’s readable, and it’s searchable — months later.</p>
+            <div class="sw-pledge"><b>Placeholder.</b> Same treatment as Wallets once you hand me the media brief.</div>
+          </div>
+          <div class="sw-shot"><div class="ph"><b>Clip</b><span>Media apps<br>placeholder</span><span class="dur">~14s · silent loop</span></div></div>
+          <div class="sw-detail">
+            <div class="sw-grp"><h4>Screenshots become words</h4><ul><li>Read on-device, so “that recipe I screenshotted” actually finds it.</li></ul></div>
+            <div class="sw-grp"><h4>Every save in one river</h4><ul><li>Liked songs, watched videos, saved pins — side by side, in time.</li></ul></div>
+            <div class="sw-grp"><h4>Ask across all of it</h4><ul><li>“What was I listening to in June?” — answered from your own history.</li></ul></div>
+          </div>
+        </div>
+
+        <!-- ══════════════ FEED (placeholder content) ══════════════ -->
+        <div class="sw-panel" id="p-feed">
+          <div class="sw-copy">
+            <h3>Stop opening nine apps to find out what happened.</h3>
+            <p>Work, social, mail, calendar, reading. One feed, in time order — and one chip to narrow it to any single app.</p>
+            <div class="sw-pledge"><b>Placeholder.</b> Same treatment as Wallets once you hand me the feed brief.</div>
+          </div>
+          <div class="sw-shot"><div class="ph"><b>Clip</b><span>Feed apps<br>placeholder</span><span class="dur">~14s · silent loop</span></div></div>
+          <div class="sw-detail">
+            <div class="sw-grp"><h4>While you were away</h4><ul><li>One ask, and the agent tells you what moved since you last opened it.</li></ul></div>
+            <div class="sw-grp"><h4>Each app keeps its shape</h4><ul><li>Calendar reads like an agenda, Photos like a grid, GitHub like a release.</li></ul></div>
+            <div class="sw-grp"><h4>Act without leaving</h4><ul><li>Close the issue, open the thread — and a write always asks first.</li></ul></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+    <a class="docs-link" href="docs.html">See it all in the docs →</a>
+  </section>
+
+  <div style="height:120px"></div>
+</div>
+
+<script>
+document.querySelectorAll('.sw-tab').forEach(function (t) {
+  t.addEventListener('click', function () {
+    document.querySelectorAll('.sw-tab').forEach(function (x) { x.classList.remove('on'); });
+    document.querySelectorAll('.sw-panel').forEach(function (x) { x.classList.remove('on'); });
+    t.classList.add('on');
+    document.getElementById('p-' + t.dataset.p).classList.add('on');
+  });
+});
+</script>
+
+</body>
+</html>

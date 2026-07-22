@@ -1298,9 +1298,20 @@ struct FeedScreen: View {
                 let els = GenParser.parse(prefix: digest[...], isComplete: true)
                 Section {
                     GenRender(id: "root", els: els)
+                        // The Themes CARD (2026-07-21, the §160 ruling carried
+                        // to the All room): every other feed-head read — the
+                        // wallet's two parcels, the heatmaps, the leaderboards,
+                        // the mosaics — wears the widget surface; this was the
+                        // last one floating bare on the page. Same recipe as
+                        // the holdings card: GenTagMap self-pads horizontally,
+                        // so only the bottom needs closing.
+                        .padding(.bottom, DS.Space.s3)
+                        .dsWidgetSurface(fillOpacity: Self.walletCardFill)
                         .listRowBackground(Color.clear)
                         .listRowSeparator(.hidden)
-                        .listRowInsets(EdgeInsets())
+                        // The card needs the page gutter the bare map didn't.
+                        .listRowInsets(EdgeInsets(top: DS.Space.s2, leading: DS.Space.s4,
+                                                  bottom: 0, trailing: DS.Space.s4))
                         .environment(\.genProjectTap) { name in
                             openProject = ProjectRoute(name: name)
                         }

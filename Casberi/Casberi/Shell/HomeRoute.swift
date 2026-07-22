@@ -11,7 +11,11 @@ import Observation
 final class HomeRoute {
     static let shared = HomeRoute()
     enum Push: String, Identifiable { case apps, settings; var id: String { rawValue } }
-    var push: Push?
+    var push: Push? {
+        #if DEBUG
+        didSet { NSLog("[Casberi] route.push: %@ -> %@", oldValue?.rawValue ?? "nil", push?.rawValue ?? "nil") }
+        #endif
+    }
     /// A bridge's own screen (wallet, tokens, a setup screen, …) — ONE shared
     /// push target for every entry point (Feed's Manage, Apps' tile capsules,
     /// a product page's Connect/Open), registered as a single

@@ -1,0 +1,204 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;transition:none!important}
+html,body{width:1080px;height:1920px;overflow:hidden;background:#EEEAE1;
+  font-family:-apple-system,"Helvetica Neue","SF Pro Display",system-ui,sans-serif;-webkit-font-smoothing:antialiased;}
+.mono{font-family:ui-monospace,"SF Mono","Menlo",monospace;}
+.stage{position:absolute;inset:0;overflow:hidden;background:#EEEAE1;}
+.grain{position:absolute;inset:0;opacity:.5;
+  background-image:radial-gradient(circle at 20% 30%, rgba(0,0,0,.03) 0 1px, transparent 1px),radial-gradient(circle at 70% 65%, rgba(0,0,0,.025) 0 1px, transparent 1px);
+  background-size:7px 7px, 9px 9px;}
+.mast{position:absolute;left:70px;right:70px;top:74px;display:flex;justify-content:space-between;font-size:27px;letter-spacing:.16em;color:#14110d;font-weight:600;}
+.rule{position:absolute;left:70px;right:70px;top:126px;height:3px;background:#14110d;transform-origin:left;}
+.wm{position:absolute;right:20px;top:150px;font-size:280px;line-height:.82;white-space:nowrap;text-align:right;font-weight:800;letter-spacing:-.04em;opacity:.08;will-change:opacity,transform;}
+.kick{position:absolute;left:74px;top:238px;font-size:32px;letter-spacing:.14em;font-weight:600;will-change:transform,opacity;}
+.head{position:absolute;left:70px;top:284px;right:70px;font-size:120px;line-height:.96;font-weight:800;letter-spacing:-.045em;color:#14110d;white-space:pre-line;will-change:transform,opacity;}
+.foot{position:absolute;left:74px;right:74px;bottom:70px;display:flex;justify-content:space-between;font-size:26px;letter-spacing:.12em;color:#14110d;font-weight:600;}
+.wipe{position:absolute;top:-12%;left:0;width:135%;height:124%;transform:skewX(-9deg) translateX(160%);will-change:transform;}
+
+.comp{position:absolute;left:120px;top:840px;width:840px;height:800px;border-radius:34px;overflow:hidden;
+  box-shadow:34px 40px 0 rgba(20,17,13,.13), 0 30px 70px rgba(20,17,13,.26);opacity:0;will-change:transform,opacity;
+  transform-origin:center top;padding:52px;color:#fff;}
+.comp.blue{background:linear-gradient(160deg,#2E63FF,#1B49D6);}
+.comp.amber{background:linear-gradient(160deg,#F0A93A,#D97913);}
+.comp.grn{background:linear-gradient(160deg,#0f2e1c,#0a1a10);}
+.comp.pink{background:linear-gradient(160deg,#E0345C,#8a1638);}
+
+.lhead{font-size:34px;font-weight:650;margin-bottom:22px;}
+.lrow{display:flex;align-items:flex-start;gap:20px;padding:16px 0;border-top:2px solid rgba(255,255,255,.08);will-change:opacity,transform;}
+.lrow:first-of-type{border-top:none;}
+.dot{width:12px;height:12px;border-radius:50%;background:rgba(255,255,255,.5);flex:none;margin-top:9px;}
+.lt{font-size:28px;font-weight:700;}
+.ls{font-size:21px;color:rgba(255,255,255,.6);margin-top:3px;line-height:1.38;}
+
+.phead{font-size:34px;font-weight:650;margin-bottom:28px;}
+.pgrid{display:flex;flex-wrap:wrap;gap:14px;}
+.pill{padding:16px 26px;border-radius:100px;background:rgba(255,255,255,.12);font-size:27px;font-weight:650;will-change:opacity,transform;opacity:0;}
+
+/* auto-overviews visual: heatmap + leaderboard */
+.ohead{font-size:30px;color:rgba(255,255,255,.65);margin-bottom:14px;}
+.heat{display:grid;grid-template-columns:repeat(12,1fr);gap:7px;margin-bottom:34px;}
+.hc{aspect-ratio:1;border-radius:5px;background:rgba(255,255,255,var(--v));will-change:opacity,transform;opacity:0;}
+.boardhead{font-size:26px;color:rgba(255,255,255,.65);margin:8px 0 14px;}
+.boardrow{display:flex;align-items:center;gap:18px;margin-bottom:14px;will-change:opacity,transform;}
+.boardn{font-size:25px;font-weight:700;width:180px;flex:none;}
+.boardbar{height:22px;border-radius:8px;background:rgba(255,255,255,.85);flex:none;}
+
+.outro{position:absolute;inset:0;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;padding:0 74px;opacity:0;will-change:opacity;}
+.outro .big{font-size:200px;font-weight:800;letter-spacing:-.05em;color:#14110d;line-height:.9;}
+.outro .u{font-size:34px;letter-spacing:.1em;color:#14110d;margin-top:40px;font-weight:600;}
+.outro .u b{color:#2E63FF;}
+</style></head><body>
+<div class="stage">
+  <div class="grain"></div>
+  <div class="mast mono"><span>CASBERI</span><span>MEDIA</span></div>
+  <div class="rule" id="rule"></div>
+  <div class="wm" id="wm">01</div>
+
+  <!-- 0 ONE GRAMMAR -->
+  <div class="comp blue" id="comp0">
+    <div class="lhead">Nine sources, one grammar</div>
+    <div class="lrow" data-i="0"><b class="dot"></b><div><div class="lt">Chip strip navigation</div><div class="ls">no tab bar — circular brand chips, the selection ring slides between them</div></div></div><div class="lrow" data-i="1"><b class="dot"></b><div><div class="lt">Chip life</div><div class="ls">a chip bobs when a thing lands; switching plays a coin-flip</div></div></div><div class="lrow" data-i="2"><b class="dot"></b><div><div class="lt">Landing memory</div><div class="ls">the app reopens on whichever chip you last stood on</div></div></div>
+  </div>
+
+  <!-- 1 FEELS ALIVE -->
+  <div class="comp blue" id="comp1">
+    <div class="lhead">Small signals, everywhere</div>
+    <div class="lrow" data-i="0"><b class="dot"></b><div><div class="lt">“New since” seam</div><div class="ls">“New since Friday · 4” — frozen for the whole visit, so it can’t shift under you</div></div></div><div class="lrow" data-i="1"><b class="dot"></b><div><div class="lt">Pull-to-refresh delight</div><div class="ls">one pull rains berries in that source’s own brand hue</div></div></div><div class="lrow" data-i="2"><b class="dot"></b><div><div class="lt">Honest footer</div><div class="ls">every feed ends “That’s everything from Spotify · 41”</div></div></div><div class="lrow" data-i="3"><b class="dot"></b><div><div class="lt">Row entrance choreography</div><div class="ls">photos scale in, music lifts, calendar slides — each shape moves its own way</div></div></div>
+  </div>
+
+  <!-- 2 AUTO OVERVIEWS (visual) -->
+  <div class="comp amber" id="comp2">
+    <div class="ohead">Heatmap years — your capture year, your casting activity</div>
+    <div class="heat"><div class="hc" data-i="0" style="--v:0.11"></div><div class="hc" data-i="1" style="--v:0.48"></div><div class="hc" data-i="2" style="--v:0.85"></div><div class="hc" data-i="3" style="--v:0.22"></div><div class="hc" data-i="4" style="--v:0.59"></div><div class="hc" data-i="5" style="--v:0.96"></div><div class="hc" data-i="6" style="--v:0.33"></div><div class="hc" data-i="7" style="--v:0.70"></div><div class="hc" data-i="8" style="--v:0.07"></div><div class="hc" data-i="9" style="--v:0.44"></div><div class="hc" data-i="10" style="--v:0.81"></div><div class="hc" data-i="11" style="--v:0.18"></div><div class="hc" data-i="12" style="--v:0.55"></div><div class="hc" data-i="13" style="--v:0.92"></div><div class="hc" data-i="14" style="--v:0.29"></div><div class="hc" data-i="15" style="--v:0.66"></div><div class="hc" data-i="16" style="--v:0.03"></div><div class="hc" data-i="17" style="--v:0.40"></div><div class="hc" data-i="18" style="--v:0.77"></div><div class="hc" data-i="19" style="--v:0.14"></div><div class="hc" data-i="20" style="--v:0.51"></div><div class="hc" data-i="21" style="--v:0.88"></div><div class="hc" data-i="22" style="--v:0.25"></div><div class="hc" data-i="23" style="--v:0.62"></div><div class="hc" data-i="24" style="--v:0.99"></div><div class="hc" data-i="25" style="--v:0.36"></div><div class="hc" data-i="26" style="--v:0.73"></div><div class="hc" data-i="27" style="--v:0.10"></div><div class="hc" data-i="28" style="--v:0.47"></div><div class="hc" data-i="29" style="--v:0.84"></div><div class="hc" data-i="30" style="--v:0.21"></div><div class="hc" data-i="31" style="--v:0.58"></div><div class="hc" data-i="32" style="--v:0.95"></div><div class="hc" data-i="33" style="--v:0.32"></div><div class="hc" data-i="34" style="--v:0.69"></div><div class="hc" data-i="35" style="--v:0.06"></div><div class="hc" data-i="36" style="--v:0.43"></div><div class="hc" data-i="37" style="--v:0.80"></div><div class="hc" data-i="38" style="--v:0.17"></div><div class="hc" data-i="39" style="--v:0.54"></div><div class="hc" data-i="40" style="--v:0.91"></div><div class="hc" data-i="41" style="--v:0.28"></div><div class="hc" data-i="42" style="--v:0.65"></div><div class="hc" data-i="43" style="--v:0.02"></div><div class="hc" data-i="44" style="--v:0.39"></div><div class="hc" data-i="45" style="--v:0.76"></div><div class="hc" data-i="46" style="--v:0.13"></div><div class="hc" data-i="47" style="--v:0.50"></div><div class="hc" data-i="48" style="--v:0.87"></div><div class="hc" data-i="49" style="--v:0.24"></div><div class="hc" data-i="50" style="--v:0.61"></div><div class="hc" data-i="51" style="--v:0.98"></div><div class="hc" data-i="52" style="--v:0.35"></div><div class="hc" data-i="53" style="--v:0.72"></div><div class="hc" data-i="54" style="--v:0.09"></div><div class="hc" data-i="55" style="--v:0.46"></div><div class="hc" data-i="56" style="--v:0.83"></div><div class="hc" data-i="57" style="--v:0.20"></div><div class="hc" data-i="58" style="--v:0.57"></div><div class="hc" data-i="59" style="--v:0.94"></div></div>
+    <div class="boardhead">Leaderboards — computed from your corpus</div>
+    <div class="boardrow" data-i="0"><div class="boardn">Your top artists</div><div class="boardbar" style="width:92%"></div></div><div class="boardrow" data-i="1"><div class="boardn">Who writes you</div><div class="boardbar" style="width:68%"></div></div><div class="boardrow" data-i="2"><div class="boardn">Your subreddits</div><div class="boardbar" style="width:48%"></div></div>
+  </div>
+
+  <!-- 3 DAY CARDS -->
+  <div class="comp blue" id="comp3">
+    <div class="lhead">A day, one card</div>
+    <div class="lrow" data-i="0"><b class="dot"></b><div><div class="lt">Day cards</div><div class="ls">a day’s rows merge into one lifted card, headers speaking the source’s unit</div></div></div><div class="lrow" data-i="1"><b class="dot"></b><div><div class="lt">Sparse sources coarsen</div><div class="ls">to “This week / Last week” instead of a ladder of one-row days</div></div></div><div class="lrow" data-i="2"><b class="dot"></b><div><div class="lt">Empty states</div><div class="ls">a fresh feed falls into a pile of app tiles; a connected-but-empty source shows its own skeleton, plus a try-it chip</div></div></div>
+  </div>
+
+  <!-- 4 MEDIA (source roll call) -->
+  <div class="comp blue" id="comp4">
+    <div class="phead">Every media app you use</div>
+    <div class="pgrid"><div class="pill" data-i="0">Twitch</div><div class="pill" data-i="1">Spotify</div><div class="pill" data-i="2">Apple Music</div><div class="pill" data-i="3">Photos</div><div class="pill" data-i="4">Podcasts</div><div class="pill" data-i="5">YouTube</div><div class="pill" data-i="6">Steam</div><div class="pill" data-i="7">Pinterest</div></div>
+  </div>
+
+  <!-- 5 LIVE & PLAYED (Twitch + Spotify/Apple Music) -->
+  <div class="comp blue" id="comp5">
+    <div class="lhead">Live streams. What you played.</div>
+    <div class="lrow" data-i="0"><b class="dot"></b><div><div class="lt">Twitch</div><div class="ls">live streams float to the top with a green dot + “Live” — a real stream-frame thumbnail, only while it’s live</div></div></div><div class="lrow" data-i="1"><b class="dot"></b><div><div class="lt">Spotify & Apple Music</div><div class="ls">44pt covers grouped into listening sittings; today’s covers fan like a hand of cards; “Your top artists” leaderboard</div></div></div>
+  </div>
+
+  <!-- 6 AND THE REST -->
+  <div class="comp blue" id="comp6">
+    <div class="lhead">Every scroll, remembered</div>
+    <div class="lrow" data-i="0"><b class="dot"></b><div><div class="lt">Photos</div><div class="ls">a continuous grid, day pills on the first photo of each day — tap zooms into the sheet</div></div></div><div class="lrow" data-i="1"><b class="dot"></b><div><div class="lt">Podcasts</div><div class="ls">“Your shows” leaderboard over episode rows</div></div></div><div class="lrow" data-i="2"><b class="dot"></b><div><div class="lt">YouTube</div><div class="ls">“Latest uploads” thumbnail mosaic</div></div></div><div class="lrow" data-i="3"><b class="dot"></b><div><div class="lt">Steam</div><div class="ls">“Recently played” by two-week hours</div></div></div><div class="lrow" data-i="4"><b class="dot"></b><div><div class="lt">Pinterest</div><div class="ls">“Your pins” mosaic</div></div></div>
+  </div>
+
+  <!-- 7 READING -->
+  <div class="comp blue" id="comp7">
+    <div class="lhead">What you read</div>
+    <div class="lrow" data-i="0"><b class="dot"></b><div><div class="lt">Safari saves</div><div class="ls">page image + domain; the lede is facts, not guilt — “12 saved this month · 4 older · oldest 4 months”</div></div></div><div class="lrow" data-i="1"><b class="dot"></b><div><div class="lt">RSS & Substack</div><div class="ls">the publisher’s own mark leads the row; “Your publications” leaderboard</div></div></div><div class="lrow" data-i="2"><b class="dot"></b><div><div class="lt">Readwise & Kindle</div><div class="ls">“Most highlighted” by book</div></div></div><div class="lrow" data-i="3"><b class="dot"></b><div><div class="lt">Reddit</div><div class="ls">“Your subreddits” ranked bars</div></div></div>
+  </div>
+
+  <!-- 8 NOTES & CHATS -->
+  <div class="comp grn" id="comp8">
+    <div class="lhead">Your own words</div>
+    <div class="lrow" data-i="0"><b class="dot"></b><div><div class="lt">Notes, journals, AI chats</div><div class="ls">excerpt rows — title plus a body preview</div></div></div><div class="lrow" data-i="1"><b class="dot"></b><div><div class="lt">A pinned chat</div><div class="ls">becomes a free-standing takeaway card</div></div></div><div class="lrow" data-i="2"><b class="dot"></b><div><div class="lt">Year heatmaps</div><div class="ls">for journaling and for chats, same grammar as capture years</div></div></div>
+  </div>
+
+  <!-- 9 SOCIAL -->
+  <div class="comp pink" id="comp9">
+    <div class="lhead">Bluesky & Farcaster</div>
+    <div class="lrow" data-i="0"><b class="dot"></b><div><div class="lt">Post cards</div><div class="ls">full text, unclamped — author face and handle, images at card width, never bundled or collapsed</div></div></div><div class="lrow" data-i="1"><b class="dot"></b><div><div class="lt">Context markers</div><div class="ls">the row says why it’s here — “Liked,” “Mentions you,” “/design”</div></div></div><div class="lrow" data-i="2"><b class="dot"></b><div><div class="lt">Thread walking</div><div class="ls">quote cards are recessed and tappable; replies and quotes push deeper, as far as the thread goes</div></div></div><div class="lrow" data-i="3"><b class="dot"></b><div><div class="lt">Profile cards</div><div class="ls">tap any face — avatar, bio, and a Watch verb; Farcaster adds “Watch their wallet”</div></div></div>
+  </div>
+
+  <div class="kick mono" id="kick"></div>
+  <div class="head" id="head"></div>
+  <div class="foot mono"><span>casberi.app</span><span>—</span></div>
+  <div class="wipe" id="wipe"></div>
+  <div class="outro" id="outro"><div class="big">Casberi</div><div class="u mono"><b>casberi.app</b></div></div>
+</div>
+<script>
+const clamp01=v=>Math.max(0,Math.min(1,v));
+const easeOut=p=>1-Math.pow(1-p,3);
+const back=p=>{const c=1.7;return 1+(c+1)*Math.pow(p-1,3)+c*Math.pow(p-1,2);};
+const INTRO=0.45, N=10, OUT_AT=27.950000000000003;
+const DUR=[2.6,2.8,2.7,2.6,2.6,2.8,3,2.8,2.6,3];
+const START=[0.45,3.0500000000000003,5.85,8.55,11.15,13.75,16.55,19.55,22.35,24.950000000000003];
+const D=[{"kick":"ONE GRAMMAR","head":"One grammar,\nnot nine apps.","accent":"#2E63FF"},{"kick":"FEELS ALIVE","head":"It feels\nalive.","accent":"#2E63FF"},{"kick":"AUTO OVERVIEWS","head":"Every source\nsums itself up.","accent":"#E8912A"},{"kick":"DAY CARDS","head":"A day is\none card.","accent":"#2E63FF"},{"kick":"MEDIA","head":"Every media\napp you use.","accent":"#2E63FF"},{"kick":"LIVE & PLAYED","head":"Live streams.\nWhat you played.","accent":"#2E63FF"},{"kick":"AND THE REST","head":"Every scroll,\nremembered.","accent":"#2E63FF"},{"kick":"READING","head":"What you\nread.","accent":"#2E63FF"},{"kick":"NOTES & CHATS","head":"Your own\nwords.","accent":"#3fb950"},{"kick":"SOCIAL","head":"Bluesky &\nFarcaster.","accent":"#E0345C"}];
+window.TOTAL=29.85;
+const comps=[...document.querySelectorAll('.comp')];
+
+function activeAt(t){ for(let i=N-1;i>=0;i--) if(t>=START[i]) return i; return 0; }
+function staggerRows(sel,p,stagger,dur,dx){
+  document.querySelectorAll(sel).forEach((r,k)=>{
+    const rp=clamp01((p-k*stagger)/dur);
+    r.style.opacity=rp; r.style.transform='translateX('+((1-easeOut(rp))*(dx||-40))+'px)';
+  });
+}
+function staggerPop(sel,p,stagger,dur){
+  document.querySelectorAll(sel).forEach((r,k)=>{
+    const rp=clamp01((p-k*stagger)/dur);
+    r.style.opacity=rp; r.style.transform='scale('+(0.6+0.4*back(rp))+')';
+  });
+}
+
+window.seek=function(t){
+  const active=activeAt(t);
+  const bs=START[active], local=t-bs, dur=DUR[active], acc=D[active].accent;
+  const pIn=clamp01((local-0.26)/Math.max(0.5,dur-0.45));
+
+  let coverAcc=acc, wipeX=200;
+  const bounds=[]; for(let k=1;k<N;k++) bounds.push({t:START[k],c:D[k].accent}); bounds.push({t:OUT_AT,c:'#14110d'});
+  for(const b of bounds){const p=(t-(b.t-0.34))/0.68; if(p>=0&&p<=1){wipeX=(1-p)*135-p*135*1.15;coverAcc=b.c;}}
+  const wp=document.getElementById('wipe'); wp.style.background=coverAcc; wp.style.transform='skewX(-9deg) translateX('+wipeX+'%)';
+
+  document.getElementById('rule').style.transform='scaleX('+easeOut(clamp01(t/0.6))+')';
+  const wm=document.getElementById('wm'); wm.textContent=D[active].kick;
+  wm.style.fontSize=Math.max(60,Math.min(320,900/(0.6*D[active].kick.length)))+'px';
+  wm.style.color=acc; wm.style.opacity=0.09*clamp01(local/0.4); wm.style.transform='translateY('+((1-easeOut(clamp01(local/0.5)))*30)+'px)';
+
+  const ki=document.getElementById('kick'); ki.textContent=D[active].kick; ki.style.color=acc;
+  const kin=clamp01(local/0.4); ki.style.opacity=easeOut(kin); ki.style.transform='translateX('+((1-easeOut(kin))*-40)+'px)';
+
+  const he=document.getElementById('head'); he.textContent=D[active].head;
+  const hin=clamp01((local-0.06)/0.5); he.style.opacity=clamp01(local/0.2); he.style.transform='translateY('+((1-back(hin))*80)+'px)';
+
+  comps.forEach((c,i)=>{
+    const cbs=START[i], cl=t-cbs, cin=clamp01((cl-0.12)/0.6);
+    const beatEnd=START[i]+DUR[i], outp=clamp01((t-(beatEnd-0.3))/0.4);
+    let op=(i===active?1:0)*clamp01(cl/0.15);
+    if(t>OUT_AT) op*=(1-clamp01((t-OUT_AT)/0.25));
+    const y=(1-back(cin))*180 + outp*200 + Math.sin(t*0.9+i)*5;
+    const rot=(-2.2)+(1-easeOut(cin))*-5+outp*4;
+    c.style.opacity=op; c.style.transform='translateY('+y+'px) rotate('+rot+'deg)';
+  });
+
+  animateComp(active, pIn);
+
+  const fo=(t>OUT_AT)?(1-clamp01((t-OUT_AT)/0.25)):1;
+  ['kick','head'].forEach(id=>{const e=document.getElementById(id);e.style.opacity=Math.min(+e.style.opacity||1,fo);});
+  document.getElementById('outro').style.opacity=easeOut(clamp01((t-(OUT_AT+0.25))/0.5));
+};
+
+function animateComp(i,p){
+  if(i===0) staggerRows('#comp0 .lrow', p, 0.15, 0.35, -40);
+  else if(i===1) staggerRows('#comp1 .lrow', p, 0.12, 0.3, -40);
+  else if(i===2){
+    staggerPop('#comp2 .hc', p, 0.008, 0.3);
+    staggerRows('#comp2 .boardrow', clamp01((p-0.55)/0.4), 0.12, 0.35, -30);
+  }
+  else if(i===3) staggerRows('#comp3 .lrow', p, 0.15, 0.35, -40);
+  else if(i===4) staggerPop('#comp4 .pill', p, 0.08, 0.32);
+  else if(i===5) staggerRows('#comp5 .lrow', p, 0.18, 0.4, -40);
+  else if(i===6) staggerRows('#comp6 .lrow', p, 0.1, 0.28, -40);
+  else if(i===7) staggerRows('#comp7 .lrow', p, 0.13, 0.32, -40);
+  else if(i===8) staggerRows('#comp8 .lrow', p, 0.15, 0.35, -40);
+  else if(i===9) staggerRows('#comp9 .lrow', p, 0.12, 0.3, -40);
+}
+window.seek(0);
+</script></body></html>

@@ -370,3 +370,22 @@
     setInterval(function () { el.classList.toggle('on'); }, 2400);
   }, 1200);
 })();
+
+// "What you can do" switcher: four tabs, one stage. Panels are display:contents
+// so the active one's children become grid items of the stage itself.
+(function candoSwitcher() {
+  var tabs = document.querySelectorAll('.sw-tab');
+  if (!tabs.length) return;
+  tabs.forEach(function (t) {
+    t.addEventListener('click', function () {
+      document.querySelectorAll('.sw-tab').forEach(function (x) { x.classList.remove('on', 'jiggle'); });
+      document.querySelectorAll('.sw-panel').forEach(function (x) { x.classList.remove('on'); });
+      t.classList.add('on');
+      void t.offsetWidth; // restart the animation even if it's re-clicked
+      t.classList.add('jiggle');
+      var p = document.getElementById('p-' + t.dataset.p);
+      if (p) p.classList.add('on');
+    });
+    t.addEventListener('animationend', function () { t.classList.remove('jiggle'); });
+  });
+})();

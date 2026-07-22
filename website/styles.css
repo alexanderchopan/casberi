@@ -84,10 +84,14 @@ nav { display: flex; align-items: center; justify-content: space-between; paddin
 .ai-kalshi    { background: #4fae7b; }
 .ai-stocktwits { background: #008fff; }
 .ai-opensea   { background: #2081e2; }
-/* Read-only exchange seats (prd 163). Coinbase is a white mark on brand
-   blue. Kraken's own mark is purple with a transparent ground, so it takes a
-   WHITE tile rather than a full-bleed one — dropped onto the near-black page
-   it would otherwise float with no tile at all (checked in the browser). */
+/* Read-only exchange seats (prd 163). Coinbase's downloaded app icon carried
+   a baked-in gloss/bevel highlight around its rounded corners (a third-party
+   render, not an official flat asset) — visible as a stray light edge once
+   tiled. Drawn as a flat glyph instead: brand blue field + a hand-traced ring
+   mark, same shape, no artifact. Kraken's own mark is purple with a
+   transparent ground, so it takes a WHITE tile rather than a full-bleed one —
+   dropped onto the near-black page it would otherwise float with no tile at
+   all (checked in the browser). */
 .ai-coinbase  { background: #0052ff; }
 .ai-kraken    { background: #fff; }
 .ai-geckoterminal { background: #272053; }
@@ -121,7 +125,8 @@ nav { display: flex; align-items: center; justify-content: space-between; paddin
 .ai-shopify   { background: #5e8e3e; }
 .ai-deals     { background: #e0245e; }
 .ai-bitrefill { background: #002b28; }
-.ai-privacy   { background: #0b7a5e; }
+/* Privacy.com's own dark-circle mark is full-bleed via .tilefull; no flat
+   background needed here. */
 .ai-openfoodfacts { background: #7cb342; }
 .ai-more      { background: var(--surface-2); color: var(--muted); }
 .ai-more span { font-size: 20px; font-weight: 800; letter-spacing: -1px; line-height: 1; }

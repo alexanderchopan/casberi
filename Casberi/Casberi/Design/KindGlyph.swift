@@ -170,6 +170,7 @@ enum BridgeGlyph {
         case "open food facts": return "barcode.viewfinder"
         case "bitrefill": return "gift"
         case "privacy":   return "creditcard"
+        case "coinbase", "kraken": return "building.columns"
         case "1claw":     return "lock.shield"
         case "homekit":   return "homekit"
         default:          return "app"
