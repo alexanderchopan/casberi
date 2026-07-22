@@ -394,6 +394,12 @@ enum WalletIngest {
                                                               addresses: evmAddresses,
                                                               existing: existing)
         added += privacyPoolsAdded ?? 0
+        // ENS names expire (2026-07-21) — keyless, one GET per readable name,
+        // landing a dated row the "What's coming up?" chip sorts on. Inside the
+        // running guard like everything above.
+        let ensAdded = await ENSExpiry.sync(context: context, addresses: evmAddresses,
+                                            existing: existing)
+        added += ensAdded ?? 0
         // …and the Solana arm (prd §86), which lands its own things off its own
         // two calls. Inside the running guard like everything above.
         let solana = await solanaSync(context: context, addresses: solanaOnly(addresses),
