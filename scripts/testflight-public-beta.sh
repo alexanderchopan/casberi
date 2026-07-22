@@ -49,18 +49,18 @@ api() {
   fi
 }
 
-echo "→ Looking up app $BUNDLE_ID…"
+echo "-- Looking up app $BUNDLE_ID..."
 APP_ID=$(api GET "/apps?filter%5BbundleId%5D=$BUNDLE_ID" | jq -r '.data[0].id')
-[ -n "$APP_ID" ] && [ "$APP_ID" != "null" ] || { echo "✗ app not found"; exit 1; }
+[ -n "$APP_ID" ] && [ "$APP_ID" != "null" ] || { echo "FAIL: app not found"; exit 1; }
 echo "  app id: $APP_ID"
 
-echo "→ Looking up the $PUBLIC_BETA_GROUP_NAME group…"
+echo "-- Looking up the $PUBLIC_BETA_GROUP_NAME group..."
 GROUP_ID=$(api GET "/apps/$APP_ID/betaGroups?fields%5BbetaGroups%5D=name" \
   | jq -r --arg name "$PUBLIC_BETA_GROUP_NAME" '.data[] | select(.attributes.name == $name) | .id')
-[ -n "$GROUP_ID" ] && [ "$GROUP_ID" != "null" ] || { echo "✗ beta group '$PUBLIC_BETA_GROUP_NAME' not found"; exit 1; }
+[ -n "$GROUP_ID" ] && [ "$GROUP_ID" != "null" ] || { echo "FAIL: beta group '$PUBLIC_BETA_GROUP_NAME' not found"; exit 1; }
 echo "  group id: $GROUP_ID"
 
-echo "→ Waiting for build $VERSION to finish processing…"
+echo "-- Waiting for build $VERSION to finish processing..."
 BUILD_ID=""
 for i in $(seq 1 20); do
   RESP=$(api GET "/builds?filter%5Bapp%5D=$APP_ID&filter%5Bversion%5D=$VERSION&fields%5Bbuilds%5D=version,processingState")
@@ -69,14 +69,14 @@ for i in $(seq 1 20); do
   echo "  [$i/20] state: $STATE"
   if [ "$STATE" = "VALID" ]; then break; fi
   if [ "$STATE" = "INVALID" ] || [ "$STATE" = "FAILED" ]; then
-    echo "✗ build $VERSION processing ended in $STATE"; exit 1
+    echo "FAIL: build $VERSION processing ended in $STATE"; exit 1
   fi
   sleep 60
 done
-[ -n "$BUILD_ID" ] || { echo "✗ build $VERSION never appeared / never finished processing"; exit 1; }
+[ -n "$BUILD_ID" ] || { echo "FAIL: build $VERSION never appeared / never finished processing"; exit 1; }
 echo "  build id: $BUILD_ID"
 
-echo "→ Setting beta release notes…"
+echo "-- Setting beta release notes..."
 EXISTING_LOC=$(api GET "/builds/$BUILD_ID/betaBuildLocalizations?filter%5Blocale%5D=en-US" | jq -r '.data[0].id // empty')
 NOTES_JSON=$(jq -n --arg notes "$NOTES" '$notes')
 if [ -n "$EXISTING_LOC" ]; then
@@ -86,20 +86,20 @@ else
   api POST "/betaBuildLocalizations" \
     "{\"data\":{\"type\":\"betaBuildLocalizations\",\"attributes\":{\"locale\":\"en-US\",\"whatsNew\":$NOTES_JSON},\"relationships\":{\"build\":{\"data\":{\"type\":\"builds\",\"id\":\"$BUILD_ID\"}}}}}" > /dev/null
 fi
-echo "  ✓ release notes set"
+echo "  OK: release notes set"
 
-echo "→ Assigning build to $PUBLIC_BETA_GROUP_NAME…"
+echo "-- Assigning build to $PUBLIC_BETA_GROUP_NAME..."
 HTTP=$(curl -s -g -o /dev/null -w "%{http_code}" -X POST \
   -H "Authorization: Bearer $(jwt)" \
   -H "Content-Type: application/json" \
   -d "{\"data\":[{\"type\":\"betaGroups\",\"id\":\"$GROUP_ID\"}]}" \
   "$API/builds/$BUILD_ID/relationships/betaGroups")
-[ "$HTTP" = "204" ] || { echo "✗ group assignment failed (HTTP $HTTP)"; exit 1; }
-echo "  ✓ assigned"
+[ "$HTTP" = "204" ] || { echo "FAIL: group assignment failed (HTTP $HTTP)"; exit 1; }
+echo "  OK: assigned"
 
-echo "→ Submitting for Beta App Review…"
+echo "-- Submitting for Beta App Review..."
 SUBMIT=$(api POST "/betaAppReviewSubmissions" \
   "{\"data\":{\"type\":\"betaAppReviewSubmissions\",\"relationships\":{\"build\":{\"data\":{\"type\":\"builds\",\"id\":\"$BUILD_ID\"}}}}}")
 STATE=$(echo "$SUBMIT" | jq -r '.data.attributes.betaReviewState // .errors[0].detail // "unknown"')
 echo "  betaReviewState: $STATE"
-echo "✓ Public Beta handoff complete for build $VERSION."
+echo "OK: Public Beta handoff complete for build $VERSION."
