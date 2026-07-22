@@ -845,20 +845,39 @@ struct ContributionGraph: View {
     var minColumns: Int = 53
 
     private static let gap: CGFloat = 3
+    /// The geometry every heatmap is measured against — a full year. Cell size
+    /// is derived from THIS, never from the grid's own column count, so a
+    /// windowed heatmap draws the same squares as the year graph and simply
+    /// occupies less width (2026-07-21, user: the social charts "should be
+    /// same size, they are too large"). Before this, the grid stretched its
+    /// columns edge to edge, so cell size scaled inversely with the window —
+    /// the 14-week social grid drew squares roughly six times the year
+    /// graph's, and read as a different, fatter kind of chart.
+    private static let referenceColumns = 53
 
     var body: some View {
         let weeks = year?.weeks ?? []
         let cols = max(weeks.count, minColumns)
+        // A grid longer than a year (never today, but the type allows it)
+        // measures against itself rather than overflowing the card.
+        let reference = max(cols, Self.referenceColumns)
         Canvas { ctx, size in
             let gap = Self.gap
-            let cell = min((size.width - gap * CGFloat(cols - 1)) / CGFloat(cols),
+            let cell = min((size.width - gap * CGFloat(reference - 1)) / CGFloat(reference),
                            (size.height - gap * 6) / 7)
             guard cell > 0 else { return }
+            // A short window sits against the card's TRAILING edge, not its
+            // leading one: the last column is always the current week, and the
+            // year graph puts today at the right. Left-aligned, a 14-week grid
+            // put "now" mid-card with empty space after it, reading as time
+            // that continues with nothing in it.
+            let drawnWidth = CGFloat(cols) * cell + gap * CGFloat(cols - 1)
+            let originX = max(0, size.width - drawnWidth)
             for c in 0..<cols {
                 let week = c < weeks.count ? weeks[c] : nil
                 for r in 0..<7 {
                     let day = (week.map { $0.days.count > r ? $0.days[r] : nil }) ?? nil
-                    let rect = CGRect(x: CGFloat(c) * (cell + gap),
+                    let rect = CGRect(x: originX + CGFloat(c) * (cell + gap),
                                       y: CGFloat(r) * (cell + gap),
                                       width: cell, height: cell)
                     ctx.fill(Path(roundedRect: rect, cornerRadius: 2, style: .continuous),
@@ -866,7 +885,10 @@ struct ContributionGraph: View {
                 }
             }
         }
-        .aspectRatio(CGFloat(cols) / 7.0, contentMode: .fit)
+        // Measured against the reference year too, so every heatmap card is
+        // the same height whatever window it draws — the windowed grid ends
+        // early on the trailing edge instead of growing taller.
+        .aspectRatio(CGFloat(reference) / 7.0, contentMode: .fit)
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
