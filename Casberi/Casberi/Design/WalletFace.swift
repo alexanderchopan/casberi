@@ -26,10 +26,17 @@ struct WalletFace: View {
                 if let avatarURL {
                     AsyncImage(url: avatarURL) { phase in
                         if let image = phase.image {
+                            // The hatch (prd §171, 2026-07-22): a resolved ENS
+                            // avatar doesn't pop over the identicon, it settles
+                            // onto it — a crossfade with a touch of scale, the
+                            // wallet introducing itself. The moment is real (a
+                            // name resolved just now), which is the only kind
+                            // of moment §79 lets us animate.
                             image.resizable().scaledToFill()
-                                .transition(.opacity)
+                                .transition(.opacity.combined(with: .scale(scale: 1.06)))
                         }   // failure/empty: the identicon shows through
                     }
+                    .animation(DS.Motion.standard, value: avatarURL)
                 }
             }
             .frame(width: size, height: size)

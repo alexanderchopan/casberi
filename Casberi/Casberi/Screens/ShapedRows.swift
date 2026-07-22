@@ -35,6 +35,14 @@ struct BandRow: View {
     /// can't support. It's the same fact the title used to carry, moved — not
     /// a second fact invented for the column.
     var moneyColumn: Bool = false
+    /// Where this row sits in its run, for the naming RIPPLE (prd §171,
+    /// 2026-07-22): renaming a counterparty rewrites every landed transfer
+    /// with that address, and the rewrite used to happen invisibly. Now each
+    /// row crossfades its title as the change reaches it, a beat behind the
+    /// row above — you type one word and watch it travel back through months
+    /// of your own history. Modulo'd so a long feed still finishes the sweep
+    /// quickly.
+    var rippleIndex: Int = 0
     @Environment(\.colorScheme) private var scheme
 
     private var done: Bool { thing.mark == .done }
@@ -246,6 +254,13 @@ struct BandRow: View {
             }
             Text(titleText)
                 .dsText(.body17)
+                // The ripple (prd §171): the title dissolves into its new
+                // wording rather than swapping. Keyed on the string, so this
+                // fires ONLY on a real retitle — never on scroll, never on a
+                // first appearance.
+                .contentTransition(.opacity)
+                .animation(DS.Motion.standard.delay(Double(rippleIndex % 8) * 0.045),
+                           value: titleText)
                 .fontWeight(emphasized ? .semibold : .regular)
                 .foregroundStyle(done ? DS.textTertiary : DS.textPrimary)
                 .strikethrough(done, color: DS.textTertiary)

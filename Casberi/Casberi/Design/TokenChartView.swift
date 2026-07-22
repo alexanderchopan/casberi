@@ -142,7 +142,12 @@ struct TokenChartPlot: View {
     /// reach of the tap wins. Absent, they're read-only punctuation (no dead
     /// controls either way — an untappable mark simply isn't a control).
     var onTapMark: ((TokenChartMark) -> Void)? = nil
+    /// How long the caller's own draw-on takes, so the marks can wait for it
+    /// (prd §171). 0 lands them immediately — the default everywhere that
+    /// draws no line of its own.
+    var markDelay: Double = 0
     @State private var pulsing = false
+    @State private var marksLanded = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
@@ -208,6 +213,16 @@ struct TokenChartPlot: View {
                 }
                 if !marks.isEmpty, let plotAnchor = proxy.plotFrame {
                     markLayer(proxy: proxy, plot: geo[plotAnchor])
+                        .onAppear {
+                            guard !marksLanded else { return }
+                            if reduceMotion || markDelay <= 0 {
+                                marksLanded = true
+                            } else {
+                                DispatchQueue.main.asyncAfter(deadline: .now() + markDelay) {
+                                    marksLanded = true
+                                }
+                            }
+                        }
                 }
             }
         }
@@ -218,7 +233,7 @@ struct TokenChartPlot: View {
     /// on the line, never a second series competing with it.
     @ViewBuilder
     private func markLayer(proxy: ChartProxy, plot: CGRect) -> some View {
-        ForEach(marks) { mark in
+        ForEach(Array(marks.enumerated()), id: \.element.id) { i, mark in
             if let x = proxy.position(forX: mark.x),
                let y = proxy.position(forY: value(at: mark.x)) {
                 Circle()
@@ -228,6 +243,18 @@ struct TokenChartPlot: View {
                         Circle().stroke(accent.opacity(0.3), lineWidth: 4)
                     }
                     .position(x: plot.minX + x, y: plot.minY + y)
+                    // The marks LAND (prd §171, 2026-07-22) — they wait for the
+                    // line to finish drawing itself, then spring in left to
+                    // right, in the order the money actually moved. Before
+                    // this they simply existed inside the draw-on mask, which
+                    // wasted the one beat where the line and the events it
+                    // explains could be shown as cause and effect.
+                    .scaleEffect(marksLanded ? 1 : 0.1)
+                    .opacity(marksLanded ? 1 : 0)
+                    .animation(reduceMotion ? nil
+                               : .spring(response: 0.34, dampingFraction: 0.62)
+                                   .delay(Double(i) * 0.05),
+                               value: marksLanded)
                     .accessibilityLabel(mark.label)
             }
         }

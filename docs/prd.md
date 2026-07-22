@@ -6195,3 +6195,66 @@ way that still works — the social doors save the name to the book instead.
 VERIFIED headlessly (`-watchCapProbe`): five added, the sixth returned
 `limitReached`; on screen, the add card states the limit and the address card's
 toggle refuses with "Stop watching one to watch this. Its name stays either way."
+
+## 171. Delight, part two — the moments the wallet work left silent (user: "how would you add surprise and delight and polish the UI?", then "do all these", 2026-07-22)
+
+§79's definition holds and this pass is measured against it: delight is **a real
+moment, made visible** — never decoration, never an idle loop. Everything below
+is gated on an event that actually happened; the moment any of them could fire
+without one, it would be exactly what §79 forbids. Eight, in three families.
+
+**Recognition — the app visibly understanding you.**
+
+1. **The naming ripple.** The best moment in the app, and it was invisible.
+   `retitleWalletThings` already rewrites every landed transfer when you name a
+   counterparty — so now each row CROSSFADES its title as the change reaches
+   it, a beat behind the row above (`rippleIndex`, modulo'd so a long feed
+   still finishes quickly). You type one word and watch it travel back through
+   months of your own history: the corpus thesis — your record, in your words —
+   performed in half a second. Keyed on the title string, so it fires only on a
+   real retitle, never on scroll or first appearance.
+2. **The kind reveal.** `eth_getCode` answers a beat after a book row is on
+   screen; the mark used to hard-swap from round face to square glyph. It turns
+   over now — the app worked out WHAT this address is while you watched, and
+   that is a real moment.
+3. **The avatar hatch.** A resolved ENS avatar settles onto its identicon
+   (crossfade + a touch of scale) instead of popping over it — the wallet
+   introducing itself. Fires on every fresh watch.
+
+**Identity colour, carried further.** The through-line of the whole session:
+faces → tints → the crown pour → the rain → the cards, one colour system saying
+who things are at every layer.
+
+4. **The address card wears its own weather.** A wallet's card pours in ITS
+   face tint — the same hue its identicon, switcher chip, and combined-sheet
+   band already carry, so Mom looks like Mom everywhere. §129-legal: it kept
+   the wash exactly where the source IS the subject, and a person's card is
+   that case precisely. Machinery (contract, Safe) pours in Casberi's own tint,
+   because a contract has no identity to borrow — the round-vs-square rule,
+   said in colour.
+5. **The rain wears the scope.** Pull-to-refresh in a wallet-scoped feed rains
+   in THAT wallet's colour. The crown already retints on a scope switch (§159);
+   the refresh that follows now agrees.
+
+**Motion fit-and-finish — gestures we started, finished.**
+
+6. **The marks land.** The balance line draws itself on over 0.8s; its
+   transaction dots used to simply exist inside that mask. They wait now, then
+   spring in left to right in the order the money moved — the line and the
+   events that explain it, shown as cause and effect.
+7. **The history cascades.** The address card's "history together" arrives a
+   beat at a time (`settleIn`), the sheet grammar it was missing.
+8. **The full shelf.** The watch-cap card shows the five faces above the
+   sentence. Same facts, warmer voice: a refusal that shows you the collection
+   reads as "look what you've got" rather than a scolding — and the faces are
+   literally the five, so nothing is dressed up.
+
+**Declined, on purpose:** idle shimmer on treemap cells, pulsing anything,
+sound, and any confetti beyond the berry rain's two earned triggers. All eight
+above inherit Reduce Motion for free — `settleIn`, `symbolEffect`, the draw-on
+and the springs all already honour it.
+
+VERIFIED on the dedicated sim: the full shelf renders five overlapping faces
+above the limit sentence, and an address card pours in its wallet's own hue
+(confirmed the tint and the identicon share a seed — the pour is the face's
+first hue, its top-left, so they agree by construction).

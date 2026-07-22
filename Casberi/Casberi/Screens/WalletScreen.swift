@@ -588,6 +588,23 @@ struct WalletScreen: View {
     private var limitReachedSection: some View {
         Section {
             VStack(alignment: .leading, spacing: DS.Space.s2) {
+                // The full shelf (prd §171, 2026-07-22): the five faces you're
+                // already watching, above the sentence. Same facts, different
+                // feeling — a refusal that SHOWS you the collection reads as
+                // "look what you've got" rather than a scolding, and the faces
+                // are literally the five, so nothing is dressed up.
+                HStack(spacing: -6) {
+                    ForEach(wallet.addresses) { addr in
+                        WalletFace(address: addr.address, size: 30)
+                            .overlay {
+                                RoundedRectangle(cornerRadius: DS.Radius.appIcon(30),
+                                                 style: .continuous)
+                                    .stroke(DS.surfaceSheet, lineWidth: 2)
+                            }
+                    }
+                    Spacer(minLength: 0)
+                }
+                .padding(.bottom, 2)
                 Text("You're watching \(WalletStore.watchLimit) wallets — the limit for now.")
                     .dsText(.callout15).foregroundStyle(DS.textPrimary)
                     .fixedSize(horizontal: false, vertical: true)

@@ -170,7 +170,9 @@ struct WalletBalanceHeadline: View {
                 TokenChartPlot(chart: chart, accent: accent, height: 52, pulses: false,
                                lineWidth: 2.6, fillOpacity: 0.16, endpointDot: true,
                                marks: marks,
-                               onTapMark: marks.isEmpty ? nil : { onOpenMark($0.id) })
+                               onTapMark: marks.isEmpty ? nil : { onOpenMark($0.id) },
+                               // Wait out the draw-on below, then land (§171).
+                               markDelay: 0.95)
                     .mask(alignment: .leading) {
                         GeometryReader { geo in
                             Rectangle().frame(width: geo.size.width * drawn)

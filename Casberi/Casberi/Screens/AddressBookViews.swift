@@ -29,18 +29,29 @@ struct AddressMark: View {
     var size: CGFloat = 32
 
     var body: some View {
-        if let glyph = entry.kind.glyph {
-            RoundedRectangle(cornerRadius: size * 0.28, style: .continuous)
-                .fill(DS.fillFaint)
-                .frame(width: size, height: size)
-                .overlay {
-                    Image(systemName: glyph)
-                        .font(.system(size: size * 0.42, weight: .semibold))
-                        .foregroundStyle(DS.textSecondary)
-                }
-        } else {
-            WalletFace(address: entry.address, size: size)
+        Group {
+            if let glyph = entry.kind.glyph {
+                RoundedRectangle(cornerRadius: size * 0.28, style: .continuous)
+                    .fill(DS.fillFaint)
+                    .frame(width: size, height: size)
+                    .overlay {
+                        Image(systemName: glyph)
+                            .font(.system(size: size * 0.42, weight: .semibold))
+                            .foregroundStyle(DS.textSecondary)
+                    }
+            } else {
+                WalletFace(address: entry.address, size: size)
+            }
         }
+        // The kind reveal (prd §171, 2026-07-22). Detection lands
+        // asynchronously — `eth_getCode` answers a beat after the row is on
+        // screen — and the mark used to hard-swap from face to square glyph.
+        // Now it turns over: the app worked out WHAT this address is while you
+        // were looking at it, and that's a real moment, so it gets shown.
+        // Keyed on the kind so nothing replays on a scroll or a rename.
+        .transition(.scale(scale: 0.82).combined(with: .opacity))
+        .id(entry.kind)
+        .animation(DS.Motion.standard, value: entry.kind)
     }
 }
 
@@ -263,6 +274,26 @@ struct AddressCard: View {
             }
             .scrollIndicators(.hidden)
             .dsAdaptiveContentWidth()
+            // This address's OWN weather (prd §171, 2026-07-22). §129 kept the
+            // wash exactly where the source IS the subject — the app-detail
+            // page, the bridge setup header, the token quick sheet — and a
+            // person's card is that case precisely: the subject of this screen
+            // is an identity, so the screen wears its color. A wallet pours in
+            // its face tint (the same hue its identicon, its switcher chip and
+            // its band in the combined sheet already carry, so Mom looks like
+            // Mom everywhere); machinery pours in Casberi's own tint, because
+            // a contract has no identity of its own to borrow.
+            .background(alignment: .top) {
+                LinearGradient(stops: [
+                    .init(color: pourHue.opacity(0.26), location: 0),
+                    .init(color: pourHue.opacity(0.08), location: 0.45),
+                    .init(color: pourHue.opacity(0), location: 1),
+                ], startPoint: .top, endPoint: .bottom)
+                    .frame(height: 320)
+                    .frame(maxHeight: .infinity, alignment: .top)
+                    .ignoresSafeArea()
+                    .allowsHitTesting(false)
+            }
             .dsPageBackground()
             .navigationTitle("Address")
             .navigationBarTitleDisplayMode(.inline)
@@ -288,6 +319,16 @@ struct AddressCard: View {
                 Text("A blank name removes it from your book.")
             }
             .task { await AddressKind.detect(entry.address) }
+        }
+    }
+
+    /// A wallet is a who and owns a hue; a contract or a Safe is machinery and
+    /// borrows the app's. Mirrors the mark's own round-vs-square rule, so the
+    /// card's color says the same thing its face does.
+    private var pourHue: Color {
+        switch current.kind {
+        case .wallet, .unknown: return WalletFace.tint(for: current.address)
+        case .contract, .safe:  return DS.tint
         }
     }
 
@@ -364,7 +405,7 @@ struct AddressCard: View {
                 Text("Your history together · \(things.count)")
                     .dsText(.label12).foregroundStyle(DS.textSecondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                ForEach(things.prefix(6)) { thing in
+                ForEach(Array(things.prefix(6).enumerated()), id: \.element.id) { i, thing in
                     HStack(spacing: DS.Space.s3) {
                         KindGlyph(kind: thing.kind, size: 26)
                         VStack(alignment: .leading, spacing: 1) {
@@ -375,6 +416,10 @@ struct AddressCard: View {
                         }
                         Spacer(minLength: 0)
                     }
+                    // The cascade (prd §171) — the app's own sheet grammar,
+                    // which this card was missing: your history with someone
+                    // arrives a beat at a time rather than as a slab.
+                    .settleIn(delay: 0.05 + Double(i) * 0.04)
                 }
             }
             .padding(DS.Space.s3)

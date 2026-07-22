@@ -740,7 +740,13 @@ struct FeedScreen: View {
             // of the app's default berry blue — "All" keeps the default
             // (delight pass 2026-07-21). Set once; both this bump and
             // refreshFeed()'s own read the same stored hue.
-            chrome.refreshHue = source == "All" ? nil : DS.washHue(for: source)
+            // Scoped to one wallet, the rain falls in THAT wallet's colour
+            // (prd §171, 2026-07-22) — the crown already retints on a scope
+            // switch (§159), so the refresh that follows should agree. Every
+            // other room keeps the source's hue; "All" keeps the default berry.
+            chrome.refreshHue = source == "Wallet"
+                ? (selectedWallet.map(WalletFace.tint) ?? DS.washHue(for: source))
+                : (source == "All" ? nil : DS.washHue(for: source))
             chrome.refreshPulse += 1   // spins the avatar door, deals the berry rain
             await refreshFeed()
         }
@@ -2055,7 +2061,7 @@ struct FeedScreen: View {
     private func shapedListRow(_ thing: Thing, index: Int = 0, nextEventID: UUID?,
                                position: RunPosition = .only) -> some View {
         // AnyView: same metadata-depth insurance as GenRender (crash fix).
-        return AnyView(shapedRow(thing, nextEventID: nextEventID))
+        return AnyView(shapedRow(thing, nextEventID: nextEventID, index: index))
             .modifier(RowEntrance(index: index, wave: shapeWave, style: entranceStyle))
             .contentShape(Rectangle())
             .matchedTransitionSource(id: thing.id, in: zoomNS)
@@ -2097,7 +2103,7 @@ struct FeedScreen: View {
     }
 
     @ViewBuilder
-    private func shapedRow(_ thing: Thing, nextEventID: UUID?) -> some View {
+    private func shapedRow(_ thing: Thing, nextEventID: UUID?, index: Int = 0) -> some View {
         // Approval is the one rhythm-breaker everywhere: the consent card.
         if thing.kind == .approval, thing.mark != .done {
             ApprovalCard(thing: thing,
@@ -2121,7 +2127,7 @@ struct FeedScreen: View {
             // The wallet room reads as a ledger (prd §157): the band, with the
             // moved amount pulled out of the sentence into a right-aligned
             // figure. Same anatomy as every other row — one opt-in flag.
-            case .wallet: BandRow(thing: thing, moneyColumn: true)
+            case .wallet: BandRow(thing: thing, moneyColumn: true, rippleIndex: index)
             case .notes:  ExcerptRow(thing: thing, lines: 3)
             case .chat:   ExcerptRow(thing: thing, lines: 2)
             case .social: PostCard(thing: thing)
