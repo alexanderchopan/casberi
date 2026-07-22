@@ -1,0 +1,235 @@
+<title>Address book — where it lives, how it looks</title>
+<style>
+  :root {
+    --page: #0a0b0f; --ink: #f2f4f8; --muted: #99a1b4; --faint: #626b80;
+    --tint: #1673e6; --confirm: #32d74b; --attention: #ff9f0a;
+    --card: rgba(22,24,31,.82);
+    --money: ui-rounded, -apple-system, system-ui, sans-serif;
+    --text: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { background: var(--page); }
+  body {
+    font-family: var(--text); color: var(--ink);
+    background: radial-gradient(900px 420px at 18% -8%, rgba(22,115,230,.10), transparent 62%), var(--page);
+    padding: 48px 28px 72px;
+  }
+  .wrap { max-width: 1180px; margin: 0 auto; }
+  header { max-width: 730px; margin-bottom: 40px; }
+  .eyebrow { font-size: 12px; font-weight: 600; color: #4d8dff; margin-bottom: 10px; }
+  h1 { font-size: clamp(26px,3.6vw,38px); font-weight: 800; letter-spacing: -.02em; line-height: 1.08; text-wrap: balance; margin-bottom: 14px; }
+  header p { font-size: 15px; line-height: 1.55; color: var(--muted); max-width: 64ch; }
+  header p b { color: var(--ink); font-weight: 600; }
+
+  .row { display: flex; flex-wrap: wrap; gap: 34px; align-items: flex-start; justify-content: center; margin-bottom: 50px; }
+  .option { width: 316px; }
+  .phone { width: 316px; border-radius: 44px; padding: 9px; background: #16181d; box-shadow: 0 30px 70px rgba(0,0,0,.55); }
+  .screen {
+    border-radius: 36px; overflow: hidden; position: relative; padding: 18px 14px 20px;
+    background: linear-gradient(180deg, rgba(22,115,230,.30) 0%, rgba(22,115,230,.10) 50%, rgba(22,115,230,0) 100%) top/100% 460px no-repeat, #000;
+  }
+  .caption { margin-top: 18px; padding: 0 6px; }
+  .caption h2 { font-size: 17px; font-weight: 700; margin-bottom: 6px; }
+  .caption h2 span { color: var(--faint); font-weight: 600; }
+  .caption p { font-size: 13.5px; line-height: 1.55; color: var(--muted); }
+
+  .navTitle { font-size: 22px; font-weight: 800; letter-spacing: -.015em; margin: 6px 0 14px; }
+  .sectionLabel { font-size: 11.5px; font-weight: 600; color: var(--faint); margin: 16px 0 8px; }
+
+  .boxed { background: var(--card); border-radius: 18px; padding: 6px 12px; }
+
+  .entry { display: flex; align-items: center; gap: 10px; padding: 9px 0; }
+  .face { width: 32px; height: 32px; border-radius: 50%; flex: none;
+          display: flex; align-items: center; justify-content: center; font-size: 13px; }
+  .f-mom   { background: radial-gradient(circle at 30% 30%, #ff9ec6, #c2477f); }
+  .f-main  { background: radial-gradient(circle at 30% 30%, #7d9bff, #4a56d2); }
+  .f-trading { background: radial-gradient(circle at 30% 30%, #6fe3a5, #2e9e63); }
+  .f-jesse { background: radial-gradient(circle at 30% 30%, #ffd27d, #d2812a); }
+  /* Non-person kinds: a SQUARE mark, not a face — a contract is not a who. */
+  .face.square { border-radius: 9px; }
+  .f-contract { background: #2a2f3d; color: #99a1b4; }
+  .f-safe     { background: #1d3328; color: #58d68d; }
+  .f-exchange { background: #1f2a3f; color: #6ea8ff; }
+
+  .entry .t { flex: 1; min-width: 0; }
+  .entry .t b { display: block; font-size: 14px; font-weight: 600; }
+  .entry .t span { display: block; font-size: 11px; color: var(--faint); font-family: var(--money); }
+  .badge {
+    font-size: 9.5px; font-weight: 700; padding: 3px 8px; border-radius: 999px; flex: none;
+    color: var(--confirm); background: rgba(50,215,75,.12);
+  }
+  .badge.quiet { color: var(--faint); background: rgba(255,255,255,.06); }
+  .copyBtn {
+    width: 26px; height: 26px; border-radius: 8px; flex: none;
+    background: rgba(255,255,255,.07); color: var(--muted);
+    display: flex; align-items: center; justify-content: center; font-size: 11px;
+  }
+
+  .addRow { display: flex; align-items: center; gap: 8px; padding: 11px 2px 9px; color: #4d8dff; font-size: 13.5px; font-weight: 600; }
+  .addRow span { color: var(--faint); font-weight: 400; font-size: 11px; margin-left: auto; }
+  .searchField {
+    display: flex; align-items: center; gap: 7px; font-size: 12px; color: var(--faint);
+    background: rgba(255,255,255,.06); border-radius: 12px; padding: 8px 11px; margin-bottom: 4px;
+  }
+
+  /* card detail frame */
+  .bigFace { width: 64px; height: 64px; border-radius: 50%; margin: 8px auto 10px;
+             display: flex; align-items: center; justify-content: center; font-size: 24px; }
+  .cardName { text-align: center; font-size: 21px; font-weight: 800; }
+  .cardKind { text-align: center; font-size: 11.5px; color: var(--faint); margin: 3px 0 12px; }
+  .addrChip {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    background: var(--card); border-radius: 14px; padding: 11px 13px; margin-bottom: 8px;
+  }
+  .addrChip code { font-family: var(--money); font-size: 11.5px; color: var(--muted); }
+  .addrChip b { font-size: 12px; color: #4d8dff; font-weight: 700; }
+  .toggleRow {
+    display: flex; align-items: center; justify-content: space-between;
+    background: var(--card); border-radius: 14px; padding: 11px 13px; margin-bottom: 8px;
+  }
+  .toggleRow .t b { display: block; font-size: 13.5px; font-weight: 600; }
+  .toggleRow .t span { font-size: 11px; color: var(--faint); }
+  .knob { width: 42px; height: 26px; border-radius: 999px; background: rgba(255,255,255,.14); position: relative; flex: none; }
+  .knob i { position: absolute; top: 2px; left: 2px; width: 22px; height: 22px; border-radius: 50%; background: #fff; opacity: .85; }
+  .knob.on { background: var(--confirm); } .knob.on i { left: auto; right: 2px; }
+  .histRow { display: flex; align-items: center; gap: 9px; padding: 8px 2px; }
+  .histRow .g { width: 24px; height: 24px; border-radius: 8px; background: rgba(255,255,255,.07);
+                display: flex; align-items: center; justify-content: center; font-size: 10px; flex: none; }
+  .histRow .t { flex: 1; font-size: 12px; }
+  .histRow .t span { display: block; font-size: 10px; color: var(--faint); }
+  .histRow .amt { font-family: var(--money); font-size: 12px; font-weight: 700; color: var(--muted); }
+  .histRow .amt.up { color: var(--confirm); }
+
+  /* frame 3: tx sheet */
+  .sheetEyebrow { font-size: 11px; color: var(--faint); margin-bottom: 14px; display: flex; gap: 6px; align-items: center; }
+  .stage { display: flex; align-items: center; justify-content: center; gap: 22px; margin: 12px 0 6px; }
+  .stage .who { text-align: center; }
+  .stage .who .face { width: 52px; height: 52px; margin: 0 auto 6px; border-radius: 14px; }
+  .stage .who b { font-size: 12px; font-weight: 600; display: block; }
+  .stage .arrow { color: var(--muted); font-size: 18px; }
+  .bigAmt { text-align: center; font-family: var(--money); font-size: 30px; font-weight: 800; margin: 10px 0 2px; }
+  .chainLbl { text-align: center; font-size: 12px; color: var(--faint); margin-bottom: 14px; }
+  .promptCard {
+    background: var(--card); border-radius: 16px; padding: 13px 14px; margin-top: 10px;
+  }
+  .promptCard b { font-size: 13.5px; font-weight: 700; display: block; margin-bottom: 3px; }
+  .promptCard p { font-size: 11.5px; color: var(--muted); line-height: 1.45; margin-bottom: 10px; }
+  .promptBtns { display: flex; gap: 8px; }
+  .pb { flex: 1; text-align: center; font-size: 12.5px; font-weight: 700; padding: 9px 0; border-radius: 11px; }
+  .pb.primary { background: var(--tint); color: #fff; }
+  .pb.quiet { background: rgba(255,255,255,.08); color: var(--muted); }
+
+  .doors { max-width: 900px; margin: 0 auto; }
+  .doors h3 { font-size: 15px; font-weight: 700; margin-bottom: 14px; }
+  .doorGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 12px; margin-bottom: 26px; }
+  .door { background: rgba(255,255,255,.035); border-radius: 16px; padding: 14px 16px; }
+  .door b { display: block; font-size: 13.5px; font-weight: 700; margin-bottom: 4px; }
+  .door p { font-size: 12.5px; line-height: 1.5; color: var(--muted); }
+  .law { font-size: 12.5px; line-height: 1.6; color: var(--faint); max-width: 76ch; }
+  .law b { color: var(--muted); font-weight: 600; }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .option { animation: rise .5s ease-out backwards; }
+    .option:nth-child(2) { animation-delay: .08s; }
+    .option:nth-child(3) { animation-delay: .16s; }
+    @keyframes rise { from { opacity: 0; transform: translateY(14px); } }
+  }
+</style>
+
+<div class="wrap">
+<header>
+  <div class="eyebrow">Casberi · wallet world · the address book</div>
+  <h1>Named addresses: one ledger, three doors</h1>
+  <p>Naming is cheap; watching is deliberate. The book is a ledger of <b>named addresses</b> — and an address isn't always a wallet: people, your own accounts, contracts, Safes, exchange deposits. Kind is <b>detected, never asked</b> (eth_getCode says contract, the Safe service says Safe — machinery the app already runs). Only people and your own wallets wear round faces; a contract is not a who, so it gets a square mark.</p>
+</header>
+
+<div class="row">
+
+  <!-- ============ 1: THE BOOK ============ -->
+  <div class="option">
+    <div class="phone"><div class="screen">
+      <div class="navTitle">Wallet</div>
+      <div class="sectionLabel">Watching · activity lands in your feed</div>
+      <div class="boxed">
+        <div class="entry"><span class="face f-main"></span><div class="t"><b>Main</b><span>0xd8dA…6045</span></div><span class="badge">Watching</span><span class="copyBtn">⧉</span></div>
+        <div class="entry"><span class="face f-trading"></span><div class="t"><b>Trading</b><span>0x28C6…1d60</span></div><span class="badge">Watching</span><span class="copyBtn">⧉</span></div>
+      </div>
+      <div class="sectionLabel">Address book · names only, nothing lands</div>
+      <div class="boxed">
+        <div class="searchField">🔍 Find by name or 0x…</div>
+        <div class="entry"><span class="face f-mom"></span><div class="t"><b>Mom</b><span>0x9a2E…44b1</span></div><span class="copyBtn">⧉</span></div>
+        <div class="entry"><span class="face f-jesse"></span><div class="t"><b>jesse.base.eth</b><span>0x2211…9d0f</span></div><span class="copyBtn">⧉</span></div>
+        <div class="entry"><span class="face square f-safe">▣</span><div class="t"><b>Team Safe</b><span>0x77Ab…3c02 · Safe · 2 of 3</span></div><span class="copyBtn">⧉</span></div>
+        <div class="entry"><span class="face square f-exchange">◫</span><div class="t"><b>My Coinbase deposit</b><span>0x50e1…88f4</span></div><span class="copyBtn">⧉</span></div>
+        <div class="entry"><span class="face square f-contract">{}</span><div class="t"><b>Milady mint</b><span>0x5Af0…c4A6 · Contract</span></div><span class="copyBtn">⧉</span></div>
+        <div class="addRow">+ Name an address <span>paste one, or several</span></div>
+      </div>
+    </div></div>
+    <div class="caption">
+      <h2>1 · The book <span>— lives on the Wallet screen</span></h2>
+      <p>Same page as Watching (§139: manage is one page), one section down. Copy rides every row — the book's most-used verb. Watched wallets are just book entries wearing the "Watching" badge; kind marks are detected, and only people get faces.</p>
+    </div>
+  </div>
+
+  <!-- ============ 2: THE ADDRESS CARD ============ -->
+  <div class="option">
+    <div class="phone"><div class="screen">
+      <div class="sheetEyebrow">📒 Address · in your book</div>
+      <div class="bigFace f-mom"></div>
+      <div class="cardName">Mom</div>
+      <div class="cardKind">Wallet · named Jul 21</div>
+      <div class="addrChip"><code>0x9a2E4c81f22D07360bd44b1e5A9744b1</code><b>Copy</b></div>
+      <div class="toggleRow">
+        <div class="t"><b>Land its activity</b><span>Transfers, approvals, holdings — the full feed</span></div>
+        <div class="knob"><i></i></div>
+      </div>
+      <div class="sectionLabel">Your history together · 3 things</div>
+      <div class="boxed">
+        <div class="histRow"><span class="g">↑</span><div class="t">Sent to Mom<span>Ethereum · May 12</span></div><span class="amt">−0.5 ETH</span></div>
+        <div class="histRow"><span class="g">↓</span><div class="t">Received from Mom<span>Base · Apr 2</span></div><span class="amt up">+120 USDC</span></div>
+        <div class="histRow"><span class="g">↑</span><div class="t">Sent to Mom<span>Ethereum · Feb 27</span></div><span class="amt">−0.2 ETH</span></div>
+      </div>
+      <div class="addrChip" style="margin-top:10px"><code>View on Etherscan</code><b>↗</b></div>
+    </div></div>
+    <div class="caption">
+      <h2>2 · The address card <span>— tap any entry</span></h2>
+      <p>The person-card pattern (casberi://person) extended to addresses: face, name, the full address with Copy, the watch toggle as an UPGRADE on the entry — and your actual history with this address, pulled from the corpus. The book is corpus-native, not a contacts app bolted on.</p>
+    </div>
+  </div>
+
+  <!-- ============ 3: THE DOOR IN THE WILD ============ -->
+  <div class="option">
+    <div class="phone"><div class="screen">
+      <div class="sheetEyebrow">🔵 Transaction · 2h ago</div>
+      <div class="stage">
+        <div class="who"><span class="face f-main" style="border-radius:14px"></span><b>You</b></div>
+        <div class="arrow">→</div>
+        <div class="who"><span class="face square f-contract" style="width:52px;height:52px;font-size:18px">{}</span><b>0x5Af0…c4A6 ✎</b></div>
+      </div>
+      <div class="bigAmt">− 0.08 ETH</div>
+      <div class="chainLbl">Ethereum</div>
+      <div class="promptCard">
+        <b>Name this address?</b>
+        <p>A contract you've now used twice. A name here retitles every transaction with it — past and future.</p>
+        <div class="promptBtns"><span class="pb primary">Name it</span><span class="pb quiet">Not now</span></div>
+      </div>
+    </div></div>
+    <div class="caption">
+      <h2>3 · The door in the wild <span>— where naming already lives</span></h2>
+      <p>The counterparty pencil today opens a bare rename alert; it becomes the book's third door. The nudge appears on the SECOND encounter with an unnamed address — once is noise, twice is a relationship. "Contract" is already detected, so the prompt says what it is.</p>
+    </div>
+  </div>
+
+</div>
+
+<div class="doors">
+  <h3>Where you reach it — every door already exists</h3>
+  <div class="doorGrid">
+    <div class="door"><b>The Wallet screen</b><p>The book's home: one section below Watching, same one-page manage surface the sync chip already opens. No new navigation destination.</p></div>
+    <div class="door"><b>Any transaction's counterparty</b><p>The pencil on a transfer stage — today's rename alert becomes "add to book," and the second-encounter nudge invites it proactively.</p></div>
+    <div class="door"><b>Social profiles</b><p>"Watch their wallet" on a Farcaster/Bluesky profile gains a lighter sibling: "Add to book" — name without the pipeline.</p></div>
+    <div class="door"><b>The composer</b><p>"who is 0x9a2E…" answers from the book; "mom's wallet" retrieves through it. Names become part of how you ask.</p></div>
+  </div>
+  <p class="law"><b>What stays honest:</b> kind is detected (getCode → Contract, Safe service → Safe, watched → Watching), never a form the person fills. Naming costs zero network and lands nothing. Watching stays the deliberate upgrade, on the entry, with its cost stated ("the full feed"). Unwatching demotes back to the book — history wiped honestly, the name kept, because the name is the person's own data.</p>
+</div>
+</div>
