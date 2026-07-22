@@ -131,8 +131,61 @@ struct WalletBalanceHeadline: View {
         VStack(alignment: .leading, spacing: DS.Space.s1) {
             // Only the reading is a door — the chips and the marks below are
             // their own controls, so the tappable region stops at the number.
-            Button { onOpen?() } label: {
-                VStack(alignment: .leading, spacing: DS.Space.s1) {
+            //
+            // A door-less reading is NOT a disabled button (fixed 2026-07-21,
+            // caught on screen): `.disabled` dims a plain button's whole label,
+            // so with one wallet watched — no breakdown, no door — the crown
+            // number rendered grey instead of white, and the room's loudest
+            // element was its faintest. The honesty corollary the design law
+            // already states for backgrounds, applied to ink: when there's no
+            // action, don't render a control at all.
+            if let onOpen {
+                Button(action: onOpen) {
+                    reading.contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+            } else {
+                reading
+            }
+
+            if let chart {
+                // Taller, heavier, and ending on a solid dot (prd §157) — the
+                // line is the total said a second way, so it carries weight
+                // like the total does.
+                // Body in the STROKE, not the fill (measured on screen
+                // 2026-07-21): a portfolio line is nearly flat most weeks, so
+                // it hugs the top of its box and a 0.30 fill under it paints a
+                // solid slab rather than a glow. 2.6pt of line reads as
+                // confidence; a heavy fill just reads as a rectangle.
+                TokenChartPlot(chart: chart, accent: accent, height: 52, pulses: false,
+                               lineWidth: 2.6, fillOpacity: 0.16, endpointDot: true,
+                               marks: marks,
+                               onTapMark: marks.isEmpty ? nil : { onOpenMark($0.id) })
+                    .mask(alignment: .leading) {
+                        GeometryReader { geo in
+                            Rectangle().frame(width: geo.size.width * drawn)
+                        }
+                    }
+                    .onAppear { draw() }
+                    .onChange(of: chart.closes) { draw(redraw: true) }
+                    .padding(.top, DS.Space.s1)
+                if ranges.count > 1 { rangeChips }
+            } else {
+                // No line yet — say why, rather than leaving the number
+                // hanging over empty space. The total above it is already
+                // real; this is only about the SHAPE not existing yet.
+                Text("The line starts once a second reading lands.")
+                    .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                    .padding(.top, 2)
+            }
+        }
+    }
+
+    /// The reading itself — caption, total, delta, and why it moved. Rendered
+    /// bare or inside a Button depending on whether there's anything behind a
+    /// tap; identical either way.
+    private var reading: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s1) {
                     HStack(spacing: 5) {
                         // Quieter than it was (prd §157): hierarchy is the GAP
                         // between the loud thing and the quiet one, and a
@@ -183,38 +236,7 @@ struct WalletBalanceHeadline: View {
                             .lineLimit(1)
                     }
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .disabled(onOpen == nil)
-
-            if let chart {
-                // Taller, heavier, and ending on a solid dot (prd §157) — the
-                // line is the total said a second way, so it carries weight
-                // like the total does.
-                TokenChartPlot(chart: chart, accent: accent, height: 52, pulses: false,
-                               lineWidth: 2.4, fillOpacity: 0.30, endpointDot: true,
-                               marks: marks,
-                               onTapMark: marks.isEmpty ? nil : { onOpenMark($0.id) })
-                    .mask(alignment: .leading) {
-                        GeometryReader { geo in
-                            Rectangle().frame(width: geo.size.width * drawn)
-                        }
-                    }
-                    .onAppear { draw() }
-                    .onChange(of: chart.closes) { draw(redraw: true) }
-                    .padding(.top, DS.Space.s1)
-                if ranges.count > 1 { rangeChips }
-            } else {
-                // No line yet — say why, rather than leaving the number
-                // hanging over empty space. The total above it is already
-                // real; this is only about the SHAPE not existing yet.
-                Text("The line starts once a second reading lands.")
-                    .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-                    .padding(.top, 2)
-            }
-        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     /// The window chips — the token chart's own grammar, at the wallet's dose.

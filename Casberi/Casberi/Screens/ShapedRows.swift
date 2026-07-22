@@ -24,9 +24,32 @@ struct BandRow: View {
     /// Honest by construction: the caller derives it from the source's own
     /// current-live set, never from the row's age.
     var live: Bool = false
+    /// The wallet room's ledger reading (prd §158, 2026-07-21): the moved
+    /// amount leaves the sentence and becomes a right-aligned figure, so a
+    /// stream of transactions scans as a column of magnitudes instead of a
+    /// column of prose. Opt-in — only the Wallet shape asks for it.
+    ///
+    /// The figure is the ASSET amount ("+0.4 ETH"), never a dollar value:
+    /// nothing on a landed transfer records what it was worth at the time, and
+    /// pricing a past transfer at today's rate would be a number the record
+    /// can't support. It's the same fact the title used to carry, moved — not
+    /// a second fact invented for the column.
+    var moneyColumn: Bool = false
     @Environment(\.colorScheme) private var scheme
 
     private var done: Bool { thing.mark == .done }
+
+    /// The signed amount for the money column, when this row has one. Only
+    /// directional transfers qualify: a swap and a self-move have two legs and
+    /// no single signed number, so they keep their full sentence and no column
+    /// (`transferDirection` is nil for both, by the field's own contract).
+    private var moneyAmount: (text: String, received: Bool)? {
+        guard moneyColumn, let direction = thing.transferDirection,
+              let amount = thing.transferAmount, !amount.isEmpty,
+              direction == "received" || direction == "sent" else { return nil }
+        let received = direction == "received"
+        return ("\(received ? "+" : "−")\(amount)", received)
+    }
 
     /// The trailing label — a project tag normally, or which wallet a
     /// transaction came from when more than one is watched (2026-07-09):
@@ -131,10 +154,21 @@ struct BandRow: View {
     }
 
     /// Events carry their clock time inline — the left time column died.
+    ///
+    /// A money-column row drops the amount from its sentence ("Received 0.4
+    /// ETH from jesse.eth" → "Received from jesse.eth") because the column now
+    /// says it — printing it twice was the first thing that looked wrong on
+    /// screen. Display only: `thing.title` is untouched, so search, Spotlight,
+    /// and the sheet all still read the full sentence.
     private var titleText: String {
-        thing.kind == .event
-            ? "\(thing.title) · \(thing.capturedAt.formatted(date: .omitted, time: .shortened))"
-            : thing.title
+        if thing.kind == .event {
+            return "\(thing.title) · \(thing.capturedAt.formatted(date: .omitted, time: .shortened))"
+        }
+        if moneyAmount != nil, let amount = thing.transferAmount,
+           let range = thing.title.range(of: " \(amount)") {
+            return thing.title.replacingCharacters(in: range, with: "")
+        }
+        return thing.title
     }
 
     /// The project writes in ITS color (V3b): stable per name, same hue on
@@ -230,6 +264,17 @@ struct BandRow: View {
                 RemoteThumb(urlString: art, size: 26, fallback: thing.source)
             }
             VStack(alignment: .trailing, spacing: 1) {
+                // The ledger figure leads the trailing stack (prd §158) —
+                // rounded and tabular so a run of rows lines up on the decimal.
+                // Green only on a receive: money arriving is the one state
+                // worth coloring, and a send in red would read as an error.
+                if let money = moneyAmount {
+                    Text(money.text)
+                        .dsText(.price16)
+                        .monospacedDigit()
+                        .foregroundStyle(money.received ? DS.confirm : DS.textPrimary)
+                        .lineLimit(1)
+                }
                 if live {
                     HStack(spacing: 4) {
                         Circle().fill(DS.confirm).frame(width: 6, height: 6)

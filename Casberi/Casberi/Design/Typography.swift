@@ -56,6 +56,12 @@ extension DSTextStyle {
     // fat feed row's price. Display-tier rounded bold, and routed through
     // this ramp precisely so they SCALE with Dynamic Type like everything
     // else (raw `.font(.system(size:))` froze while neighbors grew).
+    /// The portfolio rung (prd §157, 2026-07-21) — one step above `price40`,
+    /// for the single biggest number in the app: the wallet room's combined
+    /// total. A money app's confidence lives in its numerals, and at 40 beside
+    /// its own caption the total read as one more label. Nothing else earns
+    /// this size; a second user would flatten the hierarchy it exists to make.
+    static let price48 = DSTextStyle(size: 48, weight: .bold, tracking: 0, lineHeight: 52, relative: .largeTitle, rounded: true)
     static let price40 = DSTextStyle(size: 40, weight: .bold, tracking: 0, lineHeight: 44, relative: .largeTitle, rounded: true)
     static let stat24  = DSTextStyle(size: 24, weight: .bold, tracking: 0, lineHeight: 28, relative: .title2, rounded: true)
     static let price16 = DSTextStyle(size: 16, weight: .bold, tracking: 0, lineHeight: 20, relative: .callout, rounded: true)

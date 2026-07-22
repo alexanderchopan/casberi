@@ -5345,3 +5345,60 @@ positions (forecloses on §84's watching-can-never-trade promise), and
 yield-ranked vault discovery ("top APY vaults") — unlike GeckoTerminal
 trending, surfacing ranked yields drifts toward recommending financial
 products, which the honesty rule and the no-advice line both refuse.
+
+## 158. The wallet room stops being sterile (user: "how do we make it look cooler… i don't think 'ooooh this is lovely'", 2026-07-21)
+
+Ruled from three on-page treatments (`design/wallet-look/wallet-look-mocks.html`,
+same components, different color temperature): **A (the pour) + the four shared
+moves + C's treemap.** The diagnosis the mocks made visible: the room was
+ink-only — every hue on it was a 16pt face or a delta pill — so the crown
+feature photographed as a dashboard, not a money app. Cash App and Uber both
+let one color own a region; we let none.
+
+**The pour — the one exception to §129, argued from inside it.** §129 retired
+the per-source brand wash because the hue was the SOURCE's brand ("borrowed
+identity, not owned") and because a browsing surface doesn't need decoration
+the chip strip already provides. Both objections are answered rather than
+ignored: the Wallet feed pours **Casberi's own tint**, not Wallet's brand blue
+(§129's own words: Cash App is "bold in ONE color that's *theirs*"), and scoped
+to a wallet it pours **that wallet's face tint**, where hue is information —
+which wallet am I standing in — and switching wallets re-tints the room. 340pt,
+gone before the transaction rows, half dose in light mode (the same field that
+reads as atmosphere on ink reads as a stain on white). Every OTHER feed stays
+ink: §129 holds everywhere it was aimed.
+
+**C's treemap — tokens wear their own color.** A cell's wash is now the token's
+brand hue (`Design/TokenHue.swift`) at the opacity `DS.tint(magnitude:)` used —
+hue became identity, magnitude still rides size AND saturation, so nothing the
+old wash encoded was lost. This amends 2026-07-10's "colored fills read as
+noise", which judged FLAT fills before the magnitude wash existed. A symbol
+whose brand color we don't actually know keeps the neutral wash — `TokenIcon`'s
+own rule (never a guessed mark) applied to color, which is why a real map reads
+half-branded and that's correct.
+
+**The four moves, independent of the above.** (1) The total takes a new type
+rung, `price48` — the one number in the app that earns it. (2) Its caption
+drops to tertiary: hierarchy is the GAP between loud and quiet. (3) The line
+gets body in the STROKE (2.6pt) and LESS in the fill (0.16) — measured on
+screen: a portfolio line is nearly flat most weeks, so it hugs the top of its
+box and a heavy fill paints a slab, not a glow — plus a static endpoint dot
+(the pulse's honest twin: "latest reading", not "streaming"). (4) Transaction
+rows become a **ledger**: the moved amount leaves the sentence and becomes a
+right-aligned rounded tabular figure, green only on a receive ("Sent" ·
+"−100,000 USDC"). It is the ASSET amount, never a dollar value — nothing on a
+landed transfer records what it was worth then, and pricing a past transfer at
+today's rate would be a number the record can't support.
+
+**Bug this pass caught (shipped this morning, in every single-wallet install):**
+the balance headline was a `Button` that `.disabled()` itself when there was no
+breakdown to open — and a disabled plain button dims its whole label, so the
+room's loudest element rendered grey for anyone watching one wallet. A
+door-less reading now renders bare instead of as an inert control. The design
+law's existing corollary ("a hand-rolled button MUST swap its background when
+disabled") extended to ink: when there's no action, don't render a control.
+
+**Found while verifying, filed separately:** a watched wallet's history carried
+"Sent 100,000 USDC" where the symbol is `U`+U+0301, Cyrillic `Ѕ`, `D`, Cyrillic
+`С` — a homograph spoof, rendered faithfully and unflagged. The app detects
+address poisoning but not symbol spoofing; same attack, different field. The
+money column raises the stakes by setting symbols large.

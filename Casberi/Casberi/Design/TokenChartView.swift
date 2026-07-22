@@ -123,6 +123,18 @@ struct TokenChartPlot: View {
     /// pulsing endpoint there overclaims (the row's own ruling; review
     /// 2026-07-11). The sheet, which refetches per range, keeps the pulse.
     var pulses = true
+    /// The line's weight and the area's density (prd §157, 2026-07-21). The
+    /// defaults are the chart family's own hairline dose, unchanged
+    /// everywhere; the wallet balance line asks for more body, because a thin
+    /// line under a 48pt total read as an afterthought rather than the same
+    /// fact drawn twice.
+    var lineWidth: CGFloat = 2
+    var fillOpacity: Double = 0.22
+    /// A solid dot on the last point — the pulse's quiet twin (prd §157). The
+    /// breathing halo claims live streaming and stays off by default (the
+    /// 2026-07-11 ruling); a static dot only claims "this is the latest
+    /// reading", which every one of these lines can honestly say.
+    var endpointDot = false
     /// Moments to mark on the curve (transactions, prd §155) — empty
     /// everywhere but the wallet balance line.
     var marks: [TokenChartMark] = []
@@ -141,10 +153,12 @@ struct TokenChartPlot: View {
             LineMark(x: .value("t", Double(i)), y: .value("price", close))
                 .interpolationMethod(chart.coarse ? .linear : .catmullRom)
                 .foregroundStyle(accent)
+                .lineStyle(StrokeStyle(lineWidth: lineWidth, lineCap: .round,
+                                       lineJoin: .round))
             AreaMark(x: .value("t", Double(i)), y: .value("price", close))
                 .interpolationMethod(chart.coarse ? .linear : .catmullRom)
                 .foregroundStyle(LinearGradient(
-                    colors: [accent.opacity(0.22), accent.opacity(0)],
+                    colors: [accent.opacity(fillOpacity), accent.opacity(0)],
                     startPoint: .top, endPoint: .bottom))
             if chart.coarse {
                 PointMark(x: .value("t", Double(i)), y: .value("price", close))
@@ -178,6 +192,19 @@ struct TokenChartPlot: View {
                         withAnimation(.easeInOut(duration: 1.4)
                             .repeatForever(autoreverses: true)) { pulsing = true }
                     }
+                }
+                // The static endpoint — drawn only when the pulse isn't, so
+                // the two can never stack into a dot with a halo it didn't ask
+                // for.
+                if endpointDot, !pulses, let plotAnchor = proxy.plotFrame,
+                   let last = chart.closes.last,
+                   let x = proxy.position(forX: Double(chart.closes.count - 1)),
+                   let y = proxy.position(forY: last) {
+                    let plot = geo[plotAnchor]
+                    Circle()
+                        .fill(accent)
+                        .frame(width: 7, height: 7)
+                        .position(x: plot.minX + x, y: plot.minY + y)
                 }
                 if !marks.isEmpty, let plotAnchor = proxy.plotFrame {
                     markLayer(proxy: proxy, plot: geo[plotAnchor])

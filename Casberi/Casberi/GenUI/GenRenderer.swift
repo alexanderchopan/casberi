@@ -2053,8 +2053,37 @@ private struct GenTagMap: View {
                         // claiming substance.
                         ZStack {
                             DS.surfaceSheet
-                            if iconMode == "token", !preview {
-                                DS.tint(magnitude: usdShare(of: item))
+                            if !preview {
+                                // Every map wears it now, not just token maps
+                                // (2026-07-21, user: "applying the same wash to
+                                // the themes") — the Themes lede on the All
+                                // feed was the last flat treemap in the app.
+                                // One tint, opacity by share, biggest cell
+                                // brightest. One hue on purpose: a per-theme
+                                // palette was pitched the same day and declined
+                                // ("I don't want all these random colors"), so
+                                // magnitude stays the only thing the fill says.
+                                // A TOKEN map's cell additionally wears the
+                                // token's OWN color, at that same magnitude
+                                // opacity (prd §158, 2026-07-21): hue is
+                                // identity, size and saturation are still
+                                // magnitude. A token whose brand color we
+                                // don't actually know keeps the neutral wash —
+                                // see TokenHue.
+                                //
+                                // The `iconMode` guard is load-bearing, not
+                                // leftover: `item.tag` is a project NAME on a
+                                // theme map, and a tag that happens to spell a
+                                // ticker ("OP", "ARB") would otherwise paint
+                                // that theme in a token's brand color — hue
+                                // claiming an identity it doesn't have.
+                                if iconMode == "token",
+                                   let wash = TokenHue.wash(for: item.tag,
+                                                            share: usdShare(of: item)) {
+                                    wash
+                                } else {
+                                    DS.tint(magnitude: usdShare(of: item))
+                                }
                             }
                         }
                         .opacity((preview ? (breathe ? 0.55 : 0.85) : 1)
