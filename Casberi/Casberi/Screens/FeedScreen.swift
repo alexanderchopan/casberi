@@ -2185,7 +2185,7 @@ struct FeedScreen: View {
                 .settleIn(delay: 0.05)
             Button {
                 DSHaptic.selection()
-                HomeRoute.shared.push = .apps
+                HomeRoute.shared.present(.apps)
             } label: {
                 HStack(spacing: DS.Space.s1) {
                     Text("Open the catalog")
@@ -2761,7 +2761,7 @@ private struct EmptyFeedPile: View {
                     try? await Task.sleep(for: .seconds(1.5))
                     NSLog("pileTap: \(name)")
                     HomeRoute.shared.openOffer = name
-                    HomeRoute.shared.push = .apps
+                    HomeRoute.shared.present(.apps)
                 }
             }
             #endif
@@ -2780,7 +2780,7 @@ private struct EmptyFeedPile: View {
         Button {
             DSHaptic.selection()
             HomeRoute.shared.openOffer = name
-            HomeRoute.shared.push = .apps
+            HomeRoute.shared.present(.apps)
         } label: {
             BridgeIcon(name: name, size: size)
         }

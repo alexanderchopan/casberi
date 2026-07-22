@@ -165,8 +165,8 @@ struct MainSurface: View {
                 // chips (the 56pt Stories size is a 2026-07-10 ruling, not
                 // being revisited here).
                 SourceChips(labels: chipLabels, active: filter.source,
-                            onApps: { route.push = .apps },
-                            onSettings: { route.push = .settings },
+                            onApps: { route.present(.apps) },
+                            onSettings: { route.present(.settings) },
                             refreshSpin: chrome.refreshPulse,
                             zoomNS: doorNS) { label in
                     if label == filter.source {

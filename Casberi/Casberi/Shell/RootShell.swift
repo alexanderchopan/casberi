@@ -621,7 +621,7 @@ struct RootShell: View {
             guard landInCatalog else { return }
             landInCatalog = false
             FeedFilter.shared.source = "All"
-            HomeRoute.shared.push = .apps
+            HomeRoute.shared.present(.apps)
         }) {
             // Onboarding is ONE screen (re-ruled 2026-07-16 — the connect
             // screen died): the "How it works" greeting, wearing the rain
@@ -678,9 +678,9 @@ struct RootShell: View {
         // wherever the chip header currently sits (back-compat for
         // casberi://apps and //account).
         case "account", "apps":
-            HomeRoute.shared.push = .apps
+            HomeRoute.shared.present(.apps)
         case "settings":
-            HomeRoute.shared.push = .settings
+            HomeRoute.shared.present(.settings)
         // casberi://person/<Source>/<handle> — the profile card for one person
         // on one network (2026-07-16). In the app it's reached by tapping a
         // face; this is the same card by name, so the screen sweep can reach it
@@ -742,7 +742,7 @@ struct RootShell: View {
                 // be a dead control (honesty rule).
                 if name == "@apps" {
                     composerOpen = false
-                    HomeRoute.shared.push = .apps
+                    HomeRoute.shared.present(.apps)
                     return
                 }
                 // Other sentinels ("@wallet", "@token:…") are surface routes,
