@@ -115,6 +115,7 @@ nav { display: flex; align-items: center; justify-content: space-between; paddin
 .ai-shopify   { background: #5e8e3e; }
 .ai-deals     { background: #e0245e; }
 .ai-bitrefill { background: #002b28; }
+.ai-privacy   { background: #0b7a5e; }
 .ai-openfoodfacts { background: #7cb342; }
 .ai-more      { background: var(--surface-2); color: var(--muted); }
 .ai-more span { font-size: 20px; font-weight: 800; letter-spacing: -1px; line-height: 1; }

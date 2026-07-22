@@ -131,6 +131,13 @@ enum ProbeHooks {
         Hook(key: "oneclawProbe") { _, _ in
             Task { await OneClawFetch.probe() }
         },
+        // `-privacyProbe YES` reads the STORED Privacy key (connect first via
+        // `-tokenBridge "Privacy:<key>"`) and NSLogs the RAW transactions
+        // shape — HTTP status, envelope keys, count, and the first txn's
+        // fields — the measure tool for an UNMEASURED API. Reads only.
+        Hook(key: "privacyProbe") { _, _ in
+            Task { await PrivacyFetch.probe() }
+        },
         // `-fcName <username>` connects Farcaster headlessly (appends, so a
         // comma-separated list watches several — dedupes, safe to re-fire).
         Hook(key: "fcName") { name, context in

@@ -129,6 +129,14 @@ enum BridgeCatalog {
         Offer(name: "Bitrefill",   tagline: "Your gift cards, in reach",             group: "Shopping",  connectable: true,
               summary: "What you buy on Bitrefill lands in your feed — gift cards wearing their own artwork, phone top-ups, eSIMs, balance refills — with your balance at the top of the Bitrefill feed. Connects with an API key from Bitrefill's developer settings — it stays in this iPhone's Keychain. Read-only by conduct: nothing here ever buys, pays, or spends your balance.",
               needsSetup: true, added: day(2026, 7, 17)),
+        // Shopping, beside Bitrefill: Privacy.com is your own card-spending
+        // record — receipts across every merchant — not a market you watch.
+        // Honesty note (2026-07-22): Privacy's key is NOT scoped read-only, so
+        // the summary says plainly that the read-only promise is kept by
+        // conduct, not by the credential (unlike every other keyed bridge).
+        Offer(name: "Privacy",     tagline: "Your card purchases, in reach",         group: "Shopping",  connectable: true,
+              summary: "What you buy with your Privacy.com virtual cards lands in your feed — each purchase with its merchant and amount, so your spending is findable next to everything else. Connects with an API key from your Privacy account (a paid Privacy plan is required); the key stays in this iPhone's Keychain. Read-only by conduct: Casberi only ever reads your transactions. One honest caveat — Privacy's key can't be scoped read-only, so the same key could manage cards on your account; Casberi never creates, closes, or funds a card.",
+              needsSetup: true, added: day(2026, 7, 22)),
         Offer(name: "Shopify",     tagline: "Follow any store's new drops",          group: "Shopping",  connectable: true,
               summary: "Follow any Shopify store — paste its web address and its newest products, restocks, and sale prices land in your feed as things, opening back on the store's own page. Fetched straight from the store's public catalog by this iPhone: no account, no sign-in, read-only — nothing here checks out or pays. Some big stores block automated reads; those it can't follow, it says so.",
               needsSetup: true),
