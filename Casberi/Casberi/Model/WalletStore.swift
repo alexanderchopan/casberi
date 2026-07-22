@@ -256,6 +256,48 @@ final class WalletStore {
             .sorted { abs($0.delta) > abs($1.delta) }
     }
 
+    /// How long the line keeps FULL 4-hourly resolution. Older than this and a
+    /// day's worth of points collapses to one — see `thinned`.
+    static let fullResolutionDays = 30
+    /// The hard ceiling, a backstop rather than the working limit: with the
+    /// recent month at 4h (about 180 points) and everything before it at one a
+    /// day, this holds well over two years.
+    static let sampleCap = 1000
+
+    /// Ages the history instead of truncating it.
+    ///
+    /// This used to be `if samples.count > 240 { removeFirst(…) }`, which with
+    /// the 4-hour throttle is a hard **40-day** ceiling — so §155's "watched"
+    /// window chip quietly meant "the last 40 days" for anyone who had been
+    /// watching longer, and the beginning of their history was dropped with no
+    /// sign it had ever existed. A person's first year of holding something is
+    /// exactly the span worth keeping.
+    ///
+    /// Recent history keeps every point, because that is what the sparkline and
+    /// the 7d/30d windows actually draw. Beyond the window each calendar day
+    /// collapses to its LAST sample — closing value, the convention every price
+    /// chart uses, and the sample most likely to carry `holdings` (the newest
+    /// pass wrote it). Only then does the cap apply, and reaching it now means
+    /// years rather than weeks.
+    static func thinned(_ samples: [ValueSample]) -> [ValueSample] {
+        guard let newest = samples.last?.at else { return samples }
+        let cal = Calendar.current
+        let cutoff = cal.date(byAdding: .day, value: -fullResolutionDays, to: newest) ?? newest
+        var kept: [ValueSample] = []
+        var lastOldDay: Date?
+        for sample in samples {
+            guard sample.at < cutoff else { kept.append(sample); continue }
+            let day = cal.startOfDay(for: sample.at)
+            // Same day as the previous old sample → replace it, so the one that
+            // survives is the day's last.
+            if lastOldDay == day { kept.removeLast() }
+            kept.append(sample)
+            lastOldDay = day
+        }
+        if kept.count > sampleCap { kept.removeFirst(kept.count - sampleCap) }
+        return kept
+    }
+
     /// Appends a sample unless one landed in the last 4 hours — holdings
     /// refresh every foreground, and a line of near-identical minutes-apart
     /// points is noise, not history. Main-actor: it fires source moments
@@ -276,7 +318,7 @@ final class WalletStore {
         if let last = samples.last, Date.now.timeIntervalSince(last.at) < 4 * 3600 { return }
         samples.append(ValueSample(at: .now, usd: totalUSD,
                                    holdings: holdings.isEmpty ? nil : holdings))
-        if samples.count > 240 { samples.removeFirst(samples.count - 240) }
+        samples = Self.thinned(samples)
         if let data = try? JSONEncoder().encode(samples) {
             UserDefaults.standard.set(data, forKey: Self.historyKey(address))
         }
