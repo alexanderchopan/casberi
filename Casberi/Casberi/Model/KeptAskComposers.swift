@@ -34,6 +34,7 @@ enum KeptAskComposers {
         if kind == "walletsafe" { return await walletSafe() }
         if kind == "watchlist" { return await watchlist(context: context) }
         if kind == "overdue" { return overdue(things) }
+        if kind == "upcoming" { return upcoming(things) }
         if kind == "noticed" { return noticed() }
         if kind.hasPrefix("showtag:") {
             return showtag(String(kind.dropFirst("showtag:".count)), things: things)
@@ -301,6 +302,62 @@ enum KeptAskComposers {
         return Result(delta: delta, digest: "\(overdue.count)",
                       doc: ["root = Stack([ins, res])", "ins = Insight(\"\(genSafe(line))\")"]
                           + agendaRows(Array(sorted.prefix(4)), title: "Overdue"))
+    }
+
+    // MARK: - What's coming up
+
+    /// The forward half of `overdue` (2026-07-21) — the deadlines that HAVEN'T
+    /// passed yet.
+    ///
+    /// Nothing in the app surfaced a future `dueAt` before this. The old "Coming
+    /// up" card did, and it died with the Home board (prd §131) as a renderer
+    /// with no surviving emitter; since then `dueAt` has only ever been read
+    /// looking BACKWARD, by `overdue`. That left a real gap rather than a
+    /// cosmetic one: 1Claw already lands grant expiries as a structured
+    /// `dueAt`, and they were invisible until the day they expired.
+    ///
+    /// Scoped to DEADLINES, never to calendar events. An event's start rides
+    /// `capturedAt`, and folding those in here would rebuild the lane §101 cut
+    /// back for making the feed "something it isn't" — a person who sees their
+    /// whole day in Casberi stops opening their calendar. A chip you ask beats a
+    /// card that announces, which is also why this is the surface the §131
+    /// settlement points at.
+    ///
+    /// Unlike `overdue` this is NOT restricted to Reminders/Todoist: any bridge
+    /// that lands a real deadline belongs here, which is the whole reason it can
+    /// carry grant expiries and (next) ENS names without being touched again.
+    /// The words that name this ask. ONE definition, read by both the typed
+    /// answer path (`RootShell.answerDocument`) and the keepable-kind
+    /// recognizer (`Composer`) — so a query that answers can always also be
+    /// kept, and neither can drift from the other.
+    static func matchesUpcoming(_ query: String) -> Bool {
+        let q = query.lowercased()
+        return q.contains("coming up") || q.contains("due soon")
+            || q.contains("what's due") || q.contains("whats due")
+    }
+
+    private static func upcoming(_ things: [Thing]) -> Result? {
+        let horizon = Calendar.current.date(byAdding: .day, value: 7, to: .now) ?? .now
+        let due = things
+            .filter { t in
+                guard t.mark != .done, let when = t.dueAt else { return false }
+                // `>= .now` keeps this and `overdue` disjoint — a deadline is in
+                // exactly one of the two chips, never counted by both.
+                return when >= .now && when <= horizon
+            }
+            .sorted { ($0.dueAt ?? .now) < ($1.dueAt ?? .now) }
+        guard !due.isEmpty else {
+            return Result(delta: "", digest: "0",
+                          doc: ["root = Stack([ins])",
+                                "ins = Insight(\"\(genSafe(String(localized: "Nothing due in the next week.")))\")"])
+        }
+        let line = due.count == 1
+            ? String(localized: "1 thing due in the next week.")
+            : String(localized: "\(due.count) things due in the next week.")
+        let delta = "\(due.count), \(due.count == 1 ? "1 thing" : "\(due.count) things") due"
+        return Result(delta: delta, digest: "\(due.count)",
+                      doc: ["root = Stack([ins, res])", "ins = Insight(\"\(genSafe(line))\")"]
+                          + agendaRows(Array(due.prefix(4)), title: String(localized: "Coming up")))
     }
 
     /// Agenda rows for date-bearing things — the due date on the time rail,

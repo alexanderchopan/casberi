@@ -1158,6 +1158,22 @@ struct RootShell: View {
             let groups = await WalletIngest.topHoldingsByWallet()
             return KeptAskComposers.walletDoc(line: line, groups: groups, things: allThings())
         }
+        // "What's coming up?" — the forward deadlines, computed, no model
+        // (2026-07-21). This branch is what makes the typed ask agree with the
+        // kept chip: without it the words fall through to retrieval, and since
+        // no THING contains the phrase "coming up", a corpus with two live
+        // deadlines answered "nothing in your things matches that" (measured
+        // on-sim). "Overdue" only ever appeared to work here because it is a
+        // word a reminder itself retrieves on — an accident of vocabulary, not
+        // a branch. Answers through the composer itself rather than a parallel
+        // builder, so the two paths cannot drift (the §132 principle).
+        if KeptAskComposers.matchesUpcoming(query) {
+            lastAnswerHits = []
+            if let result = await KeptAskComposers.compose("upcoming", things: allThings(),
+                                                          context: modelContext) {
+                return result.doc
+            }
+        }
         // A DeFi ask ("how's my loan", "what's my health factor", "how are
         // my Morpho vaults") — live read over Aave + Morpho, no model
         // (2026-07-20; Morpho 2026-07-21). Same slot as WalletAsk, right

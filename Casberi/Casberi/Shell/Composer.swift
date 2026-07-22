@@ -246,6 +246,13 @@ struct Composer: View {
                   things.contains(where: { $0.mark != .done && ($0.source == "Reminders" || $0.source == "Todoist")
                                             && ($0.dueAt ?? .distantFuture) < .now }) {
             kind = "overdue"
+        } else if KeptAskComposers.matchesUpcoming(q),
+                  things.contains(where: { $0.mark != .done && ($0.dueAt ?? .distantPast) >= .now }) {
+            // Gated on a real future deadline existing, the same way every other
+            // recognizer is gated on its own answer being non-empty — typing it
+            // with nothing ahead falls through to the normal answer path rather
+            // than minting a keepable ask that would only ever say "nothing".
+            kind = "upcoming"
         } else if let name = namedTopicPhrase(q),
                   let source = Set(things.map(\.source)).first(where: { $0.lowercased() == name }) {
             kind = "context:\(source)"
@@ -553,6 +560,17 @@ struct Composer: View {
                                   && ($0.dueAt ?? .distantFuture) < .now }) {
             out.append(AskOption(kind: "overdue", title: "What's overdue?",
                                  glyph: "exclamationmark.circle"))
+        }
+        // …and its forward half (2026-07-21). Same duplication precedent, same
+        // week horizon `KeptAskComposers.upcoming` uses, so the tile and its
+        // composer can never disagree about whether there's anything to say.
+        if let horizon = Calendar.current.date(byAdding: .day, value: 7, to: .now),
+           all.contains(where: { t in
+               guard t.mark != .done, let when = t.dueAt else { return false }
+               return when >= .now && when <= horizon
+           }) {
+            out.append(AskOption(kind: "upcoming", title: "What's coming up?",
+                                 glyph: "clock.badge"))
         }
         // The Noticed chip (2026-07-20) — the board's old "Noticed" card had
         // no home after the board retired (prd §131); this is its one way
