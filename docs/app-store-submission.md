@@ -33,49 +33,63 @@ One home for your things
 
 ### Promotional text  *(≤170 — editable anytime without review)*
 ```
-Screenshots, links, notes, events, chats — everything you capture lands in one private home on your iPhone. Ask it anything. Nothing leaves your phone.
+Connect your apps and wallets once. Everything lands in one feed, and the built-in agent answers questions from what you've actually saved.
 ```
-*(150)*
+*(138 — rewritten 2026-07-21 for the agent-shell redesign; the old capture-first text also claimed "Nothing leaves your phone," which wallet syncs and optional BYOK made an overclaim)*
 
 ### Keywords  *(≤100, comma-separated, NO spaces — spaces waste the budget)*
 ```
-second brain,capture,screenshots,notes,organizer,private,on-device,bookmarks,save,links,feed,memory
+wallet,crypto,portfolio,tracker,ai,agent,second,brain,notes,feed,farcaster,bluesky,screenshots,rss
 ```
-*(99)*
+*(98 — rewritten 2026-07-21: added the wallet/crypto cluster and the social networks, dropped description-words nobody searches (private, on-device, organizer). Apple matches word combinations, so "second,brain" covers "second brain" without spending a space.)*
 - **Do not** put competitor/trademarked names (ChatGPT, Notion, etc.) in keywords — Apple rejects them.
 - Don't repeat the app name or subtitle words here; they're already indexed.
 
 ### Description  *(≤4000)*
 ```
-Casberi is one private home for everything you make.
+Casberi is one private home for everything you care about — and an agent that answers from it.
 
-Every screenshot you take, link you save, note you jot, event on your calendar, voice memo, and chat becomes a "thing" — captured in one gesture, with no folder to pick and no title to write. It all lands in one place, on your iPhone.
+Connect your apps and wallets once. Everything they produce lands in one feed on your iPhone: posts, transactions, workouts, releases, events, screenshots, notes. Then ask about any of it, in plain words, and get an answer grounded in your own things — never invented.
+
+ONE FEED, EVERY SOURCE
+• Wallets, Farcaster, Bluesky, RSS, GitHub, your calendar, reminders, photos, health — connect them in the catalog and each lands automatically.
+• Chips up top narrow the feed to one app; the feed learns which ones you visit.
+• A day's events share one card, and each source's feed takes the shape of its content.
+
+CONNECTS WITH
+Photos, Calendar, Reminders, Contacts, Apple Health, Apple Notes, Apple Journal, Apple Music, Podcasts, HomeKit, ChatGPT, Claude, Gemini, GitHub, Linear, Notion, Todoist, Obsidian, Day One, Readwise, Raindrop, Kindle, RSS, Substack, Pinterest, Reddit, YouTube, Spotify, Twitch, Steam, Strava, Cal.com, Calendly, Farcaster, Bluesky, Shopify, Kalshi, Stocktwits, OpenSea, GeckoTerminal, Peer, Bitrefill, Open Food Facts, Venice, Bankr, 1Claw — and more join regularly.
+
+ASK YOUR THINGS
+• The ask bar sits at the bottom of every screen. Ask "what's happening with my trip?" or "show me my wallet" — Casberi retrieves the actual things and writes the answer from them.
+• Answers draw real charts: holdings, trends, activity.
+• Keep an ask you make often and it becomes a standing chip, ready with a fresh answer.
+• On iPhones with Apple Intelligence, answers are written by Apple's on-device model. Optionally bring your own key (Claude, ChatGPT, Gemini, and more) for longer answers — your key stays in the device Keychain.
+
+WATCH ANY WALLET
+• Paste an address or a name (ENS, .sol) — or connect read-only through WalletConnect. Watching can never trade or move funds.
+• Live holdings across Ethereum, Base, Solana, and more, drawn as a treemap.
+• Transactions, token approvals (with a direct path to review and revoke), NFT drops, trending tokens, stocks, and event odds if you want them.
 
 CAPTURE WITHOUT FRICTION
-• Share anything from any app — it lands instantly, no filing.
-• Screenshots flow in on their own once Photos is connected.
+• Share from any app and it lands instantly, no filing. Screenshots flow in from Photos on their own.
 • Tap the mic for a voice note; it's transcribed and stays findable.
 • Paste a link and Casberi reads the page so you don't have to.
+• Import your ChatGPT, Claude, and Gemini conversations, Day One journals, and Apple Journal entries.
 
-FIND BY WHAT IT IS
-One search across everything you've kept. Ask in plain words — "what did I save about the trip" — and get the actual things back, most relevant first. No remembering which app it was in.
+FOUND EVERYWHERE
+• Spotlight finds your things. Siri and Shortcuts can search them and ask about them.
+• Visual Intelligence matches what your camera sees against what you've saved.
 
-ANSWERS ON YOUR DEVICE
-On iPhones with Apple Intelligence, Casberi writes answers from your things using Apple's on-device model. Your data isn't sent to us, to Apple's servers, or to anyone. Casberi can only answer from things you actually saved — it never invents.
-
-CONNECT YOUR APPS, KEEP THE DATA YOURS
-Bring in what you already use — RSS feeds, Bluesky, Farcaster, Apple Health workouts, your calendar and reminders, GitHub, Todoist, Notion, Linear, and more. Casberi talks to each service directly from your iPhone. Tokens and keys live in your device Keychain and are never uploaded.
-
-BUILT SO YOUR THINGS STAY YOURS
+YOURS, ACTUALLY
 • No account. No sign-up. No password to give us.
 • No analytics, no tracking, no ads.
-• No Casberi server holds your things — there's no backend at all.
+• No Casberi server holds your things — there is no backend at all.
 • Optional iCloud sync through your own private iCloud account (off by default).
 • Export everything to a single file, any time. Delete everything for real.
 
-Casberi isn't another chatbot to configure. It's an organizer that happens to be smart — one home, on your phone, that stays yours.
+Casberi isn't another chatbot. It's your own things, in one feed, with an agent that actually knows them.
 ```
-*(~1,760 — well under the cap; room to expand if you like)*
+*(3,089 — rewritten 2026-07-21, CONNECTS WITH list added same day (48 names, feature-offers Wallet/Tokens/Deals excluded; ends open-ended since description edits ride version reviews and the catalog grows) for the agent-shell redesign: leads with agent + one feed, adds the wallet section, scopes the on-device claim honestly around BYOK)*
 
 ### What's New (version notes)  *(≤4000)*
 For a first public release, keep it simple:
