@@ -158,6 +158,14 @@ enum WalletIngest {
         // returned empty silently).
         let addresses = await resolvedAddresses(watched)
         guard !addresses.isEmpty else { return nil }
+
+        // One-time backfill of the spoofed-symbol flag (prd §160) over things
+        // that landed before the rule existed — they dedupe out of the pass
+        // below and would otherwise stay unflagged forever. It spans every
+        // Wallet thing (EVM, Solana, approvals), so it sits here at the top of
+        // the pass rather than inside the EVM leg pipeline.
+        let healed = WalletSafety.healSpoofedSymbols(context: context)
+        if healed > 0 { NSLog("Symbol heal: flagged %d already-landed transfers", healed) }
         // The transfer sync is EVM-only, so a Solana wallet contributes nothing
         // here — it still reads holdings below. A person watching ONLY Solana
         // has no transfer jobs at all, which must not read as "unreachable":
@@ -307,6 +315,9 @@ enum WalletIngest {
                 guard !existing.contains(swapRef),
                       let thing = swapThing(sent: sMax, received: rMax, ref: swapRef, names: names)
                 else { continue }
+                // A swap names two assets and either can be the spoof — the
+                // received side especially ("Swapped 1 ETH → 4,000 ÚЅDС").
+                WalletSafety.flagSpoofedSymbol(thing, symbols: [sMax.asset, rMax.asset])
                 landed.append(thing)
                 continue
             }
@@ -334,6 +345,9 @@ enum WalletIngest {
                         let knownGood = knownGoodByOwner[leg.address.lowercased()] ?? []
                         WalletSafety.flagPoisoning(thing, knownGood: knownGood)
                     }
+                    // Both directions: a spoofed symbol lies on the way out
+                    // too (see `flagSpoofedSymbol`).
+                    WalletSafety.flagSpoofedSymbol(thing, symbols: [leg.asset])
                     landed.append(thing)
                 }
             }
@@ -683,6 +697,11 @@ enum WalletIngest {
             thing.transferDirection = story.direction
             thing.transferAmount = story.amount
             thing.transferVenue = story.venue
+            // Solana's symbols come from Jupiter's token SEARCH, which is an
+            // open index — a spoofed SPL is exactly as reachable there as on
+            // an EVM chain, so the same flag rides this arm.
+            WalletSafety.flagSpoofedSymbol(
+                thing, symbols: move.legs.compactMap { symbols[$0.mint] })
             landed.append(thing)
         }
         for thing in landed {
@@ -1117,7 +1136,15 @@ enum WalletIngest {
         bySymbol.sorted { $0.value > $1.value }.prefix(5)
             .map { sym, usd in
                 let route = routes[sym].map { " @t:\($0)" } ?? ""
-                return "\(sym) \(treemapWeight(usd)) @v:\(TokenStats.compact(usd))\(route)"
+                // A spoofed symbol (prd §160) is marked HERE, on the display
+                // cell, never on the `bySymbol` key it came from — the key is
+                // the token's identity and is persisted in value samples. The
+                // symbol keeps its real spelling; the glyph is added, nothing
+                // is rewritten. It also drops the cell out of `TokenIcon`'s
+                // lookup, so a fake USDC can't wear the real one's mark. No
+                // space in the marker — the cell parser slices on one.
+                let label = SymbolConfusables.isSuspicious(sym) ? "⚠︎" + sym : sym
+                return "\(label) \(treemapWeight(usd)) @v:\(TokenStats.compact(usd))\(route)"
             }
     }
 
@@ -1297,7 +1324,12 @@ enum WalletIngest {
             reached = true
             let allowed = routed[i].networks
             for h in result where allowed.contains(h.network) {
-                candidates.append(Candidate(symbol: h.symbol, contract: h.contract,
+                // `clean`, not the raw symbol (fixed 2026-07-21, prd §160):
+                // this arm is the PRIMARY holdings read now, and it was the
+                // one path that skipped the shared label rule — so a spoofed
+                // symbol reached the treemap unmarked here while the Alchemy
+                // fallback marked it. Same call, same rule, both arms.
+                candidates.append(Candidate(symbol: clean(h.symbol), contract: h.contract,
                                             network: h.network, amount: h.amount,
                                             owner: h.owner, price: h.price))
             }
@@ -1757,6 +1789,18 @@ enum WalletIngest {
         return v < 9_000_000_000_000_000 ? Int(v) : 9_000_000_000_000_000
     }
 
+    /// The treemap/holdings label for a token symbol.
+    ///
+    /// Note what the filter does NOT do: `isLetter` is true for Cyrillic and
+    /// Greek, so a confusable symbol passes through untouched and paints
+    /// "ÚЅDС" across a treemap cell at display size — the spoof (prd §160) in
+    /// a bigger font than the row that started the hunt. That warning is
+    /// added in `treemapCells`, NOT here: this return value is an IDENTITY,
+    /// not a label — it keys `bySymbol`, `routeBySymbol`, and the holdings
+    /// snapshot persisted in each `WalletStore.ValueSample`. Marking it here
+    /// renamed the token in the record, so a holding sampled before the
+    /// marker and after it read as one position vanishing and another
+    /// appearing (caught in review, 2026-07-21).
     private static func clean(_ symbol: String) -> String {
         let up = symbol.uppercased().filter { $0.isLetter || $0.isNumber }
         return up.isEmpty ? "TOKEN" : String(up.prefix(6))

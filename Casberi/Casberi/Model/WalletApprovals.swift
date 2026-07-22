@@ -419,6 +419,15 @@ enum WalletApprovals {
                 sourceRef: ref)
             thing.walletAddress = owner
             thing.counterpartyAddress = e.spender
+            // An approval names an asset too — "Approved Uniswap to spend
+            // unlimited ÚЅDС" is the same lie in a more dangerous sentence,
+            // since the thing you're being asked to trust IS the token
+            // (prd §160, added in review 2026-07-21: the transfer arms were
+            // flagged and this one was not, so the corpus disagreed with
+            // itself about the same token).
+            if let symbol = meta[e.contract]?.symbol {
+                WalletSafety.flagSpoofedSymbol(thing, symbols: [symbol])
+            }
             out.append(thing)
         }
         return out

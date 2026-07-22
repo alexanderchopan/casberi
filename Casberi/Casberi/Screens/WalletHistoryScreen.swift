@@ -129,7 +129,7 @@ private struct WalletHistoryRow: View {
         HStack(spacing: DS.Space.s3) {
             KindGlyph(kind: thing.kind, size: 28)
                 .overlay(alignment: .bottomTrailing) {
-                    if thing.securityFlag == "poisoning" {
+                    if thing.isFlagged {
                         Image(systemName: "exclamationmark.triangle.fill")
                             .font(.system(size: 9))
                             .foregroundStyle(DS.destructive)

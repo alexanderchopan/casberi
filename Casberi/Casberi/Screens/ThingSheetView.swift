@@ -127,8 +127,8 @@ struct ThingSheetView: View {
                     // Moved leg is exactly as real, and used to be invisible
                     // (those never earned a stage before 2026-07-21, and the
                     // warning only ever rendered inside one).
-                    if thing.securityFlag == "poisoning" {
-                        poisoningWarning
+                    if thing.isFlagged {
+                        securityWarning
                             .padding(.horizontal, DS.Space.s4)
                             .padding(.top, DS.Space.s3)
                             .settleIn(delay: 0.08)
@@ -654,13 +654,32 @@ struct ThingSheetView: View {
     /// Address-poisoning warning (2026-07-20) — a one-line flag, not a card:
     /// the transfer already lands honestly, this only says its counterparty
     /// looks like a copy of one the wallet has actually used.
-    private var poisoningWarning: some View {
+    /// Every safety flag on this transfer, one line each — a transfer can wear
+    /// more than one (a lookalike address sending a lookalike token is one
+    /// scam, not two, but each half needs saying).
+    private var securityWarning: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+            if thing.hasSecurityFlag("poisoning") {
+                warningLine(String(localized: "Looks like a copy of an address you've used — this is a different wallet."))
+            }
+            // The symbol's own sentence, recovered from the text the row
+            // shows (`WalletSafety.spoofVerdict`) so the warning can name what
+            // it imitates: "Looks like a copy of USDC — this is a different
+            // token." The symbol keeps its real spelling everywhere; the app
+            // never quietly rewrites what the chain said.
+            if let verdict = WalletSafety.spoofVerdict(for: thing) {
+                warningLine(verdict.sentence)
+            }
+        }
+    }
+
+    private func warningLine(_ text: String) -> some View {
         HStack(alignment: .top, spacing: DS.Space.s2) {
             Image(systemName: "exclamationmark.triangle.fill")
                 .accessibilityHidden(true)
                 .font(.system(size: 13))
                 .foregroundStyle(DS.destructive)
-            Text("Looks like a copy of an address you've used — this is a different wallet.")
+            Text(text)
                 .dsText(.subhead13).foregroundStyle(DS.destructive)
                 .fixedSize(horizontal: false, vertical: true)
         }

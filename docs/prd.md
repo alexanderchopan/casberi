@@ -5436,3 +5436,94 @@ VERIFIED on a dedicated sim (a THIRD device — two Claude sessions were
 fighting over `booted`, per the CLAUDE.md gotcha): dark reads as one
 continuous field from status bar through chips into ink, light reads as sky,
 no seam in either.
+## 160. A fake symbol is address poisoning in the asset field (2026-07-21)
+
+Closes the item §158 filed while verifying. The finding was one spoofed symbol
+on poap.eth; the first probe run over the real corpus found **21**, in four
+distinct spellings, none of which any existing check objected to:
+
+| what landed | how | named by the rule |
+| --- | --- | --- |
+| `ÚЅDС` | `U`+U+0301, Cyrillic `Ѕ`, `D`, Cyrillic `С` | USDC |
+| `UЅDС` | plain Cyrillic, no accent | USDC |
+| `USḌC` | `D`+U+0323 combining dot below | USDC |
+| `UႽD‸C` | Georgian `Ⴝ` + an INVISIBLE U+202C bidi control | USDC |
+| `ꓴꓢꓓꓔ0` | written entirely in **Lisu** | USDT0 |
+
+**The ruling: flag it, never hide it, never rewrite it.** Identical grammar to
+poisoning (§84) — the transfer lands honestly, wears a `securityFlag`, and the
+symbol keeps its real spelling on every surface. We do not "correct" a symbol
+to what it imitates: that would make the app the author of a claim the chain
+never made. The warning speaks in the poisoning line's voice — "Looks like a
+copy of USDC — this is a different token."
+
+**Two clauses, because one is a table and tables are always incomplete.** A
+symbol is suspicious if (1) it contains ANY non-ASCII scalar, or (2) its
+confusable skeleton matches a well-known symbol while its literal text does
+not. Clause 1 needs no table and cannot be evaded by reaching for an alphabet
+we forgot — it is what made Lisu and the bidi control land flagged on the first
+run, before either was in the table. Clause 2 is what catches the pure-ASCII
+attacks clause 1 cannot see (`DAl` with a lowercase L, `U5DT`, `S0L`, `3TH`).
+The known-symbol list stays TIGHT, per `TokenHue`/`TokenIcon`'s precedent: a
+short list of symbols actually worth impersonating produces a warning we can
+stand behind; a general resemblance engine produces noise.
+
+**Measurement writes the table, not intuition.** Every alphabet added after the
+first run (Lisu, Georgian) and the one symbol added to the known set (`USDT0`,
+a real omnichain token) came from the probe's own output. The skeleton also
+strips invisible scalars before comparing — anything that draws no ink cannot
+be part of what a symbol LOOKS like, and U+202C was in the corpus for exactly
+that reason. Note what was NOT used: ICU's `.toLatin` transform is PHONETIC,
+and renders Cyrillic `Ѕ` as "Dz" — it turns the real spoof into `UDzDC` and
+matches nothing. Confusability is visual; the table is visual.
+
+**Where it shows.** The row badge (the same glyph poisoning wears — the row is
+where the lie is read), the sheet's warning line, a `Needs attention` roll-up
+whose every row states ITS OWN flag, and the holdings treemap, where a
+suspicious symbol wears `⚠︎` and thereby drops out of `TokenIcon`'s lookup so
+it cannot borrow the real token's mark. The treemap marker goes on the display
+CELL, never on the symbol key: that key is the token's identity, and it is
+persisted inside every `WalletStore.ValueSample` — marking it there renamed the
+token in the record, so one holding read as a position vanishing and another
+appearing. A warning belongs on the label, never in the identity.
+Two honesty corollaries fell out and were fixed here: the ledger figure
+(§158.4) **loses its green on a flagged receive** — "money arrived" is exactly
+the claim a fake USDC is making, and the confirm color would make the design a
+party to it — and the warnings subline was counting WARNING ROWS, so 21 spoofed
+transfers read "1 fake symbol" while the row two taps behind it said 21.
+Poisoning had the identical bug; one `count` field fixed both.
+
+**VoiceOver is not a secondary surface here.** "ÚЅDС" and "USDC" are read
+identically aloud, so for that reader the spoken flag is the ONLY difference
+between the two rows — not an enhancement of a visual cue, but the entire cue.
+
+**`securityFlag` became a set** (comma-joined, no migration — still a String):
+one transfer can be both a lookalike address and a lookalike symbol, and the
+old equality test would have silently dropped whichever arrived second.
+
+**The offending symbol is STORED** (`Thing.spoofedSymbol`, an additive optional
+— no migration stage; the "a new field would need one" instinct is wrong, see
+`ThingSchemaVersioning`). Ingest is the only place holding ground truth: it
+flags from the raw symbol, while a surface can only re-scan the rendered title,
+where the symbol sits beside a counterparty and a venue that may themselves be
+non-ASCII. Re-parsing prose to recover a fact we had in hand is how a warning
+ends up naming the wrong token; the text scan survives only as the fallback for
+transfers that landed before the field.
+
+**Backfill, once.** Ingest-time flagging alone would have shipped doing nothing
+for the wallet that revealed the attack: `refresh` dedupes on `sourceRef`, so
+the 21 already-landed transfers would never be re-examined. A one-time heal
+flags them (measured: 21 healed, then 21/21 on re-probe). Honest limit — a
+thing arriving later from another device via CloudKit misses that pass, the
+same gap poisoning has; `-symbolProbe YES` is how you'd see it.
+
+**Every wallet producer flags, not just the transfer arms.** Review caught the
+approvals arm building "Approved Uniswap to spend unlimited ÚЅDС" unflagged —
+the same lie in a more dangerous sentence, since the thing being trusted IS the
+token. It flags now. The corpus must not disagree with itself about one token
+depending on which arm landed it.
+
+Rule for later: **a spoofable string is any string the chain hands us and we
+then set in type.** Symbols were the second one found. NFT collection names,
+ENS-adjacent labels and token NAMES (not just symbols) are the same shape and
+are unchecked today.

@@ -228,13 +228,15 @@ struct BandRow: View {
                     BridgeIcon(name: thing.source, size: 26)
                 }
             }
-            // Address-poisoning warning (2026-07-20) — the scam works at
-            // exactly this glance (a familiar-looking row, casually
-            // re-copied), so the flag rides the icon itself, not just the
-            // opened sheet (ThingSheetView's `poisoningWarning`, same glyph
-            // and color at a bigger scale).
+            // Wallet safety warning (2026-07-20; any flag since prd §160,
+            // 2026-07-21) — the scam works at exactly this glance (a
+            // familiar-looking row, casually trusted), so the flag rides the
+            // icon itself, not just the opened sheet (ThingSheetView's
+            // `securityWarning`, same glyph and color at a bigger scale). A
+            // spoofed symbol earns the badge for the same reason a poisoned
+            // address does: the row is where the lie is read.
             .overlay(alignment: .bottomTrailing) {
-                if thing.securityFlag == "poisoning" {
+                if thing.isFlagged {
                     Image(systemName: "exclamationmark.triangle.fill")
                         .font(.system(size: 9))
                         .foregroundStyle(DS.destructive)
@@ -268,11 +270,18 @@ struct BandRow: View {
                 // rounded and tabular so a run of rows lines up on the decimal.
                 // Green only on a receive: money arriving is the one state
                 // worth coloring, and a send in red would read as an error.
+                // A spoofed symbol (prd §160) keeps its figure — the app never
+                // hides what landed — but loses the green. The confirm color
+                // is this row's loudest claim, and "money arrived" is exactly
+                // the claim a fake USDC is making; celebrating it would make
+                // the design a party to the lie. Same corollary as a flat
+                // change having no direction: unearned status isn't painted.
                 if let money = moneyAmount {
                     Text(money.text)
                         .dsText(.price16)
                         .monospacedDigit()
-                        .foregroundStyle(money.received ? DS.confirm : DS.textPrimary)
+                        .foregroundStyle(money.received && !thing.hasSecurityFlag("symbol")
+                                         ? DS.confirm : DS.textPrimary)
                         .lineLimit(1)
                 }
                 if live {
@@ -369,10 +378,16 @@ enum ThingVoice {
             parts.append(String(localized: "from \(thing.source)"))
         }
         if let project, !project.isEmpty { parts.append(project) }
-        // Visual-only facts, spoken. The poisoning flag is a 9pt glyph on the
-        // row icon and it is the whole warning — silent, it does not exist.
-        if thing.securityFlag == "poisoning" {
+        // Visual-only facts, spoken. A safety flag is a 9pt glyph on the row
+        // icon and it is the whole warning — silent, it does not exist. And
+        // the spoofed-symbol case is worse than visual: VoiceOver reads
+        // "ÚЅDС" and "USDC" identically, so for that reader the flag is the
+        // ONLY difference between the two rows.
+        if thing.hasSecurityFlag("poisoning") {
             parts.append(String(localized: "Warning, possible scam address"))
+        }
+        if thing.hasSecurityFlag("symbol") {
+            parts.append(String(localized: "Warning, this token's symbol imitates another"))
         }
         if thing.mark == .done { parts.append(String(localized: "done")) }
         if live { parts.append(String(localized: "live now")) }

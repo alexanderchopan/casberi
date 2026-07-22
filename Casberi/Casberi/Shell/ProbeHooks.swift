@@ -646,6 +646,16 @@ enum ProbeHooks {
             let line = WalletSafety.poisoningProbe(context: context)
             NSLog("Poisoning probe: %@", line)
         },
+        // `-symbolProbe YES` runs the confusable-symbol rule (prd §160) over
+        // already-landed Wallet things and reports every spoofed symbol it
+        // finds, WITH each one's scalars (`U+0055 U+0301 U+0405 …`) — the
+        // only form in which "ÚЅDС" and "USDC" are distinguishable in a log,
+        // which is the whole point of the feature. Read-only. Pairs with
+        // `-walletAddress` (poap.eth held several on 2026-07-21).
+        Hook(key: "symbolProbe") { _, context in
+            let line = WalletSafety.symbolProbe(context: context)
+            NSLog("Symbol probe: %@", line)
+        },
         // `-gasSpentProbe YES` NSLogs the running gas total per watched
         // wallet (per chain and combined USD). Pairs with `-walletAddress`
         // (and a real refresh/`-walletAddress` re-fire to have landed at

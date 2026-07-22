@@ -578,7 +578,12 @@ struct WalletWorthALookTray: View {
     let onOpenThing: (Thing) -> Void
     @Environment(\.openURL) private var openURL
 
-    private var listed: [WalletWarning] { warnings.filter { $0.kind != .poisoning } }
+    /// The aggregate rows. Both flagged-transfer kinds drop out: `flagged`
+    /// below lists those transfers individually, each with a door to its
+    /// sheet, so an aggregate line would be a dead duplicate of real rows.
+    private var listed: [WalletWarning] {
+        warnings.filter { $0.kind != .poisoning && $0.kind != .spoofedSymbol }
+    }
     private var rowCount: Int { listed.count + flagged.count }
 
     var body: some View {
@@ -644,6 +649,17 @@ struct WalletWorthALookTray: View {
         .disabled(action == nil)
     }
 
+    /// The one-line reason this transfer is in the list. A transfer wearing
+    /// both flags leads with poisoning — the address is the older, more
+    /// expensive lie — and the sheet behind the tap still states both.
+    private func flagLine(for thing: Thing) -> String {
+        if thing.hasSecurityFlag("poisoning") {
+            return String(localized: "Looks like address poisoning — don't copy this address")
+        }
+        if let verdict = WalletSafety.spoofVerdict(for: thing) { return verdict.sentence }
+        return String(localized: "Flagged as unsafe")
+    }
+
     private func flaggedRow(_ thing: Thing) -> some View {
         Button {
             DSHaptic.selection()
@@ -662,7 +678,13 @@ struct WalletWorthALookTray: View {
                     Text(thing.title).dsText(.body17).foregroundStyle(DS.textPrimary)
                         .lineLimit(2)
                         .multilineTextAlignment(.leading)
-                    Text("Looks like address poisoning — don't copy this address")
+                    // The row states ITS OWN flag. This line used to be the
+                    // poisoning sentence hardcoded for everything in `flagged`
+                    // — correct while poisoning was the only flag, and a plain
+                    // falsehood the moment a spoofed-symbol transfer joined the
+                    // list (caught in review, 2026-07-21): a fake USDC would be
+                    // described to the reader as an address-poisoning attempt.
+                    Text(flagLine(for: thing))
                         .dsText(.subhead13).foregroundStyle(DS.textSecondary)
                         .lineLimit(1)
                 }

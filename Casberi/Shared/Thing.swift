@@ -206,16 +206,75 @@ final class Thing {
     /// every non-Wallet thing and for transfers landed before this field —
     /// those parse the title.
     var transferCounterparty: String? = nil
-    /// A wallet safety signal on a landed transfer (2026-07-20) — today only
-    /// `"poisoning"`: an incoming transfer whose counterparty address fuzzily
-    /// mimics one this wallet has actually sent to (same leading/trailing hex,
-    /// different address), the address-poisoning scam's whole mechanism. The
-    /// thing still lands honestly as a transfer; this only adds the warning.
+    /// The wallet safety signals on a landed transfer — a comma-joined SET,
+    /// read through `securityFlags`/`hasSecurityFlag`, never compared as a
+    /// whole string.
+    ///
+    /// `"poisoning"` (2026-07-20): an incoming transfer whose counterparty
+    /// address fuzzily mimics one this wallet has actually sent to (same
+    /// leading/trailing hex, different address), the address-poisoning scam's
+    /// whole mechanism. `"symbol"` (2026-07-21, prd §160): the transferred
+    /// token's SYMBOL is a confusable copy of a well-known one ("ÚЅDС" for
+    /// USDC) — see `SymbolConfusables`. Either way the thing still lands
+    /// honestly as a transfer; a flag only adds the warning.
+    ///
+    /// It became a set the day the second flag existed: one transfer can be
+    /// both a lookalike address AND a lookalike symbol, and a single-valued
+    /// field would have silently dropped whichever arrived second.
+    ///
     /// A raw string, not an enum, so an unknown future value from a newer
     /// synced device degrades to "no warning shown" instead of failing the
     /// decode. Optional + default nil keeps CloudKit mirroring happy; nil for
     /// every non-Wallet thing and for every transfer that isn't flagged.
+    /// Stays a String rather than becoming an array because CHANGING this
+    /// property's type is the breaking kind of change that would need a
+    /// `ThingSchemaVN` stage; a comma-joined set needs none. (Adding a new
+    /// optional property, like `spoofedSymbol` below, needs none either —
+    /// SwiftData infers it. See `ThingSchemaVersioning`.)
     var securityFlag: String? = nil
+
+    /// The offending symbol exactly as the chain reported it, recorded when
+    /// the `"symbol"` flag is set (2026-07-21, prd §160).
+    ///
+    /// Stored rather than re-derived because ingest is the only place that
+    /// holds GROUND TRUTH: it flags from the raw symbol string, while a
+    /// surface can only re-scan the rendered title, where the symbol sits
+    /// beside a counterparty name and a venue that may themselves be
+    /// non-ASCII. Re-parsing prose to recover a fact we had in hand is how
+    /// the warning ends up naming the wrong token. An additive optional needs
+    /// no migration stage; the text scan survives only as the fallback for
+    /// transfers that landed before this field existed.
+    var spoofedSymbol: String? = nil
+
+    /// The flags on this thing, split out of the stored string. Empty when
+    /// nothing is flagged — so a caller never has to reason about nil.
+    var securityFlags: [String] {
+        (securityFlag ?? "").split(separator: ",").map(String.init).filter { !$0.isEmpty }
+    }
+
+    /// Whether ANY signal is present — the question the row badge and the
+    /// sheet's warning stack ask. A non-nil-but-empty string reads as
+    /// unflagged here, which is why surfaces ask this instead of `!= nil`.
+    var isFlagged: Bool { !securityFlags.isEmpty }
+
+    /// Whether one named signal is present. Every surface asks this rather
+    /// than comparing `securityFlag` to a literal — the comparison that was
+    /// correct while exactly one flag existed and silently wrong after.
+    /// Fast path first: this runs in feed row bodies, where the answer is
+    /// almost always "nothing is flagged".
+    func hasSecurityFlag(_ name: String) -> Bool {
+        guard let raw = securityFlag, !raw.isEmpty else { return false }
+        return raw.split(separator: ",").contains { $0 == name }
+    }
+
+    /// Adds a signal, idempotently. Order is insertion order and no surface
+    /// depends on it; re-flagging never duplicates.
+    func addSecurityFlag(_ name: String) {
+        let current = securityFlags
+        guard !current.contains(name) else { return }
+        securityFlag = (current + [name]).joined(separator: ",")
+    }
+
     /// The account a social post came from — the Bluesky/Farcaster handle
     /// that authored it. When more than one account of a source is watched,
     /// the row leads with that author's avatar and names them, the way a

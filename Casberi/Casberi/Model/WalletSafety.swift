@@ -22,6 +22,16 @@ import SwiftData
 ///     deliberately one-directional: an address you've SENT to is
 ///     unambiguous, while an incoming address is exactly what a poisoner
 ///     controls, so it can never itself become "known good".
+///
+/// (3) Spoofed token symbols (2026-07-21, prd §160) — the same attack as (2)
+///     against the ASSET field: a token whose symbol is a confusable copy of
+///     a well-known one ("ÚЅDС" for USDC). Purely local, no network at all —
+///     the rule lives in `SymbolConfusables` and this only flags. Found on a
+///     real watched wallet, where it had been landing unflagged into titles,
+///     the money column, the holdings map and answers.
+///
+/// All three share the same grammar: the transfer LANDS, honestly, and wears
+/// its flag. Nothing here hides a thing from the feed.
 enum WalletSafety {
 
     // MARK: - EIP-7702 delegation
@@ -225,7 +235,114 @@ enum WalletSafety {
     static func flagPoisoning(_ thing: Thing, knownGood: Set<String>) {
         guard let cp = thing.counterpartyAddress?.lowercased(),
               isFuzzyMatch(cp, against: knownGood) else { return }
-        thing.securityFlag = "poisoning"
+        thing.addSecurityFlag("poisoning")
+    }
+
+    // MARK: - Spoofed token symbols
+
+    /// Flags `thing` when a token symbol in the transfer is a confusable copy
+    /// of a well-known one — the same class of attack as poisoning, aimed at
+    /// the asset field instead of the address (prd §160, 2026-07-21). The rule
+    /// itself lives in `SymbolConfusables`; this is only the flagging.
+    ///
+    /// Called for EVERY transfer, not just received ones: unlike poisoning —
+    /// where an outgoing address is one you chose — a spoofed symbol lies just
+    /// as hard on the way out, and "Sent 100,000 ÚЅDС" is exactly the line
+    /// someone would misread as having sent real USDC.
+    @MainActor
+    static func flagSpoofedSymbol(_ thing: Thing, symbols: [String]) {
+        guard let spoof = symbols.first(where: { SymbolConfusables.isSuspicious($0) })
+        else { return }
+        thing.addSecurityFlag("symbol")
+        // Recorded here because here is the only place that HAS it — see
+        // `Thing.spoofedSymbol`. Every surface reads this rather than parsing
+        // the sentence built from it.
+        thing.spoofedSymbol = spoof
+    }
+
+    /// The spoofed symbol in a thing, whether or not it's flagged — the one
+    /// scan rule, shared by the flag accessor, the heal pass and the probe so
+    /// those three can never disagree about WHERE the symbol lives.
+    ///
+    /// The stored `spoofedSymbol` wins; the text scan is the fallback for
+    /// transfers that landed before that field existed (`transferAmount`
+    /// carries "100,000 ÚЅDС", and a swap, which has no amount field, carries
+    /// both its symbols in the title).
+    private static func spoofScan(_ thing: Thing) -> SymbolConfusables.Verdict? {
+        if let stored = thing.spoofedSymbol,
+           let v = SymbolConfusables.verdict(for: stored) { return v }
+        if let amount = thing.transferAmount,
+           let v = SymbolConfusables.firstSuspicious(in: amount) { return v }
+        return SymbolConfusables.firstSuspicious(in: thing.title)
+    }
+
+    /// The verdict behind a thing's `"symbol"` flag — what the sheet's warning
+    /// line and the Worth-a-look row say.
+    static func spoofVerdict(for thing: Thing) -> SymbolConfusables.Verdict? {
+        guard thing.hasSecurityFlag("symbol") else { return nil }
+        return spoofScan(thing)
+    }
+
+    /// Flags the spoofed symbols ALREADY in the corpus, once.
+    ///
+    /// Without this the feature would have shipped doing nothing for the very
+    /// wallet that revealed the attack: the ingest-time flag only ever sees
+    /// NEW transfers, and `WalletIngest.refresh` dedupes on `sourceRef`, so a
+    /// transfer that landed yesterday is never rebuilt and never re-examined.
+    /// The first probe run measured exactly that gap — 21 confusable symbols
+    /// in the corpus, 0 of them flagged.
+    ///
+    /// Runs at most once per install (the same "seed the baseline" idiom as
+    /// the delegation cursor above, keyed by presence). Honest limit: a thing
+    /// arriving later from another device via CloudKit lands already-decoded
+    /// and misses this pass. That's the same shape as the poisoning flag's own
+    /// gap and not worth a permanent full-corpus scan on every refresh — the
+    /// probe is how you'd see it, and re-running the heal is one defaults key.
+    @MainActor
+    static func healSpoofedSymbols(context: ModelContext) -> Int {
+        let key = "wallet.symbolHeal.v1"
+        guard !UserDefaults.standard.bool(forKey: key) else { return 0 }
+        let things = (try? context.fetch(FetchDescriptor<Thing>(
+            predicate: #Predicate { $0.source == "Wallet" }))) ?? []
+        var healed = 0
+        for t in things where !t.hasSecurityFlag("symbol") {
+            guard let v = spoofScan(t) else { continue }
+            t.addSecurityFlag("symbol")
+            t.spoofedSymbol = v.symbol
+            healed += 1
+        }
+        // The key is written whether or not anything was healed — a clean
+        // corpus must not re-scan on every launch forever.
+        UserDefaults.standard.set(true, forKey: key)
+        if healed > 0 { context.saveHonestly() }
+        return healed
+    }
+
+    /// `-symbolProbe YES` — the read-only twin of `poisoningProbe`: runs the
+    /// confusable rule over ALREADY-LANDED wallet things and reports what it
+    /// finds, so the rule can be verified against a real corpus without
+    /// waiting for a fresh spoofed transfer to arrive. Reports the flagged
+    /// count separately from the count the rule finds NOW, since things landed
+    /// before this shipped carry no flag — a gap between the two numbers is
+    /// the backfill's size, not a bug.
+    @MainActor
+    static func symbolProbe(context: ModelContext) -> String {
+        let all = (try? context.fetch(FetchDescriptor<Thing>(
+            predicate: #Predicate { $0.source == "Wallet" }))) ?? []
+        var found: [String] = []
+        var alreadyFlagged = 0
+        for t in all {
+            if t.hasSecurityFlag("symbol") { alreadyFlagged += 1 }
+            guard let v = spoofScan(t) else { continue }
+            let scalars = v.symbol.unicodeScalars
+                .map { String(format: "U+%04X", $0.value) }.joined(separator: " ")
+            found.append("\"\(v.symbol)\" [\(scalars)] → \(v.impersonating ?? "lookalike chars")")
+        }
+        guard !found.isEmpty else {
+            return "\(all.count) wallet things scanned, no confusable symbols"
+        }
+        return "\(all.count) wallet things scanned, \(found.count) confusable "
+            + "(\(alreadyFlagged) already flagged): " + found.prefix(8).joined(separator: " | ")
     }
 
     /// `-poisoningProbe YES` — runs the fuzzy-match rule over
