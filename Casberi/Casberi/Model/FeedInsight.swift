@@ -120,8 +120,45 @@ enum FeedInsight {
     static func distribution(source: String, things: [Thing]) -> Distribution? {
         switch source {
         case "Stocktwits": return stocktwitsMood(things)
+        case "Linear":     return linearWorkload(things)
         default: return nil
         }
+    }
+
+    /// Where your assigned Linear work sits — the tracker's standing question
+    /// (prd §164's "mood" tier; 2026-07-22). Deliberately NOT the GitHub
+    /// heatmap treatment it superficially resembles: Linear's only date is
+    /// `updatedAt`, which moves when ANYONE touches an issue you're assigned,
+    /// so a contribution-style grid would chart your teammates' activity while
+    /// looking like your own. State is a fact the API states outright.
+    ///
+    /// Reads `mark`, which `TokenBridges.linearMark` maps from Linear's own
+    /// state type — so an issue whose state we couldn't classify counts in
+    /// neither bucket rather than being guessed into one.
+    private static func linearWorkload(_ things: [Thing]) -> Distribution? {
+        var todo = 0, doing = 0, done = 0
+        for thing in things {
+            switch thing.mark {
+            case .todo:  todo += 1
+            case .doing: doing += 1
+            case .done:  done += 1
+            default:     break
+            }
+        }
+        let total = todo + doing + done
+        // Needs enough classified issues to describe a workload — and at
+        // least one still open, or this is a finished list, not a state of
+        // play. A corpus synced before the state field existed marks nothing,
+        // so it correctly draws no card until the next sync reconciles it.
+        guard total >= 4, (todo + doing) >= 1 else { return nil }
+        let segments = [
+            Segment(label: "In progress", count: doing, tone: .positive),
+            Segment(label: "Todo", count: todo, tone: .neutral),
+            Segment(label: "Done", count: done, tone: .neutral),
+        ].filter { $0.count > 0 }
+        return Distribution(title: "Where your work sits",
+                            subtitle: "\(total) \(total == 1 ? "issue" : "issues")",
+                            segments: segments)
     }
 
     /// The declared mood of the posters on your tickers — Stocktwits stores each

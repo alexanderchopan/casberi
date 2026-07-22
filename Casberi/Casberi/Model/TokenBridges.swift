@@ -170,6 +170,12 @@ enum TokenIngest {
 
         guard let incoming = await fetch(bridge, token: token, context: context) else { return nil }
 
+        // Linear's issue state is the one field here that CHANGES after
+        // landing (2026-07-22) — an issue closed in Linear must stop reading
+        // as open in the feed. Runs before the dedupe below, which by design
+        // never revisits a known ref.
+        if bridge == .linear { reconcileLinear(incoming, context: context) }
+
         var existing = IngestSupport.existingSourceRefs(context)
         // One backfill per source string the items actually carry — no
         // assumption that a fetch is single-source, and the lazy artless
@@ -371,9 +377,15 @@ enum TokenIngest {
     /// Linear — issues assigned to you, via its GraphQL API. Personal keys
     /// ride the Authorization header bare, no Bearer.
     private static func linear(_ token: String) async -> [Thing]? {
+        // `state { type }` rides along (2026-07-22) so a Linear row can SHOW
+        // whether it's open — until now a closed issue looked identical to an
+        // active one — and so the feed head can state where the work sits.
+        // `type` not `name`: names are per-team and user-renameable ("In
+        // Review", "Shipping"), the type enum is Linear's own fixed
+        // vocabulary, so the mapping can't drift with someone's workflow.
         let query = """
         { viewer { assignedIssues(first: 30, orderBy: updatedAt) \
-        { nodes { id identifier title url updatedAt } } } }
+        { nodes { id identifier title url updatedAt state { type } } } } }
         """
         guard let root = await IngestSupport.postJSON("https://api.linear.app/graphql",
                                     auth: token,
@@ -387,7 +399,7 @@ enum TokenIngest {
                   let title = node["title"] as? String,
                   let url = node["url"] as? String else { return nil }
             let ident = node["identifier"] as? String
-            return Thing(
+            let thing = Thing(
                 kind: .link,
                 title: ident.map { "\($0) · \(title)" } ?? title,
                 content: url,
@@ -395,7 +407,55 @@ enum TokenIngest {
                 capturedAt: IngestSupport.isoDate(node["updatedAt"]) ?? .now,
                 sourceRef: "linear:\(id)"
             )
+            thing.mark = linearMark((node["state"] as? [String: Any])?["type"] as? String)
+            return thing
         }
+    }
+
+    /// Linear's own state vocabulary → the corpus's mark. An unknown type
+    /// (Linear adding one, or the field absent on an older sync) stays
+    /// `.none` — a mark we can't justify is worse than no mark, and the row
+    /// simply reads as it did before.
+    ///
+    /// The seven types are not guessed: Linear's schema states them on the
+    /// field itself, read by introspection 2026-07-22 — "One of triage,
+    /// backlog, unstarted, started, completed, canceled, duplicate". That
+    /// read is what caught `duplicate`, which an intuition-written table
+    /// would have dropped into `.none` and left reading as open forever.
+    ///
+    /// `canceled` and `duplicate` map to `.done` deliberately: all three
+    /// closing types mean the issue left your plate, which is what the row's
+    /// strikethrough and the "Done" segment claim. Calling either "todo"
+    /// would keep it in your open count for good.
+    private static func linearMark(_ type: String?) -> Mark {
+        switch type {
+        case "backlog", "unstarted", "triage":       return .todo
+        case "started":                              return .doing
+        case "completed", "canceled", "duplicate":   return .done
+        default:                                     return .none
+        }
+    }
+
+    /// Re-marks Linear things already in the corpus on every sync — an issue
+    /// you closed elsewhere has to stop reading as open here. Dedupe skips
+    /// re-landing a known `sourceRef`, so without this the state stamped at
+    /// first sight would be frozen forever (the same reconciliation
+    /// `ScheduleIngest` does for a reminder completed in the Reminders app).
+    @MainActor
+    static func reconcileLinear(_ fresh: [Thing], context: ModelContext) {
+        let byRef = Dictionary(fresh.map { ($0.sourceRef ?? "", $0) },
+                               uniquingKeysWith: { a, _ in a })
+        guard !byRef.isEmpty else { return }
+        let existing = (try? context.fetch(FetchDescriptor<Thing>(
+            predicate: #Predicate { $0.source == "Linear" }))) ?? []
+        var changed = false
+        for thing in existing {
+            guard let ref = thing.sourceRef, let now = byRef[ref],
+                  now.mark != thing.mark else { continue }
+            thing.mark = now.mark
+            changed = true
+        }
+        if changed { context.saveHonestly() }
     }
 
     /// Raindrop — newest 30 bookmarks across all collections.
