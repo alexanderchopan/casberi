@@ -326,7 +326,12 @@ enum HandOff {
         let event = EKEvent(eventStore: store)
         event.title = thing.title
         event.notes = thing.content.isEmpty ? nil : thing.content
-        event.startDate = defaultStart()
+        // This verb only ever derives for `.event` things (VerbDerivation),
+        // whose `capturedAt` IS the real start time ScheduleIngest stamped —
+        // so the real date is always in hand here; `defaultStart()` stays
+        // only as the honest fallback for a kind this verb doesn't actually
+        // reach today.
+        event.startDate = thing.kind == .event ? thing.capturedAt : defaultStart()
         event.endDate = event.startDate.addingTimeInterval(3600)
         event.calendar = store.defaultCalendarForNewEvents
         try store.save(event, span: .thisEvent)
@@ -341,6 +346,12 @@ enum HandOff {
         reminder.title = thing.title
         reminder.notes = thing.content.isEmpty ? nil : thing.content
         reminder.calendar = store.defaultCalendarForNewReminders()
+        // A real `dueAt` (a landed 1Claw grant's expiry, say) rides over —
+        // never invented for a thing that doesn't carry one.
+        if let due = thing.dueAt {
+            reminder.dueDateComponents = Calendar.current.dateComponents(
+                [.year, .month, .day, .hour, .minute], from: due)
+        }
         try store.save(reminder, commit: true)
     }
 

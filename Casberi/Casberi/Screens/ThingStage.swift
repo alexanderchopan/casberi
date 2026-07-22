@@ -10,8 +10,6 @@ import SwiftUI
 /// green, a send stays white (spending isn't a loss state — red would
 /// editorialize).
 ///
-/// Sent/Received only for now — Moved and Swapped keep the standard layout
-/// until their two-legged grammar earns a stage of its own.
 struct TransferStage {
     enum Direction { case sent, received }
     let direction: Direction
@@ -149,6 +147,7 @@ struct TransferStageView: View {
 
     private var arrow: some View {
         Image(systemName: "arrow.right")
+            .accessibilityHidden(true)
             .font(.system(size: 20, weight: .semibold))
             .foregroundStyle(.white.opacity(0.8))
             // Optically centered on the faces, not the whole party column.
@@ -180,6 +179,7 @@ struct TransferStageView: View {
                             .foregroundStyle(.white.opacity(0.95))
                             .lineLimit(1)
                         Image(systemName: "square.and.pencil")
+                            .accessibilityHidden(true)
                             .font(.system(size: 10))
                             .foregroundStyle(.white.opacity(0.5))
                     }
@@ -188,6 +188,8 @@ struct TransferStageView: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
+            // The pencil is the only hint that this column is a control.
+            .accessibilityLabel(Text("Name this address, currently \(label)"))
         } else {
             party(face: counterpartyFace, label: label)
         }
@@ -245,6 +247,175 @@ struct TransferStageView: View {
             return watched.label
         }
         return String(localized: "You")
+    }
+}
+
+/// A self-transfer between two of the person's own watched wallets — the
+/// "Moved 0.5 ETH · Main → Cold" title `WalletIngest` builds when both legs
+/// are watched (2026-07-15). Parsed from the title, the same fallback grammar
+/// `TransferStage` uses for pre-field transfers — a self-move stores no
+/// direction/amount fields (there's no single direction to store), so the
+/// title IS the structured record here.
+struct MovedStage {
+    /// "0.5 ETH", or the bare asset when the leg carried no value.
+    let amount: String
+    let fromLabel: String
+    let toLabel: String
+    /// The real hex addresses behind `fromLabel`/`toLabel` — `WalletFace`
+    /// needs the actual address for its identicon (and any resolved ENS
+    /// avatar), not the display label, or two different wallets that happen
+    /// to share a label prefix would draw the same face. Resolved from
+    /// `thing.walletAddress`/`counterpartyAddress` — both real, since
+    /// `WalletIngest`'s Moved arm stamps the counterparty like every other
+    /// transfer (2026-07-21 fix; the first cut passed the label strings
+    /// straight into `WalletFace`, fabricating an identicon from text no
+    /// address ever produced).
+    let fromAddress: String
+    let toAddress: String
+
+    init?(_ thing: Thing) {
+        guard thing.kind == .transaction, thing.source == "Wallet",
+              thing.title.hasPrefix("Moved "),
+              let mine = thing.walletAddress, !mine.isEmpty,
+              let other = thing.counterpartyAddress, !other.isEmpty
+        else { return nil }
+        let rest = String(thing.title.dropFirst("Moved ".count))
+        guard let sep = rest.range(of: " · "),
+              let arrow = rest.range(of: " → ", range: sep.upperBound..<rest.endIndex)
+        else { return nil }
+        amount = String(rest[..<sep.lowerBound])
+        fromLabel = String(rest[sep.upperBound..<arrow.lowerBound])
+        toLabel = String(rest[arrow.upperBound...])
+        // The title's word order, matched back to whichever wallet's CURRENT
+        // label produced it. A rename since this thing landed can break the
+        // match (the title is frozen, the label isn't) — falls back to
+        // mine→other, a deterministic guess rather than a crash; worst case
+        // the two faces land on the wrong side, never a wrong address.
+        let mineLabel = WalletStore.shared.label(forAddress: mine) ?? WalletStore.shortAddress(mine)
+        if fromLabel == mineLabel {
+            fromAddress = mine; toAddress = other
+        } else if toLabel == mineLabel {
+            fromAddress = other; toAddress = mine
+        } else {
+            fromAddress = mine; toAddress = other
+        }
+    }
+}
+
+/// A trade folded from a matched send+receive on one hash — "Swapped 0.5 ETH
+/// → 1,200 USDC on Uniswap" (`WalletIngest.swapThing`). Two assets change
+/// hands, not a single signed amount, so the stage draws the trade itself
+/// rather than borrowing `TransferStage`'s party/arrow grammar. Parsed from
+/// the title for the same reason `MovedStage` is: a swap stores its venue as
+/// `transferCounterparty`, but never split the two leg amounts into fields.
+struct SwapStage {
+    let outAmount: String
+    let inAmount: String
+    let venue: String?
+
+    init?(_ thing: Thing) {
+        guard thing.kind == .transaction, thing.source == "Wallet",
+              thing.title.hasPrefix("Swapped ") else { return nil }
+        var rest = String(thing.title.dropFirst("Swapped ".count))
+        if let onRange = rest.range(of: " on ") {
+            venue = String(rest[onRange.upperBound...])
+            rest = String(rest[..<onRange.lowerBound])
+        } else {
+            venue = nil
+        }
+        guard let arrow = rest.range(of: " → ") else { return nil }
+        outAmount = String(rest[..<arrow.lowerBound])
+        inAmount = String(rest[arrow.upperBound...])
+    }
+}
+
+/// The self-move stage: two of your own wallets, an arrow, a plain amount.
+/// No sign — moving your own money between your own wallets is neither a
+/// gain nor a loss (the same "spending isn't a loss state" reasoning
+/// `TransferStageView.amountLine` states for a send, taken one step further).
+struct MovedStageView: View {
+    let thing: Thing
+    let stage: MovedStage
+
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack(alignment: .top, spacing: DS.Space.s4) {
+                party(address: stage.fromAddress, label: stage.fromLabel)
+                arrow
+                party(address: stage.toAddress, label: stage.toLabel)
+            }
+            Text(verbatim: stage.amount)
+                .foregroundStyle(DS.textPrimary)
+                .dsText(.heading34)
+                .monospacedDigit()
+                .padding(.top, DS.Space.s8)
+            if let chain = WalletIngest.chainName(forContent: thing.content) {
+                Text(verbatim: chain)
+                    .dsText(.callout15)
+                    .foregroundStyle(DS.textSecondary)
+                    .padding(.top, DS.Space.s1)
+            }
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    private var arrow: some View {
+        Image(systemName: "arrow.right")
+            .accessibilityHidden(true)
+            .font(.system(size: 20, weight: .semibold))
+            .foregroundStyle(.white.opacity(0.8))
+            .frame(height: 50)
+    }
+
+    private func party(address: String, label: String) -> some View {
+        VStack(spacing: DS.Space.s2) {
+            WalletFace(address: address, size: 50)
+                .overlay(
+                    RoundedRectangle(cornerRadius: DS.Radius.appIcon(50), style: .continuous)
+                        .strokeBorder(.white.opacity(0.25), lineWidth: 3)
+                )
+            Text(verbatim: label)
+                .dsText(.label12)
+                .foregroundStyle(.white.opacity(0.95))
+                .lineLimit(1)
+        }
+        .frame(maxWidth: 120)
+    }
+}
+
+/// The swap stage: what left, an arrow, what arrived — the trade as a fact,
+/// no party faces (a router isn't a "who" the way a counterparty is; naming
+/// it still rides the Name disc off `counterpartyAddress`, same as any
+/// transfer).
+struct SwapStageView: View {
+    let thing: Thing
+    let stage: SwapStage
+
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+                Text(verbatim: stage.outAmount)
+                Image(systemName: "arrow.right")
+                    .accessibilityHidden(true)
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.6))
+                Text(verbatim: stage.inAmount)
+            }
+            .foregroundStyle(DS.textPrimary)
+            .dsText(.stat24)
+            .monospacedDigit()
+            .multilineTextAlignment(.center)
+
+            let place = [WalletIngest.chainName(forContent: thing.content), stage.venue]
+                .compactMap(\.self)
+            if !place.isEmpty {
+                Text(verbatim: place.joined(separator: " · "))
+                    .dsText(.callout15)
+                    .foregroundStyle(DS.textSecondary)
+                    .padding(.top, DS.Space.s3)
+            }
+        }
+        .frame(maxWidth: .infinity)
     }
 }
 

@@ -57,6 +57,27 @@ struct BandRow: View {
         // TechCrunch — the icon's word twin, the way a social row names its
         // account. Empty on rows that landed before the name was captured.
         case "RSS":       let name = thing.authorHandle ?? ""; return name.isEmpty ? nil : name
+        // GitHub carries starCount/repoLanguage but rendered as a plain band
+        // like any other link — the contribution hero above the feed was the
+        // only place either fact showed (2026-07-21 enrichment, matching the
+        // grammar RSS/social/Wallet already use in this same slot).
+        case "GitHub":
+            let language = thing.repoLanguage ?? ""
+            let stars = (thing.starCount).map { "★\(GitHubStarContent.compact($0))" } ?? ""
+            let parts = [language, stars].filter { !$0.isEmpty }
+            return parts.isEmpty ? nil : parts.joined(separator: " · ")
+        // Peer rides the Wallet address (the wallet-label check above already
+        // covers the >1-watched-wallet case); with just one wallet watched
+        // that slot sits empty, so a single-wallet Peer row instead names the
+        // fiat rail — "Cash App", "Venmo" — parsed off the title's own fixed
+        // "… with <method> on Peer" template (`PeerBridge.title(for:story:)`
+        // is the only place that string is built, so the parse is exact, not
+        // a heuristic). No structured field carries the method separately.
+        case "Peer":
+            guard let start = thing.title.range(of: " with "),
+                  let end = thing.title.range(of: " on Peer", range: start.upperBound..<thing.title.endIndex)
+            else { return nil }
+            return String(thing.title[start.upperBound..<end.lowerBound])
         default:          return nil
         }
     }
@@ -221,13 +242,98 @@ struct BandRow: View {
                 }
                 if let project {
                     Text(project)
-                        .font(.system(size: 11, weight: .medium))
+                        .dsText(.label11)
                         .foregroundStyle(projectInk)
                         .lineLimit(1)
                 }
             }
         }
         .padding(.vertical, DS.Space.s2)
+        // One row, one element, one sentence — see `ThingVoice`. Without this
+        // a single row is five stops: icon, title, thumbnail, time, tag.
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(ThingVoice.rowLabel(for: thing, title: titleText,
+                                                project: project, live: live,
+                                                countdown: countdown))
+    }
+}
+
+/// A relative time ("3m", "2h", "5d") that stays true — it re-renders each
+/// minute instead of going stale with the row (§9 polish). Moved here from
+/// the now-deleted ThingRow.swift (2026-07-21): BandRow is the row every
+/// shaped feed actually uses, and this is the clock every one of them reads.
+struct LiveTimeText: View {
+    let date: Date
+    var color: Color = DS.textTertiary
+
+    var body: some View {
+        TimelineView(.periodic(from: .now, by: 60)) { _ in
+            let label = Self.short(date)
+            // "2h" → "3h" rolls its digit (the Clock app's grammar) instead
+            // of swapping — the change is the moment (motion pass 2026-07-11).
+            Text(label)
+                .dsText(.subhead13)
+                .foregroundStyle(color)
+                .contentTransition(.numericText())
+                .animation(DS.Motion.standard, value: label)
+                .accessibilityLabel(Self.spoken(date))
+        }
+    }
+
+    static func short(_ date: Date) -> String {
+        let s = Date.now.timeIntervalSince(date)
+        if s < 3600 { return "\(max(1, Int(s / 60)))m" }
+        if s < 86_400 { return "\(Int(s / 3600))h" }
+        return "\(Int(s / 86_400))d"
+    }
+
+    /// The same instant, said out loud. "2h" is a glance; VoiceOver reads the
+    /// abbreviation as a bare letter, so the spoken form spells the unit.
+    static func spoken(_ date: Date) -> String {
+        let s = Date.now.timeIntervalSince(date)
+        if s < 3600 {
+            let m = max(1, Int(s / 60))
+            return m == 1 ? String(localized: "1 minute ago")
+                          : String(localized: "\(m) minutes ago")
+        }
+        if s < 86_400 {
+            let h = Int(s / 3600)
+            return h == 1 ? String(localized: "1 hour ago")
+                          : String(localized: "\(h) hours ago")
+        }
+        let d = Int(s / 86_400)
+        return d == 1 ? String(localized: "1 day ago")
+                      : String(localized: "\(d) days ago")
+    }
+}
+
+/// A row said out loud (2026-07-21).
+///
+/// A feed row is one thing, so VoiceOver should hear one sentence — kind,
+/// title, where it came from, why it's here, when — rather than stepping
+/// through an icon, a title, a context word and a "2h" fragment as four
+/// unrelated elements. Every shaped row composes its label here so the feed
+/// speaks one grammar, and so a fact that is visual-only (the scam flag riding
+/// the icon, the strikethrough that means done) still reaches someone who
+/// never sees it.
+enum ThingVoice {
+    static func rowLabel(for thing: Thing, title: String, project: String? = nil,
+                         live: Bool = false, countdown: String? = nil) -> String {
+        var parts: [String] = [thing.kind.typeTag, title]
+        if thing.source != thing.kind.typeTag {
+            parts.append(String(localized: "from \(thing.source)"))
+        }
+        if let project, !project.isEmpty { parts.append(project) }
+        // Visual-only facts, spoken. The poisoning flag is a 9pt glyph on the
+        // row icon and it is the whole warning — silent, it does not exist.
+        if thing.securityFlag == "poisoning" {
+            parts.append(String(localized: "Warning, possible scam address"))
+        }
+        if thing.mark == .done { parts.append(String(localized: "done")) }
+        if live { parts.append(String(localized: "live now")) }
+        else if let countdown, !countdown.isEmpty { parts.append(countdown) }
+        else { parts.append(LiveTimeText.spoken(thing.capturedAt)) }
+        return parts.filter { !$0.isEmpty }.joined(separator: ", ")
     }
 }
 
@@ -568,7 +674,7 @@ struct MusicRow: View {
                 LiveTimeText(date: thing.capturedAt)
                 if let project {
                     Text(project)
-                        .font(.system(size: 11, weight: .medium))
+                        .dsText(.label11)
                         .foregroundStyle(projectInk)
                         .lineLimit(1)
                 }
@@ -799,9 +905,11 @@ struct PhotoCell: View {
             .overlay(alignment: .topLeading) {
                 if let dayPill {
                     Text(dayPill)
-                        .font(.system(size: 12, weight: .semibold))
+                        .dsText(.label12).fontWeight(.semibold)
                         .foregroundStyle(.white)
-                        .padding(.horizontal, DS.Space.s2).frame(height: 22)
+                        // Vertical padding, not a pinned 22pt height: the pill
+                        // now grows with the label instead of clipping it.
+                        .padding(.horizontal, DS.Space.s2).padding(.vertical, 3)
                         .background(Color.black.opacity(0.5), in: Capsule(style: .continuous))
                         .padding(DS.Space.s2)
                 }
@@ -981,7 +1089,7 @@ struct CheckRow: View {
                 LiveTimeText(date: thing.capturedAt)
                 if let project {
                     Text(project)
-                        .font(.system(size: 11, weight: .medium))
+                        .dsText(.label11)
                         .foregroundStyle(projectInk)
                         .lineLimit(1)
                 }
@@ -1060,7 +1168,7 @@ struct RowTrailingMeta: View {
             LiveTimeText(date: thing.capturedAt)
             if let project {
                 Text(project)
-                    .font(.system(size: 11, weight: .medium))
+                    .dsText(.label11)
                     .foregroundStyle(projectInk)
                     .lineLimit(1)
             }

@@ -55,6 +55,13 @@ struct ThingSheetView: View {
     /// section renders only when the check answered.
     @State private var approvalCheck: WalletPrepare.Check?
     @State private var safeCheck: SafeBridge.Check?
+    /// The same link, saved earlier from a different source (2026-07-21) —
+    /// `CrossSourceEcho` was built for this and briefly wired into a row
+    /// anatomy (`ThingRow.swift`) nothing actually rendered, which would
+    /// have run its SwiftData fetch on every link row in every feed. Once
+    /// per sheet open, like `replies`/`approvalCheck` below, is the honest
+    /// place to pay that cost.
+    @State private var crossSourceEcho: String?
     /// Translate verb (2026-07-17): the system Translation sheet, shown over
     /// the thing's own words — no custom UI, Apple's picker does the rest.
     @State private var showTranslate = false
@@ -102,18 +109,24 @@ struct ThingSheetView: View {
                         .padding(.top, DS.Space.s2)
                         .settleIn(delay: 0.04)
                 }
-                // The stage (B1, 2026-07-16): a wallet transfer or a screenshot
-                // leads with a HERO that depicts the thing — parties + signed
-                // amount, or the image in a floating frame — and its verbs
-                // become the dial. Everything else keeps the title-led layout.
-                let stage = self.stage
-                let framedShot = stage == nil && thing.kind == .screenshot
-                if let stage {
-                    TransferStageView(thing: thing, stage: stage,
-                                      onNameCounterparty: nameCounterpartyAction)
+                // The stage (B1, 2026-07-16; extended 2026-07-21 to Moved and
+                // Swapped): a wallet transfer/move/swap or a screenshot leads
+                // with a HERO that depicts the thing — parties + signed
+                // amount, two of your own wallets, a trade's two legs, or the
+                // image in a floating frame — and its verbs become the dial.
+                // Everything else keeps the title-led layout.
+                let walletStage = self.walletStage
+                let framedShot = walletStage == nil && thing.kind == .screenshot
+                if let walletStage {
+                    stageView(for: walletStage)
                         .padding(.horizontal, DS.Space.s4)
                         .padding(.top, DS.Space.s6)
                         .settleIn(delay: 0.06)
+                    // The poisoning flag rides EVERY wallet stage now, not just
+                    // Sent/Received — a spoofed-address warning on a Swap or a
+                    // Moved leg is exactly as real, and used to be invisible
+                    // (those never earned a stage before 2026-07-21, and the
+                    // warning only ever rendered inside one).
                     if thing.securityFlag == "poisoning" {
                         poisoningWarning
                             .padding(.horizontal, DS.Space.s4)
@@ -121,7 +134,12 @@ struct ThingSheetView: View {
                             .settleIn(delay: 0.08)
                     }
                     VerbDial(thing: thing, verbs: walletVerbs,
-                             onVerb: runVerb, onName: nameCounterpartyAction)
+                             onVerb: runVerb,
+                             // A Moved leg's counterparty IS your own watched
+                             // wallet — it already has a name (via the Wallet
+                             // screen's rename), so the Name disc would just
+                             // offer to relabel it through the wrong flow.
+                             onName: isMoved(walletStage) ? nil : nameCounterpartyAction)
                         .padding(.top, DS.Space.s6)
                         .settleIn(delay: 0.12)
                     dialResult
@@ -159,7 +177,7 @@ struct ThingSheetView: View {
                 // A social post always shows content — its pictures, what it
                 // quotes, how it landed — and its `content` is a permalink, so
                 // the title-stutter test never applied to it anyway.
-                let contentShown = stage == nil && !framedShot
+                let contentShown = walletStage == nil && !framedShot
                     && (isSocialPost || (thing.kind != .event
                     && thing.content.trimmingCharacters(in: .whitespacesAndNewlines)
                         != thing.title.trimmingCharacters(in: .whitespacesAndNewlines)))
@@ -170,7 +188,7 @@ struct ThingSheetView: View {
                 }
                 // The stage already shows the counterparty (with its pencil),
                 // so its spec table drops the Who row instead of repeating it.
-                specTable(contentShown: contentShown, showsWho: stage == nil)
+                specTable(contentShown: contentShown, showsWho: walletStage == nil)
                     .padding(.horizontal, DS.Space.s4)
                     .padding(.top, DS.Space.s6)
                     .settleIn(delay: 0.18)
@@ -189,7 +207,7 @@ struct ThingSheetView: View {
                         .padding(.top, DS.Space.s3)
                         .id("tags")
                 }
-                if stage == nil && !framedShot {
+                if walletStage == nil && !framedShot {
                     actionRows
                         .padding(.top, DS.Space.s6)
                 }
@@ -227,6 +245,12 @@ struct ThingSheetView: View {
         .onAppear {
             streamRelated()
             Task { replies = await SocialThread.replies(for: thing) }
+            // `CrossSourceEcho.find` itself gates on `.link` (returns nil
+            // instantly otherwise), but checking here too skips even
+            // constructing the Task for the common non-link case.
+            if thing.kind == .link {
+                crossSourceEcho = CrossSourceEcho.find(for: thing, context: modelContext)
+            }
             // The gate is a string check — non-approval things spend nothing.
             if WalletPrepare.applies(to: thing) {
                 Task { approvalCheck = await WalletPrepare.check(for: thing) }
@@ -384,6 +408,7 @@ struct ThingSheetView: View {
         } label: {
             HStack(spacing: DS.Space.s1) {
                 Image(systemName: "arrowshape.turn.up.left")
+                    .accessibilityHidden(true)
                     .dsText(.label12).foregroundStyle(DS.textTertiary)
                 Text("Replying to @\(SocialThread.shortHandle(parent.handle))")
                     .dsText(.label12).foregroundStyle(DS.textTertiary)
@@ -414,6 +439,8 @@ struct ThingSheetView: View {
                         .coinFlip(trigger: thing.id)
                 }
                 .buttonStyle(.plain)
+                // A bare face: the only control here with no word in it.
+                .accessibilityLabel(Text("Open profile"))
                 // WHY this post is here rides the sentence when there's a
                 // reason worth stating ("@dwr · in /design · 2h ago") — a
                 // liked cast, a channel cast, and your own post used to read
@@ -426,14 +453,50 @@ struct ThingSheetView: View {
                 // died with the hue ruling (2026-07-10). BridgeIcon falls back
                 // to the glyph-on-hue circle for sources without a bundled
                 // asset, so the seat is never empty.
-                BridgeIcon(name: thing.source, size: 18, circular: true)
-                    // The mark coin-flips as the sheet opens (delight, 2026-07-12).
-                    .coinFlip(trigger: thing.id)
-                Text("\(thing.kind.typeTag) · \(shortTime(thing.capturedAt)) ago")
-                    .dsText(.label12)
-                    .foregroundStyle(DS.textTertiary)
+                //
+                // A door, not just a label (2026-07-21): tapping it leaves
+                // for that source's own feed, the inverse of the row you
+                // drilled in from — and inside the agent's pushed sheet
+                // (which has no chrome of its own) it's the only way back to
+                // "where does this live" that isn't the app-opening "Open in".
+                //
+                // `dismiss()` then `openURL(...)` is deliberate, not
+                // redundant: on a plain `.sheet` presentation, `dismiss()`
+                // does the whole job (openURL just re-routes the app
+                // underneath). Pushed inside the agent's own Stack,
+                // Composer.swift wraps `openURL` to ALSO call `onLowerAgent()`
+                // — the same "leaving is a verb" contract every other
+                // `.openURL` verb in this sheet already gets (ruling 9), so
+                // the eyebrow correctly drops the whole agent and lands on
+                // the source feed, not just pops the pushed thing-view.
+                // Verified live via `-agentThingProbe` (2026-07-21).
+                Button {
+                    DSHaptic.tap()
+                    dismiss()
+                    if let url = URL(string: "casberi://feed/source/\(sourcePathComponent)") {
+                        openURL(url)
+                    }
+                } label: {
+                    HStack(spacing: DS.Space.s2) {
+                        BridgeIcon(name: thing.source, size: 18, circular: true)
+                            // The mark coin-flips as the sheet opens (delight, 2026-07-12).
+                            .coinFlip(trigger: thing.id)
+                        Text("\(thing.kind.typeTag) · \(shortTime(thing.capturedAt)) ago")
+                            .dsText(.label12)
+                            .foregroundStyle(DS.textTertiary)
+                    }
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
             }
         }
+    }
+
+    /// `thing.source` as a URL path component — a source name can carry
+    /// spaces ("Apple Music", "iCloud Mail"), so the eyebrow's door needs
+    /// this before handing it to `casberi://feed/source/…`.
+    private var sourcePathComponent: String {
+        thing.source.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? thing.source
     }
 
     /// A social post with a known author — the eyebrow and thread treatment
@@ -465,6 +528,9 @@ struct ThingSheetView: View {
             if thing.kind == .event, !thing.content.isEmpty {
                 specRow("When", thing.content)
             }
+            if thing.kind == .reminder, let due = thing.dueAt {
+                specRow("Due", due.formatted(.dateTime.month(.abbreviated).day().hour().minute()))
+            }
             // Tokens' content URL is plumbing (the chart's technical
             // dependency, not a site the person browsed to) — the native
             // TokenChartView above already carries the read; a "Site" row
@@ -479,6 +545,12 @@ struct ThingSheetView: View {
                let url = Capture.detectURL(in: thing.content.isEmpty ? thing.title : thing.content),
                let host = url.host() {
                 specRow("Site", host.replacingOccurrences(of: "www.", with: ""))
+            }
+            // The same link, already in the corpus from somewhere else — the
+            // app recognizing its own history instead of treating a re-save
+            // as new (CrossSourceEcho, 2026-07-21).
+            if let crossSourceEcho {
+                specRow("Also", "Saved from \(crossSourceEcho)")
             }
             if let agent = thing.provenance.agent {
                 specRow("By", "\(agent)\(thing.provenance.machine.map { " on \($0)" } ?? "")")
@@ -532,6 +604,7 @@ struct ThingSheetView: View {
                     .dsText(.callout15).foregroundStyle(DS.textPrimary)
                     .lineLimit(1)
                 Image(systemName: "square.and.pencil")
+                    .accessibilityHidden(true)
                     .font(.system(size: 12))
                     .foregroundStyle(DS.textTertiary)
                     .padding(.leading, DS.Space.s2)
@@ -563,7 +636,7 @@ struct ThingSheetView: View {
         .buttonStyle(.plain)
     }
 
-    private var tagsLine: Text {
+    private var tagsLine: some View {
         var line = Text("")
         for (i, tag) in thing.tags.enumerated() {
             if i > 0 { line = line + Text(" · ").foregroundStyle(DS.textTertiary) }
@@ -571,7 +644,7 @@ struct ThingSheetView: View {
             line = line + Text(tag)
                 .foregroundStyle(isType ? DS.textSecondary : ProjectHue.color(for: tag))
         }
-        return line.font(.system(size: 15))
+        return line.dsText(.callout15)
     }
 
     // MARK: - The dial's wiring (stage sheets — B1, 2026-07-16)
@@ -584,6 +657,7 @@ struct ThingSheetView: View {
     private var poisoningWarning: some View {
         HStack(alignment: .top, spacing: DS.Space.s2) {
             Image(systemName: "exclamationmark.triangle.fill")
+                .accessibilityHidden(true)
                 .font(.system(size: 13))
                 .foregroundStyle(DS.destructive)
             Text("Looks like a copy of an address you've used — this is a different wallet.")
@@ -592,7 +666,43 @@ struct ThingSheetView: View {
         }
     }
 
-    private var stage: TransferStage? { TransferStage(thing) }
+    /// The three shapes a wallet thing's stage can take — Sent/Received earns
+    /// the full party/arrow/signed-amount treatment; Moved and Swapped
+    /// (2026-07-21) each earn their own, since neither is a single signed
+    /// amount between "you" and a counterparty.
+    private enum WalletStageKind {
+        case transfer(TransferStage)
+        case moved(MovedStage)
+        case swapped(SwapStage)
+    }
+
+    /// The ONE decision point every wallet-stage branch reads — first match
+    /// wins, since a thing can only ever satisfy one of the three title
+    /// grammars.
+    private var walletStage: WalletStageKind? {
+        if let t = TransferStage(thing) { return .transfer(t) }
+        if let m = MovedStage(thing) { return .moved(m) }
+        if let s = SwapStage(thing) { return .swapped(s) }
+        return nil
+    }
+
+    private func isMoved(_ stage: WalletStageKind?) -> Bool {
+        if case .moved = stage { return true }
+        return false
+    }
+
+    @ViewBuilder
+    private func stageView(for stage: WalletStageKind) -> some View {
+        switch stage {
+        case .transfer(let t):
+            TransferStageView(thing: thing, stage: t,
+                              onNameCounterparty: nameCounterpartyAction)
+        case .moved(let m):
+            MovedStageView(thing: thing, stage: m)
+        case .swapped(let s):
+            SwapStageView(thing: thing, stage: s)
+        }
+    }
 
     /// A wallet transfer's dial verbs: Open (the explorer link, when the
     /// record carries one) and Copy. Name and Share ride the dial's own slots.
@@ -754,6 +864,7 @@ struct ThingSheetView: View {
             Text(tag).dsText(.label12).foregroundStyle(DS.tint)
             if !isTypeTag {
                 Image(systemName: "xmark")
+                    .accessibilityHidden(true)
                     .font(.system(size: 9, weight: .bold))
                     .foregroundStyle(DS.tint.opacity(0.6))
             }
@@ -762,6 +873,11 @@ struct ThingSheetView: View {
         .frame(height: 28)
         .background(DS.tintDim, in: Capsule(style: .continuous))
         .onTapGesture { remove(tag: tag) }
+        // The chip reads as a bare word; its tap REMOVES the tag. A type tag
+        // carries no ✕ and no tap, so it stays a plain label.
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(isTypeTag ? Text(tag) : Text("Remove tag \(tag)"))
+        .accessibilityAddTraits(isTypeTag ? [] : .isButton)
         .contextMenu {
             if !isTypeTag {
                 Button("Remove from this thing", systemImage: "xmark.circle") {

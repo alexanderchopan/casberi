@@ -26,6 +26,16 @@ struct ThingContentView: View {
             && Capture.detectURL(in: thing.content.isEmpty ? thing.title : thing.content) != nil
     }
 
+    /// A product's stated price, formatted in its own currency — nil (never
+    /// a guess) when the record doesn't carry one.
+    static func productPrice(_ thing: Thing) -> String? {
+        guard let value = thing.priceValue else { return nil }
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .currency
+        formatter.currencyCode = thing.priceCurrency ?? "USD"
+        return formatter.string(from: NSNumber(value: value))
+    }
+
     var body: some View {
         switch thing.kind {
         case .screenshot:
@@ -62,10 +72,30 @@ struct ThingContentView: View {
             // A product leads with its page preview and photo — the store/deal
             // page in `content`, the product image in `previewImageURL` — the
             // same treatment a link gets, so a product never renders as a bare URL.
-            if let url = Capture.detectURL(in: thing.content.isEmpty ? thing.title : thing.content) {
-                LinkPreviewCard(url: url, storedImageURL: thing.previewImageURL)
-            } else if let art = thing.previewImageURL, !art.isEmpty {
+            let url = Capture.detectURL(in: thing.content.isEmpty ? thing.title : thing.content)
+            let art = thing.previewImageURL
+            if let url {
+                LinkPreviewCard(url: url, storedImageURL: art)
+            } else if let art, !art.isEmpty {
                 StoredArtContent(urlString: art)
+            }
+            // The price the record holds — a fact of its own, shown beside
+            // whatever media rendered above (or, when neither URL nor stored
+            // art exist, doing the work of not leaving the sheet blank).
+            if let price = Self.productPrice(thing) {
+                Text(price)
+                    .dsText(.heading17).foregroundStyle(DS.textPrimary)
+                    .padding(.horizontal, DS.Space.s4)
+                    .padding(.bottom, DS.Space.s3)
+            } else if url == nil, (art ?? "").isEmpty, !thing.content.isEmpty {
+                // No URL, no art, no price — the sheet used to render nothing
+                // here at all. The record's own words are the honest fallback,
+                // same as every other kind's default case.
+                Text(thing.content)
+                    .dsText(.callout15).foregroundStyle(DS.textSecondary)
+                    .lineLimit(6)
+                    .padding(.horizontal, DS.Space.s4)
+                    .padding(.bottom, DS.Space.s3)
             }
         case .chat:
             // A post/cast is not a conversation — it's one person's words,
@@ -86,6 +116,29 @@ struct ThingContentView: View {
             FileChip(name: thing.title, note: thing.content)
         case .event:
             if !thing.content.isEmpty { ScheduleCard(text: thing.content) }
+        case .mail:
+            // Real inbox mail (MailBridge) carries no body — `content` is
+            // just "From <sender>" — so its content-area anatomy is the
+            // sender, with the same initial-circle identity the feed row
+            // already draws, instead of that raw string in a bare text
+            // bubble. Demo/sample mail things DO carry real body text with
+            // no sender field at all — MailContentView shows whichever facts
+            // the record actually has, never both when they'd say the same
+            // thing.
+            MailContentView(thing: thing)
+        case .reminder:
+            if let due = thing.dueAt {
+                ReminderDueRow(due: due)
+            } else if !thing.content.isEmpty {
+                // No structured due date (a Todoist task, or a Reminders item
+                // with none set) — the same bare-text fallback every kind
+                // without a dedicated anatomy gets.
+                Text(thing.content)
+                    .dsText(.callout15).foregroundStyle(DS.textSecondary)
+                    .lineLimit(12)
+                    .padding(.horizontal, DS.Space.s4)
+                    .padding(.bottom, DS.Space.s3)
+            }
         case .approval:
             if !thing.content.isEmpty { CommandCard(text: thing.content) }
         default:
@@ -123,6 +176,7 @@ private struct ScreenshotContent: View {
                     .overlay(
                         VStack(spacing: DS.Space.s1) {
                             Image(systemName: "photo")
+                                .accessibilityHidden(true)
                                 .font(.system(size: 22))
                                 .foregroundStyle(DS.textTertiary)
                             Text("In your photos")
@@ -333,6 +387,7 @@ private struct StoredArtContent: View {
                     .frame(height: 140)
                     .overlay(
                         Image(systemName: "music.note")
+                            .accessibilityHidden(true)
                             .font(.system(size: 22))
                             .foregroundStyle(DS.textTertiary)
                     )
@@ -370,19 +425,39 @@ private extension UIImage {
 
 /// Chat content reads as a conversation — one bubble per paragraph. No
 /// speakers are invented; the record holds text, the shape says chat.
+///
+/// A long imported transcript (ChatGPT, Claude) used to hard-cut at 6
+/// paragraphs with no sign anything was missing — a silent truncation, the
+/// same class of dishonesty the app polices everywhere else (a cut needs a
+/// seam). "Show more" names what's hidden and lets it in.
 private struct ChatBubbles: View {
     let text: String
+    @State private var expanded = false
+
+    private var paragraphs: [Substring] { text.split(separator: "\n") }
+    private static let collapsedCount = 6
 
     var body: some View {
+        let shown = expanded ? paragraphs : Array(paragraphs.prefix(Self.collapsedCount))
+        let hiddenCount = paragraphs.count - shown.count
         VStack(alignment: .leading, spacing: DS.Space.s2) {
-            ForEach(Array(text.split(separator: "\n").prefix(6).enumerated()),
-                    id: \.offset) { _, line in
+            ForEach(Array(shown.enumerated()), id: \.offset) { _, line in
                 Text(String(line))
                     .dsText(.callout15).foregroundStyle(DS.textPrimary)
                     .padding(.horizontal, DS.Space.s3)
                     .padding(.vertical, DS.Space.s2)
                     .background(DS.fillFaint,
                                 in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            }
+            if hiddenCount > 0 {
+                Button {
+                    withAnimation(DS.Motion.standard) { expanded = true }
+                } label: {
+                    Text("Show \(hiddenCount) more")
+                        .dsText(.subhead13).foregroundStyle(DS.tint)
+                }
+                .buttonStyle(.plain)
+                .padding(.horizontal, DS.Space.s3)
             }
         }
         .padding(.horizontal, DS.Space.s4)
@@ -400,6 +475,13 @@ private struct VoiceContent: View {
 
     @State private var player: AVAudioPlayer?
     @State private var playing = false
+    /// The real amplitude envelope, read off the audio file itself — nil
+    /// until decoded, or forever when there's no audio to read one from. Was
+    /// a hardcoded bar-height array before 2026-07-21 (pure decoration, in an
+    /// app that otherwise polices fake status hard); a flat, even bar shape
+    /// is the honest placeholder while this hasn't loaded, never invented
+    /// peaks and valleys.
+    @State private var envelope: [CGFloat]?
 
     private var audioURL: URL? {
         sourceRef.flatMap(VoiceCapture.audioURL(for:))
@@ -423,9 +505,8 @@ private struct VoiceContent: View {
                     .accessibilityLabel(playing ? "Pause" : "Play")
                 }
                 HStack(spacing: 2) {
-                    ForEach(Array([8, 14, 20, 12, 18, 8, 16, 22, 10, 14, 6, 12, 18, 9, 15].enumerated()),
-                            id: \.offset) { _, h in
-                        Capsule().fill(DS.tint).frame(width: 3, height: CGFloat(h))
+                    ForEach(Array((envelope ?? Self.flatBars).enumerated()), id: \.offset) { _, h in
+                        Capsule().fill(DS.tint).frame(width: 3, height: h)
                             .opacity(playing ? 1 : 0.7)
                     }
                 }
@@ -440,6 +521,63 @@ private struct VoiceContent: View {
         .padding(.horizontal, DS.Space.s4)
         .padding(.bottom, DS.Space.s3)
         .onDisappear { player?.stop() }
+        .task { envelope = await Self.readEnvelope(url: audioURL, data: audio) }
+    }
+
+    /// The flat placeholder — 15 bars, all the same height, drawn while the
+    /// real envelope hasn't loaded (or never will). Even, not shaped: it
+    /// says "audio" without claiming to depict this recording's peaks.
+    private static let flatBars = [CGFloat](repeating: 10, count: 15)
+
+    /// Peak amplitude per bar, read straight off the file's PCM samples — 15
+    /// bars, normalized so the loudest bar in THIS recording always reaches
+    /// full height (there's no absolute loudness to compare against, only
+    /// this clip's own shape).
+    private static func readEnvelope(url: URL?, data: Data?) async -> [CGFloat]? {
+        await Task.detached(priority: .utility) {
+            var tempURL: URL?
+            defer { tempURL.map { try? FileManager.default.removeItem(at: $0) } }
+            let fileURL: URL
+            if let url {
+                fileURL = url
+            } else if let data {
+                let tmp = FileManager.default.temporaryDirectory
+                    .appendingPathComponent(UUID().uuidString + ".m4a")
+                guard (try? data.write(to: tmp)) != nil else { return nil }
+                tempURL = tmp
+                fileURL = tmp
+            } else {
+                return nil
+            }
+            guard let file = try? AVAudioFile(forReading: fileURL) else { return nil }
+            let frameCount = AVAudioFrameCount(file.length)
+            guard frameCount > 0,
+                  let buffer = AVAudioPCMBuffer(pcmFormat: file.processingFormat,
+                                                frameCapacity: frameCount),
+                  (try? file.read(into: buffer)) != nil,
+                  let channelData = buffer.floatChannelData
+            else { return nil }
+            let channels = Int(buffer.format.channelCount)
+            let frames = Int(buffer.frameLength)
+            let bars = 15
+            guard frames > 0, channels > 0 else { return nil }
+            let samplesPerBar = max(1, frames / bars)
+            var peaks = [Float](repeating: 0, count: bars)
+            for bar in 0..<bars {
+                let start = bar * samplesPerBar
+                let end = min(start + samplesPerBar, frames)
+                guard start < end else { continue }
+                var peak: Float = 0
+                for ch in 0..<channels {
+                    let samples = channelData[ch]
+                    for i in start..<end { peak = max(peak, abs(samples[i])) }
+                }
+                peaks[bar] = peak
+            }
+            guard let maxPeak = peaks.max(), maxPeak > 0 else { return nil }
+            // 6...22pt, the same range the old hardcoded bars drew in.
+            return peaks.map { 6 + CGFloat($0 / maxPeak) * 16 }
+        }.value
     }
 
     private func toggle() {
@@ -476,6 +614,7 @@ private struct FileChip: View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
             HStack(spacing: DS.Space.s3) {
                 Image(systemName: "doc")
+                    .accessibilityHidden(true)
                     .font(.system(size: 17, weight: .medium))
                     .foregroundStyle(DS.tint)
                 Text(name)
@@ -503,6 +642,84 @@ private struct FileChip: View {
     }
 }
 
+/// A mail thing's content-area anatomy: the sender, in the same
+/// initial-circle identity the feed row draws (SenderInitial, ShapedRows.swift),
+/// plus whatever body text the record actually carries. `MailBridge` stores
+/// no body (`content` is just "From <sender>"), so real inbox mail shows only
+/// the sender row; demo/sample mail carries real body text with no sender
+/// field, and shows only that — never a duplicate "From …" line next to the
+/// same fact restated.
+private struct MailContentView: View {
+    let thing: Thing
+
+    /// New rows carry the sender in `authorHandle`; older rows stored it only
+    /// as the content's "From …" prefix — the same fallback the feed row uses,
+    /// so a mail thing never loses its sender to a schema gap.
+    private var sender: String? {
+        if let from = thing.authorHandle, !from.isEmpty { return from }
+        if thing.content.hasPrefix("From ") {
+            let from = String(thing.content.dropFirst("From ".count))
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            return from.isEmpty ? nil : from
+        }
+        return nil
+    }
+
+    private var isFromLine: Bool { thing.content.hasPrefix("From ") }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+            if let sender {
+                HStack(spacing: DS.Space.s2) {
+                    SenderInitial(sender: sender, size: 26)
+                    Text(SenderInitial.displayName(of: sender))
+                        .dsText(.callout15).foregroundStyle(DS.textSecondary)
+                        .lineLimit(1)
+                }
+            }
+            if !isFromLine, !thing.content.isEmpty {
+                Text(thing.content)
+                    .dsText(.callout15).foregroundStyle(DS.textPrimary)
+                    .lineLimit(10)
+            }
+        }
+        .padding(.horizontal, DS.Space.s4)
+        .padding(.bottom, DS.Space.s3)
+    }
+}
+
+/// A reminder's structured deadline — read straight off `dueAt`, the same
+/// field the "Coming up" lane already reads (KeptAskComposers.swift), so the
+/// sheet finally shows the date the app is quietly tracking for you rather
+/// than only the free-text title.
+private struct ReminderDueRow: View {
+    let due: Date
+
+    private var overdue: Bool { due < .now }
+
+    var body: some View {
+        HStack(spacing: DS.Space.s3) {
+            Image(systemName: "clock")
+                .accessibilityHidden(true)
+                .font(.system(size: 15, weight: .medium))
+                .foregroundStyle(overdue ? DS.destructive : DS.tint)
+            Text(due.formatted(.dateTime.month(.abbreviated).day().hour().minute()))
+                .dsText(.body17)
+                .foregroundStyle(overdue ? DS.destructive : DS.textPrimary)
+            if overdue {
+                Text("Overdue")
+                    .dsText(.label12).foregroundStyle(DS.destructive)
+            }
+            Spacer()
+        }
+        .padding(DS.Space.s3)
+        .background(DS.fillFaint,
+                    in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+        .padding(.horizontal, DS.Space.s4)
+        .padding(.bottom, DS.Space.s3)
+    }
+}
+
 /// What the agent wants to run — the exact ask, monospaced, nothing
 /// paraphrased. The verbs below it are the answer.
 private struct CommandCard: View {
@@ -510,7 +727,7 @@ private struct CommandCard: View {
 
     var body: some View {
         Text(text)
-            .font(.system(size: 13, design: .monospaced))
+            .dsText(.mono13)
             .foregroundStyle(DS.textPrimary)
             .lineLimit(6)
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -530,6 +747,7 @@ private struct ScheduleCard: View {
     var body: some View {
         HStack(spacing: DS.Space.s3) {
             Image(systemName: "clock")
+                .accessibilityHidden(true)
                 .font(.system(size: 15, weight: .medium))
                 .foregroundStyle(DS.tint)
             Text(text)
@@ -621,6 +839,7 @@ private struct TokenChartContent: View {
             // layout, and it stays a label, not a control.
             HStack(spacing: DS.Space.s2) {
                 Image(systemName: "checkmark")
+                    .accessibilityHidden(true)
                     .font(.system(size: 15, weight: .bold))
                     .foregroundStyle(DS.confirm)
                 Text("Watching \(watchedTitle)")
@@ -755,7 +974,11 @@ private struct StockChartContent: View {
 /// for stars — "since you starred", the stargazer count the day you saved it
 /// against where it is now. The anchor is stored at ingest; the current count
 /// is fetched live (and simply omitted if the fetch can't reach it).
-private struct GitHubStarContent: View {
+/// Not private (2026-07-21): `compact(_:)` and `languageColor(_:)` are also
+/// what the GitHub feed row's trailing star/language enrichment reuses
+/// (ShapedRows.swift) — one star-formatting and one Linguist-color table, not
+/// two copies drifting apart.
+struct GitHubStarContent: View {
     let thing: Thing
     @State private var currentStars: Int?
 
@@ -804,6 +1027,7 @@ private struct GitHubStarContent: View {
         if let since {
             HStack(spacing: 5) {
                 Image(systemName: "star.fill")
+                    .accessibilityHidden(true)
                     .dsText(.label12).foregroundStyle(DS.textTertiary)
                 if let now = currentStars, now != since.stars {
                     let delta = now - since.stars
