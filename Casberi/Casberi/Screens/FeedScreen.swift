@@ -96,6 +96,17 @@ struct FeedScreen: View {
     /// (2026-07-20: the tile's tap used to push the MANAGE screen, which no
     /// longer shows warnings at all — a door to the wrong room).
     @State private var showWorthALook = false
+    /// The combined portfolio behind the treemap (2026-07-21, prd §155) — one
+    /// derivation the balance headline, the concentration line, and the
+    /// allocation tray all read, so nothing on this screen can disagree with
+    /// the map it's standing under. Lands with the treemap doc, from the same
+    /// read.
+    @State private var portfolio: WalletPortfolio?
+    /// The full allocation tray — every position and which wallets hold it.
+    @State private var showAllocation = false
+    /// The balance line's window (prd §155). Narrowed to what the record can
+    /// actually answer each render; the choice persists across launches.
+    @State private var balanceRange: WalletRange = .watched
     /// The wallet switcher's selection fill — ONE capsule that slides from
     /// the old chip to the new (the source chips' own ruling, 2026-07-14:
     /// "selection is an object traveling, not two states blinking").
@@ -778,9 +789,18 @@ struct FeedScreen: View {
         }
         .sheet(isPresented: $showCombinedWallets) {
             let samples = wallet.combinedValueSamples()
-            CombinedWalletsSheet(total: samples.last?.usd ?? 0,
+            // The LIVE total leads when the holdings read has landed (prd
+            // §155) — the last sample can be up to four hours old, and the
+            // sheet's own header should never be staler than the headline
+            // that opened it.
+            CombinedWalletsSheet(total: portfolio?.totalUSD ?? samples.last?.usd ?? 0,
                                  combined: samples,
                                  wallets: wallet.addresses)
+        }
+        .sheet(isPresented: $showAllocation) {
+            if let portfolio {
+                WalletAllocationTray(portfolio: portfolio)
+            }
         }
         .sheet(isPresented: $showWorthALook) {
             WalletWorthALookTray(
@@ -852,7 +872,7 @@ struct FeedScreen: View {
             // (The wallet switcher isn't here: it PINS over the stream via
             // safeAreaInset — a scoping control has to stay reachable when
             // you're deep in the transactions it scopes.)
-            walletTilesSection
+            walletTilesSection(visible)
             holdingsBlockSection
             walletDeFiSection
             let all = visible
@@ -1347,31 +1367,50 @@ struct FeedScreen: View {
     /// and with both absent the section renders nothing at all rather than an
     /// empty row (the same honesty floor every section here keeps).
     @ViewBuilder
-    private var walletTilesSection: some View {
+    private func walletTilesSection(_ visible: [Thing]) -> some View {
         // Scoped to the selected wallet's own value line, else the combined
         // portfolio line (prd §128). Both start honest — nil until two aligned
-        // samples exist (TokenChart.from guards ≥2).
+        // samples exist (TokenChart.from guards ≥2) — but the NUMBER no longer
+        // waits on them (prd §155): the live total leads, the line joins.
         let samples = selectedWallet.map { wallet.valueSamples(forAddress: $0) }
             ?? wallet.combinedValueSamples()
-        let chart = TokenChart.from(samples: samples)
+        let ranges = WalletRange.offered(for: samples)
+        let active = ranges.contains(balanceRange) ? balanceRange
+            : WalletRange.remembered(offered: ranges)
+        let windowed = active.clip(samples)
+        let chart = TokenChart.from(samples: windowed)
+        let total = portfolio.map(\.totalUSD).flatMap { $0 > 0 ? $0 : nil }
         let warnings = walletLive.warnings
-        if chart != nil || !warnings.isEmpty {
+        if chart != nil || total != nil || !warnings.isEmpty {
             Section {
                 // The balance takes the room's headline; Worth a look drops to
                 // a quiet line beneath it (prd §146, 2026-07-21) — the two
                 // stack now rather than sitting as a matched pair of cards.
                 VStack(alignment: .leading, spacing: DS.Space.s3) {
-                    if let chart {
+                    if chart != nil || total != nil {
                         // The door exists only where a breakdown exists: the
                         // multi-wallet "All" view opens the combined sheet.
                         // Scoped (or single-wallet), the treemap below already
                         // IS the composition — no door, no chevron.
                         let hasBreakdown = wallet.addresses.count > 1 && selectedWallet == nil
-                        WalletBalanceHeadline(chart: chart,
-                                              caption: hasBreakdown
-                                                  ? String(localized: "Across your wallets")
-                                                  : String(localized: "Balance"),
-                                              onOpen: hasBreakdown ? { showCombinedWallets = true } : nil)
+                        WalletBalanceHeadline(
+                            total: total,
+                            chart: chart,
+                            marks: walletMarks(dates: windowed.map(\.at), things: visible),
+                            caption: hasBreakdown
+                                ? String(localized: "Across your wallets")
+                                : String(localized: "Balance"),
+                            mover: moverLine(),
+                            ranges: ranges,
+                            range: active,
+                            onPickRange: { r in
+                                balanceRange = r
+                                r.remember()
+                            },
+                            onOpen: hasBreakdown ? { showCombinedWallets = true } : nil,
+                            onOpenMark: { id in
+                                sheetThing = visible.first { $0.id == id }
+                            })
                             // Each piece arrives on its own clock — the balance
                             // reads off already-recorded samples (instant) while
                             // warnings/holdings/DeFi wait on live reads (2026-07-
@@ -1395,6 +1434,44 @@ struct FeedScreen: View {
                                           bottom: 0, trailing: DS.Space.s4))
             }
         }
+    }
+
+    /// The transactions that landed inside the drawn window, placed against it
+    /// (prd §155, 2026-07-21). A balance line conflates two different stories —
+    /// prices moved, and money moved in or out — and the app holds both halves;
+    /// this is the one that ties them together, so a step in the line can be
+    /// read back to the send that caused it.
+    ///
+    /// Only things that fall BETWEEN the first and last sample are marked:
+    /// a transaction from before the record began has no place on the line, and
+    /// inventing one at the left edge would claim it caused a move the line
+    /// never saw. Capped at the most recent ten — beyond that the punctuation
+    /// becomes a second series and the line stops being readable.
+    private func walletMarks(dates: [Date], things: [Thing]) -> [TokenChartMark] {
+        guard dates.count >= 2, let first = dates.first, let last = dates.last else { return [] }
+        return things
+            .filter { $0.kind == .transaction && $0.capturedAt >= first && $0.capturedAt <= last }
+            .prefix(10)
+            .compactMap { thing in
+                guard let i = dates.lastIndex(where: { $0 <= thing.capturedAt }) else { return nil }
+                let next = min(i + 1, dates.count - 1)
+                let span = dates[next].timeIntervalSince(dates[i])
+                let t = span > 0 ? thing.capturedAt.timeIntervalSince(dates[i]) / span : 0
+                return TokenChartMark(id: thing.id, x: Double(i) + min(max(t, 0), 1),
+                                      label: thing.title)
+            }
+    }
+
+    /// "Mostly ETH · +$310" — the top attributed mover, in the scope the feed
+    /// is standing in (prd §155). The delta pill says the line moved; this says
+    /// what moved it, off the same per-token snapshots the combined sheet's
+    /// "What moved" section reads. nil whenever the record can't attribute
+    /// honestly yet — most of all on a young history, where no snapshot pair
+    /// exists to difference.
+    private func moverLine() -> String? {
+        guard let top = wallet.holdingsDeltas(forAddress: selectedWallet).first else { return nil }
+        let sign = top.delta >= 0 ? "+" : "−"
+        return String(localized: "Mostly \(top.symbol) · \(sign)\(TokenStats.compact(abs(top.delta)))")
     }
 
     /// Aave collateral / debt / health for the wallets in scope (2026-07-20) —
@@ -1525,32 +1602,50 @@ struct FeedScreen: View {
     private var holdingsBlockSection: some View {
         if !blockStream.els.isEmpty {
             Section {
-                GenRender(id: "root", els: blockStream.els)
-                    // The SECTION's own arrival, not the cells' — GenTagMap
-                    // already stages its cells once mounted; this is what
-                    // stops the whole treemap from hard-popping in the moment
-                    // the holdings read lands (2026-07-20, wallet streaming fix).
-                    .modifier(RowEntrance(index: 1, wave: shapeWave, style: entranceStyle))
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
-                    .listRowInsets(EdgeInsets())
-                    // A tapped holdings cell opens its token's chart
-                    // (2026-07-14): the thing sheet when watched, the quick
-                    // sheet when it's just held; a routeless native-coin
-                    // cell keeps its old door — the Wallet screen (no dead
-                    // controls). The Feed sets its own handler —
-                    // HomeScreen's doesn't reach this surface.
-                    .environment(\.genProjectTap) { name in
-                        if let route = TokenQuickRoute.from(sentinel: name) {
-                            if let thing = route.watchedThing(in: modelContext) {
-                                sheetThing = thing
-                            } else {
-                                quickToken = route
+                VStack(alignment: .leading, spacing: DS.Space.s2) {
+                    GenRender(id: "root", els: blockStream.els)
+                        // A tapped holdings cell opens its token's chart
+                        // (2026-07-14): the thing sheet when watched, the quick
+                        // sheet when it's just held; a routeless native-coin
+                        // cell keeps its old door — the Wallet screen (no dead
+                        // controls). The Feed sets its own handler —
+                        // HomeScreen's doesn't reach this surface.
+                        .environment(\.genProjectTap) { name in
+                            if let route = TokenQuickRoute.from(sentinel: name) {
+                                if let thing = route.watchedThing(in: modelContext) {
+                                    sheetThing = thing
+                                } else {
+                                    // The combined map merges wallets, so a
+                                    // cell tapped there carries the "held in"
+                                    // breakdown with it (prd §155) — the fact
+                                    // the per-wallet maps used to carry by
+                                    // never merging in the first place.
+                                    quickToken = route.withHolders(
+                                        portfolio?.holders(forSymbol: route.symbol ?? "") ?? [])
+                                }
+                            } else if name == "@wallet" {
+                                HomeRoute.shared.bridgePush = .wallet
                             }
-                        } else if name == "@wallet" {
-                            HomeRoute.shared.bridgePush = .wallet
                         }
+                    // The map says WHAT you hold; this says how much of it is
+                    // one thing (prd §155) — a read that only means something
+                    // about a whole portfolio.
+                    if let portfolio, !portfolio.isEmpty {
+                        WalletConcentrationLine(
+                            portfolio: portfolio,
+                            onOpen: portfolio.walletCount > 1 && selectedWallet == nil
+                                ? { showAllocation = true } : nil)
+                            .padding(.horizontal, DS.Space.s4)
                     }
+                }
+                // The SECTION's own arrival, not the cells' — GenTagMap
+                // already stages its cells once mounted; this is what
+                // stops the whole treemap from hard-popping in the moment
+                // the holdings read lands (2026-07-20, wallet streaming fix).
+                .modifier(RowEntrance(index: 1, wave: shapeWave, style: entranceStyle))
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+                .listRowInsets(EdgeInsets())
             }
         }
     }
@@ -2424,20 +2519,35 @@ struct FeedScreen: View {
     private func streamBlock() {
         guard source == "Wallet" else {
             if !blockStream.els.isEmpty { blockStream.paint([]) }
+            if portfolio != nil { portfolio = nil }
             return
         }
-        // The treemap paints as soon as holdings land. Scoped to the selected
-        // wallet when the feed is (prd §128) — the doc generator filters its
-        // groups to that address; nil paints all.
+        // The treemap paints as soon as holdings land, and the portfolio behind
+        // it lands on the same beat — one read, both answers (prd §155), so the
+        // balance number, the map, and the concentration line can never be
+        // three different moments. Scoped to the selected wallet when the feed
+        // is (prd §128) — the doc generator filters its groups to that address;
+        // nil paints the combined map.
         let scope = selectedWallet
         Task { @MainActor in
-            if let doc = await WalletIngest.holdingsChart(scopeTo: scope) {
+            let read = await WalletIngest.portfolioRead(scopeTo: scope)
+            // The scope may have moved while the read was in flight — a late
+            // answer for a wallet we've since left must not paint (the same
+            // guard `loadWalletLive` keeps).
+            guard scope == selectedWallet else { return }
+            if let read {
                 // Same animated landing as `loadWalletLive` — the treemap is
                 // the tallest late-arriving block, so ITS unanimated insert
                 // was the most jarring of the pops.
-                withAnimation(DS.Motion.standard) { blockStream.paint(doc) }
-            } else if !blockStream.els.isEmpty {
-                withAnimation(DS.Motion.standard) { blockStream.paint([]) }
+                withAnimation(DS.Motion.standard) {
+                    blockStream.paint(read.doc)
+                    portfolio = read.portfolio
+                }
+            } else if !blockStream.els.isEmpty || portfolio != nil {
+                withAnimation(DS.Motion.standard) {
+                    blockStream.paint([])
+                    portfolio = nil
+                }
             }
         }
     }

@@ -78,14 +78,37 @@ private struct WalletTile<Content: View>: View {
 /// samples exist (`TokenChart.from` guards it), so a freshly-watched wallet
 /// shows no headline rather than a flat line.
 struct WalletBalanceHeadline: View {
-    let chart: TokenChart
+    /// The live total from the holdings read — the most current number the app
+    /// knows, and the ONLY one on a first run (2026-07-21, prd §155). The line
+    /// below is sampled at most every four hours, so before this the crown
+    /// number simply didn't exist for the first four hours of watching: the
+    /// headline waited on a chart that waits on a second sample. The total is
+    /// real from the first holdings read; it leads, and the line joins it when
+    /// there's a line to draw.
+    let total: Double?
+    /// The sampled line for the chosen window — nil until two samples fall
+    /// inside it.
+    let chart: TokenChart?
+    /// Transactions that landed inside the window (prd §155) — punctuation on
+    /// the line, each one a door to its own sheet.
+    var marks: [TokenChartMark] = []
     /// "Across your wallets" on the combined view, "Balance" scoped.
     var caption: String = String(localized: "Balance")
+    /// "Mostly ETH · +$310" — WHY the line moved, from the same per-token
+    /// snapshots the combined sheet's "What moved" reads. nil when the record
+    /// can't attribute the move yet.
+    var mover: String? = nil
+    /// The windows this history can honestly answer; fewer than two draws no
+    /// chips (a lone chip is a dead control).
+    var ranges: [WalletRange] = []
+    var range: WalletRange = .watched
+    var onPickRange: (WalletRange) -> Void = { _ in }
     /// nil = no door: with one wallet (or scoped to one) the number has no
     /// further breakdown to show — the treemap below IS the composition, so a
     /// chevron here would open nothing new. Only the multi-wallet "All" view
     /// gets the combined-breakdown sheet behind it.
     let onOpen: (() -> Void)?
+    var onOpenMark: (UUID) -> Void = { _ in }
     @Environment(\.colorScheme) private var scheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// The sparkline's draw-on: 0 → 1 sweeps a mask left to right, so the
@@ -94,44 +117,77 @@ struct WalletBalanceHeadline: View {
     /// a new line deserves its own draw).
     @State private var drawn: CGFloat = 0
 
-    private var accent: Color { TokenChartStyle.accent(change: chart.change, scheme: scheme) }
+    private var accent: Color {
+        TokenChartStyle.accent(change: chart?.change ?? 0, scheme: scheme)
+    }
+
+    /// The number in the headline seat: the live total when the holdings read
+    /// has landed, else the last sampled value. nil renders nothing at all —
+    /// the caller's own guard, kept here too so this view can't paint a $0
+    /// portfolio it doesn't know about.
+    private var displayed: Double? { total ?? chart?.price }
 
     var body: some View {
-        Button { onOpen?() } label: {
-            VStack(alignment: .leading, spacing: DS.Space.s1) {
-                HStack(spacing: 5) {
-                    Text(caption)
-                        .dsText(.label12).foregroundStyle(DS.textSecondary)
-                        .lineLimit(1)
-                    // The door — only where a breakdown exists (the multi-wallet
-                    // "All" view). A chevron promises more behind the tap.
-                    if onOpen != nil {
-                        Image(systemName: "chevron.right")
-                            .font(.system(size: 10, weight: .semibold))
-                            .foregroundStyle(DS.textTertiary)
+        VStack(alignment: .leading, spacing: DS.Space.s1) {
+            // Only the reading is a door — the chips and the marks below are
+            // their own controls, so the tappable region stops at the number.
+            Button { onOpen?() } label: {
+                VStack(alignment: .leading, spacing: DS.Space.s1) {
+                    HStack(spacing: 5) {
+                        Text(caption)
+                            .dsText(.label12).foregroundStyle(DS.textSecondary)
+                            .lineLimit(1)
+                        // The door — only where a breakdown exists (the multi-
+                        // wallet "All" view). A chevron promises more behind
+                        // the tap.
+                        if onOpen != nil {
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 10, weight: .semibold))
+                                .foregroundStyle(DS.textTertiary)
+                        }
+                    }
+                    HStack(alignment: .firstTextBaseline, spacing: DS.Space.s3) {
+                        // The app's money voice ($19.9K), not a token price — this is
+                        // a portfolio total, and `TokenStats.compact` is what the
+                        // combined sheet and the wallet row sublines already speak.
+                        // The digits ROLL between values (a scope switch re-keys the
+                        // number, and $20K odometer-rolling to $4.2K says "same
+                        // instrument, new reading"). Direction rides the value, so
+                        // the roll runs the way the money moved. `price40` is the
+                        // sanctioned big-money rung (prd §102), so it scales with
+                        // Dynamic Type like everything else.
+                        Text(TokenStats.compact(displayed ?? 0))
+                            .dsText(.price40).foregroundStyle(DS.textPrimary)
+                            .monospacedDigit()
+                            .contentTransition(reduceMotion ? .identity
+                                               : .numericText(value: displayed ?? 0))
+                            .lineLimit(1).minimumScaleFactor(0.6)
+                        // The window the delta is measured over, named — the
+                        // record's own span ("watched") or a calendar window
+                        // it actually covers. Nothing to measure yet, no pill.
+                        if let chart {
+                            TokenDeltaPill(change: chart.change,
+                                           label: range.deltaLabel, compact: true)
+                        }
+                    }
+                    if let mover {
+                        // WHY it moved, in the quietest ink on the screen: the
+                        // headline states the reading, this states its cause.
+                        Text(mover)
+                            .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                            .lineLimit(1)
                     }
                 }
-                HStack(alignment: .firstTextBaseline, spacing: DS.Space.s3) {
-                    // The app's money voice ($19.9K), not a token price — this is
-                    // a portfolio total, and `TokenStats.compact` is what the
-                    // combined sheet and the wallet row sublines already speak.
-                    // The digits ROLL between values (a scope switch re-keys the
-                    // number, and $20K odometer-rolling to $4.2K says "same
-                    // instrument, new reading"). Direction rides the value, so
-                    // the roll runs the way the money moved. `price40` is the
-                    // sanctioned big-money rung (prd §102), so it scales with
-                    // Dynamic Type like everything else.
-                    Text(TokenStats.compact(chart.price))
-                        .dsText(.price40).foregroundStyle(DS.textPrimary)
-                        .monospacedDigit()
-                        .contentTransition(reduceMotion ? .identity : .numericText(value: chart.price))
-                        .lineLimit(1).minimumScaleFactor(0.6)
-                    // "watched" — the honest window. The samples start when the
-                    // wallet was first watched, so naming any calendar period
-                    // ("this week") would claim a range the data may not cover.
-                    TokenDeltaPill(change: chart.change, label: "watched", compact: true)
-                }
-                TokenChartPlot(chart: chart, accent: accent, height: 40, pulses: false)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .disabled(onOpen == nil)
+
+            if let chart {
+                TokenChartPlot(chart: chart, accent: accent, height: 40, pulses: false,
+                               marks: marks,
+                               onTapMark: marks.isEmpty ? nil : { onOpenMark($0.id) })
                     .mask(alignment: .leading) {
                         GeometryReader { geo in
                             Rectangle().frame(width: geo.size.width * drawn)
@@ -140,12 +196,42 @@ struct WalletBalanceHeadline: View {
                     .onAppear { draw() }
                     .onChange(of: chart.closes) { draw(redraw: true) }
                     .padding(.top, DS.Space.s1)
+                if ranges.count > 1 { rangeChips }
+            } else {
+                // No line yet — say why, rather than leaving the number
+                // hanging over empty space. The total above it is already
+                // real; this is only about the SHAPE not existing yet.
+                Text("The line starts once a second reading lands.")
+                    .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                    .padding(.top, 2)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
-        .disabled(onOpen == nil)
+    }
+
+    /// The window chips — the token chart's own grammar, at the wallet's dose.
+    /// Only drawn with a real choice to make (see `WalletRange.offered`).
+    private var rangeChips: some View {
+        HStack(spacing: DS.Space.s1) {
+            ForEach(ranges, id: \.self) { r in
+                Button {
+                    guard r != range else { return }
+                    DSHaptic.tap()
+                    onPickRange(r)
+                } label: {
+                    Text(r.rawValue)
+                        .dsText(.label12)
+                        .lineLimit(1)
+                        .fixedSize()
+                        .foregroundStyle(r == range ? DS.textPrimary : DS.textSecondary)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 4)
+                        .background(r == range ? DS.fillFaint : .clear,
+                                    in: Capsule(style: .continuous))
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(.top, 2)
     }
 
     private func draw(redraw: Bool = false) {
@@ -250,6 +336,111 @@ struct WalletDeFiTile: View {
     }
 }
 
+
+/// The concentration read (2026-07-21, prd §155) — "ETH is 62% of everything",
+/// a quiet line under the treemap. Portfolio-level by nature: it says nothing
+/// about any one holding and everything about the shape of the whole, which is
+/// exactly the read the combined view exists to give. One computed sentence,
+/// no card, no color — risk posture at a glance, never advice.
+///
+/// With more than one wallet it's also the door to the full allocation: the
+/// treemap says WHAT you hold, this says how much of it is one thing, and the
+/// tray behind it says WHERE each position actually sits.
+struct WalletConcentrationLine: View {
+    let portfolio: WalletPortfolio
+    /// nil with a single wallet — there's no "where" to open, and a chevron
+    /// would promise a page that says the same thing twice.
+    let onOpen: (() -> Void)?
+
+    var body: some View {
+        if let line = portfolio.concentrationLine {
+            Button { onOpen?() } label: {
+                HStack(spacing: 5) {
+                    Text(line)
+                        .dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                        .lineLimit(1)
+                    if onOpen != nil {
+                        Text("Where it's held")
+                            .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                            .lineLimit(1)
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 10, weight: .semibold))
+                            .foregroundStyle(DS.textTertiary)
+                    }
+                    Spacer(minLength: 0)
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .disabled(onOpen == nil)
+        }
+    }
+}
+
+/// The full allocation (2026-07-21) — every position the combined portfolio
+/// holds, and which wallets hold it. The answer to the question the combined
+/// treemap raises by merging: "fine, but whose ETH is that?"
+///
+/// The old per-wallet maps answered it by never merging in the first place;
+/// this answers it on demand, in one place, for every position rather than
+/// only the five the map had room for.
+struct WalletAllocationTray: View {
+    let portfolio: WalletPortfolio
+
+    /// Enough to be the whole answer for a normal book without becoming a
+    /// ledger — beyond this the tail is dust the treemap already floors out.
+    private var listed: [WalletPortfolio.Position] { Array(portfolio.positions.prefix(12)) }
+
+    var body: some View {
+        DSTray(title: String(localized: "Where it's held"),
+               height: min(620, CGFloat(150 + listed.count * 62))) {
+            ScrollView {
+                VStack(spacing: DS.Space.s1) {
+                    ForEach(listed) { position in
+                        row(position)
+                    }
+                }
+            }
+            .scrollIndicators(.hidden)
+        }
+    }
+
+    private func row(_ position: WalletPortfolio.Position) -> some View {
+        VStack(alignment: .leading, spacing: DS.Space.s1) {
+            HStack(spacing: DS.Space.s2) {
+                Text(position.symbol)
+                    .dsText(.body17).foregroundStyle(DS.textPrimary)
+                    .lineLimit(1)
+                Spacer(minLength: 0)
+                Text(TokenStats.compact(position.usd))
+                    .dsText(.body17).foregroundStyle(DS.textPrimary)
+                    .monospacedDigit()
+                if portfolio.totalUSD > 0 {
+                    Text("\(Int((position.usd / portfolio.totalUSD * 100).rounded()))%")
+                        .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                        .monospacedDigit()
+                }
+            }
+            // The faces carry the identity here, the same tint the switcher
+            // and the stacked hero use — a wallet is a color in this app.
+            HStack(spacing: DS.Space.s3) {
+                ForEach(position.holders) { holder in
+                    HStack(spacing: 5) {
+                        WalletFace(address: holder.address, size: 16)
+                        Text(holder.label)
+                            .dsText(.label12).foregroundStyle(DS.textSecondary)
+                            .lineLimit(1)
+                        Text(TokenStats.compact(holder.usd))
+                            .dsText(.label12).foregroundStyle(DS.textTertiary)
+                            .monospacedDigit()
+                    }
+                }
+                Spacer(minLength: 0)
+            }
+        }
+        .dsListCardRow()
+    }
+}
 
 /// The page behind the Worth-a-look tile — and the LAST page (2026-07-20,
 /// same-day correction; user: "you can't have worth a look pull up a sheet

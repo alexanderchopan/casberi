@@ -159,6 +159,48 @@ final class WalletStore {
         }
     }
 
+    /// One wallet's contribution to the combined line, moment by moment
+    /// (2026-07-21) — the decomposition the combined sheet's hero STACKS, so
+    /// the total is drawn as the sum of its parts rather than asserted above a
+    /// separate set of small lines.
+    struct WalletBand: Identifiable {
+        let address: String
+        let label: String
+        /// One value per moment in `moments`, forward-filled exactly the way
+        /// `combinedValueSamples` fills them — so the bands sum, at every
+        /// moment, to the combined line's own value. Anything else would draw
+        /// a total that disagrees with the number above it.
+        let closes: [Double]
+        var id: String { address }
+    }
+
+    /// The combined line decomposed: the shared moments, and each watched
+    /// wallet's forward-filled value at each. Empty under two aligned moments,
+    /// the same honesty floor `combinedValueSamples()` keeps (and computed off
+    /// the same alignment rule — the series can't start before every wallet has
+    /// a sample, or a wallet joining late reads as a gain).
+    func combinedBands() -> (moments: [Date], bands: [WalletBand]) {
+        let lines = addresses.map { ($0, valueSamples(forAddress: $0.address)) }
+            .filter { !$0.1.isEmpty }
+        guard !lines.isEmpty, let start = lines.compactMap({ $0.1.first?.at }).max()
+        else { return ([], []) }
+        let moments = Set(lines.flatMap { $0.1.map(\.at) })
+            .filter { $0 >= start }
+            .sorted()
+        guard moments.count >= 2 else { return ([], []) }
+        let bands = lines.map { entry, samples in
+            WalletBand(address: entry.address,
+                       label: entry.label.isEmpty ? entry.short : entry.label,
+                       closes: moments.map { m in samples.last(where: { $0.at <= m })?.usd ?? 0 })
+        }
+        return (moments, bands)
+    }
+
+    /// The moments behind `combinedValueSamples()` — the WHEN of each point,
+    /// so a chart drawn off that line can place things that happened in real
+    /// time (a transaction, prd §155) against it. Same series, same rules.
+    func combinedSampleDates() -> [Date] { combinedValueSamples().map(\.at) }
+
     /// The combined move attributed by TOKEN (2026-07-15) — each symbol's USD
     /// change from the first aligned moment to the last, summed across wallets,
     /// biggest swing first. The combined sheet's "What moved" read: "ETH +$310,
@@ -168,7 +210,18 @@ final class WalletStore {
     /// so a composition change can't masquerade as a move (§77's rule, applied
     /// per token). Deltas under $1 drop as noise.
     func combinedHoldingsDeltas() -> [(symbol: String, delta: Double)] {
-        let lines = addresses
+        holdingsDeltas(forAddress: nil)
+    }
+
+    /// The same attribution for ONE watched wallet, or (nil) for all of them
+    /// together — the scoped twin (2026-07-21), so the Wallet feed's "what
+    /// moved" whisper can speak in whatever scope the switcher is standing in.
+    /// A single-wallet scope needs no alignment across wallets, but goes
+    /// through the identical path so the two can never diverge on what counts.
+    func holdingsDeltas(forAddress scope: String?) -> [(symbol: String, delta: Double)] {
+        let watched = scope.map { s in addresses.filter { WalletWatch.sameAddress($0.address, s) } }
+            ?? addresses
+        let lines = watched
             .map { valueSamples(forAddress: $0.address).filter { $0.holdings != nil } }
             .filter { !$0.isEmpty }
         guard !lines.isEmpty,

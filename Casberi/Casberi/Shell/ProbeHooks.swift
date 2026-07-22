@@ -538,21 +538,40 @@ enum ProbeHooks {
                 NSLog("Wallet probe: %@ new", n.map(String.init) ?? "FAILED")
             }
         },
-        // `-seedWalletHistory "<usd,usd,…>"` writes a synthetic ValueSample
-        // line for the first watched wallet, spaced 4h+ apart so the real
-        // `recordSample` throttle can never fold them into one point —
-        // headless test of the Wallet row's/feed's balance sparkline (prd
-        // 126), which draws off exactly this history and otherwise only
-        // gains a second point after 4 real hours of use. Declared AFTER
-        // `walletAddress` (hooks run in list order) so the wallet exists to
-        // key the history to.
+        // `-seedWalletHistory "<usd,usd,…>[|<watched address>]"` writes a
+        // synthetic ValueSample line for a watched wallet (the first one, or
+        // the named one), spaced 4h+ apart so the real `recordSample` throttle
+        // can never fold them into one point — headless test of the Wallet
+        // row's/feed's balance sparkline (prd 126), which draws off exactly
+        // this history and otherwise only gains a second point after 4 real
+        // hours of use. Declared AFTER `walletAddress` (hooks run in list
+        // order) so the wallet exists to key the history to.
+        //
+        // The address selector (2026-07-21) is what makes the COMBINED line
+        // testable: `combinedValueSamples` only starts once EVERY watched
+        // wallet has a sample, so a two-wallet stack (prd §155's banded hero)
+        // needs two seeded lines, one per launch.
+        //
+        // Each sample also carries a synthetic 60/40 ETH/USDC snapshot so the
+        // attribution paths (`holdingsDeltas` → the headline's "Mostly ETH"
+        // whisper and the combined sheet's "What moved") have a pair to
+        // difference. Synthetic on purpose and DEBUG-only: it exercises the
+        // path, it is not a reading of anything real.
         Hook(key: "seedWalletHistory") { spec, _ in
-            let values = spec.split(separator: ",").compactMap { Double($0) }
-            guard let entry = WalletStore.shared.addresses.first, !values.isEmpty else { return }
+            let parts = spec.split(separator: "|", maxSplits: 1).map(String.init)
+            let values = (parts.first ?? "").split(separator: ",").compactMap { Double($0) }
+            let target = parts.count > 1
+                ? WalletStore.shared.addresses.first { WalletWatch.sameAddress($0.address, parts[1]) }
+                : WalletStore.shared.addresses.first
+            guard let entry = target, !values.isEmpty else {
+                NSLog("Seed-wallet-history probe: no matching watched wallet")
+                return
+            }
             let samples = values.enumerated().map { i, usd in
                 WalletStore.ValueSample(
                     at: Date.now.addingTimeInterval(Double(i - values.count) * 4 * 3600),
-                    usd: usd)
+                    usd: usd,
+                    holdings: ["ETH": usd * 0.6, "USDC": usd * 0.4])
             }
             if let data = try? JSONEncoder().encode(samples) {
                 UserDefaults.standard.set(data, forKey: "wallet.history.\(entry.address.lowercased())")
@@ -704,6 +723,40 @@ enum ProbeHooks {
                 for line in await WalletIngest.holdingsDiagnostic() {
                     NSLog("Holdings probe: %@", line)
                 }
+            }
+        },
+        // `-portfolioProbe YES|<watched address>` runs the COMBINED portfolio
+        // read (prd §155) headlessly: the merged total, the token count, which
+        // treemap shape the feed would paint (one combined map unscoped with
+        // more than one wallet, per-wallet maps otherwise), the concentration
+        // line, and the per-wallet holders behind the top positions. The one
+        // check that the crown feature actually merges — a count alone can't
+        // tell "combined" from "the first wallet's map wearing a new title".
+        // Pass a watched address to probe the scoped shape instead. Pairs with
+        // `-walletAddress`; reads only (it does spend the same Alchemy credits
+        // the treemap's own read does).
+        Hook(key: "portfolioProbe") { value, _ in
+            Task { @MainActor in
+                let scope = (value == "YES" || value.isEmpty) ? nil : value
+                guard let read = await WalletIngest.portfolioRead(scopeTo: scope) else {
+                    NSLog("Portfolio probe: nothing read (no watched wallet priced)")
+                    return
+                }
+                let p = read.portfolio
+                let combined = read.doc.count == 1 && read.doc[0].contains("Across your wallets")
+                NSLog("Portfolio probe: scope=%@ total=%@ tokens=%d wallets=%d map=%@",
+                      scope ?? "ALL", TokenStats.compact(p.totalUSD), p.tokenCount,
+                      p.walletCount, combined ? "COMBINED" : "per-wallet")
+                NSLog("Portfolio probe: concentration=%@", p.concentrationLine ?? "—")
+                for position in p.positions.prefix(5) {
+                    let held = position.holders
+                        .map { "\($0.label) \(TokenStats.compact($0.usd))" }
+                        .joined(separator: ", ")
+                    NSLog("  %@ %@ (%d wallet%@: %@)", position.symbol,
+                          TokenStats.compact(position.usd), position.holders.count,
+                          position.holders.count == 1 ? "" : "s", held)
+                }
+                for line in read.doc { NSLog("Portfolio probe doc: %@", line) }
             }
         },
         // `-defillamaProbe <address>` walks the DeFiLlama price backstop (prd

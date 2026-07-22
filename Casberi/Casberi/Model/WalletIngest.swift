@@ -456,8 +456,9 @@ enum WalletIngest {
         // The router is the swap's counterparty, and its name is the title's
         // " on …" clause — so it rides `transferCounterparty` (rename-safe),
         // not `transferVenue` (Solana's un-renameable program slot). No
-        // direction/amount: a swap is two-legged, and keeps the standard
-        // sheet layout until its grammar earns a stage.
+        // direction/amount fields: a swap is two-legged, so SwapStage
+        // (2026-07-21) parses its two leg amounts straight off this title's
+        // "out → in" clause instead.
         thing.counterpartyAddress = router
         thing.transferCounterparty = venue
         return thing
@@ -760,7 +761,10 @@ enum WalletIngest {
         let title: String
         // The directional facts, kept as data beside the sentence built from
         // them — so TransferStage reads fields, not words. nil on the "Moved"
-        // arm: a self-transfer has no single direction (and no stage).
+        // arm: a self-transfer has no single direction. MovedStage (2026-07-21)
+        // still earns a stage — it parses the "Moved … · From → To" title
+        // directly, the same fallback grammar TransferStage uses for
+        // pre-field transfers.
         var direction: String? = nil
         var amountText: String? = nil
         var counterpartyName: String? = nil
@@ -823,6 +827,16 @@ enum WalletIngest {
         /// into each value sample so the combined sheet can attribute a move to a
         /// token ("mostly ETH"). Empty when this group wasn't built for sampling.
         var topBySymbol: [String: Double] = [:]
+        /// EVERY counted position summed by symbol — the unclipped twin of
+        /// `topBySymbol` (2026-07-21). In memory only, never sampled: the
+        /// combined read (`WalletPortfolio`) merges these across wallets, and a
+        /// top-8 clip per wallet would under-count both the combined token
+        /// count and any symbol a wallet holds just outside its own top 8.
+        var bySymbolAll: [String: Double] = [:]
+        /// symbol → "chain:address", the same route a cell's "@t:" marker
+        /// carries — kept beside the amounts so the COMBINED treemap can rebuild
+        /// its own cells (merged across wallets) without a second network read.
+        var routeBySymbol: [String: String] = [:]
         /// Set only on a LAST-KNOWN group (an unreachable wallet showing its
         /// cached treemap): the moment it was sampled, so the subline can say
         /// "as of 2h ago" instead of claiming the number is current
@@ -867,8 +881,25 @@ enum WalletIngest {
             : groupAddress == scope
     }
 
+    /// The holdings treemap document AND the portfolio behind it — one read,
+    /// both answers (2026-07-21). The doc is what the Wallet feed paints; the
+    /// portfolio is what its balance headline, concentration line, and
+    /// held-in breakdown all speak from, so no surface on that screen can
+    /// disagree with the map above it.
+    ///
+    /// Two shapes, by scope:
+    ///
+    /// - **Unscoped, more than one wallet** → ONE combined map. The room whose
+    ///   whole identity is "everything together" now answers what the
+    ///   portfolio is MADE of, not what each wallet separately holds. (Ruling
+    ///   2026-07-21, prd §155, revising 2026-07-09's "separate, not combined":
+    ///   that ruling protected "which wallet holds what" at a time when the
+    ///   feed had no other way to ask — the wallet switcher, prd §128, is that
+    ///   way now, one chip tap per wallet, and the held-in breakdown carries
+    ///   the same fact down to the position.)
+    /// - **Scoped, or a single wallet** → that wallet's own map, unchanged.
     @MainActor
-    static func holdingsChart(scopeTo address: String? = nil) async -> [String]? {
+    static func portfolioRead(scopeTo address: String? = nil) async -> (doc: [String], portfolio: WalletPortfolio)? {
         var groups = await topHoldingsByWallet()
         // The Wallet feed can scope to one watched wallet (prd §128) — filter
         // the groups AFTER the fetch, never before, so every wallet's value
@@ -876,38 +907,28 @@ enum WalletIngest {
         // regardless of what the feed is currently showing.
         if let address { groups = groups.filter { scopeMatch($0.address, address) } }
         guard !groups.isEmpty else { return nil }
+        let portfolio = WalletPortfolio.from(groups: groups)
+
+        if address == nil, groups.count > 1, !portfolio.isEmpty {
+            // "What you hold", not "Across your wallets" — the balance headline
+            // directly above already owns that phrase (verified on screen
+            // 2026-07-21: the two stacked read as one thing said twice). The
+            // headline answers what it's WORTH; the map answers what it's MADE
+            // OF, and its subline names the wallet count either way.
+            let doc = ["root = TagMap(\(q(String(localized: "What you hold"))), \(q(portfolio.subline)), [\(portfolio.treemapCells.joined(separator: ", "))], \(q("token")))"]
+            return (doc, portfolio)
+        }
+
         let ids = groups.indices.map { "w\($0)" }
         var doc = ["root = Stack([\(ids.joined(separator: ", "))])"]
         for (i, g) in groups.enumerated() {
             doc.append("w\(i) = TagMap(\(q(g.label)), \(q(g.subline)), [\(g.cells.joined(separator: ", "))], \(q("token")))")
         }
-        return doc
+        return (doc, portfolio)
     }
 
     private static func q(_ s: String) -> String {
         "\"\(s.replacingOccurrences(of: "\"", with: "'"))\""
-    }
-
-    /// The COMBINED holdings across every watched wallet (2026-07-15) — the
-    /// "bundle" view. `holdings(addresses:)` already aggregates any number of
-    /// addresses by symbol, so this passes them all at once: one total, one
-    /// top-5 treemap summing the same >= $1 positions the per-wallet view
-    /// shows separately. Added ALONGSIDE the per-wallet treemaps, not instead
-    /// of them (ruling 2026-07-15, revising 2026-07-09): the separate views
-    /// stay the default so you never lose which wallet holds what — this is an
-    /// extra overview answering "what am I worth in total." Nil with one or
-    /// zero wallets (one wallet's own view already IS its portfolio). The
-    /// `pinnedOnly` restriction retired with the Home board (2026-07-20) — no
-    /// caller ever requested it once Home was the only pinned-only consumer.
-    @MainActor
-    static func combinedHoldings() async -> HoldingsGroup? {
-        let watched = WalletStore.shared.addresses
-        guard watched.count > 1 else { return nil }
-        let resolved = await resolvedAddresses(watched.map(\.address))
-        guard !resolved.isEmpty, let h = (await holdings(addresses: resolved)).group else { return nil }
-        return HoldingsGroup(label: String(localized: "All wallets"), cells: h.cells,
-                             totalUSD: h.total, tokenCount: h.count,
-                             topBySymbol: topBySymbol(h.bySymbol))
     }
 
     /// The top 8 positions by USD from a by-symbol map — the snapshot each value
@@ -920,7 +941,7 @@ enum WalletIngest {
 
     /// Builds a single-group treemap document (label + subline + cells) — the
     /// `q`-escaped form the combined "bundle" view paints. Kept here so the
-    /// escaping matches `holdingsChart`'s and callers don't rebuild the string.
+    /// escaping matches `portfolioRead`'s and callers don't rebuild the string.
     static func groupDocument(_ g: HoldingsGroup) -> [String] {
         ["root = TagMap(\(q(g.label)), \(q(g.subline)), [\(g.cells.joined(separator: ", "))], \(q("token")))"]
     }
@@ -1008,7 +1029,9 @@ enum WalletIngest {
                                     address: entry.address,
                                     cells: g.cells, totalUSD: g.total,
                                     tokenCount: g.count,
-                                    topBySymbol: topBySymbol(g.bySymbol)))
+                                    topBySymbol: topBySymbol(g.bySymbol),
+                                    bySymbolAll: g.bySymbol,
+                                    routeBySymbol: g.routes))
     }
 
     /// The top-5-by-value cells for one or more hex addresses, combined —
@@ -1021,7 +1044,8 @@ enum WalletIngest {
     /// same empty treemap, but only the first should surface an error or hold a
     /// last-known card; the second is correct-and-empty (2026-07-17).
     private static func holdings(addresses: [String])
-        async -> (reached: Bool, group: (cells: [String], total: Double, count: Int, bySymbol: [String: Double])?) {
+        async -> (reached: Bool, group: (cells: [String], total: Double, count: Int,
+                                         bySymbol: [String: Double], routes: [String: String])?) {
         guard let tokens = await fetchHeldTokens(addresses: addresses) else { return (false, nil) }
         var bySymbol: [String: Double] = [:]
         // Each symbol's biggest single position also remembers WHERE it is
@@ -1046,22 +1070,33 @@ enum WalletIngest {
         }
         guard !bySymbol.isEmpty else { return (true, nil) }
 
-        // Top 5 by value; sqrt-scale so a big holding doesn't slice the rest
-        // to slivers. Icons for "token" mode are a bundled local set keyed by
-        // symbol (TokenIcon) — Alchemy's own logo field turned out null for
-        // nearly everything, so the cell string carries no icon data. A routed
-        // cell trails "@t:chain:address" (stripped by KindCountRow.parse, never
-        // shown) so a tap can open that token's chart. "@v:" carries the
-        // position's display value (prd §145, 2026-07-21): the cell states the
-        // number its area encodes — the area says "big", the number says how
-        // big. Compact form only, so the marker never contains a space (the
-        // parser slices it as one token).
-        let cells = bySymbol.sorted { $0.value > $1.value }.prefix(5)
+        let routes = routeBySymbol.mapValues(\.route)
+        return (true, (treemapCells(bySymbol: bySymbol, routes: routes),
+                       bySymbol.values.reduce(0, +), bySymbol.count, bySymbol, routes))
+    }
+
+    /// The top-5-by-value treemap cells for a by-symbol map. Extracted
+    /// (2026-07-21) so the COMBINED map — whose amounts are merged across
+    /// wallets rather than read in one call — builds its cells through the
+    /// exact same rule as a single wallet's, markers and all.
+    ///
+    /// Top 5 by value; sqrt-scale (`treemapWeight`) so a big holding doesn't
+    /// slice the rest to slivers. Icons for "token" mode are a bundled local
+    /// set keyed by symbol (TokenIcon) — Alchemy's own logo field turned out
+    /// null for nearly everything, so the cell string carries no icon data. A
+    /// routed cell trails "@t:chain:address" (stripped by KindCountRow.parse,
+    /// never shown) so a tap can open that token's chart. "@v:" carries the
+    /// position's display value (prd §145, 2026-07-21): the cell states the
+    /// number its area encodes — the area says "big", the number says how big.
+    /// Compact form only, so the marker never contains a space (the parser
+    /// slices it as one token).
+    static func treemapCells(bySymbol: [String: Double],
+                             routes: [String: String]) -> [String] {
+        bySymbol.sorted { $0.value > $1.value }.prefix(5)
             .map { sym, usd in
-                let route = routeBySymbol[sym].map { " @t:\($0.route)" } ?? ""
+                let route = routes[sym].map { " @t:\($0)" } ?? ""
                 return "\(sym) \(treemapWeight(usd)) @v:\(TokenStats.compact(usd))\(route)"
             }
-        return (true, (cells, bySymbol.values.reduce(0, +), bySymbol.count, bySymbol))
     }
 
     /// One priced token a wallet holds — the shared read behind both the

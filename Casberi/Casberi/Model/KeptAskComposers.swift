@@ -74,7 +74,7 @@ enum KeptAskComposers {
     // MARK: - How's my money
 
     /// The summary line PLUS the real holdings treemap — the same `TagMap`
-    /// idiom the Wallet feed itself draws (`WalletIngest.holdingsChart`).
+    /// idiom the Wallet feed itself draws (`WalletIngest.portfolioRead`).
     /// Standing rule: any kept ask backed by a real visualization always
     /// shows it, never text alone (matches `RootShell.answerDocument`'s
     /// watchlist branch below, which already did this for TokenChip rows).

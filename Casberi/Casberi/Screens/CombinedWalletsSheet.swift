@@ -1,4 +1,5 @@
 import SwiftUI
+import Charts
 
 /// The "Across your wallets" full read (2026-07-15) — the combined section's
 /// headline opens into this. The Casberi frame, not Zapper's: one number
@@ -117,12 +118,96 @@ struct CombinedWalletsSheet: View {
                                height: 150, pulses: false)
                 TokenDeltaPill(change: change,
                                label: "since \(combined.first!.at.formatted(.dateTime.month(.abbreviated).day()))")
+                madeOfSection(momentCount: closes.count)
             } else {
                 Text("A combined line begins once every wallet has a sample — sampled as you use Casberi, never back-filled.")
                     .dsText(.callout15).foregroundStyle(DS.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
+    }
+
+    // MARK: - Made of (2026-07-21, prd §155)
+
+    /// The combined value drawn as the SUM OF ITS PARTS — one stacked band per
+    /// wallet, each in its own face tint, so "the whole is these parts" is the
+    /// shape of the drawing rather than an addition the reader does in their
+    /// head against the small per-wallet lines below.
+    ///
+    /// Deliberately NOT the hero (tried as the hero first, 2026-07-21, and
+    /// reverted on the screenshot): a stack has to be zero-based to stack
+    /// honestly, and at real portfolio ratios — one wallet holding almost
+    /// everything — that paints a full-height slab of one color in which a 3%
+    /// move is invisible. The line above keeps the movement read (its own
+    /// non-zero scale); this strip keeps the composition read. Two questions,
+    /// two pictures, neither lying to flatter the other.
+    ///
+    /// Every band is forward-filled on the SAME moments the combined line uses
+    /// (`WalletStore.combinedBands`), so at every x the bands sum to exactly the
+    /// number in the header. Below two wallets with aligned history there's no
+    /// composition to show, and nothing renders.
+    @ViewBuilder
+    private func madeOfSection(momentCount: Int) -> some View {
+        let (moments, bands) = WalletStore.shared.combinedBands()
+        if bands.count > 1, moments.count == momentCount {
+            let latest = bands.map { $0.closes.last ?? 0 }
+            let total = latest.reduce(0, +)
+            VStack(alignment: .leading, spacing: DS.Space.s2) {
+                Text("Made of").dsText(.label12).foregroundStyle(DS.textSecondary)
+                Chart {
+                    ForEach(bands) { band in
+                        ForEach(Array(band.closes.enumerated()), id: \.offset) { i, usd in
+                            AreaMark(x: .value("t", Double(i)), y: .value("usd", usd),
+                                     stacking: .standard)
+                                .foregroundStyle(by: .value("Wallet", band.label))
+                                .interpolationMethod(.catmullRom)
+                        }
+                    }
+                }
+                .chartForegroundStyleScale(domain: bands.map(\.label),
+                                           range: bands.map {
+                                               WalletFace.tint(for: $0.address).opacity(0.55)
+                                           })
+                // The legend below names the colors with their shares — the
+                // chart's own legend would say less, in more space.
+                .chartLegend(.hidden)
+                .chartXAxis(.hidden)
+                .chartYAxis(.hidden)
+                .frame(height: 74)
+                .clipShape(RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+                HStack(spacing: DS.Space.s4) {
+                    ForEach(Array(zip(bands, latest)), id: \.0.id) { band, usd in
+                        HStack(spacing: 5) {
+                            Circle()
+                                .fill(WalletFace.tint(for: band.address))
+                                .frame(width: 7, height: 7)
+                            Text(band.label)
+                                .dsText(.label12).foregroundStyle(DS.textSecondary)
+                                .lineLimit(1)
+                            if total > 0 {
+                                Text(share(usd / total))
+                                    .dsText(.label12).foregroundStyle(DS.textTertiary)
+                                    .monospacedDigit()
+                            }
+                        }
+                    }
+                    Spacer(minLength: 0)
+                }
+            }
+        }
+    }
+
+    /// A share, honest at BOTH ends: a wallet holding a thousandth of the
+    /// portfolio reads "<1%", never a rounded-away "0%" that denies it's there —
+    /// and the wallet holding the rest reads ">99%", never a rounded-up "100%",
+    /// which beside a "<1%" sibling would have the shares summing past the whole
+    /// (caught on screen 2026-07-21). Only a true 100% — one wallet holding
+    /// everything — says 100%.
+    private func share(_ fraction: Double) -> String {
+        let pct = fraction * 100
+        if pct > 0, pct < 1 { return "<1%" }
+        if pct < 100, pct.rounded() >= 100 { return ">99%" }
+        return "\(Int(pct.rounded()))%"
     }
 
     // MARK: - Per-wallet line

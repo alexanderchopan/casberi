@@ -94,6 +94,21 @@ struct TokenDeltaPill: View {
     }
 }
 
+/// Something that HAPPENED, drawn against a line that only knows values
+/// (2026-07-21, prd §155). The wallet's balance line is sampled; its
+/// transactions are landed things — a mark ties one to the other, so a step in
+/// the line can be read back to the send that caused it.
+///
+/// `x` is fractional along the series (2.5 = halfway between the third and
+/// fourth sample) because a transaction lands whenever it lands, not on a
+/// sample boundary — which is why the plot's x scale is Double, not Int.
+struct TokenChartMark: Identifiable, Equatable {
+    let id: UUID
+    let x: Double
+    /// What the mark is, for the accessibility label — never drawn.
+    let label: String
+}
+
 /// The bare plot — line over a gradient fade, the live end pulsing gently
 /// (the chart refreshes; the pulse claims only the endpoint). A coarse
 /// fallback curve draws as it is: five dots, straight segments, no pulse
@@ -108,21 +123,31 @@ struct TokenChartPlot: View {
     /// pulsing endpoint there overclaims (the row's own ruling; review
     /// 2026-07-11). The sheet, which refetches per range, keeps the pulse.
     var pulses = true
+    /// Moments to mark on the curve (transactions, prd §155) — empty
+    /// everywhere but the wallet balance line.
+    var marks: [TokenChartMark] = []
+    /// Given, the marks become tap targets: the nearest mark within a finger's
+    /// reach of the tap wins. Absent, they're read-only punctuation (no dead
+    /// controls either way — an untappable mark simply isn't a control).
+    var onTapMark: ((TokenChartMark) -> Void)? = nil
     @State private var pulsing = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
+        // x is Double, not the enumeration's Int: an event mark lands between
+        // samples (see TokenChartMark), and a proxy can only place a value in
+        // its scale's own type.
         Chart(Array(chart.closes.enumerated()), id: \.offset) { i, close in
-            LineMark(x: .value("t", i), y: .value("price", close))
+            LineMark(x: .value("t", Double(i)), y: .value("price", close))
                 .interpolationMethod(chart.coarse ? .linear : .catmullRom)
                 .foregroundStyle(accent)
-            AreaMark(x: .value("t", i), y: .value("price", close))
+            AreaMark(x: .value("t", Double(i)), y: .value("price", close))
                 .interpolationMethod(chart.coarse ? .linear : .catmullRom)
                 .foregroundStyle(LinearGradient(
                     colors: [accent.opacity(0.22), accent.opacity(0)],
                     startPoint: .top, endPoint: .bottom))
             if chart.coarse {
-                PointMark(x: .value("t", i), y: .value("price", close))
+                PointMark(x: .value("t", Double(i)), y: .value("price", close))
                     .symbolSize(28)
                     .foregroundStyle(accent)
             }
@@ -136,7 +161,7 @@ struct TokenChartPlot: View {
                 // The live endpoint — solid dot plus a soft breathing halo.
                 if pulses, !chart.coarse, let plotAnchor = proxy.plotFrame,
                    let last = chart.closes.last,
-                   let x = proxy.position(forX: chart.closes.count - 1),
+                   let x = proxy.position(forX: Double(chart.closes.count - 1)),
                    let y = proxy.position(forY: last) {
                     let plot = geo[plotAnchor]
                     ZStack {
@@ -154,8 +179,63 @@ struct TokenChartPlot: View {
                             .repeatForever(autoreverses: true)) { pulsing = true }
                     }
                 }
+                if !marks.isEmpty, let plotAnchor = proxy.plotFrame {
+                    markLayer(proxy: proxy, plot: geo[plotAnchor])
+                }
             }
         }
+    }
+
+    /// The event marks, and (when a handler exists) their tap target. Drawn in
+    /// the plot's own ink at low opacity with a small solid core: punctuation
+    /// on the line, never a second series competing with it.
+    @ViewBuilder
+    private func markLayer(proxy: ChartProxy, plot: CGRect) -> some View {
+        ForEach(marks) { mark in
+            if let x = proxy.position(forX: mark.x),
+               let y = proxy.position(forY: value(at: mark.x)) {
+                Circle()
+                    .fill(accent)
+                    .frame(width: 5, height: 5)
+                    .overlay {
+                        Circle().stroke(accent.opacity(0.3), lineWidth: 4)
+                    }
+                    .position(x: plot.minX + x, y: plot.minY + y)
+                    .accessibilityLabel(mark.label)
+            }
+        }
+        if let onTapMark {
+            // One tap surface over the plot rather than a target per dot: a
+            // 5pt circle is far under the 44pt floor, so the nearest mark
+            // within a finger's reach of the tap wins instead.
+            Rectangle()
+                .fill(.clear)
+                .contentShape(Rectangle())
+                .frame(width: plot.width, height: plot.height)
+                .position(x: plot.midX, y: plot.midY)
+                .onTapGesture { point in
+                    let hits = marks.compactMap { mark -> (TokenChartMark, CGFloat)? in
+                        guard let x = proxy.position(forX: mark.x) else { return nil }
+                        return (mark, abs(plot.minX + x - point.x))
+                    }
+                    guard let nearest = hits.min(by: { $0.1 < $1.1 }), nearest.1 <= 22
+                    else { return }
+                    DSHaptic.selection()
+                    onTapMark(nearest.0)
+                }
+        }
+    }
+
+    /// The curve's value at a fractional index — linearly interpolated between
+    /// the two samples it falls between, so a mark sits ON the line rather than
+    /// floating beside it.
+    private func value(at x: Double) -> Double {
+        let closes = chart.closes
+        guard !closes.isEmpty else { return 0 }
+        let clamped = min(max(x, 0), Double(closes.count - 1))
+        let low = Int(clamped.rounded(.down)), high = min(low + 1, closes.count - 1)
+        let t = clamped - Double(low)
+        return closes[low] + (closes[high] - closes[low]) * t
     }
 }
 
@@ -444,8 +524,8 @@ struct TokenChartView<R: PriceRange, Fallback: View>: View {
             if !chart.coarse, closes.count > 2,
                let hi = closes.max(), let lo = closes.min(),
                let iH = closes.firstIndex(of: hi), let iL = closes.firstIndex(of: lo),
-               let xH = proxy.position(forX: iH), let yH = proxy.position(forY: hi),
-               let xL = proxy.position(forX: iL), let yL = proxy.position(forY: lo) {
+               let xH = proxy.position(forX: Double(iH)), let yH = proxy.position(forY: hi),
+               let xL = proxy.position(forX: Double(iL)), let yL = proxy.position(forY: lo) {
                 extremeMark(text: TokenChartStyle.priceText(hi),
                             x: plot.minX + xH, dotY: plot.minY + yH,
                             labelY: plot.minY - 9, plot: plot)
@@ -458,7 +538,7 @@ struct TokenChartView<R: PriceRange, Fallback: View>: View {
             // curve, and the WHEN above it (the header carries the value:
             // one number, one place).
             if !chart.coarse, let i = displayIndex,
-               let x = proxy.position(forX: i),
+               let x = proxy.position(forX: Double(i)),
                let y = proxy.position(forY: closes[i]) {
                 Capsule(style: .continuous)
                     .fill(DS.textTertiary.opacity(0.5))

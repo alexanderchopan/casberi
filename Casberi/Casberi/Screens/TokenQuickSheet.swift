@@ -14,7 +14,18 @@ struct TokenQuickRoute: Identifiable, Equatable {
     /// sheet names the token before (and without) a live resolve. Never
     /// part of `id` — identity is chain+address alone.
     var symbol: String? = nil
+    /// Which watched wallets hold this token, biggest stake first (2026-07-21,
+    /// prd §155) — carried in from the COMBINED treemap, whose merged cells
+    /// would otherwise lose the "whose is it" the per-wallet maps got for free.
+    /// Empty everywhere else; never part of `id` — identity is chain+address.
+    var holders: [WalletPortfolio.Holder] = []
     var id: String { "\(chain):\(address.lowercased())" }
+
+    func withHolders(_ holders: [WalletPortfolio.Holder]) -> TokenQuickRoute {
+        var copy = self
+        copy.holders = holders
+        return copy
+    }
 
     /// Parses a GenTagMap cell's "@token:chain:address[:symbol]" sentinel, or nil.
     static func from(sentinel name: String) -> TokenQuickRoute? {
@@ -85,6 +96,7 @@ struct TokenQuickSheet: View {
                 }
                 .padding(.horizontal, DS.Space.s4)
                 .padding(.top, DS.Space.s3)
+                heldInSection
                 watchRow
                     .padding(.top, DS.Space.s6)
             }
@@ -138,6 +150,33 @@ struct TokenQuickSheet: View {
         if let resolved { return "\(resolved.name) · $\(resolved.symbol)" }
         if let symbol = route.symbol { return "$\(symbol)" }
         return shortAddress
+    }
+
+    /// "Held in" — which watched wallets hold this token, in their own face
+    /// colors (2026-07-21, prd §155). Only with MORE THAN ONE holder: naming
+    /// the single wallet a position sits in says nothing the screen you tapped
+    /// from didn't already say.
+    @ViewBuilder private var heldInSection: some View {
+        if route.holders.count > 1 {
+            VStack(alignment: .leading, spacing: DS.Space.s2) {
+                Text("Held in")
+                    .dsText(.label12).foregroundStyle(DS.textTertiary)
+                ForEach(route.holders) { holder in
+                    HStack(spacing: DS.Space.s3) {
+                        WalletFace(address: holder.address, size: 22)
+                        Text(holder.label)
+                            .dsText(.callout15).foregroundStyle(DS.textPrimary)
+                            .lineLimit(1)
+                        Spacer(minLength: 0)
+                        Text(TokenStats.compact(holder.usd))
+                            .dsText(.callout15).foregroundStyle(DS.textSecondary)
+                            .monospacedDigit()
+                    }
+                }
+            }
+            .padding(.horizontal, DS.Space.s4)
+            .padding(.top, DS.Space.s6)
+        }
     }
 
     /// One real verb: Watch. Once it lands (or the token was already

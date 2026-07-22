@@ -5144,3 +5144,73 @@ is a bounded surface, not the seed of a general "actions" layer. The Peer
 capture-only pattern (settled fills landing as things) also stands — capture
 is the app's job; initiating is not. If a future feature wants a handoff
 button, it argues against this ruling first.
+
+## 155. The combined portfolio, made whole (2026-07-21)
+
+User: "the wallet's best feature is being able to see a combined portfolio."
+Everything in this ruling follows from taking that literally — the combined
+read stops being an overview bolted onto per-wallet views and becomes what the
+Wallet room IS. Six changes, one derivation behind all of them
+(`Model/WalletPortfolio.swift`, merged in memory from the per-wallet holdings
+groups the app already fetches every foreground — no new network read, and no
+way for the map, the number, and the lines under them to disagree).
+
+1. **The crown number no longer waits four hours.** The balance headline drew
+   off `TokenChart.from(samples:)`, which needs two samples, and samples are
+   throttled to one per four hours — so a new user who watched three wallets
+   saw NO combined total during exactly the first-impression window. The total
+   is real from the first holdings read: it leads now, the sparkline joins when
+   there is a line to draw, and the absence is worded ("The line starts once a
+   second reading lands") instead of leaving a gap. The live total also beats
+   the last sample as the displayed number everywhere, including the combined
+   sheet's header — a sample can be four hours stale.
+
+2. **The All room paints ONE combined treemap** — "What you hold", subline
+   "$X across N tokens in M wallets". Scoped to a wallet (or watching only
+   one), the per-wallet map is unchanged. This REVISES 2026-07-09's "separate,
+   not combined": that ruling protected "which wallet holds what" at a time
+   when the feed had no other way to ask. The wallet switcher (§128) is that
+   way now — one chip per wallet — and the held-in breakdown (below) carries
+   the same fact down to the position. Title is "What you hold", not "Across
+   your wallets": the balance headline directly above owns that phrase, and on
+   screen the two stacked read as one thing said twice.
+
+3. **A tapped combined cell says whose it is.** The quick sheet gains a "Held
+   in" section — wallet faces, labels, and each stake — shown only with more
+   than one holder. This is the fact the per-wallet maps got for free by never
+   merging.
+
+4. **"Mostly ETH · +$310"** under the headline: the top attributed mover, from
+   the same per-token snapshots the combined sheet's "What moved" reads, in
+   whatever scope the switcher is standing in. The delta pill says the line
+   moved; this says what moved it. Alongside it, **7d / 30d / watched** window
+   chips — offered ONLY when the record reaches back that far and holds two
+   points inside, so a chip can never name a period the history doesn't cover
+   (the same rule that made "watched" the original label).
+
+5. **Transactions are marked on the balance line.** A balance line conflates
+   two stories — prices moved, and money moved in or out — and the app holds
+   both halves. Marks sit at the moment each transaction landed (fractional,
+   between samples, which is why `TokenChartPlot`'s x scale is now Double), and
+   a tap opens that transaction's sheet. Only things falling BETWEEN the first
+   and last sample are marked; capped at ten, past which punctuation becomes a
+   second series.
+
+6. **"ETH is 62% of everything"** under the treemap — the concentration read, a
+   sentence that only means something about a whole portfolio. With more than
+   one wallet it opens **Where it's held**: every position, its share, and the
+   wallets holding it.
+
+And one thing tried and REVERTED, recorded so it isn't re-pitched: the combined
+sheet's hero as a **stacked area** (one band per wallet, summing to the total).
+Built, screenshotted, backed out — a stack must be zero-based to stack
+honestly, and at real portfolio ratios (one wallet holding almost everything)
+that paints a full-height slab of one color in which a 3% move is invisible.
+The line keeps the hero (its own non-zero scale, movement legible); the bands
+live below it as a compact **"Made of"** strip with a share legend. Two
+questions, two pictures, neither lying to flatter the other.
+
+Verified headlessly with `-portfolioProbe` (new): two real watched wallets
+merged to one map with per-position holders (ETH attributed across both), the
+scoped shape still per-wallet, and the concentration line computed off the
+merged book.
