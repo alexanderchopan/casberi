@@ -3,8 +3,11 @@ import SwiftData
 import PhotosUI
 
 /// Settings — the small stuff behind the avatar in the Apps nav bar: your
-/// photo, Data, Theme. A tile workspace (amendment: tiles, not rows). Pushed
-/// from Apps, not a tab of its own (2026-07-06 restructure).
+/// photo, Data, Theme. One parcel of rows in the feed's own grammar (ruling
+/// 2026-07-21, supersedes the tile grid: seven one-fact entries couldn't fill
+/// uniform tiles, and every neighboring surface — the feed, the Apps page,
+/// this screen's own detail trays — already speaks rows). Pushed from Apps,
+/// not a tab of its own (2026-07-06 restructure).
 struct SettingsScreen: View {
     @Environment(ShellChrome.self) private var chrome
     @Environment(\.modelContext) private var modelContext
@@ -19,18 +22,14 @@ struct SettingsScreen: View {
     @State private var avatarDialogOpen = false
     @State private var avatarSelection: PhotosPickerItem?
 
-    private let columns = [GridItem(.flexible(), spacing: DS.Space.s3),
-                           GridItem(.flexible(), spacing: DS.Space.s3)]
-
     var body: some View {
         ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
-                    // One grid, no group headers — every tile in one A–Z field,
-                    // uniform, rows left to right, odd counts fine.
-                    // (A big avatar hero lived here for an hour on 2026-07-10
-                    // and was rejected: personalization paints your SPACE —
-                    // it never builds a profile of you.)
-                    tileGrid(allTiles)
+                    // One parcel, no group headers — every row in one A–Z
+                    // field. (A big avatar hero lived here for an hour on
+                    // 2026-07-10 and was rejected: personalization paints your
+                    // SPACE — it never builds a profile of you.)
+                    rowList(allRows)
                 }
                 .padding(.top, ShellMetrics.topInset)
                 .padding(.bottom, ShellMetrics.bottomInset)
@@ -89,236 +88,172 @@ struct SettingsScreen: View {
         .tint(DS.tint)
     }
 
-    private struct TileSpec {
+    private struct RowSpec {
         let title: String
         let value: String
         var valueColor: Color = DS.textTertiary
         var avatar: UIImage? = nil
-        /// The Avatar tile always shows the photo seat — the photo once set,
-        /// a dashed invitation before (it marks where the photo lands).
+        /// The Avatar row always shows the photo seat — the photo once set,
+        /// the Casberi mark before (it marks where the photo lands).
         var avatarSeat = false
-        /// The Apps tile wears the whole shelf — all 16 seats, the connected
-        /// ones ringed green (the Apps page rows' own ring grammar, smaller).
-        var seats: [(String, BridgeApp.Status?)] = []
-        /// A signature glyph badge, top-right (the Data tile's trust mark) —
-        /// like Avatar's photo seat, one tile earns one image.
+        /// The row's leading glyph-in-a-squircle (the Data row's trust mark) —
+        /// the same colored mark the Apps page speaks, at row size.
         var badge: (symbol: String, color: Color)? = nil
         var action: () -> Void = {}
     }
 
-    /// Live count for the Data tile — the number that leads its story.
+    /// Live count for the Data row — the number that leads its story.
     private var thingCount: Int {
         (try? modelContext.fetchCount(FetchDescriptor<Thing>())) ?? 0
     }
 
     /// Group one — your things and their state. A–Z.
-    private var primaryTiles: [TileSpec] {
+    private var primaryRows: [RowSpec] {
         [
-            TileSpec(title: "Avatar",
-                     // Set, the photo IS the fact — no words needed. It also
-                     // rides the Apps nav bar as the settings entry.
-                     value: ProfileStore.shared.avatar == nil ? String(localized: "Add your photo") : "",
-                     avatar: ProfileStore.shared.avatar,
-                     avatarSeat: true,
-                     action: {
-                         if ProfileStore.shared.avatar == nil { avatarPickerOpen = true }
-                         else { avatarDialogOpen = true }
-                     }),
-            TileSpec(title: "Data", value: String(localized: "\(thingCount) things · on device"),
-                     badge: icloudSync ? ("icloud.fill", DS.tint) : ("lock.iphone", DS.confirm),
-                     action: { detail = .data }),
+            RowSpec(title: "Avatar",
+                    // Set, the photo IS the fact — no words needed. It also
+                    // rides the Apps nav bar as the settings entry.
+                    value: ProfileStore.shared.avatar == nil ? String(localized: "Add your photo") : "",
+                    avatar: ProfileStore.shared.avatar,
+                    avatarSeat: true,
+                    action: {
+                        if ProfileStore.shared.avatar == nil { avatarPickerOpen = true }
+                        else { avatarDialogOpen = true }
+                    }),
+            RowSpec(title: "Data", value: String(localized: "\(thingCount) things · on device"),
+                    badge: icloudSync ? ("icloud.fill", DS.tint) : ("lock.iphone", DS.confirm),
+                    action: { detail = .data }),
         ].sorted { $0.title < $1.title }
     }
 
     /// Group two — the app itself: housekeeping, rarely visited. A–Z.
-    private var secondaryTiles: [TileSpec] {
-        // One Keychain read per render, not two (the tile needs it twice).
+    private var secondaryRows: [RowSpec] {
+        // One Keychain read per render, not two (the row needs it twice).
         let keyedAgent = AgentKey.active
         let keyed = keyedAgent != nil
         return [
             // A binary choice earns a tap, not a tray with one empty screen's
-            // worth of nothing below two chips (report 2026-07-09) — the tile
+            // worth of nothing below two chips (report 2026-07-09) — the row
             // itself flips, and the icon states which way.
-            TileSpec(title: "Theme",
-                     value: ThemeStore.shared.summary,
-                     badge: (ThemeStore.shared.isLight ? "sun.max.fill" : "moon.fill", DS.textSecondary),
-                     action: {
-                         DSHaptic.tap()
-                         withAnimation(DS.Motion.standard) { ThemeStore.shared.isLight.toggle() }
-                     }),
+            RowSpec(title: "Theme",
+                    value: ThemeStore.shared.summary,
+                    badge: (ThemeStore.shared.isLight ? "sun.max.fill" : "moon.fill", DS.textSecondary),
+                    action: {
+                        DSHaptic.tap()
+                        withAnimation(DS.Motion.standard) { ThemeStore.shared.isLight.toggle() }
+                    }),
             // The app's own language — an override that switches Casberi live,
             // on top of the device language (LanguageStore). One tap opens the
-            // tray; the subline states the language in force.
-            TileSpec(title: "Language",
-                     value: LanguageStore.shared.summary,
-                     badge: ("globe", DS.textSecondary),
-                     action: { languageOpen = true }),
+            // tray; the trailing fact states the language in force.
+            RowSpec(title: "Language",
+                    value: LanguageStore.shared.summary,
+                    badge: ("globe", DS.textSecondary),
+                    action: { languageOpen = true }),
             // Your key (prd §67) — the BYO escape hatch: on-device by default,
             // your own agent key adds a per-answer "Try with your key".
             // Ruling 2026-07-14: it's an AGENT key — name the agents, never
-            // "the Anthropic key".
-            TileSpec(title: "Your key",
-                     value: keyedAgent.map {
-                        String.localizedStringWithFormat(
-                            String(localized: "%@ answers on tap"), $0.agent)
-                     } ?? String(localized: "Claude, ChatGPT, Gemini, or Venice"),
-                     badge: ("key.fill", keyed ? DS.confirm : DS.textSecondary),
-                     action: { detail = .key }),
+            // "the Anthropic key". Keyed, the fact earns the badge's green —
+            // a live connection states itself in the connected color.
+            RowSpec(title: "Your key",
+                    value: keyedAgent.map {
+                       String.localizedStringWithFormat(
+                           String(localized: "%@ answers on tap"), $0.agent)
+                    } ?? String(localized: "Claude, ChatGPT, Gemini, or Venice"),
+                    valueColor: keyed ? DS.confirm : DS.textTertiary,
+                    badge: ("key.fill", keyed ? DS.confirm : DS.textSecondary),
+                    action: { detail = .key }),
             // The one persistent explainer of the model (2026-07-11) — for
             // a new person after the coach lines retire. "How it works", not
             // "About" (About reads as version/legal).
-            TileSpec(title: "How it works",
-                     value: String(localized: "New here? Start here"),
-                     badge: ("questionmark.circle", DS.textSecondary),
-                     action: { howItWorksOpen = true }),
+            RowSpec(title: "How it works",
+                    value: String(localized: "New here? Start here"),
+                    badge: ("questionmark.circle", DS.textSecondary),
+                    action: { howItWorksOpen = true }),
             // Dev-facing on purpose: TestFlight reports become a screenshot
             // of on-device facts instead of a description (2026-07-09).
-            TileSpec(title: "Diagnostics",
-                     value: String(localized: "Test and report"),
-                     // The instrument, not the trace — the ECG line is the
-                     // Feed tab's glyph (ruled 2026-07-10: Feed keeps it).
-                     badge: ("stethoscope", DS.textSecondary),
-                     action: { diagnosticsOpen = true }),
+            RowSpec(title: "Diagnostics",
+                    value: String(localized: "Test and report"),
+                    // The instrument, not the trace — the ECG line is the
+                    // Feed tab's glyph (ruled 2026-07-10: Feed keeps it).
+                    badge: ("stethoscope", DS.textSecondary),
+                    action: { diagnosticsOpen = true }),
         ].sorted { $0.title < $1.title }
     }
 
-    /// Every tile in one A–Z field — the You/App groups are retired.
-    private var allTiles: [TileSpec] {
-        (primaryTiles + secondaryTiles).sorted { $0.title < $1.title }
+    /// Every row in one A–Z field — the You/App groups are retired.
+    private var allRows: [RowSpec] {
+        (primaryRows + secondaryRows).sorted { $0.title < $1.title }
     }
 
-    private func tileGrid(_ tiles: [TileSpec]) -> some View {
-        LazyVGrid(columns: columns, spacing: DS.Space.s3) {
-            ForEach(tiles, id: \.title) { tile in
-                Button(action: tile.action) {
-                    AccountTile(title: tile.title, value: tile.value,
-                                valueColor: tile.valueColor,
-                                avatar: tile.avatar,
-                                avatarSeat: tile.avatarSeat,
-                                seats: tile.seats,
-                                badge: tile.badge)
+    private func rowList(_ rows: [RowSpec]) -> some View {
+        VStack(spacing: 0) {
+            ForEach(rows, id: \.title) { row in
+                Button(action: row.action) {
+                    AccountRow(title: row.title, value: row.value,
+                               valueColor: row.valueColor,
+                               avatar: row.avatar,
+                               avatarSeat: row.avatarSeat,
+                               badge: row.badge)
                 }
                 .buttonStyle(DSTileButtonStyle())
             }
         }
+        .padding(.vertical, DS.Space.s2)
+        .dsWidgetSurface()
         .padding(.horizontal, DS.Space.s4)
     }
 }
 
-/// An Account tile: title up top, the fact at the bottom. The avatar tile
-/// shows the photo in place of nothing — identity earns the one image.
-struct AccountTile: View {
+/// A Settings row in the feed's grammar: glyph seat leading, title, the live
+/// fact trailing. The avatar row seats the photo — identity earns the image.
+struct AccountRow: View {
     let title: String
     let value: String
     var valueColor: Color = DS.textTertiary
     var avatar: UIImage? = nil
     var avatarSeat = false
-    var seats: [(String, BridgeApp.Status?)] = []
     var badge: (symbol: String, color: Color)? = nil
 
     var body: some View {
-        VStack(alignment: .leading, spacing: DS.Space.s1) {
-            HStack {
-                // The title doubles as its own catalog key — localized at
-                // render so the stored English still drives sort/id.
-                Text(LocalizedStringKey(title)).dsText(.heading17).foregroundStyle(DS.textPrimary)
-                Spacer()
-                if let avatar {
-                    Image(uiImage: avatar)
-                        .resizable().scaledToFill()
-                        .frame(width: 28, height: 28)
-                        .clipShape(Circle())
-                } else if avatarSeat {
-                    // Empty, the seat wears the app's own face — the Casberi
-                    // mark, avatar-shaped, where the photo will land.
-                    CasberiSeal(size: 28)
-                } else if let badge {
-                    // A tile's trust mark: the same colored-glyph-in-a-squircle
-                    // the Apps page speaks, sized like the avatar seat.
-                    RoundedRectangle(cornerRadius: DS.Radius.appIcon(28), style: .continuous)
-                        .fill(badge.color.opacity(0.16))
-                        .frame(width: 28, height: 28)
-                        .overlay(
-                            Image(systemName: badge.symbol)
-                                .accessibilityHidden(true)
-                                .font(.system(size: 14, weight: .semibold))
-                                .foregroundStyle(badge.color)
-                        )
-                }
+        HStack(spacing: DS.Space.s3) {
+            if let avatar {
+                Image(uiImage: avatar)
+                    .resizable().scaledToFill()
+                    .frame(width: 34, height: 34)
+                    .clipShape(Circle())
+            } else if avatarSeat {
+                // Empty, the seat wears the app's own face — the Casberi
+                // mark, avatar-shaped, where the photo will land.
+                CasberiSeal(size: 34)
+            } else if let badge {
+                // The row's trust mark: the same colored-glyph-in-a-squircle
+                // the Apps page speaks.
+                RoundedRectangle(cornerRadius: DS.Radius.appIcon(34), style: .continuous)
+                    .fill(badge.color.opacity(0.16))
+                    .frame(width: 34, height: 34)
+                    .overlay(
+                        Image(systemName: badge.symbol)
+                            .accessibilityHidden(true)
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundStyle(badge.color)
+                    )
             }
-            // The whole shelf — two rows of eight, compact, so the tile
-            // keeps the standard height (uniform tiles, no exceptions).
-            // Color is the only signal: colored = connected, orange = fix,
-            // gray = not connected.
-            if !seats.isEmpty {
-                VStack(alignment: .leading, spacing: 4) {
-                    ForEach(0..<2, id: \.self) { row in
-                        HStack(spacing: 4) {
-                            ForEach(Array(seats.dropFirst(row * 8).prefix(8).enumerated()),
-                                    id: \.offset) { _, seat in
-                                seatChip(name: seat.0, status: seat.1)
-                            }
-                        }
-                    }
-                }
-                .padding(.top, DS.Space.s1)
-            }
-            // The fact sits right under the title (2026-07-13 polish) — the
-            // old bottom-anchored line left a dead middle band on every tile;
-            // one text block reads, air stays below it.
+            // The title doubles as its own catalog key — localized at
+            // render so the stored English still drives sort/id.
+            Text(LocalizedStringKey(title))
+                .dsText(.heading17).foregroundStyle(DS.textPrimary)
+                .lineLimit(1)
+            Spacer(minLength: DS.Space.s2)
             if !value.isEmpty {
                 Text(value)
-                    .dsText(.subhead13).foregroundStyle(valueColor)
+                    .dsText(.callout15).foregroundStyle(valueColor)
+                    .multilineTextAlignment(.trailing)
                     .lineLimit(2)
-                    .fixedSize(horizontal: false, vertical: true)
             }
-            Spacer(minLength: 0)
         }
-        .padding(DS.Space.s4)
-        .frame(maxWidth: .infinity, minHeight: 96, alignment: .topLeading)
-        .dsWidgetSurface()
-        .contentShape(RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
-    }
-
-    @ViewBuilder
-    private func seatChip(name: String, status: BridgeApp.Status?) -> some View {
-        // Color is the signal: a connected app lights up in its OWN brand
-        // color (saturated fill + bright glyph); an available one stays dim.
-        // So the shelf reads its state at a glance — your live apps glow, the
-        // rest wait — without a legend.
-        let color: Color = switch status {
-        // signalColor: a glyph-colored mark (Tokens' green-on-ink) glows by
-        // its glyph — near-black carries no light on this dark surface.
-        case .connected: BridgeGlyph.signalColor(for: name)
-        case .attention: DS.attention
-        case .paused, nil: DS.textTertiary.opacity(0.4)
-        }
-        let fill: Color = switch status {
-        case .connected: BridgeGlyph.signalColor(for: name).opacity(0.30)
-        case .attention: DS.attention.opacity(0.30)
-        case .paused, nil: DS.fillFaint
-        }
-        RoundedRectangle(cornerRadius: DS.Radius.appIcon(16), style: .continuous)
-            .fill(fill)
-            .frame(width: 16, height: 16)
-            .overlay(
-                Image(systemName: BridgeGlyph.symbol(for: name))
-                    .font(.system(size: 8, weight: .semibold))
-                    .foregroundStyle(color)
-            )
-            // Sixteen of these sit in one strip; unlabeled, VoiceOver reads
-            // sixteen SF Symbol names after the tile's title. The tile's own
-            // subtitle already counts what is connected.
-            .accessibilityHidden(true)
-            // Shape as well as hue (2026-07-21): a needs-attention seat wears
-            // a corner dot, so the three states aren't one square in three
-            // colors.
-            .overlay(alignment: .topTrailing) {
-                if status == .attention {
-                    Circle().fill(DS.attention)
-                        .frame(width: 5, height: 5).offset(x: 1.5, y: -1.5)
-                }
-            }
+        .padding(.horizontal, DS.Space.s4)
+        .padding(.vertical, DS.Space.s3)
+        .contentShape(Rectangle())
     }
 }
 

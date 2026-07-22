@@ -497,10 +497,17 @@ struct RootShell: View {
                 Task {
                     await EmbeddingIndex.indexPending(context: modelContext)
                     let start = Date()
-                    let doc = await keyedAnswerDocument(q)
+                    let outcome = await keyedAnswerDocument(q)
                     let ms = Int(Date().timeIntervalSince(start) * 1000)
-                    NSLog("[Casberi] byokProbe(\"%@\") %dms →\n%@", q, ms,
-                          doc?.joined(separator: "\n") ?? "nil (key/network failed — composer words it)")
+                    switch outcome {
+                    case .success(let answer):
+                        NSLog("[Casberi] byokProbe(\"%@\") %dms searchedWeb=%d images=%d →\n%@",
+                              q, ms, answer.searchedWeb ? 1 : 0, answer.imagesSeen,
+                              answer.doc.joined(separator: "\n"))
+                    case .failure(let failure):
+                        NSLog("[Casberi] byokProbe(\"%@\") %dms failed=%@ → \"%@\"",
+                              q, ms, String(describing: failure), failure.line)
+                    }
                 }
             }
             // Debug hook: `-keepAskProbe "<kind>:<title>"` keeps that kind
@@ -1287,19 +1294,22 @@ struct RootShell: View {
     /// same grounded "Found" row the on-device lookup path does, via
     /// `modelDoc` — plain prose when it named none.
     private func keyedAnswerDocument(_ query: String,
-                                     onProseDoc: @escaping ([String]) -> Void = { _ in }) async -> [String]? {
+                                     onProseDoc: @escaping ([String]) -> Void = { _ in })
+    async -> Result<KeyedAnswer, AgentAnswerFailure> {
         let hits = lastAnswerHits.isEmpty ? retrieve(query) : lastAnswerHits
         // Bankr answers from the wallet and live markets too, so an empty
         // corpus match still asks; every other agent only re-reads the same
         // evidence, so an empty match gets the honest line instead.
         guard !hits.isEmpty || AgentKey.active == .bankr else {
-            return proseDoc("Nothing in your things matches that — a bigger model can't change what's here.")
+            return .success(KeyedAnswer(doc: proseDoc(
+                "Nothing in your things matches that — a bigger model can't change what's here.")))
         }
-        guard let result = await AgentAnswer.synthesize(
+        let outcome = await AgentAnswer.synthesize(
             query: query, candidates: candidates(hits), history: keyedHistory,
-            onPartial: { partial in onProseDoc(self.proseDoc(partial)) }
-        ) else {
-            return nil
+            onPartial: { partial in onProseDoc(self.proseDoc(partial)) })
+        guard case .success(let result) = outcome else {
+            guard case .failure(let failure) = outcome else { return .failure(.empty) }
+            return .failure(failure)
         }
         keyedHistory.append(AgentTurn(question: query, answer: result.text))
         let picks = result.picks.filter { hits.indices.contains($0) }
@@ -1307,8 +1317,10 @@ struct RootShell: View {
         // tile the way the on-device lookup route does, and `modelDoc` skips
         // that tile entirely whenever `tag` is nil, so there's no corpus
         // fetch to make for it.
-        guard !picks.isEmpty else { return proseDoc(result.text) }
-        return modelDoc(insight: result.text, hits: hits, picks: picks)
+        let doc = picks.isEmpty ? proseDoc(result.text)
+                                : modelDoc(insight: result.text, hits: hits, picks: picks)
+        return .success(KeyedAnswer(doc: doc, searchedWeb: result.searchedWeb,
+                                    imagesSeen: result.imagesSeen))
     }
 
     /// The corpus flattened to a plain `Sendable` snapshot for the tool-calling

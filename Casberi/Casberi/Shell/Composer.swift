@@ -1,6 +1,17 @@
 import SwiftUI
 import SwiftData
 
+/// What a keyed answer produced (2026-07-21) — the rendered document, plus
+/// what the agent actually DID to make it. `searchedWeb` and `imagesSeen`
+/// are observed, never assumed (see `AgentAnswerResult`), so the badge that
+/// reports them can't over-claim: an agent that could search but didn't
+/// never says it did.
+struct KeyedAnswer {
+    let doc: [String]
+    var searchedWeb = false
+    var imagesSeen = 0
+}
+
 /// The composer — the hero (principle 4). Full width above the tab bar, glass.
 ///
 /// RULING (2026-07-04): typed text is never saved — typing is TALKING to the
@@ -34,7 +45,7 @@ struct Composer: View {
     /// (2026-07-21). nil when the key or the network failed — the composer
     /// words that honestly. The verb only shows when a key is configured; it
     /// never fires on its own.
-    var answerWithKey: (_ query: String, _ onProseDoc: @escaping ([String]) -> Void) async -> [String]? = { _, _ in nil }
+    var answerWithKey: (_ query: String, _ onProseDoc: @escaping ([String]) -> Void) async -> Result<KeyedAnswer, AgentAnswerFailure> = { _, _ in .failure(.noKey) }
     /// Candidate project tags for the parse card, from the corpus.
     var tagCandidates: () -> [String] = { [] }
     /// The connected sources ("Gmail", "Steam") — navigation asks match them.
@@ -109,6 +120,15 @@ struct Composer: View {
         /// True when the person's own key produced this answer — the settled
         /// turn keeps its badge (honesty: a keyed answer says so, always).
         var keyed = false
+        /// What the agent actually did to make it (2026-07-21) — carried onto
+        /// the settled turn so scrolling back doesn't lose the receipt.
+        var searchedWeb = false
+        var imagesSeen = 0
+        /// This turn is a failure notice, not an answer — so it wears NO
+        /// provenance badge. Without this a keyed failure fell through to
+        /// the on-device badge and claimed "Answered on this iPhone" over a
+        /// message that says the opposite (caught on sim, 2026-07-21).
+        var failed = false
     }
     @State private var turns: [ConvoTurn] = []
     /// The question currently being answered — shown above the live answer
@@ -127,6 +147,20 @@ struct Composer: View {
     /// True when the current answer came from the person's own key — it wears
     /// the badge, and the retry verb retires (one keyed try per ask).
     @State private var keyedCurrent = false
+    /// What the CURRENT keyed answer actually did (2026-07-21) — observed
+    /// from the provider's own stream, so the badge reports rather than
+    /// assumes. Reset per ask alongside `keyedCurrent`.
+    @State private var keyedSearchedWeb = false
+    @State private var keyedImagesSeen = 0
+    /// The current "answer" is really a failure notice — no provenance badge
+    /// belongs on it (2026-07-21). Reset at the start of every ask.
+    @State private var answerFailed = false
+    /// True once a keyed answer has landed in this conversation, so a typed
+    /// FOLLOW-UP stays on the agent that just answered instead of silently
+    /// dropping back to the on-device model — which never saw the keyed turn
+    /// and would answer "which of those…" with no idea what "those" means
+    /// (2026-07-21). Cleared by `close()` with the rest of the conversation.
+    @State private var conversationIsKeyed = false
     /// Monotonic ask generation — every new ask (and close) bumps it, and an
     /// answer Task that finishes after a newer ask started must not paint
     /// over the live answer (review 2026-07-13: a slow first answer was
@@ -808,7 +842,11 @@ struct Composer: View {
                                     VStack(alignment: .leading, spacing: DS.Space.s1) {
                                         GenRender(id: "root", els: turn.els)
                                             .environment(\.genAgentAnswerContext, true)
-                                        if turn.keyed { keyedBadge }
+                                        if !turn.failed {
+                                            provenanceBadge(keyed: turn.keyed,
+                                                            searchedWeb: turn.searchedWeb,
+                                                            imagesSeen: turn.imagesSeen)
+                                        }
                                     }
                                 }
                             }
@@ -844,9 +882,22 @@ struct Composer: View {
                                         // A keyed answer says so, always — the
                                         // badge is the honesty rule applied to
                                         // where the answer was made.
-                                        if keyedCurrent, !inFlight { keyedBadge }
+                                        if !inFlight, !answerFailed {
+                                            provenanceBadge(keyed: keyedCurrent,
+                                                            searchedWeb: keyedSearchedWeb,
+                                                            imagesSeen: keyedImagesSeen)
+                                        }
                                         if !proseStreaming, !inFlight {
-                                            HStack(spacing: DS.Space.s2) {
+                                            // FlowRow, not HStack (2026-07-21):
+                                            // three chips don't fit one line once
+                                            // Keep wears its long proactive label
+                                            // ("You ask this a lot — keep it?"),
+                                            // and the HStack squeezed them until
+                                            // "Try with your key" broke across two
+                                            // lines mid-phrase. Chips wrap as whole
+                                            // chips now, the way the ask chips
+                                            // already do.
+                                            FlowRow(spacing: DS.Space.s2) {
                                                 // The standing-ask verb (docs/agent-brief.md
                                                 // ruling 5/12): mints a KEPT ASK — a pill on
                                                 // the agent's rest screen that recomposes
@@ -888,11 +939,21 @@ struct Composer: View {
                                                             keepJustLanded = false
                                                         }
                                                     } label: {
+                                                        // Tint is reserved for what genuinely
+                                                        // wants attention (design pass
+                                                        // 2026-07-21): the just-landed receipt,
+                                                        // and the proactive "you ask this a lot"
+                                                        // prompt. A plain Keep is a routine save
+                                                        // and sits at neutral — so the row's one
+                                                        // consequential verb (Try with your key,
+                                                        // which sends your things off this
+                                                        // iPhone and spends your own money) can
+                                                        // be the thing that stands out.
                                                         Chip(text: keepJustLanded ? "Kept"
                                                                 : (askedOften
                                                                    ? "You ask this a lot — keep it?"
                                                                    : "Keep"),
-                                                             style: .tint,
+                                                             style: (keepJustLanded || askedOften) ? .tint : .neutral,
                                                              glyph: keepJustLanded ? "checkmark"
                                                                 : (askedOften ? "sparkles" : "pin.fill"))
                                                     }
@@ -913,7 +974,7 @@ struct Composer: View {
                                                         keptCurrent = true
                                                         onKeepAnswer(text)
                                                     } label: {
-                                                        Chip(text: "Save as a note", style: .tint,
+                                                        Chip(text: "Save as a note", style: .neutral,
                                                              glyph: "tray.and.arrow.down")
                                                     }
                                                     .buttonStyle(.plain)
@@ -926,8 +987,15 @@ struct Composer: View {
                                                 if !keyedCurrent, keyAvailable,
                                                    !currentQuestion.isEmpty {
                                                     Button { askWithKey() } label: {
+                                                        // The row's one consequential verb wears
+                                                        // its weight (design pass 2026-07-21):
+                                                        // it sends the question and its matched
+                                                        // things off this iPhone and spends the
+                                                        // person's own key. It read as the
+                                                        // QUIETEST chip in the row while two
+                                                        // routine saves shouted.
                                                         Chip(text: "Try with your key",
-                                                             glyph: "key.fill")
+                                                             style: .tint, glyph: "key.fill")
                                                     }
                                                     .buttonStyle(.plain)
                                                 }
@@ -953,6 +1021,16 @@ struct Composer: View {
                     // the full-screen agent (ruling 3) there's a whole screen
                     // to use instead.
                     .frame(maxHeight: .infinity)
+                    // The conversation settles at the BOTTOM (design pass
+                    // 2026-07-21). Top-anchored, a one-answer conversation
+                    // left more than half the screen empty below it and put
+                    // the answer's own verbs — Keep, Save, Try with your key
+                    // — at the far top of the display, the furthest possible
+                    // point from the thumb that just typed the question. Now
+                    // the answer rises out of the composer it was asked from
+                    // and its verbs land within reach; a long conversation
+                    // still scrolls exactly as before.
+                    .defaultScrollAnchor(.bottom)
                     .dsAdaptiveContentWidth()
                     // Tapping empty space puts the keyboard away WITHOUT
                     // lowering the agent — a separate action from the ✕/⌄
@@ -1254,6 +1332,10 @@ struct Composer: View {
         currentQuestion = ""
         keptCurrent = false
         keyedCurrent = false
+        keyedSearchedWeb = false
+        keyedImagesSeen = 0
+        answerFailed = false
+        conversationIsKeyed = false
         inFlight = false
         keepJustLanded = false
         awayRainPlayedThisOpen = false
@@ -1262,13 +1344,34 @@ struct Composer: View {
         onLowerAgent()
     }
 
-    /// The small honest mark a keyed answer wears — where it was made, stated
-    /// plainly, on the answer itself and on its settled turn.
-    private var keyedBadge: some View {
-        HStack(spacing: DS.Space.s1) {
-            Image(systemName: "key.fill").font(.system(size: 10))
+    /// The small honest mark every answer wears — where it was made, and what
+    /// was actually done to make it, on the answer itself and on its settled
+    /// turn.
+    ///
+    /// BOTH paths are marked now (2026-07-21). The keyed answer always said
+    /// so; the on-device answer said nothing — which left the app's own
+    /// promise (this ran free, on your iPhone, and nothing left it) as the
+    /// silent default while the exception got all the words. `searchedWeb`
+    /// and `imagesSeen` are OBSERVED — the provider's own stream reported the
+    /// tool running — so this states what happened rather than what was
+    /// offered: an agent that could search but didn't never claims it did.
+    private func provenanceBadge(keyed: Bool, searchedWeb: Bool = false,
+                                 imagesSeen: Int = 0) -> some View {
+        var parts: [String] = []
+        if searchedWeb { parts.append(String(localized: "searched the web")) }
+        if imagesSeen == 1 {
+            parts.append(String(localized: "read 1 screenshot"))
+        } else if imagesSeen > 1 {
+            parts.append(String(localized: "read \(imagesSeen) screenshots"))
+        }
+        let detail = parts.isEmpty ? "" : " · " + parts.joined(separator: " · ")
+        return HStack(spacing: DS.Space.s1) {
+            Image(systemName: keyed ? "key.fill" : "lock.iphone")
+                .font(.system(size: 10))
                 .accessibilityHidden(true)
-            Text("Answered with your key")
+            Text(keyed ? "Answered with your key\(detail)"
+                       : "Answered on this iPhone")
+                .fixedSize(horizontal: false, vertical: true)
         }
         .dsText(.label12)
         .foregroundStyle(DS.textTertiary)
@@ -1287,26 +1390,36 @@ struct Composer: View {
         withAnimation(DS.Motion.standard) {
             if answering {
                 turns.append(ConvoTurn(question: currentQuestion, els: answerStream.els,
-                                       keyed: keyedCurrent))
+                                       keyed: keyedCurrent, searchedWeb: keyedSearchedWeb,
+                                       imagesSeen: keyedImagesSeen, failed: answerFailed))
             }
             answering = true
             inFlight = true
             keyedCurrent = true
             keptCurrent = false
             currentStreamed = false
+            keyedSearchedWeb = false   // observed per answer, never carried over
+            keyedImagesSeen = 0
+            answerFailed = false
             // keepableAskKind is NOT reset here: askWithKey() re-asks the
             // SAME currentQuestion, so the kind commit() already recognized
             // for it is still correct throughout the retry.
         }
         askGeneration += 1
         let gen = askGeneration
-        answerStream.paint(["root = Stack([w])", "w = Insight(\"Asking with your key…\")"])
+        // Bankr answers through an async job that can genuinely run a minute
+        // (submit → poll), so it says so rather than leaving the same
+        // "Asking…" line sitting for 90 seconds looking stuck.
+        let waitLine = AgentKey.active == .bankr
+            ? "Asking Bankr — reading your wallet and the market. This can take a minute."
+            : "Asking with your key…"
+        answerStream.paint(["root = Stack([w])", "w = Insight(\"\(waitLine)\")"])
         Task { @MainActor in
             // Prose arrives live over the network now (2026-07-21) — paint
             // each growing snapshot the same way the on-device path does
             // (commit()'s onProseDoc), with the same stale-ask guard.
             var streamed = false
-            let doc = await answerWithKey(q) { partialDoc in
+            let outcome = await answerWithKey(q) { partialDoc in
                 guard gen == askGeneration else { return }
                 streamed = true
                 currentStreamed = true   // a real synthesis — keepable
@@ -1317,18 +1430,31 @@ struct Composer: View {
             guard isOpen, gen == askGeneration else { return }
             withAnimation(DS.Motion.standard) { proseStreaming = false; inFlight = false }
             keyAvailable = AgentKey.isConfigured
-            if let doc {
+            switch outcome {
+            case .success(let answer):
                 currentStreamed = true   // a keyed synthesis is keepable too
+                keyedSearchedWeb = answer.searchedWeb
+                keyedImagesSeen = answer.imagesSeen
+                // From here a typed follow-up stays on the agent that just
+                // answered — it has the context the on-device model doesn't.
+                conversationIsKeyed = true
                 DSHaptic.success()   // a real keyed answer landed — the honest tick
                 // Prose already painted its way in live; settle on the final
                 // doc instantly (it may add a grounded "Found" row after the
                 // prose). A doc that never streamed (an early failure before
                 // any text arrived) still gets the typewriter reveal.
-                if streamed { answerStream.paint(doc) } else { answerStream.stream(doc) }
-            } else {
+                if streamed { answerStream.paint(answer.doc) }
+                else { answerStream.stream(answer.doc) }
+            case .failure(let failure):
                 keyedCurrent = false     // no keyed answer arrived — no badge
+                answerFailed = true      // …and this isn't an answer at all
+                // Each failure says what actually happened (2026-07-21). The
+                // old single line blamed the key for every one of them, which
+                // is a lie when the model simply declined or the network
+                // dropped — and it sent people to Settings to "fix" a key
+                // that was never the problem.
                 answerStream.stream(["root = Stack([w])",
-                                     "w = Insight(\"That didn't go through — check your key in Settings, or your connection.\")"])
+                                     "w = Insight(\"\(failure.line)\")"])
             }
         }
     }
@@ -1782,8 +1908,15 @@ struct Composer: View {
             // ask or close, so its typewriter reveal never gets cut.
             if answering {
                 turns.append(ConvoTurn(question: currentQuestion, els: answerStream.els,
-                                       keyed: keyedCurrent))
+                                       keyed: keyedCurrent, searchedWeb: keyedSearchedWeb,
+                                       imagesSeen: keyedImagesSeen, failed: answerFailed))
             }
+            // A follow-up in a conversation the person already took to their
+            // own agent stays there (2026-07-21). Before this, a typed
+            // follow-up after a keyed answer silently dropped back to the
+            // on-device model — which never saw the keyed turn, so "which of
+            // those…" was answered by a model with no idea what "those" meant.
+            let stayKeyed = conversationIsKeyed && keyAvailable
             // The question lift (delight, 2026-07-21): the header's entrance
             // and the berry's fade-in ride the same animated commit as the
             // rest of "a new ask just started."
@@ -1792,7 +1925,10 @@ struct Composer: View {
                 currentQuestion = draft
                 keptCurrent = false
                 currentStreamed = false
-                keyedCurrent = false
+                keyedCurrent = stayKeyed
+                keyedSearchedWeb = false   // observed per answer
+                keyedImagesSeen = 0
+                answerFailed = false
                 inFlight = true
             }
             keepableAskKind = nil   // recomputed at settle, for THIS question
@@ -1826,7 +1962,7 @@ struct Composer: View {
                     return
                 }
                 var streamed = false
-                let finalDoc = await answer(q) { partialDoc in
+                let paintPartial: ([String]) -> Void = { partialDoc in
                     // Prose arriving live — paint each growing snapshot; the
                     // Insight breathes its dot while this fires (§2). A stale
                     // ask's partials never paint over a newer one.
@@ -1835,6 +1971,30 @@ struct Composer: View {
                     currentStreamed = true   // a real synthesis — keepable
                     proseStreaming = true
                     answerStream.paint(partialDoc)
+                }
+                let finalDoc: [String]
+                if stayKeyed {
+                    // The follow-up stays on the agent that answered last. A
+                    // failure here falls back to the on-device answer rather
+                    // than dead-ending the conversation — the local model
+                    // still knows the corpus, it just lacks the keyed turn.
+                    // Bound as `keyed`, not `answer` — `answer` is the
+                    // on-device closure this same block falls back to, and
+                    // one name for both reads as a bug.
+                    switch await answerWithKey(q, paintPartial) {
+                    case .success(let keyed):
+                        keyedSearchedWeb = keyed.searchedWeb
+                        keyedImagesSeen = keyed.imagesSeen
+                        finalDoc = keyed.doc
+                    case .failure:
+                        // The agent didn't answer, so the on-device model
+                        // does — and the badge correctly reads "on this
+                        // iPhone", because that's who actually answered.
+                        keyedCurrent = false
+                        finalDoc = await answer(q, paintPartial)
+                    }
+                } else {
+                    finalDoc = await answer(q, paintPartial)
                 }
                 // A newer ask (or close) overtook this one — its answer owns
                 // the stream now; this one retires silently.
@@ -1995,11 +2155,15 @@ struct Chip: View {
                 Image(systemName: glyph).font(.system(size: 12))
                     .accessibilityHidden(true)
             }
-            Text(text).dsText(.label12)
+            // A chip is a capsule — its label never breaks across lines
+            // (2026-07-21: a squeezed row wrapped "Try with your key" into
+            // "Try with / your key" inside a 28pt capsule).
+            Text(text).dsText(.label12).lineLimit(1)
         }
         .foregroundStyle(style == .tint ? DS.tint : DS.textPrimary)
         .padding(.horizontal, DS.Space.s3)
         .frame(height: 28)
+        .fixedSize(horizontal: true, vertical: false)
         .background(style == .tint ? DS.tintDim : DS.gray100,
                     in: Capsule(style: .continuous))
     }

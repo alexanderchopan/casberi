@@ -5587,3 +5587,32 @@ VERIFIED on the dedicated sim, dark and light: the pour still reads at the
 crown and between the parcels, cells keep their brand washes inside the
 holdings card, and the light page renders the two cards as white parcels on
 sky without a seam.
+
+## 161. Settings speaks the feed's row grammar (user: "lets go w/ rows the feed's own grammar", 2026-07-21)
+
+The Settings tile grid retires. The screen came up in a vibecoded-parts audit
+as the one surface that read generated rather than drawn: seven one-fact
+entries in uniform two-column tiles (minHeight 96) left dead air at the bottom
+of every card and an orphan in the last row — the generic dashboard-tile
+layout, in an app whose every neighboring surface (the feed's parcels, the
+Apps page rows, Settings' own aliveRow detail trays) already speaks rows.
+
+Ruled on a two-way mock (design/settings-look/mock-settings-rows-vs-grid.html):
+**A — rows in the feed's grammar** vs **B — the grid kept, facts at display
+size**. B surprised where a real fact exists ("279" big reads like the Wallet
+card) but strains on the three entries that have no fact to wear big
+(Diagnostics, How it works, Avatar) — an action line at headline size is an
+announcement about nothing. A speaks with one voice across all seven. User
+ruled A.
+
+Shape: ONE parcel (`dsWidgetSurface`), every entry an `AccountRow` — leading
+glyph-in-a-squircle at 34pt (the Apps-page trust-mark grammar; the Avatar row
+seats the photo or the Casberi mark), title `heading17`, the live fact
+TRAILING right-aligned in `callout15` (the feed rows' own seat for it). No
+hairlines between rows — padding separates, per the no-hairlines law. Theme
+keeps its tap-flips-in-place behavior as a row. New beside the mock: a KEYED
+"Your key" row speaks its fact in the badge's green (`DS.confirm`) — a live
+connection states itself in the connected color; unkeyed stays tertiary. The
+A–Z single-field ordering and every action/badge/debug hook carry over
+unchanged; the tile's `seats` shelf machinery (dead since the Apps tile
+retired) is deleted with it.

@@ -191,9 +191,62 @@ struct AgentTurn: Sendable {
 /// drew on (validated indices into the candidates it was given) — empty when
 /// the provider didn't point at specific things, in which case the caller
 /// shows plain prose instead of a grounded row.
+///
+/// `searchedWeb` and `imagesSeen` are the honesty half (2026-07-21): an
+/// answer that leaned on live search is a different promise than one made
+/// only from your things, and an answer that actually LOOKED at a screenshot
+/// did something its OCR'd text couldn't. Both are OBSERVED, never assumed —
+/// `searchedWeb` is set only when the provider's own stream says the search
+/// tool ran, so a provider that could search but didn't never claims it.
 struct AgentAnswerResult: Sendable {
     let text: String
     let picks: [Int]
+    var searchedWeb = false
+    var imagesSeen = 0
+}
+
+/// Why a keyed answer didn't arrive (2026-07-21). The old path collapsed all
+/// of these to nil and the composer blamed the key for every one of them —
+/// which is a lie when the model simply declined, or the network dropped.
+/// Each case words itself.
+enum AgentAnswerFailure: Error, Sendable {
+    /// No key saved, or it vanished from the vault mid-flight.
+    case noKey
+    /// The provider rejected the key (401/403) — the one case where
+    /// "check your key" is the honest advice.
+    case rejectedKey
+    /// The provider is rate-limiting this key (429).
+    case rateLimited
+    /// A valid answer that the model declined to give. NOT a failure the
+    /// person can fix by touching their key.
+    case refused
+    /// Couldn't reach the provider at all.
+    case unreachable
+    /// The provider answered, but with an error (5xx or anything else).
+    case providerError(Int)
+    /// A clean 200 that carried no words.
+    case empty
+
+    /// One plain sentence for the composer — what happened, and only where
+    /// it's true, what to do about it.
+    var line: String {
+        switch self {
+        case .noKey:
+            String(localized: "No key saved — add one in Settings to ask an agent.")
+        case .rejectedKey:
+            String(localized: "Your key was turned down — check it in Settings.")
+        case .rateLimited:
+            String(localized: "Your agent is rate-limiting this key right now — try again in a minute.")
+        case .refused:
+            String(localized: "The agent declined to answer that one. Your key is fine.")
+        case .unreachable:
+            String(localized: "Couldn't reach your agent — check your connection.")
+        case .providerError(let status):
+            String(localized: "Your agent had trouble answering (error \(status)) — try again.")
+        case .empty:
+            String(localized: "Your agent came back with nothing. Try asking it another way.")
+        }
+    }
 }
 
 /// The device→provider call itself. Same contract as the on-device model:
@@ -262,18 +315,18 @@ enum AgentAnswer {
     /// whole answer already isn't bound to the candidate list.)
     static func synthesize(query: String, candidates: [OnDeviceModel.Candidate],
                            history: [AgentTurn] = [],
-                           onPartial: ((String) -> Void)? = nil) async -> AgentAnswerResult? {
+                           onPartial: ((String) -> Void)? = nil)
+    async -> Result<AgentAnswerResult, AgentAnswerFailure> {
         guard let provider = AgentKey.active,
-              let key = TokenVault.get(provider.vaultKey) else { return nil }
+              let key = TokenVault.get(provider.vaultKey) else { return .failure(.noKey) }
 
         // Bankr diverges twice, both sanctioned (2026-07-16): it answers
         // through an async job (submit → poll), and it may ground on the
         // wallet and live markets — so an empty candidate list still asks.
         if provider == .bankr {
-            guard let text = await bankrAnswer(query: query, candidates: candidates, key: key) else { return nil }
-            return AgentAnswerResult(text: text, picks: [])
+            return await bankrAnswer(query: query, candidates: candidates, key: key)
         }
-        guard !candidates.isEmpty else { return nil }
+        guard !candidates.isEmpty else { return .failure(.empty) }
 
         var system = OnDeviceModel.synthesisInstructions(length: "a few plain sentences") + pickInstructions
         if provider.searchesWeb { system += webSearchGuidance }
@@ -369,18 +422,25 @@ enum AgentAnswer {
             request.httpBody = try? JSONSerialization.data(withJSONObject: body)
             parse = geminiDelta
         case .bankr:
-            return nil // unreachable — bankr returned above
+            return .failure(.noKey) // unreachable — bankr returned above
         }
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.timeoutInterval = 90
 
-        guard let raw = await streamText(request, onPartial: liveOnPartial, parse: parse) else {
-            NSLog("[Casberi] AgentAnswer(%@): no answer", provider.rawValue)
-            return nil
+        let streamed: StreamOutcome
+        switch await streamText(request, onPartial: liveOnPartial, parse: parse) {
+        case .success(let outcome):
+            streamed = outcome
+        case .failure(let failure):
+            NSLog("[Casberi] AgentAnswer(%@): %@", provider.rawValue, String(describing: failure))
+            return .failure(failure)
         }
-        let (text, picks) = extractPicks(from: raw, candidateCount: candidates.count)
-        return text.isEmpty ? nil : AgentAnswerResult(text: text, picks: picks)
+        let (text, picks) = extractPicks(from: streamed.text, candidateCount: candidates.count)
+        guard !text.isEmpty else { return .failure(.empty) }
+        return .success(AgentAnswerResult(text: text, picks: picks,
+                                          searchedWeb: streamed.searchedWeb,
+                                          imagesSeen: images.count))
     }
 
     // MARK: - The "PICKS: …" marker — structured grounding without a
@@ -442,11 +502,21 @@ enum AgentAnswer {
 
     /// What one SSE line's parsed JSON means to the caller — an incremental
     /// chunk of prose to append, a refusal that abandons the whole answer,
-    /// or an event type this parser doesn't care about.
+    /// the provider's own signal that its web-search tool actually ran, or
+    /// an event type this parser doesn't care about.
     private enum StreamDelta {
         case text(String)
         case refused
+        case searched
         case ignore
+    }
+
+    /// Everything one stream produced: the accumulated prose, whether the
+    /// model declined, and whether its live search actually ran.
+    private struct StreamOutcome {
+        var text = ""
+        var refused = false
+        var searchedWeb = false
     }
 
     /// Reads one provider's SSE response line by line, accumulating text via
@@ -457,18 +527,22 @@ enum AgentAnswer {
     /// OpenAI-shaped, Gemini) — only `parse` differs.
     private static func streamText(_ request: URLRequest,
                                    onPartial: ((String) -> Void)?,
-                                   parse: @escaping ([String: Any]) -> StreamDelta) async -> String? {
+                                   parse: @escaping ([String: Any]) -> StreamDelta)
+    async -> Result<StreamOutcome, AgentAnswerFailure> {
         guard let (bytes, response) = try? await URLSession.shared.bytes(for: request) else {
-            NSLog("[Casberi] AgentAnswer: network failure")
-            return nil
+            return .failure(.unreachable)
         }
-        guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
-            let status = (response as? HTTPURLResponse)?.statusCode ?? -1
-            NSLog("[Casberi] AgentAnswer: HTTP %d", status)
-            return nil
+        guard let http = response as? HTTPURLResponse else { return .failure(.unreachable) }
+        // Classify before reading a byte — a 401 is the person's key, a 429 is
+        // their quota, a 5xx is the provider's problem, and each deserves its
+        // own sentence rather than one shrug.
+        switch http.statusCode {
+        case 200: break
+        case 401, 403: return .failure(.rejectedKey)
+        case 429: return .failure(.rateLimited)
+        default: return .failure(.providerError(http.statusCode))
         }
-        var text = ""
-        var refused = false
+        var outcome = StreamOutcome()
         do {
             for try await line in bytes.lines {
                 guard line.hasPrefix("data:") else { continue }
@@ -479,19 +553,24 @@ enum AgentAnswer {
                 else { continue }
                 switch parse(json) {
                 case .text(let chunk):
-                    text += chunk
-                    onPartial?(text)
+                    outcome.text += chunk
+                    onPartial?(outcome.text)
                 case .refused:
-                    refused = true
+                    outcome.refused = true
+                case .searched:
+                    outcome.searchedWeb = true
                 case .ignore:
                     continue
                 }
             }
         } catch {
-            // A connection dropped mid-stream — whatever text arrived stands;
-            // the accumulated total below is what the caller gets.
+            // A connection dropped mid-stream. Whatever text arrived stands —
+            // a partial answer is still a real answer, and the person can see
+            // it got cut. Only a drop before ANY text is a failure.
+            if outcome.text.isEmpty { return .failure(.unreachable) }
         }
-        return refused ? nil : text
+        if outcome.refused { return .failure(.refused) }
+        return .success(outcome)
     }
 
     /// Anthropic's SSE shape: `content_block_delta` events carry the text;
@@ -505,6 +584,15 @@ enum AgentAnswer {
            let t = delta["text"] as? String {
             return .text(t)
         }
+        // The search tool actually running opens its own content block — the
+        // observed signal, not the fact that we offered the tool.
+        if type == "content_block_start",
+           let block = json["content_block"] as? [String: Any] {
+            let blockType = block["type"] as? String
+            if blockType == "server_tool_use" || blockType == "web_search_tool_result" {
+                return .searched
+            }
+        }
         if type == "message_delta",
            let delta = json["delta"] as? [String: Any],
            delta["stop_reason"] as? String == "refusal" {
@@ -517,6 +605,16 @@ enum AgentAnswer {
     /// Venice): each chunk's `choices[0].delta.content` is the next slice of
     /// text; a populated `delta.refusal` is a refusal, never text.
     private static func openAIDelta(_ json: [String: Any]) -> StreamDelta {
+        // Venice reports a search it actually ran as citations riding the
+        // chunk. Checked before `choices` because the citation chunk carries
+        // no delta of its own. If Venice ever stops sending these we simply
+        // stop claiming the search — under-claiming is the honest failure
+        // (ChatGPT has no search on this endpoint at all, so it never fires).
+        if let venice = json["venice_parameters"] as? [String: Any],
+           let citations = venice["web_search_citations"] as? [Any], !citations.isEmpty {
+            return .searched
+        }
+        if let citations = json["citations"] as? [Any], !citations.isEmpty { return .searched }
         guard let choices = json["choices"] as? [[String: Any]],
               let delta = choices.first?["delta"] as? [String: Any] else { return .ignore }
         if let refusal = delta["refusal"] as? String, !refusal.isEmpty { return .refused }
@@ -533,7 +631,12 @@ enum AgentAnswer {
             return .refused
         }
         guard let candidates = json["candidates"] as? [[String: Any]],
-              let content = candidates.first?["content"] as? [String: Any],
+              let first = candidates.first else { return .ignore }
+        // Gemini attaches groundingMetadata only when its search actually ran
+        // — the observed signal. Reported before the text below because the
+        // metadata rides its own chunk.
+        if first["groundingMetadata"] != nil { return .searched }
+        guard let content = first["content"] as? [String: Any],
               let parts = content["parts"] as? [[String: Any]] else { return .ignore }
         let t = parts.compactMap { $0["text"] as? String }.joined()
         return t.isEmpty ? .ignore : .text(t)
@@ -587,7 +690,8 @@ enum AgentAnswer {
     /// be minted read-only at bankr.bot/api-keys and the setup copy says to.
     private static func bankrAnswer(query: String,
                                     candidates: [OnDeviceModel.Candidate],
-                                    key: String) async -> String? {
+                                    key: String)
+    async -> Result<AgentAnswerResult, AgentAnswerFailure> {
         var prompt = """
         ANSWER ONLY. Do not execute, prepare, or queue any transaction, trade, \
         swap, transfer, or on-chain action of any kind, even if the question \
@@ -618,13 +722,20 @@ enum AgentAnswer {
         guard let (data, response) = try? await URLSession.shared.data(for: submit),
               let http = response as? HTTPURLResponse else {
             NSLog("[Casberi] AgentAnswer(bankr): network failure")
-            return nil
+            return .failure(.unreachable)
         }
-        guard (200...202).contains(http.statusCode),
-              let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let jobId = root["jobId"] as? String else {
+        switch http.statusCode {
+        case 200...202: break
+        case 401, 403: return .failure(.rejectedKey)
+        case 429: return .failure(.rateLimited)
+        default:
             NSLog("[Casberi] AgentAnswer(bankr): HTTP %d", http.statusCode)
-            return nil
+            return .failure(.providerError(http.statusCode))
+        }
+        guard let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let jobId = root["jobId"] as? String else {
+            NSLog("[Casberi] AgentAnswer(bankr): no job id in a %d", http.statusCode)
+            return .failure(.providerError(http.statusCode))
         }
 
         // Poll every 2s for up to ~90s (Bankr says most jobs land inside 30).
@@ -641,16 +752,20 @@ enum AgentAnswer {
             case "completed":
                 let text = (job["response"] as? String)?
                     .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-                return text.isEmpty ? nil : text
+                // Bankr grounds on the wallet and live markets, never on the
+                // numbered candidates — so it points at no things, and its
+                // own grounding isn't the web search the other agents run.
+                return text.isEmpty ? .failure(.empty)
+                                    : .success(AgentAnswerResult(text: text, picks: []))
             case "failed", "cancelled":
                 NSLog("[Casberi] AgentAnswer(bankr): job %@ — %@", status,
                       job["error"] as? String ?? "no detail")
-                return nil
+                return .failure(.refused)
             default:
                 continue // pending / processing — keep polling
             }
         }
         NSLog("[Casberi] AgentAnswer(bankr): job timed out")
-        return nil
+        return .failure(.unreachable)
     }
 }

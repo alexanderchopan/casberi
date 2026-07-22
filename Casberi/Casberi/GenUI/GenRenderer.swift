@@ -506,6 +506,7 @@ private struct GenWidget: View {
     @Environment(\.genSpan) private var span
     @Environment(\.genSizeToggle) private var sizeToggle
     @Environment(\.genSourceUnpin) private var sourceUnpin
+    @Environment(\.genAgentAnswerContext) private var inAgentAnswer
 
     /// arg 3 — the pinned source this tile stands for; empty off the board.
     private var source: String { el.str(3) }
@@ -543,9 +544,19 @@ private struct GenWidget: View {
     private var card: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-                Text(LocalizedStringKey(el.str(0))).dsText(.heading22).foregroundStyle(DS.textPrimary)
+                // Inside an agent answer this header labels the answer's
+                // EVIDENCE ("Found 6"), so it steps down to a quiet label
+                // (design pass 2026-07-21). At card weight it was the largest
+                // thing on the screen — outranking both the answer sentence
+                // it supports and the question that was asked. Everywhere
+                // else (Home board, store previews) it stays a card title.
+                Text(LocalizedStringKey(el.str(0)))
+                    .dsText(inAgentAnswer ? .subhead13 : .heading22)
+                    .foregroundStyle(inAgentAnswer ? DS.textSecondary : DS.textPrimary)
                 if !el.str(1).isEmpty {
-                    Text(el.str(1)).dsText(.callout15).foregroundStyle(DS.textTertiary)
+                    Text(el.str(1))
+                        .dsText(inAgentAnswer ? .subhead13 : .callout15)
+                        .foregroundStyle(DS.textTertiary)
                         .contentTransition(.numericText())
                         .animation(DS.Motion.standard, value: el.str(1))
                 }

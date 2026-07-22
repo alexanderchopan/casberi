@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Settings — rows vs. grid</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { background: #08090c; color: #f2f2f5;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
+    -webkit-font-smoothing: antialiased; }
+  .stage { display: flex; gap: 56px; justify-content: center; align-items: flex-start;
+    padding: 48px 24px 72px; flex-wrap: wrap; }
+  .variant { display: flex; flex-direction: column; align-items: center; gap: 20px; }
+  .variant h2 { font-size: 15px; font-weight: 600; color: #9a9aa2; }
+  .variant h2 b { color: #f2f2f5; font-weight: 700; }
+
+  .phone { width: 393px; height: 852px; border-radius: 54px; overflow: hidden;
+    position: relative; border: 1px solid #26282e;
+    background: linear-gradient(180deg, #0a1322 0%, #05070c 34%, #010203 100%);
+    box-shadow: 0 30px 80px rgba(0,0,0,.6); }
+  .island { position: absolute; top: 12px; left: 50%; transform: translateX(-50%);
+    width: 122px; height: 36px; border-radius: 20px; background: #000; z-index: 5; }
+  .screen { position: absolute; inset: 0; padding: 72px 20px 0; overflow: hidden; }
+
+  .backbtn { width: 44px; height: 44px; border-radius: 50%; background: rgba(255,255,255,.08);
+    display: flex; align-items: center; justify-content: center; margin-bottom: 22px; }
+  .backbtn svg { width: 16px; height: 16px; }
+  h1.title { font-size: 40px; font-weight: 800; letter-spacing: 0; margin-bottom: 26px; }
+
+  /* ---------- shared glyph squircle ---------- */
+  .glyph { width: 34px; height: 34px; border-radius: 10px; flex: none;
+    display: flex; align-items: center; justify-content: center; }
+  .glyph svg { width: 17px; height: 17px; }
+  .g-gray  { background: rgba(255,255,255,.08); color: #9a9aa2; }
+  .g-green { background: rgba(48,209,88,.16);  color: #30d158; }
+  .g-blue  { background: rgba(10,132,255,.16); color: #0a84ff; }
+
+  /* the Casberi seal — berry cluster */
+  .seal { width: 34px; height: 34px; flex: none; position: relative; }
+  .seal i { position: absolute; border-radius: 50%; display: block; }
+
+  /* ---------- variant A: rows ---------- */
+  .parcel { background: #141519; border-radius: 24px; overflow: hidden; }
+  .row { display: flex; align-items: center; gap: 14px; padding: 16px 18px; position: relative; }
+  .row + .row::before { content: ""; position: absolute; left: 66px; right: 0; top: 0; height: 0; }
+  .row .name { font-size: 17px; font-weight: 600; color: #f2f2f5; }
+  .row .fact { margin-left: auto; font-size: 15px; color: #8a8a93; text-align: right;
+    max-width: 55%; }
+  .row .fact.on { color: #30d158; }
+
+  /* ---------- variant B: grid, facts lead ---------- */
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .tile { background: #141519; border-radius: 24px; padding: 16px 18px 18px;
+    display: flex; flex-direction: column; min-height: 118px; }
+  .tile .head { display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: auto; }
+  .tile .label { font-size: 13px; font-weight: 600; color: #8a8a93; }
+  .tile .glyph { width: 28px; height: 28px; border-radius: 9px; }
+  .tile .glyph svg { width: 14px; height: 14px; }
+  .tile .big { font-size: 30px; font-weight: 800; color: #f2f2f5; margin-top: 14px;
+    line-height: 1.05; letter-spacing: -.3px; }
+  .tile .sub { font-size: 13px; color: #8a8a93; margin-top: 3px; }
+  .tile .big .unit { font-size: 15px; font-weight: 600; color: #8a8a93; margin-left: 4px; }
+
+  /* floating ask bar */
+  .askbar { position: absolute; left: 20px; right: 20px; bottom: 26px; height: 60px;
+    border-radius: 30px; background: rgba(28,30,36,.72);
+    backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255,255,255,.06);
+    display: flex; align-items: center; padding: 0 22px; gap: 12px; }
+  .askbar span { color: #7c7c85; font-size: 18px; }
+  .askbar .berry { margin-left: auto; }
+
+  .note { max-width: 840px; margin: 0 auto; padding: 0 24px;
+    color: #6e6e76; font-size: 14px; line-height: 1.55; text-align: center; }
+</style>
+</head>
+<body>
+
+<p class="note" style="padding-top:40px">
+  Settings, two ways — same seven entries, same facts, same glyph grammar.
+  <b style="color:#9a9aa2">A</b> speaks the feed's row language;
+  <b style="color:#9a9aa2">B</b> keeps the grid but lets each tile's fact lead at display size.
+</p>
+
+<div class="stage">
+
+  <!-- ============ VARIANT A — rows ============ -->
+  <div class="variant">
+    <h2><b>A</b> · Rows — the feed's own grammar</h2>
+    <div class="phone">
+      <div class="island"></div>
+      <div class="screen">
+        <div class="backbtn">
+          <svg viewBox="0 0 16 16" fill="none" stroke="#f2f2f5" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M10.5 2.5 5 8l5.5 5.5"/></svg>
+        </div>
+        <h1 class="title">Settings</h1>
+
+        <div class="parcel">
+          <div class="row">
+            <div class="seal">
+              <i style="width:13px;height:13px;background:#0a84ff;left:10.5px;top:2px"></i>
+              <i style="width:12px;height:12px;background:#3f9fff;left:2px;top:9px"></i>
+              <i style="width:12px;height:12px;background:#1668d6;left:20px;top:9px"></i>
+              <i style="width:13px;height:13px;background:#7db8ff;left:5px;top:19px"></i>
+              <i style="width:13px;height:13px;background:#2456a8;left:16px;top:19px"></i>
+              <i style="width:11px;height:11px;background:#5ea3f5;left:11.5px;top:11px"></i>
+            </div>
+            <div class="name">Avatar</div>
+            <div class="fact">Add your photo</div>
+          </div>
+          <div class="row">
+            <div class="glyph g-green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="10" width="14" height="10" rx="2.5"/><path d="M8.5 10V7a3.5 3.5 0 0 1 7 0v3"/></svg></div>
+            <div class="name">Data</div>
+            <div class="fact">279 things · on device</div>
+          </div>
+          <div class="row">
+            <div class="glyph g-gray"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3v5a5 5 0 0 0 10 0V3"/><path d="M10 13v3a5 5 0 0 0 5 5 5 5 0 0 0 5-5v-2"/><circle cx="20" cy="12" r="2"/></svg></div>
+            <div class="name">Diagnostics</div>
+            <div class="fact">Test and report</div>
+          </div>
+          <div class="row">
+            <div class="glyph g-gray"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.2a2.6 2.6 0 0 1 5 .9c0 1.6-2.4 2-2.4 3.4"/><circle cx="12" cy="16.8" r=".4" fill="currentColor"/></svg></div>
+            <div class="name">How it works</div>
+            <div class="fact">New here? Start here</div>
+          </div>
+          <div class="row">
+            <div class="glyph g-gray"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.8 2.6 4 5.6 4 9s-1.2 6.4-4 9c-2.8-2.6-4-5.6-4-9s1.2-6.4 4-9z"/></svg></div>
+            <div class="name">Language</div>
+            <div class="fact">English</div>
+          </div>
+          <div class="row">
+            <div class="glyph g-gray"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M20.3 14.6A8.5 8.5 0 0 1 9.4 3.7 8.5 8.5 0 1 0 20.3 14.6z"/></svg></div>
+            <div class="name">Theme</div>
+            <div class="fact">Dark</div>
+          </div>
+          <div class="row">
+            <div class="glyph g-green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="15" r="4"/><path d="M10.8 12.2 20 3M15 8l2.5 2.5M18 5l2 2"/></svg></div>
+            <div class="name">Your key</div>
+            <div class="fact on">Claude answers on tap</div>
+          </div>
+        </div>
+
+        <div class="askbar">
+          <span>Ask your things…</span>
+          <div class="seal berry" style="transform:scale(.8)">
+            <i style="width:13px;height:13px;background:#0a84ff;left:10.5px;top:2px"></i>
+            <i style="width:12px;height:12px;background:#3f9fff;left:2px;top:9px"></i>
+            <i style="width:12px;height:12px;background:#1668d6;left:20px;top:9px"></i>
+            <i style="width:13px;height:13px;background:#7db8ff;left:5px;top:19px"></i>
+            <i style="width:13px;height:13px;background:#2456a8;left:16px;top:19px"></i>
+            <i style="width:11px;height:11px;background:#5ea3f5;left:11.5px;top:11px"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ VARIANT B — grid, facts lead ============ -->
+  <div class="variant">
+    <h2><b>B</b> · Grid — facts at display size</h2>
+    <div class="phone">
+      <div class="island"></div>
+      <div class="screen">
+        <div class="backbtn">
+          <svg viewBox="0 0 16 16" fill="none" stroke="#f2f2f5" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M10.5 2.5 5 8l5.5 5.5"/></svg>
+        </div>
+        <h1 class="title">Settings</h1>
+
+        <div class="grid">
+          <div class="tile">
+            <div class="head">
+              <div class="label">Avatar</div>
+              <div class="seal" style="transform:scale(.82)">
+                <i style="width:13px;height:13px;background:#0a84ff;left:10.5px;top:2px"></i>
+                <i style="width:12px;height:12px;background:#3f9fff;left:2px;top:9px"></i>
+                <i style="width:12px;height:12px;background:#1668d6;left:20px;top:9px"></i>
+                <i style="width:13px;height:13px;background:#7db8ff;left:5px;top:19px"></i>
+                <i style="width:13px;height:13px;background:#2456a8;left:16px;top:19px"></i>
+                <i style="width:11px;height:11px;background:#5ea3f5;left:11.5px;top:11px"></i>
+              </div>
+            </div>
+            <div class="big" style="font-size:22px">Add your photo</div>
+          </div>
+
+          <div class="tile">
+            <div class="head">
+              <div class="label">Data</div>
+              <div class="glyph g-green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="10" width="14" height="10" rx="2.5"/><path d="M8.5 10V7a3.5 3.5 0 0 1 7 0v3"/></svg></div>
+            </div>
+            <div class="big">279<span class="unit">things</span></div>
+            <div class="sub">on device</div>
+          </div>
+
+          <div class="tile">
+            <div class="head">
+              <div class="label">Diagnostics</div>
+              <div class="glyph g-gray"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3v5a5 5 0 0 0 10 0V3"/><path d="M10 13v3a5 5 0 0 0 5 5 5 5 0 0 0 5-5v-2"/><circle cx="20" cy="12" r="2"/></svg></div>
+            </div>
+            <div class="big" style="font-size:22px">Test and report</div>
+          </div>
+
+          <div class="tile">
+            <div class="head">
+              <div class="label">How it works</div>
+              <div class="glyph g-gray"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.2a2.6 2.6 0 0 1 5 .9c0 1.6-2.4 2-2.4 3.4"/><circle cx="12" cy="16.8" r=".4" fill="currentColor"/></svg></div>
+            </div>
+            <div class="big" style="font-size:22px">New here?<br>Start here</div>
+          </div>
+
+          <div class="tile">
+            <div class="head">
+              <div class="label">Language</div>
+              <div class="glyph g-gray"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.8 2.6 4 5.6 4 9s-1.2 6.4-4 9c-2.8-2.6-4-5.6-4-9s1.2-6.4 4-9z"/></svg></div>
+            </div>
+            <div class="big">English</div>
+          </div>
+
+          <div class="tile">
+            <div class="head">
+              <div class="label">Theme</div>
+              <div class="glyph g-gray"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M20.3 14.6A8.5 8.5 0 0 1 9.4 3.7 8.5 8.5 0 1 0 20.3 14.6z"/></svg></div>
+            </div>
+            <div class="big">Dark</div>
+          </div>
+
+          <div class="tile" style="grid-column: 1 / -1; min-height: 96px">
+            <div class="head">
+              <div class="label">Your key</div>
+              <div class="glyph g-green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="15" r="4"/><path d="M10.8 12.2 20 3M15 8l2.5 2.5M18 5l2 2"/></svg></div>
+            </div>
+            <div class="big" style="font-size:22px">Claude <span class="unit" style="font-size:15px">answers on tap</span></div>
+          </div>
+        </div>
+
+        <div class="askbar">
+          <span>Ask your things…</span>
+          <div class="seal berry" style="transform:scale(.8)">
+            <i style="width:13px;height:13px;background:#0a84ff;left:10.5px;top:2px"></i>
+            <i style="width:12px;height:12px;background:#3f9fff;left:2px;top:9px"></i>
+            <i style="width:12px;height:12px;background:#1668d6;left:20px;top:9px"></i>
+            <i style="width:13px;height:13px;background:#7db8ff;left:5px;top:19px"></i>
+            <i style="width:13px;height:13px;background:#2456a8;left:16px;top:19px"></i>
+            <i style="width:11px;height:11px;background:#5ea3f5;left:11.5px;top:11px"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<p class="note">
+  Where B strains, honestly shown: Diagnostics, How it works, and Avatar have no fact to
+  wear big — an action line at display size is a headline about nothing. The orphan is
+  resolved by letting Your key go full-width, which is a patch, not a fix.
+</p>
+
+</body>
+</html>
