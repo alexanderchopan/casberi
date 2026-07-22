@@ -492,10 +492,18 @@ enum WalletIngest {
         // assets, and both used to render as trades — "Swapped 0.5 ETH → 0.5
         // WETH on WETH" for the wrap especially. nil (the common case: a real
         // trade, or any venue the table doesn't know) keeps the sentence below.
-        let decoded = WalletVerbs.pairVerb(counterparty: router,
-                                           sentAsset: sent.asset, sentAmount: sentAmount,
-                                           receivedAsset: received.asset, receivedAmount: recvAmount,
-                                           nativeSymbol: sent.chain.symbol)
+        // Zerion's classification first, for the same reason the single-leg path
+        // prefers it: a deposit that hands back a receipt token is shaped
+        // exactly like a trade, and only the source can tell them apart.
+        let decoded = WalletVerbs.pairOperationVerb(
+            operation: sent.t["zerionOperation"] as? String ?? received.t["zerionOperation"] as? String,
+            sentAsset: sent.asset, sentAmount: sentAmount,
+            receivedAsset: received.asset, receivedAmount: recvAmount,
+            venueName: venue)
+            ?? WalletVerbs.pairVerb(counterparty: router,
+                                    sentAsset: sent.asset, sentAmount: sentAmount,
+                                    receivedAsset: received.asset, receivedAmount: recvAmount,
+                                    nativeSymbol: sent.chain.symbol)
         let out = sentAmount.isEmpty ? sent.asset : "\(sentAmount) \(sent.asset)"
         let inn = recvAmount.isEmpty ? received.asset : "\(recvAmount) \(received.asset)"
         let head = "Swapped \(out) → \(inn)"
@@ -781,6 +789,11 @@ enum WalletIngest {
         ]
         if let contract = t.contract { d["rawContract"] = ["address": contract] }
         if let cp = t.counterparty { d[t.received ? "from" : "to"] = cp }
+        // Zerion's own read of what the transaction WAS (2026-07-21). Carried
+        // under a Zerion-only key: the Alchemy arm never sets it, so its absence
+        // is exactly the signal that this leg came from the fallback path and
+        // has to be decoded from shape instead (WalletVerbs).
+        if let op = t.operationType { d["zerionOperation"] = op }
         return d
     }
 
@@ -843,16 +856,29 @@ enum WalletIngest {
             let to = received ? myLabel : otherLabel
             let head = amount.isEmpty ? "Moved \(asset)" : "Moved \(amount) \(asset)"
             title = "\(head) · \(from) → \(to)"
+        } else if let op = WalletVerbs.operationVerb(
+            operation: t["zerionOperation"] as? String, received: received,
+            asset: asset, amount: amount, venueName: cp.flatMap({ names[$0] })) {
+            // Zerion already classified this transaction, so the verb is READ,
+            // not inferred (2026-07-21) — "Claimed 12 CRV from Curve" where a
+            // transfer read alone could only ever say "Received 12 CRV". Tried
+            // before the shape rules below because a source that knows beats a
+            // table that guesses.
+            title = op.title
+            counterpartyName = op.venueName
+            direction = received ? "received" : "sent"
+            amountText = amount.isEmpty ? asset : "\(amount) \(asset)"
         } else if let minted = WalletVerbs.voidVerb(
             received: received, counterparty: cp,
             category: (t["category"] as? String) ?? "",
-            asset: asset, amount: amount,
+            asset: t["asset"] as? String, amount: amount,
             tokenID: WalletVerbs.decimalTokenID(t["tokenId"] ?? t["erc721TokenId"])) {
             // Minted or burned — the other side is the void, which no table is
             // needed to recognise (2026-07-21). "Received CryptoPunks from
-            // 0x0000…" was never the story; "Minted CryptoPunks #402" is. No
-            // direction/amount fields: a mint has no counterparty to rename and
-            // no side to face, so it earns no TransferStage.
+            // 0x0000…" was never the story; "Minted CryptoPunks #402" is. The
+            // RAW asset is passed, not the chain-symbol-defaulted local: see
+            // `voidVerb`. No direction/amount fields — a mint has no counterparty
+            // to rename and no side to face, so it earns no TransferStage.
             title = minted
         } else {
             let verb = received ? "Received" : "Sent"

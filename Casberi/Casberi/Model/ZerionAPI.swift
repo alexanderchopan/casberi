@@ -166,6 +166,16 @@ enum ZerionAPI {
         let amount: Double
         let counterparty: String?   // lowercased hex; the OTHER side of this leg
         let when: Date
+        /// Zerion's own classification of the whole TRANSACTION this leg belongs
+        /// to (2026-07-21) — already-decoded intent, which is exactly the thing
+        /// a raw transfer read can't recover without calldata. The authoritative
+        /// set, read back from the API's own validation error on a bogus
+        /// `filter[operation_types]`: approve, bid, burn, claim, delegate,
+        /// deploy, deposit, execute, mint, receive, revoke, revoke_delegation,
+        /// send, trade, withdraw. Note there is no "stake" — staking arrives as
+        /// deposit/withdraw. Consumed by `WalletVerbs.operationVerb`; nil when
+        /// absent so the caller degrades to its old sentence.
+        let operationType: String?
     }
 
     /// A wallet's recent fungible activity across the EVM chains Casberi
@@ -202,6 +212,8 @@ enum ZerionAPI {
                   let zid = chainId["id"] as? String,
                   let network = networkFor[zid] else { continue }
 
+            let operation = (attrs["operation_type"] as? String)
+                .flatMap { $0.isEmpty ? nil : $0 }
             guard let transfers = attrs["transfers"] as? [[String: Any]] else { continue }
             for t in transfers {
                 // Fungible-only — an NFT transfer carries no `fungible_info`
@@ -219,12 +231,12 @@ enum ZerionAPI {
                 if direction == "in" || direction == "self" {
                     out.append(Transfer(hash: hash, network: network, received: true,
                                         symbol: clean(symbol), contract: contract, amount: amount,
-                                        counterparty: sender, when: when))
+                                        counterparty: sender, when: when, operationType: operation))
                 }
                 if direction == "out" || direction == "self" {
                     out.append(Transfer(hash: hash, network: network, received: false,
                                         symbol: clean(symbol), contract: contract, amount: amount,
-                                        counterparty: recipient, when: when))
+                                        counterparty: recipient, when: when, operationType: operation))
                 }
             }
         }

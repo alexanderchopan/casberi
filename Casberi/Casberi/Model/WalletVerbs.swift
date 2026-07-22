@@ -145,26 +145,128 @@ enum WalletVerbs {
     /// table at all, which is why it is the broadest-coverage rule here: it
     /// works on every chain, for every collection and token, forever.
     ///
+    /// `asset` is the RAW symbol and may be nil. That distinction is the whole
+    /// reason this takes an optional: `WalletIngest`'s own `asset` local falls
+    /// back to the CHAIN's symbol when the transfer reports none, which is
+    /// correct for a native coin and a lie for anything else — an NFT contract
+    /// with no `symbol()` came through as "ETH" and this function dutifully
+    /// wrote "Minted ETH #160" (caught on-sim 2026-07-21 against a real wallet).
+    /// A nameless NFT says so; a nameless token declines the verb entirely,
+    /// since "Minted 500" names nothing a person could act on.
+    ///
     /// Returns nil for native-coin legs (a chain's own coin is not minted to you
     /// by a transfer) and for any leg whose counterparty is a real address.
     static func voidVerb(received: Bool, counterparty: String?, category: String,
-                         asset: String, amount: String, tokenID: String?) -> String? {
+                         asset: String?, amount: String, tokenID: String?) -> String? {
         guard isVoid(counterparty) else { return nil }
         let isNFT = category == "erc721" || category == "erc1155"
         guard isNFT || category == "erc20" else { return nil }
+        let name = asset.flatMap { $0.isEmpty ? nil : $0 }
 
         if isNFT {
             // A collection symbol plus its token number is how an NFT is named
-            // everywhere else in the app; a collection that reports no symbol
-            // falls back to the bare verb rather than inventing a name.
-            let piece = tokenID.map { "\(asset) #\($0)" } ?? asset
+            // everywhere else in the app. With no symbol, the id alone would be
+            // "#160 of what?" — so the nameless case drops it and says the one
+            // true thing instead.
+            guard let name else {
+                return received ? String(localized: "Minted an NFT")
+                                : String(localized: "Burned an NFT")
+            }
+            let piece = tokenID.map { "\(name) #\($0)" } ?? name
             return received
                 ? String(localized: "Minted \(piece)")
                 : String(localized: "Burned \(piece)")
         }
+        guard let name else { return nil }
         return received
-            ? String(localized: "Minted \(amountClause(amount, asset))")
-            : String(localized: "Burned \(amountClause(amount, asset))")
+            ? String(localized: "Minted \(amountClause(amount, name))")
+            : String(localized: "Burned \(amountClause(amount, name))")
+    }
+
+    // MARK: - Zerion's own classification
+
+    /// The verb for a TWO-legged transaction Zerion classified — a deposit, a
+    /// withdrawal or a claim that moved value both ways on one hash.
+    ///
+    /// This exists because swap-folding runs first and is shape-based: any hash
+    /// that both sends and receives two different assets becomes "Swapped A → B".
+    /// That is right for a trade and wrong for everything else that happens to
+    /// look like one — a vault deposit hands you a receipt token, so supplying
+    /// 1,265,457 USDT to earn yield rendered as "Swapped 1,265,457 USDT →
+    /// 1,265,456 USDe" (measured on-sim 2026-07-21 against a real lender; Zerion
+    /// called all nine of them deposits).
+    ///
+    /// Which side the sentence names is the decision each verb turns on: a
+    /// deposit is about what you PUT IN, a withdrawal and a claim about what
+    /// you GOT BACK. The receipt token on the other side is an implementation
+    /// detail of the protocol, not the story.
+    static func pairOperationVerb(operation: String?,
+                                  sentAsset: String, sentAmount: String,
+                                  receivedAsset: String, receivedAmount: String,
+                                  venueName: String?) -> Decoded? {
+        guard let operation else { return nil }
+        let sent = amountClause(sentAmount, sentAsset)
+        let got = amountClause(receivedAmount, receivedAsset)
+
+        func decoded(_ verb: String, _ clause: String) -> Decoded {
+            guard let venueName else { return Decoded(title: verb, venueName: nil) }
+            return Decoded(title: verb + clause + venueName, venueName: venueName)
+        }
+
+        switch operation {
+        case "deposit":  return decoded(String(localized: "Deposited \(sent)"), " into ")
+        case "withdraw": return decoded(String(localized: "Withdrew \(got)"), " from ")
+        case "claim":    return decoded(String(localized: "Claimed \(got)"), " from ")
+        // "trade" is the one this function deliberately declines: swap-folding's
+        // two-sided sentence already says more than any single-sided verb could.
+        default:         return nil
+        }
+    }
+
+    /// The verb for a leg whose transaction Zerion already classified — the
+    /// primary decoder on the live path (2026-07-21), because intent read from
+    /// the source beats intent inferred from a contract table.
+    ///
+    /// Only the operations that BEAT the sentence `WalletIngest` would otherwise
+    /// write are mapped. `send`/`receive`/`trade` already have correct handling
+    /// (the last through swap-folding), `approve`/`revoke` are `WalletApprovals`'
+    /// own surface with far more detail than a leg carries, and `execute` is
+    /// Zerion's word for "a contract call we didn't classify" — adopting it would
+    /// replace a true sentence with a vaguer one.
+    ///
+    /// Each verb is gated on the direction that makes it true, so the OTHER leg
+    /// of the same transaction can't wear it: a deposit's refund leg is not a
+    /// deposit, and labelling both would double-count the story.
+    static func operationVerb(operation: String?, received: Bool,
+                              asset: String, amount: String,
+                              venueName: String?) -> Decoded? {
+        guard let operation else { return nil }
+        let what = amountClause(amount, asset)
+
+        func decoded(_ verb: String, _ clause: String) -> Decoded {
+            guard let venueName else { return Decoded(title: verb, venueName: nil) }
+            return Decoded(title: verb + clause + venueName, venueName: venueName)
+        }
+
+        switch (operation, received) {
+        case ("claim", true):
+            return decoded(String(localized: "Claimed \(what)"), " from ")
+        case ("deposit", false):
+            // Staking lives here — Zerion has no "stake" type, so a Lido deposit
+            // and a lending-pool supply are the same word. "Deposited … into" is
+            // true of both; a verb that guessed between them would not be.
+            return decoded(String(localized: "Deposited \(what)"), " into ")
+        case ("withdraw", true):
+            return decoded(String(localized: "Withdrew \(what)"), " from ")
+        case ("mint", true):
+            return decoded(String(localized: "Minted \(what)"), " on ")
+        case ("burn", false):
+            return Decoded(title: String(localized: "Burned \(what)"), venueName: nil)
+        case ("bid", false):
+            return decoded(String(localized: "Bid \(what)"), " on ")
+        default:
+            return nil
+        }
     }
 
     /// Alchemy reports an NFT's id as a hex string (`"0x01a4"`). Decimal is what
