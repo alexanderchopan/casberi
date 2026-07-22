@@ -71,6 +71,14 @@ struct WhisperCapsule: View {
     var title: String
     var lead: String
     var walletPct: Double?
+    /// The bar↔surface morph's own namespace (2026-07-22) — the title text
+    /// carries a SECOND, independent `matchedGeometryEffect` pairing inside
+    /// it (id "whisperTitleMorph", position-only — see `WhisperTitleMorph`),
+    /// so the words themselves travel from the capsule up into the masthead
+    /// as the agent rises, rather than the capsule's promise and the
+    /// screen's title merely happening to match. Optional for the same
+    /// reason `AgentBar.morphNS` is: a namespace-free preview still renders.
+    var morphNS: Namespace.ID?
     var action: () -> Void
 
     @Environment(\.colorScheme) private var scheme
@@ -96,6 +104,7 @@ struct WhisperCapsule: View {
                         .dsText(.subhead13).fontWeight(.semibold)
                         .foregroundStyle(DS.textPrimary)
                         .lineLimit(1)
+                        .modifier(WhisperTitleMorph(ns: morphNS))
                     detail
                         .dsText(.subhead13)
                         .lineLimit(1)
@@ -130,6 +139,26 @@ struct MorphMatch: ViewModifier {
     func body(content: Content) -> some View {
         if let ns {
             content.matchedGeometryEffect(id: "agentMorph", in: ns)
+        } else {
+            content
+        }
+    }
+}
+
+/// The whisper's title, travelling (2026-07-22, prd §167a) — pairs the
+/// capsule's `Text(title)` with the masthead's own title in `Composer`
+/// (`briefTitleText`), same id, same shared namespace. POSITION only, not
+/// size/frame: the two texts are genuinely different type scales
+/// (`subhead13` → `heading22`), and matching their full frames would stretch
+/// the smaller glyph run into the bigger one's bounds — a visible distortion
+/// for a beat. Position-only lets the words travel to their new home while
+/// each text crossfades into its own real style, which reads as "the same
+/// words, grown up" rather than "text smeared across the screen".
+struct WhisperTitleMorph: ViewModifier {
+    let ns: Namespace.ID?
+    func body(content: Content) -> some View {
+        if let ns {
+            content.matchedGeometryEffect(id: "whisperTitleMorph", in: ns, properties: .position)
         } else {
             content
         }

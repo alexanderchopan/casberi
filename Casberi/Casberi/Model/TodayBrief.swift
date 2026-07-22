@@ -60,7 +60,7 @@ enum TodayBrief {
         var lines: [String] = []
 
         // 1. The synthesis card (B3) — only the observations that fired.
-        let notes = observations(landed: landed, move: move, moves: moves, now: now)
+        let notes = observations(things: things, landed: landed, move: move, moves: moves, now: now)
         if !notes.isEmpty {
             ids.append("notes")
             lines.append("notes = DayNotes([\(notes.indices.map { "n\($0)" }.joined(separator: ", "))])")
@@ -138,9 +138,20 @@ enum TodayBrief {
     /// Three strong lines read as intelligence; three padded ones read as a
     /// horoscope, so nothing here has a filler branch — a patternless day
     /// simply drops the card and the brief starts at the money hero.
-    static func observations(landed: [Thing], move: DayBrief.WalletMove?,
+    static func observations(things: [Thing], landed: [Thing], move: DayBrief.WalletMove?,
                              moves: [TokensAsk.Move], now: Date) -> [Note] {
         var out: [Note] = []
+
+        // A RECORD — the rarest, best kind of surprise (2026-07-22). Checked
+        // early so it competes for a slot ahead of the routine observations;
+        // still capped by the same `.prefix(3)` at the end, so a record never
+        // grows the card, it just earns a better seat in it. Positive-only by
+        // design: celebrating a big DROP as a "record" would be tone-deaf, and
+        // the discipline every other note already keeps (never pad, never
+        // invent) rules out a negative-framed one too.
+        if let record = records(things: things, landed: landed, move: move, now: now) {
+            out.append(record)
+        }
 
         // A mention that's gathering a conversation — the reply count is the
         // pattern, not the mention itself (any mention already leads its own
@@ -204,6 +215,78 @@ enum TodayBrief {
         }
 
         return Array(out.prefix(3))
+    }
+
+    /// The 4th observation family (2026-07-22, user: "how would you improve
+    /// the surprise & delight"): a deterministic RECORD — the most reading in
+    /// a day this month, or the wallet's best day since watching began. Both
+    /// are rare by construction (they only fire when a genuine local max is
+    /// actually beaten), which is what makes them a real surprise rather than
+    /// a threshold dressed up as one — there is no "big green day" confetti
+    /// here, because a fixed percentage threshold is exactly the horoscope
+    /// failure mode this card's whole discipline exists to avoid. Checks in
+    /// priority order; returns the first that fires.
+    private static func records(things: [Thing], landed: [Thing],
+                                move: DayBrief.WalletMove?, now: Date) -> Note? {
+        if let wallet = walletRecord(move, now: now) { return wallet }
+        if let reading = readingRecord(things, landed: landed, now: now) { return reading }
+        return nil
+    }
+
+    /// Today's wallet gain beats every prior day's gain since watching began.
+    /// Compares day-over-day moves off the LAST sample of each calendar day
+    /// (`combinedValueSamples()` — cached, no network read). Needs real
+    /// history (4+ distinct prior days) before "record" means anything; a
+    /// two-day-old wallet can't have a "best day" yet.
+    private static func walletRecord(_ move: DayBrief.WalletMove?, now: Date) -> Note? {
+        guard let move, move.pct > 0 else { return nil }
+        let samples = WalletStore.shared.combinedValueSamples()
+        guard samples.count >= 8 else { return nil }
+        let cal = Calendar.current
+        var lastPerDay: [Date: Double] = [:]
+        for s in samples {
+            // Samples arrive chronologically, so the LAST write for a day
+            // naturally wins — no explicit sort needed.
+            lastPerDay[cal.startOfDay(for: s.at)] = s.usd
+        }
+        let days = lastPerDay.keys.sorted()
+        guard days.count >= 4 else { return nil }
+        var priorMoves: [Double] = []
+        for i in 1..<days.count {
+            guard !cal.isDate(days[i], inSameDayAs: now) else { continue }   // today isn't "prior"
+            guard let prev = lastPerDay[days[i - 1]], prev > 0,
+                  let cur = lastPerDay[days[i]] else { continue }
+            priorMoves.append((cur - prev) / prev * 100)
+        }
+        guard priorMoves.count >= 3, let bestPrior = priorMoves.max(), move.pct > bestPrior
+        else { return nil }
+        return Note(glyph: "trophy",
+                    text: String(format: String(localized:
+                        "Your wallet's best day since you started watching — %@ on the day."),
+                        String(format: "%+.1f%%", move.pct)))
+    }
+
+    /// Today's real-reading count (the `reads()` scope — links minus the
+    /// money sources) beats every day in the past month. Needs 5+ distinct
+    /// prior days with at least one read before "record" means anything —
+    /// a corpus three days old can't set a monthly record.
+    private static func readingRecord(_ things: [Thing], landed: [Thing], now: Date) -> Note? {
+        let todayCount = reads(landed).count
+        guard todayCount >= 3 else { return nil }
+        let cal = Calendar.current
+        let horizon = cal.date(byAdding: .day, value: -30, to: now) ?? now
+        let windowStart = DayBrief.windowStart(now: now)
+        let prior = things.filter {
+            $0.kind == .link && !moneySources.contains($0.source)
+                && $0.capturedAt >= horizon && $0.capturedAt < windowStart
+        }
+        guard !prior.isEmpty else { return nil }
+        var perDay: [Date: Int] = [:]
+        for r in prior { perDay[cal.startOfDay(for: r.capturedAt), default: 0] += 1 }
+        guard perDay.count >= 5, let maxPrior = perDay.values.max(), todayCount > maxPrior
+        else { return nil }
+        return Note(glyph: "trophy",
+                    text: String(localized: "Most reading to land in one day this month — \(todayCount) so far."))
     }
 
     /// The word three or more of the day's reads share, and the newest read
@@ -291,7 +374,15 @@ enum TodayBrief {
         let anchor = samples.count >= 2
             ? (move.map { String(localized: "since \($0.since.formatted(.dateTime.month(.abbreviated).day()))") } ?? "")
             : ""
-        return "hero = MoneyHero(\"\(genSafe(compactUSD(total)))\", \"\(delta)\", \"\(csv)\", \"\(genSafe(subline))\", [\(cells.prefix(6).joined(separator: ", "))], \"\(genSafe(anchor))\", \"\(genSafe(txTitle))\", \"\(genSafe(txMeta))\", \"\(txID)\")"
+        // The raw numbers, alongside the pre-formatted total (2026-07-22) — so
+        // the renderer can ROLL the total from the day's anchor value to the
+        // current one on mount (`GenMoneyHero`'s own delight pass) instead of
+        // just printing a static string. `rollFrom` is the same anchor the %
+        // delta is measured against; empty when there's no real move to roll
+        // from, so a wallet with no day-scale history just shows the number
+        // plainly, same as before this pass.
+        let rollFrom = move.map { String(format: "%.2f", $0.anchorUSD) } ?? ""
+        return "hero = MoneyHero(\"\(genSafe(compactUSD(total)))\", \"\(delta)\", \"\(csv)\", \"\(genSafe(subline))\", [\(cells.prefix(6).joined(separator: ", "))], \"\(genSafe(anchor))\", \"\(genSafe(txTitle))\", \"\(genSafe(txMeta))\", \"\(txID)\", \"\(String(format: "%.2f", total))\", \"\(rollFrom)\")"
     }
 
     // MARK: - 3. The pair

@@ -194,6 +194,14 @@ struct Composer: View {
     /// Guards the away rain to once per open — a follow-up re-ask of the
     /// same away question must not replay it.
     @State private var awayRainPlayedThisOpen = false
+    /// The FIRST brief ever, deals its own small shower (delight, 2026-07-22)
+    /// — a real, provable, one-time event (mirrors the `bloom.seen.<source>`
+    /// idiom `MainSurface` already uses for a source's first-ever landing),
+    /// so it can never replay. A separate trigger from `awayRainTrigger` on
+    /// purpose — that one's name and doc comment are specific to the away
+    /// haul; reusing it for an unrelated moment would make a future reader
+    /// wonder why "away" rain fired for a brief.
+    @State private var firstBriefRainTrigger = 0
 
     /// The keepable text of a synthesis answer — a synthesis is one Insight
     /// carrying the prose (RootShell's proseDoc). Only that shape is worth
@@ -710,6 +718,13 @@ struct Composer: View {
                             Text(DayBrief.title())
                                 .dsText(.heading22)
                                 .foregroundStyle(DS.textPrimary)
+                                // The capsule's words travel here (prd §167a)
+                                // — the SAME id RootShell's proxy title (and,
+                                // before it, the whisper capsule's own title)
+                                // carry, so when this real masthead mounts it
+                                // simply takes over the geometry pairing and
+                                // the proxy quietly fades away underneath it.
+                                .modifier(WhisperTitleMorph(ns: glassNamespace))
                         }
                     } else {
                         Text(question)
@@ -1124,6 +1139,21 @@ struct Composer: View {
                     // ported verbatim). Buttons inside (Keep, chips, a
                     // drill-down row) still take their own tap first.
                     .onTapGesture { fieldFocused = false }
+                    // The completion tick (delight, 2026-07-22) — a single
+                    // SOFT haptic when the brief finishes visibly assembling,
+                    // distinct from the louder "real content landed" tick that
+                    // already fires the moment the doc is COMPOSED (well
+                    // before the typewriter finishes painting it — see the
+                    // settle block's own `DSHaptic.success()`). `.selection()`
+                    // on purpose: `.success()` again here would be a second,
+                    // redundant buzz for the same answer. Scoped to the Today
+                    // brief only — every other answer's completion already
+                    // reads as "done" the moment the settle haptic fires, so
+                    // adding a second tick there would be noise, not delight.
+                    .onChange(of: answerStream.completed) { _, done in
+                        guard done, TodayBrief.matches(currentQuestion) else { return }
+                        DSHaptic.selection()
+                    }
                     .onChange(of: answerStream.progress) { _, _ in
                         withAnimation(DS.Motion.standard) { proxy.scrollTo("bottom", anchor: .bottom) }
                     }
@@ -1214,6 +1244,7 @@ struct Composer: View {
         // shower over the answer (delight, 2026-07-21) — an arrival worth
         // marking, contained to the bubble's own bounds by the clip below.
         .overlay { BerryRain(trigger: awayRainTrigger) }
+        .overlay { BerryRain(trigger: firstBriefRainTrigger) }
         // Report the content's natural height so the hosting sheet hugs it.
         .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { h in
             if embedded { onHeight(h) }
@@ -2115,6 +2146,19 @@ struct Composer: View {
                    let count = StatusAsk.pulse(q, things: settledThings)?.pool.count, count >= 20 {
                     awayRainPlayedThisOpen = true
                     awayRainTrigger += 1
+                }
+                // The first brief ever, marked (delight, 2026-07-22) — the
+                // SAME persisted-flag idiom `MainSurface`'s `bloom.seen.
+                // <source>` uses for a source's first-ever landing, so it can
+                // only ever fire once, ever, ON THIS DEVICE (a fresh install
+                // sees it again, which is correct — it's a new relationship
+                // with the brief, not a global server-side fact).
+                if TodayBrief.matches(q), !docHasFallback(finalDoc),
+                   !UserDefaults.standard.bool(forKey: "today.firstBriefShown") {
+                    UserDefaults.standard.set(true, forKey: "today.firstBriefShown")
+                    firstBriefRainTrigger += 1
+                    chrome.flash(String(localized: "Your first brief — I'll have it ready every morning."),
+                                tone: .success)
                 }
                 if streamed { answerStream.paint(finalDoc) }
                 else { answerStream.stream(finalDoc) }

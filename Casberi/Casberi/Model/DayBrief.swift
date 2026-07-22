@@ -181,6 +181,11 @@ enum DayBrief {
         let pct: Double
         let usd: Double
         let since: Date
+        /// The anchor sample's own value (2026-07-22) — the hero's total
+        /// ROLLS from this to `usd` on mount, so the number tells the day's
+        /// story before the delta pill summarizes it. Additive: every
+        /// existing reader of `WalletMove` ignores a field it doesn't ask for.
+        let anchorUSD: Double
     }
 
     static func walletMove(now: Date = .now) -> WalletMove? {
@@ -193,7 +198,7 @@ enum DayBrief {
         else { return nil }
         let pct = (latest.usd - base.usd) / base.usd * 100
         guard abs(pct) >= 0.05 else { return nil }
-        return WalletMove(pct: pct, usd: latest.usd, since: base.at)
+        return WalletMove(pct: pct, usd: latest.usd, since: base.at, anchorUSD: base.usd)
     }
 
     /// How old a sample must be before a delta measured against it may wear

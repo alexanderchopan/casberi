@@ -156,7 +156,8 @@ struct RootShell: View {
                     // raises the agent, same move as the bar's own.
                     if let whisper {
                         WhisperCapsule(title: whisper.title, lead: whisper.lead,
-                                       walletPct: whisper.walletPct) {
+                                       walletPct: whisper.walletPct,
+                                       morphNS: agentMorph) {
                             DSHaptic.tap()
                             // The capsule's promise kept (prd §166): the tap
                             // lands on the Today brief itself, not the rest
@@ -166,7 +167,27 @@ struct RootShell: View {
                             // typed "how's my day", and a kept pill all reach
                             // the one composer.
                             chrome.askRequest = TodayBrief.title
+                            // The title travels (prd §167a): set BEFORE
+                            // `composerOpen` flips, so the proxy title below
+                            // mounts in the SAME `composerOpen`-driven
+                            // transaction as the capsule vanishing — the real
+                            // masthead doesn't exist for another 400ms+ (it
+                            // waits on `consumeAskRequest`'s settle delay,
+                            // then commit()), well past this rise animation's
+                            // own duration, so without a proxy there'd be
+                            // nothing on the OTHER side of the pairing for the
+                            // morph to animate into.
+                            let title = whisper.title
+                            chrome.risingBriefTitle = title
                             composerOpen = true
+                            Task { @MainActor in
+                                try? await Task.sleep(for: .milliseconds(700))
+                                // Only clear OUR OWN word — a fast re-tap that
+                                // set a newer title must not be stomped by an
+                                // older timer firing late.
+                                guard chrome.risingBriefTitle == title else { return }
+                                withAnimation(DS.Motion.standard) { chrome.risingBriefTitle = nil }
+                            }
                         }
                         // Inset a step narrower than the bar (2026-07-22) —
                         // see WhisperCapsule's own note: stacked full-width
@@ -199,6 +220,28 @@ struct RootShell: View {
                     agentSurface
                 }
                 .transition(.opacity)
+                // The proxy title (prd §167a) — mounts in this SAME
+                // transaction as the surface itself appearing, so its
+                // `matchedGeometryEffect` has a live pair to interpolate from
+                // (the whisper capsule's own title, vanishing in the SAME
+                // transaction one layer down). Purely cosmetic scaffolding:
+                // Composer's real masthead carries the identical id, so once
+                // it mounts the two simply crossfade in place — this view
+                // never does anything but sit still and then fade.
+                .overlay(alignment: .top) {
+                    if let title = chrome.risingBriefTitle {
+                        Text(title)
+                            .dsText(.heading22)
+                            .foregroundStyle(DS.textPrimary)
+                            .lineLimit(1)
+                            .modifier(WhisperTitleMorph(ns: agentMorph))
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.horizontal, DS.Space.s4)
+                            .padding(.top, 68)
+                            .allowsHitTesting(false)
+                            .transition(.opacity)
+                    }
+                }
                 .zIndex(3)
             }
         }
@@ -308,6 +351,12 @@ struct RootShell: View {
                 // The whisper's job is done however the agent rose — it
                 // never returns until a new day has something to say.
                 whisper = nil
+            } else {
+                // A safety clear, not the primary one (that's the guarded
+                // timer at the tap site) — a fast close before the timer
+                // fires must not leave a stale proxy title behind for the
+                // NEXT rise to inherit.
+                chrome.risingBriefTitle = nil
             }
         }
         // A surface requested an ask (the weekend cover) — open the composer;

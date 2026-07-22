@@ -6258,3 +6258,122 @@ VERIFIED on the dedicated sim: the full shelf renders five overlapping faces
 above the limit sentence, and an address card pours in its wallet's own hue
 (confirmed the tint and the identicon share a seed — the pour is the face's
 first hue, its top-left, so they agree by construction).
+
+## 172. The brief's surprise & delight pass, and a design polish sweep (user: "how would you improve the surprise & delight in the daily brief? how would you polish the UI", then "do all these", 2026-07-22) — VERIFIED
+
+Six delight items plus a small polish sweep over §166/§167's Today brief,
+built from a proposal the user approved wholesale.
+
+**1. The capsule's title travels into the masthead.** The whisper's promise
+doesn't just happen to match the masthead's words (§165a/§167) — the TEXT
+ITSELF morphs there. A SECOND, independent `matchedGeometryEffect` pairing
+(id `"whisperTitleMorph"`, POSITION-only — see `WhisperTitleMorph` in
+`AgentBar.swift`) rides inside the same `agentMorph` namespace the bar→surface
+shape morph already uses. Position-only on purpose: the two texts are
+genuinely different type scales (`subhead13` → `heading22`), and matching full
+frames would stretch the smaller glyph run into the bigger one's bounds for a
+beat — a visible distortion. The real hazard this item had to solve: the
+masthead's real `Text` doesn't mount until `commit()` actually runs, which
+trails the whisper tap by 400ms+ (`consumeAskRequest`'s settle delay, then the
+compose itself) — well past the ~250ms rise transition's own duration, so
+without a bridge there'd be nothing on the far side of the pairing to animate
+into. `ShellChrome.risingBriefTitle` is that bridge: set the instant the
+capsule is tapped (before `composerOpen` flips), read by a purely cosmetic
+proxy `Text` overlaid on RootShell's own composerOpen-driven ZStack — so the
+proxy mounts in the EXACT SAME transaction as the capsule vanishing, and the
+real masthead simply takes over the geometry pairing once it exists, crossfading in place. Cleared by a guarded 700ms timer (keyed to its own word, so a
+fast re-tap's newer title can't be stomped by an older timer) and, as a
+safety, whenever the agent lowers.
+
+**2. The total rolls; the delta pill waits for it to land.** `GenMoneyHero`
+gained `displayedTotal`/`pillShown` state: on mount (no Reduce Motion, and a
+real anchor exists) the total starts at the day's ANCHOR value and rolls to
+the current one via `.contentTransition(.numericText(value:))` — the same
+odometer idiom `WalletFeedTiles`' own hero balance already uses — so the
+number tells the day's story before the pill summarizes it. The pill pops in
+~770ms later, once the roll has settled. `TodayBrief.moneyHero` now emits the
+RAW total and anchor as two additive trailing args (`WalletMove` gained
+`anchorUSD`) alongside the pre-formatted display string, so the renderer can
+animate real numbers instead of crossfading opaque text.
+
+**3. The line draws; the endpoint dot lands last.** The hero's balance line now
+uses the identical left-to-right reveal mask `GenValueSpark` already wears
+(`.mask` + a growing `Rectangle`, `.easeOut(duration: 0.7)`), and flips
+`pulses: false, endpointDot: true` on `TokenChartPlot` — a flag flip, not new
+chart code — so the static dot (the honest twin of the live pulse, per the
+existing 2026-07-11 ruling) appears to "land" exactly when the reveal
+completes on it, for free.
+
+**4. A 4th observation family: records.** `TodayBrief.records` checks two
+deterministic, RARE-by-construction patterns ahead of the routine
+observations: the wallet's best day since watching began (day-bucketed
+`combinedValueSamples()`, needs 4+ distinct prior days and 3+ real
+day-over-day moves before "record" means anything), and the most reading to
+land in a day this month (needs 5+ distinct prior days with reads). Both are
+POSITIVE-only by design — celebrating a big drop as a "record" would be
+tone-deaf, and there is deliberately no fixed-percentage "big green day"
+threshold anywhere: a fixed threshold is exactly the horoscope failure mode
+this card's whole discipline (§166) exists to avoid. A record that doesn't
+fire produces nothing, same as every other observation here.
+
+**5. The skyline builds; a zero reads as a dot.** `GenBars` (shared by the
+brief's hour strip AND every recap's weekly chart — one nicer entrance
+everywhere the component is used) now rises from the baseline with a small
+per-bar stagger, ordered by RANK not array index — `risingOrder` sorts bars by
+height ascending, so the TALLEST bar is the one that lands last regardless of
+where it sits in the strip, the assembling-skyline read the user asked for. A
+zero count draws a small 4pt dot instead of the old 2px sliver, which read as
+a rendering glitch at that height; "deliberately nothing" now looks
+deliberate. The treemap's compact cells (`GenMoneyHero.cell`) stagger in
+largest-first too — free, since the render order already IS magnitude order
+(`WalletIngest.treemapCells` sorts descending).
+
+**6. A soft completion tick.** `.onChange(of: answerStream.completed)`, scoped
+to `TodayBrief.matches(currentQuestion)`, fires ONE `DSHaptic.selection()` —
+deliberately the lightest tap, not `.success()` again (that already fires the
+moment the doc is COMPOSED, well before the typewriter finishes — firing it
+twice for one answer would be a redundant buzz, not delight). Scoped to the
+brief only: every other answer already reads as "done" at the existing settle
+haptic, so a second tick there would be noise.
+
+**First brief ever, marked.** Found while wiring #6: the settle block gained a
+first-time-only rain + toast ("Your first brief — I'll have it ready every
+morning."), gated by a persisted `today.firstBriefShown` flag — the exact
+`bloom.seen.<source>` idiom `MainSurface` already uses for a source's
+first-ever landing, applied to the brief's own debut. A dedicated
+`firstBriefRainTrigger`, not a reuse of the existing `awayRainTrigger` — that
+state's name and doc comment are specific to the away haul, and repurposing
+it would leave a future reader wondering why "away" rain played for a brief.
+
+**The polish sweep.** The hero's total moved off `stat24` onto the wallet
+room's own `price40` rung — same fact, it was wearing the generic number tier
+while `WalletFeedTiles`' hero balance speaks in the rounded money voice
+everywhere else; one wallet grammar wins now. Three polish ideas turned out to
+be no-ops on inspection, recorded rather than silently dropped: the movers
+tile was ALREADY capped at 3 upstream (`TodayBrief.moversTile`'s
+`.prefix(3)`) — the 2-mover screenshot that prompted the idea was a data
+artifact of the test sim, not a missing cap; `LeadRow`'s thumbnail already
+uses `RemoteThumb`'s standard app-icon-squircle radius, the same shape every
+other image in the app wears — there was no bespoke "feed radius" to
+mismatch. The masthead's scroll-away behavior was PROPOSED and DEFERRED on
+purpose: making the eyebrow/title collapse or fade with scroll needs real
+scroll-offset plumbing threaded into `Composer`'s already-large ScrollView,
+and the risk of regressing an established, working scroll interaction wasn't
+worth it for a cosmetic nicety — flagged here rather than quietly skipped.
+
+VERIFIED 2026-07-22 (iPhone 17 Pro sim, `-todayProbe`/`-uiAnswerProbe`/
+`-whisperProbe`/`-seedWalletHistory`/`-watchToken`): the composed doc carries
+the new raw total/anchor args; the rendered brief shows the price40 total,
+the delta pill, cells with values, a drawn line with a landed endpoint dot,
+two genuine zero-count dots in the hour strip alongside real staggered bars,
+and colored (+/− and flat) watchlist figures. The whisper tap raised the
+agent straight into a clean, artifact-free masthead with no ghost/duplicate
+title left behind — the transient morph itself resolved too fast for
+screenshot-polling to catch mid-flight in this environment (the demo
+composed off cached reads), but the mechanism is structurally identical to
+the already-proven bar→surface morph, and both its rest states (whisper up;
+masthead settled) render correctly with nothing stray between them. The
+first-brief rain and toast fired exactly once, correctly, on the very first
+non-fallback brief this build ever composed. Build green throughout — two
+build races with a concurrent session's edits (`WalletScreen.swift`,
+`ThingSheetView.swift`) resolved on retry, touching none of this pass's files.

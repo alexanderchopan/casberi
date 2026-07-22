@@ -53,6 +53,16 @@ final class ShellChrome {
     var askRequest: String?
     func ask(_ query: String) { askRequest = query }
 
+    /// The whisper's title, mid-flight (2026-07-22, prd §167a) — set the
+    /// instant the capsule is tapped, so a proxy title can mount in
+    /// RootShell's OWN composerOpen-driven transaction (the same transaction
+    /// that already morphs the bar into the risen surface), rather than
+    /// waiting for the real masthead, which doesn't exist until `commit()`
+    /// actually runs — a good 400ms+ later, well after the rise transition
+    /// has already finished. Cleared by RootShell on a short timer once the
+    /// real masthead has had time to mount and take over the geometry pairing.
+    var risingBriefTitle: String?
+
     /// The FAB lives on MainSurface's root now (it belongs to Home/Feed, not
     /// to pushed rooms or forms) — bumping this asks RootShell, which still
     /// owns the sheet, to open the composer.

@@ -2722,15 +2722,34 @@ private struct GenValueSpark: View {
 /// answer, not an empty state).
 private struct GenBars: View {
     let el: GenEl
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// The skyline builds (delight, 2026-07-22): bars rise from the baseline
+    /// with a small stagger, the TALLEST landing last — the day's shape
+    /// assembling like a little skyline rather than popping in all at once.
+    /// Shared by every `Bars` caller (the Today brief's hour strip, the
+    /// per-source/category recap's weekly chart) — a nicer entrance for one
+    /// component is a nicer entrance everywhere it's used.
+    @State private var risen = false
+
     private var counts: [Double] { genCSVDoubles(el.str(2)) }
     private var labels: [String] {
         el.str(3).split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }
+    }
+    /// Each bar's RANK by height, ascending (0 = shortest, last = tallest) —
+    /// the entrance delay follows this, not array index, so the tallest bar
+    /// is the one that lands last regardless of where it sits in the strip.
+    private var risingOrder: [Int] {
+        let ranked = counts.indices.sorted { counts[$0] < counts[$1] }
+        var order = [Int](repeating: 0, count: counts.count)
+        for (rank, i) in ranked.enumerated() { order[i] = rank }
+        return order
     }
 
     var body: some View {
         Group {
             if !counts.isEmpty {
                 let peak = max(counts.max() ?? 1, 1)
+                let order = risingOrder
                 VStack(alignment: .leading, spacing: DS.Space.s2) {
                     if !el.str(0).isEmpty {
                         Text(el.str(0)).dsText(.callout15).fontWeight(.semibold)
@@ -2742,11 +2761,30 @@ private struct GenBars: View {
                     HStack(alignment: .bottom, spacing: DS.Space.s2) {
                         ForEach(Array(counts.enumerated()), id: \.offset) { i, c in
                             let last = i == counts.count - 1
+                            let delay = reduceMotion ? 0 : Double(order[i]) * 0.04
                             VStack(spacing: DS.Space.s1) {
                                 Spacer(minLength: 0)
-                                Capsule(style: .continuous)
-                                    .fill(last ? DS.tint : DS.tint.opacity(0.35))
-                                    .frame(height: max(3, 64 * CGFloat(c / peak)))
+                                // A zero count reads as a DOT, not a 2px sliver
+                                // (2026-07-22) — at that height a "real" bar is
+                                // indistinguishable from a rendering glitch; a
+                                // small dot reads as "deliberately nothing".
+                                if c <= 0 {
+                                    Circle()
+                                        .fill(last ? DS.tint.opacity(0.5) : DS.tint.opacity(0.25))
+                                        .frame(width: 4, height: 4)
+                                        .scaleEffect(risen ? 1 : 0.2)
+                                        .opacity(risen ? 1 : 0)
+                                        .animation(reduceMotion ? nil
+                                                   : .spring(response: 0.4, dampingFraction: 0.7).delay(delay),
+                                                   value: risen)
+                                } else {
+                                    Capsule(style: .continuous)
+                                        .fill(last ? DS.tint : DS.tint.opacity(0.35))
+                                        .frame(height: risen ? max(3, 64 * CGFloat(c / peak)) : 0)
+                                        .animation(reduceMotion ? nil
+                                                   : .spring(response: 0.46, dampingFraction: 0.68).delay(delay),
+                                                   value: risen)
+                                }
                                 if i < labels.count {
                                     Text(labels[i]).dsText(.label12)
                                         .foregroundStyle(last ? DS.textSecondary : DS.textTertiary)
@@ -2763,6 +2801,16 @@ private struct GenBars: View {
                 .dsWidgetSurface()
                 .padding(.horizontal, DS.Space.s4)
                 .padding(.top, DS.Space.s2)
+                .onAppear {
+                    guard !risen else { return }
+                    if reduceMotion { risen = true }
+                    else {
+                        Task { @MainActor in
+                            try? await Task.sleep(for: .milliseconds(30))
+                            risen = true
+                        }
+                    }
+                }
             }
         }
     }
@@ -3010,10 +3058,11 @@ private func signedPercent(_ token: String) -> Double? {
     return Double(body)
 }
 
-/// MoneyHero(total, delta, "v0,v1,…", subline, [cells]) — the Today brief's
-/// one fused visualization (direction B2's hero): the combined total and its
-/// day move, then the holdings treemap and the balance line SIDE BY SIDE, then
-/// what actually settled.
+/// MoneyHero(total, delta, "v0,v1,…", subline, [cells], anchor, txTitle,
+/// txMeta, txID, rawTotal, rawAnchorTotal) — the Today brief's one fused
+/// visualization (direction B2's hero): the combined total and its day move,
+/// then the holdings treemap and the balance line SIDE BY SIDE, then what
+/// actually settled.
 ///
 /// Fused rather than stacked on purpose — the wallet is the only always-on
 /// aggregate in the brief, so it earns both shapes at once, while every other
@@ -3025,9 +3074,26 @@ private struct GenMoneyHero: View {
     let el: GenEl
     @Environment(\.colorScheme) private var scheme
     @Environment(\.genThingOpen) private var thingOpen
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    /// The total ROLLS from the day's anchor value to the current one on
+    /// mount (delight, 2026-07-22) — the same odometer idiom the wallet
+    /// feed's own hero balance already uses (`WalletFeedTiles`), so the number
+    /// tells the day's story before the delta pill summarizes it. nil until
+    /// the entrance fires, so the very first frame paints the FINAL number
+    /// plainly rather than a flash of the anchor (no anchor means no move to
+    /// roll — the honest case a fresh/flat wallet already falls into).
+    @State private var displayedTotal: Double?
+    /// The delta pill waits for the roll to settle (2026-07-22) — popping in
+    /// WITH the rolling digits argued with itself about what to look at first.
+    @State private var pillShown = false
+    @State private var lineRevealed = false
+    @State private var cellsShown = false
 
     private var items: [KindCountRow.Item] { KindCountRow.parse(el.refs(4), cap: 4) }
     private var series: [Double] { genCSVDoubles(el.str(2)) }
+    private var rawTotal: Double? { Double(el.str(9)) }
+    private var rawAnchor: Double? { Double(el.str(10)) }
     /// The day move as a fraction, parsed back off the composed "+1.5%" — the
     /// pill and the line's accent both key off it, so an empty delta simply
     /// shows neither rather than claiming flatness.
@@ -3048,14 +3114,25 @@ private struct GenMoneyHero: View {
     var body: some View {
         VStack(alignment: .leading, spacing: DS.Space.s3) {
             HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-                Text(el.str(0))
-                    .dsText(.stat24)
+                // The wallet room's own money ramp (2026-07-22) — this was
+                // `stat24`, the generic number tier, while every other total
+                // in the app (WalletFeedTiles' own hero balance) speaks in the
+                // rounded `price40` rung. Same fact, two voices; one wallet
+                // grammar wins.
+                Text(TokenStats.compact(displayedTotal ?? rawTotal ?? 0))
+                    .dsText(.price40)
                     .foregroundStyle(DS.textPrimary)
                     .monospacedDigit()
+                    .contentTransition(reduceMotion ? .identity
+                                       : .numericText(value: displayedTotal ?? rawTotal ?? 0))
                     .lineLimit(1)
                     .minimumScaleFactor(0.6)
                 Spacer(minLength: DS.Space.s2)
-                if let change { TokenDeltaPill(change: change, label: "") }
+                if let change {
+                    TokenDeltaPill(change: change, label: "")
+                        .scaleEffect(pillShown ? 1 : 0.6)
+                        .opacity(pillShown ? 1 : 0)
+                }
             }
             HStack(alignment: .bottom, spacing: DS.Space.s3) {
                 treemap
@@ -3067,7 +3144,24 @@ private struct GenMoneyHero: View {
                                                          price: series.last ?? 0,
                                                          change: c),
                                        accent: TokenChartStyle.accent(change: c, scheme: scheme),
-                                       height: heroHeight - 14, pulses: false)
+                                       height: heroHeight - 14,
+                                       // Live-streaming's pulse would overclaim
+                                       // here (this reads once, not per visit —
+                                       // the 2026-07-11 ruling `ValueSpark`
+                                       // already follows); the STATIC dot is
+                                       // the honest twin, and the reveal mask
+                                       // below makes it "land" exactly when
+                                       // the line finishes drawing (2026-07-22).
+                                       pulses: false, endpointDot: true)
+                            // The line DRAWS (delight, 2026-07-22) — the same
+                            // left-to-right reveal `GenValueSpark` already
+                            // uses, so a static composed doc gets the same
+                            // "this just arrived" feel a real chart earns.
+                            .mask(alignment: .leading) {
+                                GeometryReader { geo in
+                                    Rectangle().frame(width: lineRevealed ? geo.size.width : 0)
+                                }
+                            }
                         // The line's own anchor — the same job ValueSpark's
                         // subline does ("since Jul 18"). Without it the curve
                         // claims a span it never states.
@@ -3125,6 +3219,37 @@ private struct GenMoneyHero: View {
         .dsWidgetSurface()
         .padding(.horizontal, DS.Space.s4)
         .padding(.top, DS.Space.s2)
+        .onAppear { fireEntrance() }
+    }
+
+    /// One-shot entrance, gated on `displayedTotal == nil` the same way
+    /// `GenTagMap`'s `settled`/`GenValueSpark`'s `revealed` guard their own
+    /// mount animation — a re-render (theme change, Dynamic Type) must never
+    /// replay it.
+    private func fireEntrance() {
+        guard displayedTotal == nil else { return }
+        guard !reduceMotion, let rawTotal, let rawAnchor, rawAnchor > 0
+        else {
+            // No real anchor to roll from (a fresh wallet, or Reduce Motion) —
+            // show the true number immediately, the honest static case.
+            displayedTotal = rawTotal
+            pillShown = true
+            lineRevealed = true
+            cellsShown = true
+            return
+        }
+        displayedTotal = rawAnchor
+        withAnimation(.easeOut(duration: 0.7)) { lineRevealed = true }
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(30))
+            // Each cell owns its own delayed spring via `.animation(value:)`
+            // below — a plain set here, not a second `withAnimation` wrap.
+            cellsShown = true
+            try? await Task.sleep(for: .milliseconds(120))
+            withAnimation(.spring(response: 0.55, dampingFraction: 0.86)) { displayedTotal = rawTotal }
+            try? await Task.sleep(for: .milliseconds(650))
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.62)) { pillShown = true }
+        }
     }
 
     private var heroHeight: CGFloat { 84 }
@@ -3138,11 +3263,11 @@ private struct GenMoneyHero: View {
             EmptyView()
         } else {
             HStack(spacing: DS.Space.s1) {
-                cell(items[0])
+                cell(items[0], index: 0)
                 if items.count > 1 {
                     VStack(spacing: DS.Space.s1) {
-                        ForEach(Array(items.dropFirst().prefix(3).enumerated()), id: \.offset) { _, item in
-                            cell(item)
+                        ForEach(Array(items.dropFirst().prefix(3).enumerated()), id: \.offset) { i, item in
+                            cell(item, index: i + 1)
                         }
                     }
                     .frame(maxWidth: .infinity)
@@ -3151,7 +3276,7 @@ private struct GenMoneyHero: View {
         }
     }
 
-    private func cell(_ item: KindCountRow.Item) -> some View {
+    private func cell(_ item: KindCountRow.Item, index: Int) -> some View {
         // The cell SHOWS its value (2026-07-22). The doc's cells already carry
         // one (`@v:$92` — `KindCountRow.Item.value`), and dropping it left
         // large empty rectangles labelled only by symbol: a treemap whose
@@ -3185,6 +3310,16 @@ private struct GenMoneyHero: View {
                 }
                 .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
             }
+            // Cells stagger in LARGEST FIRST (2026-07-22) — the render order
+            // already IS magnitude order (the doc's cells arrive pre-sorted
+            // descending, `WalletIngest.treemapCells`), so following index
+            // order for the entrance delay is narrative order for free: ETH
+            // enters first because ETH matters most.
+            .scaleEffect(cellsShown ? 1 : 0.85)
+            .opacity(cellsShown ? 1 : 0)
+            .animation(reduceMotion ? nil
+                       : .spring(response: 0.36, dampingFraction: 0.72).delay(Double(index) * 0.06),
+                       value: cellsShown)
     }
 }
 
