@@ -10,13 +10,25 @@ import CryptoKit
 /// into the same total and the same treemap, wearing its venue the way a
 /// wallet wears its face.
 ///
-/// **The promise, and why it survives.** The wallet room says watching can
-/// never trade or move funds. Until now that was true because there was no
-/// credential at all. With an exchange there is one, so the promise rests on
-/// the key's SCOPE — and the only honest way to rest on that is to check it
-/// rather than ask for it. Every venue here exposes permission introspection,
-/// so before a key is ever used to read a balance it is asked what it is
-/// allowed to do, and refused if it can trade or move funds.
+/// **What the permission check is for — and what it is NOT for** (corrected
+/// 2026-07-21, user: "how would someone be able to trade, we don't even have a
+/// wallet"). An earlier version of this comment claimed the wallet room's
+/// "watching can never trade or move funds" promise came to rest on the key's
+/// scope. That was wrong, and worth recording so it isn't re-argued. The
+/// promise holds for the reason it always did: the app has NO capability to
+/// trade. There is no signing path anywhere in it — no `personal_sign`, no
+/// `eth_sendTransaction`, and WalletConnect proposes `methods: []` — and no
+/// order, withdrawal or transfer endpoint is reachable from this file. Adding
+/// a key does not change any of that.
+///
+/// The check earns its place for a narrower and less dramatic reason: **blast
+/// radius**. An API key is a bearer credential — whoever holds it can use it,
+/// whatever this app's code does. A key that can withdraw turns a keychain
+/// leak, a bad backup or a compromised device from a privacy problem into a
+/// funds-loss one. Refusing it means Casberi never holds more power than the
+/// feature needs. It also catches the likelier case by far: people reuse the
+/// key they already made, and that key usually has trading on, because trading
+/// is what they made it for.
 ///
 /// The gate **fails closed**, which is the part that makes it worth anything:
 /// an unreachable check, an unparseable answer, or a permission string we do
@@ -183,10 +195,17 @@ enum ExchangeBridge {
 
     // MARK: - Coinbase
 
-    /// Coinbase reports the three powers separately; only viewing may be true.
-    /// `can_receive` is deliberately treated as disqualifying too: it is the
-    /// power to accept inbound payments to the account, which is a funds-
-    /// movement right, and a read-only portfolio has no use for it.
+    /// Coinbase reports its powers separately. Only the two that can MOVE money
+    /// out disqualify: trade and transfer.
+    ///
+    /// `can_receive` was disqualifying here at first, on the reasoning that it
+    /// is "a funds-movement right". That reasoning doesn't survive the
+    /// blast-radius test above: receiving is inbound, so it cannot lose anyone
+    /// money, and refusing it buys nothing. It could easily COST something — if
+    /// Coinbase sets that bit on ordinary view keys, the gate would reject
+    /// perfectly safe keys and the failure would be undiagnosable from the
+    /// setup screen. Held to the rule that a check must refuse a real power, not
+    /// merely a named one.
     static func verifyCoinbase(keyName: String, privateKey: String) async -> KeyVerdict {
         guard let jwt = coinbaseJWT(keyName: keyName, privateKey: privateKey,
                                     method: "GET", path: "/api/v3/brokerage/key_permissions")
@@ -204,7 +223,6 @@ enum ExchangeBridge {
         var disqualifying: [String] = []
         if root["can_trade"] as? Bool == true { disqualifying.append("trade") }
         if root["can_transfer"] as? Bool == true { disqualifying.append("transfer") }
-        if root["can_receive"] as? Bool == true { disqualifying.append("receive") }
         if !disqualifying.isEmpty { return .tooPowerful(disqualifying) }
         return canView ? .readOnly
                        : .unverifiable(String(localized: "That key can't read anything — give it View access."))
