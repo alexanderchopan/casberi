@@ -775,6 +775,7 @@ struct AppsScreen: View {
                            startPoint: .topLeading, endPoint: .bottomTrailing)
                 .overlay(alignment: .bottomTrailing) {
                     Image(systemName: BridgeGlyph.symbol(for: iconName))
+                        .accessibilityHidden(true)
                         .font(.system(size: 150, weight: .semibold))
                         .foregroundStyle((BridgeGlyph.glyphTint(for: iconName) ?? .white).opacity(0.10))
                         .rotationEffect(.degrees(-12))
@@ -905,6 +906,7 @@ struct AppsScreen: View {
                     Text(LocalizedStringKey(name))
                         .dsText(.heading22).foregroundStyle(DS.textPrimary)
                     Image(systemName: "chevron.right")
+                        .accessibilityHidden(true)
                         .font(.system(size: 17, weight: .semibold))
                         .foregroundStyle(DS.textTertiary)
                     Spacer()

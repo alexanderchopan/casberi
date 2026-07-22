@@ -384,6 +384,9 @@ struct TokenRow: View {
             }
         }
         .padding(.vertical, DS.Space.s2)
+        // One row, one sentence — name, price, and which way it moved.
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text("\(tokenName), \(TokenChartStyle.priceText(pulse.price)), \(TokenChartStyle.changeText(pulse.change24h))"))
     }
 
     /// "Solana" out of "Solana · $SOL" — via the format's one parser
@@ -434,10 +437,16 @@ struct Sparkline: View {
                     y: inset + CGFloat(1 - t) * (canvasSize.height - inset * 2))
                 if i == 0 { path.move(to: point) } else { path.addLine(to: point) }
             }
+            // A DASHED stroke when the line is down (2026-07-21): direction
+            // was hue alone, and this component is reusable — the one call
+            // site that pairs it with a signed number can't vouch for the
+            // next. Solid-up / dashed-down survives greyscale.
             ctx.stroke(path, with: .color(up ? DS.confirm : DS.destructive),
-                       style: StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round))
+                       style: StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round,
+                                          dash: up ? [] : [3, 2]))
         }
         .frame(width: 46, height: 14)
+        .accessibilityLabel(up ? Text("Price trend, up") : Text("Price trend, down"))
         // A draw-on reveal was built here and REVERTED (review 2026-07-11):
         // row @State resets on List recycling, so the wipe replayed on every
         // scroll pass — motion claiming a data arrival that didn't happen.
@@ -568,6 +577,7 @@ struct RemoteThumb: View {
                 ZStack {
                     DS.fillFaint
                     Image(systemName: "photo")
+                        .accessibilityHidden(true)
                         .font(.system(size: size * 0.4, weight: .medium))
                         .foregroundStyle(DS.textTertiary)
                 }
@@ -957,6 +967,7 @@ struct PhotoWell: View {
             ZStack {
                 thing.kind.hue.opacity(0.22)
                 Image(systemName: "photo")
+                    .accessibilityHidden(true)
                     .font(.system(size: (size ?? 100) * 0.34, weight: .medium))
                     .foregroundStyle(thing.kind.hue)
             }

@@ -37,6 +37,20 @@ extension DSTextStyle {
     static let tab10     = DSTextStyle(size: 10, weight: .medium,   tracking: 0,    lineHeight: 12, relative: .caption2)
     static let mono12    = DSTextStyle(size: 12, weight: .regular,  tracking: 0,    lineHeight: 16, relative: .caption1, monospaced: true)
 
+    // Rungs added by the Dynamic Type pass (2026-07-21). Each one existed
+    // already as a raw `.system(size:)` somewhere — frozen while its
+    // neighbours grew. They are here rather than folded into the nearest
+    // existing rung so the fix costs nothing visually: same size, same
+    // weight, now scaled.
+    /// The row's project tag — one step under `label12`.
+    static let label11   = DSTextStyle(size: 11, weight: .medium,   tracking: 0,    lineHeight: 15, relative: .caption2)
+    /// Monospaced body — command cards, diagnostic log lines.
+    static let mono13    = DSTextStyle(size: 13, weight: .regular,  tracking: 0,    lineHeight: 18, relative: .footnote, monospaced: true)
+    /// A device-flow user code: the one string on its screen, read aloud off
+    /// the glass and typed into another device. Monospaced so the character
+    /// groups stay even, and display-sized because it IS the screen.
+    static let monoCode34 = DSTextStyle(size: 34, weight: .bold,    tracking: 0,    lineHeight: 41, relative: .largeTitle, monospaced: true)
+
     // The Big money rungs (prd §102, 2026-07-17) — token money's three
     // deliberate off-ramp sizes: the sheet's hero price, its stat cards, the
     // fat feed row's price. Display-tier rounded bold, and routed through

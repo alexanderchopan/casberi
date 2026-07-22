@@ -130,7 +130,17 @@ final class ThemeStore {
 extension DS {
     /// Live theme accessors — reading these inside a view body tracks the
     /// observable store, so a change repaints every token consumer.
-    static var themedTint: Color { Color(hex: ThemeStore.accentHex) }
+    /// Casberi blue, which the accent picker no longer varies. Under Increase
+    /// Contrast it steps to a measured pair (≥4.5:1 on every page/sheet/well
+    /// surface in both modes) — the shipped blue measures 3.8:1 on the light
+    /// well and 4.2:1 on the dark sheet, fine for a fill but thin for the link
+    /// and button words it also paints. `accentHex` itself is untouched: the
+    /// widget reads that value out of the app group and has no such setting.
+    static var themedTint: Color {
+        ContrastStore.shared.increased
+            ? Color.adaptive(dark: "#62a1ee", light: "#1366cd")
+            : Color(hex: ThemeStore.accentHex)
+    }
     static var themedTintDim: Color { themedTint.opacity(0.16) }
 
     /// The themed page color (photo rendering is the shell's job). A chosen

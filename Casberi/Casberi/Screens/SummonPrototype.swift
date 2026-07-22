@@ -469,6 +469,7 @@ private struct AgentSurface: View {
                         .foregroundStyle(DS.textTertiary)
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel("Clear search")
             }
         }
         .padding(.horizontal, DS.Space.s4)

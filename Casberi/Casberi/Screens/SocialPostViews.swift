@@ -175,14 +175,15 @@ struct SocialEngagementLine: View {
 
     var body: some View {
         HStack(spacing: DS.Space.s4) {
-            cell("heart", engagement.likes)
-            cell("arrow.2.squarepath", engagement.reposts)
-            cell("bubble.left", engagement.replies)
+            cell("heart", engagement.likes, "likes")
+            cell("arrow.2.squarepath", engagement.reposts, "reposts")
+            cell("bubble.left", engagement.replies, "replies")
             Spacer(minLength: 0)
         }
     }
 
-    @ViewBuilder private func cell(_ glyph: String, _ count: SocialCount?) -> some View {
+    @ViewBuilder private func cell(_ glyph: String, _ count: SocialCount?,
+                                   _ kind: String) -> some View {
         if let count {
             HStack(spacing: 5) {
                 Image(systemName: glyph)
@@ -191,6 +192,10 @@ struct SocialEngagementLine: View {
                     .dsText(.subhead13).foregroundStyle(DS.textSecondary)
                     .monospacedDigit()
             }
+            // The glyph is the only thing saying WHICH count this is — silent,
+            // the row reads as three bare numbers in a row.
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(Text("\(count.text) \(kind)"))
         }
     }
 }
@@ -358,6 +363,7 @@ struct SocialRepliesSection: View {
                                         displayName: nil, bio: nil, avatarURL: reply.avatarURL)
             } label: { avatarIcon(reply) }
             .buttonStyle(.plain)
+            .accessibilityLabel(Text("Open profile for \(reply.handle)"))
         } else {
             avatarIcon(reply)
         }

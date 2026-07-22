@@ -240,6 +240,7 @@ struct AccountTile: View {
                         .frame(width: 28, height: 28)
                         .overlay(
                             Image(systemName: badge.symbol)
+                                .accessibilityHidden(true)
                                 .font(.system(size: 14, weight: .semibold))
                                 .foregroundStyle(badge.color)
                         )
@@ -305,6 +306,19 @@ struct AccountTile: View {
                     .font(.system(size: 8, weight: .semibold))
                     .foregroundStyle(color)
             )
+            // Sixteen of these sit in one strip; unlabeled, VoiceOver reads
+            // sixteen SF Symbol names after the tile's title. The tile's own
+            // subtitle already counts what is connected.
+            .accessibilityHidden(true)
+            // Shape as well as hue (2026-07-21): a needs-attention seat wears
+            // a corner dot, so the three states aren't one square in three
+            // colors.
+            .overlay(alignment: .topTrailing) {
+                if status == .attention {
+                    Circle().fill(DS.attention)
+                        .frame(width: 5, height: 5).offset(x: 1.5, y: -1.5)
+                }
+            }
     }
 }
 

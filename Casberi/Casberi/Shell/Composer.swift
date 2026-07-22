@@ -691,6 +691,7 @@ struct Composer: View {
                             .background(DS.fillFaint, in: Circle())
                     }
                     .buttonStyle(.plain)
+                    .accessibilityLabel("Close")
                     .padding(.top, DS.Space.s3)
                     .padding(.trailing, DS.Space.s4)
                 }
@@ -1266,6 +1267,7 @@ struct Composer: View {
     private var keyedBadge: some View {
         HStack(spacing: DS.Space.s1) {
             Image(systemName: "key.fill").font(.system(size: 10))
+                .accessibilityHidden(true)
             Text("Answered with your key")
         }
         .dsText(.label12)
@@ -1439,6 +1441,7 @@ struct Composer: View {
                     } label: {
                         HStack(spacing: DS.Space.s2) {
                             Image(systemName: "tag")
+                                .accessibilityHidden(true)
                                 .font(.system(size: 13, weight: .semibold))
                             Text("Tag your \(hint.count) \(hint.source) things")
                                 .dsText(.callout15)
@@ -1465,6 +1468,7 @@ struct Composer: View {
                     } label: {
                         HStack(spacing: DS.Space.s2) {
                             Image(systemName: isAway ? "sparkles" : ask.glyph)
+                                .accessibilityHidden(true)
                                 .font(.system(size: 13, weight: .semibold))
                                 .foregroundStyle(DS.tint)
                                 // The Noticed chip is the agent's one
@@ -1659,6 +1663,7 @@ struct Composer: View {
                             Button { runTake(tool) } label: {
                                 HStack(spacing: DS.Space.s2) {
                                     Image(systemName: tool.glyph)
+                                        .accessibilityHidden(true)
                                         .font(.system(size: 14, weight: .medium))
                                         .foregroundStyle(DS.tint)
                                     Text(tool.label)
@@ -1988,6 +1993,7 @@ struct Chip: View {
         HStack(spacing: DS.Space.s1) {
             if let glyph {
                 Image(systemName: glyph).font(.system(size: 12))
+                    .accessibilityHidden(true)
             }
             Text(text).dsText(.label12)
         }

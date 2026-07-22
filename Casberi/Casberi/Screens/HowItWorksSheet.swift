@@ -35,6 +35,7 @@ struct HowItWorksSheet: View {
     var onOpenCatalog: (() -> Void)? = nil
 
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var arrived = false
     /// False = the rain waits above the screen · true = it has fallen through.
     @State private var rainFell = false
@@ -115,13 +116,22 @@ struct HowItWorksSheet: View {
                     // The base delay clears the cover's own presentation —
                     // start the rain while the cover is still fading in and
                     // half the fall is spent invisible (measured 2026-07-16).
-                    .animation(.easeIn(duration: 0.75)
-                                .delay(0.7 + Double(i) * 0.055),
+                    // Reduce Motion (2026-07-21): no fall. The tiles snap to
+                    // their off-screen resting place, so the curtain simply
+                    // never plays — nothing is lost, because the rain is pure
+                    // transition (it ends below the screen either way) and
+                    // step 1's settled strip says the same thing standing still.
+                    .animation(reduceMotion ? nil
+                                            : .easeIn(duration: 0.75)
+                                                .delay(0.7 + Double(i) * 0.055),
                                value: rainFell)
             }
         }
         .ignoresSafeArea()
         .allowsHitTesting(false)
+        // 31 brand tiles with no informational role — VoiceOver would read the
+        // whole catalog aloud before reaching the first step.
+        .accessibilityHidden(true)
     }
 
     var body: some View {
@@ -133,7 +143,7 @@ struct HowItWorksSheet: View {
                     // new person meets.
                     VStack(alignment: .leading, spacing: DS.Space.s2) {
                         Text("How it works")
-                            .font(.system(size: 34, weight: .heavy, design: .rounded))
+                            .dsText(.heading34).fontWeight(.heavy)
                             .foregroundStyle(DS.textPrimary)
                             .minimumScaleFactor(0.8)
                             .fixedSize(horizontal: false, vertical: true)
@@ -203,7 +213,8 @@ struct HowItWorksSheet: View {
         .overlay { if onOpenCatalog != nil && !rainDone { rain } }
         .tint(DS.tint)
         .onAppear {
-            withAnimation(DS.Motion.standard) { arrived = true }
+            if reduceMotion { arrived = true }
+            else { withAnimation(DS.Motion.standard) { arrived = true } }
             guard onOpenCatalog != nil else { return }
             rainFell = true
             // Last tile: 0.7 base + 30 × 0.055 stagger + 0.75 fall ≈ 3.1s.
@@ -288,8 +299,23 @@ struct HowItWorksSheet: View {
 private extension View {
     /// The steps' entrance — sections fade up in order, one curve.
     func arrive(_ on: Bool, delay: Double) -> some View {
-        opacity(on ? 1 : 0)
-            .offset(y: on ? 0 : 10)
-            .animation(DS.Motion.standard.delay(delay), value: on)
+        modifier(ArriveEntrance(on: on, delay: delay))
+    }
+}
+
+/// A ViewModifier rather than a bare `View` extension so it can read the
+/// environment: under Reduce Motion the rise is dropped and the section is
+/// simply present (no fade-from-offset, which is the part that reads as
+/// movement).
+private struct ArriveEntrance: ViewModifier {
+    let on: Bool
+    let delay: Double
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    func body(content: Content) -> some View {
+        content
+            .opacity(on || reduceMotion ? 1 : 0)
+            .offset(y: on || reduceMotion ? 0 : 10)
+            .animation(reduceMotion ? nil : DS.Motion.standard.delay(delay), value: on)
     }
 }

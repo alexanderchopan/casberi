@@ -43,22 +43,47 @@ enum DS {
             || ThemeStore.shared.background.name != "Default"
     }
 
-    /// Primary text — 100%. Brief §8: "white".
+    /// True when the person has asked the system for higher contrast — the
+    /// ramp answers it by climbing (see the ratios on each tier below).
+    private static var moreContrast: Bool { ContrastStore.shared.increased }
+
+    /// Primary text — 100%. Brief §8: "white". 21:1 / 18.8:1.
     static let textPrimary    = Color.adaptive(dark: "#ffffff", light: "#000000")
-    /// Secondary text — 60% on the quiet page, 85% on a vivid one.
+
+    /// Secondary text. Contrast pass 2026-07-21: dark held at 60% (6.2:1, was
+    /// already clear), LIGHT raised 60% → 84%. Apple's own `secondaryLabel`
+    /// value measured 3.3:1 on our light page — under the 4.5:1 body-text bar,
+    /// and this tier carries real sentences, not hints. 5.9:1 now.
     static var textSecondary: Color {
-        vividBackground
+        if moreContrast {
+            return Color.adaptive(dark: "#ebebf5c9", light: "#3c3c43")     // 10.1:1 / 9.1:1
+        }
+        return vividBackground
             ? Color.adaptive(dark: "#ffffffd9", light: "#000000c6")
-            : Color.adaptive(dark: "#ebebf599", light: "#3c3c4399")
+            : Color.adaptive(dark: "#ebebf599", light: "#3c3c43d6")        //  6.2:1 / 5.9:1
     }
-    /// Tertiary text — 30% quiet / 60% vivid. Also placeholder / disabled glyphs.
+
+    /// Tertiary text — row metadata (timestamps, source names), placeholders,
+    /// disabled glyphs. Contrast pass 2026-07-21: raised HARD, dark 30% → 49%
+    /// and light 30% → 74%. At 30% this measured 2.3:1 dark and 1.7:1 light —
+    /// the worst failure in the app, and it was reading `subhead13` metadata in
+    /// every feed row, so it was informational text wearing a hint's tone.
+    /// The tier stays visibly quieter than secondary; it is no longer unreadable.
     static var textTertiary: Color {
-        vividBackground
+        if moreContrast {
+            return Color.adaptive(dark: "#ebebf5a4", light: "#3c3c43e7")   //  7.0:1 / 7.0:1
+        }
+        return vividBackground
             ? Color.adaptive(dark: "#ffffff99", light: "#00000099")
-            : Color.adaptive(dark: "#ebebf54d", light: "#3c3c434d")
+            : Color.adaptive(dark: "#ebebf57e", light: "#3c3c43bd")        //  4.5:1 / 4.5:1
     }
-    /// Between secondary and tertiary (CSS gray-800).
-    static let textQuaternary = Color.adaptive(dark: "#ebebf573", light: "#3c3c4373")
+
+    /// Between secondary and tertiary (CSS gray-800). Raised on the same pass.
+    static var textQuaternary: Color {
+        moreContrast
+            ? Color.adaptive(dark: "#ebebf5c9", light: "#3c3c43")           // 10.1:1 / 9.1:1
+            : Color.adaptive(dark: "#ebebf58c", light: "#3c3c43c9")         //  5.4:1 / 5.1:1
+    }
 
     // MARK: - Fills
 
@@ -95,9 +120,24 @@ enum DS {
 
     // MARK: - Semantic state  — orange attention, red destructive, green confirm
 
-    static let attention   = Color.adaptive(dark: "#ff9f0a", light: "#ff9500")
-    static let destructive = Color.adaptive(dark: "#ff453a", light: "#ff3b30")
-    static let confirm     = Color.adaptive(dark: "#30d158", light: "#34c759")
+    /// The three keep Apple's system values by default — they read as native,
+    /// and they mostly paint glyphs and fills, which answer to the 3:1 bar for
+    /// non-text, not 4.5:1. Under Increase Contrast each drops to a measured
+    /// ≥4.5:1 variant on our light surfaces (the light values are the weak
+    /// ones: system orange measures 1.8:1 and green 1.8:1 on white), so the
+    /// person who asked for contrast gets it wherever these DO carry words.
+    static var attention: Color {
+        moreContrast ? Color.adaptive(dark: "#ffb340", light: "#9b5a00")
+                     : Color.adaptive(dark: "#ff9f0a", light: "#ff9500")
+    }
+    static var destructive: Color {
+        moreContrast ? Color.adaptive(dark: "#ff7b70", light: "#c62e25")
+                     : Color.adaptive(dark: "#ff453a", light: "#ff3b30")
+    }
+    static var confirm: Color {
+        moreContrast ? Color.adaptive(dark: "#5ce07f", light: "#1f7936")
+                     : Color.adaptive(dark: "#30d158", light: "#34c759")
+    }
 
     // MARK: - Glass & overlays  — liquid glass, brief §8 / shell spec
 

@@ -141,7 +141,7 @@ struct TokenSetupScreen: View {
                     // (the bare tap-to-copy went unnoticed; user, 2026-07-15).
                     HStack(spacing: DS.Space.s3) {
                         Text(code.userCode)
-                            .font(.system(size: 34, weight: .bold, design: .monospaced))
+                            .dsText(.monoCode34)
                             .foregroundStyle(DS.textPrimary)
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .minimumScaleFactor(0.6)

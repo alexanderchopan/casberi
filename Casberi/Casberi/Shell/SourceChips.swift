@@ -148,7 +148,11 @@ struct SourceChips: View {
             .dsGlass(cornerRadius: 23)
         }
         .buttonStyle(.plain)
-        .accessibilityLabel("Apps")
+        // The door's glyph fills, colors and pulses when a bridge breaks —
+        // all three cues are visual, so the label has to say it too.
+        .accessibilityLabel(bridges.attentionCount > 0
+                            ? Text("Apps, needs attention")
+                            : Text("Apps"))
     }
 
     @ViewBuilder
@@ -164,9 +168,20 @@ struct SourceChips: View {
             ZStack {
                 switch label {
                 case "All":
+                    // The one WORD in a strip of fixed 46pt icon chips, so it
+                    // has to live inside that circle at every text size —
+                    // at accessibility sizes it grew past the glass and
+                    // collided with the catalogue door beside it (measured at
+                    // accessibility-extra-large, 2026-07-21). It still scales;
+                    // it just stops at the circle instead of spilling over the
+                    // door. The neighbouring chips are app icons, which don't
+                    // scale at all, so the strip's rhythm is fixed by design.
                     Text("All").dsText(.label12)
                         .foregroundStyle(DS.textPrimary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.55)
                         .frame(width: 46, height: 46)
+                        .clipShape(Circle())
                         .dsGlass(cornerRadius: 23)
                 default:
                     BridgeIcon(name: label, size: 46, circular: true)
@@ -205,7 +220,13 @@ struct SourceChips: View {
                         ring.matchedGeometryEffect(id: "chipRing", in: chipRingNS)
                     }
                 } else if broken {
-                    Circle().strokeBorder(DS.attention, lineWidth: 2.5)
+                    // DASHED, not merely orange (2026-07-21). "Selected" and
+                    // "this connection is broken" were the same 2.5pt ring in
+                    // two hues — indistinguishable to anyone who doesn't
+                    // separate them by color. The solid ring now belongs to
+                    // selection alone.
+                    Circle().strokeBorder(DS.attention,
+                                          style: StrokeStyle(lineWidth: 2.5, dash: [3, 3]))
                 }
             }
             .frame(width: 56, height: 56)

@@ -66,7 +66,7 @@ struct TwitchScreen: View {
                 // The code, big — the person approves it on Twitch's side.
                 VStack(alignment: .leading, spacing: DS.Space.s3) {
                     Text(code.userCode)
-                        .font(.system(size: 34, weight: .bold, design: .monospaced))
+                        .dsText(.monoCode34)
                         .foregroundStyle(DS.textPrimary)
                         .frame(maxWidth: .infinity)
                         .settleIn()

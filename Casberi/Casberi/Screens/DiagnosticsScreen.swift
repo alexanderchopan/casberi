@@ -19,7 +19,7 @@ struct DiagnosticsScreen: View {
             Section {
                 ForEach(Array(lines.enumerated()), id: \.offset) { _, line in
                     Text(line)
-                        .font(.system(size: 13, design: .monospaced))
+                        .dsText(.mono13)
                         .foregroundStyle(line.hasPrefix("FAIL") ? DS.attention
                                          : line.hasPrefix("OK") ? DS.confirm : DS.textPrimary)
                         .dsListCardRow()

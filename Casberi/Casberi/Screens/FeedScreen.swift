@@ -500,9 +500,15 @@ struct FeedScreen: View {
             HomeRoute.shared.bridgePush = BridgeRouter.destination(forID: bridge.id)
         } label: {
             HStack(spacing: DS.Space.s2) {
-                Circle()
-                    .fill(bridge.status == .connected ? DS.confirm : bridge.status.color)
-                    .frame(width: 6, height: 6)
+                // A glyph, not a bare dot: the three states were one shape
+                // in three hues (2026-07-21). Sized to the old 6pt dot's
+                // footprint so the header's rhythm is unchanged.
+                Image(systemName: bridge.status.glyph)
+                    .font(.system(size: 8, weight: .bold))
+                    .foregroundStyle(bridge.status == .connected ? DS.confirm
+                                                                 : bridge.status.color)
+                    .frame(width: 8, height: 8)
+                    .accessibilityLabel(Text(bridge.status.spoken))
                 HStack(spacing: 4) {
                     Text(bridge.name).fontWeight(.semibold).foregroundStyle(DS.textPrimary)
                     Text(bridge.statusLine)
@@ -520,6 +526,7 @@ struct FeedScreen: View {
                     .frame(width: 1, height: 12)
                 if showAddHint {
                     Image(systemName: "plus")
+                        .accessibilityHidden(true)
                         .font(.system(size: 12, weight: .semibold))
                         .foregroundStyle(DS.tint)
                 } else {
@@ -554,6 +561,7 @@ struct FeedScreen: View {
             } label: {
                 HStack(spacing: DS.Space.s1) {
                     Image(systemName: "plus").font(.system(size: 13, weight: .semibold))
+                        .accessibilityHidden(true)
                     Text(LocalizedStringKey(headerCompose.label))
                         .dsText(.subhead13).fontWeight(.medium)
                 }
@@ -615,6 +623,7 @@ struct FeedScreen: View {
                     let label = ThingKind.from(typeTag: filter.tag)?.typeTagPlural ?? filter.tag
                     HStack(spacing: DS.Space.s1) {
                         Image(systemName: "xmark").font(.system(size: 10, weight: .semibold))
+                            .accessibilityHidden(true)
                         Text(label).dsText(.label12)
                     }
                     .foregroundStyle(DS.tint)
@@ -1302,6 +1311,7 @@ struct FeedScreen: View {
                 .lineLimit(1).truncationMode(.tail)
             Spacer(minLength: 0)
             Image(systemName: "chevron.down")
+                .accessibilityHidden(true)
                 .font(.system(size: 12, weight: .semibold))
                 .foregroundStyle(DS.textTertiary)
         }
@@ -1834,6 +1844,7 @@ struct FeedScreen: View {
                             Text("\(stale.count)").dsText(.subhead13).foregroundStyle(DS.textTertiary)
                             Spacer()
                             Image(systemName: "chevron.down")
+                                .accessibilityHidden(true)
                                 .font(.system(size: 12, weight: .semibold))
                                 .foregroundStyle(DS.textTertiary)
                         }
@@ -2100,6 +2111,7 @@ struct FeedScreen: View {
                     Text("Open the catalog")
                         .dsText(.callout15).fontWeight(.semibold)
                     Image(systemName: "chevron.right")
+                        .accessibilityHidden(true)
                         .font(.system(size: 12, weight: .semibold))
                 }
                 .foregroundStyle(DS.tint)
@@ -2213,6 +2225,7 @@ struct FeedScreen: View {
         } label: {
             HStack(spacing: DS.Space.s1) {
                 Image(systemName: "sparkles")
+                    .accessibilityHidden(true)
                     .font(.system(size: 12, weight: .semibold))
                 Text(label)
                     .dsText(.subhead13).fontWeight(.medium)

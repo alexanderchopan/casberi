@@ -5214,3 +5214,82 @@ Verified headlessly with `-portfolioProbe` (new): two real watched wallets
 merged to one map with per-position holders (ETH attributed across both), the
 scoped shape still per-wallet, and the concentration line computed off the
 merged book.
+
+## 156. Accessibility as a feature, not a compliance checkbox (user: "lets do all of these", 2026-07-21)
+
+Prompted by App Store Connect's **Accessibility Nutrition Labels**, which ask an
+app to declare, per feature, what it supports. The labels are metadata — they
+don't gate review — but a claim that isn't true is worse than an honest "not
+yet", so the pass below is what makes each claim real. The framing that decided
+the scope: **Larger Text, Reduce Motion and Dark Interface are not edge cases**
+— a large share of iPhone users run a non-default text size, many simply
+because they're over forty. This is mainstream configuration, not a minority
+accommodation, and the honesty rule (§83) already forbids claiming what we
+don't do.
+
+**Contrast — the text ramp was failing, and it was carrying real text.**
+Measured every token against every surface in both themes. `textTertiary` came
+in at **2.3:1 dark and 1.7:1 light** — the worst failure in the app, and not a
+placeholder tone: it paints `subhead13` row metadata (timestamps, source names,
+"3 delegations") in 302 places. Light-mode `textSecondary` measured 3.3:1,
+under the 4.5:1 body bar, on a tier that carries whole sentences. Both were
+Apple's own `secondaryLabel`/`tertiaryLabel` values, which is how they passed
+unnoticed — inheriting a system value is not the same as measuring it against
+*our* surfaces. Raised: tertiary 30% → **49% dark / 74% light**, light
+secondary 60% → **84%**. Every text tier now clears 4.5:1 on page, sheet and
+well, in both themes, and the three-tier hierarchy still reads (secondary sits
+~6:1, tertiary ~4.5:1).
+
+**Increase Contrast is now answered.** `ContrastStore` mirrors the system
+setting into the token layer (the same `@Observable` singleton shape
+`ThemeStore` uses, because `DS` is a static enum with no environment to read).
+Under it the ramp climbs to 7–10:1, and the tint and the three semantic colors
+step to measured variants — light-mode system orange and green measure **1.8:1**
+and are indefensible the moment they carry a word. Default stays Apple-native;
+the person who asks for contrast gets it.
+
+**Color is never the only carrier** (Differentiate Without Color). Fixed, in
+descending order of what's at stake: the Aave **health** stat, where orange
+alone signalled liquidation risk to anyone who happens to know where the margin
+sits, now says "Health · at risk"; the source-chip **ring**, where "selected"
+and "this connection is broken" were the same 2.5pt ring in two hues, gives
+broken a **dashed** stroke and keeps solid for selection; bridge **status** gains
+a glyph per state (filled dot / triangle / hollow pause) so the header mark
+survives greyscale; the wallet warnings line swaps its glyph with severity
+rather than only its color; `Sparkline` draws **dashed when down**, because it's
+a reusable component and the one call site that pairs it with a signed number
+can't vouch for the next. `TokenChartView` was already the reference — `isFlat`
+strips sign and color together — and is untouched.
+
+**Dynamic Type.** Eleven pieces of real reader text were frozen at raw
+`.system(size:)` while their neighbours grew: four copies of the row project
+tag, the media day pill, the command card, the sheet's tag line, both
+device-flow user codes, the onboarding header, the diagnostic log. Three ramp
+rungs were added (`label11`, `mono13`, `monoCode34`) rather than folding them
+into the nearest existing rung, so each fix costs nothing visually — same size,
+same weight, now scaled. The day pill traded a pinned 22pt height for vertical
+padding, which is what let it clip.
+
+**VoiceOver.** The app was in better shape than feared — every swipe action
+already uses `Label`, and only eight icon-only controls were unlabeled (the
+agent tray's ✕, the two profile avatars, the tag chip whose tap *removes* the
+tag, Share, Clear search, the name-this-address column). The real problem was
+noise and silence: **40 decorative glyphs** were read aloud (the onboarding rain
+alone announced 31 brand tiles before the first step; the account tile read
+sixteen SF Symbol names in a row), while facts that exist only as visuals were
+silent — the address-poisoning flag, the strikethrough that means done, the
+Apps door's breakage state. And a feed row was **five separate stops**: icon,
+title, thumbnail, time, tag.
+
+The ruling that follows from that: **a row is one thing, so it is one element
+and one sentence.** `ThingVoice.rowLabel` composes it — kind, title, where it
+came from, why it's here, state, when — and every shaped row speaks that one
+grammar. "2h" is spoken as "2 hours ago"; the abbreviation is a glance, not a
+reading.
+
+**Measured, not assumed:** running the feed at `accessibility-extra-large`
+immediately found the "All" source chip's label growing past its fixed 46pt
+circle and colliding with the catalogue door. It now scales inside its own
+circle. The neighbouring chips are app icons, which don't scale at all — that
+strip is fixed-geometry chrome by design, and the one word in it has to respect
+the geometry.

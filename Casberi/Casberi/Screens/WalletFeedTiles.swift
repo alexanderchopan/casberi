@@ -258,10 +258,14 @@ struct WalletWarningsLine: View {
         let critical = warnings.contains { $0.severity == .critical }
         Button(action: onOpen) {
             HStack(spacing: DS.Space.s2) {
-                Image(systemName: "exclamationmark.triangle.fill")
+                // The GLYPH carries severity too, not just its hue — the
+                // pattern `warningRow` below already uses.
+                Image(systemName: critical ? "exclamationmark.triangle.fill"
+                                           : "info.circle.fill")
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundStyle(critical ? DS.destructive : DS.attention)
-                Text("Worth a look")
+                    .accessibilityHidden(true)
+                Text(critical ? "Needs attention" : "Worth a look")
                     .dsText(.callout15).foregroundStyle(DS.textPrimary)
                     .layoutPriority(1)
                 Text(WalletWatch.summary(warnings))
@@ -315,7 +319,12 @@ struct WalletDeFiTile: View {
                      "$\(WalletIngest.format(collateral))", tint: DS.textPrimary)
                 stat(String(localized: "Debt"),
                      "$\(WalletIngest.format(debt))", tint: DS.textPrimary)
-                stat(String(localized: "Health"),
+                // The label says "at risk" when the number is (2026-07-21):
+                // orange alone meant nothing to anyone who doesn't know where
+                // Aave's margin sits, and this is the one stat here that is
+                // about losing money.
+                stat((health ?? .infinity) < 1.5
+                        ? String(localized: "Health · at risk") : String(localized: "Health"),
                      health.map { WalletIngest.format($0) } ?? String(localized: "No debt"),
                      tint: (health ?? .infinity) < 1.5 ? DS.attention : DS.textPrimary)
             }

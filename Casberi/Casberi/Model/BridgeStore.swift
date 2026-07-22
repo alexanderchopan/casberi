@@ -103,6 +103,24 @@ struct BridgeApp: Identifiable, Codable {
             case .paused:    DS.textTertiary
             }
         }
+        /// A shape per state, so the status mark is not hue alone (2026-07-21
+        /// Differentiate Without Color pass): a filled dot, a warning triangle,
+        /// a hollow pause. Distinguishable in greyscale.
+        var glyph: String {
+            switch self {
+            case .connected: "circle.fill"
+            case .attention: "exclamationmark.triangle.fill"
+            case .paused:    "pause.circle"
+            }
+        }
+        /// The state, said out loud — the mark is silent otherwise.
+        var spoken: String {
+            switch self {
+            case .connected: String(localized: "Connected")
+            case .attention: String(localized: "Needs attention")
+            case .paused:    String(localized: "Paused")
+            }
+        }
     }
     let id: String
     let name: String

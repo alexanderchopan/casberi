@@ -942,6 +942,7 @@ struct CalendarHeatmapHero: View {
                         .font(.system(size: 13, weight: .semibold))
                         .foregroundStyle(DS.textTertiary)
                 }
+                .accessibilityLabel("Share")
             }
             ContributionGraph(year: year, minColumns: minColumns)
             if let onThisDay {
@@ -958,6 +959,7 @@ struct CalendarHeatmapHero: View {
                             .foregroundStyle(DS.textPrimary)
                             .lineLimit(1)
                         Image(systemName: "chevron.right")
+                            .accessibilityHidden(true)
                             .font(.system(size: 11, weight: .semibold))
                             .foregroundStyle(DS.textTertiary)
                     }
@@ -1413,6 +1415,7 @@ private struct GenMediaTile: View {
             ZStack {
                 DS.gray200
                 Image(systemName: "photo")
+                    .accessibilityHidden(true)
                     .font(.system(size: (size ?? 96) * 0.3, weight: .medium))
                     .foregroundStyle(DS.textTertiary)
             }
@@ -1508,6 +1511,7 @@ private struct GenFlexThumb: View {
                 ZStack {
                     DS.gray200
                     Image(systemName: "photo")
+                        .accessibilityHidden(true)
                         .font(.system(size: 24, weight: .medium))
                         .foregroundStyle(DS.textTertiary)
                 }
@@ -2297,6 +2301,7 @@ private struct GenAppsInvite: View {
                 }
                 Spacer(minLength: 0)
                 Image(systemName: "chevron.right")
+                    .accessibilityHidden(true)
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(DS.textTertiary)
             }
