@@ -808,6 +808,52 @@ enum ProbeHooks {
                 }
             }
         },
+        // `-addressBook "<Name>:<address>[,<Name>:<address>…]"|clear` — seed the
+        // address book headlessly (prd §169). `clear` empties it. Splits each
+        // pair on the LAST colon so a name may carry its own.
+        Hook(key: "addressBook") { spec, _ in
+            if spec == "clear" {
+                for entry in AddressBook.shared.all { AddressBook.shared.remove(entry.address) }
+                NSLog("Address-book probe: cleared")
+                return
+            }
+            var landed = 0
+            for pair in spec.split(separator: ",") {
+                let text = String(pair)
+                guard let colon = text.lastIndex(of: ":") else { continue }
+                let name = String(text[text.startIndex..<colon])
+                let address = String(text[text.index(after: colon)...])
+                if AddressBook.shared.setName(name, for: address) != nil { landed += 1 }
+            }
+            NSLog("Address-book probe: %d named, %d in book", landed, AddressBook.shared.count)
+        },
+        // `-addressBookProbe YES` — report the book and the watch cap: every
+        // entry with its detected kind and whether it's watched, plus how the
+        // cap currently stands. The one check that naming and watching are
+        // really two tiers over ONE ledger (prd §169/§170).
+        Hook(key: "addressBookProbe") { _, _ in
+            Task { @MainActor in
+                await AddressKind.detectPending(limit: 12)
+                let watched = Set(WalletStore.shared.addresses.map { AddressBook.key(for: $0.address) })
+                NSLog("Address-book probe: %d named · %d/%d watched · canWatchMore=%@",
+                      AddressBook.shared.count, WalletStore.shared.addresses.count,
+                      WalletStore.watchLimit, WalletStore.shared.canWatchMore ? "YES" : "NO")
+                for entry in AddressBook.shared.all {
+                    NSLog("  %@ · %@ · kind=%@%@%@", entry.name, entry.short,
+                          entry.kind.rawValue,
+                          watched.contains(entry.id) ? " · WATCHED" : "",
+                          entry.provenance.map { " · from \($0)" } ?? "")
+                }
+            }
+        },
+        // `-watchCapProbe <address>` — try to watch one more and NSLog the
+        // OUTCOME word (added / alreadyWatching / limitReached / invalid), so
+        // the cap's refusal is verifiable without driving the UI (prd §170).
+        Hook(key: "watchCapProbe") { address, _ in
+            let outcome = WalletStore.shared.outcome(ofAdding: address, label: "")
+            NSLog("Watch-cap probe: %@ → %@ (%d/%d watched)", address, "\(outcome)",
+                  WalletStore.shared.addresses.count, WalletStore.watchLimit)
+        },
         // `-portfolioProbe YES|<watched address>` runs the COMBINED portfolio
         // read (prd §155) headlessly: the merged total, the token count, which
         // treemap shape the feed would paint (one combined map unscoped with

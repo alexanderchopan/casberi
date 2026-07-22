@@ -78,6 +78,18 @@ enum SafeBridge {
         return result
     }
 
+    /// Is this address a Safe on ANY read chain? For the address book's kind
+    /// detection (prd §169) — the person supplies a name, the chain supplies
+    /// what the thing is. Rides the same cached per-chain check the queue read
+    /// uses, so a Safe already detected costs nothing, and stops at the first
+    /// hit rather than polling all five.
+    static func isSafeAnywhere(_ address: String) async -> Bool {
+        for chain in chains {
+            if await isSafe(chain: chain, address: address) == true { return true }
+        }
+        return false
+    }
+
     /// Unwatching wipes the Safe-detection cache too (called from
     /// `WalletStore.addresses.didSet`, next to every sibling cursor) — the
     /// same "re-watching starts honest" rule; also the only way to recover

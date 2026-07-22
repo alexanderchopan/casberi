@@ -612,7 +612,12 @@ struct HandleSetupScreen: View {
                 }
                 return
             }
-            WalletStore.shared.add(address, label: "@\(username)")
+            // Cap-aware (prd §170) — a refused watch still lands the NAME,
+            // with where it came from, since that door is never full.
+            if WalletStore.shared.outcome(ofAdding: address, label: "@\(username)") == .limitReached {
+                AddressBook.shared.setName("@\(username)", for: address,
+                                           provenance: bridge.rawValue, kind: .wallet)
+            }
             chrome.flash(String(localized: "Watching @\(username)'s wallet."), tone: .success)
         }
     }

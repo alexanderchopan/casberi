@@ -5808,3 +5808,101 @@ mosaic of dead frames would claim streams are on. Its head-worthy fact is
 In three lines: one head parcel per feed, always boxed, always an aggregate
 derived from the feed's own things; rows own recency; a single item reaches
 the head only while it's live.
+## 169. The address book — naming is free, watching is the upgrade (user: "lets imagine a user wants to track N wallets but just their addresses and names", 2026-07-21)
+
+The app had TWO naming systems that never met. `WalletStore` held the labels of
+WATCHED wallets; `CounterpartyLabels` held names for addresses met in your own
+activity — and only the expensive tier had a front door. You could name an
+address only AFTER a transaction with it happened to land, there was no surface
+listing what you'd named, and unwatching a wallet DESTROYED its name along with
+its cursors. Meanwhile the only way to bookkeep an address was to watch it,
+which starts six pipelines you didn't ask for.
+
+**One ledger** (`Model/AddressBook.swift`). Every named address, watched or not,
+in one store that outlives every watch — because a name the person typed is
+their data, not bookkeeping. Migrates both old sources on first launch (neither
+is deleted, so a downgrade loses nothing). Watched wallets are book entries that
+happen to be watched; the naming cascade in `WalletIngest` and the wallet
+switcher both read the book first, so a wallet renamed anywhere reads the same
+word everywhere.
+
+**Membership: the copy test.** An entry is something you'd copy to send value or
+look up on an explorer — personal wallets, your own accounts, contracts, Safes,
+exchange deposits; EVM hex and Solana base58 alike. Emails and phone numbers
+fail that test and belong to the phone's own contacts. Crypto-only isn't a
+limitation to apologise for: it's what keeps the list scannable at fifty rows.
+
+**Kind is detected, never asked** (`Model/AddressKind.swift`). `eth_getCode`
+says contract, Safe's own service says Safe, everything else is a wallet;
+`.unknown` is the honest resting state for anything not yet checked. Both reads
+are KEYLESS and already ran elsewhere, so naming stays free on the keyed budget.
+A kind PICKER would be homework, and the app would know better half the time.
+**Only a wallet is a "who"** — it wears the identicon face; contracts and Safes
+wear square glyph marks, which is what lets a long book separate people from
+machinery with no grouping UI at all.
+
+**Provenance, never inference.** An entry added from a Farcaster/Bluesky profile
+remembers where it came from — a pointer captured from a link the app already
+verified. What the app will NOT do, now or later without a deliberate ruling, is
+GUESS identity across sources ("this email sender is probably this wallet").
+A wrong link silently retitles history with a wrong name, and the person can't
+see it to correct it. User-asserted or protocol-verified only.
+
+**Three doors, all pre-existing:** the Wallet screen (the book's home, one
+section below Watching — §139's one-page manage surface), any transaction's
+counterparty pencil (now writes through the book), and the **second-encounter
+nudge** (`Screens/NameAddressPrompt.swift`): once is noise, twice is a
+relationship, so the prompt appears from the second landed transfer with an
+unnamed address — never for one the app can already name itself, and never
+again once declined for that address.
+
+**The address card** (`Screens/AddressBookViews.swift`): face, name, detected
+kind, the full address with **Copy** (the book's most-used verb, also on every
+row — it did not exist anywhere before this), the watch toggle as an upgrade
+with its cost stated, your history together pulled from the corpus, and the
+explorer door only where an explorer can serve it. Unwatching DEMOTES to the
+book: the landed history and cursors go honestly, the name stays.
+
+VERIFIED headlessly (`-addressBook`, `-addressBookProbe`) and on screen: a book
+of four resolved as `toly.sol → wallet`, `Uniswap router → contract` (real
+`eth_getCode`), `Mom → wallet`, `Main → wallet · WATCHED`, with the square
+contract mark and the round faces rendering as designed.
+
+## 170. Watching is capped at five (user: "should we limit people to how many wallets they can watch? like lets say 5", 2026-07-21)
+
+**Five watched wallets.** Watching is the expensive tier — a Zerion
+transactions call plus a share of the Portfolio holdings read per wallet, every
+foreground, forever, against a key shipped in the binary and shared by every
+user. One person watching fifty wallets costs more than fifty people watching
+one. The cap converts the worst case into a bounded one.
+
+Five is also where the room's own design already topped out: the switcher chips
+crowd past six, and the combined line only starts once EVERY watched wallet has
+an aligned sample, so each extra wallet is one more thing that can stall the
+crown feature. And it's the honest seam for a future paid tier — wallet count
+is the classic gate, trivially explainable, and it degrades no existing data
+(unlike gating chains or history depth, which would make the corpus lie).
+
+Four rules the honesty law imposes, all shipped:
+
+1. **Stated before it's hit, never discovered at failure.** At the limit the add
+   card's controls are REPLACED by the statement, not disabled — a live-looking
+   field that refuses on submit is the §83 dead-control bug. Every other door
+   words its own refusal.
+2. **No upsell copy until the tier exists.** "Upgrade to watch more" today would
+   be fake status. Plain statement now; the same seam becomes the paid door
+   later without moving anything.
+3. **Grandfathered, never evicted.** An install already past five keeps every
+   wallet; the cap gates ADDING only. Dropping someone's sixth wallet would
+   delete their data to enforce our cost policy.
+4. **One choke point.** `WalletStore.outcome(ofAdding:)` — every door already
+   funnels through it, so a new entry point can't side-step the cap. `add()`
+   keeps its Bool for the call sites that only branch.
+
+The cap and the book are ONE design: the person tracking twenty addresses names
+twenty and watches five. Every door that refuses a watch says so and names the
+way that still works — the social doors save the name to the book instead.
+
+VERIFIED headlessly (`-watchCapProbe`): five added, the sixth returned
+`limitReached`; on screen, the add card states the limit and the address card's
+toggle refuses with "Stop watching one to watch this. Its name stays either way."

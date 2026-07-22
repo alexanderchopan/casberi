@@ -591,8 +591,19 @@ struct SocialProfileCard: View {
                 }
                 return
             }
-            WalletStore.shared.add(address, label: "@\(shown.handle)")
-            chrome?.flash(String(localized: "Watching @\(shown.shortHandle)'s wallet."), tone: .success)
+            // The watch cap, worded at this door too (prd §170): the wallet
+            // still gets NAMED — the light tier is unlimited — so the person
+            // keeps something rather than bouncing off a silent refusal.
+            switch WalletStore.shared.outcome(ofAdding: address, label: "@\(shown.handle)") {
+            case .added:
+                chrome?.flash(String(localized: "Watching @\(shown.shortHandle)'s wallet."), tone: .success)
+            case .limitReached:
+                AddressBook.shared.setName("@\(shown.handle)", for: address,
+                                           provenance: shown.source, kind: .wallet)
+                chrome?.flash(String(localized: "Watching \(WalletStore.watchLimit) wallets already — saved @\(shown.shortHandle) to your address book instead."))
+            case .alreadyWatching, .invalid:
+                chrome?.flash(String(localized: "Already watching @\(shown.shortHandle)'s wallet."))
+            }
         }
     }
 

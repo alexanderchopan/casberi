@@ -37,6 +37,15 @@ struct ThingSheetView: View {
     /// being named, and the draft. The label enriches every FUTURE transfer
     /// with that counterparty (CounterpartyLabels).
     @State private var counterpartyTarget: String?
+    /// Flipped by "Not now" so the nudge leaves immediately — the decline is
+    /// also persisted, so it never returns for this address (prd §169).
+    @State private var nudgeDeclined = false
+
+    /// The second-encounter naming nudge, when this sheet earns one.
+    private var namePrompt: (address: String, count: Int, kind: AddressBook.Kind)? {
+        guard !nudgeDeclined else { return nil }
+        return AddressNudge.prompt(for: thing, context: modelContext)
+    }
     @State private var counterpartyDraft = ""
     /// The TAGS row opens the full editor (chips, rename, delete) in place.
     @State private var editingTags = false
@@ -202,6 +211,18 @@ struct ThingSheetView: View {
                         .padding(.horizontal, DS.Space.s4)
                         .padding(.top, DS.Space.s3)
                 }
+                if let nudge = namePrompt {
+                    NameAddressPrompt(address: nudge.address, count: nudge.count,
+                                      kind: nudge.kind) {
+                        counterpartyTarget = nudge.address
+                        counterpartyDraft = ""
+                    } onDismiss: {
+                        AddressNudge.decline(nudge.address)
+                        withAnimation(DS.Motion.standard) { nudgeDeclined = true }
+                    }
+                    .padding(.horizontal, DS.Space.s4)
+                    .padding(.top, DS.Space.s3)
+                }
                 if editingTags {
                     tagsField
                         .padding(.top, DS.Space.s3)
@@ -314,7 +335,11 @@ struct ThingSheetView: View {
     private func nameCounterparty() {
         guard let address = counterpartyTarget else { return }
         counterpartyTarget = nil
-        CounterpartyLabels.shared.setLabel(counterpartyDraft, for: address)
+        // Through the BOOK now (prd §169) — naming a counterparty adds it to
+        // your address book, so the name survives, gets a card, and can be
+        // upgraded to a watch later. Kind detection follows, keyless.
+        AddressBook.shared.setName(counterpartyDraft, for: address)
+        Task { @MainActor in await AddressKind.detect(address) }
         // The display name after the change: the user's label, else whatever
         // else resolves it (a known contract, a watched handle), else nil —
         // clearing a label reverts the historical titles to that.
@@ -771,7 +796,7 @@ struct ThingSheetView: View {
     private var nameCounterpartyAction: (() -> Void)? {
         guard let cp = thing.counterpartyAddress, !cp.isEmpty else { return nil }
         return {
-            counterpartyDraft = CounterpartyLabels.shared.label(for: cp) ?? ""
+            counterpartyDraft = AddressBook.shared.name(for: cp) ?? ""
             counterpartyTarget = cp
         }
     }

@@ -574,7 +574,7 @@ enum WalletIngest {
     /// The thing sheet's "Who" row shows this over the raw hex.
     static func knownLabel(for address: String) -> String? {
         let a = address.lowercased()
-        return CounterpartyLabels.shared.label(for: a)
+        return AddressBook.shared.name(for: a)
             ?? FarcasterStore.shared.handle(forAddress: a)
             ?? knownContracts[a]
     }
@@ -606,7 +606,7 @@ enum WalletIngest {
         for a in addrs {
             // A name the PERSON gave this address wins over everything — it's
             // their own record ("Mom", "my Ledger"), truer than any resolver.
-            if let mine = CounterpartyLabels.shared.label(for: a) {
+            if let mine = AddressBook.shared.name(for: a) {
                 names[a] = mine
             } else if let handle = FarcasterStore.shared.handle(forAddress: a) {
                 // A watched Farcaster account's verified wallet — "from @dwr".

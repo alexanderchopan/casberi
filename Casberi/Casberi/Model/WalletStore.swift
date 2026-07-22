@@ -227,17 +227,31 @@ final class WalletStore {
     /// moved" whisper can speak in whatever scope the switcher is standing in.
     /// A single-wallet scope needs no alignment across wallets, but goes
     /// through the identical path so the two can never diverge on what counts.
-    func holdingsDeltas(forAddress scope: String?) -> [(symbol: String, delta: Double)] {
+    ///
+    /// `since` narrows the window to a recent stretch (the day brief's own
+    /// anchor, prd §166) — the start moves forward to the last snapshot at or
+    /// before that date, but NEVER earlier than the cross-wallet alignment
+    /// point, so a scoped read keeps §77's guarantee that a composition change
+    /// can't masquerade as a move. nil (the default) reads the whole line, the
+    /// behavior every existing caller already depends on.
+    func holdingsDeltas(forAddress scope: String?,
+                        since: Date? = nil) -> [(symbol: String, delta: Double)] {
         let watched = scope.map { s in addresses.filter { WalletWatch.sameAddress($0.address, s) } }
             ?? addresses
         let lines = watched
             .map { valueSamples(forAddress: $0.address).filter { $0.holdings != nil } }
             .filter { !$0.isEmpty }
         guard !lines.isEmpty,
-              let start = lines.compactMap({ $0.first?.at }).max(),
-              let end = lines.compactMap({ $0.last?.at }).max(),
-              end > start
+              let aligned = lines.compactMap({ $0.first?.at }).max(),
+              let end = lines.compactMap({ $0.last?.at }).max()
         else { return [] }
+        // The latest snapshot at or before `since`, across every line — the
+        // day-scoped anchor, floored at the alignment point.
+        let windowed = since.flatMap { cutoff in
+            lines.compactMap { $0.last(where: { $0.at <= cutoff })?.at }.max()
+        }
+        let start = max(aligned, windowed ?? aligned)
+        guard end > start else { return [] }
         func merged(at moment: Date) -> [String: Double] {
             var total: [String: Double] = [:]
             for samples in lines {
@@ -338,7 +352,7 @@ final class WalletStore {
                       || resolvedForm(of: $0.address).map { WalletWatch.sameAddress($0, address) } == true
               })
         else { return nil }
-        return match.label.isEmpty ? match.short : match.label
+        return displayName(for: match)
     }
 
     // MARK: - Resolution cache (2026-07-20)
@@ -402,17 +416,70 @@ final class WalletStore {
         ENS.isHexAddress(address) ? address.lowercased() : address
     }
 
+    // MARK: - The watch cap (prd §170, 2026-07-21)
+
+    /// How many wallets may be WATCHED at once. Watching is the expensive tier
+    /// — a Zerion transactions call plus a share of the Portfolio holdings read
+    /// per wallet on every foreground, forever, against a key shipped in the
+    /// binary and shared by everyone. Naming an address stays unlimited
+    /// (`AddressBook`), which is what makes this cap livable: the person
+    /// tracking twenty addresses names twenty and watches their five.
+    ///
+    /// Five is also where the room's own design already tops out — the
+    /// switcher chips crowd past six, and the combined line only starts once
+    /// EVERY watched wallet has an aligned sample, so each extra wallet is one
+    /// more thing that can stall the crown feature.
+    static let watchLimit = 5
+
+    /// Room for another watch? False when the list is full — the doors read
+    /// this to STATE the limit up front rather than letting a person fill in a
+    /// field that will refuse them (the §83 dead-control rule).
+    var canWatchMore: Bool { addresses.count < Self.watchLimit }
+
+    /// Why an add didn't take, so a door can say the true thing.
+    enum AddOutcome: Equatable {
+        case added
+        case alreadyWatching
+        case limitReached
+        case invalid
+    }
+
     /// Adds a pasted address. Light validation only — an address is public
     /// data and a bad one simply never produces things.
+    ///
+    /// The ONE choke point for the cap: every door (paste, ENS, `.sol`,
+    /// WalletConnect, a Farcaster profile, the address card's toggle, the
+    /// probe hooks) already funnels through here, so the limit can't be
+    /// side-stepped by adding a new entry point later.
+    ///
+    /// GRANDFATHERED, never evicted: an install already past the limit keeps
+    /// every wallet it has and simply can't add more. Silently dropping
+    /// someone's sixth wallet would delete their data to enforce our cost
+    /// policy.
     @discardableResult
     func add(_ raw: String, label: String = "") -> Bool {
+        outcome(ofAdding: raw, label: label) == .added
+    }
+
+    /// The same add, reporting WHY when it refuses — for doors that word the
+    /// refusal (`add` keeps its Bool for the many call sites that only branch).
+    @discardableResult
+    func outcome(ofAdding raw: String, label: String = "") -> AddOutcome {
         let addr = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         let key = Self.dedupeKey(addr)
-        guard addr.count >= 6,
-              !addresses.contains(where: { Self.dedupeKey($0.address) == key })
-        else { return false }
+        guard addr.count >= 6 else { return .invalid }
+        guard !addresses.contains(where: { Self.dedupeKey($0.address) == key })
+        else { return .alreadyWatching }
+        guard canWatchMore else { return .limitReached }
         addresses.append(WatchedAddress(label: label, address: addr))
-        return true
+        // A watched wallet is a book entry too (prd §169) — one ledger of
+        // named addresses, so the name survives an unwatch and every surface
+        // reads the same word. Unnamed watches (a raw hex paste) don't invent
+        // a book entry; the person names it when they mean to.
+        if !label.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            AddressBook.shared.setName(label, for: addr, kind: .wallet)
+        }
+        return .added
     }
 
     func remove(at offsets: IndexSet) {
@@ -431,7 +498,20 @@ final class WalletStore {
     /// wallet is watched). Empty clears back to the address-only display.
     func rename(_ id: WatchedAddress.ID, to label: String) {
         guard let i = addresses.firstIndex(where: { $0.id == id }) else { return }
-        addresses[i].label = label.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmed = label.trimmingCharacters(in: .whitespacesAndNewlines)
+        addresses[i].label = trimmed
+        // Through to the book (prd §169): renaming a watched wallet renames
+        // the ADDRESS, so the name outlives the watch and every surface — feed
+        // tags, transfer titles, the switcher — keeps reading one word.
+        AddressBook.shared.setName(trimmed, for: addresses[i].address, kind: .wallet)
+    }
+
+    /// The name for a watched wallet, book first. The stored `label` remains
+    /// the fallback so installs that predate the book (and probe hooks that
+    /// set a label directly) still read correctly.
+    func displayName(for entry: WatchedAddress) -> String {
+        AddressBook.shared.name(for: entry.address)
+            ?? (entry.label.isEmpty ? entry.short : entry.label)
     }
 
     private func persist() {

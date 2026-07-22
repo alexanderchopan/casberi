@@ -66,6 +66,11 @@ struct WalletScreen: View {
     /// tap went back to being the rename prompt it was before the collapse).
     @State private var renamingID: WalletStore.WatchedAddress.ID?
     @State private var renameDraft = ""
+    /// The address book (prd §169) — the light tier beside Watching.
+    @Bindable private var book = AddressBook.shared
+    @State private var bookQuery = ""
+    @State private var showNameSheet = false
+    @State private var openEntry: AddressBook.Entry?
     /// Whether the Chains row is expanded (2026-07-15) — collapsed by
     /// default to a one-line summary ("Ethereum, Base +3"); a set-once
     /// setting doesn't deserve six full-height rows every visit.
@@ -113,7 +118,18 @@ struct WalletScreen: View {
                 // bunch of stuff mashed together") — watching, add, admin.
                 // Status WHISPERS in Watching's header when all is well and
                 // becomes a row only for errors and the typo'd-address nudge.
-                addSection.listRowSeparator(.hidden)
+                //
+                // Full watch list → the add card states the limit instead of
+                // offering controls that would refuse (prd §170).
+                if wallet.canWatchMore {
+                    addSection.listRowSeparator(.hidden)
+                } else {
+                    limitReachedSection.listRowSeparator(.hidden)
+                }
+                // The book sits between adding and admin (prd §169): names are
+                // the light tier, so they live beside watching rather than
+                // behind a door of their own.
+                bookSection.listRowSeparator(.hidden)
                 adminSection.listRowSeparator(.hidden)
                 statusSection
             }
@@ -125,6 +141,11 @@ struct WalletScreen: View {
         .dsSoftTopEdge()
         .navigationTitle("Wallet")
         .navigationBarTitleDisplayMode(.large)
+        .sheet(isPresented: $showNameSheet) { NameAddressSheet() }
+        .sheet(item: $openEntry) { entry in AddressCard(entry: entry) }
+        // Ask the chain what the unnamed-kind entries are, a few at a time —
+        // keyless, and only for entries that haven't been checked (prd §169).
+        .task { await AddressKind.detectPending() }
         .alert("Name this wallet",
                isPresented: Binding(get: { renamingID != nil },
                                     set: { if !$0 { renamingID = nil } })) {
@@ -258,7 +279,10 @@ struct WalletScreen: View {
                         // blue icons.
                         WalletFace(address: addr.address, size: 36)
                         VStack(alignment: .leading, spacing: 2) {
-                            Text(addr.label.isEmpty ? addr.short : addr.label)
+                            // The name comes from the BOOK now (prd §169) —
+                            // one ledger, so a wallet renamed anywhere reads
+                            // the same word here.
+                            Text(wallet.displayName(for: addr))
                                 .dsText(.body17).foregroundStyle(DS.textPrimary)
                                 .lineLimit(1)
                             // The address, always — identity, not a read
@@ -266,13 +290,17 @@ struct WalletScreen: View {
                             // sparkline these rows carried were holdings on
                             // the plumbing screen; the feed's Balance tile is
                             // where value lives now).
-                            if !addr.label.isEmpty {
+                            if wallet.displayName(for: addr) != addr.short {
                                 Text(addr.short).dsText(.subhead13)
                                     .foregroundStyle(DS.textSecondary)
                                     .monospacedDigit()
                             }
                         }
                         Spacer()
+                        // Copy rides watched rows too — the book's verb, and a
+                        // watched wallet is a book entry that happens to be
+                        // watched (prd §169).
+                        CopyAddressButton(address: addr.address)
                     }
                     .contentShape(Rectangle())
                 }
@@ -463,6 +491,114 @@ struct WalletScreen: View {
         if syncing { return String(localized: "Syncing…") }
         guard result != nil, !resultIsError, !resultProminent else { return "" }
         return String(localized: "Synced just now")
+    }
+
+    // MARK: - The address book (prd §169)
+
+    /// Named addresses that AREN'T watched — the light tier. Watched wallets
+    /// already have their own section above, and listing them twice would make
+    /// one book read as two.
+    private var bookEntries: [AddressBook.Entry] {
+        let watched = Set(wallet.addresses.map { AddressBook.key(for: $0.address) })
+        return book.search(bookQuery).filter { !watched.contains($0.id) }
+    }
+
+    /// The book: search, rows, and one door to name another address. Nothing
+    /// here lands anything — that's the section's whole promise, and its footer
+    /// says so.
+    @ViewBuilder
+    private var bookSection: some View {
+        Section {
+            if book.count > 6 {
+                // Search appears only when the list is long enough to need it
+                // — a filter over four rows is furniture.
+                HStack(spacing: DS.Space.s2) {
+                    Image(systemName: "magnifyingglass")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(DS.textTertiary)
+                    TextField("Find by name or 0x…", text: $bookQuery)
+                        .dsText(.callout15)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                }
+            }
+            ForEach(bookEntries) { entry in
+                Button {
+                    DSHaptic.selection()
+                    openEntry = entry
+                } label: {
+                    bookRow(entry)
+                }
+                .buttonStyle(.plain)
+                .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                    Button(role: .destructive) {
+                        book.remove(entry.address)
+                    } label: { Label("Remove", systemImage: "trash") }
+                }
+            }
+            Button {
+                DSHaptic.tap()
+                showNameSheet = true
+            } label: {
+                HStack(spacing: DS.Space.s2) {
+                    Image(systemName: "plus")
+                        .font(.system(size: 12, weight: .semibold))
+                    Text("Name an address").dsText(.callout15).fontWeight(.semibold)
+                    Spacer(minLength: 0)
+                    Text("one, or a pasted list")
+                        .dsText(.label12).foregroundStyle(DS.textTertiary)
+                }
+                .foregroundStyle(DS.tint)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+        } header: {
+            Text("Address book").dsText(.label12).foregroundStyle(DS.textSecondary)
+        } footer: {
+            Text(bookEntries.isEmpty && bookQuery.isEmpty
+                 ? "Name any address — a person, a contract, your own account elsewhere. Names cost nothing, land nothing, and title every transaction with that address in your own words."
+                 : "Names only — nothing lands from these. Tap one to see it, copy it, or start watching it.")
+                .dsText(.callout15).foregroundStyle(DS.textSecondary)
+        }
+    }
+
+    /// One book row: the kind's mark, the name, the address, and Copy — the
+    /// book's most-used verb, on every row rather than one level down.
+    private func bookRow(_ entry: AddressBook.Entry) -> some View {
+        HStack(spacing: DS.Space.s3) {
+            AddressMark(entry: entry, size: 32)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(entry.name).dsText(.body17).foregroundStyle(DS.textPrimary)
+                    .lineLimit(1)
+                Text(entry.subline).dsText(.label12).foregroundStyle(DS.textTertiary)
+                    .lineLimit(1)
+            }
+            Spacer(minLength: 0)
+            CopyAddressButton(address: entry.address)
+        }
+        .padding(.vertical, 2)
+        .contentShape(Rectangle())
+    }
+
+    /// The add card, when the watch list is FULL (prd §170). The controls are
+    /// replaced, not disabled: a live-looking field that refuses on submit is
+    /// the §83 dead-control bug, and a person deserves to know the limit before
+    /// they paste 42 characters. No upsell line — there is nothing to upgrade
+    /// to yet, and inventing one would be fake status.
+    private var limitReachedSection: some View {
+        Section {
+            VStack(alignment: .leading, spacing: DS.Space.s2) {
+                Text("You're watching \(WalletStore.watchLimit) wallets — the limit for now.")
+                    .dsText(.callout15).foregroundStyle(DS.textPrimary)
+                    .fixedSize(horizontal: false, vertical: true)
+                Text("Stop watching one to watch another. Naming addresses stays unlimited — a name costs nothing and still titles every transaction with it.")
+                    .dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .padding(.vertical, DS.Space.s1)
+        } header: {
+            Text("Add a wallet").dsText(.label12).foregroundStyle(DS.textSecondary)
+        }
     }
 
     private var addSection: some View {
@@ -755,9 +891,22 @@ struct WalletScreen: View {
     }
 
     private func addWatched(address: String, label: String) {
-        guard wallet.add(address, label: label) else {
+        switch wallet.outcome(ofAdding: address, label: label) {
+        case .added:
+            break
+        case .alreadyWatching:
             resultIsError = true
             result = String(localized: "Already watching that address.")
+            return
+        case .limitReached:
+            // The cap, worded (prd §170) — and it names the way forward that
+            // still works, since naming stays unlimited.
+            resultIsError = true
+            result = String(localized: "You're watching \(WalletStore.watchLimit) wallets — the limit for now. Stop watching one first, or name this address instead.")
+            return
+        case .invalid:
+            resultIsError = true
+            result = String(localized: "That doesn't look like an address.")
             return
         }
         newAddress = ""
