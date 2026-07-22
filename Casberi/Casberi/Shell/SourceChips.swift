@@ -129,9 +129,6 @@ struct SourceChips: View {
     /// the neutral circle Pinned/All share. The store still zooms out of it.
     @ViewBuilder private var catalogueChip: some View {
         Button {
-            #if DEBUG
-            NSLog("[Casberi] catalogueTap")
-            #endif
             DSHaptic.selection()
             onApps()
         } label: {

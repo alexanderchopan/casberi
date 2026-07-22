@@ -10,12 +10,44 @@ import Observation
 @Observable
 final class HomeRoute {
     static let shared = HomeRoute()
-    enum Push: String, Identifiable { case apps, settings; var id: String { rawValue } }
-    var push: Push? {
-        #if DEBUG
-        didSet { NSLog("[Casberi] route.push: %@ -> %@", oldValue?.rawValue ?? "nil", push?.rawValue ?? "nil") }
-        #endif
+    /// A shell door, plus a mint stamp that makes every request for it a value
+    /// SwiftUI has never seen before.
+    ///
+    /// `navigationDestination(item:)` gates on VALUE EQUALITY, so a plain enum
+    /// made every re-request of a door indistinguishable from the one already
+    /// sitting in the route — and the route does go stale (SwiftUI does not
+    /// reliably write `nil` back on every dismiss, worse under a `.zoom`
+    /// transition). A stale `.apps` meant `push = .apps` equalled the current
+    /// value, SwiftUI saw no change, and the catalogue door read as dead. The
+    /// stamp is what the fix rests on: `.apps` MINTS a fresh value every time
+    /// it is read, so every assignment is a real change and no stale route can
+    /// swallow it.
+    ///
+    /// This replaced a clear-then-set-one-runloop-later dance that measurably
+    /// made things WORSE (2026-07-22): setting `nil` first asks SwiftUI to
+    /// dismiss, and the dismissal writes its own `nil` back into the binding
+    /// AFTER the deferred set landed — clobbering it. Measured as
+    /// `pushRendered: apps -> nil` with no return edge, which is precisely the
+    /// reported "it presses but nothing opens". Never route a door through
+    /// `nil` to force an edge; mint a new stamp instead.
+    struct Push: Identifiable, Hashable {
+        enum Door: String { case apps, settings }
+        let door: Door
+        private let stamp: Int
+        var id: String { "\(door.rawValue)#\(stamp)" }
+
+        @MainActor private static var minted = 0
+        @MainActor private static func mint(_ door: Door) -> Push {
+            minted += 1
+            return Push(door: door, stamp: minted)
+        }
+        @MainActor static var apps: Push { mint(.apps) }
+        @MainActor static var settings: Push { mint(.settings) }
+        /// The same door, freshly stamped — for re-landing a request that was
+        /// set before the stack could receive it.
+        @MainActor var renewed: Push { Push.mint(door) }
     }
+    var push: Push?
     /// A bridge's own screen (wallet, tokens, a setup screen, …) — ONE shared
     /// push target for every entry point (Feed's Manage, Apps' tile capsules,
     /// a product page's Connect/Open), registered as a single
@@ -39,23 +71,10 @@ final class HomeRoute {
 
     /// Open a shell door (Apps / Settings) so it PUSHES every time.
     ///
-    /// `navigationDestination(item: $push)` does not reliably reset `push` to
-    /// nil after an interactive swipe-back dismiss (a documented SwiftUI issue,
-    /// worse under a `.zoom` transition — see the same drop class called out in
-    /// `RootShell`'s onboarding-CTA and launch re-land notes). When `push` is
-    /// left STALE at `.apps`, a bare `push = .apps` equals the current value and
-    /// SwiftUI, seeing no change, does nothing — so the catalogue button reads
-    /// as dead until some other path happens to clear the route. That is the
-    /// reported "pressing the app catalogue button isn't working every time":
-    /// it isn't a missed tap, it's a no-op set.
-    ///
-    /// Force a fresh nil→value edge instead: clear now, set one runloop later so
-    /// SwiftUI always sees a real change and pushes. Harmless when `push` is
-    /// already nil (the clear is a no-op; the deferred set still pushes), and
-    /// the destination's zoom transition plays regardless of which runloop set
-    /// it (the same deferred-set the `-openAppsDelay` hook already relies on).
+    /// One assignment, no `nil` round-trip: the caller's `.apps` / `.settings`
+    /// is already freshly stamped (see `Push`), so this is always a change
+    /// SwiftUI acts on — whatever stale value the route was holding.
     @MainActor func present(_ target: Push) {
-        push = nil
-        Task { @MainActor in push = target }
+        push = target
     }
 }

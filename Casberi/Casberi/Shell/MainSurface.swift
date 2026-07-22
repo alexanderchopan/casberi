@@ -231,11 +231,12 @@ struct MainSurface: View {
                 // such a push: the app lands on Home with the route pointing
                 // at a room that never opened (audit 2026-07-13; .settings
                 // dropped on early sets while post-mount sets always land).
-                // Re-land it now that the stack is up: clear, then set one
-                // turn later so the destination sees a fresh value.
+                // Re-land it now that the stack is up: one turn later, freshly
+                // stamped so the destination sees a value it has never held.
+                // (Re-stamping is the whole mechanism — routing it through
+                // `nil` first is what broke the catalogue door, see `Push`.)
                 if let early = route.push {
-                    route.push = nil
-                    Task { @MainActor in route.push = early }
+                    Task { @MainActor in route.push = early.renewed }
                 }
             }
             .onChange(of: feedThings.count) { _, _ in
@@ -328,10 +329,7 @@ struct MainSurface: View {
             // there was nothing to hide FROM before this move.
             .toolbar(.hidden, for: .navigationBar)
             .navigationDestination(item: $route.push) { push in
-                #if DEBUG
-                let _ = NSLog("[Casberi] destBuild: %@", push.rawValue)
-                #endif
-                switch push {
+                switch push.door {
                 case .apps:
                     AppsScreen()
                         .navigationTransition(.zoom(sourceID: "appsDoor", in: doorNS))
