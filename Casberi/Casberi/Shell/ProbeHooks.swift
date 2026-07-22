@@ -552,11 +552,27 @@ enum ProbeHooks {
         // wallet has a sample, so a two-wallet stack (prd §155's banded hero)
         // needs two seeded lines, one per launch.
         //
-        // Each sample also carries a synthetic 60/40 ETH/USDC snapshot so the
-        // attribution paths (`holdingsDeltas` → the headline's "Mostly ETH"
-        // whisper and the combined sheet's "What moved") have a pair to
-        // difference. Synthetic on purpose and DEBUG-only: it exercises the
-        // path, it is not a reading of anything real.
+        // Each sample also carries a holdings snapshot so the attribution
+        // paths (`holdingsDeltas` → the headline's "Mostly ETH" whisper and
+        // the combined sheet's "What moved") have a pair to difference.
+        //
+        // Two properties are load bearing (both paid for 2026-07-21, shooting
+        // the Wallet App Store preview):
+        //
+        // 1. The composition is the wallet's REAL one, taken from its newest
+        //    genuinely-recorded sample and scaled to each seeded total — not a
+        //    hardcoded 60/40 ETH/USDC. The hardcoded pair differenced against
+        //    real holdings the moment a real sample landed on top of the line,
+        //    printing "Mostly ETH · −$593K" under a GREEN +3.0% pill: a whisper
+        //    that contradicted the delta beside it. Falls back to the old
+        //    synthetic pair only when nothing real has been recorded yet.
+        //
+        // 2. The newest seeded sample sits 5 MINUTES back, not 4 hours. The old
+        //    spacing put it at exactly `recordSample`'s 4h throttle boundary, so
+        //    the next real fetch ALWAYS appended on top of the seeded line and
+        //    the seam above was unavoidable. Five minutes is inside the throttle,
+        //    so the seeded line stays the whole line for the run. Earlier points
+        //    keep the 4h spacing so nothing folds together.
         Hook(key: "seedWalletHistory") { spec, _ in
             let parts = spec.split(separator: "|", maxSplits: 1).map(String.init)
             let values = (parts.first ?? "").split(separator: ",").compactMap { Double($0) }
@@ -567,16 +583,28 @@ enum ProbeHooks {
                 NSLog("Seed-wallet-history probe: no matching watched wallet")
                 return
             }
+            // The real composition, if this wallet has ever priced.
+            let real = WalletStore.shared.valueSamples(forAddress: entry.address)
+                .last { ($0.holdings?.isEmpty == false) }?.holdings
+            let realTotal = real?.values.reduce(0, +) ?? 0
+            let newest = Date.now.addingTimeInterval(-300)
             let samples = values.enumerated().map { i, usd in
-                WalletStore.ValueSample(
-                    at: Date.now.addingTimeInterval(Double(i - values.count) * 4 * 3600),
+                let holdings: [String: Double]
+                if let real, realTotal > 0 {
+                    holdings = real.mapValues { $0 / realTotal * usd }
+                } else {
+                    holdings = ["ETH": usd * 0.6, "USDC": usd * 0.4]
+                }
+                return WalletStore.ValueSample(
+                    at: newest.addingTimeInterval(Double(i - (values.count - 1)) * 4 * 3600),
                     usd: usd,
-                    holdings: ["ETH": usd * 0.6, "USDC": usd * 0.4])
+                    holdings: holdings)
             }
             if let data = try? JSONEncoder().encode(samples) {
                 UserDefaults.standard.set(data, forKey: "wallet.history.\(entry.address.lowercased())")
             }
-            NSLog("Seed-wallet-history probe: %d samples for %@", samples.count, entry.address)
+            NSLog("Seed-wallet-history probe: %d samples for %@ (composition: %@)",
+                  samples.count, entry.address, real == nil ? "synthetic" : "real")
         },
         // `-approvalProbe <blocksBack|YES>` runs the token-approval sync over
         // the watched wallets and NSLogs the landed count. A numeric spec
