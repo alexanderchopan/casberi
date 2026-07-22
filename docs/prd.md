@@ -5527,3 +5527,47 @@ Rule for later: **a spoofable string is any string the chain hands us and we
 then set in type.** Symbols were the second one found. NFT collection names,
 ENS-adjacent labels and token NAMES (not just symbols) are the same shape and
 are unchecked today.
+
+## 160. Both boxed — the wallet room's two reads become parcels (user: "i like both boxed", 2026-07-21)
+
+Ruled from five on-page frames (`design/wallet-look/wallet-cards-mocks.html`,
+redrawn mid-review with the REAL crown context — source chips, wallet switcher
+pills, sync capsule — after the user pointed out the first cut had flattered
+the card by omitting them). **Both the balance and the holdings map get card
+surfaces.** The argument that won: parcels are easier to SCAN than strata, and
+in a room the eye enters looking for sections, edges are the strongest grouping
+signal there is.
+
+This AMENDS §146/§151, which took the balance OUT of a tile so it could hold
+"the room's headline voice — set on the page, no card". That reasoning was
+sound when the crown was ink; it lost to the scanning argument once the crown
+was full of shapes anyway. The number keeps every ounce of weight it earned in
+§158 (price48, the crown pour behind it, the delta pill and mover line with
+it) — it just gets an edge.
+
+Recorded because it was argued and lost, so it isn't re-pitched as new: the
+counter-case was that a boxed number reads as a widget reporting rather than
+the room speaking, and that with everything parcelled nothing leads. Two other
+options died on the way — a card around the map ALONE (the user's own
+objection: in a parade of chips, pills, and capsules, one more rounded surface
+is camouflage, not distinction) and a full-bleed map band (the shape-grammar
+break; built as frame E, not chosen).
+
+Craft the ruling required:
+
+- **Translucent, not opaque** (`dsWidgetSurface(fillOpacity:)`, 0.82). These
+  cards sit ON the crown pour (§159); an opaque fill punches a hole in the one
+  atmospheric move the shell makes. Still a fill, never a material — glass
+  belongs to the floating layer alone.
+- **Worth a look stays a LINE between them.** Warnings are usually absent, and
+  a third card would reserve a permanent parcel for the exception (§146's own
+  reasoning, which survives intact for that element).
+- **The holdings card is one object**: title, subline, treemap, and the
+  concentration line inside one edge. GenTagMap's own s4 horizontal padding
+  becomes the card's inner gutter, so the cells nest without a second inset;
+  the map keeps its own card-cells (a card of cards, as approved on the mock).
+
+VERIFIED on the dedicated sim, dark and light: the pour still reads at the
+crown and between the parcels, cells keep their brand washes inside the
+holdings card, and the light page renders the two cards as white parcels on
+sky without a seam.

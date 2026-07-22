@@ -1396,11 +1396,25 @@ struct FeedScreen: View {
     /// screen, and an unbounded stream buried all four of them.
     private static let walletPreviewRows = 5
 
-    /// The balance headline, then Worth a look as a quiet line beneath it
-    /// (prd §146, 2026-07-21) — the two questions a wallet screen answers at a
-    /// glance ("what's it worth", "is it okay"), the crown-feature total taking
-    /// the room's headline voice and the usually-empty warnings whispering
-    /// below.
+    /// The wallet room's two cards are TRANSLUCENT (prd §160): they sit on the
+    /// crown pour, and an opaque surface would punch a hole in the one
+    /// atmospheric move the shell makes. One constant so the balance card and
+    /// the holdings card can never drift apart.
+    private static let walletCardFill = 0.82
+
+    /// The balance CARD, then Worth a look as a quiet line beneath it — the two
+    /// questions a wallet screen answers at a glance ("what's it worth", "is it
+    /// okay").
+    ///
+    /// The card is prd §160 (2026-07-21, user: "i like both boxed"), amending
+    /// §146/§151's page-set headline: the room's crown is already a parade of
+    /// rounded shapes (source chips, wallet switcher pills, sync capsule), so
+    /// the argument that a free-set number reads as "the room's voice" lost to
+    /// the argument that a boxed one is easier to SCAN — parcels beat strata
+    /// when the eye is looking for sections. The number keeps every ounce of
+    /// its weight (price48, the pour behind it, the delta and mover with it);
+    /// it just gets an edge. Translucent so the crown pour still travels under
+    /// it rather than being punched out.
     ///
     /// Rendered FLAT (§gotchas' eager-head law): a plain VStack of two shallow
     /// pieces, no generic widget path. Either can be absent — no balance until
@@ -1452,6 +1466,11 @@ struct FeedScreen: View {
                             onOpenMark: { id in
                                 sheetThing = visible.first { $0.id == id }
                             })
+                            // The card (prd §160). Padded and surfaced HERE, not
+                            // inside the headline view, so the same component
+                            // still renders bare wherever else it's used.
+                            .padding(DS.Space.s4)
+                            .dsWidgetSurface(fillOpacity: Self.walletCardFill)
                             // Each piece arrives on its own clock — the balance
                             // reads off already-recorded samples (instant) while
                             // warnings/holdings/DeFi wait on live reads (2026-07-
@@ -1465,6 +1484,9 @@ struct FeedScreen: View {
                             .modifier(RowEntrance(index: 0, wave: shapeWave, style: entranceStyle))
                     }
                     if !warnings.isEmpty {
+                        // Stays a LINE between the two cards (§146 holds here):
+                        // warnings are usually absent, and a third card would
+                        // reserve a parcel for the exception.
                         WalletWarningsLine(warnings: warnings) { showWorthALook = true }
                             .modifier(RowEntrance(index: 0, wave: shapeWave, style: entranceStyle))
                     }
@@ -1692,6 +1714,13 @@ struct FeedScreen: View {
                             .padding(.horizontal, DS.Space.s4)
                     }
                 }
+                // The holdings CARD (prd §160) — title, map, and the
+                // concentration line become one parcel. GenTagMap already
+                // self-pads horizontally by s4, which becomes this card's
+                // inner gutter; only the bottom needs closing, since the map
+                // pads its own top.
+                .padding(.bottom, DS.Space.s3)
+                .dsWidgetSurface(fillOpacity: Self.walletCardFill)
                 // The SECTION's own arrival, not the cells' — GenTagMap
                 // already stages its cells once mounted; this is what
                 // stops the whole treemap from hard-popping in the moment
@@ -1699,7 +1728,10 @@ struct FeedScreen: View {
                 .modifier(RowEntrance(index: 1, wave: shapeWave, style: entranceStyle))
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
-                .listRowInsets(EdgeInsets())
+                // The card needs the page gutter the bare map didn't (it used
+                // to bleed to the screen edge and self-pad its cells).
+                .listRowInsets(EdgeInsets(top: DS.Space.s2, leading: DS.Space.s4,
+                                          bottom: 0, trailing: DS.Space.s4))
             }
         }
     }

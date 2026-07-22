@@ -77,8 +77,15 @@ extension View {
     /// radius, lifted off the page by the ambient card shadow. The Home board's
     /// tiles and every gen-UI module card route through this so the lift lives
     /// in ONE place, not hand-copied per renderer (elevation ladder 2026-07-12).
-    func dsWidgetSurface(cornerRadius: CGFloat = DS.Radius.widget) -> some View {
-        dsElevatedSurface(cornerRadius: cornerRadius)
+    /// `fillOpacity` below 1 lets whatever is BEHIND the card read through it
+    /// (prd §160, 2026-07-21) — the crown pour, in practice. An opaque card on
+    /// the pour punches a hole in the one atmospheric move the shell makes; at
+    /// ~0.82 the field still travels under the surface while the card keeps its
+    /// edge and its lift. Still a fill, never a material: glass is the floating
+    /// layer's alone (design law), and this is content.
+    func dsWidgetSurface(cornerRadius: CGFloat = DS.Radius.widget,
+                         fillOpacity: Double = 1) -> some View {
+        dsElevatedSurface(cornerRadius: cornerRadius, fillOpacity: fillOpacity)
     }
 
     /// The shared sheet-fill-plus-shadow recipe. The shadow rides the FILL
@@ -86,10 +93,11 @@ extension View {
     /// Animation casts it from a cheap path instead of rasterizing each card's
     /// content offscreen every scroll frame (matches `dsSheetSurface`, which
     /// shadows the clipped shape rather than the live view).
-    private func dsElevatedSurface(cornerRadius: CGFloat) -> some View {
+    private func dsElevatedSurface(cornerRadius: CGFloat,
+                                   fillOpacity: Double = 1) -> some View {
         background {
             RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                .fill(DS.surfaceSheet)
+                .fill(DS.surfaceSheet.opacity(fillOpacity))
                 .shadow(color: DS.cardShadow, radius: 18, x: 0, y: 6)
         }
     }
