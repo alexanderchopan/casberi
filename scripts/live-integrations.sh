@@ -116,6 +116,23 @@ http_ping "GeckoTerminal"  "https://api.geckoterminal.com/api/v2/networks/eth/tr
 http_ping "Jupiter"        "https://lite-api.jup.ag/tokens/v2/search?query=SOL"
 http_ping "Bluesky public" "https://public.api.bsky.app/xrpc/app.bsky.actor.getProfile?actor=bsky.app"
 
+# Morpho (MorphoDeFi) — POST GraphQL, so http_ping can't cover it. This sends
+# the SAME field/enum shape the app's position + activity queries use against a
+# neutral address, so schema drift (the class already caught once: market txs
+# order by `Timestamp`, vault txs by `Time`) turns a row red before it turns
+# the seat silent. Keyless by contract, like everything here.
+MORPHO_Q='{"query":"{ marketPositions(first: 1, where: { userAddress_in: [\"0x000000000000000000000000000000000000dEaD\"], chainId_in: [1] }) { items { healthFactor state { collateralUsd supplyAssetsUsd borrowAssetsUsd } market { loanAsset { symbol } collateralAsset { symbol } morphoBlue { chain { id } } } } } vaultPositions(first: 1, where: { userAddress_in: [\"0x000000000000000000000000000000000000dEaD\"], chainId_in: [1] }) { items { state { assetsUsd } vault { name chain { id } asset { symbol } } } } marketTransactions(first: 1, orderBy: Timestamp, orderDirection: Desc, where: { chainId_in: [1] }) { items { txHash type data { __typename } } } vaultV1Transactions(first: 1, orderBy: Time, orderDirection: Desc, where: { chainId_in: [1] }) { items { txHash type assets } } }"}'
+mresp=$(raw "https://blue-api.morpho.org/graphql" "$MORPHO_Q")
+if [[ -z "$mresp" ]]; then
+  fail "Morpho GraphQL (unreachable)"
+elif [[ "$mresp" == *'"errors"'* ]]; then
+  fail "Morpho GraphQL — schema drift: $(print -r -- "$mresp" | sed -E 's/.*"message":"([^"]*)".*/\1/' | cut -c1-64)"
+elif [[ "$mresp" == *'"marketPositions"'* && "$mresp" == *'"vaultV1Transactions"'* ]]; then
+  pass "Morpho GraphQL — position + activity query shapes serve"
+else
+  warn "Morpho GraphQL — reachable but unexpected body"
+fi
+
 hr
 if (( RED == 0 && AMBER == 0 )); then
   print -P "%F{green}All live-integration hosts healthy.%f"

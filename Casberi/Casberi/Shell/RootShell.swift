@@ -1151,10 +1151,11 @@ struct RootShell: View {
             let groups = await WalletIngest.topHoldingsByWallet()
             return KeptAskComposers.walletDoc(line: line, groups: groups, things: allThings())
         }
-        // An Aave ask ("how's my loan", "what's my health factor") — live
-        // read, no model (2026-07-20). Same slot as WalletAsk, right after
-        // it: both need a watched wallet, and "aave"/"health factor" never
-        // collides with the generic wallet words.
+        // A DeFi ask ("how's my loan", "what's my health factor", "how are
+        // my Morpho vaults") — live read over Aave + Morpho, no model
+        // (2026-07-20; Morpho 2026-07-21). Same slot as WalletAsk, right
+        // after it: both need a watched wallet, and "aave"/"morpho"/"health
+        // factor" never collides with the generic wallet words.
         if WalletDeFiAsk.matches(query) {
             lastAnswerHits = []
             guard let line = await WalletDeFiAsk.answer() else {

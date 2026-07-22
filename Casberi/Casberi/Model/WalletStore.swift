@@ -49,6 +49,10 @@ final class WalletStore {
                 // The Peer fill cursor leaves with the watch for the same
                 // reason (prd §113).
                 PeerBridge.clearCursor(address: old.address)
+                // Morpho's activity cursor and risk buckets leave too
+                // (2026-07-21) — same back-fill reason, plus a stale
+                // "at-risk" bucket would suppress a real alert on re-watch.
+                MorphoDeFi.clearState(address: old.address)
                 // The EIP-7702 delegation baseline leaves too (2026-07-20) —
                 // a re-watch should seed fresh, not compare against a
                 // delegate state from a prior, unrelated watch period.

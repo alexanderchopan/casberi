@@ -5293,3 +5293,55 @@ circle and colliding with the catalogue door. It now scales inside its own
 circle. The neighbouring chips are app icons, which don't scale at all — that
 strip is fixed-geometry chrome by design, and the one word in it has to respect
 the geometry.
+
+## 157. Morpho rides the watched wallets — the Aave shape, per market (user: "can we still add morpho? if so lets do all", 2026-07-21)
+
+Morpho joins Aave as the second lending protocol the Wallet seat reads — no
+account, no key, no catalog offer of its own (the Strava-rides-Health shape,
+same as Aave §wallet-defi). Everything comes from Morpho's own public GraphQL
+API (`blue-api.morpho.org/graphql`, keyless, measured live 2026-07-21) because
+Morpho's positions are structurally unreadable the Aave way: Aave is one
+account-wide `getUserAccountData` call; Morpho is ISOLATED MARKETS (plus earn
+vaults), and enumerating a wallet's markets on-chain requires already knowing
+every market id — which is exactly what the API answers in one batched
+request (`userAddress_in`/`chainId_in`, all wallets and chains at once).
+
+Three parts, mirroring the Aave split plus the Peer sweep:
+
+- **Live book** (`MorphoDeFi.book`): market positions (collateral / debt /
+  per-market health factor) + vault deposits, drawn as a second DeFi tile
+  beside Aave's in the Wallet feed. The tile adapts between Morpho's two
+  faces: borrowing (the Aave layout, worst market leading) and earning
+  (Deposits + an honest "No debt"). At-risk markets roll into the
+  Needs-attention warnings EACH ON THEIR OWN — Morpho markets are isolated,
+  so two risky markets are two liquidations, not one.
+- **Risk alert** (`MorphoDeFi.sync`): lands a thing on a NEW crossing below
+  health factor 1.5 (same threshold, same bucket-reset lesson as Aave —
+  no debt is a definitive "safe"). Links app.morpho.org; acting stays there.
+- **Activity** (`MorphoDeFi.syncActivity`): settled Supply / Borrow / Repay /
+  collateral / vault-deposit / liquidation events land as things — the Peer
+  cursor shape, but TIMESTAMPS not blocks (the API filters on
+  `timestamp_gte`). First sight seeds silently; `-morphoProbe <daysBack>`
+  is the deliberate door to the past. Capture-only by ruling: settled events,
+  never a pending intent, never a path that trades.
+
+The ask ("what's my health factor", "how are my Morpho vaults") is now one
+DeFi ask across BOTH protocols — worst health factor anywhere leads, earn
+side follows; the kept ask upgrades with it for free.
+
+Measured quirks (re-measure before "fixing"): the API's `collateralUsd` can
+be NULL while the health factor reads (unpriced collateral — a real position,
+don't drop it, and the tile falls back to stating deposits); dust is
+everywhere (the burn address holds hundreds of sub-cent vault positions), so
+`WalletIngest.holdingFloor` gates rows — except a live borrow, which is too
+load-bearing to floor away; transaction amounts are raw BigInts scaled by
+each asset's own decimals; and the schema DRIFTS — market transactions order
+by `Timestamp` but vault transactions by `Time` (same field, two enum names;
+either wrong 400s the whole document — caught live 2026-07-21), so
+`live-integrations.sh` now POSTs the app's exact query shapes nightly.
+
+Deliberately NOT built: any path that supplies, borrows, or migrates
+positions (forecloses on §84's watching-can-never-trade promise), and
+yield-ranked vault discovery ("top APY vaults") — unlike GeckoTerminal
+trending, surfacing ranked yields drifts toward recommending financial
+products, which the honesty rule and the no-advice line both refuse.

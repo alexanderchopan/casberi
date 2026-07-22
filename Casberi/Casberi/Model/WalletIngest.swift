@@ -81,6 +81,14 @@ enum WalletIngest {
         return tx.replacingOccurrences(of: "/tx/", with: "/address/") + address
     }
 
+    /// The chain's own transaction-page URL prefix (2026-07-21, for the
+    /// Morpho activity things' content links) — the same measured `explorer`
+    /// prefix `chainName(forContent:)` reads, so a Morpho thing's link
+    /// routes back to a chain name for free.
+    static func explorerURL(forNetwork network: String) -> String? {
+        allChains.first { $0.network == network }?.explorer
+    }
+
     /// The chain's own display name ("Base", "Arbitrum") — for a title clause
     /// that names WHICH chain a cross-chain signal happened on (2026-07-20,
     /// the Aave health-factor alert).
@@ -384,6 +392,19 @@ enum WalletIngest {
                                               addresses: evmAddresses,
                                               existing: existing)
         added += defiAdded
+        // Morpho rides the same pass (2026-07-21) — the risk-crossing alert
+        // (the Aave rule, per chain on the wallet's worst market) plus the
+        // settled-activity sweep (the Peer cursor shape, timestamps not
+        // blocks). Both keyless via Morpho's own API; inside the running
+        // guard like everything above.
+        let morphoRiskAdded = await MorphoDeFi.sync(context: context,
+                                                    addresses: evmAddresses,
+                                                    existing: existing)
+        added += morphoRiskAdded
+        let morphoActivityAdded = await MorphoDeFi.syncActivity(context: context,
+                                                                addresses: evmAddresses,
+                                                                existing: existing)
+        added += morphoActivityAdded ?? 0
         // Safe multisig pending-queue watch (2026-07-20) rides the same
         // pass — detection + queue read per wallet per active EVM chain,
         // landing a thing for every newly seen pending transaction. Inside
@@ -407,6 +428,7 @@ enum WalletIngest {
         // approvals that just landed).
         let reached = reachedAny || solana.reached || approvalsAdded > 0
             || (peerAdded ?? 0) > 0 || delegationAdded > 0 || defiAdded > 0 || safeAdded > 0
+            || morphoRiskAdded > 0 || (morphoActivityAdded ?? 0) > 0
             || (evmAddresses.isEmpty && heldPriced != nil)
         return reached ? added : nil
     }

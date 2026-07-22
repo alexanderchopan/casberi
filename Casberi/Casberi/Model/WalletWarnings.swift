@@ -52,6 +52,9 @@ struct WalletWarning: Identifiable, Equatable {
 /// it before the split.
 struct WalletLiveState: Equatable {
     var positions: [WalletDeFi.Position] = []
+    /// The Morpho book (2026-07-21) — market positions + vault deposits,
+    /// read beside Aave's in the same parallel pass.
+    var morpho: MorphoDeFi.Book = MorphoDeFi.Book()
     var warnings: [WalletWarning] = []
     /// The address-poisoning things behind the poisoning warning — carried so
     /// the Worth-a-look tray can list each flagged transfer as its own row
@@ -61,6 +64,7 @@ struct WalletLiveState: Equatable {
     static func == (a: WalletLiveState, b: WalletLiveState) -> Bool {
         a.warnings == b.warnings
             && a.flagged.map(\.id) == b.flagged.map(\.id)
+            && a.morpho == b.morpho
             && a.positions.count == b.positions.count
             && zip(a.positions, b.positions).allSatisfy {
                 $0.address == $1.address && $0.network == $1.network
@@ -102,10 +106,12 @@ enum WalletWatch {
         guard !resolved.isEmpty else { return WalletLiveState() }
 
         async let defi = WalletDeFi.positions(addresses: resolved)
+        async let morphoBook = MorphoDeFi.book(addresses: resolved)
         async let safe = SafeBridge.pendingCounts(addresses: resolved)
         async let delegs = WalletSafety.currentDelegations(addresses: resolved)
 
         let positions = await defi
+        let morpho = await morphoBook ?? MorphoDeFi.Book()
         let safePending = await safe
         let delegations = await delegs
 
@@ -126,7 +132,9 @@ enum WalletWatch {
         }
         return WalletLiveState(
             positions: positions,
-            warnings: warnings(positions: positions, safePending: safePending,
+            morpho: morpho,
+            warnings: warnings(positions: positions, morpho: morpho,
+                               safePending: safePending,
                                delegations: delegations, poisoningCount: poisoningCount,
                                owner: owner),
             flagged: inScope)
@@ -143,6 +151,7 @@ enum WalletWatch {
     /// ordering rule (critical before notice, stable otherwise) lives in one
     /// readable place.
     static func warnings(positions: [WalletDeFi.Position],
+                         morpho: MorphoDeFi.Book = MorphoDeFi.Book(),
                          safePending: [String: Int],
                          delegations: [WalletSafety.Delegation],
                          poisoningCount: Int,
@@ -155,6 +164,17 @@ enum WalletWatch {
                                      kind: .liquidation,
                                      title: String(localized: "Aave position close to liquidation"),
                                      subtitle: "\(chain) · hf \(WalletIngest.format(p.healthFactor ?? 0))",
+                                     address: owner[p.address.lowercased()]))
+        }
+        // Morpho's markets are isolated, so each at-risk market warns on its
+        // own (two risky markets are two liquidations, not one).
+        for p in morpho.positions where (p.healthFactor ?? .infinity) < 1.5 {
+            let chain = WalletIngest.displayName(forNetwork: p.network) ?? p.network
+            out.append(WalletWarning(id: "morpho:\(p.network):\(p.address):\(p.marketLabel)",
+                                     severity: .critical,
+                                     kind: .liquidation,
+                                     title: String(localized: "Morpho position close to liquidation"),
+                                     subtitle: "\(chain) · \(p.marketLabel) · hf \(WalletIngest.format(p.healthFactor ?? 0))",
                                      address: owner[p.address.lowercased()]))
         }
         if poisoningCount > 0 {

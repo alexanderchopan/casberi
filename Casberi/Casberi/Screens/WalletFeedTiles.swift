@@ -134,8 +134,13 @@ struct WalletBalanceHeadline: View {
             Button { onOpen?() } label: {
                 VStack(alignment: .leading, spacing: DS.Space.s1) {
                     HStack(spacing: 5) {
+                        // Quieter than it was (prd §157): hierarchy is the GAP
+                        // between the loud thing and the quiet one, and a
+                        // secondary-ink caption over a 48pt total left the two
+                        // arguing. The caption steps back so the number can
+                        // step forward.
                         Text(caption)
-                            .dsText(.label12).foregroundStyle(DS.textSecondary)
+                            .dsText(.label12).foregroundStyle(DS.textTertiary)
                             .lineLimit(1)
                         // The door — only where a breakdown exists (the multi-
                         // wallet "All" view). A chevron promises more behind
@@ -157,7 +162,7 @@ struct WalletBalanceHeadline: View {
                         // sanctioned big-money rung (prd §102), so it scales with
                         // Dynamic Type like everything else.
                         Text(TokenStats.compact(displayed ?? 0))
-                            .dsText(.price40).foregroundStyle(DS.textPrimary)
+                            .dsText(.price48).foregroundStyle(DS.textPrimary)
                             .monospacedDigit()
                             .contentTransition(reduceMotion ? .identity
                                                : .numericText(value: displayed ?? 0))
@@ -185,7 +190,11 @@ struct WalletBalanceHeadline: View {
             .disabled(onOpen == nil)
 
             if let chart {
-                TokenChartPlot(chart: chart, accent: accent, height: 40, pulses: false,
+                // Taller, heavier, and ending on a solid dot (prd §157) — the
+                // line is the total said a second way, so it carries weight
+                // like the total does.
+                TokenChartPlot(chart: chart, accent: accent, height: 52, pulses: false,
+                               lineWidth: 2.4, fillOpacity: 0.30, endpointDot: true,
                                marks: marks,
                                onTapMark: marks.isEmpty ? nil : { onOpenMark($0.id) })
                     .mask(alignment: .leading) {
@@ -327,6 +336,83 @@ struct WalletDeFiTile: View {
                         ? String(localized: "Health · at risk") : String(localized: "Health"),
                      health.map { WalletIngest.format($0) } ?? String(localized: "No debt"),
                      tint: (health ?? .infinity) < 1.5 ? DS.attention : DS.textPrimary)
+            }
+            .padding(.top, DS.Space.s1)
+        }
+    }
+
+    private func stat(_ label: String, _ value: String, tint: Color) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(label).dsText(.label12).foregroundStyle(DS.textTertiary)
+                .lineLimit(1)
+            Text(value).dsText(.price16).foregroundStyle(tint)
+                .monospacedDigit()
+                .contentTransition(.numericText())
+                .lineLimit(1).minimumScaleFactor(0.6)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+/// DeFi — the Morpho book (2026-07-21), the Aave tile's sibling. Morpho has
+/// two faces the tile adapts between: BORROWING (isolated markets with
+/// collateral, debt, and a per-market health factor — the Aave layout
+/// verbatim, worst market leading) and EARNING (vault deposits — one
+/// Deposits stat, "No debt" where health would be). A wallet with neither
+/// renders nothing.
+struct WalletMorphoTile: View {
+    let book: MorphoDeFi.Book
+
+    /// Vault deposits + market-side lending, the earn total.
+    private var deposits: Double {
+        book.vaults.reduce(0) { $0 + $1.usd }
+            + book.positions.reduce(0) { $0 + $1.supplyUSD }
+    }
+    private var collateral: Double { book.positions.reduce(0) { $0 + ($1.collateralUSD ?? 0) } }
+    private var debt: Double { book.positions.reduce(0) { $0 + $1.borrowUSD } }
+    /// The riskiest market — Morpho markets are isolated, so the worst one
+    /// is the one that liquidates first; nil when nothing is borrowed.
+    private var health: Double? { book.positions.compactMap(\.healthFactor).min() }
+
+    private var caption: String {
+        let markets = book.positions.count + book.vaults.count
+        guard markets == 1,
+              let network = book.positions.first?.network ?? book.vaults.first?.network,
+              let chain = WalletIngest.displayName(forNetwork: network) else {
+            return String(localized: "DeFi · Morpho")
+        }
+        return String(localized: "DeFi · Morpho on \(chain)")
+    }
+
+    var body: some View {
+        // No door, same reason as the Aave tile: these numbers ARE the whole
+        // in-app read; acting on a position happens on Morpho, not here.
+        WalletTile(caption: caption, showChevron: false) {
+            HStack(alignment: .top, spacing: DS.Space.s3) {
+                if debt > 0 {
+                    // Borrowing face — the Aave layout. Collateral can be
+                    // unpriced on Morpho (measured); deposits stand in only
+                    // when there's genuinely no priced collateral to state.
+                    if collateral > 0 {
+                        stat(String(localized: "Collateral"),
+                             "$\(WalletIngest.format(collateral))", tint: DS.textPrimary)
+                    } else if deposits > 0 {
+                        stat(String(localized: "Deposits"),
+                             "$\(WalletIngest.format(deposits))", tint: DS.textPrimary)
+                    }
+                    stat(String(localized: "Debt"),
+                         "$\(WalletIngest.format(debt))", tint: DS.textPrimary)
+                    stat((health ?? .infinity) < 1.5
+                            ? String(localized: "Health · at risk") : String(localized: "Health"),
+                         health.map { WalletIngest.format($0) } ?? String(localized: "No debt"),
+                         tint: (health ?? .infinity) < 1.5 ? DS.attention : DS.textPrimary)
+                } else {
+                    // Earning face — deposits, and an honest "No debt".
+                    stat(String(localized: "Deposits"),
+                         "$\(WalletIngest.format(deposits))", tint: DS.textPrimary)
+                    stat(String(localized: "Debt"),
+                         String(localized: "None"), tint: DS.textPrimary)
+                }
             }
             .padding(.top, DS.Space.s1)
         }

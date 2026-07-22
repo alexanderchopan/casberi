@@ -1502,6 +1502,19 @@ struct FeedScreen: View {
                                           bottom: 0, trailing: DS.Space.s4))
             }
         }
+        // Morpho beside Aave (2026-07-21) — same live-state pass, its own
+        // tile because the two books answer differently (isolated markets +
+        // vaults vs one account-wide read).
+        if !walletLive.morpho.isEmpty {
+            Section {
+                WalletMorphoTile(book: walletLive.morpho)
+                    .modifier(RowEntrance(index: 2, wave: shapeWave, style: entranceStyle))
+                    .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+                .listRowInsets(EdgeInsets(top: DS.Space.s2, leading: DS.Space.s4,
+                                          bottom: 0, trailing: DS.Space.s4))
+            }
+        }
     }
 
     /// The stream's door — only when there's more behind it than the preview
@@ -2031,6 +2044,10 @@ struct FeedScreen: View {
             // with its text, a conversation with its opening line, a post
             // with its author and media, a link with where it's from. All
             // keeps the band — these relax only inside the source's shape.
+            // The wallet room reads as a ledger (prd §157): the band, with the
+            // moved amount pulled out of the sentence into a right-aligned
+            // figure. Same anatomy as every other row — one opt-in flag.
+            case .wallet: BandRow(thing: thing, moneyColumn: true)
             case .notes:  ExcerptRow(thing: thing, lines: 3)
             case .chat:   ExcerptRow(thing: thing, lines: 2)
             case .social: PostCard(thing: thing)

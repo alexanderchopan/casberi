@@ -665,6 +665,18 @@ enum ProbeHooks {
                 NSLog("DeFi probe: %@", line)
             }
         },
+        // `-morphoProbe <daysBack|YES>` NSLogs each watched wallet's Morpho
+        // book (market positions with health factors, vault deposits, or
+        // the honest miss). A numeric spec ALSO rewinds every Morpho
+        // activity cursor that many DAYS (timestamps, not blocks — Morpho's
+        // API filters on time) and runs the settled-activity sweep, so real
+        // past events land headlessly. Pairs with `-walletAddress`.
+        Hook(key: "morphoProbe") { spec, context in
+            Task { @MainActor in
+                let line = await MorphoDeFi.probe(context: context, daysBack: Int(spec))
+                NSLog("Morpho probe: %@", line)
+            }
+        },
         // `-safeProbe YES` NSLogs which watched wallets are detected Safes
         // per chain and their pending queue counts (or the honest
         // unreachable/none). Pairs with `-walletAddress` (a Safe address, to
