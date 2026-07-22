@@ -5616,3 +5616,66 @@ connection states itself in the connected color; unkeyed stays tertiary. The
 A–Z single-field ordering and every action/badge/debug hook carry over
 unchanged; the tile's `seats` shelf machinery (dead since the Apps tile
 retired) is deleted with it.
+
+## 162. Privacy Pools rides the watched wallets — the alert IS the feature (user: "ok lets add that and make it a new bridge", 2026-07-21)
+
+0xBow's Privacy Pools is compliant onchain privacy: you deposit, an
+Association Set Provider (ASP) screens the deposit, and once cleared you can
+withdraw to a fresh address with a proof that your funds came from the
+approved set. The seat rides the watched wallets the way Peer does (prd
+§113) — depositing happens from the person's own wallet on 0xBow's app, so
+there is no account, no key, no OAuth, and connecting is one switch.
+
+**Two reads, and the second is the reason to build it.** Deposits land as
+things ("Put 0.0700 ETH into Privacy Pools") off Ethereum's public chain.
+But the differentiated read is the ASP STATUS: a deposit sits in review
+until it's approved, and that flip is what people otherwise keep re-checking
+a website for. Casberi polls it and lands "Privacy Pools cleared your 0.0700
+ETH deposit — ready to withdraw privately". A deposit alone is a transfer
+the wallet feed half-shows anyway; the cleared-to-withdraw moment is news
+nothing else in the app could tell you.
+
+**Category: Wallet, not Markets** (user asked; ruled 2026-07-21). Peer sits
+in Markets because a Peer fill is a TRADE — fiat became crypto, the same
+shelf as watching a token or an event's odds. Privacy Pools trades nothing
+and quotes nothing: it's your own funds, moving between your own addresses,
+wearing a status. That's the Wallet shelf's subject. (Bitrefill set the
+precedent for splitting on subject rather than on chain-ness: it went to
+Shopping, not Markets, because it's your own commerce account.)
+
+**Honesty boundaries.**
+- CAPTURE ONLY. Nothing deposits, withdraws, proves, or signs — the Peer
+  line ("lands settled fills, never a path that trades").
+- The WITHDRAWAL side is unlinkable BY DESIGN — that IS the product. The
+  chain cannot tie a withdrawal to its deposit, so Casberi never shows it and
+  the copy never implies otherwise. Watching a second address would show the
+  arrival, and correlating the two is not something the app does.
+- Alerts are NEWS: a status thing lands only for a transition observed WHILE
+  watching. A backfilled deposit whose review resolved months ago lands as
+  the deposit alone — no stale "cleared!" theater. Implemented as a baseline
+  rule: a deposit younger than a day seeds "pending" (its flip is ahead of
+  us), an older one seeds "" and the first poll records silently.
+- `exited` / `spent` are terminal non-news — the person acted elsewhere;
+  the entry drops without an alert.
+
+**Divergence from Peer, on purpose:** Peer seeds a silent block baseline on
+first sight (history before the watch isn't ours to dump). Privacy Pools
+BACKFILLS from the deploy block instead, because deposits are rare (~4k in
+the ETH pool ever, so the read is cheap) and because the primary case for
+the alert is a deposit made BEFORE connecting — a silent baseline would make
+the feature miss exactly the person it's for.
+
+**Measured 2026-07-22** (re-measure before "fixing" any of it): one
+Entrypoint (`0x6818…6b46`) serves all 14 mainnet pools with the depositor
+indexed, so one filtered `eth_getLogs` per wallet finds every deposit in any
+asset; `rpc.mevblocker.io` served the FULL 3.4M-block history in 0.33s
+(publicnode now token-walls getLogs entirely, drpc caps at 10k); the ASP API
+is fully keyless (`/{chainId}/public/…`, CORS `*`, no 429 across a burst),
+pool-keyed by an `X-Pool-Scope` decimal and batched via comma-joined
+`X-Labels`. Labels are uint256 DECIMAL strings — hence the exact
+byte-wise base conversion in `decimalString(hexWord:)`; a Double round-trip
+would silently corrupt every label and the poll would match nothing.
+
+Verified end to end on a real depositor wallet: two same-day deposits landed
+with real amounts, both their approvals landed as alerts, a re-run deduped to
+zero, and the corpus dupe probe stayed clean.

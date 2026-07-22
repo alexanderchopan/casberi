@@ -71,6 +71,7 @@ nav { display: flex; align-items: center; justify-content: space-between; paddin
 .ai-todoist   { background: #e44332; }
 .ai-wallet    { background: #2962ef; }
 .ai-peer      { background: #4b47f6; }
+.ai-privacypools { background: #fff; }
 .ai-gmail     { background: #fff; color: #ea4335; }
 .ai-icloud    { background: #3693f3; font-size: 18px; }
 .ai-chatgpt   { background: #fff; }
@@ -817,3 +818,140 @@ footer .tagline { font-size: 16px; font-weight: 600; color: var(--ink); margin-b
 .reel video { width: 100%; height: 100%; object-fit: cover; display: block; }
 .reel-cap { text-align: center; color: var(--muted); font-size: 14.5px; margin: 0 auto 44px; }
 @media (max-width: 520px) { .reel { max-width: 300px; } }
+
+
+/* ---------- "What you can do" switcher (2026-07-21) ----------
+   Four tabs over one stage: a lede (headline, the promise, a clip) above a
+   detail grid that lists the surface in full. Sits directly under the
+   "Here's what it becomes" transition — what it BUYS you, before how it works. */
+/* left rail + stage — the rail's 4 stacked tabs use the full height the
+   video sets (previously a top row left a tall empty gap under the short
+   copy column, since the grid row height follows the tallest cell). */
+.sw { display: grid; grid-template-columns: 210px 1fr; gap: 18px; margin-top: 8px; align-items: stretch; }
+.sw-tabs { display: flex; flex-direction: column; gap: 10px; }
+@media (max-width: 800px) {
+  .sw { grid-template-columns: 1fr; }
+  .sw-tabs { flex-direction: row; flex-wrap: wrap; }
+}
+.sw-tab {
+  text-align: left; cursor: pointer; border: 0;
+  background: var(--surface); color: var(--ink);
+  border-radius: var(--radius-sm); padding: 16px 16px 15px;
+  font-family: inherit; position: relative; overflow: hidden; flex: 1;
+  transition: background .2s ease, transform .22s cubic-bezier(.34,1.56,.64,1);
+}
+@media (max-width: 800px) { .sw-tab { flex: 1 1 45%; } }
+.sw-tab:hover { transform: translateY(-3px); }
+.sw-tab .t-ico { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 16px; }
+.sw-tab .t-ico .ai { width: 36px; height: 36px; border-radius: 11px; font-size: 15px; flex: none; }
+.sw-tab .t-ico .ai img { width: 52%; height: 52%; }
+.sw-tab .t-ico .ai.tilefull img { width: 100%; height: 100%; }
+/* near-black brand tiles (Venice, dark marks) vanish against this dark rail —
+   a thin ring gives them a readable edge without changing their true color. */
+.sw-tab .t-ico .ai-venice { box-shadow: inset 0 0 0 1px rgba(255,255,255,.14); }
+.sw-tab b { display: block; font-size: 16px; font-weight: 750; letter-spacing: -.01em; }
+.sw-tab span { display: block; font-size: 12.5px; color: var(--muted); margin-top: 2px; line-height: 1.4; }
+.sw-tab.on { background: var(--surface-2); box-shadow: inset 0 0 0 1.5px rgba(59,140,240,.5); }
+.sw-tab.on span { color: var(--blue-bright); }
+@keyframes tabJiggle {
+  0%, 100% { transform: translateY(0) rotate(0); }
+  25% { transform: translateY(-4px) rotate(-1.5deg); }
+  55% { transform: translateY(1px) rotate(1.2deg); }
+  80% { transform: translateY(-1px) rotate(-.5deg); }
+}
+.sw-tab.jiggle { animation: tabJiggle .5s cubic-bezier(.34,1.56,.64,1); }
+@media (prefers-reduced-motion: reduce) { .sw-tab.jiggle { animation: none; } }
+
+.sw-stage {
+  display: grid; grid-template-columns: 1fr 340px; gap: 34px 44px; align-items: start;
+  background: var(--surface); border-radius: var(--radius); padding: 42px 42px 38px 46px;
+  position: relative; overflow: hidden;
+}
+.sw-stage .glow {
+  position: absolute; width: 460px; height: 460px; right: -120px; top: -160px;
+  background: radial-gradient(circle, rgba(59,140,240,.16), transparent 66%);
+  pointer-events: none;
+}
+@media (max-width: 800px) { .sw-stage { grid-template-columns: 1fr; padding: 28px; gap: 26px; } }
+
+.sw-panel { display: none; }
+.sw-panel.on { display: contents; }
+
+.sw-copy { position: relative; z-index: 1; padding-top: 6px; }
+.sw-copy h3 {
+  font-size: clamp(25px, 3.2vw, 34px); font-weight: 800; letter-spacing: -.022em;
+  line-height: 1.1; margin-bottom: 14px; max-width: 470px;
+}
+.sw-copy > p { font-size: 15.5px; color: var(--muted); max-width: 490px; }
+.sw-copy > p + p { margin-top: 12px; }
+.sw-copy b { color: var(--ink); font-weight: 650; }
+
+/* the differentiator, set apart rather than shouted — flat, no accent bar */
+.sw-pledge {
+  margin-top: 20px; padding: 14px 16px; border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  font-size: 14px; color: var(--muted); line-height: 1.55; max-width: 490px;
+}
+.sw-pledge b { color: var(--ink); font-weight: 700; }
+
+.sw-shot { display: flex; justify-content: center; position: relative; z-index: 1; }
+.sw-shot .vid-full { margin: 0; width: 320px; }
+/* the phone bezel's volume/power-button marks (.vid-full::after) are hardcoded
+   for the OTHER usage's 170px frame — at this frame's 320px they land inside
+   the video instead of on its edge, reading as a stray line. Not needed here. */
+.sw-shot .vid-full::after { display: none; }
+
+.sw-detail {
+  grid-column: 1 / -1; position: relative; z-index: 1;
+  margin-top: 8px; padding-top: 30px; border-top: 1px solid rgba(255,255,255,.07);
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 26px 34px;
+}
+@media (max-width: 900px) { .sw-detail { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 620px) { .sw-detail { grid-template-columns: 1fr; } }
+
+.sw-grp h4 {
+  font-size: 12.5px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase;
+  color: var(--blue-bright); margin-bottom: 10px;
+}
+.sw-grp ul { list-style: none; display: flex; flex-direction: column; gap: 9px; }
+.sw-grp li { font-size: 13.5px; color: var(--muted); line-height: 1.5; padding-left: 14px; position: relative; }
+.sw-grp li::before {
+  content: ""; position: absolute; left: 0; top: 8px;
+  width: 5px; height: 5px; border-radius: 50%; background: rgba(154,163,178,.45);
+}
+.sw-grp li b { color: var(--ink); font-weight: 650; }
+.sw-grp li i { font-style: normal; color: var(--faint); }
+.sw-grp code {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 12.5px;
+  color: var(--ink); background: rgba(255,255,255,.06); padding: 1px 5px; border-radius: 5px;
+}
+.sw-grp.wide { grid-column: span 2; }
+@media (max-width: 620px) { .sw-grp.wide { grid-column: auto; } }
+
+/* the flat inventory line — many nouns, no room for a sentence each */
+.sw-inv { font-size: 13.5px; color: var(--muted); line-height: 1.75; }
+.sw-inv b { color: var(--ink); font-weight: 650; }
+.sw-inv i { font-style: normal; color: var(--faint); }
+
+.sw-chains {
+  grid-column: 1 / -1; margin-top: 4px; padding-top: 20px;
+  border-top: 1px solid rgba(255,255,255,.07);
+  font-size: 13.5px; color: var(--faint); line-height: 1.6;
+}
+.sw-chains b { color: var(--muted); font-weight: 650; }
+
+/* placeholder plate — stands in until each panel's clip is shot */
+.sw-ph {
+  width: 212px; aspect-ratio: 9/16; border-radius: 24px;
+  border: 8px solid #0b0c10; background: #171a21;
+  background-image: repeating-linear-gradient(135deg, rgba(255,255,255,.035) 0 10px, transparent 10px 20px);
+  box-shadow: 0 22px 50px rgba(0,0,0,.5);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 6px; text-align: center; padding: 20px;
+}
+.sw-ph b { font-size: 11px; letter-spacing: .16em; text-transform: uppercase; color: var(--faint); font-weight: 800; }
+.sw-ph span { font-size: 13.5px; color: var(--muted); line-height: 1.45; }
+.sw-copy code {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 14px;
+  color: var(--ink); background: rgba(255,255,255,.06); padding: 1px 5px; border-radius: 5px;
+}

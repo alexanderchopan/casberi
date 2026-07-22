@@ -710,6 +710,32 @@ enum ProbeHooks {
                 NSLog("Peer probe: %@ landed", n.map(String.init) ?? "FAILED")
             }
         },
+        // `-privacyPoolsProbe <blocksBack|YES>` switches the Privacy Pools
+        // seat on and runs the deposit sweep + ASP status poll over the
+        // watched wallets, NSLogging the landed count and the pending
+        // watchlist. A numeric spec rewinds every cursor that many blocks
+        // below the mainnet head first; a fresh install backfills from the
+        // deploy block by design (prd §162), so a plain YES already lands
+        // real deposits for a wallet that has used Privacy Pools. Pairs with
+        // `-walletAddress <a depositor wallet>`.
+        // `-privacyPoolsSeedPending "<label>[|<scope>]"` plants a PENDING
+        // baseline for a real deposit label, so the next
+        // `-privacyPoolsProbe` exercises the status-alert branch against the
+        // live ASP instead of waiting days for a real review to clear.
+        // Declared BEFORE the probe hook so list order runs the seed first.
+        Hook(key: "privacyPoolsSeedPending") { spec, _ in
+            PrivacyPoolsBridge.seedPending(spec: spec)
+            NSLog("Privacy Pools seed: %@", PrivacyPoolsBridge.pendingSummary())
+        },
+        Hook(key: "privacyPoolsProbe") { spec, context in
+            PrivacyPoolsBridge.connected = true
+            Task { @MainActor in
+                let n = await PrivacyPoolsBridge.probe(context: context, blocksBack: Int(spec))
+                NSLog("Privacy Pools probe: %@ landed; %@",
+                      n.map(String.init) ?? "FAILED",
+                      PrivacyPoolsBridge.pendingSummary())
+            }
+        },
         // `-solNameProbe <name.sol>` resolves a Solana name through SNS and
         // NSLogs the address (or the honest miss) — the fastest check that the
         // resolver still answers, without touching the corpus.

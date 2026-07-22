@@ -19,6 +19,12 @@ enum StorePreview {
             "t1 = TxRow(\"Swapped\", \"0.4 ETH → 1,120 USDC\", \"Base · Uniswap\")",
             "t2 = TxRow(\"Received\", \"250 USDC\", \"from maya.eth\")",
         ]
+        case "0xBow Privacy Pools": [
+            "root = Stack([w])",
+            "w = Widget(\"Privacy Pools\", null, [p1, p2])",
+            "p1 = TxRow(\"Cleared\", \"0.5 ETH\", \"ready to withdraw privately\")",
+            "p2 = TxRow(\"Deposited\", \"0.5 ETH\", \"in review\")",
+        ]
         case "Gmail": [
             "root = Stack([w])",
             "w = Widget(\"Waiting on you\", null, [m1, m2])",

@@ -49,6 +49,11 @@ final class WalletStore {
                 // The Peer fill cursor leaves with the watch for the same
                 // reason (prd §113).
                 PeerBridge.clearCursor(address: old.address)
+                // Privacy Pools' cursor and that wallet's pending-status
+                // watchlist leave too (prd §162) — same back-fill reason,
+                // plus a stale pending entry would alert for a wallet no
+                // longer watched.
+                PrivacyPoolsBridge.clearState(address: old.address)
                 // Morpho's activity cursor and risk buckets leave too
                 // (2026-07-21) — same back-fill reason, plus a stale
                 // "at-risk" bucket would suppress a real alert on re-watch.

@@ -47,7 +47,7 @@ enum BridgeCatalog {
         /// already carries live status).
         var qualifier: String? {
             if connectable && !needsSetup { return "One tap" }
-            let keyless: Set<String> = ["Wallet", "Tokens", "Peer", "Reddit", "YouTube",
+            let keyless: Set<String> = ["Wallet", "Tokens", "Peer", "0xBow Privacy Pools", "Reddit", "YouTube",
                 "RSS", "Substack", "Podcasts", "Pinterest", "Farcaster",
                 "Bluesky", "OpenSea", "Kalshi", "Shopify", "GeckoTerminal", "Deals",
                 "Open Food Facts", "Stocktwits"]
@@ -79,6 +79,13 @@ enum BridgeCatalog {
         Offer(name: "Wallet",      tagline: "Track any wallet's activity",          group: "Wallet",    connectable: true,
               summary: "Paste a wallet address — 0x…, an ENS name, or a .sol name — and its onchain activity (received, sent, swapped, tokens in and out) lands in your feed like anything else, across Ethereum, Base, Arbitrum, Optimism, Polygon and Solana. It also watches over the wallet itself: new token approvals (through Permit2 too), a wallet that starts delegating its control, and transfers that look like address-poisoning scams all surface as things worth a look — alongside what you've paid in gas, your Aave and Morpho positions, and any Safe signatures that need attention. Read-only, public data, no server. Watching an address can never trade or move funds.",
               needsSetup: true),
+        // Wallet group by ruling (user, 2026-07-21, prd §162). Privacy Pools
+        // rides the watched wallets the Peer way: no account exists to
+        // connect — deposits come from the person's own wallet, so the seat
+        // is a switch over the watched list.
+        Offer(name: "0xBow Privacy Pools", tagline: "Know when your deposit clears",       group: "Wallet",    connectable: true,
+              summary: "Privacy Pools (by 0xBow) lets you move crypto with privacy and a compliance screen: you deposit, their screening reviews it, and once cleared you can withdraw to a fresh address privately. Connect and your deposits land in your feed — and Casberi tells you the moment a deposit clears review and is ready to withdraw privately, or if it's declined. That's the wait people otherwise keep checking a website for. Read from Ethereum's public chain and 0xBow's public API for the wallets you already watch. No account, no key, read-only: nothing here deposits, withdraws, or moves funds.",
+              needsSetup: true, added: day(2026, 7, 21)),
         Offer(name: "Gmail",       tagline: "Your inbox, findable",                  group: "Mail",      connectable: true,
               summary: "Your recent mail becomes findable things. Connects over IMAP with a Google app password — your real password is never shared, and it's read-only. Needs 2-Step Verification on your Google account.",
               needsSetup: true),

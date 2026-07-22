@@ -54,6 +54,8 @@ extension DS {
         case "safari":              return Color.fixed("#1d9bf6")
         case "wallet":              return Color.fixed("#2461ff")
         case "peer":                return Color.fixed("#4b47f6")   // an indigo in their family — approximate; re-sample when bundling the official mark
+        case "privacy pools", "0xbow privacy pools":
+                                    return Color.fixed("#ffffff")   // 0xBow's mark is black on white (bundled) — the white field is the identity, like ChatGPT's; zero saturation means washHue nils, so the page stays pure ink on purpose
         case "kalshi":              return Color.fixed("#4fae7b")   // their green (matches the bundled logo)
         case "opensea":             return Color.fixed("#2081e2")   // OpenSea's marine blue
         case "geckoterminal":       return Color.fixed("#7556f6")   // the gecko's purple (sampled from the bundled icon)

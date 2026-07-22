@@ -142,6 +142,7 @@ enum BridgeGlyph {
         case "spotify":   return "music.note.list"
         case "wallet":    return "wallet.bifold"
         case "peer":      return "arrow.left.arrow.right"
+        case "privacy pools", "0xbow privacy pools": return "shield.lefthalf.filled"
         case "kalshi":    return "percent"
         case "opensea":   return "sailboat.fill"
         case "geckoterminal": return "flame.fill"

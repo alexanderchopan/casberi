@@ -385,6 +385,15 @@ enum WalletIngest {
                                               addresses: evmAddresses,
                                               existing: existing)
         added += peerAdded ?? 0
+        // Privacy Pools rides the same pass when that seat is on (prd §162) —
+        // one filtered Entrypoint-log read per wallet on mainnet, landing
+        // deposits, plus the ASP status poll that lands "your deposit
+        // cleared" alerts. Inside the running guard like everything above;
+        // no-ops unless connected.
+        let privacyPoolsAdded = await PrivacyPoolsBridge.sync(context: context,
+                                                              addresses: evmAddresses,
+                                                              existing: existing)
+        added += privacyPoolsAdded ?? 0
         // …and the Solana arm (prd §86), which lands its own things off its own
         // two calls. Inside the running guard like everything above.
         let solana = await solanaSync(context: context, addresses: solanaOnly(addresses),
@@ -441,7 +450,8 @@ enum WalletIngest {
         // this, a partial Alchemy outage could paint "couldn't reach" over
         // approvals that just landed).
         let reached = reachedAny || solana.reached || approvalsAdded > 0
-            || (peerAdded ?? 0) > 0 || delegationAdded > 0 || defiAdded > 0 || safeAdded > 0
+            || (peerAdded ?? 0) > 0 || (privacyPoolsAdded ?? 0) > 0
+            || delegationAdded > 0 || defiAdded > 0 || safeAdded > 0
             || morphoRiskAdded > 0 || (morphoActivityAdded ?? 0) > 0
             || (evmAddresses.isEmpty && heldPriced != nil)
         return reached ? added : nil
@@ -475,10 +485,21 @@ enum WalletIngest {
         guard !sent.hash.isEmpty else { return nil }
         let router = ((sent.t["to"] as? String) ?? (received.t["from"] as? String))?.lowercased()
         let venue = router.flatMap { names[$0] }
-        let out = sent.value > 0 ? "\(format(sent.value)) \(sent.asset)" : sent.asset
-        let inn = received.value > 0 ? "\(format(received.value)) \(received.asset)" : received.asset
+        let sentAmount = sent.value > 0 ? format(sent.value) : ""
+        let recvAmount = received.value > 0 ? format(received.value) : ""
+        // A meeting the SHAPE explains better than "swapped" does (2026-07-21):
+        // a wrap and a stake both arrive here as a send+receive of two different
+        // assets, and both used to render as trades — "Swapped 0.5 ETH → 0.5
+        // WETH on WETH" for the wrap especially. nil (the common case: a real
+        // trade, or any venue the table doesn't know) keeps the sentence below.
+        let decoded = WalletVerbs.pairVerb(counterparty: router,
+                                           sentAsset: sent.asset, sentAmount: sentAmount,
+                                           receivedAsset: received.asset, receivedAmount: recvAmount,
+                                           nativeSymbol: sent.chain.symbol)
+        let out = sentAmount.isEmpty ? sent.asset : "\(sentAmount) \(sent.asset)"
+        let inn = recvAmount.isEmpty ? received.asset : "\(recvAmount) \(received.asset)"
         let head = "Swapped \(out) → \(inn)"
-        let title = venue.map { "\(head) on \($0)" } ?? head
+        let title = decoded?.title ?? venue.map { "\(head) on \($0)" } ?? head
         let when = IngestSupport.isoDate((sent.t["metadata"] as? [String: Any])?["blockTimestamp"])
         let thing = Thing(
             kind: .transaction,
@@ -496,7 +517,11 @@ enum WalletIngest {
         // (2026-07-21) parses its two leg amounts straight off this title's
         // "out → in" clause instead.
         thing.counterpartyAddress = router
-        thing.transferCounterparty = venue
+        // A decoded verb owns its own clause — which for a wrap is NO clause, so
+        // the stored name has to go nil with it rather than fall back to the
+        // router's name and leave the stage saying "WETH" over a row that
+        // doesn't. Only an undecoded swap uses the router name.
+        thing.transferCounterparty = decoded == nil ? venue : decoded?.venueName
         return thing
     }
 
@@ -818,6 +843,17 @@ enum WalletIngest {
             let to = received ? myLabel : otherLabel
             let head = amount.isEmpty ? "Moved \(asset)" : "Moved \(amount) \(asset)"
             title = "\(head) · \(from) → \(to)"
+        } else if let minted = WalletVerbs.voidVerb(
+            received: received, counterparty: cp,
+            category: (t["category"] as? String) ?? "",
+            asset: asset, amount: amount,
+            tokenID: WalletVerbs.decimalTokenID(t["tokenId"] ?? t["erc721TokenId"])) {
+            // Minted or burned — the other side is the void, which no table is
+            // needed to recognise (2026-07-21). "Received CryptoPunks from
+            // 0x0000…" was never the story; "Minted CryptoPunks #402" is. No
+            // direction/amount fields: a mint has no counterparty to rename and
+            // no side to face, so it earns no TransferStage.
+            title = minted
         } else {
             let verb = received ? "Received" : "Sent"
             var t2 = amount.isEmpty ? "\(verb) \(asset)" : "\(verb) \(amount) \(asset)"
@@ -843,7 +879,11 @@ enum WalletIngest {
             sourceRef: ref
         )
         thing.walletAddress = address
-        thing.counterpartyAddress = cp
+        // The void is not an address you can meet again, so it isn't one worth
+        // offering to name — storing it would put a live "name this address"
+        // disc on every mint for a counterparty that can never mean anything
+        // (honesty rule: no dead controls).
+        thing.counterpartyAddress = WalletVerbs.isVoid(cp) ? nil : cp
         thing.transferDirection = direction
         thing.transferAmount = amountText
         thing.transferCounterparty = counterpartyName
