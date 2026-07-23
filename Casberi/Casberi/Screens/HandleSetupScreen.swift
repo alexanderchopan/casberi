@@ -456,7 +456,7 @@ struct HandleSetupScreen: View {
                 showHomeHint = false
                 FeedFilter.shared.source = bridge.rawValue
                 FeedFilter.shared.tag = "All"
-                HomeRoute.shared.push = nil
+                HomeRoute.shared.path = []
                 DSHaptic.tap()
             } label: {
                 HStack(spacing: DS.Space.s2) {

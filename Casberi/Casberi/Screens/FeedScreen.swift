@@ -481,7 +481,7 @@ struct FeedScreen: View {
             // screens and sheets back to root (the old per-tab pop habit).
             .onChange(of: chrome.popHome) {
                 sheetThing = nil
-                HomeRoute.shared.bridgePush = nil
+                HomeRoute.shared.path = []
                 confirming = nil
             }
     }
@@ -490,7 +490,7 @@ struct FeedScreen: View {
     /// live status. Tapping opens the app's control panel through the router —
     /// the dedicated screen when the bridge has one (Tokens' watchlist,
     /// Wallet's addresses), the generic detail page otherwise. It rides
-    /// `HomeRoute.shared.bridgePush` — the same channel a Wallet row already
+    /// `HomeRoute.shared.pushBridge` — the same channel a Wallet row already
     /// uses. (2026-07-11:
     /// this hardcoded `.detail`, so Tokens' Feed header opened a page with
     /// no way to watch a second token.)
@@ -508,7 +508,7 @@ struct FeedScreen: View {
         HStack(spacing: DS.Space.s2) {
         Button {
             DSHaptic.selection()
-            HomeRoute.shared.bridgePush = BridgeRouter.destination(forID: bridge.id)
+            HomeRoute.shared.pushBridge(BridgeRouter.destination(forID: bridge.id))
         } label: {
             HStack(spacing: DS.Space.s2) {
                 // A glyph, not a bare dot: the three states were one shape
@@ -1596,7 +1596,7 @@ struct FeedScreen: View {
         if total > Self.walletPreviewRows {
             Section {
                 WalletSeeAllRow(count: total) {
-                    HomeRoute.shared.bridgePush = .walletHistory(scope: selectedWallet)
+                    HomeRoute.shared.pushBridge(.walletHistory(scope: selectedWallet))
                 }
                 .listRowSeparator(.hidden)
                 // On the page itself, not in a card — a quiet continuation
@@ -1719,7 +1719,7 @@ struct FeedScreen: View {
                                         portfolio?.holders(forSymbol: route.symbol ?? "") ?? [])
                                 }
                             } else if name == "@wallet" {
-                                HomeRoute.shared.bridgePush = .wallet
+                                HomeRoute.shared.pushBridge(.wallet)
                             }
                         }
                     // The map says WHAT you hold; this says how much of it is
@@ -2438,7 +2438,7 @@ struct FeedScreen: View {
     /// which had nothing more than an explorer link to show (ruling 2026-07-09).
     private func openThing(_ thing: Thing) {
         if thing.source == "Wallet" {
-            HomeRoute.shared.bridgePush = .wallet
+            HomeRoute.shared.pushBridge(.wallet)
         } else {
             sheetThing = thing
         }

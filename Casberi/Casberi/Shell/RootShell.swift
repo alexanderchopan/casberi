@@ -531,7 +531,7 @@ struct RootShell: View {
             // This onAppear runs after the whole tree mounts — same proven
             // timing as the `-deeplink` hook above.
             if UserDefaults.standard.bool(forKey: "openSettings") {
-                HomeRoute.shared.push = .settings
+                HomeRoute.shared.present(.settings)
             }
             // `-openAppsDelay <s>` pushes the store after a delay — records
             // "tapping the grid door" (the zoom plays on the real push path).
@@ -539,7 +539,7 @@ struct RootShell: View {
             if appsDelay > 0 {
                 Task { @MainActor in
                     try? await Task.sleep(for: .seconds(appsDelay))
-                    withAnimation(DS.Motion.standard) { HomeRoute.shared.push = .apps }
+                    withAnimation(DS.Motion.standard) { HomeRoute.shared.present(.apps) }
                 }
             }
             // `-berryPulse <s>` bumps the refresh pulse after a delay — plays
@@ -743,7 +743,7 @@ struct RootShell: View {
                 predicate: #Predicate { $0.id == id }
             ))) ?? []
             if let thing = all.first {
-                HomeRoute.shared.push = nil   // land on the record, not a stale store push
+                HomeRoute.shared.path = []   // land on the record, not a stale store push
                 FeedFilter.shared.source = "All"
                 deepLinkThing = thing
             }
@@ -797,7 +797,7 @@ struct RootShell: View {
         // A deep link lands you AT a destination, not back in a store the route
         // singleton still holds from an earlier visit. apps/settings re-set it
         // below.
-        HomeRoute.shared.push = nil
+        HomeRoute.shared.path = []
         switch url.host() {
         // casberi://home is back-compat (the app was a Home tab, then a
         // board) — it now lands on the All feed, ruling 11.
@@ -889,7 +889,7 @@ struct RootShell: View {
                 // literally named "@token:…"; an unknown sentinel does
                 // nothing.
                 guard !name.hasPrefix("@") else { return }
-                HomeRoute.shared.push = nil
+                HomeRoute.shared.path = []
                 composerOpen = false
                 FeedFilter.shared.source = "All"
                 HomeRoute.shared.openTag = name
@@ -906,7 +906,7 @@ struct RootShell: View {
         // Every destination here is content, not a door — drop any Apps/Settings
         // the singleton still holds, else asking to open a tag while in the
         // store re-presents the store.
-        HomeRoute.shared.push = nil
+        HomeRoute.shared.path = []
         composerOpen = false
         switch intent {
         case .tag(let name):
@@ -1390,7 +1390,9 @@ struct RootShell: View {
                     lastAnswerHits = capped
                     if let prose = await streamSynthesis(query, over: candidates(capped),
                                                          onProseDoc: onProseDoc) {
-                        return proseDoc(prose)
+                        // The prose, with its receipts — the things the
+                        // publisher/source synthesis was drawn from (§175).
+                        return appendingGrounding(capped, title: "Drawn from", to: proseDoc(prose))
                     }
                 }
             }
@@ -1429,7 +1431,12 @@ struct RootShell: View {
             }
             if let prose = await streamSynthesis(query, over: candidates(pulse.sample),
                                                  onProseDoc: onProseDoc) {
-                return appendingInsight(await tokenLine(), walletLine, to: proseDoc(prose))
+                // Prose, then its away/wallet addenda, then the receipts it
+                // was drawn from — the status synthesis success now shows its
+                // grounding too, like the counted `pulseDoc` fallback already
+                // does (§175).
+                let doc = appendingInsight(await tokenLine(), walletLine, to: proseDoc(prose))
+                return appendingGrounding(pulse.sample, title: "Drawn from", to: doc)
             }
             return appendingInsight(await tokenLine(), walletLine, to: pulseDoc(pulse))
         }
@@ -1488,7 +1495,9 @@ struct RootShell: View {
                                                     onProseDoc: onProseDoc) else {
                 return synthesisEmptyDoc(hits)
             }
-            return proseDoc(prose)
+            // The prose, with the retrieved things it was drawn from as
+            // tappable receipts (§175).
+            return appendingGrounding(hits, title: "Drawn from", to: proseDoc(prose))
         }
     }
 
@@ -1651,13 +1660,42 @@ struct RootShell: View {
     /// The grounding list as doc lines — `res = Widget(title, count, rows)`
     /// plus one Row per real thing. Every answer doc that paints things emits
     /// its rows here, so the Row grammar and its escaping live in one place.
-    private func groundingLines(_ things: [Thing], title: String) -> [String] {
-        let ids = things.indices.map { "r\($0)" }
-        var lines = ["res = Widget(\"\(title)\", \"\(things.count)\", [\(ids.joined(separator: ", "))])"]
+    ///
+    /// Each Row now carries its thing's id (arg 4, 2026-07-22) — so a grounding
+    /// row OPENS on tap, pushing its thing-view onto the agent's Stack (ruling
+    /// 8: tapping content inside an answer drills in, never ejects). Before
+    /// this the id was omitted and every "Found"/grounding row was inert; the
+    /// id was already the one thing the renderer's tap needed (`GenRow` reads
+    /// `el.str(4)`). `widgetRef`/`rowPrefix` let a second grounding list live
+    /// in the same doc without colliding with the default `res`/`r0` refs
+    /// (used by `appendingGrounding`'s synthesis receipts).
+    private func groundingLines(_ things: [Thing], title: String,
+                                widgetRef: String = "res", rowPrefix: String = "r") -> [String] {
+        let ids = things.indices.map { "\(rowPrefix)\($0)" }
+        var lines = ["\(widgetRef) = Widget(\"\(genSafe(title))\", \"\(things.count)\", [\(ids.joined(separator: ", "))])"]
         for (i, t) in things.enumerated() {
-            lines.append("r\(i) = Row(\"\(genSafe(t.title))\", \"\(t.kind.typeTag)\", \"\(t.source)\", \"\(shortTime(t.capturedAt))\")")
+            lines.append("\(rowPrefix)\(i) = Row(\"\(genSafe(t.title))\", \"\(t.kind.typeTag)\", \"\(t.source)\", \"\(shortTime(t.capturedAt))\", \"\(t.id.uuidString)\")")
         }
         return lines
+    }
+
+    /// Appends a "Drawn from" receipt Widget to a finished answer doc — the
+    /// things a SYNTHESIS was written from, shown under the prose so every
+    /// model answer is verifiable at a glance and tappable into the Stack
+    /// (2026-07-22). Splices a `grd` ref into the root's list by the same
+    /// suffix surgery `appendingInsight` uses, and its rows carry a distinct
+    /// `g` prefix so they never collide with a doc's own `res`/`r0` rows.
+    /// A doc with no root, or no things to show, is returned untouched — the
+    /// prose stands alone rather than wearing an empty footer.
+    private func appendingGrounding(_ things: [Thing], title: String, to doc: [String]) -> [String] {
+        let shown = Array(things.prefix(4))
+        guard !shown.isEmpty,
+              let i = doc.firstIndex(where: { $0.hasPrefix("root = Stack([") }),
+              doc[i].hasSuffix("])")
+        else { return doc }
+        var out = doc
+        out[i] = String(out[i].dropLast(2)) + ", grd])"
+        return out + groundingLines(shown, title: title, widgetRef: "grd", rowPrefix: "g")
     }
 
     /// A synthesis that came back empty — the model refused (a title tripped a

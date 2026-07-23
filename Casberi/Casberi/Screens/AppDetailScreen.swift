@@ -108,18 +108,18 @@ struct AppDetailScreen: View {
                 // A broken setup bridge (mail/wallet/token) is fixed by redoing
                 // its setup, not the one-tap connect path.
                 if offer.needsSetup {
-                    HomeRoute.shared.bridgePush = BridgeRouter.destination(forOffer: offer.name)
+                    HomeRoute.shared.pushBridge(BridgeRouter.destination(forOffer: offer.name))
                 } else {
                     doConnect()
                 }
             }
         } else if connected {
             VerbCapsule(verb: .open) {
-                if let id = bridge?.id { HomeRoute.shared.bridgePush = BridgeRouter.destination(forID: id) }
+                if let id = bridge?.id { HomeRoute.shared.pushBridge(BridgeRouter.destination(forID: id)) }
             }
         } else if offer.connectable {
             if offer.needsSetup {
-                VerbCapsule(verb: .connect) { HomeRoute.shared.bridgePush = BridgeRouter.destination(forOffer: offer.name) }
+                VerbCapsule(verb: .connect) { HomeRoute.shared.pushBridge(BridgeRouter.destination(forOffer: offer.name)) }
             } else {
                 VerbCapsule(verb: .connect) {
                     doConnect()

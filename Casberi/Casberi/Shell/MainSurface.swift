@@ -129,7 +129,7 @@ struct MainSurface: View {
     }
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $route.path) {
             // The feeds are one pager (2026-07-16): a chip tap and a swipe are
             // the same move, because selection binds to the SAME value the chips
             // write — so the strip, the wash, and every deep link
@@ -226,18 +226,14 @@ struct MainSurface: View {
                 NSLog("[Casberi] chipLabels: %@", chipLabels.joined(separator: ", "))
                 #endif
                 // A door push that raced launch — casberi://settings arriving
-                // before the first frame — was set before this stack
-                // registered its navigationDestination, and SwiftUI drops
-                // such a push: the app lands on Home with the route pointing
-                // at a room that never opened (audit 2026-07-13; .settings
-                // dropped on early sets while post-mount sets always land).
-                // Re-land it now that the stack is up: one turn later, freshly
-                // stamped so the destination sees a value it has never held.
-                // (Re-stamping is the whole mechanism — routing it through
-                // `nil` first is what broke the catalogue door, see `Push`.)
-                if let early = route.push {
-                    Task { @MainActor in route.push = early.renewed }
-                }
+                // before the first frame — used to get silently dropped by
+                // the old item-based `navigationDestination(item:)` (audit
+                // 2026-07-13: it only fires on a nil→value EDGE, and an early
+                // set could land before the modifier was registered to see
+                // it). `route.path` is read directly on every body
+                // evaluation instead, so a push already sitting in it at
+                // mount is rendered on the first frame with no re-landing
+                // dance needed.
             }
             .onChange(of: feedThings.count) { _, _ in
                 let ids = Set(feedThings.map(\.id))
@@ -328,23 +324,27 @@ struct MainSurface: View {
             // outright. First `.toolbar(.hidden, for:)` in this codebase —
             // there was nothing to hide FROM before this move.
             .toolbar(.hidden, for: .navigationBar)
-            .navigationDestination(item: $route.push) { push in
-                switch push.door {
+            // One ordered path (see `HomeRoute.Node`) — Apps/Settings and
+            // every bridge screen (Feed's Manage, an Apps tile's capsule, a
+            // product page's Connect/Open) all push through this single
+            // registration, so a bridge screen pushed from on top of Apps
+            // genuinely nests under it and the native back chevron always
+            // pops exactly one real frame.
+            .navigationDestination(for: HomeRoute.Node.self) { node in
+                switch node {
                 case .apps:
                     AppsScreen()
                         .navigationTransition(.zoom(sourceID: "appsDoor", in: doorNS))
                 case .settings:
                     SettingsScreen()
                         .navigationTransition(.zoom(sourceID: "settingsDoor", in: doorNS))
+                case .bridge(let dest):
+                    BridgeDestinationView(destination: dest)
+                case .appDetail(let name):
+                    if let offer = BridgeCatalog.offers.first(where: { $0.name == name }) {
+                        AppDetailScreen(offer: offer)
+                    }
                 }
-            }
-            // The ONE bridge-screen registration for the whole stack (see
-            // `HomeRoute.bridgePush`) — Feed's Manage, an Apps tile's
-            // capsule, and a product page's Connect/Open all push through
-            // this single binding regardless of how deep they sit, so the
-            // pushed screen always gets a correct back chevron.
-            .navigationDestination(item: $route.bridgePush) { dest in
-                BridgeDestinationView(destination: dest)
             }
         }
         .tint(DS.tint)

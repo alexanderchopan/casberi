@@ -17,9 +17,6 @@ struct AppsScreen: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var pairing = false
-    /// The card body's door — a tap (not a swipe) pushes this offer's
-    /// product page via `navigationDestination`.
-    @State private var openOffer: String?
     @State private var query = ""
     /// The connect payoff (delight): every Connect on this screen — story
     /// card OR shelf capsule — ends the same way the product page's does,
@@ -217,14 +214,14 @@ struct AppsScreen: View {
                         if !cards.isEmpty {
                             DiscoverDeck(
                                 stories: cards,
-                                onOpen: { openOffer = $0.name },
+                                onOpen: { HomeRoute.shared.pushAppDetail($0.name) },
                                 onConnect: { offer in
                                     // Setup bridges (paste an address/token/
                                     // handle) route to their setup screen;
                                     // only the system-permission bridges
                                     // connect in one tap — the chart's split.
                                     if offer.needsSetup {
-                                        HomeRoute.shared.bridgePush = BridgeRouter.destination(forOffer: offer.name)
+                                        HomeRoute.shared.pushBridge(BridgeRouter.destination(forOffer: offer.name))
                                     } else {
                                         attemptConnect(offer)
                                     }
@@ -307,11 +304,6 @@ struct AppsScreen: View {
         .dsSoftTopEdge()
         .navigationTitle("Apps")
         .navigationBarTitleDisplayMode(.large)
-        .navigationDestination(item: $openOffer) { name in
-            if let offer = BridgeCatalog.offers.first(where: { $0.name == name }) {
-                AppDetailScreen(offer: offer)
-            }
-        }
         .sheet(isPresented: $pairing) { PairClientSheet() }
         #if DEBUG
         .navigationDestination(item: $probe) { p in
@@ -333,7 +325,7 @@ struct AppsScreen: View {
             if let name = HomeRoute.shared.openOffer {
                 HomeRoute.shared.openOffer = nil
                 if BridgeCatalog.offers.contains(where: { $0.name == name }) {
-                    openOffer = name
+                    HomeRoute.shared.pushAppDetail(name)
                 }
             }
             #if DEBUG
@@ -343,7 +335,7 @@ struct AppsScreen: View {
             // `-openSetup "<Offer name>"` pushes a bridge's setup screen
             // directly — the token/handle field screens have no deep link.
             if let name = UserDefaults.standard.string(forKey: "openSetup") {
-                HomeRoute.shared.bridgePush = BridgeRouter.destination(forOffer: name)
+                HomeRoute.shared.pushBridge(BridgeRouter.destination(forOffer: name))
             }
             #endif
         }
@@ -991,14 +983,14 @@ struct AppsScreen: View {
     private func appRow(_ entry: Ranked) -> some View {
         let soon = entry.tier == 3
         let isConnected = entry.tier == 0 || entry.tier == 2
+        let destination: HomeRoute.Node = {
+            if isConnected, let bridge = entry.bridge {
+                return .bridge(BridgeRouter.destination(forID: bridge.id))
+            }
+            return .appDetail(entry.offer.name)
+        }()
         return HStack(spacing: DS.Space.s3) {
-            NavigationLink {
-                if isConnected, let bridge = entry.bridge {
-                    BridgeDestinationView(destination: BridgeRouter.destination(forID: bridge.id))
-                } else {
-                    AppDetailScreen(offer: entry.offer)
-                }
-            } label: {
+            NavigationLink(value: destination) {
                 HStack(spacing: DS.Space.s3) {
                     BridgeIcon(name: entry.offer.name, size: 44)
                         .saturation(soon ? 0 : 1)
@@ -1061,7 +1053,7 @@ struct AppsScreen: View {
                 enabled: entry.tier == 1 && StorePreview.doc(for: entry.offer.name) != nil,
                 onConnect: {
                     if entry.offer.needsSetup {
-                        HomeRoute.shared.bridgePush = BridgeRouter.destination(forOffer: entry.offer.name)
+                        HomeRoute.shared.pushBridge(BridgeRouter.destination(forOffer: entry.offer.name))
                     } else {
                         attemptConnect(entry.offer)
                     }
@@ -1091,13 +1083,13 @@ struct AppsScreen: View {
             // Broken connection — Fix opens management, where Reconnect lives.
             if let bridge = entry.bridge {
                 VerbCapsule(verb: .fix) {
-                    HomeRoute.shared.bridgePush = BridgeRouter.destination(forID: bridge.id)
+                    HomeRoute.shared.pushBridge(BridgeRouter.destination(forID: bridge.id))
                 }
             }
         case 2:
             if let bridge = entry.bridge {
                 VerbCapsule(verb: .open) {
-                    HomeRoute.shared.bridgePush = BridgeRouter.destination(forID: bridge.id)
+                    HomeRoute.shared.pushBridge(BridgeRouter.destination(forID: bridge.id))
                 }
             }
         case 1:
@@ -1105,7 +1097,7 @@ struct AppsScreen: View {
                 // Setup bridges collect input first — Connect opens their
                 // screen; the connect happens there, with proof.
                 VerbCapsule(verb: .connect) {
-                    HomeRoute.shared.bridgePush = BridgeRouter.destination(forOffer: entry.offer.name)
+                    HomeRoute.shared.pushBridge(BridgeRouter.destination(forOffer: entry.offer.name))
                 }
             } else {
                 VerbCapsule(verb: .connect) { attemptConnect(entry.offer) }
