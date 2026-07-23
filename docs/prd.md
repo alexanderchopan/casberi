@@ -7287,3 +7287,60 @@ search slab, all four names, and the naming paragraph. Build green.
 Housekeeping: this pass also resolved a THIRD prd numbering collision — two
 sections had been written as §187 by concurrent sessions. The brief-landing
 section (first in file) keeps 187; the wallet Connect-button fix became 188.
+
+## 190. The slab, generalized — one shape per control, one signature shape per page type (user: "how would you make the rest of the app catalogue manage pages stupid simple like you have here, and perhaps different types of pages have different shapes… I do not want to change any of the top shelf rows of avatars", 2026-07-23)
+
+§189 fixed one screen. This makes its rule the app's, across every manage page
+in the catalog — and answers the "different types have different shapes"
+instinct, which turned out to be right in a specific way.
+
+**The kit** (`Design/DSSlab.swift`, graduated from `WalletSlabs.swift`): one
+height (56), one radius (`DS.Radius.widget`), four controls —
+`DSSlabField` (input with its verb inside), `DSSlabButton` (the one filled
+block), `DSSlabDoor` (title · fact ›), and the new `DSSlabSwitch` — plus
+`DSSlabNote` for the screen's single sentence and a `dsSlabSection()` modifier
+so a slab stack can't drift from the Wallet's spacing.
+
+**The type grammar — each page type has ONE signature shape:**
+- **Watch-list pages** (Farcaster, Bluesky, Pinterest, Substack, Reddit,
+  YouTube, Podcasts, RSS, Tokens, Stocktwits, Shopify, Kalshi) → the FIELD
+  slab. Field, status, one sentence; then the page's own content rows.
+- **Connected managers** (11 keyed bridges + Steam, Mail, Twitch, Spotify,
+  Obsidian, Exchange) → the DOOR slab. One edit to `BridgeConnectedState`
+  reached all eighteen.
+- **Picker pages** (OpenSea, GeckoTerminal) → the SWITCH slab. Each chain's row
+  IS that screen's connect verb for one lane, so it earns a full block instead
+  of a line in a stacked toggle list inside a card.
+- **Seat pages** (Peer, Privacy Pools) → one switch slab and one sentence. When
+  no wallet is watched the prerequisite is a DOOR slab, since it navigates — a
+  disabled switch there would be the dead control the honesty rule forbids.
+
+**What is deliberately NOT a slab:** the shelves and rosters (the ruling kept
+them explicitly — "I do not want to change any of the top shelf rows of
+avatars"); a page's own content rows, which wear §184/§185's marks and are the
+person's data, not controls; the numbered steps of a pre-connect form (§186);
+and Disconnect, which stays the quiet centered red row — destructive sits
+outside the rhythm on purpose.
+
+**The companion rule did most of the work: one gray sentence per screen.** The
+"form feel" was never really the controls, it was two or three footer
+paragraphs stacked under them. Kalshi's 34-word field footer became "Public
+odds only — nothing here places a trade."; Stocktwits' 39-word one became
+"Read-only — nothing here trades or sees a portfolio."; Tokens', Shopify's,
+Farcaster's and the chain pickers' went the same way. Everything longer already
+lives on the catalog product page the person arrived from.
+
+Two smaller consequences, both deliberate: `BridgeFieldRow`'s fixed affixes
+("farcaster.xyz/" wrapped around the field) are gone — a slab holds one input,
+and an affix was a third shape inside the second one, so it folds into the
+placeholder, which reads the same and draws less. And the section headers
+("Add a username", "Chains", "Watch a market") went with the furniture: the
+placeholder says what to type and the verb says what happens.
+
+VERIFIED 2026-07-23 (iPhone 17 Pro sim): Farcaster renders field slab
+("@name, or /channel" · ADD), status, "Public posts only — no password,
+ever.", then the untouched roster and its topic rows. GeckoTerminal renders
+nine switch slabs, each a full block with live state, no card and no
+paragraph. Caught live and fixed in the same pass: the handle screens' verb
+still read "Add" beside neighbours reading "WATCH" and "FOLLOW" — the exact
+inconsistency this pass exists to remove. Build green.

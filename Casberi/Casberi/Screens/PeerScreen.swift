@@ -76,52 +76,31 @@ struct PeerScreen: View {
 
     private var connectSection: some View {
         Section {
-            if hasWallets {
-                // A switch, not an appearing checkmark — the row IS the
-                // connect verb (the OpenSea/GeckoTerminal ruling).
-                Toggle(isOn: Binding(
-                    get: { connected },
-                    set: { on in
-                        guard on != connected else { return }
-                        toggle(on)
+            VStack(alignment: .leading, spacing: DS.Space.s2) {
+                if hasWallets {
+                    // The seat as one SWITCH SLAB (prd §190) — the row is the
+                    // connect verb, so it gets the full block.
+                    DSSlabSwitch(title: String(localized: "Land my Peer trades"),
+                                 isOn: Binding(
+                        get: { connected },
+                        set: { on in
+                            guard on != connected else { return }
+                            toggle(on)
+                        }
+                    ))
+                } else {
+                    // No wallet watched = nothing Peer settles into that this
+                    // app can see. A disabled switch would be a dead control
+                    // (honesty rule) — the live verb is the prerequisite, and
+                    // a thing that navigates wears the door slab.
+                    DSSlabDoor(title: "Watch a wallet first") {
+                        HomeRoute.shared.pushBridge(.wallet)
                     }
-                )) {
-                    Text("Land my Peer trades")
-                        .dsText(.body17).foregroundStyle(DS.textPrimary)
                 }
-                .tint(DS.tint)
-                .padding(.vertical, DS.Space.s1)
-                .dsListCardRow()
-            } else {
-                // No wallet watched = nothing Peer settles into that this app
-                // can see. A disabled switch here would be a dead control
-                // (honesty rule) — the live verb is the prerequisite itself.
-                NavigationLink {
-                    BridgeDestinationView(destination: .wallet)
-                } label: {
-                    Text("Watch a wallet first")
-                        .dsText(.body17).foregroundStyle(DS.textPrimary)
-                }
-                .padding(.vertical, DS.Space.s1)
-                .dsListCardRow()
+                DSSlabNote(text: "Rides your watched wallets — read-only, never trades.")
             }
-        } header: {
-            HStack {
-                Text(hasWallets ? "Your wallets" : "Before connecting")
-                    .dsText(.label12).foregroundStyle(DS.textTertiary)
-                Spacer()
-                if syncing {
-                    ProgressView().controlSize(.small)
-                } else if let lastResult {
-                    Text(lastResult).dsText(.label12).foregroundStyle(DS.textTertiary)
-                }
-            }
-        } footer: {
-            Text(hasWallets
-                 ? "Peer trades settle into your own wallet onchain. Switch this on and each fill lands in your feed as it settles — which token, how much, and the payment app that paid for it."
-                 : "Peer trades settle into your own wallet, so Casberi reads them off the wallets you watch. Watch the wallet you use with Peer, then come back here.")
-                .dsText(.callout15).foregroundStyle(DS.textTertiary)
         }
+        .dsSlabSection()
     }
 
     private var footerSection: some View {

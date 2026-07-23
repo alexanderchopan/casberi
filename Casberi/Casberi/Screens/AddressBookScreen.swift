@@ -32,7 +32,7 @@ struct AddressBookScreen: View {
     var body: some View {
         List {
             Section {
-                WalletSlabField(placeholder: String(localized: "Search names or addresses"),
+                DSSlabField(placeholder: String(localized: "Search names or addresses"),
                                 text: $query,
                                 actionLabel: String(localized: "NAME"),
                                 focus: $searchFocused) {

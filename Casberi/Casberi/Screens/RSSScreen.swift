@@ -57,16 +57,17 @@ struct RSSScreen: View {
 
     private var omniSection: some View {
         Section {
-            BridgeFieldRow(placeholder: "Site or feed URL", text: $newFeed,
-                           buttonLabel: "Follow", keyboard: .URL,
-                           focus: $fieldFocused, action: addFeed)
-            BridgeSyncStatusRows(syncing: syncing,
-                                 syncingLine: String(localized: "Reading your feeds…"),
-                                 result: lastResult, resultIsError: resultIsError)
-        } footer: {
-            Text("A site's own address works too — Casberi finds its feed.")
-                .dsText(.callout15).foregroundStyle(DS.textTertiary)
+            VStack(alignment: .leading, spacing: DS.Space.s2) {
+                DSSlabField(placeholder: String(localized: "Site or feed URL"),
+                            text: $newFeed, actionLabel: String(localized: "FOLLOW"),
+                            keyboard: .URL, focus: $fieldFocused, action: addFeed)
+                BridgeSyncStatusRows(syncing: syncing,
+                                     syncingLine: String(localized: "Reading your feeds…"),
+                                     result: lastResult, resultIsError: resultIsError)
+                DSSlabNote(text: "A site's own address works too — Casberi finds its feed.")
+            }
         }
+        .dsSlabSection()
     }
 
     // MARK: - The ledger

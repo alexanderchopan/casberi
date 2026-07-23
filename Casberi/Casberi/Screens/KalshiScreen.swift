@@ -82,9 +82,9 @@ struct KalshiScreen: View {
         // separator). Design law: no hairlines, zero exceptions.
         Section {
             VStack(alignment: .leading, spacing: DS.Space.s2) {
-                BridgeFieldRow(placeholder: "Team, player, or event",
-                               text: $queryField,
-                               buttonLabel: "Watch", action: watch)
+                DSSlabField(placeholder: String(localized: "Team, player, or event"),
+                            text: $queryField, actionLabel: String(localized: "WATCH"),
+                            action: watch)
                 ForEach(displayHits) { market in
                     BridgeSearchResultRow(
                         imageURL: nil, fallbackIcon: "Kalshi",
@@ -95,15 +95,10 @@ struct KalshiScreen: View {
                 BridgeSyncStatusRows(syncing: working,
                                      syncingLine: String(localized: "Finding the market…"),
                                      result: result, resultIsError: resultIsError)
+                DSSlabNote(text: "Public odds only — nothing here places a trade.")
             }
-            .dsListCardRow()
-        } header: {
-            Text("Watch a market").dsText(.label12)
-                .foregroundStyle(DS.textTertiary)
-        } footer: {
-            Text("The busiest open markets, live — type a team, player, or event to narrow them. A watched market's live odds land in your feed.")
-                .dsText(.callout15).foregroundStyle(DS.textTertiary)
         }
+        .dsSlabSection()
     }
 
     /// Same swipe grammar as every watchlist screen (Tokens, Wallet):

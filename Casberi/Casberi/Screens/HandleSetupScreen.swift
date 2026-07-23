@@ -390,7 +390,6 @@ struct HandleSetupScreen: View {
                     }
                 ).listRowSeparator(.hidden)
             }
-            footerSection.listRowSeparator(.hidden)
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
@@ -656,16 +655,14 @@ struct HandleSetupScreen: View {
     /// Bluesky, feeds), or — on Farcaster, with a leading "/" — follow a
     /// channel by name. Replaces the old separate name/channel/feed fields.
     private var omniSection: some View {
-        // Field + hits + status in ONE list row (a VStack) — a headed Section
-        // of stacked rows leaks a hairline between them that row-level
-        // .listRowSeparator(.hidden) won't suppress. Design law: no
-        // hairlines, zero exceptions.
+        // The slab, its hits, its status, and the screen's ONE sentence (prd
+        // §190). The section header ("Add a username") went with the
+        // furniture: the field's own placeholder already says what to type,
+        // and the slab's verb says what happens.
         Section {
             VStack(alignment: .leading, spacing: DS.Space.s2) {
-                BridgeFieldRow(placeholder: bridge.placeholder, text: $query,
-                               buttonLabel: omniButtonLabel,
-                               prefix: bridge.fieldPrefix, suffix: bridge.fieldSuffix,
-                               action: omniSubmit)
+                DSSlabField(placeholder: fieldPlaceholder, text: $query,
+                            actionLabel: omniButtonLabel, action: omniSubmit)
                 ForEach(omniHits) { hit in
                     BridgeSearchResultRow(
                         imageURL: hit.imageURL, fallbackIcon: bridge.rawValue,
@@ -675,15 +672,35 @@ struct HandleSetupScreen: View {
                 BridgeSyncStatusRows(syncing: syncing,
                                      syncingLine: omniSyncingLine,
                                      result: result, resultIsError: resultIsError)
+                DSSlabNote(text: omniNote)
             }
-            .dsListCardRow()
-        } header: {
-            Text(bridge.supportsMultiple ? "Add \(anArticle) \(bridge.nameNoun)"
-                                         : "Your \(bridge.nameNoun)")
-                .dsText(.label12).foregroundStyle(DS.textTertiary)
-        } footer: {
-            Text(LocalizedStringKey(omniFooter))
-                .dsText(.callout15).foregroundStyle(DS.textTertiary)
+        }
+        .dsSlabSection()
+    }
+
+    /// The field's own words. `BridgeFieldRow`'s fixed affixes are gone with
+    /// it (prd §190) — a slab holds one input, and "farcaster.xyz/" wrapped
+    /// around a field was a third shape inside the second one. The affix
+    /// becomes part of the placeholder, which reads the same and draws less.
+    private var fieldPlaceholder: String {
+        if bridge == .farcaster { return String(localized: "@name, or /channel") }
+        if bridge == .bluesky { return String(localized: "Handle, or search a feed") }
+        if let prefix = bridge.fieldPrefix { return prefix + bridge.placeholder }
+        if let suffix = bridge.fieldSuffix { return bridge.placeholder + suffix }
+        return bridge.placeholder
+    }
+
+    /// The one sentence — the shortest true version of what the three
+    /// footers said. Everything longer moved to the catalog page the person
+    /// arrived from, which already carries this bridge's full promise.
+    private var omniNote: String {
+        switch bridge {
+        case .bluesky, .farcaster:
+            return String(localized: "Public posts only — no password, ever.")
+        case .pinterest:
+            return String(localized: "Public pins only — no password, ever.")
+        default:
+            return String(localized: "Read-only — new \(bridge.noun) land in your feed.")
         }
     }
 
@@ -724,10 +741,14 @@ struct HandleSetupScreen: View {
         return hits.map(OmniHit.person) + feedHits.map(OmniHit.feed)
     }
 
+    /// The slab's verb, in caps like every other field slab's (prd §190) —
+    /// caught live: this one still read "Add" beside a "WATCH" and a "FOLLOW"
+    /// on its neighbours, which is the same inconsistency the whole pass is
+    /// about.
     private var omniButtonLabel: String {
-        if bridge == .farcaster, query.hasPrefix("/") { return "Follow" }
-        if bridge.supportsMultiple { return "Add" }
-        return bridge.currentName.isEmpty ? "Connect" : "Update"
+        if bridge == .farcaster, query.hasPrefix("/") { return "FOLLOW" }
+        if bridge.supportsMultiple { return "ADD" }
+        return bridge.currentName.isEmpty ? "CONNECT" : "UPDATE"
     }
 
     private var omniSyncingLine: String {
@@ -735,33 +756,6 @@ struct HandleSetupScreen: View {
             return String(localized: "Finding the channel…")
         }
         return String(localized: "Fetching \(bridge.noun)…")
-    }
-
-    /// The bridge's own field footer, plus one sentence naming the "/"
-    /// route or the feed search — only where that route exists.
-    private var omniFooter: String {
-        switch bridge {
-        case .farcaster:
-            return bridge.fieldFooter + " A leading / follows a topic instead — /design, /base."
-        case .bluesky:
-            return bridge.fieldFooter + " Search also finds feeds — topic lanes someone curates."
-        default:
-            return bridge.fieldFooter
-        }
-    }
-
-    private var anArticle: String {
-        // By SOUND, not spelling — "a username" (yoo), like "a unicorn";
-        // "u" in the vowel set printed "Add an username" (caught 2026-07-14).
-        bridge.nameNoun.first.map { "aeio".contains($0) ? "an" : "a" } ?? "a"
-    }
-
-    private var footerSection: some View {
-        Section {
-            Text(LocalizedStringKey(bridge.footerLine))
-                .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-                .listRowBackground(Color.clear)
-        }
     }
 
     private func omniSubmit() {

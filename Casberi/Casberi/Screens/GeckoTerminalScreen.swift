@@ -76,15 +76,16 @@ struct GeckoTerminalScreen: View {
 
     // MARK: - Chains
 
+    /// Each chain is one SWITCH SLAB (prd §190). The row is this screen's
+    /// connect verb for that lane — flipping it starts a real watch — so it
+    /// gets a full block rather than a line in a stacked toggle list. The
+    /// section header and its paragraph went with the furniture; the sync
+    /// result rides the status row, the promise rides the one sentence.
     private var chainsSection: some View {
         Section {
-            // A switch, not an appearing checkmark — the row IS the connect
-            // verb here (the OpenSea ruling, mock review 2026-07-16). One list
-            // row holding every chain — separate rows leak a hairline that
-            // survives .listRowSeparator(.hidden). Design law: no hairlines.
-            VStack(spacing: 0) {
+            VStack(spacing: DS.Space.s2) {
                 ForEach(TrendingChain.allCases) { chain in
-                    Toggle(isOn: Binding(
+                    DSSlabSwitch(title: chain.display, isOn: Binding(
                         get: { gecko.isWatching(chain) },
                         // Guard on the committed value: a same-value commit
                         // must not invert the watch behind the switch.
@@ -92,29 +93,15 @@ struct GeckoTerminalScreen: View {
                             guard on != gecko.isWatching(chain) else { return }
                             toggle(chain)
                         }
-                    )) {
-                        Text(chain.display)
-                            .dsText(.body17).foregroundStyle(DS.textPrimary)
-                    }
-                    .tint(DS.tint)
-                    .padding(.vertical, DS.Space.s1)
+                    ))
                 }
+                BridgeSyncStatusRows(syncing: syncing,
+                                     syncingLine: String(localized: "Reading the chain…"),
+                                     result: lastResult, resultIsError: false)
+                DSSlabNote(text: "Switch a chain on and its top movers land. Read-only.")
             }
-            .dsListCardRow()
-        } header: {
-            HStack {
-                Text("Chains").dsText(.label12).foregroundStyle(DS.textTertiary)
-                Spacer()
-                if syncing {
-                    ProgressView().controlSize(.small)
-                } else if let lastResult {
-                    Text(lastResult).dsText(.label12).foregroundStyle(DS.textTertiary)
-                }
-            }
-        } footer: {
-            Text("Switch a chain on and watching starts — its current top movers land as links, newest first. Read-only.")
-                .dsText(.callout15).foregroundStyle(DS.textTertiary)
         }
+        .dsSlabSection()
     }
 
     private var footerSection: some View {

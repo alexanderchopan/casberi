@@ -103,16 +103,17 @@ struct ShopifyScreen: View {
     /// primary act, not an errand below a list.
     private var addSection: some View {
         Section {
-            BridgeFieldRow(placeholder: "Store web address", text: $newStore,
-                           buttonLabel: "Follow", keyboard: .URL,
-                           focus: $fieldFocused, action: addStore)
+            VStack(alignment: .leading, spacing: DS.Space.s2) {
+            DSSlabField(placeholder: String(localized: "Store web address"),
+                        text: $newStore, actionLabel: String(localized: "FOLLOW"),
+                        keyboard: .URL, focus: $fieldFocused, action: addStore)
             BridgeSyncStatusRows(syncing: syncing,
                                  syncingLine: String(localized: "Reading the store…"),
                                  result: lastResult, resultIsError: false)
-        } footer: {
-            Text("Paste a Shopify store's web address — its newest products land in your feed as things. Sale prices and restocks land too.")
-                .dsText(.callout15).foregroundStyle(DS.textTertiary)
+            DSSlabNote(text: "New drops, restocks, and sale prices land in your feed.")
+            }
         }
+        .dsSlabSection()
     }
 
     private var footerSection: some View {

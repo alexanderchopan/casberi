@@ -110,10 +110,10 @@ struct StocktwitsScreen: View {
 
     private var addSection: some View {
         Section {
-            BridgeFieldRow(placeholder: String(localized: "Ticker or company name"),
-                           text: $queryField,
-                           buttonLabel: String(localized: "Watch"),
-                           focus: $fieldFocused, action: watch)
+            VStack(alignment: .leading, spacing: DS.Space.s2) {
+            DSSlabField(placeholder: String(localized: "Ticker or company name"),
+                        text: $queryField, actionLabel: String(localized: "WATCH"),
+                        focus: $fieldFocused, action: watch)
             ForEach(displayHits) { stock in
                 BridgeSearchResultRow(
                     imageURL: nil, fallbackIcon: "Stocktwits",
@@ -127,10 +127,10 @@ struct StocktwitsScreen: View {
                                     ? String(localized: "Finding the ticker…")
                                     : String(localized: "Syncing takes…"),
                                  result: result, resultIsError: resultIsError)
-        } footer: {
-            Text("Type a ticker or company name — matches appear as you type. A watched stock's live chart lands in your feed, and the most-followed takes about it land on each visit.")
-                .dsText(.callout15).foregroundStyle(DS.textTertiary)
+            DSSlabNote(text: "Read-only — nothing here trades or sees a portfolio.")
+            }
         }
+        .dsSlabSection()
     }
 
     /// "NASDAQ · 982K watching" — the exchange names the market, the count

@@ -131,30 +131,12 @@ struct BridgeConnectedState: View {
         }
     }
 
-    /// The one door — everything the connect form was, plus Disconnect.
+    /// The one door — everything the connect form was, plus Disconnect. The
+    /// shared slab (prd §190), so the connected state of all eighteen keyed
+    /// and account bridges wears the same block the Wallet manager does.
     private var connectionDoor: some View {
-        Button {
-            DSHaptic.tap()
-            openConnection()
-        } label: {
-            HStack(spacing: DS.Space.s3) {
-                Image(systemName: "gearshape")
-                    .font(.system(size: 15, weight: .medium))
-                    .foregroundStyle(DS.textSecondary)
-                Text("Connection").dsText(.body17).foregroundStyle(DS.textPrimary)
-                Spacer(minLength: 0)
-                if !connectionSummary.isEmpty {
-                    Text(connectionSummary)
-                        .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-                        .lineLimit(1)
-                }
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(DS.textTertiary)
-            }
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
+        DSSlabDoor(title: "Connection", detail: connectionSummary,
+                   systemImage: "gearshape", action: openConnection)
     }
 }
 

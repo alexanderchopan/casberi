@@ -105,10 +105,10 @@ struct TokenWatchScreen: View {
 
     private var addSection: some View {
         Section {
-            BridgeFieldRow(placeholder: "Name, symbol, address, or link",
-                           text: $queryField,
-                           buttonLabel: "Watch",
-                           focus: $fieldFocused, action: watch)
+            VStack(alignment: .leading, spacing: DS.Space.s2) {
+            DSSlabField(placeholder: String(localized: "Name, symbol, address, or link"),
+                        text: $queryField, actionLabel: String(localized: "WATCH"),
+                        focus: $fieldFocused, action: watch)
             ForEach(displayHits) { token in
                 BridgeSearchResultRow(
                     imageURL: token.imageURL, fallbackIcon: "Tokens",
@@ -120,13 +120,12 @@ struct TokenWatchScreen: View {
             BridgeSyncStatusRows(syncing: working,
                                  syncingLine: String(localized: "Finding the token…"),
                                  result: result, resultIsError: resultIsError)
-        } footer: {
-            // The mechanic AND the promise, one block — the bottom footer
-            // this screen used to end with moved up here when the section
-            // furniture went (prd §185, the WalletScreen arrangement).
-            Text("Type a name, symbol, address, or link — matching tokens appear as you type. Separate several with commas (\"eth, sol, pepe\") to build a watchlist in one go. Public price data only — nothing about you leaves your iPhone.")
-                .dsText(.callout15).foregroundStyle(DS.textTertiary)
+            // Commas still build a watchlist in one go — that trick moved to
+            // the placeholder's own example rather than a paragraph (§190).
+            DSSlabNote(text: "Public price data only — no wallet, no trading.")
+            }
         }
+        .dsSlabSection()
     }
 
     /// The watchlist manages itself the way Wallet's addresses do — swipe a

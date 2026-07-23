@@ -94,7 +94,7 @@ struct WalletScreen: View {
             // rhythm rather than the six-shape collage it was.
             Section {
                 VStack(spacing: DS.Space.s2) {
-                    WalletSlabField(placeholder: String(localized: "Address, ENS, .sol"),
+                    DSSlabField(placeholder: String(localized: "Address, ENS, .sol"),
                                     text: $newAddress,
                                     actionLabel: String(localized: "WATCH"),
                                     focus: $addressFieldFocused, action: watch)
@@ -113,11 +113,11 @@ struct WalletScreen: View {
                         .dsText(.subhead13).foregroundStyle(DS.textTertiary)
                         .frame(maxWidth: .infinity)
                         .padding(.top, DS.Space.s1)
-                    WalletSlabDoor(title: "Address book", detail: bookSummary) {
+                    DSSlabDoor(title: "Address book", detail: bookSummary) {
                         HomeRoute.shared.pushBridge(.addressBook)
                     }
                     .padding(.top, DS.Space.s2)
-                    WalletSlabDoor(title: "Connection", detail: chainsSummary) {
+                    DSSlabDoor(title: "Connection", detail: chainsSummary) {
                         HomeRoute.shared.pushBridge(.walletConnection)
                     }
                 }
@@ -396,7 +396,7 @@ struct WalletScreen: View {
     /// inside it — a button says what it does in as few words as it can.
     private var connectRow: some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
-            WalletSlabButton(title: connecting ? "Waiting for your wallet — tap to cancel"
+            DSSlabButton(title: connecting ? "Waiting for your wallet — tap to cancel"
                                                : "Connect a wallet app",
                              systemImage: "wallet.pass.fill",
                              busy: connecting) {

@@ -75,49 +75,36 @@ struct PrivacyPoolsScreen: View {
 
     private var connectSection: some View {
         Section {
-            if hasWallets {
-                Toggle(isOn: Binding(
-                    get: { connected },
-                    set: { on in
-                        guard on != connected else { return }
-                        toggle(on)
+            VStack(alignment: .leading, spacing: DS.Space.s2) {
+                if hasWallets {
+                    // The seat as one SWITCH SLAB (prd §190) — the row is the
+                    // connect verb, so it gets the full block.
+                    DSSlabSwitch(title: String(localized: "Watch my Privacy Pools deposits"),
+                                 isOn: Binding(
+                        get: { connected },
+                        set: { on in
+                            guard on != connected else { return }
+                            toggle(on)
+                        }
+                    ))
+                } else {
+                    // No wallet watched = no deposits this app can see. A
+                    // disabled switch would be a dead control (honesty rule);
+                    // the live verb is the prerequisite, and it navigates, so
+                    // it wears the door slab.
+                    DSSlabDoor(title: "Watch a wallet first") {
+                        HomeRoute.shared.pushBridge(.wallet)
                     }
-                )) {
-                    Text("Watch my Privacy Pools deposits")
-                        .dsText(.body17).foregroundStyle(DS.textPrimary)
                 }
-                .tint(DS.tint)
-                .padding(.vertical, DS.Space.s1)
-                .dsListCardRow()
-            } else {
-                // No wallet watched = no deposits this app can see. A
-                // disabled switch would be a dead control (honesty rule).
-                NavigationLink {
-                    BridgeDestinationView(destination: .wallet)
-                } label: {
-                    Text("Watch a wallet first")
-                        .dsText(.body17).foregroundStyle(DS.textPrimary)
-                }
-                .padding(.vertical, DS.Space.s1)
-                .dsListCardRow()
+                BridgeSyncStatusRows(syncing: syncing,
+                                     syncingLine: String(localized: "Reading your deposits…"),
+                                     result: lastResult, resultIsError: false)
+                DSSlabNote(text: hasWallets
+                    ? String(localized: "Tells you the moment screening clears a deposit.")
+                    : String(localized: "Deposits are read off the wallets you watch."))
             }
-        } header: {
-            HStack {
-                Text(hasWallets ? "Your wallets" : "Before connecting")
-                    .dsText(.label12).foregroundStyle(DS.textTertiary)
-                Spacer()
-                if syncing {
-                    ProgressView().controlSize(.small)
-                } else if let lastResult {
-                    Text(lastResult).dsText(.label12).foregroundStyle(DS.textTertiary)
-                }
-            }
-        } footer: {
-            Text(hasWallets
-                 ? "You deposit on Privacy Pools' own app; Casberi lands each deposit here and tells you the moment the screening clears it to withdraw privately — or declines it. That status is the wait people otherwise keep checking a website for."
-                 : "Privacy Pools deposits come from your own wallet, so Casberi reads them off the wallets you watch. Watch the wallet you deposit with, then come back here.")
-                .dsText(.callout15).foregroundStyle(DS.textTertiary)
         }
+        .dsSlabSection()
     }
 
     private var footerSection: some View {
