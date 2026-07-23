@@ -29,8 +29,9 @@ struct Composer: View {
     /// Reports the content's natural height (embedded only) so the hosting sheet
     /// can hug it — no stranded empty space.
     var onHeight: (CGFloat) -> Void = { _ in }
-    /// Commit carries the parse card's chosen tags (M6: save writes to us).
-    var onCommit: ([String]) -> Void
+    /// Commit keeps a pasted draft (M6: save writes to us). Tags ride only
+    /// as #hashtags inside the text itself (prd §178 — no filing chips).
+    var onCommit: () -> Void
     /// A finished voice note: transcript + the audio file's sourceRef.
     var onCommitVoice: (String, String) -> Void = { _, _ in }
     /// Answers a query, returning the final AnswerStream document (engine
@@ -46,7 +47,8 @@ struct Composer: View {
     /// words that honestly. The verb only shows when a key is configured; it
     /// never fires on its own.
     var answerWithKey: (_ query: String, _ onProseDoc: @escaping ([String]) -> Void) async -> Result<KeyedAnswer, AgentAnswerFailure> = { _, _ in .failure(.noKey) }
-    /// Candidate project tags for the parse card, from the corpus.
+    /// Your real tags, from the corpus — typed-ask completion, the "Show
+    /// <tag>" chips, and navigation matching read these (never a write).
     var tagCandidates: () -> [String] = { [] }
     /// The connected sources ("Gmail", "Steam") — navigation asks match them.
     var knownSources: () -> [String] = { [] }
@@ -85,8 +87,8 @@ struct Composer: View {
     @Environment(\.colorScheme) private var scheme
 
     /// The empty field's invitation cycles through what the composer can DO —
-    /// ask, find, organize, recap — so it teaches its range instead of reading
-    /// as one dead line (delight, 2026-07-12). These are honest capability
+    /// ask, find, recap — so it teaches its range instead of reading as one
+    /// dead line (delight, 2026-07-12). These are honest capability
     /// invitations, not data claims; the corpus-derived ask CHIPS below carry
     /// the specifics you can tap.
     @State private var placeholderIndex = 0
@@ -95,7 +97,6 @@ struct Composer: View {
         "What did I save this week?",
         "Find that thing I pasted",
         "Recap my month",
-        "Tag everything from an app",
     ]
     /// The cycling pool actually shown: the real-corpus examples when `open`
     /// computed some, else the static invitations (before first compute, or
@@ -341,12 +342,8 @@ struct Composer: View {
         return nil
     }
 
-    /// A typed organize command's pending change — rendered as a card, the
-    /// write waits for Apply (typed words never write silently).
-    @State private var proposal: OrganizeProposal?
     @State private var proseStreaming = false
     @State private var answering = false
-    @State private var chosenTags: Set<String> = []
     @State private var voice = VoiceCapture()
     /// True when the draft arrived by paste — the one typed-ish path that
     /// still captures (pasting is bringing a thing in, not talking).
@@ -365,9 +362,7 @@ struct Composer: View {
     /// The DOOR a chip opens — used only to keep the four slots from filling
     /// with four flavors of the same thing (2026-07-22): the diversity pass
     /// prefers spanning shapes over stacking one. Derived from `kind`, never
-    /// stored, so no call site has to name it. (Organize has no case: it's
-    /// never an `AskOption` — the organize invite renders as its own leading
-    /// tile, outside the ranked/diversified set.)
+    /// stored, so no call site has to name it.
     private enum AskShape { case recency, money, tasks, entity, insight }
 
     private struct AskOption {
@@ -441,19 +436,10 @@ struct Composer: View {
     /// second one).
     @State private var corpusSummary = ""
 
-    /// One corpus-derived nudge toward the tag command ("Tag your 6
-    /// Farcaster things"). Unlike ask chips, tap PREFILLS the command —
-    /// the name is the person's to type, and the write still waits behind
-    /// the proposal's Apply (ruling 2026-07-10). Count is the source's
-    /// WHOLE pile — that's what "tag <source> as X" proposes; the untagged
-    /// pile is only the trigger.
-    private struct OrganizeHint { let source: String; let count: Int }
-    @State private var organizeHint: OrganizeHint?
-
     /// The invitation cycles only while the field is genuinely idle and empty —
-    /// typing, answering, recording, or a proposal all stop it.
+    /// typing, answering, or recording all stop it.
     private var cyclingActive: Bool {
-        isOpen && !hasDraft && !answering && !isRecording && proposal == nil && !reduceMotion
+        isOpen && !hasDraft && !answering && !isRecording && !reduceMotion
     }
 
     /// One ask chip's staggered rise-in on open (delight, 2026-07-12).
@@ -475,10 +461,10 @@ struct Composer: View {
     /// CAPTURES on send. fillDraft() sets it; onChange consumes it.
     @State private var prefilled = false
 
-    /// The one door for setting the draft from code — the organize chip,
-    /// tag completion, and the debug hooks. Writing `draft` directly trips
-    /// the paste heuristic (review 2026-07-10: a completed long tag turned
-    /// a typed command into a captured note).
+    /// The one door for setting the draft from code — tag completion and
+    /// the debug hooks. Writing `draft` directly trips the paste heuristic
+    /// (review 2026-07-10: a completed long tag turned a typed command into
+    /// a captured note).
     private func fillDraft(_ text: String) {
         prefilled = true
         draft = text
@@ -490,7 +476,7 @@ struct Composer: View {
     /// Tag completions for the word being typed — your real tags, prefix-
     /// matched on the draft's last token (2+ chars, typed path only).
     private var tagMatches: [String] {
-        guard hasDraft, !pasted, !answering, proposal == nil else { return [] }
+        guard hasDraft, !pasted, !answering else { return [] }
         guard let last = draft.split(separator: " ").last.map(String.init),
               last.count >= 2 else { return [] }
         let lower = last.lowercased()
@@ -706,23 +692,6 @@ struct Composer: View {
             out.append(AskOption(kind: "week", title: "What's this week?",
                                  glyph: "calendar", signal: sig(weekCount)))
         }
-        // The organize invite (ruling 2026-07-10): the source with the most
-        // things still wearing only their type tag (≥3) earns the nudge.
-        // The label counts the source's WHOLE pile — what "tag <source> as
-        // X" actually proposes. Skipped: "You" (as a query word it matches
-        // far beyond its own things) and unfaithful names ("Reminders" is a
-        // kind word — the command would match by kind across sources).
-        var counts: [String: (untagged: Int, total: Int)] = [:]
-        for thing in all where thing.source != "You" {
-            counts[thing.source, default: (0, 0)].total += 1
-            if thing.tags.count <= 1 { counts[thing.source, default: (0, 0)].untagged += 1 }
-        }
-        organizeHint = counts
-            .filter { $0.value.untagged >= 3 && Organize.faithfulSourceQuery($0.key) }
-            // Largest pile wins; the name breaks ties so the invite doesn't
-            // change identity between opens.
-            .max { ($0.value.total, $1.key) < ($1.value.total, $0.key) }
-            .map { OrganizeHint(source: $0.key, count: $0.value.total) }
         // Already-kept asks lead as their own pills now (docs/agent-brief.md
         // ruling 4/5, `keptAskPills`) — offering one here too would show the
         // same question twice, once as a curated pill and once as a
@@ -733,12 +702,10 @@ struct Composer: View {
         // opens without a tap steps behind the next qualifier — demoted by
         // a stable partition, never filtered, so a short grid still fills
         // with it. A tap resets its counter; exemptions (a timely chip is
-        // timely, not evergreen) live in AskMemory. The organize invite has
-        // its own slot and gate.
+        // timely, not evergreen) live in AskMemory.
         let ranked = out.filter { !AskMemory.neglected($0.memoryKey) }
                    + out.filter { AskMemory.neglected($0.memoryKey) }
-        let slots = organizeHint == nil ? 4 : 3
-        suggestions = selectSuggestions(from: ranked, slots: slots)
+        suggestions = selectSuggestions(from: ranked, slots: 4)
         // A handed-off ask (a status chip's question) fills the field the
         // moment the sheet settles — the tiles never had a chance to be
         // tapped, so that open must not count against them.
@@ -746,8 +713,7 @@ struct Composer: View {
             AskMemory.shown(suggestions.map(\.memoryKey))
         }
         #if DEBUG
-        NSLog("[Casberi] askTiles: %@%@",
-              organizeHint.map { "hint:\($0.source) " } ?? "",
+        NSLog("[Casberi] askTiles: %@",
               suggestions.map { $0.memoryKey + ($0.timely ? "*" : "") + ($0.signal ?? "") }
                   .joined(separator: ","))
         #endif
@@ -1069,7 +1035,7 @@ struct Composer: View {
             // one question the tools and the field both answer, and gives the
             // sheet its warmth (design pass 2026-07-12, "B: greeting-led").
             // Hidden once a conversation is underway: the answer is the header.
-            if embedded, turns.isEmpty, !answering, proposal == nil {
+            if embedded, turns.isEmpty, !answering {
                 // The greeting, as RULED (docs/agent-brief.md ruling 4,
                 // built 2026-07-20 — the static "What now?" that shipped
                 // first was a placeholder for this): the day and its moment
@@ -1406,18 +1372,6 @@ struct Composer: View {
                 .padding(.top, DS.Space.s2)
             }
 
-            if let proposal {
-                OrganizeProposalCard(
-                    proposal: proposal,
-                    onApply: { applyProposal(proposal) },
-                    onCancel: {
-                        withAnimation(DS.Motion.standard) { self.proposal = nil }
-                    }
-                )
-                .padding(.top, DS.Space.s2)
-                .transition(.opacity.combined(with: .move(edge: .bottom)))
-            }
-
             // Recording — the red dot, the clock, and the words arriving live.
             // Save keeps the piece; the chevron discards it.
             if isRecording {
@@ -1456,8 +1410,7 @@ struct Composer: View {
             // previews what keeping will write. Typed words get answers, not
             // filing previews.
             if hasDraft && !answering && pasted {
-                ParseCard(draft: draft, candidates: tagPool,
-                          chosen: $chosenTags)
+                ParseCard(draft: draft)
                     .padding(.horizontal, DS.Space.s4)
                     .padding(.top, DS.Space.s3)
             }
@@ -1628,7 +1581,7 @@ struct Composer: View {
     private func autoSendIfProbed() async {
         #if DEBUG
         // `-composerDraft "…"` fills the field and stops — for a screenshot of
-        // the typed command, before it's sent (no proposal, no answer).
+        // the typed text, before it's sent (no answer yet).
         if isOpen, !didAutoSend,
            let d = UserDefaults.standard.string(forKey: "composerDraft") {
             didAutoSend = true
@@ -1696,8 +1649,6 @@ struct Composer: View {
         withAnimation(DS.Motion.standard) { isOpen = false }
         draft = ""      // close clears the draft (composer spec)
         answering = false
-        proposal = nil
-        chosenTags = []
         pasted = false
         chipsAppeared = false
         placeholderIndex = 0
@@ -1848,7 +1799,7 @@ struct Composer: View {
     /// before — a fresh signal is worth noticing regardless of history.
     @ViewBuilder
     private var keptAskPills: some View {
-        if isOpen, !hasDraft, !answering, !isRecording, proposal == nil,
+        if isOpen, !hasDraft, !answering, !isRecording,
            !KeptAskStore.shared.order.isEmpty {
             let sorted = KeptAskStore.shared.order.sorted { a, b in
                 let store = KeptAskStore.shared
@@ -1915,45 +1866,19 @@ struct Composer: View {
 
     // MARK: - Ask chips + input bar (chat grammar: by the bottom)
 
-    /// The ask chips — asks the corpus can answer now, plus the organize
-    /// invite, as `FlowRow` pills while the field is empty. Unified with
-    /// `keptAskPills` (2026-07-20, user: "your chips design was better")
-    /// — was a 2×2 `AskTile` grid; now the SAME pill vocabulary the kept
-    /// asks above already wear, so the whole rest screen reads as one
-    /// language instead of two. Every specific query is unchanged; the ONE
-    /// trade made explicit: the away chip's rolling-digit-climb delight
-    /// (`AskTile.rollCount`) is gone, replaced by the same static "· N"
-    /// digest suffix every kept pill already shows. The organize invite
-    /// keeps its sole solid-tint treatment — the row's one accent, per the
-    /// one-tint law.
+    /// The ask chips — asks the corpus can answer now, as `FlowRow` pills
+    /// while the field is empty. Unified with `keptAskPills` (2026-07-20,
+    /// user: "your chips design was better") — was a 2×2 `AskTile` grid; now
+    /// the SAME pill vocabulary the kept asks above already wear, so the
+    /// whole rest screen reads as one language instead of two. Every
+    /// specific query is unchanged; the ONE trade made explicit: the away
+    /// chip's rolling-digit-climb delight (`AskTile.rollCount`) is gone,
+    /// replaced by the same static "· N" digest suffix every kept pill
+    /// already shows.
     @ViewBuilder
     private var askChips: some View {
-        if isOpen && !hasDraft && !answering && !isRecording,
-           proposal == nil, !suggestions.isEmpty || organizeHint != nil {
-            let hintLead = organizeHint != nil ? 1 : 0
+        if isOpen && !hasDraft && !answering && !isRecording, !suggestions.isEmpty {
             FlowRow(spacing: DS.Space.s2) {
-                if let hint = organizeHint {
-                    Button {
-                        DSHaptic.selection()
-                        fillDraft("tag \(hint.source.lowercased()) as ")
-                        fieldFocused = true
-                    } label: {
-                        HStack(spacing: DS.Space.s2) {
-                            Image(systemName: "tag")
-                                .accessibilityHidden(true)
-                                .font(.system(size: 13, weight: .semibold))
-                            Text("Tag your \(hint.count) \(hint.source) things")
-                                .dsText(.callout15)
-                        }
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, DS.Space.s4)
-                        .padding(.vertical, DS.Space.s3)
-                        .background(DS.tint, in: RoundedRectangle(cornerRadius: DS.Radius.control,
-                                                                   style: .continuous))
-                    }
-                    .buttonStyle(.plain)
-                    .modifier(ChipEntrance(index: 0, shown: chipsAppeared, reduceMotion: reduceMotion))
-                }
                 ForEach(Array(suggestions.enumerated()), id: \.element.memoryKey) { i, ask in
                     // "While I was away?" wears its own display label ("Catch
                     // me up") but sends the canonical query — matching the
@@ -2012,7 +1937,7 @@ struct Composer: View {
                                                          style: .continuous))
                     }
                     .buttonStyle(.plain)
-                    .modifier(ChipEntrance(index: i + hintLead, shown: chipsAppeared, reduceMotion: reduceMotion))
+                    .modifier(ChipEntrance(index: i, shown: chipsAppeared, reduceMotion: reduceMotion))
                 }
             }
             .padding(.horizontal, DS.Space.s4)
@@ -2169,7 +2094,7 @@ struct Composer: View {
     /// Calendar jump will land on the right day.
     @ViewBuilder
     private var takeChips: some View {
-        if isOpen && hasDraft && !answering && !isRecording, proposal == nil,
+        if isOpen && hasDraft && !answering && !isRecording,
            !draftIsQuestion {
             VStack(alignment: .leading, spacing: DS.Space.s1) {
                 ScrollView(.horizontal, showsIndicators: false) {
@@ -2243,13 +2168,6 @@ struct Composer: View {
         close()
     }
 
-    private func applyProposal(_ proposal: OrganizeProposal) {
-        guard proposal.canApply else { return }
-        let (summary, undo) = Organize.apply(proposal, context: modelContext)
-        chrome.flash(summary, tone: .success, action: .init(label: "Undo", run: undo))
-        close()
-    }
-
     private func commit() {
         if isRecording {
             // Voice is a capture path — send keeps the piece.
@@ -2257,13 +2175,9 @@ struct Composer: View {
                 onCommitVoice(piece.transcript, piece.sourceRef)
             }
             close()
-        } else if pasted, OrganizeCommand.parse(draft) == nil {
-            // Paste is a capture path — send keeps what came in. A command-
-            // shaped draft wins over the flag, though: the organize chip
-            // prefills "tag <source> as " and the person may PASTE the name
-            // (review 2026-07-10) — that paste must not turn the command
-            // into a captured note. The proposal card stays the consent.
-            onCommit(Array(chosenTags))
+        } else if pasted {
+            // Paste is a capture path — send keeps what came in.
+            onCommit()
             close()
         } else if let intent = NavigateCommand.parse(draft, tags: tagPool,
                                                      sources: knownSources()) {
@@ -2273,29 +2187,6 @@ struct Composer: View {
             draft = ""
             onNavigate(intent)
             close()
-        } else if let command = OrganizeCommand.parse(draft) {
-            // An organize command — propose, never execute. The card below
-            // shows exactly what would change; Apply is the consent.
-            let proposed = Organize.propose(command, context: modelContext)
-            fieldFocused = false   // input phase is over — dismiss the cursor
-            withAnimation(DS.Motion.standard) {
-                answering = false
-                proposal = proposed
-            }
-            draft = ""
-            #if DEBUG
-            // `-organizeApply YES` shows the proposal for a beat, then fires
-            // the real Apply — so a screen recording captures the whole flow:
-            // proposal → Apply → toast → the renamed tag on Home.
-            if UserDefaults.standard.bool(forKey: "organizeApply") {
-                Task { @MainActor in
-                    try? await Task.sleep(for: .milliseconds(2200))
-                    applyProposal(proposed)
-                    NSLog("Organize probe: %@ · applied=%d", proposed.headline,
-                          proposed.canApply ? 1 : 0)
-                }
-            }
-            #endif
         } else {
             // Typed words are an utterance — the answer streams. A follow-up
             // first settles the current LIVE answer into the thread so the Q&A
@@ -2340,23 +2231,6 @@ struct Composer: View {
             // state now; the first real content to appear IS the answer.
             answerStream.paint([])
             Task { @MainActor in
-                // Organize-ish wording the strict parser missed ("put
-                // everything about lisbon under Trip") — the model fills the
-                // SAME proposal form; the write still waits for Apply.
-                if OrganizeLLM.looksOrganizeish(q),
-                   let command = await OrganizeLLM.extract(q) {
-                    // Closed, or a newer ask overtook this one mid-extraction.
-                    guard isOpen, gen == askGeneration else { return }
-                    let proposed = Organize.propose(command, context: modelContext)
-                    fieldFocused = false
-                    withAnimation(DS.Motion.standard) {
-                        answering = false
-                        inFlight = false
-                        proposal = proposed
-                    }
-                    draft = ""
-                    return
-                }
                 var streamed = false
                 let paintPartial: ([String]) -> Void = { partialDoc in
                     // Prose arriving live — paint each growing snapshot; the
@@ -2466,13 +2340,11 @@ struct Composer: View {
     }
 }
 
-/// The parse card — chip label + fields + candidate tags, assembling with a
-/// stagger as the person types. The chip stays a label until the parse earns
-/// correction (PRD: intent switch parked).
+/// The parse card — what keeping the pasted draft will write (kind + title
+/// preview). No candidate-tag chips (prd §178 — the filing surface retired;
+/// a #hashtag typed in the text itself still rides in via Capture).
 struct ParseCard: View {
     let draft: String
-    let candidates: [String]
-    @Binding var chosen: Set<String>
 
     private var isLink: Bool { Capture.detectURL(in: draft) != nil }
     private var kindLabel: String { isLink ? "Link" : "Note" }
@@ -2490,27 +2362,6 @@ struct ParseCard: View {
                     .lineLimit(1)
             }
             .mountIn()
-
-            if !candidates.isEmpty {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: DS.Space.s2) {
-                        ForEach(candidates, id: \.self) { tag in
-                            let active = chosen.contains(tag)
-                            // A Button, not .onTapGesture (same fix the Feed
-                            // source chips carry, 2026-07-12): tap recognition
-                            // for a chip inside a horizontal ScrollView is flaky
-                            // — taps drop and the toggle "sticks."
-                            Button {
-                                if active { chosen.remove(tag) } else { chosen.insert(tag) }
-                            } label: {
-                                Chip(text: tag, style: active ? .tint : .neutral)
-                            }
-                            .buttonStyle(.plain)
-                        }
-                    }
-                }
-                .mountIn()
-            }
         }
         .padding(DS.Space.s3)
         .background(DS.fillFaint,
@@ -2603,54 +2454,6 @@ private extension View {
             if show { placeholder() }
             self
         }
-    }
-}
-
-/// The organize proposal — what a typed command would change, waiting on
-/// Apply. The matched things list plainly; the write is one tap away and
-/// the toast it earns carries Undo.
-private struct OrganizeProposalCard: View {
-    let proposal: OrganizeProposal
-    let onApply: () -> Void
-    let onCancel: () -> Void
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: DS.Space.s3) {
-            if let blocked = proposal.blocked {
-                Text(blocked)
-                    .dsText(.callout15).foregroundStyle(DS.attention)
-                    .fixedSize(horizontal: false, vertical: true)
-            } else {
-                // The headline states the change and its scope ("… — 8 things");
-                // the itemised list left the card (ruling) — the count is the
-                // consent, and the toast carries Undo if it's wrong.
-                Text(proposal.headline)
-                    .dsText(.heading17).foregroundStyle(DS.textPrimary)
-                    .fixedSize(horizontal: false, vertical: true)
-                if proposal.things.isEmpty {
-                    Text("Nothing to change.")
-                        .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-                }
-            }
-            HStack(spacing: DS.Space.s2) {
-                Spacer()
-                Button("Cancel", action: onCancel)
-                    .dsText(.label12).foregroundStyle(DS.textSecondary)
-                    .padding(.horizontal, DS.Space.s3).frame(height: 30)
-                    .background(DS.gray100, in: Capsule(style: .continuous))
-                    .buttonStyle(PressSpring())
-                if proposal.canApply {
-                    Button("Apply", action: onApply)
-                        .dsText(.label12).foregroundStyle(.white)
-                        .padding(.horizontal, DS.Space.s4).frame(height: 30)
-                        .background(DS.tint, in: Capsule(style: .continuous))
-                        .buttonStyle(PressSpring())
-                }
-            }
-        }
-        .padding(DS.Space.s3)
-        .background(DS.surfaceSheet,
-                    in: RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 }
 

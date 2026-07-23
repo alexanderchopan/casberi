@@ -873,7 +873,7 @@ struct RootShell: View {
     // MARK: - Screens
 
     /// The agent, full screen (docs/agent-brief.md ruling 3) — the composer's
-    /// entire existing pipeline (byok, Organize, lastAnswerHits, GenStream),
+    /// entire existing pipeline (byok, lastAnswerHits, GenStream),
     /// unchanged, now hosted as a persistent ZStack layer instead of a sheet.
     private var agentSurface: some View {
         Composer(isOpen: .constant(true), draft: $draft, embedded: true,
@@ -948,9 +948,8 @@ struct RootShell: View {
         }
     }
 
-    private func saveDraft(tags: [String]) {
+    private func saveDraft() {
         guard let thing = Capture.thing(from: draft) else { return }
-        thing.tags.append(contentsOf: tags)   // parse-card candidates ride in
         modelContext.insert(thing)
         modelContext.saveHonestly()
         SpotlightIndex.index([thing])
@@ -1078,7 +1077,8 @@ struct RootShell: View {
         #endif
     }
 
-    /// Project tags for the parse card's candidate row.
+    /// Your real tags — the composer's typed-ask completion, "Show <tag>"
+    /// chips, and navigation matching read these (never a write, prd §178).
     private func projectTags() -> [String] {
         let typeTags = Set(ThingKind.allCases.map(\.typeTag))
         let all = (try? modelContext.fetch(FetchDescriptor<Thing>())) ?? []
@@ -1108,7 +1108,7 @@ struct RootShell: View {
     private func tagsDoc(_ ask: TagsAsk.Intent, in all: [Thing]) -> [String] {
         let counts = tagCounts(in: all)
         guard !counts.isEmpty else {
-            let line = "You haven't made any tags yet. Tag things from a thing's sheet, or type 'tag <app> as <name>' here."
+            let line = "No tags of your own yet. Tags arrive on their own — from imports, bridges, and #hashtags in things you capture."
             return ["root = Stack([ins])", "ins = Insight(\"\(genSafe(line))\")"]
         }
         switch ask {

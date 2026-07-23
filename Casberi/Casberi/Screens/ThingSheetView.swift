@@ -8,19 +8,15 @@ import Translation
 /// eyebrow (source icon · kind · age), the title large, the thing's media,
 /// then a quiet spec table (WHEN/SITE/BY/FROM/TAGS — labels change per
 /// kind). Verbs are text rows (derived, cap three; writes confirm), plus
-/// Pin and Share. The tag editor keeps all its power behind a tap on the
-/// TAGS row. Related streams last. Spacing does the separating — no
-/// hairlines.
+/// Pin and Share. The TAGS row is read-only provenance (prd §178 — the
+/// filing surface retired; renaming a cluster lives in project detail).
+/// Related streams last. Spacing does the separating — no hairlines.
 struct ThingSheetView: View {
     @Bindable var thing: Thing
-    /// True when the Tag swipe opened the sheet — it lands scrolled to the
-    /// Tags field (one sheet for everything; the swipe is just a shortcut).
-    var focusTags: Bool = false
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
 
-    @State private var tagDraft = ""
     @State private var confirmingVerb: Verb?
     @State private var verbResult: String?
     /// A bridge's no must READ as a no — green success styling on a failure
@@ -30,9 +26,6 @@ struct ThingSheetView: View {
     /// "Related" for tag overlap; "In your things" when a watched token's
     /// shelf holds the corpus things that mention it (2026-07-14).
     @State private var relatedTitle = "Related"
-    @State private var renameTarget: String?
-    @State private var renameDraft = ""
-    @State private var deleteTarget: String?
     /// Naming a wallet transaction's counterparty (2026-07-15) — the address
     /// being named, and the draft. The label enriches every FUTURE transfer
     /// with that counterparty (CounterpartyLabels).
@@ -47,8 +40,6 @@ struct ThingSheetView: View {
         return AddressNudge.prompt(for: thing, context: modelContext)
     }
     @State private var counterpartyDraft = ""
-    /// The TAGS row opens the full editor (chips, rename, delete) in place.
-    @State private var editingTags = false
     /// A post/cast's thread (2026-07-14) — fetched live from the source's
     /// public API when the sheet opens a social thing (Bluesky or Farcaster);
     /// the section renders only when replies exist (no dead section, no
@@ -82,9 +73,8 @@ struct ThingSheetView: View {
     /// content over a screen of black. Both detents stay a drag away.
     @State private var detent: PresentationDetent
 
-    init(thing: Thing, focusTags: Bool = false) {
+    init(thing: Thing) {
         self.thing = thing
-        self.focusTags = focusTags
         let hasMedia = thing.kind == .screenshot
             || !(thing.previewImageURL ?? "").isEmpty
             || TokenChart.route(from: thing.content) != nil
@@ -223,11 +213,6 @@ struct ThingSheetView: View {
                     .padding(.horizontal, DS.Space.s4)
                     .padding(.top, DS.Space.s3)
                 }
-                if editingTags {
-                    tagsField
-                        .padding(.top, DS.Space.s3)
-                        .id("tags")
-                }
                 if walletStage == nil && !framedShot {
                     actionRows
                         .padding(.top, DS.Space.s6)
@@ -278,16 +263,6 @@ struct ThingSheetView: View {
             }
             if SafeBridge.applies(to: thing) {
                 Task { safeCheck = await SafeBridge.check(for: thing) }
-            }
-            if focusTags {
-                // Land in the tag editor — the swipe's whole point.
-                editingTags = true
-                Task { @MainActor in
-                    try? await Task.sleep(for: .milliseconds(80))
-                    withAnimation(DS.Motion.standard) {
-                        proxy.scrollTo("tags", anchor: .top)
-                    }
-                }
             }
         }
         }
@@ -663,25 +638,18 @@ struct ThingSheetView: View {
         .buttonStyle(.plain)
     }
 
-    /// Tags as a text line — your own tags wear their hue; the "+" opens the
-    /// full editor (chips, rename everywhere, delete everywhere) in place.
+    /// Tags as a text line — read-only provenance (prd §178: the app assigns,
+    /// clusters get named in project detail; nothing here asks you to file).
+    /// Your own tags wear their hue; type tags stay quiet.
     private var tagsRow: some View {
-        Button {
-            withAnimation(DS.Motion.standard) { editingTags.toggle() }
-        } label: {
-            HStack(alignment: .firstTextBaseline, spacing: 0) {
-                Text("Tags")
-                    .dsText(.label12)
-                    .foregroundStyle(DS.textTertiary)
-                    .frame(width: 80, alignment: .leading)
-                tagsLine
-                Text(editingTags ? "  −" : "  +")
-                    .dsText(.callout15).foregroundStyle(DS.textTertiary)
-                Spacer(minLength: 0)
-            }
-            .contentShape(Rectangle())
+        HStack(alignment: .firstTextBaseline, spacing: 0) {
+            Text("Tags")
+                .dsText(.label12)
+                .foregroundStyle(DS.textTertiary)
+                .frame(width: 80, alignment: .leading)
+            tagsLine
+            Spacer(minLength: 0)
         }
-        .buttonStyle(.plain)
     }
 
     private var tagsLine: some View {
@@ -860,168 +828,6 @@ struct ThingSheetView: View {
             actionRow(icon: "square.and.arrow.up", label: "Share")
         }
         .buttonStyle(.plain)
-    }
-
-    // MARK: - Tags (one field; active lit, candidates dim)
-
-    private var candidates: [String] {
-        let typeTags = Set(ThingKind.allCases.map(\.typeTag))
-        let all = (try? modelContext.fetch(FetchDescriptor<Thing>())) ?? []
-        let projectTags = Set(all.flatMap(\.tags)).subtracting(typeTags)
-        return projectTags.subtracting(thing.tags).sorted()
-    }
-
-    private var tagsField: some View {
-        VStack(alignment: .leading, spacing: DS.Space.s2) {
-            Text("Tags")
-                .dsText(.label12)
-                .foregroundStyle(DS.textTertiary)
-
-            FlowLayout(spacing: DS.Space.s2) {
-                ForEach(thing.tags, id: \.self) { tag in
-                    activeTagChip(tag)
-                }
-                ForEach(candidates, id: \.self) { tag in
-                    tagChip(tag, active: false) { add(tag: tag) }
-                }
-            }
-
-            HStack(spacing: DS.Space.s2) {
-                TextField("Add a tag", text: $tagDraft)
-                    .dsText(.callout15)
-                    .foregroundStyle(DS.textPrimary)
-                    .tint(DS.tint)
-                    .onSubmit { add(tag: tagDraft); tagDraft = "" }
-                Button("Add") { add(tag: tagDraft); tagDraft = "" }
-                    .dsText(.label12)
-                    .foregroundStyle(tagDraft.isEmpty ? DS.textTertiary : .white)
-                    .padding(.horizontal, DS.Space.s3)
-                    .frame(height: 28)
-                    .background(tagDraft.isEmpty ? DS.gray200 : DS.tint,
-                                in: Capsule(style: .continuous))
-                    .disabled(tagDraft.isEmpty)
-                    .buttonStyle(.plain)
-            }
-            .padding(.leading, DS.Space.s4)
-            .padding(.trailing, DS.Space.s2)
-            .frame(height: 40)
-            .background(DS.gray100, in: Capsule(style: .continuous))
-        }
-        .padding(.horizontal, DS.Space.s4)
-        .padding(.bottom, DS.Space.s4)
-    }
-
-    private func tagChip(_ tag: String, active: Bool, onTap: @escaping () -> Void) -> some View {
-        Text(tag)
-            .dsText(.label12)
-            .foregroundStyle(active ? DS.tint : DS.textSecondary)
-            .padding(.horizontal, DS.Space.s3)
-            .frame(height: 28)
-            .background(active ? DS.tintDim : DS.gray100, in: Capsule(style: .continuous))
-            .onTapGesture(perform: onTap)
-    }
-
-    /// An active tag: the × makes removal visible; press-and-hold manages the
-    /// tag across every thing (fixes typos, merges duplicates). The type tag
-    /// is assigned at ingestion and carries no controls.
-    @ViewBuilder
-    private func activeTagChip(_ tag: String) -> some View {
-        let isTypeTag = tag == thing.kind.typeTag
-        HStack(spacing: DS.Space.s1) {
-            Text(tag).dsText(.label12).foregroundStyle(DS.tint)
-            if !isTypeTag {
-                Image(systemName: "xmark")
-                    .accessibilityHidden(true)
-                    .font(.system(size: 9, weight: .bold))
-                    .foregroundStyle(DS.tint.opacity(0.6))
-            }
-        }
-        .padding(.horizontal, DS.Space.s3)
-        .frame(height: 28)
-        .background(DS.tintDim, in: Capsule(style: .continuous))
-        .onTapGesture { remove(tag: tag) }
-        // The chip reads as a bare word; its tap REMOVES the tag. A type tag
-        // carries no ✕ and no tap, so it stays a plain label.
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(isTypeTag ? Text(tag) : Text("Remove tag \(tag)"))
-        .accessibilityAddTraits(isTypeTag ? [] : .isButton)
-        .contextMenu {
-            if !isTypeTag {
-                Button("Remove from this thing", systemImage: "xmark.circle") {
-                    remove(tag: tag)
-                }
-                Button("Rename tag everywhere…", systemImage: "pencil") {
-                    renameDraft = tag
-                    renameTarget = tag
-                }
-                Button("Delete everywhere…", systemImage: "trash", role: .destructive) {
-                    deleteTarget = tag
-                }
-            }
-        }
-        .alert("Rename \"\(renameTarget ?? "")\" everywhere",
-               isPresented: Binding(get: { renameTarget == tag },
-                                    set: { if !$0 { renameTarget = nil } })) {
-            TextField("New name", text: $renameDraft)
-            Button("Rename") { renameEverywhere(tag, to: renameDraft) }
-            Button("Cancel", role: .cancel) { renameTarget = nil }
-        } message: {
-            Text("Every thing with this tag gets the new name.")
-        }
-        .confirmationDialog("Delete \"\(deleteTarget ?? "")\" from every thing?",
-                            isPresented: Binding(get: { deleteTarget == tag },
-                                                 set: { if !$0 { deleteTarget = nil } }),
-                            titleVisibility: .visible) {
-            Button("Delete everywhere", role: .destructive) { deleteEverywhere(tag) }
-            Button("Cancel", role: .cancel) { deleteTarget = nil }
-        } message: {
-            Text("Things keep their content — only the tag goes.")
-        }
-    }
-
-    /// Rewrites the tag across the whole corpus; a pinned project keeps its
-    /// pin under the new name.
-    private func renameEverywhere(_ old: String, to newRaw: String) {
-        let new = newRaw.trimmingCharacters(in: .whitespaces)
-        renameTarget = nil
-        guard !new.isEmpty, new != old else { return }
-        let all = (try? modelContext.fetch(FetchDescriptor<Thing>())) ?? []
-        for t in all where t.tags.contains(old) {
-            t.tags = t.tags.map { $0 == old ? new : $0 }
-        }
-        modelContext.saveHonestly()
-        // A retag changes projectClusters but not things.count — Home composes
-        // a doc, not a live @Query, so nudge it to recompose (the same signal
-        // HomeScreen already listens on).
-        CorpusSignal.shared.bump()
-        DSHaptic.success()
-    }
-
-    private func deleteEverywhere(_ tag: String) {
-        deleteTarget = nil
-        let all = (try? modelContext.fetch(FetchDescriptor<Thing>())) ?? []
-        for t in all where t.tags.contains(tag) {
-            t.tags.removeAll { $0 == tag }
-        }
-        modelContext.saveHonestly()
-        CorpusSignal.shared.bump()
-        DSHaptic.success()
-    }
-
-    private func add(tag: String) {
-        let t = tag.trimmingCharacters(in: .whitespaces)
-        guard !t.isEmpty, !thing.tags.contains(where: { $0.lowercased() == t.lowercased() }) else { return }
-        thing.tags.append(t)
-        modelContext.saveHonestly()
-        CorpusSignal.shared.bump()
-    }
-
-    private func remove(tag: String) {
-        // The type tag stays — it's assigned at ingestion, not user-managed.
-        guard tag != thing.kind.typeTag else { return }
-        thing.tags.removeAll { $0 == tag }
-        modelContext.saveHonestly()
-        CorpusSignal.shared.bump()
     }
 
     // MARK: - Related shelf (streams last)

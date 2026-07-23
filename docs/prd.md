@@ -330,11 +330,11 @@ Bridge breakage does not land in Feed (cut on review): it surfaces in the Apps t
 
 ## 19. Thing sheet
 
-Verbs card: Open in {source} / Open shortcut / type verb — rung 2 lives here. One Tags field: active chips lit in tint, candidates dim, projects included; tap toggles. Add-to rides the tag field. Open question: the detail view needs a native rethink — App Intents replace web-era staged hand-offs; the content spec beyond tags and verbs is pending.
+Verbs card: Open in {source} / Open shortcut / type verb — rung 2 lives here. Tags row: read-only provenance (§177 retired the editor) — your own tags wear their hue, type tags stay quiet, nothing opens. Open question: the detail view needs a native rethink — App Intents replace web-era staged hand-offs; the content spec beyond tags and verbs is pending.
 
 ## 20. Tags
 
-Three sources. Type tags: assigned at ingestion. Project tags: assigned through clustering; the person renames. User tags: created in the thing detail and the composer parse card. Tags act as Feed filters and search terms. Project membership rides a tag. No tag management screen; a tag with zero things dies.
+Three sources. Type tags: assigned at ingestion. Project tags: assigned through clustering; the person renames (in project detail). User tags: land via `#hashtag` in captured text only — §177 retired the thing-sheet editor and the composer's tag/rename commands as hand-filing surfaces the app was never meant to have. Tags act as Feed filters and search terms. Project membership rides a tag. No tag management screen; a tag with zero things dies.
 
 RULING — WHAT TAGS ARE FOR (2026-07-10, user): tags are a RETRIEVAL
 VOCABULARY, not a management surface. The app assigns (type tags at
@@ -6653,3 +6653,41 @@ resolves via the person prefix; the ellipsis re-runs the shape; the comparative
 computes ("… more than last week"); the next-question chip appears. Build green
 alongside a concurrent `HomeRoute` refactor in another session; none of this
 touches those files.
+
+## 177. Tags become invisible infrastructure — the filing surface retires (user: "i feel like the tag feature is not useful... we aren't an organizing app really", 2026-07-22)
+
+Re-ruling on §20/§21, not a reversal of the retrieval-vocabulary framing —
+that framing was right, but two hand-filing doors still lived inside it and
+both are gone now. **The app assigns, the agent reads, the person never
+files:**
+
+- Kept: the `tags` field itself; type tags; bridge/import auto-labels
+  (Watchlist, Trending, NFT, Day One's own tags, RSS categories); project
+  clustering (a project IS a shared tag, §21 unchanged) and its one write —
+  renaming a cluster in project detail; the retriever's 2× tag boost;
+  Spotlight keywords; `showtag:` kept pills; `#hashtag` extraction on
+  capture (Capture.swift — zero UI, a property of the text itself, not a
+  filing act).
+- **Retired:** the thing sheet's tag editor (`ThingSheetView` — add/remove
+  chips, rename-everywhere, delete-everywhere, all behind the TAGS row's
+  tap). The row is now read-only provenance: your own tags keep their hue,
+  type tags stay quiet, nothing opens. The composer's `OrganizeCommand` /
+  `OrganizeLLM` machinery (`tag X as Y` / `rename A to B`, the strict parser
+  and the loose-wording LLM fallback) — deleted outright
+  (`Model/OrganizeCommand.swift`, `Model/OrganizeLLM.swift`), along with its
+  proposal card, the "Tag your N things" invite chip, and the `-organizeApply`
+  probe hook. The parse card (`ParseCard`) no longer offers candidate-tag
+  chips on a pasted draft — it previews kind + title only; `chosenTags`
+  is gone from `Composer`, and `onCommit` no longer carries a tag list.
+
+Why: the manual doors were the one place tags asked something OF the
+person — "you should be filing this" — in an app that was never supposed to
+ask that. `tagCandidates()`/`tagPool` survive because they still serve pure
+reads: typed-ask tag-word completion, the "Show \<tag\>" chips,
+`NavigateCommand`'s tag matching. The empty-tags answer
+(`RootShell.tagsDoc`) now says tags arrive on their own rather than
+inviting a manual tag.
+
+Files touched: `Screens/ThingSheetView.swift`, `Shell/Composer.swift`,
+`Shell/RootShell.swift`; `Model/OrganizeCommand.swift` and
+`Model/OrganizeLLM.swift` deleted.
