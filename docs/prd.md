@@ -6733,3 +6733,62 @@ empty, the hero drew "$164K", a +10.1% delta pill, the ETH/USDC last-known
 treemap, a rising green sparkline from recorded history, and "as of 5m ago" —
 nothing vanished, nothing claimed to be current. The live path (vitalik.eth)
 still draws its normal hero with no stale marker. Build green.
+
+## 180. Two more brief visualizations — what landed by source, and the watchlist drawn (user: "how can we add more visualizations to the daily brief", then "add A and B those are both good components to have", 2026-07-23) — VERIFIED
+
+Asked for more visual density in the Today brief (§166) without reopening the
+day-planner lane §101 cut — the user's own instinct ("this isn't really a
+daily brief then" if Calendar started listing other days' events) matched the
+existing ruling exactly. Four candidate visualizations were mocked up
+side-by-side (composition-by-source, drawn watchlist rows, a reading-topic
+strip, an avatar cluster); the user picked the first two.
+
+**Candidate A — "What landed" (`TodayBrief.sourceMix`, `GenSourceMix`).** A
+mosaic by SOURCE — the visualization the hour strip doesn't answer: the strip
+says WHEN, this says WHERE FROM. Gated like `hourStrip` on a dual floor (6+
+landed things AND 3+ distinct sources), not just the source count alone — a
+3-source day with one thing per source is a trivial partition, not a real
+composition. Capped at 4 cells (the money hero's own compact footprint); a
+residual folds into a named tail ("and 4 more, elsewhere") rather than growing
+the map. Sits right after the hour strip, so the brief's two "shape of the
+day" modules read as a matched pair.
+
+**Candidate B — "Movers, drawn" (`TokensAsk.moversTile` → `GenMoversTile`).**
+Each watchlist row now draws a tiny sparkline beside its percentage, reusing
+`TokenPulse`'s already-cached closes (no second fetch) via
+`TokenChartPlot` at 20pt tall. The `MoversTile` wire grammar grew a third
+per-row field for the closes CSV, so rows now join on `;` instead of `,` (each
+row's own closes are comma-joined) — `tileSafe` was widened to strip `;` too,
+alongside its existing `,`/`|` scrub.
+
+**Cleanup pass (4-angle review before commit).** `GenSourceMix`'s first cut
+copy-pasted its cell layout and squared share-weighting straight from
+`GenMoneyHero`'s holdings mini-map — caught by three of the four reviewers
+independently. Fixed by extracting the shared "biggest left, up to three
+stacked right" layout into a `MiniTreemap` view and the cell chrome into a
+`miniTreemapCellChrome` modifier, both now used by `GenMoneyHero` and
+`GenSourceMix`. The extraction also surfaced a latent correctness gap in the
+copy-paste: a holdings cell's `n` is pre sqrt-scaled by
+`WalletIngest.treemapWeight`, so squaring it recovers true USD proportion —
+but a source cell's `n` is a raw thing-count, never scaled, so squaring it
+skewed the wash disproportionately toward the top source. `GenSourceMix` now
+computes a plain linear share instead of reusing the squared formula. Also
+fixed: a stale doc comment still showing `MoversTile`'s pre-candidate-B
+grammar; `TokensAsk.Move` dropped its added `closes` field (derivable via
+`TokenPulse.shared.pulse(for:)` at the one call site, so nothing needs to
+carry a second copy); a redundant ternary in the source-mix residual count.
+One reviewer flagged `GenMoversTile`'s tolerant 2-or-3-field row parse as
+over-general — kept as is and commented: mid-stream a row's closes are still
+arriving, and requiring all three fields up front would hold the symbol and
+value off-screen until the whole sparkline lands, against GenParser's own
+"any prefix of any document renders" law.
+
+VERIFIED 2026-07-23 (iPhone 17 Pro sim, pinned UDID, both before and after the
+cleanup refactor): `-todayProbe YES` over a corpus with two watched tokens
+(WIF/ETH) and a mixed-source day composed `mix = SourceMix("What landed", "and
+4 more, elsewhere", [Calendar 5, Gmail 4, ChatGPT 2, Tokens 2])` and `tmov =
+MoversTile("Watchlist", "WIF|+49.4%|0.0006848,…;ETH|-2.4%|1933,…")`. The real
+UI path (`-uiAnswerProbe "How's my day?"`) rendered both live: a green rising
+WIF sparkline and a red declining ETH sparkline beside their percentages, and
+the source mix's four bridge-icon cells with counts and residual line, paired
+directly under the hour strip. Build green.

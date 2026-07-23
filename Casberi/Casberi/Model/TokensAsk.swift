@@ -50,7 +50,10 @@ enum TokensAsk {
 
     /// Every watched token's 24h move, biggest swing first — read through
     /// TokenPulse's cache (refreshed if stale), so this answer and the feed
-    /// rows can never disagree about the same token.
+    /// rows can never disagree about the same token. A row wanting the same
+    /// closes for a sparkline (the brief's `moversTile`, 2026-07-23) reads
+    /// `TokenPulse.shared.pulse(for:)` itself rather than `Move` carrying a
+    /// second copy — the cache is already warm from this very refresh.
     @MainActor
     static func moves(context: ModelContext) async -> [Move] {
         await TokenPulse.shared.refresh(context: context)

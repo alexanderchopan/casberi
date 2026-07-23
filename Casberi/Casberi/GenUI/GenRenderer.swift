@@ -325,6 +325,7 @@ struct GenRender: View {
         case "TilePair":     GenTilePair(el: el, els: els).mountIn()
         case "MoversTile":   GenMoversTile(el: el).mountIn()
         case "NextTile":     GenNextTile(el: el).mountIn()
+        case "SourceMix":    GenSourceMix(el: el).mountIn()
         case "LeadRow":      GenLeadRow(el: el).mountIn()
         case "LeadPost":     GenLeadPost(el: el).mountIn()
         case "AskMore":      GenAskMore(el: el).mountIn()
@@ -3058,6 +3059,64 @@ private func signedPercent(_ token: String) -> Double? {
     return Double(body)
 }
 
+/// The shared "biggest left, up to three stacked right" mini-treemap layout —
+/// the money hero's holdings map and the brief's own source mix (2026-07-23)
+/// are two instances of the same compact shape. Only the LAYOUT lives here;
+/// each caller keeps its own cell face and its own share math (a holdings
+/// cell's `n` is pre sqrt-scaled by `WalletIngest.treemapWeight`, so squaring
+/// it recovers true USD proportion — a source cell's `n` is a raw
+/// thing-count, so its share is linear). Cleanup, 2026-07-23: these had
+/// drifted into two independently-maintained copies of the same ~30 lines.
+private struct MiniTreemap<Cell: View>: View {
+    let items: [KindCountRow.Item]
+    let cell: (KindCountRow.Item, Int) -> Cell
+
+    init(items: [KindCountRow.Item], @ViewBuilder cell: @escaping (KindCountRow.Item, Int) -> Cell) {
+        self.items = items
+        self.cell = cell
+    }
+
+    var body: some View {
+        Group {
+            if !items.isEmpty {
+                HStack(spacing: DS.Space.s1) {
+                    cell(items[0], 0)
+                    if items.count > 1 {
+                        VStack(spacing: DS.Space.s1) {
+                            ForEach(Array(items.dropFirst().prefix(3).enumerated()), id: \.offset) { i, item in
+                                cell(item, i + 1)
+                            }
+                        }
+                        .frame(maxWidth: .infinity)
+                    }
+                }
+            }
+        }
+    }
+}
+
+private extension View {
+    /// The chrome every mini-treemap cell wears — rounded wash background,
+    /// bottom-leading content, and the largest-first staggered entrance
+    /// (2026-07-22's delight pass, shared rather than copy-pasted per cell).
+    func miniTreemapCellChrome<Background: View>(index: Int, cellsShown: Bool, reduceMotion: Bool,
+                                                 @ViewBuilder background: () -> Background) -> some View {
+        self
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
+            .padding(.horizontal, DS.Space.s2)
+            .padding(.vertical, DS.Space.s1)
+            .background {
+                ZStack { DS.surfaceSheet; background() }
+                    .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+            }
+            .scaleEffect(cellsShown ? 1 : 0.85)
+            .opacity(cellsShown ? 1 : 0)
+            .animation(reduceMotion ? nil
+                       : .spring(response: 0.36, dampingFraction: 0.72).delay(Double(index) * 0.06),
+                       value: cellsShown)
+    }
+}
+
 /// MoneyHero(total, delta, "v0,v1,…", subline, [cells], anchor, txTitle,
 /// txMeta, txID, rawTotal, rawAnchorTotal) — the Today brief's one fused
 /// visualization (direction B2's hero): the combined total and its day move,
@@ -3267,22 +3326,7 @@ private struct GenMoneyHero: View {
     /// stack beside it. Deliberately not the 4×3 template `GenTagMap` tiles —
     /// at this height a six-cell grid renders unreadable slivers.
     @ViewBuilder private var treemap: some View {
-        let items = items
-        if items.isEmpty {
-            EmptyView()
-        } else {
-            HStack(spacing: DS.Space.s1) {
-                cell(items[0], index: 0)
-                if items.count > 1 {
-                    VStack(spacing: DS.Space.s1) {
-                        ForEach(Array(items.dropFirst().prefix(3).enumerated()), id: \.offset) { i, item in
-                            cell(item, index: i + 1)
-                        }
-                    }
-                    .frame(maxWidth: .infinity)
-                }
-            }
-        }
+        MiniTreemap(items: items) { item, index in cell(item, index: index) }
     }
 
     private func cell(_ item: KindCountRow.Item, index: Int) -> some View {
@@ -3305,30 +3349,18 @@ private struct GenMoneyHero: View {
                     .minimumScaleFactor(0.7)
             }
         }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
-            .padding(.horizontal, DS.Space.s2)
-            .padding(.vertical, DS.Space.s1)
-            .background {
-                ZStack {
-                    DS.surfaceSheet
-                    if let wash = TokenHue.wash(for: item.tag, share: share(item)) {
-                        wash
-                    } else {
-                        DS.tint(magnitude: share(item))
-                    }
-                }
-                .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+        // Cells stagger in LARGEST FIRST (2026-07-22) — the render order
+        // already IS magnitude order (the doc's cells arrive pre-sorted
+        // descending, `WalletIngest.treemapCells`), so following index
+        // order for the entrance delay is narrative order for free: ETH
+        // enters first because ETH matters most.
+        .miniTreemapCellChrome(index: index, cellsShown: cellsShown, reduceMotion: reduceMotion) {
+            if let wash = TokenHue.wash(for: item.tag, share: share(item)) {
+                wash
+            } else {
+                DS.tint(magnitude: share(item))
             }
-            // Cells stagger in LARGEST FIRST (2026-07-22) — the render order
-            // already IS magnitude order (the doc's cells arrive pre-sorted
-            // descending, `WalletIngest.treemapCells`), so following index
-            // order for the entrance delay is narrative order for free: ETH
-            // enters first because ETH matters most.
-            .scaleEffect(cellsShown ? 1 : 0.85)
-            .opacity(cellsShown ? 1 : 0)
-            .animation(reduceMotion ? nil
-                       : .spring(response: 0.36, dampingFraction: 0.72).delay(Double(index) * 0.06),
-                       value: cellsShown)
+        }
     }
 }
 
@@ -3490,8 +3522,10 @@ private struct GenTilePair: View {
     }
 }
 
-/// MoversTile(label, "SYM|+4.2%,SYM|flat,…") — the watchlist at a glance, as
-/// one half of the brief's tile pair.
+/// MoversTile(label, "SYM|+4.2%|close,close,…;SYM|flat|close,…") — the
+/// watchlist at a glance, as one half of the brief's tile pair. Rows join on
+/// ";" (not ",") because each row's own closes are themselves comma-joined —
+/// each row DRAWS its move (a tiny sparkline) rather than only stating it.
 ///
 /// Unlike `StatRow`'s deliberately neutral counts, a price move HAS a
 /// direction, so it wears one: gains and losses take the chart accent. A move
@@ -3501,13 +3535,21 @@ private struct GenMoversTile: View {
     let el: GenEl
     @Environment(\.colorScheme) private var scheme
 
-    private struct Move { let symbol: String; let value: String }
+    private struct Move { let symbol: String; let value: String; let closes: [Double] }
+    /// Tolerant on purpose: the composer always finishes a row with a third
+    /// (closes) field, but mid-STREAM a row's closes are still arriving
+    /// character by character — requiring all three up front would hold the
+    /// symbol and value off-screen until the whole sparkline lands, instead
+    /// of the row popping in immediately and the curve drawing a moment
+    /// later (GenParser's "any prefix of any document renders" law).
     private var moves: [Move] {
-        el.str(1).split(separator: ",").compactMap { part in
-            let f = part.split(separator: "|", maxSplits: 1)
-            guard f.count == 2 else { return nil }
+        el.str(1).split(separator: ";").compactMap { part in
+            let f = part.split(separator: "|", maxSplits: 2, omittingEmptySubsequences: false)
+            guard f.count >= 2 else { return nil }
+            let closes = f.count == 3 ? genCSVDoubles(String(f[2])) : []
             return Move(symbol: f[0].trimmingCharacters(in: .whitespaces),
-                        value: f[1].trimmingCharacters(in: .whitespaces))
+                        value: f[1].trimmingCharacters(in: .whitespaces),
+                        closes: closes)
         }
     }
 
@@ -3532,6 +3574,22 @@ private struct GenMoversTile: View {
                                 .dsText(.callout15)
                                 .foregroundStyle(DS.textPrimary)
                                 .lineLimit(1)
+                            // The row's own tiny curve (2026-07-23) — reusing
+                            // `TokenPulse`'s already-cached closes, so a
+                            // watchlist row says the SHAPE of the move, not
+                            // only its sign. Flat draws in the value's own
+                            // tertiary ink (§83: no direction, no color).
+                            if m.closes.count >= 2 {
+                                TokenChartPlot(chart: TokenChart(closes: m.closes,
+                                                                 price: m.closes.last ?? 0,
+                                                                 change: (Double(m.value.replacingOccurrences(of: "%", with: "")) ?? 0) / 100),
+                                               accent: ink(m.value),
+                                               height: 20,
+                                               pulses: false,
+                                               lineWidth: 1.5,
+                                               fillOpacity: 0)
+                                    .frame(width: 44)
+                            }
                             Spacer(minLength: DS.Space.s2)
                             Text(m.value)
                                 .dsText(.callout15).fontWeight(.semibold)
@@ -3597,6 +3655,79 @@ private struct GenNextTile: View {
         } else {
             Button { thingOpen?(id) } label: { card }
                 .buttonStyle(.plain)
+        }
+    }
+}
+
+/// SourceMix(eyebrow, subline, ["Source N", ...]) — the brief's WHERE-FROM
+/// visualization (candidate A, 2026-07-23, user: "add A and B those are both
+/// good components to have"), pairing the hour strip's WHEN. A compact,
+/// self-contained cousin of the money hero's own mini-map — largest source
+/// left, up to three more stacked beside it — rather than the board's full
+/// `TagMap` (which carries pin/size-toggle/tap-to-feed chrome this smaller,
+/// answer-column card doesn't need).
+private struct GenSourceMix: View {
+    let el: GenEl
+    @State private var cellsShown = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    private var items: [KindCountRow.Item] { KindCountRow.parse(el.refs(2), cap: 4) }
+
+    /// A source cell's magnitude is a raw thing-count (unlike the money
+    /// hero's holdings cells, which `WalletIngest.treemapWeight` pre
+    /// sqrt-scales) — so its share of the map is linear, not squared.
+    private func share(_ item: KindCountRow.Item) -> Double {
+        let total = items.reduce(0) { $0 + $1.n }
+        guard total > 0 else { return 0 }
+        return Double(item.n) / Double(total)
+    }
+
+    var body: some View {
+        let items = items
+        Group {
+            if !items.isEmpty {
+                VStack(alignment: .leading, spacing: DS.Space.s2) {
+                    if !el.str(0).isEmpty {
+                        Text(el.str(0))
+                            .dsText(.callout15).fontWeight(.semibold)
+                            .foregroundStyle(DS.textPrimary)
+                    }
+                    MiniTreemap(items: items) { item, index in cell(item, index: index) }
+                        .frame(height: 84)
+                    if !el.str(1).isEmpty {
+                        Text(el.str(1))
+                            .dsText(.label11)
+                            .foregroundStyle(DS.textTertiary)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(DS.Space.s4)
+                .dsWidgetSurface()
+                .padding(.horizontal, DS.Space.s4)
+                .padding(.top, DS.Space.s2)
+                // A one-shot @State set — SwiftUI never replays a stale
+                // value, so there's nothing here for a guard to protect
+                // (unlike `GenMoneyHero.fireEntrance`'s multi-stage Task).
+                .onAppear { cellsShown = true }
+            }
+        }
+    }
+
+    private func cell(_ item: KindCountRow.Item, index: Int) -> some View {
+        VStack(alignment: .leading, spacing: DS.Space.s1) {
+            BridgeIcon(name: item.tag, size: 18)
+            Text(item.tag)
+                .dsText(.label12)
+                .foregroundStyle(DS.textPrimary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+            Text(item.n == 1 ? String(localized: "1 thing") : String(localized: "\(item.n) things"))
+                .dsText(.label11)
+                .foregroundStyle(DS.textSecondary)
+                .lineLimit(1)
+        }
+        .miniTreemapCellChrome(index: index, cellsShown: cellsShown, reduceMotion: reduceMotion) {
+            DS.tint(magnitude: share(item))
         }
     }
 }

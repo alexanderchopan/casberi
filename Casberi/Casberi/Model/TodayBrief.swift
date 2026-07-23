@@ -118,6 +118,14 @@ enum TodayBrief {
             lines.append(strip)
         }
 
+        // 6. What landed — the day's composition by source, paired with the
+        // hour strip's WHEN (candidate A, 2026-07-23, user: "add A and B
+        // those are both good components to have").
+        if let mix = sourceMix(landed) {
+            ids.append("mix")
+            lines.append(mix)
+        }
+
         // Nothing to draw at all — an honest empty day, not an empty screen.
         guard !ids.isEmpty else {
             return KeptAskComposers.Result(
@@ -414,10 +422,15 @@ enum TodayBrief {
 
     // MARK: - 3. The pair
 
-    /// `MoversTile(label, "SYM|+4.2%,…")` — the watchlist at a glance. Real
-    /// direction gets real color here (unlike `StatRow`'s neutral counts): a
-    /// price move HAS a sign. A move that rounds to flat says "flat" and takes
-    /// no color, per §83.
+    /// `MoversTile(label, "SYM|+4.2%|close,close,…;…")` — the watchlist at a
+    /// glance. Real direction gets real color here (unlike `StatRow`'s
+    /// neutral counts): a price move HAS a sign. A move that rounds to flat
+    /// says "flat" and takes no color, per §83. Rows join on ";" (not ",")
+    /// because each row's own closes are themselves comma-joined — the
+    /// candidate B delight (2026-07-23, user: "add A and B those are both
+    /// good components to have"): each row DRAWS its move instead of only
+    /// stating it, reusing `TokenPulse`'s already-cached closes so the row
+    /// costs nothing extra to fetch.
     private static func moversTile(_ moves: [TokensAsk.Move]) -> String? {
         guard !moves.isEmpty else { return nil }
         let rows = moves
@@ -428,9 +441,15 @@ enum TodayBrief {
                 let value = abs(pct) < 0.05
                     ? String(localized: "flat")
                     : String(format: "%+.1f%%", pct)
-                return "\(tileSafe(m.symbol))|\(value)"
+                // Up to 20 recent closes — a legible tiny shape without
+                // bloating the doc line; read straight off `TokenPulse`'s
+                // cache (already warm from `moves(context:)`'s own refresh
+                // moments ago) rather than `Move` carrying a second copy.
+                let closes = (TokenPulse.shared.pulse(for: m.thing)?.closes ?? [])
+                    .suffix(20).map { String(format: "%.4g", $0) }.joined(separator: ",")
+                return "\(tileSafe(m.symbol))|\(value)|\(closes)"
             }
-        return "tmov = MoversTile(\"\(String(localized: "Watchlist"))\", \"\(rows.joined(separator: ","))\")"
+        return "tmov = MoversTile(\"\(String(localized: "Watchlist"))\", \"\(rows.joined(separator: ";"))\")"
     }
 
     /// `NextTile(label, title, when, alert, thingID)` — the nearest real
@@ -553,6 +572,32 @@ enum TodayBrief {
         return "hours = Bars(\"\(String(localized: "When it landed"))\", \"\", \"\(counts.map(String.init).joined(separator: ","))\", \"\(labels.joined(separator: ","))\")"
     }
 
+    // MARK: - 6. What landed (candidate A)
+
+    /// `SourceMix(eyebrow, subline, ["Source N", ...])` — the day's
+    /// composition by SOURCE, the visualization the hour strip doesn't
+    /// answer: the strip says WHEN, this says WHERE FROM. Two gates, matching
+    /// `hourStrip`'s own dual floor: 3+ distinct sources (a day that's only
+    /// Wallet and one RSS feed has no real mix to draw — two sources is a
+    /// fact better said in a sentence than drawn as a map) AND 6+ landed
+    /// things (three sources wearing one thing each is a trivial partition,
+    /// not a real composition — the same "too thin to have a shape" floor
+    /// `hourStrip` already holds itself to).
+    private static func sourceMix(_ landed: [Thing]) -> String? {
+        guard landed.count >= 6 else { return nil }
+        var counts: [String: Int] = [:]
+        for t in landed { counts[t.source, default: 0] += 1 }
+        guard counts.count >= 3 else { return nil }
+        let sorted = counts.sorted { $0.value > $1.value }
+        // Capped at 4 — the same compact footprint the money hero's own
+        // mini-map holds to; a residual folds into a named tail rather than
+        // growing the map past a glance.
+        let cells = sorted.prefix(4).map { "\(tileSafe($0.key)) \($0.value)" }
+        let residual = sorted.dropFirst(4).reduce(0) { $0 + $1.value }
+        let subline = residual > 0 ? String(localized: "and \(residual) more, elsewhere") : ""
+        return "mix = SourceMix(\"\(String(localized: "What landed"))\", \"\(genSafe(subline))\", [\(cells.joined(separator: ", "))])"
+    }
+
     // MARK: - Shared
 
     /// What "reading" actually means here: link things MINUS the money
@@ -608,12 +653,14 @@ enum TodayBrief {
         return String(cut) + "…"
     }
 
-    /// A symbol safe for the `MoversTile` grammar, whose `,` and `|` are its
-    /// field separators (the same treatment `KeptAskComposers.allocSafe`
-    /// gives `AllocBar`'s segments).
+    /// A symbol/source name safe for the `MoversTile`/`SourceMix` grammars,
+    /// whose `,`, `|`, and `;` are all field or row separators somewhere in
+    /// the two (the same treatment `KeptAskComposers.allocSafe` gives
+    /// `AllocBar`'s segments).
     private static func tileSafe(_ s: String) -> String {
         genSafe(s).replacingOccurrences(of: "|", with: " ")
             .replacingOccurrences(of: ",", with: " ")
+            .replacingOccurrences(of: ";", with: " ")
     }
 
     /// Strips what would break the one-line gen-UI grammar — the same
