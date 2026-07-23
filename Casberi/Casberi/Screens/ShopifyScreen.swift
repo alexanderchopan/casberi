@@ -52,7 +52,7 @@ struct ShopifyScreen: View {
         .bridgeSetupWash(name: "Shopify")
         .dsAdaptiveContentWidth()
         .dsPageBackground()
-        .dsSoftTopEdge()
+        .dsSoftScrollEdges()
         .navigationTitle("Shopify")
         .navigationBarTitleDisplayMode(.large)
         .toolbar {

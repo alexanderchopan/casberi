@@ -155,6 +155,16 @@ struct RootShell: View {
             // exactly one side of the matched pair present at a time, and a
             // bar sitting inert under the risen sheet was dead weight anyway.
             if !composerOpen {
+                // The floating cluster (whisper + bar) renders as one
+                // coordinated glass system (2026-07-23) — the container gives
+                // both elements a SHARED backdrop sample, so as feed content
+                // scrolls behind the pair they lens the same field consistently
+                // instead of each sampling on its own. Spacing is 0 ON PURPOSE:
+                // a non-zero spacing would let the two shapes MERGE into a
+                // liquid bridge, and the whisper is deliberately inset a step
+                // narrower to read as SEPARATE from the bar (2026-07-22, the
+                // double-bar ruling) — coordinated, not fused.
+                DSGlassContainer(spacing: 0) {
                 VStack(spacing: DS.Space.s2) {
                     // The whisper rides ABOVE the bar (prd §165) — the day
                     // brief's headline, first open of the day only. Tap
@@ -205,6 +215,7 @@ struct RootShell: View {
                         DSHaptic.tap()
                         composerOpen = true
                     }
+                }
                 }
                 .padding(.horizontal, DS.Space.s4)
                 .padding(.bottom, DS.Space.s2)
@@ -1943,7 +1954,15 @@ struct RootShell: View {
     // MARK: - Toast (commit feedback — state lives in ShellChrome.flash)
 
     /// Transient chrome floating over content — it wears glass.
+    ///
+    /// The pill and its one action are concentric glass — a tinted prominent
+    /// capsule (the drop-capture Undo) riding inside the clear glass pill —
+    /// so they live in a `DSGlassContainer`: the container is what lets the
+    /// inner button lens against the SAME backdrop sample as the pill instead
+    /// of compositing as an unrelated glass layer stacked on top (2026-07-23,
+    /// the first real use of the container the design system already shipped).
     private func toastView(_ text: String) -> some View {
+        DSGlassContainer(spacing: DS.Space.s2) {
         HStack(spacing: DS.Space.s2) {
             // The first thing ever gets the mark (§8). Once. The first-ever
             // kept ask (composer delight, 2026-07-21) shares the treatment —
@@ -1971,8 +1990,12 @@ struct RootShell: View {
         .padding(.horizontal, DS.Space.s4)
         .padding(.vertical, DS.Space.s2)
         .dsGlass(cornerRadius: DS.Radius.pill)
+        }
         .padding(.bottom, 140)
         // A replacing flash swaps identity — crossfade, never a stack (§12).
+        // The `.id` rides the container so the whole glass unit swaps as one,
+        // preserving the crossfade (a shared `glassEffectID` would morph the
+        // shapes instead — deliberately not done, the crossfade ruling stands).
         .id(text)
         .transition(.move(edge: .bottom).combined(with: .opacity))
         // The toast floats ABOVE content in the shell ZStack. A plain outcome

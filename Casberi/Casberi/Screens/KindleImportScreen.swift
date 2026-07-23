@@ -40,7 +40,7 @@ struct KindleImportScreen: View {
         .bridgeSetupWash(name: "Kindle")
         .dsAdaptiveContentWidth()
         .dsPageBackground()
-        .dsSoftTopEdge()
+        .dsSoftScrollEdges()
         .navigationTitle("Kindle")
         .navigationBarTitleDisplayMode(.large)
         .fileImporter(isPresented: $importing,

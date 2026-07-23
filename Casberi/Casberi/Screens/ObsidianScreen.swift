@@ -33,7 +33,7 @@ struct ObsidianScreen: View {
         .bridgeSetupWash(name: "Obsidian")
         .dsAdaptiveContentWidth()
         .dsPageBackground()
-        .dsSoftTopEdge()
+        .dsSoftScrollEdges()
         .navigationTitle("Obsidian")
         .navigationBarTitleDisplayMode(.large)
         .fileImporter(isPresented: $picking, allowedContentTypes: [.folder]) { outcome in

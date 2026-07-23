@@ -95,7 +95,7 @@ struct TokenSetupScreen: View {
         .bridgeSetupWash(name: bridge.rawValue)
         .dsAdaptiveContentWidth()
         .dsPageBackground()
-        .dsSoftTopEdge()
+        .dsSoftScrollEdges()
         .navigationTitle(bridge.rawValue)
         .navigationBarTitleDisplayMode(.large)
         .onAppear {

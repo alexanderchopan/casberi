@@ -61,7 +61,7 @@ struct PrivacyPoolsScreen: View {
         .bridgeSetupWash(name: "0xBow Privacy Pools")
         .dsAdaptiveContentWidth()
         .dsPageBackground()
-        .dsSoftTopEdge()
+        .dsSoftScrollEdges()
         .navigationTitle("0xBow Privacy Pools")
         .navigationBarTitleDisplayMode(.large)
         .onAppear {

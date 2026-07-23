@@ -103,7 +103,7 @@ struct WalletHistoryScreen: View {
         .scrollContentBackground(.hidden)
         .dsAdaptiveContentWidth()
         .dsPageBackground()
-        .dsSoftTopEdge()
+        .dsSoftScrollEdges()
         .navigationTitle(title)
         .navigationBarTitleDisplayMode(.large)
         .sheet(item: $sheetThing) { ThingSheetView(thing: $0) }

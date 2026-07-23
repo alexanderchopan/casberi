@@ -69,7 +69,7 @@ struct AppDetailScreen: View {
                       token: connectToken)
         .dsAdaptiveContentWidth()
         .dsPageBackground()
-        .dsSoftTopEdge()
+        .dsSoftScrollEdges()
         .navigationTitle(offer.name)
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {

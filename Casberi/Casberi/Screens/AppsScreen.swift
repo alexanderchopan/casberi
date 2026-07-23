@@ -301,7 +301,7 @@ struct AppsScreen: View {
         }
         .dsAdaptiveContentWidth()
         .dsPageBackground()
-        .dsSoftTopEdge()
+        .dsSoftScrollEdges()
         .navigationTitle("Apps")
         .navigationBarTitleDisplayMode(.large)
         .sheet(isPresented: $pairing) { PairClientSheet() }

@@ -36,7 +36,7 @@ struct SettingsScreen: View {
             }
             .scrollIndicators(.hidden)
         .minimizesChrome(chrome)
-        .dsSoftTopEdge()
+        .dsSoftScrollEdges()
             .dsAdaptiveContentWidth()
             .dsPageBackground()
             .navigationTitle("Settings")

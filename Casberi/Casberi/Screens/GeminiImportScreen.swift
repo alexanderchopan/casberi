@@ -40,7 +40,7 @@ struct GeminiImportScreen: View {
         .scrollContentBackground(.hidden)
         .dsAdaptiveContentWidth()
         .dsPageBackground()
-        .dsSoftTopEdge()
+        .dsSoftScrollEdges()
         .navigationTitle("Gemini")
         .navigationBarTitleDisplayMode(.large)
         .fileImporter(isPresented: $importing,

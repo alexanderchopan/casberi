@@ -152,7 +152,7 @@ struct MainSurface: View {
             // backdrop blur for nothing. `safeAreaInset` reserves the strip's
             // height at rest (rows still start below it, untouched) while letting
             // scrolled content travel UNDER it, which is the only thing that makes
-            // the material read as glass. Pairs with each feed's `dsSoftTopEdge()`:
+            // the material read as glass. Pairs with each feed's `dsSoftScrollEdges()`:
             // the scroll edge dissolves content as it goes under, so rows melt into
             // the strip instead of colliding with it.
             .safeAreaInset(edge: .top, spacing: 0) {

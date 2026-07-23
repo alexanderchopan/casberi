@@ -124,11 +124,21 @@ extension View {
 }
 
 extension View {
-    /// iOS 26 soft scroll edge — content melts under the status bar edge.
+    /// iOS 26 soft scroll edges — content melts under BOTH pieces of floating
+    /// chrome that ride every screen: the source-chip strip at the top and the
+    /// agent bar at the bottom. Each floats OVER the scroll view (the strip via
+    /// `MainSurface`'s `safeAreaInset(.top)`, the bar hosted in `RootShell`'s
+    /// own ZStack), so scrolled content travels under both — the soft edge
+    /// dissolves the rows as they pass, so nothing collides with either bar.
+    ///
+    /// The bottom edge pairs with the agent bar exactly the way the top edge
+    /// pairs with the strip (2026-07-23): the bar had the same geometry as the
+    /// strip — content passing beneath it — but no dissolve, so rows met its
+    /// glass with a hard edge. One `Edge.Set` call softens the pair.
     @ViewBuilder
-    func dsSoftTopEdge() -> some View {
+    func dsSoftScrollEdges() -> some View {
         if #available(iOS 26.0, *) {
-            self.scrollEdgeEffectStyle(.soft, for: .top)
+            self.scrollEdgeEffectStyle(.soft, for: [.top, .bottom])
         } else {
             self
         }

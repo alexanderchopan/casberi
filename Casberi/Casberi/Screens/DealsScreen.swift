@@ -47,7 +47,7 @@ struct DealsScreen: View {
         .bridgeSetupWash(name: "Deals")
         .dsAdaptiveContentWidth()
         .dsPageBackground()
-        .dsSoftTopEdge()
+        .dsSoftScrollEdges()
         .navigationTitle("Deals")
         .navigationBarTitleDisplayMode(.large)
         .onAppear {

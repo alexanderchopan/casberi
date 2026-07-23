@@ -29,7 +29,7 @@ struct BankrSetupScreen: View {
         .scrollContentBackground(.hidden)
         .dsAdaptiveContentWidth()
         .dsPageBackground()
-        .dsSoftTopEdge()
+        .dsSoftScrollEdges()
         .navigationTitle("Bankr")
         .navigationBarTitleDisplayMode(.large)
     }

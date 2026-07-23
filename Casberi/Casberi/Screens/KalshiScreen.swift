@@ -59,7 +59,7 @@ struct KalshiScreen: View {
         .bridgeSetupWash(name: "Kalshi")
         .dsAdaptiveContentWidth()
         .dsPageBackground()
-        .dsSoftTopEdge()
+        .dsSoftScrollEdges()
         .navigationTitle("Kalshi")
         .navigationBarTitleDisplayMode(.large)
         .onAppear { loadWatched() }

@@ -42,7 +42,7 @@ struct DiagnosticsScreen: View {
         .scrollContentBackground(.hidden)
         .dsAdaptiveContentWidth()
         .dsPageBackground()
-        .dsSoftTopEdge()
+        .dsSoftScrollEdges()
         .navigationTitle("Diagnostics")
         .navigationBarTitleDisplayMode(.large)
         .toolbar {

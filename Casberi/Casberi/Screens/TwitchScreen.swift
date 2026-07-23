@@ -38,7 +38,7 @@ struct TwitchScreen: View {
         .bridgeSetupWash(name: "Twitch")
         .dsAdaptiveContentWidth()
         .dsPageBackground()
-        .dsSoftTopEdge()
+        .dsSoftScrollEdges()
         .navigationTitle("Twitch")
         .navigationBarTitleDisplayMode(.large)
         .onAppear {

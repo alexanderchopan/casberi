@@ -138,7 +138,7 @@ struct WalletScreen: View {
         .scrollContentBackground(.hidden)
         .dsAdaptiveContentWidth()
         .dsPageBackground()
-        .dsSoftTopEdge()
+        .dsSoftScrollEdges()
         .navigationTitle("Wallet")
         .navigationBarTitleDisplayMode(.large)
         .sheet(isPresented: $showNameSheet) { NameAddressSheet() }

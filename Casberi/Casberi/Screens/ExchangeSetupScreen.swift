@@ -41,7 +41,7 @@ struct ExchangeSetupScreen: View {
         .scrollContentBackground(.hidden)
         .dsAdaptiveContentWidth()
         .dsPageBackground()
-        .dsSoftTopEdge()
+        .dsSoftScrollEdges()
         .navigationTitle(venue.display)
         .navigationBarTitleDisplayMode(.large)
     }

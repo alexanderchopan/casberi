@@ -123,7 +123,7 @@ struct BridgeDetailScreen: View {
             .scrollIndicators(.hidden)
             .dsAdaptiveContentWidth()
             .dsPageBackground()
-            .dsSoftTopEdge()
+            .dsSoftScrollEdges()
             .onAppear { loadRecent(source: bridge.name) }
             .navigationTitle(bridge.name)
             .navigationBarTitleDisplayMode(.inline)
