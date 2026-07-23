@@ -7180,7 +7180,7 @@ catalog: Spotify/Apple Music (`Listening`), Steam (`Games`), Twitch
 (`Watching`) all resolve to `Media`; Substack (`Reading`) still counts. Build
 green.
 
-## 187. Connect a wallet app — a real button, and not claiming `wc:` stops meaning "no wallet" (user: "the 'connect a wallet app' doesn't work… also, it should be a button not a link", 2026-07-23)
+## 188. Connect a wallet app — a real button, and not claiming `wc:` stops meaning "no wallet" (user: "the 'connect a wallet app' doesn't work… also, it should be a button not a link", 2026-07-23)
 
 Two faults in one row, one visual and one real.
 
@@ -7229,3 +7229,61 @@ flips to "Waiting for your wallet — tap to cancel" and reveals the minted
 `wc:460f836c…` URI with Copy and the still-waiting line, where the old build
 ended at "No wallet app on this iPhone". The handshake probe separately
 confirms the proposal still mints with `methods=0 events=0`. Build green.
+
+## 189. The Wallet manager below the shelf — one shape, one font, four slabs (user: "we have different fonts, different shapes, and I think to myself, how would Cash App do this screen", then "yes! this is what I want", 2026-07-23)
+
+The shelf was right; everything under it had accumulated. A census of what was
+actually on screen: a recessed field with a side pill, a full-width capsule
+with a caption, three paragraph footers, a headed section with a blue text link
+and an unbounded row list, and a gear row — **six shapes and four type rungs**,
+each defensible alone and a collage together.
+
+**The rule, not new art: below the shelf every block is the same slab.** One
+height (56), one radius (`DS.Radius.widget`, the tile radius §8 already
+sanctions), in `Screens/WalletSlabs.swift` — `WalletSlabField`,
+`WalletSlabButton`, `WalletSlabDoor`. The only round things left on the screen
+are people. What ships is four slabs and one sentence: field, connect, the
+promise, and two doors.
+
+**The field swallowed its own verb.** Field-plus-side-pill read as two controls
+for one act; WATCH is now text inside the same slab, dimmed until there's
+something to act on (§83 — a control states its own disabled state). A filled
+capsule inside a filled well was the "button in a button" doing most of the
+visual noise.
+
+**Doors wear their facts, so nothing hides.** "Address book · 4 names" and
+"Connection · Ethereum, Base +4". The address book moved to its own page
+(`Screens/AddressBookScreen.swift`, route `.addressBook`) for the same reason
+the chains did in §182 — it was the largest furniture on a screen whose job is
+the shelf and the one field.
+
+**One casualty worth naming: the omnibox stopped doubling as the book's
+filter** (§184's clever bit, and the reason its placeholder had to say "or
+search your book"). The book searches itself now. One field per job is the
+simpler trade, and it's what let the placeholder shrink to "Address, ENS,
+.sol".
+
+**Words: ~70 → 9.** The three always-on footers are one line — "Read-only —
+watching can never move funds." The other two moved to the doors that own them:
+where activity is read now lives in Connection, what naming costs in Address
+book. The Connect button's caption went too — it said the same thing as the
+sentence two lines under it.
+
+**The approved mock had to be corrected on one point.** It set the tappable
+slabs in SF Rounded, Cash App style. That breaks a standing rule
+(`Typography.swift`, 2026-07-09): SF Rounded is the DISPLAY tier only —
+"functional text (body, rows, labels) stays SF Pro Text, which scans crisper at
+UI sizes and keeps the app feeling native." The complaint was *inconsistency*,
+and consistency is the fix, so every slab is the text face at one weight and
+the rounded face stays where it already lived: the large nav title. Mock at
+`design/manager-look/wallet-simple-mock.html`.
+
+VERIFIED 2026-07-23 (iPhone 17 Pro sim, seeded book + a watched wallet): the
+screen renders as the mock — field slab, blue Connect slab, the one gray line,
+then "Address book · 4 names" and "Connection · Ethereum, Base +4" at matching
+height and radius. The Address book door pushes to its own page carrying the
+search slab, all four names, and the naming paragraph. Build green.
+
+Housekeeping: this pass also resolved a THIRD prd numbering collision — two
+sections had been written as §187 by concurrent sessions. The brief-landing
+section (first in file) keeps 187; the wallet Connect-button fix became 188.

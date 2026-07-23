@@ -70,8 +70,6 @@ struct WalletScreen: View {
     /// omnibox above IS its search field now (prd §182) — typing to watch
     /// something also narrows the book live, so there's one input, not two.
     @Bindable private var book = AddressBook.shared
-    @State private var showNameSheet = false
-    @State private var openEntry: AddressBook.Entry?
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
 
@@ -91,55 +89,44 @@ struct WalletScreen: View {
                 .listRowInsets(EdgeInsets())
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
+            // Below the shelf: four slabs and one sentence (prd §189). Every
+            // block is the same height and radius, so the area reads as a
+            // rhythm rather than the six-shape collage it was.
             Section {
-                BridgeFieldRow(placeholder: "Address, ENS, .sol — or search your book",
-                               text: $newAddress, buttonLabel: "Watch", keyboard: .default,
-                               focus: $addressFieldFocused, action: watch)
-                if WalletConnectBridge.isAvailable {
-                    connectRow
+                VStack(spacing: DS.Space.s2) {
+                    WalletSlabField(placeholder: String(localized: "Address, ENS, .sol"),
+                                    text: $newAddress,
+                                    actionLabel: String(localized: "WATCH"),
+                                    focus: $addressFieldFocused, action: watch)
+                    if WalletConnectBridge.isAvailable {
+                        connectRow
+                    }
+                    // Nothing watched, nothing typed — one tap watches a famous
+                    // public wallet so the whole feature demos in three seconds.
+                    if wallet.addresses.isEmpty {
+                        peekChip
+                    }
+                    // The one sentence. The two that used to sit beside it —
+                    // where activity is read, and what naming costs — moved to
+                    // the doors that own them (Connection, Address book).
+                    Text("Read-only — watching can never move funds.")
+                        .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                        .frame(maxWidth: .infinity)
+                        .padding(.top, DS.Space.s1)
+                    WalletSlabDoor(title: "Address book", detail: bookSummary) {
+                        HomeRoute.shared.pushBridge(.addressBook)
+                    }
+                    .padding(.top, DS.Space.s2)
+                    WalletSlabDoor(title: "Connection", detail: chainsSummary) {
+                        HomeRoute.shared.pushBridge(.walletConnection)
+                    }
                 }
-                // Nothing watched, nothing typed — one tap watches a famous
-                // public wallet so the whole feature demos in three seconds.
-                if wallet.addresses.isEmpty {
-                    peekChip
-                }
-            } footer: {
-                Text("Read-only — watching can never trade or move funds. Activity is public, read across chains directly on this iPhone.")
-                    .dsText(.subhead13).foregroundStyle(DS.textSecondary)
             }
+            .listRowInsets(EdgeInsets(top: DS.Space.s2, leading: DS.Space.s4,
+                                      bottom: 0, trailing: DS.Space.s4))
+            .listRowBackground(Color.clear)
             .listRowSeparator(.hidden)
             statusSection
-            bookSection
-                .listRowSeparator(.hidden)
-            Section {
-                // A plain Button calling `pushBridge` directly. Equivalent to
-                // `NavigationLink(value: .bridge(.walletConnection))` — both
-                // push through the same `HomeRoute.path` and resolve via the
-                // same `.navigationDestination(for:)` registration; this form
-                // is kept only because it's the identical call a wallet-
-                // sourced feed row already uses to reach THIS screen, so the
-                // two doors share one proven code path.
-                Button {
-                    DSHaptic.tap()
-                    HomeRoute.shared.pushBridge(.walletConnection)
-                } label: {
-                    HStack(spacing: DS.Space.s3) {
-                        Image(systemName: "gearshape")
-                            .font(.system(size: 15, weight: .medium))
-                            .foregroundStyle(DS.textSecondary)
-                        Text("Connection").dsText(.body17).foregroundStyle(DS.textPrimary)
-                        Spacer()
-                        Text(chainsSummary).dsText(.subhead13).foregroundStyle(DS.textTertiary)
-                        Image(systemName: "chevron.right")
-                            .font(.system(size: 12, weight: .semibold))
-                            .foregroundStyle(DS.textTertiary)
-                    }
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .dsListCardRow()
-            }
-            .listRowSeparator(.hidden)
             // Room for the floating agent bar (FeedScreen's own pattern) — the
             // Connection row was the manager's own worst example of the bar
             // eating its last row before this (found live, 2026-07-22).
@@ -154,8 +141,6 @@ struct WalletScreen: View {
         .dsSoftScrollEdges()
         .navigationTitle("Wallet")
         .navigationBarTitleDisplayMode(.large)
-        .sheet(isPresented: $showNameSheet) { NameAddressSheet() }
-        .sheet(item: $openEntry) { entry in AddressCard(entry: entry) }
         // Ask the chain what the unnamed-kind entries are, a few at a time —
         // keyless, and only for entries that haven't been checked (prd §169).
         .task { await AddressKind.detectPending() }
@@ -354,80 +339,20 @@ struct WalletScreen: View {
         }
     }
 
-    // MARK: - The address book (prd §169/§182)
+    // MARK: - The address book door (prd §169/§189)
 
-    /// Named addresses that AREN'T watched — the light tier. Watched wallets
-    /// have their own shelf above, and listing them twice would make one book
-    /// read as two. Filtered by the SAME text the omnibox watches from (prd
-    /// §182) — one input, not a field up top and a second field down here.
-    private var bookEntries: [AddressBook.Entry] {
+    /// The book's own count, for the door that now stands in front of it —
+    /// the fact that makes the door honest rather than a place things hide.
+    /// Watched wallets are excluded the way the book itself excludes them:
+    /// they have the roster above, and counting them twice would make one
+    /// book read as two.
+    private var bookSummary: String {
         let watched = Set(wallet.addresses.map { AddressBook.key(for: $0.address) })
-        return book.search(newAddress).filter { !watched.contains($0.id) }
+        let n = book.all.filter { !watched.contains($0.id) }.count
+        if n == 0 { return String(localized: "Name one") }
+        return n == 1 ? String(localized: "1 name") : String(localized: "\(n) names")
     }
 
-    /// The book: rows and one door to name several at once. Nothing here
-    /// lands anything — that's the section's whole promise, and its footer
-    /// says so.
-    @ViewBuilder
-    private var bookSection: some View {
-        Section {
-            ForEach(bookEntries) { entry in
-                Button {
-                    DSHaptic.selection()
-                    openEntry = entry
-                } label: {
-                    bookRow(entry)
-                }
-                .buttonStyle(.plain)
-                .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                    Button(role: .destructive) {
-                        book.remove(entry.address)
-                    } label: { Label("Remove", systemImage: "trash") }
-                }
-            }
-            Button {
-                DSHaptic.tap()
-                showNameSheet = true
-            } label: {
-                HStack(spacing: DS.Space.s2) {
-                    Image(systemName: "plus")
-                        .font(.system(size: 12, weight: .semibold))
-                    Text("Name an address").dsText(.callout15).fontWeight(.semibold)
-                    Spacer(minLength: 0)
-                    Text("one, or a pasted list")
-                        .dsText(.label12).foregroundStyle(DS.textTertiary)
-                }
-                .foregroundStyle(DS.tint)
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-        } header: {
-            Text("Address book").dsText(.label12).foregroundStyle(DS.textSecondary)
-        } footer: {
-            Text(bookEntries.isEmpty && newAddress.isEmpty
-                 ? "Name any address — a person, a contract, your own account elsewhere. Names cost nothing, land nothing, and title every transaction with that address in your own words."
-                 : "Names only — nothing lands from these. Tap one to see it, copy it, or start watching it.")
-                .dsText(.callout15).foregroundStyle(DS.textSecondary)
-        }
-    }
-
-    /// One book row: the kind's mark, the name, the address, and Copy — the
-    /// book's most-used verb, on every row rather than one level down.
-    private func bookRow(_ entry: AddressBook.Entry) -> some View {
-        HStack(spacing: DS.Space.s3) {
-            AddressMark(entry: entry, size: 32)
-            VStack(alignment: .leading, spacing: 1) {
-                Text(entry.name).dsText(.body17).foregroundStyle(DS.textPrimary)
-                    .lineLimit(1)
-                Text(entry.subline).dsText(.label12).foregroundStyle(DS.textTertiary)
-                    .lineLimit(1)
-            }
-            Spacer(minLength: 0)
-            CopyAddressButton(address: entry.address)
-        }
-        .padding(.vertical, 2)
-        .contentShape(Rectangle())
-    }
 
     /// "All 5" when nothing's narrowed, else the selected names ("Ethereum,
     /// Base +3" past two) — the Connection door's own one-line fact.
@@ -471,41 +396,24 @@ struct WalletScreen: View {
     /// inside it — a button says what it does in as few words as it can.
     private var connectRow: some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
-            Button {
+            WalletSlabButton(title: connecting ? "Waiting for your wallet — tap to cancel"
+                                               : "Connect a wallet app",
+                             systemImage: "wallet.pass.fill",
+                             busy: connecting) {
                 DSHaptic.tap()
                 if connecting { cancelConnect() } else { connectWallet() }
-            } label: {
-                HStack(spacing: DS.Space.s2) {
-                    if connecting {
-                        ProgressView().controlSize(.small).tint(.white)
-                    } else {
-                        Image(systemName: "wallet.pass.fill")
-                            .font(.system(size: 14, weight: .semibold))
-                    }
-                    Text(connecting ? "Waiting for your wallet — tap to cancel"
-                                    : "Connect a wallet app")
-                        .dsText(.callout15).fontWeight(.semibold)
-                }
-                .foregroundStyle(.white)
-                .frame(maxWidth: .infinity)
-                .frame(height: 46)
-                .background(connecting ? AnyShapeStyle(DS.gray200) : AnyShapeStyle(DS.tint),
-                            in: Capsule(style: .continuous))
-                .contentShape(Capsule(style: .continuous))
-                .animation(DS.Motion.standard, value: connecting)
             }
-            .buttonStyle(.plain)
-            if !connecting {
-                Text("Hands over the address — read-only, never signs")
-                    .dsText(.subhead13).foregroundStyle(DS.textSecondary)
-            }
+            // "Hands over the address — read-only, never signs" retired here
+            // (prd §189): it said the same thing as the screen's one sentence
+            // two lines below it, and a button with a caption is two blocks
+            // where the slab rhythm wants one.
+            //
             // No app claimed `wc:` — the URI, to paste into the wallet
             // directly. The handshake is still listening while this shows.
             if let uri = pairingURI {
                 manualPairingCard(uri)
             }
         }
-        .dsListCardRow()
     }
 
     /// The paste-it-yourself route (2026-07-23). A wallet that registers only

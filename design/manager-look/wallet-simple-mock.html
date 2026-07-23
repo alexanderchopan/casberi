@@ -1,0 +1,113 @@
+<title>Wallet, below the shelf — the Cash App test</title>
+<style>
+  :root {
+    --page: #0a0b0f; --ink: #f2f4f8; --muted: #99a1b4; --faint: #626b80;
+    --tint: #1673e6; --confirm: #32d74b; --down: #ff5a5f;
+    --slab: #16181d; --well: #101216;
+    --money: ui-rounded, -apple-system, system-ui, sans-serif;
+    --text: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { background: var(--page); }
+  body { font-family: var(--text); color: var(--ink);
+         background: radial-gradient(900px 420px at 18% -8%, rgba(22,115,230,.10), transparent 62%), var(--page);
+         padding: 48px 28px 72px; }
+  .wrap { max-width: 1100px; margin: 0 auto; }
+  header { max-width: 760px; margin-bottom: 38px; }
+  .eyebrow { font-size: 12px; font-weight: 600; color: #4d8dff; margin-bottom: 10px; }
+  h1 { font-size: clamp(26px,3.4vw,36px); font-weight: 800; letter-spacing: -.02em; line-height: 1.1; margin-bottom: 12px; }
+  header p { font-size: 15px; line-height: 1.55; color: var(--muted); max-width: 66ch; }
+  header p b { color: var(--ink); font-weight: 600; }
+
+  .row { display: flex; flex-wrap: wrap; gap: 40px; align-items: flex-start; justify-content: center; }
+  .option { width: 330px; }
+  .phone { width: 330px; border-radius: 46px; padding: 10px; background: #15171c; box-shadow: 0 30px 70px rgba(0,0,0,.55); }
+  .screen { border-radius: 38px; overflow: hidden; padding: 22px 16px; min-height: 660px;
+            background: linear-gradient(180deg, rgba(22,115,230,.16) 0%, rgba(22,115,230,.05) 40%, transparent 100%) top/100% 380px no-repeat, #000; }
+
+  .navTitle { font-family: var(--money); font-size: 30px; font-weight: 800; letter-spacing: -.015em; }
+
+  /* the kept shelf */
+  .shelf { display: flex; gap: 13px; margin: 18px 0 4px; overflow: hidden; }
+  .slot { text-align: center; width: 58px; flex: none; }
+  .slot .face, .slot .ring { width: 54px; height: 54px; margin: 0 auto 6px; border-radius: 50%; }
+  .slot .face { background: radial-gradient(circle at 32% 30%, #e86a6a, #7d6adf 60%, #3a3160); }
+  .slot b { display: block; font-size: 10.5px; font-weight: 650; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .slot span { display: block; font-size: 9px; color: var(--faint); }
+  .ring { border: 1.6px dashed rgba(255,255,255,.22); display: flex; align-items: center; justify-content: center; color: var(--faint); font-size: 18px; }
+  .shelfNote { font-size: 10.5px; color: var(--faint); margin: 4px 2px 20px; }
+
+  /* ONE slab shape below the shelf — 18px radius, 56pt height, everywhere */
+  .slab { display: flex; align-items: center; gap: 10px; height: 56px; border-radius: 18px;
+          padding: 0 16px; margin-bottom: 10px; }
+  .slab.well { background: var(--well); border: 1px solid rgba(255,255,255,.05); }
+  .slab.well span { color: var(--faint); font-size: 15px; }
+  .slab.well .go { margin-left: auto; font-family: var(--money); font-weight: 800; font-size: 14px; color: var(--faint); }
+  .slab.primary { background: var(--tint); justify-content: center; }
+  .slab.primary b { font-family: var(--money); font-size: 16px; font-weight: 800; color: #fff; }
+  .slab.rowlink { background: var(--slab); }
+  .slab.rowlink b { font-family: var(--money); font-size: 15px; font-weight: 700; }
+  .slab.rowlink i { font-style: normal; margin-left: auto; color: var(--faint); font-size: 13px; display: flex; align-items: center; gap: 6px; }
+  .oneLine { font-size: 11.5px; color: var(--faint); text-align: center; margin: 4px 0 22px; }
+
+  .caption { margin-top: 18px; padding: 0 6px; }
+  .caption h2 { font-size: 17px; font-weight: 700; margin-bottom: 6px; }
+  .caption h2 span { color: var(--faint); font-weight: 600; }
+  .caption p { font-size: 13.5px; line-height: 1.55; color: var(--muted); }
+
+  .census { max-width: 760px; margin: 44px auto 0; }
+  .census h3 { font-size: 15px; font-weight: 700; margin-bottom: 12px; }
+  .census table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .census td { padding: 8px 12px 8px 0; color: var(--muted); vertical-align: top; line-height: 1.45; }
+  .census td:first-child { color: var(--faint); white-space: nowrap; font-weight: 600; width: 110px; }
+  .census b { color: var(--ink); font-weight: 650; }
+  .law { font-size: 12.5px; line-height: 1.6; color: var(--faint); max-width: 76ch; margin-top: 22px; }
+  .law b { color: var(--muted); font-weight: 600; }
+</style>
+
+<div class="wrap">
+<header>
+  <div class="eyebrow">Casberi · Wallet, below the shelf</div>
+  <h1>The Cash App test: one font, one shape, one verb per block</h1>
+  <p>The shelf stays. Below it, today's screen is a visual zoo — a recessed field with a side pill, a full-width capsule, three paragraph footers, a headed section with a blue text-link row, and a gear row, in two type families and five shapes. Cash App would ship four slabs and one sentence. <b>Same components, one geometry: every block is the same 56pt / 18px-radius slab; the only round things are people.</b></p>
+</header>
+
+<div class="row">
+  <div class="option">
+    <div class="phone"><div class="screen">
+      <div class="navTitle">Wallet</div>
+      <div class="shelf">
+        <div class="slot"><span class="face" style="display:block"></span><b>accountle…</b><span>0x2F60…2…</span></div>
+        <div class="slot"><span class="ring">+</span><b style="color:var(--faint)">Watch</b><span>&nbsp;</span></div>
+        <div class="slot"><span class="ring" style="opacity:.7">+</span><b style="color:var(--faint)">Watch</b><span>&nbsp;</span></div>
+        <div class="slot"><span class="ring" style="opacity:.45">+</span><b style="color:var(--faint)">Watch</b><span>&nbsp;</span></div>
+        <div class="slot"><span class="ring" style="opacity:.25">+</span><b style="color:var(--faint)">Wat…</b><span>&nbsp;</span></div>
+      </div>
+      <div class="shelfNote">1 of 5 watched</div>
+
+      <!-- FOUR SLABS. THAT'S THE SCREEN. -->
+      <div class="slab well"><span>Address, ENS, .sol</span><span class="go">WATCH</span></div>
+      <div class="slab primary"><b>Connect a wallet app</b></div>
+      <div class="oneLine">Read-only — watching can never move funds.</div>
+
+      <div class="slab rowlink"><b>Address book</b><i>4 names ›</i></div>
+      <div class="slab rowlink"><b>Connection</b><i>All 7 chains ›</i></div>
+    </div></div>
+    <div class="caption">
+      <h2>Below the shelf <span>— four slabs, one sentence</span></h2>
+      <p>Field, button, promise, two doors. The field's Watch lives INSIDE it (one slab, not field-plus-pill). The address book stops being a headed section with a paragraph and a blue text link — it's a door wearing its count, exactly like Connection wears its chains. Every explainer paragraph moved behind the door it explained.</p>
+    </div>
+  </div>
+</div>
+
+<div class="census">
+  <h3>What made it feel busy — the census</h3>
+  <table>
+    <tr><td>Shapes</td><td>Before: recessed field + side pill + full capsule + card rows + bare text link + gear row — <b>6 shapes</b>. After: the slab and the circle — <b>2</b>. One radius (18), one height (56), so the eye reads a rhythm instead of a collage.</td></tr>
+    <tr><td>Fonts</td><td>Before: body text, subheads, labels, capsule label — mixed weights of the text face. After: <b>the money font (rounded, bold) for anything tappable; the text face only for the one gray sentence.</b> Tappable = rounded-bold becomes a rule you can feel.</td></tr>
+    <tr><td>Words</td><td>Before: three footer paragraphs (~70 words) always on screen. After: <b>one nine-word sentence.</b> "Names cost nothing, land nothing…" moves inside the Address book door where the naming actually happens; the chains footer already lives in Connection.</td></tr>
+    <tr><td>Verbs</td><td>Unchanged — watch, connect, name, configure. Nothing lost; two of the four just stand behind their counts now.</td></tr>
+  </table>
+  <p class="law"><b>Law check:</b> no hairlines (the slab's edge is a fill, not a rule); sentence case; the one blue block is the screen's primary verb, not decoration; both doors state a real fact ("4 names", "All 7 chains") — no dead chrome. The Cash App borrow is the geometry and the discipline, not the branding: tint stays Casberi blue, the money font is the system's own rounded face (ui-rounded / SF Rounded), already what the nav titles use.</p>
+</div>
+</div>
