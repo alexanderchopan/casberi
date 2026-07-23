@@ -7344,3 +7344,38 @@ nine switch slabs, each a full block with live state, no card and no
 paragraph. Caught live and fixed in the same pass: the handle screens' verb
 still read "Add" beside neighbours reading "WATCH" and "FOLLOW" — the exact
 inconsistency this pass exists to remove. Build green.
+
+## 191. The product pages, checked against the slab pass — one real bug found, no shape problem (user: "now what about the app catalogue individual app pages, is there a way you would make them stupid simple", 2026-07-23)
+
+Checked live rather than assumed. Unlike the manage pages (§189/§190), the
+product pages (`AppDetailScreen`) don't have a shape-consistency problem: one
+column, one preview card, one Connect capsule, App-Store grammar throughout.
+No slab pass warranted here — applying one would have been solving a problem
+that doesn't exist.
+
+**What was actually wrong, found by testing an offer with no authored preview
+doc (Coinbase):** the fallback row repeated `offer.tagline` **verbatim** — the
+exact sentence already shown one line above it, under the header. Ten offers
+hit this path (1Claw, Bankr, Bitrefill, Coinbase, Contacts, HomeKit, Kraken,
+Peer, Privacy, Venice — computed by diffing `BridgeCatalog.offers` against
+`StorePreview.doc`'s case labels). Fixed with one line that adds a fact
+instead of echoing one: "Lands in your feed the moment you connect." (WHEN,
+since "What it does" already covers what).
+
+**A second bug surfaced fixing the first:** the old fallback also rendered
+after connecting — a static teaser row that never updated, sitting under a
+button that now says Open. The exact "form that never changes state" defect
+§189 fixed on the manage pages, just not yet noticed here. `whatLands` now
+retires entirely once connected; the promise is redeemed the moment Open
+replaces Connect, and the real feed answers the question the section exists to
+ask.
+
+**Flagged, not fixed:** `offer.summary` length varies 8–107 words with no
+consistency rule (Wallet's is a 107-word essay; Notion's is one paragraph).
+Real, but a copywriting call across a dozen offers' marketing text, not a
+shape bug — left for the user's own editorial pass rather than rewritten
+unbidden.
+
+VERIFIED 2026-07-23 (iPhone 17 Pro sim): Coinbase now shows one honest line, no
+duplicate; Notion's real preview card renders unchanged, confirming the fix is
+scoped to the no-doc fallback only. Build green.

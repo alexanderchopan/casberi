@@ -50,7 +50,15 @@ struct AppDetailScreen: View {
             VStack(alignment: .leading, spacing: DS.Space.s6) {
                 header
                 whatItDoes
-                whatLands
+                // Retires once connected (2026-07-23) — found live: the old
+                // code kept a static "what lands" teaser row on screen even
+                // after connecting, the same defect §189 fixed on the manage
+                // pages (a form that never changes state). The promise is
+                // redeemed the moment Open replaces Connect; the real feed
+                // answers the question this section exists to ask.
+                if !connected {
+                    whatLands
+                }
             }
             .padding(DS.Space.s4)
             .padding(.bottom, ShellMetrics.bottomInset)
@@ -158,38 +166,34 @@ struct AppDetailScreen: View {
         }
     }
 
+    /// Pre-connect only (the caller gates on `!connected`) — once real things
+    /// land, the section retires rather than keeping a stale teaser on screen.
     private var whatLands: some View {
         VStack(alignment: .leading, spacing: DS.Space.s3) {
             Text("What lands in your feed")
                 .dsText(.label12).foregroundStyle(DS.textTertiary)
             // The preview (option 4): the app's shape, streamed through the
             // real engine — the App Store screenshot, generated. Inert; the
-            // real thing arrives when the bridge does. Connectable apps skip
-            // it: their feed shows real things instead.
-            if !connected, StorePreview.doc(for: offer.name) != nil {
+            // real thing arrives when the bridge does.
+            if StorePreview.doc(for: offer.name) != nil {
                 GenRender(id: "root", els: previewStream.els)
                     .padding(.horizontal, -DS.Space.s4)
                     .allowsHitTesting(false)
-            } else {
-                HStack(spacing: DS.Space.s3) {
-                    RoundedRectangle(cornerRadius: DS.Radius.appIcon(36), style: .continuous)
-                        .fill(brand.opacity(0.16))
-                        .frame(width: 36, height: 36)
-                        .overlay(
-                            Image(systemName: "tray.and.arrow.down.fill")
-                                .font(.system(size: 15, weight: .medium))
-                                .foregroundStyle(brand)
-                        )
-                    Text(LocalizedStringKey(offer.tagline)).dsText(.body17).foregroundStyle(DS.textPrimary)
-                    Spacer(minLength: 0)
-                }
-            }
-            if !connected, StorePreview.doc(for: offer.name) != nil {
                 Text(offer.connectable
                      ? "A preview — your real things replace it when you connect."
                      : "A preview — this bridge arrives with the connected apps update.")
                     .dsText(.subhead13).foregroundStyle(DS.textTertiary)
                     .padding(.top, DS.Space.s1)
+            } else {
+                // No authored preview to stream (2026-07-23, found live: this
+                // row used to repeat `offer.tagline` — the exact sentence
+                // already read one line above, under the icon). One honest
+                // line that adds a fact instead of echoing one: WHEN, since
+                // "What it does" already covers what. Left-aligned, matching
+                // every other line of body copy on this page — DSSlabNote's
+                // centering belongs to a slab stack, not this layout.
+                Text("Lands in your feed the moment you connect.")
+                    .dsText(.body17).foregroundStyle(DS.textSecondary)
             }
         }
     }
