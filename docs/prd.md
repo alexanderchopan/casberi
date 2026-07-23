@@ -330,11 +330,11 @@ Bridge breakage does not land in Feed (cut on review): it surfaces in the Apps t
 
 ## 19. Thing sheet
 
-Verbs card: Open in {source} / Open shortcut / type verb — rung 2 lives here. Tags row: read-only provenance (§177 retired the editor) — your own tags wear their hue, type tags stay quiet, nothing opens. Open question: the detail view needs a native rethink — App Intents replace web-era staged hand-offs; the content spec beyond tags and verbs is pending.
+Verbs card: Open in {source} / Open shortcut / type verb — rung 2 lives here. Tags row: read-only provenance (§178 retired the editor) — your own tags wear their hue, type tags stay quiet, nothing opens. Open question: the detail view needs a native rethink — App Intents replace web-era staged hand-offs; the content spec beyond tags and verbs is pending.
 
 ## 20. Tags
 
-Three sources. Type tags: assigned at ingestion. Project tags: assigned through clustering; the person renames (in project detail). User tags: land via `#hashtag` in captured text only — §177 retired the thing-sheet editor and the composer's tag/rename commands as hand-filing surfaces the app was never meant to have. Tags act as Feed filters and search terms. Project membership rides a tag. No tag management screen; a tag with zero things dies.
+Three sources. Type tags: assigned at ingestion. Project tags: assigned through clustering; the person renames (in project detail). User tags: land via `#hashtag` in captured text only — §178 retired the thing-sheet editor and the composer's tag/rename commands as hand-filing surfaces the app was never meant to have. Tags act as Feed filters and search terms. Project membership rides a tag. No tag management screen; a tag with zero things dies.
 
 RULING — WHAT TAGS ARE FOR (2026-07-10, user): tags are a RETRIEVAL
 VOCABULARY, not a management surface. The app assigns (type tags at
@@ -6654,7 +6654,7 @@ computes ("… more than last week"); the next-question chip appears. Build gree
 alongside a concurrent `HomeRoute` refactor in another session; none of this
 touches those files.
 
-## 177. Tags become invisible infrastructure — the filing surface retires (user: "i feel like the tag feature is not useful... we aren't an organizing app really", 2026-07-22)
+## 178. Tags become invisible infrastructure — the filing surface retires (user: "i feel like the tag feature is not useful... we aren't an organizing app really", 2026-07-22)
 
 Re-ruling on §20/§21, not a reversal of the retrieval-vocabulary framing —
 that framing was right, but two hand-filing doors still lived inside it and
