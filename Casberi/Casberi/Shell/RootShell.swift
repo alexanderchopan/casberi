@@ -213,6 +213,17 @@ struct RootShell: View {
                     AgentBar(hasUnseenSignal: KeptAskStore.shared.anyChanged && !agentEverOpened,
                              morphNS: agentMorph) {
                         DSHaptic.tap()
+                        // Open onto the Today brief, not the empty chips (prd
+                        // §181, user: "make daily brief be the default when a
+                        // user opens the agent"). Routed through the SAME
+                        // `askRequest` door the whisper tap and a typed "how's
+                        // my day" already use — so all three reach the one
+                        // composer and none can drift (the §132 principle).
+                        // Guarded on nil so a surface that seeded a specific
+                        // ask before the bar rose still wins; the masthead
+                        // title-travel stays whisper-only (no `risingBriefTitle`
+                        // here — a bare tap has no capsule to morph from).
+                        if chrome.askRequest == nil { chrome.askRequest = TodayBrief.title }
                         composerOpen = true
                     }
                 }

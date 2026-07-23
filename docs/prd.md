@@ -6792,3 +6792,57 @@ UI path (`-uiAnswerProbe "How's my day?"`) rendered both live: a green rising
 WIF sparkline and a red declining ETH sparkline beside their percentages, and
 the source mix's four bridge-icon cells with counts and residual line, paired
 directly under the hour strip. Build green.
+
+## 181. The agent opens on the brief — chips docked, keyboard down (user: "make daily brief be the default when a user opens the agent", picked mockup A, 2026-07-23) — VERIFIED
+
+The agent used to rise to an empty composer wearing ask chips — but "How's my
+day?" is already the top suggested ask most mornings, so showing the QUESTION
+instead of the ANSWER was a wasted tap. Now a bare agent-bar tap lands on the
+Today brief itself, with the ask chips docked in a row above the ask bar. Three
+mockups were shown (chips-first reference, brief-leads-chips-docked,
+chips-ride-the-masthead); the user picked the middle one.
+
+**The seam is the existing `askRequest` door.** The agent-bar tap sets
+`chrome.askRequest = TodayBrief.title` (guarded on nil so a surface that seeded
+a specific ask still wins), the SAME door the whisper tap and a typed "how's my
+day" already use — one `consumeAskRequest → commit` consumer, so all three
+reach the one composer and none can drift (the §132 principle). Deliberately
+scoped to the agent-bar tap, NOT centralized in the `composerOpen` onChange:
+the FAB/Control-Center "compose" intents and the DEBUG probes
+(`-openComposer`/`-uiAnswerProbe`) legitimately want an empty field, and
+centralizing would seed the brief over them.
+
+**The brief keeps its chips (the one exception).** Seeding via `askRequest` puts
+the composer into the ANSWER state, where every rest-screen gate
+(`askChips`/`keptAskPills`/greeting) is hidden by its `!answering` clause. A new
+`briefLanding` predicate — the brief settled, `turns` still empty, nothing typed
+— re-opens exactly the two chip rows beside it, so opening the agent never costs
+the "what else can I ask" row. The three rest-chrome gates, which each hand-
+rolled `isOpen && !hasDraft && !answering && !isRecording`, were unified into one
+`restChrome(keepBrief:)` predicate in the cleanup pass (the placeholder cycle
+passes `keepBrief: false` — deliberately off on the landing, whose field reads a
+static "Ask about this…"). The landing also keeps the keyboard DOWN (skips the
+usual post-answer `fieldFocused = true`): the brief is a screen to take in, not a
+prompt to answer; the person taps the field when they're ready. Asking anything
+(a chip, or typing) grows `turns`, `briefLanding` goes false, and it's an
+ordinary conversation again — docked chips retire, keyboard rises, exactly as
+before.
+
+Two cleanup reviewers (simplification, altitude) confirmed the `briefLanding`
+clauses are load-bearing (they gate the opposite loading vs. streaming windows,
+so the chips appear once on settle, no flicker) and the seed altitude is right;
+their one real finding — the diverging hand-rolled gates — became the
+`restChrome` consolidation above. The altitude note that an explicit enum
+landing-state would beat a derived Bool was considered and skipped: the
+derivation is verified-correct, and an enum would touch commit/settle/close for
+marginal elegance in a working state machine.
+
+VERIFIED 2026-07-23 (iPhone 17 Pro sim, pinned UDID, before and after the
+cleanup consolidation): tapping the agent bar on the feed streamed the brief in
+(masthead "Your Thursday brief", the WIF day note, the $1.0M money hero, the
+watchlist + up-next pair, the hour strip, the source mix), with the keyboard
+down and four chips ("What's going on? · 44", "How's my watchlist?", "Show Book
+club · 3", "What's overdue? · 1") docked above the ask bar. Tapping "How's my
+watchlist?" settled the brief into a turn, streamed the watchlist answer below
+it, retired the docked chips, and raised the keyboard — the ordinary
+conversation state, unchanged. Build green.

@@ -436,10 +436,23 @@ struct Composer: View {
     /// second one).
     @State private var corpusSummary = ""
 
+    /// The one predicate for "the composer is idle and showing its rest-screen
+    /// chrome" — open, nothing typed, nothing recording, no answer in flight.
+    /// The ask chips, the kept pills, and the placeholder cycle all read it, so
+    /// they can't drift (they each hand-rolled this conjunction before §181).
+    /// `keepBrief` folds in the brief LANDING (prd §181) — the one answer state
+    /// that KEEPS its chips — for the two that dock beside the brief; the
+    /// placeholder cycle passes `false`, deliberately, because the landing's
+    /// field already reads a static "Ask about this…" rather than cycling.
+    private func restChrome(keepBrief: Bool) -> Bool {
+        isOpen && !hasDraft && !isRecording && (!answering || (keepBrief && briefLanding))
+    }
+
     /// The invitation cycles only while the field is genuinely idle and empty —
-    /// typing, answering, or recording all stop it.
+    /// typing, answering, or recording all stop it (and the brief landing, whose
+    /// field reads "Ask about this…" statically — `keepBrief: false`).
     private var cyclingActive: Bool {
-        isOpen && !hasDraft && !answering && !isRecording && !reduceMotion
+        restChrome(keepBrief: false) && !reduceMotion
     }
 
     /// One ask chip's staggered rise-in on open (delight, 2026-07-12).
@@ -472,6 +485,20 @@ struct Composer: View {
 
     private var isRecording: Bool { voice.phase == .recording }
     private var hasDraft: Bool { !draft.trimmingCharacters(in: .whitespaces).isEmpty }
+
+    /// The Today brief shown as the composer's LANDING — auto-seeded on open
+    /// (RootShell's agent-bar tap) or tapped from the whisper, settled, and not
+    /// yet followed up (prd §181, user: "make daily brief be the default when a
+    /// user opens the agent"). This is the one answer state that still shows
+    /// the docked ask chips and keeps the keyboard down: opening the agent
+    /// should read as "here's your day, ask anything" — the brief as a screen
+    /// to take in, with every ask still one glance away. The moment a follow-up
+    /// is asked (turns grows) or a keyed retry runs, it's an ordinary
+    /// conversation and the docked chips retire, exactly as before.
+    private var briefLanding: Bool {
+        answering && !inFlight && answerStream.completed && turns.isEmpty
+            && TodayBrief.matches(currentQuestion)
+    }
 
     /// Tag completions for the word being typed — your real tags, prefix-
     /// matched on the draft's last token (2+ chars, typed path only).
@@ -1292,8 +1319,12 @@ struct Composer: View {
                                                 // teaching the vocabulary at the moment it's
                                                 // most wanted. A bare tap sends it, the same
                                                 // as any chip; neutral, so it never competes
-                                                // with the row's real verbs.
-                                                if let next = nextAsk {
+                                                // with the row's real verbs. Suppressed on
+                                                // the brief LANDING (prd §181): the docked
+                                                // suggestion row below already carries the
+                                                // next asks (the away chip among them), so
+                                                // showing it here too would double it.
+                                                if let next = nextAsk, !briefLanding {
                                                     Button {
                                                         DSHaptic.selection()
                                                         draft = next.query
@@ -1799,8 +1830,10 @@ struct Composer: View {
     /// before — a fresh signal is worth noticing regardless of history.
     @ViewBuilder
     private var keptAskPills: some View {
-        if isOpen, !hasDraft, !answering, !isRecording,
-           !KeptAskStore.shared.order.isEmpty {
+        // Docked beneath the brief LANDING too (prd §181) — a kept standing
+        // ask must stay reachable when the agent opens onto the brief, not
+        // only from the old empty state.
+        if restChrome(keepBrief: true), !KeptAskStore.shared.order.isEmpty {
             let sorted = KeptAskStore.shared.order.sorted { a, b in
                 let store = KeptAskStore.shared
                 let changedA = store.changed(a, digest: store.currentDigests[a] ?? "")
@@ -1877,7 +1910,10 @@ struct Composer: View {
     /// already shows.
     @ViewBuilder
     private var askChips: some View {
-        if isOpen && !hasDraft && !answering && !isRecording, !suggestions.isEmpty {
+        // Also shown docked beneath the brief LANDING (prd §181) — the one
+        // answer state that keeps its chips, so opening the agent onto the
+        // brief never costs the person the "what else can I ask" row.
+        if restChrome(keepBrief: true), !suggestions.isEmpty {
             FlowRow(spacing: DS.Space.s2) {
                 ForEach(Array(suggestions.enumerated()), id: \.element.memoryKey) { i, ask in
                     // "While I was away?" wears its own display label ("Catch
@@ -2334,7 +2370,16 @@ struct Composer: View {
                 if streamed { answerStream.paint(finalDoc) }
                 else if isInstantDoc(finalDoc) { answerStream.paint(finalDoc) }
                 else { answerStream.stream(finalDoc) }
-                fieldFocused = true     // ready for the next follow-up
+                // Every answer readies the field for a follow-up — EXCEPT the
+                // brief landing (prd §181), which is a screen to take in, not a
+                // prompt to answer. Popping the keyboard over the brief the
+                // instant the agent opens would bury the very thing the person
+                // opened it to see; they tap the field when they're ready to
+                // ask. `q`, not `currentQuestion`: a newer ask could have
+                // overtaken, but this closure already guarded `gen` above.
+                if !(turns.isEmpty && TodayBrief.matches(q)) {
+                    fieldFocused = true
+                }
             }
         }
     }
