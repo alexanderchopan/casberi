@@ -6846,3 +6846,79 @@ club · 3", "What's overdue? · 1") docked above the ask bar. Tapping "How's my
 watchlist?" settled the brief into a turn, streamed the watchlist answer below
 it, retired the docked chips, and raised the keyboard — the ordinary
 conversation state, unchanged. Build green.
+## 182. The wallet manager stops looking like a settings page (user: "it still looks like a settings feature and not like a pure wallet manager purposely built for adding the addresses… give me three mockups", then "lets do your recommendation", 2026-07-22)
+
+Recommendation A (the roster) with B's omnibox grafted in, from three mockups
+(`design/wallet-look/wallet-manager-mocks.html`). The old screen was an
+insetGrouped List of section cards — watching, add, chains, disconnect — at
+equal weight: a settings page's grammar wearing wallet content. This inverts
+the three things that made it read that way.
+
+- **Identity leads.** The watched wallets render as a horizontal shelf of
+  faces — the Stories grammar the source chips already taught — with their
+  REAL empty slots drawn up to the cap (dashed rings, tap to focus the
+  omnibox). The cap stops being a sentence you might hit and becomes a shape
+  you can see filling; "N of 5 watched" is now ambient text under a shelf
+  that already showed you the same fact. Tap a face to rename (unchanged),
+  long-press for Copy/Remove (the gesture a horizontal shelf actually
+  teaches, replacing the swipe-to-remove a shelf can't perform).
+- **Adding is the primary act, not an errand.** One field under the shelf —
+  placeholder "Address, ENS, .sol — or search your book" — both watches on
+  submit AND filters the address book live as you type (the SAME binding
+  drives both, so there's one input, not two). Connect demotes to a quiet
+  secondary row beside it; the old full-prominence blue capsule died because
+  the shelf's own dashed slots now carry that invitation.
+- **Plumbing collapses to one door.** Chains and Disconnect move to a pushed
+  `WalletConnectionScreen`, reached by a single "Connection" row. This AMENDS
+  §139 ("manage is one page, no doors"): §139 killed doors to READS — the old
+  per-wallet screen's safety facts had a better home in the Worth-a-look tray.
+  Configuration nobody revisits isn't a read, and it was charging every visit
+  to the manager rent it shouldn't pay.
+
+**Face shape, corrected mid-build (user: "i thought we were going to add it
+like the roster are we not?").** The approved mockup drew round circular
+faces; the first build reused `WalletFace`'s existing app-icon SQUIRCLE
+(the shape every other use of that view has always worn — rename rows, the
+switcher chips, transfer stages) for cross-screen consistency, which quietly
+walked back the mock's circles without a ruling. Fixed with a `circular`
+parameter on `WalletFace` (default false, so every existing call site is
+untouched) — true only for the roster's filled and empty slots. The book
+below keeps the squircle: a roster of PEOPLE reads as faces, a ledger of
+mixed wallets/contracts/Safes keeps the mark that already tells them apart.
+
+**A bug found and fixed along the way:** the manager's last row (Disconnect,
+now Connection) sat partly under the floating agent bar with no bottom
+clearance — a pre-existing issue this redesign exposed by giving the screen
+enough content to reach that edge for the first time. Fixed with the same
+`Color.clear.frame(height: ShellMetrics.bottomInset - 40)` spacer row
+`FeedScreen` already uses for the identical reason.
+
+VERIFIED on-device end to end: the roster renders a real ENS avatar in a
+circular slot with accurate dashed "Watch" rings for the remaining cap, the
+omnibox's live filter narrows the book correctly, the Connection door pushes
+`WalletConnectionScreen` (all six chains, correct summary text, Disconnect)
+and the system back chevron pops it cleanly, and every existing squircle use
+of `WalletFace` elsewhere in the app is confirmed unchanged.
+
+## 183. A tap-coordinate lesson, recorded so it isn't relearned (2026-07-22)
+
+Paid for over roughly ninety minutes of this session: the on-device Connection
+door appeared completely unresponsive to taps — through a `NavigationLink`
+rewrite, a plain-`Button` rewrite, multiple fresh app relaunches, and a device
+log capture — before the actual cause surfaced. It was never the app: every
+tap issued to `mcp__Claude_Code_iOS_Simulator__control` had been sent in
+SCREENSHOT-PIXEL coordinates (~920×2000, the size a screenshot displays at)
+rather than the tool's own DEVICE-POINT coordinate space (402×874 for this
+simulator) — a ~2.29× error on both axes. Large targets (a 60pt face, a
+full-width book row) absorbed the error by accident often enough to look like
+things were working; a single-line settings row did not, which is what made
+it look targeted rather than systemic.
+
+The tool states its coordinate space explicitly on `attach`
+("Coordinate space for tap/swipe: WxH points") — call that, or derive the
+scale from a screenshot's reported pixel size divided by the device's point
+size, BEFORE trusting raw pixel coordinates read off a displayed image.
+Symptom to recognize next time: a control that renders correctly, that the
+same code pattern elsewhere in the app already proves works, and that fails
+identically across unrelated rewrites of the code underneath it — that
+combination points at the harness, not the view.

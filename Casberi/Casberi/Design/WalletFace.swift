@@ -15,6 +15,14 @@ struct WalletFace: View {
     /// The stored hex address — the stable identity (labels are free text).
     let address: String
     var size: CGFloat = 36
+    /// Circle instead of the app-icon squircle (prd §182, 2026-07-22) — the
+    /// wallet manager's roster mock showed round faces (the "a person, not an
+    /// icon" read a roster of PEOPLE wants), and every other use of this view
+    /// — rename rows, the switcher chips, transfer stages — keeps the squircle
+    /// it's always had. Same identicon and avatar underneath either way; only
+    /// the clip shape changes, so a wallet's face is still recognizably itself
+    /// in both places.
+    var circular = false
 
     private var avatarURL: URL? {
         WalletStore.shared.avatarURL(for: address).flatMap(URL.init(string:))
@@ -40,8 +48,10 @@ struct WalletFace: View {
                 }
             }
             .frame(width: size, height: size)
-            .clipShape(RoundedRectangle(cornerRadius: DS.Radius.appIcon(size),
-                                        style: .continuous))
+            .clipShape(circular
+                       ? AnyShape(Circle())
+                       : AnyShape(RoundedRectangle(cornerRadius: DS.Radius.appIcon(size),
+                                                   style: .continuous)))
     }
 
     // MARK: - Identicon

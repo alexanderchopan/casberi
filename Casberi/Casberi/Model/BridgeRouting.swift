@@ -53,6 +53,13 @@ enum BridgeRouter {
         /// the Wallet feed's "See all". Carries the feed's wallet scope so the
         /// door doesn't silently widen it; nil is every watched wallet.
         case walletHistory(scope: String?)
+        /// The wallet's connection plumbing — chains, WalletConnect key, and
+        /// Disconnect (prd §182, 2026-07-22, amending §139). §139 killed doors
+        /// to READS ("every safety fact had a better home that isn't a page");
+        /// this is configuration, set once and rarely revisited, and it was
+        /// charging every visit to the manager rent it shouldn't pay. One door
+        /// for the one thing on this screen that actually IS a settings page.
+        case walletConnection
         /// A connected seat with no dedicated screen (the demo seats — Gmail,
         /// Calendar, …) — the generic detail page, never EmptyView.
         case detail(id: String)
@@ -98,6 +105,7 @@ enum BridgeRouter {
             case .appleNotes:     "notes"
             case .token(let b):   b.bridgeID
             case .walletHistory(let scope): "wallethistory:\(scope ?? "all")"
+            case .walletConnection: "walletconnection"
             case .detail(let id): "detail:\(id)"
             }
         }
@@ -216,6 +224,7 @@ struct BridgeDestinationView: View {
         case .appleNotes:     NotesShareScreen()
         case .token(let b):   TokenSetupScreen(bridge: b)
         case .walletHistory(let scope): WalletHistoryScreen(scope: scope)
+        case .walletConnection: WalletConnectionScreen()
         case .detail(let id): BridgeDetailScreen(bridgeID: id)
         }
     }
