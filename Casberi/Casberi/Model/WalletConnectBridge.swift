@@ -230,8 +230,10 @@ enum WalletConnectBridge {
         /// was torn down. Empty is possible in principle and means the wallet
         /// approved without sharing an account.
         case connected([ConnectedAccount])
-        /// No installed app claims the `wc:` scheme. The proposal was published
-        /// but no wallet was ever shown it; paste is the way.
+        /// No installed app claims the `wc:` scheme. Kept for the probe and
+        /// for callers that pass no `offerManualPairing` handler; the Wallet
+        /// screen no longer ends here, since not claiming `wc:` doesn't mean
+        /// no wallet is installed (2026-07-23 — see `connect`).
         case noWalletApp
         /// Nobody approved before the proposal expired.
         case timedOut
@@ -261,8 +263,14 @@ enum WalletConnectBridge {
     /// down, because nothing settled — an unanswered proposal is a pairing,
     /// not a session. It carries no methods and expires on its own at
     /// `expiryTimestamp` (5 minutes), so there is nothing to revoke.
+    /// - Parameter offerManualPairing: called when no installed app claims the
+    ///   `wc:` scheme — hands over the pairing URI so the caller can show it
+    ///   for pasting into a wallet directly. The handshake keeps listening
+    ///   after this fires; it is an alternative route to the same approval,
+    ///   not a failure report.
     static func connect(timeout: Duration = .seconds(300),
-                        open: @MainActor (URL) async -> Bool) async throws -> ConnectOutcome {
+                        open: @MainActor (URL) async -> Bool,
+                        offerManualPairing: @MainActor (URL) -> Void = { _ in }) async throws -> ConnectOutcome {
         guard isAvailable else { throw ConnectError.unavailable }
         // Prove the keychain write the SDK is about to force-try, while its
         // failure can still be an error instead of a crash. See
@@ -287,19 +295,24 @@ enum WalletConnectBridge {
         // task at this line, which closes the window.
         async let settled = firstSettledSession(timeout: timeout)
 
-        guard await open(url) else {
-            // Return WITHOUT awaiting `settled`, on purpose. Returning from a
-            // scope with an outstanding `async let` cancels the child and then
-            // awaits it, and both of the listener's arms are cancellation-aware
-            // (`Task.sleep` throws, the `for await` ends), so it unwinds
-            // immediately. Writing `_ = await settled` here instead — which
-            // reads like "tidy up the child" and was the first thing this code
-            // did — is the opposite: a plain await waits for it to finish
-            // NORMALLY, so this path blocked for the full five-minute timeout
-            // before reporting a no-wallet it already knew about at second one.
-            // Measured 2026-07-16: the button sat spinning on a simulator that
-            // had already told us `canOpenURL` was false.
-            return .noWalletApp
+        if await open(url) == false {
+            // NOTHING CLAIMED `wc:` — which is not the same as "no wallet"
+            // (fixed 2026-07-23, user: "the connect a wallet app doesn't
+            // work"). `canOpenURL` is still the only trustworthy read of the
+            // scheme (see the Info.plist note), but the scheme itself has
+            // stopped being a reliable proxy for "a wallet is installed":
+            // wallets increasingly register a UNIVERSAL LINK
+            // (metamask.app.link/wc?uri=…) and no longer claim the bare `wc:`.
+            // On such a device the old code told a person with a wallet on
+            // their home screen that they had none, and stopped.
+            //
+            // So this no longer dead-ends. The pairing URI is handed to the
+            // caller to show, and the listener KEEPS RUNNING while they paste
+            // it into their wallet's own scan/paste screen — every
+            // WalletConnect wallet has one. Waiting is correct here precisely
+            // because there is now a way forward; the 2026-07-16 early return
+            // was right only while this branch had nothing to offer.
+            await offerManualPairing(url)
         }
         guard let session = await settled else { return .timedOut }
 

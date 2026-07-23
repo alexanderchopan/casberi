@@ -7121,3 +7121,53 @@ Connection row — with NO proof pill, correctly, since that bogus key never
 synced. Tapping Connection opens the sheet carrying the untouched form: the
 three numbered steps, the token field, the honest "couldn't refresh" line, the
 Keychain footer, and Remove token. Build green.
+
+## 187. Connect a wallet app — a real button, and not claiming `wc:` stops meaning "no wallet" (user: "the 'connect a wallet app' doesn't work… also, it should be a button not a link", 2026-07-23)
+
+Two faults in one row, one visual and one real.
+
+**It read as a link because it was built like one** — a link glyph, body text on
+a plain row, no fill, `.buttonStyle(.plain)`. §182 had deliberately quieted it
+so it wouldn't compete with the roster's dashed slots, and quieted it past the
+point of looking tappable. It's now the same filled capsule the omnibox's Watch
+wears, since connecting a wallet is the screen's second real verb, with the
+"read-only, never signs" line moved OUT of the button and under it — a button
+says what it does in as few words as it can.
+
+**The real bug: `canOpenURL("wc:")` returning false was treated as "no wallet
+app is installed".** That inference has quietly expired. `canOpenURL` is still
+the only trustworthy read of the scheme (both `UIApplication.open`'s completion
+and SwiftUI's `openURL` report success for an unhandled `wc:` while
+LaunchServices fails it asynchronously — measured 2026-07-16, unchanged), but
+the SCHEME is no longer a proxy for the app: wallets increasingly register a
+universal link (`metamask.app.link/wc?uri=…`) and never claim bare `wc:`. On
+such a device the screen told a person with a wallet on their home screen that
+they had none, and stopped.
+
+**The fix is a route, not a better error.** `WalletConnectBridge.connect` takes
+an `offerManualPairing` callback; when nothing claims the scheme it hands over
+the pairing URI and **keeps the settle listener running** while the person
+pastes it into their wallet's own scan / "connect with link" screen — every
+WalletConnect wallet has one, and the approval it produces is the same approval
+the direct open would have produced. The screen shows the URI with a Copy
+button and says it's still waiting.
+
+This deliberately reverses the 2026-07-16 early return, whose reasoning was
+recorded and is worth preserving: returning immediately avoided a button that
+span for the full five-minute timeout over a no-wallet we already knew about at
+second one. That was right *while this branch had nothing to offer*. Now it
+does, so waiting is the correct behavior — the person is mid-paste — and the
+button's own tap-to-cancel is the way out. `.noWalletApp` survives for the
+probe and for callers that pass no handler.
+
+Knock-on: a `timedOut` now picks its words by whether the URI was on screen —
+"approve the request in your wallet" describes a tap that never existed if the
+person was pasting, so that path says the link expired and offers a fresh one.
+
+VERIFIED 2026-07-23 (iPhone 17 Pro sim — the ideal case, since a simulator has
+no wallet app and `canOpenURL` is always false, which is exactly the branch
+that used to dead-end): the button renders as a filled capsule; tapping it
+flips to "Waiting for your wallet — tap to cancel" and reveals the minted
+`wc:460f836c…` URI with Copy and the still-waiting line, where the old build
+ended at "No wallet app on this iPhone". The handshake probe separately
+confirms the proposal still mints with `methods=0 events=0`. Build green.

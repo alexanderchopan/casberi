@@ -54,6 +54,10 @@ struct WalletScreen: View {
     /// Bumped on every start and every cancel, so an in-flight handshake can
     /// tell whether it's still the CURRENT one.
     @State private var connectGeneration = 0
+    /// The pairing URI, shown when nothing claimed `wc:` (2026-07-23) so it
+    /// can be pasted into a wallet by hand. Non-nil means the handshake is
+    /// still listening for that paste to be approved.
+    @State private var pairingURI: URL?
     private var connecting: Bool { connectTask != nil }
     /// A tapped holdings cell: the token's thing sheet when watched, the
     /// quick chart sheet when not.
@@ -459,39 +463,72 @@ struct WalletScreen: View {
                                   bottom: 0, trailing: DS.Space.s4))
     }
 
-    /// Connect — one quiet row beside the omnibox, in every state. The old
-    /// screen gave this a full-prominence blue capsule on the empty page; the
-    /// roster's own dashed slots carry that invitation now, so a second loud
-    /// CTA beside them competed rather than helped (prd §182).
+    /// Connect — a real BUTTON (user, 2026-07-23: "it should be a button not a
+    /// link"). It read as a link before: a link glyph, body text on a plain
+    /// row, no fill. Connecting a wallet is the screen's second real verb
+    /// beside the omnibox's Watch, so it wears the same filled capsule that
+    /// verb does, and the explanatory line sits UNDER the button rather than
+    /// inside it — a button says what it does in as few words as it can.
     private var connectRow: some View {
-        Button {
-            DSHaptic.tap()
-            if connecting { cancelConnect() } else { connectWallet() }
-        } label: {
-            HStack(spacing: DS.Space.s3) {
-                if connecting {
-                    ProgressView().controlSize(.small).tint(DS.textSecondary)
-                } else {
-                    Image(systemName: "link")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(DS.tint)
-                }
-                VStack(alignment: .leading, spacing: 2) {
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+            Button {
+                DSHaptic.tap()
+                if connecting { cancelConnect() } else { connectWallet() }
+            } label: {
+                HStack(spacing: DS.Space.s2) {
+                    if connecting {
+                        ProgressView().controlSize(.small).tint(.white)
+                    } else {
+                        Image(systemName: "wallet.pass.fill")
+                            .font(.system(size: 14, weight: .semibold))
+                    }
                     Text(connecting ? "Waiting for your wallet — tap to cancel"
                                     : "Connect a wallet app")
-                        .dsText(.body17).foregroundStyle(DS.textPrimary)
-                    if !connecting {
-                        Text("Hands over the address — read-only, never signs")
-                            .dsText(.subhead13).foregroundStyle(DS.textSecondary)
-                    }
+                        .dsText(.callout15).fontWeight(.semibold)
                 }
-                Spacer(minLength: 0)
+                .foregroundStyle(.white)
+                .frame(maxWidth: .infinity)
+                .frame(height: 46)
+                .background(connecting ? AnyShapeStyle(DS.gray200) : AnyShapeStyle(DS.tint),
+                            in: Capsule(style: .continuous))
+                .contentShape(Capsule(style: .continuous))
+                .animation(DS.Motion.standard, value: connecting)
             }
-            .contentShape(Rectangle())
-            .animation(DS.Motion.standard, value: connecting)
+            .buttonStyle(.plain)
+            if !connecting {
+                Text("Hands over the address — read-only, never signs")
+                    .dsText(.subhead13).foregroundStyle(DS.textSecondary)
+            }
+            // No app claimed `wc:` — the URI, to paste into the wallet
+            // directly. The handshake is still listening while this shows.
+            if let uri = pairingURI {
+                manualPairingCard(uri)
+            }
         }
-        .buttonStyle(.plain)
         .dsListCardRow()
+    }
+
+    /// The paste-it-yourself route (2026-07-23). A wallet that registers only
+    /// a universal link never claims `wc:`, so `canOpenURL` reads false on a
+    /// device that HAS a wallet — this is the way through, not an error, and
+    /// the approval it leads to is the same one the direct open would get.
+    private func manualPairingCard(_ uri: URL) -> some View {
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+            Text("No app answered the tap. Copy this and paste it in your wallet's scan or “connect with link” screen — it's still waiting.")
+                .dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+            HStack(spacing: DS.Space.s2) {
+                Text(uri.absoluteString)
+                    .dsText(.label12).foregroundStyle(DS.textTertiary)
+                    .lineLimit(1).truncationMode(.middle)
+                Spacer(minLength: 0)
+                CopyAddressButton(address: uri.absoluteString, expanded: true)
+            }
+            .padding(DS.Space.s3)
+            .background(DS.fillFaint,
+                        in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+        }
+        .padding(.top, DS.Space.s1)
     }
 
     private func cancelConnect() {
@@ -499,10 +536,12 @@ struct WalletScreen: View {
         connectTask?.cancel()
         connectTask = nil
         result = nil
+        pairingURI = nil
     }
 
     private func connectWallet() {
         result = nil
+        pairingURI = nil
         connectGeneration &+= 1
         let generation = connectGeneration
         connectTask = Task { @MainActor in
@@ -510,7 +549,14 @@ struct WalletScreen: View {
 
             let outcome: Result<WalletConnectBridge.ConnectOutcome, Error>
             do {
-                outcome = .success(try await WalletConnectBridge.connect(open: openWalletApp))
+                outcome = .success(try await WalletConnectBridge.connect(
+                    open: openWalletApp,
+                    offerManualPairing: { url in
+                        // Still the current handshake? A cancelled one must not
+                        // paint its URI over a fresh attempt.
+                        guard connectGeneration == generation else { return }
+                        pairingURI = url
+                    }))
             } catch {
                 outcome = .failure(error)
             }
@@ -519,13 +565,22 @@ struct WalletScreen: View {
 
             switch outcome {
             case .success(.connected(let found)):
+                pairingURI = nil
                 watchConnected(found)
             case .success(.noWalletApp):
+                // Only reachable now if no manual-pairing handler ran — the
+                // screen always passes one, so this is the belt to that braces.
                 resultIsError = true
                 result = String(localized: "No wallet app on this iPhone — paste the address instead.")
             case .success(.timedOut):
                 resultIsError = true
-                result = String(localized: "Nothing came back from your wallet — approve the request there, or paste the address instead.")
+                // Which wait actually expired decides the words: if the URI
+                // was on screen, the person was pasting, and telling them
+                // "approve it in your wallet" describes a tap they never had.
+                result = pairingURI == nil
+                    ? String(localized: "Nothing came back from your wallet — approve the request there, or paste the address instead.")
+                    : String(localized: "The connection link expired — tap Connect for a fresh one.")
+                pairingURI = nil
             case .failure(WalletConnectBridge.ConnectError.tearDownFailed):
                 resultIsError = true
                 result = String(localized: "Connected, but the session wouldn't close — open your wallet and disconnect Casberi. Nothing was watched.")
