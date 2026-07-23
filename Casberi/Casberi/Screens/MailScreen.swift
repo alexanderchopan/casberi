@@ -130,7 +130,16 @@ struct MailScreen: View {
         loadRecent()
         guard let added else {
             if justConnected { TokenVault.delete(provider.passwordKey) }
-            result = String(localized: "Couldn't sign in — check the address and app-specific password.")
+            switch MailIngest.lastError {
+            case .login:
+                result = String(localized: "Login rejected — check the address and app-specific password.")
+            case .connect:
+                result = String(localized: "Couldn't reach the mail server — check your connection.")
+            case .select, .timeout:
+                result = String(localized: "Signed in, but couldn't read the inbox — try again.")
+            case nil:
+                result = String(localized: "Couldn't sign in — check the address and app-specific password.")
+            }
             resultIsError = true
             return
         }

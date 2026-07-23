@@ -53,6 +53,11 @@ enum MailIngest {
 
     @MainActor private static var running: Set<MailProvider> = []
 
+    /// The IMAP failure behind the last nil `refresh` — the generic "couldn't
+    /// sign in" UI message otherwise can't tell a rejected login apart from an
+    /// unreachable server, which point the user in different directions.
+    @MainActor private(set) static var lastError: IMAPClient.IMAPError?
+
     /// Reads recent inbox messages and lands new ones as mail things. Returns
     /// the new count, or nil when login/connection fails (bad password, offline).
     @MainActor
@@ -68,7 +73,16 @@ enum MailIngest {
         do {
             messages = try await IMAPClient.fetchRecent(
                 host: provider.host, user: provider.address, password: password, limit: 20)
-        } catch { return nil }
+            lastError = nil
+        } catch let error as IMAPClient.IMAPError {
+            lastError = error
+            NSLog("Mail sign-in failed (%@): %@", provider.rawValue, String(describing: error))
+            return nil
+        } catch {
+            lastError = .connect
+            NSLog("Mail sign-in failed (%@): %@", provider.rawValue, String(describing: error))
+            return nil
+        }
 
         let existing = IngestSupport.existingSourceRefs(context, source: provider.source)
         var added = 0
