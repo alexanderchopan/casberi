@@ -961,7 +961,13 @@ struct AppsScreen: View {
                         }
                     }
                     .padding(.vertical, DS.Space.s1)
-                    .dsCard()
+                    // A category shelf is a LIST, not a read (prd §173, extended
+                    // to the catalog 2026-07-22, user: "the App Store doesn't use
+                    // cards for its items in categories") — the App Store's own
+                    // model, and the same treatment the source feeds now wear.
+                    // The rows sit on the ink; the shelf header does the
+                    // grouping the card used to. Paging is unaffected — the
+                    // containerRelativeFrame width still defines each page.
                     .containerRelativeFrame(.horizontal) { length, _ in length - 12 }
                     .id(i)
                 }

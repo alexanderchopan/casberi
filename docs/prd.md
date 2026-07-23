@@ -6411,3 +6411,15 @@ unless the row `standsAlone` (a designed card) — the same standsAlone the
 run-break logic already used, so no new taxonomy. Verified on-sim: All
 (mixed, token cards featured), RSS (86 links, no slab), Bluesky (posts keep
 their cards), Voice (bare singles under headers).
+
+**Extended to the app catalog** (user: "the App Store also doesn't use cards
+for its items in categories, so since those are lists they too should have
+the same treatment", 2026-07-22). The category shelves in `AppsScreen`
+wrapped each page of three app rows in a `.dsCard()` — the same list-on-a-card
+the feeds just shed. Dropped: the shelf rows now sit bare on the ink under
+their category header (which already carries the App Store's name+chevron
+grammar), horizontal paging unaffected (the `containerRelativeFrame` width
+still defines each page). What KEEPS its card, correctly: the "Just added"
+Discover story card at the top — that's featured content, the App Store's own
+Today-tab grammar, a read and not a list. The rule holds across both surfaces:
+lists are air, featured reads are cards.
