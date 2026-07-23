@@ -147,7 +147,7 @@ struct FeedScreen: View {
 
     /// The shape a source takes when its chip is in force.
     private enum Shape {
-        case all, photos, wallet, calendar, gmail, chat, social, reminders, agent, safari, notes, you, music, tokens, bitrefill, oneclaw, plain
+        case all, photos, wallet, calendar, gmail, chat, social, reminders, safari, notes, you, music, tokens, bitrefill, oneclaw, plain
         init(source: String) {
             switch source {
             case "All":                 self = .all
@@ -160,7 +160,6 @@ struct FeedScreen: View {
             // .chat: a saved conversation is a snippet row, a post is a card.
             case "Farcaster", "Bluesky": self = .social
             case "Reminders", "Todoist": self = .reminders
-            case "OpenClaw":            self = .agent
             case "Safari":              self = .safari
             // Obsidian joins the notes room — the vault is notes (prd §59).
             case "Notes", "Day One", "Apple Journal", "Obsidian": self = .notes
@@ -502,7 +501,7 @@ struct FeedScreen: View {
     /// shape, and it hugs its own content instead of stretching edge to edge.
     /// The per-row brand icon is gone too (it doubled the same icon in the
     /// source chip right above) — a status dot carries connection health
-    /// instead, same grammar as the OpenClaw presence line below the chips.
+    /// instead.
     private func sourceHeader(_ bridge: BridgeApp, showAddHint: Bool,
                               headerCompose: SourceAction? = nil) -> some View {
         HStack(spacing: DS.Space.s2) {
@@ -611,20 +610,6 @@ struct FeedScreen: View {
     private var feedList: some View {
         List {
             Group {
-                // Machine presence (S11) — one line, only when a gateway
-                // listens. Status is a signal here, never a screen.
-                if let gateway = bridges.bridges.first(where: {
-                    $0.name == "OpenClaw" && $0.status == .connected
-                }) {
-                    HStack(spacing: DS.Space.s2) {
-                        Circle().fill(DS.confirm).frame(width: 6, height: 6)
-                        Text("\(gateway.name) · \(gateway.statusLine)")
-                            .dsText(.subhead13).foregroundStyle(DS.textSecondary)
-                        Spacer()
-                    }
-                    .padding(.horizontal, DS.Space.s4)
-                    .padding(.bottom, DS.Space.s2)
-                }
                 // The source chips moved to the shell's fixed header
                 // (MainSurface / SourceChips) — the app is one surface now. What
                 // stays here is the kind-clear chip: Home's kind bar and the
@@ -773,7 +758,7 @@ struct FeedScreen: View {
         .scrollIndicators(.hidden)
         .minimizesChrome(chrome, active: isActive)
         .safeAreaInset(edge: .top, spacing: 0) { walletSwitcherBar }
-        .dsSoftTopEdge()
+        .dsSoftScrollEdges()
         // Arrival is `isActive`, not `onAppear` (2026-07-16, the pager): a
         // mounted neighbour appears without ever being looked at, so landing
         // effects hang off the front page changing, and leaving stamps the
@@ -928,11 +913,6 @@ struct FeedScreen: View {
             groupedSections(days, nextEventID: nextEventID, boundary: boundaryThingID(in: days))
         case .reminders:
             reminderSections(visible, nextEventID: nextEventID)
-        case .agent:
-            let approvals = pendingApprovals(visible)
-            needsYouSection(approvals, nextEventID: nextEventID)
-            let days = coarsenIfSparse(agentDayGroups(visible, excluding: approvals))
-            groupedSections(days, nextEventID: nextEventID, boundary: boundaryThingID(in: days))
         case .music:
             if !heroShown { listeningLedeSection(visible) }
             // Sessions, not days (2026-07-21) — a listening sitting is music's
@@ -1959,34 +1939,6 @@ struct FeedScreen: View {
             }
         }
         if !doneToday.isEmpty { daySection("Done", doneToday, nextEventID: nextEventID) }
-    }
-
-    /// OpenClaw: pending asks lead as consent cards; the groups below
-    /// carry runs and jobs with their status ticks.
-    private func pendingApprovals(_ visible: [Thing]) -> [Thing] {
-        visible.filter { $0.kind == .approval && $0.mark != .done }
-    }
-
-    @ViewBuilder
-    private func needsYouSection(_ approvals: [Thing], nextEventID: UUID?) -> some View {
-        if !approvals.isEmpty {
-            daySection("Needs you", approvals, nextEventID: nextEventID)
-        }
-    }
-
-    /// Day groups minus the approvals already shown above. Takes the
-    /// approvals the caller already derived (`pendingApprovals`) instead of
-    /// recomputing them a second time in the same render.
-    private func agentDayGroups(_ visible: [Thing], excluding approvals: [Thing]) -> [(String, [Thing])] {
-        let shown = Set(approvals.map(\.id))
-        var order: [String] = []
-        var groups: [String: [Thing]] = [:]
-        for thing in visible where !shown.contains(thing.id) {
-            let label = dayLabel(thing.capturedAt)
-            if groups[label] == nil { order.append(label) }
-            groups[label, default: []].append(thing)
-        }
-        return order.map { ($0, groups[$0] ?? []) }
     }
 
     // MARK: - Row dispatch (the shape decides what a row leads with)

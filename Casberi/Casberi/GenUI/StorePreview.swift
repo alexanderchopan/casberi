@@ -36,13 +36,6 @@ enum StorePreview {
             "w = Widget(\"Waiting on you\", null, [m1])",
             "m1 = MailRow(\"Your invoice is ready\", \"View or download anytime.\", \"9:02 AM\")",
         ]
-        case "OpenClaw": [
-            "root = Stack([a, w])",
-            "a = ApprovalCard(\"CLAUDE-CODE · VIA OPENCLAW\", \"Deploy the staging build?\", \"wants to run: deploy --env staging\")",
-            "w = Widget(\"From your machines\", null, [r1, r2])",
-            "r1 = Row(\"Nightly backup ran\", \"Run\", \"OpenClaw\", \"4:00 AM\")",
-            "r2 = Row(\"Parse March invoices\", \"Job\", \"OpenClaw\", \"2h\")",
-        ]
         case "Tokens": [
             "root = Stack([w])",
             "w = Widget(\"Watchlist\", null, [r1, r2])",

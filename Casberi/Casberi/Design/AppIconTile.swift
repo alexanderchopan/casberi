@@ -62,7 +62,6 @@ extension DS {
         case "tokens":              return Color.fixed("#0b0b0b")   // ink — the mark is a green chart on black (user ruling 2026-07-17; the near-zero saturation makes washHue nil, so the token sheet is pure ink ON PURPOSE — a gold/green wash fought the chart's own red)
         case "venice":              return Color.fixed("#0e2942")   // sampled from their deep-blue mark
         case "bankr":               return Color.fixed("#a78bfa")   // the terminal's lavender field (sampled from the bundled icon)
-        case "openclaw":            return Color.fixed("#e5342e")   // the agents' red (user, 2026-07-12)
         case "voice":               return Color.fixed("#ff375f")   // the voice kind's own pink
         case "apple health":        return Color.fixed("#ff2d55")
         case "strava":              return Color.fixed("#fc4c02")

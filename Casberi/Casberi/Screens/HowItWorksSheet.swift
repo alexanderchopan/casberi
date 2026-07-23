@@ -88,7 +88,7 @@ struct HowItWorksSheet: View {
                                       "Shopify", "Notion", "Reddit",
                                       "YouTube", "Todoist", "RSS", "ChatGPT",
                                       "Gemini", "Linear", "Raindrop", "Readwise",
-                                      "Tokens", "Venice", "OpenClaw", "Cal.com",
+                                      "Tokens", "Venice", "Cal.com",
                                       "Bankr", "Stocktwits",
                                       "iCloud Mail", "Apple Music", "Apple Health",
                                       "Reminders", "Calendar", "Photos"]

@@ -2,13 +2,15 @@ import Foundation
 import SwiftData
 import UIKit
 
-/// The M0 demo corpus — 30 things across the nine v1 kinds, drawn from the PRD
+/// The M0 demo corpus — 35 things across the v1 kinds, drawn from the PRD
 /// evidence set and the prototype data. Project tags (Lisbon trip, Mobile app,
 /// Home, Fitness, Book club, Work) let the M2 clusterer find real groups; marks
-/// and pins exercise Feed and Home. Seeded once into an empty store.
+/// and pins exercise Feed and Home. Seeded once into an empty store. (The Alice
+/// agent-labour things — the OpenClaw job/run/output/skill rung — retired with
+/// OpenClaw itself, 2026-07-21.)
 enum DemoCorpus {
 
-    /// Inserts the 30 seed things if the store is empty. Idempotent.
+    /// Inserts the seed things if the store is empty. Idempotent.
     static func seedIfNeeded(_ context: ModelContext) {
         let count = (try? context.fetchCount(FetchDescriptor<Thing>())) ?? 0
         guard count == 0 else { return }
@@ -202,37 +204,6 @@ enum DemoCorpus {
             Thing(kind: .voice, title: "Voice note: idea for the weekend",
                   content: "Coastal drive, leave early.", source: "Voice",
                   capturedAt: ago(hours: 24)),
-
-            // ── Agent things (the Alice rung, demo) ───────────────────────
-            // A job is one thing: prompt, output, approval, writeup (brief §3).
-            Thing(kind: .job, title: "Parse March invoices",
-                  content: "Prompt, run log, and the filed report — one record.",
-                  source: "OpenClaw", capturedAt: ago(hours: 2),
-                  tags: ["Invoices"],
-                  provenance: Provenance(app: "OpenClaw", agent: "claude-code",
-                                         run: "run_8f31", machine: "mac-studio")),
-            Thing(kind: .output, title: "invoice-report.pdf",
-                  content: "12 invoices filed, 2 flagged.",
-                  source: "OpenClaw", capturedAt: ago(hours: 2),
-                  tags: ["Invoices"],
-                  provenance: Provenance(app: "OpenClaw", agent: "claude-code",
-                                         run: "run_8f31", machine: "mac-studio")),
-            Thing(kind: .run, title: "Nightly backup finished",
-                  content: "41 GB · 22 minutes.",
-                  source: "OpenClaw", capturedAt: ago(hours: 9),
-                  provenance: Provenance(app: "OpenClaw", agent: "cron",
-                                         run: "run_9a02", machine: "home-server")),
-            Thing(kind: .run, title: "Deploy run failed — 2 tests red",
-                  content: "auth.spec and tokens.spec. Logs attached.",
-                  source: "OpenClaw", capturedAt: ago(hours: 5),
-                  provenance: Provenance(app: "OpenClaw", agent: "codex",
-                                         run: "run_77c4", machine: "mac-studio")),
-            Thing(kind: .skill, title: "Invoice parsing skill",
-                  content: "Saved — reusable from any machine.",
-                  source: "OpenClaw", capturedAt: ago(hours: 30),
-                  tags: ["Invoices"],
-                  provenance: Provenance(app: "OpenClaw", agent: "claude-code",
-                                         run: nil, machine: "mac-studio")),
         ]
     }
 }

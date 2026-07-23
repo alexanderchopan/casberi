@@ -940,10 +940,11 @@ struct ApprovalCard: View {
     var onApprove: () -> Void
     var onDeny: () -> Void
 
-    /// WHO is asking leads; the route it came through reads as a route
-    /// ("Claude-code · via OpenClaw"), and the machine name stays in the
-    /// sheet — three flat brand names explained nothing (ruling 2026-07-06).
-    /// Sentence case only — no ALL-CAPS eyebrows (design law, 2026-07-08).
+    /// WHO is asking leads; when it arrived through a different app that app
+    /// reads as a route after it ("the agent · via the app"), and the machine
+    /// name stays in the sheet — three flat brand names explained nothing
+    /// (ruling 2026-07-06). Sentence case only — no ALL-CAPS eyebrows (design
+    /// law, 2026-07-08).
     private var eyebrow: String {
         let asker = thing.provenance.agent ?? thing.provenance.app
         var parts = [asker]
