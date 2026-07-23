@@ -1129,7 +1129,7 @@ struct FeedScreen: View {
                 }
             } header: {
                 HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-                    Text(label).dsText(.heading17).foregroundStyle(DS.textPrimary)
+                    Text(label).dsText(.heading22).foregroundStyle(DS.textPrimary)
                     // The count stays the day's true total — a bundle
                     // compresses rows, never the record.
                     Text("\(dayTotals[label] ?? rows.count)")
@@ -1259,7 +1259,9 @@ struct FeedScreen: View {
                 DSHaptic.selection()
                 withAnimation(DS.Motion.standard) { filter.source = source }
             }
-            .listRowBackground(dayCardBackground(position))
+            // A bundle is an ordinary row, never a designed card, so it goes
+            // bare on the ink like every list row (lists are air).
+            .listRowBackground(runBackground(position, bare: true))
             // Feed rhythm (2026-07-13): back to s2 — the s3 airy read made
             // every gap the same size, so days never clustered. Rows sit
             // tight within their day; the day header carries the big gap.
@@ -2057,6 +2059,26 @@ struct FeedScreen: View {
             .shadow(color: DS.cardShadow, radius: 18, x: 0, y: 6)
     }
 
+    /// Lists are AIR; parcels are for the reads (user ruling 2026-07-22,
+    /// superseding the same-day "card is a group" cut). The day card failed
+    /// at both extremes — one row wearing a full card was chrome around
+    /// nothing, and a GitHub day's dozens made one giant slab — which means
+    /// the card was never doing group-work at all: the DAY HEADER is the
+    /// grouping. Apple Music is the named model: songs never sit in cards;
+    /// surfaces are spent on featured content. So ordinary rows render bare
+    /// on the ink, every shape, every run length. What keeps a surface: the
+    /// designed-card anatomies (consent card, post, takeaway, fat token row
+    /// — cards by anatomy, their surface IS this background) and the head
+    /// reads (map, chart, mosaic, lede), which stay §160 parcels.
+    @ViewBuilder
+    private func runBackground(_ position: RunPosition, bare: Bool) -> some View {
+        if bare {
+            Color.clear
+        } else {
+            dayCardBackground(position)
+        }
+    }
+
     /// The row inside a list section, with the standard list plumbing attached.
     private func shapedListRow(_ thing: Thing, index: Int = 0, nextEventID: UUID?,
                                position: RunPosition = .only) -> some View {
@@ -2069,7 +2091,7 @@ struct FeedScreen: View {
             // V3b (2026-07-07, supersedes the kind-color wash): rows are
             // NEUTRAL cards — the translucent kind wash read as murk. Color
             // moved into the tag text: the project's own stable hue.
-            .listRowBackground(dayCardBackground(position))
+            .listRowBackground(runBackground(position, bare: !standsAlone(thing)))
             // Feed rhythm (2026-07-13): back to s2 — the s3 airy read made
             // every gap the same size, so days never clustered. Rows sit
             // tight within their day; the day header carries the big gap.
@@ -2442,7 +2464,7 @@ struct FeedScreen: View {
             }
         } header: {
             HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-                Text(label).dsText(.heading17).foregroundStyle(DS.textPrimary)
+                Text(label).dsText(.heading22).foregroundStyle(DS.textPrimary)
                 // In a source's own room the count speaks the source's unit —
                 // "3 events", "5 screenshots" (2026-07-13). All keeps the
                 // bare number: mixed kinds have no one unit worth naming.

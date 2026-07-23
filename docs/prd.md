@@ -6377,3 +6377,37 @@ first-brief rain and toast fired exactly once, correctly, on the very first
 non-fallback brief this build ever composed. Build green throughout — two
 build races with a concurrent session's edits (`WalletScreen.swift`,
 `ThingSheetView.swift`) resolved on retry, touching none of this pass's files.
+
+## 173. Lists are air; parcels are for the reads (user, refined across three observations, 2026-07-22)
+
+The day card is gone from the source-feed row lists. It was doing no
+group-work — the DAY HEADER does the grouping — so it was only ever a
+surface, and it failed at both extremes the user named across one
+conversation: a run of ONE ordinary row wearing a full card is "chrome
+around nothing," and a busy day (GitHub, an 86-link RSS sync) collapses the
+card into "one long giant slab." A same-day first cut ("a card is a group,
+so a single row goes bare") was superseded by this fuller one when the giant
+slab surfaced: the real rule is not about run length at all.
+
+**Apple Music is the named model** (user: "when I think of lists, I think of
+Apple Music, and Apple Music doesn't use cards in long lists of their
+songs"). A homogeneous list IS its own structure; surfaces are spent on
+featured content, never on the rows. So ordinary rows now render bare on the
+ink — every source shape, every run length — with the day header (stepped up
+17→22pt, the display tier, to carry the structure the card used to) as the
+only grouping.
+
+**Scope note on §160, not a reversal of it.** §160 boxed the wallet room's
+two READS and this morning extended that to the Themes map — and those stay
+boxed. The precise rule is: **parcels are for the reads** (heatmap, treemap,
+mosaic, leaderboard, lede — the §164 head aggregates) and **for the designed
+cards** (the consent card, social PostCard, chat TakeawayCard, the fat
+TokenRow — cards by ANATOMY, whose own surface is the row background). Lists
+of ordinary rows are air. The payoff reads on the All feed: a token card now
+looks FEATURED beside its plain neighbours, exactly the Apple-Music split.
+
+Mechanically one predicate: `runBackground(bare:)` returns `Color.clear`
+unless the row `standsAlone` (a designed card) — the same standsAlone the
+run-break logic already used, so no new taxonomy. Verified on-sim: All
+(mixed, token cards featured), RSS (86 links, no slab), Bluesky (posts keep
+their cards), Voice (bare singles under headers).
