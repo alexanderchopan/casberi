@@ -23,15 +23,30 @@ struct TwitchScreen: View {
         recent = recentBridgeThings(source: "Twitch", context: modelContext)
     }
 
+    /// The connection door, open (prd §186).
+    @State private var showConnection = false
+
     var body: some View {
         List {
-            BridgeSetupHeader(name: "Twitch")
-            connectSection.listRowSeparator(.hidden)
-            if !recent.isEmpty {
-                RecentThingsSection(header: "Live lately", things: recent)
-                    .listRowSeparator(.hidden)
+            if TwitchAuth.connected {
+                // Connected (prd §186). No identity passed: the device flow
+                // caches an opaque user id (`twitch.userid`), not a login
+                // name, so naming the account here would mean a fetch made
+                // purely to decorate a header (measured 2026-07-23).
+                BridgeConnectedState(
+                    bridgeID: "twitch",
+                    name: "Twitch",
+                    connectionNote: String(localized: "Approved on twitch.tv · reads who you follow"),
+                    capabilitiesFallback: ["Reads channels you follow.",
+                                           "Read-only — never chats or follows."],
+                    openConnection: { showConnection = true }
+                )
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+            } else {
+                BridgeSetupHeader(name: "Twitch")
+                connectSection.listRowSeparator(.hidden)
             }
-            if TwitchAuth.connected { removeSection.listRowSeparator(.hidden) }
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
@@ -41,6 +56,12 @@ struct TwitchScreen: View {
         .dsSoftScrollEdges()
         .navigationTitle("Twitch")
         .navigationBarTitleDisplayMode(.large)
+        .sheet(isPresented: $showConnection) {
+            BridgeConnectionSheet(title: "Twitch") {
+                connectSection.listRowSeparator(.hidden)
+                removeSection.listRowSeparator(.hidden)
+            }
+        }
         .onAppear {
             loadRecent()
             if TwitchAuth.connected { Task { await sync() } }

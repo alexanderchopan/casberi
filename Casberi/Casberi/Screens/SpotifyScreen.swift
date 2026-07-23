@@ -18,15 +18,32 @@ struct SpotifyScreen: View {
         recent = recentBridgeThings(source: "Spotify", context: modelContext)
     }
 
+    /// The connection door, open (prd §186).
+    @State private var showConnection = false
+
     var body: some View {
         List {
-            BridgeSetupHeader(name: "Spotify")
-            connectSection.listRowSeparator(.hidden)
-            if !recent.isEmpty {
-                RecentThingsSection(header: "Liked songs", things: recent)
-                    .listRowSeparator(.hidden)
+            if SpotifyAuth.connected {
+                // Connected (prd §186). NO identity passed on purpose: the
+                // PKCE flow stores tokens only — no display name — so leading
+                // with a name would mean inventing one or fetching /me just to
+                // decorate a header. The bridge's own name over a true note
+                // about how it's signed in is the honest lead (measured
+                // 2026-07-23).
+                BridgeConnectedState(
+                    bridgeID: "spotify",
+                    name: "Spotify",
+                    connectionNote: String(localized: "Signed in on this iPhone · no server ever holds a secret"),
+                    capabilitiesFallback: ["Reads your liked songs.",
+                                           "Read-only — never plays, adds, or removes."],
+                    openConnection: { showConnection = true }
+                )
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+            } else {
+                BridgeSetupHeader(name: "Spotify")
+                connectSection.listRowSeparator(.hidden)
             }
-            if SpotifyAuth.connected { removeSection.listRowSeparator(.hidden) }
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
@@ -36,6 +53,12 @@ struct SpotifyScreen: View {
         .dsSoftScrollEdges()
         .navigationTitle("Spotify")
         .navigationBarTitleDisplayMode(.large)
+        .sheet(isPresented: $showConnection) {
+            BridgeConnectionSheet(title: "Spotify") {
+                connectSection.listRowSeparator(.hidden)
+                removeSection.listRowSeparator(.hidden)
+            }
+        }
         .onAppear {
             loadRecent()
             if SpotifyAuth.connected { Task { await sync() } }

@@ -1,0 +1,293 @@
+<title>The two-state screen — connect is a form, connected is a manager</title>
+<style>
+  :root {
+    --page: #0a0b0f; --ink: #f2f4f8; --muted: #99a1b4; --faint: #626b80;
+    --tint: #1673e6; --confirm: #32d74b; --down: #ff5a5f;
+    --card: rgba(22,24,31,.82);
+    --notion: #9aa3b2; --shop: #96bf48; --steam: #4a90d9;
+    --money: ui-rounded, -apple-system, system-ui, sans-serif;
+    --text: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { background: var(--page); }
+  body {
+    font-family: var(--text); color: var(--ink);
+    background: radial-gradient(900px 420px at 18% -8%, rgba(150,191,72,.08), transparent 62%), var(--page);
+    padding: 48px 28px 72px;
+  }
+  .wrap { max-width: 1180px; margin: 0 auto; }
+  header { max-width: 780px; margin-bottom: 40px; }
+  .eyebrow { font-size: 12px; font-weight: 600; color: #b6d97a; margin-bottom: 10px; }
+  h1 { font-size: clamp(26px,3.6vw,38px); font-weight: 800; letter-spacing: -.02em; line-height: 1.08; text-wrap: balance; margin-bottom: 14px; }
+  header p { font-size: 15px; line-height: 1.55; color: var(--muted); max-width: 68ch; }
+  header p b { color: var(--ink); font-weight: 600; }
+
+  .row { display: flex; flex-wrap: wrap; gap: 34px; align-items: flex-start; justify-content: center; margin-bottom: 46px; }
+  .option { width: 320px; }
+  .phone { width: 320px; border-radius: 44px; padding: 9px; background: #16181d; box-shadow: 0 30px 70px rgba(0,0,0,.55); position: relative; }
+  .statebadge { position: absolute; top: -13px; left: 50%; transform: translateX(-50%);
+    font-size: 10.5px; font-weight: 800; letter-spacing: .01em; padding: 5px 13px; border-radius: 999px;
+    background: #262b38; color: var(--muted); white-space: nowrap; z-index: 2; }
+  .statebadge.after { background: rgba(50,215,75,.16); color: var(--confirm); }
+  .screen {
+    border-radius: 36px; overflow: hidden; position: relative; padding: 20px 15px;
+    min-height: 620px; background: #000;
+  }
+  .screen.notion { background: linear-gradient(180deg, rgba(154,163,178,.20) 0%, rgba(154,163,178,.06) 46%, transparent 100%) top/100% 440px no-repeat, #000; }
+  .screen.shop   { background: linear-gradient(180deg, rgba(150,191,72,.22) 0%, rgba(150,191,72,.07) 46%, transparent 100%) top/100% 440px no-repeat, #000; }
+  .screen.steam  { background: linear-gradient(180deg, rgba(74,144,217,.22) 0%, rgba(74,144,217,.07) 46%, transparent 100%) top/100% 440px no-repeat, #000; }
+  .caption { margin-top: 18px; padding: 0 6px; }
+  .caption h2 { font-size: 17px; font-weight: 700; margin-bottom: 6px; }
+  .caption h2 span { color: var(--faint); font-weight: 600; }
+  .caption p { font-size: 13.5px; line-height: 1.55; color: var(--muted); }
+  .caption .risk { display: block; margin-top: 7px; font-size: 12.5px; color: var(--faint); }
+
+  .navTitle { font-family: var(--money); font-size: 26px; font-weight: 800; letter-spacing: -.015em; }
+  .mono { font-family: var(--money); }
+  .sq { border-radius: 9px; flex: none; display: flex; align-items: center; justify-content: center;
+        font-size: 13px; color: #cbd2e2; background: #262b38; }
+
+  /* form atoms (the BEFORE state) */
+  .steps { background: var(--card); border-radius: 15px; padding: 12px 14px; margin: 14px 0 10px; }
+  .steps li { list-style: none; font-size: 12px; color: var(--muted); margin: 6px 0; line-height: 1.4; }
+  .field { display: flex; align-items: center; gap: 8px; background: var(--card); border-radius: 15px; padding: 12px 13px; margin: 8px 0; }
+  .field span { color: var(--faint); font-size: 13px; }
+  .field .go { margin-left: auto; font-weight: 700; font-size: 12px; }
+  .ghost { border-radius: 15px; border: 1.4px dashed rgba(255,255,255,.14); padding: 12px 13px; margin-top: 12px; opacity: .55; }
+  .ghost b { font-size: 12px; } .ghost p { font-size: 11px; color: var(--muted); margin-top: 3px; }
+  .ghostcap { font-size: 10px; color: var(--faint); margin: 6px 2px; }
+
+  /* connected atoms (the AFTER state) */
+  .idhead { display: flex; align-items: center; gap: 12px; margin: 18px 0 4px; }
+  .idhead .face { width: 54px; height: 54px; border-radius: 14px; flex: none;
+                  display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 800; }
+  .idhead .t b { display: block; font-size: 17px; font-weight: 750; }
+  .idhead .t span { display: block; font-size: 11.5px; color: var(--faint); margin-top: 2px; }
+  .proof { display: inline-flex; align-items: center; gap: 6px; margin: 10px 0 2px;
+           font-family: var(--money); font-size: 11.5px; font-weight: 700; color: var(--confirm);
+           background: rgba(50,215,75,.12); border-radius: 999px; padding: 5px 11px; }
+  .cando { margin: 14px 0 0; }
+  .cando li { list-style: none; display: flex; gap: 8px; font-size: 12.5px; color: var(--muted); margin: 7px 0; line-height: 1.45; }
+  .cando li::before { content: "✓"; color: var(--confirm); font-weight: 700; flex: none; }
+  .doorline { display: flex; align-items: center; gap: 7px; margin-top: 14px; padding: 11px 13px;
+              background: var(--card); border-radius: 13px; font-size: 12.5px; color: var(--muted); }
+  .doorline i { font-style: normal; margin-left: auto; color: var(--faint); }
+  .discon { margin-top: 14px; text-align: center; font-size: 12.5px; color: var(--down); opacity: .82; }
+
+  /* shopify ledger */
+  .omni { display: flex; align-items: center; gap: 8px; background: var(--card); border-radius: 15px; padding: 12px 13px; margin: 14px 0 6px; }
+  .omni span { color: var(--faint); font-size: 13px; }
+  .omni .go { margin-left: auto; font-weight: 700; font-size: 12px; }
+  .lgRow { display: flex; align-items: center; gap: 10px; padding: 10px 4px; }
+  .lgRow .sq { width: 38px; height: 38px; }
+  .lgRow .t { flex: 1; min-width: 0; }
+  .lgRow .t b { display: block; font-size: 14.5px; font-weight: 650; }
+  .lgRow .t .sub { display: block; font-size: 11px; color: var(--faint); margin-top: 1px;
+                   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .lgRow .chev { color: var(--faint); font-size: 15px; }
+
+  /* identity strip for the rest of tier 2 */
+  .strip { max-width: 940px; margin: 0 auto 46px; }
+  .strip h3 { font-size: 15px; font-weight: 700; margin-bottom: 6px; }
+  .strip > p { font-size: 13px; color: var(--muted); margin-bottom: 16px; max-width: 74ch; line-height: 1.5; }
+  .idcards { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; }
+  .idcard { background: rgba(255,255,255,.035); border-radius: 16px; padding: 13px 15px; display: flex; gap: 11px; align-items: flex-start; }
+  .idcard .face { width: 40px; height: 40px; border-radius: 11px; flex: none;
+                  display: flex; align-items: center; justify-content: center; font-size: 17px; font-weight: 800; }
+  .idcard b { display: block; font-size: 13.5px; font-weight: 700; }
+  .idcard .line { display: block; font-size: 11.5px; color: var(--confirm); font-family: var(--money); font-weight: 700; margin: 3px 0; }
+  .idcard p { font-size: 11.5px; color: var(--faint); line-height: 1.45; }
+
+  .verdict { max-width: 940px; margin: 0 auto; }
+  .verdict h3 { font-size: 15px; font-weight: 700; margin-bottom: 14px; }
+  .points { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; margin-bottom: 26px; }
+  .point { background: rgba(255,255,255,.035); border-radius: 16px; padding: 14px 16px; }
+  .point b { display: block; font-size: 13.5px; font-weight: 700; margin-bottom: 4px; }
+  .point p { font-size: 12.5px; line-height: 1.5; color: var(--muted); }
+  .point .tag { display: inline-block; font-size: 10px; font-weight: 700; color: #b6d97a; margin-bottom: 6px; letter-spacing: .02em; }
+  .law { font-size: 12.5px; line-height: 1.6; color: var(--faint); max-width: 80ch; }
+  .law b { color: var(--muted); font-weight: 600; }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .option { animation: rise .5s ease-out backwards; }
+    .option:nth-child(2) { animation-delay: .08s; }
+    @keyframes rise { from { opacity: 0; transform: translateY(14px); } }
+  }
+</style>
+
+<div class="wrap">
+<header>
+  <div class="eyebrow">Casberi · the connect pages, part three — the two-state screen</div>
+  <h1>Connect is a form. Connected is a manager.</h1>
+  <p>The setup template has two defects, one per state. <b>State 1 is backwards:</b> it opens on instructions and an empty field — the work — while the one element that sells the feature (the streaming ghost preview) sits below the fold. Same components, reordered — <b>payoff, act, help</b> — fix it without inventing anything. <b>State 2 doesn't exist:</b> the screen never changes after you connect — Steam shows its key fields forever, Mail keeps password boxes on screen for months, the eleven keyed bridges keep setup steps you finished in week one. The flip: <b>connected, the form retires and identity takes the screen</b> — whose account, live proof, what it can do, credentials one door away. Tier 1 below is the leverage (one rework → 11 keyed bridges, plus Shopify's hidden watch-list); Tier 2 is the same treatment on the one-off screens.</p>
+</header>
+
+<div class="row">
+
+  <!-- ============ NOTION · STATE 1 TODAY ============ -->
+  <div class="option">
+    <div class="phone"><span class="statebadge">STATE 1 · TODAY — work first, payoff buried</span><div class="screen notion">
+      <div class="navTitle">Notion</div>
+      <div class="steps">
+        <li>1 · Open notion.so/my-integrations and add an integration</li>
+        <li>2 · Copy its Internal Integration Secret</li>
+        <li>3 · Share the pages you want with the integration</li>
+      </div>
+      <div class="field"><span>Paste the secret</span><span class="go" style="color:var(--notion)">Connect</span></div>
+      <div style="font-size:10.5px;color:var(--faint);margin:4px 2px 0">Stored in this iPhone's Keychain — never leaves the device.</div>
+      <div class="ghost">
+        <b>Q3 planning</b>
+        <p>Updated yesterday · 12 blocks · shared with the team</p>
+      </div>
+      <div class="ghost" style="opacity:.4">
+        <b>Reading list</b>
+        <p>Updated Tuesday · 34 items</p>
+      </div>
+      <div class="ghostcap">What lands — a preview. Your real pages replace this.</div>
+    </div></div>
+    <div class="caption">
+      <h2>State 1 today <span>— reads as homework</span></h2>
+      <p>Every component is fine; the ORDER is the problem. The screen opens on instructions and an empty field — the work — and the one element that sells the feature (the streaming ghost preview) sits below the fold. Nothing here is wrong so much as backwards.</p>
+    </div>
+  </div>
+
+  <!-- ============ NOTION · STATE 1 CONSUMER ============ -->
+  <div class="option">
+    <div class="phone"><span class="statebadge" style="background:rgba(22,115,230,.16);color:#6fb0ff">STATE 1 · PROPOSED — payoff, act, help</span><div class="screen notion">
+      <div class="navTitle">Notion</div>
+      <div style="font-size:11px;color:var(--faint);margin-top:2px">Your pages, in your feed — read-only</div>
+      <div class="ghost" style="margin-top:14px">
+        <b>Q3 planning</b>
+        <p>Updated yesterday · 12 blocks · shared with the team</p>
+      </div>
+      <div class="ghost" style="opacity:.4">
+        <b>Reading list</b>
+        <p>Updated Tuesday · 34 items</p>
+      </div>
+      <div class="ghostcap">What lands — a preview. Your real pages replace this.</div>
+      <div class="field" style="margin-top:16px"><span>Paste the secret</span><span class="go" style="color:var(--notion)">Connect</span></div>
+      <div class="doorline" style="margin-top:8px">↗ Get your key at notion.so <i>opens the exact page</i></div>
+      <div class="doorline" style="margin-top:6px; opacity:.7">Show the 3 steps <i>›</i></div>
+      <div style="font-size:10.5px;color:var(--faint);margin:12px 2px 0;text-align:center">Stored in this iPhone's Keychain — never leaves the device.</div>
+    </div></div>
+    <div class="caption">
+      <h2>State 1 proposed <span>— same parts, sell → act → help</span></h2>
+      <p>Zero new components — the existing ones reordered. The <b>ghost preview becomes the hero</b> (the screen opens as a demo, not a form). The field is the one act. Step 1 stops being prose and becomes a <b>link capsule that opens the exact page</b>; the full numbered steps collapse behind a quiet row, since they're reference for when you're stuck, not reading for everyone.</p>
+      <span class="risk">Keyless bridges add the third move: a one-tap PEEK (Wallet's own "Peek at vitalik.eth" chip; Kalshi's browse-first markets) — something real on screen before any commitment. Keyed bridges can't peek, so the streamed preview carries that job.</span>
+    </div>
+  </div>
+
+  <!-- ============ NOTION · AFTER ============ -->
+  <div class="option">
+    <div class="phone"><span class="statebadge after">STATE 2 · CONNECTED — the manager</span><div class="screen notion">
+      <div class="navTitle">Notion</div>
+      <div class="idhead">
+        <div class="face" style="background:#22252c;color:#e8eaee">N</div>
+        <div class="t"><b>Alex's Workspace</b><span>Connected via integration key · Keychain</span></div>
+      </div>
+      <span class="proof">● 12 pages in · synced just now</span>
+      <ul class="cando">
+        <li>Reads pages you've shared with the integration — nothing else in the workspace.</li>
+        <li>Read-only. Never edits, moves, or shares a page.</li>
+      </ul>
+      <div class="doorline">⚙︎ Connection — replace key, disconnect <i>›</i></div>
+      <div style="height:190px"></div>
+      <div style="font-size:10.5px;color:var(--faint);text-align:center">The steps and the paste field live behind the door now — you finished them in week one.</div>
+    </div></div>
+    <div class="caption">
+      <h2>After <span>— identity, proof, one door</span></h2>
+      <p>The moment the key verifies, the form retires. What replaces it: <b>whose</b> connection (the workspace name the API already reports), the live proof pill, the can-do sentences in plain words, and ONE door holding replace-key + disconnect. This is the anatomy all eleven keyed bridges inherit from one rework of <code>TokenSetupScreen</code>.</p>
+      <span class="risk">The unification question: <code>BridgeDetailScreen</code> already carries proof + can-do + Reconnect/Pause/Remove. This state should BE that component, shared — not a third copy of it.</span>
+    </div>
+  </div>
+
+</div>
+
+<div class="row">
+
+  <!-- ============ SHOPIFY ============ -->
+  <div class="option">
+    <div class="phone"><div class="screen shop">
+      <div class="navTitle">Shopify</div>
+      <div style="font-size:11px;color:var(--faint);margin-top:2px">Read-only — nothing here checks out or pays</div>
+      <div class="omni">🔍 <span>Store web address</span><span class="go" style="color:var(--shop)">Follow</span></div>
+      <div class="lgRow">
+        <span class="sq" style="background:#1e2a14;color:#a9d46a">▤</span>
+        <div class="t"><b>Aimé Leon Dore</b><span class="sub">aimeleondore.com</span></div>
+        <span class="chev">›</span>
+      </div>
+      <div class="lgRow">
+        <span class="sq" style="background:#1e2a14;color:#a9d46a">▤</span>
+        <div class="t"><b>SSENSE</b><span class="sub">ssense.com</span></div>
+        <span class="chev">›</span>
+      </div>
+      <div class="lgRow">
+        <span class="sq" style="background:#1e2a14;color:#a9d46a">▤</span>
+        <div class="t"><b>Norse Projects</b><span class="sub">norseprojects.com</span></div>
+        <span class="chev">›</span>
+      </div>
+      <div style="font-size:10.5px;color:var(--faint);margin:8px 4px 0">Following 3 · new drops, restocks, and sale prices land in your feed</div>
+      <div class="discon" style="margin-top:26px">Disconnect Shopify</div>
+    </div></div>
+    <div class="caption">
+      <h2>Shopify <span>— a watch-list wearing form clothes</span></h2>
+      <p>Not a two-state case at all — Shopify was the manager pattern hiding in plain sight: paste a store, list below, swipe to remove. That's RSS's exact shape, so it takes RSS's exact treatment: omnibox, <b>square store marks</b> (a store is a publication, not a person), name over URL, furniture gone. Nearly free — the components exist.</p>
+      <span class="risk">A store favicon in the square mark when the site serves one; the glyph fallback otherwise — never a faked logo.</span>
+    </div>
+  </div>
+
+  <!-- ============ STEAM · AFTER ============ -->
+  <div class="option">
+    <div class="phone"><span class="statebadge after">STATE 2 · CONNECTED</span><div class="screen steam">
+      <div class="navTitle">Steam</div>
+      <div class="idhead">
+        <div class="face" style="background:radial-gradient(circle at 30% 30%,#7db3e8,#2a5788);color:#fff">A</div>
+        <div class="t"><b>alexplays</b><span>Web API key · Keychain</span></div>
+      </div>
+      <span class="proof">● 3 games in · synced just now</span>
+      <ul class="cando">
+        <li>Reads your public game library and playtime.</li>
+        <li>Read-only. Never buys, installs, or posts.</li>
+      </ul>
+      <div class="doorline">⚙︎ Connection — replace key or profile, disconnect <i>›</i></div>
+      <div style="height:190px"></div>
+      <div style="font-size:10.5px;color:var(--faint);text-align:center">The key + profile fields — visible forever today — live behind the door.</div>
+    </div></div>
+    <div class="caption">
+      <h2>Steam <span>— the worst offender, fixed</span></h2>
+      <p>Today Steam shows its API-key and profile fields permanently — a credentials form you finished once, staring at you on every visit. The flip is the same anatomy as Notion's: the persona name Steam's own API reports as the identity, proof, can-do, one door. Tier 2 is this exact move on Mail, Twitch, Spotify, Exchange, and Obsidian.</p>
+    </div>
+  </div>
+
+</div>
+
+<!-- ============ THE TIER-2 IDENTITY STRIP ============ -->
+<div class="strip">
+  <h3>What the connected state reads, screen by screen</h3>
+  <p>Each Tier 2 screen already knows an identity it isn't leading with. The flip costs no new API calls — every line below is data the bridge holds today (or gets free on the connect it already performs).</p>
+  <div class="idcards">
+    <div class="idcard"><div class="face" style="background:#3b2a45;color:#c9a0f0">M</div>
+      <div><b>alex@gmail.com</b><span class="line">● 34 emails in · synced just now</span><p>Mail — the address IS the identity; the app-password boxes retire behind the door.</p></div></div>
+    <div class="idcard"><div class="face" style="background:#2f2540;color:#b79aff">T</div>
+      <div><b>alexplays</b><span class="line">● 2 live now · 14 channels followed</span><p>Twitch — the account the device flow approved; the code UI never shows again.</p></div></div>
+    <div class="idcard"><div class="face" style="background:#14301e;color:#5fd383">S</div>
+      <div><b>Alex</b><span class="line">● 212 liked songs in</span><p>Spotify — the display name PKCE already returned; the sign-in button retires.</p></div></div>
+    <div class="idcard"><div class="face" style="background:#1c2b3a;color:#7db3e8">C</div>
+      <div><b>Coinbase · read-only key</b><span class="line">● verified: can't trade or withdraw</span><p>Exchange — the §163 permission verdict becomes the identity's own subline.</p></div></div>
+    <div class="idcard"><div class="face" style="background:#2e2440;color:#a98fe8">O</div>
+      <div><b>Vault: Notes</b><span class="line">● 214 notes in · synced just now</span><p>Obsidian — closest to right already; the folder picker demotes to "Change vault…".</p></div></div>
+  </div>
+</div>
+
+<div class="verdict">
+  <h3>My read, and the calls for your ruling</h3>
+  <div class="points">
+    <div class="point"><span class="tag">RULE 1 · STATE 1, REORDERED</span><b>Payoff → act → help, same components</b><p>Pre-connect keeps every existing part but inverts the order: the ghost preview leads (the screen opens as a demo), the field is the one act, and the steps demote — step 1 becomes a link capsule opening the exact page, the rest collapse behind "Show the steps ›". Keyless bridges add a one-tap PEEK (the Wallet chip / Kalshi browse-first pattern). <b>Ask:</b> ratify the reorder?</p></div>
+    <div class="point"><span class="tag">RULE 2 · THE FLIP</span><b>Connected, the form retires</b><p>The moment a connection verifies, the manager state takes the screen: identity → proof pill → can-do sentences → one ⚙︎ door (replace credentials, disconnect). <b>Ask:</b> ratify the flip as the standing template?</p></div>
+    <div class="point"><span class="tag">RULE 3 · ONE COMPONENT, NOT THREE</span><b>Unify with BridgeDetailScreen</b><p>The connected state above is 90% of what <code>BridgeDetailScreen</code> already renders (proof, can-do, Reconnect/Pause/Remove). Building it inside each setup screen would make a third copy. The clean move: ONE shared connected-manager component; the setup screen renders it in state 2, and the bridge-detail route renders the same thing. <b>Ask:</b> unify, or keep the two surfaces separate?</p></div>
+    <div class="point"><span class="tag">RULE 4 · TIER 1 FIRST</span><b>Order of operations</b><p>(1) TokenSetupScreen's flip — one rework, eleven bridges inherit. (2) Shopify's ledger — nearly free on the RSS components. (3) Tier 2 one-offs adopt the shared state: Steam, Mail, Twitch, Spotify, Exchange, Obsidian. Kalshi's light odds-column pass and the chain pickers' furniture cuts trail as a sweep.</p></div>
+    <div class="point"><b>What doesn't change</b><p>Every honesty line survives: keys in Keychain only, read-only stated in the can-do sentences (each bridge's own words, not boilerplate), the §163 exchange verdict, the ghost preview's "not yet real" dimming. GitHub keeps its repo/feed follows — they render as topic rows under the connected state, the §182 grammar.</p></div>
+  </div>
+  <p class="law"><b>Law check:</b> no hairlines; sentence case; washes stay each bridge's brand hue; glass stays floating. The proof pill is the one green element and it reports a real sync fact, never decoration — a bridge that hasn't synced yet shows no pill rather than a fake one (the no-fake-status rule). The ⚙︎ door follows the wallet's §139 amendment precedent: credentials are set-once configuration, not a read.</p>
+</div>
+</div>

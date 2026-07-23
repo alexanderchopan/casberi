@@ -1,0 +1,257 @@
+<title>The asset ledger — Tokens &amp; Stocktwits wear the manager pattern</title>
+<style>
+  :root {
+    --page: #0a0b0f; --ink: #f2f4f8; --muted: #99a1b4; --faint: #626b80;
+    --tint: #1673e6; --confirm: #32d74b; --up: #32d74b; --down: #ff5a5f;
+    --card: rgba(22,24,31,.82);
+    --tok: #34c7a4; --stw: #4a90d9;
+    --money: ui-rounded, -apple-system, system-ui, sans-serif;
+    --text: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { background: var(--page); }
+  body {
+    font-family: var(--text); color: var(--ink);
+    background: radial-gradient(900px 420px at 18% -8%, rgba(52,199,164,.09), transparent 62%), var(--page);
+    padding: 48px 28px 72px;
+  }
+  .wrap { max-width: 1180px; margin: 0 auto; }
+  header { max-width: 760px; margin-bottom: 40px; }
+  .eyebrow { font-size: 12px; font-weight: 600; color: #4fd8b8; margin-bottom: 10px; }
+  h1 { font-size: clamp(26px,3.6vw,38px); font-weight: 800; letter-spacing: -.02em; line-height: 1.08; text-wrap: balance; margin-bottom: 14px; }
+  header p { font-size: 15px; line-height: 1.55; color: var(--muted); max-width: 66ch; }
+  header p b { color: var(--ink); font-weight: 600; }
+
+  .row { display: flex; flex-wrap: wrap; gap: 34px; align-items: flex-start; justify-content: center; margin-bottom: 50px; }
+  .option { width: 320px; }
+  .phone { width: 320px; border-radius: 44px; padding: 9px; background: #16181d; box-shadow: 0 30px 70px rgba(0,0,0,.55); }
+  .screen {
+    border-radius: 36px; overflow: hidden; position: relative; padding: 20px 15px;
+    min-height: 640px; background: #000;
+  }
+  .screen.tok { background: linear-gradient(180deg, rgba(52,199,164,.24) 0%, rgba(52,199,164,.07) 46%, transparent 100%) top/100% 440px no-repeat, #000; }
+  .screen.stw { background: linear-gradient(180deg, rgba(74,144,217,.24) 0%, rgba(74,144,217,.07) 46%, transparent 100%) top/100% 440px no-repeat, #000; }
+  .caption { margin-top: 18px; padding: 0 6px; }
+  .caption h2 { font-size: 17px; font-weight: 700; margin-bottom: 6px; }
+  .caption h2 span { color: var(--faint); font-weight: 600; }
+  .caption p { font-size: 13.5px; line-height: 1.55; color: var(--muted); }
+  .caption .risk { display: block; margin-top: 7px; font-size: 12.5px; color: var(--faint); }
+
+  /* shared atoms */
+  .navTitle { font-family: var(--money); font-size: 26px; font-weight: 800; letter-spacing: -.015em; }
+  .navSub { font-size: 11px; color: var(--faint); margin-top: 2px; }
+  .coin { border-radius: 50%; flex: none; }
+  .tile { border-radius: 50%; flex: none; display: flex; align-items: center; justify-content: center;
+          font-family: var(--money); font-weight: 800; color: #cbd2e2; background: #262b38; }
+  .mono { font-family: var(--money); }
+
+  .omni {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--card); border-radius: 15px; padding: 12px 13px; margin: 14px 0 6px;
+  }
+  .omni .mag { color: var(--faint); font-size: 14px; }
+  .omni span { color: var(--faint); font-size: 13px; }
+  .omni .go { margin-left: auto; font-weight: 700; font-size: 12px; }
+
+  .seg { display: flex; gap: 2px; background: rgba(255,255,255,.05); border-radius: 11px; padding: 3px; margin: 10px 0 4px; }
+  .seg div { flex: 1; text-align: center; font-size: 11px; font-weight: 600; color: var(--faint); padding: 6px 0; border-radius: 8px; }
+  .seg div.sel { background: rgba(255,255,255,.10); color: var(--ink); }
+
+  .lgRow { display: flex; align-items: center; gap: 10px; padding: 10px 4px; }
+  .lgRow .coin, .lgRow .tile { width: 38px; height: 38px; }
+  .lgRow .t { flex: 1; min-width: 0; }
+  .lgRow .t b { display: block; font-size: 14.5px; font-weight: 650; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .lgRow .t .sub { display: block; font-size: 11px; color: var(--faint); margin-top: 1px; }
+  .price { text-align: right; flex: none; }
+  .price b { font-family: var(--money); font-size: 14px; font-weight: 700; display: block; }
+  .price .d { font-family: var(--money); font-size: 11px; font-weight: 700; }
+  .up { color: var(--up); } .down { color: var(--down); } .flat { color: var(--faint); }
+
+  .discon { margin-top: 16px; text-align: center; font-size: 12.5px; color: var(--down); opacity: .82; }
+
+  /* the shelf variant — assets as a roster of coins */
+  .shelf { display: flex; gap: 14px; overflow: hidden; padding: 10px 2px 4px; }
+  .slot { text-align: center; width: 64px; flex: none; }
+  .slot .coin, .slot .tile, .slot .ring { width: 52px; height: 52px; margin: 0 auto 6px; }
+  .slot b { display: block; font-size: 10.5px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .slot .p { display: block; font-family: var(--money); font-size: 10px; color: var(--muted); }
+  .slot .d { display: block; font-family: var(--money); font-size: 10px; font-weight: 700; }
+  .ring { border-radius: 50%; border: 1.6px dashed rgba(255,255,255,.22);
+          display: flex; align-items: center; justify-content: center; color: var(--faint); font-size: 18px; }
+
+  /* the mark A/B strip */
+  .ab { display: flex; gap: 26px; justify-content: center; align-items: flex-start; margin: 6px 0 12px; flex-wrap: wrap; }
+  .abCell { text-align: center; width: 150px; }
+  .abCell .demo { display: flex; gap: 10px; justify-content: center; margin-bottom: 8px; }
+  .abCell b { display: block; font-size: 12px; font-weight: 700; margin-bottom: 3px; }
+  .abCell span { font-size: 11px; color: var(--faint); line-height: 1.4; display: block; }
+  .eth { background: radial-gradient(circle at 32% 30%, #c7d0ff, #627eea); }
+  .degen { background: radial-gradient(circle at 30% 30%, #ffe08a, #e0a020); }
+  .sqBox { border-radius: 10px; background: #262b38; display: flex; align-items: center; justify-content: center; }
+
+  .verdict { max-width: 940px; margin: 0 auto; }
+  .verdict h3 { font-size: 15px; font-weight: 700; margin-bottom: 14px; }
+  .points { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; margin-bottom: 26px; }
+  .point { background: rgba(255,255,255,.035); border-radius: 16px; padding: 14px 16px; }
+  .point b { display: block; font-size: 13.5px; font-weight: 700; margin-bottom: 4px; }
+  .point p { font-size: 12.5px; line-height: 1.5; color: var(--muted); }
+  .point .tag { display: inline-block; font-size: 10px; font-weight: 700; color: #4fd8b8; margin-bottom: 6px; letter-spacing: .02em; }
+  .law { font-size: 12.5px; line-height: 1.6; color: var(--faint); max-width: 80ch; }
+  .law b { color: var(--muted); font-weight: 600; }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .option { animation: rise .5s ease-out backwards; }
+    .option:nth-child(2) { animation-delay: .08s; }
+    @keyframes rise { from { opacity: 0; transform: translateY(14px); } }
+  }
+</style>
+
+<div class="wrap">
+<header>
+  <div class="eyebrow">Casberi · the manager pattern, part two — assets</div>
+  <h1>Tokens &amp; Stocktwits: the asset roster</h1>
+  <p>The last two watch-lists, and the pass that unified the whole family. Two rulings landed here (2026-07-23): <b>"circles"</b> — assets are round, so coins keep their art and a stock wears a round ticker disc, a coin without art that never pretends to be one; and <b>"the same horizontal row treatment"</b> — assets get the wallet's shelf too, not a table. So every manager in the app is now one grammar: <b>a shelf of circles you watch, with topics as square-marked rows below.</b> The mark rule lands as round = a person or an asset, square = a topic.</p>
+</header>
+
+<div class="row">
+
+  <!-- ============ TOKENS ============ -->
+  <div class="option">
+    <div class="phone"><div class="screen tok">
+      <div class="navTitle">Tokens</div>
+      <div class="navSub">Public price data — no wallet, no trading</div>
+      <div class="omni"><span class="mag">🔍</span><span>Name, symbol, address, or link</span><span class="go" style="color:var(--tok)">Watch</span></div>
+      <div class="seg"><div class="sel">Movers</div><div>Recent</div><div>My order</div></div>
+
+      <div class="lgRow">
+        <span class="coin degen"></span>
+        <div class="t"><b>Degen · $DEGEN</b><span class="sub">Base</span></div>
+        <div class="price"><b>$0.0091</b><span class="d down">−6.1%</span></div>
+      </div>
+      <div class="lgRow">
+        <span class="coin eth"></span>
+        <div class="t"><b>Ethereum · $ETH</b><span class="sub">Ethereum</span></div>
+        <div class="price"><b>$3,412</b><span class="d up">+2.4%</span></div>
+      </div>
+      <div class="lgRow">
+        <span class="coin" style="background:radial-gradient(circle at 30% 30%,#b8f0d8,#26a17b)"></span>
+        <div class="t"><b>USD Coin · $USDC</b><span class="sub">Ethereum</span></div>
+        <div class="price"><b>$1.00</b><span class="d flat">0.0%</span></div>
+      </div>
+      <div class="lgRow">
+        <span class="coin" style="background:radial-gradient(circle at 30% 30%,#d0b8ff,#7b4dcf)"></span>
+        <div class="t"><b>Solana · $SOL</b><span class="sub">Solana</span></div>
+        <div class="price"><b>$148.22</b><span class="d up">+5.7%</span></div>
+      </div>
+
+      <div class="discon">Remove all · clears the watchlist</div>
+    </div></div>
+    <div class="caption">
+      <h2>Tokens, as a ledger <span>— the shape NOT taken</span></h2>
+      <p>Kept for the record: the vertical reading of the same content, which the roster above replaced. Its argument was the price column — right-aligned figures you can scan down and compare — plus the sparkline and the native list gestures. The counter-argument won: comparison is a <i>reading</i> job and reading lives in the feed, so the manager only owes you add, remove, and reorder.</p>
+      <span class="risk">Both shapes share everything else, and all of it shipped: the omnibox, the Movers / Recent / My order modes, the furniture cuts, and flat-is-gray-with-no-sign (§83, already in <code>TokenChartStyle.isFlat</code>).</span>
+    </div>
+  </div>
+
+  <!-- ============ THE SHELF VARIANT ============ -->
+  <div class="option">
+    <div class="phone"><div class="screen tok">
+      <div class="navTitle">Tokens</div>
+      <div class="navSub">Public price data — no wallet, no trading</div>
+      <div class="omni"><span class="mag">🔍</span><span>Name, symbol, address, or link</span><span class="go" style="color:var(--tok)">Watch</span></div>
+
+      <div class="shelf">
+        <div class="slot">
+          <span class="coin eth"></span><b>$ETH</b>
+          <span class="p">$3,412</span><span class="d up">+2.4%</span>
+        </div>
+        <div class="slot">
+          <span class="coin degen"></span><b>$DEGEN</b>
+          <span class="p">$0.0091</span><span class="d down">−6.1%</span>
+        </div>
+        <div class="slot">
+          <span class="coin" style="background:radial-gradient(circle at 30% 30%,#b8f0d8,#26a17b)"></span><b>$USDC</b>
+          <span class="p">$1.00</span><span class="d flat">0.0%</span>
+        </div>
+        <div class="slot">
+          <span class="coin" style="background:radial-gradient(circle at 30% 30%,#d0b8ff,#7b4dcf)"></span><b>$SOL</b>
+          <span class="p">$148.22</span><span class="d up">+5.7%</span>
+        </div>
+        <div class="slot">
+          <span class="ring">+</span><b style="color:var(--faint)">Watch</b>
+          <span class="p">&nbsp;</span><span class="d">&nbsp;</span>
+        </div>
+      </div>
+      <div style="font-size:10.5px;color:var(--faint);margin:6px 4px 2px">Watching 4 · tap a coin for its chart · hold to unwatch</div>
+
+      <div class="discon" style="margin-top:26px">Remove all · clears the watchlist</div>
+    </div></div>
+    <div class="caption">
+      <h2>✅ RULED · The roster <span>— assets as a shelf</span></h2>
+      <p><b>This is what shipped.</b> The same horizontal circle treatment the wallet and social rosters wear — one grammar across every manager in the app: a band of coins, ticker + price + delta whispered under each, chart one tap away. "A manager manages" cuts this way too: the comparing job already lives in the feed's movers tile, so the manager doesn't need a table.</p>
+      <span class="risk">What it cost, accepted: the vertical price column, the sparkline, and native swipe-to-unwatch (now a hold). Drag-reorder in "My order" would have been a custom horizontal gesture — the retired Home board's exact fight — so the mode is set by <b>"Move to front"</b> in the hold menu instead, keeping it a live control rather than a setting with no way to set it.</span>
+    </div>
+  </div>
+
+  <!-- ============ STOCKTWITS ============ -->
+  <div class="option">
+    <div class="phone"><div class="screen stw">
+      <div class="navTitle">Stocktwits</div>
+      <div class="navSub">Read-only — nothing trades, no portfolio seen</div>
+      <div class="omni"><span class="mag">🔍</span><span>Ticker or company name</span><span class="go" style="color:var(--stw)">Watch</span></div>
+
+      <div class="lgRow">
+        <span class="tile" style="font-size:11px">AAPL</span>
+        <div class="t"><b>Apple</b><span class="sub">NASDAQ · 1.2M watching</span></div>
+        <div class="price"><b>$232.10</b><span class="d up">+1.1%</span></div>
+      </div>
+      <div class="lgRow">
+        <span class="tile" style="font-size:11px">NVDA</span>
+        <div class="t"><b>NVIDIA</b><span class="sub">NASDAQ · 982K watching</span></div>
+        <div class="price"><b>$171.38</b><span class="d down">−2.8%</span></div>
+      </div>
+      <div class="lgRow">
+        <span class="tile" style="font-size:9.5px">BRK.B</span>
+        <div class="t"><b>Berkshire Hathaway</b><span class="sub">NYSE · 210K watching</span></div>
+        <div class="price"><b>$472.84</b><span class="d flat">0.0%</span></div>
+      </div>
+      <div class="lgRow">
+        <span class="tile" style="font-size:10px">BTC.X</span>
+        <div class="t"><b>Bitcoin</b><span class="sub">Crypto · 1.9M watching</span></div>
+        <div class="price"><b>$117,204</b><span class="d up">+0.9%</span></div>
+      </div>
+
+      <div class="discon">Remove all · clears the watchlist</div>
+    </div></div>
+    <div class="caption">
+      <h2>Stocktwits <span>— the ticker is the mark</span></h2>
+      <p>A stock has no coin art, so the mark is a round <b>ticker monogram disc</b> — a coin without art, honest to the material (it never fakes a logo) and matching the ruled grammar: assets are round. The subline keeps the row's existing facts (exchange · Stocktwits' own watcher count); the NEW fact is the right column: live price + day change from the Yahoo read the chart sheet already does, now surfaced at the row. "Latest takes" drops — the feed shows what landed, a manager manages.</p>
+      <span class="risk">The price column costs one Yahoo fetch per watched ticker per visit — same endpoint and UA the chart already uses, batched on appear. Flat reads gray, no direction.</span>
+    </div>
+  </div>
+
+</div>
+
+<div class="verdict">
+  <h3>My read, and the calls for your ruling</h3>
+
+  <div class="ab">
+    <div class="abCell">
+      <div class="demo">
+        <span class="coin eth" style="width:44px;height:44px"></span>
+        <span class="tile" style="width:44px;height:44px;font-size:11px">AAPL</span>
+      </div>
+      <b>RULED · Assets are circles</b>
+      <span>Coins keep their round art; a stock wears a round ticker disc — a coin without art. Round = person or asset, square = topic.</span>
+    </div>
+  </div>
+
+  <div class="points">
+    <div class="point"><span class="tag">RULE 1 · THE MARK — RULED "circles"</span><b>Assets are round, topics are square</b><p>Your ruling, 2026-07-23: the §182 grammar refines to <b>round = a person or an asset</b> (coin art, or a ticker disc standing in for it), <b>square = a topic</b> (channel, feed, publication, contract glyph). No round art ever gets clipped into a squircle, and no stock ever wears a fake coin. Recorded in prd with this pass.</p></div>
+    <div class="point"><span class="tag">RULE 2 · THE LIVE FACT — RULED "roster"</span><b>Price and delta ride under the coin</b><p>Each slot carries the asset's one live fact: Tokens reads the 24h pulse it already caches for the Movers sort (<code>TokenPulse</code> — the same cache the feed reads, so the two can never disagree); Stocktwits fetches the Yahoo day quote the chart sheet already uses. A price we couldn't reach renders <b>nothing</b> — never a dash, which reads like a number. Flat is gray, signless, directionless (§83).</p></div>
+    <div class="point"><span class="tag">RULE 3 · SAME CUTS AS §182</span><b>Furniture out, recents out</b><p>Header coin card → gone (nav subtitle carries the promise); "Watch a token / Watch a stock" section headers → gone (the omnibox says it); Stocktwits' "Latest takes" preview → gone per your recents ruling. Order modes, swipe-to-unwatch, the swipe coach, and the row-tap chart sheets all survive untouched.</p></div>
+    <div class="point"><b>What doesn't change</b><p>Every honesty line survives: no invented per-ticker sentiment (Bullish/Bearish stays per-POST, on the things in the feed, where it's the author's own call); watcher counts stay labeled as Stocktwits' scale, not endorsement; read-only stated once. The thing-IS-the-watch model (unwatch deletes the thing) is untouched underneath.</p></div>
+  </div>
+  <p class="law"><b>Law check:</b> no hairlines; sentence case; the washes are each bridge's brand hue. The price column introduces no new color rules — up/down/flat already exist in <code>TokenChartStyle</code>. The one new doctrine is RULE 1's refinement of §182, which I'll record in prd with the ruling. After your call I build both screens in one pass — they share the row anatomy, so it's one component worn twice.</p>
+</div>
+</div>

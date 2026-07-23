@@ -18,15 +18,31 @@ struct ObsidianScreen: View {
         recent = recentBridgeThings(source: "Obsidian", context: modelContext)
     }
 
+    /// The connection door, open (prd §186).
+    @State private var showConnection = false
+
     var body: some View {
         List {
-            BridgeSetupHeader(name: "Obsidian")
-            vaultSection.listRowSeparator(.hidden)
-            if !recent.isEmpty {
-                RecentThingsSection(header: "Notes", things: recent)
-                    .listRowSeparator(.hidden)
+            if obsidian.connected {
+                // Connected (prd §186): the VAULT is the identity — this
+                // screen was already closest to right, naming the folder it
+                // reads; now the picker demotes behind the door with it.
+                BridgeConnectedState(
+                    bridgeID: "obsidian",
+                    name: "Obsidian",
+                    identity: obsidian.vaultName.isEmpty
+                        ? String(localized: "Vault") : obsidian.vaultName,
+                    connectionNote: String(localized: "A folder on this iPhone · read-only, never modified"),
+                    capabilitiesFallback: ["Reads the vault you picked.",
+                                           "Read-only — never edits a note."],
+                    openConnection: { showConnection = true }
+                )
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+            } else {
+                BridgeSetupHeader(name: "Obsidian")
+                vaultSection.listRowSeparator(.hidden)
             }
-            if obsidian.connected { removeSection.listRowSeparator(.hidden) }
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
@@ -36,6 +52,12 @@ struct ObsidianScreen: View {
         .dsSoftScrollEdges()
         .navigationTitle("Obsidian")
         .navigationBarTitleDisplayMode(.large)
+        .sheet(isPresented: $showConnection) {
+            BridgeConnectionSheet(title: "Obsidian") {
+                vaultSection.listRowSeparator(.hidden)
+                removeSection.listRowSeparator(.hidden)
+            }
+        }
         .fileImporter(isPresented: $picking, allowedContentTypes: [.folder]) { outcome in
             guard case .success(let url) = outcome else { return }
             let scoped = url.startAccessingSecurityScopedResource()

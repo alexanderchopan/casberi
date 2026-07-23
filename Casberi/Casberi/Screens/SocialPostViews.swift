@@ -419,13 +419,30 @@ struct SocialProfileCard: View {
     @State private var watched = false
     @State private var elsewhere: [UserSearch.Hit] = []
     @State private var searchedElsewhere = false
+    /// Who-they-follow (prd §169), reached from here now — the ledger rework
+    /// (prd §184) moved every per-account action off the setup screen's row
+    /// and onto this card, which every account face taps into.
+    @State private var followImport: FollowImportTarget?
 
     /// The fetched profile once it lands, else what the tap already knew — so
     /// the card is never empty while the network answers.
     private var shown: SocialProfile { loaded ?? profile }
 
+    /// The bridge behind this profile's source — nil for a source that isn't
+    /// a name-only handle bridge (shouldn't happen; the card only ever opens
+    /// for Farcaster/Bluesky people).
+    private var bridge: HandleBridge? { HandleBridge(rawValue: profile.source) }
+
+    /// This person's Likes/Mentions switches, read straight off the
+    /// @Observable store so a tap re-renders with nothing to keep in step.
+    private var watchChips: [SocialWatch] {
+        guard let bridge else { return [] }
+        let key = bridge.normalize(profile.handle)
+        return bridge.socialAccounts.first(where: { $0.key == key })?.watches ?? []
+    }
+
     var body: some View {
-        DSTray(title: shown.title, height: 460) {
+        DSTray(title: shown.title, height: 560) {
             VStack(alignment: .leading, spacing: DS.Space.s4) {
                 header
                 if let bio = shown.bio, !bio.isEmpty {
@@ -434,8 +451,12 @@ struct SocialProfileCard: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 watchRow
-                if profile.source == "Farcaster", watched {
-                    walletRow
+                if watched {
+                    switchesSection
+                    if profile.source == "Farcaster" {
+                        walletRow
+                    }
+                    followRow
                 }
                 elsewhereSection
                 Spacer(minLength: 0)
@@ -445,6 +466,71 @@ struct SocialProfileCard: View {
             watched = SocialPeople.isWatched(handle: profile.handle, source: profile.source)
             loaded = await SocialPeople.profile(handle: profile.handle, source: profile.source)
         }
+        .sheet(item: $followImport) { target in
+            FollowImportSheet(source: target.source, handle: target.handle) { added in
+                guard added > 0 else { return }
+                Task { await SocialPeople.sync(source: target.source, context: modelContext) }
+            }
+        }
+    }
+
+    /// The switches themselves, plus the bridge's own explanation of what
+    /// each does — moved here verbatim from the setup screen's row footer
+    /// (prd §184), since the switches live only here now.
+    @ViewBuilder private var switchesSection: some View {
+        if !watchChips.isEmpty {
+            VStack(alignment: .leading, spacing: DS.Space.s2) {
+                HStack(spacing: DS.Space.s2) {
+                    ForEach(watchChips) { watch in watchChipButton(watch) }
+                }
+                if let footer = bridge?.watchFooter {
+                    Text(LocalizedStringKey(footer))
+                        .dsText(.label12).foregroundStyle(DS.textTertiary)
+                }
+            }
+        }
+    }
+
+    /// A lit-or-quiet capsule: on wears the tint, off stays gray — the same
+    /// anatomy the setup screen's row used to wear directly.
+    private func watchChipButton(_ watch: SocialWatch) -> some View {
+        Button {
+            guard let bridge else { return }
+            let key = bridge.normalize(profile.handle)
+            bridge.setWatch(watch.kind, !watch.on, for: key)
+            DSHaptic.tap()
+            if !watch.on { Task { await SocialPeople.sync(source: profile.source, context: modelContext) } }
+        } label: {
+            Text(LocalizedStringKey(watch.label))
+                .dsText(.label12)
+                .foregroundStyle(watch.on ? DS.tint : DS.textTertiary)
+                .padding(.horizontal, DS.Space.s3)
+                .frame(height: 28)
+                .background(watch.on ? DS.tintDim : DS.gray100, in: Capsule(style: .continuous))
+        }
+        .buttonStyle(.plain)
+    }
+
+    /// Their follow graph as a picker (prd §169/§184) — moved here from the
+    /// setup row it used to sit beside.
+    private var followRow: some View {
+        Button {
+            followImport = FollowImportTarget(source: shown.source, handle: shown.handle)
+        } label: {
+            HStack(spacing: DS.Space.s2) {
+                Image(systemName: "person.2")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(DS.textSecondary)
+                Text("Who they follow")
+                    .dsText(.callout15).foregroundStyle(DS.textPrimary)
+                Spacer(minLength: 0)
+            }
+            .padding(DS.Space.s3)
+            .background(DS.fillFaint,
+                        in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
     }
 
     private var header: some View {

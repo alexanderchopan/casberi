@@ -57,38 +57,27 @@ struct TokenSetupScreen: View {
         recent = recentBridgeThings(source: bridge.rawValue, context: modelContext)
     }
 
+    /// The credentials door, open (prd §186).
+    @State private var showConnection = false
+
     var body: some View {
         List {
-            BridgeSetupHeader(name: bridge.rawValue, connected: bridge.connected)
-            if deviceFlowOffered {
-                // Sign-in is THE path; the token hunt folds away behind a
-                // disclosure so the screen leads with one action instead of
-                // two competing ones (mock review 2026-07-16). The proof and
-                // error rows surface beside sign-in while the manual path —
-                // whose card normally carries them — is folded.
-                signInSection
-                if !manualPathOpen { statusSection }
-                manualPathToggleSection
-            }
-            if manualPathOpen || !deviceFlowOffered {
-                stepsSection
-                tokenSection
+            if bridge.connected {
+                connectedState
+            } else {
+                connectForm
             }
             if bridge == .github && bridge.connected {
                 feedsSection
                 watchSection
             }
-            if recent.isEmpty {
-                // Only before the connect: a connected bridge whose sync
-                // landed nothing must not wear "when you connect" (honesty
-                // rule; review 2026-07-16).
-                if !bridge.connected {
-                    GhostPreviewSection(name: bridge.rawValue)
-                }
-            } else {
-                RecentThingsSection(header: "Landed", things: recent)
+            // The ghost preview belongs to the UNCONNECTED screen only — it's
+            // the "what lands" sell, and a connected bridge has the real
+            // thing (honesty rule; review 2026-07-16). Recents dropped with
+            // prd §184/§185 — the feed shows what landed, a manager manages.
+            if !bridge.connected, recent.isEmpty {
+                GhostPreviewSection(name: bridge.rawValue)
             }
-            if bridge.connected { removeSection }
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
@@ -98,6 +87,12 @@ struct TokenSetupScreen: View {
         .dsSoftScrollEdges()
         .navigationTitle(bridge.rawValue)
         .navigationBarTitleDisplayMode(.large)
+        .sheet(isPresented: $showConnection) {
+            BridgeConnectionSheet(title: bridge.rawValue) {
+                connectForm
+                removeSection
+            }
+        }
         .onAppear {
             loadRecent()
             if bridge.connected {
@@ -105,6 +100,45 @@ struct TokenSetupScreen: View {
             }
         }
         .onDisappear { cancelDeviceFlow() }
+    }
+
+    /// Connected (prd §186) — identity, live proof, what it can do, and the
+    /// one door back to the form. A keyed bridge stores no account name (only
+    /// the secret, in the Keychain), so this leads with the app's own name
+    /// over a truthful note about HOW it's connected rather than a display
+    /// name we'd have to invent.
+    private var connectedState: some View {
+        BridgeConnectedState(
+            bridgeID: bridge.bridgeID,
+            name: bridge.rawValue,
+            connectionNote: String(localized: "Your \(bridge.credentialNoun) · stored in this iPhone's Keychain"),
+            capabilitiesFallback: [bridge.canLine],
+            openConnection: { showConnection = true }
+        )
+        .listRowBackground(Color.clear)
+        .listRowSeparator(.hidden)
+    }
+
+    /// The connect form, UNCHANGED (user ruling, 2026-07-23: "I like the state
+    /// today for the form, it's important to know what the steps are"). It
+    /// leads the screen before connecting, and lives behind the Connection
+    /// door after — same sections either way, never rewritten.
+    @ViewBuilder private var connectForm: some View {
+        BridgeSetupHeader(name: bridge.rawValue, connected: bridge.connected)
+        if deviceFlowOffered {
+            // Sign-in is THE path; the token hunt folds away behind a
+            // disclosure so the screen leads with one action instead of
+            // two competing ones (mock review 2026-07-16). The proof and
+            // error rows surface beside sign-in while the manual path —
+            // whose card normally carries them — is folded.
+            signInSection
+            if !manualPathOpen { statusSection }
+            manualPathToggleSection
+        }
+        if manualPathOpen || !deviceFlowOffered {
+            stepsSection
+            tokenSection
+        }
     }
 
     /// The sign-in path — GitHub shows a short code here, you approve it on

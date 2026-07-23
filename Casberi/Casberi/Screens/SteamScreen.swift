@@ -18,16 +18,30 @@ struct SteamScreen: View {
         recent = recentBridgeThings(source: "Steam", context: modelContext)
     }
 
+    /// The credentials door, open (prd §186).
+    @State private var showConnection = false
+
     var body: some View {
         List {
-            BridgeSetupHeader(name: "Steam")
-            stepsSection.listRowSeparator(.hidden)
-            fieldsSection.listRowSeparator(.hidden)
-            if !recent.isEmpty {
-                RecentThingsSection(header: "Games", things: recent)
-                    .listRowSeparator(.hidden)
+            if SteamBridge.connected {
+                // Connected (prd §186): the profile IS the identity here —
+                // Steam stores what the person typed, so this screen can lead
+                // with whose library it's reading rather than the key fields
+                // that fetched it, which used to sit here forever.
+                BridgeConnectedState(
+                    bridgeID: "steam",
+                    name: "Steam",
+                    identity: SteamBridge.profile,
+                    connectionNote: String(localized: "Web API key · stored in this iPhone's Keychain"),
+                    capabilitiesFallback: ["Reads what you've played.",
+                                           "Read-only — public profile data."],
+                    openConnection: { showConnection = true }
+                )
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+            } else {
+                connectForm
             }
-            if SteamBridge.connected { removeSection.listRowSeparator(.hidden) }
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
@@ -37,11 +51,25 @@ struct SteamScreen: View {
         .dsSoftScrollEdges()
         .navigationTitle("Steam")
         .navigationBarTitleDisplayMode(.large)
+        .sheet(isPresented: $showConnection) {
+            BridgeConnectionSheet(title: "Steam") {
+                connectForm
+                removeSection.listRowSeparator(.hidden)
+            }
+        }
         .onAppear {
             loadRecent()
             profileField = SteamBridge.profile
             if SteamBridge.connected { Task { await sync() } }
         }
+    }
+
+    /// The connect form, unchanged (user ruling 2026-07-23 — the steps stay).
+    /// Leads the screen before connecting; lives behind the door after.
+    @ViewBuilder private var connectForm: some View {
+        BridgeSetupHeader(name: "Steam")
+        stepsSection.listRowSeparator(.hidden)
+        fieldsSection.listRowSeparator(.hidden)
     }
 
     private var steps: [String] = [

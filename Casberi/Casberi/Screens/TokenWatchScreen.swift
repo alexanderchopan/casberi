@@ -15,6 +15,7 @@ struct TokenWatchScreen: View {
     @State private var result: String?
     @State private var resultIsError = false
     @State private var watched: [Thing] = []
+    @FocusState private var fieldFocused: Bool
 
     /// Tokens matching what's typed so far (2026-07-11), most liquid first,
     /// UNFILTERED — the field doubles as a finder, so "degen" shows its
@@ -32,17 +33,10 @@ struct TokenWatchScreen: View {
         return hits.filter { !refs.contains("tokens:\($0.id)") }
     }
 
-    /// The one swipe lesson, shared across every screen that pins by swipe
-    /// (2026-07-11) — whichever screen a person meets the gesture on first
-    /// retires it everywhere.
-    @AppStorage("coach.swipe.done") private var swipeCoachDone = false
-
-    /// The row that plays the swipe demo — the first watched token, once
-    /// ever, retiring the moment any screen's demo (or a real swipe) does.
-    private var hintTokenID: UUID? {
-        guard !swipeCoachDone else { return nil }
-        return watched.first?.id
-    }
+    /// The token whose chart sheet is open — a tapped coin on the roster
+    /// (prd §185). The shelf replaced a list row that wasn't tappable at all,
+    /// so the chart is newly reachable from here.
+    @State private var openThing: Thing?
 
     /// The watchlist's shared order (2026-07-15) — read as a computed
     /// property, not cached, so a mode switch or a fresh pulse repaints it
@@ -58,10 +52,12 @@ struct TokenWatchScreen: View {
 
     var body: some View {
         List {
-            BridgeSetupHeader(name: "Tokens")
+            // No header coin card, no section furniture (prd §185) — the
+            // omnibox is the screen's first act, the wallet manager's own
+            // opening. The nav title already says Tokens.
             addSection.listRowSeparator(.hidden)
             if !watched.isEmpty {
-                watchlistSection.listRowSeparator(.hidden)
+                rosterSection
             }
             if !watched.isEmpty {
                 // A watched token IS its thing, so there's no separate store to
@@ -70,7 +66,6 @@ struct TokenWatchScreen: View {
                                         teardown: {})
                     .listRowSeparator(.hidden)
             }
-            footerSection.listRowSeparator(.hidden)
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
@@ -81,14 +76,24 @@ struct TokenWatchScreen: View {
         .navigationTitle("Tokens")
         .navigationBarTitleDisplayMode(.large)
         .toolbar {
-            // Drag handles only earn their keep in "My order" — the other
-            // two modes already state their own order (movers, recency), so
-            // showing Edit there would offer a drag that does nothing.
-            if TokenWatchOrder.shared.mode == .manual, watched.count > 1 {
-                ToolbarItem(placement: .topBarTrailing) { EditButton().tint(DS.textPrimary) }
+            // The sort choice lived in the old watchlist section's header;
+            // the shelf has no header, so it rides the toolbar (prd §185).
+            // Edit-mode drag handles are gone with the vertical list — a
+            // shelf reorders by "Move to front" in the hold menu instead.
+            if watched.count > 1 {
+                ToolbarItem(placement: .topBarTrailing) { sortMenu }
             }
         }
-        .onAppear { loadWatched() }
+        .sheet(item: $openThing) { thing in
+            ThingSheetView(thing: thing)
+        }
+        .onAppear {
+            loadWatched()
+            // The rows' price column reads the SAME cached TokenPulse the
+            // feed's rows do — refreshed here too (prd §185) so the manager
+            // is live on open, not whenever the feed last looked.
+            Task { await TokenPulse.shared.refresh(context: modelContext) }
+        }
         // The debounced token search.
         .task(id: queryField) {
             let q = queryField.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -102,7 +107,8 @@ struct TokenWatchScreen: View {
         Section {
             BridgeFieldRow(placeholder: "Name, symbol, address, or link",
                            text: $queryField,
-                           buttonLabel: "Watch", action: watch)
+                           buttonLabel: "Watch",
+                           focus: $fieldFocused, action: watch)
             ForEach(displayHits) { token in
                 BridgeSearchResultRow(
                     imageURL: token.imageURL, fallbackIcon: "Tokens",
@@ -114,11 +120,11 @@ struct TokenWatchScreen: View {
             BridgeSyncStatusRows(syncing: working,
                                  syncingLine: String(localized: "Finding the token…"),
                                  result: result, resultIsError: resultIsError)
-        } header: {
-            Text("Watch a token").dsText(.label12)
-                .foregroundStyle(DS.textTertiary)
         } footer: {
-            Text("Type a name, symbol, address, or link — matching tokens appear as you type. Separate several with commas (\"eth, sol, pepe\") to build a watchlist in one go. A watched token's live price chart lands in your feed.")
+            // The mechanic AND the promise, one block — the bottom footer
+            // this screen used to end with moved up here when the section
+            // furniture went (prd §185, the WalletScreen arrangement).
+            Text("Type a name, symbol, address, or link — matching tokens appear as you type. Separate several with commas (\"eth, sol, pepe\") to build a watchlist in one go. Public price data only — nothing about you leaves your iPhone.")
                 .dsText(.callout15).foregroundStyle(DS.textTertiary)
         }
     }
@@ -138,75 +144,75 @@ struct TokenWatchScreen: View {
     /// (2026-07-15) — the SAME cached TokenPulse, so the management screen
     /// can never disagree with the feed about which tokens moved. Row order
     /// follows the shared TokenWatchOrder (movers first by default).
-    private var watchlistSection: some View {
+    /// The watchlist as a roster of coins (prd §185) — the same shelf of
+    /// circles the wallet's addresses and the social screens' people wear,
+    /// since a watched token is an identity too. Tap opens its chart; hold
+    /// unwatches, and in "My order" also moves it to the front.
+    private var rosterSection: some View {
         let items = orderedWatched
-        return Section {
+        return AssetRosterShelf(note: rosterNote) {
             ForEach(items) { thing in
-                watchRow(thing)
-                    .dsListCardRow()
-                    .modifier(SwipeHintNudge(active: thing.id == hintTokenID) { swipeCoachDone = true })
-                    .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                        // Full swipe = Unwatch (the explicit group replaces the
-                        // system delete). Pinning a single token left the swipe
-                        // (2026-07-12) — pin "Tokens" from its screen for a
-                        // watchlist tile on Home, not one token at a time.
-                        Button(role: .destructive) {
-                            if let i = watched.firstIndex(where: { $0.id == thing.id }) {
-                                unwatch(at: IndexSet(integer: i))
-                            }
-                        } label: {
-                            Label("Unwatch", systemImage: "trash")
-                        }
-                    }
+                rosterSlot(thing, in: items)
             }
-            .onDelete { offsets in unwatch(displayed: items, at: offsets) }
-            .onMove { from, to in reorder(displayed: items, from: from, to: to) }
-            // Drag only means something in "My order" — the other two modes
-            // already state their own ordering rule.
-            .moveDisabled(TokenWatchOrder.shared.mode != .manual)
-        } header: {
-            HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-                Text("Watchlist").dsText(.label12)
-                    .foregroundStyle(DS.textTertiary)
-                Spacer(minLength: 0)
-                sortMenu
+            AssetRosterAddSlot { fieldFocused = true }
+        }
+        .listRowInsets(EdgeInsets())
+        .listRowBackground(Color.clear)
+        .listRowSeparator(.hidden)
+    }
+
+    private var rosterNote: String {
+        let n = watched.count
+        return n == 1
+            ? String(localized: "Watching 1 · tap for its chart, hold to unwatch")
+            : String(localized: "Watching \(n) · tap for its chart, hold to unwatch")
+    }
+
+    /// One coin on the shelf — its own logo (the same one the search row wore
+    /// when it was watched, 2026-07-17), its symbol, and the live pulse the
+    /// feed's rows read from the SAME cache, so the two can never disagree.
+    /// A token whose pulse hasn't landed shows no figure rather than a
+    /// placeholder that reads like one.
+    private func rosterSlot(_ thing: Thing, in items: [Thing]) -> some View {
+        let pulse = TokenPulse.shared.pulse(for: thing)
+        return AssetRosterSlot(label: symbolLabel(thing),
+                               price: pulse?.closes.last,
+                               change: pulse?.change24h) {
+            BridgeLogo(imageURL: thing.previewImageURL, fallbackIcon: "Tokens",
+                       size: 56)
+        }
+        .onTapGesture {
+            DSHaptic.tap()
+            openThing = thing
+        }
+        .contextMenu {
+            if TokenWatchOrder.shared.mode == .manual, items.count > 1 {
+                Button {
+                    moveToFront(thing, in: items)
+                } label: {
+                    Label("Move to Front", systemImage: "arrow.left.to.line")
+                }
             }
-        } footer: {
-            Text("Swipe a token to stop watching it.")
-                .dsText(.callout15).foregroundStyle(DS.textTertiary)
+            Button(role: .destructive) {
+                if let i = watched.firstIndex(where: { $0.id == thing.id }) {
+                    unwatch(at: IndexSet(integer: i))
+                }
+            } label: {
+                Label("Unwatch", systemImage: "trash")
+            }
         }
     }
 
-    /// One watchlist row: title, then either the live pulse (sparkline,
-    /// price, signed 1D change — same anatomy the feed's BandRow wears) or,
-    /// for a token whose pulse hasn't landed yet, the plain watched-since
-    /// timestamp it always showed.
-    @ViewBuilder
-    private func watchRow(_ thing: Thing) -> some View {
-        let pulse = TokenPulse.shared.pulse(for: thing)
-        HStack(alignment: .top, spacing: DS.Space.s3) {
-            // The coin's own face — the same logo (and leaf) the search rows
-            // above wore when it was watched (2026-07-17). Tokens watched
-            // before that stamp have no previewImageURL and fall back to the
-            // Tokens glyph.
-            BridgeLogo(imageURL: thing.previewImageURL, fallbackIcon: "Tokens")
-            Text(thing.title)
-                .dsText(.body17).foregroundStyle(DS.textPrimary)
-                .lineLimit(2)
-                .frame(maxWidth: .infinity, alignment: .leading)
-            if let pulse, let last = pulse.closes.last {
-                VStack(alignment: .trailing, spacing: 2) {
-                    Sparkline(closes: pulse.closes, up: pulse.change24h >= 0)
-                    Text(TokenChartStyle.priceText(last))
-                        .dsText(.subhead13).foregroundStyle(DS.textPrimary)
-                        .monospacedDigit()
-                    TokenDeltaPill(change: pulse.change24h, label: "1D", compact: true)
-                }
-            } else {
-                Text(LiveTimeText.short(thing.capturedAt))
-                    .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-            }
+    /// The shelf's label — the token's SYMBOL, not its full title. A slot is
+    /// 76pt wide, and "Ethereum · $ETH" truncates to nothing readable in it;
+    /// the symbol is the name a watchlist is actually read by. Falls back to
+    /// the title when a pre-symbol watch has none to parse.
+    private func symbolLabel(_ thing: Thing) -> String {
+        if let symbol = thing.title.split(separator: "·").last
+            .map({ $0.trimmingCharacters(in: .whitespaces) }), symbol.hasPrefix("$") {
+            return symbol
         }
+        return thing.title
     }
 
     /// The sort choice — a menu, not a segmented control, so the header
@@ -235,14 +241,6 @@ struct TokenWatchScreen: View {
         }
     }
 
-    private var footerSection: some View {
-        Section {
-            Text("Public price data only — nothing about you leaves your iPhone.")
-                .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-                .listRowBackground(Color.clear)
-        }
-    }
-
     private func unwatch(at offsets: IndexSet) {
         unwatch(displayed: watched, at: offsets)
     }
@@ -265,11 +263,16 @@ struct TokenWatchScreen: View {
         register()
     }
 
-    /// A drag in "My order" saves the whole new sequence — the manual order
-    /// IS the displayed order from here on, not a diff against the old one.
-    private func reorder(displayed items: [Thing], from source: IndexSet, to destination: Int) {
+    /// The shelf's reorder verb (prd §185). A horizontal drag-to-reorder is
+    /// the custom-gesture-over-a-scroll-view fight the retired Home board
+    /// already lost, so "My order" is set one coin at a time from the hold
+    /// menu instead — which keeps the mode a live control rather than a
+    /// setting with no way to set it (the no-dead-controls rule). Saves the
+    /// whole new sequence, the way the drag did.
+    private func moveToFront(_ thing: Thing, in items: [Thing]) {
         var refs = items.map { $0.sourceRef ?? "" }
-        refs.move(fromOffsets: source, toOffset: destination)
+        guard let ref = thing.sourceRef, let i = refs.firstIndex(of: ref) else { return }
+        refs.move(fromOffsets: IndexSet(integer: i), toOffset: 0)
         TokenWatchOrder.shared.saveManual(refs)
         DSHaptic.tap()
     }

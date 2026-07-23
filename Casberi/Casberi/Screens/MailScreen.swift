@@ -20,20 +20,26 @@ struct MailScreen: View {
         recent = recentBridgeThings(source: provider.source, context: modelContext)
     }
 
+    /// The credentials door, open (prd §186).
+    @State private var showConnection = false
+
     var body: some View {
         List {
-            BridgeSetupHeader(name: provider.source)
-            stepsSection.listRowSeparator(.hidden)
-            fieldsSection.listRowSeparator(.hidden)
-            if !recent.isEmpty {
-                RecentThingsSection(header: "Recent", things: recent)
-                    .listRowSeparator(.hidden)
-            }
             if provider.connected {
-                BridgeDisconnectSection(
-                    bridgeID: provider.bridgeID, name: provider.source,
-                    teardown: { TokenVault.delete(provider.passwordKey) }
-                ).listRowSeparator(.hidden)
+                // Connected (prd §186): the ADDRESS is the identity — the one
+                // fact worth leading with — and the app-password field that
+                // used to stare from this screen forever moves behind the door.
+                BridgeConnectedState(
+                    bridgeID: provider.bridgeID,
+                    name: provider.source,
+                    identity: provider.address,
+                    connectionNote: String(localized: "App password · stored in this iPhone's Keychain. Read-only over IMAP."),
+                    openConnection: { showConnection = true }
+                )
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+            } else {
+                connectForm
             }
         }
         .listStyle(.insetGrouped)
@@ -44,11 +50,27 @@ struct MailScreen: View {
         .dsSoftScrollEdges()
         .navigationTitle(provider.rawValue)
         .navigationBarTitleDisplayMode(.large)
+        .sheet(isPresented: $showConnection) {
+            BridgeConnectionSheet(title: provider.rawValue) {
+                connectForm
+                BridgeDisconnectSection(
+                    bridgeID: provider.bridgeID, name: provider.source,
+                    teardown: { TokenVault.delete(provider.passwordKey) }
+                ).listRowSeparator(.hidden)
+            }
+        }
         .onAppear {
             loadRecent()
             addressField = provider.address
             if provider.connected { Task { await sync() } }
         }
+    }
+
+    /// The connect form, unchanged (user ruling 2026-07-23 — the steps stay).
+    @ViewBuilder private var connectForm: some View {
+        BridgeSetupHeader(name: provider.source)
+        stepsSection.listRowSeparator(.hidden)
+        fieldsSection.listRowSeparator(.hidden)
     }
 
     private var stepsSection: some View {

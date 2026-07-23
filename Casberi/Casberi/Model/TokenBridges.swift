@@ -107,6 +107,27 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         }
     }
 
+    /// What this bridge calls the thing you pasted — for the connected
+    /// state's line about how it's connected (prd §186). Each venue's own
+    /// word, the way `placeholder` and `steps` already are: telling someone
+    /// their "key" is stored when the site called it a secret is a small lie
+    /// that costs trust on the one screen that's about trust.
+    var credentialNoun: String {
+        switch self {
+        case .readwise: "access token"
+        case .github:   "personal access token"
+        case .todoist:  "API token"
+        case .raindrop: "test token"
+        case .calcom:   "API key"
+        case .calendly: "personal access token"
+        case .notion:   "integration secret"
+        case .linear:   "API key"
+        case .bitrefill: "API key"
+        case .privacy:  "API key"
+        case .oneclaw:  "agent key"
+        }
+    }
+
     /// What lands, for proof lines: "12 highlights in".
     var noun: String {
         switch self {

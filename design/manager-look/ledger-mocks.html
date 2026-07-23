@@ -1,0 +1,241 @@
+<title>The ledger — one manager grammar across every watch-list bridge</title>
+<style>
+  :root {
+    --page: #0a0b0f; --ink: #f2f4f8; --muted: #99a1b4; --faint: #626b80;
+    --tint: #1673e6; --confirm: #32d74b; --up: #32d74b; --down: #ff5a5f;
+    --card: rgba(22,24,31,.82);
+    --fc: #7c5cff; --bsky: #1185fe; --rss: #f0912e; --tok: #34c7a4;
+    --money: ui-rounded, -apple-system, system-ui, sans-serif;
+    --text: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { background: var(--page); }
+  body {
+    font-family: var(--text); color: var(--ink);
+    background: radial-gradient(900px 420px at 18% -8%, rgba(124,92,255,.10), transparent 62%), var(--page);
+    padding: 48px 28px 72px;
+  }
+  .wrap { max-width: 1180px; margin: 0 auto; }
+  header { max-width: 760px; margin-bottom: 40px; }
+  .eyebrow { font-size: 12px; font-weight: 600; color: #9b83ff; margin-bottom: 10px; }
+  h1 { font-size: clamp(26px,3.6vw,38px); font-weight: 800; letter-spacing: -.02em; line-height: 1.08; text-wrap: balance; margin-bottom: 14px; }
+  header p { font-size: 15px; line-height: 1.55; color: var(--muted); max-width: 66ch; }
+  header p b { color: var(--ink); font-weight: 600; }
+
+  .row { display: flex; flex-wrap: wrap; gap: 34px; align-items: flex-start; justify-content: center; margin-bottom: 50px; }
+  .option { width: 320px; }
+  .phone { width: 320px; border-radius: 44px; padding: 9px; background: #16181d; box-shadow: 0 30px 70px rgba(0,0,0,.55); }
+  .screen {
+    border-radius: 36px; overflow: hidden; position: relative; padding: 20px 15px;
+    min-height: 640px; background: #000;
+  }
+  .screen.fc   { background: linear-gradient(180deg, rgba(124,92,255,.26) 0%, rgba(124,92,255,.08) 46%, transparent 100%) top/100% 440px no-repeat, #000; }
+  .screen.rss  { background: linear-gradient(180deg, rgba(240,145,46,.24) 0%, rgba(240,145,46,.07) 46%, transparent 100%) top/100% 440px no-repeat, #000; }
+  .screen.tok  { background: linear-gradient(180deg, rgba(52,199,164,.24) 0%, rgba(52,199,164,.07) 46%, transparent 100%) top/100% 440px no-repeat, #000; }
+  .caption { margin-top: 18px; padding: 0 6px; }
+  .caption h2 { font-size: 17px; font-weight: 700; margin-bottom: 6px; }
+  .caption h2 span { color: var(--faint); font-weight: 600; }
+  .caption p { font-size: 13.5px; line-height: 1.55; color: var(--muted); }
+  .caption .risk { display: block; margin-top: 7px; font-size: 12.5px; color: var(--faint); }
+
+  /* shared atoms */
+  .navTitle { font-family: var(--money); font-size: 26px; font-weight: 800; letter-spacing: -.015em; }
+  .navSub { font-size: 11px; color: var(--faint); margin-top: 2px; }
+  .face { border-radius: 50%; flex: none; }
+  .sq { border-radius: 9px; display: flex; align-items: center; justify-content: center; font-size: 13px; color: #cbd2e2; background: #262b38; flex: none; }
+  .f-vit    { background: radial-gradient(circle at 30% 30%, #6fe3a5, #2e9e63); }
+  .f-linda  { background: radial-gradient(circle at 30% 30%, #ff9ec6, #c2477f); }
+  .f-jesse  { background: radial-gradient(circle at 30% 30%, #ffd27d, #d2812a); }
+  .f-bsky1  { background: radial-gradient(circle at 30% 30%, #8fd0ff, #1185fe); }
+  .mono { font-family: var(--money); }
+
+  /* omnibox — the one input, both search and add */
+  .omni {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--card); border-radius: 15px; padding: 12px 13px; margin: 14px 0 6px;
+  }
+  .omni .mag { color: var(--faint); font-size: 14px; }
+  .omni span { color: var(--faint); font-size: 13px; }
+  .omni .go { margin-left: auto; font-weight: 700; font-size: 12px; }
+
+  /* roster shelf — watched people as faces (the wallet grammar) */
+  .shelf { display: flex; gap: 14px; overflow-x: auto; padding: 6px 2px 2px; }
+  .rslot { text-align: center; width: 60px; flex: none; }
+  .rface, .rring { width: 56px; height: 56px; margin: 0 auto 6px; }
+  .rslot b { display: block; font-size: 11px; font-weight: 650; white-space: nowrap; }
+  .rslot span { display: block; font-size: 9.5px; color: var(--faint); white-space: nowrap;
+                overflow: hidden; text-overflow: ellipsis; }
+  .rring { border-radius: 50%; border: 1.6px dashed rgba(255,255,255,.22);
+           display: flex; align-items: center; justify-content: center; color: var(--faint); font-size: 20px; }
+  .shelfNote { font-size: 10.5px; color: var(--faint); margin: 8px 4px 2px; }
+
+  /* ledger rows */
+  .lgRow { display: flex; align-items: flex-start; gap: 10px; padding: 10px 4px; }
+  .lgRow .face, .lgRow .sq { width: 38px; height: 38px; margin-top: 1px; }
+  .lgRow .t { flex: 1; min-width: 0; }
+  .lgRow .t b { display: block; font-size: 14.5px; font-weight: 650; }
+  .lgRow .t .sub { display: block; font-size: 11px; color: var(--faint); margin-top: 1px; line-height: 1.35;
+                   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .lgRow .chev { color: var(--faint); font-size: 15px; align-self: center; }
+  .chips { display: flex; gap: 6px; margin-top: 7px; flex-wrap: wrap; }
+  .chip { font-size: 10.5px; font-weight: 600; padding: 4px 9px; border-radius: 999px;
+          background: rgba(255,255,255,.06); color: var(--faint); }
+  .chip.on { background: rgba(22,115,230,.16); color: #6fb0ff; }
+  .divider { font-size: 10.5px; color: var(--faint); margin: 12px 4px 2px; }
+  .price { text-align: right; align-self: center; }
+  .price b { font-family: var(--money); font-size: 14px; font-weight: 700; display: block; }
+  .price .d { font-size: 11px; font-weight: 700; }
+  .up { color: var(--up); } .down { color: var(--down); }
+
+  /* segmented (tokens order mode) */
+  .seg { display: flex; gap: 2px; background: rgba(255,255,255,.05); border-radius: 11px; padding: 3px; margin: 12px 0 4px; }
+  .seg div { flex: 1; text-align: center; font-size: 11px; font-weight: 600; color: var(--faint); padding: 6px 0; border-radius: 8px; }
+  .seg div.sel { background: rgba(255,255,255,.10); color: var(--ink); }
+
+  .gearline { display: flex; align-items: center; gap: 7px; margin-top: 18px; font-size: 12px; color: var(--faint); }
+  .gearline i { font-style: normal; margin-left: auto; }
+  .discon { margin-top: 16px; text-align: center; font-size: 12.5px; color: var(--down); opacity: .82; }
+
+  .verdict { max-width: 940px; margin: 0 auto; }
+  .verdict h3 { font-size: 15px; font-weight: 700; margin-bottom: 14px; }
+  .points { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; margin-bottom: 26px; }
+  .point { background: rgba(255,255,255,.035); border-radius: 16px; padding: 14px 16px; }
+  .point b { display: block; font-size: 13.5px; font-weight: 700; margin-bottom: 4px; }
+  .point p { font-size: 12.5px; line-height: 1.5; color: var(--muted); }
+  .point .tag { display: inline-block; font-size: 10px; font-weight: 700; color: #9b83ff; margin-bottom: 6px; letter-spacing: .02em; }
+  .law { font-size: 12.5px; line-height: 1.6; color: var(--faint); max-width: 80ch; }
+  .law b { color: var(--muted); font-weight: 600; }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .option { animation: rise .5s ease-out backwards; }
+    .option:nth-child(2) { animation-delay: .08s; }
+    .option:nth-child(3) { animation-delay: .16s; }
+    @keyframes rise { from { opacity: 0; transform: translateY(14px); } }
+  }
+</style>
+
+<div class="wrap">
+<header>
+  <div class="eyebrow">Casberi · the wallet manager pattern, generalized</div>
+  <h1>One ledger grammar for every watch-list</h1>
+  <p>The wallet manager stopped being a settings page by doing three things: <b>identity leads, one omnibox both adds and searches, plumbing demotes to a door.</b> The same three moves fit Farcaster, Bluesky, RSS, Substack, Reddit, YouTube, Podcasts, Tokens and Stocktwits — every bridge that manages a set you WATCH rather than a login you set once. The clean line: <b>faces you watch → roster shelf; topics and assets → ledger.</b> So Farcaster/Bluesky become the wallet screen exactly — a roster of people up top, a ledger of topics below — while RSS, Tokens and Stocktwits (which carry URLs and prices, not faces) stay pure ledger. Below: the grammar on the three surface families, to rule on once and inherit nine times.</p>
+</header>
+
+<div class="row">
+
+  <!-- ============ FARCASTER — the richest case ============ -->
+  <div class="option">
+    <div class="phone"><div class="screen fc">
+      <div class="navTitle">Farcaster</div>
+      <div class="navSub">Read-only, public — no password, ever</div>
+      <div class="omni"><span class="mag">🔍</span><span>Find or add — @name, or /channel</span><span class="go" style="color:var(--fc)">Add</span></div>
+
+      <div class="shelf">
+        <div class="rslot"><span class="face f-vit rface"></span><b>Vitalik</b><span>@vitalik</span></div>
+        <div class="rslot"><span class="face f-linda rface"></span><b>Linda Xie</b><span>@linda</span></div>
+        <div class="rslot"><span class="face f-jesse rface"></span><b>Jesse</b><span>@jesse</span></div>
+        <div class="rslot"><span class="rring">+</span><b style="color:var(--faint)">Watch</b><span>&nbsp;</span></div>
+      </div>
+      <div class="shelfNote">Watching 3 · tap a face for likes &amp; mentions, their wallet, who they follow</div>
+
+      <div class="divider">Topics — followed by name, not people</div>
+      <div class="lgRow">
+        <span class="sq">/</span>
+        <div class="t"><b>/design</b><span class="sub">channel · 41 casts landed</span></div>
+        <span class="chev">›</span>
+      </div>
+      <div class="lgRow">
+        <span class="sq">/</span>
+        <div class="t"><b>/base</b><span class="sub">channel · 12 casts landed</span></div>
+        <span class="chev">›</span>
+      </div>
+
+      <div class="discon">Disconnect Farcaster</div>
+    </div></div>
+    <div class="caption">
+      <h2>Farcaster <span>— roster of people, ledger of topics</span></h2>
+      <p><b>Structurally the wallet screen.</b> Watched people ride a face <b>roster</b> up top (Stories grammar, unbounded so it scrolls, one trailing "+" instead of dashed cap-slots) — a tap opens the profile card that holds likes/mentions, watch-their-wallet, who-they-follow. Topics (channels, and Bluesky's feeds) stay a <b>square-mark ledger</b> below. One omnibox adds either: <b>/</b> follows a topic, anything else searches people.</p>
+      <span class="risk">Amends ruling 3: the Likes/Mentions switches move to the tapped card too (a face can't hold them). Cleaner surface, but you lose the at-a-glance "Mentions on."</span>
+    </div>
+  </div>
+
+  <!-- ============ RSS — the simplest ============ -->
+  <div class="option">
+    <div class="phone"><div class="screen rss">
+      <div class="navTitle">RSS</div>
+      <div class="navSub">Fetched by this iPhone — no account, no ranking</div>
+      <div class="omni"><span class="mag">🔍</span><span>Site or feed URL — or search your feeds</span><span class="go" style="color:var(--rss)">Follow</span></div>
+
+      <div class="lgRow">
+        <span class="sq" style="background:#2a1c10;color:#f0a95a">▤</span>
+        <div class="t"><b>Stratechery</b><span class="sub">stratechery.com/feed</span></div>
+        <span class="chev">›</span>
+      </div>
+      <div class="lgRow">
+        <span class="sq" style="background:#2a1c10;color:#f0a95a">▤</span>
+        <div class="t"><b>Daring Fireball</b><span class="sub">daringfireball.net/feeds/main</span></div>
+        <span class="chev">›</span>
+      </div>
+      <div class="lgRow">
+        <span class="sq" style="background:#2a1c10;color:#f0a95a">▤</span>
+        <div class="t"><b>Casey Newton · Platformer</b><span class="sub">platformer.news/rss</span></div>
+        <span class="chev">›</span>
+      </div>
+
+      <div class="discon">Disconnect RSS</div>
+    </div></div>
+    <div class="caption">
+      <h2>RSS <span>— the reference ledger</span></h2>
+      <p>No tiers, no toggles — the plain form. Identity leads (a <b>square favicon mark</b> + the learned publication title), the URL demotes to the subline, the "Add a feed" / "Following" section furniture is gone. The fetched-directly promise moves from a footer paragraph to the nav subtitle.</p>
+      <span class="risk">This exact row + omnibox is what <b>Substack, Reddit, YouTube, Podcasts</b> already share via FeedFollowKind — build it once here, five bridges inherit it free.</span>
+    </div>
+  </div>
+
+  <!-- ============ TOKENS — the watchlist ============ -->
+  <div class="option">
+    <div class="phone"><div class="screen tok">
+      <div class="navTitle">Tokens</div>
+      <div class="navSub">Public price data — no wallet, no trading</div>
+      <div class="omni"><span class="mag">🔍</span><span>Name, symbol, address, or link</span><span class="go" style="color:var(--tok)">Watch</span></div>
+      <div class="seg"><div class="sel">Movers</div><div>Recent</div><div>My order</div></div>
+
+      <div class="lgRow">
+        <span class="face" style="background:radial-gradient(circle at 30% 30%,#c7d0ff,#627eea)"></span>
+        <div class="t"><b>Ethereum · $ETH</b><span class="sub">Base · $3,412</span></div>
+        <div class="price"><b>$3,412</b><span class="d up">+2.4%</span></div>
+      </div>
+      <div class="lgRow">
+        <span class="face" style="background:radial-gradient(circle at 30% 30%,#ffe08a,#e0a020)"></span>
+        <div class="t"><b>Degen · $DEGEN</b><span class="sub">Base · $0.0091</span></div>
+        <div class="price"><b>$0.0091</b><span class="d down">−6.1%</span></div>
+      </div>
+      <div class="lgRow">
+        <span class="face" style="background:radial-gradient(circle at 30% 30%,#b8f0d8,#26a17b)"></span>
+        <div class="t"><b>USD Coin · $USDC</b><span class="sub">Ethereum · $1.00</span></div>
+        <div class="price"><b>$1.00</b><span class="d" style="color:var(--faint)">0.0%</span></div>
+      </div>
+
+      <div class="discon">Remove all · clears the watchlist</div>
+    </div></div>
+    <div class="caption">
+      <h2>Tokens <span>— the watchlist ledger</span></h2>
+      <p>Already half-here (search-as-you-type, watchlist below) — this strips the header coin card and section headers so identity leads: the token logo, name·$SYM, and the live price + 24h change on the right. Its <b>Movers / Recent / My order</b> modes survive intact — that's the watchlist's own grammar, not furniture.</p>
+      <span class="risk">Stocktwits is the same shape (watched tickers, live chart on tap). Flat change reads gray, no sign, no direction (the §83 honesty rule).</span>
+    </div>
+  </div>
+
+</div>
+
+<div class="verdict">
+  <h3>My read, and the calls for your ruling</h3>
+  <div class="points">
+    <div class="point"><span class="tag">RULE 1 · THE OMNIBOX</span><b>One field, find-or-add</b><p>Farcaster's people field and channel field become one, with a leading <b>/</b> as the topic route — matching how people already write channels. Same for Bluesky (people + feed search in one). Typing filters your watched set live, exactly like the wallet omnibox filters the book. <b>Ask:</b> is the <b>/</b> grammar right, or should topics stay a second field?</p></div>
+    <div class="point"><span class="tag">RULE 2 · MARK GRAMMAR</span><b>Round is a person, square is a topic</b><p>The wallet already draws faces round, machinery square (AddressMark). Extending it: channels, feeds, and RSS publications become <b>square marks</b> — an instant person-vs-topic read down the whole ledger, unified app-wide. Today channels/feeds render as circles. <b>Ask:</b> ratify square-for-topic as a standing rule (I'll record it in prd)?</p></div>
+    <div class="point"><span class="tag">RULE 3 · PEOPLE GET A ROSTER</span><b>Faces shelf, topics ledger</b><p>Watched Farcaster/Bluesky accounts ride a face <b>roster</b> exactly like the wallet's — unbounded, so no dashed cap-slots, just one trailing "+". Everything per-account (likes/mentions, watch-their-wallet, who-they-follow) moves behind the <b>row tap → SocialProfileCard</b>, which already hosts all three. Topics (channels/feeds) stay the square-mark ledger. <b>Ask:</b> roster for people, ledger for topics — ratify?</p></div>
+    <div class="point"><span class="tag">RULE 4 · DROP RECENTS</span><b>A manager manages</b><p>The rebuilt wallet quietly dropped its "what landed" list — the feed already shows that. Same argument here: the proof-faces status line still carries the first-connect "it works" moment, so the RecentThingsSection can go. <b>Ask:</b> drop it, or keep a peek?</p></div>
+    <div class="point"><b>What doesn't change</b><p>Every keyless promise and honesty line survives: read-only stated once (nav subtitle, not a footer wall), swipe-to-remove, the proof line on connect, per-account watch switches, bulk paste. No new capability — this is pure architecture.</p></div>
+    <div class="point"><b>Reach</b><p><b>9 bridges, ~2 components.</b> Extract one LedgerRow + one Omnibox from the Farcaster rework; RSS and the four FeedFollow bridges inherit them almost free; Tokens/Stocktwits adopt in a follow-up sweep. Sequenced so the hardest screen (two-field Farcaster) proves the components first.</p></div>
+  </div>
+  <p class="law"><b>Law check:</b> no hairlines (dividers are a whisper of type, the §83 rule); sentence case throughout; glass stays on the floating layer only (every row here is a fill); the tint washes are each bridge's own brand hue doing its one identity job. No dead controls — the profile card the rows tap into already exists and already does every action moved into it. The only new doctrine is <b>square-for-topic</b> (RULE 2), which generalizes the wallet's existing round/square grammar rather than inventing one.</p>
+</div>
+</div>

@@ -6922,3 +6922,202 @@ Symptom to recognize next time: a control that renders correctly, that the
 same code pattern elsewhere in the app already proves works, and that fails
 identically across unrelated rewrites of the code underneath it — that
 combination points at the harness, not the view.
+
+## 184. The manager pattern, generalized — roster for people, ledger for topics (user: "should we do roster in the feeds like the wallet", 2026-07-23)
+
+The wallet manager's rebuild (prd §182) wasn't really about wallets — it was
+three moves any watch-list screen needed: identity leads, one omnibox both
+adds and searches, plumbing demotes to a door. Applied to Farcaster, Bluesky,
+and RSS (`HandleSetupScreen`, shared by Farcaster/Bluesky/Pinterest/Substack/
+Reddit/YouTube/Podcasts, and `RSSScreen`), with one split the wallet didn't
+need to make: **a watched Farcaster/Bluesky account is a PERSON — the same
+shape as a watched address — so it gets the wallet's own face roster; a
+followed channel or feed is a TOPIC, not a person, so it stays a square-marked
+ledger.** Mocked at `design/manager-look/ledger-mocks.html` (three shapes: a
+Farcaster roster-over-ledger, RSS as the reference pure ledger, Tokens as a
+third proof point deferred to a follow-up sweep) before any code changed.
+
+**Ruling: round is a person, square is a topic — standing rule, every ledger.**
+`AddressMark` already drew this line for the address book (a face for a
+wallet, a square glyph for a contract/Safe). It now generalizes: Farcaster
+channels, Bluesky feeds, and RSS publications all render as SQUARE marks
+(`circular: false` on `RemoteThumb`/`BridgeIcon`, the already-existing
+app-icon squircle — no new component needed, since square was already each
+view's *default* shape and the old rows had opted INTO circular by mistake).
+A face — a roster slot, an address book entry, an author avatar — stays
+round. One glance down any ledger now tells identity from topic.
+
+**The roster has no cap, so no dashed slots.** The wallet's emptiest-slots
+delight draws a hard 5-limit (prd §170); Farcaster/Bluesky watch lists are
+unbounded and keyless (a follow-import alone can land hundreds), so the
+roster scrolls horizontally and ends in one dashed "+" that focuses the
+omnibox — an invitation, not a countdown.
+
+**Every per-account action moved off the row and onto `SocialProfileCard`** —
+the same card a post's byline already opens (`casberi://person/<Source>/
+<handle>`). Likes/Mentions switches, "Watch their wallet," and "Who they
+follow" (previously three inline row elements that would not have survived a
+50-account ledger) are now reached by tapping a roster face. The switches
+carry the bridge's own explanation (`HandleBridge.watchFooter`) as a caption
+beneath them, moved verbatim from the old row footer. `SocialProfileCard`'s
+tray grew from height 460 to 560 to fit the new content — no internal scroll,
+so the fixed detent has to be generous.
+
+**One omnibox replaces the old two-field screens.** Farcaster's separate
+"name" and "channel" fields, and Bluesky's separate "name" and "feed search"
+fields, collapse into one `query` binding. On Farcaster, a leading `/` follows
+a channel by name (`FarcasterStore.normalizeChannel`); anything else searches
+people. On Bluesky, plain text searches people AND feeds concurrently
+(`async let`, both `debouncedSearch` calls racing, merged into one
+`OmniHit` list so search-result rows share one grammar — a feed's subtitle
+just reads "Feed"). Typing also filters the field the same way it always
+did — the omnibox is search AND add in one input, the wallet's own pattern.
+
+**Recents dropped, following prd §182's own precedent.** The old
+`RecentThingsSection`/cached-`recent` query is gone from both
+`HandleSetupScreen` and `RSSScreen` — the feed already shows what landed, and
+a manager screen manages rather than previews. Knock-on: the proof-line
+facepile (`BridgeSyncStatusRows(faces:)`) depended on that cache and is gone
+too; the plain count-up result text carries the connect-time proof now.
+
+**Deferred:** Tokens and Stocktwits (watchlists of assets, not people or
+publications — a token's mark is a coin logo, arguably round, "worth a
+ruling" per the mock) are the pattern's next candidates but weren't touched
+this pass — flagged as a follow-up sweep rather than pushed through
+unreviewed.
+
+Build green (`xcodebuild … build`, 2026-07-23).
+
+## 185. The asset roster — every manager is one shelf of circles (user: "circles", then "why wouldn't we do the same horizontal row treatment", 2026-07-23)
+
+The pass that finished the manager family. §182 gave the wallet a roster of
+addresses; §184 gave the social screens a roster of people over a ledger of
+topics. Tokens and Stocktwits were the two left, and they forced the question
+§184 had ducked: **what is an asset?**
+
+**Ruling one — "circles".** A token ships round coin art; a stock ships none.
+Clipping a coin into a squircle reads as a mistake (the 2026-07-10 chip lesson
+in reverse), and giving a stock a fake logo or a generic "stock" glyph would be
+a mark that names nothing. So a stock wears its TICKER in a round disc
+(`TickerDisc` in `Screens/AssetRoster.swift`) — a coin without art, honest to
+the material, since a ticker IS the symbol. The mark grammar across the whole
+app now reads: **round is a person or an asset, square is a topic** (a channel,
+a feed, a publication, a contract glyph). This supersedes §184's cruder
+"round = person, square = everything else".
+
+**Ruling two — the shelf, not the table.** Asked why assets wouldn't get the
+same horizontal treatment, the honest answer was that they should. The argument
+against was the price COLUMN: a vertical ledger lets you scan deltas down and
+compare. The argument that won: comparison is a READING job, and reading lives
+in the feed (the movers tile, the chart things) — a manager only owes you add,
+remove, and reorder. So `AssetRosterShelf` / `AssetRosterSlot` carry each asset
+as a circle with its symbol, live price, and signed delta whispered underneath,
+and every watch-list manager in the app is now the same shelf.
+
+**What the shelf costs, accepted with the ruling.** The sparkline and the
+scan-down price column are gone. Swipe-to-unwatch becomes a HOLD (the roster's
+own gesture everywhere else), so the shelf states its gestures in its note line
+("Watching 4 · tap for its chart, hold to unwatch") — a shelf can't demo a
+swipe, which also retires this screen's `SwipeHintNudge` coach.
+
+**"My order" survives as a live control, not a dead one.** Drag-to-reorder was
+the vertical list's; a horizontal drag-reorder is a custom gesture over a
+UIScrollView — the exact fight the retired Home board lost (§131). Rather than
+leave a sort mode with no way to set it (the no-dead-controls rule), manual
+order is set one coin at a time via **"Move to front"** in the hold menu, which
+saves the whole sequence the way the drag did. The sort menu moved from the old
+section header to the toolbar, since the shelf has no header.
+
+**Two things got better on the way.** The Tokens watchlist row was never
+tappable — the shelf's tap opens the token's chart sheet, so the chart is newly
+reachable from its own manager. And Stocktwits' rows now carry a live day quote
+(`StockChart.fetch`, the same read the chart sheet does, concurrent per ticker),
+where before they showed only a watched-since timestamp.
+
+**Honesty details worth keeping.** A price we couldn't reach renders NOTHING,
+never a dash — a dash in a price slot reads like a number. Tokens' figures come
+from the same `TokenPulse` cache the feed reads, so manager and feed can never
+disagree about which tokens moved. Stocktwits' per-post Bullish/Bearish stays
+per-POST in the feed, where it's the author's own call — the roster invents no
+per-ticker sentiment.
+
+Also in this pass, matching §184: the header coin cards and section furniture
+came off both screens, and Stocktwits' "Latest takes" preview retired under the
+same recents ruling.
+
+Build green (`xcodebuild … build`, 2026-07-23).
+
+## 186. The two-state setup screen — connect is a form, connected is a manager (user: "the other manage / connect pages all have a similar shape, and feel like forms… how would you improve the template", then "nah, I like the state today for the form, it's important to know what the steps are. but lets change the connected pages how you recommend", 2026-07-23)
+
+The manager pattern's last frontier: the ~20 setup screens that aren't
+watch-lists. Their defect was never the form — pasting a key IS a form-filling
+moment — it was that **the screen never changed state**. Steam showed its API
+key and profile fields forever; Mail kept app-password boxes on screen for
+months; the eleven keyed bridges kept numbered setup steps you finished in
+week one. A person opening a connected bridge isn't there to re-read
+instructions; they're there to see it working.
+
+**Ruling: State 1 is kept EXACTLY as it is.** A mock offered a "consumer"
+reorder of the unconnected screen (ghost preview promoted to hero, steps
+collapsed behind a disclosure, step 1 as a link capsule). The user declined:
+*"it's important to know what the steps are."* The connect form keeps its
+steps, its fields, its ghost preview, its ordering — nothing about the
+pre-connect screen changed in this pass, and future passes shouldn't quietly
+erode it either.
+
+**Ruling: State 2 is new.** The moment a connection verifies, the form retires
+behind one door and `BridgeConnectedState` (`Screens/BridgeConnectedState.swift`)
+takes the screen: **identity → live proof → capability sentences → one ⚙︎
+Connection door**. The door opens `BridgeConnectionSheet`, which renders the
+screen's OWN existing form sections verbatim plus Disconnect — the form moved,
+it was not rewritten. A sheet rather than a push, deliberately: these screens
+are themselves pushed, and `HomeRoute.Node` would have needed a case per
+bridge (or one giant switch) to route a destination that differs per bridge.
+
+**Unified with `BridgeDetailScreen` by construction.** The proof line and the
+capability sentences are read from `BridgeStore` — the same records that
+screen renders — so a bridge can never tell two different stories about
+itself on two surfaces. That was the alternative's real cost: building this
+inside each setup screen would have made a third copy of the same screen.
+
+**Identity is never invented — measured, not assumed.** The mock cheerfully
+showed "Alex's Workspace" for Notion and "Alex" for Spotify. Neither exists:
+`TokenVault` holds a secret and nothing else, Spotify's PKCE flow stores only
+tokens, and Twitch caches an opaque `twitch.userid`, not a login name. Only
+three bridges actually hold an identity — **Steam** (`profile`), **Mail**
+(`address`), **Obsidian** (`vaultName`) — plus **Exchange**, whose identity is
+its §163 permission VERDICT ("Read-only key · the venue confirmed it can't
+trade or withdraw"), which is the most meaningful line that screen could
+possibly lead with. Everything else passes `identity: nil` and leads with the
+bridge's own name over a truthful note about HOW it connects. Fetching display
+names purely to decorate a header is a follow-up, per-bridge, not a licence to
+guess.
+
+**The proof pill waits for a real sync; capabilities don't.** Found live: a
+credential can be stored while `registerConnected` has never run (a bad key,
+a first sync that failed), leaving no `BridgeStore` record — and the screen
+rendered as just identity + door, barren. Fix: `capabilitiesFallback` carries
+each bridge's static can-do sentences (`TokenBridge.canLine` and friends) for
+that state. The distinction is the honesty rule doing its job — **a capability
+is a fact about the bridge, safe to state early; a proof is a claim about what
+happened, so no pill until something did.**
+
+**Also in this pass:** `TokenBridge.credentialNoun` (each venue's own word —
+"integration secret" for Notion, "personal access token" for GitHub — since
+telling someone their "key" is stored when the site called it a secret is a
+small lie on the one screen that's about trust). And **Shopify** got the
+§184/§185 ledger treatment rather than a two-state flip: it was the manager
+pattern hiding in a form (paste a store, list, swipe to remove — RSS's exact
+shape), so the omnibox leads and stores wear SQUARE marks, being publications
+rather than people or assets.
+
+Applied to: the 11 keyed bridges (one `TokenSetupScreen` rework), Steam, Mail,
+Twitch, Spotify, Obsidian, Exchange, and Shopify.
+
+VERIFIED 2026-07-23 (iPhone 17 Pro sim, pinned UDID): a stored Readwise token
+renders the connected state — mark, "Your access token · stored in this
+iPhone's Keychain", the "Reads your highlights." capability, and the
+Connection row — with NO proof pill, correctly, since that bogus key never
+synced. Tapping Connection opens the sheet carrying the untouched form: the
+three numbered steps, the token field, the honest "couldn't refresh" line, the
+Keychain footer, and Remove token. Build green.

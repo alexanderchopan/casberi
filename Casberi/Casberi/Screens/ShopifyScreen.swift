@@ -30,13 +30,9 @@ struct ShopifyScreen: View {
 
     var body: some View {
         List {
-            BridgeSetupHeader(name: "Shopify")
-            if !shopify.shops.isEmpty { followingSection.listRowSeparator(.hidden) }
+            BridgeSetupHeader(name: "Shopify", connected: shopify.connected)
             addSection.listRowSeparator(.hidden)
-            if !recent.isEmpty {
-                RecentThingsSection(header: "New drops", things: recent, titleLines: 1)
-                    .listRowSeparator(.hidden)
-            }
+            if !shopify.shops.isEmpty { followingSection.listRowSeparator(.hidden) }
             if !shopify.shops.isEmpty {
                 BridgeDisconnectSection(
                     bridgeID: "shopify", name: "Shopify",
@@ -55,9 +51,6 @@ struct ShopifyScreen: View {
         .dsSoftScrollEdges()
         .navigationTitle("Shopify")
         .navigationBarTitleDisplayMode(.large)
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) { EditButton().tint(DS.textPrimary) }
-        }
         .onAppear {
             // Opening the screen doesn't connect — the person pastes a store to
             // follow it. Only refresh if something's already followed.
@@ -67,44 +60,55 @@ struct ShopifyScreen: View {
 
     // MARK: - Following
 
+    /// The followed stores as a square-marked ledger (prd §186) — Shopify was
+    /// the manager pattern hiding in a form: paste a store, list below, swipe
+    /// to remove is exactly RSS's shape, so it takes RSS's treatment. Stores
+    /// are SQUARE marks: a shop is a publication you follow, not a person or
+    /// an asset (the §185 mark grammar).
     private var followingSection: some View {
         Section {
             ForEach(shopify.shops) { shop in
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(shop.displayName)
-                        .dsText(.body17).foregroundStyle(DS.textPrimary)
-                        .lineLimit(1)
-                    Text(shop.host)
-                        .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-                        .lineLimit(1)
+                HStack(spacing: DS.Space.s3) {
+                    BridgeIcon(name: "Shopify", size: 32, circular: false)
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(shop.displayName)
+                            .dsText(.body17).foregroundStyle(DS.textPrimary)
+                            .lineLimit(1)
+                        Text(shop.host)
+                            .dsText(.label12).foregroundStyle(DS.textTertiary)
+                            .lineLimit(1)
+                    }
+                    Spacer(minLength: 0)
                 }
                 .dsListCardRow()
-            }
-            .onDelete { shopify.remove(at: $0) }
-        } header: {
-            HStack {
-                Text("Following").dsText(.label12)
-                    .foregroundStyle(DS.textTertiary)
-                Spacer()
-                if syncing {
-                    ProgressView().controlSize(.small)
-                } else if let lastResult {
-                    Text(lastResult).dsText(.label12).foregroundStyle(DS.textTertiary)
+                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                    Button(role: .destructive) {
+                        if let i = shopify.shops.firstIndex(where: { $0.id == shop.id }) {
+                            shopify.remove(at: IndexSet(integer: i))
+                        }
+                    } label: {
+                        Label("Remove", systemImage: "trash")
+                    }
                 }
             }
+        } header: {
+            Text(shopify.shops.count == 1 ? "Following" : "Following \(shopify.shops.count)")
+                .dsText(.label12).foregroundStyle(DS.textTertiary)
         }
     }
 
     // MARK: - Add
 
+    /// The omnibox leads (prd §186) — following a store is this screen's
+    /// primary act, not an errand below a list.
     private var addSection: some View {
         Section {
             BridgeFieldRow(placeholder: "Store web address", text: $newStore,
                            buttonLabel: "Follow", keyboard: .URL,
                            focus: $fieldFocused, action: addStore)
-        } header: {
-            Text("Follow a store").dsText(.label12)
-                .foregroundStyle(DS.textTertiary)
+            BridgeSyncStatusRows(syncing: syncing,
+                                 syncingLine: String(localized: "Reading the store…"),
+                                 result: lastResult, resultIsError: false)
         } footer: {
             Text("Paste a Shopify store's web address — its newest products land in your feed as things. Sale prices and restocks land too.")
                 .dsText(.callout15).foregroundStyle(DS.textTertiary)

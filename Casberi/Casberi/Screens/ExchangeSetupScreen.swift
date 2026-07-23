@@ -32,10 +32,33 @@ struct ExchangeSetupScreen: View {
         _connected = State(initialValue: ExchangeBridge.credentials(venue) != nil)
     }
 
+    /// The credentials door, open (prd §186).
+    @State private var showConnection = false
+
     var body: some View {
         List {
-            stepsSection.listRowSeparator(.hidden)
-            connectSection.listRowSeparator(.hidden)
+            if connected {
+                // Connected (prd §186). The identity here is the VERDICT —
+                // the §163 permission check is this bridge's whole point, so
+                // "read-only key, verified" is the fact worth leading with,
+                // and it's one we actually hold: a key that could move money
+                // was never stored in the first place.
+                BridgeConnectedState(
+                    bridgeID: venue.rawValue,
+                    name: venue.display,
+                    identity: String(localized: "Read-only key"),
+                    connectionNote: String(localized: "\(venue.display) confirmed this key can't trade or withdraw · stored in this iPhone's Keychain"),
+                    capabilitiesFallback: [String(localized: "Reads your balances."),
+                                           String(localized: "Adds them to your combined total."),
+                                           String(localized: "Can't place an order, withdraw, or transfer.")],
+                    openConnection: { showConnection = true }
+                )
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+            } else {
+                stepsSection.listRowSeparator(.hidden)
+                connectSection.listRowSeparator(.hidden)
+            }
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
@@ -44,6 +67,12 @@ struct ExchangeSetupScreen: View {
         .dsSoftScrollEdges()
         .navigationTitle(venue.display)
         .navigationBarTitleDisplayMode(.large)
+        .sheet(isPresented: $showConnection) {
+            BridgeConnectionSheet(title: venue.display) {
+                stepsSection.listRowSeparator(.hidden)
+                connectSection.listRowSeparator(.hidden)
+            }
+        }
     }
 
     // MARK: - Steps

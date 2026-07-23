@@ -1,22 +1,17 @@
 import SwiftUI
 import SwiftData
 
-/// The RSS things already in the corpus — newest first. A @Query so the list
-/// updates live as sync lands posts, and the fetch runs once per store change
-/// rather than twice on every body pass.
-private let rssRecentDescriptor: FetchDescriptor<Thing> = {
-    var d = FetchDescriptor<Thing>(
-        predicate: #Predicate { $0.source == "RSS" },
-        sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]
-    )
-    d.fetchLimit = 12
-    return d
-}()
-
 /// RSS, connected — feeds' home in Casberi. The person manages WHICH feeds
-/// are followed (paste a site or feed URL, swipe to remove) and sees what's
-/// landed. New posts arrive as link things on every visit and app foreground
-/// — no account, no server, no algorithm in between.
+/// are followed (paste a site or feed URL, swipe to remove) and sees them as
+/// one ledger. New posts arrive as link things on every visit and app
+/// foreground — no account, no server, no algorithm in between.
+///
+/// REBUILT 2026-07-23 (prd §184) — the reference ledger for the manager
+/// pattern the wallet screen proved (prd §182): identity leads, one omnibox
+/// both follows and would search, the "what landed" preview drops (the feed
+/// already shows that; a manager manages). RSS has no tiers or toggles, so
+/// it's the plainest form the pattern takes — every publication a square
+/// mark (a favicon, or the RSS glyph), its URL demoted to the subline.
 struct RSSScreen: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(BridgeStore.self) private var store
@@ -24,27 +19,15 @@ struct RSSScreen: View {
     @State private var newFeed = ""
     @State private var syncing = false
     @State private var lastResult: String?
+    @State private var resultIsError = false
     @FocusState private var fieldFocused: Bool
-
-    @Query(rssRecentDescriptor) private var recent: [Thing]
 
     var body: some View {
         List {
             BridgeSetupHeader(name: "RSS", connected: !rss.feeds.isEmpty)
-            if !rss.feeds.isEmpty { followingSection.listRowSeparator(.hidden) }
-            addSection.listRowSeparator(.hidden)
-            if recent.isEmpty {
-                // Only before the first feed: once one is followed, a ghost
-                // captioned "when you follow a feed" would contradict the
-                // Following list above it (honesty rule; review 2026-07-16).
-                if rss.feeds.isEmpty {
-                    GhostPreviewSection(name: "RSS",
-                                        replaceLine: "Your real posts replace this when you follow a feed.")
-                        .listRowSeparator(.hidden)
-                }
-            } else {
-                RecentThingsSection(header: "Recent", things: recent, titleLines: 1)
-                    .listRowSeparator(.hidden)
+            omniSection.listRowSeparator(.hidden)
+            if !rss.feeds.isEmpty {
+                ledgerSection.listRowSeparator(.hidden)
             }
             if !rss.feeds.isEmpty {
                 BridgeDisconnectSection(
@@ -64,64 +47,61 @@ struct RSSScreen: View {
         .dsSoftScrollEdges()
         .navigationTitle("RSS")
         .navigationBarTitleDisplayMode(.large)
-        .toolbar {
-            // Edit only exists once there's a following list to edit — every
-            // other section here is gated the same way.
-            if !rss.feeds.isEmpty {
-                ToolbarItem(placement: .topBarTrailing) { EditButton().tint(DS.textPrimary) }
-            }
-        }
         .onAppear {
             // Every visit refreshes — feeds are cheap to poll.
             Task { await sync() }
         }
     }
 
-    // MARK: - Following
-
-    private var followingSection: some View {
-        Section {
-            ForEach(rss.feeds) { feed in
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(feed.displayName)
-                        .dsText(.body17).foregroundStyle(DS.textPrimary)
-                        .lineLimit(1)
-                    Text(feed.url)
-                        .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-                        .lineLimit(1)
-                }
-                .dsListCardRow()
-            }
-            .onDelete { rss.remove(at: $0) }
-        } header: {
-            HStack {
-                Text("Following").dsText(.label12)
-                    .foregroundStyle(DS.textTertiary)
-                Spacer()
-                if syncing {
-                    ProgressView().controlSize(.small)
-                } else if let lastResult {
-                    Text(lastResult).dsText(.label12).foregroundStyle(DS.textTertiary)
-                }
-            }
-        }
-    }
-
     // MARK: - Add
 
-    private var addSection: some View {
+    private var omniSection: some View {
         Section {
             BridgeFieldRow(placeholder: "Site or feed URL", text: $newFeed,
                            buttonLabel: "Follow", keyboard: .URL,
                            focus: $fieldFocused, action: addFeed)
-        } header: {
-            Text("Add a feed").dsText(.label12)
-                .foregroundStyle(DS.textTertiary)
+            BridgeSyncStatusRows(syncing: syncing,
+                                 syncingLine: String(localized: "Reading your feeds…"),
+                                 result: lastResult, resultIsError: resultIsError)
         } footer: {
-            // The mechanic only — the promise lives in the header, the privacy
-            // line in the footer; each block says its one thing (2026-07-16).
             Text("A site's own address works too — Casberi finds its feed.")
                 .dsText(.callout15).foregroundStyle(DS.textTertiary)
+        }
+    }
+
+    // MARK: - The ledger
+
+    private var ledgerSection: some View {
+        Section {
+            ForEach(rss.feeds) { feed in
+                HStack(spacing: DS.Space.s3) {
+                    // Square, not round — a publication is a topic, not a
+                    // person (the mark grammar ruling, prd §184).
+                    BridgeIcon(name: "RSS", size: 32, circular: false)
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(feed.displayName)
+                            .dsText(.body17).foregroundStyle(DS.textPrimary)
+                            .lineLimit(1)
+                        Text(feed.url)
+                            .dsText(.label12).foregroundStyle(DS.textTertiary)
+                            .lineLimit(1)
+                    }
+                    Spacer(minLength: 0)
+                }
+                .dsListCardRow()
+                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                    Button(role: .destructive) {
+                        if let i = rss.feeds.firstIndex(where: { $0.id == feed.id }) {
+                            rss.remove(at: IndexSet(integer: i))
+                        }
+                    } label: {
+                        Label("Remove", systemImage: "trash")
+                    }
+                }
+            }
+        } header: {
+            Text(rss.feeds.count == 1 ? "Following" : "Following \(rss.feeds.count)")
+                .dsText(.label12).foregroundStyle(DS.textTertiary)
         }
     }
 
@@ -139,11 +119,12 @@ struct RSSScreen: View {
         guard rss.add(newFeed) else { return }
         newFeed = ""
         fieldFocused = false
+        resultIsError = false
         DSHaptic.success()
         Task { await sync() }
     }
 
-    /// Fetch + land; the bridge's status line carries the proof.
+    /// Fetch + land; the status row carries the proof.
     private func sync() async {
         guard !rss.feeds.isEmpty, !syncing else { return }
         syncing = true
@@ -151,8 +132,10 @@ struct RSSScreen: View {
         syncing = false
         guard let added else {
             lastResult = String(localized: "Couldn't reach your feeds — check your connection.")
+            resultIsError = true
             return
         }
+        resultIsError = false
         lastResult = added > 0 ? String(localized: "\(added) new") : String(localized: "Up to date")
         let proof = added > 0 ? "\(added) posts in" : "Synced just now"
         store.registerConnected(id: "rss", name: "RSS", proof: proof,
