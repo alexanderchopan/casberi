@@ -344,6 +344,8 @@ struct MainSurface: View {
                     if let offer = BridgeCatalog.offers.first(where: { $0.name == name }) {
                         AppDetailScreen(offer: offer)
                     }
+                case .project(let name):
+                    ProjectDetailScreen(projectName: name)
                 }
             }
         }

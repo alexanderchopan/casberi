@@ -40,6 +40,11 @@ final class HomeRoute {
         /// it, same failure class as the Apps/bridge sibling-binding bug
         /// this whole path replaced.
         case appDetail(String)
+        /// A tag's project view — the same screen the feed's Themes treemap
+        /// opens. Pushed by an Ask answer's ProjectTile and the "open work"
+        /// navigate intent, so a tag named from the composer lands where a
+        /// treemap tap lands.
+        case project(String)
     }
     var path: [Node] = []
 
@@ -65,9 +70,6 @@ final class HomeRoute {
         path.append(.appDetail(offerName))
     }
 
-    /// A tag to open as its own view — set by an Ask answer that names a tag,
-    /// so "what did I save about work" opens the Work view the treemap opens.
-    var openTag: String?
     /// An offer whose product page should open once the catalog lands — set
     /// by the empty feed's pile (a tile is a door to that app's page, not
     /// just to the shelf); AppsScreen consumes it on appear, after the

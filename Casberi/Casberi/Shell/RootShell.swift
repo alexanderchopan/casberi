@@ -913,10 +913,13 @@ struct RootShell: View {
                 // literally named "@token:…"; an unknown sentinel does
                 // nothing.
                 guard !name.hasPrefix("@") else { return }
-                HomeRoute.shared.path = []
                 composerOpen = false
                 FeedFilter.shared.source = "All"
-                HomeRoute.shared.openTag = name
+                // Land on the All feed with the tag's project view pushed —
+                // the same screen the feed's Themes treemap opens (this wrote
+                // a `HomeRoute.openTag` nothing consumed after the board
+                // retired, so the tile was silently inert until 2026-07-22).
+                HomeRoute.shared.path = [.project(name)]
             }
     }
 
@@ -935,7 +938,7 @@ struct RootShell: View {
         switch intent {
         case .tag(let name):
             FeedFilter.shared.source = "All"
-            HomeRoute.shared.openTag = name
+            HomeRoute.shared.path = [.project(name)]
         case .source(let source):
             FeedFilter.shared.source = source
             FeedFilter.shared.tag = "All"
@@ -1868,7 +1871,8 @@ struct RootShell: View {
 
     /// A tappable tile for the tag an answer is about — opens that tag's view.
     /// nil when the query names no known tag. The tile's name arg is what the
-    /// tap routes on (GenProjectTile → genProjectTap → HomeRoute.openTag).
+    /// tap routes on (GenProjectTile → genProjectTap → HomeRoute.path's
+    /// `.project` node, the same screen the feed's treemap opens).
     /// Takes the corpus already fetched by the caller (2026-07-21) — this and
     /// `matchedTag` used to each run their OWN full-corpus fetch on the common
     /// retrieval path, on top of `answerDocument`'s own.
