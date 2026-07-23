@@ -297,7 +297,7 @@ enum TodayBrief {
         let horizon = cal.date(byAdding: .day, value: -30, to: now) ?? now
         let windowStart = DayBrief.windowStart(now: now)
         let prior = things.filter {
-            $0.kind == .link && !moneySources.contains($0.source)
+            $0.kind == .link && !nonReadingSources.contains($0.source)
                 && $0.capturedAt >= horizon && $0.capturedAt < windowStart
         }
         guard !prior.isEmpty else { return nil }
@@ -600,21 +600,34 @@ enum TodayBrief {
 
     // MARK: - Shared
 
-    /// What "reading" actually means here: link things MINUS the money
-    /// sources. A watched token and a trending pool both land as `.link`
-    /// (their content is a Dexscreener URL, which is what makes their sheet
-    /// draw a chart) — so an unfiltered `kind == .link` filed "dogwifhat ·
-    /// $WIF" under Reading and let it win the topic outlier, caught on-device
-    /// 2026-07-22. Scoped by the catalog's OWN category vocabulary rather than
-    /// a hardcoded source list, so a market source added later is excluded for
-    /// free.
+    /// What "reading" actually means here: link things MINUS the sources whose
+    /// links aren't things you READ. `.link` is the app's catch-all shape for
+    /// "has a URL", so a great many non-articles wear it: a watched token and a
+    /// trending pool land as `.link` (their content is a Dexscreener URL, which
+    /// is what makes their sheet draw a chart), and so do a Spotify track, an
+    /// Apple Music song, a Twitch stream, a Steam game, a Pinterest image, a
+    /// Bitrefill order. Scoped by the catalog's OWN category vocabulary rather
+    /// than a hardcoded source list, so a new source in an excluded category is
+    /// handled for free.
+    ///
+    /// Twice caught on-device by exactly this leak: Markets/Wallet first
+    /// ("dogwifhat · $WIF" won the topic outlier under Reading, 2026-07-22),
+    /// then Media/Shopping (user, 2026-07-23: "daily brief tells me about my
+    /// reading but lists my music"). The lesson both times is the same — a
+    /// `.link` is a URL, not a read.
     private static func reads(_ landed: [Thing]) -> [Thing] {
-        landed.filter { $0.kind == .link && !moneySources.contains($0.source) }
+        landed.filter { $0.kind == .link && !nonReadingSources.contains($0.source) }
     }
 
-    private static let moneySources: Set<String> = Set(
+    /// The categories whose things are never "your reading" — money (a price
+    /// isn't prose), media (a song/stream/game/image isn't prose), and shopping
+    /// (an order isn't prose). Everything else counts, so a pasted link, an RSS
+    /// article, a saved highlight, or a subreddit post all still read as
+    /// reading — including sources with no catalog offer at all.
+    private static let nonReadingSources: Set<String> = Set(
         BridgeCatalog.offers
-            .filter { ["Markets", "Wallet"].contains(BridgeCatalog.category(of: $0)) }
+            .filter { ["Markets", "Wallet", "Media", "Shopping"]
+                .contains(BridgeCatalog.category(of: $0)) }
             .map(\.name)
     )
 

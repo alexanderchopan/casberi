@@ -500,6 +500,24 @@ struct Composer: View {
             && TodayBrief.matches(currentQuestion)
     }
 
+    /// The ask kinds the Today brief ALREADY answers on screen — its money hero
+    /// is "how's my wallet", its movers tile is "how's my watchlist", its next
+    /// tile is "what's overdue", and the whole screen is "what landed today".
+    private static let briefAnswers: Set<String> = ["wallet", "watchlist", "overdue", "today"]
+
+    /// The chips as actually docked. Beneath the brief LANDING they drop the
+    /// asks the brief is already answering in view (prd §187, user: "it also
+    /// has two wallet chips which is redundant" — the money hero and the
+    /// watchlist tile were both on screen while chips offered to fetch each
+    /// again). Offering a chip for an answer the person is looking at is the
+    /// chip-shaped form of a dead control: it can only ever re-state what's
+    /// already there, so the row spends its width on what the brief DIDN'T say.
+    /// Everywhere else the full set stands.
+    private var dockedSuggestions: [AskOption] {
+        guard briefLanding else { return suggestions }
+        return suggestions.filter { !Self.briefAnswers.contains($0.kind) }
+    }
+
     /// Tag completions for the word being typed — your real tags, prefix-
     /// matched on the draft's last token (2+ chars, typed path only).
     private var tagMatches: [String] {
@@ -732,11 +750,31 @@ struct Composer: View {
         // timely, not evergreen) live in AskMemory.
         let ranked = out.filter { !AskMemory.neglected($0.memoryKey) }
                    + out.filter { AskMemory.neglected($0.memoryKey) }
-        suggestions = selectSuggestions(from: ranked, slots: 4)
-        // A handed-off ask (a status chip's question) fills the field the
-        // moment the sheet settles — the tiles never had a chance to be
-        // tapped, so that open must not count against them.
-        if chrome.askRequest == nil {
+        // 7, not 4, since the row became a horizontal SCROLL (§187): width no
+        // longer costs height, and the brief landing filters several of these
+        // back out (`dockedSuggestions` drops what the brief already answers),
+        // so a 4-slot set could dock as a single lonely chip.
+        suggestions = selectSuggestions(from: ranked, slots: 7)
+        // What this open actually OFFERED, for the decay counters (§175). A
+        // handed-off ask (a status chip's question) fills the field and HIDES
+        // the chip row — the tiles never had a chance to be tapped, so that
+        // open must not count against them.
+        //
+        // The brief landing is the one exception (§187): it hands off an ask
+        // AND docks the chips in view, so those chips genuinely were offered.
+        // Without this branch the decay would have quietly stopped running
+        // altogether the moment the agent started opening onto the brief —
+        // every open now hands off, so `askRequest == nil` would never again
+        // be true on the main path and no chip could ever decay. Counted
+        // MINUS the kinds the brief answers, since `dockedSuggestions` drops
+        // those and they never appear.
+        if let handedOff = chrome.askRequest {
+            if TodayBrief.matches(handedOff) {
+                AskMemory.shown(suggestions
+                    .filter { !Self.briefAnswers.contains($0.kind) }
+                    .map(\.memoryKey))
+            }
+        } else {
             AskMemory.shown(suggestions.map(\.memoryKey))
         }
         #if DEBUG
@@ -1841,7 +1879,10 @@ struct Composer: View {
                 return changedA != changedB ? changedA && !changedB
                                             : (store.titles[a] ?? "") < (store.titles[b] ?? "")
             }
-            FlowRow(spacing: DS.Space.s2) {
+            // Horizontal scroll, matching `askChips` (§187) — the two docked
+            // rows are one chip language and must not wrap differently.
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: DS.Space.s2) {
                 ForEach(sorted, id: \.self) { kind in
                     let store = KeptAskStore.shared
                     let digest = store.currentDigests[kind] ?? ""
@@ -1891,31 +1932,42 @@ struct Composer: View {
                     }
                     .buttonStyle(.plain)
                 }
+                }
+                // The inset rides the content, not the scroll view — see
+                // `askChips` for why.
+                .padding(.horizontal, DS.Space.s4)
             }
-            .padding(.horizontal, DS.Space.s4)
             .padding(.top, DS.Space.s3)
         }
     }
 
     // MARK: - Ask chips + input bar (chat grammar: by the bottom)
 
-    /// The ask chips — asks the corpus can answer now, as `FlowRow` pills
-    /// while the field is empty. Unified with `keptAskPills` (2026-07-20,
-    /// user: "your chips design was better") — was a 2×2 `AskTile` grid; now
-    /// the SAME pill vocabulary the kept asks above already wear, so the
-    /// whole rest screen reads as one language instead of two. Every
-    /// specific query is unchanged; the ONE trade made explicit: the away
-    /// chip's rolling-digit-climb delight (`AskTile.rollCount`) is gone,
-    /// replaced by the same static "· N" digest suffix every kept pill
-    /// already shows.
+    /// The ask chips — asks the corpus can answer now, as pills while the
+    /// field is empty. Unified with `keptAskPills` (2026-07-20, user: "your
+    /// chips design was better") — was a 2×2 `AskTile` grid; now the SAME pill
+    /// vocabulary the kept asks above already wear, so the whole rest screen
+    /// reads as one language instead of two. Every specific query is unchanged;
+    /// the ONE trade made explicit: the away chip's rolling-digit-climb delight
+    /// (`AskTile.rollCount`) is gone, replaced by the same static "· N" digest
+    /// suffix every kept pill already shows.
+    ///
+    /// ONE horizontally scrolling row since §187 (user: "i thought the mockup
+    /// we did had scrolling horizontal chips, but in my app they are stacked").
+    /// The `FlowRow` it used to be WRAPS, and these chips are wide once they
+    /// wear their signals ("What's going on? · 44") — so under the brief they
+    /// stacked one-per-line into a tall column instead of the single docked row
+    /// the design called for. A scroll row also lets the set stay generous
+    /// without costing height: what doesn't fit slides.
     @ViewBuilder
     private var askChips: some View {
         // Also shown docked beneath the brief LANDING (prd §181) — the one
         // answer state that keeps its chips, so opening the agent onto the
         // brief never costs the person the "what else can I ask" row.
-        if restChrome(keepBrief: true), !suggestions.isEmpty {
-            FlowRow(spacing: DS.Space.s2) {
-                ForEach(Array(suggestions.enumerated()), id: \.element.memoryKey) { i, ask in
+        if restChrome(keepBrief: true), !dockedSuggestions.isEmpty {
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: DS.Space.s2) {
+                ForEach(Array(dockedSuggestions.enumerated()), id: \.element.memoryKey) { i, ask in
                     // "While I was away?" wears its own display label ("Catch
                     // me up") but sends the canonical query — matching the
                     // tile version's own distinction.
@@ -1975,8 +2027,12 @@ struct Composer: View {
                     .buttonStyle(.plain)
                     .modifier(ChipEntrance(index: i, shown: chipsAppeared, reduceMotion: reduceMotion))
                 }
+                }
+                // The inset rides the CONTENT, not the ScrollView — padding the
+                // scroll view itself would clip the first and last chip against
+                // the inset edge instead of letting them scroll past it.
+                .padding(.horizontal, DS.Space.s4)
             }
-            .padding(.horizontal, DS.Space.s4)
             // Clear air between the greeting and the chips — a separate
             // band (ask), not stuck to the header.
             .padding(.top, DS.Space.s4)

@@ -7122,6 +7122,64 @@ synced. Tapping Connection opens the sheet carrying the untouched form: the
 three numbered steps, the token field, the honest "couldn't refresh" line, the
 Keychain footer, and Remove token. Build green.
 
+## 187. Three fixes to the brief landing — one scrolling chip row, no chips the brief already answers, and a `.link` is not a read (user: "i thought the mockup we did had scrolling horizontal chips, but in my app they are stacked", "daily brief tells me about my reading but lists my music", "it also has two wallet chips which is redundant", 2026-07-23) — VERIFIED
+
+Three reports against §181's landing, all real.
+
+**The chips stacked instead of scrolling.** The docked row was a `FlowRow`,
+which WRAPS — and these chips are wide once they wear their signals ("What's
+going on? · 44"), so under the brief they stacked one-per-line into a tall
+column instead of the single row the mockup drew. Both docked rows (`askChips`
+and `keptAskPills`) are now one horizontally scrolling row each, the same shape
+`takeChips` already used. Width stopped costing height, so the suggestion set
+grew 4 → 7 slots; what doesn't fit slides.
+
+**Two wallet chips, both redundant.** "How's my wallet?" and "How's my
+watchlist?" were being offered while the brief's money hero and movers tile
+were ON SCREEN answering exactly those questions — and "What's overdue?" beside
+a next tile already reading "Book dentist is late". A chip offering an answer
+the person is looking at is the chip-shaped form of a dead control: it can only
+re-state what's already there. `dockedSuggestions` now drops the kinds the brief
+answers (`wallet`, `watchlist`, `overdue`, `today`) on the landing only, so the
+row spends its width on what the brief DIDN'T say. `upcoming` deliberately
+stays: the brief names the single nearest deadline, that ask lists the rest.
+
+**A `.link` is not a read.** `reads()` — which feeds the Reading card, the
+dominant-topic observation, and the reading record — filtered `.link` things
+minus MARKETS/WALLET sources only. But `.link` is the app's catch-all for "has
+a URL", so a Spotify track, an Apple Music song, a Twitch stream, a Steam game,
+a Pinterest image and a Bitrefill order all wear it too: hence a brief that
+announced your reading and then listed your music. Now scoped against
+Markets/Wallet/**Media**/**Shopping**, still by the catalog's own category
+vocabulary so a new source in an excluded category is handled for free, and
+still permissive by default so a pasted link, an RSS article, a Substack post
+(group `Reading`) or a subreddit post all still count. This is the SECOND time
+this exact leak has been caught on-device (Markets/Wallet, 2026-07-22); the
+lesson is recorded in the function's own doc comment.
+
+**One subtle thing the fix would have broken.** `AskMemory.shown()` — §175's
+tap-learning decay — was guarded by `chrome.askRequest == nil`, on the sound
+old rationale that a handed-off ask fills the field and HIDES the chip row, so
+that open must not count against the chips. But §181 made every agent-bar open
+a hand-off, which would have silently stopped the decay running at all on the
+main path: no chip could ever be demoted again. The brief landing is now an
+explicit exception — it hands off an ask AND docks the chips in view, so it
+counts, minus the kinds `dockedSuggestions` drops (a chip that never appears
+must not decay for having been "offered").
+
+VERIFIED 2026-07-23 (iPhone 17 Pro sim, pinned UDID): tapping the agent bar
+lands the brief with the chips in ONE scrolling row — "What's going on? · 98"
+and "Show AAPL · 5" side by side, a third scrolling in from the right — where
+the same corpus previously stacked four chips vertically including "How's my
+watchlist?" and "What's overdue?". `askTiles:` logged the full 7-slot selection
+(`pulse, watchlist, showtag:AAPL, overdue, wallet, showtag:BRK.B, upcoming`),
+confirming the landing filter drops `watchlist`/`overdue`/`wallet` and docks the
+four additive ones. The Reading card read "Bond Movie Filming Locations Map ·
+RSS", a real article. Media exclusion confirmed by construction through the
+catalog: Spotify/Apple Music (`Listening`), Steam (`Games`), Twitch
+(`Watching`) all resolve to `Media`; Substack (`Reading`) still counts. Build
+green.
+
 ## 187. Connect a wallet app — a real button, and not claiming `wc:` stops meaning "no wallet" (user: "the 'connect a wallet app' doesn't work… also, it should be a button not a link", 2026-07-23)
 
 Two faults in one row, one visual and one real.
