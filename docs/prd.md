@@ -6512,3 +6512,79 @@ confirmed as a byproduct: "what's new in Calendar" — a phrasing that existed
 before this session and, per the trace, never actually recapped live — now
 correctly returns Calendar's own 3-day recap on a fresh ask, not just after
 being kept once.
+
+## 175. The suggestion chips get timely, legible, and diverse (user: "how would we improve also the suggestion chips", then "make all these changes", 2026-07-22) — VERIFIED
+
+Six improvements to the composer's empty-field ask chips (`computeSuggestions`/
+`askChips` in `Shell/Composer.swift`), the first half of a two-phase "make the
+agent smarter" pass (phase two is the response/question set).
+
+**1. Signals on every chip.** Parity with the kept pills, which have carried a
+`· N` digest since §132: each chip now shows a cheap, SYNCHRONOUS count
+computed at open — "What's overdue? · 3", "Show Book club · 3", "Catch me up ·
+11 new" (the away chip names WHAT landed — "· N new, M mentions" — not a bare
+count, the module doctrine §166 at chip scale). Wallet and watchlist show NO
+signal: they read live prices/holdings async, and §83 forbids a stale number
+wearing a fresh face. One `sig(_ n:)` helper owns the "· " format.
+
+**2. A timely publisher chip.** The one genuinely event-driven chip: when a
+publisher (any `authorHandle` — RSS feed, Substack, watched account) dominates
+the recent window (≥5 things AND ≥2× the runner-up, over the frozen away
+window or last 24h), it leads with a tint dot + tintDim wash and its own count
+("What happened in BBC · 26"). Honest by construction — fires only on a real
+burst, ages out as the burst recedes. Doubles as the teaching chip for §174's
+per-publisher vocabulary, naming a real entity that answers. `timely` is
+DERIVED from `kind`, not a stored flag. It shows a SHORTENED name
+("DealNews", not the padded feed title) but sends the CANONICAL full handle on
+tap (`AskOption.query` reads it from `memoryKey`), so the answer resolves the
+exact publisher the chip named — not a fuzzy near-match, since §174's
+`bestHandle` ranks by history while `busyPublisher` ranks by recency and the
+two can disagree.
+
+**3. A diversity rule.** The four slots span DOORS, not four flavors of one.
+`selectSuggestions` pulls timely/away leads first, then diversifies the rest by
+a stable-sort round-robin across shapes (recency / money / tasks / entity /
+insight): round 0 is one-of-each-shape in rank order, round 1 the seconds, so a
+pool heavy in tags doesn't crowd out the money/time/task doors. A shape only
+doubles up after every other shape has had a turn; the grid still fills to N
+when the pool is thin.
+
+**4. Teaching the widened vocabulary.** The empty field's cycling placeholder
+now mixes real-corpus examples that name things that exist and would answer —
+"Try: synthesize my Verge feed" when a publisher is busy, "How's ETH doing?"
+for a watched token (via `TokensAsk.symbol(of:)`, the one parser of the
+"Name · $TICKER" format — a naive space-split would read "Wrapped" from
+"Wrapped Bitcoin · $WBTC"). Discovery by example, the only teaching surface the
+composer has.
+
+**5. Daypart weighting.** A tiny rank nudge floats the moment's natural ask up:
+"What landed today?" in the evening (≥18:00, the same boundary `timeGreeting`
+uses), the week recap on Friday. Morning is deliberately absent — the whisper
+capsule already owns the day brief there, so a competing chip would say the
+same thing twice.
+
+**6. Instant answers for one-liners.** A deterministic answer that composes to
+a single bare `Insight` ("Nothing overdue.", a status count) now PAINTS
+instead of streaming — the typewriter added a beat of latency before an answer
+already fully known. Detected structurally via `GenParser` (the same engine the
+renderer uses, indifferent to ref name or line count — mirrors `keepableText`),
+never by sniffing line strings; anything with rows/charts/a treemap still
+streams module by module.
+
+Cleanup pass (`/simplify`, 4 reviewers): fixed the token-symbol parse
+(reuse), the canonical-handle send (altitude), a dead `AskShape.organize` case,
+`timely` as computed not stored, the `sig()` helper dedup, round-robin as a
+stable sort, `isInstantDoc` via `GenParser`, and hoisted the duplicated
+`busyPublisher` scan to one call per open. Skipped: extracting a shared away-
+mention helper (pre-existing looseness, intentional terser chip wording) and
+lifting `selectSuggestions` to a free type for testability (no test target
+exists).
+
+VERIFIED 2026-07-22 (iPhone 17 Pro sim, `-openComposer`/`-uiAnswerProbe`):
+chips render with signals and four-shape diversity (away/wallet/Book club/
+overdue = recency/money/tasks/entity, wallet correctly signal-less); the timely
+DealNews chip fired, led with dot+wash, and showed its shortened name; the log
+confirms the slot cap holds (≤3 with the organize hint, ≤4 without). Build
+green alongside a large concurrent refactor of `HomeRoute` in another session,
+which briefly broke the shared build — retried until it settled; none of this
+pass's changes touch those files.

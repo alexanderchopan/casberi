@@ -97,6 +97,12 @@ struct Composer: View {
         "Recap my month",
         "Tag everything from an app",
     ]
+    /// The cycling pool actually shown: the real-corpus examples when `open`
+    /// computed some, else the static invitations (before first compute, or
+    /// an empty corpus). Never empty, so the placeholder's modulo is safe.
+    private var activeInvitations: [String] {
+        invitationPool.isEmpty ? invitations : invitationPool
+    }
     /// Flips true just after the bubble opens so the ask chips stagger in
     /// rather than snapping (delight, 2026-07-12).
     @State private var chipsAppeared = false
@@ -318,19 +324,72 @@ struct Composer: View {
     /// parallel switch to forget), and `memoryKey` keys the decay counters
     /// (see AskMemory) — kind:qualifier where one kind wears many faces,
     /// so "Show recipes" neglect never pre-demotes "Show travel".
+    /// The DOOR a chip opens — used only to keep the four slots from filling
+    /// with four flavors of the same thing (2026-07-22): the diversity pass
+    /// prefers spanning shapes over stacking one. Derived from `kind`, never
+    /// stored, so no call site has to name it. (Organize has no case: it's
+    /// never an `AskOption` — the organize invite renders as its own leading
+    /// tile, outside the ranked/diversified set.)
+    private enum AskShape { case recency, money, tasks, entity, insight }
+
     private struct AskOption {
         let kind: String
         let title: String
         let glyph: String
         let memoryKey: String
-        init(kind: String, title: String, glyph: String, memoryKey: String? = nil) {
+        /// A cheap, SYNCHRONOUS digest ("· 3") computed at open (2026-07-22)
+        /// — parity with the kept pills, which have carried a digest since
+        /// §132. nil where no honest cheap count exists (wallet/watchlist read
+        /// live prices/holdings async; §83 forbids a stale number wearing a
+        /// fresh face, so they simply show none rather than a lie).
+        var signal: String?
+
+        /// An event-driven chip (2026-07-22) — a busy publisher, a real
+        /// moment. It LEADS, is exempt from neglect decay (it's timely, not
+        /// evergreen, like "away"), and wears a tint dot so "happening now"
+        /// reads as happening. Derived from `kind`, not stored — one source of
+        /// truth, so a new timely kind is a one-line switch, never a
+        /// remembered constructor flag.
+        var timely: Bool { kind == "handle" }
+
+        /// What the tap actually SENDS — the display `title` for every chip
+        /// except the timely publisher one, which shows a SHORTENED name but
+        /// must send the CANONICAL full handle (from `memoryKey`) so the
+        /// answer path resolves the exact publisher the chip named, not a
+        /// fuzzy near-match by total volume (§174's `bestHandle` ranks by
+        /// history; `busyPublisher` ranks by recency — they can disagree).
+        /// Mirrors the away chip's own label/query split.
+        var query: String {
+            guard kind == "handle" else { return title }
+            return "What happened in \(memoryKey.dropFirst("handle:".count))?"
+        }
+
+        var shape: AskShape {
+            switch kind {
+            case "wallet", "watchlist":        return .money
+            case "overdue", "upcoming":        return .tasks
+            case "away", "pulse", "today", "week": return .recency
+            case "noticed":                    return .insight
+            default:                           return .entity  // context/category/showtag/handle
+            }
+        }
+
+        init(kind: String, title: String, glyph: String, memoryKey: String? = nil,
+             signal: String? = nil) {
             self.kind = kind
             self.title = title
             self.glyph = glyph
             self.memoryKey = memoryKey ?? kind
+            self.signal = signal
         }
     }
     @State private var suggestions: [AskOption] = []
+    /// Real-corpus example phrasings mixed into the empty field's cycling
+    /// invitation (2026-07-22) — teaches the widened ask vocabulary
+    /// ("synthesize my Verge feed") by naming things that actually exist and
+    /// would answer, never a canned claim. Recomputed per open alongside
+    /// `tagPool`/`corpusSummary`.
+    @State private var invitationPool: [String] = []
     /// The away window's real count — the librarian chip rolls up to it
     /// (delight 2026-07-13); set beside the gate that shows the chip.
     @State private var awayLanded = 0
@@ -440,6 +499,10 @@ struct Composer: View {
             corpusSummary = "\(things) thing\(all.count == 1 ? "" : "s"), across \(sources) app\(sources == 1 ? "" : "s")."
             greetingFlavorLine = Self.greetingFlavor(all: all)
         }
+        // One busy-publisher scan per open, shared by the timely chip below
+        // and the placeholder examples (both want the same dominant handle).
+        let busy = busyPublisher(in: all)
+        invitationPool = computeInvitationPool(all, busy: busy)
         // Context-aware lead (2026-07-12): if you opened the composer while
         // looking at one source's feed, its recap leads the chips — the
         // composer meets you where you are. Only when that source actually has
@@ -459,8 +522,11 @@ struct Composer: View {
                 out.append(AskOption(kind: "watchlist", title: "How's my watchlist?",
                                      glyph: "chart.line.uptrend.xyaxis"))
             } else {
+                let recent = all.filter { $0.source == src
+                    && $0.capturedAt >= Date.now.addingTimeInterval(-3 * 86_400) }.count
                 out.append(AskOption(kind: "context", title: "What's new in \(src)?",
-                                     glyph: "app.badge", memoryKey: "context:\(src)"))
+                                     glyph: "app.badge", memoryKey: "context:\(src)",
+                                     signal: sig(recent)))
             }
             // A category sibling (2026-07-20) — only when it's a meaningfully
             // BROADER ask than the single-source lead above (more than one
@@ -476,6 +542,26 @@ struct Composer: View {
                 }
             }
         }
+        // A TIMELY chip (2026-07-22): a publisher unusually busy in the recent
+        // window — a feed that dropped a burst of stories, an account that
+        // went off. Event-driven, so it LEADS and is neglect-exempt; it also
+        // does double duty as the teaching chip for the widened per-publisher
+        // vocabulary (§174), naming a REAL entity that answers ("What happened
+        // in The Verge?"). Honest by construction: it fires only when one
+        // handle genuinely dominates a recent burst, and ages out on its own
+        // as that burst recedes past the window. Skipped once kept, like any
+        // chip (the `handle:` kind matches the kept store).
+        if let busy, !KeptAskStore.shared.isKept("handle:\(busy.handle)") {
+            // Display the SHORT name ("DealNews", not "DealNews - DealNews:
+            // Best Daily Deals…") — a feed pads its title, and the raw one
+            // overflows the chip. The tap still resolves: `namedAskTarget`
+            // fuzzy-matches "dealnews" back to the full handle (§174), and the
+            // memoryKey keeps the full handle so keep/dedup stay exact.
+            out.append(AskOption(kind: "handle",
+                                 title: "What happened in \(shortPublisher(busy.handle))?",
+                                 glyph: "newspaper", memoryKey: "handle:\(busy.handle)",
+                                 signal: sig(busy.count)))
+        }
         let dayStart = Calendar.current.startOfDay(for: .now)
         // The feeds' pulse (2026-07-11): "What's going on?" synthesizes the
         // recent window across every source. Gated on the SAME computation
@@ -486,23 +572,34 @@ struct Composer: View {
         // The librarian's chip (prd §67 ⑥) — LEADS, and only when a real away
         // gap holds enough to say something. Gated on the same computation
         // that answers it, like every chip.
-        let awayCount = StatusAsk.pulse("while i was away", things: all)?.pool.count ?? 0
+        let awayPulse = StatusAsk.pulse("while i was away", things: all)
+        let awayCount = awayPulse?.pool.count ?? 0
         awayLanded = awayCount
         if awayCount >= 3 {
+            // The away chip's signal names WHAT landed, not just how many
+            // (2026-07-22) — a mention count is the fact worth teasing (the
+            // module doctrine, §166, at chip scale). Mentions computed off
+            // the same pool that answers, so it can't drift.
+            let mentions = awayPulse?.pool.filter { $0.socialContext == "mention" }.count ?? 0
+            // Names WHAT landed, not a bare count — the away chip's signal is
+            // richer than `sig()`'s "· N" (it earns "· N new, M mentions").
+            let awaySignal = mentions > 0 ? "· \(awayCount) new, \(mentions) mentions"
+                                          : "· \(awayCount) new"
             out.insert(AskOption(kind: "away", title: "While I was away?",
-                                 glyph: "sparkles"), at: 0)
+                                 glyph: "sparkles", signal: awaySignal), at: 0)
         }
-        let pulseChip = StatusAsk.pulse("what's going on", things: all)
-            .map { $0.pool.count >= 2 } ?? false
+        let pulseCount = StatusAsk.pulse("what's going on", things: all)?.pool.count ?? 0
+        let todayCount = all.filter { $0.capturedAt >= dayStart }.count
         // The away chip suppresses its near-duplicates — two catch-up chips
         // would crowd out the ones that teach counting and showing.
         if awayCount >= 3 {
             // covered by "While I was away?"
-        } else if pulseChip {
-            out.append(AskOption(kind: "pulse", title: "What's going on?", glyph: "bolt"))
-        } else if all.contains(where: { $0.capturedAt >= dayStart }) {
+        } else if pulseCount >= 2 {
+            out.append(AskOption(kind: "pulse", title: "What's going on?", glyph: "bolt",
+                                 signal: sig(pulseCount)))
+        } else if todayCount > 0 {
             out.append(AskOption(kind: "today", title: "What landed today?",
-                                 glyph: "tray.and.arrow.down"))
+                                 glyph: "tray.and.arrow.down", signal: sig(todayCount)))
         }
         // The watchlist chip (2026-07-14): watched tokens are the corpus' one
         // LIVE number — teach that the composer reads them. Gated on the same
@@ -527,28 +624,35 @@ struct Composer: View {
         // Top TWO tags now (was one, 2026-07-20) — a chip vocabulary as wide
         // as the corpus means more than one tag gets a one-tap path to kept.
         for tag in tagPool.prefix(2) {
+            let n = all.filter { thing in
+                thing.tags.contains { $0.caseInsensitiveCompare(tag) == .orderedSame }
+            }.count
             out.append(AskOption(kind: "showtag", title: "Show \(tag)",
-                                 glyph: "tag", memoryKey: "showtag:\(tag)"))
+                                 glyph: "tag", memoryKey: "showtag:\(tag)",
+                                 signal: sig(n)))
         }
         // The overdue chip (2026-07-20) — mirrors KeptAskComposers.overdue's
         // own filter (light duplication, same precedent as elsewhere in this
         // function) so the tile can't offer what its composer would call
         // empty.
-        if all.contains(where: { $0.mark != .done && ($0.source == "Reminders" || $0.source == "Todoist")
-                                  && ($0.dueAt ?? .distantFuture) < .now }) {
+        let overdueCount = all.filter { $0.mark != .done && ($0.source == "Reminders" || $0.source == "Todoist")
+            && ($0.dueAt ?? .distantFuture) < .now }.count
+        if overdueCount > 0 {
             out.append(AskOption(kind: "overdue", title: "What's overdue?",
-                                 glyph: "exclamationmark.circle"))
+                                 glyph: "exclamationmark.circle", signal: sig(overdueCount)))
         }
         // …and its forward half (2026-07-21). Same duplication precedent, same
         // week horizon `KeptAskComposers.upcoming` uses, so the tile and its
         // composer can never disagree about whether there's anything to say.
-        if let horizon = Calendar.current.date(byAdding: .day, value: 7, to: .now),
-           all.contains(where: { t in
-               guard t.mark != .done, let when = t.dueAt else { return false }
-               return when >= .now && when <= horizon
-           }) {
-            out.append(AskOption(kind: "upcoming", title: "What's coming up?",
-                                 glyph: "clock.badge"))
+        if let horizon = Calendar.current.date(byAdding: .day, value: 7, to: .now) {
+            let upcomingCount = all.filter { t in
+                guard t.mark != .done, let when = t.dueAt else { return false }
+                return when >= .now && when <= horizon
+            }.count
+            if upcomingCount > 0 {
+                out.append(AskOption(kind: "upcoming", title: "What's coming up?",
+                                     glyph: "clock.badge", signal: sig(upcomingCount)))
+            }
         }
         // The Noticed chip (2026-07-20) — the board's old "Noticed" card had
         // no home after the board retired (prd §131); this is its one way
@@ -559,8 +663,10 @@ struct Composer: View {
                                  glyph: "sparkle"))
         }
         if !all.isEmpty {
+            let weekAgo = Date.now.addingTimeInterval(-7 * 86_400)
+            let weekCount = all.filter { $0.capturedAt >= weekAgo }.count
             out.append(AskOption(kind: "week", title: "What's this week?",
-                                 glyph: "calendar"))
+                                 glyph: "calendar", signal: sig(weekCount)))
         }
         // The organize invite (ruling 2026-07-10): the source with the most
         // things still wearing only their type tag (≥3) earns the nudge.
@@ -588,14 +694,13 @@ struct Composer: View {
         // Tap-learning decay (ruling 2026-07-16, prd 95): an ask offered ten
         // opens without a tap steps behind the next qualifier — demoted by
         // a stable partition, never filtered, so a short grid still fills
-        // with it. A tap resets its counter; exemptions (the away chip is
+        // with it. A tap resets its counter; exemptions (a timely chip is
         // timely, not evergreen) live in AskMemory. The organize invite has
         // its own slot and gate.
         let ranked = out.filter { !AskMemory.neglected($0.memoryKey) }
                    + out.filter { AskMemory.neglected($0.memoryKey) }
-        // Fill the 2×2 grid: three asks beside the organize invite when it's
-        // earned, four when it isn't — the tiles read whole either way.
-        suggestions = Array(ranked.prefix(organizeHint == nil ? 4 : 3))
+        let slots = organizeHint == nil ? 4 : 3
+        suggestions = selectSuggestions(from: ranked, slots: slots)
         // A handed-off ask (a status chip's question) fills the field the
         // moment the sheet settles — the tiles never had a chance to be
         // tapped, so that open must not count against them.
@@ -605,8 +710,126 @@ struct Composer: View {
         #if DEBUG
         NSLog("[Casberi] askTiles: %@%@",
               organizeHint.map { "hint:\($0.source) " } ?? "",
-              suggestions.map(\.memoryKey).joined(separator: ","))
+              suggestions.map { $0.memoryKey + ($0.timely ? "*" : "") + ($0.signal ?? "") }
+                  .joined(separator: ","))
         #endif
+    }
+
+    /// Fills the grid so the slots span DOORS, not four flavors of one
+    /// (2026-07-22). Timely chips lead (they earned their slot by a real
+    /// moment); a daypart nudge floats the moment's natural ask up; then the
+    /// rest fill by ROUND-ROBIN across shapes, so a pool heavy in one kind
+    /// (three tag chips, say) doesn't crowd out the money/time/task doors.
+    /// A shape only doubles up once every other shape is exhausted — the grid
+    /// still fills to `slots` when the pool is thin, never leaving a hole.
+    private func selectSuggestions(from ranked: [AskOption], slots: Int) -> [AskOption] {
+        var leads = ranked.filter { $0.timely || $0.kind == "away" }
+        var rest = ranked.filter { !($0.timely || $0.kind == "away") }
+        // Daypart nudge (2026-07-22): the moment's natural ask floats to the
+        // front of `rest` (never past a timely lead) so the top slot tends to
+        // match the hour — "What landed today?" in the evening, the week recap
+        // on Friday. A stable move, not a reshuffle: everything else keeps its
+        // rank. The morning belongs to "How's my day?", which the whisper
+        // already owns on the shell — so the chips defer there rather than
+        // competing, and only the evening/Friday nudges live here.
+        if let preferred = daypartPreferredKind(),
+           let i = rest.firstIndex(where: { $0.kind == preferred }) {
+            rest.insert(rest.remove(at: i), at: 0)
+        }
+        // Round-robin across shapes as one STABLE SORT: tag each option with
+        // how many of its own shape preceded it (its "round"), then sort by
+        // round. Swift's sort is stable, so within a round the original rank
+        // order holds — which is the whole point. Round 0 is one-of-each-shape
+        // in rank order, round 1 the second-of-each, and so on, so a pool
+        // heavy in one shape only doubles up after every other shape has had
+        // a turn.
+        var seen: [AskShape: Int] = [:]
+        let diversified = rest
+            .map { opt -> (round: Int, opt: AskOption) in
+                defer { seen[opt.shape, default: 0] += 1 }
+                return (seen[opt.shape, default: 0], opt)
+            }
+            .sorted { $0.round < $1.round }
+            .map(\.opt)
+        // Timely leads first, then the diversified rest; the whole list is
+        // capped to the grid. `leads` is already rank-ordered by `ranked`.
+        leads.append(contentsOf: diversified)
+        return Array(leads.prefix(slots))
+    }
+
+    /// The kind whose ask best matches the current hour, or nil. Deliberately
+    /// tiny: evening leans to "what landed today", Friday to the week recap.
+    /// Morning is intentionally absent — the whisper capsule owns the day
+    /// brief there, so a competing chip would just say the same thing twice.
+    private func daypartPreferredKind() -> String? {
+        let cal = Calendar.current
+        let hour = cal.component(.hour, from: .now)
+        // 18:00 = "evening", the same boundary `timeGreeting` already uses.
+        // weekday 6 = Friday, a Sun–Thu/Fri work-week assumption baked in as
+        // a bare literal — fine for a low-stakes ranking nudge; revisit if it
+        // ever needs locale sensitivity (`Calendar.firstWeekday`).
+        let weekday = cal.component(.weekday, from: .now)
+        if weekday == 6 { return "week" }
+        if hour >= 18 { return "today" }
+        return nil
+    }
+
+    /// The publisher (RSS feed, Substack, watched social account — all in
+    /// `Thing.authorHandle`) that dominated the recent window, when one
+    /// clearly did (2026-07-22). "Recent" is the frozen away window when one
+    /// holds, else the last 24h; "dominated" means ≥5 things AND at least
+    /// double the next-busiest handle, so an ordinarily-chatty feed doesn't
+    /// trip it every day — only a genuine burst. nil otherwise (no chip).
+    private func busyPublisher(in all: [Thing]) -> (handle: String, count: Int)? {
+        let start = AppVisit.away?.lowerBound ?? Date.now.addingTimeInterval(-24 * 3600)
+        var counts: [String: Int] = [:]
+        for t in all where t.capturedAt >= start {
+            guard let raw = t.authorHandle?.trimmingCharacters(in: .whitespaces),
+                  !raw.isEmpty else { continue }
+            counts[raw, default: 0] += 1
+        }
+        let sorted = counts.sorted { ($0.value, $1.key) > ($1.value, $0.key) }
+        guard let top = sorted.first, top.value >= 5 else { return nil }
+        let runnerUp = sorted.count > 1 ? sorted[1].value : 0
+        guard top.value >= runnerUp * 2 else { return nil }
+        return (top.key, top.value)
+    }
+
+    /// The cycling placeholder's pool for THIS open — the static invitations
+    /// plus real-corpus examples that teach the widened vocabulary by naming
+    /// things that exist and would answer (2026-07-22). A busy publisher
+    /// earns "Try: synthesize my <feed> feed"; a watched token earns a
+    /// per-token ask. Honest by construction: every added line names a real
+    /// entity the answer path resolves.
+    private func computeInvitationPool(_ all: [Thing],
+                                       busy: (handle: String, count: Int)?) -> [String] {
+        var pool = invitations
+        if let busy {
+            pool.append(String(localized: "Try: synthesize my \(shortPublisher(busy.handle)) feed"))
+        }
+        if let token = all.first(where: { $0.source == "Tokens" }),
+           !token.title.isEmpty {
+            // `TokensAsk.symbol(of:)` — the one parser of the "Name · $TICKER"
+            // watch-title format (a bare space-split grabs the NAME's first
+            // word, so "Wrapped Bitcoin · $WBTC" would read "Wrapped").
+            pool.append(String(localized: "How's \(TokensAsk.symbol(of: token.title)) doing?"))
+        }
+        return pool
+    }
+
+    /// A chip's trailing count signal ("· 3"), or nil for zero — the one
+    /// place the "· " glyph format lives, so the separator changes in one
+    /// spot, not eight.
+    private func sig(_ n: Int) -> String? { n > 0 ? "· \(n)" : nil }
+
+    /// A publisher's name trimmed to something that reads in a one-line
+    /// invitation — "Ars Technica - All content" → "Ars Technica". Cuts at
+    /// the first separator publishers pad their feed titles with.
+    private func shortPublisher(_ handle: String) -> String {
+        for sep in [" - ", " – ", " — ", " | ", ": "] {
+            if let r = handle.range(of: sep) { return String(handle[..<r.lowerBound]) }
+        }
+        return handle
     }
 
     /// "Saturday morning." — the day and its moment, ruled as the greeting's
@@ -1302,10 +1525,28 @@ struct Composer: View {
                 try? await Task.sleep(for: .seconds(3))
                 if Task.isCancelled { break }
                 withAnimation(DS.Motion.standard) {
-                    placeholderIndex = (placeholderIndex + 1) % invitations.count
+                    placeholderIndex = (placeholderIndex + 1) % activeInvitations.count
                 }
             }
         }
+    }
+
+    /// A doc trivial enough to land WITHOUT the typewriter — a root `Stack`
+    /// over exactly one `Insight` and nothing else (2026-07-22). Structural,
+    /// not a kind whitelist: any deterministic answer that composes to a
+    /// single bare line ("Nothing overdue.", a status count) qualifies, and
+    /// nothing with rows/charts/a treemap ever does — those still stream so
+    /// their modules assemble one by one. Parses the SHAPE (via `GenParser`,
+    /// the same engine the renderer uses) rather than sniffing line strings,
+    /// so it's indifferent to the ref name or line count — `keepableText`
+    /// already checks a doc's Insight-ness this way one screen up.
+    private func isInstantDoc(_ doc: [String]) -> Bool {
+        let joined = doc.joined(separator: "\n")
+        let els = GenParser.parse(prefix: joined[...], isComplete: true)
+        guard let root = els["root"], root.comp == "Stack" else { return false }
+        let refs = root.refs(0)
+        guard refs.count == 1, els[refs[0]]?.comp == "Insight" else { return false }
+        return true
     }
 
     /// A surface handed the shell an ask (chrome.ask — the weekend cover's
@@ -1658,41 +1899,62 @@ struct Composer: View {
                     .buttonStyle(.plain)
                     .modifier(ChipEntrance(index: 0, shown: chipsAppeared, reduceMotion: reduceMotion))
                 }
-                ForEach(Array(suggestions.enumerated()), id: \.offset) { i, ask in
-                    // The tap still sends the CANONICAL "While I was away?"
-                    // ask regardless of the pill's display label — matching
-                    // the tile version's own distinction.
+                ForEach(Array(suggestions.enumerated()), id: \.element.memoryKey) { i, ask in
+                    // "While I was away?" wears its own display label ("Catch
+                    // me up") but sends the canonical query — matching the
+                    // tile version's own distinction.
                     let isAway = ask.kind == "away" && awayLanded >= 3
                     Button {
                         DSHaptic.selection()
                         if !isAway { AskMemory.tapped(ask.memoryKey) }
-                        draft = ask.title
+                        // `query` is the display title for every chip but the
+                        // timely publisher one, which sends its canonical full
+                        // handle (see AskOption.query).
+                        draft = ask.query
                         commit()
                     } label: {
                         HStack(spacing: DS.Space.s2) {
-                            Image(systemName: isAway ? "sparkles" : ask.glyph)
-                                .accessibilityHidden(true)
-                                .font(.system(size: 13, weight: .semibold))
-                                .foregroundStyle(DS.tint)
-                                // The Noticed chip is the agent's one
-                                // spontaneous connection — it earns a single
-                                // sparkle as the chips settle in, so the most
-                                // surprising chip acts surprising too
-                                // (delight, 2026-07-21). Plays once per open.
-                                .symbolEffect(.bounce, value: ask.kind == "noticed" && chipsAppeared)
+                            // A timely chip wears a tint dot instead of its
+                            // glyph (2026-07-22): "happening now" reads as
+                            // happening, the same grammar a changed kept pill
+                            // uses — the row's one live signal.
+                            if ask.timely {
+                                Circle().fill(DS.tint).frame(width: 7, height: 7)
+                            } else {
+                                Image(systemName: isAway ? "sparkles" : ask.glyph)
+                                    .accessibilityHidden(true)
+                                    .font(.system(size: 13, weight: .semibold))
+                                    .foregroundStyle(DS.tint)
+                                    // The Noticed chip is the agent's one
+                                    // spontaneous connection — it earns a single
+                                    // sparkle as the chips settle in, so the most
+                                    // surprising chip acts surprising too
+                                    // (delight, 2026-07-21). Plays once per open.
+                                    .symbolEffect(.bounce, value: ask.kind == "noticed" && chipsAppeared)
+                            }
                             Text(isAway ? "Catch me up" : ask.title)
                                 .dsText(.callout15)
                                 .foregroundStyle(DS.textPrimary)
-                            if isAway {
-                                Text("· \(awayLanded)")
+                                .lineLimit(1)
+                            // The signal — parity with the kept pills
+                            // (2026-07-22). Every chip carrying a cheap
+                            // synchronous count shows it; a chip without one
+                            // (wallet/watchlist, read live) shows nothing
+                            // rather than a stale or invented number.
+                            if let signal = ask.signal {
+                                Text(signal)
                                     .dsText(.subhead13)
                                     .foregroundStyle(DS.textTertiary)
                             }
                         }
                         .padding(.horizontal, DS.Space.s4)
                         .padding(.vertical, DS.Space.s3)
-                        .background(DS.gray100, in: RoundedRectangle(cornerRadius: DS.Radius.control,
-                                                                      style: .continuous))
+                        // Timely chips wear the same tintDim wash a changed
+                        // kept pill does, so a live moment reads as filled
+                        // against the steady gray of the evergreen chips.
+                        .background(ask.timely ? AnyShapeStyle(DS.tintDim) : AnyShapeStyle(DS.gray100),
+                                    in: RoundedRectangle(cornerRadius: DS.Radius.control,
+                                                         style: .continuous))
                     }
                     .buttonStyle(.plain)
                     .modifier(ChipEntrance(index: i + hintLead, shown: chipsAppeared, reduceMotion: reduceMotion))
@@ -1754,8 +2016,9 @@ struct Composer: View {
                 // follow-up grounds in the current answer, via the SAME
                 // `lastAnswerHits` mechanism the answer closures already use).
                 .placeholder(when: !hasDraft) {
+                    let pool = activeInvitations
                     Text(answering || !turns.isEmpty ? String(localized: "Ask about this…")
-                                                     : invitations[placeholderIndex])
+                                                     : pool[min(placeholderIndex, pool.count - 1)])
                         .dsText(.body17).foregroundStyle(DS.textTertiary)
                         .lineLimit(1)
                         .id(placeholderIndex)
@@ -2124,7 +2387,17 @@ struct Composer: View {
                     chrome.flash(String(localized: "Your first brief — I'll have it ready every morning."),
                                 tone: .success)
                 }
+                // A cheap deterministic ONE-LINER lands instantly (2026-07-22)
+                // — a chip whose whole answer is a single Insight ("Nothing
+                // overdue.", a status count) has nothing to assemble, so the
+                // typewriter only adds a beat of latency before an answer the
+                // person could already have read. A real composition (the day
+                // brief, a rows doc) still streams module by module. `streamed`
+                // marks a LIVE prose synthesis (paints as it arrives); this
+                // handles the opposite end — the trivially-short deterministic
+                // doc — and everything between still streams as before.
                 if streamed { answerStream.paint(finalDoc) }
+                else if isInstantDoc(finalDoc) { answerStream.paint(finalDoc) }
                 else { answerStream.stream(finalDoc) }
                 fieldFocused = true     // ready for the next follow-up
             }
