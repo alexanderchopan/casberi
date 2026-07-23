@@ -6423,3 +6423,18 @@ still defines each page). What KEEPS its card, correctly: the "Just added"
 Discover story card at the top — that's featured content, the App Store's own
 Today-tab grammar, a read and not a list. The rule holds across both surfaces:
 lists are air, featured reads are cards.
+
+**The rule sharpened — CONTENT lists are air; control panels keep their card**
+(user asked how §173 applies to Settings, 2026-07-22). "Lists are air" read
+too literally sweeps in Settings, which is ONE card by §161 — and that would
+be wrong. The distinction Apple itself draws is not list-vs-not but
+**content-stream vs. control-panel**: an unbounded river of items you scroll
+and consume (Music songs, Mail, App Store category browse, our feeds and
+catalog) flows bare — the stream IS the structure, the container is chrome; a
+bounded, fixed set of controls that belong together as a unit (iOS Settings'
+grouped inset cards, a Contact detail, a form, our Settings parcel and Wallet
+manage screen) KEEPS its card — the card is doing the grouping, saying "this
+is the set." App Store category browse (bare) and iOS Settings (grouped) sit
+in the same OS; we mirror both. So the meta-rule under §173: **a card groups a
+bounded set that belongs together, or features a read; a content stream flows
+without one.** Settings' §161 parcel stays; §173 governs content streams only.
