@@ -49,9 +49,21 @@ enum TodayBrief {
         let now = Date.now
         let landed = DayBrief.landed(things, now: now)
         let move = DayBrief.walletMove(now: now)
-        let holdings = WalletStore.shared.addresses.isEmpty
+        // A watched wallet ALWAYS earns the money hero (user ruling
+        // 2026-07-22: "if a user has a wallet, show it no matter what — it's a
+        // rich visualization, even on a steady day"). The live read is tried
+        // first; if it comes back empty because the chain was unreachable this
+        // morning (offline / rate-limited), the hero falls back to the
+        // LAST-KNOWN holdings rather than vanishing — marked "as of Xh ago"
+        // so it never claims a stale number is current (§83). A steady day
+        // was never the gap: the hero draws whenever holdings exist, movement
+        // or not; only a failed read hid it.
+        var holdings = WalletStore.shared.addresses.isEmpty
             ? []
             : await WalletIngest.topHoldingsByWallet()
+        if holdings.isEmpty, !WalletStore.shared.addresses.isEmpty {
+            holdings = WalletIngest.lastKnownHoldingsByWallet()
+        }
         let moves = TokensAsk.watched(context).isEmpty
             ? []
             : await TokensAsk.moves(context: context)
@@ -346,6 +358,15 @@ enum TodayBrief {
         // not the first wallet's (§155's combined read, same principle).
         let cells = holdings.flatMap(\.cells)
         guard !cells.isEmpty else { return nil }
+        // The balance SPARKLINE and its delta come from recorded value
+        // HISTORY (`combinedValueSamples`) — a separate, honest data source
+        // from the live holdings read, so they draw whenever there are ≥2
+        // samples, flat line included (a flat curve honestly reads "steady").
+        // Staleness (a failed live read) only concerns the TREEMAP's currency:
+        // its one effect is the anchor line, which reads "as of Xh ago"
+        // instead of the curve's own "since" date. The curve itself, being
+        // recorded history, ends at that same last-known moment either way.
+        let staleAt = holdings.compactMap(\.stale).min()
         let samples = WalletStore.shared.combinedValueSamples()
         let csv = samples.count >= 2
             ? samples.suffix(60).map { String(format: "%.2f", $0.usd) }.joined(separator: ",")
@@ -370,17 +391,23 @@ enum TodayBrief {
             subline = String(localized: "Nothing moved today")
         }
         // The line's anchor — what span the curve covers, named the way
-        // `ValueSpark`'s own subline names it.
-        let anchor = samples.count >= 2
-            ? (move.map { String(localized: "since \($0.since.formatted(.dateTime.month(.abbreviated).day()))") } ?? "")
-            : ""
+        // `ValueSpark`'s own subline names it; or, when stale, the honest
+        // "as of Xh ago" that dates the last-known read.
+        let anchor: String
+        if let staleAt {
+            anchor = String(localized: "as of \(staleAgo(staleAt, now: Date.now))")
+        } else {
+            anchor = samples.count >= 2
+                ? (move.map { String(localized: "since \($0.since.formatted(.dateTime.month(.abbreviated).day()))") } ?? "")
+                : ""
+        }
         // The raw numbers, alongside the pre-formatted total (2026-07-22) — so
         // the renderer can ROLL the total from the day's anchor value to the
         // current one on mount (`GenMoneyHero`'s own delight pass) instead of
         // just printing a static string. `rollFrom` is the same anchor the %
         // delta is measured against; empty when there's no real move to roll
         // from, so a wallet with no day-scale history just shows the number
-        // plainly, same as before this pass.
+        // plainly.
         let rollFrom = move.map { String(format: "%.2f", $0.anchorUSD) } ?? ""
         return "hero = MoneyHero(\"\(genSafe(compactUSD(total)))\", \"\(delta)\", \"\(csv)\", \"\(genSafe(subline))\", [\(cells.prefix(6).joined(separator: ", "))], \"\(genSafe(anchor))\", \"\(genSafe(txTitle))\", \"\(genSafe(txMeta))\", \"\(txID)\", \"\(String(format: "%.2f", total))\", \"\(rollFrom)\")"
     }
@@ -560,6 +587,15 @@ enum TodayBrief {
         if s < 3600 { return "\(max(1, Int(s / 60)))m" }
         if s < 86_400 { return "\(Int(s / 3600))h" }
         return "\(Int(s / 86_400))d"
+    }
+
+    /// "2h ago" / "3d ago" — the age of a last-known holdings read, matching
+    /// `HoldingsGroup.subline`'s own staleness grammar.
+    private static func staleAgo(_ date: Date, now: Date) -> String {
+        let mins = max(1, Int(now.timeIntervalSince(date) / 60))
+        if mins < 60 { return String(localized: "\(mins)m ago") }
+        if mins < 60 * 24 { return String(localized: "\(mins / 60)h ago") }
+        return String(localized: "\(mins / 1_440)d ago")
     }
 
     private static func clamp(_ s: String, max: Int) -> String {

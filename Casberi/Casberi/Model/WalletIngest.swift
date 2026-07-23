@@ -1061,6 +1061,44 @@ enum WalletIngest {
             bySymbol.sorted { $0.value > $1.value }.prefix(8).map { ($0.key, $0.value) })
     }
 
+    /// The LAST-KNOWN holdings per watched wallet, rebuilt from the recorded
+    /// value samples (2026-07-22) — the fallback a caller shows when the live
+    /// `topHoldingsByWallet()` read comes back empty (offline / rate-limited)
+    /// but the wallet has synced at least once before. Each group is stamped
+    /// `stale` with the sample's own time, so a caller can mark it "as of Xh
+    /// ago" and never claim a cached number is current (§83). The cells carry
+    /// no tap routes — a sample stores only symbol→USD, not per-token
+    /// addresses — so a stale cell shows its magnitude but doesn't open a
+    /// chart; that's the honest limit of last-known data. Empty when no wallet
+    /// has a snapshot yet (a brand-new watch before its first sync).
+    @MainActor
+    static func lastKnownHoldingsByWallet() -> [HoldingsGroup] {
+        // A last-known read older than this stops standing in — a wallet that
+        // hasn't priced in days is either abandoned or genuinely emptied (a
+        // sold-out wallet records no new sample, so its last one just ages),
+        // and a weeks-old treemap is worse than an absent one even marked "as
+        // of". A normally-used wallet re-samples every few hours, so a
+        // transient failure always has a fresh snapshot to fall back to.
+        let floor = Date.now.addingTimeInterval(-3 * 86_400)
+        return WalletStore.shared.addresses.compactMap { entry in
+            let samples = WalletStore.shared.valueSamples(forAddress: entry.address)
+            guard let sample = samples.last(where: { !($0.holdings?.isEmpty ?? true) }),
+                  sample.at >= floor,
+                  let bySymbol = sample.holdings, sample.usd > 0 else { return nil }
+            return HoldingsGroup(label: entry.label.isEmpty ? entry.short : entry.label,
+                                 address: entry.address,
+                                 cells: treemapCells(bySymbol: bySymbol, routes: [:]),
+                                 // The recorded FULL total (the snapshot is just
+                                 // the top positions, so its sum under-reports).
+                                 totalUSD: sample.usd,
+                                 tokenCount: bySymbol.count,
+                                 topBySymbol: topBySymbol(bySymbol),
+                                 bySymbolAll: bySymbol,
+                                 routeBySymbol: [:],
+                                 stale: sample.at)
+        }
+    }
+
     /// Builds a single-group treemap document (label + subline + cells) — the
     /// `q`-escaped form the combined "bundle" view paints. Kept here so the
     /// escaping matches `portfolioRead`'s and callers don't rebuild the string.

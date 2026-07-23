@@ -3176,6 +3176,15 @@ private struct GenMoneyHero: View {
                 }
             }
             .frame(height: heroHeight)
+            // With no sparkline to host it (a stale last-known read has no
+            // live curve), the anchor's "as of Xh ago" still shows — the
+            // honesty marker (§83) must never depend on the curve being there.
+            if series.count < 2, !el.str(5).isEmpty {
+                Text(el.str(5))
+                    .dsText(.label11)
+                    .foregroundStyle(DS.textTertiary)
+                    .lineLimit(1)
+            }
             // What settled. A NAMED transaction is a real thing, so it draws
             // as a real row — glyph, title, meta, chevron — not as tertiary
             // caption text (2026-07-22: dead-looking text that opens something

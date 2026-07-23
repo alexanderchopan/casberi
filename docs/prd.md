@@ -6691,3 +6691,45 @@ inviting a manual tag.
 Files touched: `Screens/ThingSheetView.swift`, `Shell/Composer.swift`,
 `Shell/RootShell.swift`; `Model/OrganizeCommand.swift` and
 `Model/OrganizeLLM.swift` deleted.
+
+## 179. A watched wallet always shows its hero — last-known when the read fails, sparkline from recorded history (user: "if a user has a wallet i think we should show it no matter what because it is a rich visualization, even if the daily brief says all steady no changes", then "why doesn't it show a sparkline? even if flat", 2026-07-22) — VERIFIED
+
+Two clarifications framed this. First: a steady day was never the gap — the
+Today brief's money hero (§166) is gated on holdings EXISTING, not on movement,
+so a no-change day already draws the treemap + total with "Nothing moved
+today". The ONLY case a watched wallet vanished was a failed live holdings read
+(`topHoldingsByWallet` returns empty when the chain is unreachable / rate-
+limited), where the hero dropped entirely.
+
+**Last-known fallback.** New `WalletIngest.lastKnownHoldingsByWallet()` rebuilds
+each wallet's holdings from its recorded value samples (which already carry a
+top-positions snapshot per §-15), stamped `stale` with the sample's time —
+reviving the vestigial `HoldingsGroup.stale` field the board's retirement
+(§131) left unused. `TodayBrief.compose` falls back to it when the live read is
+empty but a wallet is watched, so the rich treemap stays up rather than
+vanishing on a transient blip. Bounded to reads within 3 days: a wallet that
+hasn't priced in days is either abandoned or genuinely emptied (a sold-out
+wallet records no new sample, so its last one just ages), and a weeks-old
+treemap marked "as of" is worse than an absent one. Stale cells carry no tap
+routes (a sample stores only symbol→USD), the honest limit of cached data.
+
+**Honesty marking (§83).** A last-known read never claims currency: the anchor
+line reads "as of Xh ago" (matching `HoldingsGroup.subline`'s own staleness
+grammar) instead of the curve's "since" date. `GenMoneyHero` renders that
+marker even with no sparkline to host it.
+
+**The sparkline is recorded history, not the failed read (user's follow-up).**
+The first cut of the fallback wrongly suppressed the balance sparkline and its
+delta along with everything else. But those come from `combinedValueSamples` —
+recorded value history, a SEPARATE honest source from the live holdings read.
+So they now draw whenever there are ≥2 samples, flat line included (a flat
+curve honestly reads "steady"); the curve simply ends at the last-known moment,
+which the "as of Xh ago" anchor already dates. Only the TREEMAP's currency is
+what "stale" concerns.
+
+VERIFIED 2026-07-22 (iPhone 17 Pro sim; a temporary `-forceStaleWallet` DEBUG
+flag forced the empty-read path, then removed): with the live read forced
+empty, the hero drew "$164K", a +10.1% delta pill, the ETH/USDC last-known
+treemap, a rising green sparkline from recorded history, and "as of 5m ago" —
+nothing vanished, nothing claimed to be current. The live path (vitalik.eth)
+still draws its normal hero with no stale marker. Build green.
