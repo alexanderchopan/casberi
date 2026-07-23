@@ -1354,6 +1354,52 @@ struct RootShell: View {
             }
             return proseDoc(line)
         }
+        // A named source/publisher ask ("synthesize my Verge feed", "what
+        // happened in BBC", the existing "what's new in Calendar"/"how's my
+        // GitHub") — 2026-07-22, recognized via the SAME
+        // `KeptAskComposers.namedAskTarget` the kept-pill minting uses (see
+        // Composer.recognizeKeptAskKind), so a fresh ask and its kept re-run
+        // can never disagree about which real entity it named, or what its
+        // deterministic recap says. Checked BEFORE StatusAsk on purpose: a
+        // query naming a real source/publisher would otherwise reach
+        // StatusAsk's cue check, get REJECTED by its filler-word gate (the
+        // name survives filler-stripping as a leftover content word), and
+        // fall through anyway — checking here first just skips that
+        // always-failing detour.
+        if let (target, wantsSynthesis) = KeptAskComposers.namedAskTarget(query, things: allThings()) {
+            // "synthesize"/"summarize"/"recap" asks for the model's OWN
+            // prose over the same pool the deterministic recap would show —
+            // a LIVE-only upgrade (ruling 13's principle: a kept ask never
+            // re-synthesizes, it shows what the answer was drawn from — the
+            // kept pill below always re-runs the plain recap regardless of
+            // which verb minted it). Honest degradation throughout: no
+            // model, a declined synthesis, or an empty window all fall to
+            // the exact same deterministic doc a kept pill would show.
+            if wantsSynthesis, OnDeviceModel.isAvailable {
+                let pool = target.pool(in: allThings())
+                let now = Date.now
+                var recent = pool.filter { $0.capturedAt >= now.addingTimeInterval(-3 * 86_400) }
+                if recent.isEmpty {
+                    recent = pool.filter { $0.capturedAt >= now.addingTimeInterval(-7 * 86_400) }
+                }
+                if !recent.isEmpty {
+                    // Capped at 16 candidates, the same convention
+                    // `StatusAsk.sample`'s own rotation already keeps so a
+                    // rich pool still fits the on-device context window.
+                    let capped = Array(recent.prefix(16))
+                    lastAnswerHits = capped
+                    if let prose = await streamSynthesis(query, over: candidates(capped),
+                                                         onProseDoc: onProseDoc) {
+                        return proseDoc(prose)
+                    }
+                }
+            }
+            lastAnswerHits = []
+            if let result = await KeptAskComposers.compose(target.keptKind, things: allThings(),
+                                                          context: modelContext) {
+                return result.doc
+            }
+        }
         // A status ask ("tell me what's going on") names no content to score,
         // so it grounds on recency itself: the newest things from every source
         // in a recent window — the feeds' pulse. The model synthesizes over

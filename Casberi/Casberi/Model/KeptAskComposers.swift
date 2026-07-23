@@ -46,6 +46,9 @@ enum KeptAskComposers {
         if kind.hasPrefix("category:") {
             return categoryRecap(String(kind.dropFirst("category:".count)), things: things)
         }
+        if kind.hasPrefix("handle:") {
+            return handleRecap(String(kind.dropFirst("handle:".count)), things: things)
+        }
         if kind.hasPrefix("search:") {
             return search(String(kind.dropFirst("search:".count)), things: things)
         }
@@ -385,6 +388,170 @@ enum KeptAskComposers {
         return Result(delta: "\(matched.count) things", digest: "\(matched.count)",
                       doc: ["root = Stack([ins, res])", "ins = Insight(\"\(genSafe(line))\")"]
                           + rows(Array(matched.prefix(6)), title: "Tagged \(tag)"))
+    }
+
+    // MARK: - Named asks (2026-07-22, user: "i should be able to ask things
+    // like 'synthesize my verge feed' or 'what happened in bbc'")
+
+    /// What a "name a source/publisher" ask actually scopes to. A PUBLISHER
+    /// name (an RSS feed's own title, a Substack, a watched social handle —
+    /// all stamped in `Thing.authorHandle`) is a real, useful scope that
+    /// "verge"/"bbc" name — and a DIFFERENT one from the bridge-level
+    /// `.source`/`.category` cases below (Calendar, GitHub, "my Markets
+    /// stuff"), which `namedAskTarget` already answered before this.
+    enum NamedAskTarget {
+        case source(String)
+        case handle(String)
+        case category(String)
+
+        /// The kept-ask KIND this target composes as — ONE mapping, so the
+        /// live path and the kept-pill re-run can never answer the same
+        /// target two different ways.
+        var keptKind: String {
+            switch self {
+            case .source(let s):   return "context:\(s)"
+            case .handle(let h):   return "handle:\(h)"
+            case .category(let c): return "category:\(c)"
+            }
+        }
+
+        /// The raw pool this target scopes to, BEFORE any recency windowing —
+        /// `RootShell`'s live synthesis path windows/caps this itself; the
+        /// deterministic composers below window it again, independently
+        /// (the same "light duplication of window logic" `contextRecap`/
+        /// `categoryRecap` already own, not a shared dependency).
+        func pool(in things: [Thing]) -> [Thing] {
+            switch self {
+            case .source(let s): return things.filter { $0.source == s }
+            case .handle(let h): return things.filter { $0.authorHandle == h }
+            case .category(let c):
+                let sources = Set(BridgeCatalog.offers
+                    .filter { BridgeCatalog.category(of: $0) == c }.map(\.name))
+                return things.filter { sources.contains($0.source) }
+            }
+        }
+
+        /// Whether this target is safe to KEEP — `.source`/`.handle` are
+        /// self-gating by construction (`namedAskTarget` only ever returns
+        /// one that already has a matching thing), but `.category` names a
+        /// fixed catalog entry independent of what's actually connected, so
+        /// it needs its own check (mirrors the "never mint a kind that can
+        /// only ever say nothing" rule every other kept kind already keeps).
+        func hasRealThings(in things: [Thing]) -> Bool {
+            switch self {
+            case .source, .handle: return true
+            case .category: return !pool(in: things).isEmpty
+            }
+        }
+    }
+
+    /// A per-publisher or per-source ask — "synthesize my Verge feed", "what
+    /// happened in BBC", "what's new in Calendar", "how's my GitHub". ONE
+    /// definition, read by BOTH `RootShell.answerDocument` (the live path)
+    /// and `Composer.recognizeKeptAskKind` (the keepable-kind recognizer) —
+    /// the same precedent `matchesUpcoming` already sets.
+    ///
+    /// A PUBLISHER/HANDLE match is tried FIRST: RSS/Substack/Podcasts/social
+    /// accounts all stamp their author in `Thing.authorHandle` ("The Verge",
+    /// "BBC News", a Farcaster handle) — so "verge"/"bbc" name a publisher
+    /// WITHIN a bridge, not the bridge itself, and the earlier bridge-only
+    /// recognizer had no way to answer them at all. Matched FUZZILY
+    /// (case-insensitive, either containing the other, via `bestHandle`)
+    /// because a publisher's real name is free text someone names casually
+    /// ("verge" for "The Verge") — unlike a bridge SOURCE or catalog
+    /// CATEGORY, both small fixed vocabularies that stay exact-match. Falls
+    /// back to the exact bridge/category match otherwise — every phrase that
+    /// already worked keeps working.
+    static func namedAskTarget(_ query: String, things: [Thing])
+        -> (target: NamedAskTarget, synthesize: Bool)? {
+        let q = query.lowercased().trimmingCharacters(in: .whitespaces)
+        for (prefix, synth) in namedAskPrefixes where q.hasPrefix(prefix) {
+            var name = String(q.dropFirst(prefix.count))
+                .trimmingCharacters(in: CharacterSet(charactersIn: "? "))
+                .trimmingCharacters(in: .whitespaces)
+            // "...Markets STUFF?" / "...verge FEED" — casual phrasing tacks a
+            // generic filler noun onto the real name; strip it so "markets
+            // stuff"/"verge feed" match the bare name "markets"/"verge".
+            for filler in [" feed", " stuff", " things", " activity"] where name.hasSuffix(filler) {
+                name = String(name.dropLast(filler.count))
+            }
+            guard !name.isEmpty else { continue }
+            if let handle = bestHandle(matching: name, things: things) {
+                return (.handle(handle), synth)
+            }
+            if let source = Set(things.map(\.source)).first(where: { $0.lowercased() == name }) {
+                return (.source(source), synth)
+            }
+            if let cat = BridgeCatalog.categories.first(where: { $0.name.lowercased() == name })?.name {
+                return (.category(cat), synth)
+            }
+        }
+        return nil
+    }
+
+    /// The verbs a named ask can wear, and whether each ASKS FOR REAL PROSE.
+    /// "synthesize"/"summarize"/"recap" want the model's own synthesis over
+    /// the pool (RootShell's live-only upgrade, honest-degrading to the
+    /// deterministic recap below when the model declines or is unavailable);
+    /// "what's new in"/"what happened in"/"how's my" want the plain counted
+    /// recap they've always gotten. A KEPT pill ignores this flag entirely —
+    /// it always re-runs the deterministic recap (ruling 13's principle: a
+    /// kept ask never re-synthesizes, it shows what the answer was drawn
+    /// from), so the same target answers identically on every future open
+    /// regardless of which verb minted it.
+    private static let namedAskPrefixes: [(prefix: String, synth: Bool)] = [
+        ("synthesize my ", true), ("synthesize ", true),
+        ("summarize my ", true), ("summarize ", true),
+        ("recap my ", true), ("recap ", true),
+        ("what happened in ", false), ("what happened with ", false), ("what happened on ", false),
+        ("whats happened in ", false), ("whats happened with ", false), ("whats happened on ", false),
+        ("what's new in ", false), ("whats new in ", false),
+        ("what's up with my ", false), ("whats up with my ", false),
+        ("how's my ", false), ("hows my ", false),
+    ]
+
+    /// The real, stored handle that best matches a fuzzy name. Case-
+    /// insensitive, either containing the other ("verge" ⊂ "The Verge",
+    /// "bbc" ⊂ "BBC News"); the handle with the MOST things wins when more
+    /// than one qualifies — the one useful single choice, no disambiguation
+    /// UI. nil when nothing in the corpus is close.
+    private static func bestHandle(matching name: String, things: [Thing]) -> String? {
+        var counts: [String: Int] = [:]
+        for t in things {
+            guard let raw = t.authorHandle?.trimmingCharacters(in: .whitespaces), !raw.isEmpty
+            else { continue }
+            let lower = raw.lowercased()
+            guard lower.contains(name) || name.contains(lower) else { continue }
+            counts[raw, default: 0] += 1
+        }
+        return counts.max(by: { $0.value < $1.value })?.key
+    }
+
+    // MARK: - What's new from <publisher>
+
+    /// A per-PUBLISHER recap ("what happened in BBC") — `contextRecap`'s
+    /// handle-scoped twin. Filters by the EXACT, already-resolved
+    /// `authorHandle` `namedAskTarget` matched fuzzily once, at recognition
+    /// time — never re-fuzzed here, so a kept pill's re-run stays a fixed,
+    /// honest lookup forever, the same discipline `context:<source>` already
+    /// keeps for bridges.
+    private static func handleRecap(_ handle: String, things: [Thing]) -> Result? {
+        let now = Date.now
+        var pool = things.filter { $0.authorHandle == handle && $0.capturedAt >= now.addingTimeInterval(-3 * 86_400) }
+        var windowWords = "in the last three days"
+        if pool.isEmpty {
+            pool = things.filter { $0.authorHandle == handle && $0.capturedAt >= now.addingTimeInterval(-7 * 86_400) }
+            windowWords = "in the last week"
+        }
+        guard !pool.isEmpty else {
+            return Result(delta: "", digest: "0",
+                          doc: ["root = Stack([ins])",
+                                "ins = Insight(\"\(genSafe("Nothing new from \(handle) recently."))\")"])
+        }
+        let line = "\(pool.count) thing\(pool.count == 1 ? "" : "s") from \(handle) \(windowWords)."
+        return Result(delta: "\(pool.count) things", digest: "\(pool.count)",
+                      doc: recapDoc(line: line, pool: pool,
+                                    barsEyebrow: "This week", rowsTitle: "From \(handle)"))
     }
 
     // MARK: - What's new in <source>

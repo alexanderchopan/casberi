@@ -6438,3 +6438,77 @@ is the set." App Store category browse (bare) and iOS Settings (grouped) sit
 in the same OS; we mirror both. So the meta-rule under §173: **a card groups a
 bounded set that belongs together, or features a read; a content stream flows
 without one.** Settings' §161 parcel stays; §173 governs content streams only.
+
+## 174. Named asks widen to publishers, and finally reach the live path (user: "when i talk to the agent i should be able to ask things like 'synthesize my verge feed' or 'what happened in bbc'", 2026-07-22) — VERIFIED
+
+Two gaps, found by tracing the exact recognizer path before touching anything.
+
+**Gap 1 — the wrong scope.** The existing per-source recognizer
+(`namedTopicPhrase`, six fixed prefixes: "what's new in", "how's my", …)
+matched only `Thing.source` — a BRIDGE ("RSS", "Calendar", "GitHub"). "The
+Verge" and "BBC" aren't bridges, they're PUBLISHERS *within* RSS —
+`RSSIngest` (and Substack/Podcasts/every social account) already stamps the
+publisher's own name in `Thing.authorHandle` (§172's FeedInsight fix
+surfaced the same field). So "verge"/"bbc" could never match anything, at
+any layer — the bridge-only recognizer had no concept of what's inside a
+bridge.
+
+**Gap 2 — recognition never reached the live answer at all.** Tracing
+`RootShell.answerDocument` end to end found `contextRecap`/`categoryRecap`
+(`KeptAskComposers.swift`) are called ONLY from the kept-pill RE-RUN path —
+neither string ever appears in `RootShell.swift`. A FRESH, never-before-kept
+"what's new in Calendar" fell straight through to `StatusAsk.pulse` (whose
+filler-word gate REJECTS it — "calendar" survives filler-stripping as a
+leftover content word, so `pulse` returns nil) and then to `Retriever.rank`
+(which has zero awareness of `Thing.source` — it only scores title/tags/
+content). The per-source recap only ever worked *after* being kept once. This
+was a real, silent, pre-existing gap, not a corollary of the new request.
+
+**The fix, one recognizer for both gaps.** `KeptAskComposers.namedAskTarget`
+is now the ONE shared definition (`matchesUpcoming`'s precedent) both
+`Composer.recognizeKeptAskKind` (mint) and `RootShell.answerDocument` (the
+LIVE path — this is the actual fix for gap 2) call. Widened phrase list
+(`synthesize`/`summarize`/`recap` — flagged `synth: true` — alongside the
+existing "what's new in"/"what happened in"/"how's my"), then resolved in
+priority order: a PUBLISHER/HANDLE match first — fuzzy, case-insensitive,
+either-containing-the-other (`bestHandle`), because a publisher's real name
+is free text nobody types exactly ("verge" for "The Verge") — then the
+existing exact bridge SOURCE match, then an exact catalog CATEGORY match.
+`NamedAskTarget` (`.handle`/`.source`/`.category`) carries its own
+`keptKind`/`pool(in:)`/`hasRealThings(in:)`, so both callers resolve and
+scope identically by construction. `namedTopicPhrase`/`categoryHasThings` in
+`Composer.swift` are dead now that both call sites route through the shared
+enum — deleted, not left as a shim.
+
+**The verb decides recap vs. real synthesis, but only live.** `synthesize`/
+`summarize`/`recap` route the SAME resolved pool through `streamSynthesis` —
+the exact primitive `StatusAsk`'s pulse branch already uses (`OnDeviceModel.
+synthesisStream`, capped at 16 candidates, the same convention `StatusAsk.
+sample` keeps), falling back to the deterministic recap doc when the model
+is unavailable or declines. A KEPT pill ignores the verb entirely and always
+re-runs the deterministic recap (`handleRecap`/`contextRecap`/
+`categoryRecap`) — ruling 13's principle ("a kept ask never re-synthesizes,
+it shows what the answer was drawn from") extended from `search:` to
+`handle:`/`context:`/`category:` for the first time: a "synthesize my Verge
+feed" kept today reads as a live model-written paragraph, but its pill
+re-runs tomorrow as the plain counted recap, on purpose.
+
+**New kind:** `handle:<publisher>` (`KeptAskComposers.handleRecap`), the
+handle-scoped twin of `contextRecap` — same 3-day/week window widening, same
+`recapDoc` shared builder, filtered by the exact, already-resolved
+`authorHandle` (never re-fuzzed at re-run time, so a kept pill stays a fixed
+lookup forever).
+
+VERIFIED 2026-07-22 (iPhone 17 Pro sim, `-uiAnswerProbe`/`-keepAskProbe`):
+"what happened in verge" → "17 things from The Verge in the last three
+days." with a real Bars chart and 6 real Verge rows. "synthesize my verge
+feed" → genuine on-device model prose ("Samsung is the main thread here...")
+scoped to only the Verge pool, with Keep AND Save-as-a-note both offered (the
+existing long-prose affordance, unchanged). "what happened in bbc" → fuzzy-
+matched to the corpus's real "BBC News" handle, 26 things, 6 real BBC rows.
+`-keepAskProbe "handle:BBC News:..."` composed via the kept-pill path and
+reported the identical count (26) the live answer showed. Gap 2's fix
+confirmed as a byproduct: "what's new in Calendar" — a phrasing that existed
+before this session and, per the trace, never actually recapped live — now
+correctly returns Calendar's own 3-day recap on a fresh ask, not just after
+being kept once.

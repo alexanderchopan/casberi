@@ -267,19 +267,18 @@ struct Composer: View {
             // with nothing ahead falls through to the normal answer path rather
             // than minting a keepable ask that would only ever say "nothing".
             kind = "upcoming"
-        } else if let name = namedTopicPhrase(q),
-                  let source = Set(things.map(\.source)).first(where: { $0.lowercased() == name }) {
-            kind = "context:\(source)"
-        } else if let name = namedTopicPhrase(q),
-                  let cat = BridgeCatalog.categories.first(where: { $0.name.lowercased() == name })?.name,
-                  categoryHasThings(cat, in: things) {
-            // The catalog's OWN category vocabulary (2026-07-20) — "how's my
-            // Markets stuff?" answers the same way a per-source recap does,
-            // just spanning every source the category owns. "Onchain" is
-            // deliberately NOT a match here — that category was dissolved
-            // 2026-07-17 (Markets absorbed it); Wallet/Markets are its real
-            // successors.
-            kind = "category:\(cat)"
+        } else if let (target, _) = KeptAskComposers.namedAskTarget(question, things: things),
+                  target.hasRealThings(in: things) {
+            // A named source/publisher/category ask (2026-07-22: "synthesize
+            // my Verge feed", "what happened in BBC" — widened from the
+            // original "what's new in Calendar"/"how's my GitHub" shape,
+            // which only ever recognized a whole BRIDGE, never a publisher
+            // within one). The verb ("synthesize" vs "what's new") only
+            // matters to the LIVE answer path (`RootShell.answerDocument`,
+            // same recognizer) — a kept pill always re-runs the deterministic
+            // recap regardless of which verb minted it, so the `_` here is
+            // correct: keeping never cares whether this was a synthesis ask.
+            kind = target.keptKind
         } else if TagsAsk.parse(question) == nil, AppsAsk.parse(question) == nil,
                   AggregateAsk.parse(question, sources: Array(Set(things.map(\.source)))) == nil,
                   StatusAsk.pulse(question, things: things) == nil,
@@ -298,41 +297,6 @@ struct Composer: View {
         return kind
     }
 
-    /// "what's new in <name>" / "how's my <name>" / "what's up with my
-    /// <name>" (and casual variants) — the bare name after the phrase,
-    /// lowercased and trimmed, or nil if none match. Shared by both the
-    /// source-context matcher and the category matcher below; matching
-    /// against a REAL source or category happens at each call site (this
-    /// only strips the phrase). Widened 2026-07-20 — the strict "what's new
-    /// in" prefix missed how people actually ask ("what's up w/ my X stuff").
-    private func namedTopicPhrase(_ q: String) -> String? {
-        let prefixes = ["what's new in ", "whats new in ",
-                        "what's up with my ", "whats up with my ",
-                        "how's my ", "hows my "]
-        for prefix in prefixes where q.hasPrefix(prefix) {
-            var name = String(q.dropFirst(prefix.count))
-                .trimmingCharacters(in: CharacterSet(charactersIn: "? "))
-                .trimmingCharacters(in: .whitespaces)
-            // "...Markets STUFF?" — casual phrasing tacks a generic filler
-            // noun onto the real topic name; strip it so "markets stuff"
-            // matches the bare category/source name "markets".
-            for filler in [" stuff", " things", " activity"] where name.hasSuffix(filler) {
-                name = String(name.dropLast(filler.count))
-            }
-            return name
-        }
-        return nil
-    }
-
-    /// True when some real thing sits in a source the category owns — the
-    /// same honesty gate `contextRecap`'s "must have things from this
-    /// source" check applies at the per-source level.
-    private func categoryHasThings(_ category: String, in things: [Thing]) -> Bool {
-        let sources = Set(BridgeCatalog.offers
-            .filter { BridgeCatalog.category(of: $0) == category }
-            .map(\.name))
-        return things.contains { sources.contains($0.source) }
-    }
     /// A typed organize command's pending change — rendered as a card, the
     /// write waits for Apply (typed words never write silently).
     @State private var proposal: OrganizeProposal?
