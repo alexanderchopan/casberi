@@ -6588,3 +6588,68 @@ confirms the slot cap holds (≤3 with the organize hint, ≤4 without). Build
 green alongside a large concurrent refactor of `HomeRoute` in another session,
 which briefly broke the shared build — retried until it settled; none of this
 pass's changes touch those files.
+
+## 176. The agent answers smarter — receipts, more entities, follow-ups, comparatives (user: "how else would we make responses and questions 'smarter'", then "make all these changes", 2026-07-22) — VERIFIED
+
+Phase two of the "make the agent smarter" pass (phase one was §175's chips).
+Five upgrades to the answer path, all deterministic, all reusing existing
+seams.
+
+**Synthesis receipts.** A synthesized answer (`proseDoc`, a bare Insight) now
+carries a "Drawn from · N" footer — the things the model wrote from, shown
+below the prose (`appendingGrounding`). Every answer's grounding rows became
+TAPPABLE in the process: `groundingLines` now emits each thing's id (arg 4),
+which is all `GenRow`'s tap needed — so a receipt row (and every "Found" row)
+drills into its thing-view on the agent's Stack (ruling 8). Verified on-device:
+"what's going on" → prose + four real tappable rows; tapping one pushed the
+Design-review thing-view. Applies to all three synthesis sites (status pulse,
+named-ask synthesis, free-text `.synthesis`).
+
+**People join the named-ask vocabulary.** §174 resolved publishers/sources;
+this adds person/sender phrasings — "what did Sam send", "anything from X" —
+resolving to the same `authorHandle` scope (a sender's name lives there like a
+publisher's), via new prefixes plus a trailing verb/pronoun stripper
+(`trailingPersonWords`: "what did sam send me" → "sam"). Bare "what's " was
+deliberately NOT added — it would fuzzy-match "what's new" to "BBC News".
+
+**Follow-up ellipsis.** After a per-source/publisher answer, a bare "and bbc?"
+/ "what about calendar" re-runs the SAME shape (recap vs. synthesize) with the
+new entity — the natural conversational follow-up. Stateful (`lastNamedAskSynth`
+remembers the last answer's shape, captured before each call resets it); fires
+only when the prior answer was a named ask AND the residual resolves to a real
+entity (`ellipsisEntity`), so it never hijacks an ordinary short query. The
+named-ask block was extracted to `answerNamedAsk` so both the normal path and
+the ellipsis call it. Verified: "what's new in Calendar" then "and reminders" →
+the Reminders recap.
+
+**Comparatives.** An aggregate count over a nameable period gains its
+predecessor — "40 things this week — 9 more than last week" — the same filters
+over the window before (`AggregateAsk`'s `.count` case + `priorPeriodLabel`).
+Only a real non-zero delta earns the clause (§83). Reads as intelligence, is
+pure arithmetic.
+
+**The next-question offer.** After an answer settles, one related follow-up
+chip sits in the verb row where the thumb is — a wallet answer → "What about
+gas?", a source recap → "Synthesize it instead", the day brief → "While I was
+away?". A small deterministic kind→next map (`Composer.nextAsk`), never a
+model; nil when there's no clean pairing, and skipped on the "nothing matches"
+fallback. Verified: "how's my wallet" → the "What about gas?" chip.
+
+Cleanup (`/simplify`, 4 angles): fixed a double corpus fetch (`answerNamedAsk`
+now takes the caller's memoized `allThings()`, restoring the §-21 lazy
+invariant), added a `NamedAskTarget.name` accessor so `nextAsk` doesn't
+re-switch the enum, special-cased the weekend comparative's prior window (a
+2-day span shifted by its own duration lands on Thu–Sat, not last weekend — now
+−7 days), and normalized apostrophes in `ellipsisEntity`'s query-word guard.
+Skipped two low-value items (a shared root-splice helper, and substituting
+`keepableAskKind` for `nextAsk`'s re-run matchers) as documented light
+duplication. New DEBUG hook `-ellipsisProbe "<q1>|<q2>"` runs the stateful
+two-ask sequence headlessly (it can't be tested across two launches, which each
+reset @State).
+
+VERIFIED 2026-07-22 (iPhone 17 Pro sim, `-uiAnswerProbe`/`-answerProbe`/
+`-ellipsisProbe`): receipts render + tap through; "what did calendar send"
+resolves via the person prefix; the ellipsis re-runs the shape; the comparative
+computes ("… more than last week"); the next-question chip appears. Build green
+alongside a concurrent `HomeRoute` refactor in another session; none of this
+touches those files.

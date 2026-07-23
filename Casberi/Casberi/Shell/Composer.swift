@@ -182,6 +182,14 @@ struct Composer: View {
     /// wasteful during a streaming reveal). nil when the question doesn't
     /// match a keepable shape, or it's already kept.
     @State private var keepableAskKind: String?
+    /// The one related follow-up an answer offers (2026-07-22, §177) — a
+    /// wallet answer → "What about gas?", a source recap → "Synthesize it
+    /// instead" — teaching the next step at the moment it's most wanted. A
+    /// small deterministic map (`nextAsk(for:in:)`), never a model; nil when
+    /// the answer has no natural follow-up. Set at settle, cleared on the
+    /// next send.
+    private struct NextAsk { let label: String; let query: String }
+    @State private var nextAsk: NextAsk?
     /// One-shot: the Keep chip morphs to a checkmark for a beat before it
     /// retires (delight, 2026-07-21) — the mint earns a felt moment instead
     /// of just vanishing the instant it's tapped.
@@ -301,6 +309,36 @@ struct Composer: View {
         }
         guard let kind, !KeptAskStore.shared.isKept(kind) else { return nil }
         return kind
+    }
+
+    /// The one related follow-up to offer after an answer (§177) — a small
+    /// deterministic map from the answer's own shape to the next natural ask,
+    /// the same job the composer's context-aware lead chip does at open,
+    /// extended to the moment just after an answer. nil when there's no clean
+    /// pairing. Never the model; each pairing is a fixed, always-answerable
+    /// next step (the paired ask honestly handles its own empty case).
+    private func nextAsk(for question: String, in things: [Thing]) -> NextAsk? {
+        // Wallet ⇄ its sibling reads.
+        if WalletGasAsk.matches(question) {
+            return NextAsk(label: "How's my wallet?", query: "how's my wallet")
+        }
+        if WalletAsk.matches(question) {
+            return NextAsk(label: "What about gas?", query: "what have I spent on gas")
+        }
+        if TokensAsk.matches(question), !WalletStore.shared.addresses.isEmpty {
+            return NextAsk(label: "How's my wallet?", query: "how's my wallet")
+        }
+        // The day brief → the overnight catch-up (its natural neighbor).
+        if TodayBrief.matches(question) {
+            return NextAsk(label: "While I was away?", query: "while I was away")
+        }
+        // A source/publisher RECAP → offer the synthesis of the same thing
+        // (the verb it didn't use). Skipped when it already synthesized.
+        if let (target, synth) = KeptAskComposers.namedAskTarget(question, things: things),
+           !synth, OnDeviceModel.isAvailable {
+            return NextAsk(label: "Synthesize it instead", query: "synthesize \(target.name)")
+        }
+        return nil
     }
 
     /// A typed organize command's pending change — rendered as a card, the
@@ -1280,6 +1318,23 @@ struct Composer: View {
                                                         // routine saves shouted.
                                                         Chip(text: "Try with your key",
                                                              style: .tint, glyph: "key.fill")
+                                                    }
+                                                    .buttonStyle(.plain)
+                                                }
+                                                // The related follow-up (§177) — the next
+                                                // natural ask, offered where the thumb is,
+                                                // teaching the vocabulary at the moment it's
+                                                // most wanted. A bare tap sends it, the same
+                                                // as any chip; neutral, so it never competes
+                                                // with the row's real verbs.
+                                                if let next = nextAsk {
+                                                    Button {
+                                                        DSHaptic.selection()
+                                                        draft = next.query
+                                                        commit()
+                                                    } label: {
+                                                        Chip(text: next.label, style: .neutral,
+                                                             glyph: "arrow.turn.down.right")
                                                     }
                                                     .buttonStyle(.plain)
                                                 }
@@ -2272,6 +2327,7 @@ struct Composer: View {
                 inFlight = true
             }
             keepableAskKind = nil   // recomputed at settle, for THIS question
+            nextAsk = nil           // same — the prior answer's follow-up is stale
             askGeneration += 1
             let gen = askGeneration
             let q = draft
@@ -2352,6 +2408,11 @@ struct Composer: View {
                 // corpus-wide read.
                 let settledThings = (try? modelContext.fetch(FetchDescriptor<Thing>())) ?? []
                 keepableAskKind = recognizeKeptAskKind(q, in: settledThings)
+                // The one related follow-up this answer offers (§177) — nil
+                // for an answer with no natural next step. Skipped on the
+                // honest "nothing matches" fallback: a dead-end answer has no
+                // follow-up worth teaching.
+                nextAsk = docHasFallback(finalDoc) ? nil : nextAsk(for: q, in: settledThings)
                 // Proactive minting (2026-07-20): count each keepable ask
                 // actually made, so a question asked often can upgrade its
                 // quiet Keep pill to a "you ask this a lot" prompt. Counted

@@ -415,6 +415,18 @@ enum KeptAskComposers {
             }
         }
 
+        /// The bare resolved name (the publisher/source/category), for a
+        /// caller that wants to rephrase the ask ("synthesize <name>") — one
+        /// accessor, so name extraction lives on the enum, not re-switched at
+        /// each call site.
+        var name: String {
+            switch self {
+            case .source(let s):   return s
+            case .handle(let h):   return h
+            case .category(let c): return c
+            }
+        }
+
         /// The raw pool this target scopes to, BEFORE any recency windowing —
         /// `RootShell`'s live synthesis path windows/caps this itself; the
         /// deterministic composers below window it again, independently
@@ -475,6 +487,16 @@ enum KeptAskComposers {
             for filler in [" feed", " stuff", " things", " activity"] where name.hasSuffix(filler) {
                 name = String(name.dropLast(filler.count))
             }
+            // "what did Sam SEND ME" / "what's mara.eth POSTING" — the person
+            // phrasings (2026-07-22) tack a trailing verb and/or pronoun onto
+            // the name; drop those so bestHandle sees just "sam"/"mara.eth".
+            // Trailing-only and a fixed verb/pronoun set, so a real name that
+            // happens to contain one of these words mid-string is untouched.
+            var words = name.split(separator: " ").map(String.init)
+            while let last = words.last, trailingPersonWords.contains(last) {
+                words.removeLast()
+            }
+            name = words.joined(separator: " ")
             guard !name.isEmpty else { continue }
             if let handle = bestHandle(matching: name, things: things) {
                 return (.handle(handle), synth)
@@ -506,8 +528,24 @@ enum KeptAskComposers {
         ("what happened in ", false), ("what happened with ", false), ("what happened on ", false),
         ("whats happened in ", false), ("whats happened with ", false), ("whats happened on ", false),
         ("what's new in ", false), ("whats new in ", false),
+        ("what's new from ", false), ("whats new from ", false),
         ("what's up with my ", false), ("whats up with my ", false),
         ("how's my ", false), ("hows my ", false),
+        // Person/sender phrasings (2026-07-22) — resolve to the same handle
+        // scope (a sender's name lives in `authorHandle` like a publisher's).
+        // Deliberately SPECIFIC prefixes: a bare "what's " would fuzzy-match
+        // "what's new" to "BBC News" (contains "new"), so the person forms
+        // all carry a distinguishing word ("did"/"from").
+        ("what did ", false),
+        ("anything from ", false), ("anything new from ", false),
+    ]
+
+    /// Trailing verbs/pronouns the person phrasings tack onto a name —
+    /// stripped so "what did sam send me" resolves to "sam".
+    private static let trailingPersonWords: Set<String> = [
+        "send", "sent", "sending", "post", "posted", "posting", "share",
+        "shared", "sharing", "say", "said", "saying", "write", "wrote",
+        "writing", "me", "us", "lately", "recently",
     ]
 
     /// The real, stored handle that best matches a fuzzy name. Case-

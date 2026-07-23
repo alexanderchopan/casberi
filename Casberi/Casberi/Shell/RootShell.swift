@@ -42,6 +42,11 @@ struct RootShell: View {
     /// The last answer's grounding — a follow-up ("which ones were from
     /// Sam?") searches inside it instead of the whole corpus (2026-07-10).
     @State private var lastAnswerHits: [Thing] = []
+    /// Whether the last answer was a NAMED ask, and if so whether it
+    /// synthesized (2026-07-22, §176) — enables the "and bbc?" ellipsis
+    /// follow-up to re-run the same shape with a new entity. nil = the last
+    /// answer wasn't a named ask, so the ellipsis stays off.
+    @State private var lastNamedAskSynth: Bool?
     /// A keyed conversation's prior turns (2026-07-21) — threaded into the
     /// next "Try with your key" so a keyed follow-up is understood in
     /// context, the same way the on-device model's own session is. Clears
@@ -667,6 +672,25 @@ struct RootShell: View {
                     }
                 }
             }
+            // Debug hook: `-ellipsisProbe "<q1>|<q2>"` runs two asks in
+            // sequence through the REAL answer path (§176) — q1 sets the
+            // named-ask shape, then q2 (a bare "and bbc?") exercises the
+            // ellipsis. Logs each doc's first line so the second's rewrite is
+            // verifiable headlessly (the stateful follow-up can't be tested
+            // across two separate launches, which each reset @State).
+            if let spec = UserDefaults.standard.string(forKey: "ellipsisProbe"),
+               let bar = spec.range(of: "|") {
+                let q1 = String(spec[spec.startIndex..<bar.lowerBound])
+                let q2 = String(spec[bar.upperBound...])
+                Task { @MainActor in
+                    let d1 = await answerDocument(q1) { _ in }
+                    NSLog("[Casberi] ellipsisProbe q1=\"%@\" synth=%@ → %@", q1,
+                          lastNamedAskSynth.map(String.init(describing:)) ?? "nil",
+                          d1.first ?? "(none)")
+                    let d2 = await answerDocument(q2) { _ in }
+                    for line in d2 { NSLog("[Casberi] ellipsisDoc| %@", line) }
+                }
+            }
             // Debug hook: open the composer so `-uiAnswerProbe` (handled in the
             // composer) can drive a real send for an on-screen answer.
             if UserDefaults.standard.string(forKey: "uiAnswerProbe") != nil
@@ -1218,6 +1242,12 @@ struct RootShell: View {
     /// fallback never call it and return one doc to reveal at once.
     private func answerDocument(_ query: String,
                                 onProseDoc: @escaping ([String]) -> Void) async -> [String] {
+        // The named-ask ellipsis reads the PREVIOUS answer's shape, then this
+        // call resets it — set back to non-nil only when a named ask answers
+        // below (`answerNamedAsk`), so any other kind of answer turns the
+        // ellipsis off for the next query (§176).
+        let priorNamedSynth = lastNamedAskSynth
+        lastNamedAskSynth = nil
         // A count/superlative ask is ARITHMETIC, not retrieval — computed
         // over the corpus directly, no model, always correct (2026-07-10).
         // Memoized and LAZY (2026-07-21): this used to fetch the whole corpus
@@ -1366,40 +1396,20 @@ struct RootShell: View {
         // name survives filler-stripping as a leftover content word), and
         // fall through anyway — checking here first just skips that
         // always-failing detour.
-        if let (target, wantsSynthesis) = KeptAskComposers.namedAskTarget(query, things: allThings()) {
-            // "synthesize"/"summarize"/"recap" asks for the model's OWN
-            // prose over the same pool the deterministic recap would show —
-            // a LIVE-only upgrade (ruling 13's principle: a kept ask never
-            // re-synthesizes, it shows what the answer was drawn from — the
-            // kept pill below always re-runs the plain recap regardless of
-            // which verb minted it). Honest degradation throughout: no
-            // model, a declined synthesis, or an empty window all fall to
-            // the exact same deterministic doc a kept pill would show.
-            if wantsSynthesis, OnDeviceModel.isAvailable {
-                let pool = target.pool(in: allThings())
-                let now = Date.now
-                var recent = pool.filter { $0.capturedAt >= now.addingTimeInterval(-3 * 86_400) }
-                if recent.isEmpty {
-                    recent = pool.filter { $0.capturedAt >= now.addingTimeInterval(-7 * 86_400) }
-                }
-                if !recent.isEmpty {
-                    // Capped at 16 candidates, the same convention
-                    // `StatusAsk.sample`'s own rotation already keeps so a
-                    // rich pool still fits the on-device context window.
-                    let capped = Array(recent.prefix(16))
-                    lastAnswerHits = capped
-                    if let prose = await streamSynthesis(query, over: candidates(capped),
-                                                         onProseDoc: onProseDoc) {
-                        // The prose, with its receipts — the things the
-                        // publisher/source synthesis was drawn from (§175).
-                        return appendingGrounding(capped, title: "Drawn from", to: proseDoc(prose))
-                    }
-                }
-            }
-            lastAnswerHits = []
-            if let result = await KeptAskComposers.compose(target.keptKind, things: allThings(),
-                                                          context: modelContext) {
-                return result.doc
+        if let doc = await answerNamedAsk(query, things: allThings(), onProseDoc: onProseDoc) {
+            return doc
+        }
+        // Follow-up ellipsis (2026-07-22, §176): after a per-source/publisher
+        // answer, a bare "and bbc?" / "what about calendar" re-runs the SAME
+        // shape (recap vs. synthesize) with the new entity — the natural
+        // conversational follow-up. Fires ONLY when the last answer was itself
+        // a named ask (`priorNamedSynth` non-nil, captured at the top before
+        // this call reset it) AND the residual names a real entity — so it
+        // never hijacks an ordinary short query.
+        if let synth = priorNamedSynth, let entity = ellipsisEntity(query) {
+            let rebuilt = (synth ? "synthesize " : "what happened in ") + entity
+            if let doc = await answerNamedAsk(rebuilt, things: allThings(), onProseDoc: onProseDoc) {
+                return doc
             }
         }
         // A status ask ("tell me what's going on") names no content to score,
@@ -1499,6 +1509,87 @@ struct RootShell: View {
             // tappable receipts (§175).
             return appendingGrounding(hits, title: "Drawn from", to: proseDoc(prose))
         }
+    }
+
+    /// A named source/publisher/person ask ("synthesize my Verge feed", "what
+    /// happened in BBC", "what did Sam send", the existing "what's new in
+    /// Calendar"/"how's my GitHub") — recognized via the SAME
+    /// `KeptAskComposers.namedAskTarget` the kept-pill minting uses
+    /// (Composer.recognizeKeptAskKind), so a fresh ask and its kept re-run can
+    /// never disagree about which real entity it named. Returns nil when the
+    /// query names no real entity, so the caller falls through.
+    ///
+    /// "synthesize"/"summarize"/"recap" asks for the model's OWN prose over the
+    /// same pool the deterministic recap would show — a LIVE-only upgrade
+    /// (ruling 13: a kept pill never re-synthesizes, it always re-runs the
+    /// plain recap regardless of the minting verb). Honest degradation
+    /// throughout: no model, a declined synthesis, or an empty window all fall
+    /// to the exact deterministic doc a kept pill would show. Extracted
+    /// (2026-07-22, §176) so the ellipsis follow-up can call it with a rebuilt
+    /// query. Records `lastNamedAskSynth` so the NEXT query's "and X?" ellipsis
+    /// knows this chain's shape.
+    private func answerNamedAsk(_ query: String, things all: [Thing],
+                                onProseDoc: @escaping ([String]) -> Void) async -> [String]? {
+        guard let (target, wantsSynthesis) = KeptAskComposers.namedAskTarget(query, things: all)
+        else { return nil }
+        // Records the shape only when it ACTUALLY answers, so the next query's
+        // ellipsis reflects what the person saw — a recognized-but-empty named
+        // ask that falls through to another path shouldn't arm "and X?".
+        func answered(_ doc: [String]) -> [String] { lastNamedAskSynth = wantsSynthesis; return doc }
+        if wantsSynthesis, OnDeviceModel.isAvailable {
+            let pool = target.pool(in: all)
+            let now = Date.now
+            var recent = pool.filter { $0.capturedAt >= now.addingTimeInterval(-3 * 86_400) }
+            if recent.isEmpty {
+                recent = pool.filter { $0.capturedAt >= now.addingTimeInterval(-7 * 86_400) }
+            }
+            if !recent.isEmpty {
+                let capped = Array(recent.prefix(16))
+                lastAnswerHits = capped
+                if let prose = await streamSynthesis(query, over: candidates(capped),
+                                                     onProseDoc: onProseDoc) {
+                    return answered(appendingGrounding(capped, title: "Drawn from", to: proseDoc(prose)))
+                }
+            }
+        }
+        lastAnswerHits = []
+        guard let doc = await KeptAskComposers.compose(target.keptKind, things: all,
+                                                       context: modelContext)?.doc
+        else { return nil }
+        return answered(doc)
+    }
+
+    /// The entity named by a bare follow-up ("and bbc?", "what about calendar",
+    /// "how about the verge") — the residual after a leading connective, or the
+    /// whole thing when it's just a short name, or nil when the query is a
+    /// full sentence that should answer on its own terms (2026-07-22, §176).
+    /// Deliberately conservative: at most three words and no question word, so
+    /// only a genuine "…and X?" ellipsis qualifies; the caller further gates on
+    /// the residual resolving to a real entity.
+    private func ellipsisEntity(_ query: String) -> String? {
+        // Normalize the curly apostrophe the same way `WalletAsk.matches` and
+        // the rest of the ask parsers do, so a contracted "what's" is caught
+        // by the query-word guard below rather than slipping through as an
+        // entity string (review, 2026-07-22).
+        var q = query.lowercased()
+            .replacingOccurrences(of: "\u{2019}", with: "'")
+            .trimmingCharacters(in: CharacterSet(charactersIn: "? "))
+            .trimmingCharacters(in: .whitespaces)
+        for lead in ["and how about ", "what about ", "how about ", "and ", "also "] where q.hasPrefix(lead) {
+            q = String(q.dropFirst(lead.count)); break
+        }
+        q = q.trimmingCharacters(in: .whitespaces)
+        guard !q.isEmpty, q.split(separator: " ").count <= 3 else { return nil }
+        // A residual that starts with a question/command word is a real query,
+        // not an entity — don't rewrite it. Both bare and contracted forms,
+        // matching the file's normalization convention.
+        let firstWord = q.split(separator: " ").first.map(String.init) ?? q
+        let queryWords: Set<String> = ["what", "what's", "whats", "how", "how's", "hows",
+                                       "who", "who's", "whos", "when", "where", "why",
+                                       "show", "find", "synthesize", "summarize", "recap",
+                                       "is", "are", "do", "did", "my"]
+        guard !queryWords.contains(firstWord) else { return nil }
+        return q
     }
 
     /// The BYO-key retry (prd §67) — the same question over the SAME evidence

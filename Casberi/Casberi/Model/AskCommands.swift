@@ -69,16 +69,34 @@ enum AggregateAsk {
         return nil
     }
 
+    /// The name of the period BEFORE a given timeframe, for the comparative —
+    /// only the timeframes with a clean, nameable predecessor (2026-07-22).
+    /// "yesterday"/"on Monday" have none worth naming (yesterday-vs-the-day-
+    /// before is noise), so they return nil and skip the clause.
+    private static func priorPeriodLabel(_ rangeWords: String?) -> String? {
+        switch rangeWords {
+        case "this week":        return "last week"
+        case "this month":       return "last month"
+        case "today":            return "yesterday"
+        case "over the weekend": return "the weekend before"
+        default:                 return nil
+        }
+    }
+
     /// The one-line answer, computed. Returns nil only if the intent's
     /// filters name nothing that exists (a source typo, say) — the ask then
     /// falls through to the normal answer path.
     static func answer(_ intent: Intent, things: [Thing]) -> String {
         switch intent {
         case .count(let kind, let source, let range, let rangeWords):
-            var pool = things
-            if let kind { pool = pool.filter { $0.kind == kind } }
-            if let source { pool = pool.filter { $0.source == source } }
-            if let range { pool = pool.filter { range.contains($0.capturedAt) } }
+            func filtered(_ base: [Thing], _ r: ClosedRange<Date>?) -> [Thing] {
+                var pool = base
+                if let kind { pool = pool.filter { $0.kind == kind } }
+                if let source { pool = pool.filter { $0.source == source } }
+                if let r { pool = pool.filter { r.contains($0.capturedAt) } }
+                return pool
+            }
+            let pool = filtered(things, range)
             let noun: String
             if let kind {
                 noun = pool.count == 1 ? kind.typeTag.lowercased()
@@ -89,6 +107,34 @@ enum AggregateAsk {
                 noun = pool.count == 1 ? "thing" : "things"
             }
             let when = rangeWords.map { " \($0)" } ?? ""
+            // A COMPARATIVE (2026-07-22, §177) — the same count over the period
+            // BEFORE, when the timeframe is one with a nameable predecessor
+            // ("this week" → "last week"). "23 links this week — 9 more than
+            // last week" reads as intelligence and is pure arithmetic. Only a
+            // real, non-zero delta earns the clause (a change that rounds to
+            // nothing has nothing to say, §83); a period with no clean
+            // predecessor (a bare weekday) simply omits it.
+            if let range, let priorLabel = priorPeriodLabel(rangeWords) {
+                // The prior window is normally the same-length span immediately
+                // before (yesterday, last week, last month all fall out of
+                // −duration). The WEEKEND is the exception: a 2-day span
+                // shifted back by its own 2 days lands on Thu–Sat, not last
+                // weekend — so it shifts back a full 7 days, keeping the same
+                // Sat–Sun shape (caught in review, 2026-07-22).
+                let dur = range.upperBound.timeIntervalSince(range.lowerBound)
+                let prior: ClosedRange<Date>
+                if rangeWords == "over the weekend" {
+                    let week: TimeInterval = 7 * 86_400
+                    prior = range.lowerBound.addingTimeInterval(-week)...range.upperBound.addingTimeInterval(-week)
+                } else {
+                    prior = range.lowerBound.addingTimeInterval(-dur)...range.lowerBound
+                }
+                let delta = pool.count - filtered(things, prior).count
+                if delta != 0 {
+                    let dir = delta > 0 ? "more" : "fewer"
+                    return "\(pool.count) \(noun)\(when) — \(abs(delta)) \(dir) than \(priorLabel)."
+                }
+            }
             return "\(pool.count) \(noun)\(when)."
 
         case .topSource(let range, let rangeWords):
