@@ -267,11 +267,18 @@ enum WalletWatch {
         for d in delegations {
             let chain = WalletIngest.displayName(forNetwork: d.network) ?? d.network
             let label = wallet.label(forAddress: d.address) ?? WalletStore.shortAddress(d.address)
+            // The target itself is the fact worth a heads-up — a row that only
+            // says "you delegate on Ethereum" makes the person open Revoke.cash
+            // to find out to WHOM (user, 2026-07-24: "do we know what was
+            // delegated, if so we should show it"). We already resolve it for
+            // `subtitle`; the title states the whole fact now, same grammar the
+            // Safe row already uses ("N signatures needed on <label>'s Safe").
+            let target = WalletIngest.knownLabel(for: d.delegate)
+                ?? WalletStore.shortAddress(d.delegate)
             out.append(WalletWarning(id: "delegation:\(d.network):\(d.address)", severity: .notice,
                                      kind: .delegation,
-                                     title: String(localized: "\(label) delegates on \(chain)"),
-                                     subtitle: WalletIngest.knownLabel(for: d.delegate)
-                                         ?? WalletStore.shortAddress(d.delegate),
+                                     title: String(localized: "\(label) delegates to \(target) on \(chain)"),
+                                     subtitle: target,
                                      address: owner[d.address.lowercased()] ?? d.address))
         }
         return out.sorted { $0.severity == .critical && $1.severity != .critical }
