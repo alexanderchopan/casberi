@@ -168,6 +168,8 @@ struct NameAddressSheet: View {
                 }
             }
         }
+        .presentationBackground(DS.surfaceSheet)
+        .dsColorScheme()
     }
 
     private var canSaveOne: Bool {
@@ -320,6 +322,8 @@ struct AddressCard: View {
             }
             .task { await AddressKind.detect(entry.address) }
         }
+        .presentationBackground(DS.surfaceSheet)
+        .dsColorScheme()
     }
 
     /// A wallet is a who and owns a hue; a contract or a Safe is machinery and

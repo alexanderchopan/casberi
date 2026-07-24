@@ -90,6 +90,8 @@ struct CombinedWalletsSheet: View {
                 }
             }
         }
+        .presentationBackground(DS.surfaceSheet)
+        .dsColorScheme()
     }
 
     /// "+$310" / "−$4" — signed compact USD for a token's move.

@@ -799,9 +799,17 @@ struct WalletWorthALookTray: View {
             // here keeps the frame constant across the push; the thing
             // sheet already scrolls its own content, so it isn't cramped
             // by inheriting the list's height instead of its usual near-
-            // full-screen default.
+            // full-screen default. Same loss hits `presentationBackground`/
+            // `colorScheme` (2026-07-24, user: "the wallet worth a look
+            // details tray is not ink colored") — `ThingSheetView` already
+            // declares its own `Color.black` + `.dark` internally, but that
+            // stops taking effect once pushed past DSTray's own declared
+            // preferences too, so it's pinned again here, right beside the
+            // detents fix.
             ThingSheetView(thing: thing, onBack: { path.removeLast() })
                 .presentationDetents([.height(trayHeight)])
+                .presentationBackground(Color.black)
+                .colorScheme(.dark)
         }
         }
     }
