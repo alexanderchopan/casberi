@@ -3595,6 +3595,8 @@ private struct GenMoversTile: View {
                                 .dsText(.callout15).fontWeight(.semibold)
                                 .foregroundStyle(ink(m.value))
                                 .monospacedDigit()
+                                .lineLimit(1)
+                                .fixedSize(horizontal: true, vertical: false)
                         }
                     }
                 }
