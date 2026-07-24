@@ -917,67 +917,100 @@ struct AppsScreen: View {
         }
     }
 
-    /// One category's card — a horizontal label, then every app in that
-    /// category as an icon+name tile, two across. Nothing pages, nothing
-    /// scrolls sideways: nothing hides.
-    private func categoryCard(_ name: String, apps: [Ranked]) -> some View {
-        VStack(alignment: .leading, spacing: DS.Space.s3) {
-            Text(LocalizedStringKey(name))
-                .dsText(.label12).fontWeight(.bold).foregroundStyle(DS.textTertiary)
-                .landFlash(shelfLand[name] ?? 0)
-                .landFlash(shelfComplete[name] ?? 0, tint: categoryColor(name))
-            LazyVGrid(columns: [GridItem(.flexible(), spacing: DS.Space.s2),
-                                GridItem(.flexible(), spacing: DS.Space.s2)],
-                      spacing: DS.Space.s3) {
-                ForEach(Array(apps.enumerated()), id: \.element.id) { i, entry in
-                    appTile(entry).modifier(StockEntrance(index: i))
-                }
+    /// A section of the wall: one full-width band, or two small categories
+    /// paired onto a single 4-wide row (prd §201).
+    private enum WallBand: Identifiable {
+        case full(String, [Ranked])
+        case paired(String, [Ranked], String, [Ranked])
+        var id: String {
+            switch self {
+            case .full(let n, _): "full:" + n
+            case .paired(let a, _, let b, _): "pair:" + a + "+" + b
             }
         }
-        .padding(DS.Space.s3)
-        .background(DS.surfaceSheet, in: RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
-        .id("card-" + name)
     }
 
-    /// Every category, packed into two TRUE masonry columns (prd §200, user:
-    /// "don't leave any empty spaces"). A plain two-column `LazyVGrid` of
-    /// cards pairs card N with card N+1 in the SAME row and sizes that row to
-    /// its taller member — exactly the gap the user rejected once already
-    /// (found live in the HTML mock, then again here). CSS `columns: 2` was
-    /// tried and rejected too: it auto-BALANCES by estimated height, which
-    /// silently reorders content out of the ruled category sequence.
-    ///
-    /// This instead assigns each category — in the catalog's own fixed order,
-    /// never reshuffled — to whichever column is currently SHORTER, tracking
-    /// height as a plain row-count estimate (1 label row + ⌈apps/2⌉ tile
-    /// rows). Deterministic: the same catalog state always packs the same
-    /// way, so there's no render-to-render surprise the CSS version had.
-    private var catalogWall: some View {
+    /// The catalog's categories walked into bands (prd §201, mockup B). A
+    /// category of two apps or fewer would waste most of a 4-wide row alone,
+    /// so a SMALL category pairs with the next small one — each keeping its
+    /// own label, a gap between (the user's "next to each other, not as one
+    /// category" rule, turned horizontal). Everything larger is a full-width
+    /// band, 4 across, its last row left-aligned. A lone small with no partner
+    /// falls back to a full band (2 tiles, trailing space) rather than
+    /// stretching — honest, and rare given the ruled order pairs Social+Mail.
+    private var wallBands: [WallBand] {
         let sections = Self.categories.compactMap { cat -> (String, [Ranked])? in
             let apps = ranked.filter { category(of: $0.offer) == cat.name }
             return apps.isEmpty ? nil : (cat.name, apps)
         }
-        var columns: ([(String, [Ranked])], [(String, [Ranked])]) = ([], [])
-        var heights: (Int, Int) = (0, 0)
+        var bands: [WallBand] = []
+        var pending: (String, [Ranked])?
         for section in sections {
-            let rows = 1 + (section.1.count + 1) / 2
-            if heights.0 <= heights.1 {
-                columns.0.append(section); heights.0 += rows
+            if section.1.count <= 2 {
+                if let p = pending {
+                    bands.append(.paired(p.0, p.1, section.0, section.1))
+                    pending = nil
+                } else {
+                    pending = section
+                }
             } else {
-                columns.1.append(section); heights.1 += rows
+                if let p = pending { bands.append(.full(p.0, p.1)); pending = nil }
+                bands.append(.full(section.0, section.1))
             }
         }
-        return HStack(alignment: .top, spacing: DS.Space.s3) {
-            VStack(spacing: DS.Space.s3) {
-                ForEach(columns.0, id: \.0) { categoryCard($0.0, apps: $0.1) }
-            }
-            VStack(spacing: DS.Space.s3) {
-                ForEach(columns.1, id: \.0) { categoryCard($0.0, apps: $0.1) }
+        if let p = pending { bands.append(.full(p.0, p.1)) }
+        return bands
+    }
+
+    private var catalogWall: some View {
+        VStack(spacing: DS.Space.s3) {
+            ForEach(wallBands) { band in
+                switch band {
+                case .full(let name, let apps):
+                    bandCard { categoryColumn(name, apps: apps, columns: 4) }
+                case .paired(let n1, let a1, let n2, let a2):
+                    bandCard {
+                        HStack(alignment: .top, spacing: DS.Space.s3) {
+                            categoryColumn(n1, apps: a1, columns: 2)
+                            categoryColumn(n2, apps: a2, columns: 2)
+                        }
+                    }
+                }
             }
         }
         // A connect moves its row to the strip — the wall closes the gap
         // smoothly instead of snapping.
         .animation(DS.Motion.standard, value: store.bridges.count)
+    }
+
+    /// The band's rounded card shell — one shape whether it holds one category
+    /// or a pair, so the wall reads as one rhythm of bands.
+    private func bandCard<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
+        content()
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(DS.Space.s3)
+            .background(DS.surfaceSheet, in: RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
+    }
+
+    /// One category inside a band — its label, then its apps in `columns`-wide
+    /// tiles (4 for a full band, 2 for a paired half). Carries its own scroll
+    /// anchor so a jump chip lands on it even when it shares a band.
+    private func categoryColumn(_ name: String, apps: [Ranked], columns: Int) -> some View {
+        VStack(alignment: .leading, spacing: DS.Space.s3) {
+            Text(LocalizedStringKey(name))
+                .dsText(.label12).fontWeight(.bold).foregroundStyle(DS.textTertiary)
+                .landFlash(shelfLand[name] ?? 0)
+                .landFlash(shelfComplete[name] ?? 0, tint: categoryColor(name))
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: DS.Space.s2),
+                                     count: columns),
+                      alignment: .leading, spacing: DS.Space.s3) {
+                ForEach(Array(apps.enumerated()), id: \.element.id) { i, entry in
+                    appTile(entry).modifier(StockEntrance(index: i))
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .id("card-" + name)
     }
 
     /// One app on the wall — icon, name underneath, home-screen style. The
@@ -1013,7 +1046,13 @@ struct AppsScreen: View {
                     .dsText(.label12).fontWeight(.medium)
                     .foregroundStyle(soon ? DS.textSecondary : DS.textPrimary)
                     .multilineTextAlignment(.center)
+                    // Names NEVER truncate (user ruling, prd §201). A
+                    // multi-word name wraps to two lines; a long single word
+                    // ("GeckoTerminal") that can't wrap shrinks to fit its
+                    // tile instead of clipping — `minimumScaleFactor` is what
+                    // makes "no truncation" true at four-per-row.
                     .lineLimit(2)
+                    .minimumScaleFactor(0.7)
                     .frame(height: 28, alignment: .top)
             }
             .frame(maxWidth: .infinity)

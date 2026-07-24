@@ -301,28 +301,25 @@ enum BridgeCatalog {
     // SAME mapping the catalog page shows — the whole point of this being
     // the ruled single source of truth.
     static let categories: [(name: String, exemplar: String, groups: Set<String>)] = [
-        // The finance pair LEADS the catalog (user ruling 2026-07-17): the
-        // "Onchain" category is dissolved — Markets is the front door, gathering
-        // the watch-a-market bridges (Tokens, OpenSea, GeckoTerminal join
-        // Kalshi, Stocktwits, Peer); Wallet stands on its own right behind it.
-        ("Markets", "Kalshi",      ["Markets", "NFTs"]),
+        // Order set by the user for the paired-band wall (ruling 2026-07-23):
+        // Wallet, Markets, then Social + Mail (which pair onto one 4-wide band,
+        // being ≤2 apps each), Agents, Media, then the rest. Wallet leads now,
+        // not Markets.
         ("Wallet",  "Wallet",      ["Wallet"]),
-        // Social/Agents/Media promoted ahead of Life/Notes/Work (user ruling
-        // 2026-07-23, the catalog-wall pass) — the people-and-agent bridges
-        // are the more differentiated hooks; the utility categories settle
-        // toward the bottom.
+        ("Markets", "Kalshi",      ["Markets", "NFTs"]),
         ("Social",  "Bluesky",     ["Network"]),
+        ("Mail",    "Gmail",       ["Mail"]),
         ("Agents",  "Claude",      ["Agent"]),
         ("Media",   "Spotify",     ["Watching", "Listening", "Games", "Images"]),
-        // "People" (Contacts) joins Life explicitly (2026-07-20) — it always
-        // landed here via the fallback below, this just says so honestly.
-        ("Life",    "Photos",      ["Photos", "Schedule", "Fitness", "People"]),
-        ("Mail",    "Gmail",       ["Mail"]),
+        // Life absorbs Home (user ruling 2026-07-23): HomeKit was the lone app
+        // in its own category, and a one-app band wastes a whole 4-wide row —
+        // "one option would be we could put HomeKit in Life." "People"
+        // (Contacts) already lives here (2026-07-20).
+        ("Life",    "Photos",      ["Photos", "Schedule", "Fitness", "People", "Home"]),
         ("Reading", "Readwise",    ["Reading", "Saves"]),
         ("Shopping", "Shopify",    ["Shopping"]),
         ("Notes",   "Apple Notes", ["Notes"]),
         ("Work",    "GitHub",      ["Work"]),
-        ("Home",    "HomeKit",     ["Home"]),
     ]
 
     static func category(of offer: Offer) -> String {

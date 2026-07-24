@@ -7881,3 +7881,48 @@ top with live filtering, the Discover deck paging (2 of 4), jump chips
 (Markets/Wallet/Social/Agents…), and the two-column wall rendering real icons
 and names — Markets | Wallet in row one exactly as ruled, Wallet correctly
 wearing its live green connected dot. Build green.
+
+## 201. The catalog wall goes horizontal — paired bands, four across, full names (user: "it would be more natural for users if the groups were horizontal instead of vertical... we can't truncate app names... three mockups... four apps per row", then "for sure lets do B", "lets make the order be Wallet, Markets, Social / mail, Agents, Media, and then the rest", 2026-07-23)
+
+§200 stood the catalog up as a two-column vertical masonry of category cards.
+That fixed "see it all at once" but introduced two problems the user caught:
+tile names TRUNCATED at the narrow two-up width ("GeckoTermir"), and the
+masonry left ragged column gaps. Turned it horizontal: full-width category
+bands, four apps per row. Mocked three shapes (A even bands / B paired bands /
+C flat sectioned grid); the user picked B.
+
+**Paired bands** (`WallBand` + `wallBands`): a category of two apps or fewer
+would waste most of a four-wide row alone, so a small category pairs with the
+next small one — each keeping its own label and a gap between (the "next to
+each other, not as one category" rule, §200's own, turned horizontal). Under
+the ruled order that pairs **Social + Mail** onto one row. Everything larger is
+a full-width band, four across, last row left-aligned.
+
+**Order, set by the user:** Wallet, Markets, Social/Mail, Agents, Media, then
+Life, Reading, Shopping, Notes, Work. Wallet leads now, not Markets. Changed in
+`BridgeCatalog.categories` (the single source of truth the agent's `category:`
+kept-ask kind also reads).
+
+**HomeKit → Life** (user's own suggestion): a one-app Home category wasted a
+whole four-wide row, so "Home" folds into Life's group set. Life absorbs it
+cleanly; the standalone Home category is gone.
+
+**No truncation, made true** (`appTile`): a multi-word name wraps to two lines;
+a long single word that can't wrap ("GeckoTerminal") SHRINKS to fit via
+`minimumScaleFactor(0.7)` rather than clipping. "0xBow Privacy Pools", "Open
+Food Facts", "Cal.com" all render whole at four-per-row.
+
+**Where gap-chasing was deliberately STOPPED** (user: "is it possible to put
+Work and Shopping in the same card... or do you think trying to do all that is
+bad"). It's possible — Shopping (5) + Work (3) = 8 = two clean rows, saving one
+row. But filling that gap requires the two categories to SHARE a row (Open Food
+Facts beside GitHub/Linear/Notion), which bleeds the grouping and orphans the
+"Work" label mid-card — the exact App-Store clutter the wall exists to escape.
+Ruled against: the small trailing gaps read as breathing room, and clean
+per-category grouping is what keeps the wall scannable. The paired-band rule
+stays "both categories ≤2 apps," never a mid-row interleave.
+
+VERIFIED 2026-07-23 (iPhone 17 Pro sim): Wallet band leads four-across; jump
+chips read Wallet/Markets/Social/Mail; Social+Mail render paired on one row;
+Agents (incl. the new OpenRouter seat), Media, Life (with HomeKit), then
+Reading/Shopping/Notes/Work — every long name whole, no clip. Build green.
