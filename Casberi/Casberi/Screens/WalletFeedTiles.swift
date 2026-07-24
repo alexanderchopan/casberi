@@ -790,6 +790,19 @@ struct WalletWorthALookTray: View {
                 }
                 .frame(maxHeight: .infinity, alignment: .top)
         }
+        // Pure ink, matching the detail sheet it pushes to (2026-07-24,
+        // user: "worth a look screen is not same color as the thing sheet
+        // and needs to be"). DSTray declares `presentationBackground(
+        // DS.surfaceSheet)` (#111113 — the navy-gray the tray was showing)
+        // and follows the app theme, so in dark it read a shade off the
+        // detail's black and in light it would have been white beside the
+        // detail's black. A PAINTED background + forced `.dark` is the same
+        // "always covers, wins the preference race" treatment `ThingSheetView`
+        // uses internally — the two surfaces now read as one ink sheet across
+        // the push, in either mode.
+        .background(Color.black.ignoresSafeArea())
+        .presentationBackground(Color.black)
+        .colorScheme(.dark)
         .navigationDestination(for: Thing.self) { thing in
             // `.presentationDetents` is a preference DSTray declares on
             // itself, which stops applying once the stack pushes past it —
