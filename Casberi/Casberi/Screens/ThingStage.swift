@@ -84,15 +84,14 @@ struct TransferStage {
     }
 }
 
-/// The stage rendered: parties → amount → chain. Faces are doors — the
-/// counterparty's opens the naming flow when its hex was captured.
+/// The stage rendered: parties → amount → chain. The faces are pure
+/// identity — naming the counterparty lives on the dial's Name disc (always)
+/// and the "Name this address?" nudge card (while it's showing), so the face
+/// no longer carries its own pencil (2026-07-23, user: three doors to one
+/// action; the pencil was the barely-visible, redundant third).
 struct TransferStageView: View {
     let thing: Thing
     let stage: TransferStage
-    /// Present only when the counterparty is nameable (hex captured) — the
-    /// face is then a button; without it the face is just a face (no dead
-    /// controls).
-    var onNameCounterparty: (() -> Void)?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -140,6 +139,18 @@ struct TransferStageView: View {
                 .foregroundStyle(stage.direction == .received ? DS.confirm : DS.textPrimary)
             Text(verbatim: stage.amount)
                 .foregroundStyle(DS.textPrimary)
+                // Clamp to one line (2026-07-23): a spoofed token's "name" is
+                // attacker-controlled text ("4,672 USDT Staked • gitos.org" —
+                // a phishing domain), and rendering it at 34pt across two
+                // wrapped lines amplified exactly the lie the warning below is
+                // calling out. The real amount reads at the front; the full
+                // (untrusted) spelling still lives in Copy and the warning
+                // line, so nothing is hidden — it just never gets the hero
+                // seat. minimumScaleFactor keeps a long-but-honest amount
+                // ("1,240.5000 USDC") legible before it truncates.
+                .lineLimit(1)
+                .minimumScaleFactor(0.6)
+                .truncationMode(.tail)
         }
         .dsText(.heading34)
         .monospacedDigit()
@@ -165,34 +176,12 @@ struct TransferStageView: View {
         .frame(maxWidth: 120)
     }
 
-    /// The counterparty column — a button when nameable (the pencil says so),
-    /// plain otherwise.
-    @ViewBuilder private var counterpartyParty: some View {
-        let label = counterpartyLabel
-        if let onNameCounterparty {
-            Button(action: onNameCounterparty) {
-                VStack(spacing: DS.Space.s2) {
-                    counterpartyFace
-                    HStack(spacing: DS.Space.s1) {
-                        Text(verbatim: label)
-                            .dsText(.label12)
-                            .foregroundStyle(.white.opacity(0.95))
-                            .lineLimit(1)
-                        Image(systemName: "square.and.pencil")
-                            .accessibilityHidden(true)
-                            .font(.system(size: 10))
-                            .foregroundStyle(.white.opacity(0.5))
-                    }
-                }
-                .frame(maxWidth: 120)
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            // The pencil is the only hint that this column is a control.
-            .accessibilityLabel(Text("Name this address, currently \(label)"))
-        } else {
-            party(face: counterpartyFace, label: label)
-        }
+    /// The counterparty column — pure identity now (2026-07-23). Naming moved
+    /// entirely to the dial's Name disc + the nudge card; the face is just a
+    /// face, so it matches the wallet's own column and no longer offers a
+    /// third, redundant door to the same flow.
+    private var counterpartyParty: some View {
+        party(face: counterpartyFace, label: counterpartyLabel)
     }
 
     /// Your name for the address wins, then the title's clause, then short hex.
@@ -255,12 +244,18 @@ struct TransferStageView: View {
     /// name reads fine as a label; a raw hex shortens the same way the
     /// counterparty side already does) — an honest identity, never an
     /// assumed one.
+    ///
+    /// Matches through `scopeMatches` (2026-07-23), the SAME hex↔name
+    /// equality the scoped feed uses — a thing stamps the RESOLVED hex, but
+    /// a wallet is watched by whatever spelling it was added under, so a
+    /// plain `address == a` compare missed every ENS-watched wallet and fell
+    /// straight to short-hex (why vitalik.eth read as "0xd8dA…6045").
     private var youLabel: String {
-        guard let a = thing.walletAddress?.lowercased(),
-              let watched = WalletStore.shared.addresses.first(where: {
-                  $0.address.lowercased() == a
-              })
-        else { return WalletStore.shortAddress(thing.walletAddress ?? "") }
+        let stored = thing.walletAddress ?? ""
+        let watched = WalletStore.shared.addresses.first {
+            WalletStore.shared.scopeMatches(stored, scope: $0.address)
+        }
+        guard let watched else { return WalletStore.shortAddress(stored) }
         if !watched.label.isEmpty { return watched.label }
         return ENS.isHexAddress(watched.address)
             ? WalletStore.shortAddress(watched.address) : watched.address

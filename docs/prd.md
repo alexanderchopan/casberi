@@ -7646,3 +7646,77 @@ confirmed its real on-chain detail (`−0.0100 ETH`, `You → 0x6ff9…a434`) �
 answering in passing why it says "Sent" not "Received": `flagSpoofedSymbol`
 is deliberately called on outgoing transfers too, since a scam contract can
 emit a fake event naming your wallet as sender. Build green throughout.
+
+## 197. The Worth-a-look tray and its detail sheet, de-vibe-coded (user: "this still looks like crap tho, vibe coded" / "channel cashapp" / "you can do better on these" / "nothing is happening when i click the chips", 2026-07-23) — VERIFIED
+
+Eight fixes across the tray, its jump chips, and the flagged-transfer
+detail sheet, after the §196 rebuild still read as unfinished.
+
+**The tray rows were twelve copies of one sentence.** Every flagged-transfer
+row repeated "Looks like a copy of ETH — this is a different token," half of
+them truncating mid-word — the single loudest "vibe coded" tell. Rows are
+ONE LINE now, carrying only what DIFFERS between them (the amount, wearing
+the confusable symbol as its own tell), no leading glyph (the section header
+carries the one glyph for the whole kind, so the mark stops stamping twelve
+times), no repeated subtitle. The shared "why" moved once to a per-type
+EXPLAINER line under each section header ("Someone sent these on purpose —
+don't trust the token or address"), the idea lifted from the round-two
+mockup's direction D. `WalletWatch.breakdown` already had the shared tally;
+the count rides the header, not the rows.
+
+**The chips did nothing** (user: "nothing is happening when i click them").
+`ScrollViewReader.scrollTo` silently no-oped on device — the chip lit its
+own tap state and the list never moved. Replaced with the ScrollView's
+`scrollPosition(id:)` binding + `scrollTargetLayout()`, the API `AppsScreen`'s
+category rail already ships — which is honest in BOTH directions for free:
+tap a chip to scroll, or scroll by hand and the right chip lights up. The
+`NavigationStack`'s nested `ScrollViewReader` is gone with it.
+
+**The chips looked generic** (user: "channel Cash App"). Chip anatomy is now
+a severity dot (the same destructive/attention hue the section's header glyph
+wears) + bold word + muted count, in a chunky capsule — so the rail reads as
+a legend for the list, not a row of plain words.
+
+**The chip GATE was measuring the wrong thing** (already reasoned through with
+the user before this batch): show the bar when the content actually OVERFLOWS
+the sheet AND there's more than one section to jump between — not the old
+`> 3 sections` count, which hid the bar on the exact two-section-but-fifteen-
+row tray that needed it and would have shown it on a tidy four-section tray
+that fits with nothing to scroll. `uncappedHeight > maxTrayHeight`.
+
+**The detail sheet:**
+- **The scam token's name was the 34pt headline.** "− 4,672 USDT Staked •
+  gitos.org" rendered a phishing domain at hero size across two wrapped
+  lines — amplifying the exact lie the warning below was calling out. Clamped
+  to one line with `minimumScaleFactor`; the full (untrusted) spelling stays
+  in Copy and the warning, never the hero seat.
+- **The flag warning was a thin red line under a routine card.** The whole
+  reason you tapped in lost the visual fight to the "Name this address?"
+  prompt sitting right below it. It's a tinted red BANNER now — §160's
+  "one-line flag, not a card" rule was written for the FEED, where it's a
+  heads-up you scroll past; on a flagged transfer's own detail it's the
+  headline, and the banner also fills the dead space the sheet left below
+  the fold.
+- **"You" over a public wallet.** Every watched wallet is read-only, so
+  nothing distinguishes the owner's wallet from a tracked one — the sheet
+  was captioning vitalik.eth "You". Now the wallet's real name (matched
+  hex↔ENS through `scopeMatches`), never an assumed identity. Faces went
+  circular (a wallet is a "who", `AddressBook.Kind`'s own round-vs-square
+  rule) unless the counterparty is a known contract/Safe.
+- **Three doors to one action.** Naming was offered by a barely-visible
+  pencil on the face, the Name dial disc, AND the nudge card, all at once.
+  The pencil's gone; the face is pure identity.
+- **The nudge card was the loudest block on the sheet.** A tertiary prompt
+  wore a heading, a three-line paragraph, and two full-width buttons.
+  Compressed to a title, one sentence, and two compact controls (a small
+  tinted "Name it" capsule + a plain "Not now") — an aside, not a headline.
+- **The dead top zone.** The pushed sheet's back chevron floated ~100pt above
+  the eyebrow in an empty system nav bar; the chevron rides the eyebrow's own
+  line now (`onBack`, set only when pushed) and the bar is hidden, so content
+  starts a full breath higher.
+- **"From: in your wallet"** was a one-row spec table saying nothing the
+  stage's two depicted parties hadn't — dropped on stage layouts (like the
+  Who row already was), and the whole faint card skips rendering when no rows
+  remain.
+
+Build green throughout; standalone-verified in a worktree before commit.

@@ -65,25 +65,31 @@ struct NameAddressPrompt: View {
     let onName: () -> Void
     let onDismiss: () -> Void
 
+    // A NUDGE, not a headline (2026-07-23; user: the screen read as "vibe
+    // coded") — the old card wore a heading, a three-line paragraph, and two
+    // full-width buttons, which made a tertiary prompt the loudest block on
+    // the sheet, louder than the transaction it sat under. One title line,
+    // one short fact, two compact controls — the primary a small tinted
+    // capsule, the decline a plain word — so the card reads as an aside.
     var body: some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
             Text("Name this address?")
-                .dsText(.heading17).foregroundStyle(DS.textPrimary)
+                .dsText(.body17).fontWeight(.semibold)
+                .foregroundStyle(DS.textPrimary)
             Text(reason)
                 .dsText(.subhead13).foregroundStyle(DS.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
-            HStack(spacing: DS.Space.s2) {
+            HStack(spacing: DS.Space.s4) {
                 Button {
                     DSHaptic.tap()
                     onName()
                 } label: {
                     Text("Name it")
-                        .dsText(.callout15).fontWeight(.semibold)
+                        .dsText(.subhead13).fontWeight(.semibold)
                         .foregroundStyle(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, DS.Space.s2)
-                        .background(DS.tint, in: RoundedRectangle(cornerRadius: DS.Radius.card,
-                                                                  style: .continuous))
+                        .padding(.horizontal, DS.Space.s4)
+                        .padding(.vertical, 7)
+                        .background(Capsule().fill(DS.tint))
                 }
                 .buttonStyle(.plain)
                 Button {
@@ -91,14 +97,12 @@ struct NameAddressPrompt: View {
                     onDismiss()
                 } label: {
                     Text("Not now")
-                        .dsText(.callout15).fontWeight(.semibold)
+                        .dsText(.subhead13).fontWeight(.semibold)
                         .foregroundStyle(DS.textSecondary)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, DS.Space.s2)
-                        .background(DS.fillFaint, in: RoundedRectangle(cornerRadius: DS.Radius.card,
-                                                                       style: .continuous))
+                        .padding(.vertical, 7)
                 }
                 .buttonStyle(.plain)
+                Spacer(minLength: 0)
             }
             .padding(.top, DS.Space.s1)
         }
@@ -106,15 +110,15 @@ struct NameAddressPrompt: View {
         .dsWidgetSurface(fillOpacity: WalletCardStyle.fill)
     }
 
-    /// The fact that earns the prompt. Says what the address IS when the chain
-    /// already told us — a contract you've used twice is a different sentence
-    /// from a person you've paid twice.
+    /// The fact that earns the prompt — one sentence now; what a name does
+    /// ("retitles its transactions") is the half worth saying, and the
+    /// address-book mechanics ride along without being narrated.
     private var reason: String {
         let what = kind.label?.lowercased() ?? String(localized: "address")
         // "A contract" / "A safe" read fine; only the "address" default
         // needs the vowel-sound article ("A address" — caught 2026-07-23).
         let article = what.first.map { "aeiou".contains($0) } == true
-            ? String(localized: "An") : String(localized: "A")
-        return String(localized: "\(article) \(what) you've now dealt with \(count) times. A name here retitles every transaction with it — past and future — and adds it to your address book.")
+            ? String(localized: "an") : String(localized: "a")
+        return String(localized: "You've dealt with this \(what) \(count) times — \(article) name retitles all its transactions.")
     }
 }

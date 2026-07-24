@@ -14,6 +14,16 @@ import Translation
 /// Related streams last. Spacing does the separating — no hairlines.
 struct ThingSheetView: View {
     @Bindable var thing: Thing
+    /// Set only when this sheet is PUSHED inside another sheet's own
+    /// NavigationStack (2026-07-23) — the Worth-a-look tray's flagged rows,
+    /// so far. A plain `.sheet(item:)` presentation (every other call site)
+    /// leaves this nil and the sheet looks exactly as it always has: no
+    /// system nav bar reserved above the eyebrow, dismiss is the grabber.
+    /// When set, the system nav bar is hidden and the back chevron rides
+    /// the eyebrow's own line instead of a separate ~44pt bar above it —
+    /// the "dead top zone" a pushed presentation otherwise leaves (2026-07-23,
+    /// user critique of the Worth-a-look detail screen).
+    var onBack: (() -> Void)? = nil
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
@@ -74,8 +84,9 @@ struct ThingSheetView: View {
     /// content over a screen of black. Both detents stay a drag away.
     @State private var detent: PresentationDetent
 
-    init(thing: Thing) {
+    init(thing: Thing, onBack: (() -> Void)? = nil) {
         self.thing = thing
+        self.onBack = onBack
         let hasMedia = thing.kind == .screenshot
             || !(thing.previewImageURL ?? "").isEmpty
             || TokenChart.route(from: thing.content) != nil
@@ -99,7 +110,20 @@ struct ThingSheetView: View {
                 // Sequenced entrance (delight 2026-07-14): the sheet composes
                 // itself over the pouring wash — eyebrow, then title, then
                 // media, then spec — each a beat behind the last, one-shot.
-                eyebrow
+                HStack(spacing: DS.Space.s3) {
+                    if let onBack {
+                        Button(action: onBack) {
+                            Image(systemName: "chevron.left")
+                                .font(.system(size: 13, weight: .semibold))
+                                .foregroundStyle(DS.textPrimary)
+                                .frame(width: 30, height: 30)
+                                .background(Circle().fill(.white.opacity(0.08)))
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel(Text("Back"))
+                    }
+                    eyebrow
+                }
                     .padding(.horizontal, DS.Space.s4)
                     .padding(.top, DS.Space.s6)
                     .settleIn()
@@ -266,6 +290,10 @@ struct ThingSheetView: View {
         .presentationDetents([.medium, .large], selection: $detent)
         .presentationDragIndicator(.visible)
         .presentationCornerRadius(DS.Radius.sheet)
+        // Only when pushed (`onBack` set): the eyebrow carries its own back
+        // chevron now, so the system's default pushed-view nav bar (and the
+        // back button it would ALSO draw) is redundant chrome on top of it.
+        .toolbar(onBack != nil ? .hidden : .automatic, for: .navigationBar)
         .onAppear {
             streamRelated()
             Task { replies = await SocialThread.replies(for: thing) }
@@ -564,54 +592,80 @@ struct ThingSheetView: View {
 
     // MARK: - Spec table (Gallery's graft — labels change per kind)
 
+    /// `showsWho` doubles as "not a stage layout" now (2026-07-23) — a stage
+    /// already depicts both parties 200pt above this table, so "From: in
+    /// your wallet" here was a one-row card saying nothing the stage hadn't
+    /// already shown better. The From row is gated by the same flag the Who
+    /// row already used for the identical reason.
+    @ViewBuilder
     private func specTable(contentShown: Bool, showsWho: Bool = true) -> some View {
-        VStack(alignment: .leading, spacing: DS.Space.s3) {
-            if thing.kind == .event, !thing.content.isEmpty {
-                specRow("When", thing.content)
+        // Built as a bool, not just conditionals inside the VStack, so the
+        // whole card (padding, background) can be skipped when nothing
+        // would render — a stage's typical wallet transfer now has zero
+        // spec rows (From dropped, Who already dropped), and an empty faint
+        // card floating under the stage was worse than no card at all.
+        let hasEvent = thing.kind == .event && !thing.content.isEmpty
+        let hasDue = thing.kind == .reminder && thing.dueAt != nil
+        let hasSite = thing.kind == .link && thing.source != "Tokens"
+            && !(contentShown && ThingContentView.showsLinkPreview(thing))
+            && Capture.detectURL(in: thing.content.isEmpty ? thing.title : thing.content)?.host() != nil
+        let hasEcho = crossSourceEcho != nil
+        let hasAgent = thing.provenance.agent != nil
+        let hasFrom = showsWho
+        let hasCounterparty = showsWho && thing.source == "Wallet"
+            && !(thing.counterpartyAddress ?? "").isEmpty
+        let anyRow = hasEvent || hasDue || hasSite || hasEcho || hasAgent || hasFrom || hasCounterparty
+
+        if anyRow {
+            VStack(alignment: .leading, spacing: DS.Space.s3) {
+                if hasEvent {
+                    specRow("When", thing.content)
+                }
+                if hasDue, let due = thing.dueAt {
+                    specRow("Due", due.formatted(.dateTime.month(.abbreviated).day().hour().minute()))
+                }
+                // Tokens' content URL is plumbing (the chart's technical
+                // dependency, not a site the person browsed to) — the native
+                // TokenChartView above already carries the read; a "Site" row
+                // would just leak that dependency's brand under the "Tokens"
+                // eyebrow (report 2026-07-13). And when the link preview card
+                // is on screen its footer already names the host — repeating
+                // it here read as a stutter (2026-07-13 polish).
+                if hasSite,
+                   let url = Capture.detectURL(in: thing.content.isEmpty ? thing.title : thing.content),
+                   let host = url.host() {
+                    specRow("Site", host.replacingOccurrences(of: "www.", with: ""))
+                }
+                // The same link, already in the corpus from somewhere else —
+                // the app recognizing its own history instead of treating a
+                // re-save as new (CrossSourceEcho, 2026-07-21).
+                if hasEcho, let crossSourceEcho {
+                    specRow("Also", "Saved from \(crossSourceEcho)")
+                }
+                if hasAgent, let agent = thing.provenance.agent {
+                    specRow("By", "\(agent)\(thing.provenance.machine.map { " on \($0)" } ?? "")")
+                }
+                // "From" (2026-07-23): only off a stage layout now — a stage
+                // already depicts both parties, so "in your wallet" here was
+                // the redundant row (user: "one-row table saying nothing").
+                if hasFrom {
+                    specRow("From", PlaceWords.line(for: thing))
+                }
+                // A wallet transfer's counterparty — the other side of the
+                // trade, nameable ("this is Mom"). Only when the hex was
+                // captured (native sends have none) (2026-07-15).
+                if hasCounterparty, let cp = thing.counterpartyAddress {
+                    counterpartyRow(cp)
+                }
             }
-            if thing.kind == .reminder, let due = thing.dueAt {
-                specRow("Due", due.formatted(.dateTime.month(.abbreviated).day().hour().minute()))
-            }
-            // Tokens' content URL is plumbing (the chart's technical
-            // dependency, not a site the person browsed to) — the native
-            // TokenChartView above already carries the read; a "Site" row
-            // would just leak that dependency's brand under the "Tokens"
-            // eyebrow (report 2026-07-13). And when the link preview card is
-            // on screen its footer already names the host — repeating it here
-            // read as a stutter (2026-07-13 polish). Keyed to the content
-            // view's OWN branch fact (a token/Kalshi link renders a chart,
-            // no host footer — the Site row must stay for those).
-            if thing.kind == .link, thing.source != "Tokens",
-               !(contentShown && ThingContentView.showsLinkPreview(thing)),
-               let url = Capture.detectURL(in: thing.content.isEmpty ? thing.title : thing.content),
-               let host = url.host() {
-                specRow("Site", host.replacingOccurrences(of: "www.", with: ""))
-            }
-            // The same link, already in the corpus from somewhere else — the
-            // app recognizing its own history instead of treating a re-save
-            // as new (CrossSourceEcho, 2026-07-21).
-            if let crossSourceEcho {
-                specRow("Also", "Saved from \(crossSourceEcho)")
-            }
-            if let agent = thing.provenance.agent {
-                specRow("By", "\(agent)\(thing.provenance.machine.map { " on \($0)" } ?? "")")
-            }
-            specRow("From", PlaceWords.line(for: thing))
-            // A wallet transfer's counterparty — the other side of the trade,
-            // nameable ("this is Mom"). Only when the hex was captured (native
-            // sends have none) (2026-07-15).
-            if showsWho, thing.source == "Wallet",
-               let cp = thing.counterpartyAddress, !cp.isEmpty {
-                counterpartyRow(cp)
-            }
+            // One quiet card (2026-07-13 polish): the bare rows floated in
+            // the sheet's field; the same faint fill the link preview wears
+            // gathers them into one readable spec block.
+            .padding(DS.Space.s4)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(DS.fillFaint,
+                        in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
         }
-        // One quiet card (2026-07-13 polish): the bare rows floated in the
-        // sheet's field; the same faint fill the link preview wears gathers
-        // them into one readable spec block.
-        .padding(DS.Space.s4)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(DS.fillFaint,
-                    in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
     }
 
     private func specRow(_ label: String, _ value: String) -> some View {
@@ -657,14 +711,17 @@ struct ThingSheetView: View {
 
     // MARK: - The dial's wiring (stage sheets — B1, 2026-07-16)
 
-    /// The transfer's parsed hero, when this thing earns one — the ONE
-    /// decision point the stage layout reads.
-    /// Address-poisoning warning (2026-07-20) — a one-line flag, not a card:
-    /// the transfer already lands honestly, this only says its counterparty
-    /// looks like a copy of one the wallet has actually used.
-    /// Every safety flag on this transfer, one line each — a transfer can wear
-    /// more than one (a lookalike address sending a lookalike token is one
-    /// scam, not two, but each half needs saying).
+    /// The safety flag(s) on this transfer, as a real alert BANNER on the
+    /// detail screen (2026-07-23; user: the screen read as "vibe coded").
+    /// §160's "a one-line flag, not a card" rule was written for the FEED,
+    /// where the warning is a heads-up you scroll past; here it's the whole
+    /// reason you tapped in, and a thin red line under the amount lost that
+    /// fight to a routine "Name this address?" card sitting right below it.
+    /// A tinted red panel with the triangle gives the danger the weight the
+    /// screen's own hierarchy owes it — and fills the dead space the sheet
+    /// used to leave below the fold. A transfer can wear more than one flag
+    /// (a lookalike address sending a lookalike token is one scam, but each
+    /// half needs saying), so each is its own line inside the one banner.
     private var securityWarning: some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
             if thing.hasSecurityFlag("poisoning") {
@@ -679,16 +736,20 @@ struct ThingSheetView: View {
                 warningLine(verdict.sentence)
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(DS.Space.s3)
+        .background(DS.destructive.opacity(0.12),
+                    in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
     }
 
     private func warningLine(_ text: String) -> some View {
         HStack(alignment: .top, spacing: DS.Space.s2) {
             Image(systemName: "exclamationmark.triangle.fill")
                 .accessibilityHidden(true)
-                .font(.system(size: 13))
+                .font(.system(size: 15, weight: .semibold))
                 .foregroundStyle(DS.destructive)
             Text(text)
-                .dsText(.subhead13).foregroundStyle(DS.destructive)
+                .dsText(.callout15).foregroundStyle(DS.destructive)
                 .fixedSize(horizontal: false, vertical: true)
         }
     }
@@ -722,8 +783,7 @@ struct ThingSheetView: View {
     private func stageView(for stage: WalletStageKind) -> some View {
         switch stage {
         case .transfer(let t):
-            TransferStageView(thing: thing, stage: t,
-                              onNameCounterparty: nameCounterpartyAction)
+            TransferStageView(thing: thing, stage: t)
         case .moved(let m):
             MovedStageView(thing: thing, stage: m)
         case .swapped(let s):
