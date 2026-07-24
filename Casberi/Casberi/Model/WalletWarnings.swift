@@ -171,9 +171,22 @@ enum WalletWatch {
         // and a wrong owner is worse than a slow loop over 1–5 wallets.
         var resolved: [String] = []
         var owner: [String: String] = [:]   // resolved (lowercased) → watched spelling
+        // De-duped by the RESOLVED hex, not the watched spelling (2026-07-24,
+        // crash fix): two watched entries that resolve to the same wallet —
+        // an ENS name and its own hex, watched separately — used to run every
+        // downstream read (positions, delegations, approvals) TWICE for the
+        // identical address, producing two `WalletWarning`s with an
+        // identical `id`. SwiftUI traps hard on a `ForEach` seeing a reused
+        // id (confirmed via a field crash log: EXC_BREAKPOINT inside
+        // `ForEachChild.updateValue()`) — the exact "crashes on open, only
+        // once real data exists, never on a fresh install" signature this
+        // was reported with, since a fresh install has no watched wallets to
+        // collide.
+        var seenHex = Set<String>()
         for target in targets {
             guard let hex = await WalletIngest.resolvedAddresses([target])
                 .first(where: { ENS.isHexAddress($0) }) else { continue }
+            guard seenHex.insert(hex.lowercased()).inserted else { continue }
             resolved.append(hex)
             owner[hex.lowercased()] = target
         }
@@ -209,6 +222,14 @@ enum WalletWatch {
         let poisoningCount = inScope.filter { $0.hasSecurityFlag("poisoning") }.count
         let symbolCount = inScope.filter { $0.hasSecurityFlag("symbol") }.count
 
+        // Same belt-and-suspenders as `warnings()`'s own dedup: these two
+        // also feed a `ForEach` (one row per `Thing`) directly, so a
+        // duplicate `id` here traps a view exactly the same way.
+        var seenApprovalIDs = Set<Thing.ID>()
+        let dedupedApprovals = activeApprovals.filter { seenApprovalIDs.insert($0.id).inserted }
+        var seenFlaggedIDs = Set<Thing.ID>()
+        let dedupedFlagged = inScope.filter { seenFlaggedIDs.insert($0.id).inserted }
+
         return WalletLiveState(
             positions: positions,
             morpho: morpho,
@@ -216,10 +237,10 @@ enum WalletWatch {
                                safePending: safePending,
                                delegations: delegations, poisoningCount: poisoningCount,
                                spoofedSymbolCount: symbolCount,
-                               approvalCount: activeApprovals.count,
+                               approvalCount: dedupedApprovals.count,
                                owner: owner),
-            flagged: inScope,
-            activeApprovals: activeApprovals)
+            flagged: dedupedFlagged,
+            activeApprovals: dedupedApprovals)
     }
 
     /// Hex compares case-insensitively (EIP-55 case is a checksum), base58
@@ -317,7 +338,14 @@ enum WalletWatch {
                                      subtitle: target,
                                      address: owner[d.address.lowercased()] ?? d.address))
         }
-        return out.sorted { $0.severity == .critical && $1.severity != .critical }
+        // Belt-and-suspenders against the exact crash the resolved-hex dedup
+        // above targets (2026-07-24): every `ForEach` that renders one row
+        // per warning traps if two ever share an `id`. De-duping here too
+        // means a duplicate from any OTHER path this function doesn't
+        // already guard can't reach a view and crash it.
+        var seenIDs = Set<String>()
+        let deduped = out.filter { seenIDs.insert($0.id).inserted }
+        return deduped.sorted { $0.severity == .critical && $1.severity != .critical }
     }
 
     /// The per-kind tally behind `summary(_:)` and the feed card's badge row
