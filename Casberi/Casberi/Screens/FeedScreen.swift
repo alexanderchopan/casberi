@@ -1980,7 +1980,21 @@ struct FeedScreen: View {
     /// The anatomies that earn a free-standing card — shapedRow's
     /// rhythm-breakers. Everything else (band, check, excerpt, reading,
     /// music) merges into its day's run.
+    ///
+    /// `thing.modelContext == nil` is the crash guard (2026-07-24, live
+    /// TestFlight crash on 125/126, upgrade-only — never a fresh install):
+    /// `bundledSections`' `visible` array is captured once per render, but
+    /// the delete-sync heal passes (Calendar/Reminders/Contacts/HomeKit/
+    /// Bluesky/Farcaster, added §prd 121) run as `Task { @MainActor in }` —
+    /// correctly serialized with the UI, but still able to land BETWEEN this
+    /// render's capture and this closure's evaluation inside the `ForEach`.
+    /// A `Thing` SwiftData deletes gets its `modelContext` niled out first;
+    /// reading that one property is documented-safe on a deleted model, but
+    /// `thing.kind`/`thing.mark` below fault-resolve against the store and
+    /// crashed (`_assertionFailure` inside SwiftData, real device only — a
+    /// fresh install has no synced Calendar/Reminders/etc. yet to delete).
     private func standsAlone(_ thing: Thing) -> Bool {
+        guard thing.modelContext != nil else { return false }
         if thing.kind == .approval && thing.mark != .done { return true }  // consent card
         if shape == .social { return true }                                // PostCard, media at width
         if shape == .chat && thing.mark == .doing { return true }          // TakeawayCard
@@ -2383,15 +2397,17 @@ struct FeedScreen: View {
         }
     }
 
-    /// A wallet-sourced row (an onchain transaction) opens the Wallet screen
-    /// — holdings and activity together — instead of the generic sheet,
-    /// which had nothing more than an explorer link to show (ruling 2026-07-09).
+    /// Every row opens its own thing sheet — including a wallet transaction
+    /// (2026-07-24, user: "when i tap 'received' on a transaction it brings me
+    /// to the wallet management screen... no reason to go there"). The old
+    /// ruling (2026-07-09) sent Wallet rows to the management screen because
+    /// "the generic sheet had nothing more than an explorer link to show" —
+    /// long obsolete: the sheet now leads with the full transfer STAGE (the
+    /// parties, the signed amount, the chain, the flag banner) and its Open
+    /// disc IS that explorer link. Tapping a transaction should show the
+    /// transaction, not the page for managing which wallets you watch.
     private func openThing(_ thing: Thing) {
-        if thing.source == "Wallet" {
-            HomeRoute.shared.pushBridge(.wallet)
-        } else {
-            sheetThing = thing
-        }
+        sheetThing = thing
     }
 
     /// A day group as a native section: the day's rows share ONE sheet card
