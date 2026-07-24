@@ -224,4 +224,25 @@ extension View {
             ThemeStore.shared.isLight && ThemeStore.shared.backgroundPhoto == nil ? .light : .dark
         )
     }
+
+    /// Pure ink: black in both app themes, forced dark — the stronger
+    /// override for a "detail" surface (`ThingSheetView`, `TokenQuickSheet`,
+    /// `SocialPostSheet`, `SocialProfileCard`) or a tray that precedes one
+    /// (`DSTray(ink: true)`), so the two read as one continuous black sheet
+    /// instead of `dsColorScheme()`'s theme-adaptive default showing through
+    /// a shade off (2026-07-24, user: "the wallet worth a look details tray
+    /// is not ink colored" / "farcaster and bluesky when you tap a face").
+    ///
+    /// A real `.background` fill, not just `.presentationBackground` alone:
+    /// the latter is a preference read once at initial presentation setup,
+    /// and stops taking effect once something pushes past this view inside a
+    /// `NavigationStack` — so a destination pushed past an ink tray/sheet
+    /// needs `.dsInk()` applied again at its own call site (see
+    /// `WalletWorthALookTray`'s pushed `ThingSheetView`).
+    func dsInk() -> some View {
+        self
+            .background(Color.black.ignoresSafeArea())
+            .presentationBackground(Color.black)
+            .colorScheme(.dark)
+    }
 }

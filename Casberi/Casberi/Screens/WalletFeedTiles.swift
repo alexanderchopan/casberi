@@ -710,7 +710,7 @@ struct WalletWorthALookTray: View {
 
     var body: some View {
         NavigationStack(path: $path) {
-        DSTray(title: String(localized: "Worth a look"), height: trayHeight) {
+        DSTray(title: String(localized: "Worth a look"), height: trayHeight, ink: true) {
                 VStack(alignment: .leading, spacing: DS.Space.s3) {
                     if showsJumpBar { jumpBar }
                     ScrollView {
@@ -792,17 +792,12 @@ struct WalletWorthALookTray: View {
         }
         // Pure ink, matching the detail sheet it pushes to (2026-07-24,
         // user: "worth a look screen is not same color as the thing sheet
-        // and needs to be"). DSTray declares `presentationBackground(
-        // DS.surfaceSheet)` (#111113 — the navy-gray the tray was showing)
-        // and follows the app theme, so in dark it read a shade off the
-        // detail's black and in light it would have been white beside the
-        // detail's black. A PAINTED background + forced `.dark` is the same
-        // "always covers, wins the preference race" treatment `ThingSheetView`
-        // uses internally — the two surfaces now read as one ink sheet across
-        // the push, in either mode.
-        .background(Color.black.ignoresSafeArea())
-        .presentationBackground(Color.black)
-        .colorScheme(.dark)
+        // and needs to be"). The NavigationStack wrapping this tray is the
+        // real root passed to `.sheet` here (not the `DSTray(ink:)` nested
+        // one level inside it), so it needs `dsInk()` applied again at this
+        // outer level too — the same "wins the preference race" reasoning
+        // `dsInk()` documents.
+        .dsInk()
         .navigationDestination(for: Thing.self) { thing in
             // `.presentationDetents` is a preference DSTray declares on
             // itself, which stops applying once the stack pushes past it —
@@ -821,8 +816,7 @@ struct WalletWorthALookTray: View {
             // detents fix.
             ThingSheetView(thing: thing, onBack: { path.removeLast() })
                 .presentationDetents([.height(trayHeight)])
-                .presentationBackground(Color.black)
-                .colorScheme(.dark)
+                .dsInk()
         }
         }
     }

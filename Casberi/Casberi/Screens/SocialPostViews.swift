@@ -226,8 +226,7 @@ struct SocialPostSheet: View {
         .presentationDetents([.medium, .large])
         .presentationDragIndicator(.visible)
         .presentationCornerRadius(DS.Radius.sheet)
-        .presentationBackground(Color.black)
-        .colorScheme(.dark)
+        .dsInk()
     }
 }
 
@@ -442,7 +441,13 @@ struct SocialProfileCard: View {
     }
 
     var body: some View {
-        DSTray(title: shown.title, height: 560) {
+        // Ink (2026-07-24, user: "farcaster and bluesky when you tap a face"
+        // [aren't ink-colored]): this card is a detail surface reached from
+        // ink-black hosts — the thread walker (`SocialPostSheet`), a feed
+        // row's thing sheet, a deep link — and DSTray's own adaptive default
+        // read as a shade off beside them, same bug class `dsInk()` fixed for
+        // the wallet "Worth a look" tray.
+        DSTray(title: shown.title, height: 560, ink: true) {
             VStack(alignment: .leading, spacing: DS.Space.s4) {
                 header
                 if let bio = shown.bio, !bio.isEmpty {

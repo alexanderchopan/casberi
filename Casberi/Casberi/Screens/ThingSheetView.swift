@@ -286,18 +286,15 @@ struct ThingSheetView: View {
         // Ink: the sheet is black in both modes, like a photo viewer — its
         // controls render dark regardless of the app's theme.
         //
-        // A real `.background()`, not just `.presentationBackground` (2026-07-24,
-        // user: "worth a look is ink. detail sheet is not"): when this sheet is
-        // PUSHED inside the Worth-a-look tray's own NavigationStack (`onBack`
-        // set), `presentationBackground` is a preference bubbling up to that
-        // outer sheet's ONE real presentation controller — and unlike
-        // `presentationDetents` (read live on every push, per the fix above),
-        // it only seems to get read once at initial setup, off DSTray's own
-        // declared `DS.surfaceSheet`, and never again once something pushes on
-        // top. A painted background can't lose that race — it always covers.
-        .background(Color.black.ignoresSafeArea())
-        .presentationBackground(Color.black)
-        .colorScheme(.dark)
+        // `dsInk()` (2026-07-24, user: "worth a look is ink. detail sheet is
+        // not"): when this sheet is PUSHED inside the Worth-a-look tray's own
+        // NavigationStack (`onBack` set), `presentationBackground` alone is a
+        // preference bubbling up to that outer sheet's ONE real presentation
+        // controller — and unlike `presentationDetents` (read live on every
+        // push, per the fix above), it only seems to get read once at initial
+        // setup and never again once something pushes on top. `dsInk()`'s
+        // real `.background()` can't lose that race — it always covers.
+        .dsInk()
         .presentationDetents([.medium, .large], selection: $detent)
         .presentationDragIndicator(.visible)
         .presentationCornerRadius(DS.Radius.sheet)

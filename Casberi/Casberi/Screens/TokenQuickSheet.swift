@@ -125,8 +125,7 @@ struct TokenQuickSheet: View {
                     }
             }
         }
-        .presentationBackground(Color.black)
-        .colorScheme(.dark)
+        .dsInk()
         .presentationDetents([.medium, .large])
         .presentationDragIndicator(.visible)
         .presentationCornerRadius(DS.Radius.sheet)

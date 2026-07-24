@@ -14,10 +14,16 @@ import SwiftUI
 struct DSTray<Content: View>: View {
     let title: String
     let height: CGFloat
+    /// Paint `dsInk()` (pure black, forced dark) instead of the theme-
+    /// adaptive default — for a tray that IS or precedes a black "detail"
+    /// surface (`SocialProfileCard`, `WalletWorthALookTray`), so it reads as
+    /// one continuous ink sheet instead of a shade off beside it. See
+    /// `dsInk()` in `ThemeStore.swift` for the full rationale.
+    var ink: Bool = false
     @ViewBuilder var content: () -> Content
 
     var body: some View {
-        VStack(alignment: .leading, spacing: DS.Space.s4) {
+        let tray = VStack(alignment: .leading, spacing: DS.Space.s4) {
             // The title doubles as its own catalog key — a title that isn't a
             // key just renders verbatim, so dynamic titles stay safe.
             Text(LocalizedStringKey(title))
@@ -34,7 +40,11 @@ struct DSTray<Content: View>: View {
         .padding(.bottom, DS.Space.s6)
         .presentationDetents([.height(height)])
         .presentationDragIndicator(.visible)
-        .presentationBackground(DS.surfaceSheet)
-        .dsColorScheme()
+
+        if ink {
+            tray.dsInk()
+        } else {
+            tray.presentationBackground(DS.surfaceSheet).dsColorScheme()
+        }
     }
 }
