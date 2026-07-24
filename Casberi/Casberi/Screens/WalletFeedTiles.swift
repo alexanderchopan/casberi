@@ -706,12 +706,40 @@ struct WalletWorthALookTray: View {
     /// carries its own icon and states its own whole fact, matching the
     /// approved mockup; the one shared "Worth doing" header above is doing
     /// all the grouping these four kinds need.
-    private var hasActionable: Bool {
-        !liquidation.isEmpty || !activeApprovals.isEmpty || !delegations.isEmpty || !safeSignatures.isEmpty
+    ///
+    /// Built as ONE array behind ONE `ForEach` (below) rather than four
+    /// sequential `if !x.isEmpty { ForEach(...) }` blocks stacked in the
+    /// same ViewBuilder — four sibling conditionals each nest their own
+    /// `_ConditionalContent` wrapper type, compounding the already-tight
+    /// first-render view-tree depth this app has hit before (see the
+    /// "Coming up card" stack-overflow lesson elsewhere in this codebase).
+    /// One `ForEach` over a unified enum keeps that flat regardless of how
+    /// many of the four kinds are actually present.
+    private enum ActionRow: Identifiable {
+        case liquidation(WalletWarning)
+        case approval(Thing)
+        case delegation(WalletWarning)
+        case safe(WalletWarning)
+
+        var id: String {
+            switch self {
+            case .liquidation(let w): "liquidation:\(w.id)"
+            case .approval(let t): "approval:\(t.id)"
+            case .delegation(let w): "delegation:\(w.id)"
+            case .safe(let w): "safe:\(w.id)"
+            }
+        }
     }
-    private var actionableRowCount: Int {
-        liquidation.count + activeApprovals.count + delegations.count + safeSignatures.count
+
+    private var actionRows: [ActionRow] {
+        liquidation.map(ActionRow.liquidation)
+            + activeApprovals.map(ActionRow.approval)
+            + delegations.map(ActionRow.delegation)
+            + safeSignatures.map(ActionRow.safe)
     }
+
+    private var hasActionable: Bool { !actionRows.isEmpty }
+    private var actionableRowCount: Int { actionRows.count }
 
     /// The two jump targets — "act" and "aware" — each dropped when empty.
     /// The jump bar (only shown once there's real ground to cover) is built
@@ -809,18 +837,17 @@ struct WalletWorthALookTray: View {
                                     // sub-headers; each row states its own
                                     // whole fact and carries its own icon
                                     // and, where one exists, its own
-                                    // Revoke.cash button.
-                                    if !liquidation.isEmpty {
-                                        ForEach(liquidation) { liquidationRow($0) }
-                                    }
-                                    if !activeApprovals.isEmpty {
-                                        ForEach(activeApprovals) { approvalActionRow($0) }
-                                    }
-                                    if !delegations.isEmpty {
-                                        ForEach(delegations) { delegationRow($0) }
-                                    }
-                                    if !safeSignatures.isEmpty {
-                                        ForEach(safeSignatures) { safeRow($0) }
+                                    // Revoke.cash button. ONE ForEach over
+                                    // the unified `actionRows`, not four
+                                    // sibling conditionals — see that
+                                    // property's doc comment.
+                                    ForEach(actionRows) { item in
+                                        switch item {
+                                        case .liquidation(let w): liquidationRow(w)
+                                        case .approval(let t): approvalActionRow(t)
+                                        case .delegation(let w): delegationRow(w)
+                                        case .safe(let w): safeRow(w)
+                                        }
                                     }
                                 }
                                 .id("act")
