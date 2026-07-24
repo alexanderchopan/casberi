@@ -657,16 +657,16 @@ struct Composer: View {
             out.insert(AskOption(kind: "away", title: "While I was away?",
                                  glyph: "sparkles", signal: awaySignal), at: 0)
         }
-        let pulseCount = StatusAsk.pulse("what's going on", things: all)?.pool.count ?? 0
         let todayCount = all.filter { $0.capturedAt >= dayStart }.count
-        // The away chip suppresses its near-duplicates — two catch-up chips
+        // The "What's going on?" chip RETIRED with §193: that phrase is now the
+        // name of the screen the agent opens onto, and a chip offering to fetch
+        // the screen you are already looking at is a dead control wearing a
+        // pill. `TodayBrief.matches` routes the typed phrase to that screen, so
+        // nothing is lost — the ask just stopped being worth a chip.
+        //
+        // The away chip still suppresses its near-duplicate: two catch-up chips
         // would crowd out the ones that teach counting and showing.
-        if awayCount >= 3 {
-            // covered by "While I was away?"
-        } else if pulseCount >= 2 {
-            out.append(AskOption(kind: "pulse", title: "What's going on?", glyph: "bolt",
-                                 signal: sig(pulseCount)))
-        } else if todayCount > 0 {
+        if awayCount < 3, todayCount > 0 {
             out.append(AskOption(kind: "today", title: "What landed today?",
                                  glyph: "tray.and.arrow.down", signal: sig(todayCount)))
         }
@@ -1015,17 +1015,22 @@ struct Composer: View {
         commit()
     }
 
-    /// "Wednesday, July 22 · since 9:40 pm" — the brief's eyebrow. Names the
-    /// window the brief measured, which is the one thing a reader can't infer
-    /// from the modules themselves (an overnight window and a since-midnight
-    /// one produce the same-looking screen from very different spans). Drops
-    /// the "since" clause when the window IS the calendar day, rather than
-    /// stating the obvious.
+    /// "since 9:40 pm" — the eyebrow. Names the WINDOW the screen measured,
+    /// which is the one thing a reader can't infer from the modules themselves
+    /// (an overnight window and a since-midnight one produce the same-looking
+    /// screen from very different spans).
+    ///
+    /// The weekday and date used to lead this line, back when the screen was
+    /// "Your Wednesday brief" and a dated edition is what it was. With the
+    /// rename (§193) the date became the wrong lede twice over: it re-asserted
+    /// the daily framing the title just dropped, and it was the least useful
+    /// half of the line — a person knows what day it is; what they can't know
+    /// is how far back "going on" reaches. So the span stands alone, and a
+    /// window that IS just the calendar day says so plainly rather than
+    /// printing a start time that only restates midnight.
     private func briefWindowLine() -> String {
-        let now = Date.now
-        let date = now.formatted(.dateTime.weekday(.wide).month(.wide).day())
-        guard let away = AppVisit.away else { return date }
-        return date + " · " + String(localized: "since \(away.lowerBound.formatted(.dateTime.hour().minute()))")
+        guard let away = AppVisit.away else { return String(localized: "today so far") }
+        return String(localized: "since \(away.lowerBound.formatted(.dateTime.hour().minute()))")
     }
 
     // The bubble's asymmetric corners: 24 / 24 / 10 / 24 (TL/TR/BR/BL).
@@ -1301,11 +1306,13 @@ struct Composer: View {
                                                         // A composed SCREEN gets a verb that
                                                         // names it (2026-07-22) — a bare "Keep"
                                                         // under the day brief undersold what
-                                                        // keeping would do.
+                                                        // keeping would do. "this view", not
+                                                        // "this brief", since §193 (the screen
+                                                        // stopped being a daily brief).
                                                         Chip(text: keepJustLanded ? "Kept"
                                                                 : (askedOften
                                                                    ? "You ask this a lot — keep it?"
-                                                                   : (kind == "today" ? "Keep this brief" : "Keep")),
+                                                                   : (kind == "today" ? "Keep this view" : "Keep")),
                                                              style: (keepJustLanded || askedOften) ? .tint : .neutral,
                                                              glyph: keepJustLanded ? "checkmark"
                                                                 : (askedOften ? "sparkles" : "pin.fill"))
@@ -2407,11 +2414,16 @@ struct Composer: View {
                 // only ever fire once, ever, ON THIS DEVICE (a fresh install
                 // sees it again, which is correct — it's a new relationship
                 // with the brief, not a global server-side fact).
+                // The persisted KEY keeps its old name on purpose — renaming it
+                // would re-fire this once-ever delight for everyone who already
+                // saw it. The COPY is what changed (§193): it promised "every
+                // morning" back when this was a daily brief, and it now lands
+                // on every open.
                 if TodayBrief.matches(q), !docHasFallback(finalDoc),
                    !UserDefaults.standard.bool(forKey: "today.firstBriefShown") {
                     UserDefaults.standard.set(true, forKey: "today.firstBriefShown")
                     firstBriefRainTrigger += 1
-                    chrome.flash(String(localized: "Your first brief — I'll have it ready every morning."),
+                    chrome.flash(String(localized: "I'll have this ready every time you open."),
                                 tone: .success)
                 }
                 // A cheap deterministic ONE-LINER lands instantly (2026-07-22)

@@ -7426,3 +7426,47 @@ already complete without it.
 VERIFIED 2026-07-23 (iPhone 17 Pro sim): Wallet's product page renders the
 two-sentence hook, then six green-checkmark capability lines, full width,
 readable at a glance. Build green.
+
+## 193. The brief is renamed "What's going on" — and absorbs the ask that had that name (user: "i think we can just call it 'what's goin on' b/c it's now no longer a daily brief, its a brief whenever you open it", "so we wouldn't say 'Your Thursday brief'", 2026-07-23) — VERIFIED
+
+§181 made this screen the agent's landing, rendered fresh on every rise. That
+broke its own name: "Your Thursday brief" claims a once-a-day artifact, a dated
+edition, and it stopped being one the moment it started recomposing on every
+open. It's a standing question now, so it's named like one — **"What's going
+on"**.
+
+**The eyebrow follows.** It read "Thursday, July 23 · since 9:40 pm"; the date
+now leads with the wrong idea twice over — re-asserting the daily framing the
+title just dropped, and spending the lede on the half a person already knows.
+What they can't know is how far back "going on" reaches, so the span stands
+alone: "since 9:40 pm", or "today so far" when the window IS the calendar day
+(rather than printing a start time that only restates midnight). The honesty
+job §166 gave this line is unchanged — an overnight window and a since-midnight
+one still produce the same-looking screen from very different spans.
+
+**The collision, and the ruling.** "What's going on?" was already an ask — the
+feeds' prose pulse (`StatusAsk`, prd 2026-07-11), which was literally one of the
+chips docked under this screen. Renaming without resolving that would have put
+a chip named "What's going on?" directly beneath a screen titled "What's going
+on". Ruled (user, "brief absorbs it"): **the screen takes the name and the ask**.
+`TodayBrief.matches` now recognizes the phrase — and sits above `StatusAsk`'s
+branch in `answerDocument`, so a typed "what's going on?" lands here, on the
+richer answer to the same question. The chip is retired: it offered to fetch the
+screen you're already looking at, which is a dead control wearing a pill. Exact
+matches only, so "what's going on with sam" stays a real search. `StatusAsk`
+itself is untouched and still powers "While I was away?"; the pulse ask was
+never keepable, so no kept pill is stranded.
+
+**Copy that named the old artifact.** The Keep verb was "Keep this brief" →
+"Keep this view". The first-ever flash promised "Your first brief — I'll have it
+ready every morning" → "I'll have this ready every time you open", which was
+wrong twice (not a brief, not a morning). The persisted flag behind that flash
+keeps its old key on purpose: renaming it would re-fire a once-ever delight for
+everyone who already saw it.
+
+VERIFIED 2026-07-23 (iPhone 17 Pro sim, pinned UDID): tapping the agent bar
+lands the screen with eyebrow "today so far" over the masthead "What's going
+on", followed by the synthesis card, the $19K money hero, the watchlist +
+up-next pair and the Reading card. The docked chip row reads "Show AAPL · 7 /
+Noticed / Show BRK…" — no "What's going on?" chip, confirming the retirement.
+Build green.

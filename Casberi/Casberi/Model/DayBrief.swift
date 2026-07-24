@@ -90,8 +90,19 @@ enum DayBrief {
                        walletPct: walletIsLead ? nil : move?.pct)
     }
 
+    /// What this screen is CALLED — the capsule's promise and the landing's
+    /// masthead, one string so §165a's "name the artifact" can't drift.
+    ///
+    /// "What's going on", not "Your Wednesday brief" (user ruling 2026-07-23:
+    /// "it's now no longer a daily brief, it's a brief whenever you open it").
+    /// Naming it by the WEEKDAY claimed a once-a-day artifact, which stopped
+    /// being true the moment the agent started opening onto this screen every
+    /// time (§181) — it recomposes from current facts on every rise, so it's a
+    /// standing question, not a dated edition. The `now` parameter is kept
+    /// (callers pass it, and a future name may want the moment back) but the
+    /// name is deliberately timeless.
     static func title(now: Date = .now) -> String {
-        String(localized: "Your \(now.formatted(.dateTime.weekday(.wide))) brief")
+        String(localized: "What's going on")
     }
 
     /// The day's facts as one line — the kept `today` pill's digest. ONE

@@ -32,16 +32,25 @@ enum TodayBrief {
     /// (`Composer`), and the whisper's own tap — so a question that answers
     /// can always also be kept, and none of the three can drift.
     static func matches(_ query: String) -> Bool {
-        let q = query.lowercased().trimmingCharacters(in: CharacterSet(charactersIn: "? "))
+        let q = query.lowercased()
+            .replacingOccurrences(of: "\u{2019}", with: "'")
+            .trimmingCharacters(in: CharacterSet(charactersIn: "? "))
+        // "What's going on" ABSORBED the feeds' prose pulse (§193, user ruling
+        // 2026-07-23) — this screen is the richer answer to the same question,
+        // so the phrase routes here and `StatusAsk`'s own pulse branch (which
+        // sits below this one in `answerDocument`) no longer sees it. Exact
+        // matches only, so "what's going on with sam" stays a real search.
         return q == "today" || q == "my day" || q == "how's my day" || q == "hows my day"
             || q == "what's my day" || q == "whats my day"
+            || q == "what's going on" || q == "whats going on"
             || q.contains("brief me") || q.contains("my day so far")
             || q.contains("catch me up on today")
     }
 
     /// The canonical question — what the whisper sends, and the title a kept
-    /// "today" pill wears.
-    static let title = String(localized: "How's my day?")
+    /// pill wears. Matches the screen's own name (§193) so the pill, the
+    /// capsule, and the masthead all say one thing.
+    static let title = String(localized: "What's going on?")
 
     // MARK: - Compose
 
