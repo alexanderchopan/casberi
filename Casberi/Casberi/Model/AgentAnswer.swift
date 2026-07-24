@@ -8,63 +8,71 @@ import Foundation
 /// like every bridge token.
 ///
 /// The key is an AGENT key, never "the Anthropic key" (user ruling
-/// 2026-07-14): five providers speak here — Claude, ChatGPT, Gemini,
-/// Venice, and Bankr — one request shape each, one contract for all.
-/// Bankr (2026-07-16) is the one agent that isn't a bare model: it's a
-/// wallet-attached trading agent, so its answers may ALSO draw on the
-/// wallet and live markets (the sanctioned grounding divergence), and
+/// 2026-07-14): six providers speak here — Claude, ChatGPT, Gemini,
+/// Venice, Bankr, and OpenRouter — one request shape each, one contract
+/// for all. Bankr (2026-07-16) is the one agent that isn't a bare model:
+/// it's a wallet-attached trading agent, so its answers may ALSO draw on
+/// the wallet and live markets (the sanctioned grounding divergence), and
 /// every prompt it gets is hard-prefixed "answer only — never execute"
 /// (the answer verb stays a read; writes would be separate consented
-/// verbs, unbuilt).
+/// verbs, unbuilt). OpenRouter (2026-07-24) is the multi-model divergence:
+/// it never pins one model, riding its own `openrouter/auto` router
+/// instead, so it stays honestly text-only/no-search rather than claiming
+/// a capability whichever model it lands on might not have.
 enum AgentProvider: String, CaseIterable, Identifiable {
     case anthropic
     case openai
     case google
     case venice
     case bankr
+    case openrouter
 
     var id: String { rawValue }
 
     /// The agent the person knows ("Claude"), not the vendor.
     var agent: String {
         switch self {
-        case .anthropic: "Claude"
-        case .openai:    "ChatGPT"
-        case .google:    "Gemini"
-        case .venice:    "Venice"
-        case .bankr:     "Bankr"
+        case .anthropic:  "Claude"
+        case .openai:     "ChatGPT"
+        case .google:     "Gemini"
+        case .venice:     "Venice"
+        case .bankr:      "Bankr"
+        case .openrouter: "OpenRouter"
         }
     }
 
     /// The company that takes the key and sends the bill.
     var company: String {
         switch self {
-        case .anthropic: "Anthropic"
-        case .openai:    "OpenAI"
-        case .google:    "Google"
-        case .venice:    "Venice"
-        case .bankr:     "Bankr"
+        case .anthropic:  "Anthropic"
+        case .openai:     "OpenAI"
+        case .google:     "Google"
+        case .venice:     "Venice"
+        case .bankr:      "Bankr"
+        case .openrouter: "OpenRouter"
         }
     }
 
     /// Where a key comes from — the settings small print.
     var console: String {
         switch self {
-        case .anthropic: "console.anthropic.com"
-        case .openai:    "platform.openai.com"
-        case .google:    "aistudio.google.com"
-        case .venice:    "venice.ai"
-        case .bankr:     "bankr.bot/api-keys"
+        case .anthropic:  "console.anthropic.com"
+        case .openai:     "platform.openai.com"
+        case .google:     "aistudio.google.com"
+        case .venice:     "venice.ai"
+        case .bankr:      "bankr.bot/api-keys"
+        case .openrouter: "openrouter.ai/keys"
         }
     }
 
     var placeholder: String {
         switch self {
-        case .anthropic: "sk-ant-…"
-        case .openai:    "sk-…"
-        case .google:    "AIza…"
-        case .venice:    "Paste your Venice key"
-        case .bankr:     "Paste your Bankr key"
+        case .anthropic:  "sk-ant-…"
+        case .openai:     "sk-…"
+        case .google:     "AIza…"
+        case .venice:     "Paste your Venice key"
+        case .bankr:      "Paste your Bankr key"
+        case .openrouter: "Paste your OpenRouter key"
         }
     }
 
@@ -76,12 +84,15 @@ enum AgentProvider: String, CaseIterable, Identifiable {
 
     var model: String {
         switch self {
-        case .anthropic: "claude-opus-4-8"
-        case .openai:    "gpt-4o"
-        case .google:    "gemini-2.5-flash"
-        case .venice:    "llama-3.3-70b"
+        case .anthropic:  "claude-opus-4-8"
+        case .openai:     "gpt-4o"
+        case .google:     "gemini-2.5-flash"
+        case .venice:     "llama-3.3-70b"
         // Bankr picks its own model per job — this names no request.
-        case .bankr:     "bankr-agent"
+        case .bankr:      "bankr-agent"
+        // OpenRouter's own router — picks whichever of its 400+ models fits
+        // the request, so the app never pins one model or exposes a picker.
+        case .openrouter: "openrouter/auto"
         }
     }
 
@@ -89,12 +100,14 @@ enum AgentProvider: String, CaseIterable, Identifiable {
     /// its OCR'd text (2026-07-21). Claude, ChatGPT, and Gemini are
     /// multimodal on the models above; Venice's pinned model is text-only
     /// and Bankr answers from the wallet, not the corpus — both stay
-    /// honestly text-only rather than silently dropping a photo. Stated on
-    /// the connect screens, never assumed.
+    /// honestly text-only rather than silently dropping a photo. OpenRouter's
+    /// auto router can land on a text-only model, so it stays honestly
+    /// text-only too rather than gambling a photo on whichever model it
+    /// picked. Stated on the connect screens, never assumed.
     var seesImages: Bool {
         switch self {
         case .anthropic, .openai, .google: true
-        case .venice, .bankr: false
+        case .venice, .bankr, .openrouter: false
         }
     }
 
@@ -104,10 +117,14 @@ enum AgentProvider: String, CaseIterable, Identifiable {
     /// search needs a different API (the Responses API, not the chat
     /// endpoint this app calls) and isn't wired up yet; Bankr already
     /// grounds on live markets its own way and doesn't need a second path.
+    /// OpenRouter's search rides a separate paid `:online` model suffix this
+    /// app doesn't append to the pinned `openrouter/auto` — claiming it here
+    /// without appending the suffix would be the over-claim the honesty rule
+    /// forbids.
     var searchesWeb: Bool {
         switch self {
         case .anthropic, .google, .venice: true
-        case .openai, .bankr: false
+        case .openai, .bankr, .openrouter: false
         }
     }
 
@@ -128,6 +145,8 @@ enum AgentProvider: String, CaseIterable, Identifiable {
             "Remembers this chat's answers so far, and can search the web when your things fall short — screenshots stay text-only."
         case .bankr:
             nil
+        case .openrouter:
+            "Auto-picks whichever model fits your question and remembers this chat's answers so far — screenshots and web search stay off since the model it lands on can vary."
         }
     }
 }
@@ -283,6 +302,11 @@ enum AgentAnswer {
             // the key without submitting (and billing) a prompt.
             request = URLRequest(url: URL(string: "https://api.bankr.bot/agent/job/casberi-key-check")!)
             request.setValue(key, forHTTPHeaderField: "X-API-Key")
+        case .openrouter:
+            // Echoes back the key's own limits/usage — a free read, no model
+            // call, no tokens billed.
+            request = URLRequest(url: URL(string: "https://openrouter.ai/api/v1/auth/key")!)
+            request.setValue("Bearer \(key)", forHTTPHeaderField: "Authorization")
         }
         request.timeoutInterval = 15
         guard let (_, response) = try? await URLSession.shared.data(for: request),
@@ -368,12 +392,24 @@ enum AgentAnswer {
             }
             request.httpBody = try? JSONSerialization.data(withJSONObject: body)
             parse = anthropicDelta
-        case .openai, .venice:
-            // One OpenAI-compatible shape covers both — Venice's API speaks it.
-            let base = provider == .openai ? "https://api.openai.com/v1"
-                                           : "https://api.venice.ai/api/v1"
+        case .openai, .venice, .openrouter:
+            // One OpenAI-compatible shape covers all three — Venice's and
+            // OpenRouter's APIs both speak it.
+            let base: String
+            switch provider {
+            case .openai:     base = "https://api.openai.com/v1"
+            case .venice:     base = "https://api.venice.ai/api/v1"
+            default:          base = "https://openrouter.ai/api/v1"
+            }
             request = URLRequest(url: URL(string: "\(base)/chat/completions")!)
             request.setValue("Bearer \(key)", forHTTPHeaderField: "Authorization")
+            if provider == .openrouter {
+                // OpenRouter's own attribution headers — optional, but they're
+                // how a request shows up as Casberi's on the person's own
+                // OpenRouter dashboard rather than an anonymous call.
+                request.setValue("https://casberi.app", forHTTPHeaderField: "HTTP-Referer")
+                request.setValue("Casberi", forHTTPHeaderField: "X-Title")
+            }
             var messages: [[String: Any]] = [["role": "system", "content": system]]
             for turn in history {
                 messages.append(["role": "user", "content": turn.question])

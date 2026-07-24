@@ -23,6 +23,16 @@ struct DSTextStyle {
     /// SwiftUI `lineSpacing` is additive over the font's intrinsic leading; this
     /// approximates the CSS line-height without measuring UIFont metrics.
     var lineSpacing: CGFloat { max(0, lineHeight - size * 1.18) }
+
+    /// The Dynamic-Type-scaled `Font` alone, for call sites that can't use the
+    /// `dsText` view modifier — e.g. a segment inside a concatenated `Text`
+    /// (`Text + Text`), which requires `Text`'s own `.font(_:)` overload to
+    /// stay `Text`-typed rather than erasing to `some View`.
+    var scaledFont: Font {
+        let scaled = UIFontMetrics(forTextStyle: relative).scaledValue(for: size)
+        return Font.system(size: scaled, weight: weight,
+                            design: monospaced ? .monospaced : rounded ? .rounded : .default)
+    }
 }
 
 extension DSTextStyle {
@@ -65,6 +75,36 @@ extension DSTextStyle {
     static let price40 = DSTextStyle(size: 40, weight: .bold, tracking: 0, lineHeight: 44, relative: .largeTitle, rounded: true)
     static let stat24  = DSTextStyle(size: 24, weight: .bold, tracking: 0, lineHeight: 28, relative: .title2, rounded: true)
     static let price16 = DSTextStyle(size: 16, weight: .bold, tracking: 0, lineHeight: 20, relative: .callout, rounded: true)
+
+    // Small decorative accents (2026-07-24 drift fix) — each already existed
+    // as a raw `.system(size:)` on real Text, unscaled and unnamed.
+    /// The streaming-response "still writing" dot (GenRenderer).
+    static let indicator9    = DSTextStyle(size: 9,  weight: .regular, tracking: 0, lineHeight: 12, relative: .caption2)
+    /// A token's fallback avatar initial when no logo art exists (GenRenderer).
+    static let badgeInitial11 = DSTextStyle(size: 11, weight: .bold, tracking: 0, lineHeight: 15, relative: .caption2)
+    /// The onboarding step card's giant background numeral — accessibility-hidden,
+    /// sighted-only decoration, so nothing else earns this size (mirrors `price48`'s reasoning).
+    static let flourish148 = DSTextStyle(size: 148, weight: .heavy, tracking: 0, lineHeight: 150, relative: .largeTitle, rounded: true)
+
+    // Widget/Live Activity rungs (2026-07-24 drift fix) — CasberiWidgets.swift
+    // couldn't reach this file before it lived in Shared/, so every widget
+    // label was a raw, unscaled size. Sizes/weights are unchanged from what
+    // shipped; only the plumbing changed. `heading17` and `label11` already
+    // covered two of the widget's sizes exactly and are reused as-is.
+    /// The Live Activity's "Recording" chrome label and its lock-screen timer.
+    static let widgetChrome15  = DSTextStyle(size: 15, weight: .semibold, tracking: 0, lineHeight: 20, relative: .subheadline)
+    /// Dynamic Island's compact-trailing timer.
+    static let widgetTimer13   = DSTextStyle(size: 13, weight: .semibold, tracking: 0, lineHeight: 18, relative: .footnote)
+    /// The accessory-rectangular widget's eyebrow, and the hero widget's new-count ring badge.
+    static let widgetEyebrow11 = DSTextStyle(size: 11, weight: .semibold, tracking: 0, lineHeight: 15, relative: .caption2)
+    /// The accessory-rectangular widget's title line.
+    static let widgetTitle14   = DSTextStyle(size: 14, weight: .bold, tracking: 0, lineHeight: 19, relative: .footnote)
+    /// The accessory-rectangular widget's subline.
+    static let widgetSubline11 = DSTextStyle(size: 11, weight: .regular, tracking: 0, lineHeight: 15, relative: .caption2)
+    /// The default-family hero widget's title line.
+    static let widgetTitle17   = DSTextStyle(size: 17, weight: .bold, tracking: 0, lineHeight: 22, relative: .callout)
+    /// The default-family hero widget's subline.
+    static let widgetSubline12 = DSTextStyle(size: 12, weight: .regular, tracking: 0, lineHeight: 16, relative: .caption1)
 }
 
 private struct DSTextModifier: ViewModifier {

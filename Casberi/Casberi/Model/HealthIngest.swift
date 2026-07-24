@@ -24,11 +24,15 @@ enum HealthIngest {
     static func connectAndIngest(context: ModelContext, healthOn: Bool = true,
                                  stravaOn: Bool = false,
                                  counting seat: String = "Apple Health") async -> Int? {
-        guard HKHealthStore.isHealthDataAvailable() else { return nil }
+        guard HKHealthStore.isHealthDataAvailable() else {
+            NSLog("healthConnect: FAILED — HealthKit unavailable on this device")
+            return nil
+        }
         let store = HKHealthStore()
         do {
             try await store.requestAuthorization(toShare: [], read: [HKObjectType.workoutType()])
         } catch {
+            NSLog("healthConnect: FAILED — requestAuthorization threw: \(error)")
             return nil
         }
 

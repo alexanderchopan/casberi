@@ -247,7 +247,7 @@ struct HowItWorksSheet: View {
     private func stepCard(_ index: Int, _ point: Point) -> some View {
         ZStack(alignment: .topTrailing) {
             Text(verbatim: "\(index + 1)")
-                .font(.system(size: 148, weight: .heavy, design: .rounded))
+                .dsText(.flourish148)
                 .foregroundStyle(point.hue.opacity(0.16))
                 .offset(x: DS.Space.s3, y: -DS.Space.s8 - DS.Space.s3)
                 .accessibilityHidden(true)

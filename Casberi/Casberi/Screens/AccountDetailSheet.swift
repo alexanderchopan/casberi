@@ -260,7 +260,7 @@ struct AccountDetailSheet: View {
                     .foregroundStyle(keyResultIsError ? DS.attention : DS.textSecondary)
                     .settleIn()
             }
-            Text("Get a key from the agent's own console — console.anthropic.com (Claude), platform.openai.com (ChatGPT), aistudio.google.com (Gemini), venice.ai (Venice), or bankr.bot/api-keys (Bankr — make it a read-only key; answers never trade). It stays in this iPhone's Keychain and goes only to the provider you chose.")
+            Text("Get a key from the agent's own console — console.anthropic.com (Claude), platform.openai.com (ChatGPT), aistudio.google.com (Gemini), venice.ai (Venice), bankr.bot/api-keys (Bankr — make it a read-only key; answers never trade), or openrouter.ai/keys (OpenRouter — routes to whichever model fits, no model to pick). It stays in this iPhone's Keychain and goes only to the provider you chose.")
                 .dsText(.label12).foregroundStyle(DS.textTertiary)
                 .fixedSize(horizontal: false, vertical: true)
         }

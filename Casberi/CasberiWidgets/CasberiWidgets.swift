@@ -28,11 +28,12 @@ struct VoiceRecordingActivity: Widget {
                     .font(.system(size: 20, weight: .medium))
                     .foregroundStyle(.red)
                 Text("Recording")
-                    .font(.system(size: 15, weight: .semibold))
+                    .dsText(.widgetChrome15)
                 Spacer()
                 Text(timerInterval: context.state.startedAt...Date(
                     timeInterval: 60 * 60, since: context.state.startedAt))
-                    .font(.system(size: 15, weight: .semibold).monospacedDigit())
+                    .dsText(.widgetChrome15)
+                    .monospacedDigit()
                     .frame(maxWidth: 56)
                 Image(systemName: "stop.circle.fill")
                     .font(.system(size: 24))
@@ -51,12 +52,13 @@ struct VoiceRecordingActivity: Widget {
                 DynamicIslandExpandedRegion(.trailing) {
                     Text(timerInterval: context.state.startedAt...Date(
                         timeInterval: 60 * 60, since: context.state.startedAt))
-                        .font(.system(size: 17, weight: .semibold).monospacedDigit())
+                        .dsText(.heading17)
+                        .monospacedDigit()
                         .frame(maxWidth: 60)
                 }
                 DynamicIslandExpandedRegion(.center) {
                     Text("Recording")
-                        .font(.system(size: 15, weight: .semibold))
+                        .dsText(.widgetChrome15)
                 }
             } compactLeading: {
                 Image(systemName: "waveform")
@@ -64,7 +66,8 @@ struct VoiceRecordingActivity: Widget {
             } compactTrailing: {
                 Text(timerInterval: context.state.startedAt...Date(
                     timeInterval: 60 * 60, since: context.state.startedAt))
-                    .font(.system(size: 13, weight: .semibold).monospacedDigit())
+                    .dsText(.widgetTimer13)
+                    .monospacedDigit()
                     .frame(maxWidth: 44)
             } minimal: {
                 Image(systemName: "waveform")
@@ -219,13 +222,13 @@ struct HeroWidgetView: View {
             case .accessoryRectangular:
                 VStack(alignment: .leading, spacing: 1) {
                     Text(entry.eyebrow.uppercased())
-                        .font(.system(size: 11, weight: .semibold))
+                        .dsText(.widgetEyebrow11)
                         .widgetAccentable()
                     Text(entry.title)
-                        .font(.system(size: 14, weight: .bold))
+                        .dsText(.widgetTitle14)
                         .lineLimit(2)
                     Text(entry.subline)
-                        .font(.system(size: 11))
+                        .dsText(.widgetSubline11)
                         .opacity(0.7)
                         .lineLimit(1)
                 }
@@ -233,16 +236,16 @@ struct HeroWidgetView: View {
             default:
                 VStack(alignment: .leading, spacing: 4) {
                     Text(entry.eyebrow)
-                        .font(.system(size: 11, weight: .medium))
+                        .dsText(.label11)
                         .foregroundStyle(accent)
                     Text(entry.title)
-                        .font(.system(size: 17, weight: .bold))
+                        .dsText(.widgetTitle17)
                         .foregroundStyle(.white)
                         .lineLimit(3)
                         .minimumScaleFactor(0.8)
                     Spacer(minLength: 0)
                     Text(entry.subline)
-                        .font(.system(size: 12))
+                        .dsText(.widgetSubline12)
                         .foregroundStyle(.white.opacity(0.6))
                         .lineLimit(1)
                 }
@@ -253,7 +256,7 @@ struct HeroWidgetView: View {
                 .overlay(alignment: .topTrailing) {
                     if entry.newCount > 0 {
                         Text("\(min(entry.newCount, 99))")
-                            .font(.system(size: 11, weight: .semibold))
+                            .dsText(.widgetEyebrow11)
                             .foregroundStyle(accent)
                             .frame(minWidth: 22, minHeight: 22)
                             .background(Circle().strokeBorder(accent, lineWidth: 2))

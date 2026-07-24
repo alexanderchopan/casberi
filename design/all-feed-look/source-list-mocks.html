@@ -1,0 +1,145 @@
+<title>Source lists — three row treatments</title>
+<style>
+  /* Review page — single-theme dark, same series as the other mock pages. */
+  :root {
+    --page: #0a0b0f; --ink: #f2f4f8; --muted: #99a1b4; --faint: #626b80;
+    --tint: #3a76ff; --confirm: #32d74b; --card: #17191f; --well: #101217;
+    --money: ui-rounded, -apple-system, system-ui, sans-serif;
+    --text: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { background: var(--page); }
+  body { font-family: var(--text); color: var(--ink);
+         background: radial-gradient(900px 420px at 18% -8%, rgba(58,118,255,.10), transparent 62%), var(--page);
+         padding: 48px 28px 72px; }
+  .wrap { max-width: 1220px; margin: 0 auto; }
+  header { max-width: 760px; margin-bottom: 40px; }
+  .eyebrow { font-size: 12px; font-weight: 600; color: var(--tint); margin-bottom: 10px; }
+  h1 { font-size: clamp(26px,3.6vw,38px); font-weight: 800; letter-spacing: -.02em; line-height: 1.08;
+       text-wrap: balance; margin-bottom: 14px; }
+  header p { font-size: 15px; line-height: 1.55; color: var(--muted); max-width: 64ch; }
+  header p b { color: var(--ink); font-weight: 600; }
+
+  .row { display: flex; flex-wrap: wrap; gap: 34px; align-items: flex-start; justify-content: center; }
+  .option { width: 320px; }
+  .phone { width: 320px; border-radius: 44px; padding: 9px; background: #16181d;
+           box-shadow: 0 30px 70px rgba(0,0,0,.55), 0 2px 8px rgba(0,0,0,.4); }
+  .screen { border-radius: 36px; overflow: hidden; background: #000; padding: 20px 14px 18px; height: 640px; }
+  .caption { margin-top: 20px; padding: 0 6px; }
+  .caption h2 { font-size: 17px; font-weight: 700; margin-bottom: 6px; }
+  .caption h2 span { color: var(--faint); font-weight: 600; }
+  .caption p { font-size: 13.5px; line-height: 1.55; color: var(--muted); }
+  .caption .risk { display: block; margin-top: 8px; font-size: 12.5px; color: var(--faint); }
+
+  /* shared row internals — SAME anatomy in every frame, only the surface changes */
+  .dayHead { display: flex; align-items: baseline; gap: 8px; margin: 4px 4px 8px; }
+  .dayHead b { font-size: 17px; font-weight: 700; }
+  .dayHead span { font-family: var(--money); font-size: 12px; font-weight: 700; color: var(--faint);
+                  font-variant-numeric: tabular-nums; }
+  .r { display: flex; align-items: center; gap: 11px; }
+  .g { width: 30px; height: 30px; border-radius: 9px; flex: none; overflow: hidden;
+       display: flex; align-items: center; justify-content: center; font-size: 13px; color: #fff; }
+  .g.rss { background: linear-gradient(135deg,#5a7d4d,#c86a4a 65%,#8a5a3a); }
+  .g.cal { background: #e33e30; } .g.food { background: linear-gradient(135deg,#6a4a2a,#3a2a1a); }
+  .g.wif { background: #123c1f; color: var(--confirm); } .g.pepe { background: linear-gradient(135deg,#3f8f3f,#2a6a2a); border-radius: 50%; }
+  .t { font-size: 14.5px; font-weight: 500; line-height: 1.25; min-width: 0; }
+  .t span { display: block; font-size: 11.5px; color: var(--faint); font-weight: 400; margin-top: 1px; }
+  .t.two { white-space: normal; }
+  .n { margin-left: auto; text-align: right; flex: none; }
+  .n .fig { font-family: var(--money); font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .n .unit { display: block; font-size: 10px; color: var(--faint); font-weight: 500; }
+  .n .time { font-size: 11.5px; color: var(--faint); }
+  .n .tag { display: block; font-size: 11px; color: #ff8fa0; font-weight: 500; }
+  .pill { font-family: var(--money); font-size: 11px; font-weight: 700; color: #04180a;
+          background: var(--confirm); border-radius: 999px; padding: 2px 8px; display: inline-block; margin-top: 2px; }
+
+  /* ---- A · one slab ---- */
+  .a .slab { background: var(--card); border-radius: 18px; padding: 6px 12px;
+             box-shadow: 0 10px 30px rgba(0,0,0,.35); margin-bottom: 16px; }
+  .a .r { padding: 10px 0; }
+
+  /* ---- B · row parcels ---- */
+  .b .r { background: var(--card); border-radius: 14px; padding: 11px 12px; margin-bottom: 7px; }
+
+  /* ---- C · open ledger ---- */
+  .c .dayHead { margin: 10px 4px 6px; }
+  .c .dayHead b { font-size: 20px; font-weight: 800; letter-spacing: -.02em; }
+  .c .r { padding: 11px 2px; }
+  .c .screen { padding-left: 18px; padding-right: 18px; }
+</style>
+
+<div class="wrap">
+<header>
+  <div class="eyebrow">Casberi · the All room's source lists</div>
+  <h1>Kill the grooves: three surfaces for the same rows</h1>
+  <p>The diagnosis first: today every row draws its <b>own segment</b> of the day card, and every segment casts its <b>own shadow</b> — so each row boundary is a lit ridge, which is the "3D in a not good way." Meanwhile the token rows float as separate parcels right below, so one screen runs two systems. Row anatomy is <b>identical in all three frames</b> — icons, sublines, trailing figures untouched. Only the surface underneath changes.</p>
+</header>
+
+<div class="row">
+
+  <!-- ============ A · ONE SLAB ============ -->
+  <div class="option a">
+    <div class="phone"><div class="screen">
+      <div class="dayHead"><b>Today</b><span>91</span></div>
+      <div class="slab">
+        <div class="r"><div class="g rss">▦</div><div class="t">RSS<span>9m ago</span></div><div class="n"><span class="fig">85</span><span class="unit">links</span></div></div>
+        <div class="r"><div class="g cal">▤</div><div class="t">Calendar<span>20m ago</span></div><div class="n"><span class="fig">3</span><span class="unit">events</span></div></div>
+        <div class="r"><div class="g food">🍜</div><div class="t two">Thai peanut noodle kit includes stir-fry rice noodles &amp; thai pea…</div><div class="n"><span class="time">6h</span><span class="tag">Food</span></div></div>
+        <div class="r"><div class="g wif">📈</div><div class="t">dogwifhat<span>WIF · $1.2B FDV</span></div><div class="n"><span class="fig">$1.10</span><span class="pill">+0.8%</span></div></div>
+        <div class="r"><div class="g pepe">🐸</div><div class="t">Pepe<span>PEPE · $1.2B cap</span></div><div class="n"><span class="fig">$0.00000286</span><span class="pill">+0.2%</span></div></div>
+      </div>
+      <div class="dayHead"><b>Yesterday</b><span>125</span></div>
+      <div class="slab">
+        <div class="r"><div class="g" style="background:#4d8f43">◨</div><div class="t">Shopify<span>New arrivals</span></div><div class="n"><span class="fig">100</span><span class="unit">products</span></div></div>
+        <div class="r"><div class="g" style="background:#b6392f">▣</div><div class="t">Gmail<span>Inbox</span></div><div class="n"><span class="fig">4</span><span class="unit">things</span></div></div>
+      </div>
+    </div></div>
+    <div class="caption">
+      <h2>A · One slab <span>— the day is one object</span></h2>
+      <p>The day card survives, but as a single continuous surface: one fill, one shadow for the whole day, rows separated by spacing alone. The tokens move INSIDE it — one system, no seams anywhere. §160's parcel, drawn the way a parcel should be.</p>
+      <span class="risk">Smallest change: the row code is untouched; only the per-row background+shadow becomes per-day. Long days become tall slabs — the header count keeps them honest.</span>
+    </div>
+  </div>
+
+  <!-- ============ B · ROW PARCELS ============ -->
+  <div class="option b">
+    <div class="phone"><div class="screen">
+      <div class="dayHead"><b>Today</b><span>91</span></div>
+      <div class="r"><div class="g rss">▦</div><div class="t">RSS<span>9m ago</span></div><div class="n"><span class="fig">85</span><span class="unit">links</span></div></div>
+      <div class="r"><div class="g cal">▤</div><div class="t">Calendar<span>20m ago</span></div><div class="n"><span class="fig">3</span><span class="unit">events</span></div></div>
+      <div class="r"><div class="g food">🍜</div><div class="t two">Thai peanut noodle kit includes stir-fry rice noodles &amp; thai pea…</div><div class="n"><span class="time">6h</span><span class="tag">Food</span></div></div>
+      <div class="r"><div class="g wif">📈</div><div class="t">dogwifhat<span>WIF · $1.2B FDV</span></div><div class="n"><span class="fig">$1.10</span><span class="pill">+0.8%</span></div></div>
+      <div class="r"><div class="g pepe">🐸</div><div class="t">Pepe<span>PEPE · $1.2B cap</span></div><div class="n"><span class="fig">$0.00000286</span><span class="pill">+0.2%</span></div></div>
+      <div class="dayHead" style="margin-top:14px"><b>Yesterday</b><span>125</span></div>
+      <div class="r"><div class="g" style="background:#4d8f43">◨</div><div class="t">Shopify<span>New arrivals</span></div><div class="n"><span class="fig">100</span><span class="unit">products</span></div></div>
+      <div class="r"><div class="g" style="background:#b6392f">▣</div><div class="t">Gmail<span>Inbox</span></div><div class="n"><span class="fig">4</span><span class="unit">things</span></div></div>
+    </div></div>
+    <div class="caption">
+      <h2>B · Row parcels <span>— the tokens' idiom, everywhere</span></h2>
+      <p>The other way to end the two-system clash: promote the token rows' existing treatment to every row. Each row its own quiet parcel, uniform gap, no shared card to seam. Days become runs of parcels under their header — the settings screen already reads this way (§161).</p>
+      <span class="risk">More surfaces on screen; day boundaries lean harder on the headers. Flat fills, shadow-free — depth comes from the gap, not a ridge.</span>
+    </div>
+  </div>
+
+  <!-- ============ C · OPEN LEDGER ============ -->
+  <div class="option c">
+    <div class="phone"><div class="screen">
+      <div class="dayHead"><b>Today</b><span>91</span></div>
+      <div class="r"><div class="g rss">▦</div><div class="t">RSS<span>9m ago</span></div><div class="n"><span class="fig">85</span><span class="unit">links</span></div></div>
+      <div class="r"><div class="g cal">▤</div><div class="t">Calendar<span>20m ago</span></div><div class="n"><span class="fig">3</span><span class="unit">events</span></div></div>
+      <div class="r"><div class="g food">🍜</div><div class="t two">Thai peanut noodle kit includes stir-fry rice noodles &amp; thai pea…</div><div class="n"><span class="time">6h</span><span class="tag">Food</span></div></div>
+      <div class="r"><div class="g wif">📈</div><div class="t">dogwifhat<span>WIF · $1.2B FDV</span></div><div class="n"><span class="fig">$1.10</span><span class="pill">+0.8%</span></div></div>
+      <div class="r"><div class="g pepe">🐸</div><div class="t">Pepe<span>PEPE · $1.2B cap</span></div><div class="n"><span class="fig">$0.00000286</span><span class="pill">+0.2%</span></div></div>
+      <div class="dayHead"><b>Yesterday</b><span>125</span></div>
+      <div class="r"><div class="g" style="background:#4d8f43">◨</div><div class="t">Shopify<span>New arrivals</span></div><div class="n"><span class="fig">100</span><span class="unit">products</span></div></div>
+      <div class="r"><div class="g" style="background:#b6392f">▣</div><div class="t">Gmail<span>Inbox</span></div><div class="n"><span class="fig">4</span><span class="unit">things</span></div></div>
+    </div></div>
+    <div class="caption">
+      <h2>C · Open ledger <span>— rhythm instead of surfaces</span></h2>
+      <p>No fills at all: rows sit on the ink, day headers step up to 20pt-800 and carry the whole structure, the figure column holds the right edge. No seams because there is nothing to seam. The visualizations above stay parcels — content cards, list air.</p>
+      <span class="risk">The frame-A question answered concretely: card-less without hairlines. If §160's "parcels beat strata" extends to LISTS, this loses; if parcels were about the READS (map, chart, mosaic) and lists are a different animal, this is the calmest screen of the three.</span>
+    </div>
+  </div>
+
+</div>
+</div>

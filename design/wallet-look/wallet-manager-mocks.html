@@ -1,0 +1,243 @@
+<title>Wallet manager — three shapes, not a settings page</title>
+<style>
+  :root {
+    --page: #0a0b0f; --ink: #f2f4f8; --muted: #99a1b4; --faint: #626b80;
+    --tint: #1673e6; --confirm: #32d74b;
+    --card: rgba(22,24,31,.82);
+    --money: ui-rounded, -apple-system, system-ui, sans-serif;
+    --text: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { background: var(--page); }
+  body {
+    font-family: var(--text); color: var(--ink);
+    background: radial-gradient(900px 420px at 18% -8%, rgba(22,115,230,.10), transparent 62%), var(--page);
+    padding: 48px 28px 72px;
+  }
+  .wrap { max-width: 1180px; margin: 0 auto; }
+  header { max-width: 740px; margin-bottom: 40px; }
+  .eyebrow { font-size: 12px; font-weight: 600; color: #4d8dff; margin-bottom: 10px; }
+  h1 { font-size: clamp(26px,3.6vw,38px); font-weight: 800; letter-spacing: -.02em; line-height: 1.08; text-wrap: balance; margin-bottom: 14px; }
+  header p { font-size: 15px; line-height: 1.55; color: var(--muted); max-width: 64ch; }
+  header p b { color: var(--ink); font-weight: 600; }
+
+  .row { display: flex; flex-wrap: wrap; gap: 34px; align-items: flex-start; justify-content: center; margin-bottom: 50px; }
+  .option { width: 316px; }
+  .phone { width: 316px; border-radius: 44px; padding: 9px; background: #16181d; box-shadow: 0 30px 70px rgba(0,0,0,.55); }
+  .screen {
+    border-radius: 36px; overflow: hidden; position: relative; padding: 20px 14px;
+    background: linear-gradient(180deg, rgba(22,115,230,.28) 0%, rgba(22,115,230,.09) 48%, rgba(22,115,230,0) 100%) top/100% 440px no-repeat, #000;
+    min-height: 620px;
+  }
+  .caption { margin-top: 18px; padding: 0 6px; }
+  .caption h2 { font-size: 17px; font-weight: 700; margin-bottom: 6px; }
+  .caption h2 span { color: var(--faint); font-weight: 600; }
+  .caption p { font-size: 13.5px; line-height: 1.55; color: var(--muted); }
+  .caption .risk { display: block; margin-top: 7px; font-size: 12.5px; color: var(--faint); }
+
+  /* shared atoms */
+  .navTitle { font-family: var(--money); font-size: 26px; font-weight: 800; letter-spacing: -.015em; }
+  .navSub { font-size: 11px; color: var(--faint); margin-top: 2px; }
+  .face { border-radius: 50%; flex: none; }
+  .f-vitalik { background: radial-gradient(circle at 32% 30%, #b8c4ff, #5560d8 58%, #2c3560); }
+  .f-main { background: radial-gradient(circle at 30% 30%, #7d9bff, #4a56d2); }
+  .f-trading { background: radial-gradient(circle at 30% 30%, #6fe3a5, #2e9e63); }
+  .f-mom { background: radial-gradient(circle at 30% 30%, #ff9ec6, #c2477f); }
+  .f-jesse { background: radial-gradient(circle at 30% 30%, #ffd27d, #d2812a); }
+  .sq { border-radius: 10px !important; display: flex; align-items: center; justify-content: center; font-size: 12px; color: #99a1b4; background: #262b38; }
+  .sq.safe { color: #58d68d; background: #17281f; }
+  .copy { width: 24px; height: 24px; border-radius: 8px; background: rgba(255,255,255,.07); color: var(--muted);
+          display: flex; align-items: center; justify-content: center; font-size: 10px; flex: none; }
+  .mono { font-family: var(--money); }
+  .dotOn { width: 7px; height: 7px; border-radius: 50%; background: var(--confirm); flex: none; }
+  .gearline { display: flex; align-items: center; gap: 7px; margin-top: 16px; font-size: 12px; color: var(--faint); }
+  .gearline i { font-style: normal; margin-left: auto; }
+
+  /* ============ A · THE ROSTER ============ */
+  .shelf { display: flex; gap: 12px; margin: 18px 0 4px; }
+  .slot { text-align: center; width: 56px; }
+  .slot .face, .slot .ring { width: 54px; height: 54px; margin: 0 auto 5px; }
+  .slot b { display: block; font-size: 10.5px; font-weight: 600; }
+  .slot span { display: block; font-size: 9px; color: var(--faint); }
+  .ring { border-radius: 50%; border: 1.6px dashed rgba(255,255,255,.22);
+          display: flex; align-items: center; justify-content: center; color: var(--faint); font-size: 18px; }
+  .shelfNote { font-size: 10.5px; color: var(--faint); margin: 6px 0 14px; }
+  .omni {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--card); border-radius: 16px; padding: 12px 13px; margin-bottom: 16px;
+  }
+  .omni span { color: var(--faint); font-size: 13px; }
+  .omni .go { margin-left: auto; color: #4d8dff; font-weight: 700; font-size: 12px; }
+  .bookLabel { font-size: 11px; font-weight: 600; color: var(--faint); margin: 0 0 8px; }
+  .bkRow { display: flex; align-items: center; gap: 9px; padding: 7px 0; }
+  .bkRow .face, .bkRow .sq { width: 30px; height: 30px; }
+  .bkRow .t { flex: 1; min-width: 0; }
+  .bkRow .t b { display: block; font-size: 13px; font-weight: 600; }
+  .bkRow .t span { display: block; font-size: 10px; color: var(--faint); }
+
+  /* ============ B · THE LEDGER ============ */
+  .counter {
+    font-family: var(--money); font-size: 11px; font-weight: 700; color: var(--confirm);
+    background: rgba(50,215,75,.12); border-radius: 999px; padding: 4px 10px;
+  }
+  .lgRow { display: flex; align-items: center; gap: 9px; padding: 9px 0; }
+  .lgRow .face, .lgRow .sq { width: 34px; height: 34px; }
+  .lgRow .t { flex: 1; min-width: 0; }
+  .lgRow .t b { display: block; font-size: 14.5px; font-weight: 650; }
+  .lgRow .t span { display: block; font-size: 10.5px; color: var(--faint); }
+  .knob { width: 36px; height: 22px; border-radius: 999px; background: rgba(255,255,255,.12); position: relative; flex: none; }
+  .knob i { position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; border-radius: 50%; background: #fff; opacity: .8; }
+  .knob.on { background: var(--confirm); } .knob.on i { left: auto; right: 2px; opacity: 1; }
+  .divider { font-size: 10px; color: var(--faint); margin: 10px 0 4px; letter-spacing: 0; }
+
+  /* ============ C · THE DESK ============ */
+  .idcard {
+    border-radius: 18px; padding: 13px 14px; margin-bottom: 9px; position: relative; overflow: hidden;
+  }
+  .idcard .top { display: flex; align-items: center; gap: 8px; }
+  .idcard .face { width: 30px; height: 30px; }
+  .idcard b { font-family: var(--money); font-size: 17px; font-weight: 800; }
+  .idcard .landing { margin-left: auto; display: flex; align-items: center; gap: 5px; font-size: 9.5px; color: rgba(255,255,255,.75); }
+  .idcard .addr { display: flex; align-items: center; justify-content: space-between; margin-top: 16px; }
+  .idcard .addr code { font-family: var(--money); font-size: 10.5px; color: rgba(255,255,255,.65); }
+  .c-vitalik { background: linear-gradient(135deg, rgba(85,96,216,.55), rgba(85,96,216,.18)); }
+  .c-main    { background: linear-gradient(135deg, rgba(74,86,210,.55), rgba(74,86,210,.18)); }
+  .c-trading { background: linear-gradient(135deg, rgba(46,158,99,.5), rgba(46,158,99,.16)); }
+  .slotcard {
+    border-radius: 18px; border: 1.6px dashed rgba(255,255,255,.18);
+    padding: 15px; text-align: center; color: var(--faint); font-size: 12px; margin-bottom: 14px;
+  }
+  .slotcard b { color: var(--muted); font-weight: 650; }
+  .chipgrid { display: flex; flex-wrap: wrap; gap: 7px; }
+  .bchip { display: flex; align-items: center; gap: 6px; background: var(--card); border-radius: 999px; padding: 6px 11px 6px 6px; }
+  .bchip .face, .bchip .sq { width: 22px; height: 22px; }
+  .bchip b { font-size: 11.5px; font-weight: 600; }
+
+  .verdict { max-width: 900px; margin: 0 auto; }
+  .verdict h3 { font-size: 15px; font-weight: 700; margin-bottom: 14px; }
+  .points { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; margin-bottom: 26px; }
+  .point { background: rgba(255,255,255,.035); border-radius: 16px; padding: 14px 16px; }
+  .point b { display: block; font-size: 13.5px; font-weight: 700; margin-bottom: 4px; }
+  .point p { font-size: 12.5px; line-height: 1.5; color: var(--muted); }
+  .law { font-size: 12.5px; line-height: 1.6; color: var(--faint); max-width: 76ch; }
+  .law b { color: var(--muted); font-weight: 600; }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .option { animation: rise .5s ease-out backwards; }
+    .option:nth-child(2) { animation-delay: .08s; }
+    .option:nth-child(3) { animation-delay: .16s; }
+    @keyframes rise { from { opacity: 0; transform: translateY(14px); } }
+  }
+</style>
+
+<div class="wrap">
+<header>
+  <div class="eyebrow">Casberi · the wallet manager, rebuilt</div>
+  <h1>Not a settings page — a place your addresses live</h1>
+  <p>The current screen is an inset-grouped List wearing wallet content: section cards, footers, "Add a wallet" as a mid-page errand. A purpose-built manager inverts all three — <b>identity leads, adding is the primary act, plumbing demotes to one door.</b> All three frames keep the shipped facts exactly: 3 of 5 watched, the book unlimited, kinds detected, copy everywhere, read-only stated once. Only the architecture changes.</p>
+</header>
+
+<div class="row">
+
+  <!-- ============ A: THE ROSTER ============ -->
+  <div class="option">
+    <div class="phone"><div class="screen">
+      <div class="navTitle">Wallet</div>
+      <div class="navSub">Read-only · watching can never trade or move funds</div>
+      <div class="shelf">
+        <div class="slot"><div class="face f-vitalik"></div><b>Main</b><span>vitalik.eth</span></div>
+        <div class="slot"><div class="face f-trading"></div><b>Trading</b><span>0x28C6…</span></div>
+        <div class="slot"><div class="face f-main"></div><b>Cold</b><span>0x1111…</span></div>
+        <div class="slot"><div class="ring">+</div><b style="color:var(--faint)">Watch</b><span>&nbsp;</span></div>
+        <div class="slot"><div class="ring" style="opacity:.45"></div><span style="margin-top:7px">&nbsp;</span></div>
+      </div>
+      <div class="shelfNote">3 of 5 — a watched wallet lands its whole feed</div>
+      <div class="omni">🔍 <span>Paste anything — 0x, ENS, .sol, or a name</span><span class="go">Add</span></div>
+      <div class="bookLabel">Address book · names only, unlimited</div>
+      <div class="bkRow"><span class="face f-mom"></span><div class="t"><b>Mom</b><span class="mono">0x9a2E…44b1</span></div><span class="copy">⧉</span></div>
+      <div class="bkRow"><span class="face f-jesse"></span><div class="t"><b>jesse.base.eth</b><span class="mono">0x2211…9d0f · Farcaster</span></div><span class="copy">⧉</span></div>
+      <div class="bkRow"><span class="sq safe" style="width:30px;height:30px">▣</span><div class="t"><b>Team Safe</b><span class="mono">0x77Ab…3c02 · Safe · 2 of 3</span></div><span class="copy">⧉</span></div>
+      <div class="bkRow"><span class="sq" style="width:30px;height:30px">{}</span><div class="t"><b>Milady mint</b><span class="mono">0x5Af0…c4A6 · Contract</span></div><span class="copy">⧉</span></div>
+      <div class="gearline">⚙︎ Connection — chains, WalletConnect, disconnect <i>›</i></div>
+    </div></div>
+    <div class="caption">
+      <h2>A · The roster <span>— faces first, slots literal</span></h2>
+      <p>The watched five as a shelf of big faces — the Stories grammar the source chips already taught — with the cap drawn as REAL empty slots you can see yourself filling. One omnibox adds anything; the book lists below; every pipe and toggle lives behind one ⚙︎ door.</p>
+      <span class="risk">The cap stops being refusal copy and becomes structure: two dashed rings say "room for two" better than any sentence.</span>
+    </div>
+  </div>
+
+  <!-- ============ B: THE LEDGER ============ -->
+  <div class="option">
+    <div class="phone"><div class="screen">
+      <div style="display:flex; align-items:baseline; gap:10px">
+        <div class="navTitle">Addresses</div>
+        <span class="counter" style="margin-left:auto">3 of 5 landing</span>
+      </div>
+      <div class="navSub">One list — some land their feed, the rest are names</div>
+      <div class="omni" style="margin-top:14px">🔍 <span>Find or add — name, 0x, ENS, .sol…</span></div>
+      <div class="lgRow"><span class="face f-vitalik" style="width:34px;height:34px"></span><div class="t"><b>Main</b><span class="mono">vitalik.eth · landing since Jul 2</span></div><span class="copy">⧉</span><span class="knob on"><i></i></span></div>
+      <div class="lgRow"><span class="face f-trading" style="width:34px;height:34px"></span><div class="t"><b>Trading</b><span class="mono">0x28C6…1d60 · landing</span></div><span class="copy">⧉</span><span class="knob on"><i></i></span></div>
+      <div class="lgRow"><span class="face f-main" style="width:34px;height:34px"></span><div class="t"><b>Cold</b><span class="mono">0x1111…1111 · landing</span></div><span class="copy">⧉</span><span class="knob on"><i></i></span></div>
+      <div class="divider">Named — nothing lands, nothing costs</div>
+      <div class="lgRow"><span class="face f-mom" style="width:34px;height:34px"></span><div class="t"><b>Mom</b><span class="mono">0x9a2E…44b1</span></div><span class="copy">⧉</span><span class="knob"><i></i></span></div>
+      <div class="lgRow"><span class="face f-jesse" style="width:34px;height:34px"></span><div class="t"><b>jesse.base.eth</b><span class="mono">0x2211…9d0f · Farcaster</span></div><span class="copy">⧉</span><span class="knob"><i></i></span></div>
+      <div class="lgRow"><span class="sq" style="width:34px;height:34px">{}</span><div class="t"><b>Milady mint</b><span class="mono">0x5Af0…c4A6 · Contract</span></div><span class="copy">⧉</span><span class="knob"><i></i></span></div>
+      <div class="lgRow"><span class="sq safe" style="width:34px;height:34px">▣</span><div class="t"><b>Team Safe</b><span class="mono">0x77Ab…3c02 · Safe</span></div><span class="copy">⧉</span><span class="knob"><i></i></span></div>
+      <div class="gearline">⚙︎ Connection <i>›</i></div>
+    </div></div>
+    <div class="caption">
+      <h2>B · The ledger <span>— one list, one omnibox</span></h2>
+      <p>The model's own truth on screen: ONE ledger of addresses where watching is just a switch a row can wear (§169 verbatim). The omnibox is both search and add — type a known name, it filters; paste an unknown address, it offers "Name it / Watch it." The toggle carries the cap: at five, the off knobs state it in words on tap.</p>
+      <span class="risk">Sparsest and most tool-like. Risk: the toggle column reads dense at fifty rows — the counter pill and the divider whisper carry the structure.</span>
+    </div>
+  </div>
+
+  <!-- ============ C: THE DESK ============ -->
+  <div class="option">
+    <div class="phone"><div class="screen">
+      <div class="navTitle">Wallet</div>
+      <div class="navSub">Read-only, always</div>
+      <div style="height:12px"></div>
+      <div class="idcard c-vitalik">
+        <div class="top"><span class="face f-vitalik"></span><b>Main</b><span class="landing"><span class="dotOn"></span>landing</span></div>
+        <div class="addr"><code>vitalik.eth · 0xd8dA…6045</code><span class="copy">⧉</span></div>
+      </div>
+      <div class="idcard c-trading">
+        <div class="top"><span class="face f-trading"></span><b>Trading</b><span class="landing"><span class="dotOn"></span>landing</span></div>
+        <div class="addr"><code>0x28C6…1d60</code><span class="copy">⧉</span></div>
+      </div>
+      <div class="idcard c-main">
+        <div class="top"><span class="face f-main"></span><b>Cold</b><span class="landing"><span class="dotOn"></span>landing</span></div>
+        <div class="addr"><code>0x1111…1111</code><span class="copy">⧉</span></div>
+      </div>
+      <div class="slotcard"><b>Two slots free</b> — paste an address, an ENS, or a .sol name</div>
+      <div class="bookLabel">Address book</div>
+      <div class="chipgrid">
+        <span class="bchip"><span class="face f-mom"></span><b>Mom</b></span>
+        <span class="bchip"><span class="face f-jesse"></span><b>jesse.base.eth</b></span>
+        <span class="bchip"><span class="sq safe">▣</span><b>Team Safe</b></span>
+        <span class="bchip"><span class="sq">{}</span><b>Milady mint</b></span>
+        <span class="bchip" style="color:#4d8dff"><b style="color:#4d8dff">+ Name</b></span>
+      </div>
+      <div class="gearline">⚙︎ Connection <i>›</i></div>
+    </div></div>
+    <div class="caption">
+      <h2>C · The desk <span>— a wallet holding cards</span></h2>
+      <p>The metaphor made literal: each watched wallet is an identity CARD washed in its own face tint — the hue it already wears everywhere — and the free slots are a dashed card inviting the paste. The book compresses to chips (faces round, machinery square), one tap from its full card.</p>
+      <span class="risk">The most photogenic and the most opinionated. Risk: tinted cards at 5 wallets is gorgeous; the same idea at 1 wallet is one lonely card — the empty state has to carry it.</span>
+    </div>
+  </div>
+
+</div>
+
+<div class="verdict">
+  <h3>My read, for your ruling</h3>
+  <div class="points">
+    <div class="point"><b>What all three fix</b><p>Identity leads instead of section furniture; adding becomes the screen's primary act (an omnibox or a slot, not an errand card); chains/WalletConnect/disconnect collapse behind ONE ⚙︎ door — they're set-once plumbing and were charging rent on every visit. The §170 cap turns from copy into structure you can see.</p></div>
+    <div class="point"><b>The recommendation: A, with B's omnibox</b><p>The roster is the most Casberi — the Stories shelf is a grammar the chips already taught, faces are the identity system's payoff, and literal empty slots are the warmest honest way to show a cap. Its add field should behave like B's omnibox (find-or-add in one input). B is the purest tool if you want maximum sparseness; C is the best screenshot and the biggest swing.</p></div>
+    <div class="point"><b>What doesn't change</b><p>Every shipped fact and rule survives all three: detected kinds, round-vs-square marks, copy on every row, unlimited naming, the five-cap with grandfathering, "read-only" stated once in the subtitle instead of a footer paragraph.</p></div>
+  </div>
+  <p class="law"><b>Law check:</b> no hairlines (the ledger's divider is a whisper of type, not a rule), sentence case throughout, glass only floating (the cards are fills), hue stays identity — every colored surface above is a wallet's own tint doing its one job. The ⚙︎ door needs a §139 amendment ("manage is one page, no doors") — the argument: §139 killed doors to READS, and connection plumbing isn't a read.</p>
+</div>
+</div>

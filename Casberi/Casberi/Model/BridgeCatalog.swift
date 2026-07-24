@@ -189,6 +189,14 @@ enum BridgeCatalog {
         Offer(name: "1Claw",       tagline: "What your agent's key can reach",       group: "Agent",     connectable: true,
               summary: "1Claw is a vault that holds your AI agents' secrets behind human-granted permissions. Paste an agent's API key and its actual reach lands in your feed — every vault it can see, and each grant's secret paths and permissions, straight from 1Claw's own records. Names and permissions only, read straight from this iPhone: nothing here ever reads a secret's value, signs, or spends.",
               needsSetup: true, added: day(2026, 7, 17)),
+        // OpenRouter (2026-07-24): a sixth agent key, one API routed across
+        // 400+ models. It never pins one model — it rides OpenRouter's own
+        // `openrouter/auto` router, so the answer's capabilities stay
+        // honestly text-only/no-search rather than claiming whatever the
+        // picked model might not have.
+        Offer(name: "OpenRouter",  tagline: "One key, whichever model fits",         group: "Agent",     connectable: true,
+              summary: "OpenRouter routes your question to whichever of its 400+ models fits, so your OpenRouter key powers \"Try with your key\" without pinning one model. Any answer re-runs straight from this iPhone, only when you tap.",
+              needsSetup: true, added: day(2026, 7, 24)),
         Offer(name: "GitHub",      tagline: "Stars, releases, issues — your GitHub", group: "Work",      connectable: true,
               summary: "Pick the feeds you want — starred repos, new releases, gists, your contributions, watched repos, and the issues and pull requests that involve you. Connects with a read-only token you make in GitHub settings — it stays in this iPhone's Keychain.",
               needsSetup: true),

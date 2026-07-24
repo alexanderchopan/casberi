@@ -1,0 +1,238 @@
+<title>All feed — Robinhood / Cash App / Uber</title>
+<style>
+  /* Review page for app screens — single-theme dark, same series as
+     wallet-look-mocks.html and all-feed-look-mocks.html. */
+  :root {
+    --page: #0a0b0f; --ink: #f2f4f8; --muted: #99a1b4; --faint: #626b80;
+    --tint: #3a76ff;
+    --rh: #00c805;         /* Robinhood spring green */
+    --ca: #00d632;         /* Cash App green */
+    --money: ui-rounded, -apple-system, system-ui, sans-serif;
+    --text: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { background: var(--page); }
+  body {
+    font-family: var(--text); color: var(--ink);
+    background: radial-gradient(900px 420px at 18% -8%, rgba(58,118,255,.10), transparent 62%), var(--page);
+    padding: 48px 28px 72px;
+  }
+  .wrap { max-width: 1220px; margin: 0 auto; }
+  header { max-width: 760px; margin-bottom: 40px; }
+  .eyebrow { font-size: 12px; font-weight: 600; color: var(--tint); margin-bottom: 10px; }
+  h1 { font-size: clamp(26px,3.6vw,38px); font-weight: 800; letter-spacing: -.02em; line-height: 1.08; text-wrap: balance; margin-bottom: 14px; }
+  header p { font-size: 15px; line-height: 1.55; color: var(--muted); max-width: 64ch; }
+  header p b { color: var(--ink); font-weight: 600; }
+
+  .row { display: flex; flex-wrap: wrap; gap: 34px; align-items: flex-start; justify-content: center; }
+  .option { width: 320px; }
+  .phone { width: 320px; border-radius: 44px; padding: 9px; background: #16181d;
+           box-shadow: 0 30px 70px rgba(0,0,0,.55), 0 2px 8px rgba(0,0,0,.4); }
+  .screen { border-radius: 36px; overflow: hidden; position: relative; padding: 20px 16px 18px; height: 660px; }
+  .caption { margin-top: 20px; padding: 0 6px; }
+  .caption h2 { font-size: 17px; font-weight: 700; margin-bottom: 6px; }
+  .caption h2 span { color: var(--faint); font-weight: 600; }
+  .caption p { font-size: 13.5px; line-height: 1.55; color: var(--muted); }
+  .caption .risk { display: block; margin-top: 8px; font-size: 12.5px; color: var(--faint); }
+
+  /* ---------------- A · ROBINHOOD ---------------- */
+  .rh .screen { background: #000; color: #fff; }
+  .rh .chips { display: flex; gap: 14px; margin-bottom: 22px; align-items: center; }
+  .rh .chip { font-size: 13px; font-weight: 600; color: #6b7280; }
+  .rh .chip.on { color: #fff; border-bottom: 2px solid var(--rh); padding-bottom: 3px; }
+  .rh .themesTitle { font-size: 12px; font-weight: 500; color: #6b7280; margin-bottom: 10px; }
+  .rh .themeList { margin-bottom: 22px; }
+  .rh .trow { display: flex; align-items: center; gap: 10px; padding: 7px 0; }
+  .rh .trow .name { font-size: 14px; font-weight: 500; flex: none; width: 86px; }
+  .rh .trow .barWell { flex: 1; height: 3px; border-radius: 2px; background: #1c1f24; position: relative; }
+  .rh .trow .bar { position: absolute; inset: 0 auto 0 0; border-radius: 2px; background: var(--rh); }
+  .rh .trow .n { font-family: var(--money); font-size: 13px; font-weight: 600; color: #9ca3af;
+                 font-variant-numeric: tabular-nums; width: 30px; text-align: right; }
+  .rh .dayHead { font-size: 17px; font-weight: 700; margin: 18px 0 4px; }
+  .rh .dayHead small { font-size: 12px; font-weight: 500; color: #6b7280; margin-left: 8px; }
+  .rh .r { display: flex; align-items: center; gap: 12px; padding: 11px 0; }
+  .rh .g { width: 30px; height: 30px; border-radius: 50%; flex: none; display: flex; align-items: center;
+           justify-content: center; font-size: 13px; color: #fff; background: #1c1f24; }
+  .rh .t { font-size: 14.5px; font-weight: 500; line-height: 1.25; min-width: 0; }
+  .rh .t span { display: block; font-size: 12px; color: #6b7280; font-weight: 400; margin-top: 1px; }
+  .rh .n2 { margin-left: auto; font-family: var(--money); font-size: 15px; font-weight: 600;
+            font-variant-numeric: tabular-nums; text-align: right; flex: none; }
+  .rh .n2 small { display: block; font-size: 10.5px; color: #6b7280; font-weight: 500; }
+  .rh .n2.up { color: var(--rh); }
+  .rh .bar2 { position: absolute; left: 16px; right: 16px; bottom: 14px; border: 1px solid #26292f;
+              border-radius: 24px; padding: 12px 16px; font-size: 14px; color: #6b7280; background: #000; }
+
+  /* ---------------- B · CASH APP ---------------- */
+  .ca .screen { background: #0d0f0d; color: #fff; }
+  .ca .chips { display: flex; gap: 8px; margin-bottom: 18px; }
+  .ca .chip { font-size: 12.5px; font-weight: 700; padding: 8px 14px; border-radius: 999px;
+              background: #1a1d1a; color: #9ca3af; }
+  .ca .chip.on { background: var(--ca); color: #04180a; }
+  .ca .themeCard { background: #161916; border-radius: 24px; padding: 14px 14px 12px; margin-bottom: 14px; }
+  .ca .themesTitle { font-family: var(--money); font-size: 15px; font-weight: 800; margin-bottom: 10px; }
+  .ca .map { display: grid; gap: 7px; grid-template-columns: repeat(4,1fr); grid-template-rows: 46px 44px; }
+  .ca .cell { border-radius: 16px; padding: 8px 10px; background: rgba(0,214,50,.07);
+              display: flex; flex-direction: column; justify-content: space-between; }
+  .ca .cell b { font-family: var(--money); font-size: 13px; font-weight: 800; }
+  .ca .cell i { font-style: normal; font-family: var(--money); font-size: 11px; font-weight: 700; color: #86e8a0; }
+  .ca .cell.c1 { grid-area: 1/1/2/3; background: rgba(0,214,50,.26); }
+  .ca .cell.c2 { grid-area: 1/3/2/5; background: rgba(0,214,50,.16); }
+  .ca .cell.c3 { grid-area: 2/1/3/2; } .ca .cell.c4 { grid-area: 2/2/3/4; background: rgba(0,214,50,.11); }
+  .ca .cell.c5 { grid-area: 2/4/3/5; }
+  .ca .dayHead { font-family: var(--money); font-size: 16px; font-weight: 800; margin: 16px 2px 8px; }
+  .ca .dayHead small { font-size: 12px; color: #9ca3af; font-weight: 700; margin-left: 6px; }
+  .ca .card { background: #161916; border-radius: 24px; padding: 4px 14px; }
+  .ca .r { display: flex; align-items: center; gap: 12px; padding: 12px 0; }
+  .ca .g { width: 40px; height: 40px; border-radius: 14px; flex: none; display: flex; align-items: center;
+           justify-content: center; font-size: 16px; color: #fff; }
+  .ca .g.b1 { background: #2461ff; } .ca .g.b2 { background: #e33e30; }
+  .ca .g.b3 { background: #4d8f43; } .ca .g.b4 { background: #8b1e1e; }
+  .ca .t { font-family: var(--money); font-size: 15px; font-weight: 700; line-height: 1.2; min-width: 0; }
+  .ca .t span { display: block; font-family: var(--text); font-size: 11.5px; color: #9ca3af; font-weight: 500; margin-top: 2px; }
+  .ca .n2 { margin-left: auto; font-family: var(--money); font-size: 18px; font-weight: 800;
+            font-variant-numeric: tabular-nums; flex: none; text-align: right; }
+  .ca .n2 small { display: block; font-size: 10px; color: #9ca3af; font-weight: 600; }
+  .ca .n2.up { color: var(--ca); }
+  .ca .bar2 { position: absolute; left: 16px; right: 16px; bottom: 14px; border-radius: 999px;
+              padding: 14px 18px; font-family: var(--money); font-size: 15px; font-weight: 800;
+              color: #04180a; background: var(--ca); text-align: center; }
+
+  /* ---------------- C · UBER ---------------- */
+  .ub .screen { background: #fff; color: #000; }
+  .ub .chips { display: flex; gap: 8px; margin-bottom: 18px; }
+  .ub .chip { font-size: 12.5px; font-weight: 600; padding: 7px 13px; border-radius: 999px;
+              background: #f3f3f3; color: #555; }
+  .ub .chip.on { background: #000; color: #fff; }
+  .ub .themesTitle { font-size: 20px; font-weight: 800; letter-spacing: -.02em; margin: 2px 2px 10px; }
+  .ub .map { display: grid; gap: 7px; grid-template-columns: repeat(4,1fr); grid-template-rows: 48px 46px; margin-bottom: 6px; }
+  .ub .cell { border-radius: 10px; padding: 8px 10px; background: #f3f3f3;
+              display: flex; flex-direction: column; justify-content: space-between; }
+  .ub .cell b { font-size: 13px; font-weight: 700; }
+  .ub .cell i { font-style: normal; font-size: 11px; font-weight: 600; color: #6b6b6b;
+                font-variant-numeric: tabular-nums; }
+  .ub .cell.c1 { grid-area: 1/1/2/3; background: #e8e8e8; }
+  .ub .cell.c2 { grid-area: 1/3/2/5; background: #ededed; }
+  .ub .cell.c3 { grid-area: 2/1/3/2; } .ub .cell.c4 { grid-area: 2/2/3/4; }
+  .ub .cell.c5 { grid-area: 2/4/3/5; }
+  .ub .dayHead { font-size: 20px; font-weight: 800; letter-spacing: -.02em; margin: 16px 2px 6px; }
+  .ub .dayHead small { font-size: 12px; font-weight: 500; color: #6b6b6b; margin-left: 8px; }
+  .ub .r { display: flex; align-items: center; gap: 13px; padding: 11px 0; }
+  .ub .g { width: 36px; height: 36px; border-radius: 8px; flex: none; display: flex; align-items: center;
+           justify-content: center; font-size: 15px; color: #fff; background: #000; }
+  .ub .t { font-size: 15px; font-weight: 600; line-height: 1.25; min-width: 0; }
+  .ub .t span { display: block; font-size: 12px; color: #6b6b6b; font-weight: 400; margin-top: 1px; }
+  .ub .n2 { margin-left: auto; font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums;
+            flex: none; text-align: right; }
+  .ub .n2 small { display: block; font-size: 10.5px; color: #6b6b6b; font-weight: 500; }
+  .ub .chev { color: #c4c4c4; font-size: 13px; margin-left: 4px; }
+  .ub .bar2 { position: absolute; left: 16px; right: 16px; bottom: 14px; border-radius: 10px;
+              padding: 13px 16px; font-size: 14px; font-weight: 600; color: #fff; background: #000; }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .option { animation: rise .5s ease-out backwards; }
+    .option:nth-child(2) { animation-delay: .08s; }
+    .option:nth-child(3) { animation-delay: .16s; }
+    @keyframes rise { from { opacity: 0; transform: translateY(14px); } }
+  }
+</style>
+
+<div class="wrap">
+<header>
+  <div class="eyebrow">Casberi · the All room, three borrowed accents</div>
+  <h1>The same day, worn three ways</h1>
+  <p>Same content in every frame — the real demo corpus: Themes, Today's 23, the Wallet bundle, Shopify's fans, yesterday's import. What changes is the <b>voice</b>: Robinhood's chart-quiet minimalism, Cash App's numeral swagger, Uber's typographic utility. None of these ships whole; each is a direction to steal the best sentence from.</p>
+</header>
+
+<div class="row">
+
+  <!-- ============ A · ROBINHOOD ============ -->
+  <div class="option rh">
+    <div class="phone"><div class="screen">
+      <div class="chips"><div class="chip on">All</div><div class="chip">Wallet</div><div class="chip">Calendar</div><div class="chip">Shopify</div><div class="chip">ChatGPT</div></div>
+      <div class="themesTitle">THEMES</div>
+      <div class="themeList">
+        <div class="trow"><div class="name">Work</div><div class="barWell"><div class="bar" style="width:92%"></div></div><div class="n">8</div></div>
+        <div class="trow"><div class="name">Fitness</div><div class="barWell"><div class="bar" style="width:58%; opacity:.75"></div></div><div class="n">5</div></div>
+        <div class="trow"><div class="name">Lisbon trip</div><div class="barWell"><div class="bar" style="width:46%; opacity:.55"></div></div><div class="n">4</div></div>
+        <div class="trow"><div class="name">Casberi</div><div class="barWell"><div class="bar" style="width:34%; opacity:.45"></div></div><div class="n">3</div></div>
+      </div>
+      <div class="dayHead">Today<small>23 things</small></div>
+      <div class="r"><div class="g">◧</div><div class="t">Wallet<span>6m ago</span></div><div class="n2 up">17<small>transactions</small></div></div>
+      <div class="r"><div class="g">▤</div><div class="t">Dinner with Sam<span>Calendar</span></div><div class="n2">7:00<small>PM</small></div></div>
+      <div class="r"><div class="g">◨</div><div class="t">Shopify<span>8h ago</span></div><div class="n2">4<small>products</small></div></div>
+      <div class="dayHead">Yesterday<small>125 things</small></div>
+      <div class="r"><div class="g">◨</div><div class="t">Shopify<span>New arrivals</span></div><div class="n2">100<small>products</small></div></div>
+      <div class="r"><div class="g">✳</div><div class="t">Trip plan: Lisbon<span>ChatGPT · Lisbon trip</span></div><div class="n2" style="color:#6b7280; font-size:12px">1d</div></div>
+      <div class="bar2">Ask your things…</div>
+    </div></div>
+    <div class="caption">
+      <h2>A · Robinhood <span>— chart-quiet</span></h2>
+      <p>Content floats on pure black, zero card chrome. Themes flattens into ranked magnitude bars — RH's watchlist grammar — and the ONE accent is spent only on quantities. Counts sit where RH puts prices.</p>
+      <span class="risk">Tension: no cards means day-grouping leans entirely on headers — and green-as-brand fights our green-means-money-in rule. The bars are honest; the temperature is coldest of the three.</span>
+    </div>
+  </div>
+
+  <!-- ============ B · CASH APP ============ -->
+  <div class="option ca">
+    <div class="phone"><div class="screen">
+      <div class="chips"><div class="chip on">All</div><div class="chip">Wallet</div><div class="chip">Calendar</div><div class="chip">Shopify</div></div>
+      <div class="themeCard">
+        <div class="themesTitle">Themes</div>
+        <div class="map">
+          <div class="cell c1"><b>Work</b><i>8</i></div>
+          <div class="cell c2"><b>Fitness</b><i>5</i></div>
+          <div class="cell c3"><b>Home</b></div>
+          <div class="cell c4"><b>Lisbon trip</b><i>4</i></div>
+          <div class="cell c5"><b>Onchain</b></div>
+        </div>
+      </div>
+      <div class="dayHead">Today<small>23</small></div>
+      <div class="card">
+        <div class="r"><div class="g b1">◧</div><div class="t">Wallet<span>6m ago</span></div><div class="n2 up">17<small>transactions</small></div></div>
+        <div class="r"><div class="g b2">▤</div><div class="t">Dinner with Sam<span>Calendar · tonight</span></div><div class="n2">7:00<small>PM</small></div></div>
+        <div class="r"><div class="g b3">◨</div><div class="t">Shopify<span>8h ago</span></div><div class="n2">4<small>products</small></div></div>
+      </div>
+      <div class="dayHead">Yesterday<small>125</small></div>
+      <div class="card">
+        <div class="r"><div class="g b3">◨</div><div class="t">Shopify<span>New arrivals</span></div><div class="n2">100<small>products</small></div></div>
+        <div class="r"><div class="g b4">◆</div><div class="t">OpenClaw<span>Agent</span></div><div class="n2">4<small>things</small></div></div>
+      </div>
+      <div class="bar2">Ask your things</div>
+    </div></div>
+    <div class="caption">
+      <h2>B · Cash App <span>— numeral swagger</span></h2>
+      <p>Everything rounded, everything bold: 24pt-radius cards, 40pt icon tiles, counts at 18pt rounded-black. The Themes map keeps its cells but wears the brand's green as the magnitude wash. The ask bar becomes a full-fat button.</p>
+      <span class="risk">Tension: green magnitude re-litigates "color is identity or state" — Cash App spends its green as BRAND, which §129 already retired once. The weight works; the hue is the argument.</span>
+    </div>
+  </div>
+
+  <!-- ============ C · UBER ============ -->
+  <div class="option ub">
+    <div class="phone"><div class="screen">
+      <div class="chips"><div class="chip on">All</div><div class="chip">Wallet</div><div class="chip">Calendar</div><div class="chip">Shopify</div></div>
+      <div class="themesTitle">Themes</div>
+      <div class="map">
+        <div class="cell c1"><b>Work</b><i>8 things</i></div>
+        <div class="cell c2"><b>Fitness</b><i>5</i></div>
+        <div class="cell c3"><b>Home</b></div>
+        <div class="cell c4"><b>Lisbon trip</b><i>4</i></div>
+        <div class="cell c5"><b>Onchain</b></div>
+      </div>
+      <div class="dayHead">Today<small>23</small></div>
+      <div class="r"><div class="g">◧</div><div class="t">Wallet<span>17 transactions · 6m ago</span></div><div class="chev">›</div></div>
+      <div class="r"><div class="g" style="background:#e33e30">▤</div><div class="t">Dinner with Sam<span>Calendar · 7:00 PM</span></div><div class="chev">›</div></div>
+      <div class="r"><div class="g" style="background:#4d8f43">◨</div><div class="t">Shopify<span>4 products · 8h ago</span></div><div class="chev">›</div></div>
+      <div class="dayHead">Yesterday<small>125</small></div>
+      <div class="r"><div class="g" style="background:#4d8f43">◨</div><div class="t">Shopify<span>100 products</span></div><div class="chev">›</div></div>
+      <div class="r"><div class="g" style="background:#f5f5f5; color:#111">✳</div><div class="t">Trip plan: Lisbon<span>ChatGPT · Lisbon trip</span></div><div class="chev">›</div></div>
+      <div class="bar2">Ask your things…</div>
+    </div></div>
+    <div class="caption">
+      <h2>C · Uber <span>— typographic utility</span></h2>
+      <p>White ground, black chrome, hierarchy carried entirely by type weight: 20pt-800 section heads, tight radii, monochrome icon tiles, a chevron promising every row is a door. Color retreats to the brand tiles alone. This is the app's own light mode, disciplined harder.</p>
+      <span class="risk">Tension: counts return INTO the sentence (Uber's list grammar), giving back the trailing-figure move you just shipped. Strongest hierarchy of the three; least money-voice.</span>
+    </div>
+  </div>
+
+</div>
+</div>
