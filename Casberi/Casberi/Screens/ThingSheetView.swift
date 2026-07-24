@@ -7,8 +7,9 @@ import Translation
 /// down from the top (2026-07-10 ruling — wash + icon, the dot died), an
 /// eyebrow (source icon · kind · age), the title large, the thing's media,
 /// then a quiet spec table (WHEN/SITE/BY/FROM/TAGS — labels change per
-/// kind). Verbs are text rows (derived, cap three; writes confirm), plus
-/// Pin and Share. The TAGS row is read-only provenance (prd §178 — the
+/// kind). Verbs are the disc dial everywhere now (standardized 2026-07-23 —
+/// was B1-only; derived, capped, writes confirm), Share always its last
+/// disc. The TAGS row is read-only provenance (prd §178 — the
 /// filing surface retired; renaming a cluster lives in project detail).
 /// Related streams last. Spacing does the separating — no hairlines.
 struct ThingSheetView: View {
@@ -214,8 +215,25 @@ struct ThingSheetView: View {
                     .padding(.top, DS.Space.s3)
                 }
                 if walletStage == nil && !framedShot {
-                    actionRows
+                    // The disc dial, standardized across every sheet
+                    // (2026-07-23) — it was B1-only (the wallet stage, the
+                    // framed screenshot) and everything else kept the older
+                    // vertical text rows, a split with no reason behind it:
+                    // `dialLabel` already collapses every derived verb
+                    // ("Add to Reminders", "Open in Calendar") to a
+                    // destination word, the same way it does for a stage's
+                    // verbs, and the cap-4-plus-Share count already fits five
+                    // discs. Approval is NOT special-cased out: its sheet
+                    // never carried the feed row's green Approve pill in the
+                    // first place (that color lives only on `ApprovalCard`,
+                    // the feed's OWN consent card) — the rows here were
+                    // already plain grey, so the dial changes their shape,
+                    // not their weight.
+                    VerbDial(thing: thing, verbs: VerbDerivation.verbs(for: thing),
+                             onVerb: runVerb, onName: nil)
                         .padding(.top, DS.Space.s6)
+                        .settleIn(delay: 0.2)
+                    dialResult
                 }
                 if !replies.isEmpty {
                     // One replies renderer (2026-07-16) — the thing sheet and
@@ -784,50 +802,6 @@ struct ThingSheetView: View {
         verbOutcome
             .frame(maxWidth: .infinity)
             .padding(.top, DS.Space.s2)
-    }
-
-    // MARK: - Actions (quiet text rows — verbs, then Pin, then Share)
-
-    private var actionRows: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            ForEach(VerbDerivation.verbs(for: thing)) { verb in
-                Button {
-                    runVerb(verb)   // reads pass; writes confirm
-                } label: {
-                    actionRow(icon: verb.icon, label: verb.label)
-                }
-                .buttonStyle(.plain)
-            }
-            shareRow
-            verbOutcome
-                .padding(.horizontal, DS.Space.s4)
-                .padding(.top, DS.Space.s2)
-        }
-    }
-
-    private func actionRow(icon: String, label: String) -> some View {
-        HStack(spacing: DS.Space.s4) {
-            Image(systemName: icon)
-                .font(.system(size: 18))
-                .foregroundStyle(DS.textSecondary)
-                .frame(width: 26, alignment: .center)
-            Text(LocalizedStringKey(label))
-                .dsText(.heading17).foregroundStyle(DS.textPrimary)
-            Spacer()
-        }
-        .padding(.horizontal, DS.Space.s4)
-        .padding(.vertical, DS.Space.s4)
-        .contentShape(Rectangle())
-    }
-
-    /// The universal out-door: the system share sheet reaches every app with
-    /// a share target — the only sanctioned route INTO Apple Notes, for one.
-    /// A screenshot shares its actual photo, not just its title (ThingShareLink).
-    private var shareRow: some View {
-        ThingShareLink(thing: thing) {
-            actionRow(icon: "square.and.arrow.up", label: "Share")
-        }
-        .buttonStyle(.plain)
     }
 
     // MARK: - Related shelf (streams last)
