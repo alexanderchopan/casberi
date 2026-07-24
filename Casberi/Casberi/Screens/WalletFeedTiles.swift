@@ -754,7 +754,17 @@ struct WalletWorthALookTray: View {
             }
         }
         .navigationDestination(for: Thing.self) { thing in
+            // `.presentationDetents` is a preference DSTray declares on
+            // itself, which stops applying once the stack pushes past it —
+            // observed on-device as the sheet visibly SHRINKING on push
+            // (user, 2026-07-23: "why not just keep it on a sheet the same
+            // size so it is smoother"). Pinning the identical `trayHeight`
+            // here keeps the frame constant across the push; the thing
+            // sheet already scrolls its own content, so it isn't cramped
+            // by inheriting the list's height instead of its usual near-
+            // full-screen default.
             ThingSheetView(thing: thing)
+                .presentationDetents([.height(trayHeight)])
         }
         }
     }
