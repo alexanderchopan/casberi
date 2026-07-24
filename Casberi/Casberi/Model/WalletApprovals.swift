@@ -133,6 +133,40 @@ enum WalletApprovals {
             || (ENS.looksLikeName(address) && !SNS.looksLikeName(address))
     }
 
+    /// Every landed approval/Permit2-grant thing on the given wallets whose
+    /// LIVE on-chain state is still active (2026-07-23, prd §196) — the exact
+    /// read `WalletPrepare`'s own prepare card runs when a thing's sheet
+    /// opens, batched here so the Worth-a-look tray can warn about a grant
+    /// that's still live without ever warning about one already revoked
+    /// somewhere else. A landed approval thing is the EVENT of approving,
+    /// which never expires on its own record — only a fresh read says
+    /// whether it's still true.
+    ///
+    /// Sequential, not concurrent: `WalletPrepare.check` is `@MainActor`, and
+    /// `Thing` isn't `Sendable`, so a `TaskGroup` closure can't capture one
+    /// across a task boundary without a real refactor. A live-checked warning
+    /// list is a handful of `eth_call`s at most in practice (this app has
+    /// never approved anything itself) — not worth the risk for a read that
+    /// already rides the same foreground-refresh cadence as the DeFi/Safe/
+    /// delegation reads beside it.
+    @MainActor
+    static func activeApprovals(hexAddresses: [String], context: ModelContext) async -> [Thing] {
+        let all = (try? context.fetch(FetchDescriptor<Thing>(
+            predicate: #Predicate<Thing> { $0.source == "Wallet" }
+        ))) ?? []
+        let candidates = all.filter { thing in
+            WalletPrepare.applies(to: thing)
+                && hexAddresses.contains { WalletWatch.sameAddress($0, thing.walletAddress ?? "") }
+        }
+        var active: [Thing] = []
+        for thing in candidates {
+            if let check = await WalletPrepare.check(for: thing), check.active {
+                active.append(thing)
+            }
+        }
+        return active
+    }
+
     /// The prepare path (`WalletPrepare`, prd §112) rides this same measured
     /// chain table — one table, so a chain added above serves the sync AND the
     /// prepare reads, and a network this table doesn't know honestly can't

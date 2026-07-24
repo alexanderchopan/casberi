@@ -284,15 +284,23 @@ struct WalletBalanceHeadline: View {
     }
 }
 
-/// Worth a look — the security read, as a quiet inline LINE (prd §146,
-/// 2026-07-21), not a standing card. Warnings are usually absent, and a
-/// permanent half-width card was reserving prominent space for the exception;
-/// demoted to a line, it whispers when clear-of-course and only speaks up with
-/// its own attention glyph when something's actually there. Leads with the
-/// standard warning glyph (red when any warning is critical), then the words
-/// and the top warnings' summary ("1 delegation · 1 flagged transfer"); the
-/// whole line opens the tray. Which address, on which chain, is what the tray
-/// behind the tap is for (user, 2026-07-20: a 0x in a line is detail).
+/// Worth a look — the security read, as its own CARD (2026-07-23, prd §196,
+/// superseding §146's line). §146 demoted this to a line because a permanent
+/// half-width card reserved prominent space for warnings that are usually
+/// absent — still true, and still why this only renders at all when
+/// `warnings` isn't empty. What changed is what fills the space once it DOES
+/// render: a badge per warning KIND (its own tinted glyph + count, the same
+/// glyphs `WalletWorthALookTray`'s section headers wear one tap away) reads
+/// faster than the old run-on caption ("12 fake symbols · 3 delegations" as
+/// one sentence) and gives the door somewhere to put real content instead of
+/// text alone — the honest reason a line earns a card back.
+///
+/// Title is always "Worth a look" (user, 2026-07-23: "we don't know if it
+/// needs attention, do we?") — the old critical-only "Needs attention" wording
+/// claimed an urgency nothing here actually tracks (no push, no countdown; a
+/// spoofed transfer already happened and isn't getting worse by the time you
+/// open the feed). Severity still reads honestly through glyph color alone —
+/// red badges for critical kinds, orange for notice — never through the words.
 struct WalletWarningsLine: View {
     let warnings: [WalletWarning]
     let onOpen: () -> Void
@@ -300,29 +308,54 @@ struct WalletWarningsLine: View {
     var body: some View {
         let critical = warnings.contains { $0.severity == .critical }
         Button(action: onOpen) {
-            HStack(spacing: DS.Space.s2) {
-                // The GLYPH carries severity too, not just its hue — the
-                // pattern `warningRow` below already uses.
-                Image(systemName: critical ? "exclamationmark.triangle.fill"
-                                           : "info.circle.fill")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(critical ? DS.destructive : DS.attention)
-                    .accessibilityHidden(true)
-                Text(critical ? "Needs attention" : "Worth a look")
-                    .dsText(.callout15).foregroundStyle(DS.textPrimary)
-                    .layoutPriority(1)
-                Text(WalletWatch.summary(warnings))
-                    .dsText(.subhead13).foregroundStyle(DS.textSecondary)
-                    .lineLimit(1)
-                    .truncationMode(.tail)
-                Spacer(minLength: 0)
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(DS.textTertiary)
+            VStack(alignment: .leading, spacing: DS.Space.s3) {
+                HStack(spacing: DS.Space.s2) {
+                    Image(systemName: critical ? "exclamationmark.triangle.fill"
+                                               : "info.circle.fill")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(critical ? DS.destructive : DS.attention)
+                        .accessibilityHidden(true)
+                    Text("Worth a look")
+                        .dsText(.callout15).foregroundStyle(DS.textPrimary)
+                    Spacer(minLength: 0)
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(DS.textTertiary)
+                }
+                badges
             }
+            .padding(DS.Space.s3)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .dsWidgetSurface(fillOpacity: WalletCardStyle.fill)
+    }
+
+    private var badges: some View {
+        // Wraps rather than scrolls: today's typical 1–2 active kinds never
+        // need it, and a wallet with every kind active (5) still fits two
+        // short rows in the balance card's own width before truncating.
+        FlowLayout(spacing: DS.Space.s2) {
+            ForEach(WalletWatch.breakdown(warnings), id: \.kind) { entry in
+                HStack(spacing: 6) {
+                    Image(systemName: entry.kind.glyph)
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(entry.severity == .critical ? DS.destructive : DS.attention)
+                        .frame(width: 22, height: 22)
+                        .background(
+                            Circle().fill((entry.severity == .critical ? DS.destructive : DS.attention)
+                                .opacity(0.16)))
+                    Text("\(entry.count)")
+                        .dsText(.callout15).fontWeight(.semibold).foregroundStyle(DS.textPrimary)
+                        .monospacedDigit()
+                    Text(entry.kind.label(entry.count))
+                        .dsText(.label12).foregroundStyle(DS.textSecondary)
+                        .lineLimit(1)
+                }
+                .padding(.leading, 3).padding(.trailing, 10).padding(.vertical, 3)
+                .background(Capsule().fill(DS.surfaceWell))
+            }
+        }
     }
 }
 
@@ -577,66 +610,284 @@ struct WalletAllocationTray: View {
 /// the wallet's screen, whose only added value was a Revoke.cash button —
 /// tile → tray → page → external, two hops too many. Rows are TERMINAL now:
 /// each states the whole fact, and where one real action exists it sits on
-/// the row itself — a flagged transfer opens its sheet, a delegation opens
-/// that wallet's Revoke.cash page directly (the exact door the wallet screen
-/// offers, minus the detour). Safe and liquidation rows carry no control:
-/// signing happens in the Safe app and acting on Aave happens on Aave, and
-/// the row already says everything this app can honestly say.
+/// the row itself — a flagged transfer opens its sheet, a delegation or
+/// approval opens that wallet's Revoke.cash page directly (the exact door
+/// the wallet screen offers, minus the detour). Safe and liquidation rows
+/// carry no control: signing happens in the Safe app and acting on Aave
+/// happens on Aave, and the row already says everything this app can
+/// honestly say.
+///
+/// SPLIT BY TYPE (2026-07-23, prd §196) — the flat severity-sorted list this
+/// used to be made "3 delegations" and "8 approvals" read as one undifferen-
+/// tiated wall once approvals joined the tray. Five sections now (Position
+/// risk, Flagged transfers, Approvals, Delegations, Safe), each with its own
+/// glyph + count header, still severity-ordered top to bottom; a header
+/// carries ONE bulk Revoke.cash link when every row underneath shares a
+/// single wallet address (the common case — three approvals from the same
+/// wallet all land on the same Revoke.cash page), and falls back to a
+/// per-row link the moment two different wallets are mixed in, so the door
+/// never claims to cover an address it doesn't.
 struct WalletWorthALookTray: View {
     let warnings: [WalletWarning]
-    /// The flagged transfers behind a poisoning warning — each becomes its
-    /// own row with a door to its sheet, instead of one dead aggregate line.
+    /// The flagged transfers behind a poisoning/spoofed-symbol warning — each
+    /// becomes its own row with a door to its sheet, instead of one dead
+    /// aggregate line.
     let flagged: [Thing]
-    let onOpenThing: (Thing) -> Void
+    /// The approval/Permit2-grant things whose live on-chain state is still
+    /// active (`WalletApprovals.activeApprovals`) — each becomes its own row
+    /// with a door to that wallet's Revoke.cash page.
+    let activeApprovals: [Thing]
     @Environment(\.openURL) private var openURL
+    @State private var jumpTarget: String?
+    /// Presented FROM the tray itself (2026-07-23, prd §196 fix) rather than
+    /// by closing this sheet and asking the feed to open a sibling one — the
+    /// first cut did that (mirroring the pre-existing pattern every other
+    /// row in the feed uses) and it was wrong here specifically: dismissing
+    /// the thing sheet landed back on the WALLET FEED, not this list, so
+    /// reviewing a run of flagged transfers one at a time meant re-opening
+    /// "Worth a look" and re-scrolling to find your place after every single
+    /// tap (user, 2026-07-23: "there is no way to get back to the list...
+    /// in one tap"). Nesting the sheet here means the tray never leaves the
+    /// view hierarchy — dismissing the thing sheet reveals it exactly where
+    /// it was, scroll position included, the same way `WalletHistoryScreen`
+    /// already nests `ThingSheetView` under its own list.
+    @State private var sheetThing: Thing?
 
-    /// The aggregate rows. Both flagged-transfer kinds drop out: `flagged`
-    /// below lists those transfers individually, each with a door to its
-    /// sheet, so an aggregate line would be a dead duplicate of real rows.
-    private var listed: [WalletWarning] {
-        warnings.filter { $0.kind != .poisoning && $0.kind != .spoofedSymbol }
+    private var liquidation: [WalletWarning] { warnings.filter { $0.kind == .liquidation } }
+    private var delegations: [WalletWarning] { warnings.filter { $0.kind == .delegation } }
+    private var safeSignatures: [WalletWarning] { warnings.filter { $0.kind == .safe } }
+
+    /// The five sections, in severity order, each dropped when empty — the
+    /// jump bar (only shown once there's real ground to cover) is built off
+    /// this same list, so the two can never disagree about what's on screen.
+    private var sectionIDs: [String] {
+        var ids: [String] = []
+        if !liquidation.isEmpty { ids.append("position") }
+        if !flagged.isEmpty { ids.append("transfers") }
+        if !activeApprovals.isEmpty { ids.append("approvals") }
+        if !delegations.isEmpty { ids.append("delegations") }
+        if !safeSignatures.isEmpty { ids.append("safe") }
+        return ids
     }
-    private var rowCount: Int { listed.count + flagged.count }
+
+    private var rowCount: Int {
+        liquidation.count + flagged.count + activeApprovals.count
+            + delegations.count + safeSignatures.count
+    }
+
+    /// The chip rail earns its 40pt only once there's enough ground that a
+    /// jump actually saves a scroll — on today's typical 2–4 warning tray it
+    /// would be more chrome than the taps it saves.
+    private var showsJumpBar: Bool { sectionIDs.count > 3 }
+
+    private var trayHeight: CGFloat {
+        let rows: CGFloat = CGFloat(rowCount) * 64
+        let headers: CGFloat = CGFloat(sectionIDs.count) * 44
+        let jumpBar: CGFloat = showsJumpBar ? 44 : 0
+        return min(620, 150 + rows + headers + jumpBar)
+    }
 
     var body: some View {
-        DSTray(title: String(localized: "Worth a look"),
-               height: min(620, CGFloat(150 + rowCount * 64))) {
-            ScrollView {
-                VStack(spacing: DS.Space.s1) {
-                    ForEach(listed) { w in
-                        warningRow(w)
+        DSTray(title: String(localized: "Worth a look"), height: trayHeight) {
+            ScrollViewReader { proxy in
+                VStack(alignment: .leading, spacing: DS.Space.s3) {
+                    if showsJumpBar { jumpBar(proxy: proxy) }
+                    ScrollView {
+                        // Explicit maxHeight is load-bearing here, not
+                        // decoration: nesting this ScrollView one level
+                        // deeper than the tray's usual `DSTray { ScrollView
+                        // {...} }` shape (to fit the jump bar above it) meant
+                        // it no longer inherited DSTray's implicit "fill the
+                        // sheet's remaining height" sizing — without this the
+                        // whole VStack just sized to its natural (taller than
+                        // the sheet) height and silently clipped instead of
+                        // scrolling (caught on-device: rows past the fold
+                        // were simply unreachable, no visible bug in a
+                        // screenshot of the top of the tray alone).
+                        VStack(alignment: .leading, spacing: DS.Space.s4) {
+                            if !liquidation.isEmpty {
+                                section(id: "position", title: String(localized: "Position risk"),
+                                       symbol: "chart.line.downtrend.xyaxis", critical: true,
+                                       count: liquidation.count, bulkAction: nil) {
+                                    ForEach(liquidation) { inertRow($0) }
+                                }
+                            }
+                            if !flagged.isEmpty {
+                                section(id: "transfers", title: String(localized: "Flagged transfers"),
+                                       symbol: "eye.trianglebadge.exclamationmark.fill", critical: true,
+                                       count: flagged.count, bulkAction: nil) {
+                                    ForEach(flagged) { flaggedRow($0) }
+                                }
+                            }
+                            if !activeApprovals.isEmpty {
+                                section(id: "approvals", title: String(localized: "Approvals"),
+                                       symbol: "key.fill", critical: false,
+                                       count: activeApprovals.count,
+                                       bulkAction: bulkRevoke(addresses: activeApprovals.map(\.walletAddress))) {
+                                    ForEach(activeApprovals) { approvalRow($0) }
+                                }
+                            }
+                            if !delegations.isEmpty {
+                                section(id: "delegations", title: String(localized: "Delegations"),
+                                       symbol: "arrow.triangle.branch", critical: false,
+                                       count: delegations.count,
+                                       bulkAction: bulkRevoke(addresses: delegations.map(\.address))) {
+                                    ForEach(delegations) { delegationRow($0) }
+                                }
+                            }
+                            if !safeSignatures.isEmpty {
+                                section(id: "safe", title: String(localized: "Safe signatures"),
+                                       symbol: "signature", critical: false,
+                                       count: safeSignatures.count, bulkAction: nil) {
+                                    ForEach(safeSignatures) { inertRow($0) }
+                                }
+                            }
+                        }
+                        .padding(.bottom, DS.Space.s2)
                     }
-                    ForEach(flagged) { thing in
-                        flaggedRow(thing)
-                    }
+                    .scrollIndicators(.hidden)
                 }
+                .frame(maxHeight: .infinity, alignment: .top)
             }
-            .scrollIndicators(.hidden)
+        }
+        .sheet(item: $sheetThing) { thing in
+            ThingSheetView(thing: thing)
         }
     }
 
-    /// The one real action a delegation warning has: that wallet's Revoke.cash
-    /// page — the same URL the wallet screen's Approvals row opens.
-    private func revokeAction(_ w: WalletWarning) -> URL? {
-        guard w.kind == .delegation, let address = w.address,
-              WalletApprovals.canServe(address) else { return nil }
-        return URL(string: WalletApprovals.revokeURL(address: address))
+    // MARK: - Jump bar
+
+    /// A tap scrolls to the section and lights its chip — nothing hides. This
+    /// is deliberately one-directional (tap → scroll); it doesn't track
+    /// manual scroll position back onto the chips, which would need a second
+    /// scroll-geometry read this tray's fixed, short height doesn't earn.
+    private func jumpBar(proxy: ScrollViewProxy) -> some View {
+        ScrollView(.horizontal) {
+            HStack(spacing: DS.Space.s2) {
+                ForEach(sectionIDs, id: \.self) { id in
+                    let active = jumpTarget == id || (jumpTarget == nil && id == sectionIDs.first)
+                    Button {
+                        DSHaptic.selection()
+                        jumpTarget = id
+                        withAnimation(DS.Motion.standard) { proxy.scrollTo(id, anchor: .top) }
+                    } label: {
+                        Text(jumpLabel(id))
+                            .dsText(.label12).fontWeight(.semibold)
+                            .foregroundStyle(active ? DS.surfaceSheet : DS.textSecondary)
+                            .padding(.horizontal, DS.Space.s3).padding(.vertical, 7)
+                            .background(Capsule().fill(active ? DS.textPrimary : DS.surfaceWell))
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+        .scrollIndicators(.hidden)
     }
 
+    private func jumpLabel(_ id: String) -> String {
+        switch id {
+        case "position": String(localized: "Position · \(liquidation.count)")
+        case "transfers": String(localized: "Transfers · \(flagged.count)")
+        case "approvals": String(localized: "Approvals · \(activeApprovals.count)")
+        case "delegations": String(localized: "Delegations · \(delegations.count)")
+        default: String(localized: "Safe · \(safeSignatures.count)")
+        }
+    }
+
+    // MARK: - Section shell
+
     @ViewBuilder
-    private func warningRow(_ w: WalletWarning) -> some View {
-        let action = revokeAction(w)
-        Button {
-            if let action {
-                DSHaptic.selection()
-                openURL(action)
+    private func section<Rows: View>(id: String, title: String, symbol: String, critical: Bool,
+                                     count: Int, bulkAction: (label: String, url: URL)?,
+                                     @ViewBuilder rows: () -> Rows) -> some View {
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+            HStack(spacing: DS.Space.s2) {
+                Image(systemName: symbol)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(critical ? DS.destructive : DS.attention)
+                    .frame(width: 28, height: 28)
+                    .background(
+                        RoundedRectangle(cornerRadius: DS.Radius.control, style: .continuous)
+                            .fill((critical ? DS.destructive : DS.attention).opacity(0.16)))
+                Text(title).dsText(.callout15).foregroundStyle(DS.textPrimary)
+                Text("\(count)")
+                    .dsText(.label12).foregroundStyle(DS.textSecondary)
+                    .monospacedDigit()
+                    .padding(.horizontal, 7).padding(.vertical, 2)
+                    .background(Capsule().fill(DS.surfaceWell))
+                Spacer(minLength: 0)
+                if let bulkAction {
+                    Button {
+                        DSHaptic.selection()
+                        openURL(bulkAction.url)
+                    } label: {
+                        HStack(spacing: 3) {
+                            Text(bulkAction.label)
+                            Image(systemName: "arrow.up.right")
+                                .font(.system(size: 10, weight: .semibold))
+                        }
+                        .dsText(.subhead13).foregroundStyle(DS.tint)
+                    }
+                    .buttonStyle(.plain)
+                }
             }
+            .padding(.horizontal, 3)
+            // Bare, not boxed (prd §173: lists are air, parcels are for the
+            // reads) — these rows are a content stream you scroll and
+            // consume, the same category feed rows and catalog shelves
+            // already shed their cards from; the header above is doing the
+            // grouping, same as a day header, so a card underneath it would
+            // be a second container saying the same thing twice.
+            VStack(spacing: DS.Space.s1) { rows() }
+        }
+        .id(id)
+    }
+
+    /// A single bulk Revoke.cash link when every address in the section
+    /// agrees — nil the moment two wallets are mixed in, since one link can
+    /// only ever point at one wallet's page (review, 2026-07-23: the mock
+    /// this shipped from drew one header link unconditionally, which would
+    /// have quietly hidden a second wallet's approvals behind a URL that
+    /// never mentions it).
+    private func bulkRevoke(addresses: [String?]) -> (label: String, url: URL)? {
+        let known = addresses.compactMap { $0 }
+        guard known.count == addresses.count, let first = known.first,
+              known.allSatisfy({ WalletWatch.sameAddress($0, first) }),
+              WalletApprovals.canServe(first),
+              let url = URL(string: WalletApprovals.revokeURL(address: first))
+        else { return nil }
+        return (String(localized: "Revoke.cash"), url)
+    }
+
+    // MARK: - Rows
+
+    /// Position-risk and Safe rows: the whole in-app read, no control —
+    /// acting on Aave happens on Aave, signing happens in the Safe app.
+    private func inertRow(_ w: WalletWarning) -> some View {
+        HStack(spacing: DS.Space.s3) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(w.title).dsText(.body17).foregroundStyle(DS.textPrimary)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.leading)
+                if let subtitle = w.subtitle {
+                    Text(subtitle).dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                        .lineLimit(1)
+                }
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(.vertical, DS.Space.s2).padding(.horizontal, 3)
+    }
+
+    private func delegationRow(_ w: WalletWarning) -> some View {
+        let action = w.address.flatMap { address -> URL? in
+            guard WalletApprovals.canServe(address) else { return nil }
+            return URL(string: WalletApprovals.revokeURL(address: address))
+        }
+        return Button {
+            if let action { DSHaptic.selection(); openURL(action) }
         } label: {
             HStack(spacing: DS.Space.s3) {
-                Image(systemName: w.severity == .critical
-                      ? "exclamationmark.triangle.fill" : "info.circle.fill")
-                    .font(.system(size: 15))
-                    .foregroundStyle(w.severity == .critical ? DS.destructive : DS.attention)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(w.title).dsText(.body17).foregroundStyle(DS.textPrimary)
                         .lineLimit(2)
@@ -654,7 +905,36 @@ struct WalletWorthALookTray: View {
                         .foregroundStyle(DS.textTertiary)
                 }
             }
-            .padding(.vertical, DS.Space.s2)
+            .padding(.vertical, DS.Space.s2).padding(.horizontal, 3)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .disabled(action == nil)
+    }
+
+    /// An approval thing already carries its own Revoke.cash page as
+    /// `content` (`WalletApprovals`' own field) — no need to re-derive it
+    /// from the address the way the delegation row does.
+    private func approvalRow(_ thing: Thing) -> some View {
+        let action = URL(string: thing.content)
+        return Button {
+            if let action { DSHaptic.selection(); openURL(action) }
+        } label: {
+            HStack(spacing: DS.Space.s3) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(thing.title).dsText(.body17).foregroundStyle(DS.textPrimary)
+                        .lineLimit(2)
+                        .multilineTextAlignment(.leading)
+                }
+                Spacer(minLength: 0)
+                if action != nil {
+                    Text("Revoke.cash").dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                    Image(systemName: "arrow.up.right")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(DS.textTertiary)
+                }
+            }
+            .padding(.vertical, DS.Space.s2).padding(.horizontal, 3)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -675,7 +955,7 @@ struct WalletWorthALookTray: View {
     private func flaggedRow(_ thing: Thing) -> some View {
         Button {
             DSHaptic.selection()
-            onOpenThing(thing)
+            sheetThing = thing
         } label: {
             HStack(spacing: DS.Space.s3) {
                 KindGlyph(kind: thing.kind, size: 28)
@@ -705,7 +985,7 @@ struct WalletWorthALookTray: View {
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundStyle(DS.textTertiary)
             }
-            .padding(.vertical, DS.Space.s2)
+            .padding(.vertical, DS.Space.s2).padding(.horizontal, 3)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

@@ -18,8 +18,8 @@ struct WalletWarning: Identifiable, Equatable {
     /// ("1 delegation · 1 flagged transfer") rather than quoting one warning's
     /// own words — a specific address is detail for the page behind the tap,
     /// not for a 150pt tile (user, 2026-07-20).
-    enum Kind {
-        case liquidation, poisoning, spoofedSymbol, safe, delegation
+    enum Kind: Hashable {
+        case liquidation, poisoning, spoofedSymbol, approval, safe, delegation
 
         func label(_ n: Int) -> String {
             switch self {
@@ -29,8 +29,25 @@ struct WalletWarning: Identifiable, Equatable {
                                       : String(localized: "flagged transfers")
             case .spoofedSymbol: n == 1 ? String(localized: "fake symbol")
                                         : String(localized: "fake symbols")
+            case .approval:    n == 1 ? String(localized: "active approval")
+                                      : String(localized: "active approvals")
             case .safe:        n == 1 ? String(localized: "signature") : String(localized: "signatures")
             case .delegation:  n == 1 ? String(localized: "delegation") : String(localized: "delegations")
+            }
+        }
+
+        /// The SF Symbol this kind wears everywhere it's shown as its own
+        /// object — the tray's section headers and the feed card's badge row
+        /// (prd §196) — so the two surfaces never pick different glyphs for
+        /// the same kind.
+        var glyph: String {
+            switch self {
+            case .liquidation:   "chart.line.downtrend.xyaxis"
+            case .poisoning:     "eye.trianglebadge.exclamationmark.fill"
+            case .spoofedSymbol: "doc.on.doc.fill"
+            case .approval:      "key.fill"
+            case .safe:          "signature"
+            case .delegation:    "arrow.triangle.branch"
             }
         }
     }
@@ -42,8 +59,8 @@ struct WalletWarning: Identifiable, Equatable {
     let subtitle: String?
     /// How many underlying things this warning stands for — 1 for the ones
     /// that are inherently singular (a delegation, a Safe's pending queue),
-    /// N for the two aggregates (poisoning, spoofed symbols) that roll many
-    /// flagged transfers into one row.
+    /// N for the three aggregates (poisoning, spoofed symbols, active
+    /// approvals) that roll many flagged things into one row.
     ///
     /// Added 2026-07-21 because the tile's subline was counting WARNINGS: with
     /// 21 spoofed-symbol transfers in the corpus it read "1 fake symbol",
@@ -73,10 +90,18 @@ struct WalletLiveState: Equatable {
     /// the Worth-a-look tray can list each flagged transfer as its own row
     /// with a door to its sheet, instead of a dead aggregate line.
     var flagged: [Thing] = []
+    /// The approval/Permit2-grant things whose LIVE on-chain state (the same
+    /// read `WalletPrepare`'s own card runs) says the grant is still active —
+    /// carried the same way `flagged` is, so the tray can list each one with
+    /// its own Revoke.cash door instead of a dead aggregate line (2026-07-23,
+    /// prd §196: approvals used to land as plain feed things with no seat in
+    /// this roll-up at all).
+    var activeApprovals: [Thing] = []
 
     static func == (a: WalletLiveState, b: WalletLiveState) -> Bool {
         a.warnings == b.warnings
             && a.flagged.map(\.id) == b.flagged.map(\.id)
+            && a.activeApprovals.map(\.id) == b.activeApprovals.map(\.id)
             && a.morpho == b.morpho
             && a.positions.count == b.positions.count
             && zip(a.positions, b.positions).allSatisfy {
@@ -122,11 +147,13 @@ enum WalletWatch {
         async let morphoBook = MorphoDeFi.book(addresses: resolved)
         async let safe = SafeBridge.pendingCounts(addresses: resolved)
         async let delegs = WalletSafety.currentDelegations(addresses: resolved)
+        async let approvalsRead = WalletApprovals.activeApprovals(hexAddresses: resolved, context: context)
 
         let positions = await defi
         let morpho = await morphoBook ?? MorphoDeFi.Book()
         let safePending = await safe
         let delegations = await delegs
+        let activeApprovals = await approvalsRead
 
         // The flagged transfers — a plain model fetch, no network. The
         // predicate asks only that a flag EXISTS: `securityFlag` holds a
@@ -153,8 +180,10 @@ enum WalletWatch {
                                safePending: safePending,
                                delegations: delegations, poisoningCount: poisoningCount,
                                spoofedSymbolCount: symbolCount,
+                               approvalCount: activeApprovals.count,
                                owner: owner),
-            flagged: inScope)
+            flagged: inScope,
+            activeApprovals: activeApprovals)
     }
 
     /// Hex compares case-insensitively (EIP-55 case is a checksum), base58
@@ -173,6 +202,7 @@ enum WalletWatch {
                          delegations: [WalletSafety.Delegation],
                          poisoningCount: Int,
                          spoofedSymbolCount: Int,
+                         approvalCount: Int = 0,
                          owner: [String: String] = [:]) -> [WalletWarning] {
         let wallet = WalletStore.shared
         var out: [WalletWarning] = []
@@ -213,6 +243,17 @@ enum WalletWatch {
                                          : String(localized: "\(spoofedSymbolCount) transfers use fake token symbols"),
                                      subtitle: nil, count: spoofedSymbolCount, address: nil))
         }
+        // Notice, not critical: approving a spender is an everyday DeFi/NFT
+        // action, not inherently dangerous the way poisoning/spoofing is —
+        // the warning is that it's still LIVE, not that it happened.
+        if approvalCount > 0 {
+            out.append(WalletWarning(id: "approval", severity: .notice,
+                                     kind: .approval,
+                                     title: approvalCount == 1
+                                         ? String(localized: "1 active approval")
+                                         : String(localized: "\(approvalCount) active approvals"),
+                                     subtitle: nil, count: approvalCount, address: nil))
+        }
         for (address, count) in safePending.sorted(by: { $0.key < $1.key }) where count > 0 {
             let label = wallet.label(forAddress: address) ?? WalletStore.shortAddress(address)
             out.append(WalletWarning(id: "safe:\(address)", severity: .notice,
@@ -236,22 +277,30 @@ enum WalletWatch {
         return out.sorted { $0.severity == .critical && $1.severity != .critical }
     }
 
+    /// The per-kind tally behind `summary(_:)` and the feed card's badge row
+    /// (prd §196) — one shared count so the two surfaces can't disagree.
+    /// Order is severity-first, same as `warnings` itself arrives sorted.
+    static func breakdown(_ warnings: [WalletWarning])
+        -> [(kind: WalletWarning.Kind, count: Int, severity: WalletWarning.Severity)] {
+        var order: [WalletWarning.Kind] = []
+        var counts: [String: Int] = [:]
+        var severities: [String: WalletWarning.Severity] = [:]
+        for w in warnings {
+            let key = String(describing: w.kind)
+            if counts[key] == nil { order.append(w.kind); severities[key] = w.severity }
+            counts[key, default: 0] += w.count
+        }
+        return order.map { kind in
+            let key = String(describing: kind)
+            return (kind, counts[key] ?? 0, severities[key] ?? .notice)
+        }
+    }
+
     /// "1 delegation · 1 flagged transfer" — the tile's subline. Counts by
     /// kind in severity order (the list is already sorted), so the worst kind
     /// is named first and nothing claims more precision than a count.
     static func summary(_ warnings: [WalletWarning]) -> String {
-        var order: [WalletWarning.Kind] = []
-        var counts: [String: Int] = [:]
-        for w in warnings {
-            let key = String(describing: w.kind)
-            if counts[key] == nil { order.append(w.kind) }
-            // The things behind the warning, not the warning rows — an
-            // aggregate stands for many (see `WalletWarning.count`).
-            counts[key, default: 0] += w.count
-        }
-        return order.map { kind in
-            let n = counts[String(describing: kind)] ?? 0
-            return "\(n) \(kind.label(n))"
-        }.joined(separator: " · ")
+        breakdown(warnings).map { "\($0.count) \($0.kind.label($0.count))" }
+            .joined(separator: " · ")
     }
 }

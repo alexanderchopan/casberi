@@ -7536,3 +7536,113 @@ VERIFIED 2026-07-23 (iPhone 17 Pro sim, pinned UDID): with a wallet watched,
 `-todayProbe` composed `root = Stack([hero, pair, mix, read, hours])` — wallet
 and watchlist adjacent, the source map directly behind them, the single things
 and the hour strip after. Build green.
+
+## 196. Worth a look splits by TYPE, approvals get a live-checked seat, and the trigger line earns its card back (user: "mock up for me three stupid simple ways we could design that... use cash app, apple, and robinhood for inspiration", then "i would think it would split the different types of warnings up, delegations, approvals, position risk, etc", 2026-07-23) — VERIFIED
+
+Three mockup rounds, each narrowing on a real gap the last one exposed.
+
+**Round one** (Cash App / Apple / Robinhood, severity-sorted) proved the brand
+skins beat today's plain list but all three still mixed kinds in one run —
+picking Apple's Battery-Health-style ring as the safest structural idea
+missed the actual ask, which surfaced on the next round.
+
+**Round two** (three ways to split by TYPE — a drill-down board, stacked
+sections, one-type-at-a-time chips) found a REAL gap while grounding the mock
+in the live model: **token approvals weren't in `WalletWarning.Kind` at all**
+— they landed as plain feed things with a Revoke.cash link and never rolled
+up here, so "delegations, approvals, position risk" (the user's own list)
+was only two-thirds real. The user liked the chips (round two, direction F)
+for being tactile but named the actual complaint precisely: "it's annoying to
+tap a thing sheet and then have to tap chips for more navigation" — F's chips
+SWAPPED the visible section, making them a second router stacked on a tray
+that's already one tap from the feed.
+
+**The synthesis**: keep the stacked, severity-ordered, terminal-row shape
+(round two's direction E — nothing pushes, per §137) and turn the chip idea
+into a sticky JUMP INDEX instead of a filter — tap a chip and `ScrollViewReader`
+scrolls to that section and lights it; nothing is ever hidden, so the second
+tap becomes optional. Gated to only appear past 3 sections (`showsJumpBar`) —
+today's typical 2–4-warning tray doesn't earn the extra 44pt of chrome.
+
+**The real backend addition**: `WalletApprovals.activeApprovals(hexAddresses:
+context:)` batches the exact live check `WalletPrepare`'s own prepare card
+already runs (`WalletPrepare.check(for:)` — refetch the receipt, read the live
+allowance/isApprovedForAll) over every landed approval/Permit2 thing, sequen­
+tially (not a `TaskGroup` — `Thing` isn't `Sendable` and a live-checked list is
+a handful of `eth_call`s at most). This is the honesty-load-bearing part: an
+approval THING is the record of the event, which never expires on its own —
+without the live re-check, a revoked approval would warn forever. Verified
+live against vitalik.eth: 10 approval things landed via `-approvalProbe
+3000000`, and BOTH `-worthALookProbe` (the new aggregate) and `-prepareProbe`
+(the existing single-thing check) independently agreed `approvals=0` / `active
+=NO` on the same data — proof the new aggregate isn't just echoing the landed
+count.
+
+**`WalletWorthALookTray` rebuilt** into five severity-ordered sections
+(Position risk, Flagged transfers, Approvals, Delegations, Safe signatures),
+each a glyph+count header over its rows; a section's header carries ONE bulk
+Revoke.cash link only when every row underneath shares a single wallet
+address (`bulkRevoke(addresses:)`), falling back to a per-row link the moment
+two wallets mix in — a single header link covering an address it doesn't
+would be exactly the fake-unified-control the honesty rule bans.
+
+**Caught in review, twice, both real:**
+1. **§173 violation** (user: "check our rule, we don't put lists in cards").
+   The first cut wrapped each section's rows in `.dsWidgetSurface` — boxing a
+   CONTENT STREAM (a scrollable list of individual warning rows) exactly the
+   way §173 already killed for feed rows and catalog shelves. Fixed: rows sit
+   bare, the section header does the grouping (the same job a day header
+   does), matching §173's own meta-rule precisely — this is not a "bounded
+   set of controls" (Settings' shape) but a list you scroll and consume.
+2. **Tap-back regression** (user: "there is no way to get back to the list of
+   flagged transfers from the thing sheet in one tap"). `flaggedRow` called
+   the tray's caller-supplied `onOpenThing`, which closed the WHOLE tray
+   before opening `ThingSheetView` as a sibling sheet on the Wallet FEED —
+   dismissing it stranded you on the feed, not the list, so reviewing several
+   flagged transfers meant re-opening "Worth a look" and re-scrolling after
+   every single tap. This was pre-existing behavior (the original flat list
+   called the identical closure), just far more painful once a list could
+   run to a dozen rows. Fixed by moving the sheet INSIDE the tray itself
+   (`@State private var sheetThing: Thing?` + `.sheet(item:)` on the tray's
+   own body, the same nesting `WalletHistoryScreen` already uses) — dismissing
+   the thing sheet now reveals the tray exactly where it was, scroll position
+   included, because the tray never left the view hierarchy.
+
+**The trigger line earns its card back**, reversing §146 (2026-07-21, which
+demoted it to a bare line because a permanent half-width card reserved space
+for warnings that are usually absent — still true, and still why it only
+renders when `warnings` isn't empty). What changed is what fills the card:
+`WalletWatch.breakdown(_:)` (the shared per-kind tally `summary(_:)` now
+builds ON, so the two can't disagree) drives a badge row — one tinted glyph +
+count per active kind, wrapped by a small `FlowLayout` (reused verbatim from
+`ThingSheetView.swift`, not redeclared) — which reads faster than the old
+run-on caption and gives the door real content instead of a sentence. This is
+a `WalletTile`-shaped card like its Aave/Morpho siblings, so it's a READ
+(§160's carve-out), not a list — no conflict with the §173 fix two doors up.
+
+**Title dropped the severity claim** (user: "we don't know if it needs
+attention, do we?"). The old title flipped "Needs attention" on for any
+critical warning; the user's challenge held up — nothing here is a push-
+tracked, actively-worsening alert (a spoofed transfer already happened, an
+Aave position isn't paged), so the word was claiming urgency the app doesn't
+actually monitor. Now always "Worth a look"; severity still reads honestly
+through glyph color alone (red critical badges, orange notice), never through
+wording — the same "color carries state, words don't overclaim" split the
+design law already applies everywhere else (§83's flat-change rule, the
+approval honesty divergence).
+
+**Kind gained a `glyph` property** (`chart.line.downtrend.xyaxis` liquidation,
+`eye.trianglebadge.exclamationmark.fill` poisoning, `doc.on.doc.fill` spoofed
+symbol — "a copy of X", `key.fill` approval, `signature` safe,
+`arrow.triangle.branch` delegation) so the feed card's badges and the tray's
+section headers can never pick different icons for the same kind.
+
+VERIFIED 2026-07-23 (iPhone 17 Pro sim, pinned UDID, real vitalik.eth data):
+`-worthALookProbe` reported `position=0 transfers=12 approvals=0
+delegations=3 safe=0` matching the on-screen card's two badges exactly
+("12 fake symbols", "3 delegations"); opened the tray, confirmed bare
+(un-boxed) rows under each section header; tapped a flagged-transfer row,
+confirmed its real on-chain detail (`−0.0100 ETH`, `You → 0x6ff9…a434`) —
+answering in passing why it says "Sent" not "Received": `flagSpoofedSymbol`
+is deliberately called on outgoing transfers too, since a scam contract can
+emit a fake event naming your wallet as sender. Build green throughout.

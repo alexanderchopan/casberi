@@ -663,6 +663,25 @@ enum ProbeHooks {
                 NSLog("Delegation probe: %@", line)
             }
         },
+        // `-worthALookProbe YES` runs the full Worth-a-look roll-up
+        // (`WalletWatch.liveState`, the exact read `FeedScreen` uses) over
+        // the watched wallets and NSLogs every section's count — the fastest
+        // way to verify the tray's type-split (2026-07-23, prd §196) actually
+        // sees position risk, flagged transfers, ACTIVE approvals, delegations,
+        // and Safe signatures without driving the UI. Pairs with
+        // `-walletAddress` + `-approvalProbe`/`-poisoningProbe`/
+        // `-symbolProbe`/`-delegationProbe` to land the underlying things.
+        Hook(key: "worthALookProbe") { _, context in
+            Task { @MainActor in
+                let state = await WalletWatch.liveState(context: context)
+                let liquidation = state.warnings.filter { $0.kind == .liquidation }.count
+                let delegations = state.warnings.filter { $0.kind == .delegation }.count
+                let safe = state.warnings.filter { $0.kind == .safe }.count
+                NSLog("WorthALook probe: position=%d transfers=%d approvals=%d delegations=%d safe=%d",
+                      liquidation, state.flagged.count, state.activeApprovals.count,
+                      delegations, safe)
+            }
+        },
         // `-poisoningProbe YES` runs the address-poisoning fuzzy-match rule
         // over already-landed Wallet things and reports how many it would
         // flag — a read-only scan of the matching logic itself, no live

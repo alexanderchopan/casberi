@@ -831,10 +831,7 @@ struct FeedScreen: View {
             WalletWorthALookTray(
                 warnings: walletLive.warnings,
                 flagged: walletLive.flagged,
-                onOpenThing: { thing in
-                    showWorthALook = false
-                    sheetThing = thing
-                })
+                activeApprovals: walletLive.activeApprovals)
         }
         .translationPresentation(isPresented: $showTranslate, text: translateText)
         .confirmationDialog(
@@ -1483,9 +1480,10 @@ struct FeedScreen: View {
                             .modifier(RowEntrance(index: 0, wave: shapeWave, style: entranceStyle))
                     }
                     if !warnings.isEmpty {
-                        // Stays a LINE between the two cards (§146 holds here):
-                        // warnings are usually absent, and a third card would
-                        // reserve a parcel for the exception.
+                        // A third card now (prd §196, superseding §146): still
+                        // only reserves space when warnings are non-empty, but
+                        // the badge row inside earns its own card the way the
+                        // balance/DeFi cards above it do.
                         WalletWarningsLine(warnings: warnings) { showWorthALook = true }
                             .modifier(RowEntrance(index: 0, wave: shapeWave, style: entranceStyle))
                     }
