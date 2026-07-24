@@ -115,6 +115,17 @@ final class WalletStore {
     /// name (a name resolve carries the avatar even when reverse doesn't).
     /// Skips any address already resolved this launch — ENS.avatar caches
     /// misses too, so a faceless wallet costs one lookup, not one per visit.
+    ///
+    /// Cached under BOTH the watched spelling AND the resolved hex
+    /// (2026-07-23) — a wallet watched by ENS name ("vitalik.eth") showed its
+    /// real avatar in the roster/chip strip (which draw `WalletFace` from
+    /// `entry.address` directly) but fell back to a bare identicon anywhere a
+    /// landed `Thing`'s `walletAddress`/`counterpartyAddress` was the lookup
+    /// key instead — those always store the resolved hex, never the ENS
+    /// spelling, so the single-key cache missed every time (caught on-device:
+    /// the "You" face in a transaction's from/to visualization). Same
+    /// `avatarURL(for:)` reader either way; this just makes both spellings
+    /// answer.
     @MainActor
     func loadAvatars() async {
         for entry in addresses {
@@ -124,7 +135,12 @@ final class WalletStore {
             if found == nil, ENS.looksLikeName(entry.label) {
                 found = await ENS.avatar(for: entry.label)
             }
-            if let found { avatarURLs[key] = found }
+            guard let found else { continue }
+            avatarURLs[key] = found
+            if !ENS.isHexAddress(entry.address),
+               let hex = await ENS.resolve(entry.address) {
+                avatarURLs[hex.lowercased()] = found
+            }
         }
     }
 
