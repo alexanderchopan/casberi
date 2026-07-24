@@ -15,6 +15,19 @@ enum BridgeCatalog {
         /// One plain sentence for the App-Store-style detail page — what
         /// connecting is worth, in Bob's words.
         let summary: String
+        /// Extra capabilities beyond the hook, as short scannable lines
+        /// (prd §192, 2026-07-23) — the fix for a real tension the three-beat
+        /// summary rule exposed: Wallet's differentiated features (approval
+        /// alerts, DeFi positions, the Safe queue) don't fit a one-sentence
+        /// hook, but cramming them into the summary as a second run-on clause
+        /// bloated it to 107 words and buried the actual promise. Rather than
+        /// deleting real, true, differentiating information to match a word
+        /// count, it moves to its own scannable list — same content, same
+        /// checkmark grammar `BridgeConnectedState.capabilities` already
+        /// established for the CONNECTED state, so a person reads the same
+        /// visual language before and after they connect. Empty for the
+        /// other 54 offers, whose one-sentence hook already says it all.
+        var features: [String] = []
         /// True when connecting needs the person's input first (feed URLs,
         /// a pasted token) — Connect opens the bridge's setup screen instead
         /// of firing a permission ask. Setup bridges skip onboarding's
@@ -77,14 +90,22 @@ enum BridgeCatalog {
         Offer(name: "Reminders",   tagline: "Lists stay in reach",                   group: "Schedule",  connectable: true,
               summary: "Your reminders join your things and stay findable, and Casberi can add one to your list when you ask."),
         Offer(name: "Wallet",      tagline: "Track any wallet's activity",          group: "Wallet",    connectable: true,
-              summary: "Paste a wallet address — 0x…, an ENS name, or a .sol name — and its onchain activity (received, sent, swapped, tokens in and out) lands in your feed like anything else, across Ethereum, Base, Arbitrum, Optimism, Polygon and Solana. It also watches over the wallet itself: new token approvals (through Permit2 too), a wallet that starts delegating its control, and transfers that look like address-poisoning scams all surface as things worth a look — alongside what you've paid in gas, your Aave and Morpho positions, and any Safe signatures that need attention. Read-only, public data, no server. Watching an address can never trade or move funds.",
+              summary: "Paste a wallet address — 0x…, an ENS name, or a .sol name — and its onchain activity lands in your feed like anything else, across Ethereum, Base, Arbitrum, Optimism, Polygon and Solana. Read-only, public data, no server — watching an address can never trade or move funds.",
+              features: [
+                "Flags new token approvals, including through Permit2.",
+                "Warns if the wallet starts delegating its control.",
+                "Catches transfers that look like address-poisoning scams.",
+                "Tracks what you've paid in gas.",
+                "Shows your Aave and Morpho positions.",
+                "Surfaces any Safe signatures that need attention.",
+              ],
               needsSetup: true),
         // Wallet group by ruling (user, 2026-07-21, prd §162). Privacy Pools
         // rides the watched wallets the Peer way: no account exists to
         // connect — deposits come from the person's own wallet, so the seat
         // is a switch over the watched list.
         Offer(name: "0xBow Privacy Pools", tagline: "Know when your deposit clears",       group: "Wallet",    connectable: true,
-              summary: "Privacy Pools (by 0xBow) lets you move crypto with privacy and a compliance screen: you deposit, their screening reviews it, and once cleared you can withdraw to a fresh address privately. Connect and your deposits land in your feed — and Casberi tells you the moment a deposit clears review and is ready to withdraw privately, or if it's declined. That's the wait people otherwise keep checking a website for. Read from Ethereum's public chain and 0xBow's public API for the wallets you already watch. No account, no key, read-only: nothing here deposits, withdraws, or moves funds.",
+              summary: "Privacy Pools (by 0xBow) lets you move crypto with privacy and a compliance screen: you deposit, their screening reviews it, and once cleared you can withdraw to a fresh address privately. Connect and your deposits land in your feed — and Casberi tells you the moment a deposit clears review and is ready to withdraw privately, or if it's declined. Read from Ethereum's public chain and 0xBow's public API for the wallets you already watch. No account, no key, read-only: nothing here deposits, withdraws, or moves funds.",
               needsSetup: true, added: day(2026, 7, 21)),
         // Wallet group by ruling (user, 2026-07-21): the balances MERGE into
         // the combined portfolio, so an exchange belongs beside the wallets

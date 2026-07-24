@@ -65,7 +65,7 @@ struct BridgeConnectedState: View {
             // static ones — never nothing.
             let can = bridge?.can.isEmpty == false ? bridge!.can : capabilitiesFallback
             if !can.isEmpty {
-                capabilities(can)
+                DSCheckList(lines: can)
             }
             connectionDoor
         }
@@ -111,23 +111,6 @@ struct BridgeConnectedState: View {
             .background(bridge.status.color.opacity(0.12),
                         in: Capsule(style: .continuous))
             .accessibilityLabel(Text("\(bridge.status.spoken). \(bridge.statusLine)"))
-        }
-    }
-
-    /// What it can do, in the bridge's own sentences — the same words the
-    /// catalog and the bridge detail use, never boilerplate written here.
-    private func capabilities(_ can: [String]) -> some View {
-        VStack(alignment: .leading, spacing: DS.Space.s2) {
-            ForEach(can, id: \.self) { line in
-                HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-                    Image(systemName: "checkmark")
-                        .font(.system(size: 11, weight: .bold))
-                        .foregroundStyle(DS.confirm)
-                    Text(LocalizedStringKey(line))
-                        .dsText(.callout15).foregroundStyle(DS.textSecondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-            }
         }
     }
 

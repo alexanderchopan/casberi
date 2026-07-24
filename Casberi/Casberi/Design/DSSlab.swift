@@ -242,6 +242,34 @@ struct DSSlabNote: View {
     }
 }
 
+/// A scannable checkmark list — capabilities or features, one per line (prd
+/// §192, 2026-07-23). Born on `BridgeConnectedState` ("capabilities are
+/// sentences") for the CONNECTED state; promoted here so the product page can
+/// render the same visual grammar PRE-connect, when a bridge's differentiated
+/// features don't fit the one-sentence hook the summary rule caps at (Wallet's
+/// approval/DeFi/Safe monitoring is the case that forced this: six real,
+/// distinct capabilities were being crammed into one 60-word run-on clause
+/// rather than deleted or restructured). Same lines, same look, whichever side
+/// of Connect you're standing on.
+struct DSCheckList: View {
+    let lines: [String]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+            ForEach(lines, id: \.self) { line in
+                HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundStyle(DS.confirm)
+                    Text(LocalizedStringKey(line))
+                        .dsText(.callout15).foregroundStyle(DS.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+        }
+    }
+}
+
 extension View {
     /// The list-row dress every slab stack wears: full-bleed to the screen's
     /// own margins, no list chrome, no separator. One modifier so a slab

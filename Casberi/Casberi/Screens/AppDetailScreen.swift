@@ -163,6 +163,14 @@ struct AppDetailScreen: View {
             Text(LocalizedStringKey(offer.summary))
                 .dsText(.body17).foregroundStyle(DS.textPrimary)
                 .fixedSize(horizontal: false, vertical: true)
+            // The differentiated extras, scannable rather than crammed into
+            // the hook (prd §192) — the same DSCheckList grammar the
+            // CONNECTED state renders, so nothing changes visually the
+            // moment Connect flips to Open.
+            if !offer.features.isEmpty {
+                DSCheckList(lines: offer.features)
+                    .padding(.top, DS.Space.s1)
+            }
         }
     }
 

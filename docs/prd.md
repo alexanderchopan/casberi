@@ -7379,3 +7379,50 @@ unbidden.
 VERIFIED 2026-07-23 (iPhone 17 Pro sim): Coinbase now shows one honest line, no
 duplicate; Notion's real preview card renders unchanged, confirming the fix is
 scoped to the no-doc fallback only. Build green.
+
+## 192. The three-beat summary rule, and where it actually applies (user: "what consistency rule would you apply", then "yes i agree it's important. show me the scannable version that keeps the content but displays it differently", then "and so we can now apply this to the other places in the catalogue that do this too right?", 2026-07-23)
+
+**The rule**, codified rather than left implicit: every offer's `summary` is
+Hook (1 sentence, payoff only) → Mechanism (1 sentence, credential + where it's
+stored, omitted when there's no credential) → Boundary (1 sentence, MANDATORY
+whenever money/credentials/writes are involved, always last, always leads with
+the capability word — "Read-only…", "No account…"). A flat word cap was
+rejected: pulling the real text showed Coinbase/Kraken's extra length is the
+§163 permission-check disclosure, load-bearing trust content the honesty rules
+require, not padding — a cap would have forced cutting it.
+
+**Wallet was the one genuine outlier.** Its 107-word summary had a real
+enumerable feature list (approval alerts, delegation warnings, address-
+poisoning detection, gas tracking, Aave/Morpho positions, the Safe queue) fused
+into a single 60-word run-on clause. The user confirmed that content matters —
+Wallet's most differentiated capability shouldn't be deleted to fit a rule.
+Fix: `Offer` gained a `features: [String]` field (empty for the other 54
+offers) rendered via a new shared component, `Design/DSSlab.swift`'s
+`DSCheckList` — promoted out of `BridgeConnectedState`'s `capabilities(_:)`
+(previously private to that file), so the PRE-connect product page and the
+POST-connect manager page render the exact same checkmark grammar. Nothing
+shifts visually the moment Connect flips to Open. Wallet's summary trimmed to
+the clean two-sentence hook+boundary; the six capabilities moved to
+`features`, rendered as scannable checkmark lines under it.
+
+**Checked the rest of the catalog before extending the pattern — most didn't
+need it.** Pulled the full text of every long summary (Stocktwits, GeckoTerminal,
+Bitrefill, Privacy, Shopify, Open Food Facts, 1Claw) and classified each
+honestly: none had Wallet's disease. Their extra length is legitimate —
+a single bonus sentence (GeckoTerminal, Shopify), an efficiently-compressed
+enumeration folded into the hook via em-dash apposition (Bitrefill's "gift
+cards…, phone top-ups, eSIMs, balance refills"), or a real safety caveat that
+must be stated once (Privacy.com's unscoped-key disclosure). Extracting bullets
+from any of these would have been applying the fix to problems that don't
+exist — exactly the mistake §191 already flagged once this session (don't
+manufacture shape work where none is warranted).
+
+**The one place that DID need a trim, not bullets:** 0xBow Privacy Pools (97w)
+had no enumerable list — just a mechanism explanation plus one purely
+rhetorical sentence ("That's the wait people otherwise keep checking a website
+for.") that added no new fact. Cut. Its real content (mechanism + boundary) was
+already complete without it.
+
+VERIFIED 2026-07-23 (iPhone 17 Pro sim): Wallet's product page renders the
+two-sentence hook, then six green-checkmark capability lines, full width,
+readable at a glance. Build green.
