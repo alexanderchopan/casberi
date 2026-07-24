@@ -111,6 +111,10 @@ struct NameAddressPrompt: View {
     /// from a person you've paid twice.
     private var reason: String {
         let what = kind.label?.lowercased() ?? String(localized: "address")
-        return String(localized: "A \(what) you've now dealt with \(count) times. A name here retitles every transaction with it — past and future — and adds it to your address book.")
+        // "A contract" / "A safe" read fine; only the "address" default
+        // needs the vowel-sound article ("A address" — caught 2026-07-23).
+        let article = what.first.map { "aeiou".contains($0) } == true
+            ? String(localized: "An") : String(localized: "A")
+        return String(localized: "\(article) \(what) you've now dealt with \(count) times. A name here retitles every transaction with it — past and future — and adds it to your address book.")
     }
 }

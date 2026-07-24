@@ -206,17 +206,23 @@ struct TransferStageView: View {
 
     // MARK: - Faces (identity on the solid crown — ringed to hold their edge)
 
-    /// Your face: the profile avatar when set, else the wallet's own identicon
-    /// (deterministic — the same face WalletFace gives it everywhere).
+    /// This wallet's own face: the profile avatar when set, else the
+    /// wallet's own identicon (deterministic — the same face WalletFace
+    /// gives it everywhere). Round, not squircle (2026-07-23, user: "the
+    /// avatar is supposed to be a circle" / "contacts and people are
+    /// circles") — the same "a who wears a round face" rule
+    /// `AddressBook.Kind.glyph` already draws on (a wallet is a who; a
+    /// contract or Safe is a what and keeps the square mark). A watched
+    /// wallet is definitionally always a who.
     @ViewBuilder private var youFace: some View {
         if let avatar = ProfileStore.shared.avatar {
             Image(uiImage: avatar)
                 .resizable().scaledToFill()
                 .frame(width: 50, height: 50)
-                .clipShape(faceShape)
+                .clipShape(Circle())
                 .overlay(faceRing)
         } else {
-            WalletFace(address: thing.walletAddress ?? "you", size: 50)
+            WalletFace(address: thing.walletAddress ?? "you", size: 50, circular: true)
                 .overlay(faceRing)
         }
     }
@@ -224,29 +230,40 @@ struct TransferStageView: View {
     /// The counterparty's face — WalletFace's identicon seeded from whatever
     /// identity the record holds (hex when captured, else the titled name), so
     /// the same counterparty always wears the same face. An identicon, not a
-    /// claimed avatar — nothing is invented.
+    /// claimed avatar — nothing is invented. Round unless the address book
+    /// already identified this specific address as a contract or Safe (a
+    /// "what", not a "who") — an address never checked yet defaults to round,
+    /// same as `AddressBook.Kind.glyph`'s own `.wallet, .unknown` grouping.
     private var counterpartyFace: some View {
-        WalletFace(address: thing.counterpartyAddress ?? stage.titledName ?? "?",
-                   size: 50)
+        let address = thing.counterpartyAddress ?? stage.titledName ?? "?"
+        let kind = AddressBook.shared.entry(for: address)?.kind ?? .unknown
+        return WalletFace(address: address, size: 50,
+                          circular: kind != .contract && kind != .safe)
             .overlay(faceRing)
     }
 
-    private var faceShape: RoundedRectangle {
-        RoundedRectangle(cornerRadius: DS.Radius.appIcon(50), style: .continuous)
-    }
-
     private var faceRing: some View {
-        faceShape.strokeBorder(.white.opacity(0.25), lineWidth: 3)
+        Circle().strokeBorder(.white.opacity(0.25), lineWidth: 3)
     }
 
+    /// Never "You" (2026-07-23, user: "we don't know it is 'you', we only
+    /// know it is the address used or followed") — every watched wallet here
+    /// is read-only, so nothing distinguishes the person's own wallet from a
+    /// public address they're just tracking (this exact screen, in testing,
+    /// was showing "You" over vitalik.eth). Falls back to whatever the
+    /// person actually named it, then the watched spelling itself (an ENS
+    /// name reads fine as a label; a raw hex shortens the same way the
+    /// counterparty side already does) — an honest identity, never an
+    /// assumed one.
     private var youLabel: String {
-        if let a = thing.walletAddress?.lowercased(),
-           let watched = WalletStore.shared.addresses.first(where: {
-               $0.address.lowercased() == a
-           }), !watched.label.isEmpty {
-            return watched.label
-        }
-        return String(localized: "You")
+        guard let a = thing.walletAddress?.lowercased(),
+              let watched = WalletStore.shared.addresses.first(where: {
+                  $0.address.lowercased() == a
+              })
+        else { return WalletStore.shortAddress(thing.walletAddress ?? "") }
+        if !watched.label.isEmpty { return watched.label }
+        return ENS.isHexAddress(watched.address)
+            ? WalletStore.shortAddress(watched.address) : watched.address
     }
 }
 
