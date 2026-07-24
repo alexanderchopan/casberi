@@ -18,6 +18,7 @@ struct AppsScreen: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var pairing = false
     @State private var query = ""
+    @FocusState private var searchFocused: Bool
     /// The connect payoff (delight): every Connect on this screen — story
     /// card OR shelf capsule — ends the same way the product page's does,
     /// the app's hue blooming over the page (the shared `.connectBloom`).
@@ -205,68 +206,81 @@ struct AppsScreen: View {
 
     // MARK: - Body
 
-    var body: some View {
-        ScrollViewReader { proxy in
-            ScrollView {
-                VStack(alignment: .leading, spacing: DS.Space.s6) {
-                    if query.isEmpty {
-                        let cards = stories
-                        if !cards.isEmpty {
-                            DiscoverDeck(
-                                stories: cards,
-                                onOpen: { HomeRoute.shared.pushAppDetail($0.name) },
-                                onConnect: { offer in
-                                    // Setup bridges (paste an address/token/
-                                    // handle) route to their setup screen;
-                                    // only the system-permission bridges
-                                    // connect in one tap — the chart's split.
-                                    if offer.needsSetup {
-                                        HomeRoute.shared.pushBridge(BridgeRouter.destination(forOffer: offer.name))
-                                    } else {
-                                        attemptConnect(offer)
-                                    }
-                                },
-                                onPair: { pairing = true })
-                        }
-                        jumpChips(proxy)
-                        categoryShelves
-                    } else {
-                        searchResults
-                    }
-                }
-                .padding(.vertical, DS.Space.s4)
-                .padding(.bottom, ShellMetrics.bottomInset)
-            }
-            #if DEBUG
-            .onAppear {
-                // `-appsShelf "<Category>[:page]"` — scroll the catalog to a
-                // shelf and set its pager, headlessly (screenshot runs have no
-                // scroll gesture; same route as a jump-chip tap).
-                guard let spec = UserDefaults.standard.string(forKey: "appsShelf") else { return }
-                let parts = spec.split(separator: ":", maxSplits: 1)
-                let name = String(parts[0])
-                let page = parts.count > 1 ? (Int(parts[1]) ?? 0) : 0
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-                    proxy.scrollTo("shelf-" + name, anchor: .top)
-                    // Set the pager AFTER the shelf's own ScrollView has
-                    // initialised — it writes 0 back through the binding on
-                    // first layout, which eats a value set at mount.
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
-                        shelfPage[name] = page
-                        // Re-anchor: setting the pager re-lays the shelf out
-                        // and drifts the vertical offset off the header.
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
-                            proxy.scrollTo("shelf-" + name, anchor: .top)
-                            NSLog("appsShelf: \(name) page \(page)")
-                        }
-                    }
-                }
-            }
-            #endif
+    /// The Discover deck's three callbacks, split out so `body`'s VStack stays
+    /// a single small expression — a merged version timed out the type
+    /// checker once the wall's own closures joined it (found live, 2026-07-23).
+    private func onDiscoverConnect(_ offer: BridgeCatalog.Offer) {
+        // Setup bridges (paste an address/token/handle) route to their setup
+        // screen; only the system-permission bridges connect in one tap.
+        if offer.needsSetup {
+            HomeRoute.shared.pushBridge(BridgeRouter.destination(forOffer: offer.name))
+        } else {
+            attemptConnect(offer)
         }
+    }
+
+    /// Erased to `AnyView` at this ONE boundary (prd §200, found live,
+    /// 2026-07-23): the wall added a sibling view (`searchField`) ahead of
+    /// the old single if/else, which turns the VStack's content into a tuple
+    /// the type checker must carry through `ScrollView`/`ScrollViewReader`
+    /// AND the ~16-modifier chain `body` closes with — together enough to
+    /// blow the checker's budget ("unable to type-check … in reasonable
+    /// time"), confirmed by bisection: every individual piece here type-checks
+    /// fine alone. Erasing right where the reader closes lets the modifier
+    /// chain solve against plain `AnyView` instead of the fully generic
+    /// nested type; nothing behavioral changes; `proxy` still reaches every
+    /// scrollTo call inside.
+    private var scrollContent: AnyView {
+        AnyView(
+            ScrollViewReader { proxy in
+                ScrollView {
+                    VStack(alignment: .leading, spacing: DS.Space.s6) {
+                        // The search field leads the page (user ruling,
+                        // 2026-07-23: "make sure the search bar is at the
+                        // top") — a visible slab, not the nav bar's
+                        // pull-down `.searchable` field, which the App Store
+                        // shape hid a scroll below the fold.
+                        searchField
+                        if query.isEmpty {
+                            let cards = stories
+                            if !cards.isEmpty {
+                                DiscoverDeck(stories: cards,
+                                            onOpen: { HomeRoute.shared.pushAppDetail($0.name) },
+                                            onConnect: onDiscoverConnect,
+                                            onPair: { pairing = true })
+                            }
+                            jumpChips(proxy)
+                            catalogWall
+                        } else {
+                            searchResults
+                        }
+                    }
+                    .padding(.horizontal, DS.Space.s4)
+                    .padding(.vertical, DS.Space.s4)
+                    .padding(.bottom, ShellMetrics.bottomInset)
+                }
+                #if DEBUG
+                .onAppear {
+                    // `-appsShelf "<Category>"` — scroll the catalog to a
+                    // category's card headlessly (screenshot runs have no
+                    // scroll gesture; same route as a jump-chip tap). The
+                    // pager half of this hook retired with shelf paging (prd
+                    // §200): the wall shows every app in a category at once,
+                    // nothing to page.
+                    guard let name = UserDefaults.standard.string(forKey: "appsShelf") else { return }
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                        proxy.scrollTo("card-" + name, anchor: .top)
+                        NSLog("appsShelf: \(name)")
+                    }
+                }
+                #endif
+            }
+        )
+    }
+
+    var body: some View {
+        scrollContent
         .scrollIndicators(.hidden)
-        .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .automatic),
-                    prompt: "Search apps")
         // The connect payoff blooms the app's hue over the whole store, then
         // recedes — the same beat the product page gives, now on every Connect.
         .connectBloom(hue: connectHue, token: connectToken)
@@ -807,17 +821,41 @@ struct AppsScreen: View {
     }
     }
 
-    // MARK: - Category shelves (the catalog's spine — one section per category)
+    // MARK: - Search field (prd §200 — leads the page, not a nav-bar pull-down)
 
-    /// Apps grouped by category. Each category with something you can add gets
-    /// a labeled shelf; connected apps live in the strip above (ranked drops
-    /// them), so nothing repeats. Ready-to-connect apps lead each shelf, coming
-    /// ("Soon") ones trail — the tier order `ranked` already carries.
-    /// App Store grammar: a big header, three rows showing, swipe sideways for
-    /// the rest — the shelf never grows tall, it grows wide.
-    /// The category chips, back as NAVIGATION (the filter version died with
-    /// the flat chart): a tap scrolls to that shelf. Only categories with
-    /// something to add appear — a chip always lands somewhere.
+    private var searchField: some View {
+        HStack(spacing: DS.Space.s2) {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 15, weight: .medium))
+                .foregroundStyle(DS.textTertiary)
+            TextField("Search apps", text: $query)
+                .dsText(.body17).foregroundStyle(DS.textPrimary)
+                .tint(DS.tint)
+                .focused($searchFocused)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+            if !query.isEmpty {
+                Button {
+                    query = ""
+                    DSHaptic.tap()
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 15))
+                        .foregroundStyle(DS.textTertiary)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(.horizontal, DS.Space.s4)
+        .frame(height: DS.Radius.widget + 36)
+        .background(DS.surfaceWell, in: RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
+    }
+
+    // MARK: - The wall (prd §200 — a card per category, every app visible at once)
+
+    /// The category chips: a tap scrolls to that category's card. Only
+    /// categories with something to add appear — a chip always lands
+    /// somewhere.
     @ViewBuilder
     private func jumpChips(_ proxy: ScrollViewProxy) -> some View {
         let live = Self.categories.filter { cat in
@@ -830,9 +868,9 @@ struct AppsScreen: View {
                         Button {
                             DSHaptic.selection()
                             withAnimation(DS.Motion.standard) {
-                                proxy.scrollTo("shelf-" + cat.name, anchor: .top)
+                                proxy.scrollTo("card-" + cat.name, anchor: .top)
                             }
-                            // Close the loop: the shelf you landed on flashes
+                            // Close the loop: the card you landed on flashes
                             // once, so the tap arrives instead of scrolling in
                             // silence.
                             shelfLand[cat.name, default: 0] += 1
@@ -856,73 +894,12 @@ struct AppsScreen: View {
                     }
                 }
             }
-            .contentMargins(.horizontal, DS.Space.s4, for: .scrollContent)
         }
     }
 
-    /// Which page each shelf is on — the header chevron advances it.
-    @State private var shelfPage: [String: Int] = [:]
-
-    private var categoryShelves: some View {
-        VStack(alignment: .leading, spacing: DS.Space.s6) {
-            ForEach(Self.categories, id: \.name) { cat in
-                let apps = ranked.filter { category(of: $0.offer) == cat.name }
-                if !apps.isEmpty {
-                    let pageCount = (apps.count + 2) / 3
-                    VStack(alignment: .leading, spacing: DS.Space.s2) {
-                        shelfHeader(cat.name, pageCount: pageCount)
-                        shelfPages(apps, key: cat.name)
-                    }
-                    .id("shelf-" + cat.name)
-                }
-            }
-        }
-        // A connect moves its row to the strip — the shelf closes the gap
-        // smoothly instead of snapping.
-        .animation(DS.Motion.standard, value: store.bridges.count)
-    }
-
-    /// The App Store header grammar: name + chevron when there's more to see.
-    /// Honest control: the chevron appears only with a second page, and the
-    /// tap advances the shelf (wrapping) — it does what it points at.
-    @ViewBuilder
-    private func shelfHeader(_ name: String, pageCount: Int) -> some View {
-        if pageCount > 1 {
-            Button {
-                DSHaptic.selection()
-                withAnimation(DS.Motion.standard) {
-                    shelfPage[name] = ((shelfPage[name] ?? 0) + 1) % pageCount
-                }
-            } label: {
-                HStack(spacing: DS.Space.s2) {
-                    Text(LocalizedStringKey(name))
-                        .dsText(.heading22).foregroundStyle(DS.textPrimary)
-                    Image(systemName: "chevron.right")
-                        .accessibilityHidden(true)
-                        .font(.system(size: 17, weight: .semibold))
-                        .foregroundStyle(DS.textTertiary)
-                    Spacer()
-                }
-                .padding(.horizontal, DS.Space.s4)
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .landFlash(shelfLand[name] ?? 0)
-            .landFlash(shelfComplete[name] ?? 0, tint: categoryColor(name))
-        } else {
-            Text(LocalizedStringKey(name))
-                .dsText(.heading22).foregroundStyle(DS.textPrimary)
-                .padding(.horizontal, DS.Space.s4)
-                .landFlash(shelfLand[name] ?? 0)
-                .landFlash(shelfComplete[name] ?? 0, tint: categoryColor(name))
-        }
-    }
-
-    /// The shelf's rows, three per page. One page renders exactly like the old
-    /// full-width card; more apps page sideways, view-aligned.
-    /// A one-shot "stocking the shelf" entrance — a row fades and rises into
-    /// place, staggered by its position, when the shelf appears (delight,
-    /// 2026-07-12). Off under Reduce Motion.
+    /// A one-shot entrance — a tile fades and rises into place, staggered by
+    /// its position (delight, 2026-07-12, kept from the old shelf). Off under
+    /// Reduce Motion.
     private struct StockEntrance: ViewModifier {
         let index: Int
         @State private var shown = false
@@ -940,39 +917,122 @@ struct AppsScreen: View {
         }
     }
 
-    private func shelfPages(_ apps: [Ranked], key: String) -> some View {
-        let pages: [[Ranked]] = stride(from: 0, to: apps.count, by: 3).map {
-            Array(apps[$0..<min($0 + 3, apps.count)])
-        }
-        return ScrollView(.horizontal, showsIndicators: false) {
-            HStack(alignment: .top, spacing: DS.Space.s3) {
-                ForEach(pages.indices, id: \.self) { i in
-                    VStack(spacing: DS.Space.s1) {
-                        ForEach(Array(pages[i].enumerated()), id: \.element.id) { j, entry in
-                            appRow(entry).modifier(StockEntrance(index: j))
-                        }
-                    }
-                    .padding(.vertical, DS.Space.s1)
-                    // A category shelf is a LIST, not a read (prd §173, extended
-                    // to the catalog 2026-07-22, user: "the App Store doesn't use
-                    // cards for its items in categories") — the App Store's own
-                    // model, and the same treatment the source feeds now wear.
-                    // The rows sit on the ink; the shelf header does the
-                    // grouping the card used to. Paging is unaffected — the
-                    // containerRelativeFrame width still defines each page.
-                    .containerRelativeFrame(.horizontal) { length, _ in length - 12 }
-                    .id(i)
+    /// One category's card — a horizontal label, then every app in that
+    /// category as an icon+name tile, two across. Nothing pages, nothing
+    /// scrolls sideways: nothing hides.
+    private func categoryCard(_ name: String, apps: [Ranked]) -> some View {
+        VStack(alignment: .leading, spacing: DS.Space.s3) {
+            Text(LocalizedStringKey(name))
+                .dsText(.label12).fontWeight(.bold).foregroundStyle(DS.textTertiary)
+                .landFlash(shelfLand[name] ?? 0)
+                .landFlash(shelfComplete[name] ?? 0, tint: categoryColor(name))
+            LazyVGrid(columns: [GridItem(.flexible(), spacing: DS.Space.s2),
+                                GridItem(.flexible(), spacing: DS.Space.s2)],
+                      spacing: DS.Space.s3) {
+                ForEach(Array(apps.enumerated()), id: \.element.id) { i, entry in
+                    appTile(entry).modifier(StockEntrance(index: i))
                 }
             }
-            .scrollTargetLayout()
         }
-        .scrollTargetBehavior(.viewAligned)
-        .scrollPosition(id: Binding(
-            // Clamped: a connect can shrink the shelf under a stored index.
-            get: { min(shelfPage[key] ?? 0, max(0, pages.count - 1)) },
-            set: { shelfPage[key] = $0 ?? 0 }
-        ))
-        .contentMargins(.horizontal, DS.Space.s4, for: .scrollContent)
+        .padding(DS.Space.s3)
+        .background(DS.surfaceSheet, in: RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
+        .id("card-" + name)
+    }
+
+    /// Every category, packed into two TRUE masonry columns (prd §200, user:
+    /// "don't leave any empty spaces"). A plain two-column `LazyVGrid` of
+    /// cards pairs card N with card N+1 in the SAME row and sizes that row to
+    /// its taller member — exactly the gap the user rejected once already
+    /// (found live in the HTML mock, then again here). CSS `columns: 2` was
+    /// tried and rejected too: it auto-BALANCES by estimated height, which
+    /// silently reorders content out of the ruled category sequence.
+    ///
+    /// This instead assigns each category — in the catalog's own fixed order,
+    /// never reshuffled — to whichever column is currently SHORTER, tracking
+    /// height as a plain row-count estimate (1 label row + ⌈apps/2⌉ tile
+    /// rows). Deterministic: the same catalog state always packs the same
+    /// way, so there's no render-to-render surprise the CSS version had.
+    private var catalogWall: some View {
+        let sections = Self.categories.compactMap { cat -> (String, [Ranked])? in
+            let apps = ranked.filter { category(of: $0.offer) == cat.name }
+            return apps.isEmpty ? nil : (cat.name, apps)
+        }
+        var columns: ([(String, [Ranked])], [(String, [Ranked])]) = ([], [])
+        var heights: (Int, Int) = (0, 0)
+        for section in sections {
+            let rows = 1 + (section.1.count + 1) / 2
+            if heights.0 <= heights.1 {
+                columns.0.append(section); heights.0 += rows
+            } else {
+                columns.1.append(section); heights.1 += rows
+            }
+        }
+        return HStack(alignment: .top, spacing: DS.Space.s3) {
+            VStack(spacing: DS.Space.s3) {
+                ForEach(columns.0, id: \.0) { categoryCard($0.0, apps: $0.1) }
+            }
+            VStack(spacing: DS.Space.s3) {
+                ForEach(columns.1, id: \.0) { categoryCard($0.0, apps: $0.1) }
+            }
+        }
+        // A connect moves its row to the strip — the wall closes the gap
+        // smoothly instead of snapping.
+        .animation(DS.Motion.standard, value: store.bridges.count)
+    }
+
+    /// One app on the wall — icon, name underneath, home-screen style. The
+    /// verb and status line moved off the tile onto the destination it opens
+    /// (the product page's Connect/Open, or the manager's own proof line) —
+    /// a tile states WHO, tapping it says WHAT. Connected apps wear the same
+    /// status dot the old shelf row did; a Soon app dims.
+    private func appTile(_ entry: Ranked) -> some View {
+        let soon = entry.tier == 3
+        let isConnected = entry.tier == 0 || entry.tier == 2
+        let destination: HomeRoute.Node = {
+            if isConnected, let bridge = entry.bridge {
+                return .bridge(BridgeRouter.destination(forID: bridge.id))
+            }
+            return .appDetail(entry.offer.name)
+        }()
+        return NavigationLink(value: destination) {
+            VStack(spacing: DS.Space.s1) {
+                BridgeIcon(name: entry.offer.name, size: 48)
+                    .saturation(soon ? 0 : 1)
+                    .opacity(soon ? 0.5 : 1)
+                    .overlay(alignment: .topTrailing) {
+                        if isConnected, let bridge = entry.bridge {
+                            Circle()
+                                .fill(bridge.status.color)
+                                .frame(width: 11, height: 11)
+                                .overlay(Circle().strokeBorder(DS.themedPage, lineWidth: 2))
+                                .pulseOnChange(of: bridge.statusLine)
+                                .offset(x: 3, y: -3)
+                        }
+                    }
+                Text(entry.offer.name)
+                    .dsText(.label12).fontWeight(.medium)
+                    .foregroundStyle(soon ? DS.textSecondary : DS.textPrimary)
+                    .multilineTextAlignment(.center)
+                    .lineLimit(2)
+                    .frame(height: 28, alignment: .top)
+            }
+            .frame(maxWidth: .infinity)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(PressSpring())
+        .modifier(PeekPreview(
+            offer: entry.offer,
+            enabled: entry.tier == 1 && StorePreview.doc(for: entry.offer.name) != nil,
+            onConnect: {
+                if entry.offer.needsSetup {
+                    HomeRoute.shared.pushBridge(BridgeRouter.destination(forOffer: entry.offer.name))
+                } else {
+                    attemptConnect(entry.offer)
+                }
+            }))
+        // The just-connected tile lifts as the wall re-sorts it into its
+        // connected seat — a promotion you can feel, not a silent re-order.
+        .connectPromote(isTarget: entry.offer.name == justConnectedName, token: connectLiftToken)
     }
 
     /// One app inside a shelf — icon, name, honest subline, action capsule.

@@ -307,18 +307,22 @@ enum BridgeCatalog {
         // Kalshi, Stocktwits, Peer); Wallet stands on its own right behind it.
         ("Markets", "Kalshi",      ["Markets", "NFTs"]),
         ("Wallet",  "Wallet",      ["Wallet"]),
+        // Social/Agents/Media promoted ahead of Life/Notes/Work (user ruling
+        // 2026-07-23, the catalog-wall pass) — the people-and-agent bridges
+        // are the more differentiated hooks; the utility categories settle
+        // toward the bottom.
+        ("Social",  "Bluesky",     ["Network"]),
+        ("Agents",  "Claude",      ["Agent"]),
+        ("Media",   "Spotify",     ["Watching", "Listening", "Games", "Images"]),
         // "People" (Contacts) joins Life explicitly (2026-07-20) — it always
         // landed here via the fallback below, this just says so honestly.
         ("Life",    "Photos",      ["Photos", "Schedule", "Fitness", "People"]),
-        ("Home",    "HomeKit",     ["Home"]),
-        ("Notes",   "Apple Notes", ["Notes"]),
-        ("Social",  "Bluesky",     ["Network"]),
-        ("Agents",  "Claude",      ["Agent"]),
         ("Mail",    "Gmail",       ["Mail"]),
-        ("Work",    "GitHub",      ["Work"]),
         ("Reading", "Readwise",    ["Reading", "Saves"]),
-        ("Media",   "Spotify",     ["Watching", "Listening", "Games", "Images"]),
         ("Shopping", "Shopify",    ["Shopping"]),
+        ("Notes",   "Apple Notes", ["Notes"]),
+        ("Work",    "GitHub",      ["Work"]),
+        ("Home",    "HomeKit",     ["Home"]),
     ]
 
     static func category(of offer: Offer) -> String {

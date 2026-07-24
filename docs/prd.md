@@ -7816,3 +7816,68 @@ while its line streamed, each of which would previously have rendered
 partially-parsed treemap/chart data — then flipping once to real, stable
 content. Final render unchanged and correct (`$1.0M` hero, watchlist/up-next
 pair, "Nothing moved today"). Build green.
+
+## 200. The catalog is a wall, not an App Store (user: "one issue with the app catalogue is that it looks like apple's app store... give me three mockups... use cashapp, robinhood, and your own creative bold ideas", then a live iteration to "each category on its own card", "don't leave any empty spaces", "make sure the search bar is at the top", 2026-07-23)
+
+The complaint: the catalog wore the App Store's clothes — hero shelves,
+horizontal category scrolls — a grammar built to sell one app at a time, which
+is why 56 apps felt like 200. Mocked three shapes (Cash App's flat A–Z list,
+Robinhood's portfolio-of-connections, and a bold "home screen" wall of every
+icon at once); the user picked the wall and then art-directed it live through
+several corrections, each catching a real defect:
+
+- **"we need categories no matter what"** — the wall isn't chipless; every
+  real category from `BridgeCatalog.categories` gets its own labeled card.
+- **"put them next to each other... not as one category"** — an earlier draft
+  had merged small categories ("MARKETS & WALLET") under one label. Categories
+  never merge; a small one just packs beside another, each keeping its own
+  header.
+- **"don't leave gaps"**, twice — first caught in the HTML mock: CSS
+  `columns: 2` auto-BALANCES by estimated height, which silently reordered
+  category cards out of sequence (Life jumped ahead of Social/Agents/Media).
+  Fixed there with CSS Grid (strict row-major order). The SECOND time, in the
+  Swift build, "don't leave gaps" was reasserted as a harder requirement —
+  answered with true two-column MASONRY: each category, in fixed catalog
+  order, assigned to whichever column is currently shorter (a plain row-count
+  estimate: 1 label row + ⌈apps/2⌉ tile rows). Deterministic — computed once
+  in Swift from real data, not the browser's live auto-balance — so unlike the
+  CSS version there's no render-to-render reordering risk.
+- **"they need their titles too"** — bare icons gamble on recognition (fine
+  for Spotify, weak for 1Claw or Peer); every tile carries its name.
+- **"perhaps they should be on a card each category"** — the shape that shipped.
+- **"move social agents and media up... notes work home reading shopping
+  down"** — `BridgeCatalog.categories`' order changed (the single source of
+  truth the agent's `category:` kept-ask kind also reads), not just this
+  screen's display order.
+- **"make sure the search bar is at the top"** — a persistent slab
+  (`searchField`) leads the page now; the nav-bar's pull-down `.searchable`
+  hid the field a scroll below the fold.
+- **"i also think we should still have the swipe discover cards"** —
+  `DiscoverDeck` is untouched; only the shelf architecture below it retired.
+
+**What ships:** `searchField` → `DiscoverDeck` → `jumpChips` → `catalogWall`
+(two masonry columns of `categoryCard`s, each a `LazyVGrid` of `appTile`s —
+icon, connected dot, name). `appRow` (the list row) survives for search
+results, which stay a scannable list rather than a grid. Every honest verb
+(Connect/Open/Fix/Soon), the connect bloom, the peek-preview long-press, and
+`connectPromote`'s lift animation carry over unchanged onto the tile.
+
+**A real SwiftUI compiler limit, paid for and worth recording.** Wrapping the
+new content in a `pageContent(_ proxy:)` helper function — reasonable
+refactoring instinct, to keep `body` short — actually caused "the compiler is
+unable to type-check this expression in reasonable time." Bisection (stubbing
+every new view to `EmptyView()` one at a time, and in combination) proved the
+complexity wasn't in any single piece: it was `searchField` becoming a new
+SIBLING view ahead of the old lone if/else, turning the VStack's content into
+a tuple type that then had to thread through `ScrollView`/`ScrollViewReader`
+AND survive a ~16-modifier chain on `body` as one combined inference problem.
+Fix: erase the type at exactly that boundary — `scrollContent: AnyView`
+wraps the `ScrollViewReader`, so the long modifier chain solves against plain
+`AnyView` instead of the fully generic nested type. Nothing behavioral
+changes.
+
+VERIFIED 2026-07-23 (iPhone 17 Pro sim, real catalog data): search field at
+top with live filtering, the Discover deck paging (2 of 4), jump chips
+(Markets/Wallet/Social/Agents…), and the two-column wall rendering real icons
+and names — Markets | Wallet in row one exactly as ruled, Wallet correctly
+wearing its live green connected dot. Build green.
