@@ -121,6 +121,15 @@ enum VerbDerivation {
                 out.append(Verb(label: "Open thread", icon: "bubble.left.and.bubble.right",
                                 action: .openURL(url)))
             }
+            // A real inbox mail thing carries its Message-ID (MailBridge,
+            // 2026-07-23) — enough to hand off to the exact message instead
+            // of just the inbox (the generic "Open in <source>" fallback
+            // below). Prepended like "Open thread" above, for the same
+            // reason: survives the cap, and stands the generic fallback down.
+            if thing.kind == .mail, let mid = thing.mailMessageID, !mid.isEmpty,
+               let url = Self.messageURL(for: mid) {
+                out.append(Verb(label: "Open in Mail", icon: "envelope", action: .openURL(url)))
+            }
             out.append(Verb(label: "Copy text", icon: "doc.on.doc", action: .copyText))
             // The full body — a post's own words (postText), else whatever
             // the kind carries as its text (a transcript, a mail body).
@@ -204,8 +213,23 @@ enum VerbDerivation {
 
     /// An email address in the thing → a mailto: compose URL, else nil. Only
     /// fires when there's a real address to reach — never a blank composer.
+    ///
+    /// A mail thing's `content` is body text (2026-07-23), which rarely
+    /// repeats the sender's own address — scanning it would either find
+    /// nothing or (worse) latch onto some OTHER address mentioned in the
+    /// body and offer to "reply" to the wrong person. `authorHandle` is the
+    /// real sender, but the ENVELOPE parse prefers a display name over the
+    /// raw address when the header carries one ("Jane Appleseed", no "@") —
+    /// so this only fires for the addresses it can already see, same as
+    /// before body text existed; it never guesses.
     private static func mailtoURL(for thing: Thing) -> URL? {
-        let text = thing.content.isEmpty ? thing.title : thing.content
+        let text: String
+        if thing.kind == .mail {
+            guard let from = thing.authorHandle else { return nil }
+            text = from
+        } else {
+            text = thing.content.isEmpty ? thing.title : thing.content
+        }
         guard let r = text.range(of: #"[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}"#,
                                  options: [.regularExpression, .caseInsensitive]) else { return nil }
         var comps = URLComponents()
@@ -213,6 +237,18 @@ enum VerbDerivation {
         comps.path = String(text[r])
         comps.queryItems = [URLQueryItem(name: "subject", value: thing.title)]
         return comps.url
+    }
+
+    /// Apple Mail's own convention for "open this exact message" — a
+    /// percent-encoded `Message-ID` (angle brackets included) after the
+    /// `message:` scheme. Long-standing across macOS and iOS Mail, but not
+    /// in Apple's public URL-scheme reference — UNVERIFIED against a real
+    /// device/account; needs confirming before this is more than best-effort.
+    private static func messageURL(for messageID: String) -> URL? {
+        var allowed = CharacterSet.alphanumerics
+        allowed.insert(charactersIn: "-._~")
+        guard let encoded = messageID.addingPercentEncoding(withAllowedCharacters: allowed) else { return nil }
+        return URL(string: "message://\(encoded)")
     }
 
     /// A third-party app a task-shaped thing can hand off to. The rule (user,

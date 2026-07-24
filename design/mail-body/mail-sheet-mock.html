@@ -1,0 +1,156 @@
+<title>Mail thing sheet — body text + Open in Mail</title>
+<style>
+  :root {
+    --page: #0a0b0f; --ink: #f2f4f8; --muted: #99a1b4; --faint: #626b80;
+    --tint: #0A84FF; --card: #17191f;
+    --text: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+    --rounded: ui-rounded, -apple-system, system-ui, sans-serif;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { background: var(--page); }
+  body { font-family: var(--text); color: var(--ink);
+         background: radial-gradient(900px 420px at 18% -8%, rgba(10,132,255,.08), transparent 62%), var(--page);
+         padding: 48px 28px 72px; }
+  .wrap { max-width: 1100px; margin: 0 auto; }
+  header { max-width: 760px; margin-bottom: 40px; }
+  .eyebrow-tag { font-size: 12px; font-weight: 600; color: var(--tint); margin-bottom: 10px; }
+  h1 { font-size: clamp(24px,3.4vw,34px); font-weight: 800; letter-spacing: -.02em; line-height: 1.1;
+       text-wrap: balance; margin-bottom: 14px; }
+  header p { font-size: 15px; line-height: 1.55; color: var(--muted); max-width: 68ch; }
+  header p b { color: var(--ink); font-weight: 600; }
+
+  .row { display: flex; flex-wrap: wrap; gap: 40px; align-items: flex-start; justify-content: center; }
+  .col { width: 340px; }
+  .phone { width: 340px; border-radius: 46px; padding: 10px; background: #16181d;
+           box-shadow: 0 30px 70px rgba(0,0,0,.55), 0 2px 8px rgba(0,0,0,.4); }
+  .screen { border-radius: 38px; overflow: hidden; background: #000; height: 700px;
+            position: relative; display: flex; flex-direction: column; }
+  .grabber { width: 36px; height: 5px; border-radius: 3px; background: #3a3a3d;
+             margin: 10px auto 4px; flex: none; }
+  .sheet { flex: 1; overflow: hidden; padding: 10px 18px 20px; display: flex; flex-direction: column; gap: 18px; }
+
+  .caption { margin-top: 20px; padding: 0 6px; }
+  .caption h2 { font-size: 16px; font-weight: 700; margin-bottom: 6px; }
+  .caption h2 span { color: var(--faint); font-weight: 600; font-size: 13px; }
+  .caption p { font-size: 13.5px; line-height: 1.55; color: var(--muted); }
+
+  /* -- eyebrow -- */
+  .eyebrow { display: flex; align-items: center; gap: 8px; }
+  .glyph { width: 18px; height: 18px; border-radius: 50%; flex: none; background: #b6392f;
+           display: flex; align-items: center; justify-content: center; font-size: 10px; }
+  .eyebrow span { font-size: 12px; color: rgba(235,235,245,0.49); font-weight: 500; }
+
+  /* -- title -- */
+  .title { font-size: 27px; font-weight: 800; letter-spacing: -.02em; line-height: 1.15; color: #fff; }
+
+  /* -- sender row -- */
+  .sender { display: flex; align-items: center; gap: 8px; }
+  .avatar { width: 26px; height: 26px; border-radius: 50%; background: #3a3a3c; flex: none;
+            display: flex; align-items: center; justify-content: center;
+            font-family: var(--rounded); font-size: 12px; font-weight: 700; color: #d9dbe1; }
+  .sender b { font-size: 15px; font-weight: 400; color: rgba(235,235,245,0.6); }
+
+  /* -- body text -- */
+  .body-text { font-size: 15px; line-height: 1.45; color: #fff; }
+  .body-text.dim { color: rgba(235,235,245,0.49); font-style: italic; }
+
+  /* -- spec card -- */
+  .spec { background: rgba(255,255,255,0.04); border-radius: 10px; padding: 16px; display: flex;
+          flex-direction: column; gap: 12px; }
+  .spec-row { display: flex; align-items: baseline; gap: 0; }
+  .spec-row .k { width: 60px; flex: none; font-size: 12px; color: rgba(235,235,245,0.49); }
+  .spec-row .v { font-size: 15px; color: #fff; }
+
+  /* -- action rows -- */
+  .actions { display: flex; flex-direction: column; }
+  .action { display: flex; align-items: center; gap: 16px; padding: 13px 2px; }
+  .action .ic { width: 26px; text-align: center; font-size: 17px; color: rgba(235,235,245,0.6); }
+  .action .lb { font-size: 17px; font-weight: 590; color: #fff; }
+  .action.new { position: relative; }
+  .action.new::after {
+    content: "NEW"; position: absolute; right: 4px; top: 50%; transform: translateY(-50%);
+    font-size: 9px; font-weight: 800; letter-spacing: .04em; color: #04180a;
+    background: #30d158; border-radius: 999px; padding: 3px 7px;
+  }
+
+  .diff-badge { display: inline-block; font-size: 10px; font-weight: 800; letter-spacing: .03em;
+                padding: 3px 8px; border-radius: 999px; margin-bottom: 10px; }
+  .diff-badge.before { background: rgba(255,159,10,.18); color: #ff9f0a; }
+  .diff-badge.after  { background: rgba(48,209,88,.18); color: #30d158; }
+</style>
+
+<div class="wrap">
+<header>
+  <div class="eyebrow-tag">Casberi · the Mail thing sheet</div>
+  <h1>Two changes, same sheet: the real body, and a link that opens the exact message</h1>
+  <p>Same anatomy the sheet already has — eyebrow, title, content, spec card, action rows — nothing new gets invented. Two things change: <b>MailContentView</b> renders the fetched plain-text body instead of just the sender, and a new <b>Open in Mail</b> action row (topmost verb) opens the message directly via its Message-ID, instead of just dropping you at the inbox.</p>
+</header>
+
+<div class="row">
+
+  <!-- ============ BEFORE ============ -->
+  <div class="col">
+    <div class="phone"><div class="screen">
+      <div class="grabber"></div>
+      <div class="sheet">
+        <div>
+          <span class="diff-badge before">TODAY</span>
+          <div class="eyebrow"><div class="glyph">✉︎</div><span>Mail · 2h ago</span></div>
+        </div>
+        <div class="title">Your Q3 renewal is coming up</div>
+        <div class="sender">
+          <div class="avatar">B</div>
+          <b>billing@vercel.com</b>
+        </div>
+        <div class="spec">
+          <div class="spec-row"><div class="k">From</div><div class="v">in your inbox</div></div>
+          <div class="spec-row"><div class="k">Tags</div><div class="v" style="color:rgba(235,235,245,0.6)">Mail</div></div>
+        </div>
+        <div class="actions">
+          <div class="action"><div class="ic">⧉</div><div class="lb">Copy text</div></div>
+          <div class="action"><div class="ic">↑</div><div class="lb">Share</div></div>
+        </div>
+      </div>
+    </div></div>
+    <div class="caption">
+      <h2>Before <span>— sender only, no direct open</span></h2>
+      <p>The IMAP fetch only ever asked for ENVELOPE — subject/from/date. <code>content</code> is literally <code>"From billing@vercel.com"</code>, so the sheet has nothing to show below the sender row, and there's no source-scheme entry for iCloud Mail at all, so no "Open in Mail" verb exists — you'd have to go find the email yourself.</p>
+    </div>
+  </div>
+
+  <!-- ============ AFTER ============ -->
+  <div class="col">
+    <div class="phone"><div class="screen">
+      <div class="grabber"></div>
+      <div class="sheet">
+        <div>
+          <span class="diff-badge after">AFTER</span>
+          <div class="eyebrow"><div class="glyph">✉︎</div><span>Mail · 2h ago</span></div>
+        </div>
+        <div class="title">Your Q3 renewal is coming up</div>
+        <div class="sender">
+          <div class="avatar">B</div>
+          <b>billing@vercel.com</b>
+        </div>
+        <div class="body-text">Hi there — your Pro plan renews on August 14 at $20/mo. No action needed if everything looks right. Want to switch plans first? Just reply to this email or visit your billing settings.</div>
+        <div class="spec">
+          <div class="spec-row"><div class="k">From</div><div class="v">in your inbox</div></div>
+          <div class="spec-row"><div class="k">Tags</div><div class="v" style="color:rgba(235,235,245,0.6)">Mail</div></div>
+        </div>
+        <div class="actions">
+          <div class="action new"><div class="ic">✉︎</div><div class="lb">Open in Mail</div></div>
+          <div class="action"><div class="ic">⧉</div><div class="lb">Copy text</div></div>
+          <div class="action"><div class="ic">Aあ</div><div class="lb">Translate</div></div>
+          <div class="action"><div class="ic">↑</div><div class="lb">Share</div></div>
+        </div>
+      </div>
+    </div></div>
+    <div class="caption">
+      <h2>After <span>— the real body, and a direct hand-off</span></h2>
+      <p>The IMAP fetch adds <code>BODY.PEEK[TEXT]</code> (read-only — the peek never flips the server's read flag), decoded to plain text and trimmed of quoted reply chains/signatures. <code>MailContentView</code> already renders this for free — it just needed real body text in <code>content</code>. <b>Open in Mail</b> is new: built from the message's <code>Message-ID</code> header (already present in ENVELOPE, just unparsed today) as a <code>message:</code> URL — the same scheme Mail.app itself resolves to jump straight to that message, not the inbox.</p>
+      <p style="margin-top:8px;color:#ff9f0a">Unverified until a real device check: the <code>message:</code> deep link is a long-standing Mail.app convention, not a documented public API — needs confirming it opens the exact message on-device before this ships as more than a best-effort verb.</p>
+    </div>
+  </div>
+
+</div>
+</div>

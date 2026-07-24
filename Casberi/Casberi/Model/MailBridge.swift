@@ -100,7 +100,15 @@ enum MailIngest {
             let thing = Thing(
                 kind: .mail,
                 title: m.subject,
-                content: "From \(m.from)",
+                // The plain-text body when the second FETCH pass resolved
+                // one (2026-07-23) — MailContentView already renders real
+                // body text when content isn't just a "From …" line, so this
+                // needed no sheet changes. Falls back to the old "From …"
+                // line when the body couldn't be read (a MIME shape this
+                // decoder doesn't handle, a truncated fetch) — the row still
+                // gets its sender-circle identity from `authorHandle` either
+                // way, never from parsing this string.
+                content: m.body ?? "From \(m.from)",
                 source: provider.source,
                 capturedAt: m.date ?? .now,
                 sourceRef: ref
@@ -110,6 +118,7 @@ enum MailIngest {
             // we honestly have, 2026-07-10). Older rows parse it from the
             // "From …" content at render, so no migration.
             thing.authorHandle = m.from
+            thing.mailMessageID = m.messageID
             context.insert(thing)
             SpotlightIndex.index([thing])
             added += 1

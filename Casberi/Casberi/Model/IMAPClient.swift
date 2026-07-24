@@ -16,11 +16,28 @@ enum IMAPClient {
         let subject: String
         let from: String
         let date: Date?
+        /// The RFC 822 `Message-ID` header (angle brackets included) — the
+        /// tenth ENVELOPE field, already inside every fetch this client does;
+        /// nil when a server/message omits it. Lets "Open in Mail" jump to
+        /// the exact message instead of just the inbox.
+        let messageID: String?
+        /// The plain-text body, best-effort (2026-07-23) — nil when the
+        /// second FETCH pass fails, or MIME decoding finds nothing readable.
+        /// A mail thing with no body reads exactly as it did before this
+        /// existed (sender only), so a failure here never breaks ingest.
+        let body: String?
     }
 
     enum IMAPError: Error { case connect, login, select, timeout }
 
-    /// Connects, logs in, and returns the newest `limit` messages' envelopes.
+    /// The raw bytes fetched per message for the body pass — enough for
+    /// nearly every real message's readable text (plain or the first HTML
+    /// alternative), bounded so one attachment-heavy message can't stall a
+    /// foreground refresh.
+    private static let bodyByteCap = 65536
+
+    /// Connects, logs in, and returns the newest `limit` messages' envelopes
+    /// (plus a best-effort plain-text body for each).
     static func fetchRecent(host: String, user: String, password: String,
                             limit: Int = 20) async throws -> [Message] {
         let conn = try await Session.open(host: host)
@@ -34,10 +51,22 @@ enum IMAPClient {
         let start = max(1, total - limit + 1)
         let lines = try await conn.fetchEnvelopes(from: start, to: total)
         let parsed = lines.compactMap(EnvelopeParser.parse)
+        // A second FETCH pass, best-effort: a failure here (a server that
+        // balks at partial fetch, a network hiccup) degrades every message
+        // to body-less rather than failing the whole refresh — the pre-body
+        // behavior, not a regression.
+        let rawBodies = (try? await conn.fetchBodies(
+            uids: parsed.map(\.uid), maxBytes: bodyByteCap)) ?? [:]
+        let withBodies = parsed.map { m in
+            Message(uid: m.uid, subject: m.subject, from: m.from, date: m.date,
+                    messageID: m.messageID,
+                    body: rawBodies[m.uid].flatMap(MailMIME.plainText))
+        }
         #if DEBUG
-        NSLog("IMAP %@: %d fetched, %d parsed", host, lines.count, parsed.count)
+        NSLog("IMAP %@: %d fetched, %d parsed, %d bodies", host, lines.count, parsed.count,
+              withBodies.filter { $0.body != nil }.count)
         #endif
-        return parsed.reversed()   // newest first
+        return withBodies.reversed()   // newest first
     }
 
     /// Which of the given UIDs the server still has, for the delete-sync
@@ -182,6 +211,68 @@ private final class Session {
         return out
     }
 
+    /// `UID FETCH <uids> (UID BODY.PEEK[]<0.maxBytes>)` — the raw top-level
+    /// message bytes (RFC 822 headers + body), capped at `maxBytes`. `.PEEK`
+    /// never marks the message read (RFC 3501 §6.4.5) — the read-only
+    /// promise in `MailProvider.footer` depends on it. Unlike ENVELOPE, the
+    /// server hands the payload back as an IMAP LITERAL (`{n}` then exactly
+    /// `n` raw bytes, which may contain embedded CR/LF) rather than a plain
+    /// line — `fetchEnvelopes`'s line-by-line reader would corrupt that, so
+    /// this reads each literal by byte count instead.
+    func fetchBodies(uids: [String], maxBytes: Int) async throws -> [String: Data] {
+        guard !uids.isEmpty else { return [:] }
+        var out: [String: Data] = [:]
+        var i = 0
+        // Batched (40 UIDs/round trip): a single command line for hundreds of
+        // UIDs risks the server's own command-length limit, mirrored from the
+        // 400-per-batch cap `stillPresent` already uses for UID FETCH.
+        while i < uids.count {
+            let chunk = Array(uids[i..<min(i + 40, uids.count)])
+            let t = nextTag()
+            send(line: "\(t) UID FETCH \(chunk.joined(separator: ",")) (UID BODY.PEEK[]<0.\(maxBytes)>)")
+            while true {
+                let line = try await readLine()
+                if line.hasPrefix(t + " ") { break }
+                guard line.hasPrefix("* "), line.contains(" FETCH ") else { continue }
+                guard let uid = Self.digits(after: "UID ", in: line),
+                      let literalLen = Self.literalLength(atEndOf: line) else { continue }
+                out[uid] = try await readExact(literalLen)
+                // The literal's bytes are followed, on the SAME logical
+                // line, by whatever closes this FETCH (usually just ")") —
+                // read it out so the next readLine() starts clean at the
+                // next untagged response.
+                _ = try? await readLine()
+            }
+            i += 40
+        }
+        return out
+    }
+
+    /// Reads exactly `n` raw bytes — an IMAP literal's payload. Must never go
+    /// through `readLine()`: the bytes can contain CR/LF that isn't a line
+    /// break, and a line-based read would split (and lose) content there.
+    private func readExact(_ n: Int) async throws -> Data {
+        while buffer.count < n { try await receiveMore() }
+        let end = buffer.index(buffer.startIndex, offsetBy: n)
+        let data = buffer.subdata(in: buffer.startIndex..<end)
+        buffer.removeSubrange(buffer.startIndex..<end)
+        return data
+    }
+
+    private static func digits(after key: String, in s: String) -> String? {
+        guard let r = s.range(of: key) else { return nil }
+        let digits = s[r.upperBound...].prefix { $0.isNumber }
+        return digits.isEmpty ? nil : String(digits)
+    }
+
+    /// A literal marker ("{2048}") is always the LAST token on the response
+    /// line that declares it, immediately before the CRLF that precedes its
+    /// raw bytes (RFC 3501 §4.3) — so this only ever looks at the line's tail.
+    private static func literalLength(atEndOf line: String) -> Int? {
+        guard line.hasSuffix("}"), let open = line.lastIndex(of: "{") else { return nil }
+        return Int(line[line.index(after: open)..<line.index(before: line.endIndex)])
+    }
+
     // MARK: low-level
 
     private func nextTag() -> String { tag += 1; return "a\(tag)" }
@@ -261,9 +352,16 @@ private enum EnvelopeParser {
         let date = MailDate.parse(unquote(items[0]))
         let subject = decodeWord(unquote(items[1]))
         let from = firstFrom(items[2])
+        // env-message-id is the 10th ENVELOPE field (RFC 3501 §7.4.2, after
+        // date/subject/from/sender/reply-to/to/cc/bcc/in-reply-to) — absent
+        // on some servers/messages, so this degrades to nil rather than
+        // failing the parse.
+        let messageID = items.count >= 10 ? unquote(items[9]) : ""
         return IMAPClient.Message(uid: uid,
                                   subject: subject.isEmpty ? "(no subject)" : subject,
-                                  from: from, date: date)
+                                  from: from, date: date,
+                                  messageID: messageID.isEmpty ? nil : messageID,
+                                  body: nil)
     }
 
     private static func value(after key: String, in s: String) -> String? {

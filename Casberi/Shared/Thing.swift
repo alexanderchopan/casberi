@@ -145,6 +145,14 @@ final class Thing {
     /// Stable identifier in the source system (PHAsset id, message id, URL) —
     /// ingestion (and CloudKit merge) dedupes on it.
     var sourceRef: String? = nil
+    /// A mail thing's RFC 822 `Message-ID` header (the raw value, angle
+    /// brackets included) — captured from IMAP's ENVELOPE so "Open in Mail"
+    /// can build a `message:` deep link straight to this message, instead of
+    /// just the inbox. `sourceRef` carries the IMAP UID (mailbox-local, and
+    /// meaningless to Mail.app); this is the cross-client identity a mail
+    /// client actually resolves. nil for every non-mail thing, and for a
+    /// message whose server omitted the header (rare, but not unheard of).
+    var mailMessageID: String? = nil
     /// Voice audio, stored by the model itself (externalStorage keeps the
     /// bytes beside the store, and CloudKit mirroring carries them as a
     /// CKAsset — the M1 sync half of voice notes).
