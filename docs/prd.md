@@ -7720,3 +7720,55 @@ that fits with nothing to scroll. `uncappedHeight > maxTrayHeight`.
   remain.
 
 Build green throughout; standalone-verified in a worktree before commit.
+
+## 198. The agent's answer forms — skeleton-first assembly, not a blur (user: "does the whats going on and agent in general render like generative UI or does it just render", "how would you improve it", "yes do that", 2026-07-23) — VERIFIED
+
+Asked whether the agent's answers genuinely render like generative UI. They do
+— `GenStream.stream()` reveals module by module with real pacing at each
+section boundary — but the "forming" feel was thin: a resolved module just
+faded in from `EmptyView`, so the screen's shape kept jumping as new blocks
+popped into existence.
+
+**First cut (reverted): a blur+scale entrance on `MountIn`.** Scoped to the
+agent's answer column, each module scaled up from 0.96, rose 8pt, and came
+into focus from a 4pt blur. It looked like something LOADING — a photo
+resolving into focus — not like a component being drawn. Asked "how would you
+improve it": the better move is structural, not cosmetic.
+
+**Shipped: skeleton-first assembly.** A new `GenSlot.block` + `GenSkeletonBlock`
+— a full-width card wearing the SAME outer margins the brief's own modules
+close on. `GenRender`'s shared `"Stack"` case (root-only; nothing composes a
+nested `Stack`) now passes `slot: .block` to its children whenever
+`genAgentAnswerContext` is set. Root resolves almost immediately (a short line,
+first in the doc), so the instant the stream reaches it, EVERY module's block
+lays out at once — the whole screen's shape is visible before a single one has
+content — and each block simply becomes its real component the moment that
+module's own line streams in. `MountIn` reverts to its plain original fade+rise
+everywhere: the richness now belongs to structure (the skeleton) and to each
+component's own existing build (the money hero's rolling total and drawn
+sparkline, the bars rising from baseline), not to a generic wrapper effect.
+
+Two cleanup reviewers ran in parallel. Simplification/efficiency came back
+clean. Reuse/altitude confirmed the scoping is correct (Stack is genuinely
+root-only; `genAgentAnswerContext` defaults false so nothing outside the agent
+changes; `paint()` docs — live model prose, and the trivial single-`Insight`
+case — never show a skeleton at all, since `cursor = doc.count` before the
+first publish) and flagged one real thing: the doc comment claimed to match
+"every real module"'s padding, checked only against `GenInsight`/`GenWidget`
+(both `s4`). Verified directly against the brief's own family instead —
+`GenDayNotes`, `GenMoneyHero`, `GenTilePair`, `GenBars` all close on `s2` — so
+`s2` was already the right number for the modules this shipped for; the fix was
+correcting the comment's claim, not the padding. (The app does carry a second,
+`s4` convention for `RootShell.modelDoc`'s "ins, res" answers — an inherent,
+pre-existing split this one skeleton default can't fully match both sides of;
+picked `s2` because the brief is the majority case and this feature's reason
+for existing.)
+
+VERIFIED 2026-07-23 (iPhone 17 Pro sim, pinned UDID): a temporary debug NSLog
+in `GenSkeletonBlock` (removed before commit) confirmed 6 block mounts for one
+`-uiAnswerProbe "What's going on"` run. Two screenshots taken back-to-back
+during the same stream show it directly: frame 1 has the masthead, both docked
+chips, and the Keep pill already in their final places with five gray module
+blocks below; frame 2 (moments later) shows "What landed" and "Reading" now
+holding real content while "Up next" and the module above it are still
+unresolved skeletons — the layout never jumped, it just filled in. Build green.

@@ -15,7 +15,10 @@ extension DS.Radius {
     static let widget: CGFloat = 20
 }
 
-enum GenSlot { case none, row, tile }
+/// `block` (§198): a top-level answer module's placeholder, before its own
+/// line has streamed in — distinct from `tile`/`row`, which are a WIDGET's
+/// own children (already-resolved, waiting on their smaller shapes).
+enum GenSlot { case none, row, tile, block }
 
 /// Tap routes out of the renderer — the prototype's `projectTap`/`tagTap`.
 /// Surfaces provide these; components stay dumb.
@@ -222,6 +225,13 @@ struct GenRender: View {
     let id: String
     let els: GenEls
     var slot: GenSlot = .none
+    /// Read only to pass down to `Stack`'s own children (§198) — a top-level
+    /// module streaming in inside the agent's answer column gets a `.block`
+    /// skeleton laid out immediately; the same doc rendered anywhere else
+    /// (there is no other Stack-rooted context today, but the flag already
+    /// exists for exactly this kind of agent-only distinction) keeps the old
+    /// drop-until-resolved behavior.
+    @Environment(\.genAgentAnswerContext) private var inAgentAnswer
 
     var body: some View {
         // AnyView is load-bearing (2026-07-06 crash fix): the component
@@ -235,9 +245,10 @@ struct GenRender: View {
             AnyView(component(el))
         } else {
             switch slot {
-            case .row:  GenSkeletonRow().mountIn()
-            case .tile: GenSkeletonTile().mountIn()
-            case .none: EmptyView()   // unresolved refs drop
+            case .row:   GenSkeletonRow().mountIn()
+            case .tile:  GenSkeletonTile().mountIn()
+            case .block: GenSkeletonBlock().mountIn()
+            case .none:  EmptyView()   // unresolved refs drop
             }
         }
     }
@@ -246,7 +257,17 @@ struct GenRender: View {
     private func component(_ el: GenEl) -> some View {
         switch el.comp {
         case "Stack":
-            ForEach(el.refs(0), id: \.self) { GenRender(id: $0, els: els) }
+            // The brief's — and any agent answer's — own top-level modules
+            // (§198, user: "make it look like it's drawing the components...
+            // like they form rather than just appear even if streamed"). Root
+            // resolves almost immediately (it's a short line, first in the
+            // doc), so the instant the stream reaches it every module's
+            // BLOCK lays out at once — the whole screen's shape is visible
+            // before a single one has content — and each block crossfades to
+            // its real component as that module's own line streams in.
+            ForEach(el.refs(0), id: \.self) {
+                GenRender(id: $0, els: els, slot: inAgentAnswer ? .block : .none)
+            }
 
         case "Hero":        GenHero(el: el).mountIn()
         case "KindPills":   GenKindPills(el: el).mountIn()
@@ -362,6 +383,15 @@ struct GenRender: View {
 
 private struct MountIn: ViewModifier {
     @State private var shown = false
+    /// One universal entrance, deliberately plain (prd §198). An earlier
+    /// cut special-cased the agent's answer column with a blur+scale
+    /// "materialize" — reverted (user: "how would you improve it" → skeleton-
+    /// first assembly instead of the blur). A blur reads as a photo coming
+    /// into focus, not as a component being drawn; the actual "forming" feel
+    /// now comes from `GenSkeletonBlock` laying the screen's structure out
+    /// immediately (§198) and from each component's own build (the money
+    /// hero's rolling total and drawn sparkline, the bars rising from
+    /// baseline) — richness that belongs to the content, not a generic wrapper.
     func body(content: Content) -> some View {
         content
             .opacity(shown ? 1 : 0)
@@ -2432,6 +2462,33 @@ struct GenSkeletonTile: View {
         RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous)
             .fill(DS.surfaceSheet)
             .frame(minHeight: minHeight)
+    }
+}
+
+/// A top-level answer module's placeholder (§198) — the card margins the
+/// Today brief's OWN module family wears (`DayNotes`/`MoneyHero`/`TilePair`/
+/// `Bars`/`SourceMix` all close on `.padding(.horizontal, s4).padding(.top,
+/// s2)`), so the skeleton IS the layout rather than a generic loading bar: the
+/// screen's full shape is visible before a single module has content, and each
+/// block simply becomes its real component once that module's own line
+/// streams in. The app has a SECOND top-padding convention too (`GenInsight`/
+/// `GenWidget`, `s4` — `RootShell.modelDoc`'s "ins, res" answers) that this
+/// skeleton doesn't match as closely; picked `s2` because the brief is what
+/// this shipped for and is the majority of its own family, and either choice
+/// is an 8pt one-time settle on resolve, not a functional gap.
+///
+/// A plain static fill, deliberately — this app sanctions exactly two
+/// breathing/pulsing loops (`GenTagMap`'s starter preview, the agent's own
+/// berry while an answer is in flight), each only while something real is
+/// pending; a shimmering skeleton would be a third, decorative one.
+struct GenSkeletonBlock: View {
+    var minHeight: CGFloat = 96
+    var body: some View {
+        RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous)
+            .fill(DS.surfaceSheet)
+            .frame(maxWidth: .infinity, minHeight: minHeight)
+            .padding(.horizontal, DS.Space.s4)
+            .padding(.top, DS.Space.s2)
     }
 }
 
