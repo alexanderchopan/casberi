@@ -99,10 +99,19 @@ enum AppleMusicIngest {
         // — gets one batched catalog lookup (the SteamBridge artless-refs
         // pattern, async edition). Empty in the steady state: no request.
         let artlessStored = IngestSupport.artlessThings(context, source: "Apple Music")
+        // Stored rows with no per-track URL — a library play's `Song.url` is
+        // often nil, so `content` landed empty and "Open in Apple Music"
+        // falls back to the bare app scheme (`music://`, opens the main
+        // screen, not the song). Healed the same way artless rows are:
+        // whatever catalog copy the passes below turn up also carries a
+        // usable https deep link.
+        let contentlessStored = IngestSupport.contentlessThings(context, source: "Apple Music")
 
         var artByRef: [String: String] = [:]
-        // A title+artist search term for every ref that DOESN'T get https art
-        // the direct way — the fuel for the last-resort catalog search below.
+        var urlByRef: [String: String] = [:]
+        // A title+artist search term for every ref that's missing art OR a
+        // per-track URL the direct way — the fuel for the last-resort catalog
+        // search below.
         var termForRef: [String: String] = [:]
         // The pure track title per ref — used to VERIFY a catalog search hit
         // actually is the track we asked for before trusting its art (an
@@ -113,7 +122,8 @@ enum AppleMusicIngest {
         for song in response.items {
             let ref = sourceRef(song)
             if let art = artURL(song) { artByRef[ref] = art }
-            else {
+            if let url = song.url { urlByRef[ref] = url.absoluteString }
+            if artByRef[ref] == nil || urlByRef[ref] == nil {
                 termForRef[ref] = "\(song.title) \(song.artistName)"
                 titleForRef[ref] = song.title
             }
@@ -125,14 +135,19 @@ enum AppleMusicIngest {
             termForRef[ref] = thing.title.replacingOccurrences(of: " — ", with: " ")
             titleForRef[ref] = thing.title.components(separatedBy: " — ").first ?? thing.title
         }
+        for (ref, thing) in contentlessStored where termForRef[ref] == nil {
+            termForRef[ref] = thing.title.replacingOccurrences(of: " — ", with: " ")
+            titleForRef[ref] = thing.title.components(separatedBy: " — ").first ?? thing.title
+        }
 
         // Pass 1 — catalog id lookup: resolves plays that came from the
         // catalog directly.
-        var lookupIDs: [MusicItemID] = artlessStored.keys
-            .filter { artByRef[$0] == nil }
+        var lookupIDs: [MusicItemID] = Set(artlessStored.keys).union(contentlessStored.keys)
+            .filter { artByRef[$0] == nil || urlByRef[$0] == nil }
             .map { songID(fromRef: $0) }
         for song in response.items
-        where artByRef[sourceRef(song)] == nil && !existing.contains(sourceRef(song)) {
+        where !existing.contains(sourceRef(song))
+            && (artByRef[sourceRef(song)] == nil || urlByRef[sourceRef(song)] == nil) {
             lookupIDs.append(song.id)
         }
         if !lookupIDs.isEmpty {
@@ -140,7 +155,9 @@ enum AppleMusicIngest {
                 let lookup = MusicCatalogResourceRequest<Song>(matching: \.id,
                                                                memberOf: lookupIDs)
                 for song in try await lookup.response().items {
-                    if let art = artURL(song) { artByRef[sourceRef(song)] = art }
+                    let ref = sourceRef(song)
+                    if let art = artURL(song) { artByRef[ref] = art }
+                    if let url = song.url { urlByRef[ref] = url.absoluteString }
                 }
             } catch {
                 NSLog("[Casberi] Apple Music catalog id lookup failed: %@",
@@ -151,13 +168,14 @@ enum AppleMusicIngest {
         // Pass 2 — catalog SEARCH by title+artist (2026-07-11 fix): a LIBRARY
         // play's id can't be resolved by the catalog id lookup at all, so its
         // row was stuck glyph-only; searching the catalog for the same track
-        // finds the copy that carries mzstatic art. This is what heals a
-        // corpus that re-ingested without art (device report: music covers
-        // "worked before, broke recently" — a schema-change reinstall wiped
-        // the stored URLs and the id lookup alone couldn't rebuild them).
-        // One request per still-artless ref, capped so a large backlog can't
-        // stall a foreground refresh; the rest heal on later passes.
-        let searchable = termForRef.filter { artByRef[$0.key] == nil }
+        // finds the copy that carries mzstatic art (and a per-track URL).
+        // This is what heals a corpus that re-ingested without art (device
+        // report: music covers "worked before, broke recently" — a
+        // schema-change reinstall wiped the stored URLs and the id lookup
+        // alone couldn't rebuild them). One request per still-unresolved ref,
+        // capped so a large backlog can't stall a foreground refresh; the
+        // rest heal on later passes.
+        let searchable = termForRef.filter { artByRef[$0.key] == nil || urlByRef[$0.key] == nil }
         var healedBySearch = 0
         for (ref, term) in searchable.prefix(25) {
             var search = MusicCatalogSearchRequest(term: term, types: [Song.self])
@@ -172,22 +190,28 @@ enum AppleMusicIngest {
             if let hit = songs.first(where: {
                     guard let want else { return true }
                     return Self.titleMatches(Self.normalizedTitle($0.title), want)
-                }),
-               let art = artURL(hit) {
-                artByRef[ref] = art
+                }) {
+                if let art = artURL(hit) { artByRef[ref] = art }
+                if let url = hit.url { urlByRef[ref] = url.absoluteString }
                 healedBySearch += 1
             }
-            // No matching hit: leave the ref artless (the honest glyph) rather
-            // than pinning a stranger's album cover to the track.
+            // No matching hit: leave the ref artless/URL-less (the honest
+            // glyph and app-scheme fallback) rather than pinning a stranger's
+            // track to this one.
         }
-        NSLog("[Casberi] Apple Music artwork: %d recent-played, %d stored artless, %d id-lookups, %d resolved (%d via search), %d still artless",
-              response.items.count, artlessStored.count, lookupIDs.count,
-              artByRef.count, healedBySearch, searchable.count - healedBySearch)
+        NSLog("[Casberi] Apple Music artwork: %d recent-played, %d stored artless, %d stored URL-less, %d id-lookups, %d art resolved / %d URLs resolved (%d via search), %d still unresolved",
+              response.items.count, artlessStored.count, contentlessStored.count, lookupIDs.count,
+              artByRef.count, urlByRef.count, healedBySearch, searchable.count - healedBySearch)
 
         var patched = 0
         for (ref, thing) in artlessStored {
             guard let art = artByRef[ref] else { continue }
             thing.previewImageURL = art
+            patched += 1
+        }
+        for (ref, thing) in contentlessStored {
+            guard let url = urlByRef[ref] else { continue }
+            thing.content = url
             patched += 1
         }
 
@@ -200,7 +224,7 @@ enum AppleMusicIngest {
             let thing = Thing(
                 kind: .link,
                 title: title,
-                content: song.url?.absoluteString ?? "",
+                content: song.url?.absoluteString ?? urlByRef[ref] ?? "",
                 source: "Apple Music",
                 capturedAt: song.lastPlayedDate ?? .now,
                 sourceRef: ref

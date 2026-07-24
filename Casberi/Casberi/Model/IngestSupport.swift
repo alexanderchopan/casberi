@@ -102,6 +102,21 @@ enum IngestSupport {
         return artless
     }
 
+    /// Same shape as `artlessThings`, for a row that landed with no per-track
+    /// URL (a library play whose `Song.url` was nil at ingest time) — the
+    /// "Open in Apple Music" verb falls back to the bare app scheme for these
+    /// until a later catalog match heals `content`.
+    static func contentlessThings(_ context: ModelContext, source: String) -> [String: Thing] {
+        let descriptor = FetchDescriptor<Thing>(predicate: #Predicate {
+            $0.source == source && $0.content == ""
+        })
+        var contentless: [String: Thing] = [:]
+        for thing in (try? context.fetch(descriptor)) ?? [] {
+            if let ref = thing.sourceRef { contentless[ref] = thing }
+        }
+        return contentless
+    }
+
     /// Normalizes a candidate row-thumbnail URL into something RemoteThumb
     /// can actually fetch — https only (ATS blocks cleartext, and every
     /// image CDN speaks TLS), protocol-relative "//host" upgraded, relative
