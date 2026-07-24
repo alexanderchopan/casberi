@@ -67,6 +67,12 @@ enum BridgeRefresh {
                 await BridgeRefresh.stagger(s)
                 _ = await ScheduleIngest.refreshCalendar(context: context)
             }
+            // Delete-sync: an event deleted outright (not just aged out of
+            // the ingest window) — local EventKit check, cheap like Photos'.
+            let s2 = slot(); Task { @MainActor in
+                await BridgeRefresh.stagger(s2)
+                _ = ScheduleIngest.healCalendar(context: context)
+            }
         }
         if connected("rem") {
             let s = slot(); Task { @MainActor in
@@ -106,12 +112,22 @@ enum BridgeRefresh {
                 // in the ingest above.
                 SocialMoments.checkBlueskyReturns(context: context)
             }
+            // Delete-sync: a post removed by its author or moderation.
+            // Own network round trip and its own hourly throttle.
+            let s2 = slot(); Task { @MainActor in
+                await BridgeRefresh.stagger(s2)
+                _ = await BlueskyIngest.heal(context: context)
+            }
         }
         if FarcasterStore.shared.connected {
             let s = slot(); Task { @MainActor in
                 await BridgeRefresh.stagger(s)
                 _ = await FarcasterIngest.refresh(context: context)
                 SocialMoments.checkFarcasterReturns(context: context)
+            }
+            let s2 = slot(); Task { @MainActor in
+                await BridgeRefresh.stagger(s2)
+                _ = await FarcasterIngest.heal(context: context)
             }
         }
         if !PinterestStore.shared.username.isEmpty {

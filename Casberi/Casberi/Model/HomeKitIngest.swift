@@ -50,9 +50,11 @@ enum HomeKitIngest {
 
         var landed: [Thing] = []
         var updated: [Thing] = []
+        var seen = Set<String>()
         for home in homes {
             for accessory in home.accessories {
                 let ref = "homekit:accessory:\(accessory.uniqueIdentifier.uuidString)"
+                seen.insert(ref)
                 let line = self.line(for: accessory, home: home)
                 if let existing = bySourceRef[ref] {
                     if existing.content != line {
@@ -67,13 +69,27 @@ enum HomeKitIngest {
                 }
             }
         }
+        // RECONCILE: an accessory unpaired (or a whole home removed) stops
+        // appearing in `homes` — its Thing is LIVE STATE, not a record, so a
+        // stale row here is worse than for the activity bridges. A
+        // momentarily empty `homes` (iCloud homes still syncing) must not
+        // read as "every accessory vanished" — only reconcile when the read
+        // actually found a home to walk.
+        var removedIDs: [UUID] = []
+        if !homes.isEmpty {
+            for (ref, thing) in bySourceRef where !seen.contains(ref) {
+                removedIDs.append(thing.id)
+                context.delete(thing)
+            }
+        }
         // Re-index updated accessories too — a state change (e.g. Reachable →
         // Unreachable) rewrites the Thing's content, and without this the
         // system Search index keeps showing the old text indefinitely (only
         // brand-new accessories were ever passed to SpotlightIndex before).
         let toIndex = landed + updated
         if !toIndex.isEmpty { SpotlightIndex.index(toIndex) }
-        if !toIndex.isEmpty { context.saveHonestly() }
+        if !removedIDs.isEmpty { SpotlightIndex.remove(ids: removedIDs) }
+        if !toIndex.isEmpty || !removedIDs.isEmpty { context.saveHonestly() }
         return landed.count
     }
 

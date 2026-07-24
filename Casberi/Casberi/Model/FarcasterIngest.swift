@@ -668,6 +668,77 @@ enum FarcasterIngest {
     /// `running` guard makes the pass single-flight, so one flag is safe.
     @MainActor private static var healed = false
 
+    // MARK: - Delete-sync (2026-07-23)
+
+    @MainActor private static var healRunning = false
+    private static let healInterval: TimeInterval = 3600
+    private static let healKey = "farcaster.lastHeal"
+
+    /// Reconciles against what the node still serves — a cast deleted by
+    /// its author never tells Casberi. Unlike Bluesky's `getPosts`,
+    /// Snapchain's `castById` takes ONE cast per request (no batch form), so
+    /// this fans a few out at a time instead. Its not-found shape, measured
+    /// live 2026-07-23: HTTP 400 with `error_detail` containing "cast not
+    /// found" — NOT 404. A malformed request (a bad hash) ALSO 400s, with a
+    /// different message ("Invalid hash"), so `castIsGone` reads the body
+    /// rather than trusting the status code alone — every hash checked here
+    /// comes from our own stored refs, so a shape error would mean a bug in
+    /// this code, not a real deletion, and must never be misread as one.
+    @MainActor
+    static func heal(context: ModelContext, force: Bool = false) async -> Int {
+        guard !healRunning else { return 0 }
+        if !force, let last = UserDefaults.standard.object(forKey: healKey) as? Date,
+           Date.now.timeIntervalSince(last) < healInterval { return 0 }
+        healRunning = true
+        defer { healRunning = false }
+        UserDefaults.standard.set(Date.now, forKey: healKey)
+
+        let things = IngestSupport.thingsByRef(context, source: "Farcaster")
+        let candidates = things.compactMap { ref, thing -> (ref: String, hash: String, handle: String)? in
+            guard ref.hasPrefix("fc:"), let handle = thing.authorHandle, !handle.isEmpty
+            else { return nil }
+            return (ref, String(ref.dropFirst(3)), handle)
+        }
+        guard !candidates.isEmpty else { return 0 }
+
+        // castById needs {fid, hash} — Snapchain has no lookup by hash alone
+        // — so resolve each distinct author's fid once, fanned out.
+        let handles = Array(Set(candidates.map(\.handle)))
+        let fids = await IngestSupport.boundedGather(handles, maxConcurrent: 4) { handle in
+            await fid(forName: handle)
+        }
+        let fidByHandle = Dictionary(uniqueKeysWithValues: zip(handles, fids))
+
+        let checks = await IngestSupport.boundedGather(candidates, maxConcurrent: 4) {
+            c -> (String, Bool) in
+            guard let fid = fidByHandle[c.handle].flatMap({ $0 }) else { return (c.ref, false) }
+            return (c.ref, await castIsGone(fid: fid, hash: c.hash))
+        }
+
+        var removedIDs: [UUID] = []
+        for (ref, gone) in checks where gone {
+            guard let thing = things[ref] else { continue }
+            removedIDs.append(thing.id)
+            context.delete(thing)
+        }
+        guard !removedIDs.isEmpty else { return 0 }
+        context.saveHonestly()
+        SpotlightIndex.remove(ids: removedIDs)
+        return removedIDs.count
+    }
+
+    /// True only for a definitive "cast not found" — never for a transport
+    /// failure, a malformed request, or any other status, so an outage or a
+    /// bug in our own request can't masquerade as a real deletion.
+    private static func castIsGone(fid: Int, hash: String) async -> Bool {
+        guard let url = URL(string: "\(node)/v1/castById?fid=\(fid)&hash=\(hash)") else { return false }
+        guard let (data, response) = try? await URLSession.shared.data(from: url),
+              (response as? HTTPURLResponse)?.statusCode == 400,
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let detail = json["error_detail"] as? String else { return false }
+        return detail.localizedCaseInsensitiveContains("not found")
+    }
+
     // MARK: - Channels: name → parent URL
 
     /// name → the channel's protocol parent URL plus its face, via the

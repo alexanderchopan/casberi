@@ -487,6 +487,67 @@ enum BlueskyIngest {
     /// single-flight, so one flag is safe.
     @MainActor private static var healed = false
 
+    // MARK: - Delete-sync (2026-07-23)
+
+    @MainActor private static var healRunning = false
+    private static let healInterval: TimeInterval = 3600
+    private static let healKey = "bluesky.lastHeal"
+
+    /// Reconciles against what the AppView still serves — a post deleted by
+    /// its author (or removed) never tells Casberi. `getPosts` answers only
+    /// for uris it can still serve and silently omits the rest — no error,
+    /// no partial-failure marker (verified live 2026-07-23: a real uri plus
+    /// a fabricated one in one request → HTTP 200, one post back, the fake
+    /// one just missing) — so "asked for, not returned" IS the deleted set,
+    /// the same shape as Mail's UID FETCH. Batched 25 at a time (`getPosts`'
+    /// own cap); a failed CHUNK is `continue`d past rather than counted, so
+    /// a transient network blip can never read as a mass delete — only a uri
+    /// whose chunk actually got an answer is eligible to be "not returned".
+    /// Throttled like Mail's heal: a real network round trip, not a local
+    /// check like Photos'.
+    @MainActor
+    static func heal(context: ModelContext, force: Bool = false) async -> Int {
+        guard !healRunning else { return 0 }
+        if !force, let last = UserDefaults.standard.object(forKey: healKey) as? Date,
+           Date.now.timeIntervalSince(last) < healInterval { return 0 }
+        healRunning = true
+        defer { healRunning = false }
+        UserDefaults.standard.set(Date.now, forKey: healKey)
+
+        let things = IngestSupport.thingsByRef(context, source: "Bluesky")
+        let uriToRef = Dictionary(uniqueKeysWithValues: things.keys
+            .filter { $0.hasPrefix("bsky:") }
+            .map { (String($0.dropFirst("bsky:".count)), $0) })
+        guard !uriToRef.isEmpty else { return 0 }
+
+        var present = Set<String>()
+        var attempted = Set<String>()
+        let uris = Array(uriToRef.keys)
+        for start in stride(from: 0, to: uris.count, by: 25) {
+            let chunk = Array(uris[start..<min(start + 25, uris.count)])
+            var comps = URLComponents(string: "\(host)/app.bsky.feed.getPosts")!
+            comps.queryItems = chunk.map { URLQueryItem(name: "uris", value: $0) }
+            guard let url = comps.url,
+                  let root = await IngestSupport.getJSON(url) as? [String: Any],
+                  let posts = root["posts"] as? [[String: Any]] else { continue }
+            attempted.formUnion(chunk)
+            for post in posts {
+                if let uri = post["uri"] as? String { present.insert(uri) }
+            }
+        }
+
+        var removedIDs: [UUID] = []
+        for (uri, ref) in uriToRef where attempted.contains(uri) && !present.contains(uri) {
+            guard let thing = things[ref] else { continue }
+            removedIDs.append(thing.id)
+            context.delete(thing)
+        }
+        guard !removedIDs.isEmpty else { return 0 }
+        context.saveHonestly()
+        SpotlightIndex.remove(ids: removedIDs)
+        return removedIDs.count
+    }
+
     // MARK: - Replies (the sheet's thread context, 2026-07-14)
 
     /// The thread under one post (getPostThread, depth 1), oldest first,

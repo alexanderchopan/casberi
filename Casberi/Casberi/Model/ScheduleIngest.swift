@@ -114,6 +114,32 @@ enum ScheduleIngest {
         return added
     }
 
+    /// Reconciles against what EventKit still has — an event deleted
+    /// outright (not just aged out of the rolling ±7-day window) never
+    /// tells Casberi. `calendarItem(withIdentifier:)` returning nil for the
+    /// series id is the local, zero-network equivalent of Mail's "UID
+    /// FETCH came back empty" (mirrors `ScreenshotIngest.heal`'s RECONCILE
+    /// step for Photos). Unlike the ingest window, this walks every
+    /// Calendar thing ever landed, so a deletion from months back clears.
+    @MainActor
+    static func healCalendar(context: ModelContext) -> Int {
+        guard EKEventStore.authorizationStatus(for: .event) == .fullAccess else { return 0 }
+        let things = IngestSupport.thingsByRef(context, source: "Calendar")
+        guard !things.isEmpty else { return 0 }
+        let store = EKEventStore()
+        var removedIDs: [UUID] = []
+        for (ref, thing) in things {
+            let id = String(ref.dropFirst("ekevent:".count))
+            guard store.calendarItem(withIdentifier: id) == nil else { continue }
+            removedIDs.append(thing.id)
+            context.delete(thing)
+        }
+        guard !removedIDs.isEmpty else { return 0 }
+        context.saveHonestly()
+        SpotlightIndex.remove(ids: removedIDs)
+        return removedIDs.count
+    }
+
     /// The occurrence that best stands for a series: the soonest one still ahead
     /// (the next upcoming), else — when the whole series is behind — the most
     /// recent past one. A consistent total order, so reducing the occurrences
@@ -203,9 +229,11 @@ enum ScheduleIngest {
         }
 
         let existing = IngestSupport.thingsByRef(context, source: "Reminders")
+        var seen = Set<String>()
         var added = 0
         for reminder in reminders {
             let ref = "ekreminder:\(reminder.calendarItemIdentifier)"
+            seen.insert(ref)
             if let thing = existing[ref] {
                 // The real list is authoritative on refresh — a reminder
                 // completed (or reopened) in the Reminders app carries that
@@ -242,7 +270,17 @@ enum ScheduleIngest {
             context.insert(thing)
             added += 1
         }
+        // RECONCILE: `predicateForReminders(in: nil)` fetches the WHOLE
+        // current list every time (no window, unlike Calendar's rolling
+        // ±7 days), so a ref this pass never saw was deleted outright, not
+        // just out of range.
+        var removedIDs: [UUID] = []
+        for (ref, thing) in existing where !seen.contains(ref) {
+            removedIDs.append(thing.id)
+            context.delete(thing)
+        }
         context.saveHonestly()
+        if !removedIDs.isEmpty { SpotlightIndex.remove(ids: removedIDs) }
         return added
     }
 

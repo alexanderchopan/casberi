@@ -53,17 +53,21 @@ enum ContactsIngest {
             return nil
         }
 
-        let existing = IngestSupport.existingSourceRefs(context, source: "Contacts")
+        let existing = IngestSupport.thingsByRef(context, source: "Contacts")
         // An address book runs to thousands — collect the new things and index
         // Spotlight once at the end, rather than a call per contact.
         var landed: [Thing] = []
+        var seen = Set<String>()
         for contact in fetched {
+            // Marked seen BEFORE the display-name check: a contact edited
+            // down to no name still exists (just anonymized) and must not
+            // read as deleted below.
+            let ref = "contact:\(contact.identifier)"
+            seen.insert(ref)
             let name = [contact.givenName, contact.familyName]
                 .filter { !$0.isEmpty }.joined(separator: " ")
             let display = name.isEmpty ? contact.organizationName : name
-            guard !display.isEmpty else { continue }
-            let ref = "contact:\(contact.identifier)"
-            guard !existing.contains(ref) else { continue }
+            guard !display.isEmpty, existing[ref] == nil else { continue }
             let thing = Thing(
                 kind: .contact,
                 title: display,
@@ -74,10 +78,17 @@ enum ContactsIngest {
             context.insert(thing)
             landed.append(thing)
         }
-        if !landed.isEmpty {
-            SpotlightIndex.index(landed)
-            context.saveHonestly()
+        // RECONCILE: `enumerateContacts` walks the WHOLE address book every
+        // call (no window), so a ref this pass never saw was deleted or
+        // merged away, not just outside some range.
+        var removedIDs: [UUID] = []
+        for (ref, thing) in existing where !seen.contains(ref) {
+            removedIDs.append(thing.id)
+            context.delete(thing)
         }
+        if !landed.isEmpty { SpotlightIndex.index(landed) }
+        if !removedIDs.isEmpty { SpotlightIndex.remove(ids: removedIDs) }
+        if !landed.isEmpty || !removedIDs.isEmpty { context.saveHonestly() }
         return landed.count
     }
 

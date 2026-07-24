@@ -185,6 +185,15 @@ enum ProbeHooks {
                       added.map(String.init) ?? "FAILED")
             }
         },
+        // `-fcHealProbe YES` runs the delete-sync reconcile headlessly over
+        // already-watched accounts and NSLogs how many stale casts it
+        // removed. `force: true` bypasses heal's own hourly throttle.
+        Hook(key: "fcHealProbe") { _, context in
+            Task { @MainActor in
+                let n = await FarcasterIngest.heal(context: context, force: true)
+                NSLog("Farcaster heal probe: %d removed", n)
+            }
+        },
         // `-fcReplies "<username>:<0xhash>"` fetches a cast's thread and
         // NSLogs the count + first line (the sheet's replies section,
         // headless — just the author's name and the full hash, no thing).
@@ -319,6 +328,15 @@ enum ProbeHooks {
                 let added = await BlueskyIngest.refresh(context: context)
                 NSLog("Bluesky mentions probe: %@ new things",
                       added.map(String.init) ?? "FAILED")
+            }
+        },
+        // `-bskyHealProbe YES` runs the delete-sync reconcile headlessly over
+        // already-watched accounts/feeds and NSLogs how many stale posts it
+        // removed. `force: true` bypasses heal's own hourly throttle.
+        Hook(key: "bskyHealProbe") { _, context in
+            Task { @MainActor in
+                let n = await BlueskyIngest.heal(context: context, force: true)
+                NSLog("Bluesky heal probe: %d removed", n)
             }
         },
         // `-bskyReplies "at://…"` fetches a post's thread by its at-uri (a
