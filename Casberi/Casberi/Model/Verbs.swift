@@ -121,15 +121,6 @@ enum VerbDerivation {
                 out.append(Verb(label: "Open thread", icon: "bubble.left.and.bubble.right",
                                 action: .openURL(url)))
             }
-            // A real inbox mail thing carries its Message-ID (MailBridge,
-            // 2026-07-23) — enough to hand off to the exact message instead
-            // of just the inbox (the generic "Open in <source>" fallback
-            // below). Prepended like "Open thread" above, for the same
-            // reason: survives the cap, and stands the generic fallback down.
-            if thing.kind == .mail, let mid = thing.mailMessageID, !mid.isEmpty,
-               let url = Self.messageURL(for: mid) {
-                out.append(Verb(label: "Open in Mail", icon: "envelope", action: .openURL(url)))
-            }
             out.append(Verb(label: "Copy text", icon: "doc.on.doc", action: .copyText))
             // The full body — a post's own words (postText), else whatever
             // the kind carries as its text (a transcript, a mail body).
@@ -237,18 +228,6 @@ enum VerbDerivation {
         comps.path = String(text[r])
         comps.queryItems = [URLQueryItem(name: "subject", value: thing.title)]
         return comps.url
-    }
-
-    /// Apple Mail's own convention for "open this exact message" — a
-    /// percent-encoded `Message-ID` (angle brackets included) after the
-    /// `message:` scheme. Long-standing across macOS and iOS Mail, but not
-    /// in Apple's public URL-scheme reference — UNVERIFIED against a real
-    /// device/account; needs confirming before this is more than best-effort.
-    private static func messageURL(for messageID: String) -> URL? {
-        var allowed = CharacterSet.alphanumerics
-        allowed.insert(charactersIn: "-._~")
-        guard let encoded = messageID.addingPercentEncoding(withAllowedCharacters: allowed) else { return nil }
-        return URL(string: "message://\(encoded)")
     }
 
     /// A third-party app a task-shaped thing can hand off to. The rule (user,

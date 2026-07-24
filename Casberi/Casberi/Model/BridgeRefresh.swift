@@ -196,10 +196,17 @@ enum BridgeRefresh {
             // Delete-sync: reconciles against what the server still has.
             // Own network round trip and its own hourly throttle, so it
             // runs as an independent staggered task rather than tacked onto
-            // refresh above.
+            // refresh above. `force` must ride along here too (2026-07-24
+            // fix) — this call used to always default to `force: false`, so
+            // heal's own hourly throttle silently ate a person's deliberate
+            // pull-to-refresh: a mail deleted in Mail.app kept reappearing
+            // in Casberi for up to an hour after a pull that looked, from
+            // the gesture, like it should have caught it immediately —
+            // exactly the contract `force` exists to guarantee (see the
+            // comment on `refreshAllConnected` above).
             let s2 = slot(); Task { @MainActor in
                 await BridgeRefresh.stagger(s2)
-                _ = await MailIngest.heal(provider, context: context)
+                _ = await MailIngest.heal(provider, context: context, force: force)
             }
         }
         if SteamBridge.connected {

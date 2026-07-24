@@ -16,11 +16,6 @@ enum IMAPClient {
         let subject: String
         let from: String
         let date: Date?
-        /// The RFC 822 `Message-ID` header (angle brackets included) — the
-        /// tenth ENVELOPE field, already inside every fetch this client does;
-        /// nil when a server/message omits it. Lets "Open in Mail" jump to
-        /// the exact message instead of just the inbox.
-        let messageID: String?
         /// The plain-text body, best-effort (2026-07-23) — nil when the
         /// second FETCH pass fails, or MIME decoding finds nothing readable.
         /// A mail thing with no body reads exactly as it did before this
@@ -59,7 +54,6 @@ enum IMAPClient {
             uids: parsed.map(\.uid), maxBytes: bodyByteCap)) ?? [:]
         let withBodies = parsed.map { m in
             Message(uid: m.uid, subject: m.subject, from: m.from, date: m.date,
-                    messageID: m.messageID,
                     body: rawBodies[m.uid].flatMap(MailMIME.plainText))
         }
         #if DEBUG
@@ -352,16 +346,9 @@ private enum EnvelopeParser {
         let date = MailDate.parse(unquote(items[0]))
         let subject = decodeWord(unquote(items[1]))
         let from = firstFrom(items[2])
-        // env-message-id is the 10th ENVELOPE field (RFC 3501 §7.4.2, after
-        // date/subject/from/sender/reply-to/to/cc/bcc/in-reply-to) — absent
-        // on some servers/messages, so this degrades to nil rather than
-        // failing the parse.
-        let messageID = items.count >= 10 ? unquote(items[9]) : ""
         return IMAPClient.Message(uid: uid,
                                   subject: subject.isEmpty ? "(no subject)" : subject,
-                                  from: from, date: date,
-                                  messageID: messageID.isEmpty ? nil : messageID,
-                                  body: nil)
+                                  from: from, date: date, body: nil)
     }
 
     private static func value(after key: String, in s: String) -> String? {

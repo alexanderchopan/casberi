@@ -1268,6 +1268,40 @@ enum ProbeHooks {
                 NSLog("Mail heal probe (%@): %d removed", provider.rawValue, n)
             }
         },
+        // `-seedMailBody YES` lands one mail thing with a realistic long,
+        // multi-paragraph, unicode-bearing plain-text body (the shape
+        // `MailMIME.plainText` hands back from a real message) — so the
+        // sheet's real-body render path (2026-07-23) can be reproduced
+        // headlessly, without live IMAP credentials. Pair with
+        // `-openThing "Real body"` to drive straight into its sheet.
+        Hook(key: "seedMailBody") { _, context in
+            let body = """
+            Hi there — your Pro plan renews on August 14 at $20/mo. No action needed if everything looks right.
+
+            A few things worth knowing before then:
+            • Your seat count went from 3 → 5 last month.
+            • Usage-based billing kicks in above 100k requests/day.
+            • Invoices land in your billing portal, not this inbox.
+
+            Questions? Just reply — a real person reads this address. Ünïcödé test: café, naïve, 日本語, emoji 🎉.
+
+            Thanks,
+            The Vercel team
+
+            On Mon, Jul 20, 2026 at 9:00 AM, Jane <jane@x.com> wrote:
+            > Can you confirm the renewal date?
+            > Thanks!
+
+            --
+            Sent from my iPhone
+            """
+            let t = Thing(kind: .mail, title: "Real body render test", content: body,
+                          source: "iCloud Mail", sourceRef: "probe:mailbody-\(UUID().uuidString)")
+            t.authorHandle = "billing@vercel.com"
+            context.insert(t)
+            context.saveHonestly()
+            NSLog("seedMailBody: landed")
+        },
         // `-rssFeed <url>` follows a feed and syncs — headless bridge test.
         Hook(key: "rssFeed") { url, context in
             RSSStore.shared.add(url)

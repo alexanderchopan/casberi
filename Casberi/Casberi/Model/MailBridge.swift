@@ -118,7 +118,6 @@ enum MailIngest {
             // we honestly have, 2026-07-10). Older rows parse it from the
             // "From …" content at render, so no migration.
             thing.authorHandle = m.from
-            thing.mailMessageID = m.messageID
             context.insert(thing)
             SpotlightIndex.index([thing])
             added += 1
