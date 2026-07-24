@@ -22,8 +22,9 @@ struct AvatarChip: View {
 
     var body: some View {
         Button {
-            avatarBounce += 1
-            onSettings()
+            // No-op — `.highPriorityGesture` below owns the tap, same fix
+            // and reason as `SourceChips.catalogueChip`: this door shares
+            // its safeAreaInset-over-paged-TabView placement.
         } label: {
             ZStack {
                 Circle().fill(DS.gray100)
@@ -42,6 +43,16 @@ struct AvatarChip: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel("Settings")
+        // See `SourceChips.catalogueChip`'s comment: a plain Button here
+        // competes with the paged feed TabView's pan recognizer for the
+        // first touch (Apple forums thread 725366) and can need several
+        // taps to win. `highPriorityGesture` wins immediately.
+        .highPriorityGesture(
+            TapGesture().onEnded {
+                avatarBounce += 1
+                onSettings()
+            }
+        )
     }
 }
 
