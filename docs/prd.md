@@ -8012,3 +8012,77 @@ for any other actionable kind, and a plain neutral info mark when everything
 actionable is muted or absent and only the aware pile remains unmuted.
 
 Build green.
+
+## 204. The crown pour becomes the person's color — five, curated (user: "let user choose their tint bleed color", then "i want to limit it to a few only. like 5 max", 2026-07-24)
+
+Amends §159 and re-opens the 2026-07-06 appearance ruling, both deliberately.
+The crown pour (`MainSurface.crownPour`) is the largest color surface in the
+app — a permanent gradient, 30% → 10% → 0 down 500pt from the top (16%/5% on a
+true light page), painted in the shell's background so it runs behind the chip
+strip. Today it reads `chrome.pourHue ?? DS.tint`: Casberi blue everywhere,
+re-tinted to a wallet's face color when the Wallet feed is scoped to one.
+
+**The ruling: the fallback becomes the person's.** A new `DS.bleed` token,
+default Casberi blue, replaces `DS.tint` at that one `??`. Nothing else moves.
+
+**What this trades, stated plainly.** §159's recorded why was brand ownership —
+"one owned color, everywhere, always", explicitly §129's endorsed shape ("Cash
+App is bold in ONE color that's *theirs*"). This makes it the PERSON's color
+instead, with ours as the default. That is the whole trade, and it is being
+made on purpose: the pour is atmosphere, not a logo, and §159 already broke its
+own "one color" claim with the wallet-face carve-out — the mechanism to vary it
+shipped that same day. The precedence is unchanged: a scoped wallet still wins
+(`pourHue` is checked first), so the person's color is the DEFAULT pour, never
+an override of identity-as-information.
+
+**What this is NOT.** Not the return of the background picker retired
+2026-07-06 (that ruling stands for what it actually covered: no solid page
+colors, no background photos, appearance is still one knob — light or dark).
+Not a change to `DS.tint`, which stays Casberi blue at all 157 sites: it is the
+pressable signal, it carries the measured contrast pair under Increase Contrast
+(`#62a1ee`/`#1366cd`), and a person's color must never decide whether a button
+reads as a button. The widget also keeps Casberi blue — it reads
+`theme.tint.hex` from the app group, which tracks `accentHex`, not the bleed.
+Do not "fix" that to follow the pour.
+
+**The five.** Curated, not a color well (user: five max). Every option except
+the default sits in `WalletFace.tint`'s berry register (S 0.68, B 0.78), so a
+personal pour and a wallet pour read as one family:
+
+| Name | Hex | H / S / B | Nearest reserved hue |
+|---|---|---|---|
+| Blue *(default)* | `#1673e6` | 213 / .90 / .90 | 78° |
+| Teal | `#40c7c2` | 178 / .68 / .78 | 43° |
+| Violet | `#8c40c7` | 274 / .68 / .78 | 89° |
+| Magenta | `#c74095` | 322 / .68 / .78 | 41° |
+| Slate | `#7b8a9e` | 214 / .22 / .62 | 79° |
+
+Blue keeps its exact shipped hex rather than being normalized into the register
+— it is the default and must not shift under anyone already looking at it.
+Slate is the quiet option: same hue as the default, desaturated to .22, so it
+reads as "almost none" while keeping the gradient (a true black pour would
+bring back the flat-black crown §159 replaced).
+
+**Why no warm option.** Red, orange, and green are spoken for by the app's own
+color law — destructive/loss (H 3), attention/needs-you (H 36), confirm/done
+(H 135). A permanent field in any of them puts an alert color behind every
+screen, and in a wallet app a green or red wash biases how a P&L number reads
+before the number says anything. Every option above clears the nearest reserved
+hue by ≥41°. This is the real constraint on the palette, not taste.
+
+**Two implementation rules.** (1) The light-mode half dose applies to the
+chosen color exactly as it applies to blue — the `light ? 0.16 : 0.30` exists
+because a field that reads as atmosphere on ink reads as a stain on white, and
+a curated set does not remove that. (2) The pour is the only consumer; a
+picked color must not leak into chips, glyphs, or any state fill.
+
+Settings gains one row, "Color", stating the choice in force — the tile
+grammar §161 already sets. Its detail is five swatches, each wearing the pour
+it applies (ruling 2026-07-05's principle: a swatch shows what it does).
+
+Files: `Design/DesignTokens.swift` (new `DS.bleed`), `Design/ThemeStore.swift`
+(the stored choice + its palette), `Shell/MainSurface.swift` (the one `??`),
+`Screens/AccountScreen.swift` + `Screens/AccountDetailSheet.swift` (row and
+picker). NOT `Design/WalletFace.swift`, NOT any `DS.tint` call site.
+
+Status: RULED, NOT BUILT.

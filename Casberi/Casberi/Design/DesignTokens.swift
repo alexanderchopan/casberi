@@ -111,6 +111,12 @@ enum DS {
     /// Tint at rest-chip opacity.
     static var tintDim: Color { themedTintDim }
 
+    /// The crown pour's color (prd §204) — the person's choice of five,
+    /// Casberi blue by default. `MainSurface.crownPour`'s ONLY consumer;
+    /// never route a chip, glyph, or state fill through this — those stay on
+    /// `DS.tint`, which alone carries the Increase Contrast guarantee.
+    static var bleed: Color { themedBleed }
+
     /// Magnitude fill — tint at opacity scaled by a normalized count `t ∈ [0,1]`.
     /// Treemaps and project fills only (color rule: magnitude, not decoration).
     static func tint(magnitude t: Double) -> Color {

@@ -9,7 +9,7 @@
 <meta property="og:description" content="What Casberi is, why it exists, and how to use it.">
 <meta property="og:type" content="article">
 <link rel="icon" href="icons/casberi-logo.png">
-<link rel="stylesheet" href="styles.css?v=202607240000">
+<link rel="stylesheet" href="styles.css?v=202607242230">
 <style>
   /* ---------- docs page styles (page-scoped) ---------- */
   /* SF Rounded for display type — ui-rounded resolves to SF Rounded on Apple
@@ -299,8 +299,9 @@
   <a class="sub" href="#one-screen">One screen</a>
   <a class="sub" href="#apps">Apps</a>
   <a class="sub" href="#feed">All &amp; your apps</a>
+  <a class="sub" href="#wallet">Wallets</a>
   <a class="sub" href="#open">Open a thing</a>
-  <a class="sub" href="#action-button">Action button</a>
+  <a class="sub" href="#agent">The agent</a>
   <a class="sub" href="#settings">Settings</a>
   <a class="top" href="#faq">Questions</a>
 </nav>
@@ -317,7 +318,7 @@
       <a href="#about"><span>2</span>About</a>
       <a href="#how-to-use"><span>3</span>How to use</a>
     </div>
-    <p class="updated">Last updated July 13, 2026</p>
+    <p class="updated">Last updated July 24, 2026</p>
   </header>
 
   <!-- ================= FEATURES AT A GLANCE ================= -->
@@ -338,25 +339,25 @@
     <div class="glance-group" id="keep-tabs">
       <h4>Keep tabs</h4>
       <div class="glance-grid">
-        <a class="glance" href="#action-button"><b>Keep an ask</b><span>Ask a question, keep it — it updates as your things change.</span></a>
+        <a class="glance" href="#agent"><b>Keep an ask</b><span>Ask a question, keep it — it updates as your things change.</span></a>
         <a class="glance" href="#open"><b>Act on items</b><span>From your feed: open or share, in the app it came from.</span></a>
-        <a class="glance" href="#open"><b>Tag your things</b><span>Group without folders. One thing, many tags.</span></a>
+        <a class="glance" href="#wallet"><b>Watch your wallets</b><span>Balances, activity, and what’s worth a look. Read-only, always.</span></a>
       </div>
     </div>
 
     <div class="glance-group" id="take-action">
       <h4>Take action</h4>
       <div class="glance-grid">
-        <a class="glance" href="#action-button"><b>Ask anything</b><span>A question, answered from your own things.</span></a>
-        <a class="glance" href="#action-button"><b>Organize everything</b><span>Tell it to tag or rename across the lot.</span></a>
-        <a class="glance" href="#action-button"><b>Jump to tools</b><span>From the composer: a note, message, email, event, reminder, search, or a ChatGPT or Claude session.</span></a>
+        <a class="glance" href="#agent"><b>Ask anything</b><span>A question, answered from your own things.</span></a>
+        <a class="glance" href="#agent"><b>See what’s going on</b><span>It opens on a brief of your things — the answer before you ask.</span></a>
+        <a class="glance" href="#agent"><b>Jump to tools</b><span>A note, message, email, event, reminder, or search — in the app that owns it.</span></a>
       </div>
     </div>
 
     <div class="glance-group" id="make-it-yours">
       <h4>Make it yours</h4>
       <div class="glance-grid solo">
-        <a class="glance" href="#settings"><b>Make it yours</b><span>Set your avatar, background, language, and data preferences.</span></a>
+        <a class="glance" href="#settings"><b>Make it yours</b><span>Set your avatar, your color, language, and data preferences.</span></a>
       </div>
     </div>
   </section>
@@ -371,7 +372,7 @@
 
     <div class="tldr">
       <b>The short version</b>
-      <p>Connect your apps and everything lands in one private feed on your phone — no account, ever. Tag what’s yours and keep the asks you care about, then act on things in the apps they came from. One button asks, organizes, and jumps to your tools. And it’s yours to shape: avatar, language, and where your data lives.</p>
+      <p>Connect your apps and everything lands in one private feed on your phone — no account, ever. Keep the asks you care about, then act on things in the apps they came from. The agent rides along the bottom of every screen: it opens on a brief of what’s going on, answers anything from your own things, and jumps to your tools. And it’s yours to shape: avatar, language, and where your data lives.</p>
     </div>
 
     <h3>The situation</h3>
@@ -484,10 +485,10 @@
     </div>
 
     <h3>Your things stay yours</h3>
-    <p>Casberi is a native iPhone app. Your things live in a database on your phone — no Casberi server holds them. iCloud sync is off until you turn it on. Reading and saving work offline. No analytics, no trackers. Answers are written on your own phone.</p>
+    <p>Casberi is a native iPhone app. Your things live in a database on your phone — no Casberi server holds them. iCloud sync is off until you turn it on. Reading and saving work offline. No analytics, no trackers. Answers are written on your own phone — and stay there unless you add your own agent key and tap to use it.</p>
 
     <h3 id="not-here">What’s deliberately not here</h3>
-    <p>Some things are missing on purpose. There’s no separate actions or to-do tab — you act on a thing where the thing is. No automations yet. No model picker and no chatbot persona — Casberi shows results, not a character. No note editor — Casberi collects and connects; your apps stay the editors. No streaks, goals, or guilt mechanics. And no trading, ever.</p>
+    <p>Some things are missing on purpose. There’s no separate actions or to-do tab — you act on a thing where the thing is. No automations yet. No chatbot persona and no model picker in the way of an answer — Casberi shows results, not a character (choosing an agent happens once, in Settings, only if you bring your own key). No note editor — Casberi collects and connects; your apps stay the editors. No streaks, goals, or guilt mechanics. And no trading, ever.</p>
   </section>
 
   <div class="divider"></div>
@@ -501,8 +502,9 @@
       <a href="#one-screen">One screen</a>
       <a href="#apps">Apps</a>
       <a href="#feed">All &amp; your apps</a>
+      <a href="#wallet">Wallets</a>
       <a href="#open">Open a thing</a>
-      <a href="#action-button">Action button</a>
+      <a href="#agent">The agent</a>
       <a href="#settings">Settings</a>
     </div>
 
@@ -510,39 +512,49 @@
     <div class="walk-demo"><div class="viddoc"><video src="videos/clip1-just-connect.mp4?v=8" poster="videos/clip1-just-connect-poster.jpg?v=8" preload="metadata" autoplay muted loop playsinline></video></div></div>
     <h3 id="one-screen">One screen</h3>
     <p>Casberi is one screen — no tabs to learn, no account to make. Open it and it’s yours. A row of chips across the top stays put wherever you scroll: <strong>All</strong> (everything you’ve saved), then one chip for each app you’ve connected — the app you just heard from sits up front. Tap a chip to switch.</p>
-    <p>Down in the corner, a single round button — your <strong>Action button</strong> — is where everything you do lives. And two small doors up top: your avatar opens Settings, the grid opens your apps.</p>
+    <p>Along the bottom, a glass bar reading <strong>Ask your things…</strong> — that’s the agent, and it rides above whatever you’re looking at. And two small doors up top: your avatar opens Settings, the grid opens your apps. That’s the whole app: your things, and the agent that reads them.</p>
     <div class="pager"><a href="#apps"><span>Next</span>Apps →</a></div>
 
     <h3 id="apps">Apps</h3>
-    <p>Open Apps from the grid icon. Your connected apps sit at the top; below is the catalog — everything you can add, in shelves by category. Each opens a page that says what it does and what shows up in your feed, with one clear button — Connect, Open, Fix, or Soon. This version is built around iOS and the Apple apps you already use.</p>
+    <p>Open Apps from the grid icon. Search leads the page, then your connected apps, then the catalog — every app you can add, laid out as a wall of category bands: Wallet, Markets, Social, Mail, Agents, Media, and the rest. Each opens a page that says what it does and what shows up in your feed, with one clear button — Connect, Open, Fix, or Soon.</p>
+    <p>There are more than fifty to choose from. The Apple apps you already use connect straight through iOS (Photos, Calendar, Reminders, Health, Music, HomeKit, Contacts). Services connect with a sign-in or a pasted token (Gmail and iCloud Mail, GitHub, Notion, Linear, Todoist, Readwise, Raindrop, Obsidian, Reddit, Spotify, Twitch, Steam, Shopify, and more). Wallets, tokens, and markets connect with nothing at all — just an address or a symbol.</p>
     <div class="pager"><a href="#feed"><span>Next</span>All &amp; your apps →</a></div>
 
     <h4 class="walk-group">Keep tabs</h4>
     <h3 id="feed">All &amp; your apps</h3>
     <p>Tap <strong>All</strong> to see everything, newest first. Tap an app’s chip to see just that app — and the feed takes its shape: Calendar reads like an agenda, Photos becomes a grid, a wallet leads with its balance. Everything you keep tabs on, in one place.</p>
+    <div class="pager"><a href="#wallet"><span>Next</span>Wallets →</a></div>
+
+    <h3 id="wallet">Wallets</h3>
+    <p>Add a wallet by address, ENS or <code>.sol</code> name, or by connecting a wallet app — no key, no sign-in. Name as many as you like in the address book; watch up to five. A watched wallet gets its own feed: what it holds, drawn as a map you can tap, a balance line that fills in as history builds, and its activity as ordinary rows.</p>
+    <p><strong>Worth a look</strong> gathers what deserves your attention and sorts it by whether you can actually do something — a token approval still open, a delegation, a position drifting toward risk — with everything spammy folded into a pile you can mute. Casberi reads and shows; anything that would move funds happens in your own wallet app.</p>
+    <p>Exchange balances, lending positions, onramp purchases, and privacy-pool deposits read the same way, in the same feed.</p>
     <div class="pager"><a href="#open"><span>Next</span>Open a thing →</a></div>
 
     <h3 id="open">Open a thing, act on it</h3>
-    <p>Tap any row to open it. From there you do the thing where it belongs — open it in the app it came from, or share it. <strong>Tags</strong> group things without folders — one thing can carry many; add or remove them right there.</p>
+    <p>Tap any row to open it. From there you do the thing where it belongs — open it in the app it came from, or share it. <strong>Tags</strong> arrive on their own — the app labels what lands, and the agent reads those labels when you ask. There is nothing to file.</p>
     <p>Some rows let you act in place: start a new email from Gmail, a new event from Calendar, tick a reminder off for real. Casberi keeps tabs; your own apps do the work.</p>
-    <div class="pager"><a href="#action-button"><span>Next</span>Action button →</a></div>
+    <div class="pager"><a href="#agent"><span>Next</span>The agent →</a></div>
 
     <h4 class="walk-group">Take action</h4>
     <div class="walk-demo"><div class="viddoc"><video src="videos/clip3-take-action.mp4?v=9" poster="videos/clip3-take-action-poster.jpg?v=9" preload="metadata" autoplay muted loop playsinline></video></div></div>
-    <h3 id="action-button">Action button</h3>
-    <p>The round button in the corner is your Action button — the one place you do things. Tap it and it opens with “What now?”</p>
+    <h3 id="agent">The agent</h3>
+    <p>The glass bar along the bottom is the agent. It rides above every screen — your feed, an app’s page, a settings sheet — so it’s always one tap away. Tap it and it rises to fill the screen; lower it and you’re back exactly where you were, mid-scroll and all. There is no second tab and no separate home screen to come back to: your things are the feed, and the agent is how you ask about them.</p>
+    <p>Tapping it opens on <strong>“What’s going on”</strong> — a brief built from your own things, right now: what landed and from where, how your money is doing, what’s on your watchlist, what’s next, and one plain read across the lot. It’s a screen to take in, so the keyboard stays down and your asks sit docked underneath, ready when you are.</p>
+    <p>Once a day, on your first open, that headline comes to you instead — a single glass card resting above the bar, naming your day in one line. Tap it for the full brief; leave it and it’s gone for the day. It never appears with nothing to say.</p>
     <ul>
       <li><strong>Ask</strong> a question, answered from your own things (“what did I save this week?”). Follow up, and keep an answer as a note.</li>
-      <li><strong>Organize</strong> — tell it to tag or rename across everything (“tag these as Trip,” “rename Work to Projects”). It shows you exactly what will change before you tap Apply.</li>
+      <li><strong>Keep an ask</strong> — any question worth repeating becomes a chip that carries its own answer, with a dot when it has changed since you last looked.</li>
       <li><strong>Say what you want</strong> (“show my work stuff”) and it takes you there.</li>
-      <li><strong>Jump to a tool</strong> — create a note, message, email, event, reminder, or web search, or open a ChatGPT or Claude session. The right app opens, ready to go. Nothing is created inside Casberi; you create in the tools you already use.</li>
+      <li><strong>Jump to a tool</strong> — create a note, message, email, event, reminder, or web search. The right app opens, ready to go. Nothing is created inside Casberi; you create in the tools you already use.</li>
     </ul>
     <p>You can also paste something to save it, or tap the mic and talk.</p>
     <div class="pager"><a href="#settings"><span>Next</span>Settings →</a></div>
 
     <h4 class="walk-group">Make it yours</h4>
     <h3 id="settings">Settings</h3>
-    <p>Behind your avatar: your photo, your data (all on your phone — export or delete anytime), diagnostics, language, and light or dark. No account, no sign-in — there was never anything to sign up for.</p>
+    <p>Behind your avatar, one A–Z list: your photo, the color that washes the top of every screen (five to choose from), your data (all on your phone — export or delete anytime), diagnostics, how it works, language, light or dark, and your key. No account, no sign-in — there was never anything to sign up for.</p>
+    <p><strong>Your key</strong> is the one door out. Answers are written on your phone by default. Save your own key — Claude, ChatGPT, Gemini, Venice, Bankr, or OpenRouter — and every answer offers “Try with your key”: the question and the few matched things go from your phone straight to that provider, only when you tap, billed to your key. The key lives in the Keychain. There is no Casberi server in between.</p>
   </section>
 
   <section id="faq">
@@ -551,8 +563,8 @@
     <details><summary>Do I need an account?</summary><p>No. There’s nothing to sign up for — Casberi works the moment it’s installed.</p></details>
     <details><summary>Where do my things live?</summary><p>In a database on your phone. No Casberi server holds them, and iCloud sync stays off until you turn it on. Deleting is two clear choices: <strong>Delete things</strong> wipes your data (this iPhone and iCloud), <strong>Delete access</strong> removes every token and key Casberi holds.</p></details>
     <details><summary>What does it cost?</summary><p>It’s free on TestFlight while it heads to the App Store.</p></details>
-    <details><summary>What do I need to run it?</summary><p>An iPhone. Answers are written on your phone with Apple Intelligence — nothing is sent away, and nothing is billed.</p></details>
-    <details><summary>Can it act without asking?</summary><p>No. Typed text never saves silently, organize commands show you exactly what will change before you tap Apply, and connected wallets are read-only — Casberi can never trade or move funds.</p></details>
+    <details><summary>What do I need to run it?</summary><p>An iPhone. Answers are written on your phone with Apple Intelligence — nothing is billed, and no answer is sent away unless you add your own key and tap “Try with your key.” Connected apps do reach their own services to fetch your things; that traffic goes from your phone to them, never through a Casberi server.</p></details>
+    <details><summary>Can it act without asking?</summary><p>No. Typed text never saves silently, any write that leaves the app waits for a tap, and connected wallets are read-only — Casberi can never trade or move funds.</p></details>
   </section>
 
   <div class="doc-cta">
@@ -672,8 +684,8 @@
 {"@type":"Question","name":"Do I need an account?","acceptedAnswer":{"@type":"Answer","text":"No. There is nothing to sign up for — Casberi works the moment it is installed."}},
 {"@type":"Question","name":"Where do my things live?","acceptedAnswer":{"@type":"Answer","text":"In a database on your phone. No Casberi server holds them, and iCloud sync stays off until you turn it on. Deleting is two clear choices: Delete things wipes your data (this iPhone and iCloud); Delete access removes every token and key Casberi holds."}},
 {"@type":"Question","name":"What does it cost?","acceptedAnswer":{"@type":"Answer","text":"It is free on TestFlight while it heads to the App Store."}},
-{"@type":"Question","name":"What do I need to run it?","acceptedAnswer":{"@type":"Answer","text":"An iPhone. Answers are written on your phone with Apple Intelligence — nothing is sent away, and nothing is billed."}},
-{"@type":"Question","name":"Can it act without asking?","acceptedAnswer":{"@type":"Answer","text":"No. Typed text never saves silently, organize commands show exactly what will change before Apply, and connected wallets are read-only."}}
+{"@type":"Question","name":"What do I need to run it?","acceptedAnswer":{"@type":"Answer","text":"An iPhone. Answers are written on your phone with Apple Intelligence — nothing is billed, and no answer is sent away unless you add your own key and tap \"Try with your key.\" Connected apps do reach their own services to fetch your things; that traffic goes from your phone to them, never through a Casberi server."}},
+{"@type":"Question","name":"Can it act without asking?","acceptedAnswer":{"@type":"Answer","text":"No. Typed text never saves silently, any write that leaves the app waits for a tap, and connected wallets are read-only — Casberi can never trade or move funds."}}
 ]}
 </script>
 </body>

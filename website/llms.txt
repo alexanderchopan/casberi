@@ -7,9 +7,12 @@ Key facts:
 - Native iOS app (iPhone), free on TestFlight while it heads to the App Store.
 - Everything becomes a "thing" in one feed; one search spans all of it.
 - Capture in one gesture: share sheet, screenshots, Siri, paste, voice. Typed text never saves silently.
-- Connect apps as bridges: Photos, Calendar, Reminders, Apple Health, Strava, Apple Music, RSS, Bluesky, Farcaster, Gmail, iCloud Mail, GitHub, Notion, Linear, Todoist, Readwise, Raindrop, Cal.com, Calendly, ChatGPT / Claude / Gemini imports, token watchlists, and more.
+- More than fifty apps connect as bridges: Photos, Calendar, Reminders, Contacts, Apple Health, Strava, Apple Music, HomeKit, RSS, Substack, Bluesky, Farcaster, Reddit, Pinterest, Gmail, iCloud Mail, GitHub, Notion, Linear, Todoist, Readwise, Raindrop, Obsidian, Kindle, Cal.com, Calendly, Spotify, YouTube, Podcasts, Twitch, Steam, Shopify, Deals, Open Food Facts, ChatGPT / Claude / Gemini / Day One / Apple Journal imports, and more.
+- Wallets and markets connect with no account and no key: watch a wallet by address or ENS/.sol name (or connect a wallet app), plus token watchlists, Coinbase, Kraken, Kalshi, OpenSea, GeckoTerminal, Stocktwits, Bitrefill, Peer, and 0xBow Privacy Pools. Every one of these is read-only — Casberi can never trade or move funds.
+- One screen: a row of source chips over the All feed, and the agent as a glass bar riding the bottom of every screen. No tabs, no home screen, no board — your things are the feed, and the agent is how you ask about them. Tapping the bar raises the agent full screen; lowering it returns you exactly where you were.
+- The agent opens on "What's going on" — a brief built from your own things (what landed, how your money is doing, your watchlist, what's next). Once a day the same headline arrives on its own as a card above the bar. Any question worth repeating can be kept as a chip that carries its own answer and marks itself when it changes.
 - Agents connect too: their output arrives in the feed with provenance, and any write waits for your tap (approvals). Casberi is also an MCP server — clients like Claude can search your things and propose saves you approve.
-- Answers are generated on-device (Apple Intelligence) from your own things; nothing is invented and nothing is billed. Your own key — Anthropic, OpenAI, Google, or Venice — can re-run any answer on a bigger model, only when you tap.
+- Answers are generated on-device (Apple Intelligence) from your own things; nothing is invented and nothing is billed. Your own agent key — Claude, ChatGPT, Gemini, Venice, Bankr, or OpenRouter — can re-run any answer on a bigger model, only when you tap; the question and the matched things go from the phone straight to that provider, never through a Casberi server.
 - No account, no analytics, no trackers. iCloud sync is opt-in and off by default. Export, import, and delete-everything are real controls.
 
 ## Docs

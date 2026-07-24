@@ -337,16 +337,18 @@
 })();
 
 // Make-it-yours live cards: the Avatar card cycles through cartoon faces
-// (mixed styles), the Background card cycles the app's banner colors and
-// lands on a photo — the two settings, demonstrating themselves.
+// (mixed styles); the Color card cycles the five real crown-pour colors
+// (prd §204) — the same swatches the in-app picker offers, not a color well
+// and not a photo (that picker was retired in-app 2026-07-06 and stays dead).
 (function liveCards() {
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
   var faces = Array.prototype.slice.call(document.querySelectorAll('.avatar-stack img'));
-  var fill = document.querySelector('.bg-cycle .bg-fill');
-  var photo = document.querySelector('.bg-cycle .bg-photo');
+  var fill = document.querySelector('.pour-cycle .pour-fill');
   if (!faces.length && !fill) return;
-  var grads = ["linear-gradient(160deg, #55279c, #31165a)", "linear-gradient(160deg, #9e1b4a, #5b102b)", "linear-gradient(160deg, #9e241d, #5b1511)", "linear-gradient(160deg, #9e4b00, #5b2b00)", "linear-gradient(160deg, #006e76, #004044)", "linear-gradient(160deg, #0e722d, #08421a)"];
-  var fi = 0, bi = 0;
+  // Each pair is one of the five ThemeStore.bleeds, top stop to a darkened
+  // stop — Blue, Teal, Violet, Magenta, Slate, in that order.
+  var pours = ["linear-gradient(160deg, #1673e6, #0c3f7f)", "linear-gradient(160deg, #40c7c2, #236d6b)", "linear-gradient(160deg, #8c40c7, #4d236d)", "linear-gradient(160deg, #c74095, #6d2352)", "linear-gradient(160deg, #7b8a9e, #444c57)"];
+  var fi = 0, pi = 0;
   setInterval(function () {
     if (faces.length) {
       faces[fi].classList.remove('on');
@@ -354,9 +356,8 @@
       faces[fi].classList.add('on');
     }
     if (fill) {
-      bi = (bi + 1) % (grads.length + 1);
-      if (bi === grads.length) { photo.classList.add('on'); }
-      else { photo.classList.remove('on'); fill.style.background = grads[bi]; }
+      pi = (pi + 1) % pours.length;
+      fill.style.background = pours[pi];
     }
   }, 2400);
 })();

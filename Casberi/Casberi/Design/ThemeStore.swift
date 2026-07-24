@@ -85,6 +85,41 @@ final class ThemeStore {
     /// the storage total and clears it on Delete everything.
     static var photoFileURL: URL { photoURL }
 
+    // MARK: Bleed (prd §204) — the crown pour's color, five curated, no well
+
+    /// The crown pour (`MainSurface.crownPour`) is the permanent gradient
+    /// behind the chip strip — the largest color surface in the app. It reads
+    /// `chrome.pourHue ?? DS.bleed`: Casberi blue by default, unless a wallet
+    /// room is scoped (that carve-out is untouched). This is NOT the retired
+    /// `Background`/`backgroundPhoto` above — those stay dead (2026-07-06:
+    /// appearance is one knob, no solid page colors, no photos). The bleed
+    /// only ever paints the pour; it never becomes the page itself.
+    struct Bleed: Identifiable, Equatable {
+        let name: String
+        let hex: String
+        var id: String { name }
+    }
+
+    /// Five, not a color well (user ruling 2026-07-24). Every option but the
+    /// default sits in `WalletFace.tint`'s exact register (S 0.68, B 0.78),
+    /// so a personal pour and a scoped wallet's pour read as one family. No
+    /// warm option: red/orange/green are spoken for by
+    /// destructive/attention/confirm, and every hue below clears the nearest
+    /// reserved one by ≥41°. Slate is the default's own hue at low
+    /// saturation — the "almost none" option, keeping the gradient instead of
+    /// reintroducing the flat-black crown §159 replaced.
+    static let bleeds: [Bleed] = [
+        Bleed(name: "Blue",    hex: accentHex),
+        Bleed(name: "Teal",    hex: "#40c7c2"),
+        Bleed(name: "Violet",  hex: "#8c40c7"),
+        Bleed(name: "Magenta", hex: "#c74095"),
+        Bleed(name: "Slate",   hex: "#7b8a9e"),
+    ]
+
+    var bleed: Bleed {
+        didSet { UserDefaults.standard.set(bleed.name, forKey: "theme.bleed") }
+    }
+
     /// Fits an image to a sane render size for a phone background. The
     /// renderer's scale is pinned to 1 — its default is the device scale,
     /// which would silently multiply the bitmap right back up (3× here).
@@ -107,6 +142,8 @@ final class ThemeStore {
     private init() {
         let d = UserDefaults.standard
         isLight = d.bool(forKey: "theme.light")
+        bleed = Self.bleeds.first { $0.name == d.string(forKey: "theme.bleed") }
+            ?? Self.bleeds[0]
         // Ruling 2026-07-06: appearance is ONE knob — light or dark. The
         // background-color and photo pickers are retired; stored choices
         // migrate to Default and the photo file is removed (its UI is gone,
@@ -142,6 +179,13 @@ extension DS {
             : Color(hex: ThemeStore.accentHex)
     }
     static var themedTintDim: Color { themedTint.opacity(0.16) }
+
+    /// The crown pour's color (prd §204) — one of the five curated `Bleed`s,
+    /// Casberi blue by default. Deliberately separate from `themedTint`: this
+    /// carries no contrast guarantee (it only ever paints the pour's low-
+    /// opacity gradient, never a button or a word) and must never gate
+    /// whether something reads as pressable.
+    static var themedBleed: Color { Color(hex: ThemeStore.shared.bleed.hex) }
 
     /// The themed page color (photo rendering is the shell's job). A chosen
     /// photo implies the dark treatment regardless of mode.

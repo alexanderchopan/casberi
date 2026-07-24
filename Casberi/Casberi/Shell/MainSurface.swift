@@ -96,13 +96,20 @@ struct MainSurface: View {
     //
     // What replaced it (prd §159, 2026-07-21, user: "the app could permanently
     // have that blue pour up there instead of black"): a PERMANENT crown pour
-    // in Casberi's OWN tint — one owned color, everywhere, always, which is
-    // the boldness §129 itself endorsed ("Cash App is bold in ONE color that's
-    // *theirs*") and none of what it retired (nothing borrowed, nothing
-    // per-source, nothing deciding per screen). Scoped to a wallet, the Wallet
-    // feed re-tints it to that wallet's face color through `chrome.pourHue` —
-    // identity as information, the switcher capsule's own grammar at room
-    // scale.
+    // — one owned field, everywhere, always, which is the boldness §129
+    // itself endorsed ("Cash App is bold in ONE color that's *theirs*") and
+    // none of what it retired (nothing borrowed, nothing per-source, nothing
+    // deciding per screen). Scoped to a wallet, the Wallet feed re-tints it to
+    // that wallet's face color through `chrome.pourHue` — identity as
+    // information, the switcher capsule's own grammar at room scale.
+    //
+    // AMENDED prd §204 (2026-07-24, user: "let user choose their tint bleed
+    // color"): the fallback is the PERSON's color now, not just ours —
+    // `DS.bleed`, one of five curated options, Casberi blue by default. The
+    // trade is stated on purpose in §204: the pour stops being only Casberi's
+    // and becomes theirs, with ours as the default. The wallet-face carve-out
+    // (`pourHue`) is unchanged and still wins first; `DS.tint`, the pressable
+    // signal at 157 other sites, does not move.
     //
     // It lives HERE, not on the feed pages, because the first cut lived on the
     // page and taught why that can't work (user screenshot, 2026-07-21): the
@@ -111,7 +118,7 @@ struct MainSurface: View {
     // hard seam exactly on the no-hairlines law. The shell owns the crown; the
     // field must too.
     private var crownPour: some View {
-        let hue = chrome.pourHue ?? DS.tint
+        let hue = chrome.pourHue ?? DS.bleed
         // Photo themes force the dark treatment (DS.themedPage's own rule);
         // only a true light page halves the dose — the same field that reads
         // as atmosphere on ink reads as a stain on white.

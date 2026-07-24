@@ -768,18 +768,17 @@ footer .tagline { font-size: 16px; font-weight: 600; color: var(--ink); margin-b
   opacity: 0; transform: scale(.8); transition: opacity .45s ease, transform .45s cubic-bezier(.34,1.56,.64,1); }
 .avatar-stack img.on { opacity: 1; transform: scale(1); }
 
-.b-small.bg-cycle { position: relative; overflow: hidden; }
-.b-small.bg-cycle .bg-fill { position: absolute; inset: 0; border-radius: inherit;
-  background: var(--surface); transition: background 1.1s ease; }
-.b-small.bg-cycle .bg-photo { position: absolute; inset: 0; width: 100%; height: 100%;
-  object-fit: cover; opacity: 0; transition: opacity 1.1s ease; }
-.b-small.bg-cycle .bg-photo.on { opacity: 1; }
-.b-small.bg-cycle .bg-fill::after { content: ""; position: absolute; inset: 0;
+/* Color card: cycles the five real crown-pour colors (prd §204) — a flat
+   demo of the in-app swatch picker, not the old Background card's photo. */
+.b-small.pour-cycle { position: relative; overflow: hidden; }
+.b-small.pour-cycle .pour-fill { position: absolute; inset: 0; border-radius: inherit;
+  transition: background 1.1s ease; }
+.b-small.pour-cycle .pour-fill::after { content: ""; position: absolute; inset: 0;
   background: linear-gradient(180deg, rgba(10,12,16,.18), rgba(10,12,16,.5)); }
-.b-small.bg-cycle > svg, .b-small.bg-cycle > div:not(.bg-fill) { position: relative; z-index: 1; }
-.b-small.bg-cycle b, .b-small.bg-cycle span { text-shadow: 0 1px 6px rgba(0,0,0,.45); }
-.b-small.bg-cycle span { color: rgba(244,246,249,.82); }
-.b-small.bg-cycle svg { color: #fff; }
+.b-small.pour-cycle > svg, .b-small.pour-cycle > div:not(.pour-fill) { position: relative; z-index: 1; }
+.b-small.pour-cycle b, .b-small.pour-cycle span { text-shadow: 0 1px 6px rgba(0,0,0,.45); }
+.b-small.pour-cycle span { color: rgba(244,246,249,.82); }
+.b-small.pour-cycle svg { color: #fff; }
 
 /* Data tile vignette: the sync toggle flips, the phone lights up (2026-07-13) */
 .data-live { width: 46px; height: 24px; flex: none; }

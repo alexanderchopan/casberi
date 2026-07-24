@@ -11,6 +11,7 @@ import CloudKit
 enum AccountDetail: String, Identifiable {
     case data
     case key
+    case color
     var id: String { rawValue }
 }
 
@@ -50,6 +51,8 @@ struct AccountDetailSheet: View {
                 controls
             case .key:
                 keyCard
+            case .color:
+                bleedCard
             }
         }
         .onAppear { if detail == .data { exportURL = buildExport() } }
@@ -82,6 +85,7 @@ struct AccountDetailSheet: View {
         switch detail {
         case .data: "Data"
         case .key: "Your key"
+        case .color: "Color"
         }
     }
 
@@ -147,6 +151,7 @@ struct AccountDetailSheet: View {
         switch detail {
         case .data: 530   // two wipes now — things and access, one row each
         case .key: 500   // +40 for the per-agent capability line (2026-07-21)
+        case .color: 400   // aliveRow + one swatch row + a footnote (prd §204)
         }
     }
 
@@ -261,6 +266,55 @@ struct AccountDetailSheet: View {
                     .settleIn()
             }
             Text("Get a key from the agent's own console — console.anthropic.com (Claude), platform.openai.com (ChatGPT), aistudio.google.com (Gemini), venice.ai (Venice), bankr.bot/api-keys (Bankr — make it a read-only key; answers never trade), or openrouter.ai/keys (OpenRouter — routes to whichever model fits, no model to pick). It stays in this iPhone's Keychain and goes only to the provider you chose.")
+                .dsText(.label12).foregroundStyle(DS.textTertiary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    /// The crown pour's color (prd §204) — the permanent gradient behind the
+    /// chip strip. Five curated swatches, not a color well (user ruling
+    /// 2026-07-24): every option but the default sits in `WalletFace.tint`'s
+    /// exact register, so a personal pour and a scoped wallet's pour read as
+    /// one family. Tapping a swatch is the whole interaction — no separate
+    /// Save; `ThemeStore.shared.bleed` is the live setting, same as Theme's
+    /// direct toggle.
+    private var bleedCard: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s4) {
+            aliveRow("paintbrush.pointed.fill", DS.bleed, "Crown pour",
+                     "\(ThemeStore.shared.bleed.name) washes the top of every screen")
+            HStack(spacing: DS.Space.s3) {
+                ForEach(ThemeStore.bleeds) { option in
+                    let selected = ThemeStore.shared.bleed.id == option.id
+                    Button {
+                        DSHaptic.tap()
+                        withAnimation(DS.Motion.standard) { ThemeStore.shared.bleed = option }
+                    } label: {
+                        Circle()
+                            .fill(Color(hex: option.hex))
+                            .frame(width: 44, height: 44)
+                            .overlay(
+                                // The selection ring is always tint (matches
+                                // SourceChips' own "active ring is always
+                                // tint" convention) — never the swatch's own
+                                // color, so picking Blue doesn't hide its ring.
+                                Circle().strokeBorder(DS.tint, lineWidth: selected ? 3 : 0)
+                                    .padding(-4)
+                            )
+                            .overlay {
+                                if selected {
+                                    Image(systemName: "checkmark")
+                                        .font(.system(size: 15, weight: .bold))
+                                        .foregroundStyle(.white)
+                                }
+                            }
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(option.name)
+                    .accessibilityAddTraits(selected ? [.isSelected] : [])
+                }
+                Spacer(minLength: 0)
+            }
+            Text("Washes the top of every screen behind the source chips — atmosphere, not an affordance. Your key color (buttons, chips, what's pressable) stays Casberi blue no matter what you pick here.")
                 .dsText(.label12).foregroundStyle(DS.textTertiary)
                 .fixedSize(horizontal: false, vertical: true)
         }
