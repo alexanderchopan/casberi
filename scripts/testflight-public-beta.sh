@@ -49,6 +49,32 @@ api() {
   fi
 }
 
+# api_checked <method> <path> [json-body] -- same as api(), but FAILS LOUDLY
+# (prints the response and exits 1) on anything but a 2xx status. Every call
+# that mutates state (PATCH/POST/DELETE) must go through this, never api() —
+# api()'s bare response was being piped to /dev/null with no status check,
+# which is exactly how the release-notes bug shipped silently for 20+ builds.
+api_checked() {
+  local method="$1" path="$2" body="${3:-}" resp http
+  if [ -n "$body" ]; then
+    resp=$(curl -s -g -w $'\n%{http_code}' -X "$method" \
+      -H "Authorization: Bearer $(jwt)" \
+      -H "Content-Type: application/json" \
+      -d "$body" \
+      "$API$path")
+  else
+    resp=$(curl -s -g -w $'\n%{http_code}' -X "$method" \
+      -H "Authorization: Bearer $(jwt)" \
+      "$API$path")
+  fi
+  http=$(echo "$resp" | tail -1)
+  resp=$(echo "$resp" | sed '$d')
+  case "$http" in
+    2??) echo "$resp" ;;
+    *) echo "FAIL: $method $path -> HTTP $http" >&2; echo "$resp" >&2; exit 1 ;;
+  esac
+}
+
 echo "-- Looking up app $BUNDLE_ID..."
 APP_ID=$(api GET "/apps?filter%5BbundleId%5D=$BUNDLE_ID" | jq -r '.data[0].id')
 [ -n "$APP_ID" ] && [ "$APP_ID" != "null" ] || { echo "FAIL: app not found"; exit 1; }
@@ -77,16 +103,30 @@ done
 echo "  build id: $BUILD_ID"
 
 echo "-- Setting beta release notes..."
-EXISTING_LOC=$(api GET "/builds/$BUILD_ID/betaBuildLocalizations?filter%5Blocale%5D=en-US" | jq -r '.data[0].id // empty')
+# NOTE: "filter[locale]" is NOT a valid query param on this nested endpoint
+# (confirmed live: HTTP 400 PARAMETER_ERROR.ILLEGAL) -- fetch all localizations
+# for the build (there's normally exactly one, auto-provisioned) and select
+# en-US client-side with jq instead. The old code filtered server-side, got a
+# 400 error body back, found no .data, and silently fell through to POST-
+# creating a duplicate -- which conflicts with the auto-provisioned row and
+# fails. That failure was invisible because the response went to /dev/null
+# with no status check. Confirmed live 2026-07-24: builds 102-123 all show
+# whatsNew: null despite this script printing "release notes set" every time.
+LOC_RESP=$(api GET "/builds/$BUILD_ID/betaBuildLocalizations")
+EXISTING_LOC=$(echo "$LOC_RESP" | jq -r '.data[] | select(.attributes.locale == "en-US") | .id' | head -1)
 NOTES_JSON=$(jq -n --arg notes "$NOTES" '$notes')
 if [ -n "$EXISTING_LOC" ]; then
-  api PATCH "/betaBuildLocalizations/$EXISTING_LOC" \
+  api_checked PATCH "/betaBuildLocalizations/$EXISTING_LOC" \
     "{\"data\":{\"type\":\"betaBuildLocalizations\",\"id\":\"$EXISTING_LOC\",\"attributes\":{\"whatsNew\":$NOTES_JSON}}}" > /dev/null
 else
-  api POST "/betaBuildLocalizations" \
+  api_checked POST "/betaBuildLocalizations" \
     "{\"data\":{\"type\":\"betaBuildLocalizations\",\"attributes\":{\"locale\":\"en-US\",\"whatsNew\":$NOTES_JSON},\"relationships\":{\"build\":{\"data\":{\"type\":\"builds\",\"id\":\"$BUILD_ID\"}}}}}" > /dev/null
 fi
-echo "  OK: release notes set"
+# Verify by reading back -- trust nothing this script says about ASC state
+# without a re-fetch, given the history above.
+VERIFY=$(api GET "/builds/$BUILD_ID/betaBuildLocalizations" | jq -r '.data[] | select(.attributes.locale == "en-US") | .attributes.whatsNew')
+[ "$VERIFY" = "$NOTES" ] || { echo "FAIL: release notes did not persist (readback mismatch)"; exit 1; }
+echo "  OK: release notes set and verified"
 
 echo "-- Assigning build to $PUBLIC_BETA_GROUP_NAME..."
 HTTP=$(curl -s -g -o /dev/null -w "%{http_code}" -X POST \
@@ -98,8 +138,8 @@ HTTP=$(curl -s -g -o /dev/null -w "%{http_code}" -X POST \
 echo "  OK: assigned"
 
 echo "-- Submitting for Beta App Review..."
-SUBMIT=$(api POST "/betaAppReviewSubmissions" \
+SUBMIT=$(api_checked POST "/betaAppReviewSubmissions" \
   "{\"data\":{\"type\":\"betaAppReviewSubmissions\",\"relationships\":{\"build\":{\"data\":{\"type\":\"builds\",\"id\":\"$BUILD_ID\"}}}}}")
-STATE=$(echo "$SUBMIT" | jq -r '.data.attributes.betaReviewState // .errors[0].detail // "unknown"')
+STATE=$(echo "$SUBMIT" | jq -r '.data.attributes.betaReviewState // "unknown"')
 echo "  betaReviewState: $STATE"
 echo "OK: Public Beta handoff complete for build $VERSION."
