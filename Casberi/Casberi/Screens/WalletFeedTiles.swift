@@ -299,36 +299,60 @@ struct WalletBalanceHeadline: View {
 /// needs attention, do we?") — the old critical-only "Needs attention" wording
 /// claimed an urgency nothing here actually tracks (no push, no countdown; a
 /// spoofed transfer already happened and isn't getting worse by the time you
-/// open the feed). Severity still reads honestly through glyph color alone —
-/// red badges for critical kinds, orange for notice — never through the words.
+/// open the feed).
+///
+/// COLOR IS SPENT ON WHAT'S ACTIONABLE NOW (2026-07-24, the Act/Aware
+/// reframe) — not on raw severity. Severity alone made a wallet's routine
+/// spam (poisoning, spoofed symbols — already happened, nothing to do) wear
+/// the same red as a live approval that can still drain it, so a whale
+/// wallet's permanent dozen airdrops crying-wolfed the card red forever.
+/// `isMuted` addresses lets a person who's recognized the spam say so; muted
+/// kinds drop out of both the icon color and the badge row entirely, so the
+/// card can actually go quiet.
 struct WalletWarningsLine: View {
     let warnings: [WalletWarning]
     let onOpen: () -> Void
 
+    /// What the card actually shows — every kind when unmuted, only the
+    /// actionable ones once the awareness pile is muted. Never severity
+    /// alone; `isActionable` is the axis now.
+    private var visible: [WalletWarning] {
+        WalletAwareness.isMuted ? warnings.filter { $0.kind.isActionable } : warnings
+    }
+
     var body: some View {
-        let critical = warnings.contains { $0.severity == .critical }
-        Button(action: onOpen) {
-            VStack(alignment: .leading, spacing: DS.Space.s3) {
-                HStack(spacing: DS.Space.s2) {
-                    Image(systemName: critical ? "exclamationmark.triangle.fill"
-                                               : "info.circle.fill")
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(critical ? DS.destructive : DS.attention)
-                        .accessibilityHidden(true)
-                    Text("Worth a look")
-                        .dsText(.callout15).foregroundStyle(DS.textPrimary)
-                    Spacer(minLength: 0)
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(DS.textTertiary)
+        if !visible.isEmpty {
+            let hasLiquidation = visible.contains { $0.kind == .liquidation }
+            let hasActionable = visible.contains { $0.kind.isActionable }
+            Button(action: onOpen) {
+                VStack(alignment: .leading, spacing: DS.Space.s3) {
+                    HStack(spacing: DS.Space.s2) {
+                        // Red only for the one genuinely time-sensitive thing
+                        // (a position about to liquidate); orange for
+                        // anything else actionable; a plain info mark when
+                        // all that's left unmuted is the aware pile — spam
+                        // alone earns no alarm color at all.
+                        Image(systemName: hasLiquidation || hasActionable
+                              ? "exclamationmark.triangle.fill" : "info.circle.fill")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(hasLiquidation ? DS.destructive
+                                             : hasActionable ? DS.attention : DS.textSecondary)
+                            .accessibilityHidden(true)
+                        Text("Worth a look")
+                            .dsText(.callout15).foregroundStyle(DS.textPrimary)
+                        Spacer(minLength: 0)
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(DS.textTertiary)
+                    }
+                    badges
                 }
-                badges
+                .padding(DS.Space.s3)
+                .contentShape(Rectangle())
             }
-            .padding(DS.Space.s3)
-            .contentShape(Rectangle())
+            .buttonStyle(.plain)
+            .dsWidgetSurface(fillOpacity: WalletCardStyle.fill)
         }
-        .buttonStyle(.plain)
-        .dsWidgetSurface(fillOpacity: WalletCardStyle.fill)
     }
 
     private var badges: some View {
@@ -336,14 +360,16 @@ struct WalletWarningsLine: View {
         // need it, and a wallet with every kind active (5) still fits two
         // short rows in the balance card's own width before truncating.
         FlowLayout(spacing: DS.Space.s2) {
-            ForEach(WalletWatch.breakdown(warnings), id: \.kind) { entry in
+            ForEach(WalletWatch.breakdown(visible), id: \.kind) { entry in
+                let hot = entry.kind == .liquidation
+                let actionable = entry.kind.isActionable
                 HStack(spacing: 6) {
                     Image(systemName: entry.kind.glyph)
                         .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(entry.severity == .critical ? DS.destructive : DS.attention)
+                        .foregroundStyle(hot ? DS.destructive : actionable ? DS.attention : DS.textSecondary)
                         .frame(width: 22, height: 22)
                         .background(
-                            Circle().fill((entry.severity == .critical ? DS.destructive : DS.attention)
+                            Circle().fill((hot ? DS.destructive : actionable ? DS.attention : DS.textTertiary)
                                 .opacity(0.16)))
                     Text("\(entry.count)")
                         .dsText(.callout15).fontWeight(.semibold).foregroundStyle(DS.textPrimary)
@@ -617,21 +643,28 @@ struct WalletAllocationTray: View {
 /// happens on Aave, and the row already says everything this app can
 /// honestly say.
 ///
-/// SPLIT BY TYPE (2026-07-23, prd §196) — the flat severity-sorted list this
-/// used to be made "3 delegations" and "8 approvals" read as one undifferen-
-/// tiated wall once approvals joined the tray. Five sections now (Position
-/// risk, Flagged transfers, Approvals, Delegations, Safe), each with its own
-/// glyph + count header, still severity-ordered top to bottom; a header
-/// carries ONE bulk Revoke.cash link when every row underneath shares a
-/// single wallet address (the common case — three approvals from the same
-/// wallet all land on the same Revoke.cash page), and falls back to a
-/// per-row link the moment two different wallets are mixed in, so the door
-/// never claims to cover an address it doesn't.
+/// ACT VS AWARE (2026-07-24, superseding §196's type split), the fix for a
+/// sharper problem than "one undifferentiated wall": §196 sectioned by
+/// TYPE, but colored by raw SEVERITY, and severity had the wrong axis —
+/// poisoning and spoofed-symbol transfers already happened (spam; nothing
+/// to do about them) yet wore the loudest "critical" red, while a LIVE
+/// approval that can still drain the wallet sat in quiet "notice" orange.
+/// At real scale (a wallet with dozens of airdrops) the tray cried wolf in
+/// permanent red and buried the one thing worth a decision. Two groups now:
+/// **Worth doing** (`Kind.isActionable` — liquidation, approvals,
+/// delegations, Safe signatures; each still its own type-section beneath,
+/// unchanged from §196) leads, small and stated in decision terms; **Just
+/// so you know** (poisoning + spoofed symbols — exactly the existing
+/// `flagged` list) collapses to one line by default and can be MUTED, so a
+/// recognized pattern can stop badging the feed red forever. Jump chips
+/// (kept per the user's own ask) now target these two groups, not five
+/// type-sections — "Worth doing" rarely runs long enough to need internal
+/// navigation once spam isn't diluting it.
 struct WalletWorthALookTray: View {
     let warnings: [WalletWarning]
-    /// The flagged transfers behind a poisoning/spoofed-symbol warning — each
-    /// becomes its own row with a door to its sheet, instead of one dead
-    /// aggregate line.
+    /// The flagged transfers behind a poisoning/spoofed-symbol warning — the
+    /// whole "Just so you know" pile. Each becomes its own row with a door
+    /// to its sheet when expanded, instead of one dead aggregate line.
     let flagged: [Thing]
     /// The approval/Permit2-grant things whose live on-chain state is still
     /// active (`WalletApprovals.activeApprovals`) — each becomes its own row
@@ -639,6 +672,15 @@ struct WalletWorthALookTray: View {
     let activeApprovals: [Thing]
     @Environment(\.openURL) private var openURL
     @State private var jumpTarget: String?
+    /// Mirrors `WalletAwareness.isMuted` locally so toggling redraws THIS
+    /// tray immediately; the plain UserDefaults flag underneath is what the
+    /// feed card re-reads fresh the next time it's built.
+    @State private var muted = WalletAwareness.isMuted
+    /// Collapsed by default (2026-07-24) — spam you can't act on doesn't
+    /// deserve the same standing scroll real estate the actionable rows
+    /// get. Expands in place; the sheet's own height grows to fit since
+    /// `trayHeight` reads this same state.
+    @State private var awareExpanded = false
     /// A flagged transfer PUSHES within this same sheet now (2026-07-23,
     /// second fix to prd §196) rather than presenting `ThingSheetView` as a
     /// second, sibling `.sheet` — the first fix already solved "can't get
@@ -659,22 +701,29 @@ struct WalletWorthALookTray: View {
     private var delegations: [WalletWarning] { warnings.filter { $0.kind == .delegation } }
     private var safeSignatures: [WalletWarning] { warnings.filter { $0.kind == .safe } }
 
-    /// The five sections, in severity order, each dropped when empty — the
-    /// jump bar (only shown once there's real ground to cover) is built off
-    /// this same list, so the two can never disagree about what's on screen.
-    private var sectionIDs: [String] {
+    /// The type-sections inside "Worth doing", each dropped when empty.
+    private var actionableSectionIDs: [String] {
         var ids: [String] = []
         if !liquidation.isEmpty { ids.append("position") }
-        if !flagged.isEmpty { ids.append("transfers") }
         if !activeApprovals.isEmpty { ids.append("approvals") }
         if !delegations.isEmpty { ids.append("delegations") }
         if !safeSignatures.isEmpty { ids.append("safe") }
         return ids
     }
+    private var hasActionable: Bool { !actionableSectionIDs.isEmpty }
+    private var actionableRowCount: Int {
+        liquidation.count + activeApprovals.count + delegations.count + safeSignatures.count
+    }
 
-    private var rowCount: Int {
-        liquidation.count + flagged.count + activeApprovals.count
-            + delegations.count + safeSignatures.count
+    /// The two jump targets — "act" and "aware" — each dropped when empty.
+    /// The jump bar (only shown once there's real ground to cover) is built
+    /// off this same list, so the two can never disagree about what's on
+    /// screen.
+    private var superSectionIDs: [String] {
+        var ids: [String] = []
+        if hasActionable { ids.append("act") }
+        if !flagged.isEmpty { ids.append("aware") }
+        return ids
     }
 
     /// The tray's own ceiling — past this the content scrolls.
@@ -686,22 +735,33 @@ struct WalletWorthALookTray: View {
     private static let headerHeight: CGFloat = 58
 
     /// What the content WOULD be with nothing clipped — the honest measure
-    /// the overflow gate reads, before the cap flattens it.
+    /// the overflow gate reads, before the cap flattens it. Reads
+    /// `awareExpanded`, so the sheet visibly grows when the spam pile is
+    /// opened and settles back when it's closed, both capped at
+    /// `maxTrayHeight`.
     private var uncappedHeight: CGFloat {
-        150 + CGFloat(rowCount) * Self.rowHeight
-            + CGFloat(sectionIDs.count) * Self.headerHeight
+        var h: CGFloat = 150
+        if hasActionable {
+            h += 26 // the "Worth doing" group label
+            h += CGFloat(actionableRowCount) * Self.rowHeight
+                + CGFloat(actionableSectionIDs.count) * Self.headerHeight
+        }
+        if !flagged.isEmpty {
+            h += Self.headerHeight // the collapsed (or header of the expanded) aware row
+            if awareExpanded { h += CGFloat(flagged.count) * Self.rowHeight + 40 }
+        }
+        return h
     }
 
     /// Chips exist to save a SCROLL, so the gate is overflow — not a
     /// taxonomy count (2026-07-23, superseding the old `> 3 sections`
-    /// rule). The count gate hid the bar on the exact tray that needed it
-    /// (two sections but a dozen flagged transfers burying delegations
-    /// below the fold) and would have shown it on a tidy four-section tray
-    /// that fits on screen with nothing to scroll past. The bar shows when
-    /// the content actually overflows the sheet AND there's more than one
-    /// section to jump between (jumping within a lone section is a no-op).
+    /// rule; kept unchanged by the Act/Aware split). The bar shows when the
+    /// content actually overflows the sheet AND there's more than one
+    /// group to jump between (jumping within a lone group is a no-op) —
+    /// which in practice now means "the spam pile is expanded and long",
+    /// since a short, spam-free 'Worth doing' rarely overflows on its own.
     private var showsJumpBar: Bool {
-        sectionIDs.count > 1 && uncappedHeight > Self.maxTrayHeight
+        superSectionIDs.count > 1 && uncappedHeight > Self.maxTrayHeight
     }
 
     private var trayHeight: CGFloat {
@@ -725,54 +785,54 @@ struct WalletWorthALookTray: View {
                         // scrolling (caught on-device: rows past the fold
                         // were simply unreachable, no visible bug in a
                         // screenshot of the top of the tray alone).
-                        VStack(alignment: .leading, spacing: DS.Space.s4) {
-                            if !liquidation.isEmpty {
-                                section(id: "position", title: String(localized: "Position risk"),
-                                       symbol: "chart.line.downtrend.xyaxis", critical: true,
-                                       count: liquidation.count,
-                                       explainer: String(localized: "Could be liquidated if prices move against you."),
-                                       bulkAction: nil) {
-                                    ForEach(liquidation) { inertRow($0) }
+                        VStack(alignment: .leading, spacing: DS.Space.s6) {
+                            if hasActionable {
+                                VStack(alignment: .leading, spacing: DS.Space.s4) {
+                                    Text("Worth doing")
+                                        .dsText(.label12).foregroundStyle(DS.textSecondary)
+                                        .padding(.horizontal, 3)
+                                    if !liquidation.isEmpty {
+                                        section(id: "position", title: String(localized: "Position risk"),
+                                               symbol: "chart.line.downtrend.xyaxis", critical: true,
+                                               count: liquidation.count,
+                                               explainer: String(localized: "Could be liquidated if prices move against you."),
+                                               bulkAction: nil) {
+                                            ForEach(liquidation) { inertRow($0) }
+                                        }
+                                    }
+                                    if !activeApprovals.isEmpty {
+                                        let bulk = bulkRevoke(addresses: activeApprovals.map(\.walletAddress))
+                                        section(id: "approvals", title: String(localized: "Approvals"),
+                                               symbol: "key.fill", critical: false,
+                                               count: activeApprovals.count,
+                                               explainer: String(localized: "Contracts you've allowed to move tokens from your wallet."),
+                                               bulkAction: bulk) {
+                                            ForEach(activeApprovals) { approvalRow($0, showsOwnLink: bulk == nil) }
+                                        }
+                                    }
+                                    if !delegations.isEmpty {
+                                        let bulk = bulkRevoke(addresses: delegations.map(\.address))
+                                        section(id: "delegations", title: String(localized: "Delegations"),
+                                               symbol: "arrow.triangle.branch", critical: false,
+                                               count: delegations.count,
+                                               explainer: String(localized: "Voting power you've handed to another address."),
+                                               bulkAction: bulk) {
+                                            ForEach(delegations) { delegationRow($0, showsOwnLink: bulk == nil) }
+                                        }
+                                    }
+                                    if !safeSignatures.isEmpty {
+                                        section(id: "safe", title: String(localized: "Safe signatures"),
+                                               symbol: "signature", critical: false,
+                                               count: safeSignatures.count,
+                                               explainer: String(localized: "Waiting for you to sign in the Safe app."),
+                                               bulkAction: nil) {
+                                            ForEach(safeSignatures) { inertRow($0) }
+                                        }
+                                    }
                                 }
+                                .id("act")
                             }
-                            if !flagged.isEmpty {
-                                section(id: "transfers", title: String(localized: "Flagged transfers"),
-                                       symbol: "eye.trianglebadge.exclamationmark.fill", critical: true,
-                                       count: flagged.count,
-                                       explainer: String(localized: "Someone sent these on purpose — don't trust the token or address."),
-                                       bulkAction: nil) {
-                                    ForEach(flagged) { flaggedRow($0) }
-                                }
-                            }
-                            if !activeApprovals.isEmpty {
-                                let bulk = bulkRevoke(addresses: activeApprovals.map(\.walletAddress))
-                                section(id: "approvals", title: String(localized: "Approvals"),
-                                       symbol: "key.fill", critical: false,
-                                       count: activeApprovals.count,
-                                       explainer: String(localized: "Contracts you've allowed to move tokens from your wallet."),
-                                       bulkAction: bulk) {
-                                    ForEach(activeApprovals) { approvalRow($0, showsOwnLink: bulk == nil) }
-                                }
-                            }
-                            if !delegations.isEmpty {
-                                let bulk = bulkRevoke(addresses: delegations.map(\.address))
-                                section(id: "delegations", title: String(localized: "Delegations"),
-                                       symbol: "arrow.triangle.branch", critical: false,
-                                       count: delegations.count,
-                                       explainer: String(localized: "Voting power you've handed to another address."),
-                                       bulkAction: bulk) {
-                                    ForEach(delegations) { delegationRow($0, showsOwnLink: bulk == nil) }
-                                }
-                            }
-                            if !safeSignatures.isEmpty {
-                                section(id: "safe", title: String(localized: "Safe signatures"),
-                                       symbol: "signature", critical: false,
-                                       count: safeSignatures.count,
-                                       explainer: String(localized: "Waiting for you to sign in the Safe app."),
-                                       bulkAction: nil) {
-                                    ForEach(safeSignatures) { inertRow($0) }
-                                }
-                            }
+                            if !flagged.isEmpty { awareSection }
                         }
                         .padding(.bottom, DS.Space.s2)
                         .scrollTargetLayout()
@@ -823,17 +883,18 @@ struct WalletWorthALookTray: View {
 
     // MARK: - Jump bar
 
-    /// A tap scrolls to the section and lights its chip — nothing hides —
-    /// and because the chips share the ScrollView's own `scrollPosition`
-    /// binding, scrolling by hand lights the right chip too. Chip anatomy
-    /// (2026-07-23, user: "channel Cash App"): severity dot + bold word +
-    /// muted count, in a chunky capsule — the dot is the same
-    /// destructive/attention hue the section's own header glyph wears, so
-    /// the rail is a legend for the list below it, not just a row of words.
+    /// Two chips now, not five (2026-07-24) — "Worth doing" and "Just so
+    /// you know", matching the Act/Aware split above. A tap scrolls to the
+    /// group and lights its chip — nothing hides — and because the chips
+    /// share the ScrollView's own `scrollPosition` binding, scrolling by
+    /// hand lights the right chip too. Anatomy (2026-07-23, user: "channel
+    /// Cash App"): severity dot + bold word + muted count, in a chunky
+    /// capsule. The aware chip's dot grays out once muted, echoing the
+    /// section's own state.
     private var jumpBar: some View {
         ScrollView(.horizontal) {
             HStack(spacing: DS.Space.s2) {
-                ForEach(sectionIDs, id: \.self) { id in
+                ForEach(superSectionIDs, id: \.self) { id in
                     jumpChip(id)
                 }
             }
@@ -842,19 +903,20 @@ struct WalletWorthALookTray: View {
     }
 
     private func jumpChip(_ id: String) -> some View {
-        let active = jumpTarget == id || (jumpTarget == nil && id == sectionIDs.first)
-        let critical = id == "position" || id == "transfers"
+        let active = jumpTarget == id || (jumpTarget == nil && id == superSectionIDs.first)
+        let hasLiquidation = !liquidation.isEmpty
+        let dotColor: Color = id == "act"
+            ? (hasLiquidation ? DS.destructive : DS.attention)
+            : (muted ? DS.textTertiary : DS.attention)
         return Button {
             DSHaptic.selection()
             withAnimation(DS.Motion.standard) { jumpTarget = id }
         } label: {
             HStack(spacing: 6) {
-                Circle()
-                    .fill(critical ? DS.destructive : DS.attention)
-                    .frame(width: 6, height: 6)
-                Text(jumpTitle(id))
+                Circle().fill(dotColor).frame(width: 6, height: 6)
+                Text(id == "act" ? String(localized: "Worth doing") : String(localized: "Just so you know"))
                     .dsText(.subhead13).fontWeight(.semibold)
-                Text("\(jumpCount(id))")
+                Text("\(id == "act" ? actionableRowCount : flagged.count)")
                     .dsText(.subhead13).fontWeight(.semibold)
                     .monospacedDigit()
                     .opacity(0.45)
@@ -866,27 +928,7 @@ struct WalletWorthALookTray: View {
         .buttonStyle(.plain)
     }
 
-    private func jumpTitle(_ id: String) -> String {
-        switch id {
-        case "position": String(localized: "Position")
-        case "transfers": String(localized: "Transfers")
-        case "approvals": String(localized: "Approvals")
-        case "delegations": String(localized: "Delegations")
-        default: String(localized: "Safe")
-        }
-    }
-
-    private func jumpCount(_ id: String) -> Int {
-        switch id {
-        case "position": liquidation.count
-        case "transfers": flagged.count
-        case "approvals": activeApprovals.count
-        case "delegations": delegations.count
-        default: safeSignatures.count
-        }
-    }
-
-    // MARK: - Section shell
+    // MARK: - Section shell (Worth doing's type-sections)
 
     @ViewBuilder
     private func section<Rows: View>(id: String, title: String, symbol: String, critical: Bool,
@@ -962,6 +1004,76 @@ struct WalletWorthALookTray: View {
               let url = URL(string: WalletApprovals.revokeURL(address: first))
         else { return nil }
         return (String(localized: "Revoke.cash"), url)
+    }
+
+    // MARK: - Just so you know (the aware pile, collapsed + mutable)
+
+    /// The awareness section — one collapsed line by default ("12 fake
+    /// symbols · nothing to do"), expanding in place to list each flagged
+    /// transfer with a door to its sheet. Never destructive red, muted or
+    /// not: this is spam you can recognize, not a live risk (that read is
+    /// reserved for "Worth doing"). Muting stops it badging the feed card
+    /// (`WalletWarningsLine`) without hiding it here — the tray still shows
+    /// you what you muted, it just stops shouting about it elsewhere.
+    private var awareSection: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+            Button {
+                DSHaptic.selection()
+                withAnimation(DS.Motion.standard) { awareExpanded.toggle() }
+            } label: {
+                HStack(spacing: DS.Space.s2) {
+                    Image(systemName: "eye.trianglebadge.exclamationmark.fill")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(DS.textSecondary)
+                        .frame(width: 28, height: 28)
+                        .background(
+                            RoundedRectangle(cornerRadius: DS.Radius.control, style: .continuous)
+                                .fill(DS.surfaceWell))
+                    VStack(alignment: .leading, spacing: 1) {
+                        HStack(spacing: DS.Space.s2) {
+                            Text("Flagged transfers").dsText(.callout15).foregroundStyle(DS.textPrimary)
+                            Text("\(flagged.count)")
+                                .dsText(.label12).foregroundStyle(DS.textSecondary)
+                                .monospacedDigit()
+                                .padding(.horizontal, 7).padding(.vertical, 2)
+                                .background(Capsule().fill(DS.surfaceWell))
+                        }
+                        Text(muted
+                             ? String(localized: "Muted — won't badge your feed")
+                             : String(localized: "Someone sent these on purpose — nothing to do"))
+                            .dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                            .lineLimit(1)
+                    }
+                    Spacer(minLength: 0)
+                    Image(systemName: awareExpanded ? "chevron.up" : "chevron.down")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(DS.textTertiary)
+                }
+                .padding(.horizontal, 3)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+
+            if awareExpanded {
+                VStack(spacing: 0) {
+                    ForEach(flagged) { flaggedRow($0) }
+                }
+                Button {
+                    DSHaptic.tap()
+                    muted.toggle()
+                    WalletAwareness.isMuted = muted
+                } label: {
+                    Text(muted ? String(localized: "Unmute")
+                               : String(localized: "Mute — stop badging my feed"))
+                        .dsText(.subhead13).fontWeight(.semibold)
+                        .foregroundStyle(DS.tint)
+                }
+                .buttonStyle(.plain)
+                .padding(.horizontal, 3)
+                .padding(.top, DS.Space.s1)
+            }
+        }
+        .id("aware")
     }
 
     // MARK: - Rows

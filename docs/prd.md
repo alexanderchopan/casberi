@@ -7969,3 +7969,46 @@ is this even on":
 `DSSlabField` gained an optional `isArmed` override so a verb can light only
 in a specific state (the field's own arm-on-addable-text case). Build green;
 standalone-verified in a worktree before commit.
+
+## 203. Worth a look sections by whether you can ACT, not by raw severity — and the spam pile can be muted (user: "how would you improve our wallet design 'worth a look' design", three mockups, then "lets do A with C's mut and the jump chips", 2026-07-24) — VERIFIED
+
+§196's type split fixed "one undifferentiated wall" but colored rows by raw
+`Severity`, and severity was the wrong axis: a poisoning or spoofed-symbol
+transfer already happened — spam, nothing to do about it — yet it wore the
+loudest "critical" red, while a LIVE approval that can still drain the
+wallet sat in quiet "notice" orange. At real scale (a whale wallet's dozens
+of routine airdrops) the card stayed permanently red for nothing actionable,
+burying the one thing worth a decision.
+
+New axis, `WalletWarning.Kind.isActionable`: liquidation/approval/
+delegation/safe are actionable; poisoning/spoofedSymbol are not — they
+already happened and there's no button. The tray now has exactly two
+groups instead of five flat sections:
+
+- **Worth doing** — the four actionable type-sections (Position risk,
+  Approvals, Delegations, Safe), unchanged internally from §196, under one
+  small label and one scroll-anchor.
+- **Just so you know** — the old "Flagged transfers" section, collapsed to
+  one line by default (title + count + "nothing to do"), expandable to the
+  same per-row list as before. Never wears destructive red, muted or not —
+  recognized spam isn't a live risk.
+- **Mute.** A button inside the expanded aware section flips
+  `WalletAwareness.isMuted` (plain UserDefaults, per install not per
+  wallet — recognizing spam doesn't need re-teaching per address). Muting
+  drops those kinds out of the FEED CARD's color and badge row entirely
+  (`WalletWarningsLine.visible`), so a wallet whose spam is already known
+  can stop crying wolf in red forever; the tray itself still lists what's
+  muted, it just stops shouting about it elsewhere.
+- **Jump chips, kept per the user's ask**, now target the two groups
+  ("Worth doing" / "Just so you know") instead of five type-sections — the
+  same overflow-based gate as §197 (`superSectionIDs.count > 1 &&
+  uncappedHeight > maxTrayHeight`), which in practice now fires mainly when
+  the spam pile is expanded and long, since a spam-free "Worth doing" rarely
+  overflows on its own.
+
+Feed card (`WalletWarningsLine`) icon/color now reads `isActionable` the
+same way: destructive red only for an active liquidation, attention orange
+for any other actionable kind, and a plain neutral info mark when everything
+actionable is muted or absent and only the aware pile remains unmuted.
+
+Build green.

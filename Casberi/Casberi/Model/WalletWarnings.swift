@@ -50,6 +50,23 @@ struct WalletWarning: Identifiable, Equatable {
             case .delegation:    "arrow.triangle.branch"
             }
         }
+
+        /// Whether you can still DO something about this (2026-07-24, the
+        /// Act/Aware reframe). `severity` alone had this backwards: a
+        /// poisoning or spoofed-symbol transfer already happened — nothing
+        /// undoes it, there's no button, it's just spam to recognize — yet
+        /// it wore the loudest, reddest "critical" mark and, at real scale
+        /// (a whale wallet's dozens of airdrops), buried the ONE thing that
+        /// can still drain the wallet going forward: a live approval. This
+        /// is the axis the tray sections by now: `isActionable` kinds lead
+        /// as "Worth doing"; the rest fold into "Just so you know", muted by
+        /// default and mutable, so red is spent only where it's earned.
+        var isActionable: Bool {
+            switch self {
+            case .liquidation, .approval, .delegation, .safe: true
+            case .poisoning, .spoofedSymbol: false
+            }
+        }
     }
 
     let id: String
@@ -110,6 +127,25 @@ struct WalletLiveState: Equatable {
                     && $0.totalDebtUSD == $1.totalDebtUSD
                     && $0.healthFactor == $1.healthFactor
             }
+    }
+}
+
+/// Whether the "Just so you know" pile — spam you can recognize but can't
+/// act on — is muted (2026-07-24, the Act/Aware reframe's other half). Color
+/// that never resolves teaches nothing: a wallet with dozens of airdrops
+/// always shows red, so the person who's already recognized the pattern
+/// gets to say so, and the feed's own badge stops crying wolf for it.
+/// Persisted per install, not per wallet — recognizing spam doesn't need
+/// re-teaching per address. Plain UserDefaults, not observed: the tray
+/// mirrors it in its own `@State` for live redraws while open, and the
+/// feed card re-reads it fresh the next time it's built (a sheet dismiss
+/// already forces that).
+enum WalletAwareness {
+    private static let mutedKey = "wallet.awareness.muted"
+
+    static var isMuted: Bool {
+        get { UserDefaults.standard.bool(forKey: mutedKey) }
+        set { UserDefaults.standard.set(newValue, forKey: mutedKey) }
     }
 }
 
