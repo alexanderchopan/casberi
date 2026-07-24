@@ -87,6 +87,21 @@ struct ThingSheetView: View {
     init(thing: Thing, onBack: (() -> Void)? = nil) {
         self.thing = thing
         self.onBack = onBack
+        // The same crash guard `FeedScreen.standsAlone` earned (2026-07-24,
+        // live TestFlight crash): a `Thing` a concurrent delete-sync heal
+        // pass (SyncReconcile, BridgeRefresh) removes between the row's tap
+        // and this sheet's construction has its `modelContext` niled first —
+        // reading that is documented-safe, but every other property below
+        // fault-resolves against the gone store and crashes. Transactions
+        // are the kind most exposed to this race (this sheet only started
+        // opening them directly today — 139f4fb dropped the old "Wallet rows
+        // push the management screen instead" special case — and a wallet
+        // bridge's own re-sync is the most common source of a same-tick
+        // delete). `body` carries the matching guard for the render side.
+        guard thing.modelContext != nil else {
+            _detent = State(initialValue: .medium)
+            return
+        }
         let hasMedia = thing.kind == .screenshot
             || !(thing.previewImageURL ?? "").isEmpty
             || TokenChart.route(from: thing.content) != nil
@@ -103,7 +118,16 @@ struct ThingSheetView: View {
             hasMedia || bodyLength > 280 ? .large : .medium)
     }
 
+    @ViewBuilder
     var body: some View {
+        // Mirrors the `init` guard above: a delete that lands between the
+        // sheet's construction and this render (both on the main actor, but
+        // not the same instant) would otherwise crash here instead — every
+        // branch below reads `thing.kind`/`thing.title`/etc. unconditionally.
+        // Nothing to show for a thing that's gone, so the sheet just leaves.
+        if thing.modelContext == nil {
+            Color.clear.onAppear { dismiss() }
+        } else {
         ScrollViewReader { proxy in
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
@@ -354,6 +378,7 @@ struct ThingSheetView: View {
         }
         // Translate: the system sheet, over the thing's own words.
         .translationPresentation(isPresented: $showTranslate, text: translateText)
+        }
     }
 
     /// Stores (or clears) the person's label for the counterparty address, then
