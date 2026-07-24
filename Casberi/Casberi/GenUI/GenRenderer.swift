@@ -3671,7 +3671,16 @@ private struct GenSourceMix: View {
     @State private var cellsShown = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    private var items: [KindCountRow.Item] { KindCountRow.parse(el.refs(2), cap: 4) }
+    /// THREE cells — one big, two stacked (§194). Four (one big + three
+    /// stacked) is what the money hero's map carries, but its cells are two
+    /// bare text lines; a source cell also wears a `BridgeIcon`, and three of
+    /// those stacked need ~190pt of intrinsic height. Forced into the map's
+    /// frame they didn't compress — SwiftUI spills an over-tall child rather
+    /// than clipping it, so the cells rendered straight out through the card's
+    /// rounded edge (reported on-device 2026-07-23: "larger than the card and
+    /// doesn't look good"). Three cells is also what the approved mockup drew,
+    /// and the residual line names whatever they leave out.
+    private var items: [KindCountRow.Item] { KindCountRow.parse(el.refs(2), cap: 3) }
 
     /// A source cell's magnitude is a raw thing-count (unlike the money
     /// hero's holdings cells, which `WalletIngest.treemapWeight` pre
@@ -3681,6 +3690,12 @@ private struct GenSourceMix: View {
         guard total > 0 else { return 0 }
         return Double(item.n) / Double(total)
     }
+
+    /// Taller than the money hero's 84 because every cell carries an icon on
+    /// top of its two text lines. Sized so two stacked cells fit with real
+    /// headroom rather than to-the-pixel — a to-the-pixel fit is one Dynamic
+    /// Type step away from the overflow this replaced.
+    private var mapHeight: CGFloat { 96 }
 
     var body: some View {
         let items = items
@@ -3693,7 +3708,14 @@ private struct GenSourceMix: View {
                             .foregroundStyle(DS.textPrimary)
                     }
                     MiniTreemap(items: items) { item, index in cell(item, index: index) }
-                        .frame(height: 84)
+                        .frame(height: mapHeight)
+                        // The backstop, not the fix (§194): the cell count and
+                        // density above are what make this fit. But a map that
+                        // somehow outgrows its frame again — an accessibility
+                        // type size, a longer localized "N things" — must fail
+                        // by cropping inside the card, never by drawing through
+                        // its edge.
+                        .clipped()
                     if !el.str(1).isEmpty {
                         Text(el.str(1))
                             .dsText(.label11)
@@ -3713,18 +3735,25 @@ private struct GenSourceMix: View {
         }
     }
 
+    /// The icon rides INLINE with the name (§194) — stacked on its own line it
+    /// made every cell a three-row block, which is what overflowed the map. The
+    /// same move `GenTagMap.cellLabel` already makes for its short token cells,
+    /// for the same reason: at this height a cell affords two rows, not three.
     private func cell(_ item: KindCountRow.Item, index: Int) -> some View {
-        VStack(alignment: .leading, spacing: DS.Space.s1) {
-            BridgeIcon(name: item.tag, size: 18)
-            Text(item.tag)
-                .dsText(.label12)
-                .foregroundStyle(DS.textPrimary)
-                .lineLimit(1)
-                .minimumScaleFactor(0.7)
+        VStack(alignment: .leading, spacing: 2) {
+            HStack(spacing: DS.Space.s1) {
+                BridgeIcon(name: item.tag, size: 16)
+                Text(item.tag)
+                    .dsText(.label12)
+                    .foregroundStyle(DS.textPrimary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+            }
             Text(item.n == 1 ? String(localized: "1 thing") : String(localized: "\(item.n) things"))
                 .dsText(.label11)
                 .foregroundStyle(DS.textSecondary)
                 .lineLimit(1)
+                .minimumScaleFactor(0.8)
         }
         .miniTreemapCellChrome(index: index, cellsShown: cellsShown, reduceMotion: reduceMotion) {
             DS.tint(magnitude: share(item))

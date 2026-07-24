@@ -7470,3 +7470,39 @@ on", followed by the synthesis card, the $19K money hero, the watchlist +
 up-next pair and the Reading card. The docked chip row reads "Show AAPL · 7 /
 Noticed / Show BRK…" — no "What's going on?" chip, confirming the retirement.
 Build green.
+
+## 194. The "What landed" map drew outside its own card (user: "the treemap for what's going on isn't rendered right its larger than the card and doesn't look good", 2026-07-23) — VERIFIED
+
+§180's source map shipped with four cells — one big, three stacked — copied
+from the money hero's own mini-map, which carries four comfortably. But a
+holdings cell is two bare text lines, and a SOURCE cell also wears a
+`BridgeIcon`: stacked icon over name over count, each cell needs ~60pt, so
+three of them need ~190pt of intrinsic height. Forced into an 84pt frame they
+did not compress — **SwiftUI spills an over-tall child rather than clipping
+it** — so the right column rendered straight out through the card's rounded
+edge, above its top and below its bottom.
+
+Three fixes, in the order that actually matters:
+
+1. **Three cells, not four** (one big + two stacked). This is what the approved
+   mockup drew, and it halves the height pressure at the source. The composer's
+   `prefix(3)` and the renderer's `cap: 3` must agree; the residual line ("and
+   21 more, elsewhere") names whatever they leave out, so nothing is lost.
+2. **The icon rides inline with the name**, making a cell two rows instead of
+   three — the same move `GenTagMap.cellLabel` already makes for its short
+   token cells, for the same reason: at this height a cell affords two rows.
+3. **96pt, with `.clipped()` as a backstop.** The height is set with real
+   headroom rather than to-the-pixel (a to-the-pixel fit is one Dynamic Type
+   step from the same bug), and the clip guarantees the failure mode is a crop
+   INSIDE the card rather than a draw through its edge.
+
+The lesson, worth keeping: a fixed `.frame(height:)` is not a constraint on a
+child, it's a suggestion — content that can't compress will overflow it in both
+directions and paint over whatever surrounds it. Any map or grid pinned to a
+fixed height needs its cell content sized to fit, and a clip for what sizing
+can't foresee.
+
+VERIFIED 2026-07-23 (iPhone 17 Pro sim, pinned UDID): "What landed" renders
+entirely within its card — Stocktwits (39 things) as the big cell, GeckoTerminal
+(34) and RSS (5) stacked beside it, icons inline with their names, "and 21 more,
+elsewhere" beneath. Nothing crosses the card's edge. Build green.

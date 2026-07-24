@@ -598,11 +598,13 @@ enum TodayBrief {
         for t in landed { counts[t.source, default: 0] += 1 }
         guard counts.count >= 3 else { return nil }
         let sorted = counts.sorted { $0.value > $1.value }
-        // Capped at 4 — the same compact footprint the money hero's own
-        // mini-map holds to; a residual folds into a named tail rather than
-        // growing the map past a glance.
-        let cells = sorted.prefix(4).map { "\(tileSafe($0.key)) \($0.value)" }
-        let residual = sorted.dropFirst(4).reduce(0) { $0 + $1.value }
+        // THREE — one big cell and two stacked, the shape the approved mockup
+        // drew. Must agree with `GenSourceMix`'s own cap: a source cell carries
+        // an icon as well as its two text lines, and a third stacked cell
+        // overflows the map's height (§194). A residual folds into a named tail
+        // rather than growing the map past a glance.
+        let cells = sorted.prefix(3).map { "\(tileSafe($0.key)) \($0.value)" }
+        let residual = sorted.dropFirst(3).reduce(0) { $0 + $1.value }
         let subline = residual > 0 ? String(localized: "and \(residual) more, elsewhere") : ""
         return "mix = SourceMix(\"\(String(localized: "What landed"))\", \"\(genSafe(subline))\", [\(cells.joined(separator: ", "))])"
     }
