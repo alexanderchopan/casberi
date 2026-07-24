@@ -7515,8 +7515,16 @@ the whole day — where everything came from, in one glance — while the Readin
 card beneath it is a single item and the hour strip is texture. A summary
 outranks both.
 
-New order: synthesis card, **wallet**, **what landed**, the glanceable pair
-(watchlist / up next), the leads (mention, reading), and the hour strip closing.
+Final order: synthesis card, **wallet**, **the glanceable pair** (watchlist /
+up next), **what landed**, the leads (mention, reading), and the hour strip
+closing.
+
+**The money block is one story and never splits** (user, same session: "keep
+wallet and watchlist together"). The first cut put "what landed" directly after
+the hero, which read the words of the ruling but broke something better: the
+watchlist IS money, so slotting the source map between it and the wallet split
+one subject across two places. The summaries still lead — the money block, then
+what landed — the ruling just applies to the BLOCK, not to the hero alone.
 
 The principle worth keeping, now recorded in the file's own doctrine comment:
 **the whole-day summaries lead, the single things follow, the texture closes.**
@@ -7524,7 +7532,7 @@ Order in this screen is a claim about importance, so a module added later has
 to earn its position rather than inherit the bottom of the list — which is
 exactly the trap §180 fell into.
 
-VERIFIED 2026-07-23 (iPhone 17 Pro sim, pinned UDID): `-todayProbe` composed
-`root = Stack([mix, pair, read, hours])`, and the rendered screen reads What
-landed (RSS 10 / Gmail 4 / Calendar 6, "and 11 more, elsewhere") → Up next →
-Reading → When it landed. Build green.
+VERIFIED 2026-07-23 (iPhone 17 Pro sim, pinned UDID): with a wallet watched,
+`-todayProbe` composed `root = Stack([hero, pair, mix, read, hours])` — wallet
+and watchlist adjacent, the source map directly behind them, the single things
+and the hour strip after. Build green.
