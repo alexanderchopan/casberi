@@ -25,6 +25,18 @@ enum GenArg: Equatable {
 struct GenEl: Equatable {
     let comp: String
     let args: [GenArg]
+    /// True once this element's OWN line has fully arrived (closed its final
+    /// paren) — false while it's still the stream's single current frontier
+    /// line, mid-arrival (§199). A plain sentence growing character by
+    /// character reads as a typewriter; a component computing LAYOUT from its
+    /// args (a treemap's cell shares, a sparkline's point count) does not —
+    /// re-deriving those from a partial, still-growing string produces
+    /// visible jumps (a cell resizing, a chart redrawing) rather than a
+    /// smooth reveal. Callers that render structured layout from `args` (see
+    /// `GenRender`'s `.block` slot) hold their placeholder until this flips
+    /// true; callers that just grow text (`Insight`, `LeadPost`) can ignore
+    /// it and keep the original per-character reveal.
+    var isComplete: Bool = true
 
     /// arg n as string ("" when absent/null) — mirrors `el.args[n] ?? ""`.
     func str(_ n: Int) -> String {
@@ -95,7 +107,7 @@ enum GenParser {
     /// apply it to only the lines that need it.
     private static func parseCompleteLine(_ line: String) -> (String, GenEl)? {
         guard let m = line.firstMatch(of: completeLine) else { return nil }
-        return (String(m.1), GenEl(comp: String(m.2), args: parseArgs(String(m.3))))
+        return (String(m.1), GenEl(comp: String(m.2), args: parseArgs(String(m.3)), isComplete: true))
     }
 
     /// A single PARTIAL (still-streaming) line → its (id, GenEl), or nil.
@@ -103,7 +115,7 @@ enum GenParser {
         guard let m = line.firstMatch(of: partialLine) else { return nil }
         var argStr = String(m.3)
         if argStr.hasSuffix(")") { argStr = String(argStr.dropLast()) }
-        return (String(m.1), GenEl(comp: String(m.2), args: parseArgs(argStr)))
+        return (String(m.1), GenEl(comp: String(m.2), args: parseArgs(argStr), isComplete: false))
     }
 
     /// Parses a prefix of the document into the element map. The last line is

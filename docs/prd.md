@@ -7772,3 +7772,47 @@ chips, and the Keep pill already in their final places with five gray module
 blocks below; frame 2 (moments later) shows "What landed" and "Reading" now
 holding real content while "Up next" and the module above it are still
 unresolved skeletons — the layout never jumped, it just filled in. Build green.
+
+## 199. The materializing was jittery — hold a module until its own line is complete (user: "they streaming is a bit jittery... the materializing i mean", 2026-07-23) — VERIFIED
+
+§198's skeleton-first assembly fixed the SCREEN-level jump (a module popping
+from `EmptyView` to fully-formed) but left a second, smaller jump: the design
+law "props fill as tokens arrive" means a component's OWN properties fill in
+progressively while its OWN line is still streaming — fine for a component
+that's just growing text, but not for one deriving LAYOUT from its args. The
+money hero's holdings treemap recomputes each cell's SHARE from the whole
+items array on every render; its sparkline re-parses a comma-separated series.
+While `hero`'s ~400-character line was still arriving, both were being fed a
+partial, discontinuously-growing array — the treemap's proportions and the
+chart's point count shifted with every few characters, reading as jitter
+rather than a smooth reveal.
+
+**The fix.** `GenEl` (`GenParser.swift`) gained `isComplete: Bool` — `true` from
+`parseCompleteLine`, `false` from `parsePartialLine`, the exact distinction the
+parser already made internally to decide which line may still be growing,
+just never externalized before. `GenRender`'s shared dispatch
+(`GenRenderer.swift`) changed from `if let el = els[id]` to `if let el =
+els[id], slot != .block || el.isComplete` — a `.block`-slotted top-level
+module (the brief's own modules, gated on `genAgentAnswerContext` since §198)
+now holds its skeleton for its line's ENTIRE transit, not just its first
+token, and swaps to the real component once, complete and stable. Every other
+slot (`.row`/`.tile`/`.none`) is untouched — a plain sentence or a growing note
+still fills in char by char, which is the right feel for text.
+
+Cleanup review (reuse/simplification/efficiency/altitude, one pass since the
+diff was ~15 lines): three angles clean, no changes. One real gap found and
+accepted as an explicit, documented scope decision rather than silently left:
+`StorePreview.swift`'s static "Wallet" product-page preview streams a
+top-level `TagMap` under slot `.none` (no `genAgentAnswerContext`) and has the
+SAME jitter class, unfixed — noted inline at the gate and here rather than
+expanded into, since it's a one-time preview animation on a different surface
+than the daily-use one this was reported against, not the agent's own
+answers.
+
+VERIFIED 2026-07-23 (iPhone 17 Pro sim, pinned UDID): a temporary debug NSLog
+(removed before commit, confirmed absent via `strings` on the installed
+binary) counted the gate holding "hero" across 52 consecutive re-renders
+while its line streamed, each of which would previously have rendered
+partially-parsed treemap/chart data — then flipping once to real, stable
+content. Final render unchanged and correct (`$1.0M` hero, watchlist/up-next
+pair, "Nothing moved today"). Build green.

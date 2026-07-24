@@ -241,7 +241,17 @@ struct GenRender: View {
         // SIGSEGV ("excessive recursion") on first render of a new branch
         // combination, seen when pushing a project during onboarding demo.
         // Erasing at every nesting level keeps the type flat forever.
-        if let el = els[id] {
+        // A `.block` module holds its skeleton until its OWN line has fully
+        // arrived (§199, user: "the materializing i mean [is] a bit jittery")
+        // — everywhere else, a partial line still mounts immediately (the
+        // "props fill as tokens arrive" law), which is right for a component
+        // that's just growing text, not one deriving LAYOUT from its args.
+        // Scoped to `.block` (agent-answer-only) on purpose, so it's a known
+        // gap: `StorePreview`'s static "Wallet" doc streams a top-level
+        // `TagMap` under slot `.none` (no `genAgentAnswerContext`) and has the
+        // SAME jitter class, unfixed — a one-time product-page preview
+        // animation, not the daily-use surface this was reported against.
+        if let el = els[id], slot != .block || el.isComplete {
             AnyView(component(el))
         } else {
             switch slot {
@@ -520,7 +530,7 @@ private struct GenInsight: View {
                     let phase = (sin(t * 2 * .pi) + 1) / 2
                     (Text(el.str(0))
                      + Text(" ●")
-                        .font(.system(size: 9))
+                        .font(DSTextStyle.indicator9.scaledFont)
                         .foregroundStyle(DS.tint.opacity(0.3 + 0.7 * phase)))
                         .dsText(.callout15)
                         .foregroundStyle(DS.textPrimary)
@@ -2532,7 +2542,7 @@ private struct GenTxRow: View {
                     ZStack {
                         coin
                         Text(String(ticker.prefix(1)))
-                            .font(.system(size: 11, weight: .bold))
+                            .dsText(.badgeInitial11)
                             .foregroundStyle(.white)
                     }
                 }
