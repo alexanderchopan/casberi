@@ -7506,3 +7506,25 @@ VERIFIED 2026-07-23 (iPhone 17 Pro sim, pinned UDID): "What landed" renders
 entirely within its card — Stocktwits (39 things) as the big cell, GeckoTerminal
 (34) and RSS (5) stacked beside it, icons inline with their names, "and 21 more,
 elsewhere" beneath. Nothing crosses the card's edge. Build green.
+
+## 195. Module order is RANK, not arrival — "What landed" moves up behind the wallet (user: "what landed is more important than the one reading source and when it landed... it should be after the wallet", 2026-07-23) — VERIFIED
+
+§180 appended the source map last, simply because it was built last. That was
+the wrong rank and the user caught it: "What landed" is an orienting SUMMARY of
+the whole day — where everything came from, in one glance — while the Reading
+card beneath it is a single item and the hour strip is texture. A summary
+outranks both.
+
+New order: synthesis card, **wallet**, **what landed**, the glanceable pair
+(watchlist / up next), the leads (mention, reading), and the hour strip closing.
+
+The principle worth keeping, now recorded in the file's own doctrine comment:
+**the whole-day summaries lead, the single things follow, the texture closes.**
+Order in this screen is a claim about importance, so a module added later has
+to earn its position rather than inherit the bottom of the list — which is
+exactly the trap §180 fell into.
+
+VERIFIED 2026-07-23 (iPhone 17 Pro sim, pinned UDID): `-todayProbe` composed
+`root = Stack([mix, pair, read, hours])`, and the rendered screen reads What
+landed (RSS 10 / Gmail 4 / Calendar 6, "and 11 more, elsewhere") → Up next →
+Reading → When it landed. Build green.

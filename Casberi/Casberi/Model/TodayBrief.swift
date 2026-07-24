@@ -17,10 +17,16 @@ import SwiftData
 /// moving ("1 transaction"). Everything else names its subject.
 ///
 /// Layout is direction B2 (the mosaic): form encodes type — the fused money
-/// hero leads, paired tiles carry the two glanceable reads, wide cards carry
-/// things with words in them, and the hour strip closes. The synthesis card
-/// from direction B3 sits at the very top, and is the one module that may
-/// vanish entirely: it draws only observations that actually fired.
+/// hero leads, the source map answers "where did all this come from", paired
+/// tiles carry the two glanceable reads, wide cards carry things with words in
+/// them, and the hour strip closes. The synthesis card from direction B3 sits
+/// at the very top, and is the one module that may vanish entirely: it draws
+/// only observations that actually fired.
+///
+/// Order is RANK, not arrival (amended 2026-07-23): the two whole-day SUMMARIES
+/// lead — the wallet, then what landed — because they orient; the single things
+/// follow; and the texture (when it landed) closes. A module that summarizes
+/// the day outranks one that shows a single item from it.
 ///
 /// Deterministic throughout (docs/agent-brief.md ruling 1) — every line is
 /// template-composed from facts already held. No model, ever, on this path.
@@ -96,7 +102,19 @@ enum TodayBrief {
             lines.append(hero)
         }
 
-        // 3. The pair: what's moving, what's next.
+        // 3. What landed — the day's composition by source. Sits right behind
+        // the wallet (user ruling 2026-07-23: "what landed is more important
+        // than the one reading source and when it landed... it should be after
+        // the wallet"). It shipped LAST with §180 and that was the wrong rank:
+        // this is an orienting summary of the WHOLE day — where everything came
+        // from, in one glance — while the Reading card below is a single item
+        // and the hour strip is texture. A summary outranks both.
+        if let mix = sourceMix(landed) {
+            ids.append("mix")
+            lines.append(mix)
+        }
+
+        // 4. The pair: what's moving, what's next.
         var tiles: [String] = []
         if let movers = moversTile(moves) {
             tiles.append("tmov")
@@ -111,7 +129,7 @@ enum TodayBrief {
             lines.append("pair = TilePair([\(tiles.joined(separator: ", "))])")
         }
 
-        // 4. The leads — a thing in full, per shape that landed.
+        // 5. The leads — a thing in full, per shape that landed.
         if let mention = mentionCard(landed) {
             ids.append("men")
             lines += mention
@@ -121,18 +139,10 @@ enum TodayBrief {
             lines += reading
         }
 
-        // 5. When it all landed — the day's own shape.
+        // 6. When it all landed — the day's own shape, closing the screen.
         if let strip = hourStrip(landed, now: now) {
             ids.append("hours")
             lines.append(strip)
-        }
-
-        // 6. What landed — the day's composition by source, paired with the
-        // hour strip's WHEN (candidate A, 2026-07-23, user: "add A and B
-        // those are both good components to have").
-        if let mix = sourceMix(landed) {
-            ids.append("mix")
-            lines.append(mix)
         }
 
         // Nothing to draw at all — an honest empty day, not an empty screen.
