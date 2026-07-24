@@ -28,6 +28,14 @@ enum EmbeddingIndex {
         let body = thing.content.trimmingCharacters(in: .whitespacesAndNewlines)
         var parts = [thing.title]
         if !body.isEmpty, body != thing.title { parts.append(body) }
+        // The source's own abstract (2026-07-22) — a feed item's summary, a
+        // task's description. Ahead of `enrichedText` on purpose: it's the
+        // publisher's words rather than our scrape, so it's the better
+        // signal when a thing carries both.
+        if let abstract = thing.summary?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !abstract.isEmpty {
+            parts.append(abstract)
+        }
         if let extra = thing.enrichedText?.trimmingCharacters(in: .whitespacesAndNewlines),
            !extra.isEmpty {
             parts.append(extra)

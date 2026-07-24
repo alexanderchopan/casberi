@@ -221,6 +221,9 @@ enum RSSIngest {
                 // thumbnails, enclosures, and the first inline <img>; only
                 // PinterestIngest was using it (fixed 2026-07-10).
                 thing.previewImageURL = IngestSupport.imageURL(item.imageURL)
+                // The publisher's own abstract (2026-07-22) — display copy,
+                // so the sheet reads like a reader instead of a bare link.
+                if !item.summary.isEmpty { thing.summary = item.summary }
                 // The publisher's mark leads the row (like a post's author
                 // avatar) — the article image, when there is one, rides after
                 // the title instead of the leading slot — and its NAME rides
@@ -342,6 +345,10 @@ enum FeedParser {
         /// the first <img> in the description) — used for the Pinterest row
         /// thumbnail. Empty when the feed has no image.
         var imageURL = ""
+        /// The item's own abstract, tags stripped (2026-07-22) — the words a
+        /// feed reader shows under the headline. Empty when the feed carries
+        /// none (or carries only markup, e.g. an image-only Pinterest item).
+        var summary = ""
     }
 
     struct Parsed {
@@ -473,12 +480,48 @@ enum FeedParser {
                    !Self.looksLikeTracker(src) {
                     current?.imageURL = Self.normalizeImage(src)
                 }
+                // …and keep the WORDS too (2026-07-22). Until now this blob
+                // was mined for an image and thrown away, so every RSS,
+                // Reddit, YouTube, Substack, and Podcast thing landed with no
+                // body at all — its sheet re-fetched a link preview to show
+                // what the feed had already handed us. Publisher-authored, so
+                // it's display copy (`Thing.summary`), not `enrichedText`.
+                //
+                // Keep the LONGEST candidate: a feed often carries both a
+                // short `<description>` and a full `<content:encoded>`, in
+                // either order, and the fuller one is the better read.
+                if let text = Self.plainText(fromFeedHTML: value),
+                   text.count > (current?.summary.count ?? 0) {
+                    current?.summary = text
+                }
             case "item", "entry":
                 if let item = current { result.items.append(item) }
                 current = nil
             default:
                 break
             }
+        }
+
+        /// Feed HTML → readable prose, or nil when nothing legible survives.
+        /// Strips tags (a feed's summary is usually a wrapped `<p>`, and a
+        /// full `content:encoded` is a whole article's markup), decodes the
+        /// entities that leaves behind, and collapses the whitespace the tags
+        /// stood in for. Clamped to 600 characters: this is an abstract under
+        /// a headline, not an offline copy of the article — and the sheet
+        /// still offers the real link.
+        static func plainText(fromFeedHTML html: String) -> String? {
+            var s = html.replacingOccurrences(of: "<[^>]+>", with: " ",
+                                              options: .regularExpression)
+            s = IngestSupport.decodeHTMLEntities(s)
+            s = s.replacingOccurrences(of: "\\s+", with: " ",
+                                       options: .regularExpression)
+            s = s.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard s.count >= 20 else { return nil }   // markup scraps, not prose
+            guard s.count > 600 else { return s }
+            // Cut on a word boundary so the clamp doesn't split a word.
+            let cut = s.prefix(600)
+            let end = cut.lastIndex(of: " ").map { cut[..<$0] } ?? cut
+            return String(end) + "…"
         }
 
         /// First `<img src>` in a blob of feed HTML, or nil. Compiled once.

@@ -322,6 +322,20 @@ final class Thing {
     /// until an enrichment pass reaches the thing.
     var enrichedText: String? = nil
 
+    /// The SOURCE's own abstract, display-safe (2026-07-22) — an RSS/Atom
+    /// item's `<summary>`, a Todoist task's description, a Linear issue's
+    /// description, a Raindrop excerpt, a Readwise note. Deliberately NOT
+    /// `enrichedText`: that field is text WE extracted by scraping, which is
+    /// why it is retrieval-only by ruling (2026-07-15) and why
+    /// `GitHubReleaseContent` re-fetches live rather than render it. This is
+    /// text the source AUTHORED and handed us in its own payload — the thing a
+    /// feed reader shows under the headline — so it is first-class display
+    /// copy. `content` still holds the thing's own bytes (a link's URL), so
+    /// open/route logic is untouched. Feeds retrieval too, via
+    /// `EmbeddingIndex.indexText`. Optional + default nil: purely additive, so
+    /// SwiftData infers it and no migration stage is needed.
+    var summary: String? = nil
+
     /// A reminder's own due date, structured (2026-07-14) — the deadline the
     /// "Coming up" lane sorts on. A reminder's `capturedAt` is its CREATION
     /// time, so its deadline can't ride that field; events carry their deadline

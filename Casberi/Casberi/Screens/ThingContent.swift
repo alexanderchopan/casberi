@@ -37,6 +37,35 @@ struct ThingContentView: View {
     }
 
     var body: some View {
+        // The kind's own media, then the source's own words (2026-07-22).
+        // spacing 0 — every branch below already pads its own bottom, and the
+        // summary block pads its own top.
+        VStack(alignment: .leading, spacing: 0) {
+            kindContent
+            summaryBlock
+        }
+    }
+
+    /// The source's own abstract — a feed item's summary, a task's notes, a
+    /// Linear issue's body, the rest of a clamped Readwise highlight. Follows
+    /// the media, the way a screenshot's caption follows its image. Skipped
+    /// when it would only repeat what's already on screen.
+    @ViewBuilder private var summaryBlock: some View {
+        let text = (thing.summary ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        let dupe = text == thing.title.trimmingCharacters(in: .whitespacesAndNewlines)
+            || text == thing.content.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !text.isEmpty, !dupe {
+            Text(text)
+                .dsText(.callout15)
+                .foregroundStyle(DS.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, DS.Space.s4)
+                .padding(.bottom, DS.Space.s3)
+        }
+    }
+
+    @ViewBuilder private var kindContent: some View {
         switch thing.kind {
         case .screenshot:
             ScreenshotContent(assetID: thing.sourceRef)

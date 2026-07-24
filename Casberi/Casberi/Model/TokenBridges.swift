@@ -265,6 +265,18 @@ enum TokenIngest {
                     sourceRef: "readwise:\(id)"
                 )
                 thing.previewImageURL = cover
+                // The WHOLE highlight, and your own note on it (2026-07-22).
+                // `title` is `titleLine`'s 80-character clamp, so until now a
+                // long highlight was truncated at ingest and the rest was
+                // simply lost — the one thing a highlight archive exists to
+                // keep. Only carried when the clamp actually cut something.
+                let full = text.trimmingCharacters(in: .whitespacesAndNewlines)
+                let note = (h["note"] as? String)?
+                    .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+                var parts: [String] = []
+                if full.count > thing.title.count { parts.append(full) }
+                if !note.isEmpty { parts.append(note) }
+                if !parts.isEmpty { thing.summary = parts.joined(separator: "\n\n") }
                 all.append((when, thing))
             }
         }
@@ -297,7 +309,7 @@ enum TokenIngest {
             guard let id = task["id"] as? String,
                   let content = task["content"] as? String, !content.isEmpty
             else { return nil }
-            return Thing(
+            let thing = Thing(
                 kind: .reminder,
                 title: content,
                 content: "https://app.todoist.com/app/task/\(id)",
@@ -305,6 +317,22 @@ enum TokenIngest {
                 capturedAt: IngestSupport.isoDate(task["added_at"] ?? task["created_at"]) ?? .now,
                 sourceRef: "todoist:\(id)"
             )
+            // The DEADLINE (2026-07-22). A Todoist task landed as a `.reminder`
+            // but never carried its due date, so every feature that reads
+            // `dueAt` skipped Todoist in silence: the overdue kept-ask, Coming
+            // up, the Today brief's open items, the sheet's due row, and the
+            // real date on "Add to Reminders". `datetime` when the task is
+            // timed, else the all-day `date`; a task with no due date stays
+            // honestly nil.
+            let due = task["due"] as? [String: Any]
+            thing.dueAt = IngestSupport.isoDate(due?["datetime"])
+                ?? (due?["date"] as? String).flatMap(Self.allDayDate)
+            // The task's own notes — publisher-authored, so display copy.
+            if let notes = (task["description"] as? String)?
+                .trimmingCharacters(in: .whitespacesAndNewlines), !notes.isEmpty {
+                thing.summary = notes
+            }
+            return thing
         }
     }
 
@@ -319,14 +347,25 @@ enum TokenIngest {
             guard let uid = booking["uid"] as? String,
                   let title = booking["title"] as? String,
                   (booking["status"] as? String) != "cancelled" else { return nil }
-            return Thing(
+            let thing = Thing(
                 kind: .event,
                 title: title,
                 content: "https://app.cal.com/booking/\(uid)",
                 source: "Cal.com",
+                // The START rides capturedAt — an event's deadline IS its
+                // capture time by the `dueAt` convention, so `dueAt` stays
+                // nil here on purpose (unlike a Todoist reminder, whose
+                // capturedAt is its creation time).
                 capturedAt: IngestSupport.isoDate(booking["start"]) ?? .now,
                 sourceRef: "calcom:\(uid)"
             )
+            // What the booking is actually about (2026-07-22) — the sheet
+            // otherwise had only the URL to show.
+            if let notes = (booking["description"] as? String)?
+                .trimmingCharacters(in: .whitespacesAndNewlines), !notes.isEmpty {
+                thing.summary = notes
+            }
+            return thing
         }
     }
 
@@ -384,7 +423,7 @@ enum TokenIngest {
                 break
             }
             guard !title.isEmpty else { return nil }
-            return Thing(
+            let thing = Thing(
                 kind: .note,
                 title: title,
                 content: url,
@@ -392,6 +431,15 @@ enum TokenIngest {
                 capturedAt: IngestSupport.isoDate(page["last_edited_time"]) ?? .now,
                 sourceRef: "notion:\(id)"
             )
+            // The page's cover art (2026-07-22) — external or Notion-hosted;
+            // a Notion-hosted file URL is signed and expires, but the
+            // ArtlessBackfill patch re-reads it on each sync, the same way
+            // every other hosted-image bridge stays fresh.
+            let cover = page["cover"] as? [String: Any]
+            thing.previewImageURL = IngestSupport.imageURL(
+                ((cover?["external"] as? [String: Any])?["url"] as? String)
+                    ?? ((cover?["file"] as? [String: Any])?["url"] as? String))
+            return thing
         }
     }
 
@@ -404,9 +452,15 @@ enum TokenIngest {
         // `type` not `name`: names are per-team and user-renameable ("In
         // Review", "Shipping"), the type enum is Linear's own fixed
         // vocabulary, so the mapping can't drift with someone's workflow.
+        // `description` (the issue body) and `dueDate` ride along too
+        // (2026-07-22) — a Linear URL needs auth, so the sheet's link preview
+        // resolves to nothing and the body was all it could have shown. Field
+        // names confirmed against the live schema by introspection, same trick
+        // that caught `duplicate` below.
         let query = """
         { viewer { assignedIssues(first: 30, orderBy: updatedAt) \
-        { nodes { id identifier title url updatedAt state { type } } } } }
+        { nodes { id identifier title url updatedAt dueDate description \
+        state { type } } } } }
         """
         guard let root = await IngestSupport.postJSON("https://api.linear.app/graphql",
                                     auth: token,
@@ -429,9 +483,35 @@ enum TokenIngest {
                 sourceRef: "linear:\(id)"
             )
             thing.mark = linearMark((node["state"] as? [String: Any])?["type"] as? String)
+            // A Linear issue IS a task with a deadline, and unlike an event
+            // its capturedAt is `updatedAt` — so the deadline needs its own
+            // field, same as a Todoist task. `dueDate` is an all-day
+            // calendar day.
+            thing.dueAt = (node["dueDate"] as? String).flatMap(Self.allDayDate)
+            if let body = (node["description"] as? String)?
+                .trimmingCharacters(in: .whitespacesAndNewlines), !body.isEmpty {
+                thing.summary = body
+            }
             return thing
         }
     }
+
+    /// An all-day date ("2026-07-25") → noon local. `IngestSupport.isoDate`
+    /// parses full timestamps only, and these fields carry a bare calendar
+    /// day (Todoist's `due.date`, Linear's `dueDate`). NOON, not midnight:
+    /// midnight local is the previous day in a westward timezone, which would
+    /// make an all-day task read as overdue a day early.
+    private static func allDayDate(_ s: String) -> Date? {
+        guard let day = allDayFormatter.date(from: s) else { return nil }
+        return Calendar.current.date(bySettingHour: 12, minute: 0, second: 0, of: day) ?? day
+    }
+    private static let allDayFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.calendar = Calendar(identifier: .gregorian)
+        f.locale = Locale(identifier: "en_US_POSIX")   // never the user's calendar
+        f.dateFormat = "yyyy-MM-dd"
+        return f
+    }()
 
     /// Linear's own state vocabulary → the corpus's mark. An unknown type
     /// (Linear adding one, or the field absent on an older sync) stays
@@ -497,6 +577,14 @@ enum TokenIngest {
             )
             // Raindrop's cover is the bookmark's og:image — the pin pattern.
             thing.previewImageURL = IngestSupport.imageURL(item["cover"] as? String)
+            // The bookmark's excerpt — Raindrop's own description of the page,
+            // plus whatever note you left on it (2026-07-22).
+            let excerpt = (item["excerpt"] as? String)?
+                .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            let note = (item["note"] as? String)?
+                .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            let both = [note, excerpt].filter { !$0.isEmpty }.joined(separator: "\n\n")
+            if !both.isEmpty { thing.summary = both }
             return thing
         }
     }

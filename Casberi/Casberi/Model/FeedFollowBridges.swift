@@ -450,6 +450,10 @@ enum FeedFollowIngest {
                     sourceRef: ref
                 )
                 thing.previewImageURL = IngestSupport.imageURL(item.imageURL)
+                // Reddit's selftext, a YouTube description, a Substack lede, a
+                // podcast's show notes — all ride the same feed `<summary>`
+                // the parser now keeps (2026-07-22).
+                if !item.summary.isEmpty { thing.summary = item.summary }
                 if !feedName.isEmpty { thing.authorHandle = feedName }
                 context.insert(thing)
                 existing.insert(ref)
