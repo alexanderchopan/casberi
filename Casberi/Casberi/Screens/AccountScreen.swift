@@ -158,7 +158,7 @@ struct SettingsScreen: View {
                     value: keyedAgent.map {
                        String.localizedStringWithFormat(
                            String(localized: "%@ answers on tap"), $0.agent)
-                    } ?? String(localized: "Claude, ChatGPT, Gemini, or Venice"),
+                    } ?? String(localized: "Claude, ChatGPT, Gemini, Venice, Bankr, or OpenRouter"),
                     valueColor: keyed ? DS.confirm : DS.textTertiary,
                     badge: ("key.fill", keyed ? DS.confirm : DS.textSecondary),
                     action: { detail = .key }),
