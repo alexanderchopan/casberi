@@ -701,16 +701,14 @@ struct WalletWorthALookTray: View {
     private var delegations: [WalletWarning] { warnings.filter { $0.kind == .delegation } }
     private var safeSignatures: [WalletWarning] { warnings.filter { $0.kind == .safe } }
 
-    /// The type-sections inside "Worth doing", each dropped when empty.
-    private var actionableSectionIDs: [String] {
-        var ids: [String] = []
-        if !liquidation.isEmpty { ids.append("position") }
-        if !activeApprovals.isEmpty { ids.append("approvals") }
-        if !delegations.isEmpty { ids.append("delegations") }
-        if !safeSignatures.isEmpty { ids.append("safe") }
-        return ids
+    /// "Worth doing" is a FLAT list now (2026-07-24) — no Position
+    /// risk/Approvals/Delegations/Safe sub-headers underneath it. Each row
+    /// carries its own icon and states its own whole fact, matching the
+    /// approved mockup; the one shared "Worth doing" header above is doing
+    /// all the grouping these four kinds need.
+    private var hasActionable: Bool {
+        !liquidation.isEmpty || !activeApprovals.isEmpty || !delegations.isEmpty || !safeSignatures.isEmpty
     }
-    private var hasActionable: Bool { !actionableSectionIDs.isEmpty }
     private var actionableRowCount: Int {
         liquidation.count + activeApprovals.count + delegations.count + safeSignatures.count
     }
@@ -728,7 +726,12 @@ struct WalletWorthALookTray: View {
 
     /// The tray's own ceiling — past this the content scrolls.
     private static let maxTrayHeight: CGFloat = 620
-    /// One-line row now (2026-07-23) — no subtitle, no leading glyph.
+    /// A "Worth doing" row now carries an icon, a wrapping title, and a
+    /// subtitle line (2026-07-24, matching the mockup) — taller than the
+    /// bare one-line rows the aware pile still uses.
+    private static let actionRowHeight: CGFloat = 66
+    /// The aware pile's expanded rows stay bare one-liners — spam doesn't
+    /// need the same per-row weight the actionable rows earn.
     private static let rowHeight: CGFloat = 46
     /// A section header carries a glyph, a count, and its own one-line
     /// explainer beneath, so it's taller than a bare row.
@@ -743,8 +746,7 @@ struct WalletWorthALookTray: View {
         var h: CGFloat = 150
         if hasActionable {
             h += 46 // the "Worth doing" group label + its explainer line
-            h += CGFloat(actionableRowCount) * Self.rowHeight
-                + CGFloat(actionableSectionIDs.count) * Self.headerHeight
+            h += CGFloat(actionableRowCount) * Self.actionRowHeight
         }
         if !flagged.isEmpty {
             h += 30 + Self.headerHeight // the "Just so you know" label + the boxed summary row
@@ -801,43 +803,24 @@ struct WalletWorthALookTray: View {
                                             .dsText(.subhead13).foregroundStyle(DS.textSecondary)
                                     }
                                     .padding(.horizontal, 3)
+                                    // A flat list now (2026-07-24, matching
+                                    // the approved mockup) — no Position
+                                    // risk/Approvals/Delegations/Safe
+                                    // sub-headers; each row states its own
+                                    // whole fact and carries its own icon
+                                    // and, where one exists, its own
+                                    // Revoke.cash button.
                                     if !liquidation.isEmpty {
-                                        section(id: "position", title: String(localized: "Position risk"),
-                                               symbol: "chart.line.downtrend.xyaxis", critical: true,
-                                               count: liquidation.count,
-                                               explainer: String(localized: "Could be liquidated if prices move against you."),
-                                               bulkAction: nil) {
-                                            ForEach(liquidation) { inertRow($0) }
-                                        }
+                                        ForEach(liquidation) { liquidationRow($0) }
                                     }
                                     if !activeApprovals.isEmpty {
-                                        let bulk = bulkRevoke(addresses: activeApprovals.map(\.walletAddress))
-                                        section(id: "approvals", title: String(localized: "Approvals"),
-                                               symbol: "key.fill", critical: false,
-                                               count: activeApprovals.count,
-                                               explainer: String(localized: "Contracts you've allowed to move tokens from your wallet."),
-                                               bulkAction: bulk) {
-                                            ForEach(activeApprovals) { approvalRow($0, showsOwnLink: bulk == nil) }
-                                        }
+                                        ForEach(activeApprovals) { approvalActionRow($0) }
                                     }
                                     if !delegations.isEmpty {
-                                        let bulk = bulkRevoke(addresses: delegations.map(\.address))
-                                        section(id: "delegations", title: String(localized: "Delegations"),
-                                               symbol: "arrow.triangle.branch", critical: false,
-                                               count: delegations.count,
-                                               explainer: String(localized: "Voting power you've handed to another address."),
-                                               bulkAction: bulk) {
-                                            ForEach(delegations) { delegationRow($0, showsOwnLink: bulk == nil) }
-                                        }
+                                        ForEach(delegations) { delegationRow($0) }
                                     }
                                     if !safeSignatures.isEmpty {
-                                        section(id: "safe", title: String(localized: "Safe signatures"),
-                                               symbol: "signature", critical: false,
-                                               count: safeSignatures.count,
-                                               explainer: String(localized: "Waiting for you to sign in the Safe app."),
-                                               bulkAction: nil) {
-                                            ForEach(safeSignatures) { inertRow($0) }
-                                        }
+                                        ForEach(safeSignatures) { safeRow($0) }
                                     }
                                 }
                                 .id("act")
@@ -938,84 +921,6 @@ struct WalletWorthALookTray: View {
         .buttonStyle(.plain)
     }
 
-    // MARK: - Section shell (Worth doing's type-sections)
-
-    @ViewBuilder
-    private func section<Rows: View>(id: String, title: String, symbol: String, critical: Bool,
-                                     count: Int, explainer: String,
-                                     bulkAction: (label: String, url: URL)?,
-                                     @ViewBuilder rows: () -> Rows) -> some View {
-        VStack(alignment: .leading, spacing: DS.Space.s2) {
-            HStack(spacing: DS.Space.s2) {
-                Image(systemName: symbol)
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(critical ? DS.destructive : DS.attention)
-                    .frame(width: 28, height: 28)
-                    .background(
-                        RoundedRectangle(cornerRadius: DS.Radius.control, style: .continuous)
-                            .fill((critical ? DS.destructive : DS.attention).opacity(0.16)))
-                // The count rides the header now (2026-07-23), not the rows —
-                // the rows are one line each and carry only what DIFFERS
-                // between them; the shared count and the shared "why" live
-                // up here so a dozen flagged transfers stop repeating one
-                // sentence a dozen times.
-                VStack(alignment: .leading, spacing: 1) {
-                    HStack(spacing: DS.Space.s2) {
-                        Text(title).dsText(.callout15).foregroundStyle(DS.textPrimary)
-                        Text("\(count)")
-                            .dsText(.label12).foregroundStyle(DS.textSecondary)
-                            .monospacedDigit()
-                            .padding(.horizontal, 7).padding(.vertical, 2)
-                            .background(Capsule().fill(DS.surfaceWell))
-                    }
-                    Text(explainer)
-                        .dsText(.subhead13).foregroundStyle(DS.textSecondary)
-                        .lineLimit(1).minimumScaleFactor(0.85)
-                }
-                Spacer(minLength: 0)
-                if let bulkAction {
-                    Button {
-                        DSHaptic.selection()
-                        openURL(bulkAction.url)
-                    } label: {
-                        HStack(spacing: 3) {
-                            Text(bulkAction.label)
-                            Image(systemName: "arrow.up.right")
-                                .font(.system(size: 10, weight: .semibold))
-                        }
-                        .dsText(.subhead13).foregroundStyle(DS.tint)
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-            .padding(.horizontal, 3)
-            // Bare, not boxed (prd §173: lists are air, parcels are for the
-            // reads) — these rows are a content stream you scroll and
-            // consume, the same category feed rows and catalog shelves
-            // already shed their cards from; the header above is doing the
-            // grouping, same as a day header, so a card underneath it would
-            // be a second container saying the same thing twice.
-            VStack(spacing: 0) { rows() }
-        }
-        .id(id)
-    }
-
-    /// A single bulk Revoke.cash link when every address in the section
-    /// agrees — nil the moment two wallets are mixed in, since one link can
-    /// only ever point at one wallet's page (review, 2026-07-23: the mock
-    /// this shipped from drew one header link unconditionally, which would
-    /// have quietly hidden a second wallet's approvals behind a URL that
-    /// never mentions it).
-    private func bulkRevoke(addresses: [String?]) -> (label: String, url: URL)? {
-        let known = addresses.compactMap { $0 }
-        guard known.count == addresses.count, let first = known.first,
-              known.allSatisfy({ WalletWatch.sameAddress($0, first) }),
-              WalletApprovals.canServe(first),
-              let url = URL(string: WalletApprovals.revokeURL(address: first))
-        else { return nil }
-        return (String(localized: "Revoke.cash"), url)
-    }
-
     // MARK: - Just so you know (the aware pile, collapsed + mutable)
 
     /// The awareness section — one collapsed line by default, count-led
@@ -1092,101 +997,123 @@ struct WalletWorthALookTray: View {
         .id("aware")
     }
 
-    // MARK: - Rows
+    // MARK: - "Worth doing" rows
 
-    /// What sits at a row's trailing edge — the only thing that varies
-    /// between the four row kinds now that everything else is one shared
-    /// one-line shape (2026-07-23). No leading glyph on any of them: the
-    /// section header carries the one glyph for the whole kind, so twelve
-    /// flagged transfers stop stamping the same mark twelve times.
-    private enum RowTrailing {
-        case none
-        case detail(String)   // a distinct spec (a health factor), muted
-        case revoke           // "Revoke.cash ↗"
-        case chevron          // opens the thing sheet
+    /// The shared shape every actionable row wears (2026-07-24, matching the
+    /// approved mockup): a leading icon square colored by urgency (red only
+    /// for a live liquidation, orange for everything else actionable), a
+    /// title that WRAPS — no `lineLimit`, unlike the aware pile's bare rows
+    /// below — since "Uniswap can spend unlimited USDC" is worth reading in
+    /// full, not clipped, and an optional subtitle stating the one spec that
+    /// differs (a chain, a health factor). A Revoke.cash grant, when one
+    /// exists, is its own tappable pill on the trailing edge — the row
+    /// itself carries no dead tap target when there's nothing to open
+    /// (liquidation and Safe rows: acting happens on Aave or in the Safe
+    /// app, never in here).
+    private func actionRow(icon: String, hot: Bool, title: String, subtitle: String?,
+                           revokeURL: URL?) -> some View {
+        HStack(alignment: .top, spacing: DS.Space.s3) {
+            Image(systemName: icon)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(hot ? DS.destructive : DS.attention)
+                .frame(width: 28, height: 28)
+                .background(
+                    RoundedRectangle(cornerRadius: DS.Radius.control, style: .continuous)
+                        .fill((hot ? DS.destructive : DS.attention).opacity(0.16)))
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title).dsText(.body17).foregroundStyle(DS.textPrimary)
+                    .fixedSize(horizontal: false, vertical: true)
+                if let subtitle {
+                    Text(subtitle).dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                        .lineLimit(1)
+                }
+            }
+            Spacer(minLength: DS.Space.s2)
+            if let revokeURL {
+                Button {
+                    DSHaptic.selection()
+                    openURL(revokeURL)
+                } label: {
+                    HStack(spacing: 3) {
+                        Text("Revoke")
+                        Image(systemName: "arrow.up.right")
+                            .font(.system(size: 9, weight: .bold))
+                    }
+                    .dsText(.subhead13).fontWeight(.semibold)
+                    .foregroundStyle(DS.tint)
+                    .padding(.horizontal, DS.Space.s3).padding(.vertical, 7)
+                    .background(Capsule().fill(DS.tint.opacity(0.16)))
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(.vertical, DS.Space.s2)
     }
 
-    /// Every row is this one shape: a single title line carrying only what
-    /// DIFFERS between rows (an amount, a wallet, a spender), and one
-    /// trailing element. The shared "why" that used to repeat on every
-    /// subtitle now lives once in the section header's explainer.
-    @ViewBuilder
-    private func row(_ primary: String, trailing: RowTrailing, tap: (() -> Void)?) -> some View {
-        let content = HStack(spacing: DS.Space.s3) {
-            Text(primary).dsText(.body17).foregroundStyle(DS.textPrimary)
-                .lineLimit(1).truncationMode(.tail)
-            Spacer(minLength: DS.Space.s2)
-            switch trailing {
-            case .none:
-                EmptyView()
-            case .detail(let text):
-                Text(text).dsText(.subhead13).foregroundStyle(DS.textSecondary)
-                    .lineLimit(1).monospacedDigit()
-            case .revoke:
-                HStack(spacing: 3) {
-                    Text("Revoke.cash").dsText(.subhead13).foregroundStyle(DS.textSecondary)
-                    Image(systemName: "arrow.up.right")
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(DS.textTertiary)
-                }
-            case .chevron:
+    private func liquidationRow(_ w: WalletWarning) -> some View {
+        actionRow(icon: "chart.line.downtrend.xyaxis", hot: true, title: w.title, subtitle: w.subtitle, revokeURL: nil)
+    }
+
+    /// An approval thing already carries its own Revoke.cash page as
+    /// `content` (`WalletApprovals`' own field); its chain (not otherwise
+    /// tracked as a dedicated field) is read back out of `sourceRef`.
+    private func approvalActionRow(_ thing: Thing) -> some View {
+        actionRow(icon: "key.fill", hot: false, title: thing.title,
+                 subtitle: approvalChain(thing), revokeURL: URL(string: thing.content))
+    }
+
+    /// The title already states the whole fact ("X delegates to Y on
+    /// Ethereum") — no subtitle, since the model's `subtitle` field just
+    /// repeats the delegate target the title already names in full.
+    private func delegationRow(_ w: WalletWarning) -> some View {
+        let url = w.address.flatMap { address -> URL? in
+            guard WalletApprovals.canServe(address) else { return nil }
+            return URL(string: WalletApprovals.revokeURL(address: address))
+        }
+        return actionRow(icon: "arrow.triangle.branch", hot: false, title: w.title, subtitle: nil, revokeURL: url)
+    }
+
+    private func safeRow(_ w: WalletWarning) -> some View {
+        actionRow(icon: "signature", hot: false, title: w.title,
+                 subtitle: String(localized: "Sign in the Safe app"), revokeURL: nil)
+    }
+
+    /// Pulls the chain an approval landed on out of its `sourceRef`
+    /// ("wallet:approval:<network>:…" / "wallet:permit2:<network>:…", set by
+    /// `WalletApprovals`) — the one per-row spec the mockup shows that
+    /// isn't already a dedicated `Thing` field.
+    private func approvalChain(_ thing: Thing) -> String? {
+        guard let ref = thing.sourceRef else { return nil }
+        let parts = ref.split(separator: ":")
+        guard parts.count > 2 else { return nil }
+        let network = String(parts[2])
+        return WalletIngest.displayName(forNetwork: network) ?? network.capitalized
+    }
+
+    // MARK: - Aware-pile rows (bare, one line — spam doesn't earn more)
+
+    /// A flagged transfer — its title (the amount, wearing the confusable
+    /// symbol as its own tell) is the differentiator; WHY it's flagged is the
+    /// aware pile's own explainer's job, not a repeated subtitle. Taps into
+    /// its sheet, which still states the specific poisoning/spoof verdict.
+    private func flaggedRow(_ thing: Thing) -> some View {
+        Button {
+            DSHaptic.selection()
+            path.append(thing)
+        } label: {
+            HStack(spacing: DS.Space.s3) {
+                Text(thing.title).dsText(.body17).foregroundStyle(DS.textPrimary)
+                    .lineLimit(1).truncationMode(.tail)
+                Spacer(minLength: DS.Space.s2)
                 Image(systemName: "chevron.right")
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundStyle(DS.textTertiary)
             }
+            .frame(height: Self.rowHeight)
+            .padding(.horizontal, 3)
+            .contentShape(Rectangle())
         }
-        .frame(height: Self.rowHeight)
-        .padding(.horizontal, 3)
-        .contentShape(Rectangle())
-        if let tap {
-            Button { tap() } label: { content }.buttonStyle(.plain)
-        } else {
-            content
-        }
-    }
-
-    /// Position-risk and Safe rows: the whole in-app read, no control —
-    /// acting on Aave happens on Aave, signing happens in the Safe app. The
-    /// subtitle (a health factor, a chain) is the one distinct spec, so it
-    /// rides the trailing edge instead of a dropped second line.
-    private func inertRow(_ w: WalletWarning) -> some View {
-        row(w.title, trailing: w.subtitle.map(RowTrailing.detail) ?? .none, tap: nil)
-    }
-
-    /// `showsOwnLink` is false whenever the section header already carries a
-    /// bulk Revoke.cash link covering this row's wallet — otherwise every
-    /// row in a same-wallet section repeats the link the header just showed.
-    /// The row stays tappable when a link exists; only the trailing element
-    /// (and the disabled dead-tap case) change.
-    private func delegationRow(_ w: WalletWarning, showsOwnLink: Bool) -> some View {
-        let action = w.address.flatMap { address -> URL? in
-            guard WalletApprovals.canServe(address) else { return nil }
-            return URL(string: WalletApprovals.revokeURL(address: address))
-        }
-        return row(w.title,
-                   trailing: (action != nil && showsOwnLink) ? .revoke : .none,
-                   tap: action.map { url in { DSHaptic.selection(); openURL(url) } })
-    }
-
-    /// An approval thing already carries its own Revoke.cash page as
-    /// `content` (`WalletApprovals`' own field). `showsOwnLink` is the same
-    /// header-already-covers-it suppression `delegationRow` uses.
-    private func approvalRow(_ thing: Thing, showsOwnLink: Bool) -> some View {
-        let action = URL(string: thing.content)
-        return row(thing.title,
-                   trailing: (action != nil && showsOwnLink) ? .revoke : .none,
-                   tap: action.map { url in { DSHaptic.selection(); openURL(url) } })
-    }
-
-    /// A flagged transfer — its title (the amount, wearing the confusable
-    /// symbol as its own tell) is the differentiator; WHY it's flagged is the
-    /// section explainer's job now, not a repeated subtitle. Taps into its
-    /// sheet, which still states the specific poisoning/spoof verdict.
-    private func flaggedRow(_ thing: Thing) -> some View {
-        row(thing.title, trailing: .chevron) {
-            DSHaptic.selection()
-            path.append(thing)
-        }
+        .buttonStyle(.plain)
     }
 }
 
