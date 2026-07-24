@@ -142,6 +142,15 @@ struct SettingsScreen: View {
                         DSHaptic.tap()
                         withAnimation(DS.Motion.standard) { ThemeStore.shared.isLight.toggle() }
                     }),
+            // The crown pour's color (prd §204) — five curated, Casberi blue
+            // by default. The badge wears the CHOSEN color itself (not a
+            // fixed secondary gray like Theme's sun/moon), so the row
+            // previews its own setting the way Data's icloud badge previews
+            // sync state.
+            RowSpec(title: "Color",
+                    value: ThemeStore.shared.bleed.name,
+                    badge: ("paintbrush.pointed.fill", DS.bleed),
+                    action: { detail = .color }),
             // The app's own language — an override that switches Casberi live,
             // on top of the device language (LanguageStore). One tap opens the
             // tray; the trailing fact states the language in force.

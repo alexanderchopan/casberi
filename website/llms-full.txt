@@ -28,7 +28,7 @@ Last updated: July 24, 2026
 
 ### Make it yours
 
-- Make it yours — Set your avatar, theme, language, and data preferences.
+- Make it yours — Set your avatar, your color, language, and data preferences.
 
 ## About — what Casberi is, and why
 
@@ -162,7 +162,7 @@ You can also paste something to save it, or tap the mic and talk.
 
 #### Settings
 
-Behind your avatar, one A–Z list: your photo, your data (all on your phone — export or delete anytime), diagnostics, how it works, language, light or dark, and your key. No account, no sign-in — there was never anything to sign up for.
+Behind your avatar, one A–Z list: your photo, the color that washes the top of every screen (five to choose from), your data (all on your phone — export or delete anytime), diagnostics, how it works, language, light or dark, and your key. No account, no sign-in — there was never anything to sign up for.
 
 Your key is the one door out. Answers are written on your phone by default. Save your own key — Claude, ChatGPT, Gemini, Venice, Bankr, or OpenRouter — and every answer offers "Try with your key": the question and the few matched things go from your phone straight to that provider, only when you tap, billed to your key. The key lives in the Keychain. There is no Casberi server in between.
 

@@ -336,19 +336,29 @@
   });
 })();
 
-// Make-it-yours live card: the Avatar card cycles through cartoon faces
-// (mixed styles) — the setting, demonstrating itself. The Background card it
-// used to drive alongside is gone (the picker was retired in-app 2026-07-06;
-// appearance is one knob, light or dark).
+// Make-it-yours live cards: the Avatar card cycles through cartoon faces
+// (mixed styles); the Color card cycles the five real crown-pour colors
+// (prd §204) — the same swatches the in-app picker offers, not a color well
+// and not a photo (that picker was retired in-app 2026-07-06 and stays dead).
 (function liveCards() {
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
   var faces = Array.prototype.slice.call(document.querySelectorAll('.avatar-stack img'));
-  if (!faces.length) return;
-  var fi = 0;
+  var fill = document.querySelector('.pour-cycle .pour-fill');
+  if (!faces.length && !fill) return;
+  // Each pair is one of the five ThemeStore.bleeds, top stop to a darkened
+  // stop — Blue, Teal, Violet, Magenta, Slate, in that order.
+  var pours = ["linear-gradient(160deg, #1673e6, #0c3f7f)", "linear-gradient(160deg, #40c7c2, #236d6b)", "linear-gradient(160deg, #8c40c7, #4d236d)", "linear-gradient(160deg, #c74095, #6d2352)", "linear-gradient(160deg, #7b8a9e, #444c57)"];
+  var fi = 0, pi = 0;
   setInterval(function () {
-    faces[fi].classList.remove('on');
-    fi = (fi + 1) % faces.length;
-    faces[fi].classList.add('on');
+    if (faces.length) {
+      faces[fi].classList.remove('on');
+      fi = (fi + 1) % faces.length;
+      faces[fi].classList.add('on');
+    }
+    if (fill) {
+      pi = (pi + 1) % pours.length;
+      fill.style.background = pours[pi];
+    }
   }, 2400);
 })();
 
