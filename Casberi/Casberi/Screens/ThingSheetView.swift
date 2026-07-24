@@ -604,7 +604,6 @@ struct ThingSheetView: View {
                let cp = thing.counterpartyAddress, !cp.isEmpty {
                 counterpartyRow(cp)
             }
-            tagsRow
         }
         // One quiet card (2026-07-13 polish): the bare rows floated in the
         // sheet's field; the same faint fill the link preview wears gathers
@@ -654,31 +653,6 @@ struct ThingSheetView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-    }
-
-    /// Tags as a text line — read-only provenance (prd §178: the app assigns,
-    /// clusters get named in project detail; nothing here asks you to file).
-    /// Your own tags wear their hue; type tags stay quiet.
-    private var tagsRow: some View {
-        HStack(alignment: .firstTextBaseline, spacing: 0) {
-            Text("Tags")
-                .dsText(.label12)
-                .foregroundStyle(DS.textTertiary)
-                .frame(width: 80, alignment: .leading)
-            tagsLine
-            Spacer(minLength: 0)
-        }
-    }
-
-    private var tagsLine: some View {
-        var line = Text("")
-        for (i, tag) in thing.tags.enumerated() {
-            if i > 0 { line = line + Text(" · ").foregroundStyle(DS.textTertiary) }
-            let isType = ThingKind.from(typeTag: tag) != nil
-            line = line + Text(tag)
-                .foregroundStyle(isType ? DS.textSecondary : ProjectHue.color(for: tag))
-        }
-        return line.dsText(.callout15)
     }
 
     // MARK: - The dial's wiring (stage sheets — B1, 2026-07-16)

@@ -59,12 +59,17 @@ struct BandRow: View {
         return ("\(received ? "+" : "−")\(amount)", received)
     }
 
-    /// The trailing label — a project tag normally, or which wallet a
-    /// transaction came from when more than one is watched (2026-07-09):
-    /// same slot, same voice, so two watched wallets don't read as one
-    /// indistinguishable stream.
+    /// The trailing label — which wallet a transaction came from when more
+    /// than one is watched, or a source-specific fact (2026-07-09; the tag
+    /// lookup that used to lead this dropped 2026-07-23 — a thing's own
+    /// project tag no longer surfaces on the row. Tags aren't always
+    /// accurate for a glance (a bridge-assigned literal like "Watchlist" or
+    /// "NFT" sits on EVERY row from that source, so it stopped being a
+    /// distinguishing fact and started being noise) or necessary (the agent
+    /// and the Themes treemap still read `thing.tags` in full — this is a
+    /// display choice, not a data one). Same slot, same voice, so two
+    /// watched wallets don't read as one indistinguishable stream.
     private var project: String? {
-        if let tag = thing.tags.first(where: { ThingKind.from(typeTag: $0) == nil }) { return tag }
         // Which watched wallet a transaction came from, when more than one is
         // watched — keyed on the FIELD (walletAddress), not the source name,
         // so every wallet-riding seat (Wallet, Peer, the next one) carries
@@ -720,16 +725,6 @@ struct MusicRow: View {
 
     private var done: Bool { thing.mark == .done }
 
-    private var project: String? {
-        thing.tags.first { ThingKind.from(typeTag: $0) == nil }
-    }
-
-    private var projectInk: Color {
-        guard let project else { return DS.textTertiary }
-        let base = ProjectHue.color(for: project)
-        return scheme == .light ? base.mix(with: .black, by: 0.35) : base
-    }
-
     var body: some View {
         let parts = self.parts   // one split per render, read twice below
         HStack(spacing: DS.Space.s3) {
@@ -752,18 +747,9 @@ struct MusicRow: View {
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            // Rows carry status (principle 6) — the project tag survives the
-            // shape switch, same slot as the band. (The pin badge retired
-            // 2026-07-12: pinning is per-APP now, not a mark on a thing.)
-            VStack(alignment: .trailing, spacing: 1) {
-                LiveTimeText(date: thing.capturedAt)
-                if let project {
-                    Text(project)
-                        .dsText(.label11)
-                        .foregroundStyle(projectInk)
-                        .lineLimit(1)
-                }
-            }
+            // The project tag trailed here until 2026-07-23 (dropped across
+            // every shaped row — see BandRow.project's doc for why).
+            LiveTimeText(date: thing.capturedAt)
         }
         .padding(.vertical, DS.Space.s2)
     }
@@ -1012,15 +998,10 @@ struct PhotoCell: View {
                                startPoint: .center, endPoint: .bottom)
                     .clipShape(RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
                     .allowsHitTesting(false)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(thing.title)
-                        .dsText(.subhead13).foregroundStyle(.white)
-                        .lineLimit(1)
-                    if let project = thing.tags.first(where: { ThingKind.from(typeTag: $0) == nil }) {
-                        Text(project).dsText(.label12).foregroundStyle(.white.opacity(0.8))
-                    }
-                }
-                .padding(DS.Space.s2)
+                Text(thing.title)
+                    .dsText(.subhead13).foregroundStyle(.white)
+                    .lineLimit(1)
+                    .padding(DS.Space.s2)
             }
             .overlay(alignment: .topLeading) {
                 if let dayPill {
@@ -1136,14 +1117,10 @@ struct PhotoWell: View {
 struct TakeawayCard: View {
     let thing: Thing
 
-    private var project: String? {
-        thing.tags.first { ThingKind.from(typeTag: $0) == nil }
-    }
-
     var body: some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
             HStack(spacing: DS.Space.s2) {
-                Text((project ?? thing.source))
+                Text(thing.source)
                     .dsText(.label12)
                     .foregroundStyle(DS.textSecondary)
                 Spacer()
@@ -1167,19 +1144,8 @@ struct TakeawayCard: View {
 struct CheckRow: View {
     let thing: Thing
     var onToggle: () -> Void
-    @Environment(\.colorScheme) private var scheme
 
     private var done: Bool { thing.mark == .done }
-
-    private var project: String? {
-        thing.tags.first { ThingKind.from(typeTag: $0) == nil }
-    }
-
-    private var projectInk: Color {
-        guard let project else { return DS.textTertiary }
-        let base = ProjectHue.color(for: project)
-        return scheme == .light ? base.mix(with: .black, by: 0.35) : base
-    }
 
     var body: some View {
         HStack(alignment: .top, spacing: DS.Space.s3) {
@@ -1206,15 +1172,7 @@ struct CheckRow: View {
                 .strikethrough(done, color: DS.textTertiary)
                 .lineLimit(2)
                 .frame(maxWidth: .infinity, alignment: .leading)
-            VStack(alignment: .trailing, spacing: 1) {
-                LiveTimeText(date: thing.capturedAt)
-                if let project {
-                    Text(project)
-                        .dsText(.label11)
-                        .foregroundStyle(projectInk)
-                        .lineLimit(1)
-                }
-            }
+            LiveTimeText(date: thing.capturedAt)
         }
         .padding(.vertical, DS.Space.s1)
     }
@@ -1224,8 +1182,8 @@ struct CheckRow: View {
 
 /// A note's point is its text; a saved conversation's is its opening line.
 /// In the notes and chat shapes the row carries an excerpt under the title —
-/// same band anatomy (26pt leading slot, time-over-project trailing), the
-/// body just breathes below the first line. All keeps the plain band.
+/// same band anatomy (26pt leading slot, time trailing), the body just
+/// breathes below the first line. All keeps the plain band.
 struct ExcerptRow: View {
     let thing: Thing
     /// How many excerpt lines this shape affords — notes read deeper (3),
@@ -1260,40 +1218,9 @@ struct ExcerptRow: View {
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            RowTrailingMeta(thing: thing)
+            LiveTimeText(date: thing.capturedAt)
         }
         .padding(.vertical, DS.Space.s2)
-    }
-}
-
-
-/// The trailing time-over-project stack the shaped rows share — one home for
-/// the anatomy instead of a per-row copy (the file already carried five; the
-/// new rows use this one).
-struct RowTrailingMeta: View {
-    let thing: Thing
-    @Environment(\.colorScheme) private var scheme
-
-    private var project: String? {
-        thing.tags.first { ThingKind.from(typeTag: $0) == nil }
-    }
-
-    private var projectInk: Color {
-        guard let project else { return DS.textTertiary }
-        let base = ProjectHue.color(for: project)
-        return scheme == .light ? base.mix(with: .black, by: 0.35) : base
-    }
-
-    var body: some View {
-        VStack(alignment: .trailing, spacing: 1) {
-            LiveTimeText(date: thing.capturedAt)
-            if let project {
-                Text(project)
-                    .dsText(.label11)
-                    .foregroundStyle(projectInk)
-                    .lineLimit(1)
-            }
-        }
     }
 }
 
@@ -1444,7 +1371,7 @@ struct ReadingRow: View {
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            RowTrailingMeta(thing: thing)
+            LiveTimeText(date: thing.capturedAt)
         }
         .padding(.vertical, DS.Space.s2)
     }
