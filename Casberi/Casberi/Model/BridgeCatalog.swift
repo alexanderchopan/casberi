@@ -316,10 +316,15 @@ enum BridgeCatalog {
         // "one option would be we could put HomeKit in Life." "People"
         // (Contacts) already lives here (2026-07-20).
         ("Life",    "Photos",      ["Photos", "Schedule", "Fitness", "People", "Home"]),
-        ("Reading", "Readwise",    ["Reading", "Saves"]),
-        ("Shopping", "Shopify",    ["Shopping"]),
         ("Notes",   "Apple Notes", ["Notes"]),
         ("Work",    "GitHub",      ["Work"]),
+        // Reading and Shopping settle LAST (user ruling 2026-07-23): they
+        // carry the biggest trailing gaps at four-per-row (Reading 6 → 2
+        // empty, Shopping 5 → 3 empty), and a partial last row reads as "the
+        // wall ended" at the very bottom rather than a hole mid-list. The
+        // gappiest (Shopping) sits dead last.
+        ("Reading", "Readwise",    ["Reading", "Saves"]),
+        ("Shopping", "Shopify",    ["Shopping"]),
     ]
 
     static func category(of offer: Offer) -> String {

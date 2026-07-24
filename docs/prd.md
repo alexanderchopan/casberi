@@ -7899,7 +7899,9 @@ the ruled order that pairs **Social + Mail** onto one row. Everything larger is
 a full-width band, four across, last row left-aligned.
 
 **Order, set by the user:** Wallet, Markets, Social/Mail, Agents, Media, then
-Life, Reading, Shopping, Notes, Work. Wallet leads now, not Markets. Changed in
+Life, Notes, Work, and Reading + Shopping LAST (they carry the biggest
+trailing gaps, so the blank settles at the very bottom of the scroll). Wallet
+leads now, not Markets. Changed in
 `BridgeCatalog.categories` (the single source of truth the agent's `category:`
 kept-ask kind also reads).
 
