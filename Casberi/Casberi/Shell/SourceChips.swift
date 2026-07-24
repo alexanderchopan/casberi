@@ -129,8 +129,9 @@ struct SourceChips: View {
     /// the neutral circle Pinned/All share. The store still zooms out of it.
     @ViewBuilder private var catalogueChip: some View {
         Button {
-            DSHaptic.selection()
-            onApps()
+            // No-op — `.highPriorityGesture` below owns the tap (see its
+            // comment); the empty action just keeps Button's own press
+            // feedback/accessibility affordance.
         } label: {
             ZStack {
                 if let zoomNS {
@@ -153,6 +154,19 @@ struct SourceChips: View {
         .accessibilityLabel(bridges.attentionCount > 0
                             ? Text("Apps, needs attention")
                             : Text("Apps"))
+        // This strip rides `.safeAreaInset(edge: .top)` on the paged feed
+        // TabView (`MainSurface`) — a plain Button's own tap gesture there
+        // competes with the TabView(.page)'s internal pan recognizer for the
+        // first touch (Apple's documented safeAreaInset-button bug, forums
+        // thread 725366) and can take several presses to win the
+        // arbitration (reported 2026-07-24: "requires pressing several
+        // times before opening"). `highPriorityGesture` wins immediately.
+        .highPriorityGesture(
+            TapGesture().onEnded {
+                DSHaptic.selection()
+                onApps()
+            }
+        )
     }
 
     @ViewBuilder
