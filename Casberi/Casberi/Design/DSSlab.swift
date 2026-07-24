@@ -63,10 +63,16 @@ struct DSSlabField: View {
     /// Fires even when the field is empty, for callers whose verb doesn't need
     /// input (the address book's NAME opens a sheet).
     var alwaysEnabled = false
+    /// A caller-supplied arm condition — overrides the default "text isn't
+    /// empty" when the verb should only light up in a specific state (the
+    /// address book's ADD, live only when the typed text is an addable
+    /// address, not any old search term).
+    var isArmed: Bool? = nil
     let action: () -> Void
 
     private var armed: Bool {
-        alwaysEnabled || !text.trimmingCharacters(in: .whitespaces).isEmpty
+        if let isArmed { return isArmed }
+        return alwaysEnabled || !text.trimmingCharacters(in: .whitespaces).isEmpty
     }
 
     var body: some View {

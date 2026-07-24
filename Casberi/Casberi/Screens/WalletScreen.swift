@@ -66,10 +66,18 @@ struct WalletScreen: View {
     /// Which wallet the rename alert is editing.
     @State private var renamingID: WalletStore.WatchedAddress.ID?
     @State private var renameDraft = ""
-    /// The address book (prd §169) — the light tier beside the roster. The
-    /// omnibox above IS its search field now (prd §182) — typing to watch
-    /// something also narrows the book live, so there's one input, not two.
+    /// The address book (prd §169) — merged onto THIS page now (2026-07-24,
+    /// user: "they should be on the same page too, the watched and the
+    /// address book"). It used to be a door to a separate screen; the
+    /// omnibox's own claim to already be the book's search field ("one
+    /// input, not two") was only half true while the results it searched
+    /// lived one page away. Same field, same list, no door.
     @Bindable private var book = AddressBook.shared
+    @State private var openBookEntry: AddressBook.Entry?
+    /// Set when tapping a star would exceed the watch cap — an honest modal,
+    /// since the roster's empty slots can't show "already full" from inside
+    /// the list (2026-07-24).
+    @State private var watchCapHit = false
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
 
@@ -89,15 +97,24 @@ struct WalletScreen: View {
                 .listRowInsets(EdgeInsets())
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
-            // Below the shelf: four slabs and one sentence (prd §189). Every
-            // block is the same height and radius, so the area reads as a
-            // rhythm rather than the six-shape collage it was.
+            // Below the shelf: the one field, then the book it both watches
+            // AND names FROM (2026-07-24) — no more door to a second screen.
             Section {
                 VStack(spacing: DS.Space.s2) {
                     DSSlabField(placeholder: String(localized: "Address, ENS, .sol"),
                                     text: $newAddress,
                                     actionLabel: String(localized: "WATCH"),
                                     focus: $addressFieldFocused, action: watch)
+                    // The lightweight second verb (2026-07-24) — watching is
+                    // capped at 5 and starts syncing; naming isn't and does
+                    // neither. Visible only over a real, addable address, so
+                    // it's never a stray control over "mom" or an empty
+                    // field. This is also the cap's own honest way out: the
+                    // WATCH error at the limit used to just SAY "name this
+                    // address instead" with nothing to tap.
+                    if book.looksLikeAddress(newAddress.trimmingCharacters(in: .whitespacesAndNewlines)) {
+                        justNameButton
+                    }
                     if WalletConnectBridge.isAvailable {
                         connectRow
                     }
@@ -106,20 +123,14 @@ struct WalletScreen: View {
                     if wallet.addresses.isEmpty {
                         peekChip
                     }
-                    // The one sentence. The two that used to sit beside it —
-                    // where activity is read, and what naming costs — moved to
-                    // the doors that own them (Connection, Address book).
                     Text("Read-only — watching can never move funds.")
                         .dsText(.subhead13).foregroundStyle(DS.textTertiary)
                         .frame(maxWidth: .infinity)
                         .padding(.top, DS.Space.s1)
-                    DSSlabDoor(title: "Address book", detail: bookSummary) {
-                        HomeRoute.shared.pushBridge(.addressBook)
-                    }
-                    .padding(.top, DS.Space.s2)
                     DSSlabDoor(title: "Connection", detail: chainsSummary) {
                         HomeRoute.shared.pushBridge(.walletConnection)
                     }
+                    .padding(.top, DS.Space.s2)
                 }
             }
             .listRowInsets(EdgeInsets(top: DS.Space.s2, leading: DS.Space.s4,
@@ -127,6 +138,7 @@ struct WalletScreen: View {
             .listRowBackground(Color.clear)
             .listRowSeparator(.hidden)
             statusSection
+            bookSection
             // Room for the floating agent bar (FeedScreen's own pattern) — the
             // Connection row was the manager's own worst example of the bar
             // eating its last row before this (found live, 2026-07-22).
@@ -180,6 +192,12 @@ struct WalletScreen: View {
         }
         .sheet(item: $quickToken) { route in
             TokenQuickSheet(route: route)
+        }
+        .sheet(item: $openBookEntry) { entry in AddressCard(entry: entry) }
+        .alert("Watching \(WalletStore.watchLimit) already", isPresented: $watchCapHit) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text("Watching is capped at \(WalletStore.watchLimit) so your feed stays focused. Unwatch one first — its name stays in your book either way.")
         }
     }
 
@@ -339,20 +357,133 @@ struct WalletScreen: View {
         }
     }
 
-    // MARK: - The address book door (prd §169/§189)
+    // MARK: - The address book (prd §169/§189, merged onto this page §202)
 
-    /// The book's own count, for the door that now stands in front of it —
-    /// the fact that makes the door honest rather than a place things hide.
-    /// Watched wallets are excluded the way the book itself excludes them:
-    /// they have the roster above, and counting them twice would make one
-    /// book read as two.
-    private var bookSummary: String {
-        let watched = Set(wallet.addresses.map { AddressBook.key(for: $0.address) })
-        let n = book.all.filter { !watched.contains($0.id) }.count
-        if n == 0 { return String(localized: "Name one") }
-        return n == 1 ? String(localized: "1 name") : String(localized: "\(n) names")
+    /// Every named address, watched or not — ALL of it, on this one list now
+    /// (2026-07-24). The old split (a roster for watched, a door to a
+    /// separate screen for everyone else) was the actual "which page is
+    /// this on" confusion; one list with a "Watching" mark on the entries
+    /// that are is the honest merge, not two views pretending to be one.
+    private var bookEntries: [AddressBook.Entry] { book.search(newAddress) }
+
+    private func isWatched(_ entry: AddressBook.Entry) -> Bool {
+        wallet.addresses.contains { WalletWatch.sameAddress($0.address, entry.address) }
     }
 
+    @ViewBuilder
+    private var bookSection: some View {
+        if !bookEntries.isEmpty {
+            Section {
+                ForEach(bookEntries) { entry in
+                    Button {
+                        DSHaptic.selection()
+                        openBookEntry = entry
+                    } label: {
+                        bookRow(entry)
+                    }
+                    .buttonStyle(.plain)
+                    .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                        Button(role: .destructive) {
+                            book.remove(entry.address)
+                        } label: { Label("Remove", systemImage: "trash") }
+                    }
+                }
+            } header: {
+                Text("Address book").dsText(.label12).foregroundStyle(DS.textSecondary)
+            } footer: {
+                // The one line that teaches the star (2026-07-24, user: "i
+                // like the stars, but i still want the roster shelf, so if
+                // starred maybe it shows the roster at top"). The star is
+                // now the whole watch mechanism — tap it and the wallet
+                // joins the roster shelf up top.
+                Text("Tap ★ to watch — its activity lands in your feed, up to \(WalletStore.watchLimit). Every name here shows instead of a hex address when you transact.")
+                    .dsText(.callout15).foregroundStyle(DS.textSecondary)
+            }
+            .listRowSeparator(.hidden)
+        }
+    }
+
+    private func bookRow(_ entry: AddressBook.Entry) -> some View {
+        HStack(spacing: DS.Space.s3) {
+            AddressMark(entry: entry, size: 32)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(entry.name).dsText(.body17).foregroundStyle(DS.textPrimary)
+                    .lineLimit(1)
+                Text(entry.subline).dsText(.label12).foregroundStyle(DS.textTertiary)
+                    .lineLimit(1)
+            }
+            Spacer(minLength: 0)
+            starButton(for: entry)
+            CopyAddressButton(address: entry.address)
+        }
+        .padding(.vertical, 2)
+        .contentShape(Rectangle())
+    }
+
+    /// The one watch control (2026-07-24) — filled = watching (in the roster
+    /// shelf and your feed), outline = named only. Tapping it is the whole
+    /// promote/demote: a filled star adds the wallet to the roster above and
+    /// starts its feed; an emptied one demotes it back to a plain name, which
+    /// stays. Stops event propagation so tapping the star never also opens
+    /// the card (the row's own tap).
+    private func starButton(for entry: AddressBook.Entry) -> some View {
+        let watched = isWatched(entry)
+        return Button {
+            toggleWatch(entry, currentlyWatched: watched)
+        } label: {
+            Image(systemName: watched ? "star.fill" : "star")
+                .font(.system(size: 17, weight: .medium))
+                .foregroundStyle(watched ? DS.tint : DS.textTertiary)
+                .frame(width: 32, height: 32)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(Text(watched ? "Watching \(entry.name), tap to stop"
+                                          : "Watch \(entry.name)"))
+    }
+
+    private func toggleWatch(_ entry: AddressBook.Entry, currentlyWatched: Bool) {
+        DSHaptic.tap()
+        if currentlyWatched {
+            if let i = wallet.addresses.firstIndex(where: {
+                WalletWatch.sameAddress($0.address, entry.address)
+            }) {
+                wallet.remove(at: IndexSet(integer: i))
+            }
+            return
+        }
+        switch wallet.outcome(ofAdding: entry.address, label: entry.name) {
+        case .added:
+            DSHaptic.success()
+            sync()
+        case .limitReached:
+            watchCapHit = true
+        case .alreadyWatching, .invalid:
+            break
+        }
+    }
+
+    /// Names the typed address WITHOUT watching it — unlimited, and the
+    /// honest way out of the watch cap (2026-07-24). Falls back to the
+    /// address's own short form exactly like a bare `addBulk` paste does, so
+    /// the person can rename it from the list the moment it lands.
+    private var justNameButton: some View {
+        Button {
+            DSHaptic.tap()
+            let addr = newAddress.trimmingCharacters(in: .whitespacesAndNewlines)
+            book.setName(WalletStore.shortAddress(addr), for: addr)
+            newAddress = ""
+            addressFieldFocused = false
+        } label: {
+            HStack(spacing: DS.Space.s1) {
+                Image(systemName: "tag").font(.system(size: 12, weight: .semibold))
+                Text("Just name it — don't watch").dsText(.subhead13).fontWeight(.medium)
+            }
+            .foregroundStyle(DS.textSecondary)
+        }
+        .buttonStyle(.plain)
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
 
     /// "All 5" when nothing's narrowed, else the selected names ("Ethereum,
     /// Base +3" past two) — the Connection door's own one-line fact.

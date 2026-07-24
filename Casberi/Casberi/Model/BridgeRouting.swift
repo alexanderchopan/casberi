@@ -61,12 +61,6 @@ enum BridgeRouter {
         /// charging every visit to the manager rent it shouldn't pay. One door
         /// for the one thing on this screen that actually IS a settings page.
         case walletConnection
-        /// The address book (prd §189, 2026-07-23) — naming, and the rows it
-        /// makes. It left the Wallet screen for the same reason the chains
-        /// did: the manager's job is the shelf and the one field, and a headed
-        /// section with its own paragraph was the biggest block of furniture
-        /// left below them. The door wears its own count, so nothing is hidden.
-        case addressBook
         /// A connected seat with no dedicated screen (the demo seats — Gmail,
         /// Calendar, …) — the generic detail page, never EmptyView.
         case detail(id: String)
@@ -114,7 +108,6 @@ enum BridgeRouter {
             case .token(let b):   b.bridgeID
             case .walletHistory(let scope): "wallethistory:\(scope ?? "all")"
             case .walletConnection: "walletconnection"
-            case .addressBook:    "addressbook"
             case .detail(let id): "detail:\(id)"
             }
         }
@@ -236,7 +229,6 @@ struct BridgeDestinationView: View {
         case .token(let b):   TokenSetupScreen(bridge: b)
         case .walletHistory(let scope): WalletHistoryScreen(scope: scope)
         case .walletConnection: WalletConnectionScreen()
-        case .addressBook:    AddressBookScreen()
         case .detail(let id): BridgeDetailScreen(bridgeID: id)
         }
     }

@@ -488,13 +488,19 @@ final class WalletStore {
         else { return .alreadyWatching }
         guard canWatchMore else { return .limitReached }
         addresses.append(WatchedAddress(label: label, address: addr))
-        // A watched wallet is a book entry too (prd §169) — one ledger of
-        // named addresses, so the name survives an unwatch and every surface
-        // reads the same word. Unnamed watches (a raw hex paste) don't invent
-        // a book entry; the person names it when they mean to.
-        if !label.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            AddressBook.shared.setName(label, for: addr, kind: .wallet)
-        }
+        // A watched wallet is ALWAYS a book entry too (2026-07-24, user: "if
+        // you watch one, it should automatically be in your address book").
+        // This used to skip an unnamed watch (a raw hex paste with no ENS
+        // name) entirely — reasoned at the time as "the person names it when
+        // they mean to", but the actual result was a watched wallet that
+        // silently didn't show up in its own book, which read as a bug, not
+        // a choice. A blank label gets the same short-address fallback
+        // `AddressBook.addBulk` already uses for a bare pasted address, so
+        // every watched wallet is findable in one list from the moment it's
+        // watched — renaming it later is one tap either way.
+        let bookName = label.trimmingCharacters(in: .whitespacesAndNewlines)
+        AddressBook.shared.setName(bookName.isEmpty ? Self.shortAddress(addr) : bookName,
+                                   for: addr, kind: .wallet)
         return .added
     }
 

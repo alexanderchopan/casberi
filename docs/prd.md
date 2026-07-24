@@ -7928,3 +7928,44 @@ VERIFIED 2026-07-23 (iPhone 17 Pro sim): Wallet band leads four-across; jump
 chips read Wallet/Markets/Social/Mail; Social+Mail render paired on one row;
 Agents (incl. the new OpenRouter seat), Media, Life (with HomeKit), then
 Reading/Shopping/Notes/Work — every long name whole, no clip. Build green.
+
+## 202. The wallet manager collapses to one list — a star is "watch", the roster is the starred (user: "this whole page is a mess… stupid simple and clear and concise. give me three mockups", then chose stars + roster, 2026-07-24) — VERIFIED
+
+Three mockups (two labeled zones / one list + star / value-prop cards); the
+user picked the star model but kept the face roster: "I like the stars, but
+I still want the roster shelf — so if starred, maybe it shows the roster at
+top."
+
+The page had accreted past legibility — a face roster, a WATCH field, a
+"just name it" verb, a Connect button, a Connection door, AND (as of §198) a
+separate Address-book door — and never once said, in plain words, what the
+two jobs ARE. It now says both, and drops the split that caused "which page
+is this even on":
+
+- **One list, watched or not.** The Address-book door (§189/§198) is gone;
+  every named address lives on the wallet manager itself, in one list. The
+  standalone `AddressBookScreen` is deleted, its `BridgeRouter.addressBook`
+  destination with it.
+- **The star IS watching.** Each row carries a ★ — filled = watching (its
+  activity lands in your feed, capped at 5), outline = named only. Tapping it
+  is the whole promote/demote: a fresh star adds the wallet to the roster
+  shelf above and starts its feed; an emptied one demotes to a plain name,
+  which stays. The old static "Watching" pill (a label you couldn't act on)
+  is gone.
+- **The roster shelf is the starred, shown big.** It stays at the top as the
+  glanceable showcase the user asked to keep — the same wallets the list
+  shows with a filled star, as faces. Redundant on purpose: the shelf is the
+  summary, the list is the manager, and §189's old "listing twice reads as
+  two books" worry is overridden by the user's explicit ask.
+- **Watching auto-books.** `WalletStore.add` now writes a book entry for
+  EVERY watched wallet, not just named ones — a raw-hex watch used to leave
+  a wallet that didn't appear in its own book, which read as a bug. A blank
+  label takes the short-address fallback, renamed in one tap.
+- **The two sentences, stated once each.** The list footer: "Tap ★ to watch
+  — its activity lands in your feed, up to 5. Every name here shows instead
+  of a hex address when you transact." The cap, when a sixth star is tapped,
+  is an honest modal, not a silently dead control.
+
+`DSSlabField` gained an optional `isArmed` override so a verb can light only
+in a specific state (the field's own arm-on-addable-text case). Build green;
+standalone-verified in a worktree before commit.
