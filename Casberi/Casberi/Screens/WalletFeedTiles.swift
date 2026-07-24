@@ -742,12 +742,12 @@ struct WalletWorthALookTray: View {
     private var uncappedHeight: CGFloat {
         var h: CGFloat = 150
         if hasActionable {
-            h += 26 // the "Worth doing" group label
+            h += 46 // the "Worth doing" group label + its explainer line
             h += CGFloat(actionableRowCount) * Self.rowHeight
                 + CGFloat(actionableSectionIDs.count) * Self.headerHeight
         }
         if !flagged.isEmpty {
-            h += Self.headerHeight // the collapsed (or header of the expanded) aware row
+            h += 30 + Self.headerHeight // the "Just so you know" label + the boxed summary row
             if awareExpanded { h += CGFloat(flagged.count) * Self.rowHeight + 40 }
         }
         return h
@@ -788,9 +788,19 @@ struct WalletWorthALookTray: View {
                         VStack(alignment: .leading, spacing: DS.Space.s6) {
                             if hasActionable {
                                 VStack(alignment: .leading, spacing: DS.Space.s4) {
-                                    Text("Worth doing")
-                                        .dsText(.label12).foregroundStyle(DS.textSecondary)
-                                        .padding(.horizontal, 3)
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        HStack(spacing: DS.Space.s2) {
+                                            Text("Worth doing")
+                                                .dsText(.label12).fontWeight(.semibold)
+                                                .foregroundStyle(DS.attention)
+                                            Text("\(actionableRowCount)")
+                                                .dsText(.label12).foregroundStyle(DS.textSecondary)
+                                                .monospacedDigit()
+                                        }
+                                        Text("You can still change how these turn out.")
+                                            .dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                                    }
+                                    .padding(.horizontal, 3)
                                     if !liquidation.isEmpty {
                                         section(id: "position", title: String(localized: "Position risk"),
                                                symbol: "chart.line.downtrend.xyaxis", critical: true,
@@ -1008,39 +1018,42 @@ struct WalletWorthALookTray: View {
 
     // MARK: - Just so you know (the aware pile, collapsed + mutable)
 
-    /// The awareness section — one collapsed line by default ("12 fake
-    /// symbols · nothing to do"), expanding in place to list each flagged
-    /// transfer with a door to its sheet. Never destructive red, muted or
-    /// not: this is spam you can recognize, not a live risk (that read is
-    /// reserved for "Worth doing"). Muting stops it badging the feed card
-    /// (`WalletWarningsLine`) without hiding it here — the tray still shows
-    /// you what you muted, it just stops shouting about it elsewhere.
+    /// The awareness section — one collapsed line by default, count-led
+    /// ("15 spam transfers · nothing to do"), expanding in place to list
+    /// each flagged transfer with a door to its sheet. Boxed on a well
+    /// background (2026-07-24, matching the mockup's "aware-line" treatment)
+    /// so it reads as a quiet, self-contained pile rather than another bare
+    /// list row — the visual cue that this is the one group that ISN'T a
+    /// stream of individually-worth-reading items. Never destructive red,
+    /// muted or not: this is spam you can recognize, not a live risk (that
+    /// read is reserved for "Worth doing"). Muting stops it badging the
+    /// feed card (`WalletWarningsLine`) without hiding it here — the tray
+    /// still shows you what you muted, it just stops shouting about it
+    /// elsewhere.
     private var awareSection: some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
+            Text("Just so you know")
+                .dsText(.label12).fontWeight(.semibold)
+                .foregroundStyle(DS.textSecondary)
+                .padding(.horizontal, 3)
             Button {
                 DSHaptic.selection()
                 withAnimation(DS.Motion.standard) { awareExpanded.toggle() }
             } label: {
-                HStack(spacing: DS.Space.s2) {
-                    Image(systemName: "eye.trianglebadge.exclamationmark.fill")
+                HStack(spacing: DS.Space.s3) {
+                    Image(systemName: "photo.badge.exclamationmark.fill")
                         .font(.system(size: 13, weight: .semibold))
                         .foregroundStyle(DS.textSecondary)
                         .frame(width: 28, height: 28)
-                        .background(
-                            RoundedRectangle(cornerRadius: DS.Radius.control, style: .continuous)
-                                .fill(DS.surfaceWell))
+                        .background(Circle().fill(DS.surfaceSheet))
                     VStack(alignment: .leading, spacing: 1) {
-                        HStack(spacing: DS.Space.s2) {
-                            Text("Flagged transfers").dsText(.callout15).foregroundStyle(DS.textPrimary)
-                            Text("\(flagged.count)")
-                                .dsText(.label12).foregroundStyle(DS.textSecondary)
-                                .monospacedDigit()
-                                .padding(.horizontal, 7).padding(.vertical, 2)
-                                .background(Capsule().fill(DS.surfaceWell))
-                        }
+                        Text(flagged.count == 1
+                             ? String(localized: "1 spam transfer")
+                             : String(localized: "\(flagged.count) spam transfers"))
+                            .dsText(.callout15).fontWeight(.medium).foregroundStyle(DS.textPrimary)
                         Text(muted
                              ? String(localized: "Muted — won't badge your feed")
-                             : String(localized: "Someone sent these on purpose — nothing to do"))
+                             : String(localized: "Fake tokens sent to you — nothing to do"))
                             .dsText(.subhead13).foregroundStyle(DS.textSecondary)
                             .lineLimit(1)
                     }
@@ -1049,7 +1062,10 @@ struct WalletWorthALookTray: View {
                         .font(.system(size: 11, weight: .semibold))
                         .foregroundStyle(DS.textTertiary)
                 }
-                .padding(.horizontal, 3)
+                .padding(.horizontal, DS.Space.s3).padding(.vertical, DS.Space.s3)
+                .background(
+                    RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous)
+                        .fill(DS.surfaceWell))
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
