@@ -720,19 +720,19 @@ struct WalletWorthALookTray: View {
                                 }
                             }
                             if !activeApprovals.isEmpty {
+                                let bulk = bulkRevoke(addresses: activeApprovals.map(\.walletAddress))
                                 section(id: "approvals", title: String(localized: "Approvals"),
                                        symbol: "key.fill", critical: false,
-                                       count: activeApprovals.count,
-                                       bulkAction: bulkRevoke(addresses: activeApprovals.map(\.walletAddress))) {
-                                    ForEach(activeApprovals) { approvalRow($0) }
+                                       count: activeApprovals.count, bulkAction: bulk) {
+                                    ForEach(activeApprovals) { approvalRow($0, showsOwnLink: bulk == nil) }
                                 }
                             }
                             if !delegations.isEmpty {
+                                let bulk = bulkRevoke(addresses: delegations.map(\.address))
                                 section(id: "delegations", title: String(localized: "Delegations"),
                                        symbol: "arrow.triangle.branch", critical: false,
-                                       count: delegations.count,
-                                       bulkAction: bulkRevoke(addresses: delegations.map(\.address))) {
-                                    ForEach(delegations) { delegationRow($0) }
+                                       count: delegations.count, bulkAction: bulk) {
+                                    ForEach(delegations) { delegationRow($0, showsOwnLink: bulk == nil) }
                                 }
                             }
                             if !safeSignatures.isEmpty {
@@ -861,10 +861,26 @@ struct WalletWorthALookTray: View {
 
     // MARK: - Rows
 
+    /// The leading anchor every row wears now (2026-07-23, review fix) — a
+    /// tinted glyph circle matching the section header and the feed card's
+    /// own badges, so a stack of delegation/approval rows reads as distinct
+    /// items instead of an undifferentiated run of text (the "looks sloppy"
+    /// catch: `flaggedRow` always had `KindGlyph`, every other row had
+    /// nothing, and the asymmetry was the actual problem, not any one row).
+    private func rowGlyph(_ symbol: String, critical: Bool) -> some View {
+        Image(systemName: symbol)
+            .font(.system(size: 12, weight: .semibold))
+            .foregroundStyle(critical ? DS.destructive : DS.attention)
+            .frame(width: 26, height: 26)
+            .background(
+                Circle().fill((critical ? DS.destructive : DS.attention).opacity(0.16)))
+    }
+
     /// Position-risk and Safe rows: the whole in-app read, no control —
     /// acting on Aave happens on Aave, signing happens in the Safe app.
     private func inertRow(_ w: WalletWarning) -> some View {
         HStack(spacing: DS.Space.s3) {
+            rowGlyph(w.kind.glyph, critical: w.severity == .critical)
             VStack(alignment: .leading, spacing: 2) {
                 Text(w.title).dsText(.body17).foregroundStyle(DS.textPrimary)
                     .lineLimit(2)
@@ -879,7 +895,14 @@ struct WalletWorthALookTray: View {
         .padding(.vertical, DS.Space.s2).padding(.horizontal, 3)
     }
 
-    private func delegationRow(_ w: WalletWarning) -> some View {
+    /// `showsOwnLink` is false whenever the section header already carries a
+    /// bulk Revoke.cash link covering this row's wallet — otherwise every
+    /// row in a same-wallet section repeated the identical link the header
+    /// just showed, four times over for three delegations (the actual
+    /// "sloppy" catch). The row stays tappable either way when a link
+    /// exists; only the trailing text+icon (and the disabled dead-tap case)
+    /// change.
+    private func delegationRow(_ w: WalletWarning, showsOwnLink: Bool) -> some View {
         let action = w.address.flatMap { address -> URL? in
             guard WalletApprovals.canServe(address) else { return nil }
             return URL(string: WalletApprovals.revokeURL(address: address))
@@ -888,6 +911,7 @@ struct WalletWorthALookTray: View {
             if let action { DSHaptic.selection(); openURL(action) }
         } label: {
             HStack(spacing: DS.Space.s3) {
+                rowGlyph(w.kind.glyph, critical: false)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(w.title).dsText(.body17).foregroundStyle(DS.textPrimary)
                         .lineLimit(2)
@@ -898,7 +922,7 @@ struct WalletWorthALookTray: View {
                     }
                 }
                 Spacer(minLength: 0)
-                if action != nil {
+                if action != nil, showsOwnLink {
                     Text("Revoke.cash").dsText(.subhead13).foregroundStyle(DS.textSecondary)
                     Image(systemName: "arrow.up.right")
                         .font(.system(size: 12, weight: .semibold))
@@ -914,20 +938,22 @@ struct WalletWorthALookTray: View {
 
     /// An approval thing already carries its own Revoke.cash page as
     /// `content` (`WalletApprovals`' own field) — no need to re-derive it
-    /// from the address the way the delegation row does.
-    private func approvalRow(_ thing: Thing) -> some View {
+    /// from the address the way the delegation row does. `showsOwnLink` is
+    /// the same header-already-covers-it suppression `delegationRow` uses.
+    private func approvalRow(_ thing: Thing, showsOwnLink: Bool) -> some View {
         let action = URL(string: thing.content)
         return Button {
             if let action { DSHaptic.selection(); openURL(action) }
         } label: {
             HStack(spacing: DS.Space.s3) {
+                rowGlyph(WalletWarning.Kind.approval.glyph, critical: false)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(thing.title).dsText(.body17).foregroundStyle(DS.textPrimary)
                         .lineLimit(2)
                         .multilineTextAlignment(.leading)
                 }
                 Spacer(minLength: 0)
-                if action != nil {
+                if action != nil, showsOwnLink {
                     Text("Revoke.cash").dsText(.subhead13).foregroundStyle(DS.textSecondary)
                     Image(systemName: "arrow.up.right")
                         .font(.system(size: 12, weight: .semibold))
