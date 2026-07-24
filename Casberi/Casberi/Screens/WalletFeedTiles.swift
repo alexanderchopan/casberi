@@ -639,19 +639,21 @@ struct WalletWorthALookTray: View {
     let activeApprovals: [Thing]
     @Environment(\.openURL) private var openURL
     @State private var jumpTarget: String?
-    /// Presented FROM the tray itself (2026-07-23, prd §196 fix) rather than
-    /// by closing this sheet and asking the feed to open a sibling one — the
-    /// first cut did that (mirroring the pre-existing pattern every other
-    /// row in the feed uses) and it was wrong here specifically: dismissing
-    /// the thing sheet landed back on the WALLET FEED, not this list, so
-    /// reviewing a run of flagged transfers one at a time meant re-opening
-    /// "Worth a look" and re-scrolling to find your place after every single
-    /// tap (user, 2026-07-23: "there is no way to get back to the list...
-    /// in one tap"). Nesting the sheet here means the tray never leaves the
-    /// view hierarchy — dismissing the thing sheet reveals it exactly where
-    /// it was, scroll position included, the same way `WalletHistoryScreen`
-    /// already nests `ThingSheetView` under its own list.
-    @State private var sheetThing: Thing?
+    /// A flagged transfer PUSHES within this same sheet now (2026-07-23,
+    /// second fix to prd §196) rather than presenting `ThingSheetView` as a
+    /// second, sibling `.sheet` — the first fix already solved "can't get
+    /// back to the list" by nesting the thing sheet under the tray, but a
+    /// nested `.sheet(item:)` still shows as a card visibly stacked on top
+    /// of this one, and dismissing it is a second swipe-down through a
+    /// second piece of sheet chrome (user, 2026-07-23: "i don't like how
+    /// one tray leads to another on the way back. it should be the same
+    /// sheet with a back button"). `NavigationStack(path:)` +
+    /// `navigationDestination(for:)` is the exact shape `SocialPostSheet`
+    /// already uses for the identical problem (a sheet whose rows open a
+    /// detail read, walked as deep as it goes, one back chevron unwinding
+    /// it) — one sheet, one piece of chrome, the tray's own scroll position
+    /// preserved underneath exactly as before.
+    @State private var path: [Thing] = []
 
     private var liquidation: [WalletWarning] { warnings.filter { $0.kind == .liquidation } }
     private var delegations: [WalletWarning] { warnings.filter { $0.kind == .delegation } }
@@ -688,6 +690,7 @@ struct WalletWorthALookTray: View {
     }
 
     var body: some View {
+        NavigationStack(path: $path) {
         DSTray(title: String(localized: "Worth a look"), height: trayHeight) {
             ScrollViewReader { proxy in
                 VStack(alignment: .leading, spacing: DS.Space.s3) {
@@ -750,8 +753,9 @@ struct WalletWorthALookTray: View {
                 .frame(maxHeight: .infinity, alignment: .top)
             }
         }
-        .sheet(item: $sheetThing) { thing in
+        .navigationDestination(for: Thing.self) { thing in
             ThingSheetView(thing: thing)
+        }
         }
     }
 
@@ -981,7 +985,7 @@ struct WalletWorthALookTray: View {
     private func flaggedRow(_ thing: Thing) -> some View {
         Button {
             DSHaptic.selection()
-            sheetThing = thing
+            path.append(thing)
         } label: {
             HStack(spacing: DS.Space.s3) {
                 KindGlyph(kind: thing.kind, size: 28)
