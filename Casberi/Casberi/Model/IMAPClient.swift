@@ -39,6 +39,34 @@ enum IMAPClient {
         #endif
         return parsed.reversed()   // newest first
     }
+
+    /// Which of the given UIDs the server still has, for the delete-sync
+    /// heal pass — a message expunged since we landed it isn't an IMAP
+    /// error, it's simply absent from the FETCH response (RFC 3501 §6.4.8),
+    /// so "asked for but not returned" IS the deleted set. Also hands back
+    /// the mailbox's UIDVALIDITY: if that ever changes, every UID we hold
+    /// was renumbered out from under us and a mass "not found" would be a
+    /// false positive, not real deletions — the caller must check it before
+    /// trusting `present`.
+    struct PresenceResult { let uidValidity: Int?; let present: Set<String> }
+
+    static func stillPresent(host: String, user: String, password: String,
+                             uids: [String]) async throws -> PresenceResult {
+        let conn = try await Session.open(host: host)
+        defer { conn.close() }
+        try await conn.greeting()
+        try await conn.login(user: user, password: password)
+        _ = try await conn.selectInbox()
+
+        var present = Set<String>()
+        var i = 0
+        while i < uids.count {
+            let chunk = Array(uids[i..<min(i + 400, uids.count)])
+            present.formUnion(try await conn.uidFetchPresence(chunk))
+            i += 400
+        }
+        return PresenceResult(uidValidity: conn.uidValidity, present: present)
+    }
 }
 
 // MARK: - The connection (NWConnection + async request/response)
@@ -91,19 +119,47 @@ private final class Session {
         guard try await readUntilTagged(t).ok else { throw IMAPClient.IMAPError.login }
     }
 
+    /// The SELECT response's `[UIDVALIDITY n]` — set once per session by
+    /// `selectInbox()`, read back by `stillPresent` to detect a renumbered
+    /// mailbox before trusting a presence check's absences as real deletes.
+    private(set) var uidValidity: Int?
+
     /// Returns the number of messages in the inbox (the EXISTS count).
     func selectInbox() async throws -> Int {
         let t = nextTag()
         send(line: "\(t) SELECT INBOX")
         let resp = try await readUntilTagged(t)
         guard resp.ok else { throw IMAPClient.IMAPError.select }
+        var total = 0
         for line in resp.lines {
             // "* 1234 EXISTS"
             let parts = line.split(separator: " ")
             if parts.count >= 3, parts[0] == "*", parts[2] == "EXISTS",
-               let n = Int(parts[1]) { return n }
+               let n = Int(parts[1]) { total = n }
+            // "* OK [UIDVALIDITY 1234567890] UIDs valid"
+            if let r = line.range(of: "UIDVALIDITY ") {
+                let digits = line[r.upperBound...].prefix { $0.isNumber }
+                if !digits.isEmpty { uidValidity = Int(digits) }
+            }
         }
-        return 0
+        return total
+    }
+
+    /// `UID FETCH <set> (UID)` — the server answers only for UIDs it still
+    /// has; an expunged one is simply missing from the response, not an
+    /// error (RFC 3501 §6.4.8).
+    func uidFetchPresence(_ uids: [String]) async throws -> Set<String> {
+        let t = nextTag()
+        send(line: "\(t) UID FETCH \(uids.joined(separator: ",")) (UID)")
+        let resp = try await readUntilTagged(t)
+        var present = Set<String>()
+        for line in resp.lines {
+            // "* 12 FETCH (UID 1234)"
+            guard let r = line.range(of: "UID ") else { continue }
+            let digits = line[r.upperBound...].prefix { $0.isNumber }
+            if !digits.isEmpty { present.insert(String(digits)) }
+        }
+        return present
     }
 
     /// One raw "* n FETCH (...)" string per message.

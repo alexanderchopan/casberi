@@ -1217,6 +1217,20 @@ enum ProbeHooks {
                 NSLog("Mail probe (%@): %@ new", provider.rawValue, n.map(String.init) ?? "FAILED")
             }
         },
+        // `-mailHealProbe <icloud|gmail>` runs the delete-sync reconcile
+        // headlessly against the ALREADY-connected provider (no credential
+        // on the command line) and NSLogs how many stale rows it removed.
+        // `force: true` bypasses heal's own hourly throttle so a probe run
+        // always actually checks.
+        Hook(key: "mailHealProbe") { spec, context in
+            guard let provider = MailProvider.allCases.first(where: {
+                $0.bridgeID == spec || $0.rawValue.lowercased().contains(spec.lowercased())
+            }) else { return }
+            Task { @MainActor in
+                let n = await MailIngest.heal(provider, context: context, force: true)
+                NSLog("Mail heal probe (%@): %d removed", provider.rawValue, n)
+            }
+        },
         // `-rssFeed <url>` follows a feed and syncs — headless bridge test.
         Hook(key: "rssFeed") { url, context in
             RSSStore.shared.add(url)

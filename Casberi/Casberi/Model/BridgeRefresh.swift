@@ -177,6 +177,14 @@ enum BridgeRefresh {
                 await BridgeRefresh.stagger(s)
                 _ = await MailIngest.refresh(provider, context: context)
             }
+            // Delete-sync: reconciles against what the server still has.
+            // Own network round trip and its own hourly throttle, so it
+            // runs as an independent staggered task rather than tacked onto
+            // refresh above.
+            let s2 = slot(); Task { @MainActor in
+                await BridgeRefresh.stagger(s2)
+                _ = await MailIngest.heal(provider, context: context)
+            }
         }
         if SteamBridge.connected {
             let s = slot(); Task { @MainActor in
