@@ -424,16 +424,47 @@ enum GitHubFeedFetch {
         guard let events = await IngestSupport.getJSON(
             "\(api)/users/\(login)/events?per_page=30", auth: "Bearer \(token)")
                 as? [[String: Any]] else { return nil }
-        return events.compactMap { ev in
+        var things: [Thing] = []
+        var pushTargets: [(thing: Thing, repo: String, sha: String)] = []
+        for ev in events {
             guard let id = ev["id"] as? String, let type = ev["type"] as? String,
                   let repo = (ev["repo"] as? [String: Any])?["name"] as? String,
-                  let line = contributionLine(type, repo: repo,
-                                              payload: ev["payload"] as? [String: Any] ?? [:])
-            else { return nil }
-            return thing(.link, title: line, content: "https://github.com/\(repo)",
+                  let payload = ev["payload"] as? [String: Any],
+                  let line = contributionLine(type, repo: repo, payload: payload)
+            else { continue }
+            let t = thing(.link, title: line, content: "https://github.com/\(repo)",
                          ref: "gh:event:\(id)", feed: .contributions,
                          at: IngestSupport.isoDate(ev["created_at"]))
+            things.append(t)
+            if type == "PushEvent", let sha = payload["head"] as? String, !sha.isEmpty {
+                pushTargets.append((t, repo, sha))
+            }
         }
+        // The real commit message beats the branch-name fallback — capped so a
+        // busy pusher doesn't fan out dozens of extra calls on every refresh
+        // (the `involved` feed's PR-verdict cap, applied here).
+        let capped = Array(pushTargets.prefix(15))
+        _ = await IngestSupport.boundedGather(capped, maxConcurrent: 4) { target -> Void in
+            if let message = await commitMessage(repo: target.repo, sha: target.sha, token: token) {
+                target.thing.title = IngestSupport.titleLine("\(message) · \(target.repo)")
+            }
+        }
+        return things
+    }
+
+    /// The head commit's own message (first line only — a multi-line body is
+    /// dropped) for a push event, replacing the branch-name fallback in
+    /// `contributionLine` with what was actually pushed. GitHub's events feed
+    /// no longer carries the message on the event itself (see below), so this
+    /// is a follow-up call keyed off the `head` sha the payload does carry.
+    private static func commitMessage(repo: String, sha: String, token: String) async -> String? {
+        guard let root = await IngestSupport.getJSON(
+            "\(api)/repos/\(repo)/commits/\(sha)", auth: "Bearer \(token)") as? [String: Any],
+              let raw = (root["commit"] as? [String: Any])?["message"] as? String,
+              let message = raw.split(separator: "\n").first.map(String.init)?
+                .trimmingCharacters(in: .whitespaces), !message.isEmpty
+        else { return nil }
+        return message
     }
 
     private static func contributionLine(_ type: String, repo: String,
