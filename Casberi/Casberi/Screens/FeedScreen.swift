@@ -59,10 +59,34 @@ struct FeedScreen: View {
     /// Only `tag` is read from here now — a kind filter is a cross-page state
     /// (it arrives from Home's kind bar and applies to the All room).
     @State private var filter = FeedFilter.shared
-    @State private var sheetThing: Thing?
-    /// A tapped holdings cell whose token isn't watched — its quick chart
-    /// (2026-07-14). Watched ones open their thing via sheetThing.
-    @State private var quickToken: TokenQuickRoute?
+    /// The one sheet this screen can have open at a time (2026-07-24, fixing
+    /// prd §196's "opens and dismisses itself on first try"). Five separate
+    /// `.sheet` modifiers stacked on one view — thing/token/combined
+    /// wallets/allocation/Worth-a-look — fought each other for the
+    /// presentation controller: SwiftUI only reliably drives one
+    /// `.sheet(item:)` + one `.sheet(isPresented:)` per view, and past that
+    /// the first tap's controller got torn down mid-present by a sibling's
+    /// state settling, so it flashed open and closed; the second tap then
+    /// worked because the machinery had quieted. One enum route behind one
+    /// `.sheet(item:)` removes the contention entirely.
+    private enum FeedSheetRoute: Identifiable {
+        case thing(Thing)
+        case token(TokenQuickRoute)
+        case combinedWallets
+        case allocation
+        case worthALook
+
+        var id: String {
+            switch self {
+            case .thing(let t): "thing:\(t.id.uuidString)"
+            case .token(let r): "token:\(r.id)"
+            case .combinedWallets: "combinedWallets"
+            case .allocation: "allocation"
+            case .worthALook: "worthALook"
+            }
+        }
+    }
+    @State private var feedSheet: FeedSheetRoute?
     @State private var confirming: (Verb, Thing)?
     /// Translate verb, swipe-triggered — same system sheet as ThingSheetView's.
     @State private var showTranslate = false
@@ -91,11 +115,7 @@ struct FeedScreen: View {
     /// Balance tile (2026-07-20). It moved here with the balance itself: the
     /// tile IS the combined portfolio, so it's the honest door. Only meaningful
     /// with more than one wallet watched, which is also the sheet's own guard.
-    @State private var showCombinedWallets = false
-    /// The Worth-a-look tray — the page behind the warnings tile
-    /// (2026-07-20: the tile's tap used to push the MANAGE screen, which no
-    /// longer shows warnings at all — a door to the wrong room).
-    @State private var showWorthALook = false
+    /// Routed through `feedSheet` (`.combinedWallets`) now, not its own bool.
     /// The combined portfolio behind the treemap (2026-07-21, prd §155) — one
     /// derivation the balance headline, the concentration line, and the
     /// allocation tray all read, so nothing on this screen can disagree with
@@ -103,7 +123,7 @@ struct FeedScreen: View {
     /// read.
     @State private var portfolio: WalletPortfolio?
     /// The full allocation tray — every position and which wallets hold it.
-    @State private var showAllocation = false
+    /// Routed through `feedSheet` (`.allocation`) now, not its own bool.
     /// The balance line's window (prd §155). Narrowed to what the record can
     /// actually answer each render; the choice persists across launches.
     @State private var balanceRange: WalletRange = .watched
@@ -510,7 +530,7 @@ struct FeedScreen: View {
             // Re-tapping the active chip pops this surface's own pushed
             // screens and sheets back to root (the old per-tab pop habit).
             .onChange(of: chrome.popHome) {
-                sheetThing = nil
+                feedSheet = nil
                 HomeRoute.shared.path = []
                 confirming = nil
             }
@@ -832,37 +852,39 @@ struct FeedScreen: View {
                 chrome.pourHue = selectedWallet.map(WalletFace.tint)
             }
         }
-        .sheet(item: $sheetThing) { thing in
-            ThingSheetView(thing: thing)
-                .navigationTransition(.zoom(sourceID: thing.id, in: zoomNS))
-        }
         .navigationDestination(item: $openProject) { route in
             ProjectDetailScreen(projectName: route.name)
                 .navigationTransition(.zoom(sourceID: route.name, in: zoomNS))
         }
-        .sheet(item: $quickToken) { route in
-            TokenQuickSheet(route: route)
-        }
-        .sheet(isPresented: $showCombinedWallets) {
-            let samples = wallet.combinedValueSamples()
-            // The LIVE total leads when the holdings read has landed (prd
-            // §155) — the last sample can be up to four hours old, and the
-            // sheet's own header should never be staler than the headline
-            // that opened it.
-            CombinedWalletsSheet(total: portfolio?.totalUSD ?? samples.last?.usd ?? 0,
-                                 combined: samples,
-                                 wallets: wallet.addresses)
-        }
-        .sheet(isPresented: $showAllocation) {
-            if let portfolio {
-                WalletAllocationTray(portfolio: portfolio)
+        // One `.sheet(item:)` for every sheet this screen presents — see
+        // `FeedSheetRoute`'s doc comment for why five separate `.sheet`
+        // modifiers here caused the first tap to silently self-dismiss.
+        .sheet(item: $feedSheet) { route in
+            switch route {
+            case .thing(let thing):
+                ThingSheetView(thing: thing)
+                    .navigationTransition(.zoom(sourceID: thing.id, in: zoomNS))
+            case .token(let route):
+                TokenQuickSheet(route: route)
+            case .combinedWallets:
+                let samples = wallet.combinedValueSamples()
+                // The LIVE total leads when the holdings read has landed (prd
+                // §155) — the last sample can be up to four hours old, and the
+                // sheet's own header should never be staler than the headline
+                // that opened it.
+                CombinedWalletsSheet(total: portfolio?.totalUSD ?? samples.last?.usd ?? 0,
+                                     combined: samples,
+                                     wallets: wallet.addresses)
+            case .allocation:
+                if let portfolio {
+                    WalletAllocationTray(portfolio: portfolio)
+                }
+            case .worthALook:
+                WalletWorthALookTray(
+                    warnings: walletLive.warnings,
+                    flagged: walletLive.flagged,
+                    activeApprovals: walletLive.activeApprovals)
             }
-        }
-        .sheet(isPresented: $showWorthALook) {
-            WalletWorthALookTray(
-                warnings: walletLive.warnings,
-                flagged: walletLive.flagged,
-                activeApprovals: walletLive.activeApprovals)
         }
         .translationPresentation(isPresented: $showTranslate, text: translateText)
         .confirmationDialog(
@@ -1409,7 +1431,7 @@ struct FeedScreen: View {
                                     subtitle: FeedHeatmap.subtitle(label, total: year.total),
                                     year: year, minColumns: label.columns,
                                     onThisDay: echo,
-                                    onTapOnThisDay: { sheetThing = echo?.thing })
+                                    onTapOnThisDay: { feedSheet = echo.map { .thing($0.thing) } })
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
                     .listRowInsets(EdgeInsets())
@@ -1493,9 +1515,9 @@ struct FeedScreen: View {
                                 balanceRange = r
                                 r.remember()
                             },
-                            onOpen: hasBreakdown ? { showCombinedWallets = true } : nil,
+                            onOpen: hasBreakdown ? { feedSheet = .combinedWallets } : nil,
                             onOpenMark: { id in
-                                sheetThing = visible.first { $0.id == id }
+                                feedSheet = visible.first { $0.id == id }.map(FeedSheetRoute.thing)
                             })
                             // The card (prd §160). Padded and surfaced HERE, not
                             // inside the headline view, so the same component
@@ -1519,7 +1541,7 @@ struct FeedScreen: View {
                         // only reserves space when warnings are non-empty, but
                         // the badge row inside earns its own card the way the
                         // balance/DeFi cards above it do.
-                        WalletWarningsLine(warnings: warnings) { showWorthALook = true }
+                        WalletWarningsLine(warnings: warnings) { feedSheet = .worthALook }
                             .modifier(RowEntrance(index: 0, wave: shapeWave, style: entranceStyle))
                     }
                 }
@@ -1721,15 +1743,15 @@ struct FeedScreen: View {
                         .environment(\.genProjectTap) { name in
                             if let route = TokenQuickRoute.from(sentinel: name) {
                                 if let thing = route.watchedThing(in: modelContext) {
-                                    sheetThing = thing
+                                    feedSheet = .thing(thing)
                                 } else {
                                     // The combined map merges wallets, so a
                                     // cell tapped there carries the "held in"
                                     // breakdown with it (prd §155) — the fact
                                     // the per-wallet maps used to carry by
                                     // never merging in the first place.
-                                    quickToken = route.withHolders(
-                                        portfolio?.holders(forSymbol: route.symbol ?? "") ?? [])
+                                    feedSheet = .token(route.withHolders(
+                                        portfolio?.holders(forSymbol: route.symbol ?? "") ?? []))
                                 }
                             } else if name == "@wallet" {
                                 HomeRoute.shared.pushBridge(.wallet)
@@ -1742,7 +1764,7 @@ struct FeedScreen: View {
                         WalletConcentrationLine(
                             portfolio: portfolio,
                             onOpen: portfolio.walletCount > 1 && selectedWallet == nil
-                                ? { showAllocation = true } : nil)
+                                ? { feedSheet = .allocation } : nil)
                             .padding(.horizontal, DS.Space.s4)
                     }
                 }
@@ -1800,7 +1822,7 @@ struct FeedScreen: View {
                             let firstOfDay = i == 0
                                 || dayLabel(items[i - 1].capturedAt) != dayLabel(thing.capturedAt)
                             Button {
-                                sheetThing = thing
+                                feedSheet = .thing(thing)
                             } label: {
                                 PhotoCell(thing: thing, dayPill: firstOfDay ? dayLabel(thing.capturedAt) : nil)
                             }
@@ -2443,7 +2465,7 @@ struct FeedScreen: View {
     /// disc IS that explorer link. Tapping a transaction should show the
     /// transaction, not the page for managing which wallets you watch.
     private func openThing(_ thing: Thing) {
-        sheetThing = thing
+        feedSheet = .thing(thing)
     }
 
     /// A day group as a native section: the day's rows share ONE sheet card

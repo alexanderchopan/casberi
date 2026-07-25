@@ -757,8 +757,12 @@ struct WalletWorthALookTray: View {
         return ids
     }
 
-    /// The tray's own ceiling — past this the content scrolls.
-    private static let maxTrayHeight: CGFloat = 620
+    /// The tray's own ceiling — past this the content scrolls within the
+    /// natural-height detent below. Raised from 620 (2026-07-24, user: "it
+    /// could be taller") — the tray also now offers `.large` as a second
+    /// detent (see `trayDetents`) so a long pile can be dragged open past
+    /// even this, but the natural-height detent still caps here first.
+    private static let maxTrayHeight: CGFloat = 720
     /// A "Worth doing" row now carries an icon, a wrapping title, and a
     /// subtitle line (2026-07-24, matching the mockup) — taller than the
     /// bare one-line rows the aware pile still uses.
@@ -803,9 +807,18 @@ struct WalletWorthALookTray: View {
         min(Self.maxTrayHeight, uncappedHeight + (showsJumpBar ? 44 : 0))
     }
 
+    /// Resizable now (2026-07-24, user: "it could be taller") — opens at its
+    /// natural `trayHeight` but can be dragged up to `.large` when the
+    /// content (especially the expanded "Just so you know" pile) runs long,
+    /// instead of hard-clipping at `maxTrayHeight` with no way out but the
+    /// jump bar.
+    private var trayDetents: Set<PresentationDetent> {
+        [.height(trayHeight), .large]
+    }
+
     var body: some View {
         NavigationStack(path: $path) {
-        DSTray(title: String(localized: "Worth a look"), height: trayHeight, ink: true) {
+        DSTray(title: String(localized: "Worth a look"), height: trayHeight, ink: true, detents: trayDetents) {
                 VStack(alignment: .leading, spacing: DS.Space.s3) {
                     if showsJumpBar { jumpBar }
                     ScrollView {
@@ -900,7 +913,7 @@ struct WalletWorthALookTray: View {
             // preferences too, so it's pinned again here, right beside the
             // detents fix.
             ThingSheetView(thing: thing, onBack: { path.removeLast() })
-                .presentationDetents([.height(trayHeight)])
+                .presentationDetents(trayDetents)
                 .dsInk()
         }
         }

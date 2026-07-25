@@ -20,6 +20,11 @@ struct DSTray<Content: View>: View {
     /// one continuous ink sheet instead of a shade off beside it. See
     /// `dsInk()` in `ThemeStore.swift` for the full rationale.
     var ink: Bool = false
+    /// The detent set. Defaults to the single computed `height` every other
+    /// tray already ships — pass a wider set (e.g. `[.height(height), .large]`)
+    /// to let a tray with unpredictable content length be dragged open past
+    /// its natural size instead of clipping at a hard ceiling.
+    var detents: Set<PresentationDetent>?
     @ViewBuilder var content: () -> Content
 
     var body: some View {
@@ -38,7 +43,7 @@ struct DSTray<Content: View>: View {
         // the top edge; every tray inherits it.
         .padding(.top, DS.Space.s6)
         .padding(.bottom, DS.Space.s6)
-        .presentationDetents([.height(height)])
+        .presentationDetents(detents ?? [.height(height)])
         .presentationDragIndicator(.visible)
 
         if ink {
