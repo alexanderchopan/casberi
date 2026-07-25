@@ -8149,3 +8149,13 @@ transaction-signing (that becomes a wallet — the Kohaku conversation), no
 onion-routing proxy (needs the server we've sworn off). And nothing
 mixer-adjacent or entitlement-churning while build 103 is in App Store
 review. The privacy win on the table was legibility, not more crypto.
+
+## 206. Bigger reading text and a roomier scale — the app read like a technical manual (user: "at times I feel like I'm reading a technical manual", "the components in the wallet are too close to each other... the wallet overall is very dense... there should be more spacing between elements", "we can't just apply something one-off to wallet, we need to do this globally so rest of app would feel the same", 2026-07-25)
+
+The feed and wallet the user loves also read dense — the wallet worst, because it stacks four cards over the treemap. Two rulings, both GLOBAL by the user's own instruction (a one-off wallet fix was built, then dropped: it would only make the wallet drift from the rest of the app).
+
+**1. The reading band goes up a point.** `Typography.swift`: the app leaned on 13/15/17 for almost all running text, and its single most-used style was 13pt (`subhead13`, ~195 sites) carrying real sentences. Each of the four reading rungs steps up one point AND opens its line-height, so the band is larger and airier: `subhead13` 13→14 (lh 18→21), `callout15` 15→16 (20→23), `body17` 17→18 (22→26), `heading17` 17→18 (22→24, moving with body like iOS `.headline`/`.body`). The DISPLAY tier (heading22/34), the MONEY rungs (price48/40, stat24, price16), and the micro-caption floor (label12/11, tab10) are untouched — moving those would flatten the hierarchy the feed and wallet lean on. Token names keep their pixel suffix as stable identifiers ("names read as intent, not pixel counts").
+
+**2. The spacing scale loosens, once, in the design system.** Everything routes through `DS.Space`, so the single honest lever for app-wide breathing room is the scale itself — not per-screen padding. The three content-rhythm rungs step up; the atomic and macro rungs hold: s1 4 (held — keeps deliberate groupings like caption↔number tight), s2 8→10, s3 12→14, s4 16→18, s6 24 and s8 32 (held — macro, rare, so already-spacious areas don't blow out). s2/s3/s4 carry ~930 of the app's ~1050 `DS.Space` uses (inter-element gaps, card padding, section spacing), so this loosens exactly the crowding, uniformly, on every screen.
+
+Amends build-brief §8 (the type ramp is law there): the reading band is now 14/16/18 and the spacing scale is 4/10/14/18/24/32. WATCH on-device: a few components use literal pixel heights (some fixed-height rows, chips, DSTray heights) rather than tokens, so their internal padding grows while their frame doesn't — scan for clipping.
