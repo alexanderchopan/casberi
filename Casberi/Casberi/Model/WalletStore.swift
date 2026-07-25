@@ -337,6 +337,10 @@ final class WalletStore {
         guard watched != resolved, resolutions[watched] != resolved else { return }
         resolutions[watched] = resolved
         UserDefaults.standard.set(resolutions, forKey: "wallet.resolutions")
+        // The book keys on identity, not spelling (prd §212) — a name and the
+        // address it stands for are one entry, and this is the moment the two
+        // forms meet. Folds any row already standing under the name.
+        AddressBook.shared.noteResolution(watched, resolved: resolved)
     }
 
     func resolvedForm(of watched: String) -> String? {
@@ -433,10 +437,16 @@ final class WalletStore {
     @discardableResult
     func outcome(ofAdding raw: String, label: String = "") -> AddOutcome {
         let addr = raw.trimmingCharacters(in: .whitespacesAndNewlines)
-        let key = Self.dedupeKey(addr)
         guard addr.count >= 6 else { return .invalid }
-        guard !addresses.contains(where: { Self.dedupeKey($0.address) == key })
-        else { return .alreadyWatching }
+        // Two spellings, one wallet (2026-07-25): "vitalik.eth" and the hex it
+        // resolves to are the same watch, so BOTH sides compare in their
+        // resolved form. Without this, the field (which resolves before
+        // adding) and a door that watches the raw name (a probe hook, a
+        // starred book row) could each land the same wallet once.
+        let key = Self.dedupeKey(resolvedForm(of: addr) ?? addr)
+        guard !addresses.contains(where: {
+            Self.dedupeKey(resolvedForm(of: $0.address) ?? $0.address) == key
+        }) else { return .alreadyWatching }
         guard canWatchMore else { return .limitReached }
         addresses.append(WatchedAddress(label: label, address: addr))
         // A watched wallet is ALWAYS a book entry too (2026-07-24, user: "if
