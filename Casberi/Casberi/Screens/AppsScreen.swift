@@ -134,11 +134,13 @@ struct AppsScreen: View {
         }
     }
 
-    /// Discover leads with the "track anything" bridges — paste a token, a
-    /// wallet, or a Farcaster handle and its activity lands in the feed. These
-    /// are the standout hooks, so they head the carousel; everything else
-    /// backfills in catalog order.
-    private static let featuredStories = ["Tokens", "Wallet", "Farcaster"]
+    /// Discover's featured picks lead the deck (user ruling 2026-07-23:
+    /// "do Steam as a card and Mail as a card to start with"). Steam and Gmail
+    /// now HEAD the carousel — a broad, non-crypto first impression, since the
+    /// deck leading with Tokens/Wallet/Farcaster made the app read crypto-only.
+    /// The crypto hooks still ride behind them (they're strong, just not the
+    /// face). Order is the display order, trimmed to `prefix(4)`.
+    private static let featuredStories = ["Steam", "Gmail", "Tokens", "Wallet", "Farcaster"]
 
     private var stories: [Story] {
         let active = Set(store.bridges.filter { $0.status != .paused }.map(\.name))

@@ -301,16 +301,20 @@ enum BridgeCatalog {
     // SAME mapping the catalog page shows — the whole point of this being
     // the ruled single source of truth.
     static let categories: [(name: String, exemplar: String, groups: Set<String>)] = [
-        // Order set by the user for the paired-band wall (ruling 2026-07-23):
-        // Wallet, Markets, then Social + Mail (which pair onto one 4-wide band,
-        // being ≤2 apps each), Agents, Media, then the rest. Wallet leads now,
-        // not Markets.
+        // Order set by the user (ruling 2026-07-23, "broaden the first
+        // impression"): Wallet leads (the flagship), but Markets no longer
+        // sits beside it — leading with two crypto bands read as a crypto-only
+        // app when the app is broader. So universal categories (Social, Mail,
+        // Agents, Media) come between Wallet and Markets: breadth is obvious by
+        // the second band, and Markets stays prominent without forming a
+        // crypto wall up top. Social + Mail render as two compact side-by-side
+        // cards.
         ("Wallet",  "Wallet",      ["Wallet"]),
-        ("Markets", "Kalshi",      ["Markets", "NFTs"]),
         ("Social",  "Bluesky",     ["Network"]),
         ("Mail",    "Gmail",       ["Mail"]),
         ("Agents",  "Claude",      ["Agent"]),
         ("Media",   "Spotify",     ["Watching", "Listening", "Games", "Images"]),
+        ("Markets", "Kalshi",      ["Markets", "NFTs"]),
         // Life absorbs Home (user ruling 2026-07-23): HomeKit was the lone app
         // in its own category, and a one-app band wastes a whole 4-wide row —
         // "one option would be we could put HomeKit in Life." "People"
