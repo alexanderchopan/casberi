@@ -352,6 +352,7 @@ struct GenRender: View {
         // own: it only ever renders as a child of `DayNotes`, flat, the way
         // a Widget's rows do.
         case "DayNotes":     GenDayNotes(el: el, els: els).mountIn()
+        case "DayLede":      GenDayLede(el: el).mountIn()
         case "MoneyHero":    GenMoneyHero(el: el).mountIn()
         case "TilePair":     GenTilePair(el: el, els: els).mountIn()
         case "MoversTile":   GenMoversTile(el: el).mountIn()
@@ -3201,6 +3202,34 @@ private extension View {
 /// (and the same `TokenHue` washes at the same squared magnitude) the full
 /// `TagMap` draws elsewhere, so the small read and the big one can't disagree
 /// about which holding is largest.
+/// DayLede(text) — the day brief's opening sentence, in display type, above
+/// everything (2026-07-25, user: "that line should be above wallet").
+///
+/// No surface, by design: it is a sentence on the page, not a card. The whole
+/// point of putting it here rather than under the hero's total is that the
+/// screen opens with WORDS — "Up $1,247 today. ETH did the lifting." — and
+/// then hands the number the room to be a number in.
+///
+/// Flat by law: a plain `Text`, no nesting. This draws at the head of the
+/// agent's Stack, the exact position that has tipped the main-thread stack
+/// three times (see CLAUDE.md's eager-head depth lesson).
+private struct GenDayLede: View {
+    let el: GenEl
+    var body: some View {
+        Text(el.str(0))
+            .dsText(.heading22)
+            .foregroundStyle(DS.textPrimary)
+            .fixedSize(horizontal: false, vertical: true)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            // Self-padded, like every other component in this file (the
+            // answer column doesn't inset its children — `GenTagMap`,
+            // `GenWidget` and the rest each own their horizontal margin). A
+            // bare `maxWidth: .infinity` ran the sentence off both edges,
+            // starting left of the masthead above it.
+            .padding(.horizontal, DS.Space.s4)
+    }
+}
+
 private struct GenMoneyHero: View {
     let el: GenEl
     @Environment(\.colorScheme) private var scheme
@@ -3264,19 +3293,6 @@ private struct GenMoneyHero: View {
                         .scaleEffect(pillShown ? 1 : 0.6)
                         .opacity(pillShown ? 1 : 0)
                 }
-            }
-            // The crown's sentence (arg 11, 2026-07-25) — "Up $184 today. ETH
-            // did the lifting." It rides in with the pill rather than the
-            // number, because it explains the move, and it fades rather than
-            // scales: two things popping at the same beat argued for attention.
-            if !el.str(11).isEmpty {
-                Text(el.str(11))
-                    .dsText(.callout15)
-                    .foregroundStyle(DS.textSecondary)
-                    .lineLimit(2)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .opacity(pillShown ? 1 : 0)
-                    .padding(.top, -DS.Space.s1)
             }
             HStack(alignment: .bottom, spacing: DS.Space.s3) {
                 treemap

@@ -32,7 +32,11 @@ import SwiftData
 /// crown is the MONEY (user: "when a user has a wallet active the money is
 /// going to always be the most important thing") — it's the one read where a
 /// number is itself the event, and the one that changes while you sleep, so the
-/// hero leads and the synthesis card no longer sits above it. Its watchlist
+/// hero leads and the synthesis card no longer sits above it. Above the hero
+/// sits one line of display type, the `DayLede` (user: "that line should be
+/// above wallet") — the money said in WORDS before it's said in digits, which
+/// is the one thing the approved mockup's crown had that a number alone can't:
+/// magnitude in dollars, and which holding moved. Its watchlist
 /// stays glued to it (2026-07-23, one story, never split). Then the THEMES map,
 /// which took the slot `sourceMix`/`hourStrip` vacated and answers what the day
 /// was ABOUT rather than how much of it there was. Then the agent's read, then
@@ -98,14 +102,28 @@ enum TodayBrief {
         var ids: [String] = []
         var lines: [String] = []
 
-        // 1. The money hero — the CROWN (2026-07-25), the day's one fused
+        // 1. The lede — the day in ONE sentence, in display type, above
+        // everything (user, 2026-07-25: "that line should be above wallet").
+        // It shipped as the hero's own subtitle earlier the same day; up here
+        // it does what the mockup's crown did — the screen opens with words,
+        // then hands the number the room to be a number in. Wallet-only for
+        // now: the sentence we can always keep is the one about the money that
+        // moved. No move, no lede — the brief opens on the hero instead, and
+        // nothing is padded to fill the slot.
+        let lede = walletAttribution(move)
+        if !lede.isEmpty {
+            ids.append("lede")
+            lines.append("lede = DayLede(\"\(genSafe(lede))\")")
+        }
+
+        // 2. The money hero — the CROWN (2026-07-25), the day's one fused
         // visualization and the only read where a number is itself the event.
         if let hero = moneyHero(move: move, holdings: holdings, landed: landed) {
             ids.append("hero")
             lines.append(hero)
         }
 
-        // 2. The pair: what's moving, what's next. Stays glued to the hero
+        // 3. The pair: what's moving, what's next. Stays glued to the hero
         // above it (user ruling 2026-07-23: "keep wallet and watchlist
         // together") — the watchlist IS money, so putting anything between it
         // and the wallet splits one story across two places.
@@ -123,7 +141,7 @@ enum TodayBrief {
             lines.append("pair = TilePair([\(tiles.joined(separator: ", "))])")
         }
 
-        // 3. The themes map — the second whole-day summary, and the one that
+        // 4. The themes map — the second whole-day summary, and the one that
         // replaced "what landed" and "when it landed" outright (2026-07-25,
         // user: the themes treemap "is more important than 'what landed' and
         // when"). Same slot, same geometry; a different question — what today
@@ -133,7 +151,7 @@ enum TodayBrief {
             lines.append(themes)
         }
 
-        // 4. The synthesis card (B3) — only the observations that fired. Sits
+        // 5. The synthesis card (B3) — only the observations that fired. Sits
         // BELOW the summaries now (2026-07-25): it used to open the screen,
         // which made the agent's read the crown instead of the money.
         let notes = observations(things: things, landed: landed, move: move, moves: moves, now: now)
@@ -145,7 +163,7 @@ enum TodayBrief {
             }
         }
 
-        // 5. The leads — a thing in full, per shape that landed.
+        // 6. The leads — a thing in full, per shape that landed.
         if let mention = mentionCard(landed) {
             ids.append("men")
             lines += mention
@@ -418,11 +436,11 @@ enum TodayBrief {
         // from, so a wallet with no day-scale history just shows the number
         // plainly.
         let rollFrom = move.map { String(format: "%.2f", $0.anchorUSD) } ?? ""
-        return "hero = MoneyHero(\"\(genSafe(compactUSD(total)))\", \"\(delta)\", \"\(csv)\", \"\(genSafe(subline))\", [\(cells.prefix(6).joined(separator: ", "))], \"\(genSafe(anchor))\", \"\(genSafe(txTitle))\", \"\(genSafe(txMeta))\", \"\(txID)\", \"\(String(format: "%.2f", total))\", \"\(rollFrom)\", \"\(genSafe(walletAttribution(move)))\")"
+        return "hero = MoneyHero(\"\(genSafe(compactUSD(total)))\", \"\(delta)\", \"\(csv)\", \"\(genSafe(subline))\", [\(cells.prefix(6).joined(separator: ", "))], \"\(genSafe(anchor))\", \"\(genSafe(txTitle))\", \"\(genSafe(txMeta))\", \"\(txID)\", \"\(String(format: "%.2f", total))\", \"\(rollFrom)\")"
     }
 
-    /// "Up $184 today. ETH did the lifting." — the crown's own sentence
-    /// (2026-07-25), arg 11, drawn directly under the total it explains.
+    /// "Up $184 today. ETH did the lifting." — the brief's LEDE (`DayLede`),
+    /// the sentence the screen opens with, above the hero.
     ///
     /// It carries the two facts the number and its pill can't. The MAGNITUDE
     /// in money, because a percentage hides whether +1.5% is a coffee or a
@@ -430,9 +448,11 @@ enum TodayBrief {
     /// (§166, `holdingsDeltas(forAddress:since:)`), never the all-time one, so
     /// the sentence spans exactly what the percentage claims.
     ///
-    /// This was a synthesis NOTE until 2026-07-25. It moved here because the
-    /// money became the crown: an attribution belongs under the number it
-    /// attributes, not in a card three modules down. Both halves fail
+    /// It has now been in three places in one day (2026-07-25): a synthesis
+    /// note buried three modules down, then the hero's own subtitle when the
+    /// money took the crown, then here — the user's call, and the one the
+    /// approved mockup drew. Above the number it reads as the day's headline;
+    /// under it, it read as a caption on a chart. Both halves fail
     /// independently and silently — no move, no line; no snapshot pair
     /// covering the window, just the dollar half.
     private static func walletAttribution(_ move: DayBrief.WalletMove?) -> String {
