@@ -866,13 +866,17 @@ struct FeedScreen: View {
         }
         .translationPresentation(isPresented: $showTranslate, text: translateText)
         .confirmationDialog(
-            confirming.map { "\($0.0.label): \($0.1.title)?" } ?? "",
-            isPresented: Binding(get: { confirming != nil },
+            // Guard the held `Thing` with `isLive` (2026-07-24 crash class):
+            // a background heal can delete this exact thing while the dialog
+            // sits open, and reading `$0.1.title` on a dead model traps. If it
+            // dies, the presentation binding flips false and the dialog leaves.
+            confirming.map { $0.1.isLive ? "\($0.0.label): \($0.1.title)?" : "" } ?? "",
+            isPresented: Binding(get: { confirming?.1.isLive == true },
                                  set: { if !$0 { confirming = nil } }),
             titleVisibility: .visible
         ) {
-            if let (verb, thing) = confirming {
-                Button(verb.label) { perform(verb, on: thing); confirming = nil }
+            if let (verb, thing) = confirming, thing.isLive {
+                Button(verb.label) { if thing.isLive { perform(verb, on: thing) }; confirming = nil }
                 Button("Cancel", role: .cancel) { confirming = nil }
             }
         }
