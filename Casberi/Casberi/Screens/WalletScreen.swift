@@ -527,7 +527,7 @@ struct WalletScreen: View {
     /// inside it — a button says what it does in as few words as it can.
     private var connectRow: some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
-            DSSlabButton(title: connecting ? "Waiting for your wallet — tap to cancel"
+            DSSlabButton(title: connecting ? "Waiting — tap to cancel"
                                                : "Connect a wallet app",
                              systemImage: "wallet.pass.fill",
                              busy: connecting) {
