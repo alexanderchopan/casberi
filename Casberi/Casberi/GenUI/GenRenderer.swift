@@ -2317,7 +2317,12 @@ private struct GenTagMap: View {
                 // already encodes as area (a name floating in a void read
                 // as unfinished). 1-unit-tall cells skip it (no vertical
                 // room; the line would draw past the tile onto its neighbor).
-                if !preview, f.3 >= 2 {
+                // "plain" mode skips it everywhere (2026-07-25, the Today
+                // brief's themes map): where arrival volume is explicitly not
+                // news, printing the tally the area already draws is the same
+                // fact twice — and it's the half nobody asked for. The count
+                // still arrives on the ref; it just sizes the cell now.
+                if !preview, f.3 >= 2, iconMode != "plain" {
                     Text(item.n == 1 ? "1 thing" : "\(item.n) things")
                         .dsText(.subhead13)
                         .foregroundStyle(DS.textSecondary)
@@ -3259,6 +3264,19 @@ private struct GenMoneyHero: View {
                         .scaleEffect(pillShown ? 1 : 0.6)
                         .opacity(pillShown ? 1 : 0)
                 }
+            }
+            // The crown's sentence (arg 11, 2026-07-25) — "Up $184 today. ETH
+            // did the lifting." It rides in with the pill rather than the
+            // number, because it explains the move, and it fades rather than
+            // scales: two things popping at the same beat argued for attention.
+            if !el.str(11).isEmpty {
+                Text(el.str(11))
+                    .dsText(.callout15)
+                    .foregroundStyle(DS.textSecondary)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .opacity(pillShown ? 1 : 0)
+                    .padding(.top, -DS.Space.s1)
             }
             HStack(alignment: .bottom, spacing: DS.Space.s3) {
                 treemap

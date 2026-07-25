@@ -1,0 +1,208 @@
+<title>What's going on — v2, money crowned, themes second</title>
+<style>
+  :root {
+    --page: #0a0b0f; --ink: #f2f4f8; --muted: #99a1b4; --faint: #626b80;
+    --tint: #1673e6; --confirm: #32d74b; --down: #ff5a5f; --attn: #ff9f0a;
+    --money: ui-rounded, -apple-system, system-ui, sans-serif;
+    --text: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { background: var(--page); }
+  body { font-family: var(--text); color: var(--ink);
+         background: radial-gradient(900px 420px at 18% -8%, rgba(22,115,230,.10), transparent 62%), var(--page);
+         padding: 46px 28px 72px; }
+  .wrap { max-width: 1080px; margin: 0 auto; }
+  header { max-width: 780px; margin-bottom: 34px; }
+  .eyebrow { font-size: 12px; font-weight: 600; color: #4d8dff; margin-bottom: 10px; }
+  h1 { font-size: clamp(26px,3.4vw,36px); font-weight: 800; letter-spacing: -.02em; line-height: 1.1; margin-bottom: 12px; }
+  header p { font-size: 15px; line-height: 1.55; color: var(--muted); max-width: 70ch; margin-bottom: 8px; }
+  header p b { color: var(--ink); font-weight: 600; }
+
+  .split { display: flex; flex-wrap: wrap; gap: 44px; align-items: flex-start; }
+  .phone { width: 350px; flex: none; border-radius: 46px; padding: 10px; background: #15171c; box-shadow: 0 30px 70px rgba(0,0,0,.55); }
+  .screen { border-radius: 38px; overflow: hidden; padding: 16px 15px 20px;
+            background: linear-gradient(180deg, rgba(22,115,230,.17) 0%, rgba(22,115,230,.045) 34%, transparent 70%) top/100% 420px no-repeat, #000; }
+  .notes { flex: 1; min-width: 330px; }
+
+  /* chrome */
+  .stackbar { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; }
+  .stackbar .back { color: var(--faint); font-size: 14px; }
+  .stackbar .q { font-family: var(--money); font-size: 13px; font-weight: 700; color: var(--muted); }
+  .prov { display: flex; align-items: center; gap: 5px; margin-left: auto; font-size: 10px; color: var(--faint); }
+  .prov span { width: 6px; height: 6px; border-radius: 50%; background: var(--confirm); }
+
+  /* the crown */
+  .cap  { font-size: 10.5px; font-weight: 600; color: var(--faint); }
+  .big  { font-family: var(--money); font-size: 46px; font-weight: 800; letter-spacing: -.03em;
+          line-height: 1.06; font-variant-numeric: tabular-nums; margin-top: 2px; }
+  .pill { font-family: var(--money); font-size: 12.5px; font-weight: 800; padding: 3px 8px; border-radius: 999px;
+          background: rgba(50,215,75,.16); color: var(--confirm); font-variant-numeric: tabular-nums; vertical-align: 7px; }
+  .pill.dn { background: rgba(255,90,95,.16); color: var(--down); }
+  .said { font-size: 15px; line-height: 1.4; font-weight: 600; color: var(--ink); margin-top: 7px; letter-spacing: -.01em; }
+  .said em { font-style: normal; color: var(--muted); font-weight: 500; }
+  .spark { height: 46px; margin: 9px 0 0; }
+  .anchor { font-size: 11px; color: var(--faint); margin-top: 1px; }
+
+  /* labels + rows */
+  .label { font-size: 10.5px; font-weight: 700; color: var(--faint); margin: 22px 2px 4px; display: flex; align-items: center; }
+  .label i { font-style: normal; margin-left: auto; font-weight: 600; color: var(--faint); }
+  .li { display: flex; align-items: center; gap: 11px; padding: 9px 3px; }
+  .li.top { align-items: flex-start; }
+  .g { width: 30px; height: 30px; border-radius: 50%; flex: none; display: flex; align-items: center;
+       justify-content: center; font-size: 13px; background: rgba(255,255,255,.08); color: var(--muted); }
+  .g.good { background: rgba(50,215,75,.16); color: var(--confirm); }
+  .g.attn { background: rgba(255,159,10,.18); color: var(--attn); }
+  .g.face { background: radial-gradient(circle at 32% 30%, #e86a6a, #7d6adf 60%, #3a3160); }
+  .g.tk   { background: rgba(22,115,230,.2); color: #77b0ff; font-family: var(--money); font-weight: 800; font-size: 10px; }
+  .li .t  { min-width: 0; }
+  .li b   { display: block; font-family: var(--money); font-size: 14.5px; font-weight: 700; letter-spacing: -.01em;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .li s   { display: block; text-decoration: none; font-size: 11.5px; color: var(--faint);
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .li .v  { margin-left: auto; text-align: right; flex: none; padding-left: 8px; }
+  .li .v u  { text-decoration: none; display: block; font-family: var(--money); font-size: 13px; font-weight: 700;
+              color: var(--confirm); font-variant-numeric: tabular-nums; }
+  .li .v u.dn { color: var(--down); } .li .v u.flat { color: var(--faint); }
+  .chev { margin-left: auto; color: var(--faint); font-size: 13px; flex: none; padding-left: 8px; }
+  .li .mini { margin-left: auto; width: 54px; height: 20px; flex: none; }
+  .li .mini + .v { margin-left: 10px; }
+  .thumb { width: 46px; height: 46px; border-radius: 11px; flex: none;
+           background: linear-gradient(135deg,#2b3a55,#16202f); }
+  .quote { font-size: 13.5px; line-height: 1.45; color: var(--ink); margin-top: 3px; }
+  .askmore { display: inline-flex; font-family: var(--money); font-size: 12.5px; font-weight: 700;
+             color: #6ea8ff; padding: 6px 3px 0; }
+
+  /* the themes map — §145 wash: one hue, opacity by share, no per-cell palette */
+  .map { display: grid; gap: 4px; height: 168px; margin-top: 6px;
+         grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(3, 1fr); }
+  .map div { border-radius: 13px; padding: 9px 10px; display: flex; align-items: flex-end;
+             font-family: var(--money); font-weight: 700; font-size: 12.5px; letter-spacing: -.01em;
+             background: rgba(22,115,230,var(--o)); }
+  .c1 { grid-column: 1/3; grid-row: 1/3; --o: .40; font-size: 15px !important; }
+  .c2 { grid-column: 3/5; grid-row: 1/2; --o: .30; }
+  .c3 { grid-column: 3/4; grid-row: 2/3; --o: .24; }
+  .c4 { grid-column: 4/5; grid-row: 2/4; --o: .20; }
+  .c5 { grid-column: 1/3; grid-row: 3/4; --o: .16; }
+  .c6 { grid-column: 3/4; grid-row: 3/4; --o: .12; font-size: 11.5px !important; }
+  .mapsaid { font-size: 12.5px; line-height: 1.4; color: var(--muted); margin-top: 9px; font-weight: 500; }
+  .mapsaid b { color: var(--ink); font-weight: 650; }
+
+  .keep { display: flex; align-items: center; gap: 8px; margin-top: 24px; padding: 10px 12px;
+          border-radius: 14px; background: rgba(255,255,255,.05); }
+  .keep b { font-family: var(--money); font-size: 12.5px; font-weight: 700; }
+  .keep u { text-decoration: none; margin-left: auto; font-family: var(--money); font-size: 12px;
+            font-weight: 800; color: #6ea8ff; }
+
+  /* notes column */
+  .notes h2 { font-size: 18px; font-weight: 750; letter-spacing: -.015em; margin-bottom: 8px; }
+  .notes h3 { font-size: 13px; font-weight: 700; color: #8fb8ff; margin: 22px 0 7px; }
+  .notes p { font-size: 13.5px; line-height: 1.6; color: var(--muted); margin-bottom: 9px; max-width: 66ch; }
+  .notes p b { color: var(--ink); font-weight: 650; }
+  .notes code { font-family: ui-monospace, monospace; font-size: 12.5px; color: var(--muted); }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 4px; }
+  td { padding: 8px 12px 8px 0; color: var(--muted); vertical-align: top; line-height: 1.5; }
+  td:first-child { color: var(--faint); white-space: nowrap; font-weight: 600; width: 128px; }
+  td b { color: var(--ink); font-weight: 650; }
+  .cut td:first-child { color: #ff8a8e; }
+  .law { font-size: 12.5px; line-height: 1.65; color: var(--faint); max-width: 74ch; margin-top: 16px; }
+  .law b { color: var(--muted); font-weight: 600; }
+</style>
+
+<div class="wrap">
+<header>
+  <div class="eyebrow">Casberi · the day brief · v2</div>
+  <h1>Nobody counts what landed. They want to know what it was <i>about</i>.</h1>
+  <p>Dozens land a day, so <b>volume is not news</b> — which retires two whole modules, not just their captions. <code>sourceMix</code> ("What landed: Bluesky 6, Photos 4…") and <code>hourStrip</code> ("When it landed") both exist only to quantify and locate volume. Gone. The Themes treemap takes their place: same slot, but it answers <b>what today was about</b> instead of how much of it there was.</p>
+  <p>Crown goes to money whenever a wallet is watched — it's the one read where a number IS the event. B's <b>voice</b> survives as the sentence under it; C's <b>layout</b> is the whole screen: no module owns a card, rank is size and position under a small gray label.</p>
+</header>
+
+<div class="split">
+
+  <div class="phone"><div class="screen">
+    <div class="stackbar"><span class="back">‹</span><span class="q">How's my day?</span>
+      <span class="prov"><span></span>on device</span></div>
+
+    <!-- CROWN: money, said in words -->
+    <div class="cap">Wednesday</div>
+    <div class="big">$12,480 <span class="pill">+1.5%</span></div>
+    <div class="said">Up $184 today. <em>ETH did the lifting.</em></div>
+    <svg class="spark" viewBox="0 0 300 46" preserveAspectRatio="none">
+      <defs><linearGradient id="f" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#32d74b" stop-opacity=".22"/><stop offset="1" stop-color="#32d74b" stop-opacity="0"/>
+      </linearGradient></defs>
+      <path d="M0,34 L30,32 L60,36 L90,27 L120,30 L150,21 L180,25 L210,14 L240,17 L270,9 L300,6 L300,46 L0,46 Z" fill="url(#f)"/>
+      <path d="M0,34 L30,32 L60,36 L90,27 L120,30 L150,21 L180,25 L210,14 L240,17 L270,9 L300,6"
+            fill="none" stroke="#32d74b" stroke-width="2.2" stroke-linecap="round"/>
+    </svg>
+    <div class="anchor">since Jul 24</div>
+    <div class="li"><span class="g good">↓</span><span class="t"><b>Bought 25 USDC with Cash App</b><s>your only transaction · settled 9:14</s></span><span class="chev">›</span></div>
+
+    <!-- THEMES: the map, no tallies -->
+    <div class="label">What you're into</div>
+    <div class="map">
+      <div class="c1">Foldables</div><div class="c2">Solana</div><div class="c3">Design systems</div>
+      <div class="c4">Peer</div><div class="c5">Recipes</div><div class="c6">Cycling</div>
+    </div>
+    <div class="mapsaid"><b>Foldables is new this week.</b> Everything else has been around a while.</div>
+
+    <!-- LEADS -->
+    <div class="label">Worth opening</div>
+    <div class="li top"><span class="g face"></span><span class="t">
+      <b>@lina.bsky.social</b>
+      <div class="quote">"casberi is the first thing I've seen that treats a screenshot and a wallet as the same kind of object —"</div>
+      <s style="margin-top:5px">mentions you · 3 replies · 2 more behind it</s></span></div>
+    <div class="li"><span class="thumb"></span><span class="t"><b>Samsung's foldable bet</b><s>The Verge · 9:41</s></span><span class="chev">›</span></div>
+    <div class="askmore">See the rest ›</div>
+
+    <!-- WATCHLIST -->
+    <div class="label">Watchlist <i>3 ›</i></div>
+    <div class="li"><span class="g tk">WIF</span><span class="t"><b>dogwifhat</b></span>
+      <svg class="mini" viewBox="0 0 54 20" preserveAspectRatio="none"><path d="M0,15 L9,13 L18,16 L27,9 L36,11 L45,5 L54,3" fill="none" stroke="#32d74b" stroke-width="1.8"/></svg>
+      <span class="v"><u>+4.2%</u></span></div>
+    <div class="li"><span class="g tk">SOL</span><span class="t"><b>Solana</b></span>
+      <svg class="mini" viewBox="0 0 54 20" preserveAspectRatio="none"><path d="M0,7 L9,9 L18,6 L27,11 L36,10 L45,14 L54,13" fill="none" stroke="#ff5a5f" stroke-width="1.8"/></svg>
+      <span class="v"><u class="dn">−1.1%</u></span></div>
+    <div class="li"><span class="g tk">ETH</span><span class="t"><b>Ethereum</b></span>
+      <svg class="mini" viewBox="0 0 54 20" preserveAspectRatio="none"><path d="M0,10 L9,10 L18,9 L27,10 L36,10 L45,9 L54,10" fill="none" stroke="#626b80" stroke-width="1.8"/></svg>
+      <span class="v"><u class="flat">flat</u></span></div>
+
+    <!-- NEXT -->
+    <div class="label">Up next</div>
+    <div class="li"><span class="g attn">⏱</span><span class="t"><b>Renew casberi.app</b><s>Thu 5:00 PM · 2 more overdue</s></span><span class="chev">›</span></div>
+
+    <div class="keep"><span class="g" style="width:22px;height:22px;font-size:11px">★</span>
+      <b>You ask this a lot — keep it?</b><u>Keep</u></div>
+  </div></div>
+
+  <div class="notes">
+    <h2>What changed, and why</h2>
+    <p>Your note kills more than copy. A brief that can't say "14 landed" loses <b>both of its volume modules</b> — and the synthesis notes lose a whole shape, because "most of it landed before 10am" is a tally wearing a sentence.</p>
+
+    <h3>Cut</h3>
+    <table>
+      <tr class="cut"><td>sourceMix</td><td><b>"What landed" — gone.</b> Its entire content is <i>Bluesky 6, Photos 4, RSS 3</i>. A composition of volume, when volume isn't news. The Themes map takes its slot and its geometry.</td></tr>
+      <tr class="cut"><td>hourStrip</td><td><b>"When it landed" — gone.</b> Eight buckets of arrival counts. The only case it earned was the overnight window, and the away-gap sentence already covers that in words.</td></tr>
+      <tr class="cut"><td>Counting notes</td><td>A synthesis note whose payload is a number ("most of it landed before 10am", "4 of 6 links") stops qualifying. A note must name <b>a thing, a shift, or an attribution</b> — the existing module doctrine (§166), now enforced on notes too.</td></tr>
+      <tr class="cut"><td>The <i>N things</i> line</td><td><code>themesDocument</code> still passes counts for <b>area</b> — but the cell stops printing them. Size already says which theme is bigger; the number is the same fact twice, and it's the fact nobody wanted.</td></tr>
+    </table>
+
+    <h3>Kept, and re-ranked</h3>
+    <table>
+      <tr><td>Money</td><td><b>The crown, unconditionally, when a wallet is watched.</b> This is the one place a count is still the event (money moving), and the one number that changes while you sleep. It keeps its curve; the treemap of holdings stays in the wallet room — one map per screen, and this screen's map is themes.</td></tr>
+      <tr><td>The sentence</td><td>B's voice survives as the line <i>under</i> the number: "Up $184 today. ETH did the lifting." Attribution, not restatement — it says <b>which holding moved</b>, which the number alone can't.</td></tr>
+      <tr><td>Themes</td><td>Second, at full size, straight on the page. Same <code>TagMap</code> the All feed draws, same §145 wash (one hue, opacity by share) and no icons — a tag spans sources by nature. A cell tap re-runs the retriever, as it does in the feed.</td></tr>
+      <tr><td>The map's sentence</td><td>The one line the map can't draw: <b>what's new</b>. "Foldables is new this week" is the observation the old <code>dominantTopic</code> note was reaching for — a shift, not a share.</td></tr>
+      <tr><td>Leads · watchlist · next</td><td>Unchanged in content, de-carded in form: gray label, rows beneath, one chevron grammar, mention still shown in full because the post's words are the lead.</td></tr>
+    </table>
+
+    <h3>The no-wallet case</h3>
+    <p>Without a watched wallet the crown falls through to <b>Themes</b>, drawn at hero size with its sentence promoted to the display line — the same screen minus a section, not a different design. This is the honest version of the ruling: money leads <i>because it's yours and it moved</i>, not because it's the app's favorite subject.</p>
+
+    <h3>Two things to watch</h3>
+    <p><b>Themes needs a shift, not a snapshot.</b> Six tags that barely move day to day make the map look identical every morning — the All feed already solved this with a seen-digest that collapses an unchanged map to one line. The brief should inherit that: if today's clusters equal yesterday's, the map shrinks and its sentence carries the screen.</p>
+    <p><b>A count still hides in "Up next".</b> "2 more overdue" is volume — but overdue is a state, not an arrival, so it stays. The rule isn't "no numbers"; it's <b>no numbers about how much arrived</b>.</p>
+
+    <p class="law"><b>Render depth.</b> Fewer surfaces helps, but the crown, the map and every row here still mount through <code>GenRender</code>'s generic <code>Widget</code>/<code>Row</code> path — the one that has tipped the main-thread stack three times. Any new renderer for these draws flat, a plain <code>HStack</code> of <code>Text</code>, exactly like <code>WalletRow</code>.</p>
+  </div>
+</div>
+</div>

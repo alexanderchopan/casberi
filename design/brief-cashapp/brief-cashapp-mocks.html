@@ -1,0 +1,344 @@
+<title>What's going on — the Cash App test</title>
+<style>
+  :root {
+    --page: #0a0b0f; --ink: #f2f4f8; --muted: #99a1b4; --faint: #626b80;
+    --tint: #1673e6; --confirm: #32d74b; --down: #ff5a5f; --attn: #ff9f0a;
+    --slab: #16181d; --well: #101216; --card: rgba(28,30,37,.82);
+    --money: ui-rounded, -apple-system, system-ui, sans-serif;
+    --text: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { background: var(--page); }
+  body { font-family: var(--text); color: var(--ink);
+         background: radial-gradient(900px 420px at 18% -8%, rgba(22,115,230,.10), transparent 62%), var(--page);
+         padding: 48px 28px 72px; }
+  .wrap { max-width: 1180px; margin: 0 auto; }
+  header { max-width: 800px; margin-bottom: 34px; }
+  .eyebrow { font-size: 12px; font-weight: 600; color: #4d8dff; margin-bottom: 10px; }
+  h1 { font-size: clamp(26px,3.4vw,36px); font-weight: 800; letter-spacing: -.02em; line-height: 1.1; margin-bottom: 12px; }
+  header p { font-size: 15px; line-height: 1.55; color: var(--muted); max-width: 70ch; margin-bottom: 8px; }
+  header p b { color: var(--ink); font-weight: 600; }
+
+  .row { display: flex; flex-wrap: wrap; gap: 34px; align-items: flex-start; justify-content: center; }
+  .option { width: 340px; }
+  .phone { width: 340px; border-radius: 46px; padding: 10px; background: #15171c; box-shadow: 0 30px 70px rgba(0,0,0,.55); }
+  .screen { border-radius: 38px; overflow: hidden; padding: 16px 14px 20px; min-height: 760px;
+            background: linear-gradient(180deg, rgba(22,115,230,.16) 0%, rgba(22,115,230,.04) 34%, transparent 70%) top/100% 400px no-repeat, #000; }
+
+  /* agent-stack chrome */
+  .stackbar { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; }
+  .stackbar .back { color: var(--faint); font-size: 14px; }
+  .stackbar .q { font-family: var(--money); font-size: 13px; font-weight: 700; color: var(--muted); }
+  .prov { display: flex; align-items: center; gap: 5px; margin-left: auto; font-size: 10px; color: var(--faint); }
+  .prov span { width: 6px; height: 6px; border-radius: 50%; background: var(--confirm); }
+
+  /* type */
+  .cap  { font-size: 10.5px; font-weight: 600; color: var(--faint); }
+  .lede { font-size: 25px; font-weight: 800; letter-spacing: -.022em; line-height: 1.16; }
+  .lede em { font-style: normal; color: var(--faint); font-weight: 700; }
+  .big  { font-family: var(--money); font-size: 44px; font-weight: 800; letter-spacing: -.03em;
+          line-height: 1.05; font-variant-numeric: tabular-nums; }
+  .pill { font-family: var(--money); font-size: 12px; font-weight: 800; padding: 3px 8px; border-radius: 999px;
+          background: rgba(50,215,75,.16); color: var(--confirm); font-variant-numeric: tabular-nums; vertical-align: 5px; }
+  .pill.dn { background: rgba(255,90,95,.16); color: var(--down); }
+  .why  { font-size: 11.5px; color: var(--faint); margin-top: 4px; }
+
+  /* the one list */
+  .label { font-size: 10.5px; font-weight: 700; color: var(--faint); margin: 20px 2px 4px; display: flex; align-items: center; }
+  .label i { font-style: normal; margin-left: auto; font-weight: 600; color: var(--faint); }
+  .li { display: flex; align-items: center; gap: 11px; padding: 9px 4px; }
+  .li.top { align-items: flex-start; }
+  .g { width: 30px; height: 30px; border-radius: 50%; flex: none; display: flex; align-items: center;
+       justify-content: center; font-size: 13px; background: rgba(255,255,255,.08); color: var(--muted); }
+  .g.attn { background: rgba(255,159,10,.18); color: var(--attn); }
+  .g.hot  { background: rgba(255,90,95,.18); color: var(--down); }
+  .g.good { background: rgba(50,215,75,.16); color: var(--confirm); }
+  .g.face { background: radial-gradient(circle at 32% 30%, #e86a6a, #7d6adf 60%, #3a3160); }
+  .g.face2{ background: radial-gradient(circle at 32% 30%, #5ad1c4, #2f7de0 60%, #1c3b6e); }
+  .g.tk   { background: rgba(22,115,230,.2); color: #77b0ff; font-family: var(--money); font-weight: 800; font-size: 10px; }
+  .g.sq   { border-radius: 9px; background: #26303f; }
+  .li .t  { min-width: 0; }
+  .li b   { display: block; font-family: var(--money); font-size: 14.5px; font-weight: 700; letter-spacing: -.01em;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .li b.wrap { white-space: normal; font-size: 14px; line-height: 1.32; }
+  .li s   { display: block; text-decoration: none; font-size: 11.5px; color: var(--faint);
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .li s.wrap { white-space: normal; line-height: 1.4; }
+  .li .v  { margin-left: auto; text-align: right; flex: none; padding-left: 8px; }
+  .li .v em { font-style: normal; display: block; font-family: var(--money); font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .li .v u  { text-decoration: none; display: block; font-size: 11px; color: var(--confirm); font-variant-numeric: tabular-nums; }
+  .li .v u.dn { color: var(--down); } .li .v u.flat { color: var(--faint); }
+  .chev { margin-left: auto; color: var(--faint); font-size: 13px; flex: none; padding-left: 8px; }
+  .li .mini { margin-left: auto; width: 54px; height: 20px; flex: none; }
+  .li .mini + .v { margin-left: 10px; }
+  .thumb { width: 46px; height: 46px; border-radius: 11px; flex: none; object-fit: cover;
+           background: linear-gradient(135deg,#2b3a55,#16202f); }
+
+  /* bare graphics (no card) */
+  .spark { height: 44px; margin: 10px 0 2px; }
+  .band  { height: 54px; margin: 6px 0 2px; }
+  .band.thin { height: 34px; }
+  .stamps { display: flex; justify-content: space-between; font-size: 10px; color: var(--faint); margin-top: 2px; }
+  .map { display: grid; gap: 3px; height: 116px; margin-top: 6px;
+         grid-template-columns: 1.55fr 1fr; grid-template-rows: 1fr 1fr; }
+  .map div { border-radius: 9px; padding: 7px 8px; font-family: var(--money); font-weight: 800; font-size: 11.5px; }
+  .map div u { text-decoration: none; display: block; font-size: 10px; font-weight: 700; opacity: .62; }
+  .m1 { grid-row: span 2; background: #1e5fc4; } .m2 { background: #2f7de0; } .m3 { background: #37527a; }
+  .stack { display: flex; height: 12px; border-radius: 999px; overflow: hidden; margin: 8px 0 6px; }
+  .stack i { display: block; }
+  .keys { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 11px; color: var(--muted); }
+  .keys em { font-style: normal; display: inline-flex; align-items: center; gap: 5px; }
+  .keys em s { text-decoration: none; width: 7px; height: 7px; border-radius: 2px; display: block; }
+  .keys em u { text-decoration: none; color: var(--faint); font-variant-numeric: tabular-nums; }
+
+  /* card (only where an option keeps one) */
+  .card { background: var(--card); border-radius: 20px; padding: 14px; margin-top: 8px; }
+  .card .cap { margin-bottom: 4px; }
+  .quote { font-size: 13.5px; line-height: 1.45; color: var(--ink); margin-top: 2px; }
+  .askmore { display: inline-flex; align-items: center; gap: 5px; font-family: var(--money);
+             font-size: 12.5px; font-weight: 700; color: #6ea8ff; padding: 8px 4px 2px; }
+  .keep { display: flex; align-items: center; gap: 8px; margin-top: 20px; padding: 10px 12px;
+          border-radius: 14px; background: rgba(255,255,255,.05); }
+  .keep b { font-family: var(--money); font-size: 12.5px; font-weight: 700; }
+  .keep u { text-decoration: none; margin-left: auto; font-family: var(--money); font-size: 12px;
+            font-weight: 800; color: #6ea8ff; }
+
+  .caption { margin-top: 16px; padding: 0 4px; }
+  .caption h2 { font-size: 16.5px; font-weight: 700; margin-bottom: 6px; }
+  .caption h2 span { color: var(--faint); font-weight: 600; }
+  .caption p { font-size: 13px; line-height: 1.55; color: var(--muted); }
+  .caption p + p { margin-top: 7px; }
+  .caption b { color: var(--ink); font-weight: 650; }
+  .verdict { margin-top: 9px; font-size: 12.5px; line-height: 1.5; color: var(--faint); }
+  .verdict b { color: #8fb8ff; font-weight: 700; }
+
+  .census { max-width: 860px; margin: 54px auto 0; }
+  .census h3 { font-size: 16px; font-weight: 700; margin-bottom: 12px; }
+  .census table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .census td { padding: 9px 12px 9px 0; color: var(--muted); vertical-align: top; line-height: 1.5; }
+  .census td:first-child { color: var(--faint); white-space: nowrap; font-weight: 600; width: 132px; }
+  .census b { color: var(--ink); font-weight: 650; }
+  .census code { font-family: ui-monospace, monospace; font-size: 12px; color: var(--muted); }
+  .law { font-size: 12.5px; line-height: 1.65; color: var(--faint); max-width: 80ch; margin-top: 22px; }
+  .law b { color: var(--muted); font-weight: 600; }
+  .law + .law { margin-top: 12px; }
+</style>
+
+<div class="wrap">
+<header>
+  <div class="eyebrow">Casberi · the day brief · the Cash App test</div>
+  <h1>The brief has the wallet's disease, and one organ the wallet doesn't</h1>
+  <p><b>The disease.</b> "How's my day?" composes up to seven modules — synthesis notes, money hero, the movers/next pair, the source mix, a mention card, a reading card, an hour strip — and <b>each one arrives as its own captioned surface</b>. Same failure the wallet room had: near-identical weight stacked seven deep, so rank is asserted by order alone and nothing leads.</p>
+  <p><b>The organ.</b> The wallet room has one subject, so one number can own it. The brief's subject <i>is</i> the composition — the treemap, the curve, the hour shape are the answer, not decoration. Cash App has almost no charts. Applying its grammar literally would row-ify the brief into an inbox. So the three options below sit at three points on one axis: <b>how much drawing survives the de-carding.</b></p>
+</header>
+
+<div class="row">
+
+  <!-- ============ A: THE ONE LIST ============ -->
+  <div class="option">
+    <div class="phone"><div class="screen">
+      <div class="stackbar"><span class="back">‹</span><span class="q">How's my day?</span>
+        <span class="prov"><span></span>on device</span></div>
+
+      <div class="cap">Wednesday · your money</div>
+      <div class="big">$12,480 <span class="pill">+1.5%</span></div>
+      <div class="why">since Jul 24 · ETH did the lifting</div>
+      <svg class="spark" viewBox="0 0 300 44" preserveAspectRatio="none">
+        <path d="M0,32 L30,30 L60,34 L90,26 L120,29 L150,20 L180,24 L210,14 L240,17 L270,9 L300,6"
+              fill="none" stroke="#32d74b" stroke-width="2.2" stroke-linecap="round"/>
+      </svg>
+
+      <div class="label">Today <i>14 landed</i></div>
+      <div class="li"><span class="g good">✦</span><span class="t"><b>ETH did the lifting</b><s>+1.5% today, mostly one holding</s></span><span class="chev">›</span></div>
+      <div class="li"><span class="g">◔</span><span class="t"><b>Your reading keeps circling Samsung</b><s>4 of 6 links today</s></span><span class="chev">›</span></div>
+      <div class="li"><span class="g attn">!</span><span class="t"><b>Most of it landed before 10am</b><s>quiet since</s></span><span class="chev">›</span></div>
+
+      <div class="label">Worth opening <i>2</i></div>
+      <div class="li"><span class="g face"></span><span class="t"><b>@lina.bsky.social</b><s>mentions you · 3 replies</s></span><span class="chev">›</span></div>
+      <div class="li"><span class="thumb"></span><span class="t"><b>Samsung's foldable bet</b><s>The Verge · 9:41</s></span><span class="chev">›</span></div>
+
+      <div class="label">Watchlist</div>
+      <div class="li"><span class="g tk">WIF</span><span class="t"><b>dogwifhat</b></span>
+        <svg class="mini" viewBox="0 0 54 20" preserveAspectRatio="none"><path d="M0,15 L9,13 L18,16 L27,9 L36,11 L45,5 L54,3" fill="none" stroke="#32d74b" stroke-width="1.8"/></svg>
+        <span class="v"><u>+4.2%</u></span></div>
+      <div class="li"><span class="g tk">SOL</span><span class="t"><b>Solana</b></span>
+        <svg class="mini" viewBox="0 0 54 20" preserveAspectRatio="none"><path d="M0,7 L9,9 L18,6 L27,11 L36,10 L45,14 L54,13" fill="none" stroke="#ff5a5f" stroke-width="1.8"/></svg>
+        <span class="v"><u class="dn">−1.1%</u></span></div>
+      <div class="li"><span class="g tk">ETH</span><span class="t"><b>Ethereum</b></span>
+        <svg class="mini" viewBox="0 0 54 20" preserveAspectRatio="none"><path d="M0,10 L9,10 L18,9 L27,10 L36,10 L45,9 L54,10" fill="none" stroke="#626b80" stroke-width="1.8"/></svg>
+        <span class="v"><u class="flat">flat</u></span></div>
+
+      <div class="label">Up next</div>
+      <div class="li"><span class="g attn">⏱</span><span class="t"><b>Renew casberi.app</b><s>Thu 5:00 PM · 2 more overdue</s></span><span class="chev">›</span></div>
+
+      <div class="label">Where it came from</div>
+      <div class="stack">
+        <i style="flex:6;background:#1e5fc4"></i><i style="flex:4;background:#2f7de0"></i>
+        <i style="flex:3;background:#37527a"></i><i style="flex:2;background:#2c3a52"></i>
+      </div>
+      <div class="keys">
+        <em><s style="background:#1e5fc4"></s>Bluesky <u>6</u></em><em><s style="background:#2f7de0"></s>Photos <u>4</u></em>
+        <em><s style="background:#37527a"></s>RSS <u>3</u></em><em><s style="background:#2c3a52"></s>2 more</u></em>
+      </div>
+
+      <div class="keep"><span class="g" style="width:22px;height:22px;font-size:11px">★</span>
+        <b>You ask this a lot — keep it?</b><u>Keep</u></div>
+    </div></div>
+
+    <div class="caption">
+      <h2>A · The one list <span>— the literal transfer</span></h2>
+      <p>Money owns the top exactly as it does in the wallet room; everything else becomes a row under a small gray label. The treemap collapses to <b>one stacked bar with a key</b>, the hour strip is gone, the mention and reading cards become two rows in "Worth opening", the movers tile becomes three rows that still draw their own move.</p>
+      <p>Reads fastest of the three and rhymes perfectly with the new wallet. But the day stops being a <i>composition</i> and becomes an <b>inbox of nouns</b> — and the top of the screen is now the same $ total the wallet room already crowns, so the brief looks like the wallet room wearing a date.</p>
+      <p class="verdict"><b>Cost:</b> the hour strip (the only module that answers "when"), and the brief's own identity.</p>
+    </div>
+  </div>
+
+  <!-- ============ B: THE SENTENCE IS THE HERO ============ -->
+  <div class="option">
+    <div class="phone"><div class="screen">
+      <div class="stackbar"><span class="back">‹</span><span class="q">How's my day?</span>
+        <span class="prov"><span></span>on device</span></div>
+
+      <div class="cap">Wednesday</div>
+      <div class="lede">Fourteen things landed, most of&nbsp;them before ten.<br><em>Your money moved</em> <span class="pill">+1.5%</span></div>
+
+      <svg class="band" viewBox="0 0 300 54" preserveAspectRatio="none">
+        <rect x="2"   y="18" width="32" height="36" rx="4" fill="#2f7de0"/>
+        <rect x="39"  y="6"  width="32" height="48" rx="4" fill="#3f8ded"/>
+        <rect x="76"  y="30" width="32" height="24" rx="4" fill="#2b6ec9"/>
+        <rect x="113" y="42" width="32" height="12" rx="4" fill="#24507f"/>
+        <rect x="150" y="46" width="32" height="8"  rx="4" fill="#1e3f66"/>
+        <rect x="187" y="38" width="32" height="16" rx="4" fill="#24507f"/>
+        <rect x="224" y="44" width="32" height="10" rx="4" fill="#1e3f66"/>
+        <rect x="261" y="34" width="32" height="20" rx="4" fill="#2b6ec9"/>
+      </svg>
+      <div class="stamps"><span>6 AM</span><span>12 PM</span><span>6 PM</span></div>
+
+      <div class="label">Your money <i>$12,480 ›</i></div>
+      <div class="li"><span class="g face"></span><span class="t"><b>Main · $9,140</b><s>ETH did the lifting</s></span>
+        <svg class="mini" viewBox="0 0 54 20" preserveAspectRatio="none"><path d="M0,15 L9,14 L18,16 L27,10 L36,12 L45,6 L54,4" fill="none" stroke="#32d74b" stroke-width="1.8"/></svg>
+        <span class="v"><u>+1.9%</u></span></div>
+      <div class="li"><span class="g face2"></span><span class="t"><b>Cold · $3,340</b><s>steady</s></span>
+        <svg class="mini" viewBox="0 0 54 20" preserveAspectRatio="none"><path d="M0,11 L9,10 L18,11 L27,10 L36,11 L45,10 L54,10" fill="none" stroke="#626b80" stroke-width="1.8"/></svg>
+        <span class="v"><u class="flat">flat</u></span></div>
+      <div class="li"><span class="g good">↓</span><span class="t"><b>Bought 25 USDC with Cash App</b><s>your only transaction · settled 9:14</s></span><span class="chev">›</span></div>
+
+      <div class="label">Worth opening</div>
+      <div class="li top"><span class="g face"></span><span class="t">
+        <b>@lina.bsky.social</b>
+        <div class="quote">"casberi is the first thing I've seen that treats a screenshot and a wallet as the same kind of object —"</div>
+        <s style="margin-top:5px">mentions you · 3 replies · 2 more behind it</s></span></div>
+      <div class="li"><span class="thumb"></span><span class="t"><b>Samsung's foldable bet</b><s>The Verge · 9:41</s></span><span class="chev">›</span></div>
+      <div class="askmore">See the rest ›</div>
+
+      <div class="label">Watchlist <i>3 ›</i></div>
+      <div class="li"><span class="g tk">WIF</span><span class="t"><b>dogwifhat</b></span>
+        <svg class="mini" viewBox="0 0 54 20" preserveAspectRatio="none"><path d="M0,15 L9,13 L18,16 L27,9 L36,11 L45,5 L54,3" fill="none" stroke="#32d74b" stroke-width="1.8"/></svg>
+        <span class="v"><u>+4.2%</u></span></div>
+      <div class="li"><span class="g tk">SOL</span><span class="t"><b>Solana</b></span>
+        <svg class="mini" viewBox="0 0 54 20" preserveAspectRatio="none"><path d="M0,7 L9,9 L18,6 L27,11 L36,10 L45,14 L54,13" fill="none" stroke="#ff5a5f" stroke-width="1.8"/></svg>
+        <span class="v"><u class="dn">−1.1%</u></span></div>
+
+      <div class="label">Up next</div>
+      <div class="li"><span class="g attn">⏱</span><span class="t"><b>Renew casberi.app</b><s>Thu 5:00 PM · 2 more overdue</s></span><span class="chev">›</span></div>
+
+      <div class="keep"><span class="g" style="width:22px;height:22px;font-size:11px">★</span>
+        <b>You ask this a lot — keep it?</b><u>Keep</u></div>
+    </div></div>
+
+    <div class="caption">
+      <h2>B · The sentence is the hero <span>— the divergence</span></h2>
+      <p>The crown goes to <b>the day, said in words</b>, not to the money. The synthesis notes stop being a card of glyph rows and become the one display sentence at the top; the hour strip rises to sit directly under it as a <b>bare full-bleed band</b> — the day's shape as the hero's own graphic, no card, no caption. Money keeps its place but as a <b>labelled group of rows</b> with a count-link to the wallet room, where the big number properly lives.</p>
+      <p>This is the option that lets the two rooms rhyme in <i>grammar</i> without competing for the same crown: the wallet room's hero is a number, the brief's hero is a sentence, and both are followed by one list.</p>
+      <p class="verdict"><b>Cost:</b> the treemap and the source mix (money's composition is a tap away; the day's mix survives only in the sentence). <b>Risk:</b> the lede is model-adjacent prose in the biggest type on screen — it must stay deterministic, or the whole screen inherits the doubt.</p>
+    </div>
+  </div>
+
+  <!-- ============ C: BARE GRAPHICS ============ -->
+  <div class="option">
+    <div class="phone"><div class="screen">
+      <div class="stackbar"><span class="back">‹</span><span class="q">How's my day?</span>
+        <span class="prov"><span></span>on device</span></div>
+
+      <div class="cap">Wednesday</div>
+      <div class="lede">Fourteen landed. <em>Your reading keeps circling Samsung.</em></div>
+
+      <div class="label">Your money <i>$12,480 ›</i></div>
+      <div class="li" style="padding-bottom:2px"><span class="t">
+        <b style="font-size:26px">$12,480 <span class="pill">+1.5%</span></b>
+        <s>since Jul 24 · ETH did the lifting</s></span></div>
+      <svg class="spark" viewBox="0 0 300 44" preserveAspectRatio="none">
+        <path d="M0,32 L30,30 L60,34 L90,26 L120,29 L150,20 L180,24 L210,14 L240,17 L270,9 L300,6"
+              fill="none" stroke="#32d74b" stroke-width="2.2" stroke-linecap="round"/>
+      </svg>
+      <div class="map">
+        <div class="m1">ETH<u>62%</u></div><div class="m2">USDC<u>21%</u></div><div class="m3">WIF<u>9%</u></div>
+      </div>
+      <div class="li"><span class="g good">↓</span><span class="t"><b>Bought 25 USDC with Cash App</b><s>your only transaction · settled 9:14</s></span><span class="chev">›</span></div>
+
+      <div class="label">What landed <i>14</i></div>
+      <div class="map" style="height:96px">
+        <div class="m1">Bluesky<u>6</u></div><div class="m2">Photos<u>4</u></div><div class="m3">RSS<u>3</u></div>
+      </div>
+      <div class="why">and 2 more, elsewhere</div>
+
+      <div class="label">When</div>
+      <svg class="band thin" viewBox="0 0 300 34" preserveAspectRatio="none">
+        <rect x="2"   y="10" width="32" height="24" rx="3" fill="#2f7de0"/>
+        <rect x="39"  y="2"  width="32" height="32" rx="3" fill="#3f8ded"/>
+        <rect x="76"  y="17" width="32" height="17" rx="3" fill="#2b6ec9"/>
+        <rect x="113" y="26" width="32" height="8"  rx="3" fill="#24507f"/>
+        <rect x="150" y="29" width="32" height="5"  rx="3" fill="#1e3f66"/>
+        <rect x="187" y="24" width="32" height="10" rx="3" fill="#24507f"/>
+        <rect x="224" y="28" width="32" height="6"  rx="3" fill="#1e3f66"/>
+        <rect x="261" y="21" width="32" height="13" rx="3" fill="#2b6ec9"/>
+      </svg>
+      <div class="stamps"><span>6 AM</span><span>12 PM</span><span>6 PM</span></div>
+
+      <div class="label">Worth opening</div>
+      <div class="li top"><span class="g face"></span><span class="t">
+        <b>@lina.bsky.social</b>
+        <div class="quote">"casberi is the first thing I've seen that treats a screenshot and a wallet as the same kind of object —"</div>
+        <s style="margin-top:5px">mentions you · 3 replies · 2 more behind it</s></span></div>
+      <div class="li"><span class="thumb"></span><span class="t"><b>Samsung's foldable bet</b><s>The Verge · 9:41</s></span><span class="chev">›</span></div>
+      <div class="askmore">See the rest ›</div>
+
+      <div class="label">Watchlist <i>3 ›</i></div>
+      <div class="li"><span class="g tk">WIF</span><span class="t"><b>dogwifhat</b></span>
+        <svg class="mini" viewBox="0 0 54 20" preserveAspectRatio="none"><path d="M0,15 L9,13 L18,16 L27,9 L36,11 L45,5 L54,3" fill="none" stroke="#32d74b" stroke-width="1.8"/></svg>
+        <span class="v"><u>+4.2%</u></span></div>
+      <div class="li"><span class="g attn">⏱</span><span class="t"><b>Renew casberi.app</b><s>Thu 5:00 PM · 2 more overdue</s></span><span class="chev">›</span></div>
+
+      <div class="keep"><span class="g" style="width:22px;height:22px;font-size:11px">★</span>
+        <b>You ask this a lot — keep it?</b><u>Keep</u></div>
+    </div></div>
+
+    <div class="caption">
+      <h2>C · Bare graphics <span>— de-card, delete nothing</span></h2>
+      <p>Every module survives, including all three drawings. What dies is <b>the container, universally</b>: no module gets a surface, a caption bar, or padding of its own. Each becomes a small gray label with its content drawn <b>straight onto the page</b> — the sparkline and treemap under "Your money", the source mix under "What landed", the hour bars under "When", rows everywhere else.</p>
+      <p>Rank stops being asserted by chrome and starts being carried by <b>size and position</b>: the money block is tall and first, the day's mix is half its height, the hour strip is a thin band, the leads are rows. Same seven modules, one column, one voice.</p>
+      <p class="verdict"><b>Cost:</b> the least — nothing is removed. <b>Risk:</b> it's still long, and two treemaps on one screen invite "which map is this?" — the second must be visibly shorter and differently labelled, or they read as a repeat.</p>
+    </div>
+  </div>
+
+</div>
+
+<div class="census">
+  <h3>What makes it feel cumbersome — the census</h3>
+  <table>
+    <tr><td>Surfaces</td><td>A full brief composes <b>7 modules, each its own captioned surface</b>: <code>DayNotes</code>, <code>MoneyHero</code>, <code>TilePair</code> (2 tiles side by side), <code>SourceMix</code>, the mention <code>Widget</code>, the reading <code>Widget</code>, <code>Bars</code>. A → <b>0 cards</b>. B → <b>0</b>. C → <b>0</b>, but 3 bare graphics.</td></tr>
+    <tr><td>Captions</td><td>Six of the seven name themselves ("Watchlist", "Up next", "What landed", "Reading", "Bluesky · mentions you", "When it landed") — and several then repeat the noun inside. In a labelled list <b>the row's own title is the caption</b>; the gray label only says which group you're in.</td></tr>
+    <tr><td>Money, twice</td><td>The hero's total, its delta and its treemap are the <i>same read</i> the wallet room now crowns. Today both screens open with the same $ number in the same face. B settles this by ranking money as a group inside the day; A and C keep it as the visual lead and accept the echo.</td></tr>
+    <tr><td>"There's more"</td><td>The brief carries a chevron on a lead row, an <code>AskMore</code> text link, a <code>TilePair</code> tile that opens a screen with no chevron at all, and tappable notes with no affordance. Same 4-grammar sprawl the wallet pass cut to two: <b>a chevron on a row, a count-link on a label</b>.</td></tr>
+    <tr><td>Type</td><td>Every row title moves to <code>rowTitle17</code> (the new SF Rounded semibold from the wallet pass) so <b>"tappable" registers before the words are read</b> — the one rule that transfers unchanged, and the cheapest single change here.</td></tr>
+    <tr><td>Color</td><td>Today the brief tints notes, tiles and stat rows. Under the wallet's rule color survives only where <b>direction is real</b>: the wallet delta, a mover's move, the overdue mark. A flat move takes no color (§83), a count never does.</td></tr>
+    <tr><td>Nothing lost (C)</td><td>Synthesis notes, treemap, balance curve + delta, settled-transaction row, source mix, mention post in full, reading lead + "See the rest", hour strip, keep pill — <b>all still present.</b> Only their containers changed.</td></tr>
+  </table>
+
+  <p class="law"><b>The one thing the wallet pass can't lend.</b> "Fewer containers" works there because the room has a single subject and a single number that can outrank everything. The brief's subject is plural by construction — it exists to say <i>what happened across everything</i>. So the transferable half is the <b>grammar</b> (one row anatomy, one chevron, rounded face = tappable, color only on real direction, rank by position under a gray label) and the non-transferable half is the <b>crown</b>: copying "one big number owns the screen" hands the day to the wallet, which is the one module that already has a room of its own.</p>
+
+  <p class="law"><b>Render-depth law still applies.</b> Whatever wins, these draw at the head of the agent's Stack through <code>GenRender</code>'s generic <code>Widget</code>/<code>Row</code> mount — the path that has now tipped the main-thread stack three times (CLAUDE.md). De-carding <i>helps</i> (fewer nested surfaces, fewer erasures), but any new flat renderer must be a plain <code>HStack</code> of <code>Text</code>, exactly like <code>WalletRow</code>.</p>
+
+  <p class="law"><b>And the whisper.</b> The capsule that teases this screen already says the brief's sentence in one line ("Your Wednesday · 14 new, wallet +1.5%"). Option B's hero <i>is</i> that line, promoted — which is either the strongest argument for it (the tease and the screen finally agree) or an argument that B repeats the thing the user just tapped. Worth deciding deliberately rather than inheriting.</p>
+</div>
+</div>

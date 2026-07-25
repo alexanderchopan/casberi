@@ -5,29 +5,40 @@ import SwiftData
 /// the screen the whisper capsule opens, and a keepable ask in its own right
 /// (`kind == "today"`).
 ///
-/// **The module doctrine, ruled 2026-07-22.** A count is almost never the
-/// fact: people receive dozens of things a day and care WHAT landed. So every
-/// module here is exactly one of four shapes, and none of them is a tally:
-///   1. a **visualization** (the money hero's treemap + line, the hour strip),
+/// **The module doctrine, ruled 2026-07-22, hardened 2026-07-25.** A count is
+/// almost never the fact: people receive dozens of things a day and care WHAT
+/// landed. The 2026-07-25 amendment (user: "people do not care how many things
+/// landed, b/c we have dozens a day") carries that from a preference to a law —
+/// **volume is not news**, so a module whose whole content is arrival volume
+/// doesn't earn a caption, it gets deleted. Two did: `sourceMix` ("What landed:
+/// Bluesky 6, Photos 4…") and `hourStrip` ("When it landed"), both compositions
+/// of how much rather than of what. The reading RECORD went with them — "most
+/// reading to land in one day this month" is a tally wearing a surprise, and in
+/// a deluge it fires constantly.
+///
+/// So every module here is exactly one of four shapes, and none of them is a
+/// tally:
+///   1. a **visualization** (the money hero's treemap + line, the themes map),
 ///   2. the **most recent thing itself**, rendered in full (the mention that
 ///      names you, the read worth opening),
 ///   3. **what's next** (the nearest real deadline),
 ///   4. a **synthesis card** — the agent's own read of the day.
 /// Counts survive in exactly one place, where the count IS the event: money
-/// moving ("1 transaction"). Everything else names its subject.
+/// moving ("1 transaction"). Everything else names its subject. The rule isn't
+/// "no numbers" — "2 more overdue" is a STATE, not an arrival, and stays; it's
+/// **no numbers about how much arrived**.
 ///
-/// Layout is direction B2 (the mosaic): form encodes type — the fused money
-/// hero leads with its paired tiles, the source map answers "where did all this
-/// come from", wide cards carry things with words in them, and the hour strip
-/// closes. The synthesis card from direction B3 sits at the very top, and is
-/// the one module that may vanish entirely: it draws only observations that
-/// actually fired.
-///
-/// Order is RANK, not arrival (amended 2026-07-23): the whole-day SUMMARIES
-/// lead — the money block (hero + watchlist, one story, never split), then what
-/// landed — because they orient; the single things follow; and the texture
-/// (when it landed) closes. A module that summarizes the day outranks one that
-/// shows a single item from it.
+/// Order is RANK, not arrival (amended 2026-07-23, re-ruled 2026-07-25). The
+/// crown is the MONEY (user: "when a user has a wallet active the money is
+/// going to always be the most important thing") — it's the one read where a
+/// number is itself the event, and the one that changes while you sleep, so the
+/// hero leads and the synthesis card no longer sits above it. Its watchlist
+/// stays glued to it (2026-07-23, one story, never split). Then the THEMES map,
+/// which took the slot `sourceMix`/`hourStrip` vacated and answers what the day
+/// was ABOUT rather than how much of it there was. Then the agent's read, then
+/// the single things. Without a watched wallet the crown falls through to
+/// themes — the same screen minus a section, because money leads when it's
+/// yours and it moved, not because the app prefers the subject.
 ///
 /// Deterministic throughout (docs/agent-brief.md ruling 1) — every line is
 /// template-composed from facts already held. No model, ever, on this path.
@@ -87,23 +98,14 @@ enum TodayBrief {
         var ids: [String] = []
         var lines: [String] = []
 
-        // 1. The synthesis card (B3) — only the observations that fired.
-        let notes = observations(things: things, landed: landed, move: move, moves: moves, now: now)
-        if !notes.isEmpty {
-            ids.append("notes")
-            lines.append("notes = DayNotes([\(notes.indices.map { "n\($0)" }.joined(separator: ", "))])")
-            for (i, n) in notes.enumerated() {
-                lines.append("n\(i) = DayNote(\"\(n.glyph)\", \"\(genSafe(n.text))\", \"\(n.thingID)\")")
-            }
-        }
-
-        // 2. The money hero — the day's one fused visualization.
+        // 1. The money hero — the CROWN (2026-07-25), the day's one fused
+        // visualization and the only read where a number is itself the event.
         if let hero = moneyHero(move: move, holdings: holdings, landed: landed) {
             ids.append("hero")
             lines.append(hero)
         }
 
-        // 3. The pair: what's moving, what's next. Stays glued to the hero
+        // 2. The pair: what's moving, what's next. Stays glued to the hero
         // above it (user ruling 2026-07-23: "keep wallet and watchlist
         // together") — the watchlist IS money, so putting anything between it
         // and the wallet splits one story across two places.
@@ -121,17 +123,26 @@ enum TodayBrief {
             lines.append("pair = TilePair([\(tiles.joined(separator: ", "))])")
         }
 
-        // 4. What landed — the day's composition by source, and the second
-        // whole-day SUMMARY (user ruling 2026-07-23: "what landed is more
-        // important than the one reading source and when it landed"). It
-        // shipped LAST with §180, which was the wrong rank: this says where
-        // everything came from in one glance, while the Reading card below is a
-        // single item and the hour strip is texture. So it sits directly after
-        // the money block — behind the wallet's own story, ahead of everything
-        // that shows one thing.
-        if let mix = sourceMix(landed) {
-            ids.append("mix")
-            lines.append(mix)
+        // 3. The themes map — the second whole-day summary, and the one that
+        // replaced "what landed" and "when it landed" outright (2026-07-25,
+        // user: the themes treemap "is more important than 'what landed' and
+        // when"). Same slot, same geometry; a different question — what today
+        // was ABOUT, which survives a deluge, where a source tally doesn't.
+        if let themes = themesMap(things: things, now: now) {
+            ids.append("themes")
+            lines.append(themes)
+        }
+
+        // 4. The synthesis card (B3) — only the observations that fired. Sits
+        // BELOW the summaries now (2026-07-25): it used to open the screen,
+        // which made the agent's read the crown instead of the money.
+        let notes = observations(things: things, landed: landed, move: move, moves: moves, now: now)
+        if !notes.isEmpty {
+            ids.append("notes")
+            lines.append("notes = DayNotes([\(notes.indices.map { "n\($0)" }.joined(separator: ", "))])")
+            for (i, n) in notes.enumerated() {
+                lines.append("n\(i) = DayNote(\"\(n.glyph)\", \"\(genSafe(n.text))\", \"\(n.thingID)\")")
+            }
         }
 
         // 5. The leads — a thing in full, per shape that landed.
@@ -142,12 +153,6 @@ enum TodayBrief {
         if let reading = readingCard(landed) {
             ids.append("read")
             lines += reading
-        }
-
-        // 6. When it all landed — the day's own shape, closing the screen.
-        if let strip = hourStrip(landed, now: now) {
-            ids.append("hours")
-            lines.append(strip)
         }
 
         // Nothing to draw at all — an honest empty day, not an empty screen.
@@ -168,7 +173,7 @@ enum TodayBrief {
                                        doc: ["root = Stack([\(ids.joined(separator: ", "))])"] + lines)
     }
 
-    // MARK: - 1. Synthesis (direction B3)
+    // MARK: - Synthesis (direction B3)
 
     struct Note {
         let glyph: String
@@ -231,21 +236,11 @@ enum TodayBrief {
                             thingID: topic.outlier?.id.uuidString ?? ""))
         }
 
-        // What actually moved the wallet — the day-scoped holdings
-        // attribution (§166: `holdingsDeltas(forAddress:since:)`), never the
-        // all-time one, so the sentence spans exactly what the percentage
-        // claims. Silent when no snapshot pair covers the window.
-        if let move {
-            let deltas = WalletStore.shared.holdingsDeltas(forAddress: nil, since: move.since)
-            if let top = deltas.first, abs(top.delta) >= 1 {
-                let direction = top.delta > 0
-                    ? String(localized: "did the lifting")
-                    : String(localized: "took it back")
-                out.append(Note(glyph: "chart.line.uptrend.xyaxis",
-                                text: String(format: "%@ %@ — the wallet is %+.1f%% on the day.",
-                                             top.symbol, direction, move.pct)))
-            }
-        }
+        // (The wallet attribution — "ETH did the lifting" — used to be a note
+        // here. It moved INTO the hero on 2026-07-25, where it reads as the
+        // crown's own sentence directly under the number it explains; see
+        // `walletAttribution`. Leaving it here too would have said the same
+        // thing twice on one screen.)
 
         // A watchlist leader worth naming — only a real move, and only when
         // it clearly leads the rest (a 0.2% "leader" is noise wearing a
@@ -270,11 +265,16 @@ enum TodayBrief {
     /// here, because a fixed percentage threshold is exactly the horoscope
     /// failure mode this card's whole discipline exists to avoid. Checks in
     /// priority order; returns the first that fires.
+    ///
+    /// ONE family now (2026-07-25): the reading record ("most reading to land
+    /// in one day this month — 12 so far") was cut with the volume modules. It
+    /// is a tally wearing a surprise, and for someone receiving dozens a day
+    /// the monthly maximum is beaten constantly, so it was neither rare nor
+    /// news. The wallet record survives because it measures a MOVE, not an
+    /// arrival count.
     private static func records(things: [Thing], landed: [Thing],
                                 move: DayBrief.WalletMove?, now: Date) -> Note? {
-        if let wallet = walletRecord(move, now: now) { return wallet }
-        if let reading = readingRecord(things, landed: landed, now: now) { return reading }
-        return nil
+        walletRecord(move, now: now)
     }
 
     /// Today's wallet gain beats every prior day's gain since watching began.
@@ -308,29 +308,6 @@ enum TodayBrief {
                     text: String(format: String(localized:
                         "Your wallet's best day since you started watching — %@ on the day."),
                         String(format: "%+.1f%%", move.pct)))
-    }
-
-    /// Today's real-reading count (the `reads()` scope — links minus the
-    /// money sources) beats every day in the past month. Needs 5+ distinct
-    /// prior days with at least one read before "record" means anything —
-    /// a corpus three days old can't set a monthly record.
-    private static func readingRecord(_ things: [Thing], landed: [Thing], now: Date) -> Note? {
-        let todayCount = reads(landed).count
-        guard todayCount >= 3 else { return nil }
-        let cal = Calendar.current
-        let horizon = cal.date(byAdding: .day, value: -30, to: now) ?? now
-        let windowStart = DayBrief.windowStart(now: now)
-        let prior = things.filter {
-            $0.kind == .link && !nonReadingSources.contains($0.source)
-                && $0.capturedAt >= horizon && $0.capturedAt < windowStart
-        }
-        guard !prior.isEmpty else { return nil }
-        var perDay: [Date: Int] = [:]
-        for r in prior { perDay[cal.startOfDay(for: r.capturedAt), default: 0] += 1 }
-        guard perDay.count >= 5, let maxPrior = perDay.values.max(), todayCount > maxPrior
-        else { return nil }
-        return Note(glyph: "trophy",
-                    text: String(localized: "Most reading to land in one day this month — \(todayCount) so far."))
     }
 
     /// The word three or more of the day's reads share, and the newest read
@@ -373,7 +350,7 @@ enum TodayBrief {
         "first", "best", "everything", "announced", "announcement",
     ]
 
-    // MARK: - 2. The money hero (the fused visualization)
+    // MARK: - The money hero (the crown, and the fused visualization)
 
     /// `MoneyHero(total, delta, csv, subline, [cells])` — the day's one big
     /// read: the combined total, its day move, the balance line and the
@@ -441,10 +418,40 @@ enum TodayBrief {
         // from, so a wallet with no day-scale history just shows the number
         // plainly.
         let rollFrom = move.map { String(format: "%.2f", $0.anchorUSD) } ?? ""
-        return "hero = MoneyHero(\"\(genSafe(compactUSD(total)))\", \"\(delta)\", \"\(csv)\", \"\(genSafe(subline))\", [\(cells.prefix(6).joined(separator: ", "))], \"\(genSafe(anchor))\", \"\(genSafe(txTitle))\", \"\(genSafe(txMeta))\", \"\(txID)\", \"\(String(format: "%.2f", total))\", \"\(rollFrom)\")"
+        return "hero = MoneyHero(\"\(genSafe(compactUSD(total)))\", \"\(delta)\", \"\(csv)\", \"\(genSafe(subline))\", [\(cells.prefix(6).joined(separator: ", "))], \"\(genSafe(anchor))\", \"\(genSafe(txTitle))\", \"\(genSafe(txMeta))\", \"\(txID)\", \"\(String(format: "%.2f", total))\", \"\(rollFrom)\", \"\(genSafe(walletAttribution(move)))\")"
     }
 
-    // MARK: - 3. The pair
+    /// "Up $184 today. ETH did the lifting." — the crown's own sentence
+    /// (2026-07-25), arg 11, drawn directly under the total it explains.
+    ///
+    /// It carries the two facts the number and its pill can't. The MAGNITUDE
+    /// in money, because a percentage hides whether +1.5% is a coffee or a
+    /// month's rent. And WHICH holding did it — the day-scoped attribution
+    /// (§166, `holdingsDeltas(forAddress:since:)`), never the all-time one, so
+    /// the sentence spans exactly what the percentage claims.
+    ///
+    /// This was a synthesis NOTE until 2026-07-25. It moved here because the
+    /// money became the crown: an attribution belongs under the number it
+    /// attributes, not in a card three modules down. Both halves fail
+    /// independently and silently — no move, no line; no snapshot pair
+    /// covering the window, just the dollar half.
+    private static func walletAttribution(_ move: DayBrief.WalletMove?) -> String {
+        guard let move, move.anchorUSD > 0 else { return "" }
+        let delta = move.usd - move.anchorUSD
+        guard abs(delta) >= 1 else { return "" }
+        var line = delta > 0
+            ? String(localized: "Up \(compactUSD(delta)) today.")
+            : String(localized: "Down \(compactUSD(abs(delta))) today.")
+        let deltas = WalletStore.shared.holdingsDeltas(forAddress: nil, since: move.since)
+        if let top = deltas.first, abs(top.delta) >= 1 {
+            line += " " + (top.delta > 0
+                ? String(localized: "\(top.symbol) did the lifting.")
+                : String(localized: "\(top.symbol) took it back."))
+        }
+        return line
+    }
+
+    // MARK: - The pair
 
     /// `MoversTile(label, "SYM|+4.2%|close,close,…;…")` — the watchlist at a
     /// glance. Real direction gets real color here (unlike `StatRow`'s
@@ -507,7 +514,62 @@ enum TodayBrief {
         return "tnext = NextTile(\"\(String(localized: "Up next"))\", \"\(genSafe(clamp(next.title, max: 40)))\", \"\(genSafe(when))\", \"\(genSafe(alert))\", \"\(next.id.uuidString)\")"
     }
 
-    // MARK: - 4. The leads (the thing itself, in full)
+    // MARK: - The themes map
+
+    /// `TagMap(eyebrow, subline, [cells], "plain")` — what you're actually
+    /// into, drawn as the same treemap the All feed leads with
+    /// (`HomeComposition.projectClusters`: any tag carrying 2+ things), and
+    /// the module that replaced `sourceMix` and `hourStrip` outright on
+    /// 2026-07-25. Same slot, same geometry, a different question — a source
+    /// tally dies in a deluge, a theme survives one.
+    ///
+    /// Three things make it the brief's map rather than the feed's:
+    ///
+    /// 1. **It reads a month, not the day.** A theme is a shape that forms
+    ///    over time; scoped to the window it would just be today's tags, which
+    ///    is the volume read wearing better clothes.
+    /// 2. **The cells print no count** ("plain" — see `GenTagMap.iconMode`).
+    ///    Area already encodes magnitude; the number said the same fact twice,
+    ///    and it's the fact nobody wanted.
+    /// 3. **Its subline is the one thing the map can't draw: what's new.**
+    ///    Deliberately NOT "new this week" (user, 2026-07-25) — a week means
+    ///    nothing to someone receiving dozens a day, and the only claim we can
+    ///    actually keep is that this theme didn't exist before today. So a
+    ///    theme is new when its OLDEST thing landed inside the brief's own
+    ///    window. Nothing new, no subline — never padded.
+    ///
+    /// Two clusters minimum: one cell isn't a map, it's a title.
+    private static func themesMap(things: [Thing], now: Date) -> String? {
+        let horizon = Calendar.current.date(byAdding: .day, value: -30, to: now) ?? now
+        let clusters = HomeComposition.projectClusters(things: things.filter { $0.capturedAt >= horizon })
+        guard clusters.count >= 2 else { return nil }
+        // Six, matching the feed map's own cap and `GenTagMap`'s six-cell
+        // frame set — a seventh cell has nowhere to tile.
+        let shown = Array(clusters.prefix(6))
+        // The count still rides each cell: it sizes the cell's AREA. Only the
+        // printed line is gone.
+        let cells = shown.map { "\(tileSafe($0.name)) \($0.things.count)" }
+        let windowStart = DayBrief.windowStart(now: now)
+        let fresh = shown
+            .filter { ($0.things.map(\.capturedAt).min() ?? .distantPast) >= windowStart }
+            .map(\.name)
+        return "themes = TagMap(\"\(String(localized: "What you're into"))\", \"\(genSafe(newThemeLine(fresh)))\", [\(cells.joined(separator: ", "))], \"plain\")"
+    }
+
+    /// "Foldables is new." / "Foldables and Recipes are new." — the new themes
+    /// NAMED, never counted, capped at three so the line stays a sentence
+    /// rather than becoming the tally it exists to replace.
+    private static func newThemeLine(_ names: [String]) -> String {
+        let named = names.prefix(3).map { clamp($0, max: 24) }
+        switch named.count {
+        case 0:  return ""
+        case 1:  return String(localized: "\(named[0]) is new.")
+        case 2:  return String(localized: "\(named[0]) and \(named[1]) are new.")
+        default: return String(localized: "\(named[0]), \(named[1]) and \(named[2]) are new.")
+        }
+    }
+
+    // MARK: - The leads (the thing itself, in full)
 
     /// The mention that names you, rendered as the real post — author, their
     /// words, their avatar. The card's title says WHY it's here.
@@ -558,70 +620,6 @@ enum TodayBrief {
         }
         doc[0] = "read = Widget(\"\(String(localized: "Reading"))\", \"\", [\(refs.joined(separator: ", "))])"
         return doc
-    }
-
-    // MARK: - 5. The hour strip
-
-    /// `Bars` over the window's hours — the day's own shape, and the one
-    /// module that answers "when did all this arrive" rather than "what is
-    /// it". Buckets to keep the bar count readable; drops entirely when the
-    /// day is too thin to have a shape.
-    private static func hourStrip(_ landed: [Thing], now: Date) -> String? {
-        guard landed.count >= 6 else { return nil }
-        let start = DayBrief.windowStart(now: now)
-        let span = now.timeIntervalSince(start)
-        guard span >= 3600 else { return nil }
-        let buckets = 8
-        let width = span / Double(buckets)
-        var counts = [Int](repeating: 0, count: buckets)
-        for thing in landed {
-            let offset = thing.capturedAt.timeIntervalSince(start)
-            let i = min(buckets - 1, max(0, Int(offset / width)))
-            counts[i] += 1
-        }
-        // Three anchors — the ends, plus the MIDPOINT (2026-07-22). With ends
-        // alone an overnight window's long quiet stretch is unreadable: two
-        // stamps eight buckets apart say nothing about where 2am sits. One
-        // middle label makes the shape legible without turning the strip into
-        // an axis (nothing draws a grid; the hairline law holds on charts).
-        // The blanks are a SPACE, not an empty string: `GenBars` splits its
-        // label CSV with `split(separator:)`, which omits empty subsequences,
-        // so empty labels collapsed the array and every stamp bunched under
-        // the first bars (caught on-device 2026-07-22).
-        let labels = (0..<buckets).map { i -> String in
-            guard i == 0 || i == buckets / 2 || i == buckets - 1 else { return " " }
-            let at = start.addingTimeInterval(width * Double(i))
-            return at.formatted(.dateTime.hour())
-        }
-        return "hours = Bars(\"\(String(localized: "When it landed"))\", \"\", \"\(counts.map(String.init).joined(separator: ","))\", \"\(labels.joined(separator: ","))\")"
-    }
-
-    // MARK: - 6. What landed (candidate A)
-
-    /// `SourceMix(eyebrow, subline, ["Source N", ...])` — the day's
-    /// composition by SOURCE, the visualization the hour strip doesn't
-    /// answer: the strip says WHEN, this says WHERE FROM. Two gates, matching
-    /// `hourStrip`'s own dual floor: 3+ distinct sources (a day that's only
-    /// Wallet and one RSS feed has no real mix to draw — two sources is a
-    /// fact better said in a sentence than drawn as a map) AND 6+ landed
-    /// things (three sources wearing one thing each is a trivial partition,
-    /// not a real composition — the same "too thin to have a shape" floor
-    /// `hourStrip` already holds itself to).
-    private static func sourceMix(_ landed: [Thing]) -> String? {
-        guard landed.count >= 6 else { return nil }
-        var counts: [String: Int] = [:]
-        for t in landed { counts[t.source, default: 0] += 1 }
-        guard counts.count >= 3 else { return nil }
-        let sorted = counts.sorted { $0.value > $1.value }
-        // THREE — one big cell and two stacked, the shape the approved mockup
-        // drew. Must agree with `GenSourceMix`'s own cap: a source cell carries
-        // an icon as well as its two text lines, and a third stacked cell
-        // overflows the map's height (§194). A residual folds into a named tail
-        // rather than growing the map past a glance.
-        let cells = sorted.prefix(3).map { "\(tileSafe($0.key)) \($0.value)" }
-        let residual = sorted.dropFirst(3).reduce(0) { $0 + $1.value }
-        let subline = residual > 0 ? String(localized: "and \(residual) more, elsewhere") : ""
-        return "mix = SourceMix(\"\(String(localized: "What landed"))\", \"\(genSafe(subline))\", [\(cells.joined(separator: ", "))])"
     }
 
     // MARK: - Shared
