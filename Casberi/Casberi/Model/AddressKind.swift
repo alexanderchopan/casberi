@@ -52,20 +52,31 @@ enum AddressKind {
         for entry in pending { await detect(entry.address) }
     }
 
-    /// True when the address has bytecode — an EOA answers "0x". nil when the
-    /// read itself failed, which must NOT be cached as "wallet" (a transient
-    /// outage would permanently mislabel a contract).
+    /// True when the address has bytecode — an EOA answers "0x". nil when no
+    /// chain answered at all, which must NOT be cached as "wallet" (a
+    /// transient outage would permanently mislabel a contract).
     private static func hasCode(_ address: String) async -> Bool? {
+        var answered = false
         for network in networks {
             guard let result = await WalletApprovals.rpcRead(
                 network: network, method: "eth_getCode",
                 params: [address, "latest"]) as? String else { continue }
+            answered = true
+            // An EIP-7702 delegation is NOT a contract (2026-07-25). Since
+            // Pectra an ordinary wallet can carry `0xef0100` + a delegate
+            // address as its "code", and reading that as bytecode labelled a
+            // person's own account "Contract" and took away its identicon
+            // face — the one thing the mark exists to say. Caught on
+            // vitalik.eth, which is delegated. Treated as no code here, so a
+            // genuine contract deployment on another chain can still answer.
+            if WalletSafety.delegateAddress(from: result) != nil { continue }
             let code = result.dropFirst(2)   // strip "0x"
             if !code.isEmpty, code.contains(where: { $0 != "0" }) { return true }
             // An empty answer on this chain only rules it out here — the
             // address may still be a contract elsewhere, so keep asking, and
-            // only report "no code anywhere" once every chain has answered.
+            // only report "no code anywhere" once the chains that can answer
+            // have.
         }
-        return false
+        return answered ? false : nil
     }
 }

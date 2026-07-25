@@ -61,7 +61,12 @@ enum WalletSafety {
     /// `0xef0100` prefix (3 bytes) followed by the 20-byte delegate address.
     /// nil for plain undelegated code (`0x`) or genuine contract bytecode
     /// (any other shape) — a smart contract wallet is not a 7702 delegation.
-    private static func delegateAddress(from codeHex: String) -> String? {
+    ///
+    /// Shared with `AddressKind` (2026-07-25), which needs the same question
+    /// answered for the opposite reason: this file asks "did a delegate
+    /// appear?", the book asks "is this a contract or a person?" — and a
+    /// delegated EOA is a person.
+    static func delegateAddress(from codeHex: String) -> String? {
         let s = codeHex.lowercased()
         guard s.hasPrefix("0xef0100"), s.count == 48 else { return nil }
         return "0x" + s.suffix(40)

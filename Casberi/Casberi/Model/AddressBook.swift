@@ -29,6 +29,7 @@ final class AddressBook {
     static let shared = AddressBook()
     private static let key = "wallet.addressBook.v1"
     private static let migratedKey = "wallet.addressBook.migrated.v1"
+    private static let kindRecheckKey = "wallet.addressBook.kindRecheck.7702"
 
     /// What the app learned an address IS — detected, never asked (prd §169).
     /// The person supplies a name; the chain supplies the kind. `unknown` is
@@ -201,6 +202,7 @@ final class AddressBook {
             entries = [:]
         }
         migrateIfNeeded()
+        recheckContractKinds()
         // Heals books written before names were resolved (2026-07-25) — the
         // duplicate pair collapses on the next launch with no sync and no
         // migration flag, because the reconcile is the same pass that keeps
@@ -355,6 +357,26 @@ final class AddressBook {
             }
         }
         UserDefaults.standard.set(true, forKey: Self.migratedKey)
+    }
+
+    /// Forgets every cached `.contract` verdict, once (2026-07-25). Detection
+    /// used to read an EIP-7702 delegation as bytecode and call a delegated
+    /// wallet a contract; the rule is fixed in `AddressKind`, but a verdict
+    /// already cached is never revisited (`detectPending` only asks about
+    /// `.unknown`), so the wrong label would outlive the bug. Dropping back to
+    /// `.unknown` costs nothing visible — an unchecked row and a wallet row
+    /// look identical — and the next Wallet-screen visit re-detects under the
+    /// corrected rule. Genuine contracts simply come back as contracts.
+    private func recheckContractKinds() {
+        guard !UserDefaults.standard.bool(forKey: Self.kindRecheckKey) else { return }
+        UserDefaults.standard.set(true, forKey: Self.kindRecheckKey)
+        var out = entries
+        var changed = false
+        for (key, entry) in entries where entry.kind == .contract {
+            out[key]?.kind = .unknown
+            changed = true
+        }
+        if changed { entries = out }
     }
 
     private func persist() {
