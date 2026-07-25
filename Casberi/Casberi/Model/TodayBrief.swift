@@ -44,6 +44,36 @@ import SwiftData
 /// themes — the same screen minus a section, because money leads when it's
 /// yours and it moved, not because the app prefers the subject.
 ///
+/// **The brief remembers itself (§214, 2026-07-25).** Everything above was a
+/// fresh read of the current window, which is why the screen could never say
+/// *still*, *again* or *third day running*, and why re-opening at 4pm re-led
+/// with the mention it had already led with at 8am. `BriefLedger` is the
+/// substrate: a capped record of what each window's brief actually SHOWED —
+/// written only when `presenting` is true, so the background digest refresh
+/// can't make the app claim to have told you something it merely computed.
+/// Four things read it: the lede's streak ("ETH has done the lifting three
+/// days running"), the themes map's continuity subline, the leads' novelty
+/// preference, and the absence note.
+///
+/// **The lede is a ladder now, not a wallet special case.** It was
+/// wallet-only, so a day the wallet didn't move opened on a number with no
+/// sentence over it. The rungs are ranked by what can still cost you
+/// something: a liquidation risk, then the money's move, then someone
+/// addressing you, then a deadline landing today. Nothing is ever padded — a
+/// rung with no fact yields to the next, and an empty ladder emits no lede.
+/// When risk takes the lede the money's attribution isn't lost, it falls back
+/// to a synthesis note (where it lived before 2026-07-25).
+///
+/// **The observations cross sources.** Every original note read a single
+/// field — a reply count, a word frequency, a percentage — which is a read
+/// any single-source app could make. The families added in §214 are joins
+/// only this corpus can do: a symbol that moved today which is also what
+/// you've been reading, one person appearing in several sources at once, and
+/// a habitual source that went quiet. Absence is the one genuinely new KIND
+/// of fact — it's a state change rather than a tally, so it survives §213's
+/// volume ruling, and it can't be manufactured because a day when nothing
+/// landed at all is excluded.
+///
 /// Deterministic throughout (docs/agent-brief.md ruling 1) — every line is
 /// template-composed from facts already held. No model, ever, on this path.
 @MainActor
@@ -76,44 +106,61 @@ enum TodayBrief {
 
     // MARK: - Compose
 
-    static func compose(things: [Thing], context: ModelContext) async -> KeptAskComposers.Result? {
+    /// `presenting` is what separates a brief a person SAW from one the app
+    /// merely computed: `KeptAskStore.refreshDigests` composes every kept kind
+    /// in the background on each foreground, and recording those would let the
+    /// ledger claim it had already told you things it never drew. Defaults to
+    /// false so a new caller is silent by construction; the three display
+    /// routes (the typed ask, the kept pill's tap, the whisper's tap — all
+    /// three funnel through `RootShell.answerDocument`) pass true.
+    static func compose(things: [Thing], context: ModelContext,
+                        presenting: Bool = false) async -> KeptAskComposers.Result? {
         let now = Date.now
         let landed = DayBrief.landed(things, now: now)
         let move = DayBrief.walletMove(now: now)
-        // A watched wallet ALWAYS earns the money hero (user ruling
-        // 2026-07-22: "if a user has a wallet, show it no matter what — it's a
-        // rich visualization, even on a steady day"). The live read is tried
-        // first; if it comes back empty because the chain was unreachable this
-        // morning (offline / rate-limited), the hero falls back to the
-        // LAST-KNOWN holdings rather than vanishing — marked "as of Xh ago"
-        // so it never claims a stale number is current (§83). A steady day
-        // was never the gap: the hero draws whenever holdings exist, movement
-        // or not; only a failed read hid it.
-        var holdings = WalletStore.shared.addresses.isEmpty
-            ? []
-            : await WalletIngest.topHoldingsByWallet()
-        if holdings.isEmpty, !WalletStore.shared.addresses.isEmpty {
-            holdings = WalletIngest.lastKnownHoldingsByWallet()
-        }
-        let moves = TokensAsk.watched(context).isEmpty
-            ? []
-            : await TokensAsk.moves(context: context)
+        let windowStart = DayBrief.windowStart(now: now)
+        // The ledger is read ONCE here and threaded through every module that
+        // asks it something (the `ChipMemory.snapshot()` discipline) — five
+        // separate reads would decode the same JSON five times per rise.
+        let ledger = BriefLedger.snapshot()
+        let told = BriefLedger.told(ledger, windowStart: windowStart, now: now)
+        let weights = ChipMemory.snapshot()
+
+        // The three live reads run CONCURRENTLY (2026-07-25). They were
+        // sequential, so each new read added its full latency to the rise;
+        // `async let` makes the brief pay the slowest rather than the sum,
+        // which is what left room for the risk read the lede's top rung needs.
+        async let holdingsRead = liveHoldings()
+        async let movesRead = liveMoves(context: context)
+        // Gated on `presenting` (2026-07-25): the risk rung only ever reaches
+        // the LEDE, and the digest — the one thing the background path uses —
+        // is `DayBrief.detail`, which never carries it. So on the digest
+        // refresh this read's result is discarded, and it is the single
+        // most expensive thing here: `WalletDeFi.positions` walks its pools
+        // and addresses SEQUENTIALLY, so a cold 60s cache costs several
+        // round-trips. `KeptAskStore.refreshDigests` runs on every foreground
+        // and every composer open for anyone who has kept this ask — paying
+        // chain latency there to compute a sentence nobody is looking at is
+        // work with no reader. The cost of the gate: `-todayProbe` composes
+        // with `presenting: false`, so it can't show the risk rung.
+        async let riskRead = presenting ? worstDebt() : nil
+        let holdings = await holdingsRead
+        let moves = await movesRead
+        let risk = await riskRead
 
         var ids: [String] = []
         var lines: [String] = []
 
         // 1. The lede — the day in ONE sentence, in display type, above
         // everything (user, 2026-07-25: "that line should be above wallet").
-        // It shipped as the hero's own subtitle earlier the same day; up here
-        // it does what the mockup's crown did — the screen opens with words,
-        // then hands the number the room to be a number in. Wallet-only for
-        // now: the sentence we can always keep is the one about the money that
-        // moved. No move, no lede — the brief opens on the hero instead, and
-        // nothing is padded to fill the slot.
-        let lede = walletAttribution(move)
-        if !lede.isEmpty {
+        // A ranked ladder since §214: risk, then money, then a person, then a
+        // deadline. Nothing is padded to fill the slot — an empty ladder emits
+        // no lede and the brief opens on the hero instead.
+        let lede = ledeLine(move: move, risk: risk, landed: landed, things: things,
+                            ledger: ledger, now: now)
+        if !lede.text.isEmpty {
             ids.append("lede")
-            lines.append("lede = DayLede(\"\(genSafe(lede))\")")
+            lines.append("lede = DayLede(\"\(genSafe(lede.text))\")")
         }
 
         // 2. The money hero — the CROWN (2026-07-25), the day's one fused
@@ -146,15 +193,18 @@ enum TodayBrief {
         // user: the themes treemap "is more important than 'what landed' and
         // when"). Same slot, same geometry; a different question — what today
         // was ABOUT, which survives a deluge, where a source tally doesn't.
-        if let themes = themesMap(things: things, now: now) {
+        var themeNames: [String] = []
+        if let themes = themesMap(things: things, now: now, ledger: ledger, windowStart: windowStart) {
             ids.append("themes")
-            lines.append(themes)
+            lines.append(themes.line)
+            themeNames = themes.names
         }
 
         // 5. The synthesis card (B3) — only the observations that fired. Sits
         // BELOW the summaries now (2026-07-25): it used to open the screen,
         // which made the agent's read the crown instead of the money.
-        let notes = observations(things: things, landed: landed, move: move, moves: moves, now: now)
+        let notes = observations(things: things, landed: landed, move: move, moves: moves,
+                                 now: now, ledger: ledger, ledeTookRisk: lede.tookRisk)
         if !notes.isEmpty {
             ids.append("notes")
             lines.append("notes = DayNotes([\(notes.indices.map { "n\($0)" }.joined(separator: ", "))])")
@@ -163,14 +213,28 @@ enum TodayBrief {
             }
         }
 
-        // 6. The leads — a thing in full, per shape that landed.
-        if let mention = mentionCard(landed) {
+        // 6. The leads — a thing in full, per shape that landed. Both prefer
+        // something this window hasn't already led with, then the sources you
+        // actually visit (§214) — see `ranked`.
+        var leadIDs: [String] = []
+        if let mention = mentionCard(landed, told: told, weights: weights) {
             ids.append("men")
-            lines += mention
+            lines += mention.lines
+            leadIDs.append(mention.id)
         }
-        if let reading = readingCard(landed) {
+        if let reading = readingCard(landed, told: told, weights: weights) {
             ids.append("read")
-            lines += reading
+            lines += reading.lines
+            leadIDs.append(reading.id)
+        }
+
+        // What this window's brief showed — the memory every §214 read is
+        // built on. Written last, so it records what was actually composed,
+        // and only when a person is looking at it.
+        if presenting {
+            BriefLedger.record(into: ledger, windowStart: windowStart, leadIDs: leadIDs,
+                               ledeSymbol: lede.symbol, themes: themeNames,
+                               sources: Array(Set(landed.map(\.source))), now: now)
         }
 
         // Nothing to draw at all — an honest empty day, not an empty screen.
@@ -206,8 +270,21 @@ enum TodayBrief {
     /// horoscope, so nothing here has a filler branch — a patternless day
     /// simply drops the card and the brief starts at the money hero.
     static func observations(things: [Thing], landed: [Thing], move: DayBrief.WalletMove?,
-                             moves: [TokensAsk.Move], now: Date) -> [Note] {
+                             moves: [TokensAsk.Move], now: Date,
+                             ledger: [BriefLedger.Entry], ledeTookRisk: Bool) -> [Note] {
         var out: [Note] = []
+
+        // The money's own sentence, displaced. When a liquidation risk takes
+        // the lede the attribution has nowhere else to go, so it comes back
+        // here — the seat it held before 2026-07-25 — rather than the day's
+        // biggest number going unexplained. Never both: if the lede said it,
+        // this doesn't.
+        if ledeTookRisk {
+            let attribution = walletAttribution(move, ledger: ledger, now: now).text
+            if !attribution.isEmpty {
+                out.append(Note(glyph: "dollarsign.circle", text: attribution))
+            }
+        }
 
         // A RECORD — the rarest, best kind of surprise (2026-07-22). Checked
         // early so it competes for a slot ahead of the routine observations;
@@ -218,6 +295,32 @@ enum TodayBrief {
         // invent) rules out a negative-framed one too.
         if let record = records(things: things, landed: landed, move: move, now: now) {
             out.append(record)
+        }
+
+        // THE JOINS (§214). Everything above and below this pair reads a
+        // single field — a reply count, a word frequency, a percentage — which
+        // is a read any single-source app could make. These two cross sources,
+        // which is the only thing this corpus can do that a feed reader can't,
+        // so they sit ahead of the single-signal families.
+        if let echo = marketReadingEcho(moves: moves, things: things, now: now) {
+            out.append(echo)
+        }
+        if let person = personEcho(landed) {
+            out.append(person)
+        }
+
+        // A source that has landed something every time the brief looked, and
+        // didn't today. Rare by construction (four unbroken appearances and
+        // five days of calendar), and gated on the day having landed SOMETHING
+        // — on a genuinely empty day every source is quiet and naming one
+        // would be a coincidence dressed as an observation.
+        if !landed.isEmpty,
+           let gone = BriefLedger.absent(ledger, landedSources: Set(landed.map(\.source)),
+                                         now: now) {
+            let since = gone.since.formatted(.dateTime.month(.abbreviated).day())
+            out.append(Note(glyph: "moon.zzz",
+                            text: String(localized:
+                                "Nothing from \(gone.source) today — the first quiet day since \(since).")))
         }
 
         // A mention that's gathering a conversation — the reply count is the
@@ -341,8 +444,7 @@ enum TodayBrief {
             // Count each word ONCE per title — a headline repeating a word
             // must not out-vote three separate articles sharing it.
             var seen = Set<String>()
-            for raw in read.title.split(whereSeparator: { !$0.isLetter && !$0.isNumber }) {
-                let word = String(raw)
+            for word in words(of: read.title) {
                 let key = word.lowercased()
                 guard key.count >= 4, !stopwords.contains(key), seen.insert(key).inserted
                 else { continue }
@@ -455,20 +557,270 @@ enum TodayBrief {
     /// under it, it read as a caption on a chart. Both halves fail
     /// independently and silently — no move, no line; no snapshot pair
     /// covering the window, just the dollar half.
-    private static func walletAttribution(_ move: DayBrief.WalletMove?) -> String {
-        guard let move, move.anchorUSD > 0 else { return "" }
+    private static func walletAttribution(_ move: DayBrief.WalletMove?,
+                                          ledger: [BriefLedger.Entry],
+                                          now: Date) -> Lede {
+        guard let move, move.anchorUSD > 0 else { return Lede() }
         let delta = move.usd - move.anchorUSD
-        guard abs(delta) >= 1 else { return "" }
+        guard abs(delta) >= 1 else { return Lede() }
         var line = delta > 0
             ? String(localized: "Up \(compactUSD(delta)) today.")
             : String(localized: "Down \(compactUSD(abs(delta))) today.")
         let deltas = WalletStore.shared.holdingsDeltas(forAddress: nil, since: move.since)
-        if let top = deltas.first, abs(top.delta) >= 1 {
+        guard let top = deltas.first, abs(top.delta) >= 1 else { return Lede(text: line) }
+        // The CONTINUITY half (§214): when the same holding has carried the
+        // wallet several days in a row, saying so is strictly more than
+        // naming it once more. Consecutive CALENDAR days, checked in
+        // `BriefLedger.streak` — three opens across a week must never wear
+        // the words "three days running".
+        let run = BriefLedger.symbolStreak(ledger, symbol: top.symbol, now: now)
+        if run >= 3 {
+            line += " " + (top.delta > 0
+                ? String(localized: "\(top.symbol) has done the lifting \(spelled(run)) days running.")
+                : String(localized: "\(top.symbol) has taken it back \(spelled(run)) days running."))
+        } else {
             line += " " + (top.delta > 0
                 ? String(localized: "\(top.symbol) did the lifting.")
                 : String(localized: "\(top.symbol) took it back."))
         }
-        return line
+        return Lede(text: line, symbol: top.symbol)
+    }
+
+    /// The ladder itself — the rungs in the order they can cost you something.
+    ///
+    /// Risk outranks the move on purpose: +$800 is the day's biggest number,
+    /// but a health factor under `DeFiRisk.floor` is the day's
+    /// biggest CONSEQUENCE, and it's the one a person can still act on. The
+    /// money isn't lost when that happens — its attribution falls back to a
+    /// synthesis note, which is where it lived before the crown pass.
+    ///
+    /// Every rung yields rather than padding: no debt, no risk line; no
+    /// snapshot pair spanning the window, no money line; and an empty ladder
+    /// returns "" so the brief simply opens on the hero.
+    ///
+    /// **This is not `DayBrief.lead`, and the orders differ on purpose.** That
+    /// one ranks a mention above money; this one ranks money above a mention.
+    /// Neither is wrong: `DayBrief.lead` feeds the whisper capsule and the
+    /// kept pill, where the line stands ALONE and someone addressing you is
+    /// the most human thing a lone line can carry — while this sentence sits
+    /// directly above the money hero, which is about to say the number
+    /// anyway, so a lede that named a mention instead would leave the crown
+    /// uncaptioned. Don't "fix" one to match the other.
+    private static func ledeLine(move: DayBrief.WalletMove?, risk: DeFiRisk.Debt?,
+                                 landed: [Thing], things: [Thing],
+                                 ledger: [BriefLedger.Entry], now: Date) -> Lede {
+        // 1. Something is close to liquidation.
+        if let risk {
+            let chain = WalletIngest.displayName(forNetwork: risk.network) ?? risk.network
+            return Lede(text: String(localized:
+                "Your \(risk.protocolName) position on \(chain) is close to liquidation — health factor \(WalletIngest.format(risk.hf))."),
+                        tookRisk: true)
+        }
+        // 2. The money moved.
+        let money = walletAttribution(move, ledger: ledger, now: now)
+        if !money.text.isEmpty { return money }
+        // 3. Someone addressed you by name. The mention card below shows the
+        // POST; this says who, which is the half a headline is for.
+        if let mention = landed.first(where: { $0.socialContext == "mention" }),
+           let who = mention.authorHandle, !who.isEmpty {
+            return Lede(text: String(localized: "\(who) mentioned you."))
+        }
+        // 4. A deadline lands today. Deadlines only, never calendar events —
+        // the same scoping `nextTile` holds to (§101's day-planner ruling).
+        if let due = dueToday(things) {
+            let name = clamp(due.title, max: 44)
+            let stop = name.hasSuffix("…") ? "" : "."
+            return Lede(text: (due.dueAt ?? .now) < .now
+                ? String(localized: "\(name) is overdue\(stop)")
+                : String(localized: "\(name) is due today\(stop)"))
+        }
+        return Lede()
+    }
+
+    /// The lede's three facts, named rather than positional. `text` and
+    /// `symbol` are both plain Strings, so a positional tuple built at four
+    /// separate rungs could transpose them and still compile — the one place
+    /// in this file where the compiler couldn't catch a copy-paste slip.
+    /// `symbol` is the holding the sentence credited, carried out for the
+    /// ledger; `tookRisk` tells the synthesis card whether the money's
+    /// attribution still needs a seat.
+    struct Lede {
+        var text = ""
+        var symbol = ""
+        var tookRisk = false
+    }
+
+    /// The nearest open deadline falling inside today, overdue included — the
+    /// lede's fourth rung. Nil when the next deadline is tomorrow or later:
+    /// "due Thursday" is not a headline, it's the `NextTile`'s job.
+    private static func dueToday(_ things: [Thing], now: Date = .now) -> Thing? {
+        let calendar = Calendar.current
+        return things
+            .filter { $0.mark != .done }
+            .filter { thing in
+                guard let due = thing.dueAt else { return false }
+                return due < now || calendar.isDate(due, inSameDayAs: now)
+            }
+            .min { ($0.dueAt ?? .distantFuture) < ($1.dueAt ?? .distantFuture) }
+    }
+
+    /// 3 → "three". Spelled through nine, then numerals — a sentence in
+    /// display type reads better with the word, and past nine the word is
+    /// longer than the fact deserves.
+    private static func spelled(_ n: Int) -> String {
+        let words = [3: String(localized: "three"), 4: String(localized: "four"),
+                     5: String(localized: "five"), 6: String(localized: "six"),
+                     7: String(localized: "seven"), 8: String(localized: "eight"),
+                     9: String(localized: "nine")]
+        return words[n] ?? "\(n)"
+    }
+
+    // MARK: - The live reads
+
+    /// A watched wallet ALWAYS earns the money hero (user ruling 2026-07-22:
+    /// "if a user has a wallet, show it no matter what — it's a rich
+    /// visualization, even on a steady day"). The live read is tried first; if
+    /// it comes back empty because the chain was unreachable this morning
+    /// (offline / rate-limited), the hero falls back to the LAST-KNOWN
+    /// holdings rather than vanishing — marked "as of Xh ago" so it never
+    /// claims a stale number is current (§83).
+    private static func liveHoldings() async -> [WalletIngest.HoldingsGroup] {
+        guard !WalletStore.shared.addresses.isEmpty else { return [] }
+        let live = await WalletIngest.topHoldingsByWallet()
+        return live.isEmpty ? WalletIngest.lastKnownHoldingsByWallet() : live
+    }
+
+    private static func liveMoves(context: ModelContext) async -> [TokensAsk.Move] {
+        TokensAsk.watched(context).isEmpty ? [] : await TokensAsk.moves(context: context)
+    }
+
+    /// The worst borrow across both lending protocols, and only when it has
+    /// actually crossed the risk floor. Both the threshold and the read live
+    /// in `DeFiRisk`, so this can't call a position dangerous on a screen
+    /// where the Wallet room calls it fine. Reads nothing when no EVM wallet
+    /// is watched.
+    private static func worstDebt() async -> DeFiRisk.Debt? {
+        let watched = WalletStore.shared.addresses.map(\.address)
+        guard !watched.isEmpty else { return nil }
+        let addresses = await WalletIngest.resolvedAddresses(watched).filter { ENS.isHexAddress($0) }
+        guard !addresses.isEmpty else { return nil }
+        return await DeFiRisk.atRisk(addresses: addresses)
+    }
+
+    // MARK: - The joins (§214)
+
+    /// A token that moved today which is ALSO what the corpus has been reading
+    /// about — the observation neither a portfolio tracker nor a feed reader
+    /// can make alone, because each holds only one half.
+    ///
+    /// It names the read rather than counting the reads: "in 3 of your saves
+    /// this week" is a tally, and §213 outlawed those. The count still does
+    /// the work — two independent reads before a symbol qualifies — it just
+    /// never reaches the sentence.
+    private static func marketReadingEcho(moves: [TokensAsk.Move], things: [Thing],
+                                          now: Date) -> Note? {
+        guard !moves.isEmpty else { return nil }
+        let horizon = now.addingTimeInterval(-7 * 86_400)
+        let recent = reads(things.filter { $0.capturedAt >= horizon })
+        guard recent.count >= 2 else { return nil }
+        // Each title is split and lowercased ONCE, up front. Testing every
+        // symbol against every title instead re-tokenized the same title per
+        // move — watched tokens times a week of reading, all of it thrown
+        // away immediately.
+        let tokenized = recent.map { (thing: $0, words: Set(words(of: $0.title).map { $0.lowercased() })) }
+        for move in moves.sorted(by: { abs($0.change) > abs($1.change) }) {
+            // Two letters is not a symbol, it's a syllable — "AI" or "ID"
+            // would match half the headlines ever written.
+            guard move.symbol.count >= 3 else { continue }
+            let needle = move.symbol.lowercased()
+            let hits = tokenized.filter { $0.words.contains(needle) }.map(\.thing)
+            guard hits.count >= 2, let lead = hits.first else { continue }
+            return Note(glyph: "arrow.triangle.merge",
+                        text: String(localized:
+                            "\(move.symbol) is \(TokenChartStyle.changeText(move.change)) today, and it's what you've been reading: \(clamp(lead.title, max: 52))"),
+                        thingID: lead.id.uuidString)
+        }
+        return nil
+    }
+
+    /// A title's words — maximal runs of letters and digits, original casing
+    /// kept so a caller that DISPLAYS one (`dominantTopic`) doesn't have to
+    /// re-derive it. One definition of what a word is, shared by the topic
+    /// count and the symbol match, which had spelled the same rule twice.
+    private static func words(of title: String) -> [String] {
+        title.split(whereSeparator: { !$0.isLetter && !$0.isNumber }).map(String.init)
+    }
+
+    /// One person turning up in several sources at once — the corpus noticing
+    /// that a handle in your mail is the handle in your feed.
+    ///
+    /// Handles compare EXACTLY (lowercased, a leading `@` dropped) and never
+    /// fuzzily: the networks share no identity system, so "mara" on Bluesky
+    /// and "mara" on Farcaster may be two people. The claim we can keep is
+    /// only that the same spelling appeared twice — so the line says where it
+    /// appeared and lets the person judge, rather than asserting they're one.
+    private static func personEcho(_ landed: [Thing]) -> Note? {
+        var seen: [String: (handle: String, sources: [String], thing: Thing)] = [:]
+        for thing in landed {
+            let raw = (thing.authorHandle ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !raw.isEmpty else { continue }
+            var key = raw.lowercased()
+            if key.hasPrefix("@") { key.removeFirst() }
+            guard key.count >= 3 else { continue }
+            if var entry = seen[key] {
+                if !entry.sources.contains(thing.source) { entry.sources.append(thing.source) }
+                seen[key] = entry
+            } else {
+                seen[key] = (raw, [thing.source], thing)
+            }
+        }
+        guard let best = seen.values
+            .filter({ $0.sources.count >= 2 })
+            .max(by: { $0.sources.count < $1.sources.count })
+        else { return nil }
+        return Note(glyph: "person.2",
+                    text: String(localized:
+                        "\(best.handle) turns up in \(list(best.sources)) today."),
+                    thingID: best.thing.id.uuidString)
+    }
+
+    /// "Bluesky and Mail" / "Bluesky, Farcaster and Mail" — a sentence, never
+    /// a count, capped at three so it stays one.
+    private static func list(_ names: [String]) -> String {
+        let shown = Array(names.prefix(3))
+        switch shown.count {
+        case 0:  return ""
+        case 1:  return shown[0]
+        case 2:  return String(localized: "\(shown[0]) and \(shown[1])")
+        default: return String(localized: "\(shown[0]), \(shown[1]) and \(shown[2])")
+        }
+    }
+
+    /// How both leads pick when several things qualify (§214): something this
+    /// window hasn't already led with first, then the sources you actually
+    /// visit (`ChipMemory`'s existing tap-learned weights — the same counters
+    /// that order the source strip), then the caller's own order, which is
+    /// newest-first everywhere this is called.
+    ///
+    /// Prefer-then-fall-back, never drop: if EVERY candidate has already been
+    /// shown this window, the lead still draws. A brief that empties a card on
+    /// a revisit reads as a bug, and there is genuinely nothing newer to say.
+    /// The enumerated offset makes this a total order — `sorted` is not
+    /// documented stable, so ties would otherwise shuffle between rises.
+    private static func ranked(_ candidates: [Thing], told: Set<String>,
+                               weights: ChipMemory.Weights)
+        -> [Thing] {
+        candidates.enumerated().sorted { a, b in
+            let aTold = told.contains(a.element.id.uuidString)
+            let bTold = told.contains(b.element.id.uuidString)
+            if aTold != bTold { return !aTold }
+            let aWeight = ChipMemory.weight(for: a.element.source,
+                                            counts: weights.counts, lastVisit: weights.lastVisit)
+            let bWeight = ChipMemory.weight(for: b.element.source,
+                                            counts: weights.counts, lastVisit: weights.lastVisit)
+            if aWeight != bWeight { return aWeight > bWeight }
+            return a.offset < b.offset
+        }.map(\.element)
     }
 
     // MARK: - The pair
@@ -559,7 +911,9 @@ enum TodayBrief {
     ///    window. Nothing new, no subline — never padded.
     ///
     /// Two clusters minimum: one cell isn't a map, it's a title.
-    private static func themesMap(things: [Thing], now: Date) -> String? {
+    private static func themesMap(things: [Thing], now: Date,
+                                  ledger: [BriefLedger.Entry], windowStart: Date)
+        -> (line: String, names: [String])? {
         let horizon = Calendar.current.date(byAdding: .day, value: -30, to: now) ?? now
         let clusters = HomeComposition.projectClusters(things: things.filter { $0.capturedAt >= horizon })
         guard clusters.count >= 2 else { return nil }
@@ -569,11 +923,27 @@ enum TodayBrief {
         // The count still rides each cell: it sizes the cell's AREA. Only the
         // printed line is gone.
         let cells = shown.map { "\(tileSafe($0.name)) \($0.things.count)" }
-        let windowStart = DayBrief.windowStart(now: now)
         let fresh = shown
             .filter { ($0.things.map(\.capturedAt).min() ?? .distantPast) >= windowStart }
             .map(\.name)
-        return "themes = TagMap(\"\(String(localized: "What you're into"))\", \"\(genSafe(newThemeLine(fresh)))\", [\(cells.joined(separator: ", "))], \"plain\")"
+        var subline = newThemeLine(fresh)
+        // Nothing new is the COMMON case once a corpus settles, and it used to
+        // leave the map captionless. §214 fills that slot — and only that slot
+        // — with the other thing the map can't draw: which theme has been
+        // holding for days. Never both, since "X is new" and "X has been
+        // building" are contradictory claims about the same shape.
+        if subline.isEmpty {
+            let runs = shown.compactMap { cluster -> (name: String, run: Int)? in
+                let run = BriefLedger.themeStreak(ledger, theme: cluster.name, now: now)
+                return run >= 4 ? (cluster.name, run) : nil
+            }
+            if let longest = runs.max(by: { $0.run < $1.run }) {
+                subline = String(localized:
+                    "\(clamp(longest.name, max: 24)) has been building for \(spelled(longest.run)) days.")
+            }
+        }
+        return ("themes = TagMap(\"\(String(localized: "What you're into"))\", \"\(genSafe(subline))\", [\(cells.joined(separator: ", "))], \"plain\")",
+                shown.map(\.name))
     }
 
     /// "Foldables is new." / "Foldables and Recipes are new." — the new themes
@@ -581,20 +951,22 @@ enum TodayBrief {
     /// rather than becoming the tally it exists to replace.
     private static func newThemeLine(_ names: [String]) -> String {
         let named = names.prefix(3).map { clamp($0, max: 24) }
-        switch named.count {
-        case 0:  return ""
-        case 1:  return String(localized: "\(named[0]) is new.")
-        case 2:  return String(localized: "\(named[0]) and \(named[1]) are new.")
-        default: return String(localized: "\(named[0]), \(named[1]) and \(named[2]) are new.")
-        }
+        guard !named.isEmpty else { return "" }
+        let subject = list(Array(named))
+        return named.count == 1
+            ? String(localized: "\(subject) is new.")
+            : String(localized: "\(subject) are new.")
     }
 
     // MARK: - The leads (the thing itself, in full)
 
     /// The mention that names you, rendered as the real post — author, their
     /// words, their avatar. The card's title says WHY it's here.
-    private static func mentionCard(_ landed: [Thing]) -> [String]? {
-        let mentions = landed.filter { $0.socialContext == "mention" }
+    private static func mentionCard(_ landed: [Thing], told: Set<String>,
+                                    weights: ChipMemory.Weights)
+        -> (lines: [String], id: String)? {
+        let mentions = ranked(landed.filter { $0.socialContext == "mention" },
+                              told: told, weights: weights)
         guard let mention = mentions.first else { return nil }
         let words = mention.postText ?? mention.title
         let author = mention.authorHandle ?? mention.source
@@ -609,17 +981,24 @@ enum TodayBrief {
         if mentions.count > 1 {
             meta.append(String(localized: "\(mentions.count - 1) more behind it"))
         }
-        return ["men = Widget(\"\(genSafe(String(localized: "\(mention.source) · mentions you")))\", \"\", [m0])",
-                "m0 = LeadPost(\"\(genSafe(author))\", \"\(genSafe(clamp(words, max: 200)))\", \"\(genSafe(mention.authorAvatarURL ?? ""))\", \"\(genSafe(meta.joined(separator: " · ")))\", \"\(mention.id.uuidString)\")"]
+        return (["men = Widget(\"\(genSafe(String(localized: "\(mention.source) · mentions you")))\", \"\", [m0])",
+                 "m0 = LeadPost(\"\(genSafe(author))\", \"\(genSafe(clamp(words, max: 200)))\", \"\(genSafe(mention.authorAvatarURL ?? ""))\", \"\(genSafe(meta.joined(separator: " · ")))\", \"\(mention.id.uuidString)\")"],
+                mention.id.uuidString)
     }
 
     /// The one read worth opening — the topic outlier when the day has a
     /// dominant topic (the interesting one is the one that ISN'T like the
     /// others), else simply the newest. The residue is named, never counted:
     /// "the rest keeps circling Samsung".
-    private static func readingCard(_ landed: [Thing]) -> [String]? {
-        let reads = reads(landed)
+    private static func readingCard(_ landed: [Thing], told: Set<String>,
+                                    weights: ChipMemory.Weights)
+        -> (lines: [String], id: String)? {
+        let reads = ranked(reads(landed), told: told, weights: weights)
         guard !reads.isEmpty else { return nil }
+        // The topic outlier still wins when there IS one — "the read that
+        // isn't like the others" is a stronger claim than "the source you tap
+        // most". The ranking decides only the fallback, which is where a plain
+        // newest-first pick was leaving a habit source behind a stranger.
         let topic = dominantTopic(landed)
         let lead = topic?.outlier ?? reads[0]
         let meta = "\(genSafe(lead.source)) · \(shortTime(lead.capturedAt))"
@@ -639,7 +1018,7 @@ enum TodayBrief {
             doc.append("rmore = AskMore(\"\(genSafe(String(localized: "See the rest")))\", \"\(genSafe(topic.word))\")")
         }
         doc[0] = "read = Widget(\"\(String(localized: "Reading"))\", \"\", [\(refs.joined(separator: ", "))])"
-        return doc
+        return (doc, lead.id.uuidString)
     }
 
     // MARK: - Shared

@@ -46,12 +46,17 @@ enum ChipMemory {
         weight(for: source, counts: counts, lastVisit: lastVisit)
     }
 
+    /// The shape `snapshot()` hands back, named once (2026-07-25) — the Today
+    /// brief threads it through three signatures, and spelling the tuple out
+    /// at each would mean four places to edit if a field is ever added.
+    typealias Weights = (counts: [String: Int], lastVisit: [String: Double])
+
     /// Both backing dictionaries, read once — for a caller (a sort
     /// comparator) that would otherwise call `weight(for:)` once per
     /// comparison, each re-deserializing both UserDefaults dictionaries from
     /// scratch (2026-07-21 audit: an O(n log n) comparator over the chip
     /// list did exactly that).
-    static func snapshot() -> (counts: [String: Int], lastVisit: [String: Double]) {
+    static func snapshot() -> Weights {
         (counts, lastVisit)
     }
 

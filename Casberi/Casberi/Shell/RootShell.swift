@@ -746,11 +746,22 @@ struct RootShell: View {
                     }
                 }
             }
+            // Debug hook: `-briefLedger "days=6;symbol=ETH;themes=…;sources=…"`
+            // (or `clear`) plants prior windows in the §214 ledger, so a
+            // streak, a continuity subline or an absence line verifies in ONE
+            // launch instead of a week of real opens. Declared before the
+            // probe below — hooks run in list order, and the probe must read a
+            // ledger that's already seeded.
+            BriefLedger.seedFromLaunchArgs()
             // Debug hook: `-todayProbe YES` composes the Today brief (prd
             // §166) over the real corpus and logs the whole doc — every module
             // it chose and every observation that fired — so the composer
             // verifies without a tap. Pair with `-awayGap <hours>` to widen
             // the window a headless run measures.
+            //
+            // Composes with `presenting: false` ON PURPOSE: recording would
+            // make each probe run suppress the leads of the next one, so a
+            // rerun wouldn't reproduce. Use `-briefLedger` to stage memory.
             if UserDefaults.standard.bool(forKey: "todayProbe") {
                 Task { @MainActor in
                     let all = Corpus.surfaced((try? modelContext.fetch(FetchDescriptor<Thing>(
@@ -758,8 +769,9 @@ struct RootShell: View {
                     let landed = DayBrief.landed(all)
                     let result = await KeptAskComposers.compose("today", things: all,
                                                                context: modelContext)
-                    NSLog("[Casberi] todayProbe: landed=%d headline=\"%@\" digest=\"%@\"",
-                          landed.count, DayBrief.headline(things: all) ?? "(nil)",
+                    NSLog("[Casberi] todayProbe: landed=%d ledger=%d headline=\"%@\" digest=\"%@\"",
+                          landed.count, BriefLedger.snapshot().count,
+                          DayBrief.headline(things: all) ?? "(nil)",
                           result?.digest ?? "nil")
                     // One NSLog PER LINE — a joined multi-line message gets
                     // truncated by the log reader mid-document, which hid an
@@ -1400,8 +1412,13 @@ struct RootShell: View {
         // theirs.
         if TodayBrief.matches(query) {
             lastAnswerHits = []
+            // `presenting: true` — this is the route every way of REACHING the
+            // brief funnels through (the typed ask, the whisper's tap, the
+            // kept pill), so it's the one place the §214 ledger should record
+            // what was shown.
             if let result = await KeptAskComposers.compose("today", things: allThings(),
-                                                          context: modelContext) {
+                                                          context: modelContext,
+                                                          presenting: true) {
                 return result.doc
             }
         }
@@ -1654,7 +1671,8 @@ struct RootShell: View {
         }
         lastAnswerHits = []
         guard let doc = await KeptAskComposers.compose(target.keptKind, things: all,
-                                                       context: modelContext)?.doc
+                                                       context: modelContext,
+                                                       presenting: true)?.doc
         else { return nil }
         return answered(doc)
     }

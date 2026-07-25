@@ -8271,3 +8271,152 @@ Verified on sim (dark, seeded corpus + wallet history): `-todayProbe` composes `
 One layout lesson paid for immediately: the answer column does NOT inset its children — every component in `GenRenderer` owns its own horizontal margin — so a bare `frame(maxWidth: .infinity)` ran the sentence off both edges, starting left of the masthead above it. `GenDayLede` self-pads `DS.Space.s4` like everything else.
 
 Verified on sim with 24h of seeded history (`walletMove` needs an anchor 20h+ old — three samples at 4h spacing is not enough to make one): `root = Stack([lede, hero, pair, themes, notes])`, `lede = DayLede("Up $800 today. ETH did the lifting.")`, rendered inset and aligned with the masthead.
+
+## 214. The brief gets a memory — continuity, cross-source joins, and a lede that isn't wallet-only (user: "how if at all would we make the what's going on brief smarter?" → "do all", 2026-07-25) — VERIFIED
+
+§213 settled what the brief SHOWS. This asks what it KNOWS. The census found three
+structural ceilings, none of them about adding modules.
+
+**1. It had no memory of itself.** Every `TodayBrief.compose` was a fresh read of the
+current window, so the screen could never say *still*, *again*, or *third day running* —
+and because `windowStart` freezes at the away window, re-opening at 4pm recomposed a
+near-identical page to 8am's, leads and all. `Model/BriefLedger.swift` is the substrate:
+a 14-window capped record of what each brief actually SHOWED, in UserDefaults, the same
+shape as `AskMemory`/`ChipMemory`.
+
+Two rules make it honest. It records only what a person SAW — `compose` takes
+`presenting`, and `KeptAskStore.refreshDigests` (which composes every kept kind in the
+background on each foreground) passes false, so the app can never claim to have told you
+something it merely computed. And **every claim is checked against the calendar, not the
+entry count**: someone who opens the app Monday/Wednesday/Friday has three entries, and
+"three days running" would be a lie, so `streak` walks back one calendar day at a time
+and stops at the first gap.
+
+*The bug that cost the entry its second date field.* The walk first anchored on
+`windowStart` and counted a seven-day streak as six. `windowStart` is the frozen away
+window, so a morning open carries LAST NIGHT's date — the walk treated yesterday as
+"today" and then skipped it. `Entry` now carries both: `windowStart` is the merge
+identity, `day` is the calendar day, and only `day` does arithmetic. Caught by the probe,
+not by reading.
+
+**2. It never learned what you did about it.** The leads picked by shape — a mention
+exists, so show the mention — while `ChipMemory`'s tap-learned source weights (the same
+counters that order the source strip) sat unread one file away. Both leads now rank by
+`ranked()`: something this window hasn't already led with first, then the sources you
+actually visit, then newest. Prefer-then-fall-back, never drop — if every candidate has
+been shown, the lead still draws, because a card that empties on a revisit reads as a bug
+and there is genuinely nothing newer to say. Suppression also waits out `revisitGap` (30
+min): rising the agent twice in a minute must show the same screen. The topic outlier
+still wins the reading card outright when there is one — "the read that isn't like the
+others" is a stronger claim than "the source you tap most"; the ranking decides only the
+fallback.
+
+**3. Its observations read one field each.** A reply count, a word frequency, a
+percentage — reads any single-source app could make. Three families were added, all
+deterministic, and the two joins sit AHEAD of the single-signal families because crossing
+sources is the only thing this corpus can do that a feed reader can't:
+- **Money ↔ reading.** A token that moved today which is also what you've been reading:
+  "SOL is +12.4% today, and it's what you've been reading: <headline>". It NAMES the read
+  rather than counting the reads — "in 3 of your saves this week" is a tally and §213
+  outlawed those; the count still gates the claim (two independent reads), it just never
+  reaches the sentence. Symbols under three characters are refused ("AI" is a syllable,
+  not a ticker) and matching is whole-word, since substring matching finds "ETH" inside
+  "ethics" — the `CrossSourceEcho` discipline.
+- **Person ↔ sources.** One handle in several sources at once. Handles compare EXACTLY
+  (lowercased, leading `@` dropped), never fuzzily: the networks share no identity system,
+  so the claim we can keep is that the same spelling appeared twice — the line says WHERE
+  and lets the person judge.
+- **Absence.** "Nothing from Bluesky today — the first quiet day since Jul 19." The one
+  genuinely new KIND of fact: a state change, not a tally, so it survives §213. Rare by
+  construction (four unbroken appearances and five days of calendar), and gated on the day
+  having landed something — on an empty day every source is quiet and naming one would be
+  a coincidence dressed as an observation. It names a DATE rather than counting entries,
+  for the same reason the streak walks days.
+
+**The lede is a ladder now, not a wallet special case.** It was wallet-only, so a day the
+wallet didn't move opened on a number with no sentence over it. Rungs, ranked by what can
+still cost you something: a liquidation risk, then the money's move, then someone
+addressing you, then a deadline landing today. **Risk outranks the move on purpose** —
++$800 is the day's biggest number, but a health factor under the floor is the day's
+biggest consequence and the only one still actionable. The money isn't lost when that
+happens: its attribution falls back to a synthesis note, the seat it held before the crown
+pass. Nothing is padded — a rung with no fact yields, and an empty ladder emits no lede.
+
+That threshold is now ONE definition. `WalletWarning.liquidationFloor` (1.5) is read by
+both the Wallet room's warnings and the brief's top rung, so the brief can't call a
+position at risk on a screen where the wallet calls it fine.
+
+**Continuity fills the themes map's empty caption.** The subline said what's NEW, which is
+empty once a corpus settles — the common case. It now falls through to the other thing the
+map can't draw: which theme has been holding ("Work has been building for seven days").
+Never both — "X is new" and "X has been building" are contradictory claims about the same
+shape.
+
+**The §213 domino, closed.** `DayBrief.lead`'s last resort was the pile itself — "121 new"
+— which §213 outlawed one screen over while this line kept saying it, in the whisper
+capsule AND in the kept pill's trailing signal. The fallback is now the same answer the
+brief's own map gives: what the day was ABOUT ("mostly Lisbon trip"), falling through to
+the newest thing naming itself. The short form can't be a count either, so it names where
+the newest thing came from.
+
+**One free speed-up.** The brief's live reads were sequential, so each new read added its
+full latency to every agent rise. `async let` makes it pay the slowest rather than the sum
+— which is what left room for the risk read the top rung needs.
+
+Verified on sim (seeded corpus + wallet history + `-briefLedger "days=6;symbol=ETH;
+themes=Onchain,Work;sources=RSS,Bluesky"` + `-awayGap 18`): `lede = DayLede("Up $1,000
+today. ETH has done the lifting seven days running.")`, `themes` subline "Work has been
+building for seven days.", and `n0 = DayNote("moon.zzz", "Nothing from Bluesky today — the
+first quiet day since Jul 19.")`. Build green.
+
+**Not verified in-app, stated plainly.** The risk rung needs a watched wallet holding a
+lending position under the floor; the two joins need a symbol in the day's reading and a
+handle in two sources; novelty suppression needs two real presentations 30 minutes apart.
+All four are build-green and reasoned, none has been seen firing on a device. New probe:
+`-briefLedger "days=N;symbol=…;themes=…;sources=…"` (or `clear`) plants prior windows so a
+streak, a continuity subline or an absence verifies in one launch. `-todayProbe` composes
+with `presenting: false` on purpose, so a rerun reproduces instead of suppressing its own
+previous leads.
+
+**Amendment, same session — what the cleanup pass changed.** Four review angles ran over
+the diff; three findings were worth acting on and one reframed a claim §214 had made
+falsely.
+
+*The threshold claim was wrong when written.* §214 said `WalletWarning.liquidationFloor`
+made 1.5 "ONE definition". It didn't — `WalletDeFi` and `MorphoDeFi` each already carried
+a private `riskThreshold = 1.5` for their own risk-crossing alerts (Morpho's comment even
+pointed at Aave's, which is the codebase noticing the duplication without fixing it), so
+the constant went from two copies to *four*, in a struct that is presentation, not domain.
+It now lives in `Model/DeFiRisk.swift` and all four read it. The same file absorbed the
+duplicated READ: `WalletDeFiAsk.answer` and the brief's lede both fetched Aave and Morpho
+concurrently, flattened each into an identical local `Debt`, and took the minimum — the
+same twenty lines twice. `DeFiRisk.read`/`.debts`/`.atRisk` are that logic once, which
+makes the "the brief can't disagree with the Wallet room" property mechanical instead of
+resting on two copies staying in sync by hand.
+
+*The risk read was riding a path with no reader.* `worstDebt()` ran on every compose —
+including `KeptAskStore.refreshDigests`, which composes every kept kind in the background
+on each foreground and each composer open, and uses only `.digest`. The digest is
+`DayBrief.detail`, which never carries the lede, so the read's result was discarded there
+— and it is the most expensive thing in the composer, since `WalletDeFi.positions` walks
+its pools and addresses SEQUENTIALLY and a cold 60s cache costs several round-trips. It is
+now gated on `presenting`. The accepted cost, stated so nobody re-derives it: `-todayProbe`
+composes with `presenting: false`, so it cannot show the risk rung.
+
+*One nested loop.* `marketReadingEcho` re-tokenized each reading title once per watched
+symbol. Titles are tokenized once into lowercase word sets up front; the symbol test is a
+set membership. Same answer, one pass instead of symbols × titles.
+
+*Two ladders, now cross-referenced.* `TodayBrief.ledeLine` ranks money above a mention;
+`DayBrief.lead` ranks a mention above money. Both are right for their surface — the
+capsule's line stands ALONE, where someone addressing you is the most human thing a lone
+line can carry, while the brief's lede sits directly above a money hero that is about to
+say the number anyway. Neither doc comment mentioned the other, so a future editor would
+have "fixed" one to match. Both now say why they differ. Left deliberately unmerged: two
+call sites with different rung sets and return shapes don't earn a shared abstraction.
+
+Also folded in: `newThemeLine` and the new source-list joiner were the same three-branch
+sentence builder, now one; `titleNames` and `dominantTopic` spelled the same "what is a
+word" rule twice, now `words(of:)`; `BriefLedger.record` re-decoded the ledger its caller
+had already snapshotted, breaking the read-once rule the file's own comments assert.
+Re-verified on sim after all of it — same lede, same continuity subline, same absence line.

@@ -263,7 +263,7 @@ enum WalletWatch {
                          owner: [String: String] = [:]) -> [WalletWarning] {
         let wallet = WalletStore.shared
         var out: [WalletWarning] = []
-        for p in positions where (p.healthFactor ?? .infinity) < 1.5 {
+        for p in positions where (p.healthFactor ?? .infinity) < DeFiRisk.floor {
             let chain = WalletIngest.displayName(forNetwork: p.network) ?? p.network
             out.append(WalletWarning(id: "defi:\(p.network):\(p.address)", severity: .critical,
                                      kind: .liquidation,
@@ -273,7 +273,7 @@ enum WalletWatch {
         }
         // Morpho's markets are isolated, so each at-risk market warns on its
         // own (two risky markets are two liquidations, not one).
-        for p in morpho.positions where (p.healthFactor ?? .infinity) < 1.5 {
+        for p in morpho.positions where (p.healthFactor ?? .infinity) < DeFiRisk.floor {
             let chain = WalletIngest.displayName(forNetwork: p.network) ?? p.network
             out.append(WalletWarning(id: "morpho:\(p.network):\(p.address):\(p.marketLabel)",
                                      severity: .critical,

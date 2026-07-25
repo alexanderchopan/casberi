@@ -40,11 +40,12 @@ enum WalletDeFi {
         Pool(network: "matic-mainnet", address: "0x794a61358d6845594f94dc1db02a252b5b4814ad"),
     ]
 
-    /// The health-factor line below which Aave positions commonly get
-    /// flagged as at risk of liquidation — a widely used warning threshold,
-    /// not Aave's own liquidation point (that's 1.0; 1.5 is the standing
-    /// margin worth a heads-up before it gets there).
-    private static let riskThreshold = 1.5
+    /// The health-factor line below which Aave positions get flagged as at
+    /// risk of liquidation. `DeFiRisk.floor` since 2026-07-25 — this file,
+    /// `MorphoDeFi`, `WalletWarnings` and the brief's lede each held their
+    /// own copy of the same 1.5, and a threshold that decides whether the app
+    /// warns you must not be able to disagree with itself.
+    private static var riskThreshold: Double { DeFiRisk.floor }
 
     struct Position {
         let network: String

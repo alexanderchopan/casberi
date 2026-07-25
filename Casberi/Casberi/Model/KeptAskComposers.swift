@@ -26,8 +26,19 @@ enum KeptAskComposers {
     /// `context` is threaded through explicitly (matching how `RootShell`
     /// already calls `TokensAsk.moves(context:)`/`.watched(_:)` — there is no
     /// shared/static ModelContext accessor in this codebase).
-    static func compose(_ kind: String, things: [Thing], context: ModelContext) async -> Result? {
-        if kind == "today" { return await TodayBrief.compose(things: things, context: context) }
+    ///
+    /// `presenting` says whether the person is about to SEE this document or
+    /// the app is only computing a digest (`KeptAskStore.refreshDigests` runs
+    /// every kept kind in the background on each foreground). Only the Today
+    /// brief reads it — its ledger (§214) must never record having told you
+    /// something it merely composed — so it defaults to false and a new
+    /// composer is silent by construction.
+    static func compose(_ kind: String, things: [Thing], context: ModelContext,
+                        presenting: Bool = false) async -> Result? {
+        if kind == "today" {
+            return await TodayBrief.compose(things: things, context: context,
+                                            presenting: presenting)
+        }
         if kind == "away" { return away(things) }
         if kind == "wallet" { return await wallet(things) }
         if kind == "walletdefi" { return await walletDeFi() }

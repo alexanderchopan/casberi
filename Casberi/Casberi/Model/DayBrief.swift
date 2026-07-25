@@ -163,14 +163,22 @@ enum DayBrief {
                 : String(localized: "\(money.count) transactions")
             return Lead(full: money.count == 1 ? clamp(first.title) : count, short: count)
         }
-        // Nothing claimed you — name the newest thing instead of counting,
-        // unless the day is genuinely a pile, where the pile IS the fact.
+        // Nothing claimed you. The last resort used to be the pile itself —
+        // "121 new" — which §213 outlawed one screen over and this line kept
+        // saying, in the capsule AND in the kept pill's trailing signal
+        // ("Catch me up · 121 new"). Volume is not news anywhere, so the
+        // fallback is now the same answer the brief's own map gives: what the
+        // day was ABOUT. A theme carrying the most of the window names it; if
+        // no tag has gathered two things yet, the newest thing names itself.
         guard let newest = landed.first else { return nil }
-        if landed.count >= 8 {
-            let pile = String(localized: "\(landed.count) new")
-            return Lead(full: pile, short: pile)
+        if let theme = HomeComposition.projectClusters(things: landed).first {
+            let line = String(localized: "mostly \(clamp(theme.name, max: 28))")
+            return Lead(full: line, short: line)
         }
-        return Lead(full: clamp(newest.title), short: String(localized: "\(landed.count) new"))
+        // The SHORT form can't be a count either, so it names where the day's
+        // newest thing came from — always shorter than a title, never a tally.
+        return Lead(full: clamp(newest.title),
+                    short: String(localized: "new from \(newest.source)"))
     }
 
     /// "wallet +1.5%" off the CACHED combined value line (`WalletStore`'s

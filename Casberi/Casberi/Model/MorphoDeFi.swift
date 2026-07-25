@@ -48,9 +48,11 @@ enum MorphoDeFi {
         (10, "opt-mainnet"), (137, "matic-mainnet"),
     ]
 
-    /// Same warning line Aave wears (`WalletDeFi.riskThreshold`) — 1.0 is
-    /// liquidation itself, 1.5 is the heads-up margin.
-    private static let riskThreshold = 1.5
+    /// Same warning line Aave wears — 1.0 is liquidation itself, 1.5 is the
+    /// heads-up margin. One definition for both (`DeFiRisk.floor`, 2026-07-25);
+    /// this comment used to point at Aave's private copy, which is the
+    /// codebase noticing the duplication without fixing it.
+    private static var riskThreshold: Double { DeFiRisk.floor }
 
     /// Positions below this stay invisible — `WalletIngest.holdingFloor`,
     /// the same line the treemap draws. Without it the measured dust

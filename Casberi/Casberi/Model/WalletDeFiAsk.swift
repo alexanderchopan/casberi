@@ -25,25 +25,16 @@ enum WalletDeFiAsk {
         let watched = WalletStore.shared.addresses.map(\.address)
         let addresses = await WalletIngest.resolvedAddresses(watched).filter { ENS.isHexAddress($0) }
         guard !addresses.isEmpty else { return nil }
-        async let aaveRead = WalletDeFi.positions(addresses: addresses)
-        async let morphoRead = MorphoDeFi.book(addresses: addresses)
-        let aave = await aaveRead
-        let morpho = await morphoRead ?? MorphoDeFi.Book()
-
-        // Worst health factor across BOTH protocols, with its protocol and
-        // chain named — a position with no debt sorts last, never first.
-        struct Debt { let hf: Double; let protocolName: String; let network: String }
-        var debts: [Debt] = aave.compactMap { p in
-            p.healthFactor.map { Debt(hf: $0, protocolName: "Aave", network: p.network) }
-        }
-        debts += morpho.positions.compactMap { p in
-            p.healthFactor.map { Debt(hf: $0, protocolName: "Morpho", network: p.network) }
-        }
+        // Both protocols, and every open borrow worst-first — the same read
+        // and the same flattening the brief's lede wants, so both call
+        // `DeFiRisk` rather than keeping a copy each (2026-07-25).
+        let (aave, morpho) = await DeFiRisk.read(addresses: addresses)
+        let debts = DeFiRisk.debts(aave: aave, morpho: morpho)
         let deposits = morpho.vaults.reduce(0) { $0 + $1.usd }
             + morpho.positions.reduce(0) { $0 + $1.supplyUSD }
 
         var parts: [String] = []
-        if let worst = debts.min(by: { $0.hf < $1.hf }) {
+        if let worst = debts.first {
             let chain = WalletIngest.displayName(forNetwork: worst.network) ?? worst.network
             let count = debts.count
             let tail = count > 1 ? String(localized: " (\(count) borrow positions)") : ""
