@@ -72,7 +72,6 @@ struct FeedScreen: View {
     private enum FeedSheetRoute: Identifiable {
         case thing(Thing)
         case token(TokenQuickRoute)
-        case combinedWallets
         case allocation
         case worthALook
 
@@ -80,7 +79,6 @@ struct FeedScreen: View {
             switch self {
             case .thing(let t): "thing:\(t.id.uuidString)"
             case .token(let r): "token:\(r.id)"
-            case .combinedWallets: "combinedWallets"
             case .allocation: "allocation"
             case .worthALook: "worthALook"
             }
@@ -111,11 +109,6 @@ struct FeedScreen: View {
     /// landed thing: re-read each time this feed comes forward or its scope
     /// changes, exactly as the manage screen used to hold it.
     @State private var walletLive = WalletLiveState()
-    /// "Across your wallets" — the combined-value breakdown, opened by the
-    /// Balance tile (2026-07-20). It moved here with the balance itself: the
-    /// tile IS the combined portfolio, so it's the honest door. Only meaningful
-    /// with more than one wallet watched, which is also the sheet's own guard.
-    /// Routed through `feedSheet` (`.combinedWallets`) now, not its own bool.
     /// The combined portfolio behind the treemap (2026-07-21, prd §155) — one
     /// derivation the balance headline, the concentration line, and the
     /// allocation tray all read, so nothing on this screen can disagree with
@@ -866,15 +859,6 @@ struct FeedScreen: View {
                     .navigationTransition(.zoom(sourceID: thing.id, in: zoomNS))
             case .token(let route):
                 TokenQuickSheet(route: route)
-            case .combinedWallets:
-                let samples = wallet.combinedValueSamples()
-                // The LIVE total leads when the holdings read has landed (prd
-                // §155) — the last sample can be up to four hours old, and the
-                // sheet's own header should never be staler than the headline
-                // that opened it.
-                CombinedWalletsSheet(total: portfolio?.totalUSD ?? samples.last?.usd ?? 0,
-                                     combined: samples,
-                                     wallets: wallet.addresses)
             case .allocation:
                 if let portfolio {
                     WalletAllocationTray(portfolio: portfolio)
@@ -952,6 +936,7 @@ struct FeedScreen: View {
             // safeAreaInset — a scoping control has to stay reachable when
             // you're deep in the transactions it scopes.)
             walletTilesSection(visible)
+            eachWalletSection
             holdingsBlockSection
             walletDeFiSection
             let all = visible
@@ -1496,10 +1481,13 @@ struct FeedScreen: View {
                 // stack now rather than sitting as a matched pair of cards.
                 VStack(alignment: .leading, spacing: DS.Space.s3) {
                     if chart != nil || total != nil {
-                        // The door exists only where a breakdown exists: the
-                        // multi-wallet "All" view opens the combined sheet.
-                        // Scoped (or single-wallet), the treemap below already
-                        // IS the composition — no door, no chevron.
+                        // The headline is a READ, not a door (prd §208,
+                        // 2026-07-25): the multi-wallet "All" view used to open
+                        // a separate "Across your wallets" sheet, but that sheet
+                        // re-showed this very number and line before getting to
+                        // its only unique content — the per-wallet split — which
+                        // now lives inline below as `eachWalletSection`. No
+                        // door, no chevron; the number just states itself.
                         let hasBreakdown = wallet.addresses.count > 1 && selectedWallet == nil
                         WalletBalanceHeadline(
                             total: total,
@@ -1515,7 +1503,7 @@ struct FeedScreen: View {
                                 balanceRange = r
                                 r.remember()
                             },
-                            onOpen: hasBreakdown ? { feedSheet = .combinedWallets } : nil,
+                            onOpen: nil,
                             onOpenMark: { id in
                                 feedSheet = visible.first { $0.id == id }.map(FeedSheetRoute.thing)
                             })
@@ -1581,14 +1569,100 @@ struct FeedScreen: View {
 
     /// "Mostly ETH · +$310" — the top attributed mover, in the scope the feed
     /// is standing in (prd §155). The delta pill says the line moved; this says
-    /// what moved it, off the same per-token snapshots the combined sheet's
-    /// "What moved" section reads. nil whenever the record can't attribute
-    /// honestly yet — most of all on a young history, where no snapshot pair
-    /// exists to difference.
+    /// what moved it, off the same per-token snapshots. nil whenever the record
+    /// can't attribute honestly yet — most of all on a young history, where no
+    /// snapshot pair exists to difference. (This line is now the only "what
+    /// moved" surface; the combined sheet that carried a fuller table retired
+    /// with prd §208.)
     private func moverLine() -> String? {
         guard let top = wallet.holdingsDeltas(forAddress: selectedWallet).first else { return nil }
         let sign = top.delta >= 0 ? "+" : "−"
         return String(localized: "Mostly \(top.symbol) · \(sign)\(TokenStats.compact(abs(top.delta)))")
+    }
+
+    /// One watched wallet's own value line — the per-wallet split that used to
+    /// live behind the "Across your wallets" door (prd §208, 2026-07-25). A
+    /// value type keyed by address, so its ForEach never reads a live `@Model`
+    /// (the crash class the CLAUDE.md ForEach rule guards). `@Generable` nesting
+    /// caveats don't apply — this is a plain value type.
+    private struct FeedWalletLine: Identifiable {
+        let id: String        // the address — stable, value-typed
+        let label: String
+        let closes: [Double]
+        let since: Date
+        let tint: Color
+    }
+
+    /// Every watched wallet with ≥2 aligned samples, each paired with its face
+    /// tint — the exact set the old combined sheet's "Each wallet" list drew.
+    private var perWalletLines: [FeedWalletLine] {
+        wallet.addresses.compactMap { addr in
+            let samples = wallet.valueSamples(forAddress: addr.address)
+            guard samples.count >= 2, let first = samples.first else { return nil }
+            return FeedWalletLine(id: addr.address,
+                                  label: addr.label.isEmpty ? addr.short : addr.label,
+                                  closes: samples.map(\.usd), since: first.at,
+                                  tint: WalletFace.tint(for: addr.address))
+        }
+    }
+
+    /// The per-wallet split, inline on the "All" feed (prd §208) — the combined
+    /// number said as its parts, so "which wallet drove this" is answered where
+    /// the number already lives instead of behind a sheet that re-showed the
+    /// number first. Only when more than one wallet is watched AND the feed is
+    /// unscoped (scoped, the whole feed already IS that one wallet), and only
+    /// once ≥1 wallet has the two aligned samples a line needs. A row taps to
+    /// scope the feed to that wallet — the same move the switcher bar makes.
+    @ViewBuilder
+    private var eachWalletSection: some View {
+        let lines = perWalletLines
+        if wallet.addresses.count > 1, selectedWallet == nil, !lines.isEmpty {
+            Section {
+                VStack(alignment: .leading, spacing: DS.Space.s3) {
+                    Text("Each wallet")
+                        .dsText(.label12).foregroundStyle(DS.textSecondary)
+                    ForEach(lines) { eachWalletRow($0) }
+                }
+                .padding(DS.Space.s4)
+                .dsWidgetSurface(fillOpacity: Self.walletCardFill)
+                .modifier(RowEntrance(index: 1, wave: shapeWave, style: entranceStyle))
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+                .listRowInsets(EdgeInsets(top: DS.Space.s2, leading: DS.Space.s4,
+                                          bottom: 0, trailing: DS.Space.s4))
+            }
+        }
+    }
+
+    private func eachWalletRow(_ line: FeedWalletLine) -> some View {
+        let first = line.closes.first ?? 0
+        let last = line.closes.last ?? 0
+        let change = first > 0 ? (last - first) / first : 0
+        return Button {
+            withAnimation(DS.Motion.standard) { selectedWallet = line.id }
+            DSHaptic.selection()
+        } label: {
+            HStack(spacing: DS.Space.s3) {
+                WalletFace(address: line.id, size: 34)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(line.label).dsText(.body17).foregroundStyle(DS.textPrimary)
+                        .lineLimit(1)
+                    Text(TokenStats.compact(last))
+                        .dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                        .monospacedDigit()
+                }
+                Spacer(minLength: 0)
+                TokenChartPlot(chart: TokenChart(closes: line.closes, price: last, change: change),
+                               accent: line.tint, height: 30, pulses: false)
+                    .frame(width: 80)
+                    .accessibilityHidden(true)
+                TokenDeltaPill(change: change,
+                               label: "since \(line.since.formatted(.dateTime.month(.abbreviated).day()))",
+                               compact: true)
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
     }
 
     /// Aave collateral / debt / health for the wallets in scope (2026-07-20) —
@@ -2156,11 +2230,13 @@ struct FeedScreen: View {
         } else {
             // B2b (ruling 2026-07-06): ONE row anatomy — the band — for every
             // kind and every shape. The wash carries the kind; per-kind row
-            // shapes retired. Two earned exceptions: the reminders check
-            // circle (the lightest write) and the doing chat takeaway.
+            // shapes retired. One earned exception: the doing chat takeaway.
+            // Reminders are the band too — read-only (ruling 2026-07-25), so
+            // no check circle: a done reminder is just struck through, its
+            // state grouped by section, never a control that does nothing.
             switch shape {
             case .calendar:  BandRow(thing: thing, emphasized: thing.id == nextEventID)
-            case .reminders: CheckRow(thing: thing, onToggle: { toggleReminder(thing) })
+            case .reminders: BandRow(thing: thing)
             case .music:     MusicRow(thing: thing)
             case .chat where thing.mark == .doing:
                 TakeawayCard(thing: thing)
@@ -2190,35 +2266,6 @@ struct FeedScreen: View {
                             emphasized: thing.id == nextEventID,
                             live: isLive(thing))
                 }
-            }
-        }
-    }
-
-    /// The check circle IS the consent for the lightest write; tapping again
-    /// is the undo (shaped-feeds ruling). The local mark flips optimistically
-    /// (the tap needs to feel instant), but if the real reminder's write
-    /// fails, it's reverted and the toast corrects itself — a check mark
-    /// that silently doesn't stick is the "fake status" the design law bans.
-    private func toggleReminder(_ thing: Thing) {
-        let nowDone = thing.mark != .done
-        let wasMark = thing.mark
-        thing.mark = nowDone ? .done : .todo
-        modelContext.saveHonestly()
-        // A thing with no real reminder behind it (demo seeds) marks locally
-        // only — the toast says so instead of imitating a real write.
-        let ekBacked = ScheduleIngest.isEKBacked(thing.sourceRef)
-        chrome.flash(nowDone
-            ? (ekBacked ? "Done — tap again to undo" : "Done here — not in your Reminders")
-            : (ekBacked ? "Back on the list" : "Back to to-do"),
-            tone: .success)
-        let sourceRef = thing.sourceRef
-        Task {
-            let ok = await ScheduleIngest.setCompleted(sourceRef, nowDone)
-            guard !ok else { return }
-            await MainActor.run {
-                thing.mark = wasMark
-                modelContext.saveHonestly()
-                chrome.flash("Couldn't reach Reminders — not marked", tone: .failure)
             }
         }
     }
@@ -2574,22 +2621,12 @@ struct FeedScreen: View {
             UIPasteboard.general.string = thing.content.isEmpty ? thing.title : thing.content
             chrome.flash("Copied")
         case .markDone:
-            // Write through to the real reminder like the check circle does
-            // (no-op for things that aren't EK-backed), reverting on failure
-            // — this verb used to mark locally only.
-            let wasMark = thing.mark
+            // Rung-1 local mark only — app-owned things (a note turned to-do,
+            // demo seeds). A real reminder's done-state is READ-ONLY, mirrored
+            // from the Reminders app (ruling 2026-07-25), so it never offers
+            // this verb; nothing here writes back to any external record.
             thing.mark = .done
             modelContext.saveHonestly()
-            let sourceRef = thing.sourceRef
-            Task {
-                let ok = await ScheduleIngest.setCompleted(sourceRef, true)
-                guard !ok else { return }
-                await MainActor.run {
-                    thing.mark = wasMark
-                    modelContext.saveHonestly()
-                    chrome.flash("Couldn't reach Reminders — not marked", tone: .failure)
-                }
-            }
         case .translate:
             translateText = thing.postText ?? thing.content
             showTranslate = true
