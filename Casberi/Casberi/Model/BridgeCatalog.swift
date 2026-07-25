@@ -141,12 +141,20 @@ enum BridgeCatalog {
         Offer(name: "Stocktwits",  tagline: "Watch any stock",                      group: "Markets",   connectable: true,
               summary: "Watch any stock — search a ticker and the takes traders post about it on Stocktwits land in your feed, each wearing its author's own bullish or bearish call. The stock's live price chart draws on this iPhone from public market data. No account, no key, read-only: nothing here trades, and a watched ticker can never see your portfolio.",
               needsSetup: true),
-        // Markets by ruling (user, 2026-07-17 — corrected from Onchain the
-        // same day). Peer rides the Wallet bridge the way Strava rides Apple
-        // Health (prd §113): no account exists to connect — trades settle
-        // into the person's own wallet, so the seat is a switch over the
-        // watched list.
-        Offer(name: "Peer",        tagline: "Your Peer trades, as they settle",      group: "Markets",   connectable: true,
+        // Wallet, not Markets (2026-07-25, prd §210 — amending the 2026-07-17
+        // ruling below, kept for the record). A Peer fill is the person's OWN
+        // settled transaction landing in their OWN wallet — not a market they
+        // watch, the same shape as Privacy Pools/Coinbase/Kraken, all already
+        // in Wallet. §207 made this literal: Peer rides the watched wallets
+        // automatically and its connect routes straight to the Wallet manager
+        // (§209) — it already walks and talks like a wallet feature, not a
+        // marketplace. (Original ruling, 2026-07-17 — corrected from Onchain
+        // the same day: Peer rides the Wallet bridge the way Strava rides
+        // Apple Health, prd §113: no account exists to connect — trades
+        // settle into the person's own wallet, so the seat is a switch over
+        // the watched list. That mechanism argument is now Wallet's own
+        // argument too — it no longer distinguishes the two groups.)
+        Offer(name: "Peer",        tagline: "Your Peer trades, as they settle",      group: "Wallet",    connectable: true,
               summary: "Peer trades settle onchain into your own wallet — connect and each fill lands in your feed as it settles: which token, how much, and the payment app that paid for it (\"Bought 25 USDC with Venmo on Peer\"). Read from the public chain for the wallets you already watch; Peer's zero-knowledge design keeps your Venmo or PayPal side private, so the chain never shows it and neither does Casberi. No account, no key, read-only: nothing here ever starts a trade.",
               needsSetup: true, added: day(2026, 7, 17)),
         Offer(name: "GeckoTerminal", tagline: "Trending tokens, per chain",          group: "Markets",   connectable: true,
