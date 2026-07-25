@@ -936,7 +936,6 @@ struct FeedScreen: View {
             // safeAreaInset — a scoping control has to stay reachable when
             // you're deep in the transactions it scopes.)
             walletTilesSection(visible)
-            eachWalletSection
             holdingsBlockSection
             walletDeFiSection
             let all = visible
@@ -1474,11 +1473,14 @@ struct FeedScreen: View {
         let chart = TokenChart.from(samples: windowed)
         let total = portfolio.map(\.totalUSD).flatMap { $0 > 0 ? $0 : nil }
         let warnings = walletLive.warnings
+        let chips = walletFaceChipEntries
         if chart != nil || total != nil || !warnings.isEmpty {
             Section {
-                // The balance takes the room's headline; Worth a look drops to
-                // a quiet line beneath it (prd §146, 2026-07-21) — the two
-                // stack now rather than sitting as a matched pair of cards.
+                // ONE card (prd §212, 2026-07-25) — the balance, the per-wallet
+                // split, and the security read. Three parcels of equal weight
+                // until this pass, and they were never three subjects: "what's
+                // it worth", "whose is it", "is it okay" are the questions of a
+                // single glance at a single number.
                 VStack(alignment: .leading, spacing: DS.Space.s3) {
                     if chart != nil || total != nil {
                         // The headline is a READ, not a door (prd §208,
@@ -1486,8 +1488,8 @@ struct FeedScreen: View {
                         // a separate "Across your wallets" sheet, but that sheet
                         // re-showed this very number and line before getting to
                         // its only unique content — the per-wallet split — which
-                        // now lives inline below as `eachWalletSection`. No
-                        // door, no chevron; the number just states itself.
+                        // now lives in this same card as face chips. No door, no
+                        // chevron; the number just states itself.
                         let hasBreakdown = wallet.addresses.count > 1 && selectedWallet == nil
                         WalletBalanceHeadline(
                             total: total,
@@ -1507,32 +1509,33 @@ struct FeedScreen: View {
                             onOpenMark: { id in
                                 feedSheet = visible.first { $0.id == id }.map(FeedSheetRoute.thing)
                             })
-                            // The card (prd §160). Padded and surfaced HERE, not
-                            // inside the headline view, so the same component
-                            // still renders bare wherever else it's used.
-                            .padding(DS.Space.s4)
-                            .dsWidgetSurface(fillOpacity: Self.walletCardFill)
-                            // Each piece arrives on its own clock — the balance
-                            // reads off already-recorded samples (instant) while
-                            // warnings/holdings/DeFi wait on live reads (2026-07-
-                            // 20: "balance shows then the others pop in but looks
-                            // unintentional"). Entrance is on the PIECE, not the
-                            // row, so each one's own onAppear fires the moment
-                            // IT lands, in the wallet shape's own established
-                            // grammar (`entranceStyle` — the same rise every
-                            // transaction row below already uses) instead of a
-                            // silent, jarring insert.
-                            .modifier(RowEntrance(index: 0, wave: shapeWave, style: entranceStyle))
+                    }
+                    // Whose the number is (prd §212) — only unscoped and only
+                    // with more than one wallet carrying a real line, exactly
+                    // the guard the retired "Each wallet" card kept. A tap
+                    // scopes the whole feed, the move the switcher bar makes.
+                    if !chips.isEmpty, selectedWallet == nil {
+                        WalletFaceChips(entries: chips) { address in
+                            withAnimation(DS.Motion.standard) { selectedWallet = address }
+                        }
                     }
                     if !warnings.isEmpty {
-                        // A third card now (prd §196, superseding §146): still
-                        // only reserves space when warnings are non-empty, but
-                        // the badge row inside earns its own card the way the
-                        // balance/DeFi cards above it do.
-                        WalletWarningsLine(warnings: warnings) { feedSheet = .worthALook }
-                            .modifier(RowEntrance(index: 0, wave: shapeWave, style: entranceStyle))
+                        WalletWarningsStrip(warnings: warnings) { feedSheet = .worthALook }
                     }
                 }
+                // The card (prd §160, kept). Padded and surfaced HERE, not
+                // inside the headline view, so `WalletBalanceHeadline` still
+                // renders bare wherever else it's used.
+                .padding(DS.Space.s4)
+                .dsWidgetSurface(fillOpacity: Self.walletCardFill)
+                // Each piece arrives on its own clock — the balance reads off
+                // already-recorded samples (instant) while warnings/holdings/
+                // lending wait on live reads (2026-07-20: "balance shows then
+                // the others pop in but looks unintentional"). The card is one
+                // entrance now that the three ride inside it; the pieces still
+                // appear as they land, they just no longer each stage a
+                // separate surface into the room.
+                .modifier(RowEntrance(index: 0, wave: shapeWave, style: entranceStyle))
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
                 .listRowInsets(EdgeInsets(top: DS.Space.s2, leading: DS.Space.s4,
@@ -1580,120 +1583,46 @@ struct FeedScreen: View {
         return String(localized: "Mostly \(top.symbol) · \(sign)\(TokenStats.compact(abs(top.delta)))")
     }
 
-    /// One watched wallet's own value line — the per-wallet split that used to
-    /// live behind the "Across your wallets" door (prd §208, 2026-07-25). A
-    /// value type keyed by address, so its ForEach never reads a live `@Model`
-    /// (the crash class the CLAUDE.md ForEach rule guards). `@Generable` nesting
-    /// caveats don't apply — this is a plain value type.
-    private struct FeedWalletLine: Identifiable {
-        let id: String        // the address — stable, value-typed
-        let label: String
-        let closes: [Double]
-        let since: Date
-        let tint: Color
-    }
-
-    /// Every watched wallet with ≥2 aligned samples, each paired with its face
-    /// tint — the exact set the old combined sheet's "Each wallet" list drew.
-    private var perWalletLines: [FeedWalletLine] {
-        wallet.addresses.compactMap { addr in
+    /// The per-wallet split as chip entries (prd §212, 2026-07-25) — value
+    /// types keyed by address, so the ForEach behind them never reads a live
+    /// `@Model` (the crash class the CLAUDE.md ForEach rule guards).
+    ///
+    /// It rode a card of its own from §208 until this pass: face, name, total,
+    /// an 80pt sparkline and a delta pill per wallet. Same source, same guard
+    /// (≥2 aligned samples, >1 wallet watched) — the sparkline and the name
+    /// drop out, because at 80pt the line was decoration and tapping a chip
+    /// scopes the feed to that wallet, where the line is drawn full-width as
+    /// the room's own headline.
+    private var walletFaceChipEntries: [WalletFaceChips.Entry] {
+        guard wallet.addresses.count > 1 else { return [] }
+        return wallet.addresses.compactMap { addr in
             let samples = wallet.valueSamples(forAddress: addr.address)
-            guard samples.count >= 2, let first = samples.first else { return nil }
-            return FeedWalletLine(id: addr.address,
-                                  label: addr.label.isEmpty ? addr.short : addr.label,
-                                  closes: samples.map(\.usd), since: first.at,
-                                  tint: WalletFace.tint(for: addr.address))
+            guard samples.count >= 2, let first = samples.first?.usd,
+                  let last = samples.last?.usd else { return nil }
+            return WalletFaceChips.Entry(id: addr.address, value: last,
+                                         change: first > 0 ? (last - first) / first : 0)
         }
     }
 
-    /// The per-wallet split, inline on the "All" feed (prd §208) — the combined
-    /// number said as its parts, so "which wallet drove this" is answered where
-    /// the number already lives instead of behind a sheet that re-showed the
-    /// number first. Only when more than one wallet is watched AND the feed is
-    /// unscoped (scoped, the whole feed already IS that one wallet), and only
-    /// once ≥1 wallet has the two aligned samples a line needs. A row taps to
-    /// scope the feed to that wallet — the same move the switcher bar makes.
-    @ViewBuilder
-    private var eachWalletSection: some View {
-        let lines = perWalletLines
-        if wallet.addresses.count > 1, selectedWallet == nil, !lines.isEmpty {
-            Section {
-                VStack(alignment: .leading, spacing: DS.Space.s3) {
-                    Text("Each wallet")
-                        .dsText(.label12).foregroundStyle(DS.textSecondary)
-                    ForEach(lines) { eachWalletRow($0) }
-                }
-                .padding(DS.Space.s4)
-                .dsWidgetSurface(fillOpacity: Self.walletCardFill)
-                .modifier(RowEntrance(index: 1, wave: shapeWave, style: entranceStyle))
-                .listRowBackground(Color.clear)
-                .listRowSeparator(.hidden)
-                .listRowInsets(EdgeInsets(top: DS.Space.s2, leading: DS.Space.s4,
-                                          bottom: 0, trailing: DS.Space.s4))
-            }
-        }
-    }
-
-    private func eachWalletRow(_ line: FeedWalletLine) -> some View {
-        let first = line.closes.first ?? 0
-        let last = line.closes.last ?? 0
-        let change = first > 0 ? (last - first) / first : 0
-        return Button {
-            withAnimation(DS.Motion.standard) { selectedWallet = line.id }
-            DSHaptic.selection()
-        } label: {
-            HStack(spacing: DS.Space.s3) {
-                WalletFace(address: line.id, size: 34)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(line.label).dsText(.body17).foregroundStyle(DS.textPrimary)
-                        .lineLimit(1)
-                    Text(TokenStats.compact(last))
-                        .dsText(.subhead13).foregroundStyle(DS.textSecondary)
-                        .monospacedDigit()
-                }
-                Spacer(minLength: 0)
-                TokenChartPlot(chart: TokenChart(closes: line.closes, price: last, change: change),
-                               accent: line.tint, height: 30, pulses: false)
-                    .frame(width: 80)
-                    .accessibilityHidden(true)
-                TokenDeltaPill(change: change,
-                               label: "since \(line.since.formatted(.dateTime.month(.abbreviated).day()))",
-                               compact: true)
-            }
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-    }
-
-    /// Aave collateral / debt / health for the wallets in scope (2026-07-20) —
-    /// moved up from the detail page so the debt side sits beside the holdings
-    /// that are its collateral. Nothing renders without a position.
+    /// Lending — Aave and Morpho for the wallets in scope, in ONE card as two
+    /// rows (prd §212, 2026-07-25). They were two full cards until this pass;
+    /// they were never two subjects, just two providers of one. The treemap
+    /// says what you HOLD, this says what you OWE — which is why it earns a
+    /// seat here rather than staying two taps down. Nothing renders without a
+    /// position on either.
     @ViewBuilder
     private var walletDeFiSection: some View {
-        if !walletLive.positions.isEmpty {
+        if !walletLive.positions.isEmpty || !walletLive.morpho.isEmpty {
             Section {
-                WalletDeFiTile(positions: walletLive.positions)
-                    // Same reveal the balance/warnings tiles and holdings
-                    // treemap wear — DeFi is usually the last of the four live
-                    // reads to land, so it gets the deepest stagger.
+                WalletLendingCard(aave: walletLive.positions, morpho: walletLive.morpho)
+                    // Same reveal the balance card and holdings treemap wear —
+                    // lending is usually the last of the live reads to land, so
+                    // it gets the deepest stagger.
                     .modifier(RowEntrance(index: 2, wave: shapeWave, style: entranceStyle))
                     .listRowBackground(Color.clear)
-                .listRowSeparator(.hidden)
-                .listRowInsets(EdgeInsets(top: DS.Space.s2, leading: DS.Space.s4,
-                                          bottom: 0, trailing: DS.Space.s4))
-            }
-        }
-        // Morpho beside Aave (2026-07-21) — same live-state pass, its own
-        // tile because the two books answer differently (isolated markets +
-        // vaults vs one account-wide read).
-        if !walletLive.morpho.isEmpty {
-            Section {
-                WalletMorphoTile(book: walletLive.morpho)
-                    .modifier(RowEntrance(index: 2, wave: shapeWave, style: entranceStyle))
-                    .listRowBackground(Color.clear)
-                .listRowSeparator(.hidden)
-                .listRowInsets(EdgeInsets(top: DS.Space.s2, leading: DS.Space.s4,
-                                          bottom: 0, trailing: DS.Space.s4))
+                    .listRowSeparator(.hidden)
+                    .listRowInsets(EdgeInsets(top: DS.Space.s2, leading: DS.Space.s4,
+                                              bottom: 0, trailing: DS.Space.s4))
             }
         }
     }

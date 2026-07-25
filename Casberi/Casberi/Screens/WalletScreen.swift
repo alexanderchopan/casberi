@@ -54,6 +54,10 @@ struct WalletScreen: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(BridgeStore.self) private var store
     @State private var syncing = false
+    /// Each watched wallet's total USD, keyed the address book's way (prd
+    /// §212, 2026-07-25) — what the roster slots and the shelf note read. The
+    /// same `topHoldingsByWallet` call `sync` already made and threw away.
+    @State private var walletTotals: [String: Double] = [:]
     @State private var result: String?
     @State private var resultIsError = false
     /// True when a non-error result still needs the person's eyes (the
@@ -115,29 +119,48 @@ struct WalletScreen: View {
                 .listRowInsets(EdgeInsets())
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
-            // Below the shelf: the one field, then the book it both watches
-            // AND names FROM (2026-07-24) — no more door to a second screen.
+            // Below the shelf: TWO verbs and one sentence (prd §212,
+            // 2026-07-25). The page carried nine distinct blocks before this
+            // — shelf, count, field, a "Just name it" text button, Connect,
+            // the peek chip, the promise, a Connection door, status rows, and
+            // then a headed address-book section with its own sort menu and a
+            // two-sentence footer. Naming folded INTO the field as its second
+            // verb; the Connection door moved to the foot of the page (it's
+            // the last thing anyone touches, not the third); the footer
+            // paragraph went entirely — the shelf visibly filling when you tap
+            // a star teaches the star better than a sentence about it does.
             Section {
                 VStack(spacing: DS.Space.s2) {
                     DSSlabField(placeholder: String(localized: "Address, ENS, .sol"),
                                     text: $newAddress,
                                     actionLabel: String(localized: "WATCH"),
-                                    focus: $addressFieldFocused, action: watch)
-                    // The lightweight second verb (2026-07-24) — watching is
-                    // capped at 5 and starts syncing; naming isn't and does
-                    // neither. Visible only over a real, addable address, so
-                    // it's never a stray control over "mom" or an empty
-                    // field. This is also the cap's own honest way out: the
-                    // WATCH error at the limit used to just SAY "name this
-                    // address instead" with nothing to tap.
-                    if book.looksLikeAddress(newAddress.trimmingCharacters(in: .whitespacesAndNewlines)) {
-                        justNameButton
-                    }
+                                    focus: $addressFieldFocused,
+                                    // The lightweight second verb (2026-07-24,
+                                    // moved inside the slab 2026-07-25) —
+                                    // watching is capped at 5 and starts
+                                    // syncing; naming isn't and does neither.
+                                    // Armed only over a real, addable address,
+                                    // so it's never a stray control over "mom"
+                                    // or an empty field. This is also the cap's
+                                    // own honest way out: the WATCH error at the
+                                    // limit used to just SAY "name this address
+                                    // instead" with nothing to tap.
+                                    secondaryLabel: String(localized: "NAME"),
+                                    secondaryArmed: book.looksLikeAddress(
+                                        newAddress.trimmingCharacters(in: .whitespacesAndNewlines)),
+                                    secondaryAction: justName,
+                                    action: watch)
                     if WalletConnectBridge.isAvailable {
                         connectRow
                     }
                     // Nothing watched, nothing typed — one tap watches a famous
                     // public wallet so the whole feature demos in three seconds.
+                    // Kept as a real control rather than demoted to placeholder
+                    // text (the mock's suggestion): it only ever renders on an
+                    // empty roster, so it costs nothing in the normal case, and
+                    // turning a one-tap demo into a string you must type by hand
+                    // is a real loss at exactly the moment a new person has the
+                    // least patience.
                     if wallet.addresses.isEmpty {
                         peekChip
                     }
@@ -145,10 +168,6 @@ struct WalletScreen: View {
                         .dsText(.subhead13).foregroundStyle(DS.textTertiary)
                         .frame(maxWidth: .infinity)
                         .padding(.top, DS.Space.s1)
-                    DSSlabDoor(title: "Connection", detail: chainsSummary) {
-                        HomeRoute.shared.pushBridge(.walletConnection)
-                    }
-                    .padding(.top, DS.Space.s2)
                 }
             }
             .listRowInsets(EdgeInsets(top: DS.Space.s2, leading: DS.Space.s4,
@@ -157,6 +176,18 @@ struct WalletScreen: View {
             .listRowSeparator(.hidden)
             statusSection
             bookSection
+            // The connection plumbing, at the foot of the page — chains and
+            // teardown are the one thing here nobody revisits, so it sits after
+            // the list rather than between the verbs and the names.
+            Section {
+                DSSlabDoor(title: "Connection", detail: chainsSummary) {
+                    HomeRoute.shared.pushBridge(.walletConnection)
+                }
+            }
+            .listRowInsets(EdgeInsets(top: DS.Space.s6, leading: DS.Space.s4,
+                                      bottom: 0, trailing: DS.Space.s4))
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
             // Room for the floating agent bar (FeedScreen's own pattern) — the
             // Connection row was the manager's own worst example of the bar
             // eating its last row before this (found live, 2026-07-22).
@@ -228,6 +259,13 @@ struct WalletScreen: View {
             let added = await WalletIngest.refresh(context: modelContext)
             let totals = await WalletIngest.topHoldingsByWallet()
             syncing = false
+            // Keep what the read already cost us (prd §212) — the roster slots
+            // and the shelf note draw off this. Groups with no address are the
+            // combined one; it would double every total if counted.
+            walletTotals = totals.reduce(into: [:]) { acc, group in
+                guard let address = group.address else { return }
+                acc[AddressBook.key(for: address)] = group.totalUSD
+            }
             guard let added else {
                 result = String(localized: "Couldn't reach the chain — check your connection.")
                 resultIsError = true
@@ -277,11 +315,34 @@ struct WalletScreen: View {
                 .padding(.horizontal, DS.Space.s4)
                 .padding(.vertical, DS.Space.s1)
             }
-            Text("\(wallet.addresses.count) of \(WalletStore.watchLimit) watched")
-                .dsText(.label12).foregroundStyle(DS.textTertiary)
-                .padding(.horizontal, DS.Space.s4)
+            // The shelf's own one line — how full it is, what it's worth, and
+            // (while a read is in flight) that it's reading (prd §212,
+            // 2026-07-25). The syncing state used to be a separate status
+            // block below the verbs; a spinner belongs on the thing being
+            // read, not in a row of its own.
+            HStack(spacing: 5) {
+                Text("\(wallet.addresses.count) of \(WalletStore.watchLimit) watched")
+                    .dsText(.label12).foregroundStyle(DS.textTertiary)
+                if let total = watchedTotal {
+                    Text("· \(TokenStats.compact(total))")
+                        .dsText(.label12).foregroundStyle(DS.textSecondary)
+                        .monospacedDigit()
+                }
+                if syncing {
+                    ProgressView().controlSize(.mini)
+                        .padding(.leading, 2)
+                }
+            }
+            .padding(.horizontal, DS.Space.s4)
         }
         .padding(.top, DS.Space.s2)
+    }
+
+    /// Everything watched, summed — nil until a holdings read has landed, so
+    /// the line never claims a $0 portfolio it simply hasn't read yet.
+    private var watchedTotal: Double? {
+        let sum = walletTotals.values.reduce(0, +)
+        return sum > 0 ? sum : nil
     }
 
     /// One watched wallet's face — tap renames (the row's own tap-again
@@ -296,10 +357,18 @@ struct WalletScreen: View {
                     .dsText(.label12).fontWeight(.semibold)
                     .foregroundStyle(DS.textPrimary)
                     .lineLimit(1)
-                // The address only when the name isn't already showing it —
-                // an unnamed wallet's "name" IS its short address, and
-                // printing it twice reads as a stutter.
-                if wallet.displayName(for: addr) != addr.short {
+                // What it's WORTH, under the name (prd §212, 2026-07-25) — the
+                // one fact the roster was missing, and the reason a shelf of
+                // faces is worth looking at rather than just tapping. Falls
+                // back to the short address until a holdings read lands, and
+                // stays silent when the name IS the short address (printing it
+                // twice reads as a stutter).
+                if let usd = walletTotals[AddressBook.key(for: addr.address)], usd > 0 {
+                    Text(TokenStats.compact(usd))
+                        .dsText(.label12).foregroundStyle(DS.textSecondary)
+                        .monospacedDigit()
+                        .lineLimit(1)
+                } else if wallet.displayName(for: addr) != addr.short {
                     Text(addr.short)
                         .dsText(.label12).foregroundStyle(DS.textTertiary)
                         .lineLimit(1)
@@ -430,15 +499,28 @@ struct WalletScreen: View {
                         bookRow(entry)
                     }
                     .buttonStyle(.plain)
-                    .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                        Button(role: .destructive) {
-                            book.remove(entry.address)
-                        } label: { Label("Remove", systemImage: "trash") }
-                    }
+                    // Removal lives in the row's context menu now (prd §212),
+                    // beside Copy — the same gesture the roster slots above
+                    // already teach, and one less grammar on the page. It also
+                    // squares the row with the design law's own reading:
+                    // swipe verbs are READS; a write belongs behind a
+                    // deliberate press.
+                    .listRowBackground(Color.clear)
+                    // The insets go with the card — see the same note on
+                    // `WalletHistoryScreen`. `WalletRow`'s own vertical
+                    // padding carries the rhythm.
+                    .listRowInsets(EdgeInsets(top: 0, leading: DS.Space.s4,
+                                              bottom: 0, trailing: DS.Space.s4))
                 }
             } header: {
-                HStack {
-                    Text("Address book").dsText(.label12).foregroundStyle(DS.textSecondary)
+                // The page's list, not a section on it (prd §212, 2026-07-25)
+                // — a small gray label wearing its count and its sort, the
+                // same anatomy the wallet feed's own section labels use.
+                HStack(spacing: DS.Space.s2) {
+                    Text("Address book · \(book.count)")
+                        .dsText(.label12).fontWeight(.semibold)
+                        .foregroundStyle(DS.textSecondary)
+                        .monospacedDigit()
                     Spacer(minLength: 0)
                     Menu {
                         Picker("Sort by", selection: $bookSort) {
@@ -447,41 +529,58 @@ struct WalletScreen: View {
                             }
                         }
                     } label: {
-                        Image(systemName: bookSort == .recent
-                              ? "arrow.up.arrow.down.circle" : "arrow.up.arrow.down.circle.fill")
-                            .font(.system(size: 15, weight: .semibold))
-                            .foregroundStyle(bookSort == .recent ? DS.textTertiary : DS.tint)
+                        HStack(spacing: 3) {
+                            Text(bookSort.label).dsText(.label12).fontWeight(.semibold)
+                            Image(systemName: "arrow.up.arrow.down")
+                                .font(.system(size: 10, weight: .bold))
+                        }
+                        .foregroundStyle(bookSort == .recent ? DS.textTertiary : DS.tint)
                     }
                     .accessibilityLabel(Text("Sort: \(bookSort.label)"))
                 }
-            } footer: {
-                // The one line that teaches the star (2026-07-24, user: "i
-                // like the stars, but i still want the roster shelf, so if
-                // starred maybe it shows the roster at top"). The star is
-                // now the whole watch mechanism — tap it and the wallet
-                // joins the roster shelf up top.
-                Text("Tap ★ to watch — its activity lands in your feed, up to \(WalletStore.watchLimit). Every name here shows instead of a hex address when you transact.")
-                    .dsText(.callout15).foregroundStyle(DS.textSecondary)
             }
+            // The footer paragraph retired here (prd §212). It taught the star
+            // in two sentences — but tapping a star visibly drops the wallet
+            // into the shelf at the top of the same screen, which teaches it
+            // better than the sentence did, and "one gray sentence per screen"
+            // (§190) was already spent on the read-only promise above.
             .listRowSeparator(.hidden)
         }
     }
 
     private func bookRow(_ entry: AddressBook.Entry) -> some View {
+        // The room's shared row anatomy (prd §212) — the book's own
+        // `AddressMark` stays as the mark (it already encodes wallet vs
+        // contract vs Safe, which no generic glyph would), and the star is the
+        // one trailing control. Copy moved into the row's context menu: two
+        // buttons competing for the trailing slot made the star, which is the
+        // real verb here, look like one of a pair.
         HStack(spacing: DS.Space.s3) {
-            AddressMark(entry: entry, size: 32)
+            AddressMark(entry: entry, size: 34)
             VStack(alignment: .leading, spacing: 1) {
-                Text(entry.name).dsText(.body17).foregroundStyle(DS.textPrimary)
+                Text(entry.name).dsText(.rowTitle17).foregroundStyle(DS.textPrimary)
                     .lineLimit(1)
-                Text(entry.subline).dsText(.label12).foregroundStyle(DS.textTertiary)
+                Text(entry.subline).dsText(.subhead13).foregroundStyle(DS.textTertiary)
                     .lineLimit(1)
             }
-            Spacer(minLength: 0)
+            Spacer(minLength: DS.Space.s2)
             starButton(for: entry)
-            CopyAddressButton(address: entry.address)
         }
-        .padding(.vertical, 2)
+        .padding(.vertical, DS.Space.s2)
         .contentShape(Rectangle())
+        .contextMenu {
+            Button {
+                UIPasteboard.general.string = entry.address
+                DSHaptic.success()
+            } label: {
+                Label("Copy Address", systemImage: "doc.on.doc")
+            }
+            Button(role: .destructive) {
+                book.remove(entry.address)
+            } label: {
+                Label("Remove", systemImage: "trash")
+            }
+        }
     }
 
     /// The one watch control (2026-07-24) — filled = watching (in the roster
@@ -530,23 +629,15 @@ struct WalletScreen: View {
     /// Names the typed address WITHOUT watching it — unlimited, and the
     /// honest way out of the watch cap (2026-07-24). Falls back to the
     /// address's own short form exactly like a bare `addBulk` paste does, so
-    /// the person can rename it from the list the moment it lands.
-    private var justNameButton: some View {
-        Button {
-            DSHaptic.tap()
-            let addr = newAddress.trimmingCharacters(in: .whitespacesAndNewlines)
-            book.setName(WalletStore.shortAddress(addr), for: addr)
-            newAddress = ""
-            addressFieldFocused = false
-        } label: {
-            HStack(spacing: DS.Space.s1) {
-                Image(systemName: "tag").font(.system(size: 12, weight: .semibold))
-                Text("Just name it — don't watch").dsText(.subhead13).fontWeight(.medium)
-            }
-            .foregroundStyle(DS.textSecondary)
-        }
-        .buttonStyle(.plain)
-        .frame(maxWidth: .infinity, alignment: .leading)
+    /// the person can rename it from the list the moment it lands. The field
+    /// slab's second verb since 2026-07-25 (prd §212); it was a floating text
+    /// button on its own line before that.
+    private func justName() {
+        DSHaptic.tap()
+        let addr = newAddress.trimmingCharacters(in: .whitespacesAndNewlines)
+        book.setName(WalletStore.shortAddress(addr), for: addr)
+        newAddress = ""
+        addressFieldFocused = false
     }
 
     /// "All 5" when nothing's narrowed, else the selected names ("Ethereum,

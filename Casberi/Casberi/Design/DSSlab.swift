@@ -68,6 +68,17 @@ struct DSSlabField: View {
     /// address book's ADD, live only when the typed text is an addable
     /// address, not any old search term).
     var isArmed: Bool? = nil
+    /// A SECOND verb inside the same slab (prd §212, 2026-07-25) — the quieter
+    /// one, shown only while `secondaryArmed`. It exists because the Wallet
+    /// manager has two real things to do with a typed address (watch it, which
+    /// is capped and starts syncing; or just name it, which is neither), and
+    /// the second one was a floating text button on its own line under the
+    /// field — a fifth block on a page whose whole problem was block count.
+    /// Two verbs in one slab is still one control for one act; a second line
+    /// was two.
+    var secondaryLabel: String? = nil
+    var secondaryArmed = false
+    var secondaryAction: () -> Void = { }
     let action: () -> Void
 
     private var armed: Bool {
@@ -84,6 +95,15 @@ struct DSSlabField: View {
                     field
                 }
             }
+            if let secondaryLabel, secondaryArmed {
+                Button(action: secondaryAction) {
+                    Text(secondaryLabel)
+                        .dsText(.subhead13).fontWeight(.bold)
+                        .foregroundStyle(DS.textSecondary)
+                }
+                .buttonStyle(.plain)
+                .transition(.opacity)
+            }
             Button(action: action) {
                 Text(actionLabel)
                     .dsText(.subhead13).fontWeight(.bold)
@@ -93,6 +113,7 @@ struct DSSlabField: View {
             .buttonStyle(.plain)
             .disabled(!armed)
         }
+        .animation(DS.Motion.standard, value: secondaryArmed)
         .padding(.horizontal, DS.Space.s4)
         .frame(height: DSSlab.height)
         .background(DS.surfaceWell, in: DSSlab.shape)

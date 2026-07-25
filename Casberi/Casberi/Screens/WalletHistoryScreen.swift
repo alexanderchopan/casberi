@@ -76,7 +76,7 @@ struct WalletHistoryScreen: View {
                         .dsText(.body17).foregroundStyle(DS.textSecondary)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .listRowSeparator(.hidden)
-                        .dsListCardRow()
+                        .listRowBackground(Color.clear)
                 }
             } else {
                 ForEach(groups, id: \.0) { label, rows in
@@ -92,10 +92,24 @@ struct WalletHistoryScreen: View {
                             // exceptions) — a List hands out separators by
                             // default, so every row here opts out explicitly.
                             .listRowSeparator(.hidden)
-                            .dsListCardRow()
+                            // No card per row (prd §212, 2026-07-25). This page
+                            // is the room's longest list, and `dsListCardRow`
+                            // gave all 128 transactions an opaque surface and a
+                            // shadow each — a stack of parcels where the day
+                            // header is already doing the grouping. The rows sit
+                            // on the page now; the header separates them.
+                            .listRowBackground(Color.clear)
+                            // The insets go WITH the cards. A List sizes its
+                            // default row insets for a card's own body, so
+                            // keeping them over a bare row left ~95pt of air
+                            // per transaction and the page read as a list of
+                            // ghosts. `WalletRow`'s own vertical padding is the
+                            // rhythm now.
+                            .listRowInsets(EdgeInsets(top: 0, leading: DS.Space.s4,
+                                                      bottom: 0, trailing: DS.Space.s4))
                         }
                     } header: {
-                        Text(label).dsText(.label12).foregroundStyle(DS.textSecondary)
+                        WalletSectionLabel(title: label)
                     }
                 }
             }
@@ -119,38 +133,26 @@ struct WalletHistoryScreen: View {
     }
 }
 
-/// One transaction line. Flat by construction — this page is a long list, so
-/// the row stays a single shallow body rather than routing through the generic
-/// widget path (the §gotchas render-depth lesson, applied by default).
+/// One transaction line — the room's shared row anatomy (prd §212), with the
+/// thing's own `KindGlyph` as its mark. Flat by construction: this page is a
+/// long list, so the row stays a single shallow body rather than routing
+/// through the generic widget path (the §gotchas render-depth lesson, applied
+/// by default) — `WalletRow` is itself a plain HStack, so it costs no depth.
+///
+/// The title WRAPS here (unlike the room's label-ish rows): a transaction
+/// title is a sentence — "Received 0.42 ETH from coinbase.eth" — and the tail
+/// of it is the part worth reading.
 private struct WalletHistoryRow: View {
     let thing: Thing
     let walletLabel: String?
 
     var body: some View {
-        HStack(spacing: DS.Space.s3) {
-            KindGlyph(kind: thing.kind, size: 28)
-                .overlay(alignment: .bottomTrailing) {
-                    if thing.isFlagged {
-                        Image(systemName: "exclamationmark.triangle.fill")
-                            .font(.system(size: 9))
-                            .foregroundStyle(DS.destructive)
-                            .padding(3)
-                            .background(Circle().fill(.black.opacity(0.55)))
-                    }
-                }
-            VStack(alignment: .leading, spacing: 2) {
-                Text(thing.title).dsText(.body17).foregroundStyle(DS.textPrimary)
-                    .lineLimit(2)
-                if let walletLabel {
-                    Text(walletLabel).dsText(.subhead13).foregroundStyle(DS.textSecondary)
-                        .lineLimit(1)
-                }
-            }
-            Spacer(minLength: 0)
+        WalletRow(mark: .kind(thing.kind, flagged: thing.isFlagged),
+                  title: thing.title, subtitle: walletLabel, titleWraps: true) {
             Text(shortTime(thing.capturedAt))
-                .dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                .monospacedDigit()
         }
-        .contentShape(Rectangle())
     }
 
     private func shortTime(_ date: Date) -> String {

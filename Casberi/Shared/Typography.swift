@@ -88,6 +88,22 @@ extension DSTextStyle {
     static let price40 = DSTextStyle(size: 40, weight: .bold, tracking: 0, lineHeight: 44, relative: .largeTitle, rounded: true)
     static let stat24  = DSTextStyle(size: 24, weight: .bold, tracking: 0, lineHeight: 28, relative: .title2, rounded: true)
     static let price16 = DSTextStyle(size: 16, weight: .bold, tracking: 0, lineHeight: 20, relative: .callout, rounded: true)
+    /// The wallet room's ROW TITLE (prd §212, 2026-07-25) — the one rung every
+    /// row in that room titles itself at, so a lending row, a transaction, a
+    /// holder and a warning are visibly the same kind of statement.
+    ///
+    /// SF Pro Text, NOT rounded, and that's the interesting part. The Cash App
+    /// pass this rung comes from wanted the rounded money face on every row
+    /// title ("tappable" registering before the words are read) — but prd §190
+    /// already ruled that question, in the conversation that produced the slab:
+    /// the complaint being fixed was *"we have different fonts"*, so the fix
+    /// was ONE font, and it's SF Pro Text (Typography's own 2026-07-09 rule:
+    /// rounded is the display tier; body, rows and labels stay Text). Setting
+    /// row titles in rounded beside SF Pro slab labels would hand back the
+    /// exact complaint. So the "tappable" signal is carried by WEIGHT instead
+    /// — semibold against the subline's regular — and the rounded face stays
+    /// where §190 left it: display headings and the money rungs below.
+    static let rowTitle17 = DSTextStyle(size: 17, weight: .semibold, tracking: 0, lineHeight: 23, relative: .body)
 
     // Small decorative accents (2026-07-24 drift fix) — each already existed
     // as a raw `.system(size:)` on real Text, unscaled and unnamed.

@@ -25,58 +25,10 @@ enum WalletCardStyle {
     static let fill = 0.82
 }
 
-/// One tile's shell — the shared anatomy so the two never drift: caption row
-/// with an optional glyph and a chevron, then the tile's own body.
-private struct WalletTile<Content: View>: View {
-    let caption: String
-    var glyph: String? = nil
-    var glyphTint: Color = DS.attention
-    /// False when the tile IS the whole read — no door, no chevron (the
-    /// honesty rule: a chevron promises more behind the tap).
-    var showChevron = true
-    @ViewBuilder var content: Content
-
-    /// Flipped once on appear so the glyph bounces exactly one beat as the
-    /// tile lands — attention paid, never nagged. `.symbolEffect` is the
-    /// system's own vocabulary and honors Reduce Motion by itself.
-    @State private var glyphBeat = false
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: DS.Space.s1) {
-            HStack(spacing: 5) {
-                if let glyph {
-                    Image(systemName: glyph)
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(glyphTint)
-                        .symbolEffect(.bounce, options: .nonRepeating, value: glyphBeat)
-                        .onAppear {
-                            // A breath after the tile's own entrance settles,
-                            // so the beat reads as punctuation, not collision.
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
-                                glyphBeat = true
-                            }
-                        }
-                }
-                Text(caption)
-                    .dsText(.label12).foregroundStyle(DS.textSecondary)
-                    .lineLimit(1)
-                Spacer(minLength: 0)
-                if showChevron {
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 10, weight: .semibold))
-                        .foregroundStyle(DS.textTertiary)
-                }
-            }
-            content
-        }
-        // Stretch to the tallest sibling: two tiles side by side reading as
-        // two different heights looked broken (user, 2026-07-20). The HStack
-        // sizes to the taller one; this makes the shorter one fill it.
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .padding(DS.Space.s3)
-        .dsWidgetSurface(fillOpacity: WalletCardStyle.fill)
-    }
-}
+// `WalletTile` (the caption-plus-chevron tile shell) retired here 2026-07-25
+// with prd §212 — its only two users were the Aave and Morpho cards, and the
+// whole point of the pass is that those reads are ROWS, not tiles. The room's
+// shared anatomy now lives in `WalletRow.swift`.
 
 /// Balance — the portfolio number, its sparkline, and the honest delta, as the
 /// Wallet feed's DISPLAY HEADLINE (prd §146, 2026-07-21). The combined read is
@@ -284,16 +236,23 @@ struct WalletBalanceHeadline: View {
     }
 }
 
-/// Worth a look — the security read, as its own CARD (2026-07-23, prd §196,
-/// superseding §146's line). §146 demoted this to a line because a permanent
-/// half-width card reserved prominent space for warnings that are usually
-/// absent — still true, and still why this only renders at all when
-/// `warnings` isn't empty. What changed is what fills the space once it DOES
-/// render: a badge per warning KIND (its own tinted glyph + count, the same
-/// glyphs `WalletWorthALookTray`'s section headers wear one tap away) reads
-/// faster than the old run-on caption ("12 fake symbols · 3 delegations" as
-/// one sentence) and gives the door somewhere to put real content instead of
-/// text alone — the honest reason a line earns a card back.
+/// Worth a look — the security read, as a STRIP inside the balance card's own
+/// bottom edge (prd §212, 2026-07-25, superseding §196's card and §146's line
+/// before it).
+///
+/// The ledger here is a pendulum: §146 made it a line because a permanent
+/// half-width card reserved prominent space for warnings usually absent; §196
+/// gave the card back because a badge row per kind reads faster than a run-on
+/// caption and needed somewhere to live. Both were arguing about the same
+/// missing thing — WHERE it belongs. It belongs to the balance: "what's it
+/// worth" and "is it okay" are the two questions one glance asks, and they
+/// were being answered by two separate parcels of equal weight.
+///
+/// So the badges retire and their counts come back as words on one subline —
+/// `WalletWatch.summary` is the SAME shared per-kind tally the badges read, so
+/// nothing is lost but the capsules. It renders only when `warnings` isn't
+/// empty (§146's floor, still right), and its whole surface is a faint fill
+/// inside the card, not a card of its own.
 ///
 /// Title is always "Worth a look" (user, 2026-07-23: "we don't know if it
 /// needs attention, do we?") — the old critical-only "Needs attention" wording
@@ -306,14 +265,13 @@ struct WalletBalanceHeadline: View {
 /// spam (poisoning, spoofed symbols — already happened, nothing to do) wear
 /// the same red as a live approval that can still drain it, so a whale
 /// wallet's permanent dozen airdrops crying-wolfed the card red forever.
-/// `isMuted` addresses lets a person who's recognized the spam say so; muted
-/// kinds drop out of both the icon color and the badge row entirely, so the
-/// card can actually go quiet.
-struct WalletWarningsLine: View {
+/// `isMuted` lets a person who's recognized the spam say so; muted kinds drop
+/// out of both the mark's color and the subline entirely, so it can go quiet.
+struct WalletWarningsStrip: View {
     let warnings: [WalletWarning]
     let onOpen: () -> Void
 
-    /// What the card actually shows — every kind when unmuted, only the
+    /// What the strip actually shows — every kind when unmuted, only the
     /// actionable ones once the awareness pile is muted. Never severity
     /// alone; `isActionable` is the axis now.
     private var visible: [WalletWarning] {
@@ -324,203 +282,210 @@ struct WalletWarningsLine: View {
         if !visible.isEmpty {
             let hasLiquidation = visible.contains { $0.kind == .liquidation }
             let hasActionable = visible.contains { $0.kind.isActionable }
+            // Red only for the one genuinely time-sensitive thing (a position
+            // about to liquidate); orange for anything else actionable; plain
+            // secondary ink when all that's left unmuted is the aware pile —
+            // spam alone earns no alarm color at all.
+            let tint: Color = hasLiquidation ? DS.destructive
+                : hasActionable ? DS.attention : DS.textSecondary
             Button(action: onOpen) {
-                VStack(alignment: .leading, spacing: DS.Space.s3) {
-                    HStack(spacing: DS.Space.s2) {
-                        // Red only for the one genuinely time-sensitive thing
-                        // (a position about to liquidate); orange for
-                        // anything else actionable; a plain info mark when
-                        // all that's left unmuted is the aware pile — spam
-                        // alone earns no alarm color at all.
-                        Image(systemName: hasLiquidation || hasActionable
-                              ? "exclamationmark.triangle.fill" : "info.circle.fill")
-                            .font(.system(size: 12, weight: .semibold))
-                            .foregroundStyle(hasLiquidation ? DS.destructive
-                                             : hasActionable ? DS.attention : DS.textSecondary)
-                            .accessibilityHidden(true)
-                        Text("Worth a look")
-                            .dsText(.callout15).foregroundStyle(DS.textPrimary)
-                        Spacer(minLength: 0)
-                        Image(systemName: "chevron.right")
-                            .font(.system(size: 11, weight: .semibold))
-                            .foregroundStyle(DS.textTertiary)
-                    }
-                    badges
-                }
-                .padding(DS.Space.s3)
-                .contentShape(Rectangle())
+                WalletRow(mark: .symbol(hasLiquidation || hasActionable
+                                        ? "exclamationmark.triangle.fill" : "info.circle.fill",
+                                        tint: tint),
+                          title: String(localized: "Worth a look"),
+                          subtitle: WalletWatch.summary(visible))
+                    .padding(.horizontal, DS.Space.s3)
+                    .padding(.vertical, 2)
+                    .background(DS.fillFaint,
+                                in: RoundedRectangle(cornerRadius: DS.Radius.widget,
+                                                     style: .continuous))
             }
             .buttonStyle(.plain)
+        }
+    }
+}
+
+/// The per-wallet split, as CHIPS inside the balance card (prd §212,
+/// 2026-07-25). It was a card of its own until this pass — a face, a name, a
+/// total, an 80pt sparkline and a delta pill per wallet — which is a lot of
+/// parcel for a question the combined number raises in passing ("fine, but
+/// whose?").
+///
+/// What survives is what a glance actually reads off that card: whose, how
+/// much, which way. The 80pt line doesn't survive, deliberately — at that
+/// width it was decoration, and tapping a chip scopes the WHOLE feed to that
+/// wallet, where the same line is drawn at full width as the room's headline.
+/// So the read isn't lost, it's one tap away and bigger.
+struct WalletFaceChips: View {
+    struct Entry: Identifiable {
+        let id: String        // the address — stable, value-typed
+        let value: Double
+        let change: Double
+    }
+
+    let entries: [Entry]
+    let onPick: (String) -> Void
+    @Environment(\.colorScheme) private var scheme
+
+    var body: some View {
+        // Scrolls rather than wraps: the watch cap is 5, and five chips
+        // wrapping to two rows inside the balance card would rebuild the
+        // second parcel this replaced.
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: DS.Space.s2) {
+                ForEach(entries) { entry in
+                    chip(entry)
+                }
+            }
+        }
+        .scrollIndicators(.hidden)
+    }
+
+    private func chip(_ entry: Entry) -> some View {
+        Button {
+            DSHaptic.selection()
+            onPick(entry.id)
+        } label: {
+            HStack(spacing: 6) {
+                WalletFace(address: entry.id, size: 20, circular: true)
+                Text(TokenStats.compact(entry.value))
+                    .dsText(.label12).fontWeight(.semibold)
+                    .foregroundStyle(DS.textPrimary)
+                    .monospacedDigit()
+                Text(TokenChartStyle.changeText(entry.change))
+                    .dsText(.label12)
+                    .foregroundStyle(TokenChartStyle.accent(change: entry.change, scheme: scheme))
+                    .monospacedDigit()
+            }
+            .padding(.leading, 4).padding(.trailing, DS.Space.s3).padding(.vertical, 4)
+            .background(Capsule(style: .continuous).fill(DS.fillFaint))
+            .contentShape(Capsule(style: .continuous))
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+/// LENDING — Aave and Morpho, in ONE card as two rows (prd §212, 2026-07-25).
+///
+/// They used to be two full cards, each with its own caption ("DeFi · Aave on
+/// Base") and its own three-stat layout — the clearest case in the room of a
+/// component picking its container. Aave and Morpho were never two subjects;
+/// they're two providers of one subject, and a wallet that uses both got two
+/// identical parcels arguing for the same attention as the balance above them.
+///
+/// The stats survive, re-ranked. What a lending position is actually asking
+/// you is "how much, and is it safe" — so the money leads on the trailing edge
+/// and the health factor rides the subline where it can be read as a sentence
+/// ("Health 1.82 · Base"). Collateral moves behind the row rather than
+/// disappearing: it's the denominator of the health factor, which is already
+/// stated, so printing it a second time was the stat that earned its seat
+/// least.
+///
+/// Still no chevron on either row — acting on a position happens on Aave or
+/// Morpho, never in here, and a chevron promises a page that doesn't exist.
+/// The card renders only when at least one of the two has something to say.
+struct WalletLendingCard: View {
+    let aave: [WalletDeFi.Position]
+    let morpho: MorphoDeFi.Book
+
+    /// Aave's margin, borrowed by both rows: under this a position is worth
+    /// worrying about, and the mark goes `DS.attention` while the subline
+    /// says "at risk" in words — orange alone means nothing to anyone who
+    /// doesn't know where Aave's margin sits (the 2026-07-21 ruling, kept).
+    private static let riskMargin: Double = 1.5
+
+    var body: some View {
+        if !aave.isEmpty || !morpho.isEmpty {
+            VStack(alignment: .leading, spacing: DS.Space.s1) {
+                WalletSectionLabel(title: String(localized: "Lending"))
+                    .padding(.bottom, 2)
+                if !aave.isEmpty { aaveRow }
+                if !morpho.isEmpty { morphoRow }
+            }
+            .padding(DS.Space.s4)
             .dsWidgetSurface(fillOpacity: WalletCardStyle.fill)
         }
     }
 
-    private var badges: some View {
-        // Wraps rather than scrolls: today's typical 1–2 active kinds never
-        // need it, and a wallet with every kind active (5) still fits two
-        // short rows in the balance card's own width before truncating.
-        FlowLayout(spacing: DS.Space.s2) {
-            ForEach(WalletWatch.breakdown(visible), id: \.kind) { entry in
-                let hot = entry.kind == .liquidation
-                let actionable = entry.kind.isActionable
-                HStack(spacing: 6) {
-                    Image(systemName: entry.kind.glyph)
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(hot ? DS.destructive : actionable ? DS.attention : DS.textSecondary)
-                        .frame(width: 22, height: 22)
-                        .background(
-                            Circle().fill((hot ? DS.destructive : actionable ? DS.attention : DS.textTertiary)
-                                .opacity(0.16)))
-                    Text("\(entry.count)")
-                        .dsText(.callout15).fontWeight(.semibold).foregroundStyle(DS.textPrimary)
-                        .monospacedDigit()
-                    Text(entry.kind.label(entry.count))
-                        .dsText(.label12).foregroundStyle(DS.textSecondary)
-                        .lineLimit(1)
-                }
-                .padding(.leading, 3).padding(.trailing, 10).padding(.vertical, 3)
-                .background(Capsule().fill(DS.surfaceWell))
-            }
-        }
-    }
-}
+    // MARK: - Aave
 
-/// DeFi — Aave collateral, debt, and health factor, moved up from the wallet
-/// detail page (2026-07-20). The treemap says what you HOLD; only this can say
-/// what you OWE, which is why it earns a seat beside it rather than staying two
-/// taps down. A wallet with no position renders nothing.
-///
-/// The health factor is the one number here that carries state: `DS.attention`
-/// under Aave's 1.5 margin, plain ink above it. Below 1.0 risks liquidation —
-/// but that case has already filed a critical warning in the tile above, so
-/// this stays a reading, not a second alarm.
-struct WalletDeFiTile: View {
-    let positions: [WalletDeFi.Position]
-
-    private var collateral: Double { positions.reduce(0) { $0 + $1.totalCollateralUSD } }
-    private var debt: Double { positions.reduce(0) { $0 + $1.totalDebtUSD } }
+    private var aaveCollateral: Double { aave.reduce(0) { $0 + $1.totalCollateralUSD } }
+    private var aaveDebt: Double { aave.reduce(0) { $0 + $1.totalDebtUSD } }
     /// The riskiest health factor across positions — nil when nothing is
     /// borrowed anywhere (Aave's no-debt sentinel), which is not a zero.
-    private var health: Double? { positions.compactMap(\.healthFactor).min() }
+    private var aaveHealth: Double? { aave.compactMap(\.healthFactor).min() }
 
-    private var caption: String {
-        guard positions.count == 1, let p = positions.first else {
-            return String(localized: "DeFi · Aave")
-        }
-        let chain = WalletIngest.displayName(forNetwork: p.network) ?? p.network
-        return String(localized: "DeFi · Aave on \(chain)")
-    }
-
-    var body: some View {
-        // No door on purpose: collateral, debt, and health ARE the whole
-        // in-app read (acting on a position happens on Aave, not here), and
-        // a chevron would promise a page that doesn't exist.
-        WalletTile(caption: caption, showChevron: false) {
-            HStack(alignment: .top, spacing: DS.Space.s3) {
-                stat(String(localized: "Collateral"),
-                     TokenStats.compact(collateral), tint: DS.textPrimary)
-                stat(String(localized: "Debt"),
-                     TokenStats.compact(debt), tint: DS.textPrimary)
-                // The label says "at risk" when the number is (2026-07-21):
-                // orange alone meant nothing to anyone who doesn't know where
-                // Aave's margin sits, and this is the one stat here that is
-                // about losing money.
-                stat((health ?? .infinity) < 1.5
-                        ? String(localized: "Health · at risk") : String(localized: "Health"),
-                     health.map { WalletIngest.format($0) } ?? String(localized: "No debt"),
-                     tint: (health ?? .infinity) < 1.5 ? DS.attention : DS.textPrimary)
-            }
-            .padding(.top, DS.Space.s1)
+    private var aaveRow: some View {
+        let atRisk = (aaveHealth ?? .infinity) < Self.riskMargin
+        let borrowing = aaveDebt > 0
+        return WalletRow(mark: .monogram("AA", tint: atRisk ? DS.attention : DS.tint),
+                         title: "Aave",
+                         subtitle: Self.line(health: aaveHealth, atRisk: atRisk,
+                                             chains: aave.map(\.network))) {
+            WalletRowValue(value: TokenStats.compact(borrowing ? aaveDebt : aaveCollateral),
+                           caption: borrowing ? String(localized: "borrowed")
+                                              : String(localized: "supplied"))
         }
     }
 
-    private func stat(_ label: String, _ value: String, tint: Color) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(label).dsText(.label12).foregroundStyle(DS.textTertiary)
-                .lineLimit(1)
-            Text(value).dsText(.price16).foregroundStyle(tint)
-                .monospacedDigit()
-                .contentTransition(.numericText())
-                .lineLimit(1).minimumScaleFactor(0.6)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-}
-
-/// DeFi — the Morpho book (2026-07-21), the Aave tile's sibling. Morpho has
-/// two faces the tile adapts between: BORROWING (isolated markets with
-/// collateral, debt, and a per-market health factor — the Aave layout
-/// verbatim, worst market leading) and EARNING (vault deposits — one
-/// Deposits stat, "No debt" where health would be). A wallet with neither
-/// renders nothing.
-struct WalletMorphoTile: View {
-    let book: MorphoDeFi.Book
+    // MARK: - Morpho
 
     /// Vault deposits + market-side lending, the earn total.
-    private var deposits: Double {
-        book.vaults.reduce(0) { $0 + $1.usd }
-            + book.positions.reduce(0) { $0 + $1.supplyUSD }
+    private var morphoDeposits: Double {
+        morpho.vaults.reduce(0) { $0 + $1.usd }
+            + morpho.positions.reduce(0) { $0 + $1.supplyUSD }
     }
-    private var collateral: Double { book.positions.reduce(0) { $0 + ($1.collateralUSD ?? 0) } }
-    private var debt: Double { book.positions.reduce(0) { $0 + $1.borrowUSD } }
-    /// The riskiest market — Morpho markets are isolated, so the worst one
-    /// is the one that liquidates first; nil when nothing is borrowed.
-    private var health: Double? { book.positions.compactMap(\.healthFactor).min() }
+    private var morphoDebt: Double { morpho.positions.reduce(0) { $0 + $1.borrowUSD } }
+    /// The riskiest market — Morpho markets are isolated, so the worst one is
+    /// the one that liquidates first; nil when nothing is borrowed.
+    private var morphoHealth: Double? { morpho.positions.compactMap(\.healthFactor).min() }
 
-    private var caption: String {
-        let markets = book.positions.count + book.vaults.count
-        guard markets == 1,
-              let network = book.positions.first?.network ?? book.vaults.first?.network,
-              let chain = WalletIngest.displayName(forNetwork: network) else {
-            return String(localized: "DeFi · Morpho")
-        }
-        return String(localized: "DeFi · Morpho on \(chain)")
-    }
-
-    var body: some View {
-        // No door, same reason as the Aave tile: these numbers ARE the whole
-        // in-app read; acting on a position happens on Morpho, not here.
-        WalletTile(caption: caption, showChevron: false) {
-            HStack(alignment: .top, spacing: DS.Space.s3) {
-                if debt > 0 {
-                    // Borrowing face — the Aave layout. Collateral can be
-                    // unpriced on Morpho (measured); deposits stand in only
-                    // when there's genuinely no priced collateral to state.
-                    if collateral > 0 {
-                        stat(String(localized: "Collateral"),
-                             TokenStats.compact(collateral), tint: DS.textPrimary)
-                    } else if deposits > 0 {
-                        stat(String(localized: "Deposits"),
-                             TokenStats.compact(deposits), tint: DS.textPrimary)
-                    }
-                    stat(String(localized: "Debt"),
-                         TokenStats.compact(debt), tint: DS.textPrimary)
-                    stat((health ?? .infinity) < 1.5
-                            ? String(localized: "Health · at risk") : String(localized: "Health"),
-                         health.map { WalletIngest.format($0) } ?? String(localized: "No debt"),
-                         tint: (health ?? .infinity) < 1.5 ? DS.attention : DS.textPrimary)
-                } else {
-                    // Earning face — deposits, and an honest "No debt".
-                    stat(String(localized: "Deposits"),
-                         TokenStats.compact(deposits), tint: DS.textPrimary)
-                    stat(String(localized: "Debt"),
-                         String(localized: "None"), tint: DS.textPrimary)
-                }
-            }
-            .padding(.top, DS.Space.s1)
+    private var morphoRow: some View {
+        let atRisk = (morphoHealth ?? .infinity) < Self.riskMargin
+        let borrowing = morphoDebt > 0
+        // Morpho's two faces still differ, they just differ in one line now:
+        // BORROWING states its health, EARNING states how many places the
+        // money sits (isolated markets and vaults are Morpho's whole shape,
+        // and "2 vaults" is the fact a single Deposits number can't carry).
+        let subtitle = borrowing
+            ? Self.line(health: morphoHealth, atRisk: atRisk,
+                        chains: morpho.positions.map(\.network))
+            : Self.earning(vaults: morpho.vaults.count, markets: morpho.positions.count)
+        return WalletRow(mark: .monogram("MO", tint: atRisk ? DS.attention : DS.tint),
+                         title: "Morpho", subtitle: subtitle) {
+            WalletRowValue(value: TokenStats.compact(borrowing ? morphoDebt : morphoDeposits),
+                           caption: borrowing ? String(localized: "borrowed")
+                                              : String(localized: "deposits"))
         }
     }
 
-    private func stat(_ label: String, _ value: String, tint: Color) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(label).dsText(.label12).foregroundStyle(DS.textTertiary)
-                .lineLimit(1)
-            Text(value).dsText(.price16).foregroundStyle(tint)
-                .monospacedDigit()
-                .contentTransition(.numericText())
-                .lineLimit(1).minimumScaleFactor(0.6)
+    // MARK: - Sublines
+
+    /// "Health 1.82 · Base" — the reading, then where it lives. A position
+    /// with no debt says so instead of printing a sentinel, and a book spread
+    /// across chains names none rather than picking one arbitrarily.
+    private static func line(health: Double?, atRisk: Bool, chains: [String]) -> String {
+        var parts: [String] = []
+        if let health {
+            parts.append(atRisk
+                ? String(localized: "Health \(WalletIngest.format(health)) · at risk")
+                : String(localized: "Health \(WalletIngest.format(health))"))
+        } else {
+            parts.append(String(localized: "No debt"))
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        let unique = Set(chains)
+        if unique.count == 1, let network = unique.first,
+           let chain = WalletIngest.displayName(forNetwork: network) {
+            parts.append(chain)
+        }
+        return parts.joined(separator: " · ")
+    }
+
+    private static func earning(vaults: Int, markets: Int) -> String {
+        let places = vaults + markets
+        guard places > 0 else { return String(localized: "Earning") }
+        return places == 1 ? String(localized: "Earning · 1 position")
+                           : String(localized: "Earning · \(places) positions")
     }
 }
 

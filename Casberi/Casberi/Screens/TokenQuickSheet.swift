@@ -157,19 +157,15 @@ struct TokenQuickSheet: View {
     /// from didn't already say.
     @ViewBuilder private var heldInSection: some View {
         if route.holders.count > 1 {
-            VStack(alignment: .leading, spacing: DS.Space.s2) {
-                Text("Held in")
-                    .dsText(.label12).foregroundStyle(DS.textTertiary)
+            // The room's shared row anatomy (prd §212) — same face mark, same
+            // rounded title, same trailing money as the wallet feed's own
+            // rows, so a holding read here and a holding read there are
+            // visibly the same kind of statement.
+            VStack(alignment: .leading, spacing: DS.Space.s1) {
+                WalletSectionLabel(title: String(localized: "Held in"))
                 ForEach(route.holders) { holder in
-                    HStack(spacing: DS.Space.s3) {
-                        WalletFace(address: holder.address, size: 22)
-                        Text(holder.label)
-                            .dsText(.callout15).foregroundStyle(DS.textPrimary)
-                            .lineLimit(1)
-                        Spacer(minLength: 0)
-                        Text(TokenStats.compact(holder.usd))
-                            .dsText(.callout15).foregroundStyle(DS.textSecondary)
-                            .monospacedDigit()
+                    WalletRow(mark: .face(holder.address), title: holder.label) {
+                        WalletRowValue(value: TokenStats.compact(holder.usd))
                     }
                 }
             }
