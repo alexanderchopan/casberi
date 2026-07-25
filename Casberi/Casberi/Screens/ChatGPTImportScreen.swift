@@ -40,8 +40,7 @@ struct ChatGPTImportScreen: View {
         .dsAdaptiveContentWidth()
         .dsPageBackground()
         .dsSoftScrollEdges()
-        .navigationTitle("ChatGPT")
-        .navigationBarTitleDisplayMode(.large)
+        .dsScreenTitle("ChatGPT")
         .fileImporter(isPresented: $importing,
                       allowedContentTypes: [.json]) { outcome in
             guard case .success(let url) = outcome else { return }

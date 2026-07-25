@@ -41,8 +41,7 @@ struct KindleImportScreen: View {
         .dsAdaptiveContentWidth()
         .dsPageBackground()
         .dsSoftScrollEdges()
-        .navigationTitle("Kindle")
-        .navigationBarTitleDisplayMode(.large)
+        .dsScreenTitle("Kindle")
         .fileImporter(isPresented: $importing,
                       allowedContentTypes: [.plainText, .text]) { outcome in
             guard case .success(let url) = outcome else { return }

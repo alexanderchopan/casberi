@@ -54,8 +54,7 @@ struct PrivacyPoolsScreen: View {
         .dsAdaptiveContentWidth()
         .dsPageBackground()
         .dsSoftScrollEdges()
-        .navigationTitle("0xBow Privacy Pools")
-        .navigationBarTitleDisplayMode(.large)
+        .dsScreenTitle("0xBow Privacy Pools")
         .onAppear {
             // Watching is consent (prd §207): keep the catalog seat honest on
             // appear, and refresh deposits if a wallet's watched.

@@ -289,7 +289,14 @@ extension View {
     /// middle). Inline centres the title over the column instead, which is
     /// also what iPad system apps do.
     func dsScreenTitle(_ title: LocalizedStringKey) -> some View {
-        modifier(DSScreenTitle(title: title))
+        modifier(DSScreenTitle(title: Text(title)))
+    }
+
+    /// The dynamic-title overload (a provider's name, a scoped wallet's
+    /// label). Mirrors `navigationTitle`'s own pair, so a string LITERAL at a
+    /// call site still resolves to the localized version above.
+    func dsScreenTitle<S: StringProtocol>(_ title: S) -> some View {
+        modifier(DSScreenTitle(title: Text(title)))
     }
 
     /// The person's mode, restated. The root shell already sets this, but a
@@ -326,7 +333,7 @@ extension View {
 
 /// See `dsScreenTitle(_:)`.
 private struct DSScreenTitle: ViewModifier {
-    let title: LocalizedStringKey
+    let title: Text
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     func body(content: Content) -> some View {
         content

@@ -48,8 +48,7 @@ struct MailScreen: View {
         .dsAdaptiveContentWidth()
         .dsPageBackground()
         .dsSoftScrollEdges()
-        .navigationTitle(provider.rawValue)
-        .navigationBarTitleDisplayMode(.large)
+        .dsScreenTitle(provider.rawValue)
         .sheet(isPresented: $showConnection) {
             BridgeConnectionSheet(title: provider.rawValue) {
                 connectForm

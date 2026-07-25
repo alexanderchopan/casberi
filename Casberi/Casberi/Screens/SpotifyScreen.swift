@@ -51,8 +51,7 @@ struct SpotifyScreen: View {
         .dsAdaptiveContentWidth()
         .dsPageBackground()
         .dsSoftScrollEdges()
-        .navigationTitle("Spotify")
-        .navigationBarTitleDisplayMode(.large)
+        .dsScreenTitle("Spotify")
         .sheet(isPresented: $showConnection) {
             BridgeConnectionSheet(title: "Spotify") {
                 connectSection.listRowSeparator(.hidden)

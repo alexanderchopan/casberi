@@ -50,8 +50,7 @@ struct ObsidianScreen: View {
         .dsAdaptiveContentWidth()
         .dsPageBackground()
         .dsSoftScrollEdges()
-        .navigationTitle("Obsidian")
-        .navigationBarTitleDisplayMode(.large)
+        .dsScreenTitle("Obsidian")
         .sheet(isPresented: $showConnection) {
             BridgeConnectionSheet(title: "Obsidian") {
                 vaultSection.listRowSeparator(.hidden)

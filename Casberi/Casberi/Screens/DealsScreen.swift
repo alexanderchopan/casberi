@@ -48,8 +48,7 @@ struct DealsScreen: View {
         .dsAdaptiveContentWidth()
         .dsPageBackground()
         .dsSoftScrollEdges()
-        .navigationTitle("Deals")
-        .navigationBarTitleDisplayMode(.large)
+        .dsScreenTitle("Deals")
         .onAppear {
             if deals.connected { Task { await sync() } }
         }

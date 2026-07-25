@@ -73,8 +73,7 @@ struct NetworkReachScreen: View {
         .dsAdaptiveContentWidth()
         .dsPageBackground()
         .dsSoftScrollEdges()
-        .navigationTitle("What this app reaches")
-        .navigationBarTitleDisplayMode(.large)
+        .dsScreenTitle("What this app reaches")
     }
 
     private func group(_ title: String, _ endpoints: [NetworkReach.Endpoint],

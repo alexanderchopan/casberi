@@ -200,8 +200,7 @@ struct WalletScreen: View {
         .dsAdaptiveContentWidth()
         .dsPageBackground()
         .dsSoftScrollEdges()
-        .navigationTitle("Wallet")
-        .navigationBarTitleDisplayMode(.large)
+        .dsScreenTitle("Wallet")
         // Ask the chain what the unnamed-kind entries are, a few at a time —
         // keyless, and only for entries that haven't been checked (prd §169).
         .task { await AddressKind.detectPending() }

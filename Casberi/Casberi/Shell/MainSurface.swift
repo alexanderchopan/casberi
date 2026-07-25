@@ -211,6 +211,12 @@ struct MainSurface: View {
                 // stroke.
                 ThingSheetView(thing: thing, onBack: { detail.clear() })
                     .id(thing.id)
+                    // Fill the column BEFORE the ink goes on: `dsInk`'s black
+                    // is a `.background`, which sizes to its content — without
+                    // this the ink stopped at the bottom of a short record and
+                    // left the rest of the pane showing the feed's own field
+                    // through a hard horizontal edge.
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                     .dsInk()
                     .transition(.opacity)
             } else {
@@ -241,6 +247,51 @@ struct MainSurface: View {
     }
 
     var body: some View {
+        // On iPad the rail sits OUTSIDE the NavigationStack (2026-07-25), so
+        // a pushed room — Apps, Settings, a bridge setup form — is inset
+        // beside it rather than covering it. Primary navigation that
+        // disappears the moment you use it is the phone's compromise, made
+        // because a phone has no room to keep it; an iPad does. It is the
+        // same argument ruling 6 already made for the agent bar.
+        //
+        // It carries the shell's field itself rather than relying on a
+        // background behind the stack — an opaque UIKit backing means nothing
+        // behind a NavigationStack ever shows through (the standing gotcha),
+        // and the pour is the same top-anchored 500pt gradient on both sides,
+        // so the two line up with no seam.
+        HStack(spacing: 0) {
+            if isRegular {
+                sourceStrip(axis: .vertical)
+                    .background {
+                        ZStack(alignment: .top) {
+                            DS.themedPage
+                            crownPour
+                        }
+                        .ignoresSafeArea()
+                    }
+            }
+            surface
+        }
+        // Measured on the WHOLE surface, not the stack beside the rail:
+        // `minWidthForPane` and `paneWidth(for:)` are both stated against the
+        // device's total width (and `RootShell` reads the same number for the
+        // agent bar), so measuring the post-rail remainder here would put the
+        // two out of step by exactly `railWidth` — enough to drop the pane in
+        // portrait on the one iPad that most wants it.
+        .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width in
+            surfaceWidth = width
+        }
+        // Told once, read everywhere: a row-tap site asks the selection
+        // whether a pane exists rather than re-deriving the breakpoint.
+        .onChange(of: showsPane, initial: true) { _, now in
+            detail.paneActive = now
+            // Rotating a mini into a shape that can't hold a pane must
+            // not strand a selection nothing renders.
+            if !now { detail.thing = nil }
+        }
+    }
+
+    private var surface: some View {
         NavigationStack(path: $route.path) {
             // The feeds are one pager (2026-07-16): a chip tap and a swipe are
             // the same move, because selection binds to the SAME value the chips
@@ -281,9 +332,6 @@ struct MainSurface: View {
             // `safeAreaInset` reserves the rail's width so every feed page's
             // rows start beside it rather than under it, and the crown pour
             // painted by this surface's own background still runs behind it.
-            .safeAreaInset(edge: .leading, spacing: 0) {
-                if isRegular { sourceStrip(axis: .vertical) }
-            }
             .safeAreaInset(edge: .top, spacing: 0) {
                 if !isRegular {
                     sourceStrip(axis: .horizontal)
@@ -302,17 +350,6 @@ struct MainSurface: View {
                     detailPane
                         .frame(width: PadLayout.paneWidth(for: surfaceWidth))
                 }
-            }
-            .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width in
-                surfaceWidth = width
-            }
-            // Told once, read everywhere: a row-tap site asks the selection
-            // whether a pane exists rather than re-deriving the breakpoint.
-            .onChange(of: showsPane, initial: true) { _, now in
-                detail.paneActive = now
-                // Rotating a mini into a shape that can't hold a pane must
-                // not strand a selection nothing renders.
-                if !now { detail.thing = nil }
             }
             // The themed page behind the chip header too — the header sits
             // OUTSIDE the screens' own dsPageBackground, so in light mode the

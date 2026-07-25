@@ -26,8 +26,7 @@ struct VeniceSetupScreen: View {
         .dsAdaptiveContentWidth()
         .dsPageBackground()
         .dsSoftScrollEdges()
-        .navigationTitle("Venice")
-        .navigationBarTitleDisplayMode(.large)
+        .dsScreenTitle("Venice")
     }
 
     // MARK: - Steps (the key comes from Venice's side — say so plainly)

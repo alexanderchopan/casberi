@@ -26,8 +26,7 @@ struct OpenRouterSetupScreen: View {
         .dsAdaptiveContentWidth()
         .dsPageBackground()
         .dsSoftScrollEdges()
-        .navigationTitle("OpenRouter")
-        .navigationBarTitleDisplayMode(.large)
+        .dsScreenTitle("OpenRouter")
     }
 
     // MARK: - Steps (the key comes from OpenRouter's side — say so plainly)

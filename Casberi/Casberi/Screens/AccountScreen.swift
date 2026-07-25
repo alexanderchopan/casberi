@@ -39,8 +39,7 @@ struct SettingsScreen: View {
         .dsSoftScrollEdges()
             .dsAdaptiveContentWidth()
             .dsPageBackground()
-            .navigationTitle("Settings")
-            .navigationBarTitleDisplayMode(.large)
+            .dsScreenTitle("Settings")
             .sheet(isPresented: $diagnosticsOpen) {
                 NavigationStack { DiagnosticsScreen() }
             }

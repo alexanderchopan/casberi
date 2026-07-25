@@ -41,8 +41,7 @@ struct GeminiImportScreen: View {
         .dsAdaptiveContentWidth()
         .dsPageBackground()
         .dsSoftScrollEdges()
-        .navigationTitle("Gemini")
-        .navigationBarTitleDisplayMode(.large)
+        .dsScreenTitle("Gemini")
         .fileImporter(isPresented: $importing,
                       allowedContentTypes: [.json]) { outcome in
             guard case .success(let url) = outcome else { return }

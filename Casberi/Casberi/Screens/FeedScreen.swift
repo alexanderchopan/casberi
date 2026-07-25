@@ -2459,35 +2459,55 @@ struct FeedScreen: View {
     private func daySection(_ label: String, _ rows: [Thing],
                             nextEventID: UUID?,
                             boundary: UUID? = nil) -> some View {
+        // LIVE ONLY, before anything reads a stored property (build 150 crash,
+        // 2026-07-25 — pull-to-refresh, symbolicated to `countLabel` inside
+        // this section's own header). `rows` is a DERIVED array (the day
+        // grouping) holding models by reference, and everything below touches
+        // persisted properties on them: `standsAlone`/`.id` for the run
+        // positions, the row bodies, and the header's `countLabel(rows)`,
+        // which maps `\.kind` over every one. A refresh runs the bridge heals,
+        // each of which deletes upstream-gone rows on the MAIN context — so a
+        // delete lands inside the same graph update that re-evaluates this
+        // section, and the first read of a tombstoned model traps in SwiftData.
+        //
+        // The keying rule (`ThingRowKeying`) fixed the ForEach's own identity
+        // diffing; it can't help a header that reads the array directly. This
+        // is the same rule's other half: guard a HELD reference with `isLive`
+        // before reading through it. Filtering here covers the positions, the
+        // rows, and the header at once — a row that just died drops out of the
+        // day it was in, which is what the next `@Query` emission says anyway.
+        let rows = rows.filter(\.isLive)
         let positions = cardRunPositions(count: rows.count,
                                          isBreaker: { standsAlone(rows[$0]) },
                                          isBoundary: { rows[$0].id == boundary })
-        Section {
-            // Rows dispatch by shape (shaped feeds); the swipe stays triage —
-            // reads only, writes live in the sheet (ruling), Copy sheet-only.
-            ForEach(Array(keyed(rows).enumerated()), id: \.element.id) { i, item in
-                let thing = item.thing
-                if thing.id == boundary { newSinceDivider }
-                shapedListRow(thing, index: i, nextEventID: nextEventID,
-                              position: positions[i])
+        if !rows.isEmpty {
+            Section {
+                // Rows dispatch by shape (shaped feeds); the swipe stays triage —
+                // reads only, writes live in the sheet (ruling), Copy sheet-only.
+                ForEach(Array(keyed(rows).enumerated()), id: \.element.id) { i, item in
+                    let thing = item.thing
+                    if thing.id == boundary { newSinceDivider }
+                    shapedListRow(thing, index: i, nextEventID: nextEventID,
+                                  position: positions[i])
+                }
+            } header: {
+                HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+                    Text(label).dsText(.heading22).foregroundStyle(DS.textPrimary)
+                    // In a source's own room the count speaks the source's unit —
+                    // "3 events", "5 screenshots" (2026-07-13). All keeps the
+                    // bare number: mixed kinds have no one unit worth naming.
+                    Text(countLabel(rows)).dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                        .contentTransition(.numericText())
+                }
+                .textCase(nil)
+                .padding(.leading, DS.Space.s4)
+                // Days read as clusters: the gap ABOVE a day header is the
+                // feed's biggest (2026-07-13), and since 2026-07-21 the day's
+                // rows also share one card — the header's s6 plus the card's own
+                // silhouette say "new day" without drawing a line.
+                .padding(.top, DS.Space.s6)
+                .padding(.bottom, DS.Space.s1)
             }
-        } header: {
-            HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-                Text(label).dsText(.heading22).foregroundStyle(DS.textPrimary)
-                // In a source's own room the count speaks the source's unit —
-                // "3 events", "5 screenshots" (2026-07-13). All keeps the
-                // bare number: mixed kinds have no one unit worth naming.
-                Text(countLabel(rows)).dsText(.subhead13).foregroundStyle(DS.textTertiary)
-                    .contentTransition(.numericText())
-            }
-            .textCase(nil)
-            .padding(.leading, DS.Space.s4)
-            // Days read as clusters: the gap ABOVE a day header is the
-            // feed's biggest (2026-07-13), and since 2026-07-21 the day's
-            // rows also share one card — the header's s6 plus the card's own
-            // silhouette say "new day" without drawing a line.
-            .padding(.top, DS.Space.s6)
-            .padding(.bottom, DS.Space.s1)
         }
     }
 
@@ -2496,6 +2516,11 @@ struct FeedScreen: View {
     /// The social room says "posts": its things are kind .chat (the ingest's
     /// container), but nobody calls a Bluesky post a chat.
     private func countLabel(_ rows: [Thing]) -> String {
+        // Guarded independently of `daySection`'s own filter: the footer
+        // (`caughtUpFooter`) calls this with the whole render's `visible`
+        // array, which is derived the same way and carries the same hazard.
+        // `\.kind` below is a persisted read — the one that trapped in 150.
+        let rows = rows.filter(\.isLive)
         guard source != "All" else { return "\(rows.count)" }
         if shape == .social {
             return rows.count == 1 ? "1 post" : "\(rows.count) posts"

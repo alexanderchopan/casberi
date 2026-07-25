@@ -52,8 +52,7 @@ struct OpenFoodFactsScreen: View {
         .dsAdaptiveContentWidth()
         .dsPageBackground()
         .dsSoftScrollEdges()
-        .navigationTitle("Open Food Facts")
-        .navigationBarTitleDisplayMode(.large)
+        .dsScreenTitle("Open Food Facts")
         .fullScreenCover(isPresented: $scanning) {
             BarcodeScannerSheet { scanned in
                 scanning = false

@@ -62,7 +62,14 @@ struct RootShell: View {
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var shellWidth: CGFloat = 0
     private var padShell: PadShellInsets {
-        PadShellInsets(regular: horizontalSizeClass == .regular, width: shellWidth)
+        // A PUSHED room (Apps, Settings, a bridge form) covers the detail
+        // pane — the rail is outside the stack and survives, the pane is
+        // inside it and doesn't. So the bar reserves the pane's space only
+        // while the pane is actually on screen; otherwise it hangs left of
+        // centre over a room that runs the full width beside the rail.
+        PadShellInsets(regular: horizontalSizeClass == .regular,
+                       width: shellWidth,
+                       paneVisible: HomeRoute.shared.path.isEmpty)
     }
     /// The bar↔surface morph (2026-07-20) — shared between `AgentBar` and
     /// `Composer`'s `glassNamespace`, both keying `matchedGeometryEffect` to
@@ -598,9 +605,24 @@ struct RootShell: View {
                 let all = (try? modelContext.fetch(FetchDescriptor<Thing>(
                     sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]
                 ))) ?? []
-                deepLinkThing = all.first { $0.title.hasPrefix(prefix) }
-                NSLog("[Casberi] openThing: %@",
-                      deepLinkThing?.title ?? "no match for \(prefix)")
+                let match = all.first { $0.title.hasPrefix(prefix) }
+                // On iPad the pane is where a thing opens, so the hook has to
+                // go there too — otherwise the probe verifies a route no tap
+                // takes. Deferred one beat because `paneActive` is written by
+                // `MainSurface` from its own measured width, and this
+                // `onAppear` can run before that geometry has landed; nil-ing
+                // the reply out of `present` is what makes the fallback exact.
+                Task { @MainActor in
+                    try? await Task.sleep(for: .milliseconds(400))
+                    guard let match, match.isLive else {
+                        NSLog("[Casberi] openThing: no match for %@", prefix)
+                        return
+                    }
+                    let inPane = PadDetailSelection.shared.present(match)
+                    if !inPane { deepLinkThing = match }
+                    NSLog("[Casberi] openThing: %@ (%@)", match.title,
+                          inPane ? "pane" : "sheet")
+                }
             }
             // `-openSettings YES` pushes Settings. Lives HERE, not a screen's
             // own onAppear — content-first landing is now the ONLY landing

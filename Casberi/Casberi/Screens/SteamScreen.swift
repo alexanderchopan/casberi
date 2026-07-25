@@ -49,8 +49,7 @@ struct SteamScreen: View {
         .dsAdaptiveContentWidth()
         .dsPageBackground()
         .dsSoftScrollEdges()
-        .navigationTitle("Steam")
-        .navigationBarTitleDisplayMode(.large)
+        .dsScreenTitle("Steam")
         .sheet(isPresented: $showConnection) {
             BridgeConnectionSheet(title: "Steam") {
                 connectForm

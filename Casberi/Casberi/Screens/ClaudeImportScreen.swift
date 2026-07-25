@@ -41,8 +41,7 @@ struct ClaudeImportScreen: View {
         .dsAdaptiveContentWidth()
         .dsPageBackground()
         .dsSoftScrollEdges()
-        .navigationTitle("Claude")
-        .navigationBarTitleDisplayMode(.large)
+        .dsScreenTitle("Claude")
         .fileImporter(isPresented: $importing,
                       allowedContentTypes: [.json]) { outcome in
             guard case .success(let url) = outcome else { return }

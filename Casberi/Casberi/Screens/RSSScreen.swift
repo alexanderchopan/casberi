@@ -45,8 +45,7 @@ struct RSSScreen: View {
         .dsAdaptiveContentWidth()
         .dsPageBackground()
         .dsSoftScrollEdges()
-        .navigationTitle("RSS")
-        .navigationBarTitleDisplayMode(.large)
+        .dsScreenTitle("RSS")
         .onAppear {
             // Every visit refreshes — feeds are cheap to poll.
             Task { await sync() }

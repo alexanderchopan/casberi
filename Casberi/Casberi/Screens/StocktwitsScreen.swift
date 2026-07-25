@@ -82,8 +82,7 @@ struct StocktwitsScreen: View {
         .dsAdaptiveContentWidth()
         .dsPageBackground()
         .dsSoftScrollEdges()
-        .navigationTitle("Stocktwits")
-        .navigationBarTitleDisplayMode(.large)
+        .dsScreenTitle("Stocktwits")
         .sheet(item: $openThing) { thing in
             ThingSheetView(thing: thing)
         }

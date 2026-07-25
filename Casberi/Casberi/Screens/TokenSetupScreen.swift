@@ -85,8 +85,7 @@ struct TokenSetupScreen: View {
         .dsAdaptiveContentWidth()
         .dsPageBackground()
         .dsSoftScrollEdges()
-        .navigationTitle(bridge.rawValue)
-        .navigationBarTitleDisplayMode(.large)
+        .dsScreenTitle(bridge.rawValue)
         .sheet(isPresented: $showConnection) {
             BridgeConnectionSheet(title: bridge.rawValue) {
                 connectForm

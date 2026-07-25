@@ -65,8 +65,7 @@ struct ExchangeSetupScreen: View {
         .dsAdaptiveContentWidth()
         .dsPageBackground()
         .dsSoftScrollEdges()
-        .navigationTitle(venue.display)
-        .navigationBarTitleDisplayMode(.large)
+        .dsScreenTitle(venue.display)
         .sheet(isPresented: $showConnection) {
             BridgeConnectionSheet(title: venue.display) {
                 stepsSection.listRowSeparator(.hidden)

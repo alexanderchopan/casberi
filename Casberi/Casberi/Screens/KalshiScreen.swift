@@ -60,8 +60,7 @@ struct KalshiScreen: View {
         .dsAdaptiveContentWidth()
         .dsPageBackground()
         .dsSoftScrollEdges()
-        .navigationTitle("Kalshi")
-        .navigationBarTitleDisplayMode(.large)
+        .dsScreenTitle("Kalshi")
         .onAppear { loadWatched() }
         // minLength: 0 — unlike every other bridge's finder, an empty query
         // isn't "nothing to show": KalshiWatch.search("") already returns the

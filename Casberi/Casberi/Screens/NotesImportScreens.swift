@@ -45,8 +45,7 @@ struct DayOneImportScreen: View {
         .dsAdaptiveContentWidth()
         .dsPageBackground()
         .dsSoftScrollEdges()
-        .navigationTitle("Day One")
-        .navigationBarTitleDisplayMode(.large)
+        .dsScreenTitle("Day One")
         .fileImporter(isPresented: $importing,
                       allowedContentTypes: [.json]) { outcome in
             guard case .success(let url) = outcome else { return }
@@ -123,8 +122,7 @@ struct JournalImportScreen: View {
         .dsAdaptiveContentWidth()
         .dsPageBackground()
         .dsSoftScrollEdges()
-        .navigationTitle("Apple Journal")
-        .navigationBarTitleDisplayMode(.large)
+        .dsScreenTitle("Apple Journal")
         .fileImporter(isPresented: $importing,
                       allowedContentTypes: [.folder]) { outcome in
             guard case .success(let url) = outcome else { return }
@@ -207,8 +205,7 @@ struct NotesShareScreen: View {
         .dsAdaptiveContentWidth()
         .dsPageBackground()
         .dsSoftScrollEdges()
-        .navigationTitle("Apple Notes")
-        .navigationBarTitleDisplayMode(.large)
+        .dsScreenTitle("Apple Notes")
     }
 }
 

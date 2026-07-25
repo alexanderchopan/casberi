@@ -43,8 +43,7 @@ struct DiagnosticsScreen: View {
         .dsAdaptiveContentWidth()
         .dsPageBackground()
         .dsSoftScrollEdges()
-        .navigationTitle("Diagnostics")
-        .navigationBarTitleDisplayMode(.large)
+        .dsScreenTitle("Diagnostics")
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button("Done") { dismiss() }

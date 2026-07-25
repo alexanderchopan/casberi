@@ -62,8 +62,7 @@ struct OpenSeaScreen: View {
         .dsAdaptiveContentWidth()
         .dsPageBackground()
         .dsSoftScrollEdges()
-        .navigationTitle("OpenSea")
-        .navigationBarTitleDisplayMode(.large)
+        .dsScreenTitle("OpenSea")
         .onAppear {
             // Opening the screen doesn't connect — the person taps a chain to
             // watch it (like RSS wants a feed pasted). Only refresh if

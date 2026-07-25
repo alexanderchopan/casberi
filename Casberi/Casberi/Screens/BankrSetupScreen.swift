@@ -30,8 +30,7 @@ struct BankrSetupScreen: View {
         .dsAdaptiveContentWidth()
         .dsPageBackground()
         .dsSoftScrollEdges()
-        .navigationTitle("Bankr")
-        .navigationBarTitleDisplayMode(.large)
+        .dsScreenTitle("Bankr")
     }
 
     // MARK: - Steps (the key comes from Bankr's side — say so plainly)

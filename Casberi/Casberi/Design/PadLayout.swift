@@ -71,10 +71,13 @@ struct PadShellInsets {
     /// the shell is too narrow to render one.
     let paneInset: CGFloat
 
-    init(regular: Bool, width: CGFloat) {
+    /// `paneVisible` is false while a pushed room covers the pane — the rail
+    /// lives outside the navigation stack and survives a push, the pane lives
+    /// inside it and does not.
+    init(regular: Bool, width: CGFloat, paneVisible: Bool = true) {
         isRegular = regular
         railInset = regular ? PadLayout.railWidth : 0
-        paneInset = regular && width >= PadLayout.minWidthForPane
+        paneInset = regular && paneVisible && width >= PadLayout.minWidthForPane
             ? PadLayout.paneWidth(for: width) : 0
     }
 }

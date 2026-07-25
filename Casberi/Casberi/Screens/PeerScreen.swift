@@ -55,8 +55,7 @@ struct PeerScreen: View {
         .dsAdaptiveContentWidth()
         .dsPageBackground()
         .dsSoftScrollEdges()
-        .navigationTitle("Peer")
-        .navigationBarTitleDisplayMode(.large)
+        .dsScreenTitle("Peer")
         .onAppear {
             // Watching is consent (prd §207): keep the catalog seat honest the
             // moment this screen appears, and refresh fills if a wallet's watched.

@@ -397,8 +397,7 @@ struct HandleSetupScreen: View {
         .dsAdaptiveContentWidth()
         .dsPageBackground()
         .dsSoftScrollEdges()
-        .navigationTitle(bridge.rawValue)
-        .navigationBarTitleDisplayMode(.large)
+        .dsScreenTitle(bridge.rawValue)
         .onAppear {
             accountNames = bridge.names
             query = bridge.displayName

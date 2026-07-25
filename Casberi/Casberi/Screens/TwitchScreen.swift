@@ -54,8 +54,7 @@ struct TwitchScreen: View {
         .dsAdaptiveContentWidth()
         .dsPageBackground()
         .dsSoftScrollEdges()
-        .navigationTitle("Twitch")
-        .navigationBarTitleDisplayMode(.large)
+        .dsScreenTitle("Twitch")
         .sheet(isPresented: $showConnection) {
             BridgeConnectionSheet(title: "Twitch") {
                 connectSection.listRowSeparator(.hidden)

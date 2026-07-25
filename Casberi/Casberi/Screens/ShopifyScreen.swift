@@ -49,8 +49,7 @@ struct ShopifyScreen: View {
         .dsAdaptiveContentWidth()
         .dsPageBackground()
         .dsSoftScrollEdges()
-        .navigationTitle("Shopify")
-        .navigationBarTitleDisplayMode(.large)
+        .dsScreenTitle("Shopify")
         .onAppear {
             // Opening the screen doesn't connect — the person pastes a store to
             // follow it. Only refresh if something's already followed.

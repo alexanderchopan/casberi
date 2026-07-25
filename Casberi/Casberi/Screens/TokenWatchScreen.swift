@@ -73,8 +73,7 @@ struct TokenWatchScreen: View {
         .dsAdaptiveContentWidth()
         .dsPageBackground()
         .dsSoftScrollEdges()
-        .navigationTitle("Tokens")
-        .navigationBarTitleDisplayMode(.large)
+        .dsScreenTitle("Tokens")
         .toolbar {
             // The sort choice lived in the old watchlist section's header;
             // the shelf has no header, so it rides the toolbar (prd §185).

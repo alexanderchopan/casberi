@@ -64,8 +64,7 @@ struct GeckoTerminalScreen: View {
         .dsAdaptiveContentWidth()
         .dsPageBackground()
         .dsSoftScrollEdges()
-        .navigationTitle("GeckoTerminal")
-        .navigationBarTitleDisplayMode(.large)
+        .dsScreenTitle("GeckoTerminal")
         .onAppear {
             // Opening the screen doesn't connect — the person taps a chain to
             // watch it. Only refresh if something's already watched: viewing is

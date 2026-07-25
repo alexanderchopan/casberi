@@ -16,6 +16,7 @@ struct AppsScreen: View {
     @Environment(BridgeStore.self) private var store
     @Environment(\.modelContext) private var modelContext
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var pairing = false
     @State private var query = ""
     @FocusState private var searchFocused: Bool
@@ -315,11 +316,13 @@ struct AppsScreen: View {
         .onChange(of: connectedNames) { old, new in
             handleConnectChange(old: old, new: new)
         }
-        .dsAdaptiveContentWidth()
+        // The catalog is a GRID, so it takes the wide column (2026-07-25) —
+        // it answers extra width with extra columns per band, not with longer
+        // rows, which is the whole distinction `DSContentWidth` draws.
+        .dsAdaptiveContentWidth(.wide)
         .dsPageBackground()
         .dsSoftScrollEdges()
-        .navigationTitle("Apps")
-        .navigationBarTitleDisplayMode(.large)
+        .dsScreenTitle("Apps")
         .sheet(isPresented: $pairing) { PairClientSheet() }
         #if DEBUG
         .navigationDestination(item: $probe) { p in
@@ -964,17 +967,23 @@ struct AppsScreen: View {
         return bands
     }
 
+    /// Tiles across a full band — 4 on iPhone, 6 on iPad (2026-07-25). At the
+    /// wide column's 1040pt a 4-across band drew 240pt-wide tiles around a
+    /// 48pt icon, which is a grid pretending to be a list. A paired band
+    /// splits this in half, so the two shapes stay one rhythm.
+    private var wallColumns: Int { horizontalSizeClass == .regular ? 6 : 4 }
+
     private var catalogWall: some View {
         VStack(spacing: DS.Space.s3) {
             ForEach(wallBands) { band in
                 switch band {
                 case .full(let name, let apps):
-                    bandCard { categoryColumn(name, apps: apps, columns: 4) }
+                    bandCard { categoryColumn(name, apps: apps, columns: wallColumns) }
                 case .paired(let n1, let a1, let n2, let a2):
                     bandCard {
                         HStack(alignment: .top, spacing: DS.Space.s3) {
-                            categoryColumn(n1, apps: a1, columns: 2)
-                            categoryColumn(n2, apps: a2, columns: 2)
+                            categoryColumn(n1, apps: a1, columns: wallColumns / 2)
+                            categoryColumn(n2, apps: a2, columns: wallColumns / 2)
                         }
                     }
                 }
