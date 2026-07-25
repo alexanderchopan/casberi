@@ -44,6 +44,18 @@ struct MainSurface: View {
     /// Anchors the doors' zoom transitions (each room grows from its door).
     @Namespace private var doorNS
 
+    /// iPad (2026-07-25). `regular` alone decides the RAIL; the detail pane
+    /// additionally needs real width (see `PadLayout.minWidthForPane`), so
+    /// the shell measures itself rather than guessing from the idiom — an
+    /// iPad mini in portrait and an iPad in Slide Over are both "iPad" and
+    /// neither can hold two columns.
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @State private var surfaceWidth: CGFloat = 0
+    @Bindable private var detail = PadDetailSelection.shared
+
+    private var isRegular: Bool { horizontalSizeClass == .regular }
+    private var showsPane: Bool { isRegular && surfaceWidth >= PadLayout.minWidthForPane }
+
     /// The corpus MINUS search-only sources (Contacts) — the same rule Home and
     /// Feed already share (`Corpus.surfaced`), so the chip row lists exactly the
     /// sources the feed shows.
@@ -149,6 +161,85 @@ struct MainSurface: View {
             .animation(DS.Motion.standard, value: chrome.pourHue)
     }
 
+    /// The chip strip in whichever orientation this device wears it. One
+    /// call site for the taps so the strip and the rail can never drift on
+    /// what a chip actually DOES.
+    private func sourceStrip(axis: Axis) -> some View {
+        SourceChips(labels: chipLabels, active: filter.source,
+                    axis: axis,
+                    onApps: { route.present(.apps) },
+                    onSettings: { route.present(.settings) },
+                    refreshSpin: chrome.refreshPulse,
+                    zoomNS: doorNS) { label in
+            if label == filter.source {
+                // Re-tapping the chip you're already on pops back to
+                // root (the old per-tab habit) instead of doing nothing.
+                chrome.popHome += 1
+                return
+            }
+            withAnimation(DS.Motion.standard) {
+                filter.source = label
+                // Entering "All" means all; a specific source keeps
+                // its own tag.
+                if label == "All" { filter.tag = "All" }
+            }
+            // Tap-learning (ChipMemory) counts an actual switch, not
+            // the re-tap-to-pop branch above.
+            ChipMemory.visited(label)
+        }
+    }
+
+    /// The detail pane. Always present once the shell is wide enough — the
+    /// two-pane shape is the layout, not a state the layout enters, so the
+    /// canvas never collapses back to one column and half a screen of black
+    /// under a tap.
+    ///
+    /// `isLive` guards the held model (the 2026-07-24 crash class): a
+    /// foreground bridge heal can delete the open thing under the pane, and
+    /// reading any stored property on it then traps inside SwiftData. Unlike
+    /// a sheet there is nothing to dismiss here — it simply falls back to the
+    /// resting state, which sidesteps the presentation-transition corollary
+    /// (build 142) entirely.
+    @ViewBuilder private var detailPane: some View {
+        Group {
+            if let thing = detail.thing, thing.isLive {
+                // Ink, exactly as this view is everywhere else it appears
+                // (`dsInk` — a detail surface is black in both themes). The
+                // ink starts only when there IS a detail: painting it at rest
+                // put a hard black column beside the poured feed, which is
+                // the no-hairlines law broken with a background instead of a
+                // stroke.
+                ThingSheetView(thing: thing, onBack: { detail.clear() })
+                    .id(thing.id)
+                    .dsInk()
+                    .transition(.opacity)
+            } else {
+                // At rest the pane is a WINDOW, not a surface: the shell's own
+                // themed page and crown pour run straight through it, so the
+                // two columns read as one canvas until something is opened in
+                // this one.
+                paneRest
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .onChange(of: things.count) { _, _ in detail.pruneIfDead() }
+    }
+
+    /// The pane at rest. Quiet on purpose — this is the two-pane shape's
+    /// resting half, not an empty state apologising for itself, and it must
+    /// not compete with the feed beside it for attention.
+    private var paneRest: some View {
+        VStack(spacing: DS.Space.s3) {
+            CasberiMark(size: 44)
+                .opacity(0.32)
+            Text("Pick something to open it here.")
+                .dsText(.subhead13)
+                .foregroundStyle(DS.textTertiary)
+                .multilineTextAlignment(.center)
+        }
+        .padding(DS.Space.s6)
+    }
+
     var body: some View {
         NavigationStack(path: $route.path) {
             // The feeds are one pager (2026-07-16): a chip tap and a swipe are
@@ -176,38 +267,52 @@ struct MainSurface: View {
             // the material read as glass. Pairs with each feed's `dsSoftScrollEdges()`:
             // the scroll edge dissolves content as it goes under, so rows melt into
             // the strip instead of colliding with it.
+            // The fixed navigation strip — always in reach, never scrolls
+            // away with content (the whole point of dropping the tab bar).
+            // The avatar leads it now too (2026-07-20) — the system nav
+            // bar it used to sit in alone is hidden below, so this strip
+            // owns the top of the screen outright; the extra top padding
+            // (was s2) is that vacated space becoming air, not bigger
+            // chips (the 56pt Stories size is a 2026-07-10 ruling, not
+            // being revisited here).
+            //
+            // On iPad it insets the LEADING edge instead as a vertical rail
+            // (2026-07-25). Same view, same inset mechanism, one axis apart:
+            // `safeAreaInset` reserves the rail's width so every feed page's
+            // rows start beside it rather than under it, and the crown pour
+            // painted by this surface's own background still runs behind it.
+            .safeAreaInset(edge: .leading, spacing: 0) {
+                if isRegular { sourceStrip(axis: .vertical) }
+            }
             .safeAreaInset(edge: .top, spacing: 0) {
-                // The fixed navigation strip — always in reach, never scrolls
-                // away with content (the whole point of dropping the tab bar).
-                // The avatar leads it now too (2026-07-20) — the system nav
-                // bar it used to sit in alone is hidden below, so this strip
-                // owns the top of the screen outright; the extra top padding
-                // (was s2) is that vacated space becoming air, not bigger
-                // chips (the 56pt Stories size is a 2026-07-10 ruling, not
-                // being revisited here).
-                SourceChips(labels: chipLabels, active: filter.source,
-                            onApps: { route.present(.apps) },
-                            onSettings: { route.present(.settings) },
-                            refreshSpin: chrome.refreshPulse,
-                            zoomNS: doorNS) { label in
-                    if label == filter.source {
-                        // Re-tapping the chip you're already on pops back to
-                        // root (the old per-tab habit) instead of doing nothing.
-                        chrome.popHome += 1
-                        return
-                    }
-                    withAnimation(DS.Motion.standard) {
-                        filter.source = label
-                        // Entering "All" means all; a specific source keeps
-                        // its own tag.
-                        if label == "All" { filter.tag = "All" }
-                    }
-                    // Tap-learning (ChipMemory) counts an actual switch, not
-                    // the re-tap-to-pop branch above.
-                    ChipMemory.visited(label)
+                if !isRegular {
+                    sourceStrip(axis: .horizontal)
+                        .padding(.top, DS.Space.s6)
+                        .padding(.bottom, DS.Space.s2)
                 }
-                .padding(.top, DS.Space.s6)
-                .padding(.bottom, DS.Space.s2)
+            }
+            // The detail pane (2026-07-25) — the iPad half of "a row tap
+            // opens a thing". A trailing inset rather than an HStack sibling
+            // so every modifier already hanging off the pager (the crown
+            // background, the bloom overlay, the arrival watcher, the
+            // navigation destinations) keeps applying to exactly what it
+            // always did; the pane is simply reserved space beside it.
+            .safeAreaInset(edge: .trailing, spacing: 0) {
+                if showsPane {
+                    detailPane
+                        .frame(width: PadLayout.paneWidth(for: surfaceWidth))
+                }
+            }
+            .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width in
+                surfaceWidth = width
+            }
+            // Told once, read everywhere: a row-tap site asks the selection
+            // whether a pane exists rather than re-deriving the breakpoint.
+            .onChange(of: showsPane, initial: true) { _, now in
+                detail.paneActive = now
+                // Rotating a mini into a shape that can't hold a pane must
+                // not strand a selection nothing renders.
+                if !now { detail.thing = nil }
             }
             // The themed page behind the chip header too — the header sits
             // OUTSIDE the screens' own dsPageBackground, so in light mode the

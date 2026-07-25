@@ -54,6 +54,16 @@ struct RootShell: View {
     /// per-conversation composer state.
     @State private var keyedHistory: [AgentTurn] = []
     @State private var redactNow = false
+    /// iPad (2026-07-25). The floating agent cluster lives in THIS ZStack,
+    /// which is deliberately outside `MainSurface`'s safe-area insets (ruling
+    /// 6 — the bar rides every screen this app can push, not just the feed),
+    /// so it has to restate the shell's two columns itself to float clear of
+    /// them. `PadShellInsets` is where that arithmetic lives.
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @State private var shellWidth: CGFloat = 0
+    private var padShell: PadShellInsets {
+        PadShellInsets(regular: horizontalSizeClass == .regular, width: shellWidth)
+    }
     /// The bar↔surface morph (2026-07-20) — shared between `AgentBar` and
     /// `Composer`'s `glassNamespace`, both keying `matchedGeometryEffect` to
     /// the same `"agentMorph"` id.
@@ -228,6 +238,19 @@ struct RootShell: View {
                     }
                 }
                 }
+                // iPad (2026-07-25): the cluster is a capsule holding one
+                // line, and at 1376pt wide it read as a mile-long bar with a
+                // placeholder floating in it. Capped, and inset past BOTH
+                // shell columns so it floats over the feed it belongs to
+                // rather than straddling the source rail on one side and the
+                // detail pane's content on the other. This ZStack sits
+                // OUTSIDE MainSurface's safe-area insets, so the rail and
+                // pane widths have to be restated here — that is what
+                // `PadLayout` exists to keep in one place.
+                .frame(maxWidth: padShell.isRegular ? PadLayout.agentBarMaxWidth : .infinity)
+                .frame(maxWidth: .infinity)
+                .padding(.leading, padShell.railInset)
+                .padding(.trailing, padShell.paneInset)
                 .padding(.horizontal, DS.Space.s4)
                 .padding(.bottom, DS.Space.s2)
                 .transition(.opacity)
@@ -273,6 +296,7 @@ struct RootShell: View {
             }
         }
         .animation(DS.Motion.standard, value: composerOpen)
+        .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { shellWidth = $0 }
         // The bar rides RootShell's OWN ZStack now (2026-07-19 — it replaced
         // the FAB, which used to live on MainSurface's root content
         // specifically so pushed rooms could slide over it; the bar

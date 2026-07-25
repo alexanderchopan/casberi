@@ -13,10 +13,20 @@ import SwiftUI
 /// connection needs you wears an orange one. No labels (labels made the row
 /// scroll, ruling 2026-07-09) — All keeps its word, every source wears its
 /// own brand mark.
+/// On iPad (regular width) the same strip turns 90° and becomes a fixed RAIL
+/// down the leading edge (2026-07-25, user ruling) — same 56pt Stories
+/// circles, same avatar-then-catalogue head, same rings, flips, catch bobs and
+/// accessibility. It is ONE view with an `axis`, not two: every behaviour on a
+/// chip (the sliding active ring, `ChipCatchBob`, the coin flip, the "All"
+/// chip reporting its frame so the capture flight knows where to land) would
+/// otherwise have to be kept in step across two copies, which is exactly how
+/// the old Home/Feed split drifted.
 struct SourceChips: View {
     /// The full ordered label list — "All", then real sources.
     let labels: [String]
     let active: String
+    /// `.horizontal` is the iPhone strip; `.vertical` is the iPad rail.
+    var axis: Axis = .horizontal
     /// Opens the app catalogue (user 2026-07-17: its door moved OUT of the
     /// top-right cluster and INTO the head of this strip — "add a source"
     /// belongs with your sources).
@@ -60,6 +70,45 @@ struct SourceChips: View {
     private static let stripInset: CGFloat = fadeClear + fadeRamp
 
     var body: some View {
+        switch axis {
+        case .horizontal: horizontalStrip
+        case .vertical:   verticalRail
+        }
+    }
+
+    /// The iPad rail. The two fixed doors sit at the HEAD, outside the scroll,
+    /// exactly as they do horizontally — but there is no leading-fade mask
+    /// here, because a rail has vertical room to spare and never has to run
+    /// its chips underneath the doors to earn it. Chips below scroll on their
+    /// own when a corpus grows past the rail's height.
+    private var verticalRail: some View {
+        VStack(spacing: Self.iconGap) {
+            avatarChip
+            catalogueChip
+            ScrollViewReader { proxy in
+                ScrollView(.vertical, showsIndicators: false) {
+                    VStack(spacing: DS.Space.s1) {
+                        ForEach(labels, id: \.self) { label in
+                            chip(label)
+                        }
+                    }
+                    .padding(.vertical, DS.Space.s2)
+                }
+                .scrollBounceBehavior(.basedOnSize)
+                .onAppear {
+                    if active != "All" { proxy.scrollTo(active, anchor: .center) }
+                }
+                .onChange(of: active) { _, now in
+                    withAnimation(DS.Motion.standard) { proxy.scrollTo(now, anchor: .center) }
+                }
+            }
+        }
+        .padding(.top, DS.Space.s2)
+        .frame(width: PadLayout.railWidth)
+        .frame(maxHeight: .infinity, alignment: .top)
+    }
+
+    private var horizontalStrip: some View {
         // The scroll strip runs the full width, UNDER the fixed app icon; the
         // leading fade mask dissolves each chip as it reaches the icon, so chips
         // melt INTO the catalogue button instead of being sheared off at a hard
@@ -259,7 +308,9 @@ struct SourceChips: View {
         .buttonStyle(.plain)
         // Finger-driven, never idle: chips ease down as they leave the viewport
         // edges (Stories grammar). Under Reduce Motion only the fade remains.
-        .scrollTransition(.interactive, axis: .horizontal) { content, phase in
+        // Follows `axis` so the rail's chips ease at its TOP and BOTTOM edges,
+        // which is where its own viewport ends.
+        .scrollTransition(.interactive, axis: axis) { content, phase in
             content
                 .scaleEffect(reduceMotion || phase.isIdentity ? 1 : 0.88)
                 .opacity(phase.isIdentity ? 1 : 0.6)

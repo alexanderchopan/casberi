@@ -1746,7 +1746,7 @@ struct FeedScreen: View {
                         .environment(\.genProjectTap) { name in
                             if let route = TokenQuickRoute.from(sentinel: name) {
                                 if let thing = route.watchedThing(in: modelContext) {
-                                    feedSheet = .thing(thing)
+                                    openThing(thing)
                                 } else {
                                     // The combined map merges wallets, so a
                                     // cell tapped there carries the "held in"
@@ -1825,7 +1825,7 @@ struct FeedScreen: View {
                             let firstOfDay = i == 0
                                 || dayLabel(items[i - 1].capturedAt) != dayLabel(thing.capturedAt)
                             Button {
-                                feedSheet = .thing(thing)
+                                openThing(thing)
                             } label: {
                                 PhotoCell(thing: thing, dayPill: firstOfDay ? dayLabel(thing.capturedAt) : nil)
                             }
@@ -2440,7 +2440,15 @@ struct FeedScreen: View {
     /// parties, the signed amount, the chain, the flag banner) and its Open
     /// disc IS that explorer link. Tapping a transaction should show the
     /// transaction, not the page for managing which wallets you watch.
+    ///
+    /// On iPad wide enough for two columns (2026-07-25) this fills the
+    /// trailing DETAIL PANE instead of throwing a sheet over the whole
+    /// screen — the row and the thing it opens stay on screen together, which
+    /// is the point of the shape. `present` returns false wherever no pane
+    /// exists (iPhone, an iPad mini in portrait, Slide Over), and the sheet
+    /// path below is then exactly the one this app has always taken.
     private func openThing(_ thing: Thing) {
+        guard !PadDetailSelection.shared.present(thing) else { return }
         feedSheet = .thing(thing)
     }
 

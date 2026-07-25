@@ -234,14 +234,33 @@ struct DSPageBackground: View {
 /// chain, so the background paints the full width behind the centered
 /// content, not just the narrowed column).
 private struct AdaptiveContentWidth: ViewModifier {
+    let width: DSContentWidth
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     func body(content: Content) -> some View {
         if horizontalSizeClass == .regular {
             content
-                .frame(maxWidth: DS.Layout.iPadContentMaxWidth)
+                .frame(maxWidth: width.points)
                 .frame(maxWidth: .infinity)
         } else {
             content
+        }
+    }
+}
+
+/// Which of the two iPad columns a screen's content wants (2026-07-25).
+enum DSContentWidth {
+    /// A single file of rows or form fields — Settings, every bridge setup
+    /// screen, the feed. The default, because that is what nearly every
+    /// screen in this app is.
+    case reading
+    /// A grid or catalog, which answers extra width with extra COLUMNS
+    /// rather than longer rows, and so earns more of the canvas.
+    case wide
+
+    var points: CGFloat {
+        switch self {
+        case .reading: DS.Layout.iPadReadingMaxWidth
+        case .wide:    DS.Layout.iPadWideMaxWidth
         }
     }
 }
@@ -255,8 +274,22 @@ extension View {
     /// iPad-only content-width cap (see `AdaptiveContentWidth`). A no-op on
     /// iPhone. Apply to the screen's own content root (its List/ScrollView),
     /// immediately before `.dsPageBackground()` where that screen has one.
-    func dsAdaptiveContentWidth() -> some View {
-        modifier(AdaptiveContentWidth())
+    /// Defaults to the READING column; pass `.wide` from a grid/catalog.
+    func dsAdaptiveContentWidth(_ width: DSContentWidth = .reading) -> some View {
+        modifier(AdaptiveContentWidth(width: width))
+    }
+
+    /// The screen title, sized for the device (2026-07-25). On iPhone this is
+    /// the large title every screen already wore. On iPad it goes INLINE:
+    /// a large title is laid out by the system against the physical screen
+    /// edge, while the content below it is capped and centred by
+    /// `dsAdaptiveContentWidth()` — so the two sat on different axes and the
+    /// screen read as two unrelated layouts stacked ("Settings" jammed into
+    /// the top-left corner of an empty canvas with its card floating in the
+    /// middle). Inline centres the title over the column instead, which is
+    /// also what iPad system apps do.
+    func dsScreenTitle(_ title: LocalizedStringKey) -> some View {
+        modifier(DSScreenTitle(title: title))
     }
 
     /// The person's mode, restated. The root shell already sets this, but a
@@ -288,5 +321,16 @@ extension View {
             .background(Color.black.ignoresSafeArea())
             .presentationBackground(Color.black)
             .colorScheme(.dark)
+    }
+}
+
+/// See `dsScreenTitle(_:)`.
+private struct DSScreenTitle: ViewModifier {
+    let title: LocalizedStringKey
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    func body(content: Content) -> some View {
+        content
+            .navigationTitle(title)
+            .navigationBarTitleDisplayMode(horizontalSizeClass == .regular ? .inline : .large)
     }
 }

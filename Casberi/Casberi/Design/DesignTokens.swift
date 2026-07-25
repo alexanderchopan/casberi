@@ -176,9 +176,17 @@ enum DS {
 
     enum Layout {
         /// The single-column content cap on iPad (regular width class).
-        /// Wide enough to read as intentional, not cramped; narrow enough
-        /// that a row/text block never touches the physical screen edges.
-        static let iPadContentMaxWidth: CGFloat = 900
+        ///
+        /// This was a flat 900 for every screen, which is the number that made
+        /// the app read as a phone stretched to fit (2026-07-25): at 900 a
+        /// feed row put its title and its trailing metadata ~700pt apart, and
+        /// a Settings row stranded its value at the far edge of a card
+        /// floating in an otherwise empty canvas. There are two jobs here, not
+        /// one — a READING column (a single file of rows) and a WIDE column
+        /// (a grid, which answers width with more columns instead of longer
+        /// rows) — so the token split in two. See `DSContentWidth`.
+        static let iPadReadingMaxWidth: CGFloat = PadLayout.readingMaxWidth
+        static let iPadWideMaxWidth: CGFloat = PadLayout.wideMaxWidth
     }
 
     // MARK: - Radii  (brief §8 is law; control/pill fill the gaps §8 omits)
