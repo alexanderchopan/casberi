@@ -153,13 +153,23 @@ enum DS {
 
     // MARK: - Spacing scale  (CSS --ds-space-*)
 
+    // Breathing-room pass (2026-07-25). The app read a bit dense — most visibly
+    // where cards stack (the wallet), but the fix belongs to the whole app, not
+    // one screen: everything routes through this scale, so loosening it here is
+    // the single global lever. The three CONTENT-RHYTHM rungs — inter-element
+    // gaps, card padding, section spacing — step up (they carry ~90% of the
+    // app's spacing: s2/s3/s4 are used ~930×), while the atomic s1 stays tight
+    // so deliberate groupings (caption↔number, icon↔label) don't drift, and the
+    // rare macro rungs (s6/s8) hold so already-spacious areas don't blow out.
+    // Names are now identifiers, not 4pt multiples — same convention the type
+    // ramp uses ("names read as intent, not pixel counts").
     enum Space {
-        static let s1: CGFloat = 4
-        static let s2: CGFloat = 8
-        static let s3: CGFloat = 12
-        static let s4: CGFloat = 16
-        static let s6: CGFloat = 24
-        static let s8: CGFloat = 32
+        static let s1: CGFloat = 4    // atomic — deliberately unchanged
+        static let s2: CGFloat = 10   // was 8
+        static let s3: CGFloat = 14   // was 12
+        static let s4: CGFloat = 18   // was 16
+        static let s6: CGFloat = 24   // macro — unchanged
+        static let s8: CGFloat = 32   // macro — unchanged
     }
 
     // MARK: - Layout (iPad content width — see `dsAdaptiveContentWidth()`)
