@@ -1,7 +1,9 @@
 import SwiftUI
 
 /// The SF type ramp. Ported 1:1 from the prototype's `.t-*` classes, which are
-/// the concrete visual spec. Brief §8 names the size ramp 34/22/17/15/13/12/10.
+/// the concrete visual spec. Brief §8 named the original size ramp
+/// 34/22/17/15/13/12/10; the reading band (17/15/13 → 18/16/14, see below) was
+/// raised a point each on 2026-07-25 so running text reads less like a manual.
 ///
 /// Dynamic Type: every style scales with the person's text-size setting via
 /// UIFontMetrics, anchored to its nearest system text style — the ramp keeps
@@ -39,10 +41,21 @@ extension DSTextStyle {
     // Prototype class → style. Names read as intent, not pixel counts.
     static let heading34 = DSTextStyle(size: 34, weight: .bold,     tracking: 0.34, lineHeight: 41, relative: .largeTitle, rounded: true)
     static let heading22 = DSTextStyle(size: 22, weight: .bold,     tracking: 0.22, lineHeight: 28, relative: .title2, rounded: true)
-    static let heading17 = DSTextStyle(size: 17, weight: .semibold, tracking: 0,    lineHeight: 22, relative: .headline)
-    static let body17    = DSTextStyle(size: 17, weight: .regular,  tracking: 0,    lineHeight: 22, relative: .body)
-    static let callout15 = DSTextStyle(size: 15, weight: .regular,  tracking: 0,    lineHeight: 20, relative: .subheadline)
-    static let subhead13 = DSTextStyle(size: 13, weight: .regular,  tracking: 0,    lineHeight: 18, relative: .footnote)
+    // Reading-band pass (2026-07-25). The app leaned on 13/15/17 for nearly
+    // all its running text — a lot of real sentences (row sublines, wallet
+    // metadata, DeFi stats) sat at 13pt, which read dense and document-like
+    // ("like a technical manual", user). Each of these four rungs steps up one
+    // point AND opens its line-height, so the reading band is both larger and
+    // airier. The DISPLAY tier (heading22/34), MONEY rungs (price*/stat24), and
+    // the micro-caption floor (label12/11, tab10) are deliberately untouched —
+    // moving those would flatten the hierarchy the feed and wallet lean on.
+    // Names keep their original pixel suffix as stable identifiers (the ~485
+    // call sites are unchanged); the comment above the ramp already says "names
+    // read as intent, not pixel counts".
+    static let heading17 = DSTextStyle(size: 18, weight: .semibold, tracking: 0,    lineHeight: 24, relative: .headline)
+    static let body17    = DSTextStyle(size: 18, weight: .regular,  tracking: 0,    lineHeight: 26, relative: .body)
+    static let callout15 = DSTextStyle(size: 16, weight: .regular,  tracking: 0,    lineHeight: 23, relative: .subheadline)
+    static let subhead13 = DSTextStyle(size: 14, weight: .regular,  tracking: 0,    lineHeight: 21, relative: .footnote)
     static let label12   = DSTextStyle(size: 12, weight: .medium,   tracking: 0,    lineHeight: 16, relative: .caption1)
     static let tab10     = DSTextStyle(size: 10, weight: .medium,   tracking: 0,    lineHeight: 12, relative: .caption2)
     static let mono12    = DSTextStyle(size: 12, weight: .regular,  tracking: 0,    lineHeight: 16, relative: .caption1, monospaced: true)
