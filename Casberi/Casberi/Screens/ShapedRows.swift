@@ -1,5 +1,6 @@
 import SwiftUI
 import Photos
+import CryptoKit
 
 /// Shaped Feed rows (docs/handoff-shaped-feeds.md) — when one source is in
 /// force the feed takes that source's native shape; "All" renders kind-aware
@@ -584,6 +585,91 @@ enum RemoteImageLoader {
 
     static func isDead(_ urlString: String) -> Bool { dead.contains(urlString) }
 
+    // MARK: Disk cache (survives cold launch — 2026-07-24)
+
+    /// The in-memory `cache` above is the hot path but dies with the process,
+    /// so every relaunch re-downloaded every thumbnail on the first scroll.
+    /// This is the backstop: downsampled thumbnails, keyed by the SAME
+    /// url+pixel-side identity, written under Caches (the OS may evict it
+    /// under storage pressure, which is correct for a cache) and read on a
+    /// memory miss before the network. Bounded by a throttled trim.
+    private static let diskDir: URL? = {
+        guard let base = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first
+        else { return nil }
+        let dir = base.appendingPathComponent("RemoteImageCache", isDirectory: true)
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        return dir
+    }()
+    private static let diskBudget = 80 * 1024 * 1024   // ~80MB of thumbnails
+
+    private static func diskURL(_ urlString: String, _ side: CGFloat) -> URL? {
+        guard let dir = diskDir else { return nil }
+        // A hash of the memory key — URLs carry slashes/query and can be long,
+        // so a fixed-width digest is the only safe filename. Collision-free in
+        // practice (SHA-256), so a hit is never the wrong image.
+        let digest = SHA256.hash(data: Data(String(key(urlString, side)).utf8))
+        let name = digest.map { String(format: "%02x", $0) }.joined()
+        return dir.appendingPathComponent(name).appendingPathExtension("img")
+    }
+
+    /// Decoded downsampled image from disk, or nil. Off the main actor (this
+    /// enum is nonisolated), so the file read never blocks a frame.
+    private static func diskImage(_ urlString: String, _ side: CGFloat) -> UIImage? {
+        guard let durl = diskURL(urlString, side),
+              let data = try? Data(contentsOf: durl),
+              let img = UIImage(data: data) else { return nil }
+        return img
+    }
+
+    /// Persist an already-downsampled thumb. PNG when the image carries alpha
+    /// (logos/icons — a JPEG would flatten transparency to black), JPEG
+    /// otherwise (photos — far smaller). Best-effort; a write failure just
+    /// means a future re-download.
+    private static func writeDisk(_ image: UIImage, _ urlString: String, _ side: CGFloat) {
+        guard let durl = diskURL(urlString, side) else { return }
+        let hasAlpha: Bool = {
+            guard let info = image.cgImage?.alphaInfo else { return true }
+            switch info {
+            case .none, .noneSkipFirst, .noneSkipLast: return false
+            default: return true
+            }
+        }()
+        guard let data = hasAlpha ? image.pngData() : image.jpegData(compressionQuality: 0.8)
+        else { return }
+        try? data.write(to: durl, options: .atomic)
+        trimDiskIfNeeded()
+    }
+
+    private static let trimLock = NSLock()
+    nonisolated(unsafe) private static var lastTrim = Date.distantPast
+    /// Trim the disk cache to budget, oldest-first — throttled to at most once
+    /// every few minutes and run detached so a write never waits on it.
+    private static func trimDiskIfNeeded() {
+        trimLock.lock()
+        let due = Date.now.timeIntervalSince(lastTrim) > 300
+        if due { lastTrim = .now }
+        trimLock.unlock()
+        guard due, let dir = diskDir else { return }
+        Task.detached(priority: .utility) {
+            let fm = FileManager.default
+            let keys: [URLResourceKey] = [.contentModificationDateKey, .fileSizeKey]
+            guard let files = try? fm.contentsOfDirectory(
+                at: dir, includingPropertiesForKeys: keys) else { return }
+            var entries = files.compactMap { url -> (URL, Date, Int)? in
+                guard let v = try? url.resourceValues(forKeys: Set(keys)) else { return nil }
+                return (url, v.contentModificationDate ?? .distantPast, v.fileSize ?? 0)
+            }
+            var total = entries.reduce(0) { $0 + $1.2 }
+            guard total > diskBudget else { return }
+            entries.sort { $0.1 < $1.1 }               // oldest first
+            let target = diskBudget * 8 / 10           // trim down to 80%
+            for (url, _, size) in entries where total > target {
+                try? fm.removeItem(at: url)
+                total -= size
+            }
+        }
+    }
+
     /// The synchronous cache probe — a hit lands in the same render pass, so
     /// a recycled row never flashes its placeholder for an image the session
     /// already holds (an await, however short, is a frame).
@@ -599,6 +685,16 @@ enum RemoteImageLoader {
         if dead.contains(urlString) { return .dead }
         if cached, let hit = cache.object(forKey: key(urlString, targetSide)) {
             return .image(hit, fresh: false)
+        }
+        // Disk backstop (2026-07-24): a relaunch's first scroll paints from
+        // disk instead of re-downloading. Already downsampled to `targetSide`,
+        // so no re-decode-at-size cost. `fresh: false` — a known image, so it
+        // assigns flat rather than fading in like a network arrival.
+        if cached, let onDisk = diskImage(urlString, targetSide) {
+            let cost = Int(onDisk.size.width * onDisk.size.height
+                           * onDisk.scale * onDisk.scale * 4)
+            cache.setObject(onDisk, forKey: key(urlString, targetSide), cost: cost)
+            return .image(onDisk, fresh: false)
         }
         guard let url = URL(string: urlString),
               let (data, _) = try? await URLSession.shared.data(from: url) else {
@@ -621,6 +717,7 @@ enum RemoteImageLoader {
             let cost = Int(thumb.size.width * thumb.size.height
                            * thumb.scale * thumb.scale * 4)
             cache.setObject(thumb, forKey: key(urlString, targetSide), cost: cost)
+            writeDisk(thumb, urlString, targetSide)   // survive cold launch
         }
         return .image(thumb, fresh: true)
     }

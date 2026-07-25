@@ -439,6 +439,15 @@ struct RootShell: View {
             // screens' own reads and crashes SwiftData. The CoreSpotlight
             // calls it makes are non-blocking, so this is cheap on main.
             Task { @MainActor in
+                // Yield past the first frame (2026-07-24 perf): none of this
+                // block is needed for the UI to function — Spotlight donation,
+                // duplicate cleanup, and the one-time migrations are all
+                // housekeeping. Letting the first paint land before this runs
+                // on the main actor keeps cold launch snappy; it also widens
+                // the gap before the dedupe delete (already crash-safe via the
+                // KeyedThing value-keying) touches the store.
+                try? await Task.sleep(for: .milliseconds(400))
+                guard !Task.isCancelled else { return }
                 // Every launch: Spotlight reconciles and CloudKit-merge
                 // duplicates collapse (covers extension writes + sync merges).
                 SpotlightIndex.reindexAll(context: modelContext)

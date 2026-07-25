@@ -15,7 +15,21 @@ import SwiftData
 /// body keeps its own inner pushes (a project, a bridge panel) but no longer
 /// carries a stack of its own.
 struct MainSurface: View {
-    @Query(sort: \Thing.capturedAt, order: .reverse) private var things: [Thing]
+    // Whole corpus, newest first — but hydrating ONLY the columns this surface
+    // reads (2026-07-24 perf). This screen never renders a Thing's body
+    // (FeedScreen does, with its own query); it only needs source/capturedAt
+    // for the chip strip and id/tags/title for the arrival watcher. Without
+    // `propertiesToFetch`, every write re-materialized the whole corpus WITH
+    // its heavy inline text (content/enrichedText/postText) on the main
+    // thread — the dominant steady-state cost as the corpus grows. Every
+    // property read off `things`/`feedThings` here is in this set, so nothing
+    // faults; the objects never leave this view.
+    @Query(MainSurface.chipCorpus) private var things: [Thing]
+    private static var chipCorpus: FetchDescriptor<Thing> {
+        var d = FetchDescriptor<Thing>(sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
+        d.propertiesToFetch = [\.id, \.source, \.capturedAt, \.title, \.tags]
+        return d
+    }
     @Environment(ShellChrome.self) private var chrome
     @Bindable private var filter = FeedFilter.shared
     @Bindable private var route = HomeRoute.shared

@@ -30,6 +30,23 @@ enum BridgeRefresh {
     private static var lastSweep: Date?
     private static let minSweepInterval: TimeInterval = 45
 
+    /// Per-heal throttle (2026-07-24 perf): the pure DELETE-SYNC passes —
+    /// removing rows whose upstream item is gone (Photos/Calendar) — are
+    /// cleanup, not fresh content, so they needn't run on every foreground the
+    /// way the "land new items" refreshes do. Each runs at most once per
+    /// `healInterval`, keyed in UserDefaults so the throttle survives relaunch.
+    /// A deleted item lingering a few extra minutes is invisible; a full
+    /// source-wide fetch+diff on every foreground is not free. (Bluesky/
+    /// Farcaster/Mail heals already carry their own 1h network throttle.)
+    private static let healInterval: TimeInterval = 600
+    static func dueForHeal(_ key: String) -> Bool {
+        let k = "heal.due.\(key)"
+        let now = Date.now.timeIntervalSince1970
+        guard now - UserDefaults.standard.double(forKey: k) > healInterval else { return false }
+        UserDefaults.standard.set(now, forKey: k)
+        return true
+    }
+
     /// `force: true` (pull-to-refresh) always runs live, matching the
     /// gesture's own contract of bypassing every other TTL/cache in the
     /// refresh path — only the automatic scenePhase-driven sweep is gated.
@@ -57,9 +74,13 @@ enum BridgeRefresh {
         if connected("pho") {
             _ = ScreenshotIngest.ingest(context: context)
             // Thumbnails for new rows, removal of confirmed-gone hollow ones.
-            let s = slot(); Task { @MainActor in
-                await BridgeRefresh.stagger(s)
-                _ = await ScreenshotIngest.heal(context: context)
+            // The heal (delete-sync + thumbnail backfill) is throttled — new
+            // screenshots still land every foreground via `ingest` above.
+            if BridgeRefresh.dueForHeal("photos") {
+                let s = slot(); Task { @MainActor in
+                    await BridgeRefresh.stagger(s)
+                    _ = await ScreenshotIngest.heal(context: context)
+                }
             }
         }
         if connected("cal") {
@@ -68,10 +89,13 @@ enum BridgeRefresh {
                 _ = await ScheduleIngest.refreshCalendar(context: context)
             }
             // Delete-sync: an event deleted outright (not just aged out of
-            // the ingest window) — local EventKit check, cheap like Photos'.
-            let s2 = slot(); Task { @MainActor in
-                await BridgeRefresh.stagger(s2)
-                _ = ScheduleIngest.healCalendar(context: context)
+            // the ingest window) — local EventKit check. Throttled: refresh
+            // above still lands new/changed events every foreground.
+            if BridgeRefresh.dueForHeal("calendar") {
+                let s2 = slot(); Task { @MainActor in
+                    await BridgeRefresh.stagger(s2)
+                    _ = ScheduleIngest.healCalendar(context: context)
+                }
             }
         }
         if connected("rem") {
