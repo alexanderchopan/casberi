@@ -3645,6 +3645,49 @@ private struct GenMoversTile: View {
         return TokenChartStyle.accent(change: pct / 100, scheme: scheme)
     }
 
+    /// One watchlist line. `curve` is what `ViewThatFits` trades away first —
+    /// the symbol and the move are the facts, the sparkline is their texture.
+    ///
+    /// The symbol also carries layout priority (2026-07-25). Before that it
+    /// was the row's only compressible element — the value is `fixedSize`, the
+    /// curve pinned at 44 — so in a narrow tile, or at a larger Dynamic Type
+    /// size, the ticker absorbed the entire shortfall and drew as "E…", a row
+    /// naming nothing.
+    @ViewBuilder
+    private func row(_ m: Move, curve: Bool) -> some View {
+        HStack(spacing: DS.Space.s2) {
+            Text(m.symbol)
+                .dsText(.callout15)
+                .foregroundStyle(DS.textPrimary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+                .allowsTightening(true)
+                .layoutPriority(1)
+            // The row's own tiny curve (2026-07-23) — reusing `TokenPulse`'s
+            // already-cached closes, so a watchlist row says the SHAPE of the
+            // move, not only its sign. Flat draws in the value's own tertiary
+            // ink (§83: no direction, no color).
+            if curve, m.closes.count >= 2 {
+                TokenChartPlot(chart: TokenChart(closes: m.closes,
+                                                 price: m.closes.last ?? 0,
+                                                 change: (Double(m.value.replacingOccurrences(of: "%", with: "")) ?? 0) / 100),
+                               accent: ink(m.value),
+                               height: 20,
+                               pulses: false,
+                               lineWidth: 1.5,
+                               fillOpacity: 0)
+                    .frame(width: 44)
+            }
+            Spacer(minLength: DS.Space.s2)
+            Text(m.value)
+                .dsText(.callout15).fontWeight(.semibold)
+                .foregroundStyle(ink(m.value))
+                .monospacedDigit()
+                .lineLimit(1)
+                .fixedSize(horizontal: true, vertical: false)
+        }
+    }
+
     var body: some View {
         let moves = moves
         return Group {
@@ -3654,34 +3697,14 @@ private struct GenMoversTile: View {
                         .dsText(.subhead13)
                         .foregroundStyle(DS.textTertiary)
                     ForEach(Array(moves.enumerated()), id: \.offset) { _, m in
-                        HStack(spacing: DS.Space.s2) {
-                            Text(m.symbol)
-                                .dsText(.callout15)
-                                .foregroundStyle(DS.textPrimary)
-                                .lineLimit(1)
-                            // The row's own tiny curve (2026-07-23) — reusing
-                            // `TokenPulse`'s already-cached closes, so a
-                            // watchlist row says the SHAPE of the move, not
-                            // only its sign. Flat draws in the value's own
-                            // tertiary ink (§83: no direction, no color).
-                            if m.closes.count >= 2 {
-                                TokenChartPlot(chart: TokenChart(closes: m.closes,
-                                                                 price: m.closes.last ?? 0,
-                                                                 change: (Double(m.value.replacingOccurrences(of: "%", with: "")) ?? 0) / 100),
-                                               accent: ink(m.value),
-                                               height: 20,
-                                               pulses: false,
-                                               lineWidth: 1.5,
-                                               fillOpacity: 0)
-                                    .frame(width: 44)
-                            }
-                            Spacer(minLength: DS.Space.s2)
-                            Text(m.value)
-                                .dsText(.callout15).fontWeight(.semibold)
-                                .foregroundStyle(ink(m.value))
-                                .monospacedDigit()
-                                .lineLimit(1)
-                                .fixedSize(horizontal: true, vertical: false)
+                        // All three parts, or the two that are the facts
+                        // (2026-07-25). A flexible curve squeezed to a few
+                        // points draws a vertical tick that reads as a
+                        // rendering fault; ViewThatFits gives it its real 44
+                        // or drops it, and nothing in between.
+                        ViewThatFits(in: .horizontal) {
+                            row(m, curve: true)
+                            row(m, curve: false)
                         }
                     }
                 }
