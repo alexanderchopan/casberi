@@ -8186,3 +8186,13 @@ Resolution — kill the separate surface, fold its unique content inline:
 - **Deleted:** `CombinedWalletsSheet.swift`, the `.combinedWallets` `FeedSheetRoute` case, and the now-orphaned `WalletStore.combinedBands()` / `WalletBand` / `combinedHoldingsDeltas()`.
 
 Known edge (faithful to the old component, worth a later pass): if only *some* watched wallets have sample history, "Each wallet" shows a partial list — inline that reads slightly odd where in a deliberately-opened sheet it didn't. A future pass could show every watched wallet, dimmed until it has a line. Verified on sim: the section renders inline with the door gone; build green, catalog-sync unaffected.
+
+## 209. Peer/0xBow "connect" routes straight to the Wallet manager — one screen removed (user: "we made the wallet experience for peer and 0xbow worse… there is an extra screen… we need to remove a screen somehow", 2026-07-25) — VERIFIED
+
+A regression from §207. Once Peer/0xBow went automatic, their setup screen (`PeerScreen`/`PrivacyPoolsScreen`) lost its only action — the connect toggle — and became a pass-through that just re-doored to the Wallet manager. So the connect flow was **product page → setup screen (which only says "watch a wallet") → Wallet manager** — three screens where the middle one did nothing.
+
+The user's constraint: keep Peer/0xBow as *separate* catalog entries (they're a separate API call — don't run it for every wallet unless asked), but kill the dead screen.
+
+Fix, one line in the router: `BridgeRouter.destination(forOffer:)` returns `.wallet` for "Peer" and "0xBow Privacy Pools". Because the catalog's **connect** paths all resolve through `forOffer` while the **open/manage** paths resolve through `forID`, this reroutes *every* connect entry point (product-page Connect, catalog tiles, peek-connect) straight to the Wallet manager — while a connected seat's "Open" still resolves to its own fills screen via `forID`. Connecting Peer = watching a wallet (§207), so the Wallet manager is the honest destination. Flow is now **product page → Connect → Wallet manager** (2), or a direct tile → Wallet manager (1). Verified on sim: Peer product page's Connect lands on the Wallet manager, no setup-screen hop.
+
+`PeerScreen`/`PrivacyPoolsScreen` still exist as the connected "recent fills" view (the Open target); they're simply no longer in the connect path. A later pass could retire them entirely in favor of the Peer/0xBow *source feed*, but that wasn't the ask.

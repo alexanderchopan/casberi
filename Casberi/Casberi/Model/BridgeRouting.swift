@@ -173,7 +173,16 @@ enum BridgeRouter {
     /// `nil` = the offer has no dedicated screen — its Connect runs
     /// `BridgeConnect` instead of pushing.
     static func destination(forOffer name: String) -> Destination? {
-        rows.first { $0.offer == name }?.destination
+        // Peer & 0xBow Privacy Pools have no setup of their own — "connecting"
+        // them IS watching a wallet (prd §207/§209). So the CONNECT flow (every
+        // caller of `forOffer`) routes straight to the Wallet manager instead
+        // of a pass-through setup screen that only re-doored there — one fewer
+        // screen between the catalog and the one real action. Their own screen
+        // (recent fills) is unaffected: it's the OPEN/manage path, which resolves
+        // through `destination(forID:)` below, and still returns `.peer`/
+        // `.privacyPools` once a wallet is watched and the seat reads connected.
+        if name == "Peer" || name == "0xBow Privacy Pools" { return .wallet }
+        return rows.first { $0.offer == name }?.destination
     }
 
     /// Where a connected seat opens (connected route), keyed by BridgeStore id.
