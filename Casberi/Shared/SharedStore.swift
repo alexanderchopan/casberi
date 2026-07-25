@@ -19,6 +19,17 @@ enum SharedStore {
         UserDefaults.standard.bool(forKey: "icloud.sync")
     }
 
+    /// UserDefaults key: set to `true` the instant we ask SwiftData for a
+    /// CloudKit-backed container; cleared once we have proof this launch
+    /// survived setup (see `CloudSyncGuard`). If it's still `true` at the top
+    /// of the NEXT launch, the previous launch's CloudKit setup TRAPPED (a
+    /// mirroring queue can `os_crash` from Apple's own code — see
+    /// `Casberi-2026-07-24-233929.ips`, `PFCloudKitSetupAssistant` on
+    /// `com.apple.coredata.cloudkit.queue`). `containerWithFallback`'s `try?`
+    /// can't catch that — it happens after `container()` returns — so this
+    /// out-of-band marker is the only way to break the crash-loop.
+    static let cloudAttemptMarkerKey = "icloud.cloudAttemptInFlight"
+
     /// The build's CloudKit readiness — the ship gate. CloudKit mirroring sets
     /// up on a background queue and *traps* (doesn't throw) when the iCloud
     /// container entitlement is absent, so `try?` can't guard it, and iOS has no
@@ -46,6 +57,12 @@ enum SharedStore {
         // final UI, and this is the ship gate that keeps a live toggle from
         // crashing (or lying) before the engine exists.
         if syncEnabled, cloudKitReady {
+            // Stamp the in-flight marker BEFORE handing SwiftData the
+            // CloudKit descriptor: the mirror's own setup queue can trap
+            // inside Apple's code, and a marker written after that point
+            // would never land. `CloudSyncGuard` (app-only) clears it on
+            // any proof-of-survival (setup event, or clean background).
+            UserDefaults.standard.set(true, forKey: cloudAttemptMarkerKey)
             let made = try make(cloudKit: .private(cloudContainerID))
             cloudSyncActive = true
             return made
@@ -78,6 +95,20 @@ enum SharedStore {
     /// the app still launches (empty, but alive); the real store file is
     /// left untouched on disk for a future fixed build to recover.
     static func containerWithFallback() -> ModelContainer {
+        // If the last launch stamped the CloudKit attempt marker and never
+        // cleared it, the mirror trapped mid-setup. Auto-flip sync off THIS
+        // launch so the app comes up local-only instead of crash-looping —
+        // the person still has their things, and the toggle is theirs to
+        // turn back on when the underlying cause is addressed (schema
+        // deployment, entitlement, capacity). Written to `UserDefaults`
+        // directly so the AppStorage-backed toggle picks it up on next read.
+        let defaults = UserDefaults.standard
+        if defaults.bool(forKey: cloudAttemptMarkerKey), defaults.bool(forKey: "icloud.sync") {
+            NSLog("[Casberi] previous launch trapped in CloudKit setup — turning sync off")
+            defaults.set(false, forKey: "icloud.sync")
+            degradeReason = "iCloud sync couldn't set up and was turned off. Your things are safe here — you can turn it back on in Data."
+        }
+        defaults.removeObject(forKey: cloudAttemptMarkerKey)
         do {
             return try container()
         } catch let primaryError {

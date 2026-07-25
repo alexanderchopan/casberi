@@ -32,6 +32,10 @@ struct CasberiApp: App {
         // the app must always launch. `SharedStore.degradeReason` is non-nil
         // when that happened; RootShell flashes it once at first appearance.
         container = SharedStore.containerWithFallback()
+        // Clear the CloudKit "attempt in flight" marker on the first proof
+        // this launch survived setup — either CoreData's mirror event or a
+        // clean background handoff. See `CloudSyncGuard`.
+        CloudSyncGuard.begin()
         // The demo corpus seeds only in debug, never for a fresh user (real
         // users start empty — the empty states are the product too).
         if DemoState.seedsDemoData {
