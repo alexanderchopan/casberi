@@ -32,7 +32,7 @@ import SwiftData
 /// `TokenChart.route` reads). Curated, not exhaustive — a chain with no trading
 /// culture would only pad the picker.
 enum TrendingChain: String, CaseIterable, Identifiable {
-    case ethereum, base, solana, bsc, arbitrum, polygon, optimism, avalanche, blast
+    case ethereum, base, solana, bsc, arbitrum, polygon, optimism, avalanche, blast, robinhood
 
     var id: String { rawValue }
 
@@ -48,6 +48,7 @@ enum TrendingChain: String, CaseIterable, Identifiable {
         case .optimism:  "Optimism"
         case .avalanche: "Avalanche"
         case .blast:     "Blast"
+        case .robinhood: "Robinhood"
         }
     }
 
@@ -63,6 +64,7 @@ enum TrendingChain: String, CaseIterable, Identifiable {
         case .optimism:  "optimism"
         case .avalanche: "avax"
         case .blast:     "blast"
+        case .robinhood: "robinhood"
         }
     }
 
@@ -79,6 +81,7 @@ enum TrendingChain: String, CaseIterable, Identifiable {
         case .optimism:  "optimism"
         case .avalanche: "avalanche"
         case .blast:     "blast"
+        case .robinhood: "robinhood"
         }
     }
 
