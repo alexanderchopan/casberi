@@ -44,6 +44,16 @@ struct SocialPostContent: View {
     }
 
     var body: some View {
+        // A CHILD of ThingSheetView (whose init/body guard the deleted-model
+        // case) — but SwiftUI can re-render a child on the model's own
+        // observation before the parent re-evaluates its guard, so this reads
+        // `thing`'s stored props (likeCount, imageURLs, quote…) independently.
+        // Bluesky/Farcaster run their OWN foreground delete-sync heals that can
+        // remove an open post, so guard here too: reading a tombstoned model's
+        // stored property traps (2026-07-24). `isLive` is safe on a tombstone.
+        if !thing.isLive {
+            Color.clear
+        } else {
         VStack(alignment: .leading, spacing: DS.Space.s3) {
             photos
             if let quote = thing.quote {
@@ -57,7 +67,9 @@ struct SocialPostContent: View {
         .padding(.horizontal, DS.Space.s4)
         .padding(.bottom, DS.Space.s3)
         .task {
+            guard thing.isLive else { return }
             engagement = await SocialThread.engagement(for: thing)
+        }
         }
     }
 

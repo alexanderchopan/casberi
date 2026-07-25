@@ -126,7 +126,24 @@ struct ThingSheetView: View {
         // branch below reads `thing.kind`/`thing.title`/etc. unconditionally.
         // Nothing to show for a thing that's gone, so the sheet just leaves.
         if thing.modelContext == nil {
-            Color.clear.onAppear { dismiss() }
+            // This item was removed by a concurrent delete-sync heal between
+            // the row tap and this render. DON'T dismiss from `onAppear`:
+            // that fires DURING the sheet's (zoom) present transition and
+            // trips UIKit's dismiss-mid-transition assertion — a `brk 1`
+            // inside `-[UIPresentationController runTransitionForCurrentState
+            // Animated:]`, reached via SwiftUI's `SheetBridge.preferencesDid
+            // change` (live TestFlight crash, build 142, opening a Bluesky
+            // post a heal had just removed; the empty branch also drops the
+            // `.presentationDetents` the sheet expects, which is what pokes
+            // `preferencesDidChange`). Wait for the present transition to
+            // settle, THEN dismiss — a brief empty sheet that closes itself
+            // is the honest outcome for a thing that's gone, and it never
+            // races the transition. `.task` is cancelled if the user swipes
+            // it away first.
+            Color.clear.task {
+                try? await Task.sleep(for: .milliseconds(500))
+                dismiss()
+            }
         } else {
         ScrollViewReader { proxy in
         ScrollView {
