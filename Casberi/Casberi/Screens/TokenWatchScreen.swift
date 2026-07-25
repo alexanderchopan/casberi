@@ -150,8 +150,8 @@ struct TokenWatchScreen: View {
     private var rosterSection: some View {
         let items = orderedWatched
         return AssetRosterShelf(note: rosterNote) {
-            ForEach(items) { thing in
-                rosterSlot(thing, in: items)
+            ForEach(items.keyed) { row in
+                rosterSlot(row.thing, in: items)
             }
             AssetRosterAddSlot { fieldFocused = true }
         }

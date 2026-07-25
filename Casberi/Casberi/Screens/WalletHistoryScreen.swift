@@ -81,7 +81,8 @@ struct WalletHistoryScreen: View {
             } else {
                 ForEach(groups, id: \.0) { label, rows in
                     Section {
-                        ForEach(rows) { thing in
+                        ForEach(rows.keyed) { row in
+                            let thing = row.thing
                             Button { sheetThing = thing } label: {
                                 WalletHistoryRow(thing: thing,
                                                  walletLabel: walletLabel(thing))

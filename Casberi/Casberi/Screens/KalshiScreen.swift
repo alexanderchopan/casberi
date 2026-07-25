@@ -106,7 +106,8 @@ struct KalshiScreen: View {
     /// Unwatching deletes the thing — the thing IS the watch.
     private var watchlistSection: some View {
         Section {
-            ForEach(watched) { thing in
+            ForEach(watched.keyed) { row in
+                let thing = row.thing
                 VStack(alignment: .leading, spacing: 2) {
                     Text(thing.title)
                         .dsText(.body17).foregroundStyle(DS.textPrimary)

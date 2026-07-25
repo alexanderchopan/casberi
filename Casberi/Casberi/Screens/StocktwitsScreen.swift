@@ -156,8 +156,8 @@ struct StocktwitsScreen: View {
     /// sourceRef leaving the store lets a re-add resolve).
     private var watchlistSection: some View {
         AssetRosterShelf(note: rosterNote) {
-            ForEach(watched) { thing in
-                rosterSlot(thing)
+            ForEach(watched.keyed) { row in
+                rosterSlot(row.thing)
             }
             AssetRosterAddSlot { fieldFocused = true }
         }

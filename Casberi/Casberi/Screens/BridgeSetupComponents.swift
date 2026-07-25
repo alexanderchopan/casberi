@@ -378,7 +378,8 @@ struct RecentThingsSection: View {
             // row-level .listRowSeparator(.hidden) (SwiftUI won't suppress the
             // first separator after a section header). Design law: no hairlines.
             VStack(alignment: .leading, spacing: DS.Space.s3) {
-                ForEach(Array(things.enumerated()), id: \.element.id) { i, thing in
+                ForEach(Array(things.keyed.enumerated()), id: \.element.id) { i, row in
+                    let thing = row.thing
                     VStack(alignment: .leading, spacing: 2) {
                         Text(thing.title)
                             .dsText(.body17).foregroundStyle(DS.textPrimary)

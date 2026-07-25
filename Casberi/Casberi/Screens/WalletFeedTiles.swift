@@ -717,14 +717,19 @@ struct WalletWorthALookTray: View {
     /// many of the four kinds are actually present.
     private enum ActionRow: Identifiable {
         case liquidation(WalletWarning)
-        case approval(Thing)
+        // The approval carries its id as a STORED value captured at
+        // construction (2026-07-24 crash fix) — reading `t.id` lazily in the
+        // `id` getter reached into the SwiftData model during ForEach diffing,
+        // and a reconciliation/CloudKit delete of that approval Thing then
+        // trapped. WalletWarning is a value struct, so its `id` is safe.
+        case approval(id: String, thing: Thing)
         case delegation(WalletWarning)
         case safe(WalletWarning)
 
         var id: String {
             switch self {
             case .liquidation(let w): "liquidation:\(w.id)"
-            case .approval(let t): "approval:\(t.id)"
+            case .approval(let id, _): "approval:\(id)"
             case .delegation(let w): "delegation:\(w.id)"
             case .safe(let w): "safe:\(w.id)"
             }
@@ -733,7 +738,7 @@ struct WalletWorthALookTray: View {
 
     private var actionRows: [ActionRow] {
         liquidation.map(ActionRow.liquidation)
-            + activeApprovals.map(ActionRow.approval)
+            + activeApprovals.map { ActionRow.approval(id: $0.id.uuidString, thing: $0) }
             + delegations.map(ActionRow.delegation)
             + safeSignatures.map(ActionRow.safe)
     }
@@ -844,7 +849,7 @@ struct WalletWorthALookTray: View {
                                     ForEach(actionRows) { item in
                                         switch item {
                                         case .liquidation(let w): liquidationRow(w)
-                                        case .approval(let t): approvalActionRow(t)
+                                        case .approval(_, let t): approvalActionRow(t)
                                         case .delegation(let w): delegationRow(w)
                                         case .safe(let w): safeRow(w)
                                         }
@@ -1004,7 +1009,7 @@ struct WalletWorthALookTray: View {
 
             if awareExpanded {
                 VStack(spacing: 0) {
-                    ForEach(flagged) { flaggedRow($0) }
+                    ForEach(flagged.keyed) { flaggedRow($0.thing) }
                 }
                 Button {
                     DSHaptic.tap()

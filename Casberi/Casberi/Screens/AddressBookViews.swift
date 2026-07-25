@@ -409,7 +409,8 @@ struct AddressCard: View {
                 Text("Your history together · \(things.count)")
                     .dsText(.label12).foregroundStyle(DS.textSecondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                ForEach(Array(things.prefix(6).enumerated()), id: \.element.id) { i, thing in
+                ForEach(Array(Array(things.prefix(6)).keyed.enumerated()), id: \.element.id) { i, row in
+                    let thing = row.thing
                     HStack(spacing: DS.Space.s3) {
                         KindGlyph(kind: thing.kind, size: 26)
                         VStack(alignment: .leading, spacing: 1) {
