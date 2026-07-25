@@ -366,26 +366,57 @@ struct FeedScreen: View {
 
     /// A feed row in the All shape: a thing, or one row standing in for a
     /// source's bulk arrivals that day.
-    private enum FeedRow: Identifiable {
-        case single(Thing)
-        /// `art`: up to three member preview-image URLs, newest first — the
-        /// bundle's own pictures (2026-07-21), so "Shopify · 100 products"
-        /// can show what actually arrived instead of one brand glyph.
-        case bundle(source: String, word: String, count: Int, newest: Date, art: [String])
-        var id: String {
-            switch self {
-            case .single(let t): t.id.uuidString
-            case .bundle(let source, _, _, let newest, _):
-                "bundle-\(source)-\(newest.timeIntervalSince1970)"
-            }
+    /// `id` and `date` are STORED, captured at construction — never computed
+    /// off the wrapped `Thing` on demand (2026-07-24 crash fix). As an enum
+    /// whose `id` read `t.id.uuidString` lazily, `ForEach`'s identity diffing
+    /// (`ForEachChild.updateValue()`) reached into the SwiftData model every
+    /// graph update; when a launch-time dedupe (`SyncReconcile`) or a CloudKit
+    /// merge deleted that `Thing` mid-render, the read trapped inside SwiftData
+    /// (`_assertionFailure`) — the field crash reported as "crashes on open
+    /// after an update, never on a fresh install," since only an updated
+    /// install has synced duplicates to delete. Capturing the id/date as plain
+    /// value types at construction (below, while the `Thing` is still valid)
+    /// keeps the diffing path off the model entirely; the model is only touched
+    /// in the row body, which renders exclusively from the post-delete `@Query`
+    /// snapshot that already excludes the deleted row.
+    private struct FeedRow: Identifiable {
+        let id: String
+        let date: Date
+        let kind: Kind
+        enum Kind {
+            case single(Thing)
+            /// `art`: up to three member preview-image URLs, newest first — the
+            /// bundle's own pictures (2026-07-21), so "Shopify · 100 products"
+            /// can show what actually arrived instead of one brand glyph.
+            case bundle(source: String, word: String, count: Int, newest: Date, art: [String])
         }
-        var date: Date {
-            switch self {
-            case .single(let t): t.capturedAt
-            case .bundle(_, _, _, let newest, _): newest
-            }
+        static func single(_ t: Thing) -> FeedRow {
+            FeedRow(id: t.id.uuidString, date: t.capturedAt, kind: .single(t))
+        }
+        static func bundle(source: String, word: String, count: Int,
+                           newest: Date, art: [String]) -> FeedRow {
+            FeedRow(id: "bundle-\(source)-\(newest.timeIntervalSince1970)", date: newest,
+                    kind: .bundle(source: source, word: word, count: count,
+                                  newest: newest, art: art))
         }
     }
+
+    /// A `Thing` paired with its identity captured as a plain `String` — so a
+    /// `ForEach` over a DERIVED thing array (a shaped feed, the photo grid)
+    /// keys on a value, never reaching into the SwiftData model during
+    /// identity diffing (`ForEachChild.updateValue()`). Same 2026-07-24 crash
+    /// class as `FeedRow`: when a launch-time dedupe or a CloudKit merge
+    /// deletes/invalidates a `Thing` mid-render, reading its `id` off the model
+    /// while `ForEach` reconciles the OLD (now-stale) children traps inside
+    /// SwiftData — only on an updated install, never a fresh one. The row body
+    /// still uses `.thing`, but bodies only ever render the post-delete
+    /// `@Query` snapshot, which already excludes the deleted row.
+    private struct KeyedThing: Identifiable {
+        let id: String
+        let thing: Thing
+        init(_ t: Thing) { id = t.id.uuidString; thing = t }
+    }
+    private func keyed(_ things: [Thing]) -> [KeyedThing] { things.map(KeyedThing.init) }
 
     /// Machine bulk bundles; human captures never do. A screenshot, a voice
     /// note, or anything typed/pasted is one deliberate act each — an RSS
@@ -1044,8 +1075,8 @@ struct FeedScreen: View {
         let positions = cardRunPositions(count: ordered.count,
                                          isBreaker: { standsAlone(ordered[$0]) })
         Section {
-            ForEach(Array(ordered.enumerated()), id: \.element.id) { i, thing in
-                shapedListRow(thing, index: i, nextEventID: nextEventID,
+            ForEach(Array(keyed(ordered).enumerated()), id: \.element.id) { i, item in
+                shapedListRow(item.thing, index: i, nextEventID: nextEventID,
                               position: positions[i])
             }
         }
@@ -1088,14 +1119,14 @@ struct FeedScreen: View {
             let positions = cardRunPositions(
                 count: rows.count,
                 isBreaker: { i in
-                    if case .single(let thing) = rows[i] { return standsAlone(thing) }
+                    if case .single(let thing) = rows[i].kind { return standsAlone(thing) }
                     return false
                 },
                 isBoundary: { rows[$0].id == boundary })
             Section {
                 ForEach(Array(rows.enumerated()), id: \.element.id) { i, row in
                     if row.id == boundary { newSinceDivider }
-                    switch row {
+                    switch row.kind {
                     case .single(let thing):
                         shapedListRow(thing, index: i, nextEventID: nextEventID,
                                       position: positions[i])
@@ -1759,7 +1790,8 @@ struct FeedScreen: View {
             VStack(spacing: DS.Space.s3) {
                 ForEach(Array(rows.enumerated()), id: \.offset) { rowIndex, row in
                     HStack(spacing: DS.Space.s3) {
-                        ForEach(Array(row.enumerated()), id: \.element.id) { colIndex, thing in
+                        ForEach(Array(keyed(row).enumerated()), id: \.element.id) { colIndex, item in
+                            let thing = item.thing
                             let i = rowIndex * perRow + colIndex
                             let firstOfDay = i == 0
                                 || dayLabel(items[i - 1].capturedAt) != dayLabel(thing.capturedAt)
@@ -1901,14 +1933,14 @@ struct FeedScreen: View {
             let slots = fresh.count + (staleExpanded ? stale.count : 0) + (hasToggle ? 1 : 0)
             let positions = cardRunPositions(count: slots)
             Section {
-                ForEach(Array(fresh.enumerated()), id: \.element.id) { i, thing in
-                    shapedListRow(thing, index: i, nextEventID: nextEventID,
+                ForEach(Array(keyed(fresh).enumerated()), id: \.element.id) { i, item in
+                    shapedListRow(item.thing, index: i, nextEventID: nextEventID,
                                   position: positions[i])
                 }
                 if !stale.isEmpty {
                     if staleExpanded {
-                        ForEach(Array(stale.enumerated()), id: \.element.id) { i, thing in
-                            shapedListRow(thing, index: i, nextEventID: nextEventID,
+                        ForEach(Array(keyed(stale).enumerated()), id: \.element.id) { i, item in
+                            shapedListRow(item.thing, index: i, nextEventID: nextEventID,
                                           position: positions[fresh.count + i])
                         }
                     } else {
@@ -2423,7 +2455,8 @@ struct FeedScreen: View {
         Section {
             // Rows dispatch by shape (shaped feeds); the swipe stays triage —
             // reads only, writes live in the sheet (ruling), Copy sheet-only.
-            ForEach(Array(rows.enumerated()), id: \.element.id) { i, thing in
+            ForEach(Array(keyed(rows).enumerated()), id: \.element.id) { i, item in
+                let thing = item.thing
                 if thing.id == boundary { newSinceDivider }
                 shapedListRow(thing, index: i, nextEventID: nextEventID,
                               position: positions[i])
