@@ -79,6 +79,19 @@ struct DiagnosticsScreen: View {
         let auth = PHPhotoLibrary.authorizationStatus(for: .readWrite)
         log("Photos access: \(authWord(auth))")
 
+        // — Screenshot detection: what does each fetch path actually find on
+        // THIS device? Field report 2026-07-24 (build 138, iOS 26): new
+        // screenshots existed in Photos but never landed in Casberi. This
+        // reports both paths' counts and a dry-run ingest so drift between
+        // "album says 20 screenshots" and "mediaSubtypes predicate says 0"
+        // is immediately visible instead of hidden inside a silent skip.
+        if auth == .authorized || auth == .limited {
+            let report = ScreenshotIngest.ingestWithReport(context: modelContext)
+            log("Screenshots album: \(report.albumFound) most recent")
+            log("Screenshots mediaSubtypes predicate: \(report.predicateFound) most recent")
+            log("After merge/dedupe: \(report.merged) unique · \(report.added) newly landed")
+        }
+
         let images = all.filter { $0.kind == .screenshot && $0.sourceRef != nil }
         let cover = images.first { Calendar.current.isDateInToday($0.capturedAt) }
             ?? images.first { $0.capturedAt > .now.addingTimeInterval(-7 * 86_400) }

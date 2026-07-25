@@ -22,31 +22,75 @@ enum ScreenshotIngest {
     /// Ingests the most recent screenshots as things, deduped on the asset id.
     @MainActor
     static func ingest(context: ModelContext, limit: Int = 20) -> Int {
-        let options = PHFetchOptions()
-        options.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
-        options.fetchLimit = limit
-        options.predicate = NSPredicate(
+        ingestWithReport(context: context, limit: limit).added
+    }
+
+    /// The real ingest, exposed with a per-path count so Diagnostics can show
+    /// exactly what each fetch found — the field-report pattern for a
+    /// silent-drop bug ("no new screenshots" while Photos has them).
+    @MainActor
+    static func ingestWithReport(context: ModelContext, limit: Int = 20)
+    -> (added: Int, albumFound: Int, predicateFound: Int, merged: Int)
+    {
+        // Two independent fetches, unioned by localIdentifier:
+        //  1) The Screenshots smart album — iOS's own list, updated by the
+        //     screenshot capture pipeline itself. Direct, no predicate.
+        //  2) The mediaSubtypes predicate — the historical path. Field report
+        //     2026-07-24 (build 138, iOS 26): only the album path caught new
+        //     screenshots on the reporter's device; the mediaSubtypes predicate
+        //     silently returned zero for newer captures while still returning
+        //     older ones. Keeping the predicate as a second source is a cheap
+        //     safety net for whatever the album misses (edited screenshots
+        //     saved as new assets, third-party capture apps, etc.).
+        let sort = [NSSortDescriptor(key: "creationDate", ascending: false)]
+
+        let albumOptions = PHFetchOptions()
+        albumOptions.sortDescriptors = sort
+        albumOptions.fetchLimit = limit
+        let albums = PHAssetCollection.fetchAssetCollections(
+            with: .smartAlbum, subtype: .smartAlbumScreenshots, options: nil)
+        var albumAssets: [PHAsset] = []
+        albums.enumerateObjects { collection, _, _ in
+            PHAsset.fetchAssets(in: collection, options: albumOptions)
+                .enumerateObjects { asset, _, _ in albumAssets.append(asset) }
+        }
+
+        let predicateOptions = PHFetchOptions()
+        predicateOptions.sortDescriptors = sort
+        predicateOptions.fetchLimit = limit
+        predicateOptions.predicate = NSPredicate(
             format: "(mediaSubtypes & %d) != 0",
             PHAssetMediaSubtype.photoScreenshot.rawValue
         )
-        var assets = PHAsset.fetchAssets(with: .image, options: options)
+        var predicateAssets: [PHAsset] = []
+        PHAsset.fetchAssets(with: .image, options: predicateOptions)
+            .enumerateObjects { asset, _, _ in predicateAssets.append(asset) }
+
+        var merged: [PHAsset] = []
+        var seenIDs: Set<String> = []
+        for asset in (albumAssets + predicateAssets) {
+            guard !seenIDs.contains(asset.localIdentifier) else { continue }
+            seenIDs.insert(asset.localIdentifier)
+            merged.append(asset)
+        }
 
         #if DEBUG
         // Simulator photo libraries rarely hold true screenshots; fall back to
         // recent images so the connect-ends-in-proof path can be demonstrated.
-        if assets.count == 0 {
+        if merged.isEmpty {
             let fallback = PHFetchOptions()
-            fallback.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
+            fallback.sortDescriptors = sort
             fallback.fetchLimit = min(limit, 4)
-            assets = PHAsset.fetchAssets(with: .image, options: fallback)
+            PHAsset.fetchAssets(with: .image, options: fallback)
+                .enumerateObjects { asset, _, _ in merged.append(asset) }
         }
         #endif
 
         let existing = IngestSupport.existingSourceRefs(context, source: "Photos")
 
         var added = 0
-        assets.enumerateObjects { asset, _, _ in
-            guard !existing.contains(asset.localIdentifier) else { return }
+        for asset in merged {
+            guard !existing.contains(asset.localIdentifier) else { continue }
             let date = asset.creationDate ?? .now
             let thing = Thing(
                 kind: .screenshot,
@@ -60,7 +104,7 @@ enum ScreenshotIngest {
             added += 1
         }
         if added > 0 { context.saveHonestly() }
-        return added
+        return (added, albumAssets.count, predicateAssets.count, merged.count)
     }
 
     /// The screenshot corpus heals itself (2026-07-10). Three passes over
