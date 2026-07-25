@@ -414,8 +414,12 @@ struct WalletScreen: View {
         return counts
     }
 
+    /// Matched through the resolution cache, not by raw string (2026-07-25):
+    /// a book entry holds the RESOLVED address while a watch may hold the
+    /// spelling it was added under ("vitalik.eth"), so a plain compare left
+    /// the star empty on a wallet that was plainly being watched.
     private func isWatched(_ entry: AddressBook.Entry) -> Bool {
-        wallet.addresses.contains { WalletWatch.sameAddress($0.address, entry.address) }
+        wallet.addresses.contains { wallet.scopeMatches(entry.address, scope: $0.address) }
     }
 
     @ViewBuilder
@@ -510,7 +514,7 @@ struct WalletScreen: View {
         DSHaptic.tap()
         if currentlyWatched {
             if let i = wallet.addresses.firstIndex(where: {
-                WalletWatch.sameAddress($0.address, entry.address)
+                wallet.scopeMatches(entry.address, scope: $0.address)
             }) {
                 wallet.remove(at: IndexSet(integer: i))
             }
@@ -534,8 +538,7 @@ struct WalletScreen: View {
     private var justNameButton: some View {
         Button {
             DSHaptic.tap()
-            let addr = newAddress.trimmingCharacters(in: .whitespacesAndNewlines)
-            book.setName(WalletStore.shortAddress(addr), for: addr)
+            justName(newAddress.trimmingCharacters(in: .whitespacesAndNewlines))
             newAddress = ""
             addressFieldFocused = false
         } label: {
@@ -547,6 +550,28 @@ struct WalletScreen: View {
         }
         .buttonStyle(.plain)
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// Names an address without watching it. A typed ENS/SNS name lands under
+    /// the name itself and RESOLVES in the background (2026-07-25): the row
+    /// stands immediately either way, and when resolution arrives the book
+    /// re-keys it onto the address, so this row and the one a chain read lands
+    /// for the same wallet are one row (prd §212). A name that never resolves
+    /// simply stays as typed — honest, and still the person's own record.
+    private func justName(_ input: String) {
+        guard !input.isEmpty else { return }
+        let isName = SNS.looksLikeName(input) || ENS.looksLikeName(input)
+        book.setName(isName ? input : WalletStore.shortAddress(input), for: input)
+        guard isName else { return }
+        Task {
+            // `.sol` first, exactly like `watch()` — `ENS.looksLikeName` takes
+            // ANY dotted string and would send a `.sol` name to the ENS
+            // resolver, which answers with a null address rather than an error.
+            let resolved = SNS.looksLikeName(input)
+                ? await SNS.resolve(input) : await ENS.resolve(input)
+            guard let resolved else { return }
+            await MainActor.run { wallet.noteResolution(input, resolved: resolved) }
+        }
     }
 
     /// "All 5" when nothing's narrowed, else the selected names ("Ethereum,

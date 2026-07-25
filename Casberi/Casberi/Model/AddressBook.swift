@@ -58,8 +58,11 @@ final class AddressBook {
     }
 
     struct Entry: Codable, Identifiable, Equatable {
-        /// The address exactly as it was added — display keeps the person's
-        /// own spelling (and Solana's case, which IS identity).
+        /// The address itself — as it was added, except that a NAME is stored
+        /// as the address it resolves to (`AddressBook.resolvedForm`), because
+        /// a name is a label, not an identity, and two spellings of one wallet
+        /// are one entry. Solana's case is preserved; it IS identity. The
+        /// person's own spelling lives on in `name`.
         var address: String
         var name: String
         var addedAt: Date
@@ -78,13 +81,116 @@ final class AddressBook {
     /// key (normalised address) → entry.
     private var entries: [String: Entry] { didSet { persist() } }
 
-    /// The comparison form. Hex lowercases (EIP-55 case is a checksum, not
-    /// identity); everything else is left exactly as it came, because base58
-    /// case IS identity and folding it merges two different wallets — the same
-    /// asymmetry `WalletStore.dedupeKey` keeps.
+    /// The comparison form. A NAME resolves to the address it stands for
+    /// first (below); then hex lowercases (EIP-55 case is a checksum, not
+    /// identity), and everything else is left exactly as it came, because
+    /// base58 case IS identity and folding it merges two different wallets —
+    /// the same asymmetry `WalletStore.dedupeKey` keeps.
     static func key(for address: String) -> String {
+        let canonical = resolvedForm(of: address)
+        return ENS.isHexAddress(canonical) ? canonical.lowercased() : canonical
+    }
+
+    // MARK: - Names are not identities (2026-07-25, prd §212)
+
+    /// watched/typed spelling → the address it stands for ("vitalik.eth" →
+    /// "0xd8dA…6045"), mirrored from `WalletStore`'s own resolution cache and
+    /// keyed by the LOWERCASED name (a name is case-insensitive; the address
+    /// it answers with is not, so only the key folds).
+    ///
+    /// Why the book needs it: keying on the literal string made one wallet two
+    /// entries. Watching by ENS named a row under "vitalik.eth" while every
+    /// chain read — counterparty naming, reverse ENS — named another under the
+    /// hex, and the two never met: two rows, same wallet, one of them wearing
+    /// the star (found 2026-07-25, when prd §212 made the book the Wallet
+    /// manager's main content and the duplicate became the first thing you
+    /// see). Only names ever alias (a spelling with a dot); a hex or base58
+    /// address is already the identity.
+    ///
+    /// Static, and read from the same defaults key `WalletStore` persists to,
+    /// so `key(for:)` stays a pure static function — callable from `shared`'s
+    /// own initializer without re-entering it.
+    private static var aliases: [String: String] = loadAliases()
+
+    private static func loadAliases() -> [String: String] {
+        let raw = UserDefaults.standard.dictionary(forKey: "wallet.resolutions")
+            as? [String: String] ?? [:]
+        var out: [String: String] = [:]
+        for (spelling, resolved) in raw where isName(spelling) && !resolved.isEmpty {
+            out[spelling.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()] = resolved
+        }
+        return out
+    }
+
+    /// A spelling that stands for an address rather than being one. The dot is
+    /// the whole test: every ENS/SNS name has one and no hex or base58 address
+    /// can (base58 excludes it, hex is `0x` + 40 hex digits).
+    private static func isName(_ s: String) -> Bool {
+        s.contains(".") && !ENS.isHexAddress(s)
+    }
+
+    /// The address a spelling stands for — the resolved hex/base58 when the
+    /// name has resolved at least once, else the spelling itself. Display
+    /// keeps the person's own words (`Entry.name`); identity uses this.
+    static func resolvedForm(of address: String) -> String {
         let trimmed = address.trimmingCharacters(in: .whitespacesAndNewlines)
-        return ENS.isHexAddress(trimmed) ? trimmed.lowercased() : trimmed
+        guard isName(trimmed) else { return trimmed }
+        return aliases[trimmed.lowercased()] ?? trimmed
+    }
+
+    /// Records a name's resolution and folds the row standing under the name
+    /// into the row standing under the address. Called by
+    /// `WalletStore.noteResolution` — the one place both spellings meet.
+    func noteResolution(_ watched: String, resolved: String) {
+        let name = watched.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard Self.isName(name), !resolved.isEmpty else { return }
+        let key = name.lowercased()
+        guard Self.aliases[key] != resolved else { return }
+        Self.aliases[key] = resolved
+        reconcileAliases()
+    }
+
+    /// Re-keys every entry whose spelling now resolves, merging into whatever
+    /// already stands under the resolved address. Idempotent and cheap (the
+    /// book is tens of rows): run once at init — so a launch that already
+    /// knows the resolution heals before anything reads the list, no sync
+    /// required — and again whenever a new resolution lands.
+    private func reconcileAliases() {
+        var merged = entries
+        var changed = false
+        for (oldKey, entry) in entries {
+            let newKey = Self.key(for: entry.address)
+            guard newKey != oldKey else { continue }
+            let address = Self.resolvedForm(of: entry.address)
+            var moved = entry
+            moved.address = address
+            if let standing = merged[newKey] {
+                moved = Self.merging(moved, into: standing, at: address)
+            }
+            merged.removeValue(forKey: oldKey)
+            merged[newKey] = moved
+            changed = true
+        }
+        if changed { entries = merged }
+    }
+
+    /// Folds two rows for one wallet into one. The row keyed by the ADDRESS
+    /// stands — it's the one every chain read writes and consults — and keeps
+    /// its name, unless that name is only the address's own short form (the
+    /// fallback a bare watch lands), in which case the name given to the ENS
+    /// spelling is the real one and wins. The earliest `addedAt` survives (the
+    /// book remembers when you first named it), and kind/provenance fill in
+    /// from either side rather than leaving with the row that goes.
+    private static func merging(_ alias: Entry, into standing: Entry, at address: String) -> Entry {
+        var out = standing
+        out.address = address
+        if standing.name.isEmpty || standing.name == WalletStore.shortAddress(address) {
+            out.name = alias.name
+        }
+        out.addedAt = min(standing.addedAt, alias.addedAt)
+        if out.kind == .unknown { out.kind = alias.kind }
+        if out.provenance == nil { out.provenance = alias.provenance }
+        return out
     }
 
     private init() {
@@ -95,6 +201,11 @@ final class AddressBook {
             entries = [:]
         }
         migrateIfNeeded()
+        // Heals books written before names were resolved (2026-07-25) — the
+        // duplicate pair collapses on the next launch with no sync and no
+        // migration flag, because the reconcile is the same pass that keeps
+        // the book correct from here on.
+        reconcileAliases()
     }
 
     // MARK: - Reading
@@ -152,7 +263,11 @@ final class AddressBook {
             entries[key] = existing
             return existing
         }
-        let entry = Entry(address: address.trimmingCharacters(in: .whitespacesAndNewlines),
+        // Stored in its RESOLVED form when the name has resolved before, so a
+        // row named by ENS and a row met on-chain are one row from the start
+        // (§212). An unresolved name still stores as typed — `reconcileAliases`
+        // folds it in the moment resolution lands.
+        let entry = Entry(address: Self.resolvedForm(of: address),
                           name: trimmed, addedAt: .now,
                           kind: kind ?? .unknown, provenance: provenance)
         entries[key] = entry
