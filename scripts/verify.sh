@@ -22,6 +22,13 @@ step "Catalog sync"
 "$ROOT/scripts/catalog-sync.sh" || fail "catalog surfaces drifted — run scripts/catalog-sync.sh"
 print -P "%F{green}✓ catalog sync%f"
 
+# Keeps the "What this app reaches" registry complete (prd §205): every host
+# the app calls must be disclosed in NetworkReach.swift or the explicit
+# non-reach denylist — an undisclosed fetch host fails here.
+step "Network-reach audit"
+"$ROOT/scripts/network-reach-audit.sh" || fail "a network host isn't disclosed — see scripts/network-reach-audit.sh"
+print -P "%F{green}✓ network-reach audit%f"
+
 # ── 1. Build ────────────────────────────────────────────────────────
 step "Building Casberi (derivedData: $DD)"
 xcodebuild -project "$ROOT/Casberi/Casberi.xcodeproj" -scheme Casberi \

@@ -15,6 +15,11 @@ struct SettingsScreen: View {
     /// the person turns iCloud sync on.
     @AppStorage("icloud.sync") private var icloudSync = false
     @State private var diagnosticsOpen = false
+    /// "What this app reaches" (prd §205) — its own row and sheet, the
+    /// reliable Diagnostics pattern (a nested sheet from the Data tray
+    /// presented flakily). The privacy story stays whole: Data owns your
+    /// data, this owns the network — one clearly-named axis each.
+    @State private var networkOpen = false
     @State private var languageOpen = false
     @State private var howItWorksOpen = false
     @State private var detail: AccountDetail?
@@ -43,6 +48,9 @@ struct SettingsScreen: View {
             .navigationBarTitleDisplayMode(.large)
             .sheet(isPresented: $diagnosticsOpen) {
                 NavigationStack { DiagnosticsScreen() }
+            }
+            .sheet(isPresented: $networkOpen) {
+                NavigationStack { NetworkReachScreen() }
             }
             .sheet(item: $detail) { AccountDetailSheet(detail: $0) }
             .sheet(isPresented: $languageOpen) { LanguagePickerSheet() }
@@ -171,6 +179,14 @@ struct SettingsScreen: View {
                     valueColor: keyed ? DS.confirm : DS.textTertiary,
                     badge: ("key.fill", keyed ? DS.confirm : DS.textSecondary),
                     action: { detail = .key }),
+            // "What this app reaches" (prd §205) — the privacy-legibility
+            // door: every service Casberi talks to, straight from this
+            // iPhone, and why. "Network", A–Z, its own sheet (the reliable
+            // Diagnostics pattern).
+            RowSpec(title: "Network",
+                    value: String(localized: "What this app reaches"),
+                    badge: ("network", DS.tint),
+                    action: { networkOpen = true }),
             // The one persistent explainer of the model (2026-07-11) — for
             // a new person after the coach lines retire. "How it works", not
             // "About" (About reads as version/legal).

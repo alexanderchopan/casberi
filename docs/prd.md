@@ -8086,3 +8086,66 @@ Files: `Design/DesignTokens.swift` (new `DS.bleed`), `Design/ThemeStore.swift`
 picker). NOT `Design/WalletFace.swift`, NOT any `DS.tint` call site.
 
 Status: RULED, NOT BUILT.
+
+## 205. Privacy, made legible — "What this app reaches", the ADP nudge, and the at-rest finding (user: "how if at all would we improve privacy in the app? is there even a need", then "ok do all", 2026-07-24)
+
+The privacy posture is already the product's spine: no server, on-device
+answers, no analytics, keys in the Keychain, keyless bridges, read-only
+wallets. The honest assessment found the need is NOT more cryptography —
+it's making the guarantees we already keep VERIFIABLE, plus closing two
+small honesty gaps. Four things done, one deliberately not.
+
+**1. "What this app reaches" (the real feature).** A Settings › Network
+screen listing every service Casberi talks to, straight from this iPhone,
+and exactly what each call carries — grouped into what's reaching now
+(always-on + your connected apps), what reaches only if you connect it, and
+the agent key that reaches only when you tap "Try with your key." This turns
+"nothing routes through us" from a claim into something a skeptic can read
+top to bottom. `Model/NetworkReach.swift` + `Screens/NetworkReachScreen.swift`.
+
+It is a CURATED registry, not a live request log, ON PURPOSE: ~18 call sites
+each hold their own URLSession, so a live logger would miss one and lie by
+omission — worse than no log for a privacy surface. Instead
+`scripts/network-reach-audit.sh` (in verify.sh) asserts every host literal
+in the app appears either in the registry or an explicit non-reach denylist
+(browser permalinks, demo hosts) — so the registry is complete BY
+CONSTRUCTION: a new fetch host added in code that nobody disclosed fails the
+build. Provable where a log would only be plausible.
+
+Placement: its own A–Z Settings row ("Network"), its own sheet — the
+reliable Diagnostics pattern. (First built as a row inside the Data tray;
+a nested sheet from a fixed-detent tray presents flakily. Data owns your
+DATA — things, delete, sync; Network owns the wire. One clearly-named axis
+each, and the privacy story stays whole.)
+
+**2. The ADP nudge.** A contextual line under the iCloud-sync toggle,
+shown only while sync is ON (with sync off there's no iCloud copy to
+encrypt), pointing the person at Advanced Data Protection — the one thing
+that upgrades their sync to true end-to-end, which is theirs to enable, not
+ours. Cheapest real win.
+
+**3. The URL audit (verification, passed).** Confirmed every identifier in
+an outbound query string is the PUBLIC subject the person chose to watch —
+a wallet address, a Farcaster fid, a Safe address — never a hidden identity,
+analytics id, email, or device id. Matches the privacy policy's "carries
+only the token" claim. The reach audit script now guards this surface going
+forward.
+
+**4. At-rest — verified, and deliberately NOT changed.** The app carries no
+`default-data-protection` entitlement, so the SwiftData store sits at the
+iOS default, which since iOS 7 is `NSFileProtectionCompleteUntilFirst-
+UserAuthentication` — already encrypted, readable after first unlock.
+Raising to `Complete` (locked whenever the screen locks) requires that
+entitlement (an App-ID capability + provisioning change, an UNVERIFIABLE
+signing risk on the sim while build 103 is in review) AND would BREAK the
+background wallet/bridge refresh and CloudKit mirroring, which must read
+while the device is locked-after-first-unlock. So the honest outcome of
+"verify carefully" is: at rest is already at the correct background-safe
+encrypted class; no change is right, and forcing higher would regress
+background sync. Documented rather than shipped.
+
+**What we did NOT build, and why:** no mixers, no shielding, no
+transaction-signing (that becomes a wallet — the Kohaku conversation), no
+onion-routing proxy (needs the server we've sworn off). And nothing
+mixer-adjacent or entitlement-churning while build 103 is in App Store
+review. The privacy win on the table was legibility, not more crypto.

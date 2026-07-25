@@ -149,7 +149,9 @@ struct AccountDetailSheet: View {
 
     private var sheetHeight: CGFloat {
         switch detail {
-        case .data: 530   // two wipes now — things and access, one row each
+        // The ADP nudge adds ~3 lines only when sync is on (prd §205); DSTray
+        // clips at a fixed detent, so the taller state must be sized for.
+        case .data: icloudSync ? 590 : 530
         case .key: 500   // +40 for the per-agent capability line (2026-07-21)
         case .color: 400   // aliveRow + one swatch row + a footnote (prd §204)
         }
@@ -180,6 +182,16 @@ struct AccountDetailSheet: View {
                         : (SharedStore.cloudSyncActive ? "Stops syncing from your next launch"
                                                        : "Stays on this iPhone"),
                       Binding(get: { icloudSync }, set: { icloudSync = $0; DSHaptic.tap() }))
+            // ADP nudge — only meaningful while sync is ON (with sync off
+            // there's no iCloud copy to encrypt). Points the person at the
+            // one thing that upgrades their sync to true end-to-end, which
+            // is theirs to enable, not ours: Advanced Data Protection.
+            if icloudSync {
+                Text("For end-to-end encryption of your iCloud copy, turn on Advanced Data Protection in Settings › [your name] › iCloud. Then only your devices can read it — not even Apple.")
+                    .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.leading, 38 + DS.Space.s3)
+            }
             toggleRow(hidePreviews ? "eye.slash.fill" : "eye",
                       hidePreviews ? DS.confirm : DS.textSecondary,
                       "Hide previews", "Blur your things in the app switcher",
