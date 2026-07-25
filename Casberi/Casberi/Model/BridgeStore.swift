@@ -84,6 +84,24 @@ final class BridgeStore {
         bridges.removeAll { $0.id == id }
     }
 
+    /// Peer & Privacy Pools ride the watched wallets automatically now (prd
+    /// §207, 2026-07-25) — there is no connect switch, so their catalog seat
+    /// is a mirror of "is a wallet watched": connected while ≥1 is, gone when
+    /// none are. This is the one place that truth is written; call it after
+    /// any change to the watch list and once per foreground refresh.
+    /// Idempotent (registerConnected reconnects an existing seat).
+    func reconcileWalletSeats() {
+        let n = WalletStore.shared.addresses.count
+        guard n > 0 else { remove("peer"); remove("privacypools"); return }
+        let watching = "Watching \(n) wallet\(n == 1 ? "" : "s")"
+        registerConnected(id: "peer", name: "Peer", proof: watching,
+            can: ["Reads Peer fills for the wallets you watch, from the public chain.",
+                  "Read-only — never starts, signs, or settles a trade."])
+        registerConnected(id: "privacypools", name: "0xBow Privacy Pools", proof: watching,
+            can: ["Reads Privacy Pools deposits and their screening status for the wallets you watch, from public sources.",
+                  "Read-only — never deposits, withdraws, or moves funds."])
+    }
+
     func togglePause(_ id: String) {
         guard let i = bridges.firstIndex(where: { $0.id == id }) else { return }
         if bridges[i].status == .paused {

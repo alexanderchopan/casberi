@@ -113,36 +113,17 @@ enum PeerBridge {
         "0x2dd272ddce846149d92496b4c3e677504aec8d5e6aab5908b25c9fe0a797e25f": "RON",
     ]
 
-    // MARK: - The seat
+    // MARK: - The seat (automatic — rides the watched wallets)
 
-    /// Internal (not private) so the setup screen's @AppStorage binds to the
-    /// SAME spelling — two hand-matched literals for one defaults slot is how
-    /// a toggle silently stops gating the sweep (review 2026-07-17).
-    static let seatKey = "peer.connected"
-
-    /// Whether the seat is on. Stored flat in UserDefaults — the TrendingStore
-    /// idiom: keyless seats hold no credential, so there's nothing for the
-    /// Keychain and nothing for Delete-access to purge.
-    static var connected: Bool {
-        get { UserDefaults.standard.bool(forKey: seatKey) }
-        set { UserDefaults.standard.set(newValue, forKey: seatKey) }
-    }
-
-    /// Disconnect drops the seat AND the cursors, so re-connecting seeds a
-    /// fresh baseline instead of back-filling the disconnected gap — the same
-    /// "re-watching starts honest, at zero" rule the wallet's sibling keys
-    /// obey.
-    static func disconnect() {
-        connected = false
-        // Clear the known cursors (the watched list's) rather than walking
-        // the whole merged defaults dictionary on the main actor (review
-        // 2026-07-17). A wallet stored as an ENS name misses — its cursor
-        // keys on the resolved hex — but the orphan is inert and bounded,
-        // the same accepted miss WalletApprovals.clearCursors documents.
-        for entry in WalletStore.shared.addresses {
-            clearCursor(address: entry.address)
-        }
-    }
+    /// There is no connect switch anymore (2026-07-25, prd §207, user:
+    /// "if you use a wallet in peer … it should automatically watch them").
+    /// Peer's identity IS the wallet, so watching a wallet is the consent to
+    /// read its fills — the sweep runs for every watched wallet and no-ops
+    /// when none are (the `!addresses.isEmpty` guard below). The old
+    /// `seatKey`/`connected`/`disconnect()` toggle is gone; unwatching a
+    /// wallet still drops that wallet's cursor from `WalletStore` via
+    /// `clearCursor`, which was the whole of disconnect's teardown, per
+    /// address — so a re-watch still seeds a fresh baseline, honest at zero.
 
     private static func cursorKey(_ address: String) -> String {
         "peer.cursor.\(address.lowercased())"
@@ -173,7 +154,8 @@ enum PeerBridge {
     @MainActor
     static func sync(context: ModelContext, addresses: [String],
                      existing: Set<String>) async -> Int? {
-        guard connected else { return 0 }
+        // Automatic: no seat gate. Runs for whatever wallets this pass
+        // resolved; `syncLocked` returns 0 when there are none.
         guard !running else { return 0 }
         running = true
         defer { running = false }
@@ -186,7 +168,7 @@ enum PeerBridge {
     /// hex), so Connect syncs without dragging the whole wallet pass along.
     @MainActor
     static func syncNow(context: ModelContext) async -> Int? {
-        guard connected, !running else { return 0 }
+        guard !running else { return 0 }
         running = true
         defer { running = false }
         let watched = WalletStore.shared.addresses.map(\.address)

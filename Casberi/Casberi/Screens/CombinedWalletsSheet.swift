@@ -13,7 +13,6 @@ struct CombinedWalletsSheet: View {
     let combined: [WalletStore.ValueSample]
     let wallets: [WalletStore.WatchedAddress]
 
-    @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var scheme
 
     /// Per-wallet lines with ≥2 points, each paired with its face tint.
@@ -44,8 +43,27 @@ struct CombinedWalletsSheet: View {
         }
     }
 
+    /// Opens hugging its own content, draggable to `.large` when the movers +
+    /// per-wallet lists run long — the same resizable shape `WalletWorthALookTray`
+    /// ships, so all three wallet feed trays now behave identically. The exact
+    /// number isn't load-bearing: it's clamped, and the `.large` detent absorbs
+    /// any underestimate.
+    private var trayHeight: CGFloat {
+        var h: CGFloat = combined.count >= 2 ? 360 : 210   // hero chart + pill (+ made-of) or the empty note
+        if !movers.isEmpty { h += 44 + CGFloat(movers.count) * 48 }
+        if !perWallet.isEmpty { h += 44 + CGFloat(perWallet.count) * 66 }
+        h += 96   // footer sentence
+        return min(660, h)
+    }
+
     var body: some View {
-        NavigationStack {
+        // A DSTray now (2026-07-25), not a hand-rolled NavigationStack — the
+        // design law is that trays are never hand-rolled, and this was the one
+        // wallet feed tray still carrying its own sheet chrome (a navigationTitle
+        // + a "Done" toolbar) while its two siblings ("Where it's held", "Worth a
+        // look") already rode DSTray. The grabber dismisses, like every other tray.
+        DSTray(title: String(localized: "Across your wallets"),
+               height: trayHeight, detents: [.height(trayHeight), .large]) {
             ScrollView {
                 VStack(alignment: .leading, spacing: DS.Space.s6) {
                     combinedHeader
@@ -78,20 +96,10 @@ struct CombinedWalletsSheet: View {
                         .dsText(.subhead13).foregroundStyle(DS.textTertiary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
-                .padding(DS.Space.s4)
+                .padding(.bottom, DS.Space.s2)
             }
-            .dsAdaptiveContentWidth()
-            .dsPageBackground()
-            .navigationTitle("Across your wallets")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Done") { dismiss() }.tint(DS.tint)
-                }
-            }
+            .scrollIndicators(.hidden)
         }
-        .presentationBackground(DS.surfaceSheet)
-        .dsColorScheme()
     }
 
     /// "+$310" / "−$4" — signed compact USD for a token's move.

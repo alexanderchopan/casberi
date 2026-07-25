@@ -214,6 +214,10 @@ enum BridgeRefresh {
                 _ = await TokenIngest.refresh(bridge, context: context)
             }
         }
+        // Peer & Privacy Pools ride the watched wallets automatically (prd
+        // §207) — reflect that in the catalog every foreground: connected
+        // while a wallet is watched, dropped when the last one goes.
+        store.reconcileWalletSeats()
         if !WalletStore.shared.addresses.isEmpty {
             let s = slot(); Task { @MainActor in
                 await BridgeRefresh.stagger(s)

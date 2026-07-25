@@ -324,6 +324,8 @@ struct WalletScreen: View {
             Button(role: .destructive) {
                 if let i = wallet.addresses.firstIndex(where: { $0.id == addr.id }) {
                     wallet.remove(at: IndexSet(integer: i))
+                    // Unwatching the last wallet drops the riding seats (§207).
+                    store.reconcileWalletSeats()
                 }
             } label: {
                 Label("Remove Wallet", systemImage: "trash")
@@ -762,7 +764,10 @@ struct WalletScreen: View {
     private func addWatched(address: String, label: String) {
         switch wallet.outcome(ofAdding: address, label: label) {
         case .added:
-            break
+            // Watching is consent (prd §207): the wallet-riding seats (Peer,
+            // Privacy Pools) are on the moment a wallet is — reflect that in
+            // the catalog immediately, not only at the next foreground.
+            store.reconcileWalletSeats()
         case .alreadyWatching:
             resultIsError = true
             result = String(localized: "Already watching that address.")

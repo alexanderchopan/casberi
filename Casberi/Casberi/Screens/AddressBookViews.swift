@@ -146,6 +146,32 @@ struct HistorySummary {
 /// app: landed transfers already carry `counterpartyAddress`, so the card can
 /// show the relationship the corpus already recorded — without one extra
 /// request.
+/// Everything the corpus knows about one address, newest first — the shared
+/// rule behind both the card's six-row preview and its "See all" screen, so
+/// the two can never show different sets. Two kinds of belonging:
+///   • a Wallet transaction where this address was the COUNTERPARTY (the
+///     original "your history together" — someone you transacted with), and
+///   • a Peer fill or Privacy Pools deposit MADE BY this address (prd §207):
+///     those seats ride the watched wallets and have no separate home, so a
+///     watched wallet's own fills and deposits live on its address-book card.
+/// `walletAddress` is the owner both bridges stamp on every thing they land.
+private func addressHistory(for address: String, in context: ModelContext) -> [Thing] {
+    let key = AddressBook.key(for: address)
+    let all = (try? context.fetch(FetchDescriptor<Thing>(
+        predicate: #Predicate {
+            $0.source == "Wallet" || $0.source == "Peer" || $0.source == "Privacy Pools"
+        },
+        sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]))) ?? []
+    return all.filter { thing in
+        if thing.source == "Wallet" {
+            guard let cp = thing.counterpartyAddress else { return false }
+            return AddressBook.key(for: cp) == key
+        }
+        guard let owner = thing.walletAddress else { return false }
+        return AddressBook.key(for: owner) == key
+    }
+}
+
 struct AddressCard: View {
     let entry: AddressBook.Entry
     @Environment(\.dismiss) private var dismiss
@@ -160,17 +186,10 @@ struct AddressCard: View {
     /// Live, so a rename or a kind landing repaints the card.
     private var current: AddressBook.Entry { book.entry(for: entry.address) ?? entry }
 
-    /// The corpus's own record of this address — every transaction where it
-    /// was the counterparty, newest first.
+    /// The corpus's own record of this address — counterparty transactions
+    /// plus its own Peer/Pool activity (see `addressHistory`), newest first.
     private var history: [Thing] {
-        let key = AddressBook.key(for: entry.address)
-        let all = (try? modelContext.fetch(FetchDescriptor<Thing>(
-            predicate: #Predicate { $0.source == "Wallet" },
-            sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]))) ?? []
-        return all.filter { thing in
-            guard let cp = thing.counterpartyAddress else { return false }
-            return AddressBook.key(for: cp) == key
-        }
+        addressHistory(for: entry.address, in: modelContext)
     }
 
     var body: some View {
@@ -395,14 +414,7 @@ struct AddressHistoryScreen: View {
     @Environment(\.modelContext) private var modelContext
 
     private var history: [Thing] {
-        let key = AddressBook.key(for: entry.address)
-        let all = (try? modelContext.fetch(FetchDescriptor<Thing>(
-            predicate: #Predicate { $0.source == "Wallet" },
-            sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]))) ?? []
-        return all.filter { thing in
-            guard let cp = thing.counterpartyAddress else { return false }
-            return AddressBook.key(for: cp) == key
-        }
+        addressHistory(for: entry.address, in: modelContext)
     }
 
     var body: some View {

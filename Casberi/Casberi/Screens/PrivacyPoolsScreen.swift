@@ -25,34 +25,26 @@ struct PrivacyPoolsScreen: View {
     @Environment(BridgeStore.self) private var store
     @State private var syncing = false
     @State private var lastResult: String?
-    @AppStorage(PrivacyPoolsBridge.seatKey) private var connected = false
 
     @Query(privacyPoolsRecentDescriptor) private var recent: [Thing]
 
     private var hasWallets: Bool { !WalletStore.shared.addresses.isEmpty }
+    private var walletCount: Int { WalletStore.shared.addresses.count }
 
     var body: some View {
         List {
-            BridgeSetupHeader(name: "0xBow Privacy Pools", connected: connected)
+            BridgeSetupHeader(name: "0xBow Privacy Pools", connected: hasWallets)
             connectSection.listRowSeparator(.hidden)
             if recent.isEmpty {
-                if !connected {
+                if !hasWallets {
                     GhostPreviewSection(name: "0xBow Privacy Pools",
-                                        replaceLine: "Your real deposits replace this when you switch this on.")
+                                        replaceLine: "Your real deposits replace this once you watch a wallet.")
                         .listRowSeparator(.hidden)
                 }
             } else {
                 RecentThingsSection(header: String(localized: "Recent activity"),
                                     things: recent, titleLines: 1)
                     .listRowSeparator(.hidden)
-            }
-            if connected {
-                BridgeDisconnectSection(
-                    bridgeID: "privacypools", name: "0xBow Privacy Pools",
-                    teardown: {
-                        PrivacyPoolsBridge.disconnect()
-                    }
-                ).listRowSeparator(.hidden)
             }
             footerSection.listRowSeparator(.hidden)
         }
@@ -65,34 +57,29 @@ struct PrivacyPoolsScreen: View {
         .navigationTitle("0xBow Privacy Pools")
         .navigationBarTitleDisplayMode(.large)
         .onAppear {
-            // Viewing is not consent to connect — only refresh if the switch
-            // is already on.
-            if connected { Task { await sync() } }
+            // Watching is consent (prd §207): keep the catalog seat honest on
+            // appear, and refresh deposits if a wallet's watched.
+            store.reconcileWalletSeats()
+            if hasWallets { Task { await sync() } }
         }
     }
 
-    // MARK: - Connect
+    // MARK: - Connect (automatic — no switch, prd §207)
 
+    /// No toggle: deposits come from your own wallet, so watching a wallet IS
+    /// the consent to read them and poll their screening status. With wallets
+    /// watched, the row states the fact and doors to the wallet manager; with
+    /// none, it's the invitation to watch one.
     private var connectSection: some View {
         Section {
             VStack(alignment: .leading, spacing: DS.Space.s2) {
                 if hasWallets {
-                    // The seat as one SWITCH SLAB (prd §190) — the row is the
-                    // connect verb, so it gets the full block.
-                    DSSlabSwitch(title: String(localized: "Watch my Privacy Pools deposits"),
-                                 isOn: Binding(
-                        get: { connected },
-                        set: { on in
-                            guard on != connected else { return }
-                            toggle(on)
-                        }
-                    ))
+                    DSSlabDoor(title: String(localized: "Watching \(walletCount) wallet\(walletCount == 1 ? "" : "s")"),
+                               detail: String(localized: "Manage")) {
+                        HomeRoute.shared.pushBridge(.wallet)
+                    }
                 } else {
-                    // No wallet watched = no deposits this app can see. A
-                    // disabled switch would be a dead control (honesty rule);
-                    // the live verb is the prerequisite, and it navigates, so
-                    // it wears the door slab.
-                    DSSlabDoor(title: "Watch a wallet first") {
+                    DSSlabDoor(title: "Watch a wallet") {
                         HomeRoute.shared.pushBridge(.wallet)
                     }
                 }
@@ -100,8 +87,8 @@ struct PrivacyPoolsScreen: View {
                                      syncingLine: String(localized: "Reading your deposits…"),
                                      result: lastResult, resultIsError: false)
                 DSSlabNote(text: hasWallets
-                    ? String(localized: "Tells you the moment screening clears a deposit.")
-                    : String(localized: "Deposits are read off the wallets you watch."))
+                    ? String(localized: "On automatically — tells you the moment screening clears a deposit.")
+                    : String(localized: "Deposits are read off the wallets you watch. Read-only."))
             }
         }
         .dsSlabSection()
@@ -117,45 +104,18 @@ struct PrivacyPoolsScreen: View {
 
     // MARK: - Actions
 
-    private func toggle(_ on: Bool) {
-        connected = on
-        DSHaptic.tap()
-        if on {
-            // Register the seat EAGERLY (the Peer lesson, review 2026-07-17).
-            register(proof: watchingProof)
-            Task { await sync() }
-        } else {
-            PrivacyPoolsBridge.disconnect()
-            store.remove("privacypools")
-            lastResult = nil
-        }
-    }
-
+    /// Refresh deposits + status for the watched wallets. The catalog seat is
+    /// kept honest by `store.reconcileWalletSeats()`, not here.
     private func sync() async {
-        guard connected else { store.remove("privacypools"); return }
-        guard !syncing else { return }
+        guard hasWallets, !syncing else { return }
         syncing = true
         defer { syncing = false }
         let added = await PrivacyPoolsBridge.syncNow(context: modelContext)
-        // Disconnected mid-sync — don't resurrect the seat.
-        guard connected else { store.remove("privacypools"); return }
         if let added {
             lastResult = added > 0 ? String(localized: "\(added) new")
                                    : String(localized: "Up to date")
-            register(proof: added > 0 ? "\(added) new" : watchingProof)
         } else {
             lastResult = String(localized: "Couldn't reach the chain — check your connection.")
         }
-    }
-
-    private var watchingProof: String {
-        let n = WalletStore.shared.addresses.count
-        return "Watching \(n) wallet\(n == 1 ? "" : "s")"
-    }
-
-    private func register(proof: String) {
-        store.registerConnected(id: "privacypools", name: "0xBow Privacy Pools", proof: proof,
-                                can: ["Reads Privacy Pools deposits and their screening status for the wallets you watch, from public sources.",
-                                      "Read-only — never deposits, withdraws, or moves funds."])
     }
 }

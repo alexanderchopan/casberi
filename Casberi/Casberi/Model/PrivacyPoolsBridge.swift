@@ -118,26 +118,15 @@ enum PrivacyPoolsBridge {
             scope: "12594345321156708920712766274402096360984745412708601457862140420990105325804"),
     ]
 
-    // MARK: - The seat
+    // MARK: - The seat (automatic — rides the watched wallets)
 
-    /// Internal so the setup screen's @AppStorage binds the SAME spelling
-    /// (the Peer lesson, review 2026-07-17).
-    static let seatKey = "privacypools.connected"
-
-    static var connected: Bool {
-        get { UserDefaults.standard.bool(forKey: seatKey) }
-        set { UserDefaults.standard.set(newValue, forKey: seatKey) }
-    }
-
-    /// Disconnect drops the seat, the cursors, AND the pending-status
-    /// watchlist — re-connecting starts honest, at a fresh backfill.
-    static func disconnect() {
-        connected = false
-        for entry in WalletStore.shared.addresses {
-            clearState(address: entry.address)
-        }
-        UserDefaults.standard.removeObject(forKey: pendingKey)
-    }
+    /// No connect switch (2026-07-25, prd §207): watching a wallet is the
+    /// consent to read its Privacy Pools deposits and poll their screening
+    /// status — the sweep runs for every watched wallet and no-ops when none
+    /// are. The old `seatKey`/`connected`/`disconnect()` toggle is gone;
+    /// unwatching a wallet still drops that wallet's cursor AND its pending
+    /// entries via `clearState`, so unwatching the last wallet clears all of
+    /// them and a re-watch starts honest at a fresh backfill.
 
     private static func cursorKey(_ address: String) -> String {
         "privacypools.cursor.\(address.lowercased())"
@@ -178,7 +167,7 @@ enum PrivacyPoolsBridge {
     @MainActor
     static func sync(context: ModelContext, addresses: [String],
                      existing: Set<String>) async -> Int? {
-        guard connected else { return 0 }
+        // Automatic: no seat gate. `syncLocked` returns 0 when no wallets.
         guard !running else { return 0 }
         running = true
         defer { running = false }
@@ -190,7 +179,7 @@ enum PrivacyPoolsBridge {
     /// wallet refresh does.
     @MainActor
     static func syncNow(context: ModelContext) async -> Int? {
-        guard connected, !running else { return 0 }
+        guard !running else { return 0 }
         running = true
         defer { running = false }
         let watched = WalletStore.shared.addresses.map(\.address)

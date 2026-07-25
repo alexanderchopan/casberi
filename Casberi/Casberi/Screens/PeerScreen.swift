@@ -26,34 +26,26 @@ struct PeerScreen: View {
     @Environment(BridgeStore.self) private var store
     @State private var syncing = false
     @State private var lastResult: String?
-    @AppStorage(PeerBridge.seatKey) private var connected = false
 
     @Query(peerRecentDescriptor) private var recent: [Thing]
 
     private var hasWallets: Bool { !WalletStore.shared.addresses.isEmpty }
+    private var walletCount: Int { WalletStore.shared.addresses.count }
 
     var body: some View {
         List {
-            BridgeSetupHeader(name: "Peer", connected: connected)
+            BridgeSetupHeader(name: "Peer", connected: hasWallets)
             connectSection.listRowSeparator(.hidden)
             if recent.isEmpty {
-                if !connected {
+                if !hasWallets {
                     GhostPreviewSection(name: "Peer",
-                                        replaceLine: "Your real fills replace this when you switch this on.")
+                                        replaceLine: "Your real fills replace this once you watch a wallet.")
                         .listRowSeparator(.hidden)
                 }
             } else {
                 RecentThingsSection(header: String(localized: "Recent fills"),
                                     things: recent, titleLines: 1)
                     .listRowSeparator(.hidden)
-            }
-            if connected {
-                BridgeDisconnectSection(
-                    bridgeID: "peer", name: "Peer",
-                    teardown: {
-                        PeerBridge.disconnect()
-                    }
-                ).listRowSeparator(.hidden)
             }
             footerSection.listRowSeparator(.hidden)
         }
@@ -66,38 +58,36 @@ struct PeerScreen: View {
         .navigationTitle("Peer")
         .navigationBarTitleDisplayMode(.large)
         .onAppear {
-            // Viewing is not consent to connect — only refresh if the switch
-            // is already on.
-            if connected { Task { await sync() } }
+            // Watching is consent (prd §207): keep the catalog seat honest the
+            // moment this screen appears, and refresh fills if a wallet's watched.
+            store.reconcileWalletSeats()
+            if hasWallets { Task { await sync() } }
         }
     }
 
-    // MARK: - Connect
+    // MARK: - Connect (automatic — no switch, prd §207)
 
+    /// No toggle: Peer settles into your own wallet, so watching a wallet IS
+    /// the consent to read its fills. With wallets watched, the row states the
+    /// fact and doors to the wallet manager (where you add or remove them);
+    /// with none, it's the invitation to watch one — the add-a-wallet entry
+    /// this catalog tile exists to be.
     private var connectSection: some View {
         Section {
             VStack(alignment: .leading, spacing: DS.Space.s2) {
                 if hasWallets {
-                    // The seat as one SWITCH SLAB (prd §190) — the row is the
-                    // connect verb, so it gets the full block.
-                    DSSlabSwitch(title: String(localized: "Land my Peer trades"),
-                                 isOn: Binding(
-                        get: { connected },
-                        set: { on in
-                            guard on != connected else { return }
-                            toggle(on)
-                        }
-                    ))
+                    DSSlabDoor(title: String(localized: "Watching \(walletCount) wallet\(walletCount == 1 ? "" : "s")"),
+                               detail: String(localized: "Manage")) {
+                        HomeRoute.shared.pushBridge(.wallet)
+                    }
                 } else {
-                    // No wallet watched = nothing Peer settles into that this
-                    // app can see. A disabled switch would be a dead control
-                    // (honesty rule) — the live verb is the prerequisite, and
-                    // a thing that navigates wears the door slab.
-                    DSSlabDoor(title: "Watch a wallet first") {
+                    DSSlabDoor(title: "Watch a wallet") {
                         HomeRoute.shared.pushBridge(.wallet)
                     }
                 }
-                DSSlabNote(text: "Rides your watched wallets — read-only, never trades.")
+                DSSlabNote(text: hasWallets
+                    ? "On automatically — Peer reads the wallets you watch. Read-only, never trades."
+                    : "Peer settles into your own wallet, so watching a wallet is all it takes. Read-only, never trades.")
             }
         }
         .dsSlabSection()
@@ -113,54 +103,19 @@ struct PeerScreen: View {
 
     // MARK: - Actions
 
-    private func toggle(_ on: Bool) {
-        connected = on
-        DSHaptic.tap()
-        if on {
-            // Register the seat EAGERLY — the switch is the connect verb, so
-            // the catalog must show connected the moment it's on, not only
-            // after the first sync succeeds (a live bridge wearing "not
-            // connected" is fake status; review 2026-07-17). The sync then
-            // upgrades the proof line with real counts.
-            register(proof: watchingProof)
-            Task { await sync() }
-        } else {
-            // Switching off clears the seat; the corpus keeps its things (the
-            // full remove-things choice lives in the disconnect section).
-            PeerBridge.disconnect()
-            store.remove("peer")
-            lastResult = nil
-        }
-    }
-
-    /// Sweep + land; the bridge's status line carries the proof.
+    /// Refresh fills for the watched wallets. The catalog seat is kept honest
+    /// by `store.reconcileWalletSeats()` (on appear + every foreground), not
+    /// here — this only lands new fills and reports reach.
     private func sync() async {
-        guard connected else { store.remove("peer"); return }
-        guard !syncing else { return }
+        guard hasWallets, !syncing else { return }
         syncing = true
         defer { syncing = false }
         let added = await PeerBridge.syncNow(context: modelContext)
-        // Disconnected mid-sync (teardown ran while this awaited) — don't
-        // resurrect the seat the person just removed.
-        guard connected else { store.remove("peer"); return }
         if let added {
             lastResult = added > 0 ? String(localized: "\(added) new")
                                    : String(localized: "Up to date")
-            register(proof: added > 0 ? "\(added) fill\(added == 1 ? "" : "s") in"
-                                      : watchingProof)
         } else {
             lastResult = String(localized: "Couldn't reach Base — check your connection.")
         }
-    }
-
-    private var watchingProof: String {
-        let n = WalletStore.shared.addresses.count
-        return "Watching \(n) wallet\(n == 1 ? "" : "s")"
-    }
-
-    private func register(proof: String) {
-        store.registerConnected(id: "peer", name: "Peer", proof: proof,
-                                can: ["Reads Peer fills for the wallets you watch, from the public chain.",
-                                      "Read-only — never starts, signs, or settles a trade."])
     }
 }

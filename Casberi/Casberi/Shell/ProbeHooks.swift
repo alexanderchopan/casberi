@@ -748,7 +748,9 @@ enum ProbeHooks {
         // signal join → deposit token → titles → things) verifies headlessly.
         // Pairs with `-walletAddress`.
         Hook(key: "peerProbe") { spec, context in
-            PeerBridge.connected = true
+            // No seat to switch on anymore (automatic, prd §207) — `probe`
+            // rewinds cursors and runs the sweep over the watched wallets
+            // directly, so pair this with `-walletAddress`.
             Task { @MainActor in
                 let n = await PeerBridge.probe(context: context, blocksBack: Int(spec))
                 NSLog("Peer probe: %@ landed", n.map(String.init) ?? "FAILED")
@@ -772,7 +774,8 @@ enum ProbeHooks {
             NSLog("Privacy Pools seed: %@", PrivacyPoolsBridge.pendingSummary())
         },
         Hook(key: "privacyPoolsProbe") { spec, context in
-            PrivacyPoolsBridge.connected = true
+            // Automatic seat (prd §207) — `probe` runs the sweep directly;
+            // pair with `-walletAddress <a depositor wallet>`.
             Task { @MainActor in
                 let n = await PrivacyPoolsBridge.probe(context: context, blocksBack: Int(spec))
                 NSLog("Privacy Pools probe: %@ landed; %@",
