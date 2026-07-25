@@ -94,122 +94,53 @@ struct CopyAddressButton: View {
     }
 }
 
-/// Name an address — the book's front door. Accepts one address or a pasted
-/// list ("Mom, 0x9a2E…" per line), because a person arriving with a set of
-/// addresses shouldn't have to add them one at a time (the Tokens screen's
-/// bulk-watch precedent, prd §169).
-struct NameAddressSheet: View {
-    @Environment(\.dismiss) private var dismiss
-    @State private var name = ""
-    @State private var address = ""
-    @State private var bulk = ""
-    @State private var showBulk = false
-    @State private var outcome: String?
-    private var book = AddressBook.shared
+/// One address's aggregate stats — count, span, and per-token net flow, built
+/// once from the card's own `history` array (already the COMPLETE matching
+/// set; the card's six-row list is a display slice of it, not a fetch limit).
+struct HistorySummary {
+    let count: Int
+    let firstDate: Date?
+    let lastDate: Date?
+    /// Native-unit net flow, largest magnitude first. No USD figure: `Thing`
+    /// carries no per-transaction USD field — only a portfolio-level snapshot
+    /// exists (`WalletStore.ValueSample`) — so inventing one here would be
+    /// exactly the fabricated status the honesty rule forbids.
+    let netByToken: [(symbol: String, net: Double)]
 
-    var body: some View {
-        NavigationStack {
-            List {
-                if showBulk {
-                    Section {
-                        TextEditor(text: $bulk)
-                            .frame(minHeight: 140)
-                            .dsText(.callout15)
-                            .textInputAutocapitalization(.never)
-                            .autocorrectionDisabled()
-                    } header: {
-                        Text("Paste a list").dsText(.label12).foregroundStyle(DS.textSecondary)
-                    } footer: {
-                        Text("One per line, or comma-separated. A name before an address takes it — \"Mom, 0x9a2E…\". A bare address lands under its short form, ready to rename.")
-                            .dsText(.callout15).foregroundStyle(DS.textSecondary)
-                    }
-                } else {
-                    Section {
-                        TextField("Name", text: $name)
-                            .dsText(.callout15)
-                        TextField("Address (0x…, ENS, or .sol)", text: $address)
-                            .dsText(.callout15)
-                            .textInputAutocapitalization(.never)
-                            .autocorrectionDisabled()
-                    } header: {
-                        Text("Name an address").dsText(.label12).foregroundStyle(DS.textSecondary)
-                    } footer: {
-                        Text("Nothing lands from a named address — naming is free. Watching its activity is a separate choice, on the address itself.")
-                            .dsText(.callout15).foregroundStyle(DS.textSecondary)
-                    }
-                }
-                Section {
-                    Button(showBulk ? "Name one at a time" : "Paste a list instead") {
-                        DSHaptic.tap()
-                        withAnimation(DS.Motion.standard) { showBulk.toggle() }
-                    }
-                    .dsText(.callout15)
-                    .foregroundStyle(DS.tint)
-                }
-                if let outcome {
-                    Section {
-                        Text(outcome).dsText(.callout15).foregroundStyle(DS.textSecondary)
-                    }
-                }
-            }
-            .listStyle(.insetGrouped)
-            .scrollContentBackground(.hidden)
-            .dsPageBackground()
-            .navigationTitle("Address book")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }.tint(DS.tint)
-                }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Save", action: save)
-                        .tint(DS.tint)
-                        .disabled(showBulk ? bulk.isEmpty : !canSaveOne)
-                }
-            }
+    init(_ things: [Thing]) {
+        count = things.count
+        let dates = things.map(\.capturedAt)
+        firstDate = dates.min()
+        lastDate = dates.max()
+        var sums: [String: Double] = [:]
+        var order: [String] = []
+        for thing in things {
+            guard let amountText = thing.transferAmount,
+                  let (magnitude, symbol) = Self.parse(amountText) else { continue }
+            let signed = thing.transferDirection == "sent" ? -magnitude : magnitude
+            if sums[symbol] == nil { order.append(symbol) }
+            sums[symbol, default: 0] += signed
         }
-        .presentationBackground(DS.surfaceSheet)
-        .dsColorScheme()
+        netByToken = order.map { ($0, sums[$0] ?? 0) }.sorted { abs($0.net) > abs($1.net) }
     }
 
-    private var canSaveOne: Bool {
-        !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-            && book.looksLikeAddress(address.trimmingCharacters(in: .whitespacesAndNewlines))
-    }
-
-    private func save() {
-        if showBulk {
-            let landed = book.addBulk(bulk)
-            guard landed > 0 else {
-                // Honest refusal: say what was wrong, don't just fail to close.
-                outcome = String(localized: "No addresses found in that — each line needs an address (0x…, ENS, or .sol).")
-                return
-            }
-            DSHaptic.success()
-            detect(book.all.prefix(landed).map(\.address))
-            dismiss()
-            return
-        }
-        let addr = address.trimmingCharacters(in: .whitespacesAndNewlines)
-        book.setName(name, for: addr)
-        DSHaptic.success()
-        detect([addr])
-        dismiss()
-    }
-
-    /// Ask the chain what these are, once they're in the book. Keyless, and
-    /// detached so the sheet closes immediately.
-    private func detect(_ addresses: [String]) {
-        Task { @MainActor in
-            for address in addresses { await AddressKind.detect(address) }
-        }
+    /// "0.9962 ETH" → (0.9962, "ETH") — the only shape `transferAmount`
+    /// carries (a formatted display string, not a numeric+symbol pair).
+    /// Unparseable strings return nil and are excluded from the net line
+    /// without suppressing the count — a parse miss must never hide the rest
+    /// of the summary.
+    private static func parse(_ text: String) -> (Double, String)? {
+        let parts = text.split(separator: " ")
+        guard parts.count == 2, let value = Double(parts[0]) else { return nil }
+        return (value, String(parts[1]))
     }
 }
 
 /// The address card (prd §169) — one address, everything the app honestly
-/// knows about it: its name, what it is, the address itself with Copy, the
-/// watch toggle as an UPGRADE on the entry, and your own history together,
-/// pulled from the corpus.
+/// knows about it: its name, what it is, the address itself with Copy, and
+/// your own history together, pulled from the corpus. Purely informational —
+/// watching lives solely on the book row's own star (prd §202), so the same
+/// setting isn't a control in two places at once.
 ///
 /// The history section is what makes this Casberi's rather than a contacts
 /// app: landed transfers already carry `counterpartyAddress`, so the card can
@@ -220,20 +151,14 @@ struct AddressCard: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
     @Environment(\.openURL) private var openURL
-    @Bindable private var wallet = WalletStore.shared
     private var book = AddressBook.shared
     @State private var renaming = false
     @State private var nameDraft = ""
-    @State private var refusal: String?
 
     init(entry: AddressBook.Entry) { self.entry = entry }
 
     /// Live, so a rename or a kind landing repaints the card.
     private var current: AddressBook.Entry { book.entry(for: entry.address) ?? entry }
-
-    private var isWatched: Bool {
-        wallet.addresses.contains { WalletWatch.sameAddress($0.address, entry.address) }
-    }
 
     /// The corpus's own record of this address — every transaction where it
     /// was the counterparty, newest first.
@@ -261,14 +186,6 @@ struct AddressCard: View {
                         .dsText(.subhead13).foregroundStyle(DS.textTertiary)
 
                     addressRow
-                    watchRow
-                    if let refusal {
-                        Text(refusal)
-                            .dsText(.subhead13).foregroundStyle(DS.textSecondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(.horizontal, DS.Space.s1)
-                    }
                     historySection
                     explorerRow
                 }
@@ -357,58 +274,20 @@ struct AddressCard: View {
         .dsWidgetSurface(fillOpacity: WalletCardStyle.fill)
     }
 
-    /// Watching as an UPGRADE on the book entry — with its cost stated, and
-    /// the cap honoured in words rather than a control that refuses (prd §170).
-    private var watchRow: some View {
-        HStack(spacing: DS.Space.s3) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Land its activity")
-                    .dsText(.callout15).foregroundStyle(DS.textPrimary)
-                Text(isWatched
-                     ? String(localized: "Transfers, approvals, and holdings are landing in your feed.")
-                     : String(localized: "Transfers, approvals, and holdings — the full feed."))
-                    .dsText(.label12).foregroundStyle(DS.textTertiary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            Spacer(minLength: 0)
-            Toggle("", isOn: Binding(get: { isWatched }, set: { toggleWatch($0) }))
-                .labelsHidden()
-                .tint(DS.confirm)
-        }
-        .padding(DS.Space.s3)
-        .dsWidgetSurface(fillOpacity: WalletCardStyle.fill)
-    }
-
-    private func toggleWatch(_ on: Bool) {
-        refusal = nil
-        if on {
-            switch wallet.outcome(ofAdding: entry.address, label: current.name) {
-            case .added:
-                DSHaptic.success()
-            case .limitReached:
-                refusal = String(localized: "You're watching \(WalletStore.watchLimit) wallets — the limit for now. Stop watching one to watch this. Its name stays either way.")
-            case .alreadyWatching, .invalid:
-                break
-            }
-        } else if let i = wallet.addresses.firstIndex(where: {
-            WalletWatch.sameAddress($0.address, entry.address)
-        }) {
-            // Unwatching DEMOTES to the book (prd §169): the landed history and
-            // cursors go, honestly, but the name is the person's own data and
-            // stays.
-            wallet.addresses.remove(at: i)
-            DSHaptic.tap()
-        }
-    }
-
     @ViewBuilder
     private var historySection: some View {
         let things = history
         if !things.isEmpty {
+            let summary = HistorySummary(things)
             VStack(alignment: .leading, spacing: DS.Space.s2) {
                 Text("Your history together · \(things.count)")
                     .dsText(.label12).foregroundStyle(DS.textSecondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
+                if let line = summaryLine(for: summary) {
+                    Text(line)
+                        .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
                 ForEach(Array(Array(things.prefix(6)).keyed.enumerated()), id: \.element.id) { i, row in
                     let thing = row.thing
                     HStack(spacing: DS.Space.s3) {
@@ -426,10 +305,59 @@ struct AddressCard: View {
                     // arrives a beat at a time rather than as a slab.
                     .settleIn(delay: 0.05 + Double(i) * 0.04)
                 }
+                if things.count > 6 {
+                    NavigationLink {
+                        AddressHistoryScreen(entry: current)
+                    } label: {
+                        HStack(spacing: DS.Space.s2) {
+                            Text("See all \(things.count)")
+                                .dsText(.subhead13).fontWeight(.semibold)
+                                .foregroundStyle(DS.tint)
+                            Spacer(minLength: 0)
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundStyle(DS.textTertiary)
+                        }
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.top, 2)
+                }
             }
             .padding(DS.Space.s3)
             .dsWidgetSurface(fillOpacity: WalletCardStyle.fill)
         }
+    }
+
+    /// "since Mar 3 · net −0.80 ETH" — the two facts a count alone can't say.
+    /// Only the fields that resolved to something real appear; a summary
+    /// with nothing to add stays absent rather than printing an empty line.
+    private func summaryLine(for summary: HistorySummary) -> String? {
+        var parts: [String] = []
+        if let first = summary.firstDate {
+            parts.append(String(localized: "since \(first.formatted(.dateTime.month(.abbreviated).day()))"))
+        }
+        if !summary.netByToken.isEmpty {
+            let shown = summary.netByToken.prefix(2).map { token -> String in
+                let sign = token.net < 0 ? "−" : "+"
+                return "\(sign)\(Self.formatAmount(abs(token.net))) \(token.symbol)"
+            }
+            var netText = "net " + shown.joined(separator: ", ")
+            let remaining = summary.netByToken.count - 2
+            if remaining > 0 {
+                netText += " " + String(localized: "+\(remaining) more")
+            }
+            parts.append(netText)
+        }
+        return parts.isEmpty ? nil : parts.joined(separator: " · ")
+    }
+
+    private static func formatAmount(_ value: Double) -> String {
+        let f = NumberFormatter()
+        f.numberStyle = .decimal
+        f.maximumFractionDigits = 4
+        f.minimumFractionDigits = 0
+        return f.string(from: NSNumber(value: value)) ?? String(format: "%.4f", value)
     }
 
     /// The one door out — and only for an address an explorer can actually
@@ -455,5 +383,52 @@ struct AddressCard: View {
             .buttonStyle(.plain)
             .dsWidgetSurface(fillOpacity: WalletCardStyle.fill)
         }
+    }
+}
+
+/// The whole of an address's history — the "See all" drill-down from the
+/// card's own six-row preview (`AddressCard.historySection`). Same fetch, no
+/// cap; a push, not a sheet, since it's a closer look at data the card
+/// already showed a slice of, not a new top-level surface.
+struct AddressHistoryScreen: View {
+    let entry: AddressBook.Entry
+    @Environment(\.modelContext) private var modelContext
+
+    private var history: [Thing] {
+        let key = AddressBook.key(for: entry.address)
+        let all = (try? modelContext.fetch(FetchDescriptor<Thing>(
+            predicate: #Predicate { $0.source == "Wallet" },
+            sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]))) ?? []
+        return all.filter { thing in
+            guard let cp = thing.counterpartyAddress else { return false }
+            return AddressBook.key(for: cp) == key
+        }
+    }
+
+    var body: some View {
+        List {
+            // `.keyed` per the CLAUDE.md rule against keying a ForEach on a
+            // derived array of raw `Thing` refs — see `ThingRowKeying.swift`.
+            ForEach(history.keyed) { row in
+                let thing = row.thing
+                HStack(spacing: DS.Space.s3) {
+                    KindGlyph(kind: thing.kind, size: 26)
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(thing.title).dsText(.subhead13)
+                            .foregroundStyle(DS.textPrimary).lineLimit(1)
+                        Text(thing.capturedAt.formatted(.dateTime.month(.abbreviated).day().year()))
+                            .dsText(.label12).foregroundStyle(DS.textTertiary)
+                    }
+                    Spacer(minLength: 0)
+                }
+            }
+            .listRowSeparator(.hidden)
+            .listRowBackground(Color.clear)
+        }
+        .listStyle(.plain)
+        .scrollContentBackground(.hidden)
+        .dsPageBackground()
+        .navigationTitle(entry.name)
+        .navigationBarTitleDisplayMode(.inline)
     }
 }

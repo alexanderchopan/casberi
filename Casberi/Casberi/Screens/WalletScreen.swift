@@ -13,6 +13,21 @@ private let walletRecentDescriptor: FetchDescriptor<Thing> = {
     return d
 }()
 
+/// How the address book list orders itself — recency (the book's own default
+/// order) is the honest baseline; name and activity are opt-in for a book big
+/// enough that insertion order stops being useful.
+private enum BookSort: CaseIterable, Hashable {
+    case recent, name, mostActive
+
+    var label: String {
+        switch self {
+        case .recent: String(localized: "Recent")
+        case .name: String(localized: "Name")
+        case .mostActive: String(localized: "Most active")
+        }
+    }
+}
+
 /// Wallet, connected — the wallet's home in Casberi. The person manages WHICH
 /// addresses are watched (paste to add, tap to rename, long-press to remove),
 /// sees a live holdings treemap (top 5 by USD value), and sees what's landed
@@ -74,6 +89,9 @@ struct WalletScreen: View {
     /// lived one page away. Same field, same list, no door.
     @Bindable private var book = AddressBook.shared
     @State private var openBookEntry: AddressBook.Entry?
+    /// How the list below the roster orders itself — recency by default,
+    /// name or activity on request.
+    @State private var bookSort: BookSort = .recent
     /// Set when tapping a star would exceed the watch cap — an honest modal,
     /// since the roster's empty slots can't show "already full" from inside
     /// the list (2026-07-24).
@@ -364,7 +382,35 @@ struct WalletScreen: View {
     /// separate screen for everyone else) was the actual "which page is
     /// this on" confusion; one list with a "Watching" mark on the entries
     /// that are is the honest merge, not two views pretending to be one.
-    private var bookEntries: [AddressBook.Entry] { book.search(newAddress) }
+    private var sortedBookEntries: [AddressBook.Entry] {
+        let matched = book.search(newAddress)
+        switch bookSort {
+        case .recent:
+            return matched
+        case .name:
+            return matched.sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
+        case .mostActive:
+            let counts = historyCounts
+            return matched.sorted {
+                (counts[AddressBook.key(for: $0.address)] ?? 0)
+                    > (counts[AddressBook.key(for: $1.address)] ?? 0)
+            }
+        }
+    }
+
+    /// Every book entry's landed-history count, keyed like the book itself —
+    /// one raw fetch (mirrors `AddressCard.history`'s own non-`@Query` read,
+    /// `AddressBookViews.swift`), built only when "Most active" needs it.
+    private var historyCounts: [String: Int] {
+        let all = (try? modelContext.fetch(FetchDescriptor<Thing>(
+            predicate: #Predicate<Thing> { $0.source == "Wallet" }))) ?? []
+        var counts: [String: Int] = [:]
+        for thing in all {
+            guard let cp = thing.counterpartyAddress else { continue }
+            counts[AddressBook.key(for: cp), default: 0] += 1
+        }
+        return counts
+    }
 
     private func isWatched(_ entry: AddressBook.Entry) -> Bool {
         wallet.addresses.contains { WalletWatch.sameAddress($0.address, entry.address) }
@@ -372,9 +418,9 @@ struct WalletScreen: View {
 
     @ViewBuilder
     private var bookSection: some View {
-        if !bookEntries.isEmpty {
+        if !sortedBookEntries.isEmpty {
             Section {
-                ForEach(bookEntries) { entry in
+                ForEach(sortedBookEntries) { entry in
                     Button {
                         DSHaptic.selection()
                         openBookEntry = entry
@@ -389,7 +435,23 @@ struct WalletScreen: View {
                     }
                 }
             } header: {
-                Text("Address book").dsText(.label12).foregroundStyle(DS.textSecondary)
+                HStack {
+                    Text("Address book").dsText(.label12).foregroundStyle(DS.textSecondary)
+                    Spacer(minLength: 0)
+                    Menu {
+                        Picker("Sort by", selection: $bookSort) {
+                            ForEach(BookSort.allCases, id: \.self) { sort in
+                                Text(sort.label).tag(sort)
+                            }
+                        }
+                    } label: {
+                        Image(systemName: bookSort == .recent
+                              ? "arrow.up.arrow.down.circle" : "arrow.up.arrow.down.circle.fill")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundStyle(bookSort == .recent ? DS.textTertiary : DS.tint)
+                    }
+                    .accessibilityLabel(Text("Sort: \(bookSort.label)"))
+                }
             } footer: {
                 // The one line that teaches the star (2026-07-24, user: "i
                 // like the stars, but i still want the roster shelf, so if
