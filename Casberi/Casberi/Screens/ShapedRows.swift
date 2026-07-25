@@ -425,7 +425,7 @@ enum ThingVoice {
 /// rounded display voice over a solid state pill. The pill carries direction
 /// alone, number-first, so color is never the only voice; no timestamp (a
 /// watchlist row's "watched N days ago" was already ruled noise, 2026-07-15).
-/// Its own struct like MusicRow/CheckRow/ExcerptRow — the caller (FeedScreen's
+/// Its own struct like MusicRow/ExcerptRow — the caller (FeedScreen's
 /// shapedRow) mounts it only when a pulse EXISTS and falls back to the plain
 /// band + timestamp until one lands, so this view never fakes a price.
 struct TokenRow: View {
@@ -1236,44 +1236,10 @@ struct TakeawayCard: View {
     }
 }
 
-// MARK: - Reminders: the check row (the lightest write, consent inline)
-
-struct CheckRow: View {
-    let thing: Thing
-    var onToggle: () -> Void
-
-    private var done: Bool { thing.mark == .done }
-
-    var body: some View {
-        HStack(alignment: .top, spacing: DS.Space.s3) {
-            Button(action: onToggle) {
-                ZStack {
-                    Circle()
-                        .strokeBorder(done ? DS.tint : DS.gray300, lineWidth: 1.5)
-                        .background(Circle().fill(done ? DS.tint : .clear))
-                        .frame(width: 24, height: 24)
-                    if done {
-                        Image(systemName: "checkmark")
-                            .font(.system(size: 11, weight: .bold))
-                            .foregroundStyle(.white)
-                    }
-                }
-                .padding(DS.Space.s1)
-                .contentShape(Circle())
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(done ? "Mark not done" : "Mark done")
-            Text(thing.title)
-                .dsText(.body17)
-                .foregroundStyle(done ? DS.textTertiary : DS.textPrimary)
-                .strikethrough(done, color: DS.textTertiary)
-                .lineLimit(2)
-                .frame(maxWidth: .infinity, alignment: .leading)
-            LiveTimeText(date: thing.capturedAt)
-        }
-        .padding(.vertical, DS.Space.s1)
-    }
-}
+// Reminders retired their own check row (ruling 2026-07-25): the integration
+// is read-only, so a reminder renders as the plain band like everything else —
+// struck through when done, its state carried by the section it's grouped under
+// (FeedScreen's reminders shape), never a check circle that writes nothing.
 
 // MARK: - Notes / chats — the excerpt row (shaped feeds, 2026-07-13)
 

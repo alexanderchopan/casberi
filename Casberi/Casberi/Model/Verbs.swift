@@ -72,10 +72,17 @@ enum VerbDerivation {
                 : Verb(label: "Add to Calendar", icon: "calendar.badge.plus",
                        action: .addToCalendar))
         case .reminder:
-            out.append(thing.source == "Reminders"
-                ? Verb(label: "Mark done", icon: "checkmark.circle", action: .markDone)
-                : Verb(label: "Add to Reminders", icon: "checklist",
-                       action: .addToReminders))
+            // A real reminder (Reminders source) is READ-ONLY (ruling
+            // 2026-07-25): its done-state mirrors the real list, so we never
+            // offer to complete it here — a local mark would drift, then get
+            // reverted by the authoritative refresh (the "fake status" the
+            // design law bans). Completing it is a hand-off to Reminders,
+            // added by the source-hand-off step below. A reminder captured
+            // elsewhere can still be added to the real list.
+            if thing.source != "Reminders" {
+                out.append(Verb(label: "Add to Reminders", icon: "checklist",
+                                action: .addToReminders))
+            }
             if let v = externalVerb(for: thing, apps: [.todoist]) { out.append(v) }
         case .link:
             // Music rows open the exact track in their app — the stored content
@@ -156,8 +163,11 @@ enum VerbDerivation {
                             action: .openURL(url)))
         }
 
-        // 3 — a task verb for marked things.
+        // 3 — a task verb for marked things. Reminders are excluded: their
+        // done-state is read-only, mirrored from the real list (ruling
+        // 2026-07-25), so "Mark done" would mark locally then get reverted.
         if thing.mark == .todo || thing.mark == .doing,
+           thing.source != "Reminders",
            !out.contains(where: { $0.label == "Mark done" }) {
             out.append(Verb(label: "Mark done", icon: "checkmark.circle", action: .markDone))
         }

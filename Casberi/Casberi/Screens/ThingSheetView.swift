@@ -1025,23 +1025,14 @@ struct ThingSheetView: View {
             UIPasteboard.general.string = thing.content.isEmpty ? thing.title : thing.content
             verbResult = "Copied"
         case .markDone:
-            // Same shape as the feed's check circle: mark optimistically,
-            // write through to the real reminder, revert if that fails —
-            // this verb used to mark locally only, leaving an EK-backed
-            // reminder open in the Reminders app (honesty rule).
-            let wasMark = thing.mark
+            // Rung-1 local mark only — app-owned things (a note turned to-do,
+            // demo seeds). A real reminder's done-state is READ-ONLY, mirrored
+            // from the Reminders app (ruling 2026-07-25), so it never offers
+            // this verb; nothing here writes back to any external record.
             thing.mark = .done
             modelContext.saveHonestly()
             CorpusSignal.shared.bump()
-            if await ScheduleIngest.setCompleted(thing.sourceRef, true) {
-                verbResult = "Done"
-            } else {
-                thing.mark = wasMark
-                modelContext.saveHonestly()
-                CorpusSignal.shared.bump()
-                verbResult = "Couldn't reach Reminders — not marked"
-                verbResultIsError = true
-            }
+            verbResult = "Done"
         case .translate:
             verbResult = nil
             translateText = thing.postText ?? thing.content
