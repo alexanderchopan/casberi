@@ -19,6 +19,20 @@ enum ScreenshotIngest {
         return added
     }
 
+    /// The AUTHORITATIVE gate for the foreground/pull refresh: does the app
+    /// actually have Photos read access right now? Keying off this instead of
+    /// the stored bridge status is the 2026-07-24 fix — new screenshots stopped
+    /// refreshing because the `pho` bridge status had drifted off exactly
+    /// `.connected` while full access was granted the whole time, so the old
+    /// status-only gate silently skipped every ingest after connect.
+    @MainActor
+    static var hasAccess: Bool {
+        switch PHPhotoLibrary.authorizationStatus(for: .readWrite) {
+        case .authorized, .limited: return true
+        default: return false
+        }
+    }
+
     /// Ingests the most recent screenshots as things, deduped on the asset id.
     @MainActor
     static func ingest(context: ModelContext, limit: Int = 20) -> Int {

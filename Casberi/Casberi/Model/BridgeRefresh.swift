@@ -71,26 +71,42 @@ enum BridgeRefresh {
         func connected(_ id: String) -> Bool {
             store.bridges.contains { $0.id == id && $0.status == .connected }
         }
-        if connected("pho") {
-            // Staggered off the synchronous call path (2026-07-24 perf): this
-            // runs TWO PHAsset library scans and must stay on the main actor
-            // for its SwiftData inserts, so calling it inline stalled the main
-            // thread mid-animation — the chip-flip and pull-to-refresh confetti
-            // stuttered on every sweep (user report). A Task defers it a beat
-            // past the frame the animation starts on; new screenshots still
-            // land this same sweep.
-            let ps = slot(); Task { @MainActor in
-                await BridgeRefresh.stagger(ps)
-                _ = ScreenshotIngest.ingest(context: context)
-            }
-            // Thumbnails for new rows, removal of confirmed-gone hollow ones.
-            // The heal (delete-sync + thumbnail backfill) is throttled — new
-            // screenshots still land every foreground via `ingest` above.
-            if BridgeRefresh.dueForHeal("photos") {
-                let s = slot(); Task { @MainActor in
-                    await BridgeRefresh.stagger(s)
-                    _ = await ScreenshotIngest.heal(context: context)
+        // Photos gates on the REAL authorization, not the stored bridge status
+        // (2026-07-24 fix): the `pho` status could drift off exactly
+        // `.connected` while full Photos access was granted the whole time, and
+        // the old `connected("pho")` gate then silently stopped every
+        // foreground/pull from ingesting new screenshots — connect landed the
+        // first batch and nothing refreshed after (user report). Run whenever
+        // access is live and the user hasn't explicitly PAUSED the bridge.
+        if let photoBridge = store.bridges.first(where: { $0.id == "pho" }),
+           photoBridge.status != .paused {
+            if ScreenshotIngest.hasAccess {
+                // Self-heal a drifted status so the Apps catalog reads true.
+                if photoBridge.status != .connected {
+                    store.reconnect("pho", proof: "Synced just now")
                 }
+                // Staggered off the synchronous call path (2026-07-24 perf):
+                // this runs TWO PHAsset library scans and must stay on the main
+                // actor for its SwiftData inserts, so calling it inline stalled
+                // the main thread mid-animation — the chip-flip and refresh
+                // confetti stuttered. A Task defers it a beat past the frame the
+                // animation starts on; new screenshots still land this sweep.
+                let ps = slot(); Task { @MainActor in
+                    await BridgeRefresh.stagger(ps)
+                    _ = ScreenshotIngest.ingest(context: context)
+                }
+                // Thumbnails for new rows, removal of confirmed-gone hollow
+                // ones. Throttled — new screenshots still land via `ingest`.
+                if BridgeRefresh.dueForHeal("photos") {
+                    let s = slot(); Task { @MainActor in
+                        await BridgeRefresh.stagger(s)
+                        _ = await ScreenshotIngest.heal(context: context)
+                    }
+                }
+            } else if photoBridge.status != .attention {
+                // Access revoked since connect — say so instead of silently
+                // ingesting nothing forever (honesty rule).
+                store.markAttention("pho", statusLine: "Photos access is off — reconnect to resume")
             }
         }
         if connected("cal") {

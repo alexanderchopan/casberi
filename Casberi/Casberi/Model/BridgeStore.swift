@@ -71,6 +71,15 @@ final class BridgeStore {
         bridges[i].statusLine = proof ?? "Synced just now"
     }
 
+    /// Flags a connected bridge as needing attention (access revoked upstream,
+    /// a sync that can't proceed) without tearing it down — the honest middle
+    /// state between connected and paused.
+    func markAttention(_ id: String, statusLine: String) {
+        guard let i = bridges.firstIndex(where: { $0.id == id }) else { return }
+        bridges[i].status = .attention
+        bridges[i].statusLine = statusLine
+    }
+
     func remove(_ id: String) {
         bridges.removeAll { $0.id == id }
     }
