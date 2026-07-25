@@ -288,6 +288,7 @@ struct RootShell: View {
         .redacted(reason: redactNow ? .placeholder : [])
         .onChange(of: scenePhase) { _, phase in
             if phase == .active {
+                let firstActivation = !hasBeenActive
                 hasBeenActive = true
                 // Freeze the away window (librarian, prd §67 ⑥) — "while you
                 // were away" grounds on it; things landing from here on are
@@ -299,31 +300,48 @@ struct RootShell: View {
                 // Warm the model on foreground so the first Ask is fast; the
                 // call is idempotent and returns immediately.
                 if !skipPrewarm { OnDeviceModel.prewarm() }
-                // Connected bridges are cheap to poll — every foreground
-                // refreshes them all (one place, reusable from screens).
-                BridgeRefresh.refreshAllConnected(context: modelContext, store: bridges)
-                // Build the on-device semantic index for anything new or not
-                // yet embedded — a bounded background sweep, so Ask can retrieve
-                // by meaning, not just shared words.
-                EmbeddingIndex.backfill(context: modelContext)
-                // The "Noticed" line's real trigger (docs/agent-brief.md
-                // ruling 10 — a gap the original ruling didn't name):
-                // `HomeInsightStore.refresh` used to fire from ONLY
-                // HomeScreen's own compose cycle, so a person who lands on
-                // "All" a whole session (increasingly the common case under
-                // content-first landing) never got a fresh line — same call,
-                // same signature-gate, just a second trigger point, never
-                // duplicated logic. Also refreshes the kept-ask digest cache
-                // (`KeptAskStore.anyChanged`) the bar's pulse reads from, so
-                // that stays current without recomputing on every render.
-                Task { @MainActor in
-                    let surfaced = Corpus.surfaced((try? modelContext.fetch(FetchDescriptor<Thing>(
-                        sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]))) ?? [])
-                    HomeInsightStore.shared.refresh(from: surfaced)
-                    await KeptAskStore.shared.refreshDigests(things: surfaced, context: modelContext)
-                    // The whisper's compose rides the same corpus walk this
-                    // Task already paid for — never its own fetch.
-                    refreshWhisper(things: surfaced)
+                // The heavier foreground work — polling every connected bridge
+                // (`refreshAllConnected` includes a SYNCHRONOUS Photos fetch),
+                // the embedding backfill, and the insight/kept-ask/whisper
+                // recompute — is deferred past the launch ANIMATION on the
+                // FIRST activation (2026-07-24 perf, user report "loading
+                // hangs / the coins-flip stutters"): running it as the opening
+                // frames paint stalled the main thread mid-animation. A later
+                // foreground has no launch animation to protect, so it runs
+                // immediately.
+                let runForegroundWork: @MainActor () -> Void = {
+                    // Connected bridges are cheap to poll — every foreground
+                    // refreshes them all (one place, reusable from screens).
+                    BridgeRefresh.refreshAllConnected(context: modelContext, store: bridges)
+                    // Build the on-device semantic index for anything new or
+                    // not yet embedded — a bounded background sweep, so Ask can
+                    // retrieve by meaning, not just shared words.
+                    EmbeddingIndex.backfill(context: modelContext)
+                    // The "Noticed" line's real trigger (docs/agent-brief.md
+                    // ruling 10). Also refreshes the kept-ask digest cache
+                    // (`KeptAskStore.anyChanged`) the bar's pulse reads from.
+                    Task { @MainActor in
+                        // Bounded (2026-07-24): insight/kept-ask/whisper read
+                        // only recent activity, so this needn't materialize the
+                        // whole corpus on the main actor at launch.
+                        var d = FetchDescriptor<Thing>(
+                            sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
+                        d.fetchLimit = 600
+                        let surfaced = Corpus.surfaced((try? modelContext.fetch(d)) ?? [])
+                        HomeInsightStore.shared.refresh(from: surfaced)
+                        await KeptAskStore.shared.refreshDigests(things: surfaced, context: modelContext)
+                        // The whisper's compose rides the same corpus walk this
+                        // Task already paid for — never its own fetch.
+                        refreshWhisper(things: surfaced)
+                    }
+                }
+                if firstActivation {
+                    Task { @MainActor in
+                        try? await Task.sleep(for: .milliseconds(800))
+                        runForegroundWork()
+                    }
+                } else {
+                    runForegroundWork()
                 }
                 // Resnapshot hand-off state so the thing sheet's "Add to <app>"
                 // verbs only show apps the person connected AND has installed.
