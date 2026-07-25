@@ -30,6 +30,11 @@ struct AccountDetailSheet: View {
     @State private var importing = false
     @State private var importResult: String?
     @State private var deleteResult: String?
+    /// "What this app reaches" (prd §205) — the in-motion half of the privacy
+    /// story (what LEAVES this iPhone), a sub-page of this one Privacy home so
+    /// it sits beside the at-rest half (on device / iCloud) instead of
+    /// competing as a second privacy row.
+    @State private var reachOpen = false
     /// Your key (prd §67) — draft, outcome line, and a mirrored configured
     /// flag (AgentKey isn't observable; actions refresh it by hand). The
     /// picker chooses which agent the key belongs to (ruling 2026-07-14:
@@ -56,6 +61,9 @@ struct AccountDetailSheet: View {
             }
         }
         .onAppear { if detail == .data { exportURL = buildExport() } }
+        .sheet(isPresented: $reachOpen) {
+            NavigationStack { NetworkReachScreen() }
+        }
         // The export's other half — the file comes back in whole (dedupe by id).
         .fileImporter(isPresented: $importing,
                       allowedContentTypes: [.json]) { result in
@@ -83,7 +91,7 @@ struct AccountDetailSheet: View {
 
     private var title: String {
         switch detail {
-        case .data: "Data"
+        case .data: "Privacy"   // the ONE privacy home (user, 2026-07-24)
         case .key: "Your key"
         case .color: "Color"
         }
@@ -149,9 +157,10 @@ struct AccountDetailSheet: View {
 
     private var sheetHeight: CGFloat {
         switch detail {
-        // The ADP nudge adds ~3 lines only when sync is on (prd §205); DSTray
+        // Now the one privacy home: + the "What this app reaches" row always,
+        // and the ADP nudge (~3 lines) only when sync is on (prd §205). DSTray
         // clips at a fixed detent, so the taller state must be sized for.
-        case .data: icloudSync ? 590 : 530
+        case .data: icloudSync ? 660 : 600
         case .key: 500   // +40 for the per-agent capability line (2026-07-21)
         case .color: 400   // aliveRow + one swatch row + a footnote (prd §204)
         }
@@ -196,6 +205,29 @@ struct AccountDetailSheet: View {
                       hidePreviews ? DS.confirm : DS.textSecondary,
                       "Hide previews", "Blur your things in the app switcher",
                       Binding(get: { hidePreviews }, set: { hidePreviews = $0; DSHaptic.tap() }))
+            // The in-motion half (prd §205): what LEAVES this iPhone. The rows
+            // above are your copy AT REST (on device / iCloud); this opens the
+            // full list of every service the app talks to. Same privacy home,
+            // one tap deeper.
+            Button {
+                DSHaptic.tap()
+                reachOpen = true
+            } label: {
+                HStack(spacing: DS.Space.s3) {
+                    badge("network", DS.tint)
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text("What this app reaches").dsText(.body17).foregroundStyle(DS.textPrimary)
+                        Text("Every service, straight from this iPhone")
+                            .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                    }
+                    Spacer(minLength: 0)
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(DS.textTertiary)
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
         }
     }
 

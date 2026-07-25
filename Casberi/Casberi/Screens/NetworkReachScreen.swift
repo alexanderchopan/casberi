@@ -6,8 +6,9 @@ import SwiftUI
 /// can read the whole list and see that connected services reach out, and the
 /// rest don't until you connect them.
 ///
-/// Reached from the Data sheet — Data is the app's one privacy home, so this
-/// lives under it rather than as its own top-level settings row. Three
+/// Reached from the Privacy sheet — the ONE privacy home (user, 2026-07-24),
+/// where the at-rest half (on device / iCloud) and this in-motion half (what
+/// leaves the iPhone) sit together rather than as two competing rows. Three
 /// groups: what's reaching now (always-on + your connected apps), what would
 /// reach only if you connect it, and the agent key that reaches only when you
 /// tap "Try with your key".

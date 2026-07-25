@@ -15,11 +15,6 @@ struct SettingsScreen: View {
     /// the person turns iCloud sync on.
     @AppStorage("icloud.sync") private var icloudSync = false
     @State private var diagnosticsOpen = false
-    /// "What this app reaches" (prd §205) — its own row and sheet, the
-    /// reliable Diagnostics pattern (a nested sheet from the Data tray
-    /// presented flakily). The privacy story stays whole: Data owns your
-    /// data, this owns the network — one clearly-named axis each.
-    @State private var networkOpen = false
     @State private var languageOpen = false
     @State private var howItWorksOpen = false
     @State private var detail: AccountDetail?
@@ -48,9 +43,6 @@ struct SettingsScreen: View {
             .navigationBarTitleDisplayMode(.large)
             .sheet(isPresented: $diagnosticsOpen) {
                 NavigationStack { DiagnosticsScreen() }
-            }
-            .sheet(isPresented: $networkOpen) {
-                NavigationStack { NetworkReachScreen() }
             }
             .sheet(item: $detail) { AccountDetailSheet(detail: $0) }
             .sheet(isPresented: $languageOpen) { LanguagePickerSheet() }
@@ -128,7 +120,14 @@ struct SettingsScreen: View {
                         if ProfileStore.shared.avatar == nil { avatarPickerOpen = true }
                         else { avatarDialogOpen = true }
                     }),
-            RowSpec(title: "Data", value: String(localized: "\(thingCount) things · on device"),
+            // "Privacy", not "Data" (user, 2026-07-24) — the ONE privacy home:
+            // where your things live (on device / iCloud + ADP), what leaves
+            // this iPhone ("What this app reaches"), previews, and the two
+            // deletes. A privacy-curious person has one obvious place to tap,
+            // and there's no second privacy-ish row to compete with it. The
+            // badge still previews sync STATE — a green on-device lock or the
+            // blue cloud — which is itself the privacy fact at a glance.
+            RowSpec(title: "Privacy", value: String(localized: "\(thingCount) things · on device"),
                     badge: icloudSync ? ("icloud.fill", DS.tint) : ("lock.iphone", DS.confirm),
                     action: { detail = .data }),
         ].sorted { $0.title < $1.title }
@@ -179,14 +178,6 @@ struct SettingsScreen: View {
                     valueColor: keyed ? DS.confirm : DS.textTertiary,
                     badge: ("key.fill", keyed ? DS.confirm : DS.textSecondary),
                     action: { detail = .key }),
-            // "What this app reaches" (prd §205) — the privacy-legibility
-            // door: every service Casberi talks to, straight from this
-            // iPhone, and why. "Network", A–Z, its own sheet (the reliable
-            // Diagnostics pattern).
-            RowSpec(title: "Network",
-                    value: String(localized: "What this app reaches"),
-                    badge: ("network", DS.tint),
-                    action: { networkOpen = true }),
             // The one persistent explainer of the model (2026-07-11) — for
             // a new person after the coach lines retire. "How it works", not
             // "About" (About reads as version/legal).
