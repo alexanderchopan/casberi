@@ -1829,30 +1829,30 @@
         }
       }
     },
-    "Jump to a tool, or ask below." : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "ツールを開くか、下で質問しましょう。"
+    "Jump to a tool, or ask below.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "ツールを開くか、下で質問しましょう。"
           }
         },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "도구를 열거나 아래에서 질문하세요."
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "도구를 열거나 아래에서 질문하세요."
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "打开工具,或在下方提问。"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "打开工具,或在下方提问。"
           }
         },
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Abre una herramienta o pregunta abajo."
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Abre una herramienta o pregunta abajo."
           }
         }
       }
@@ -14013,30 +14013,30 @@
         }
       }
     },
-    "Your recent mail becomes findable things. Connects over IMAP with a Google app password — your real password is never shared, and it's read-only. Needs 2-Step Verification on your Google account.": {
+    "Your recent mail becomes findable things.\n\nConnects over IMAP with a Google app password — your real password is never shared, and it's read-only. Needs 2-Step Verification on your Google account.": {
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "最近のメールが見つけられる thing になります。Google のアプリパスワードを使い IMAP 経由で接続します — 本当のパスワードは共有されず、読み取り専用です。Google アカウントで2段階認証が必要です。"
+            "value": "最近のメールが見つけられる thing になります。\n\nGoogle のアプリパスワードを使い IMAP 経由で接続します — 本当のパスワードは共有されず、読み取り専用です。Google アカウントで2段階認証が必要です。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "최근 메일이 찾을 수 있는 항목이 돼요. Google 앱 비밀번호로 IMAP을 통해 연결돼요 — 실제 비밀번호는 공유되지 않고, 읽기 전용이에요. Google 계정에 2단계 인증이 필요해요."
+            "value": "최근 메일이 찾을 수 있는 항목이 돼요.\n\nGoogle 앱 비밀번호로 IMAP을 통해 연결돼요 — 실제 비밀번호는 공유되지 않고, 읽기 전용이에요. Google 계정에 2단계 인증이 필요해요."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "你近期的邮件会变成可查找的内容。通过 IMAP 用一个 Google 应用密码连接 — 你的真实密码不会被共享，且为只读。需要在你的 Google 账户上开启两步验证。"
+            "value": "你近期的邮件会变成可查找的内容。\n\n通过 IMAP 用一个 Google 应用密码连接 — 你的真实密码不会被共享，且为只读。需要在你的 Google 账户上开启两步验证。"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Tu correo reciente se convierte en cosas localizables. Se conecta por IMAP con una contraseña de app de Google — tu contraseña real nunca se comparte, y es de solo lectura. Necesita la Verificación en dos pasos en tu cuenta de Google."
+            "value": "Tu correo reciente se convierte en cosas localizables.\n\nSe conecta por IMAP con una contraseña de app de Google — tu contraseña real nunca se comparte, y es de solo lectura. Necesita la Verificación en dos pasos en tu cuenta de Google."
           }
         }
       }
@@ -14293,114 +14293,114 @@
         }
       }
     },
-    "The pages you connect become findable things, so what you wrote isn't stranded in one more app. Pages only. Connects with an integration token from notion.so — it stays in this iPhone's Keychain.": {
+    "The pages you connect become findable things, so what you wrote isn't stranded in one more app.\n\nPages only. Connects with an integration token from notion.so — it stays in this iPhone's Keychain.": {
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "接続したページが見つけられる thing になり、書いたものがもうひとつのアプリに取り残されずに済みます。ページのみ。notion.so のインテグレーショントークンで接続します — トークンはこの iPhone の Keychain に留まります。"
+            "value": "接続したページが見つけられる thing になり、書いたものがもうひとつのアプリに取り残されずに済みます。\n\nページのみ。notion.so のインテグレーショントークンで接続します — トークンはこの iPhone の Keychain に留まります。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "연결한 페이지가 찾을 수 있는 항목이 돼서, 작성한 내용이 또 하나의 앱에 갇히지 않아요. 페이지만. notion.so의 통합 토큰으로 연결돼요 — 토큰은 이 iPhone의 Keychain에 남아요."
+            "value": "연결한 페이지가 찾을 수 있는 항목이 돼서, 작성한 내용이 또 하나의 앱에 갇히지 않아요.\n\n페이지만. notion.so의 통합 토큰으로 연결돼요 — 토큰은 이 iPhone의 Keychain에 남아요."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "你连接的页面会变成可查找的内容，于是你写的东西不会被困在又一个应用里。仅限页面。用一个来自 notion.so 的集成令牌连接 — 它留在这台 iPhone 的 Keychain 里。"
+            "value": "你连接的页面会变成可查找的内容，于是你写的东西不会被困在又一个应用里。\n\n仅限页面。用一个来自 notion.so 的集成令牌连接 — 它留在这台 iPhone 的 Keychain 里。"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Las páginas que conectas se convierten en cosas localizables, así lo que escribiste no queda varado en una app más. Solo páginas. Se conecta con un token de integración de notion.so — se queda en el Keychain de este iPhone."
+            "value": "Las páginas que conectas se convierten en cosas localizables, así lo que escribiste no queda varado en una app más.\n\nSolo páginas. Se conecta con un token de integración de notion.so — se queda en el Keychain de este iPhone."
           }
         }
       }
     },
-    "Follow any subreddit or person on Reddit — their new posts land in your feed as links, through Reddit's own public feed. No account, no sign-in. Read-only.": {
+    "Follow any subreddit or person on Reddit — their new posts land in your feed as links, through Reddit's own public feed.\n\nNo account, no sign-in. Read-only.": {
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Reddit の任意のサブレディットや人をフォロー — 新しい投稿が Reddit 自身の公開フィード経由でリンクとしてフィードに届きます。アカウントもサインインも不要。読み取り専用です。"
+            "value": "Reddit の任意のサブレディットや人をフォロー — 新しい投稿が Reddit 自身の公開フィード経由でリンクとしてフィードに届きます。\n\nアカウントもサインインも不要。読み取り専用です。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Reddit에서 어떤 서브레딧이나 사람이든 팔로우하세요 — 새 게시물이 Reddit 자체 공개 피드를 통해 링크로 피드에 들어와요. 계정도, 로그인도 필요 없어요. 읽기 전용."
+            "value": "Reddit에서 어떤 서브레딧이나 사람이든 팔로우하세요 — 새 게시물이 Reddit 자체 공개 피드를 통해 링크로 피드에 들어와요.\n\n계정도, 로그인도 필요 없어요. 읽기 전용."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "关注 Reddit 上的任意 subreddit 或用户 — 他们的新帖子会作为链接，通过 Reddit 自己的公开订阅源进入你的订阅流。无需账户，无需登录。只读。"
+            "value": "关注 Reddit 上的任意 subreddit 或用户 — 他们的新帖子会作为链接，通过 Reddit 自己的公开订阅源进入你的订阅流。\n\n无需账户，无需登录。只读。"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Sigue cualquier subreddit o persona en Reddit — sus nuevas publicaciones llegan a tu feed como enlaces, a través del propio feed público de Reddit. Sin cuenta, sin inicio de sesión. Solo lectura."
+            "value": "Sigue cualquier subreddit o persona en Reddit — sus nuevas publicaciones llegan a tu feed como enlaces, a través del propio feed público de Reddit.\n\nSin cuenta, sin inicio de sesión. Solo lectura."
           }
         }
       }
     },
-    "Follow any YouTube channel — its new uploads land in your feed as links, through YouTube's own public feed. Paste the channel's @handle or URL. No account. Read-only.": {
+    "Follow any YouTube channel — its new uploads land in your feed as links, through YouTube's own public feed. Paste the channel's @handle or URL.\n\nNo account. Read-only.": {
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "任意の YouTube チャンネルをフォロー — 新しいアップロードが YouTube 自身の公開フィード経由でリンクとしてフィードに届きます。チャンネルの @ハンドルか URL を貼り付けてください。アカウント不要。読み取り専用です。"
+            "value": "任意の YouTube チャンネルをフォロー — 新しいアップロードが YouTube 自身の公開フィード経由でリンクとしてフィードに届きます。チャンネルの @ハンドルか URL を貼り付けてください。\n\nアカウント不要。読み取り専用です。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "어떤 YouTube 채널이든 팔로우하세요 — 새 업로드가 YouTube 자체 공개 피드를 통해 링크로 피드에 들어와요. 채널의 @핸들이나 URL을 붙여넣으세요. 계정 필요 없어요. 읽기 전용."
+            "value": "어떤 YouTube 채널이든 팔로우하세요 — 새 업로드가 YouTube 자체 공개 피드를 통해 링크로 피드에 들어와요. 채널의 @핸들이나 URL을 붙여넣으세요.\n\n계정 필요 없어요. 읽기 전용."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "关注任意 YouTube 频道 — 它的新上传会作为链接，通过 YouTube 自己的公开订阅源进入你的订阅流。粘贴该频道的 @handle 或 URL。无需账户。只读。"
+            "value": "关注任意 YouTube 频道 — 它的新上传会作为链接，通过 YouTube 自己的公开订阅源进入你的订阅流。粘贴该频道的 @handle 或 URL。\n\n无需账户。只读。"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Sigue cualquier canal de YouTube — sus nuevas subidas llegan a tu feed como enlaces, a través del propio feed público de YouTube. Pega el @handle o la URL del canal. Sin cuenta. Solo lectura."
+            "value": "Sigue cualquier canal de YouTube — sus nuevas subidas llegan a tu feed como enlaces, a través del propio feed público de YouTube. Pega el @handle o la URL del canal.\n\nSin cuenta. Solo lectura."
           }
         }
       }
     },
-    "What you've recently played lands in your feed, opening back in Apple Music. Uses Apple's own MusicKit with your permission — read-only, nothing added to your library. Everything stays on this iPhone.": {
+    "What you've recently played lands in your feed, opening back in Apple Music.\n\nUses Apple's own MusicKit with your permission — read-only, nothing added to your library. Everything stays on this iPhone.": {
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "最近再生したものがフィードに届き、Apple Music で開き直せます。あなたの許可のもと Apple 自身の MusicKit を使います — 読み取り専用で、ライブラリに何も追加されません。すべてがこの iPhone に留まります。"
+            "value": "最近再生したものがフィードに届き、Apple Music で開き直せます。\n\nあなたの許可のもと Apple 自身の MusicKit を使います — 読み取り専用で、ライブラリに何も追加されません。すべてがこの iPhone に留まります。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "최근 재생한 곡이 피드에 들어오고, Apple Music에서 다시 열려요. 여러분의 권한으로 Apple 자체 MusicKit을 사용해요 — 읽기 전용, 라이브러리에 아무것도 추가하지 않아요. 모든 것은 이 iPhone에 남아요."
+            "value": "최근 재생한 곡이 피드에 들어오고, Apple Music에서 다시 열려요.\n\n여러분의 권한으로 Apple 자체 MusicKit을 사용해요 — 읽기 전용, 라이브러리에 아무것도 추가하지 않아요. 모든 것은 이 iPhone에 남아요."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "你近期播放过的内容会进入你的订阅流，并能回到 Apple Music 中打开。经你授权后使用 Apple 自己的 MusicKit — 只读，不会往你的资料库添加任何内容。一切都留在这台 iPhone 上。"
+            "value": "你近期播放过的内容会进入你的订阅流，并能回到 Apple Music 中打开。\n\n经你授权后使用 Apple 自己的 MusicKit — 只读，不会往你的资料库添加任何内容。一切都留在这台 iPhone 上。"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Lo que has escuchado hace poco llega a tu feed, y se abre de nuevo en Apple Music. Usa el propio MusicKit de Apple con tu permiso — solo lectura, nada se añade a tu biblioteca. Todo se queda en este iPhone."
+            "value": "Lo que has escuchado hace poco llega a tu feed, y se abre de nuevo en Apple Music.\n\nUsa el propio MusicKit de Apple con tu permiso — solo lectura, nada se añade a tu biblioteca. Todo se queda en este iPhone."
           }
         }
       }
@@ -14629,30 +14629,30 @@
         }
       }
     },
-    "Your recent public pins land in your feed as links — what you saved on Pinterest joins everything else. Connects with just your username through Pinterest's own public feed: no password, nothing stored but the name. Public boards only.": {
+    "Your recent public pins land in your feed as links — what you saved on Pinterest joins everything else.\n\nConnects with just your username through Pinterest's own public feed: no password, nothing stored but the name. Public boards only.": {
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "最近の公開ピンがリンクとしてフィードに届きます — Pinterest に保存したものが他のすべてに加わります。Pinterest 自身の公開フィード経由でユーザー名だけで接続します。パスワードは不要で、名前以外は何も保存されません。公開ボードのみ。"
+            "value": "最近の公開ピンがリンクとしてフィードに届きます — Pinterest に保存したものが他のすべてに加わります。\n\nPinterest 自身の公開フィード経由でユーザー名だけで接続します。パスワードは不要で、名前以外は何も保存されません。公開ボードのみ。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "최근 공개 핀이 링크로 피드에 들어와요 — Pinterest에 저장한 것이 다른 모든 것과 합류해요. Pinterest 자체 공개 피드를 통해 사용자 이름만으로 연결돼요: 비밀번호 없음, 이름 외에는 아무것도 저장하지 않아요. 공개 보드만."
+            "value": "최근 공개 핀이 링크로 피드에 들어와요 — Pinterest에 저장한 것이 다른 모든 것과 합류해요.\n\nPinterest 자체 공개 피드를 통해 사용자 이름만으로 연결돼요: 비밀번호 없음, 이름 외에는 아무것도 저장하지 않아요. 공개 보드만."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "你近期的公开图钉会作为链接进入你的订阅流 — 你在 Pinterest 上保存的内容加入其他一切。仅用你的用户名通过 Pinterest 自己的公开订阅源连接：无需密码，除名称外不存储任何内容。仅限公开画板。"
+            "value": "你近期的公开图钉会作为链接进入你的订阅流 — 你在 Pinterest 上保存的内容加入其他一切。\n\n仅用你的用户名通过 Pinterest 自己的公开订阅源连接：无需密码，除名称外不存储任何内容。仅限公开画板。"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Tus pines públicos recientes llegan a tu feed como enlaces — lo que guardaste en Pinterest se une a todo lo demás. Se conecta solo con tu nombre de usuario a través del propio feed público de Pinterest: sin contraseña, no se guarda nada salvo el nombre. Solo tableros públicos."
+            "value": "Tus pines públicos recientes llegan a tu feed como enlaces — lo que guardaste en Pinterest se une a todo lo demás.\n\nSe conecta solo con tu nombre de usuario a través del propio feed público de Pinterest: sin contraseña, no se guarda nada salvo el nombre. Solo tableros públicos."
           }
         }
       }
@@ -14713,58 +14713,58 @@
         }
       }
     },
-    "A one-time import of Journal's own export — entries become findable notes, dated as you wrote them. In Journal: your profile picture → Export Journal, unzip in Files, pick the folder here. Apple offers no live read.": {
+    "A one-time import of Journal's own export — entries become findable notes, dated as you wrote them.\n\nIn Journal: your profile picture → Export Journal, unzip in Files, pick the folder here. Apple offers no live read.": {
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Journal 自身のエクスポートの一度きりの取り込みで、エントリーが、書いた日付のまま見つけられるノートになります。Journal で: プロフィール画像 → Export Journal、Files で解凍し、ここでフォルダを選びます。Apple はライブ読み込みを提供していません。"
+            "value": "Journal 自身のエクスポートの一度きりの取り込みで、エントリーが、書いた日付のまま見つけられるノートになります。\n\nJournal で: プロフィール画像 → Export Journal、Files で解凍し、ここでフォルダを選びます。Apple はライブ読み込みを提供していません。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Journal 자체 내보내기를 한 번 가져와요 — 기록이 작성한 날짜 그대로 찾을 수 있는 노트가 돼요. Journal에서: 프로필 사진 → Export Journal, 파일에서 압축을 풀고, 여기서 폴더를 선택하세요. Apple은 실시간 읽기를 제공하지 않아요."
+            "value": "Journal 자체 내보내기를 한 번 가져와요 — 기록이 작성한 날짜 그대로 찾을 수 있는 노트가 돼요.\n\nJournal에서: 프로필 사진 → Export Journal, 파일에서 압축을 풀고, 여기서 폴더를 선택하세요. Apple은 실시간 읽기를 제공하지 않아요."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "一次性导入 Journal 自己的导出 — 记录会变成可查找的笔记，日期为你书写它们的日期。在 Journal 中：头像 → 导出日志，在 文件 中解压，然后在这里选择文件夹。Apple 未提供实时读取。"
+            "value": "一次性导入 Journal 自己的导出 — 记录会变成可查找的笔记，日期为你书写它们的日期。\n\n在 Journal 中：头像 → 导出日志，在 文件 中解压，然后在这里选择文件夹。Apple 未提供实时读取。"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Una importación única de la propia exportación de Journal — las entradas se convierten en notas localizables, con la fecha en que las escribiste. En Journal: tu foto de perfil → Export Journal, descomprime en Archivos, elige la carpeta aquí. Apple no ofrece lectura en vivo."
+            "value": "Una importación única de la propia exportación de Journal — las entradas se convierten en notas localizables, con la fecha en que las escribiste.\n\nEn Journal: tu foto de perfil → Export Journal, descomprime en Archivos, elige la carpeta aquí. Apple no ofrece lectura en vivo."
           }
         }
       }
     },
-    "A one-time import of your Day One export — every entry becomes a findable note, dated as you wrote it, tags kept. Export JSON in Day One, unzip in Files, pick the file here. Re-imports add only what's new.": {
+    "A one-time import of your Day One export — every entry becomes a findable note, dated as you wrote it, tags kept.\n\nExport JSON in Day One, unzip in Files, pick the file here. Re-imports add only what's new.": {
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Day One のエクスポートの一度きりの取り込みで、すべてのエントリーが、書いた日付のまま、タグを保ったまま見つけられるノートになります。Day One で JSON をエクスポートし、Files で解凍して、ここでファイルを選びます。再取り込みでは新しいものだけが追加されます。"
+            "value": "Day One のエクスポートの一度きりの取り込みで、すべてのエントリーが、書いた日付のまま、タグを保ったまま見つけられるノートになります。\n\nDay One で JSON をエクスポートし、Files で解凍して、ここでファイルを選びます。再取り込みでは新しいものだけが追加されます。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Day One 내보내기를 한 번 가져와요 — 모든 기록이 작성한 날짜 그대로, 태그를 유지한 채 찾을 수 있는 노트가 돼요. Day One에서 JSON을 내보내고, 파일에서 압축을 풀어, 여기서 파일을 선택하세요. 다시 가져오면 새로운 것만 추가돼요."
+            "value": "Day One 내보내기를 한 번 가져와요 — 모든 기록이 작성한 날짜 그대로, 태그를 유지한 채 찾을 수 있는 노트가 돼요.\n\nDay One에서 JSON을 내보내고, 파일에서 압축을 풀어, 여기서 파일을 선택하세요. 다시 가져오면 새로운 것만 추가돼요."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "一次性导入你的 Day One 导出 — 每条记录都变成可查找的笔记，日期为你书写它的日期，标签保留。在 Day One 中导出 JSON，在 文件 中解压，然后在这里选择文件。重新导入只会添加新增内容。"
+            "value": "一次性导入你的 Day One 导出 — 每条记录都变成可查找的笔记，日期为你书写它的日期，标签保留。\n\n在 Day One 中导出 JSON，在 文件 中解压，然后在这里选择文件。重新导入只会添加新增内容。"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Una importación única de tu exportación de Day One — cada entrada se convierte en una nota localizable, con la fecha en que la escribiste, conservando las etiquetas. Exporta JSON en Day One, descomprime en Archivos, elige el archivo aquí. Las reimportaciones solo añaden lo nuevo."
+            "value": "Una importación única de tu exportación de Day One — cada entrada se convierte en una nota localizable, con la fecha en que la escribiste, conservando las etiquetas.\n\nExporta JSON en Day One, descomprime en Archivos, elige el archivo aquí. Las reimportaciones solo añaden lo nuevo."
           }
         }
       }
@@ -14909,30 +14909,30 @@
         }
       }
     },
-    "Recently played games land in your feed, linking to their store pages. Connects with a free Steam Web API key and your public profile name — the key stays in this iPhone's Keychain. Read-only.": {
+    "Recently played games land in your feed, linking to their store pages.\n\nConnects with a free Steam Web API key and your public profile name — the key stays in this iPhone's Keychain. Read-only.": {
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "最近プレイしたゲームが、ストアページへのリンクとともにフィードに届きます。無料の Steam Web API key と公開プロフィール名で接続します — キーはこの iPhone の Keychain に留まります。読み取り専用です。"
+            "value": "最近プレイしたゲームが、ストアページへのリンクとともにフィードに届きます。\n\n無料の Steam Web API key と公開プロフィール名で接続します — キーはこの iPhone の Keychain に留まります。読み取り専用です。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "최근 플레이한 게임이 스토어 페이지로 연결되며 피드에 들어와요. 무료 Steam Web API 키와 공개 프로필 이름으로 연결돼요 — 키는 이 iPhone의 Keychain에 남아요. 읽기 전용."
+            "value": "최근 플레이한 게임이 스토어 페이지로 연결되며 피드에 들어와요.\n\n무료 Steam Web API 키와 공개 프로필 이름으로 연결돼요 — 키는 이 iPhone의 Keychain에 남아요. 읽기 전용."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "近期玩过的游戏会进入你的订阅流，并链接到它们的商店页面。用一个免费的 Steam Web API 密钥和你的公开资料名称连接 — 密钥留在这台 iPhone 的 Keychain 里。只读。"
+            "value": "近期玩过的游戏会进入你的订阅流，并链接到它们的商店页面。\n\n用一个免费的 Steam Web API 密钥和你的公开资料名称连接 — 密钥留在这台 iPhone 的 Keychain 里。只读。"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Los juegos jugados hace poco llegan a tu feed, enlazando a sus páginas de tienda. Se conecta con una clave gratuita de la Steam Web API y tu nombre de perfil público — la clave se queda en el Keychain de este iPhone. Solo lectura."
+            "value": "Los juegos jugados hace poco llegan a tu feed, enlazando a sus páginas de tienda.\n\nSe conecta con una clave gratuita de la Steam Web API y tu nombre de perfil público — la clave se queda en el Keychain de este iPhone. Solo lectura."
           }
         }
       }
@@ -14993,30 +14993,30 @@
         }
       }
     },
-    "Follow any Substack — new posts land in your feed as links, fetched straight from the publication's own feed. Paste its URL or name. No account. Read-only.": {
+    "Follow any Substack — new posts land in your feed as links, fetched straight from the publication's own feed. Paste its URL or name.\n\nNo account. Read-only.": {
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "任意の Substack をフォロー — 新しい投稿が、パブリケーション自身のフィードから直接取得され、リンクとしてフィードに届きます。URL か名前を貼り付けてください。アカウント不要。読み取り専用です。"
+            "value": "任意の Substack をフォロー — 新しい投稿が、パブリケーション自身のフィードから直接取得され、リンクとしてフィードに届きます。URL か名前を貼り付けてください。\n\nアカウント不要。読み取り専用です。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "어떤 Substack이든 팔로우하세요 — 새 게시물이 퍼블리케이션 자체 피드에서 바로 가져와져 링크로 피드에 들어와요. URL이나 이름을 붙여넣으세요. 계정 필요 없어요. 읽기 전용."
+            "value": "어떤 Substack이든 팔로우하세요 — 새 게시물이 퍼블리케이션 자체 피드에서 바로 가져와져 링크로 피드에 들어와요. URL이나 이름을 붙여넣으세요.\n\n계정 필요 없어요. 읽기 전용."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "关注任意 Substack — 新帖子会作为链接进入你的订阅流，直接从该刊物自己的订阅源获取。粘贴它的 URL 或名称。无需账户。只读。"
+            "value": "关注任意 Substack — 新帖子会作为链接进入你的订阅流，直接从该刊物自己的订阅源获取。粘贴它的 URL 或名称。\n\n无需账户。只读。"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Sigue cualquier Substack — las nuevas publicaciones llegan a tu feed como enlaces, obtenidas directamente del propio feed de la publicación. Pega su URL o nombre. Sin cuenta. Solo lectura."
+            "value": "Sigue cualquier Substack — las nuevas publicaciones llegan a tu feed como enlaces, obtenidas directamente del propio feed de la publicación. Pega su URL o nombre.\n\nSin cuenta. Solo lectura."
           }
         }
       }
@@ -15049,58 +15049,58 @@
         }
       }
     },
-    "Follow any podcast — new episodes land in your feed as links. Search for a show and pick it; episodes arrive through the show's own public feed. No account. Read-only.": {
+    "Follow any podcast — new episodes land in your feed as links. Search for a show and pick it; episodes arrive through the show's own public feed.\n\nNo account. Read-only.": {
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "任意のポッドキャストをフォロー — 新しいエピソードがリンクとしてフィードに届きます。番組を検索して選ぶと、エピソードが番組自身の公開フィード経由で届きます。アカウント不要。読み取り専用です。"
+            "value": "任意のポッドキャストをフォロー — 新しいエピソードがリンクとしてフィードに届きます。番組を検索して選ぶと、エピソードが番組自身の公開フィード経由で届きます。\n\nアカウント不要。読み取り専用です。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "어떤 팟캐스트든 팔로우하세요 — 새 에피소드가 링크로 피드에 들어와요. 프로그램을 검색해 선택하세요; 에피소드는 프로그램 자체 공개 피드를 통해 들어와요. 계정 필요 없어요. 읽기 전용."
+            "value": "어떤 팟캐스트든 팔로우하세요 — 새 에피소드가 링크로 피드에 들어와요. 프로그램을 검색해 선택하세요; 에피소드는 프로그램 자체 공개 피드를 통해 들어와요.\n\n계정 필요 없어요. 읽기 전용."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "关注任意播客 — 新单集会作为链接进入你的订阅流。搜索一个节目并选择它；单集通过该节目自己的公开订阅源到来。无需账户。只读。"
+            "value": "关注任意播客 — 新单集会作为链接进入你的订阅流。搜索一个节目并选择它；单集通过该节目自己的公开订阅源到来。\n\n无需账户。只读。"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Sigue cualquier podcast — los nuevos episodios llegan a tu feed como enlaces. Busca un programa y elígelo; los episodios llegan a través del propio feed público del programa. Sin cuenta. Solo lectura."
+            "value": "Sigue cualquier podcast — los nuevos episodios llegan a tu feed como enlaces. Busca un programa y elígelo; los episodios llegan a través del propio feed público del programa.\n\nSin cuenta. Solo lectura."
           }
         }
       }
     },
-    "Your contacts become findable people — a name you're looking for turns up with everything it connects to. Search-only: they never crowd your feed. Everything stays on this iPhone — Contacts never touches a server. Read-only.": {
+    "Your contacts become findable people — a name you're looking for turns up with everything it connects to. Search-only: they never crowd your feed.\n\nEverything stays on this iPhone — Contacts never touches a server. Read-only.": {
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "連絡先が見つけられる人になります — 探している名前が、それにつながるすべてとともに現れます。検索専用で、フィードを埋め尽くすことはありません。すべてがこの iPhone に留まり、Contacts がサーバーに触れることはありません。読み取り専用です。"
+            "value": "連絡先が見つけられる人になります — 探している名前が、それにつながるすべてとともに現れます。検索専用で、フィードを埋め尽くすことはありません。\n\nすべてがこの iPhone に留まり、Contacts がサーバーに触れることはありません。読み取り専用です。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "연락처가 찾을 수 있는 사람이 돼요 — 찾고 있는 이름이 그것과 연결된 모든 것과 함께 나타나요. 검색 전용: 피드를 절대 어지럽히지 않아요. 모든 것은 이 iPhone에 남아요 — Contacts는 서버에 절대 닿지 않아요. 읽기 전용."
+            "value": "연락처가 찾을 수 있는 사람이 돼요 — 찾고 있는 이름이 그것과 연결된 모든 것과 함께 나타나요. 검색 전용: 피드를 절대 어지럽히지 않아요.\n\n모든 것은 이 iPhone에 남아요 — Contacts는 서버에 절대 닿지 않아요. 읽기 전용."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "你的联系人会变成可查找的人物 — 你要找的名字会连同它关联的一切一起出现。仅供搜索：他们绝不会挤占你的订阅流。一切都留在这台 iPhone 上 — Contacts 绝不接触任何服务器。只读。"
+            "value": "你的联系人会变成可查找的人物 — 你要找的名字会连同它关联的一切一起出现。仅供搜索：他们绝不会挤占你的订阅流。\n\n一切都留在这台 iPhone 上 — Contacts 绝不接触任何服务器。只读。"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Tus contactos se convierten en personas localizables — un nombre que buscas aparece con todo lo que conecta. Solo búsqueda: nunca saturan tu feed. Todo se queda en este iPhone — Contactos nunca toca un servidor. Solo lectura."
+            "value": "Tus contactos se convierten en personas localizables — un nombre que buscas aparece con todo lo que conecta. Solo búsqueda: nunca saturan tu feed.\n\nTodo se queda en este iPhone — Contactos nunca toca un servidor. Solo lectura."
           }
         }
       }

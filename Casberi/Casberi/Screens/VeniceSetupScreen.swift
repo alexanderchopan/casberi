@@ -88,7 +88,7 @@ struct VeniceSetupScreen: View {
             .dsListCardRow()
             BridgeSyncStatusRows(result: result, resultIsError: resultIsError)
         } footer: {
-            Text("Nothing reads in — Venice keeps chats on your device by design. Your key powers \"Try with your key\": any answer re-runs on Venice, straight from this iPhone, only when you tap. It also remembers a chat's earlier answers, and can lean on live web search when your saved things fall short — screenshots stay text-only. The key lives in the Keychain, goes only to Venice itself, and Venice bills you directly. It also appears in Settings → Your key.")
+            Text("Nothing reads in — Venice keeps chats on your device by design. Your key powers \"Try with your key\": any answer re-runs on Venice, straight from this iPhone, only when you tap.\n\nIt also remembers a chat's earlier answers, and can lean on live web search when your saved things fall short — screenshots stay text-only.\n\nThe key lives in the Keychain, goes only to Venice itself, and Venice bills you directly. It also appears in Settings → Your key.")
                 .dsText(.subhead13).foregroundStyle(DS.textTertiary)
         }
     }

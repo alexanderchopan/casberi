@@ -49,7 +49,7 @@ struct NetworkReachScreen: View {
     var body: some View {
         List {
             Section {
-                Text("Casberi has no server. Every request below goes straight from this iPhone to the service named — nothing routes through us, because there is no us to route through. This is the whole list.")
+                Text("Casberi has no server. Every request below goes straight from this iPhone to the service named — nothing routes through us, because there is no us to route through.\n\nThis is the whole list.")
                     .dsText(.subhead13).foregroundStyle(DS.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
                     .listRowBackground(Color.clear)

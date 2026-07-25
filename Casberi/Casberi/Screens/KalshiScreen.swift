@@ -139,7 +139,7 @@ struct KalshiScreen: View {
 
     private var footerSection: some View {
         Section {
-            Text("Public odds from Kalshi, a CFTC-regulated exchange — nothing about you leaves your iPhone. Read-only: nothing here places a trade. Opens on Kalshi.")
+            Text("Public odds from Kalshi, a CFTC-regulated exchange — nothing about you leaves your iPhone.\n\nRead-only: nothing here places a trade. Opens on Kalshi.")
                 .dsText(.subhead13).foregroundStyle(DS.textTertiary)
                 .listRowBackground(Color.clear)
         }

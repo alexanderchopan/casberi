@@ -237,7 +237,7 @@ struct StocktwitsScreen: View {
 
     private var footerSection: some View {
         Section {
-            Text("Takes are what traders post publicly on Stocktwits — each bullish or bearish call is its author's, never a rating of ours. Charts draw from public market data on this iPhone. Read-only: nothing here trades or sees a portfolio.")
+            Text("Takes are what traders post publicly on Stocktwits — each bullish or bearish call is its author's, never a rating of ours.\n\nCharts draw from public market data on this iPhone. Read-only: nothing here trades or sees a portfolio.")
                 .dsText(.subhead13).foregroundStyle(DS.textTertiary)
                 .listRowBackground(Color.clear)
         }

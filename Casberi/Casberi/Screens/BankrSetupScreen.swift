@@ -92,7 +92,7 @@ struct BankrSetupScreen: View {
             .dsListCardRow()
             BridgeSyncStatusRows(result: result, resultIsError: resultIsError)
         } footer: {
-            Text("Nothing reads in. Your key powers \"Try with your key\": any answer re-runs on Bankr — which can weigh your wallet and live markets, not just your things — straight from this iPhone, only when you tap. Every question says answer only: nothing here trades, sends, or swaps. The key lives in the Keychain, goes only to Bankr itself, and Bankr bills you directly. It also appears in Settings → Your key.")
+            Text("Nothing reads in. Your key powers \"Try with your key\": any answer re-runs on Bankr — which can weigh your wallet and live markets, not just your things — straight from this iPhone, only when you tap.\n\nEvery question says answer only: nothing here trades, sends, or swaps.\n\nThe key lives in the Keychain, goes only to Bankr itself, and Bankr bills you directly. It also appears in Settings → Your key.")
                 .dsText(.subhead13).foregroundStyle(DS.textTertiary)
         }
     }

@@ -118,7 +118,7 @@ struct ShopifyScreen: View {
 
     private var footerSection: some View {
         Section {
-            Text("Fetched directly by this iPhone through each store's public catalog — no account, no ranking. Read-only: nothing here checks out or pays. Some big stores block automated reads; those it can't follow, it says so.")
+            Text("Fetched directly by this iPhone through each store's public catalog — no account, no ranking. Read-only: nothing here checks out or pays.\n\nSome big stores block automated reads; those it can't follow, it says so.")
                 .dsText(.subhead13).foregroundStyle(DS.textTertiary)
                 .listRowBackground(Color.clear)
         }

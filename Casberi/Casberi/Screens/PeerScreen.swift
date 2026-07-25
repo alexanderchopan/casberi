@@ -95,7 +95,7 @@ struct PeerScreen: View {
 
     private var footerSection: some View {
         Section {
-            Text("Fills are read from Base's public chain by this iPhone — no Peer account, no key. Peer's zero-knowledge design keeps your Venmo or PayPal side private; the chain never shows it, so neither does Casberi. Read-only: nothing here ever starts a trade.")
+            Text("Fills are read from Base's public chain by this iPhone — no Peer account, no key.\n\nPeer's zero-knowledge design keeps your Venmo or PayPal side private; the chain never shows it, so neither does Casberi. Read-only: nothing here ever starts a trade.")
                 .dsText(.subhead13).foregroundStyle(DS.textTertiary)
                 .listRowBackground(Color.clear)
         }

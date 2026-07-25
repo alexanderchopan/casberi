@@ -85,7 +85,7 @@ struct AccountDetailSheet: View {
             Button("Delete every token and key", role: .destructive) { deleteAccess() }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("Every token, key, and mail password Casberi holds — connected apps stop syncing and paired clients disconnect. Your things stay. Photos and Calendar access is iOS's; revoke those in Settings. No undo.")
+            Text("Every token, key, and mail password Casberi holds — connected apps stop syncing and paired clients disconnect. Your things stay.\n\nPhotos and Calendar access is iOS's; revoke those in Settings. No undo.")
         }
     }
 

@@ -147,7 +147,7 @@ struct ExchangeSetupScreen: View {
             .dsListCardRow()
             BridgeSyncStatusRows(result: result, resultIsError: resultIsError)
         } footer: {
-            Text("Your balances join your watched wallets in one combined total and one map. Casberi asks \(venue.display) what this key is allowed to do before storing it, and hands it back if it can move money — an API key works for whoever holds it, so the app keeps the weakest one that does the job. The key lives in the Keychain and goes only to \(venue.display). Nothing here can place an order, withdraw, or transfer.")
+            Text("Your balances join your watched wallets in one combined total and one map.\n\nCasberi asks \(venue.display) what this key is allowed to do before storing it, and hands it back if it can move money — an API key works for whoever holds it, so the app keeps the weakest one that does the job.\n\nThe key lives in the Keychain and goes only to \(venue.display). Nothing here can place an order, withdraw, or transfer.")
                 .dsText(.subhead13).foregroundStyle(DS.textTertiary)
         }
     }

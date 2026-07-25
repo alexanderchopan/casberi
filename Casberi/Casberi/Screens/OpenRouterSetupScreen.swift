@@ -88,7 +88,7 @@ struct OpenRouterSetupScreen: View {
             .dsListCardRow()
             BridgeSyncStatusRows(result: result, resultIsError: resultIsError)
         } footer: {
-            Text("OpenRouter auto-picks whichever of its 400+ models fits your question — your key powers \"Try with your key\": any answer re-runs on OpenRouter, straight from this iPhone, only when you tap. It also remembers a chat's earlier answers — screenshots and live web search stay off, since the model it lands on can vary. The key lives in the Keychain, goes only to OpenRouter itself, and OpenRouter bills you directly. It also appears in Settings → Your key.")
+            Text("OpenRouter auto-picks whichever of its 400+ models fits your question — your key powers \"Try with your key\": any answer re-runs on OpenRouter, straight from this iPhone, only when you tap.\n\nIt also remembers a chat's earlier answers — screenshots and live web search stay off, since the model it lands on can vary.\n\nThe key lives in the Keychain, goes only to OpenRouter itself, and OpenRouter bills you directly. It also appears in Settings → Your key.")
                 .dsText(.subhead13).foregroundStyle(DS.textTertiary)
         }
     }
