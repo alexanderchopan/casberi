@@ -178,6 +178,19 @@ enum MailIngest {
             }
         }
 
+        // An EMPTY presence answer to a non-empty query is almost never "every
+        // email was deleted at once" — it's a fetch that didn't parse or an
+        // inbox that didn't answer (no throw, just nothing back). Deleting the
+        // whole held set on that wipes a connected inbox out of Casberi's feed
+        // and source chips (reported 2026-07-24: "mail connected but gone").
+        // Skip removal this pass; a real per-message delete still surfaces via
+        // the survivors in `present` on a pass that actually answers.
+        guard !result.present.isEmpty else {
+            NSLog("Mail heal (%@): empty presence for %d held UIDs — skipping delete (treated as a fetch hiccup, not a mass deletion)",
+                  provider.rawValue, uidToThing.count)
+            return 0
+        }
+
         var removedIDs: [UUID] = []
         for (uid, thing) in uidToThing where !result.present.contains(uid) {
             removedIDs.append(thing.id)

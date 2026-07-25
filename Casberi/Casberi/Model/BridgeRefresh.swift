@@ -72,7 +72,17 @@ enum BridgeRefresh {
             store.bridges.contains { $0.id == id && $0.status == .connected }
         }
         if connected("pho") {
-            _ = ScreenshotIngest.ingest(context: context)
+            // Staggered off the synchronous call path (2026-07-24 perf): this
+            // runs TWO PHAsset library scans and must stay on the main actor
+            // for its SwiftData inserts, so calling it inline stalled the main
+            // thread mid-animation — the chip-flip and pull-to-refresh confetti
+            // stuttered on every sweep (user report). A Task defers it a beat
+            // past the frame the animation starts on; new screenshots still
+            // land this same sweep.
+            let ps = slot(); Task { @MainActor in
+                await BridgeRefresh.stagger(ps)
+                _ = ScreenshotIngest.ingest(context: context)
+            }
             // Thumbnails for new rows, removal of confirmed-gone hollow ones.
             // The heal (delete-sync + thumbnail backfill) is throttled — new
             // screenshots still land every foreground via `ingest` above.
