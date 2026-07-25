@@ -280,6 +280,19 @@ struct MainSurface: View {
         // portrait on the one iPad that most wants it.
         .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width in
             surfaceWidth = width
+            detail.layoutSettled = true
+            #if DEBUG
+            // The iPad shape, stated. Every branch here is invisible on the
+            // device that DOESN'T take it — a mini falling back to the sheet
+            // and a 13" opening the pane look identical in a screenshot of
+            // the feed alone — so the shell says which one it computed. Logs
+            // on every rotation, which is exactly when it changes.
+            NSLog("[Casberi] padLayout: width=%.0f regular=%@ rail=%.0f pane=%@",
+                  width, isRegular ? "YES" : "NO",
+                  isRegular ? PadLayout.railWidth : 0,
+                  showsPane ? String(format: "%.0f", PadLayout.paneWidth(for: width))
+                            : "none (sheet)")
+            #endif
         }
         // Told once, read everywhere: a row-tap site asks the selection
         // whether a pane exists rather than re-deriving the breakpoint.

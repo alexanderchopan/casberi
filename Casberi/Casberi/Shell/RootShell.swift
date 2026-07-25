@@ -608,12 +608,14 @@ struct RootShell: View {
                 let match = all.first { $0.title.hasPrefix(prefix) }
                 // On iPad the pane is where a thing opens, so the hook has to
                 // go there too — otherwise the probe verifies a route no tap
-                // takes. Deferred one beat because `paneActive` is written by
-                // `MainSurface` from its own measured width, and this
-                // `onAppear` can run before that geometry has landed; nil-ing
-                // the reply out of `present` is what makes the fallback exact.
+                // takes. It waits on the shell's first layout rather than a
+                // magic delay: `paneActive` is written by `MainSurface` from
+                // its own measured width, so before the first geometry pass
+                // it reads false in a way that means "not measured", not "no
+                // pane" — and the hook would take the sheet on a device that
+                // has one.
                 Task { @MainActor in
-                    try? await Task.sleep(for: .milliseconds(400))
+                    await PadDetailSelection.shared.awaitLayout()
                     guard let match, match.isLive else {
                         NSLog("[Casberi] openThing: no match for %@", prefix)
                         return

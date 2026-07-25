@@ -109,6 +109,23 @@ final class PadDetailSelection {
     /// no caller has to know the breakpoint or re-derive the size class.
     var paneActive = false
 
+    /// Set the first time the shell measures itself. `paneActive` starts
+    /// false and only becomes true after a layout pass, so anything asking
+    /// at LAUNCH (a deep link, a Spotlight hand-off, the `-openThing` probe)
+    /// would otherwise read a settled-looking `false` that just means "not
+    /// measured yet" and take the sheet on a device that has a pane.
+    var layoutSettled = false
+
+    /// Suspends until the shell has measured itself, so a launch-time route
+    /// asks a question that has an answer. Bounded — a shell that never lays
+    /// out (nothing on screen to route into) must not hang the caller, it
+    /// falls through and the caller takes its normal path.
+    func awaitLayout() async {
+        for _ in 0..<60 where !layoutSettled {
+            try? await Task.sleep(for: .milliseconds(16))
+        }
+    }
+
     /// Routes a row tap. Returns true when the pane took it — a caller that
     /// gets false must present its own sheet exactly as it always did, which
     /// is what keeps iPhone (and a narrow iPad) on the original path.
