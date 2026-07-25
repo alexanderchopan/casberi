@@ -81,8 +81,20 @@ enum BridgeRefresh {
         if let photoBridge = store.bridges.first(where: { $0.id == "pho" }),
            photoBridge.status != .paused {
             if ScreenshotIngest.hasAccess {
-                // Self-heal a drifted status so the Apps catalog reads true.
-                if photoBridge.status != .connected {
+                // LIMITED access is the silent version of this bridge's own
+                // bug report (2026-07-25): every fetch still succeeds, so
+                // nothing downstream can tell "your library has 4 screenshots"
+                // from "iOS only lets us see the 4 you picked" — new
+                // screenshots never land and older ones are missing wholesale,
+                // which reads exactly like a broken sync. Say it instead
+                // (honesty rule); Photos' detail screen carries the remedy.
+                let limitedLine = String(localized: "Limited access — only the photos you picked can land")
+                if ScreenshotIngest.accessIsLimited {
+                    if photoBridge.status != .attention || photoBridge.statusLine != limitedLine {
+                        store.markAttention("pho", statusLine: limitedLine)
+                    }
+                } else if photoBridge.status != .connected || photoBridge.statusLine == limitedLine {
+                    // Self-heal a drifted status so the Apps catalog reads true.
                     store.reconnect("pho", proof: "Synced just now")
                 }
                 // Staggered off the synchronous call path (2026-07-24 perf):
@@ -94,10 +106,16 @@ enum BridgeRefresh {
                 let ps = slot(); Task { @MainActor in
                     await BridgeRefresh.stagger(ps)
                     _ = ScreenshotIngest.ingest(context: context)
+                    // …and one batch of the walk BACKWARDS through the library,
+                    // so screenshots older than the head fetch's window finally
+                    // arrive. Costs nothing once the walk has reached the end.
+                    ScreenshotIngest.backfill(context: context)
                 }
                 // Thumbnails for new rows, removal of confirmed-gone hollow
-                // ones. Throttled — new screenshots still land via `ingest`.
-                if BridgeRefresh.dueForHeal("photos") {
+                // ones. Throttled — new screenshots still land via `ingest` —
+                // but a deliberate pull runs it live, same contract as Mail's
+                // heal below: `force` bypasses every other TTL in this path.
+                if force || BridgeRefresh.dueForHeal("photos") {
                     let s = slot(); Task { @MainActor in
                         await BridgeRefresh.stagger(s)
                         _ = await ScreenshotIngest.heal(context: context)

@@ -1061,6 +1061,25 @@ enum ProbeHooks {
             let n = ScreenshotIngest.ingest(context: context)
             NSLog("Photos re-ingest probe: %d new", n)
         },
+        // `-photoBackfill YES|reset` walks one batch BACKWARDS through the
+        // library — the 2026-07-25 fix for "older screenshots never show".
+        // `reset` restarts the walk first, so a second run re-lands from the
+        // top of the library instead of reporting an already-finished cursor.
+        // A numeric spec sets the batch size, so the walk itself can be
+        // stepped on a small library ("-photoBackfill 2" three times).
+        Hook(key: "photoBackfill") { spec, context in
+            if spec.lowercased().hasPrefix("reset") { ScreenshotIngest.resetBackfill() }
+            let limited = ScreenshotIngest.accessIsLimited
+            let batch = Int(spec.split(separator: " ").last.map(String.init) ?? "") ?? 200
+            let n = ScreenshotIngest.backfill(context: context, batch: batch)
+            let held = ((try? context.fetch(FetchDescriptor<Thing>(
+                predicate: #Predicate { $0.source == "Photos" }))) ?? [])
+                .filter { $0.kind == .screenshot }.count
+            NSLog("Photos backfill probe: %d landed · %d in corpus · %@ · access=%@",
+                  n, held,
+                  ScreenshotIngest.backfillDone ? "walked to the end" : "more to walk",
+                  limited ? "LIMITED" : (ScreenshotIngest.hasAccess ? "full" : "none"))
+        },
         // `-connectStrava YES` runs the Strava connect — the Health-store
         // read filtered to workouts Strava wrote (no Strava account
         // anywhere). On the sim the store is empty: expect "0 in".

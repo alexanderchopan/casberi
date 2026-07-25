@@ -13,9 +13,16 @@ enum ScreenshotIngest {
     static func connectAndIngest(context: ModelContext, limit: Int = 20) async -> Int? {
         let status = await PHPhotoLibrary.requestAuthorization(for: .readWrite)
         guard status == .authorized || status == .limited else { return nil }
+        // A connect with nothing landed yet is a genuinely fresh start — a
+        // cursor left over from a previous connect would skip the library.
+        if !hasLandedScreenshots(context: context) { resetBackfill() }
         let added = ingest(context: context, limit: limit)
-        // Thumbnails save behind the connect proof, never blocking it.
-        Task { @MainActor in _ = await heal(context: context) }
+        // The rest of the library, and thumbnails, save behind the connect
+        // proof — never blocking it.
+        Task { @MainActor in
+            backfill(context: context)
+            _ = await heal(context: context)
+        }
         return added
     }
 
@@ -33,6 +40,19 @@ enum ScreenshotIngest {
         }
     }
 
+    /// LIMITED access — the app can only ever see the handful of assets the
+    /// person picked in the system sheet. Every fetch below still succeeds and
+    /// still returns "all the screenshots", so nothing in the ingest can tell
+    /// this apart from a small library: new screenshots simply never appear
+    /// (they aren't in the picked set) and older ones are missing wholesale.
+    /// That is indistinguishable, from inside the app, from the bug it looks
+    /// like — so the bridge has to SAY it (honesty rule); see `BridgeRefresh`
+    /// and the Photos row on `BridgeDetailScreen`.
+    @MainActor
+    static var accessIsLimited: Bool {
+        PHPhotoLibrary.authorizationStatus(for: .readWrite) == .limited
+    }
+
     /// Ingests the most recent screenshots as things, deduped on the asset id.
     @MainActor
     static func ingest(context: ModelContext, limit: Int = 20) -> Int {
@@ -46,16 +66,148 @@ enum ScreenshotIngest {
     static func ingestWithReport(context: ModelContext, limit: Int = 20)
     -> (added: Int, albumFound: Int, predicateFound: Int, merged: Int)
     {
-        // Two independent fetches, unioned by localIdentifier:
-        //  1) The Screenshots smart album — iOS's own list, updated by the
-        //     screenshot capture pipeline itself. Direct, no predicate.
-        //  2) The mediaSubtypes predicate — the historical path. Field report
-        //     2026-07-24 (build 138, iOS 26): only the album path caught new
-        //     screenshots on the reporter's device; the mediaSubtypes predicate
-        //     silently returned zero for newer captures while still returning
-        //     older ones. Keeping the predicate as a second source is a cheap
-        //     safety net for whatever the album misses (edited screenshots
-        //     saved as new assets, third-party capture apps, etc.).
+        let fetched = fetchScreenshots(limit: limit)
+        let added = land(fetched.merged, context: context)
+        // A head window where EVERY asset was new means the window was too
+        // small for what arrived since the last pass — there are probably more
+        // just past its edge (a screenshotting spree while the app sat in the
+        // background). Re-open the walk so the tail can't be stranded; it
+        // dedupes on the way back down and costs a few foregrounds.
+        if added >= limit, backfillDone { resetBackfill() }
+        return (added, fetched.albumFound.count, fetched.predicateFound.count, fetched.merged.count)
+    }
+
+    // MARK: - Backfill
+
+    /// The head fetch above is `limit`-capped and newest-first, so it can only
+    /// ever see the most recent handful of screenshots — which means the
+    /// corpus was permanently truncated to whatever existed at connect plus
+    /// whatever arrived after (report 2026-07-25: "they don't always show the
+    /// photos that are in Photos, especially if they are a bit older").
+    /// Nothing walked backwards. This does: each refresh takes the next batch
+    /// deeper into the library, so a big library fills in progressively over a
+    /// few foregrounds instead of never.
+    ///
+    /// The walk is by INDEX into each newest-first fetch, not by a creationDate
+    /// cursor. A date cursor was the first shape and it silently dropped
+    /// assets: `creationDate < cursor` skips EVERY asset tied on the boundary
+    /// timestamp, and screenshots tie constantly (a burst, an import, anything
+    /// batch-written). Measured 2026-07-25 on a 12-asset library — the walk
+    /// landed 8 and declared itself finished. An index can't tie.
+    private static let doneKey = "photos.backfill.done"
+    private static func offsetKey(_ path: String) -> String { "photos.backfill.offset.\(path)" }
+
+    /// Restarts the walk — for a genuinely fresh connect, or after the visible
+    /// library widens (limited access picking more photos).
+    static func resetBackfill() {
+        UserDefaults.standard.removeObject(forKey: doneKey)
+        for path in ["album", "predicate", "debug"] {
+            UserDefaults.standard.removeObject(forKey: offsetKey(path))
+        }
+    }
+
+    static var backfillDone: Bool { UserDefaults.standard.bool(forKey: doneKey) }
+
+    /// Real landed screenshots — the demo seeds share the "Photos" source but
+    /// carry `sample:` refs, and counting them would make every fresh connect
+    /// on a seeded install look like a re-connect.
+    @MainActor
+    private static func hasLandedScreenshots(context: ModelContext) -> Bool {
+        let descriptor = FetchDescriptor<Thing>(predicate: #Predicate { $0.source == "Photos" })
+        return ((try? context.fetch(descriptor)) ?? []).contains {
+            $0.kind == .screenshot && !($0.sourceRef ?? "sample:").hasPrefix("sample:")
+        }
+    }
+
+    /// One batch of the backwards walk. Returns how many landed; 0 once the
+    /// library is fully walked (and every pass after that costs nothing).
+    ///
+    /// An index walk re-reads a few assets when the library GROWS between
+    /// passes (newest-first, so new items shift the window shallower) — those
+    /// dedupe out on `sourceRef` and cost nothing. That direction is the safe
+    /// one: it re-walks rather than skips.
+    @MainActor
+    @discardableResult
+    static func backfill(context: ModelContext, batch: Int = 200) -> Int {
+        guard hasAccess, !backfillDone else { return 0 }
+
+        var assets: [PHAsset] = []
+        var exhausted = true
+        for path in walkPaths() {
+            let offset = UserDefaults.standard.integer(forKey: offsetKey(path.name))
+            let total = path.result.count
+            guard offset < total else { continue }
+            let end = min(offset + batch, total)
+            assets.append(contentsOf: path.result.objects(at: IndexSet(integersIn: offset..<end)))
+            UserDefaults.standard.set(end, forKey: offsetKey(path.name))
+            if end < total { exhausted = false }
+        }
+        if exhausted { UserDefaults.standard.set(true, forKey: doneKey) }
+
+        // Dedupe across the paths before landing — the same screenshot is in
+        // both the album and the mediaSubtypes fetch.
+        var merged: [PHAsset] = []
+        var seen: Set<String> = []
+        for asset in assets where !seen.contains(asset.localIdentifier) {
+            seen.insert(asset.localIdentifier)
+            merged.append(asset)
+        }
+        return land(merged, context: context)
+    }
+
+    /// The walk's sources, each as a full newest-first fetch result.
+    /// `PHFetchResult` is lazy — `count` and a windowed `objects(at:)` don't
+    /// materialize the rest of the library.
+    @MainActor
+    private static func walkPaths() -> [(name: String, result: PHFetchResult<PHAsset>)] {
+        let sort = [NSSortDescriptor(key: "creationDate", ascending: false)]
+
+        let albumOptions = PHFetchOptions()
+        albumOptions.sortDescriptors = sort
+        var paths: [(String, PHFetchResult<PHAsset>)] = []
+        let albums = PHAssetCollection.fetchAssetCollections(
+            with: .smartAlbum, subtype: .smartAlbumScreenshots, options: nil)
+        if let screenshots = albums.firstObject {
+            paths.append(("album", PHAsset.fetchAssets(in: screenshots, options: albumOptions)))
+        }
+
+        let predicateOptions = PHFetchOptions()
+        predicateOptions.sortDescriptors = sort
+        predicateOptions.predicate = NSPredicate(
+            format: "(mediaSubtypes & %d) != 0", PHAssetMediaSubtype.photoScreenshot.rawValue)
+        paths.append(("predicate", PHAsset.fetchAssets(with: .image, options: predicateOptions)))
+
+        #if DEBUG
+        // A simulator library holds no true screenshots, so neither path above
+        // has anything to walk — fall back to ordinary images, exactly as the
+        // head fetch does, so this path stays demonstrable off-device.
+        if paths.allSatisfy({ $0.1.count == 0 }) {
+            let fallback = PHFetchOptions()
+            fallback.sortDescriptors = sort
+            return [("debug", PHAsset.fetchAssets(with: .image, options: fallback))]
+        }
+        #endif
+        return paths
+    }
+
+    // MARK: - Fetch & land
+
+    /// Two independent fetches, unioned by localIdentifier:
+    ///  1) The Screenshots smart album — iOS's own list, updated by the
+    ///     screenshot capture pipeline itself. Direct, no subtype predicate.
+    ///  2) The mediaSubtypes predicate — the historical path. Field report
+    ///     2026-07-24 (build 138, iOS 26): only the album path caught new
+    ///     screenshots on the reporter's device; the mediaSubtypes predicate
+    ///     silently returned zero for newer captures while still returning
+    ///     older ones. Keeping the predicate as a second source is a cheap
+    ///     safety net for whatever the album misses (edited screenshots
+    ///     saved as new assets, third-party capture apps, etc.).
+    /// This is the HEAD of the corpus — the newest `limit`. Everything deeper
+    /// is `backfill`'s job.
+    @MainActor
+    private static func fetchScreenshots(limit: Int)
+    -> (albumFound: [PHAsset], predicateFound: [PHAsset], merged: [PHAsset])
+    {
         let sort = [NSSortDescriptor(key: "creationDate", ascending: false)]
 
         let albumOptions = PHFetchOptions()
@@ -100,10 +252,16 @@ enum ScreenshotIngest {
         }
         #endif
 
-        let existing = IngestSupport.existingSourceRefs(context, source: "Photos")
+        return (albumAssets, predicateAssets, merged)
+    }
 
+    /// Lands whatever the fetch found, deduped on the asset id.
+    @MainActor
+    private static func land(_ assets: [PHAsset], context: ModelContext) -> Int {
+        guard !assets.isEmpty else { return 0 }
+        let existing = IngestSupport.existingSourceRefs(context, source: "Photos")
         var added = 0
-        for asset in merged {
+        for asset in assets {
             guard !existing.contains(asset.localIdentifier) else { continue }
             let date = asset.creationDate ?? .now
             let thing = Thing(
@@ -118,7 +276,7 @@ enum ScreenshotIngest {
             added += 1
         }
         if added > 0 { context.saveHonestly() }
-        return (added, albumAssets.count, predicateAssets.count, merged.count)
+        return added
     }
 
     /// The screenshot corpus heals itself (2026-07-10). Three passes over

@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import Photos
 
 /// A bridge's detail — the app, what it can do (sentences), a one-line proof
 /// it's delivering, and its controls: Reconnect when broken, Pause/Resume, Remove with
@@ -40,16 +41,27 @@ struct BridgeDetailScreen: View {
                     header(bridge)
 
                     if bridge.status == .attention {
-                        Button {
-                            store.reconnect(bridge.id)
-                            DSHaptic.success()
-                        } label: {
-                            Text("Reconnect")
-                                .dsText(.body17).foregroundStyle(.white)
-                                .frame(maxWidth: .infinity).frame(height: 44)
-                                .dsGlassProminent(tint: DS.tint, cornerRadius: DS.Radius.pill)
+                        // Photos on LIMITED access isn't broken and can't be
+                        // reconnected out of — the app is seeing exactly the
+                        // photos it was given. The remedy is the system's own
+                        // picker (widen the set) or Settings (full access), so
+                        // that is what this button does instead of a Reconnect
+                        // that would change nothing (honesty rule: no control
+                        // that doesn't do what it says).
+                        if bridge.id == "pho", ScreenshotIngest.accessIsLimited {
+                            photosLimitedRemedy
+                        } else {
+                            Button {
+                                store.reconnect(bridge.id)
+                                DSHaptic.success()
+                            } label: {
+                                Text("Reconnect")
+                                    .dsText(.body17).foregroundStyle(.white)
+                                    .frame(maxWidth: .infinity).frame(height: 44)
+                                    .dsGlassProminent(tint: DS.tint, cornerRadius: DS.Radius.pill)
+                            }
+                            .buttonStyle(.plain)
                         }
-                        .buttonStyle(.plain)
                     }
 
                     // Capabilities — sentences, not scopes. They arrive one
@@ -137,6 +149,60 @@ struct BridgeDetailScreen: View {
                     store.remove(bridge.id); dismiss()
                 }
                 Button("Cancel", role: .cancel) {}
+            }
+        }
+    }
+
+    /// Both ways out of limited access, stated plainly: widen the picked set
+    /// here, or hand Photos full access in Settings.
+    @ViewBuilder
+    private var photosLimitedRemedy: some View {
+        VStack(spacing: DS.Space.s2) {
+            Text("Casberi can only see the photos you picked, so new screenshots don't arrive on their own.")
+                .dsText(.callout15).foregroundStyle(DS.textSecondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            Button {
+                DSHaptic.tap()
+                presentLimitedPicker()
+            } label: {
+                Text("Choose more photos")
+                    .dsText(.body17).foregroundStyle(.white)
+                    .frame(maxWidth: .infinity).frame(height: 44)
+                    .dsGlassProminent(tint: DS.tint, cornerRadius: DS.Radius.pill)
+            }
+            .buttonStyle(.plain)
+            Button {
+                DSHaptic.tap()
+                if let url = URL(string: UIApplication.openSettingsURLString) { openURL(url) }
+            } label: {
+                Text("Allow all photos in Settings")
+                    .dsText(.body17).foregroundStyle(DS.textPrimary)
+                    .frame(maxWidth: .infinity).frame(height: 44)
+                    .background(DS.gray100, in: Capsule(style: .continuous))
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    /// The system's own "select more photos" sheet. Needs a presenting
+    /// controller, which SwiftUI doesn't hand out — the key window's root is
+    /// the same anchor `RedditBridge`/`SpotifyBridge` use for their web auth.
+    private func presentLimitedPicker() {
+        guard let root = UIApplication.shared.connectedScenes
+            .compactMap({ ($0 as? UIWindowScene)?.keyWindow })
+            .first?.rootViewController
+        else { return }
+        var top = root
+        while let presented = top.presentedViewController { top = presented }
+        PHPhotoLibrary.shared().presentLimitedLibraryPicker(from: top) { _ in
+            Task { @MainActor in
+                // Photos just widened what we can see — anything newly visible
+                // is OLDER than the walk's cursor, and the walk may already
+                // have reported itself finished. Start it over so the newly
+                // picked screenshots actually land.
+                ScreenshotIngest.resetBackfill()
+                _ = ScreenshotIngest.ingest(context: modelContext)
+                ScreenshotIngest.backfill(context: modelContext)
             }
         }
     }

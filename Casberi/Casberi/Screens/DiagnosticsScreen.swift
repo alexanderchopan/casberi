@@ -89,6 +89,15 @@ struct DiagnosticsScreen: View {
             log("Screenshots album: \(report.albumFound) most recent")
             log("Screenshots mediaSubtypes predicate: \(report.predicateFound) most recent")
             log("After merge/dedupe: \(report.merged) unique · \(report.added) newly landed")
+            // The backwards walk (2026-07-25) — "older screenshots are
+            // missing" is either a walk still in progress or LIMITED access,
+            // and those look identical from the feed.
+            let landed = all.filter { $0.source == "Photos" && $0.kind == .screenshot }.count
+            let backfilled = ScreenshotIngest.backfill(context: modelContext)
+            log("Backfill: \(ScreenshotIngest.backfillDone ? "whole library walked" : "still walking") · \(backfilled) landed this pass · \(landed + report.added + backfilled) screenshots in")
+            if auth == .limited {
+                log("FAIL LIMITED access is why older/new screenshots are missing — only the picked set is readable")
+            }
         }
 
         let images = all.filter { $0.kind == .screenshot && $0.sourceRef != nil }

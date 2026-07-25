@@ -356,6 +356,14 @@ struct AppsScreen: View {
             if let name = UserDefaults.standard.string(forKey: "openSetup") {
                 HomeRoute.shared.pushBridge(BridgeRouter.destination(forOffer: name))
             }
+            // `-openBridgeDetail "<BridgeStore id>"` pushes a CONNECTED seat's
+            // manage screen — the route a connected tile's Open takes. The
+            // setup hook above can't reach it: a bridge whose connect is a
+            // system permission (Photos, Calendar…) has no setup screen, so
+            // `destination(forOffer:)` gives nothing to push.
+            if let id = UserDefaults.standard.string(forKey: "openBridgeDetail") {
+                HomeRoute.shared.pushBridge(BridgeRouter.destination(forID: id))
+            }
             #endif
         }
     }
