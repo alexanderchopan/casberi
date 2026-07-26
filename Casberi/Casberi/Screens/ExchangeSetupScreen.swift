@@ -89,7 +89,7 @@ struct ExchangeSetupScreen: View {
                         openURL(url)
                     }
                 }
-                BridgeStepLines(steps: steps)
+                BridgeStepLines(steps: steps, numbered: false)
                 DSSlabField(placeholder: venue == .kraken ? "API key" : "Key name",
                             text: $keyDraft, actionLabel: "", action: connect)
                 DSSlabField(placeholder: venue == .kraken ? "Private key" : "Private key (PEM)",
@@ -123,17 +123,27 @@ struct ExchangeSetupScreen: View {
         }
     }
 
-    /// Named per venue, because the permission a person has to find is named
-    /// differently in each dashboard and "give it read access" helps nobody
-    /// standing in front of a list of checkboxes.
+    /// The ONE thing left to say after the door (prd §220). Named per venue,
+    /// because the permission a person has to find is named differently in each
+    /// dashboard and "give it read access" helps nobody standing in front of a
+    /// list of checkboxes — that difference is the only reason this is a
+    /// `switch` and not a constant.
+    ///
+    /// The second step was deleted, not shortened: it said "paste the key and
+    /// its private key below" over two fields already labelled with those exact
+    /// words, then repeated the §163 permission check the note underneath
+    /// states in full. Both halves were already on screen. §218 applied
+    /// "the placeholder says what to type" to the section headers and stopped
+    /// short of the steps; this is the same rule reaching them.
     private var steps: [String] {
         switch venue {
         case .kraken:
-            return ["Create a new key, ticking only the Query permissions — Query Funds, and Query Ledger Entries if you want deposits and withdrawals to show. Leave every Create, Modify, Withdraw and Deposit box unticked.",
-                    "Paste the key and its private key below. Casberi asks Kraken what the key can do before it saves."]
+            // Kraken's dashboard is checkboxes across four groups, so the line
+            // has to name which to tick AND which to leave — one clause each,
+            // not a paragraph carrying both plus a conditional.
+            return ["Create a key with only the Query permissions ticked — Query Funds, plus Query Ledger Entries for deposits and withdrawals. Leave everything else unticked."]
         case .coinbase:
-            return ["Create an API key for your account with View permission only — not Trade, not Transfer.",
-                    "Paste the key name and its private key below. Casberi asks Coinbase what the key can do before it saves."]
+            return ["Create an API key with View permission only — not Trade, not Transfer."]
         }
     }
 

@@ -8836,3 +8836,47 @@ audit) and the diff. What has NOT been seen on screen: the sheet's rise and its
 self-dismissal on connect, the bloom landing on the product page behind it, and
 the slabbed forms' layout. Walk one keyed bridge (Notion or Readwise), one
 two-field bridge (Steam or Mail) and one import screen before calling it done.
+
+## 220. A step that was already on screen twice (user: "these should be the same or different? also very dense and wordy why", then "you decide", 2026-07-26)
+
+Two screenshots, Kraken and Coinbase connect. The first question answers itself
+in the source: there is no Kraken screen and no Coinbase screen, only
+`ExchangeSetupScreen(venue:)` and a `switch` over four strings. They are the
+same screen, correctly. What made them look like two was that the one
+deliberate divergence — the permission naming, which §163 keeps per-venue
+because each dashboard names its checkboxes differently — had grown to 34 words
+on Kraken against 16 on Coinbase.
+
+The density had a smaller and more embarrassing cause. **Step 3 was on the
+screen twice already.** Its first half — *"Paste the key and its private key
+below"* — sat directly above two fields placeheld `API key` and `Private key`.
+Its second half — *"Casberi asks Kraken what the key can do before it saves"* —
+was the gray note thirty points lower, which says the same thing in full. Both
+halves were duplicates, so the step had nothing of its own to say and was
+deleted rather than tightened. §218 applied *"the placeholder says what to type
+and the verb says what happens"* to the section headers and stopped short of
+the steps; this is that rule reaching them.
+
+**The numbering ends here, and that is a §186 boundary.** With step 3 gone one
+instruction remains, and a lone bold "2" beneath an unnumbered blue door sends
+the eye hunting for a missing 1. §186 (*"it's important to know what the steps
+are"*) and §218's carve-out both protected a SEQUENCE; one line is not one.
+`BridgeStepLines` gained `numbered` (default `true`) so this is opt-in — the ten
+other callers, which really do have ordered lists, keep their numerals
+untouched.
+
+Kraken's remaining line was also carrying three jobs in one paragraph (which
+boxes to tick, a conditional about ledger entries, which boxes to leave). Now
+one clause each.
+
+On screen, per venue: Kraken 99 → 70 words, Coinbase 83 → 59. Nothing factual
+left — the §163 permission check the note states is untouched (§192 protects
+that text), and both venues still name their own permissions.
+
+Applied to: `ExchangeSetupScreen`, `BridgeSetupComponents`.
+
+NOT BUILT, NOT SEEN — authored in a Linux session with no Xcode. The static
+gates (`catalog-sync.sh`, the SwiftData liveness audit) pass, but `verify.sh`
+has not run. Build and open both venues before trusting the layout: the
+unnumbered line's left alignment against the slabs above and below it is the
+one thing a diff can't show.

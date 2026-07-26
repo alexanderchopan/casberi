@@ -170,15 +170,22 @@ struct BridgeStepLines: View {
     let steps: [String]
     /// The number the first line wears — 2 when a door did step one.
     var startingAt = 2
+    /// Off when what's left after the door isn't a SEQUENCE (prd §220): a lone
+    /// bold "2" under an unnumbered button sends the eye hunting for a missing
+    /// 1, and one instruction was never a series of steps. Opt-in, so a screen
+    /// that really does have an ordered list keeps its numerals.
+    var numbered = true
 
     var body: some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
             ForEach(Array(steps.enumerated()), id: \.offset) { i, text in
                 HStack(alignment: .firstTextBaseline, spacing: DS.Space.s3) {
-                    Text("\(i + startingAt)")
-                        .dsText(.callout15).fontWeight(.bold)
-                        .foregroundStyle(DS.textTertiary)
-                        .frame(width: 13, alignment: .trailing)
+                    if numbered {
+                        Text("\(i + startingAt)")
+                            .dsText(.callout15).fontWeight(.bold)
+                            .foregroundStyle(DS.textTertiary)
+                            .frame(width: 13, alignment: .trailing)
+                    }
                     Text(LocalizedStringKey(text))
                         .dsText(.callout15).foregroundStyle(DS.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
