@@ -848,6 +848,27 @@ enum ProbeHooks {
                 }
             }
         },
+        // `-holdingsWindowProbe YES` — the freshness window's own test
+        // (2026-07-25). Reads holdings three times and NSLogs each verdict:
+        // live → window HIT (no metered call) → invalidate → live again. That
+        // sequence is the whole contract: the window saves the repeat read,
+        // and a deliberate pull-to-refresh always defeats it. Costs exactly
+        // TWO metered `/positions` reads, not three, which is the point.
+        // Pair with `-walletAddress`. `-holdingsWindow <seconds>` overrides the
+        // window (0 disables it) for a probe that needs a genuinely live read.
+        Hook(key: "holdingsWindowProbe") { _, _ in
+            Task { @MainActor in
+                NSLog("[Casberi] holdingsWindowProbe: read 1 (cold — expect MISS) → %@",
+                      await WalletIngest.holdingsWindowRead())
+                NSLog("[Casberi] holdingsWindowProbe: read 2 (expect HIT) → %@",
+                      await WalletIngest.holdingsWindowRead())
+                NSLog("[Casberi] holdingsWindowProbe: invalidating (pull-to-refresh)")
+                await WalletIngest.invalidateHoldingsCache()
+                NSLog("[Casberi] holdingsWindowProbe: read 3 (expect MISS) → %@",
+                      await WalletIngest.holdingsWindowRead())
+                NSLog("[Casberi] holdingsWindowProbe: done")
+            }
+        },
         // `-addressBook "<Name>:<address>[,<Name>:<address>…]"|clear` — seed the
         // address book headlessly (prd §169). `clear` empties it. Splits each
         // pair on the LAST colon so a name may carry its own.

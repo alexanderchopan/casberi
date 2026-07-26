@@ -1,5 +1,6 @@
 import Foundation
 import SwiftData
+import WidgetKit
 
 /// The Today brief (prd §166, user: "lets build b2 with b3 synthesis card") —
 /// the screen the whisper capsule opens, and a keepable ask in its own right
@@ -162,6 +163,15 @@ enum TodayBrief {
             ids.append("lede")
             lines.append("lede = DayLede(\"\(genSafe(lede.text))\")")
         }
+        // The home/Lock Screen widget carries this SAME sentence (2026-07-25).
+        // Published here rather than at a display route so it refreshes on
+        // every foreground — `KeptAskStore.refreshDigests` composes the brief
+        // for anyone who has kept this ask, and the widget should not have to
+        // wait for someone to actually open the brief to stop being stale.
+        // Publishing is NOT recording: the ledger's `presenting` discipline is
+        // about claiming "I already told you this", and a widget line is the
+        // telling, not a claim about it.
+        publishLedeToWidget(lede.text)
 
         // 2. The money hero — the CROWN (2026-07-25), the day's one fused
         // visualization and the only read where a number is itself the event.
@@ -1106,5 +1116,36 @@ enum TodayBrief {
         s.replacingOccurrences(of: "\"", with: "")
             .replacingOccurrences(of: "\n", with: " ")
             .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    // MARK: - Widget publication
+
+    /// Hands the lede to the widget through the app group, and asks it to
+    /// re-read. The widget extension can't call into this file (app target
+    /// only) and must not recompose the brief anyway — it runs in a ~30MB
+    /// budget where the brief's live wallet reads are impossible. So the app
+    /// publishes the finished sentence and the widget mirrors it.
+    ///
+    /// An EMPTY lede clears the key rather than leaving the last one standing:
+    /// the brief itself opens on the hero when the ladder yields nothing, and a
+    /// widget still showing yesterday's sentence would be the fake-status the
+    /// honesty rule forbids. The widget's own fallback takes over.
+    private static func publishLedeToWidget(_ text: String) {
+        guard let group = UserDefaults(suiteName: SharedStore.appGroup) else { return }
+        let previous = group.string(forKey: WidgetLede.textKey) ?? ""
+        if text.isEmpty {
+            group.removeObject(forKey: WidgetLede.textKey)
+            group.removeObject(forKey: WidgetLede.stampKey)
+        } else {
+            group.set(text, forKey: WidgetLede.textKey)
+            group.set(Date.now.timeIntervalSince1970, forKey: WidgetLede.stampKey)
+        }
+        // Only when the SENTENCE changed — the brief recomposes on every
+        // foreground and on every composer open for anyone who kept the ask,
+        // and a reload per compose would spend the widget's refresh budget on
+        // writing the same words back.
+        if previous != text {
+            WidgetCenter.shared.reloadTimelines(ofKind: WidgetLede.kind)
+        }
     }
 }

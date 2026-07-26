@@ -29,6 +29,17 @@ step "Network-reach audit"
 "$ROOT/scripts/network-reach-audit.sh" || fail "a network host isn't disclosed — see scripts/network-reach-audit.sh"
 print -P "%F{green}✓ network-reach audit%f"
 
+# The recurring "reads a dead Thing" crash class (builds 137/138/139/142/150 —
+# five TestFlight-found crashes, one defect). The rule was written down and
+# re-broken twice because memory was enforcing it; this makes it mechanical.
+# `--self-test` runs first on purpose: a check that cannot fail proves nothing,
+# so the audit demonstrates it catches each shape before it certifies the tree.
+step "SwiftData liveness audit"
+"$ROOT/scripts/swiftdata-liveness-audit.py" --self-test >/dev/null \
+  || fail "the liveness audit's own self-test failed — the check is broken, not the code"
+"$ROOT/scripts/swiftdata-liveness-audit.py" || fail "a Thing is read without a liveness guard — see the output above"
+print -P "%F{green}✓ swiftdata liveness audit%f"
+
 # ── 1. Build ────────────────────────────────────────────────────────
 step "Building Casberi (derivedData: $DD)"
 xcodebuild -project "$ROOT/Casberi/Casberi.xcodeproj" -scheme Casberi \

@@ -704,7 +704,14 @@ enum KeptAskComposers {
     /// a kept "summarize my week" shows what the summary was drawn from, not
     /// a re-synthesized summary — the chip's title is the ORIGINAL question,
     /// the answer is "here's what matches now."
-    private static func search(_ query: String, things: [Thing]) -> Result? {
+    ///
+    /// Internal rather than file-private since 2026-07-25: the composer's Find
+    /// chip calls this directly for an ad-hoc, un-kept search. That is the
+    /// same engine on the same terms — the kept version just runs it on a
+    /// schedule — so routing both through one function is what keeps "Find
+    /// never synthesizes" true of both by construction rather than by two
+    /// implementations agreeing.
+    static func search(_ query: String, things: [Thing]) -> Result? {
         let hits = Retriever.rank(query, in: things, isPoolRefinement: false)
         guard !hits.isEmpty else {
             return Result(delta: "", digest: "0",

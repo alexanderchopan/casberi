@@ -372,13 +372,20 @@ struct RecentThingsSection: View {
     @State private var entered = false
 
     var body: some View {
-        Section {
+        // Filtered ONCE at the top, before anything reads through it (build 150
+        // corollary 2): every caller hands this a HELD array — a `@State` value
+        // from `recentBridgeThings`' manual fetch — and a bridge's own
+        // per-foreground heal deletes upstream-gone rows on the main context
+        // while this screen is open. `keyed` below protects the ForEach's
+        // identity diffing; it does NOT protect `thing.title` in the row body.
+        let rows = things.live
+        return Section {
             // One list row holding every landed thing (a VStack) — a Section of
             // separate rows leaks a hairline between them that survives
             // row-level .listRowSeparator(.hidden) (SwiftUI won't suppress the
             // first separator after a section header). Design law: no hairlines.
             VStack(alignment: .leading, spacing: DS.Space.s3) {
-                ForEach(Array(things.keyed.enumerated()), id: \.element.id) { i, row in
+                ForEach(Array(rows.keyed.enumerated()), id: \.element.id) { i, row in
                     let thing = row.thing
                     VStack(alignment: .leading, spacing: 2) {
                         Text(thing.title)

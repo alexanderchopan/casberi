@@ -109,14 +109,18 @@ struct HeroEntry: TimelineEntry {
     let eyebrow: String
     let title: String
     let subline: String
-    /// Things that landed since the app was last open — the widget wears the
-    /// new-ring when it's nonzero (delight 2026-07-13). Zero = no ring.
-    var newCount: Int = 0
+    /// Something landed since the app was last open — a plain accent dot
+    /// (delight 2026-07-13, amended 2026-07-25). It used to be a COUNT in a
+    /// ring ("47"), which §213 retired everywhere else in the product: volume
+    /// is not news. Presence still is — "there's something in there" is a true
+    /// and useful thing for a home-screen tile to say — so the dot stayed and
+    /// the number went.
+    var hasNew: Bool = false
 }
 
 struct HeroProvider: TimelineProvider {
     func placeholder(in context: Context) -> HeroEntry {
-        HeroEntry(date: .now, eyebrow: String(localized: "This week"),
+        HeroEntry(date: .now, eyebrow: "",
                   title: String(localized: "Your things, one place"),
                   subline: "Casberi")
     }
@@ -131,67 +135,96 @@ struct HeroProvider: TimelineProvider {
         completion(Timeline(entries: [entry], policy: .after(next)))
     }
 
-    /// The hero rule, in miniature: the largest moving cluster leads.
+    /// The widget says what the BRIEF says (2026-07-25). It used to compose
+    /// its own line — the largest tag cluster and how many things were in it
+    /// ("Recipes fills your week · 12 things across 3 apps"). That is a tally,
+    /// and §213 ruled tallies out of the product: people receive dozens of
+    /// things a day and care WHAT landed, not how many. The brief already
+    /// ranks the day into one sentence (risk → money → a person → a deadline),
+    /// so this mirrors that sentence rather than inventing a weaker one.
+    ///
+    /// Three rungs, each a real fact, and it falls to the next only when the
+    /// one above has nothing to say:
+    ///   1. the brief's published lede,
+    ///   2. the most recent THING itself — the module doctrine's own second
+    ///      shape, and never a count of them,
+    ///   3. the empty-corpus invitation.
     private func compose() -> HeroEntry {
+        let group = UserDefaults(suiteName: SharedStore.appGroup)
+
+        // Something landed while the app was closed? The app stamps this
+        // boundary on background. Presence only — never how much (§213).
+        let lastSeen = group?.double(forKey: "widget.lastSeen") ?? 0
+
+        // ── 1. The brief's own sentence ──────────────────────────────
+        if let lede = WidgetLede.current(defaults: group) {
+            // No eyebrow above the lede: the sentence is already the whole
+            // headline, and "This week" over "ETH has done the lifting seven
+            // days running" would date a line that isn't about this week.
+            return HeroEntry(date: .now, eyebrow: "", title: lede,
+                             subline: "What's going on",
+                             hasNew: hasNew(since: lastSeen))
+        }
+
         guard let container = try? SharedStore.extensionContainer() else {
-            return HeroEntry(date: .now, eyebrow: String(localized: "This week"),
-                             title: String(localized: "Your things, one place"), subline: "Casberi")
+            return HeroEntry(date: .now, eyebrow: "",
+                             title: String(localized: "Your things, one place"),
+                             subline: "Casberi")
         }
         let context = ModelContext(container)
-        // The widget extension runs in a tight (~30MB) memory budget — an
-        // unbounded fetch hydrated every Thing, inline strings and all
-        // (2026-07-21 audit). Only tags/capturedAt/source ever get read below.
-        var descriptor = FetchDescriptor<Thing>()
-        descriptor.propertiesToFetch = [\.tags, \.capturedAt, \.source]
-        let things = (try? context.fetch(descriptor)) ?? []
-        guard !things.isEmpty else {
-            return HeroEntry(date: .now, eyebrow: String(localized: "Now"),
-                             title: String(localized: "Your things go here"),
-                             subline: String(localized: "Save one in Casberi"))
+        // The extension runs in a tight (~30MB) budget — an unbounded fetch
+        // hydrated every Thing, inline strings and all (2026-07-21 audit).
+        // Now that the tag histogram is gone this needs exactly ONE row, so
+        // the fetch is limited to it instead of walking the whole corpus.
+        var descriptor = FetchDescriptor<Thing>(
+            sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]
+        )
+        descriptor.propertiesToFetch = [\.title, \.source, \.capturedAt]
+        descriptor.fetchLimit = 1
+
+        // ── 2. The most recent thing, as itself ──────────────────────
+        if let newest = (try? context.fetch(descriptor))?.first {
+            return HeroEntry(date: .now, eyebrow: "",
+                             title: newest.title,
+                             subline: newest.source,
+                             hasNew: newest.capturedAt.timeIntervalSince1970 > lastSeen
+                                     && lastSeen > 0)
         }
 
-        // The new-ring boundary the app stamps on background — things newer
-        // than it landed while the person was away, and the widget says so.
-        let lastSeen = UserDefaults(suiteName: SharedStore.appGroup)?
-            .double(forKey: "widget.lastSeen") ?? 0
-        let newCount = lastSeen > 0
-            ? things.count(where: { $0.capturedAt.timeIntervalSince1970 > lastSeen })
-            : 0
+        // ── 3. Nothing yet ───────────────────────────────────────────
+        return HeroEntry(date: .now, eyebrow: "",
+                         title: String(localized: "Your things go here"),
+                         subline: String(localized: "Save one in Casberi"))
+    }
 
-        let typeTags = Set(ThingKind.allCases.map(\.typeTag))
-        var buckets: [String: Int] = [:]
-        for thing in things {
-            for tag in thing.tags where !typeTags.contains(tag) {
-                buckets[tag, default: 0] += 1
-            }
+    /// Whether anything at all landed since the app went to background — one
+    /// bounded fetch, not a count of the corpus.
+    private func hasNew(since lastSeen: TimeInterval) -> Bool {
+        guard lastSeen > 0, let container = try? SharedStore.extensionContainer() else {
+            return false
         }
-        let top = buckets.sorted {
-            $0.value != $1.value ? $0.value > $1.value : $0.key < $1.key
-        }.first
-
-        if let top, top.value >= 2 {
-            let sources = Set(things.filter { $0.tags.contains(top.key) }.map(\.source)).count
-            return HeroEntry(date: .now, eyebrow: String(localized: "This week"),
-                             title: "\(top.key) fills your week",
-                             subline: "\(top.value) things across \(sources) app\(sources == 1 ? "" : "s")",
-                             newCount: newCount)
-        }
-        let count = things.count
-        return HeroEntry(date: .now, eyebrow: String(localized: "Now"),
-                         title: String(localized: "Your things are landing"),
-                         subline: count == 1 ? "1 thing so far" : "\(count) things so far",
-                         newCount: newCount)
+        let boundary = Date(timeIntervalSince1970: lastSeen)
+        var descriptor = FetchDescriptor<Thing>(
+            predicate: #Predicate { $0.capturedAt > boundary }
+        )
+        descriptor.propertiesToFetch = [\.capturedAt]
+        descriptor.fetchLimit = 1
+        return ((try? ModelContext(container).fetch(descriptor))?.isEmpty == false)
     }
 }
 
 struct HeroWidget: Widget {
     var body: some WidgetConfiguration {
-        StaticConfiguration(kind: "casberi.hero", provider: HeroProvider()) { entry in
+        // The kind string is shared with the app's reload call — one name, so
+        // a rename can't leave the widget listening on a channel nobody writes.
+        StaticConfiguration(kind: WidgetLede.kind, provider: HeroProvider()) { entry in
             HeroWidgetView(entry: entry)
                 .containerBackground(.black, for: .widget)
         }
-        .configurationDisplayName("Synthesis")
-        .description("One line about what your things are up to.")
+        // Named for what it now shows (§193 renamed the brief "What's going
+        // on"); the old "Synthesis" described the tag-cluster line that's gone.
+        .configurationDisplayName("What's going on")
+        .description("Your day in one line, the same one the brief opens with.")
         .supportedFamilies([.systemSmall, .systemMedium,
                             .accessoryRectangular, .accessoryInline])
     }
@@ -220,13 +253,24 @@ struct HeroWidgetView: View {
                 // One line on the lock screen / StandBy — the title is the line.
                 Text(entry.title)
             case .accessoryRectangular:
+                // Sentence case, never ALL-CAPS: the eyebrow used to be
+                // `.uppercased()` here, which the 2026-07-08 ruling banned with
+                // no exceptions ("headers are words in sentence case"). It
+                // predated the ruling and nobody had looked at the widget
+                // since. The type ramp carries the hierarchy on its own.
+                //
+                // The lede rung emits no eyebrow at all — the sentence IS the
+                // headline — so the row is dropped rather than left as an
+                // empty line eating one of three scarce lock-screen lines.
                 VStack(alignment: .leading, spacing: 1) {
-                    Text(entry.eyebrow.uppercased())
-                        .dsText(.widgetEyebrow11)
-                        .widgetAccentable()
+                    if !entry.eyebrow.isEmpty {
+                        Text(entry.eyebrow)
+                            .dsText(.widgetEyebrow11)
+                            .widgetAccentable()
+                    }
                     Text(entry.title)
                         .dsText(.widgetTitle14)
-                        .lineLimit(2)
+                        .lineLimit(entry.eyebrow.isEmpty ? 3 : 2)
                     Text(entry.subline)
                         .dsText(.widgetSubline11)
                         .opacity(0.7)
@@ -235,9 +279,11 @@ struct HeroWidgetView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
             default:
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(entry.eyebrow)
-                        .dsText(.label11)
-                        .foregroundStyle(accent)
+                    if !entry.eyebrow.isEmpty {
+                        Text(entry.eyebrow)
+                            .dsText(.label11)
+                            .foregroundStyle(accent)
+                    }
                     Text(entry.title)
                         .dsText(.widgetTitle17)
                         .foregroundStyle(.white)
@@ -250,21 +296,25 @@ struct HeroWidgetView: View {
                         .lineLimit(1)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-                // The new-ring, carried to the home screen: things landed
-                // since you left, counted in the app's own chip grammar —
-                // an accent ring, never a red badge. Absent when nothing new.
+                // Something landed since you left — an accent dot, never a red
+                // badge and (since §213) never a number. The count that used
+                // to sit in this ring was the same "14 things landed" claim the
+                // brief itself stopped making: in a corpus taking dozens a day
+                // it says nothing except that the app is on. Presence is the
+                // part that was ever true, so presence is what's left.
                 .overlay(alignment: .topTrailing) {
-                    if entry.newCount > 0 {
-                        Text("\(min(entry.newCount, 99))")
-                            .dsText(.widgetEyebrow11)
-                            .foregroundStyle(accent)
-                            .frame(minWidth: 22, minHeight: 22)
-                            .background(Circle().strokeBorder(accent, lineWidth: 2))
-                            .accessibilityLabel("\(entry.newCount) new")
+                    if entry.hasNew {
+                        Circle()
+                            .fill(accent)
+                            .frame(width: 9, height: 9)
+                            .accessibilityLabel(Text("Something new"))
                     }
                 }
             }
         }
-        .widgetURL(URL(string: "casberi://home"))
+        // Lands on the brief itself — the sentence this tile is showing,
+        // opened — rather than the feed. A headline you can't open is the
+        // dead control the honesty rule forbids.
+        .widgetURL(URL(string: "casberi://brief"))
     }
 }

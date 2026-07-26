@@ -82,7 +82,13 @@ struct BridgeDetailScreen: View {
                     // second copy of the feed. Tapping goes straight to the
                     // real record — this page is about the connection, not
                     // the things.
-                    if let recent {
+                    // `isLive` beside the unwrap: `recent` is a HELD ref from a
+                    // manual fetch, and this bridge's own per-foreground heal
+                    // deletes upstream-gone rows on the main context while this
+                    // screen is open — `if let` proves it isn't nil, not that
+                    // it's still backed by the store. Reading `.kind`/`.title`
+                    // off a tombstoned model traps inside SwiftData.
+                    if let recent, recent.isLive {
                         section("Recent") {
                             Button {
                                 FeedFilter.shared.source = bridge.name

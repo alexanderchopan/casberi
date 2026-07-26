@@ -136,6 +136,12 @@ struct Composer: View {
         /// the on-device badge and claimed "Answered on this iPhone" over a
         /// message that says the opposite (caught on sim, 2026-07-21).
         var failed = false
+        /// A FIND, not an answer (2026-07-25) — `Retriever.rank` ran and the
+        /// matches are painted as they are. No model saw the question, so the
+        /// badge says "Matched" rather than "Answered": the difference between
+        /// a ranked list of your own things and a sentence something wrote is
+        /// exactly the kind of thing the honesty rule exists to keep visible.
+        var found = false
     }
     @State private var turns: [ConvoTurn] = []
     /// The question currently being answered — shown above the live answer
@@ -162,6 +168,14 @@ struct Composer: View {
     /// The current "answer" is really a failure notice — no provenance badge
     /// belongs on it (2026-07-21). Reset at the start of every ask.
     @State private var answerFailed = false
+    /// The current result came from Find, not from an answer (2026-07-25) —
+    /// `Retriever.rank` alone, no model. Drives the badge's wording and is
+    /// carried onto the settled turn, so scrolling back never relabels a
+    /// deterministic match as something that was written for you.
+    @State private var foundCurrent = false
+    /// The exact doc the last Find painted — kept only so `-findProbe` can log
+    /// it verbatim. Never read by the UI.
+    @State private var lastFindDoc: [String] = []
     /// True once a keyed answer has landed in this conversation, so a typed
     /// FOLLOW-UP stays on the agent that just answered instead of silently
     /// dropping back to the on-device model — which never saw the keyed turn
@@ -1198,7 +1212,8 @@ struct Composer: View {
                                         if !turn.failed {
                                             provenanceBadge(keyed: turn.keyed,
                                                             searchedWeb: turn.searchedWeb,
-                                                            imagesSeen: turn.imagesSeen)
+                                                            imagesSeen: turn.imagesSeen,
+                                                            found: turn.found)
                                         }
                                     }
                                 }
@@ -1239,7 +1254,8 @@ struct Composer: View {
                                         if !inFlight, !answerFailed {
                                             provenanceBadge(keyed: keyedCurrent,
                                                             searchedWeb: keyedSearchedWeb,
-                                                            imagesSeen: keyedImagesSeen)
+                                                            imagesSeen: keyedImagesSeen,
+                                                            found: foundCurrent)
                                         }
                                         if !proseStreaming, !inFlight {
                                             // FlowRow, not HStack (2026-07-21):
@@ -1681,6 +1697,26 @@ struct Composer: View {
             commit()
             return
         }
+        // `-findProbe "<query>"` fills the field and fires FIND — the
+        // deterministic door, headless. NSLogs the doc it painted, so the
+        // "nothing was synthesized" promise is checkable: a `findProbe:` line
+        // carrying Row(...) entries and no prose IS the guarantee, and the
+        // same run proves the chip's action is wired to `Retriever.rank` and
+        // not quietly to the answer path.
+        if isOpen, !didAutoSend,
+           let q = UserDefaults.standard.string(forKey: "findProbe"), !q.isEmpty {
+            didAutoSend = true
+            fillDraft(q)
+            try? await Task.sleep(for: .milliseconds(500))
+            runFind()
+            try? await Task.sleep(for: .milliseconds(300))
+            NSLog("[Casberi] findProbe: query=%@ keepable=%@", q, keepableAskKind ?? "(none)")
+            // One NSLog PER LINE — a joined multi-line message gets truncated
+            // mid-document by the log reader (the lesson `-todayProbe` paid
+            // for on 2026-07-22).
+            for line in lastFindDoc { NSLog("[Casberi] findDoc| %@", line) }
+            return
+        }
         guard isOpen, !didAutoSend,
               let q = UserDefaults.standard.string(forKey: "uiAnswerProbe") else { return }
         didAutoSend = true
@@ -1735,6 +1771,7 @@ struct Composer: View {
         keyedSearchedWeb = false
         keyedImagesSeen = 0
         answerFailed = false
+        foundCurrent = false
         conversationIsKeyed = false
         inFlight = false
         keepJustLanded = false
@@ -1742,6 +1779,76 @@ struct Composer: View {
         askGeneration += 1   // any in-flight answer Task retires silently
         path = NavigationPath()
         onLowerAgent()
+    }
+
+    /// FIND — the deterministic door (2026-07-25, the composer's third exit).
+    ///
+    /// The corpus has always been searchable: `Retriever.rank` is the engine
+    /// behind every free-text ask, and a kept `search:<query>` re-runs it
+    /// verbatim. What it never had was a way to ASK FOR IT. Typing "climate
+    /// links" into the composer offered to send those two words to Messages,
+    /// Mail or Google — the outbound exits — while the one thing the app is
+    /// actually for, finding it in your own things, had no affordance at all.
+    /// Spotlight, Visual Intelligence and Shortcuts all reach this corpus from
+    /// OUTSIDE; inside, it was reachable only by phrasing a question and
+    /// hoping. This is that door, named.
+    ///
+    /// It is deliberately NOT the Ask button with a different label. Ask routes
+    /// through `RootShell.answerDocument`, which may reach the on-device model
+    /// or the person's own key. Find runs `KeptAskComposers.search` and nothing
+    /// else: the same deterministic engine, on the same terms, painting the
+    /// matches as they are. Instant, no model, nothing synthesized — and the
+    /// badge says so. That distinction is the whole reason it earns a control
+    /// of its own instead of being folded into Ask.
+    ///
+    /// The result is keepable through the existing Keep affordance, which mints
+    /// exactly the `search:<query>` kind this engine already serves — so a
+    /// find that proves useful becomes a standing search with one more tap, and
+    /// no new machinery.
+    private func runFind() {
+        let query = draft.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !query.isEmpty, !inFlight else { return }
+        DSHaptic.selection()
+        let things = (try? modelContext.fetch(FetchDescriptor<Thing>(
+            sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]
+        ))) ?? []
+        guard let result = KeptAskComposers.search(query, things: things) else { return }
+
+        withAnimation(DS.Motion.standard) {
+            // A find lands mid-conversation like any other turn — the one
+            // already live settles first, exactly as `commit()` does.
+            if answering {
+                turns.append(ConvoTurn(question: currentQuestion, els: answerStream.els,
+                                       keyed: keyedCurrent, searchedWeb: keyedSearchedWeb,
+                                       imagesSeen: keyedImagesSeen, failed: answerFailed,
+                                       found: foundCurrent))
+            }
+            answering = true
+            currentQuestion = query
+            keptCurrent = false
+            currentStreamed = false
+            keyedCurrent = false
+            keyedSearchedWeb = false
+            keyedImagesSeen = 0
+            answerFailed = false
+            foundCurrent = true
+            // Nothing is in flight: the retriever already ran, synchronously.
+            // Leaving `inFlight` true would breathe a loading berry over a
+            // result that is already complete.
+            inFlight = false
+        }
+        // Retires any answer Task still streaming — its doc must not paint
+        // over the matches that just landed.
+        askGeneration += 1
+        nextAsk = nil
+        draft = ""
+        answerStream.paint(result.doc)
+        lastFindDoc = result.doc
+        // Keepable as a standing search — the kind `KeptAskComposers` already
+        // serves, so the Keep pill's whole path exists.
+        keepableAskKind = "search:\(query)"
+        AskMemory.asked("search:\(query)")
+        DSHaptic.success()
     }
 
     /// The small honest mark every answer wears — where it was made, and what
@@ -1756,7 +1863,7 @@ struct Composer: View {
     /// tool running — so this states what happened rather than what was
     /// offered: an agent that could search but didn't never claims it did.
     private func provenanceBadge(keyed: Bool, searchedWeb: Bool = false,
-                                 imagesSeen: Int = 0) -> some View {
+                                 imagesSeen: Int = 0, found: Bool = false) -> some View {
         var parts: [String] = []
         if searchedWeb { parts.append(String(localized: "searched the web")) }
         if imagesSeen == 1 {
@@ -1765,12 +1872,19 @@ struct Composer: View {
             parts.append(String(localized: "read \(imagesSeen) screenshots"))
         }
         let detail = parts.isEmpty ? "" : " · " + parts.joined(separator: " · ")
+        // A find gets its own words, not "Answered": nothing wrote this — the
+        // retriever ranked your own things and they're shown as they are.
+        // Collapsing the two would let the most trustworthy result in the app
+        // wear the same label as the least.
+        let glyph = found ? "magnifyingglass" : (keyed ? "key.fill" : "lock.iphone")
+        let words = found ? String(localized: "Matched on this iPhone — nothing was written")
+                          : (keyed ? String(localized: "Answered with your key\(detail)")
+                                   : String(localized: "Answered on this iPhone"))
         return HStack(spacing: DS.Space.s1) {
-            Image(systemName: keyed ? "key.fill" : "lock.iphone")
+            Image(systemName: glyph)
                 .font(.system(size: 10))
                 .accessibilityHidden(true)
-            Text(keyed ? "Answered with your key\(detail)"
-                       : "Answered on this iPhone")
+            Text(words)
                 .fixedSize(horizontal: false, vertical: true)
         }
         .dsText(.label12)
@@ -1791,7 +1905,8 @@ struct Composer: View {
             if answering {
                 turns.append(ConvoTurn(question: currentQuestion, els: answerStream.els,
                                        keyed: keyedCurrent, searchedWeb: keyedSearchedWeb,
-                                       imagesSeen: keyedImagesSeen, failed: answerFailed))
+                                       imagesSeen: keyedImagesSeen, failed: answerFailed,
+                                       found: foundCurrent))
             }
             answering = true
             inFlight = true
@@ -1801,6 +1916,7 @@ struct Composer: View {
             keyedSearchedWeb = false   // observed per answer, never carried over
             keyedImagesSeen = 0
             answerFailed = false
+            foundCurrent = false       // a keyed retry is an answer, not a find
             // keepableAskKind is NOT reset here: askWithKey() re-asks the
             // SAME currentQuestion, so the kind commit() already recognized
             // for it is still correct throughout the retry.
@@ -2183,48 +2299,86 @@ struct Composer: View {
                 "did", "does", "do", "is", "are", "can", "show", "find"].contains(first)
     }
 
-    /// The "Send to" chips (2026-07-16, third form of this band — see
-    /// TakeTool): shown the moment there's typed text that isn't a question,
-    /// in the ask chips' slot — the two bands are the field's two exits, and
-    /// only one is ever visible. What you typed is a FACT bound for another
-    /// app; the text rides the jump (Messages/Mail body, Google query,
-    /// Calendar at the detected date) or the clipboard where no URL carries
-    /// it (the flash says so). A found date earns a receipt line — proof the
-    /// Calendar jump will land on the right day.
+    /// The typed-draft band (2026-07-16, fourth form — see TakeTool), in the
+    /// ask chips' slot. Two verbs now, in the order the app's own priorities
+    /// put them (2026-07-25):
+    ///
+    ///   **Find** — keep it here. Searches your own things, deterministically.
+    ///   Leads the row because it is the app's own job; the outbound jumps are
+    ///   the guest verbs. Shown for ANY draft, a question included: "climate
+    ///   links" and "what did I save about climate?" are the same search to
+    ///   `Retriever.rank`, and hiding the door behind a grammar check would
+    ///   reintroduce exactly the guess-the-phrasing problem it exists to fix.
+    ///
+    ///   **Send to** — take it there. What you typed is a FACT bound for
+    ///   another app; the text rides the jump (Messages/Mail body, Google
+    ///   query, Calendar at the detected date) or the clipboard where no URL
+    ///   carries it (the flash says so). Still sits out for a question, so a
+    ///   question's one honest exit stays obvious. A found date earns a
+    ///   receipt line — proof the Calendar jump lands on the right day.
     @ViewBuilder
     private var takeChips: some View {
-        if isOpen && hasDraft && !answering && !isRecording,
-           !draftIsQuestion {
+        // Two independent gates, so Find is purely ADDITIVE — the Send-to
+        // band's own visibility rule is byte-for-byte what it was.
+        // Find sits out for a PASTE: that's a capture path on its way to being
+        // kept, not a phrase to search for.
+        let offerFind = !pasted
+        let offerSend = !answering && !draftIsQuestion
+        if isOpen && hasDraft && !isRecording, offerFind || offerSend {
             VStack(alignment: .leading, spacing: DS.Space.s1) {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: DS.Space.s2) {
-                        Text("Send to")
-                            .dsText(.subhead13)
-                            .foregroundStyle(DS.textTertiary)
-                        // Chunkier pills than the shell Chip — the same bold
-                        // grammar as the ask tiles (option A, 2026-07-16), so
-                        // the field's two exits read as one design.
-                        ForEach(TakeTool.all) { tool in
-                            Button { runTake(tool) } label: {
-                                HStack(spacing: DS.Space.s2) {
-                                    Image(systemName: tool.glyph)
-                                        .accessibilityHidden(true)
-                                        .font(.system(size: 14, weight: .medium))
-                                        .foregroundStyle(DS.tint)
-                                    Text(tool.label)
-                                        .dsText(.callout15).fontWeight(.semibold)
-                                        .foregroundStyle(DS.textPrimary)
-                                }
-                                .padding(.horizontal, DS.Space.s3 + 2)
-                                .frame(height: 40)
-                                .background(DS.gray100, in: Capsule(style: .continuous))
+                        // Find leads, and wears the tint FILL where the other
+                        // chips wear tint only in their glyph — this is the one
+                        // verb that keeps you in the app, so it reads primary.
+                        if offerFind {
+                        Button { runFind() } label: {
+                            HStack(spacing: DS.Space.s2) {
+                                Image(systemName: "magnifyingglass")
+                                    .accessibilityHidden(true)
+                                    .font(.system(size: 14, weight: .semibold))
+                                Text("Find")
+                                    .dsText(.callout15).fontWeight(.semibold)
                             }
-                            .buttonStyle(PressSpring())
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, DS.Space.s3 + 2)
+                            .frame(height: 40)
+                            .background(DS.tint, in: Capsule(style: .continuous))
+                        }
+                        .buttonStyle(PressSpring())
+                        .accessibilityLabel("Find in your things")
+                        }
+
+                        if offerSend {
+                            Text("Send to")
+                                .dsText(.subhead13)
+                                .foregroundStyle(DS.textTertiary)
+                            // Chunkier pills than the shell Chip — the same
+                            // bold grammar as the ask tiles (option A,
+                            // 2026-07-16), so the field's exits read as one
+                            // design.
+                            ForEach(TakeTool.all) { tool in
+                                Button { runTake(tool) } label: {
+                                    HStack(spacing: DS.Space.s2) {
+                                        Image(systemName: tool.glyph)
+                                            .accessibilityHidden(true)
+                                            .font(.system(size: 14, weight: .medium))
+                                            .foregroundStyle(DS.tint)
+                                        Text(tool.label)
+                                            .dsText(.callout15).fontWeight(.semibold)
+                                            .foregroundStyle(DS.textPrimary)
+                                    }
+                                    .padding(.horizontal, DS.Space.s3 + 2)
+                                    .frame(height: 40)
+                                    .background(DS.gray100, in: Capsule(style: .continuous))
+                                }
+                                .buttonStyle(PressSpring())
+                            }
                         }
                     }
                     .padding(.horizontal, DS.Space.s4)
                 }
-                if let date = detectedDate {
+                if offerSend, let date = detectedDate {
                     Text("Found a time: \(date.formatted(.dateTime.weekday(.wide).month(.abbreviated).day().hour().minute()))")
                         .dsText(.label12)
                         .foregroundStyle(DS.textTertiary)
@@ -2294,7 +2448,8 @@ struct Composer: View {
             if answering {
                 turns.append(ConvoTurn(question: currentQuestion, els: answerStream.els,
                                        keyed: keyedCurrent, searchedWeb: keyedSearchedWeb,
-                                       imagesSeen: keyedImagesSeen, failed: answerFailed))
+                                       imagesSeen: keyedImagesSeen, failed: answerFailed,
+                                       found: foundCurrent))
             }
             // A follow-up in a conversation the person already took to their
             // own agent stays there (2026-07-21). Before this, a typed
@@ -2314,6 +2469,7 @@ struct Composer: View {
                 keyedSearchedWeb = false   // observed per answer
                 keyedImagesSeen = 0
                 answerFailed = false
+                foundCurrent = false       // this is an ANSWER, not a find
                 inFlight = true
             }
             keepableAskKind = nil   // recomputed at settle, for THIS question

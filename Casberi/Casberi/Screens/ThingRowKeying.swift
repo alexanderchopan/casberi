@@ -40,6 +40,16 @@ extension Array where Element == Thing {
     /// Value-keyed rows for a `ForEach` over a DERIVED thing array. See
     /// `KeyedThing`.
     var keyed: [KeyedThing] { map(KeyedThing.init) }
+
+    /// The still-live members of a HELD thing array — the corollary-2 guard
+    /// (build 150, 2026-07-25). `keyed` protects a `ForEach`'s identity
+    /// diffing; it does NOT protect the row body, the section header, or any
+    /// helper that reads the same array. A view owning a held array (a
+    /// `@State` value from a manual fetch, or one handed down as a `let`)
+    /// filters ONCE at the top with this, before positions, rows, headers or
+    /// footers read through it — so a delete landing in the same graph update
+    /// can't trap on the first persisted read.
+    var live: [Thing] { filter(\.isLive) }
 }
 
 extension Thing {

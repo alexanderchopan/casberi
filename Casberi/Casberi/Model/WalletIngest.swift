@@ -1271,7 +1271,7 @@ enum WalletIngest {
     /// holdings treemap and the activity spam filter, so "what you hold" means
     /// the same thing to both. Native coins carry a nil contract.
     /// Sendable so a read can be cached in and returned across `HoldingsCache`.
-    private struct HeldToken: Sendable {
+    private struct HeldToken: Sendable, Codable {
         let symbol: String
         let contract: String?
         let network: String
@@ -1308,11 +1308,46 @@ enum WalletIngest {
     /// (nothing reached) never lands, so a rate-limited miss isn't remembered.
     private actor HoldingsCache {
         static let shared = HoldingsCache()
-        private static let ttl: TimeInterval = 90
 
-        private struct Entry { let tokens: [HeldToken]; let at: Date }
+        /// How long a priced-holdings read stays good for (2026-07-25). Raised
+        /// from 90s, and PERSISTED — the change that actually moves the quota.
+        ///
+        /// At 90s in-process this only ever coalesced ONE foreground's 5–8
+        /// duplicate calls; every separate open, and every cold launch, paid a
+        /// fresh `/positions` per wallet. On Zerion's free developer tier
+        /// (60k calls/month on the one shipped key) that put the ceiling at
+        /// roughly a couple hundred active wallet users — and a person at the
+        /// 5-wallet cap costs 5× that. A ten-minute window over the warm AND
+        /// cold cases takes most of it back.
+        ///
+        /// Why holdings can afford a window and the rest of the wallet pass
+        /// cannot: **a holdings read reports a STATE, and every other read in
+        /// `refresh` reports an EVENT.** A portfolio value that is ten minutes
+        /// old is dated, not wrong. A Privacy Pools deposit clearing ASP
+        /// review, a Peer fill settling, a new approval, a landed transfer —
+        /// those are news, and news withheld is news missed. So the window sits
+        /// HERE, on the metered `/positions` read, and never on
+        /// `WalletIngest.refresh`, where the keyless sweeps live. Putting it a
+        /// level up would have made "did my privacy pool clear?" unanswerable
+        /// for ten minutes at a time, to save calls those sweeps never make.
+        static let defaultWindow: TimeInterval = 10 * 60
+        private static var window: TimeInterval {
+            #if DEBUG
+            // `-holdingsWindow <seconds>` — 0 disables the window entirely, so
+            // a probe that needs a genuinely live read can have one.
+            let override = UserDefaults.standard.double(forKey: "holdingsWindow")
+            if UserDefaults.standard.object(forKey: "holdingsWindow") != nil { return override }
+            #endif
+            return defaultWindow
+        }
+
+        private struct Entry: Codable { let tokens: [HeldToken]; let at: Date }
         private var fresh: [String: Entry] = [:]
         private var inFlight: [String: Task<[HeldToken]?, Never>] = [:]
+        /// Survives a cold launch, so a force-quit (or an OS eviction) doesn't
+        /// re-buy holdings the app read a minute ago. Small — one entry per
+        /// address-set actually used, dropped wholesale on invalidate.
+        private static let storeKey = "wallet.holdings.window"
 
         /// A live-enough read for `key`: a fresh cache hit, the value of an
         /// already-running fetch for the same key, or a new fetch (whose task
@@ -1320,23 +1355,51 @@ enum WalletIngest {
         /// what makes the check-then-register step race-free — there is no await
         /// between reading `inFlight` and writing it.
         func tokens(key: String, fetch: @Sendable @escaping () async -> [HeldToken]?) async -> [HeldToken]? {
-            if let e = fresh[key], e.at.timeIntervalSinceNow > -Self.ttl { return e.tokens }
+            if let e = entry(key), e.at.timeIntervalSinceNow > -Self.window {
+                NSLog("[Casberi] holdingsWindow: HIT (age %.0fs of %.0fs, %d tokens) — no metered call",
+                      -e.at.timeIntervalSinceNow, Self.window, e.tokens.count)
+                return e.tokens
+            }
             if let running = inFlight[key] { return await running.value }
+            NSLog("[Casberi] holdingsWindow: MISS — reading live")
             let task = Task { await fetch() }
             inFlight[key] = task
             let result = await task.value
             inFlight[key] = nil
-            if let result { fresh[key] = Entry(tokens: result, at: Date()) }
+            // A nil (nothing reached) is never stored, so a rate-limited or
+            // offline miss isn't remembered and stays free to heal next try.
+            if let result { store(key, Entry(tokens: result, at: Date())) }
             return result
         }
 
+        /// Memory first, then the persisted mirror — so the first read after a
+        /// cold launch can still be served without a network call.
+        private func entry(_ key: String) -> Entry? {
+            if let e = fresh[key] { return e }
+            guard let data = UserDefaults.standard.data(forKey: Self.storeKey),
+                  let all = try? JSONDecoder().decode([String: Entry].self, from: data),
+                  let e = all[key] else { return nil }
+            fresh[key] = e
+            return e
+        }
+
+        private func store(_ key: String, _ entry: Entry) {
+            fresh[key] = entry
+            guard let data = try? JSONEncoder().encode(fresh) else { return }
+            UserDefaults.standard.set(data, forKey: Self.storeKey)
+        }
+
         /// Drop every cached read so the next fetch goes live. A deliberate
-        /// pull-to-refresh calls this so the TTL never serves stale holdings
+        /// pull-to-refresh calls this so the window never serves stale holdings
         /// under a gesture whose whole contract is "re-fetch now" — the in-flight
         /// coalescing map is untouched, so a pull still joins (not doubles) a
-        /// read already on the wire. Also the only thing that bounds `fresh`,
-        /// which otherwise only ever grows.
-        func invalidate() { fresh.removeAll() }
+        /// read already on the wire. Clears the PERSISTED mirror too, or a pull
+        /// after a relaunch would be served the very entry it meant to discard.
+        /// Also the only thing that bounds `fresh`, which otherwise only grows.
+        func invalidate() {
+            fresh.removeAll()
+            UserDefaults.standard.removeObject(forKey: Self.storeKey)
+        }
     }
 
     /// Clears the holdings cache so the next read is live — for pull-to-refresh
@@ -1349,15 +1412,18 @@ enum WalletIngest {
     /// One app foreground fans the SAME `by-address` Portfolio call out 5–8×:
     /// Home's pinned + combined passes, the Wallet screen's two, Feed's chip,
     /// BridgeRefresh, plus the approvals and Solana spam filters — none aware of
-    /// the others. On Alchemy's shared free key that multiplies the month's
-    /// compute burn for byte-identical data (the shared-key capacity ceiling,
-    /// see `fetchPortfolioPage`). The wrapper sits at THIS boundary so every
-    /// caller and the SPL/DeFiLlama price-fills below ride it. `HoldingsCache`
-    /// does the coalescing (concurrent asks for one address-set await a single
-    /// network task — zero staleness) and holds a 90s TTL under the existing
-    /// stale-card layer (`recordSample` + "as of Xh ago"), which still owns
-    /// anything older. A nil (nothing reached) is never cached, so a
-    /// rate-limited miss stays free to heal next try.
+    /// the others. On the shared shipped key that multiplies the month's burn
+    /// for byte-identical data (the shared-key capacity ceiling — Zerion's
+    /// `/positions` since 2026-07-19, see `collectCandidates`). The wrapper sits
+    /// at THIS boundary so every caller and the SPL/DeFiLlama price-fills below
+    /// ride it. `HoldingsCache` does the coalescing (concurrent asks for one
+    /// address-set await a single network task — zero staleness) and holds the
+    /// freshness window under the existing stale-card layer (`recordSample` +
+    /// "as of Xh ago"), which still owns anything older.
+    ///
+    /// This is the ONLY windowed read in the wallet pass, on purpose — see
+    /// `HoldingsCache` for the state-vs-event rule that decides what may be
+    /// cached and what must always go live.
     private static func fetchHeldTokens(addresses: [String]) async -> [HeldToken]? {
         guard !addresses.isEmpty else { return nil }
         // Key on the ROUTED request, not the bare addresses: a chain toggled
@@ -1808,6 +1874,20 @@ enum WalletIngest {
     /// unreachable API from a wallet that simply holds nothing priced (all
     /// airdrop spam) — the latter is correct-but-empty, not a failure.
     @MainActor
+    /// One read through the REAL cached path (`fetchHeldTokens`), for
+    /// `-holdingsWindowProbe`. Deliberately not `holdingsDiagnostic`, which
+    /// issues its own direct call and so would exercise none of the window —
+    /// a probe that asked differently than the real read would prove nothing.
+    static func holdingsWindowRead() async -> String {
+        let watched = WalletStore.shared.addresses.map(\.address)
+        guard !watched.isEmpty else { return "no watched address" }
+        let addresses = await resolvedAddresses(watched)
+        guard let tokens = await fetchHeldTokens(addresses: addresses) else {
+            return "nothing reached"
+        }
+        return "\(tokens.count) priced tokens"
+    }
+
     static func holdingsDiagnostic() async -> [String] {
         var out: [String] = []
         let watched = WalletStore.shared.addresses.map(\.address)

@@ -953,6 +953,17 @@ struct RootShell: View {
             HomeRoute.shared.present(.apps)
         case "settings":
             HomeRoute.shared.present(.settings)
+        // casberi://brief — the agent, raised onto the brief (2026-07-25).
+        // The hero widget carries the brief's own lede now, so its tap has to
+        // land on the sentence it was showing; landing on the feed instead
+        // would make the tile a headline with nothing behind it. The SAME
+        // `askRequest` door the whisper capsule, the agent bar and a typed
+        // "how's my day" all already funnel through — one composer, one route.
+        case "brief":
+            FeedFilter.shared.source = "All"
+            FeedFilter.shared.tag = "All"
+            chrome.askRequest = TodayBrief.title
+            composerOpen = true
         // casberi://person/<Source>/<handle> — the profile card for one person
         // on one network (2026-07-16). In the app it's reached by tapping a
         // face; this is the same card by name, so the screen sweep can reach it

@@ -8420,3 +8420,133 @@ sentence builder, now one; `titleNames` and `dominantTopic` spelled the same "wh
 word" rule twice, now `words(of:)`; `BriefLedger.record` re-decoded the ledger its caller
 had already snapshotted, breaking the read-once rule the file's own comments assert.
 Re-verified on sim after all of it — same lede, same continuity subline, same absence line.
+
+## 215. Find gets a door, the widget stops counting, and the dead-Thing rule stops being remembered (user: "how would you improve the app", then "lets do 3 and 4 and improve the widget", 2026-07-25) — VERIFIED
+
+Three separate improvements, one session. Two of them are the same shape: a capability the
+app already had, reachable only if you already knew it was there.
+
+**Find — the composer's deterministic door.** `Retriever.rank` has always been the engine
+behind every free-text ask, and a kept `search:<query>` re-runs it verbatim. What it never
+had was a way to ASK FOR IT. Typing "climate links" offered to send those two words to
+Messages, Mail or Google — the outbound exits — while the one thing the app is actually for,
+finding it in your own things, had no affordance at all. The asymmetry was total: Spotlight,
+Visual Intelligence and Shortcuts all reach this corpus from OUTSIDE the app; inside it, the
+only door was phrasing a question and hoping.
+
+So the typed-draft band grew a second verb, leading: **Find** (keep it here) before **Send
+to** (take it there). Ruled deliberately NOT to be the Ask button relabelled — Ask routes
+through `RootShell.answerDocument`, which may reach the on-device model or the person's own
+key; Find runs `KeptAskComposers.search` and nothing else. Instant, no model, nothing
+synthesized. That distinction is the whole reason it earns a control instead of being folded
+into Ask, so the badge carries it: "Matched on this iPhone — nothing was written", against
+the answer path's "Answered on this iPhone". The most trustworthy result in the app must not
+wear the same label as the least.
+
+Find is offered for ANY draft, a question included — "climate links" and "what did I save
+about climate?" are the same search to the retriever, and hiding the door behind a grammar
+check would reintroduce exactly the guess-the-phrasing problem it exists to fix. "Send to"
+keeps its old rule unchanged and sits out for a question. A PASTE gets no Find: that's a
+capture path on its way to being kept, not a phrase to search for. The result is keepable
+through the Keep pill that was already there, minting the `search:<query>` kind
+`KeptAskComposers` already serves — a find that proves useful becomes a standing search with
+one more tap and no new machinery. `-findProbe "<query>"` verifies it headlessly.
+
+**The widget stops counting.** `HeroProvider` composed its own line — the largest tag cluster
+and how many things were in it ("Recipes fills your week · 12 things across 3 apps") — and
+wore a ring carrying a count of what had landed since you left. That is the "14 things landed"
+claim §213 retired from the brief two days earlier, still running on the home screen: in a
+corpus taking dozens a day it says nothing except that the app is on. The brief already
+composes the one sentence that IS news, ranked risk → money → person → deadline, so the widget
+mirrors that sentence instead of inventing a weaker one. `TodayBrief.compose` publishes the
+lede to the app group (`WidgetLede`, a Shared contract so a rename can't strand either side);
+the widget reads it. Published from `compose` rather than a display route ON PURPOSE — the
+brief recomposes on every foreground for anyone who kept the ask, so the widget refreshes
+without waiting for someone to open it. Publishing is not ledger-recording: the `presenting`
+discipline is about claiming "I already told you this", and a widget line is the telling.
+
+Two fallbacks, neither a tally: the most recent THING itself (the module doctrine's own second
+shape), then the empty-corpus invitation. An empty lede CLEARS the key rather than leaving
+yesterday's sentence standing — fake status is the one thing worse than no status. The ring
+kept its dot and lost its number: presence is the part that was ever true. Also fixed in
+passing: the `.accessoryRectangular` eyebrow was `.uppercased()`, which the 2026-07-08 ruling
+banned with no exceptions (it predated the ruling and nobody had opened the widget since), and
+the gallery name still said "Synthesis" three renames after §193. Tapping now lands on
+`casberi://brief` — the sentence it's showing, opened. A headline you can't open is a dead
+control.
+
+**The dead-Thing rule stops being enforced by memory.** Builds 137, 138, 139, 142 and 150 were
+five TestFlight-found crashes of ONE defect: reading a stored property of a deleted SwiftData
+model. The rule was written down after 139 and re-broken twice anyway. `scripts/swiftdata-
+liveness-audit.py` now runs first in `verify.sh` and makes it mechanical — a derived `ForEach`
+must be `.keyed`, a held `@State` Thing whose stored property is read must be guarded by
+`isLive`. Its `--self-test` runs before the audit and is load-bearing rather than decoration:
+a check that cannot fail proves nothing, so it demonstrates it catches each shape (derived,
+chained-off-a-@Query, held) and clears the safe ones first. That discipline immediately paid:
+the ForEach half came back clean — genuinely complete, and now provably so — while the held
+half found `BridgeDetailScreen`'s `if let recent { … recent.kind … }`, an unwrap that proves
+non-nil and not still-backed, on a screen whose own bridge heals deletes underneath it.
+
+The generalizable fix went where it covers the most ground: `RecentThingsSection` — the shared
+renderer behind ~15 bridge screens — keyed its ForEach correctly and then read `thing.title` in
+the row body, which is exactly build 150's corollary 2 (keying protects identity diffing, not
+the body). It filters `things.live` once at the top now, and the new `Array<Thing>.live` sits
+beside `.keyed` in `ThingRowKeying.swift` so the two halves of the rule live together.
+
+Deliberately left alone: notifications. Raised as the app's biggest gap and correctly refused
+(user: "notifications are the problem — a user has dozens of notifications from apps a day they
+don't read"). The widget IS this app's answer to reach — ambient, consulted rather than
+interrupting — which is precisely why it had to stop lying about volume. One case remains open
+rather than settled: money at risk (a health factor crossing under liquidation while the phone
+is in a pocket) is the one event where silence is a bug and the widget's hourly timeline may be
+too quiet. Not built, not ruled — recorded here so it isn't rediscovered from scratch.
+
+## 216. The holdings read gets a freshness window — and the news does not (user: "do the refresh window first", then "trying to see if their privacy pool happened / then we'd miss that for them", 2026-07-25) — VERIFIED
+
+**Corrected first: the wallet's metered read is ZERION, not Alchemy** (user: "WE USE ZERION NOT
+ALCHEMY"). Holdings have been Zerion-first since 2026-07-19 — `collectCandidatesZerion`, one
+keyed `/positions` per wallet covering EVM + Solana, already priced — with Alchemy as the
+fallback plus NFT activity, Solana activity, prices, gas and charts. Any capacity reasoning
+that starts from the wrong vendor produces confidently wrong advice, and did.
+
+The ceiling is Zerion's free developer tier: 60k calls/month on one shipped shared key. It is a
+USAGE ceiling, not a signup one — `/positions` fired on every foreground refresh, so cost
+scales with opens × watched wallets. A single-wallet user opening ~10×/day costs ~300
+calls/month (~200 such users exhausts the key); a user at the 5-wallet cap costs 5× that (~40).
+`HoldingsCache`'s 90s TTL only ever coalesced ONE foreground's 5–8 duplicate calls; every
+separate open, and every cold launch, paid full price.
+
+So the window went to ten minutes and became PERSISTED (`wallet.holdings.window`), which is the
+part that actually moves the number — a force-quit no longer re-buys holdings read a minute
+ago. Verified across a real process boundary: a brand-new launch served read 1 from an entry
+the previous process wrote (`HIT (age 48s of 600s)`).
+
+**The ruling that shaped it, and it is the whole entry.** The obvious place for a window is
+`WalletIngest.refresh`, and that would have been a real bug. The user caught it as a user
+would: "trying to see if their privacy pool happened — then we'd miss that for them."
+`PrivacyPoolsBridge.sync` rides *inside* `refresh`, and the clear-to-withdraw flip is the
+feature, not the deposit. A window a level up would have swallowed exactly the poll someone
+opens the app to check.
+
+The line, stated so it survives the next optimization: **window the reads that report a STATE;
+never window the reads that report an EVENT.** A portfolio value ten minutes old is dated, not
+wrong. A Privacy Pools deposit clearing ASP review, a Peer fill settling, a new approval, a
+landed transfer — those are news, and news withheld is news missed. It happens to align
+perfectly with cost: every event read in that pass is KEYLESS (0xbow's public API, Base RPC for
+Peer, public RPCs for approvals, Morpho's own GraphQL), so windowing them would have saved
+nothing and cost the thing people came for. The window sits on `fetchHeldTokens` and nowhere
+else, and `HoldingsCache`'s own doc comment says why, at the site, so it isn't hoisted later by
+someone reading only the call graph.
+
+Exemptions kept: pull-to-refresh (`invalidateHoldingsCache`, which now clears the persisted
+mirror too — otherwise a pull after a relaunch would be served the very entry it meant to
+discard), and a newly watched wallet, which has no entry and so goes live by construction.
+
+`-holdingsWindowProbe` is the contract as a test: live → HIT → invalidate → live, two metered
+reads for three asks. It deliberately calls a new `holdingsWindowRead()` rather than
+`holdingsDiagnostic()`, which issues its own direct call and would have exercised none of the
+window — a probe that asks differently than the real read proves nothing.
+
+Not built: an adaptive window (shorter while the Wallet screen is open). The existing stale
+card ("as of Xh ago") already owns anything genuinely old, and a value that twitches costs
+quota to say nothing.
