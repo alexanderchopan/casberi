@@ -169,11 +169,18 @@ struct SettingsScreen: View {
             // Ruling 2026-07-14: it's an AGENT key — name the agents, never
             // "the Anthropic key". Keyed, the fact earns the badge's green —
             // a live connection states itself in the connected color.
+            //
+            // Unkeyed, the row states the FACT (answers run here), not the
+            // roster: the six agent names ran past `lineLimit(2)` and
+            // truncated mid-word ("…OpenRou…") after the reading-band pass
+            // grew callout15 (user, 2026-07-26). A trailing fact has one
+            // line's worth of room — the roster is the sheet's job, and the
+            // sheet now lays all six out as chips that can't clip.
             RowSpec(title: "Your key",
                     value: keyedAgent.map {
                        String.localizedStringWithFormat(
                            String(localized: "%@ answers on tap"), $0.agent)
-                    } ?? String(localized: "Claude, ChatGPT, Gemini, Venice, Bankr, or OpenRouter"),
+                    } ?? String(localized: "Answers on this iPhone"),
                     valueColor: keyed ? DS.confirm : DS.textTertiary,
                     badge: ("key.fill", keyed ? DS.confirm : DS.textSecondary),
                     action: { detail = .key }),

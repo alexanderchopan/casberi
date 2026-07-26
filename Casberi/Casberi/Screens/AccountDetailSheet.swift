@@ -19,6 +19,9 @@ struct AccountDetailSheet: View {
     let detail: AccountDetail
     @Environment(\.modelContext) private var modelContext
     @Environment(BridgeStore.self) private var store
+    /// The key tray's "Open <console>" slab — §218's rule that step one is the
+    /// button it was describing, not a URL you retype into Safari.
+    @Environment(\.openURL) private var openURL
     @AppStorage("privacy.hidePreviews") private var hidePreviews = true
     /// The person's iCloud-sync choice. Off by default — things stay on this
     /// iPhone. This is the real setting the CloudKit engine reads at M1; it
@@ -35,10 +38,9 @@ struct AccountDetailSheet: View {
     /// it sits beside the at-rest half (on device / iCloud) instead of
     /// competing as a second privacy row.
     @State private var reachOpen = false
-    /// Your key (prd §67) — draft, outcome line, and a mirrored configured
-    /// flag (AgentKey isn't observable; actions refresh it by hand). The
-    /// picker chooses which agent the key belongs to (ruling 2026-07-14:
-    /// it's an agent key — Claude, ChatGPT, Gemini, or Venice).
+    /// Your key (prd §67) — the draft being pasted and the outcome line it
+    /// earns. The grid below chooses which agent the key belongs to (ruling
+    /// 2026-07-14: it's an agent key, one of six).
     @State private var keyDraft = ""
     @State private var keyResult: String?
     /// A rejected key must READ as a failure — same muted gray as success
@@ -46,16 +48,32 @@ struct AccountDetailSheet: View {
     @State private var keyResultIsError = false
     @State private var keyChecking = false
     @State private var keyProvider: AgentProvider = AgentKey.active ?? .anthropic
-    @State private var keyConfigured = AgentKey.isConfigured(AgentKey.active ?? .anthropic)
+    /// Which agents hold a key, mirrored ONCE (`AgentKey` isn't observable, so
+    /// actions refresh it by hand). Read as a set rather than asked per agent:
+    /// the grid draws six tiles and the body re-evaluates on every keystroke in
+    /// the field, which asking per tile would turn into six Keychain queries
+    /// per character typed.
+    @State private var savedAgents: Set<AgentProvider> = Set(AgentKey.configured)
+
+    /// Whether the SELECTED agent holds a key — derived, never a second flag to
+    /// keep in step with the set above.
+    private var keyConfigured: Bool { savedAgents.contains(keyProvider) }
 
     var body: some View {
-        DSTray(title: title, height: sheetHeight) {
+        DSTray(title: title, height: sheetHeight, detents: detents) {
             switch detail {
             case .data:
                 dataCard
                 controls
             case .key:
-                keyCard
+                // The one tray here with a text field in it: a ScrollView so
+                // the keyboard can never sit on the paste slab, and so a large
+                // Dynamic Type setting overflows into a scroll instead of
+                // clipping at the detent.
+                ScrollView {
+                    keyCard.frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .scrollBounceBehavior(.basedOnSize)
             case .color:
                 bleedCard
             }
@@ -161,9 +179,21 @@ struct AccountDetailSheet: View {
         // and the ADP nudge (~3 lines) only when sync is on (prd §205). DSTray
         // clips at a fixed detent, so the taller state must be sized for.
         case .data: icloudSync ? 660 : 600
-        case .key: 500   // +40 for the per-agent capability line (2026-07-21)
+        // Rebuilt on slabs (2026-07-26): status row, the 3×2 agent grid + its
+        // capability line, the Open and paste slabs, one note — and, keyed,
+        // the outcome line plus Remove. Taller than the old stack on purpose;
+        // the height is what buys the grouping. It can't clip either way: the
+        // content scrolls, and `detents` below adds a full-height stop.
+        case .key: keyConfigured ? 780 : 700
         case .color: 400   // aliveRow + one swatch row + a footnote (prd §204)
         }
+    }
+
+    /// The key tray's content is the one here that grows with the person's
+    /// text-size setting (two headers, a grid, three prose blocks), so it can
+    /// be dragged full-height instead of clipping at its natural detent.
+    private var detents: Set<PresentationDetent>? {
+        detail == .key ? [.height(sheetHeight), .large] : nil
     }
 
     // MARK: - Pieces
@@ -240,79 +270,167 @@ struct AccountDetailSheet: View {
     /// Bankr's key could also trade (it's a wallet agent) — the small print
     /// says to mint it read-only, and the answer path prompts "answer only"
     /// regardless (2026-07-16).
+    ///
+    /// REBUILT 2026-07-26 (user: the row clipped, and this screen is "so dense
+    /// and badly designed… make it stupid simple even if we keep all the
+    /// words"). It was the last keyed form in the app still wearing the
+    /// pre-§190 furniture — a recessed capsule field with a filled blue pill
+    /// beside it, a segmented picker, and two prose blocks totalling eleven
+    /// lines, one of which listed all six consoles at once. Now it says the
+    /// same things in the shipped grammar: **pick, open, paste**, every
+    /// control a slab (§190), one gray block (§218), and nothing on screen
+    /// about the five agents you didn't choose.
+    ///
+    /// Four specific fixes:
+    ///   • the six-way SEGMENTED picker truncated its last segment
+    ///     ("OpenRo…") — a segmented control divides a fixed width evenly, so
+    ///     the longest name always loses. Six chips in a 3×2 grid each get a
+    ///     third of the tray and shrink rather than clip, and a chip shows a
+    ///     checkmark when that agent already has a key (the segmented control
+    ///     could never say so, and two saved keys are a real state).
+    ///   • the seven-line footnote naming all six consoles becomes §218's
+    ///     "step one is the button it was describing": one slab that OPENS
+    ///     the chosen agent's console.
+    ///   • the promise paragraph and the Keychain footnote were one fact in
+    ///     two blocks — merged into the single `DSSlabNote`, which now names
+    ///     the company the person actually picked instead of "the agent's
+    ///     provider".
+    ///   • Save was a hand-rolled fill that stayed blue while inert (§83).
+    ///     `DSSlabField`'s verb dims itself, so the bug can't come back.
     private var keyCard: some View {
         VStack(alignment: .leading, spacing: DS.Space.s4) {
             aliveRow("key.fill", keyConfigured ? DS.confirm : DS.textSecondary,
                      "Agent API key",
                      keyConfigured ? "\(keyProvider.agent) saved in the Keychain \(AgentKey.hint(keyProvider))"
                                    : "Answers run on this iPhone until you add one")
-            Text("With your key saved, every answer offers \"Try with your key\" — the question and the few matched things go straight from this iPhone to the agent's provider, only when you tap. They bill your key directly.")
-                .dsText(.subhead13).foregroundStyle(DS.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
-            // What THIS agent adds beyond a plain text answer — changes with
-            // the picker below it, so the choice is informed before a key is
-            // even saved (honesty rule: capability copy per agent, not one
-            // line pretending they're all the same).
+            // The one prompt left on the screen. §218 deleted the gray
+            // section labels over fields whose placeholder and verb already
+            // said the act — but a bare grid of six brand names has no
+            // placeholder and no verb, so this one asks the question.
+            Text("Pick your agent")
+                .dsText(.heading17).foregroundStyle(DS.textPrimary)
+                .padding(.top, DS.Space.s1)
+            agentGrid
+            // What THIS agent adds beyond a plain text answer — per agent,
+            // never one line pretending they're all the same (honesty rule),
+            // and directly under the control it qualifies.
             if let capability = keyProvider.capabilityLine {
                 Text(capability)
                     .dsText(.subhead13).foregroundStyle(DS.textTertiary)
                     .fixedSize(horizontal: false, vertical: true)
             }
-            Picker("Agent", selection: $keyProvider) {
-                ForEach(AgentProvider.allCases) { provider in
-                    Text(provider.agent).tag(provider)
+            // Then the two acts, in order: get the key, paste the key.
+            VStack(alignment: .leading, spacing: DS.Space.s2) {
+                DSSlabButton(title: "Open \(keyProvider.console)",
+                             systemImage: "arrow.up.right") {
+                    DSHaptic.tap()
+                    if let url = keyProvider.consoleURL { openURL(url) }
                 }
+                // The mint-time caution rides the mint button, not a footer —
+                // "make it read-only" is worthless read after the key exists.
+                if let caution = keyProvider.keyCaution {
+                    Text(caution)
+                        .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.bottom, DS.Space.s1)
+                }
+                DSSlabField(placeholder: keyProvider.placeholder, text: $keyDraft,
+                            actionLabel: keyChecking ? "CHECKING…"
+                                                     : (keyConfigured ? "UPDATE" : "SAVE"),
+                            secure: true,
+                            isArmed: !keyChecking
+                                && !keyDraft.trimmingCharacters(in: .whitespaces).isEmpty,
+                            action: saveKey)
             }
-            .pickerStyle(.segmented)
-            .onChange(of: keyProvider) {
-                keyConfigured = AgentKey.isConfigured(keyProvider)
-                keyResult = nil
-                keyDraft = ""
-            }
-            HStack(spacing: DS.Space.s3) {
-                SecureField(keyProvider.placeholder, text: $keyDraft)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
+            if let keyResult {
+                Text(keyResult)
                     .dsText(.callout15)
-                    .padding(.horizontal, DS.Space.s3)
-                    .frame(height: 44)
-                    .background(DS.fillFaint, in: Capsule(style: .continuous))
-                Button { saveKey() } label: {
-                    Text(keyChecking ? "Checking…" : "Save")
-                        .dsText(.callout15).fontWeight(.semibold)
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, DS.Space.s4)
-                        .frame(height: 44)
-                        .background(DS.tint, in: Capsule(style: .continuous))
-                }
-                .buttonStyle(.plain)
-                .disabled(keyChecking || keyDraft.trimmingCharacters(in: .whitespaces).isEmpty)
+                    .foregroundStyle(keyResultIsError ? DS.attention : DS.confirm)
+                    .settleIn()
             }
+            DSSlabNote(text: "With your key saved, every answer offers \"Try with your key\" — the question and the few matched things go straight from this iPhone to \(keyProvider.company), only when you tap. They bill your key directly. It stays in this iPhone's Keychain.")
             if keyConfigured {
-                Button {
+                // Destructive sits outside the rhythm (§190) — a quiet
+                // centered red row, and it names WHICH key, now that the grid
+                // can show two agents holding one.
+                Button(role: .destructive) {
                     DSHaptic.tap()
                     AgentKey.clear(keyProvider)
-                    keyConfigured = false
+                    savedAgents = Set(AgentKey.configured)
                     keyResultIsError = false
                     keyResult = AgentKey.isConfigured
                         ? "Removed — answers run on \(AgentKey.active?.agent ?? "") now."
                         : "Removed — answers stay on this iPhone."
                 } label: {
-                    actionLabel("Remove key", icon: "trash",
-                                fg: DS.destructive, bg: DS.gray100)
+                    // The destructive ROLE only tints itself inside a List or
+                    // menu; in a plain tray it would inherit the sheet's blue,
+                    // so the color is stated.
+                    Text("Remove \(keyProvider.agent) key")
+                        .dsText(.body17).foregroundStyle(DS.destructive)
+                        .frame(maxWidth: .infinity, alignment: .center)
+                        .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
+                .padding(.top, DS.Space.s1)
             }
-            if let keyResult {
-                Text(keyResult)
-                    .dsText(.callout15)
-                    .foregroundStyle(keyResultIsError ? DS.attention : DS.textSecondary)
-                    .settleIn()
-            }
-            Text("Get a key from the agent's own console — console.anthropic.com (Claude), platform.openai.com (ChatGPT), aistudio.google.com (Gemini), venice.ai (Venice), bankr.bot/api-keys (Bankr — make it a read-only key; answers never trade), or openrouter.ai/keys (OpenRouter — routes to whichever model fits, no model to pick). It stays in this iPhone's Keychain and goes only to the provider you chose.")
-                .dsText(.label12).foregroundStyle(DS.textTertiary)
-                .fixedSize(horizontal: false, vertical: true)
         }
+    }
+
+    /// The six agents, three across. Each tile owns a third of the tray and
+    /// shrinks its label rather than truncating it, so no name can clip the way
+    /// the segmented control's "OpenRouter" did — and each is a slab (§190),
+    /// same height and radius as the Open and paste slabs below, so the whole
+    /// tray reads as one rhythm instead of a picker sitting on a form.
+    private var agentGrid: some View {
+        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: DS.Space.s2),
+                                 count: 3),
+                  spacing: DS.Space.s2) {
+            ForEach(AgentProvider.allCases) { provider in
+                agentChip(provider)
+            }
+        }
+        // A draft typed for one provider must never be saved against another,
+        // and last agent's outcome isn't this agent's.
+        .onChange(of: keyProvider) {
+            keyResult = nil
+            keyDraft = ""
+        }
+    }
+
+    private func agentChip(_ provider: AgentProvider) -> some View {
+        let selected = provider == keyProvider
+        // A saved key is a fact about that agent, so the chip says it — the
+        // person with keys on two agents can see which are set without
+        // tapping through all six.
+        let saved = savedAgents.contains(provider)
+        return Button {
+            guard !selected else { return }
+            DSHaptic.tap()
+            withAnimation(DS.Motion.standard) { keyProvider = provider }
+        } label: {
+            HStack(spacing: DS.Space.s1) {
+                if saved {
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundStyle(selected ? Color.white : DS.confirm)
+                        .accessibilityHidden(true)
+                }
+                Text(provider.agent)
+                    .dsText(.body17)
+                    .fontWeight(selected ? .semibold : .medium)
+                    .foregroundStyle(selected ? Color.white : DS.textPrimary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+            }
+            .padding(.horizontal, DS.Space.s2)
+            .frame(maxWidth: .infinity)
+            .frame(height: DSSlab.height)
+            .background(selected ? DS.tint : DS.gray100, in: DSSlab.shape)
+            .contentShape(DSSlab.shape)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(saved ? "\(provider.agent), key saved" : provider.agent)
+        .accessibilityAddTraits(selected ? [.isSelected] : [])
     }
 
     /// The crown pour's color (prd §204) — the permanent gradient behind the
@@ -376,7 +494,7 @@ struct AccountDetailSheet: View {
             keyChecking = false
             if ok {
                 AgentKey.set(candidate, for: keyProvider)
-                keyConfigured = true
+                savedAgents = Set(AgentKey.configured)
                 keyDraft = ""
                 DSHaptic.success()
                 keyResultIsError = false

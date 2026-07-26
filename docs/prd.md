@@ -8836,3 +8836,86 @@ audit) and the diff. What has NOT been seen on screen: the sheet's rise and its
 self-dismissal on connect, the bloom landing on the product page behind it, and
 the slabbed forms' layout. Walk one keyed bridge (Notion or Readwise), one
 two-field bridge (Steam or Mail) and one import screen before calling it done.
+
+## 220. Your key stops being a form (user: sent a screenshot of the clipped Settings row and one of the tray — "improve this clipping and also let's improve the screen - so dense and badly designed. we need to make it stupid simple even if we keep all the words", 2026-07-26) — NOT SIMULATOR-VERIFIED
+
+Two screenshots, one root cause: **Settings → Your key never went through
+§190/§218.** Every keyed bridge in the catalog was rebuilt onto slabs; this
+one, reached from Settings rather than from the Apps wall, kept the furniture
+those rulings deleted — and then the reading-band pass (§ Typography,
+2026-07-25) grew `callout15` from 15 to 16pt and the old layout stopped
+fitting.
+
+**The clipping.** The Settings row's trailing fact was the roster —
+*"Claude, ChatGPT, Gemini, Venice, Bankr, or OpenRouter"* — in a trailing slot
+that holds about one line, so it wrapped to two and truncated mid-word
+("OpenRou…"). A trailing fact states the row's live state; a roster is a
+different job. Unkeyed the row now reads **"Answers on this iPhone"** (the same
+fact the tray's status line states), keyed it still reads "Claude answers on
+tap". The roster belongs to the tray, and the tray now lays all six out where
+they can't clip.
+
+**The density.** The tray stacked: a status row, a four-line promise, a
+three-line capability line, a six-way segmented picker, a field with a filled
+blue pill beside it, and a **seven-line footnote naming all six consoles and
+both caveats at once** — five agents' worth of small print around the one being
+set up. Rebuilt as **pick → open → paste**:
+
+- **The segmented picker becomes six slabs, three across.** A segmented control
+  divides a fixed width evenly, so the longest name always loses — that's what
+  "OpenRo…" was, and it would come back with any longer name. Each tile owns a
+  third of the tray and shrinks its label rather than truncating it. A tile also
+  shows a **checkmark when that agent already holds a key**, which the segmented
+  control could never say and which is a real state (keys on two agents).
+- **The console footnote becomes §218's "step one is the button it was
+  describing"** — one `DSSlabButton` that opens the CHOSEN agent's console
+  (`AgentProvider.consoleURL`; Venice, Bankr and OpenRouter reuse the exact deep
+  links their own setup screens already ship, the other three open the host the
+  label names, so the button can't land somewhere its label didn't promise).
+- **The mint-time cautions move to the mint button** (`AgentProvider.keyCaution`
+  — Bankr's read-only, OpenRouter's no-model-to-pick). "Make it a read-only key"
+  is worthless read after the key exists.
+- **The promise paragraph and the Keychain footnote were one fact in two
+  blocks** — merged into the single `DSSlabNote`, which now names the company
+  the person actually picked ("straight from this iPhone to Anthropic") instead
+  of the abstract "the agent's provider".
+- **`DSSlabField` replaces field-plus-blue-pill**, which also fixes a standing
+  §83 violation: the hand-rolled Save painted its own fill and only dimmed its
+  label when disabled, so it read live while inert. The slab's verb dims itself.
+- **Remove is the quiet centered red row** §190 puts outside the rhythm, and it
+  names which key — the grid can now show two agents holding one.
+
+**What was deliberately kept.** Every fact: the promise, the billing, the
+Keychain, the per-agent capability line, both cautions, all six consoles (one
+at a time, at the moment it's the one you need). One prompt survives as a
+header — **"Pick your agent"**. §218 deleted the gray labels over fields whose
+placeholder and verb already said the act; a bare grid of six brand names has
+neither, so this one asks the question. It is a primary-weight header, not a
+gray eyebrow.
+
+**Three gray blocks, not one — and that's the rule, not an exception to it.**
+§218's "one gray sentence per screen" was aimed at footers *stacked under the
+controls*. Here each gray block attaches to a different control: the capability
+line under the grid it qualifies, the caution under the button that mints, the
+note under the field. That is the ruling's own remedy ("everything a footer said
+moves to the door, dialog, or screen that owns it"), not a relapse.
+
+The tray also scrolls now (`ScrollView` + a `.large` detent): it is the only
+tray in this sheet with a text field, so the keyboard must never be able to sit
+on the paste slab, and a large Dynamic Type setting should overflow into a
+scroll instead of clipping at the detent.
+
+Applied to: `Screens/AccountScreen.swift` (the row's value), `Screens/
+AccountDetailSheet.swift` (the tray), `Model/AgentAnswer.swift` (`consoleURL`,
+`keyCaution`), and `VeniceSetupScreen` / `BankrSetupScreen` /
+`OpenRouterSetupScreen`, which now read their Open button's URL from
+`consoleURL` instead of holding a second copy of it — one agent's console can't
+live at two addresses.
+
+NOT SIMULATOR-VERIFIED — this session ran in the Linux remote environment,
+which has no Xcode, so nothing here was compiled or seen on screen. Both static
+audits pass (`catalog-sync.sh`, the SwiftData liveness audit). Before calling it
+done: build, open `-accountDetail key`, and check (1) no name clips on any of
+the six tiles, (2) the sheet's height against the real content in both the
+keyed and unkeyed states, (3) the field stays visible with the keyboard up, and
+(4) the Settings row's own value on one line.

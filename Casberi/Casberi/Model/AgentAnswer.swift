@@ -65,6 +65,38 @@ enum AgentProvider: String, CaseIterable, Identifiable {
         }
     }
 
+    /// Where `console` actually opens (prd §218's "step one becomes the button
+    /// it was describing" — a URL set in body text is an instruction the app
+    /// could have followed itself). Venice, Bankr and OpenRouter keep the exact
+    /// deep links their own setup screens shipped, and those screens now read
+    /// them from here so one agent's console can't live at two addresses; the
+    /// other three open the host `console` names, so the button can never land
+    /// somewhere its own label didn't promise.
+    var consoleURL: URL? {
+        switch self {
+        case .anthropic:  URL(string: "https://console.anthropic.com")
+        case .openai:     URL(string: "https://platform.openai.com")
+        case .google:     URL(string: "https://aistudio.google.com")
+        case .venice:     URL(string: "https://venice.ai/settings/api")
+        case .bankr:      URL(string: "https://bankr.bot/api-keys")
+        case .openrouter: URL(string: "https://openrouter.ai/settings/keys")
+        }
+    }
+
+    /// The one thing worth knowing BEFORE minting this agent's key — nil for
+    /// the agents that have nothing extra to say. Shown beside the key field
+    /// for the SELECTED agent only (2026-07-26): the settings sheet used to
+    /// print all six consoles and both caveats as one seven-line block of
+    /// small print, which is five agents' worth of noise around the one
+    /// being set up.
+    var keyCaution: String? {
+        switch self {
+        case .bankr:      "Make it a read-only key — answers never trade."
+        case .openrouter: "Routes to whichever model fits — no model to pick."
+        case .anthropic, .openai, .google, .venice: nil
+        }
+    }
+
     var placeholder: String {
         switch self {
         case .anthropic:  "sk-ant-…"

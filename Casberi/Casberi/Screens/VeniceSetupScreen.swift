@@ -38,7 +38,7 @@ struct VeniceSetupScreen: View {
             VStack(alignment: .leading, spacing: DS.Space.s2) {
                 DSSlabButton(title: "Open venice.ai → API keys", systemImage: "arrow.up.right") {
                     DSHaptic.tap()
-                    if let url = URL(string: "https://venice.ai/settings/api") { openURL(url) }
+                    if let url = AgentProvider.venice.consoleURL { openURL(url) }
                 }
                 BridgeStepLines(steps: ["Create a key and copy it.",
                                      "Paste it below — it's checked with Venice before it saves."])

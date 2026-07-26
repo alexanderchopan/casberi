@@ -42,7 +42,7 @@ struct BankrSetupScreen: View {
             VStack(alignment: .leading, spacing: DS.Space.s2) {
                 DSSlabButton(title: "Open bankr.bot/api-keys", systemImage: "arrow.up.right") {
                     DSHaptic.tap()
-                    if let url = URL(string: "https://bankr.bot/api-keys") { openURL(url) }
+                    if let url = AgentProvider.bankr.consoleURL { openURL(url) }
                 }
                 BridgeStepLines(steps: ["Make the key read-only, and enable agent access. Answers never trade — a read-only key keeps it that way.",
                                      "Paste it below — it's checked with Bankr before it saves."])

@@ -38,7 +38,7 @@ struct OpenRouterSetupScreen: View {
             VStack(alignment: .leading, spacing: DS.Space.s2) {
                 DSSlabButton(title: "Open openrouter.ai → Keys", systemImage: "arrow.up.right") {
                     DSHaptic.tap()
-                    if let url = URL(string: "https://openrouter.ai/settings/keys") { openURL(url) }
+                    if let url = AgentProvider.openrouter.consoleURL { openURL(url) }
                 }
                 BridgeStepLines(steps: ["Create a key and copy it.",
                                      "Paste it below — it's checked with OpenRouter before it saves."])
