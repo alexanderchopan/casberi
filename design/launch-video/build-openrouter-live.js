@@ -1,0 +1,165 @@
+// OpenRouter promo — live-animated. node render.js clip-openrouter-live.html --size=1080x1920
+// Grounded in Model/AgentAnswer.swift + Screens/OpenRouterSetupScreen.swift (2026-07-24):
+//   OpenRouter — the sixth agent key, one API routed across 400+ models via OpenRouter's
+//   own `openrouter/auto` router. Unlike every other agent here it never pins one model.
+//   Setup: sign in at openrouter.ai -> Settings -> Keys -> create -> paste; checked with
+//   OpenRouter (GET /v1/auth/key) BEFORE it saves.
+//   HONESTY DIVERGENCE (the differentiator, stated plainly on the connect screen): because
+//   the model varies per question, it stays honestly baseline — seesImages=false,
+//   searchesWeb=false — rather than claiming a capability whichever model it lands on
+//   might not have. It DOES remember a chat's earlier answers.
+//   Exact toast: "Connected — answers now offer \"Try with your key\" on OpenRouter."
+//   Nothing leaves the phone until the tap; OpenRouter bills you directly; key in Keychain.
+const fs=require('fs'), path=require('path');
+const AC='#7C5CFC', GRN='#3fb950';
+const BEATS=[
+  {kick:'ONE KEY',     head:'One key.\n400+ models.',        accent:AC},
+  {kick:'CONNECT',     head:'Paste your\nOpenRouter key.',   accent:AC},
+  {kick:'AUTO-ROUTED', head:'Whichever\nmodel fits.',        accent:AC},
+  {kick:'HONEST LIMITS', head:'Never claims\nwhat it can\'t promise.', accent:GRN},
+  {kick:'YOUR CALL',   head:'Nothing leaves\nuntil you tap.', accent:AC},
+];
+const INTRO=0.45,BEAT=2.2,OUT_AT=INTRO+BEATS.length*BEAT,TOTAL=OUT_AT+1.9;
+const DATA=BEATS.map((b,i)=>({kick:b.kick,head:b.head,accent:b.accent}));
+const MODELS=['GPT-4o','Claude','Gemini','Llama 3.3','Mixtral','Grok'];
+
+const html=`<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;transition:none!important}
+html,body{width:1080px;height:1920px;overflow:hidden;background:#EEEAE1;font-family:-apple-system,"Helvetica Neue","SF Pro Display",system-ui,sans-serif;-webkit-font-smoothing:antialiased;}
+.mono{font-family:ui-monospace,"SF Mono","Menlo",monospace;}
+.stage{position:absolute;inset:0;overflow:hidden;background:#EEEAE1;}
+.grain{position:absolute;inset:0;opacity:.5;background-image:radial-gradient(circle at 20% 30%, rgba(0,0,0,.03) 0 1px, transparent 1px),radial-gradient(circle at 70% 65%, rgba(0,0,0,.025) 0 1px, transparent 1px);background-size:7px 7px, 9px 9px;}
+.mast{position:absolute;left:70px;right:70px;top:74px;display:flex;justify-content:space-between;font-size:27px;letter-spacing:.16em;color:#14110d;font-weight:600;}
+.rule{position:absolute;left:70px;right:70px;top:126px;height:3px;background:#14110d;transform-origin:left;}
+.wm{position:absolute;right:20px;top:150px;font-size:280px;line-height:.82;white-space:nowrap;text-align:right;font-weight:800;letter-spacing:-.04em;opacity:.08;will-change:opacity,transform;}
+.kick{position:absolute;left:74px;top:238px;font-size:32px;letter-spacing:.14em;font-weight:600;will-change:transform,opacity;}
+.head{position:absolute;left:70px;top:284px;right:70px;font-size:112px;line-height:.98;font-weight:800;letter-spacing:-.045em;color:#14110d;white-space:pre-line;will-change:transform,opacity;}
+.foot{position:absolute;left:74px;right:74px;bottom:70px;display:flex;justify-content:space-between;font-size:26px;letter-spacing:.12em;color:#14110d;font-weight:600;}
+.wipe{position:absolute;top:-12%;left:0;width:135%;height:124%;transform:skewX(-9deg) translateX(160%);will-change:transform;}
+.comp{position:absolute;left:120px;top:820px;width:840px;height:820px;border-radius:34px;overflow:hidden;box-shadow:34px 40px 0 rgba(20,17,13,.13), inset 0 0 0 1px rgba(255,255,255,.05), 0 30px 70px rgba(20,17,13,.26);opacity:0;will-change:transform,opacity;transform-origin:center top;padding:52px;color:#fff;background:#0d0a16;}
+.shd{font-size:28px;letter-spacing:.14em;color:rgba(255,255,255,.5);margin-bottom:24px;display:flex;align-items:center;justify-content:space-between;}
+/* one key / model fan */
+.keyrow{display:flex;align-items:center;gap:22px;margin-bottom:36px;}
+.keyicon{width:70px;height:70px;border-radius:20px;flex:none;background:${AC};display:flex;align-items:center;justify-content:center;}
+.keyname{font-size:34px;font-weight:700;} .keysub{font-size:24px;color:rgba(255,255,255,.45);margin-top:4px;}
+.mgrid{display:flex;flex-wrap:wrap;gap:14px;}
+.mpill{padding:16px 26px;border-radius:100px;background:rgba(255,255,255,.1);font-size:27px;font-weight:650;will-change:opacity,transform;opacity:0;}
+/* connect form */
+.cform{background:#05050e;border-radius:24px;padding:36px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.08);}
+.cinput{background:rgba(255,255,255,.06);border-radius:100px;padding:20px 26px;font-size:27px;color:rgba(255,255,255,.35);}
+.cinput.filled{color:#fff;}
+.cbtn{margin-top:20px;text-align:center;padding:20px;border-radius:100px;font-size:28px;font-weight:700;background:rgba(255,255,255,.14);color:rgba(255,255,255,.5);will-change:background,color;}
+.cbtn.armed{background:${AC};color:#fff;}
+.cnote{margin-top:32px;font-size:26px;color:rgba(255,255,255,.5);line-height:1.45;will-change:opacity;}
+.cnote b{color:#fff;}
+/* auto-routed */
+.qrow{display:flex;align-items:center;gap:20px;padding:22px 0;border-top:2px solid rgba(255,255,255,.07);will-change:opacity,transform;}
+.qrow:first-of-type{border-top:none;}
+.qtext{font-size:28px;font-weight:600;flex:1;}
+.qarrow{color:rgba(255,255,255,.3);font-size:26px;}
+.qmodel{font-size:24px;font-weight:700;padding:10px 18px;border-radius:100px;background:rgba(255,255,255,.12);}
+.rnote{margin-top:30px;font-size:27px;color:rgba(255,255,255,.5);line-height:1.45;will-change:opacity;}
+.rnote b{color:#fff;}
+/* honest limits */
+.vrow{display:flex;align-items:center;gap:24px;padding:24px 0;border-top:2px solid rgba(255,255,255,.07);font-size:32px;font-weight:600;will-change:opacity,transform;}
+.vrow:first-of-type{border-top:none;}
+.vrow s{width:52px;height:52px;border-radius:50%;flex:none;background:rgba(255,255,255,.06);color:rgba(255,255,255,.3);display:flex;align-items:center;justify-content:center;font-size:28px;text-decoration:none;}
+.vrow b{color:#fff;}
+.vgood{display:flex;align-items:center;gap:20px;margin-top:28px;font-size:28px;font-weight:650;color:${GRN};will-change:opacity,transform;}
+.vgood i{width:48px;height:48px;border-radius:50%;flex:none;background:${GRN};color:#04140a;display:flex;align-items:center;justify-content:center;font-style:normal;font-size:26px;}
+/* your call */
+.pledge{display:flex;align-items:flex-start;gap:18px;will-change:opacity,transform;}
+.pledge .dot{width:12px;height:12px;border-radius:50%;background:${GRN};flex:none;margin-top:9px;}
+.pledge p{font-size:29px;line-height:1.55;color:rgba(255,255,255,.85);}
+.pledge b{color:#fff;}
+.outro{position:absolute;inset:0;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;padding:0 74px;opacity:0;will-change:opacity;}
+.outro .b{font-size:200px;font-weight:800;letter-spacing:-.05em;color:#14110d;line-height:.9;}
+.outro .u{font-size:34px;letter-spacing:.1em;color:#14110d;margin-top:40px;font-weight:600;} .outro .u b{color:${AC};}
+</style></head><body>
+<div class="stage">
+  <div class="grain"></div>
+  <div class="mast mono"><span>CASBERI</span><span>OPENROUTER</span></div>
+  <div class="rule" id="rule"></div>
+  <div class="wm" id="wm">01</div>
+
+  <div class="comp" id="comp0">
+    <div class="keyrow"><span class="keyicon"><svg viewBox="0 0 24 24" width="34" height="34"><path fill="#fff" d="M12 2 4 5v6c0 5 3.4 9 8 11 4.6-2 8-6 8-11V5l-8-3z"/></svg></span><div><div class="keyname">Your OpenRouter key</div><div class="keysub">routes to whichever model fits</div></div></div>
+    <div class="mgrid">${MODELS.map((m,i)=>`<div class="mpill" data-i="${i}">${m}</div>`).join('')}</div>
+  </div>
+
+  <div class="comp" id="comp1">
+    <div class="shd mono"><span>GET YOUR KEY</span></div>
+    <div class="cform">
+      <div class="cinput" id="cin">Paste your OpenRouter key</div>
+      <div class="cbtn" id="cbtn">Connect</div>
+    </div>
+    <div class="cnote" id="cnote">At <b>openrouter.ai</b> → Settings → Keys, create one and paste it — <b>checked with OpenRouter before it saves</b>.</div>
+  </div>
+
+  <div class="comp" id="comp2">
+    <div class="shd mono"><span>OPENROUTER/AUTO</span></div>
+    <div class="qrow" data-i="0"><span class="qtext">"Summarize this"</span><span class="qarrow">→</span><span class="qmodel">GPT-4o</span></div>
+    <div class="qrow" data-i="1"><span class="qtext">"Write some code"</span><span class="qarrow">→</span><span class="qmodel">Claude</span></div>
+    <div class="qrow" data-i="2"><span class="qtext">"Quick fact check"</span><span class="qarrow">→</span><span class="qmodel">Gemini</span></div>
+    <div class="rnote" id="rnote">One key, no picker — Casberi never pins a model. <b>OpenRouter decides, per question.</b></div>
+  </div>
+
+  <div class="comp" id="comp3">
+    <div class="vrow" data-i="0"><s>✕</s><span>Never claims to <b>see your screenshots</b></span></div>
+    <div class="vrow" data-i="1"><s>✕</s><span>Never claims to <b>search the web</b></span></div>
+    <div class="vgood" id="vgood"><i>✓</i> Remembers this chat's earlier answers</div>
+  </div>
+
+  <div class="comp" id="comp4">
+    <div class="pledge"><b class="dot"></b><p>Casberi runs <b>no server</b> — a keyed answer goes straight from this iPhone to OpenRouter, only when you tap "Try with your key." OpenRouter bills you directly; the key lives in the Keychain.</p></div>
+  </div>
+
+  <div class="kick mono" id="kick"></div>
+  <div class="head" id="head"></div>
+  <div class="foot mono"><span>casberi.app</span><span>—</span></div>
+  <div class="wipe" id="wipe"></div>
+  <div class="outro" id="outro"><div class="b">Casberi</div><div class="u mono"><b>casberi.app</b></div></div>
+</div>
+<script>
+const clamp01=v=>Math.max(0,Math.min(1,v)),easeOut=p=>1-Math.pow(1-p,3),back=p=>{const c=1.7;return 1+(c+1)*Math.pow(p-1,3)+c*Math.pow(p-1,2);};
+const INTRO=${INTRO},BEAT=${BEAT},OUT_AT=${OUT_AT},N=${BEATS.length};
+const D=${JSON.stringify(DATA)};window.TOTAL=${TOTAL};
+const comps=[...document.querySelectorAll('.comp')];
+function staggerPop(sel,p,stagger,dur){document.querySelectorAll(sel).forEach((r,k)=>{const rp=clamp01((p-k*stagger)/dur);r.style.opacity=rp;r.style.transform='scale('+(0.6+0.4*back(rp))+')';});}
+function staggerRows(sel,p,stagger,dur,dx){document.querySelectorAll(sel).forEach((r,k)=>{const rp=clamp01((p-k*stagger)/dur);r.style.opacity=rp;r.style.transform='translateX('+((1-easeOut(rp))*(dx||-40))+'px)';});}
+window.seek=function(t){
+  let active=Math.max(0,Math.min(N-1,Math.floor((t-INTRO)/BEAT)));
+  const bs=INTRO+active*BEAT, local=t-bs, acc=D[active].accent, pIn=clamp01((local-0.28)/1.5);
+  let coverAcc=acc,wipeX=200;const bounds=[];for(let k=1;k<N;k++)bounds.push({t:INTRO+k*BEAT,c:D[k].accent});bounds.push({t:OUT_AT,c:'#14110d'});
+  for(const b of bounds){const p=(t-(b.t-0.34))/0.68;if(p>=0&&p<=1){wipeX=(1-p)*135-p*135*1.15;coverAcc=b.c;}}
+  const wp=document.getElementById('wipe');wp.style.background=coverAcc;wp.style.transform='skewX(-9deg) translateX('+wipeX+'%)';
+  document.getElementById('rule').style.transform='scaleX('+easeOut(clamp01(t/0.6))+')';
+  const wm=document.getElementById('wm');wm.textContent=D[active].kick;wm.style.fontSize=Math.max(60,Math.min(320,900/(0.6*D[active].kick.length)))+'px';wm.style.color=acc;wm.style.opacity=0.09*clamp01(local/0.4);wm.style.transform='translateY('+((1-easeOut(clamp01(local/0.5)))*30)+'px)';
+  const ki=document.getElementById('kick');ki.textContent=D[active].kick;ki.style.color=acc;const kin=clamp01(local/0.4);ki.style.opacity=easeOut(kin);ki.style.transform='translateX('+((1-easeOut(kin))*-40)+'px)';
+  const he=document.getElementById('head');he.textContent=D[active].head;const hin=clamp01((local-0.06)/0.5);he.style.opacity=clamp01(local/0.2);he.style.transform='translateY('+((1-back(hin))*80)+'px)';
+  comps.forEach((c,i)=>{const cbs=INTRO+i*BEAT,cl=t-cbs,cin=clamp01((cl-0.12)/0.6);const beatEnd=INTRO+(i+1)*BEAT,outp=clamp01((t-(beatEnd-0.3))/0.4);let op=(i===active?1:0)*clamp01(cl/0.15);if(t>OUT_AT)op*=(1-clamp01((t-OUT_AT)/0.25));const y=(1-back(cin))*180+outp*200+Math.sin(t*0.9+i)*5;const rot=(-2.2)+(1-easeOut(cin))*-5+outp*4;c.style.opacity=op;c.style.transform='translateY('+y+'px) rotate('+rot+'deg)';});
+  animateComp(active,pIn,t);
+  const fo=(t>OUT_AT)?(1-clamp01((t-OUT_AT)/0.25)):1;['kick','head'].forEach(id=>{const e=document.getElementById(id);e.style.opacity=Math.min(+e.style.opacity||1,fo);});
+  document.getElementById('outro').style.opacity=easeOut(clamp01((t-(OUT_AT+0.25))/0.5));
+};
+function animateComp(i,p,t){
+  if(i===0){ staggerPop('#comp0 .mpill', p, 0.09, 0.3); }
+  else if(i===1){
+    const f=clamp01((p-0.2)/0.22);
+    const inp=document.getElementById('cin'); inp.textContent=f>0.5?'sk-or-••••••••7f2a':'Paste your OpenRouter key'; inp.classList.toggle('filled',f>0.5);
+    document.getElementById('cbtn').classList.toggle('armed',clamp01((p-0.46)/0.15)>0.5);
+    document.getElementById('cnote').style.opacity=clamp01((p-0.58)/0.3);
+  } else if(i===2){
+    staggerRows('#comp2 .qrow', p, 0.15, 0.35, -30);
+    document.getElementById('rnote').style.opacity=clamp01((p-0.62)/0.3);
+  } else if(i===3){
+    staggerRows('#comp3 .vrow', p, 0.16, 0.36, -32);
+    const vg=document.getElementById('vgood');const vgp=clamp01((p-0.44)/0.28);vg.style.opacity=vgp;vg.style.transform='translateY('+((1-back(vgp))*18)+'px)';
+  } else if(i===4){
+    const pl=document.querySelector('#comp4 .pledge');const pp=clamp01((p-0.15)/0.35);pl.style.opacity=pp;pl.style.transform='translateY('+((1-easeOut(pp))*16)+'px)';
+  }
+}
+window.seek(0);
+</script></body></html>`;
+fs.writeFileSync(path.join(__dirname,'clip-openrouter-live.html'),html);
+console.log('wrote clip-openrouter-live.html',(html.length/1024).toFixed(0)+'KB',TOTAL.toFixed(1)+'s');

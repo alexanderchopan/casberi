@@ -9,7 +9,10 @@
 // fabricated, no award/pricing badges — only a background + caption, which
 // App Store screenshot guidelines allow.
 const fs = require('fs'), path = require('path');
-const [rawPath, headline, sub, W, H, accent, theme] = process.argv.slice(2);
+// shotFrac: the device shot's width as a fraction of the poster width.
+// Default 0.8182 matches the original 1080-of-1320 iPhone layout. iPad is a
+// much squarer canvas, so its shot needs a smaller fraction to fit vertically.
+const [rawPath, headline, sub, W, H, accent, theme, shotFrac] = process.argv.slice(2);
 const w = parseInt(W, 10), h = parseInt(H, 10);
 const AC = accent || '#2E63FF';
 // paper = the editorial house style (matches every launch clip).
@@ -29,7 +32,7 @@ const headSize = Math.round(104 * S);
 const subSize = Math.round(40 * S);
 const mastSize = Math.round(26 * S);
 const shotTop = Math.round(560 * S);
-const shotW = Math.round(1080 * S);
+const shotW = Math.round(w * parseFloat(shotFrac || '0.8182'));
 const radius = Math.round(56 * S);
 
 const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><style>
