@@ -154,6 +154,43 @@ struct GhostPreviewSection: View {
     }
 }
 
+/// The steps that remain after the door (prd §218, 2026-07-25).
+///
+/// Every keyed bridge's setup used to open with "Open &lt;url&gt;…" set in body
+/// text inside a card under a gray "Get your token" label — an instruction to
+/// do something the app could do itself, dressed as a form. Step one is now a
+/// `DSSlabButton` that opens the page; this renders what's left, numbered from
+/// where the door left off.
+///
+/// §186's ruling stands and is the reason this component exists rather than a
+/// disclosure: **the steps stay whole and visible.** What left was the card,
+/// the label, and the 17pt body type that made three sentences read like a
+/// manual page.
+struct BridgeStepLines: View {
+    let steps: [String]
+    /// The number the first line wears — 2 when a door did step one.
+    var startingAt = 2
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+            ForEach(Array(steps.enumerated()), id: \.offset) { i, text in
+                HStack(alignment: .firstTextBaseline, spacing: DS.Space.s3) {
+                    Text("\(i + startingAt)")
+                        .dsText(.callout15).fontWeight(.bold)
+                        .foregroundStyle(DS.textTertiary)
+                        .frame(width: 13, alignment: .trailing)
+                    Text(LocalizedStringKey(text))
+                        .dsText(.callout15).foregroundStyle(DS.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Spacer(minLength: 0)
+                }
+            }
+        }
+        .padding(.horizontal, DS.Space.s2)
+        .padding(.vertical, DS.Space.s1)
+    }
+}
+
 /// A small overlapping row of faces — the proof line's "who just arrived"
 /// (delight 2026-07-14). Up to three, each ringed so the overlap reads.
 struct FacePile: View {

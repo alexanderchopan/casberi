@@ -216,7 +216,7 @@ struct AppsScreen: View {
         // Setup bridges (paste an address/token/handle) route to their setup
         // screen; only the system-permission bridges connect in one tap.
         if offer.needsSetup {
-            HomeRoute.shared.pushBridge(BridgeRouter.destination(forOffer: offer.name))
+            HomeRoute.shared.openSetup(forOffer: offer.name)
         } else {
             attemptConnect(offer)
         }
@@ -1083,7 +1083,7 @@ struct AppsScreen: View {
             enabled: entry.tier == 1 && StorePreview.doc(for: entry.offer.name) != nil,
             onConnect: {
                 if entry.offer.needsSetup {
-                    HomeRoute.shared.pushBridge(BridgeRouter.destination(forOffer: entry.offer.name))
+                    HomeRoute.shared.openSetup(forOffer: entry.offer.name)
                 } else {
                     attemptConnect(entry.offer)
                 }
@@ -1171,7 +1171,7 @@ struct AppsScreen: View {
                 enabled: entry.tier == 1 && StorePreview.doc(for: entry.offer.name) != nil,
                 onConnect: {
                     if entry.offer.needsSetup {
-                        HomeRoute.shared.pushBridge(BridgeRouter.destination(forOffer: entry.offer.name))
+                        HomeRoute.shared.openSetup(forOffer: entry.offer.name)
                     } else {
                         attemptConnect(entry.offer)
                     }
@@ -1212,10 +1212,11 @@ struct AppsScreen: View {
             }
         case 1:
             if entry.offer.needsSetup {
-                // Setup bridges collect input first — Connect opens their
-                // screen; the connect happens there, with proof.
+                // Setup bridges collect input first — Connect raises their
+                // form (a pasted key, a sign-in) or pushes their manager (a
+                // watch list); the connect happens there, with proof (§218).
                 VerbCapsule(verb: .connect) {
-                    HomeRoute.shared.pushBridge(BridgeRouter.destination(forOffer: entry.offer.name))
+                    HomeRoute.shared.openSetup(forOffer: entry.offer.name)
                 }
             } else {
                 VerbCapsule(verb: .connect) { attemptConnect(entry.offer) }

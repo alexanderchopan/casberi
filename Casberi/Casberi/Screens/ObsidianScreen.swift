@@ -97,32 +97,17 @@ struct ObsidianScreen: View {
                 .padding(.vertical, DS.Space.s1)
                 .dsListCardRow()
             } else {
-                Button {
-                    picking = true
-                } label: {
-                    HStack(spacing: DS.Space.s3) {
-                        Image(systemName: "folder.badge.plus")
-                            .font(.system(size: 17, weight: .medium))
-                        Text("Choose your vault folder")
-                            .dsText(.body17).fontWeight(.semibold)
-                        Spacer()
-                    }
-                    .foregroundStyle(DS.tint)
-                    .padding(.vertical, DS.Space.s1)
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .dsListCardRow()
+                // The screen's one verb, as the screen's one filled block
+                // (prd §218) — it was a blue text row, which read as a link to
+                // somewhere rather than the act itself.
+                DSSlabButton(title: "Choose your vault folder",
+                             systemImage: "folder.badge.plus") { picking = true }
             }
             BridgeSyncStatusRows(syncing: syncing, syncingLine: String(localized: "Reading your notes…"),
                                  result: result, resultIsError: resultIsError)
-        } header: {
-            Text("Vault").dsText(.label12)
-                .foregroundStyle(DS.textTertiary)
-        } footer: {
-            Text("A vault is a folder of Markdown — find it in Files (often iCloud Drive → Obsidian). Read-only: the vault is never changed.")
-                .dsText(.callout15).foregroundStyle(DS.textTertiary)
+            DSSlabNote(text: "A vault is a folder of Markdown — find it in Files (often iCloud Drive → Obsidian). Read-only: the vault is never changed.")
         }
+        .dsSlabSection()
     }
 
     private var removeSection: some View {

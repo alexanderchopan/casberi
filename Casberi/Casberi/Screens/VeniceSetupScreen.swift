@@ -10,6 +10,7 @@ import SwiftData
 /// and appears in Settings → Your key alongside the rest.
 struct VeniceSetupScreen: View {
     @Environment(BridgeStore.self) private var store
+    @Environment(\.openURL) private var openURL
     @State private var keyDraft = ""
     @State private var checking = false
     @State private var result: String?
@@ -18,8 +19,8 @@ struct VeniceSetupScreen: View {
 
     var body: some View {
         List {
-            stepsSection.listRowSeparator(.hidden)
-            connectSection.listRowSeparator(.hidden)
+            BridgeSetupHeader(name: "Venice")
+            setupSection
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
@@ -29,67 +30,28 @@ struct VeniceSetupScreen: View {
         .dsScreenTitle("Venice")
     }
 
-    // MARK: - Steps (the key comes from Venice's side — say so plainly)
-
-    private var stepsSection: some View {
+    /// The connect form — steps whole, furniture gone (prd §218,
+    /// 2026-07-25). Step one was "At venice.ai → API keys, sign in and open …", which is
+    /// the button below rather than a sentence you retype.
+    private var setupSection: some View {
         Section {
-            step(1, "At venice.ai, sign in and open Settings → API keys.")
-            step(2, "Create a key and copy it.")
-            step(3, "Paste it below — it's checked with Venice before it saves.")
-        } header: {
-            Text("Get your key").dsText(.label12)
-                .foregroundStyle(DS.textTertiary)
-        }
-    }
-
-    private func step(_ n: Int, _ text: String) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: DS.Space.s3) {
-            Text("\(n)")
-                .dsText(.subhead13).fontWeight(.bold)
-                .foregroundStyle(DS.tint)
-                .frame(width: 16)
-            Text(LocalizedStringKey(text))
-                .dsText(.callout15).foregroundStyle(DS.textPrimary)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-        .dsListCardRow()
-    }
-
-    // MARK: - Connect
-
-    private var connectSection: some View {
-        Section {
-            HStack(spacing: DS.Space.s3) {
-                SecureField(AgentProvider.venice.placeholder, text: $keyDraft)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-                    .dsText(.callout15)
-                    .padding(.horizontal, DS.Space.s3)
-                    .frame(height: 44)
-                    .background(DS.fillFaint, in: Capsule(style: .continuous))
-                // A plain-style button with its own background gets no dimming
-                // from `.disabled` — it has to wear the off state itself, the
-                // way BridgeFieldRow does, or it reads live while inert.
-                let armed = !checking && !keyDraft.trimmingCharacters(in: .whitespaces).isEmpty
-                Button { connect() } label: {
-                    Text(checking ? "Checking…" : (configured ? "Update" : "Connect"))
-                        .dsText(.callout15).fontWeight(.semibold)
-                        .foregroundStyle(armed ? AnyShapeStyle(.white) : AnyShapeStyle(DS.textTertiary))
-                        .padding(.horizontal, DS.Space.s4)
-                        .frame(height: 44)
-                        .background(armed ? AnyShapeStyle(DS.tint) : AnyShapeStyle(DS.gray200),
-                                    in: Capsule(style: .continuous))
-                        .animation(DS.Motion.standard, value: armed)
+            VStack(alignment: .leading, spacing: DS.Space.s2) {
+                DSSlabButton(title: "Open venice.ai → API keys", systemImage: "arrow.up.right") {
+                    DSHaptic.tap()
+                    if let url = URL(string: "https://venice.ai/settings/api") { openURL(url) }
                 }
-                .buttonStyle(.plain)
-                .disabled(!armed)
+                BridgeStepLines(steps: ["Create a key and copy it.",
+                                     "Paste it below — it's checked with Venice before it saves."])
+                DSSlabField(placeholder: AgentProvider.venice.placeholder, text: $keyDraft,
+                            actionLabel: checking ? "CHECKING…" : (configured ? "UPDATE" : "CONNECT"),
+                            secure: true,
+                            isArmed: !checking && !keyDraft.trimmingCharacters(in: .whitespaces).isEmpty,
+                            action: connect)
+                BridgeSyncStatusRows(result: result, resultIsError: resultIsError)
+                DSSlabNote(text: "Nothing reads in — Venice keeps chats on your device by design. Your key powers \"Try with your key\": any answer re-runs on Venice, straight from this iPhone, only when you tap.\n\nThe key lives in the Keychain, goes only to Venice, and Venice bills you directly.")
             }
-            .dsListCardRow()
-            BridgeSyncStatusRows(result: result, resultIsError: resultIsError)
-        } footer: {
-            Text("Nothing reads in — Venice keeps chats on your device by design. Your key powers \"Try with your key\": any answer re-runs on Venice, straight from this iPhone, only when you tap.\n\nIt also remembers a chat's earlier answers, and can lean on live web search when your saved things fall short — screenshots stay text-only.\n\nThe key lives in the Keychain, goes only to Venice itself, and Venice bills you directly. It also appears in Settings → Your key.")
-                .dsText(.subhead13).foregroundStyle(DS.textTertiary)
         }
+        .dsSlabSection()
     }
 
     /// Connects only after Venice accepts the key — the seat registers with

@@ -41,52 +41,88 @@ enum TokenBridge: String, CaseIterable, Identifiable {
     var tokenKey: String { "token.\(bridgeID)" }
     var connected: Bool { TokenVault.get(tokenKey) != nil }
 
-    /// Where the person finds their token — stated plainly, step by step.
+    /// Step one, as a door instead of a sentence (prd §218, 2026-07-25).
+    ///
+    /// Every one of these screens used to open with "Open &lt;url&gt;…" set in
+    /// body text — an instruction to do something the app was perfectly able
+    /// to do for you, and which you then retyped into Safari by hand. It's now
+    /// the screen's one filled slab, and `steps` below picks up from step two.
+    /// The URL is the page the copy already named, never a guess: each was
+    /// checked live 2026-07-25 (`bitrefill.com` answers curl with a 403 from
+    /// its bot filter, not a 404 — it's the address its own docs give).
+    var setupURL: URL? {
+        switch self {
+        case .readwise:  URL(string: "https://readwise.io/access_token")
+        case .github:    URL(string: "https://github.com/settings/tokens")
+        case .todoist:   URL(string: "https://app.todoist.com/app/settings/integrations/developer")
+        case .raindrop:  URL(string: "https://app.raindrop.io/settings/integrations")
+        case .calcom:    URL(string: "https://app.cal.com/settings/developer/api-keys")
+        case .calendly:  URL(string: "https://calendly.com/integrations/api_webhooks")
+        case .notion:    URL(string: "https://www.notion.so/my-integrations")
+        case .linear:    URL(string: "https://linear.app/settings/api")
+        case .bitrefill: URL(string: "https://www.bitrefill.com/account/developers")
+        case .privacy:   URL(string: "https://app.privacy.com/account")
+        case .oneclaw:   URL(string: "https://1claw.xyz")
+        }
+    }
+
+    /// The door's words — where you're going, not what you'll do there. The
+    /// host and path, so the button is checkable against the address bar it
+    /// opens.
+    var setupURLLabel: String {
+        switch self {
+        case .readwise:  "readwise.io/access_token"
+        case .github:    "github.com/settings/tokens"
+        case .todoist:   "Todoist → Integrations → Developer"
+        case .raindrop:  "raindrop.io → For Developers"
+        case .calcom:    "cal.com → API keys"
+        case .calendly:  "Calendly → API & Webhooks"
+        case .notion:    "notion.so/my-integrations"
+        case .linear:    "linear.app → API keys"
+        case .bitrefill: "bitrefill.com → Developers"
+        case .privacy:   "privacy.com → account"
+        case .oneclaw:   "1claw.xyz"
+        }
+    }
+
+    /// What's left after the door — stated plainly, step by step, and numbered
+    /// from TWO on screen, because opening the page really was step one.
+    /// Nothing was deleted here: what the old first step said beyond "open
+    /// the page" moved into the step that follows it.
     var steps: [String] {
         switch self {
         case .readwise: [
-            "Open readwise.io/access_token in a browser.",
             "Sign in if asked — the token appears on the page.",
             "Copy it and paste it below."]
         case .github: [
-            "Open github.com → Settings → Developer settings → Personal access tokens.",
             "Generate a token with read-only access to your repositories, gists, and profile — enough for every feed.",
             "Copy it and paste it below."]
         case .todoist: [
-            "Open Todoist → Settings → Integrations → Developer.",
             "Copy the API token shown there.",
             "Paste it below."]
         case .raindrop: [
-            "Open app.raindrop.io → Settings → Integrations → For Developers.",
             "Create an app, then copy its Test token.",
             "Paste it below."]
         case .calcom: [
-            "Open app.cal.com → Settings → Developer → API keys.",
             "Add a new key — it starts with cal_live_.",
             "Copy it and paste it below."]
         case .calendly: [
-            "Open Calendly → Integrations → API & Webhooks.",
             "Generate a personal access token.",
             "Copy it and paste it below."]
         case .notion: [
-            "Open notion.so/my-integrations and create an internal integration.",
-            "Copy its Internal Integration Secret and paste it below.",
+            "Create an internal integration and copy its Internal Integration Secret.",
             "In Notion, open each page you want here → ⋯ → Connections → add your integration. Only connected pages land."]
         case .linear: [
-            "Open Linear → Settings → Security & access → Personal API keys.",
             "Create a key — read access is enough.",
             "Copy it and paste it below."]
         case .bitrefill: [
-            "Open bitrefill.com/account/developers in a browser.",
             "In the API Keys tab, create a key — any name works.",
             "Copy it and paste it below."]
         case .privacy: [
-            "Open privacy.com → account → API (a paid Privacy plan is required).",
-            "Generate an API key.",
+            "Generate an API key (a paid Privacy plan is required).",
             "Copy it and paste it below."]
         case .oneclaw: [
-            "Open 1claw.xyz in a browser and sign in.",
-            "Create an agent (or open one) and copy its API key — it starts with ocv_.",
+            "Sign in, then create an agent (or open one) and copy its API key — it starts with ocv_.",
             "Paste it below."]
         }
     }

@@ -7,6 +7,7 @@ import SwiftData
 struct SteamScreen: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(BridgeStore.self) private var store
+    @Environment(\.openURL) private var openURL
     @State private var keyField = ""
     @State private var profileField = ""
     @State private var syncing = false
@@ -63,74 +64,46 @@ struct SteamScreen: View {
         }
     }
 
-    /// The connect form, unchanged (user ruling 2026-07-23 — the steps stay).
-    /// Leads the screen before connecting; lives behind the door after.
+    /// The connect form — steps whole (user ruling 2026-07-23), furniture gone
+    /// (prd §218, 2026-07-25). Leads the screen before connecting; lives
+    /// behind the door after.
     @ViewBuilder private var connectForm: some View {
         BridgeSetupHeader(name: "Steam")
-        stepsSection.listRowSeparator(.hidden)
-        fieldsSection.listRowSeparator(.hidden)
+        setupSection
     }
 
+    /// What's left once "Open steamcommunity.com/dev/apikey and sign in."
+    /// became the button that does it.
     private var steps: [String] = [
-        "Open steamcommunity.com/dev/apikey and sign in.",
         "Enter any domain (casberi.app works) and copy the key.",
         "Paste it with your profile name below. Your profile must be public.",
     ]
 
-    private var stepsSection: some View {
+    private var setupSection: some View {
         Section {
-            ForEach(Array(steps.enumerated()), id: \.offset) { i, text in
-                HStack(alignment: .firstTextBaseline, spacing: DS.Space.s3) {
-                    Text("\(i + 1)")
-                        .dsText(.body17).fontWeight(.bold)
-                        .foregroundStyle(DS.tint).frame(width: 20)
-                    Text(LocalizedStringKey(text))
-                        .dsText(.body17).foregroundStyle(DS.textPrimary)
-                        .fixedSize(horizontal: false, vertical: true)
+            VStack(alignment: .leading, spacing: DS.Space.s2) {
+                DSSlabButton(title: "Open steamcommunity.com/dev/apikey",
+                             systemImage: "arrow.up.right") {
+                    DSHaptic.tap()
+                    if let url = URL(string: "https://steamcommunity.com/dev/apikey") {
+                        openURL(url)
+                    }
                 }
-                .padding(.vertical, DS.Space.s1)
-                .dsListCardRow()
+                BridgeStepLines(steps: steps)
+                // Two inputs, ONE act — so only the second slab wears the
+                // verb, and it stays inert until both are filled.
+                DSSlabField(placeholder: String(localized: "Profile name or SteamID"),
+                            text: $profileField, actionLabel: "", action: connect)
+                DSSlabField(placeholder: String(localized: "Web API key"),
+                            text: $keyField,
+                            actionLabel: SteamBridge.connected ? "UPDATE" : "CONNECT",
+                            secure: true, isArmed: canConnect, action: connect)
+                BridgeSyncStatusRows(syncing: syncing, syncingLine: String(localized: "Reading your games…"),
+                                     result: result, resultIsError: resultIsError)
+                DSSlabNote(text: "Your key stays in this iPhone's Keychain, goes only to Steam, and only to read public profile data.")
             }
-        } header: {
-            Text("Get a free key").dsText(.label12)
-                .foregroundStyle(DS.textTertiary)
         }
-    }
-
-    private var fieldsSection: some View {
-        Section {
-            TextField("Profile name or SteamID", text: $profileField)
-                .dsText(.body17).foregroundStyle(DS.textPrimary).tint(DS.tint)
-                .textInputAutocapitalization(.never).autocorrectionDisabled()
-                .padding(.vertical, DS.Space.s1)
-                .dsListCardRow()
-            HStack(spacing: DS.Space.s2) {
-                SecureField("Web API key", text: $keyField)
-                    .dsText(.body17).foregroundStyle(DS.textPrimary).tint(DS.tint)
-                    .textInputAutocapitalization(.never).autocorrectionDisabled()
-                    .onSubmit(connect)
-                Button(SteamBridge.connected ? "Update" : "Connect", action: connect)
-                    .dsText(.callout15).fontWeight(.semibold)
-                    .foregroundStyle(canConnect ? .white : DS.textTertiary)
-                    .padding(.horizontal, DS.Space.s4).frame(height: 36)
-                    .background(canConnect ? AnyShapeStyle(DS.tint) : AnyShapeStyle(DS.gray200),
-                                in: Capsule(style: .continuous))
-                    .animation(DS.Motion.standard, value: canConnect)
-                    .armedPop(canConnect)
-                    .disabled(!canConnect)
-                    .buttonStyle(.plain)
-            }
-            .padding(.vertical, DS.Space.s1)
-            .dsListCardRow()
-            BridgeSyncStatusRows(syncing: syncing, syncingLine: String(localized: "Reading your games…"),
-                                 result: result, resultIsError: resultIsError)
-        } header: {
-            Text("Account").dsText(.label12)
-                .foregroundStyle(DS.textTertiary)
-        } footer: {
-            Text("The key stays in this iPhone's Keychain and goes only to Steam itself. Read-only — public profile data.")
-                .dsText(.callout15).foregroundStyle(DS.textTertiary)
-        }
+        .dsSlabSection()
     }
 
     private var removeSection: some View {

@@ -9,6 +9,7 @@ struct MailScreen: View {
 
     @Environment(\.modelContext) private var modelContext
     @Environment(BridgeStore.self) private var store
+    @Environment(\.openURL) private var openURL
     @State private var addressField = ""
     @State private var passwordField = ""
     @State private var syncing = false
@@ -65,67 +66,37 @@ struct MailScreen: View {
         }
     }
 
-    /// The connect form, unchanged (user ruling 2026-07-23 — the steps stay).
+    /// The connect form — steps whole (user ruling 2026-07-23), furniture gone
+    /// (prd §218, 2026-07-25).
     @ViewBuilder private var connectForm: some View {
         BridgeSetupHeader(name: provider.source)
-        stepsSection.listRowSeparator(.hidden)
-        fieldsSection.listRowSeparator(.hidden)
+        setupSection
     }
 
-    private var stepsSection: some View {
+    private var setupSection: some View {
         Section {
-            ForEach(Array(provider.steps.enumerated()), id: \.offset) { i, text in
-                HStack(alignment: .firstTextBaseline, spacing: DS.Space.s3) {
-                    Text("\(i + 1)")
-                        .dsText(.body17).fontWeight(.bold)
-                        .foregroundStyle(DS.tint).frame(width: 20)
-                    Text(LocalizedStringKey(text))
-                        .dsText(.body17).foregroundStyle(DS.textPrimary)
-                        .fixedSize(horizontal: false, vertical: true)
+            VStack(alignment: .leading, spacing: DS.Space.s2) {
+                if let url = provider.setupURL {
+                    DSSlabButton(title: "Open \(provider.setupURLLabel)",
+                                 systemImage: "arrow.up.right") {
+                        DSHaptic.tap()
+                        openURL(url)
+                    }
                 }
-                .padding(.vertical, DS.Space.s1)
-                .dsListCardRow()
+                BridgeStepLines(steps: provider.steps)
+                // Two inputs, one act — the verb rides the password, where
+                // connecting actually happens.
+                DSSlabField(placeholder: provider.addressPlaceholder, text: $addressField,
+                            actionLabel: "", keyboard: .emailAddress, action: connect)
+                DSSlabField(placeholder: provider.passwordPlaceholder, text: $passwordField,
+                            actionLabel: provider.connected ? "UPDATE" : "CONNECT",
+                            secure: true, isArmed: canConnect, action: connect)
+                BridgeSyncStatusRows(syncing: syncing, syncingLine: String(localized: "Reading your inbox…"),
+                                     result: result, resultIsError: resultIsError)
+                DSSlabNote(text: provider.footer)
             }
-        } header: {
-            Text("Get an app password").dsText(.label12)
-                .foregroundStyle(DS.textTertiary)
         }
-    }
-
-    private var fieldsSection: some View {
-        Section {
-            TextField(provider.addressPlaceholder, text: $addressField)
-                .dsText(.body17).foregroundStyle(DS.textPrimary).tint(DS.tint)
-                .textInputAutocapitalization(.never).autocorrectionDisabled()
-                .keyboardType(.emailAddress)
-                .padding(.vertical, DS.Space.s1)
-                .dsListCardRow()
-            HStack(spacing: DS.Space.s2) {
-                SecureField(provider.passwordPlaceholder, text: $passwordField)
-                    .dsText(.body17).foregroundStyle(DS.textPrimary).tint(DS.tint)
-                    .textInputAutocapitalization(.never).autocorrectionDisabled()
-                    .onSubmit(connect)
-                Button(provider.connected ? "Update" : "Connect", action: connect)
-                    .dsText(.callout15).fontWeight(.semibold)
-                    .foregroundStyle(canConnect ? .white : DS.textTertiary)
-                    .padding(.horizontal, DS.Space.s4).frame(height: 36)
-                    .background(canConnect ? AnyShapeStyle(DS.tint) : AnyShapeStyle(DS.gray200),
-                                in: Capsule(style: .continuous))
-                    .animation(DS.Motion.standard, value: canConnect)
-                    .armedPop(canConnect)
-                    .disabled(!canConnect)
-                    .buttonStyle(.plain)
-            }
-            .padding(.vertical, DS.Space.s1)
-            .dsListCardRow()
-            BridgeSyncStatusRows(syncing: syncing, syncingLine: String(localized: "Reading your inbox…"),
-                                 result: result, resultIsError: resultIsError)
-        } header: {
-            Text("Account").dsText(.label12)
-                .foregroundStyle(DS.textTertiary)
-        } footer: {
-            Text(LocalizedStringKey(provider.footer)).dsText(.callout15).foregroundStyle(DS.textTertiary)
-        }
+        .dsSlabSection()
     }
 
     private var canConnect: Bool {

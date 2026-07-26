@@ -39,15 +39,32 @@ enum MailProvider: String, CaseIterable, Identifiable {
     }
     var passwordPlaceholder: String { "App-specific password" }
 
+    /// Step one, as a door (prd §218, 2026-07-25) — the page the copy already
+    /// named, opened for you instead of retyped by you. Apple's own manage
+    /// page is behind its bot filter for curl (403, not 404), so this is the
+    /// root the step named; the nav path stays in step two.
+    var setupURL: URL? {
+        switch self {
+        case .icloud: URL(string: "https://appleid.apple.com")
+        case .gmail:  URL(string: "https://myaccount.google.com/apppasswords")
+        }
+    }
+
+    var setupURLLabel: String {
+        switch self {
+        case .icloud: "appleid.apple.com"
+        case .gmail:  "myaccount.google.com/apppasswords"
+        }
+    }
+
+    /// What's left after the door, numbered from two on screen.
     var steps: [String] {
         switch self {
         case .icloud: [
-            "Sign in at appleid.apple.com → Sign-In and Security → App-Specific Passwords.",
-            "Generate one, name it \u{201C}Casberi\u{201D}, and copy it.",
+            "Go to Sign-In and Security → App-Specific Passwords, generate one named \u{201C}Casberi\u{201D}, and copy it.",
             "Enter your @icloud.com address and paste the password below."]
         case .gmail: [
-            "Turn on 2-Step Verification, then open myaccount.google.com/apppasswords.",
-            "Create an app password named \u{201C}Casberi\u{201D} and copy it.",
+            "Turn on 2-Step Verification first if it asks, then create an app password named \u{201C}Casberi\u{201D} and copy it.",
             "Enter your Gmail address and paste the password below."]
         }
     }

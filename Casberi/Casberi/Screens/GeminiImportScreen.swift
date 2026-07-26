@@ -22,6 +22,7 @@ private let geminiRecentDescriptor: FetchDescriptor<Thing> = {
 struct GeminiImportScreen: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(BridgeStore.self) private var store
+    @Environment(\.openURL) private var openURL
     @State private var importing = false
     @State private var result: String?
     @State private var resultIsError = false
@@ -30,8 +31,7 @@ struct GeminiImportScreen: View {
 
     var body: some View {
         List {
-            stepsSection.listRowSeparator(.hidden)
-            importSection.listRowSeparator(.hidden)
+            setupSection
             if !recent.isEmpty {
                 recentSection.listRowSeparator(.hidden)
             }
@@ -49,58 +49,28 @@ struct GeminiImportScreen: View {
         }
     }
 
-    // MARK: - Steps (the export happens on Google's side — say so plainly)
-
-    private var stepsSection: some View {
+    /// The connect form — steps whole, furniture gone (prd §218,
+    /// 2026-07-25). The export happens on Google's side; the pick is the one
+    /// thing this screen actually does, so it wears the filled slab.
+    private var setupSection: some View {
         Section {
-            step(1, "At takeout.google.com, tap Deselect all, then pick My Activity and set it to Gemini Apps only.")
-            step(2, "Under Multiple formats, choose JSON for activity records, then Export. Google emails a download link — save the zip to Files and tap it once to unzip.")
-            step(3, "Pick MyActivity.json below.")
-        } header: {
-            Text("Get your export").dsText(.label12)
-                .foregroundStyle(DS.textTertiary)
-        }
-    }
-
-    private func step(_ n: Int, _ text: String) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: DS.Space.s3) {
-            Text("\(n)")
-                .dsText(.subhead13).fontWeight(.bold)
-                .foregroundStyle(DS.tint)
-                .frame(width: 16)
-            Text(LocalizedStringKey(text))
-                .dsText(.callout15).foregroundStyle(DS.textPrimary)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-        .dsListCardRow()
-    }
-
-    // MARK: - Import
-
-    private var importSection: some View {
-        Section {
-            Button {
-                importing = true
-            } label: {
-                HStack(spacing: DS.Space.s3) {
-                    Image(systemName: "square.and.arrow.down")
-                        .font(.system(size: 15))
-                        .foregroundStyle(DS.tint)
-                        .frame(width: 28, height: 28)
-                        .background(DS.tintDim,
-                                    in: RoundedRectangle(cornerRadius: DS.Radius.appIcon(28), style: .continuous))
-                    Text("Choose MyActivity.json")
-                        .dsText(.body17).foregroundStyle(DS.textPrimary)
-                    Spacer()
+            VStack(alignment: .leading, spacing: DS.Space.s2) {
+                DSSlabButton(title: "Open takeout.google.com", systemImage: "arrow.up.right") {
+                    DSHaptic.tap()
+                    if let url = URL(string: "https://takeout.google.com") { openURL(url) }
                 }
+                BridgeStepLines(steps: ["Tap Deselect all, then pick My Activity and set it to Gemini Apps only.",
+                                     "Under Multiple formats, choose JSON for activity records, then Export. Google emails a download link — save the zip to Files and tap it once to unzip.",
+                                     "Pick MyActivity.json below."], startingAt: 2)
+                DSSlabButton(title: "Choose MyActivity.json", systemImage: "square.and.arrow.down") {
+                    DSHaptic.tap()
+                    importing = true
+                }
+                BridgeSyncStatusRows(result: result, resultIsError: resultIsError)
+                DSSlabNote(text: "One-time import — your prompts become findable things. Re-importing later adds only what's new.")
             }
-            .buttonStyle(.plain)
-            .dsListCardRow()
-            BridgeSyncStatusRows(result: result, resultIsError: resultIsError)
-        } footer: {
-            Text("One-time import — your prompts become findable things. Re-importing later adds only what's new.")
-                .dsText(.subhead13).foregroundStyle(DS.textTertiary)
         }
+        .dsSlabSection()
     }
 
     private var recentSection: some View {

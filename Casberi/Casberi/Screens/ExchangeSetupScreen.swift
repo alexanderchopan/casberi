@@ -20,6 +20,7 @@ struct ExchangeSetupScreen: View {
     let venue: ExchangeBridge.Venue
 
     @Environment(BridgeStore.self) private var store
+    @Environment(\.openURL) private var openURL
     @State private var keyDraft = ""
     @State private var secretDraft = ""
     @State private var checking = false
@@ -56,8 +57,7 @@ struct ExchangeSetupScreen: View {
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
             } else {
-                stepsSection.listRowSeparator(.hidden)
-                connectSection.listRowSeparator(.hidden)
+                connectForm
             }
         }
         .listStyle(.insetGrouped)
@@ -68,22 +68,58 @@ struct ExchangeSetupScreen: View {
         .dsScreenTitle(venue.display)
         .sheet(isPresented: $showConnection) {
             BridgeConnectionSheet(title: venue.display) {
-                stepsSection.listRowSeparator(.hidden)
-                connectSection.listRowSeparator(.hidden)
+                connectForm
             }
         }
     }
 
-    // MARK: - Steps
+    /// The connect form — steps whole, furniture gone (prd §218, 2026-07-25).
+    @ViewBuilder private var connectForm: some View {
+        BridgeSetupHeader(name: venue.display)
+        setupSection
+    }
 
-    private var stepsSection: some View {
+    private var setupSection: some View {
         Section {
-            ForEach(Array(steps.enumerated()), id: \.offset) { i, text in
-                step(i + 1, text)
+            VStack(alignment: .leading, spacing: DS.Space.s2) {
+                if let url = setupURL {
+                    DSSlabButton(title: "Open \(setupURLLabel)",
+                                 systemImage: "arrow.up.right") {
+                        DSHaptic.tap()
+                        openURL(url)
+                    }
+                }
+                BridgeStepLines(steps: steps)
+                DSSlabField(placeholder: venue == .kraken ? "API key" : "Key name",
+                            text: $keyDraft, actionLabel: "", action: connect)
+                DSSlabField(placeholder: venue == .kraken ? "Private key" : "Private key (PEM)",
+                            text: $secretDraft,
+                            actionLabel: checking ? "CHECKING…" : (connected ? "UPDATE" : "CONNECT"),
+                            secure: true, isArmed: armed, action: connect)
+                BridgeSyncStatusRows(result: result, resultIsError: resultIsError)
+                // Two sentences, not three paragraphs — but the §163
+                // permission check STAYS said (prd §192 protected this text as
+                // load-bearing trust content, not padding). What left is the
+                // capability line the product page and the connected state
+                // both already carry.
+                DSSlabNote(text: "Casberi asks \(venue.display) what this key can do before storing it, and hands it back if it can move money.\n\nIt lives in this iPhone's Keychain and goes only to \(venue.display) — nothing here can place an order, withdraw, or transfer.")
             }
-        } header: {
-            Text("Make a view-only key").dsText(.label12)
-                .foregroundStyle(DS.textTertiary)
+        }
+        .dsSlabSection()
+    }
+
+    /// The key page, per venue — checked live 2026-07-25.
+    private var setupURL: URL? {
+        switch venue {
+        case .kraken:   URL(string: "https://www.kraken.com/u/security/api")
+        case .coinbase: URL(string: "https://portal.cdp.coinbase.com/access/api")
+        }
+    }
+
+    private var setupURLLabel: String {
+        switch venue {
+        case .kraken:   "kraken.com → API"
+        case .coinbase: "Coinbase developer portal"
         }
     }
 
@@ -93,79 +129,20 @@ struct ExchangeSetupScreen: View {
     private var steps: [String] {
         switch venue {
         case .kraken:
-            return ["At kraken.com, open Settings → API and create a new key.",
-                    "Tick only the Query permissions — Query Funds, and Query Ledger Entries if you want deposits and withdrawals to show. Leave every Create, Modify, Withdraw and Deposit box unticked.",
+            return ["Create a new key, ticking only the Query permissions — Query Funds, and Query Ledger Entries if you want deposits and withdrawals to show. Leave every Create, Modify, Withdraw and Deposit box unticked.",
                     "Paste the key and its private key below. Casberi asks Kraken what the key can do before it saves."]
         case .coinbase:
-            return ["At the Coinbase developer portal, create an API key for your account.",
-                    "Give it View permission only — not Trade, not Transfer.",
+            return ["Create an API key for your account with View permission only — not Trade, not Transfer.",
                     "Paste the key name and its private key below. Casberi asks Coinbase what the key can do before it saves."]
         }
     }
 
-    private func step(_ n: Int, _ text: String) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: DS.Space.s3) {
-            Text("\(n)")
-                .dsText(.subhead13).fontWeight(.bold)
-                .foregroundStyle(DS.tint)
-                .frame(width: 16)
-            Text(LocalizedStringKey(text))
-                .dsText(.callout15).foregroundStyle(DS.textPrimary)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-        .dsListCardRow()
-    }
-
-    // MARK: - Connect
-
-    private var connectSection: some View {
-        Section {
-            field(placeholder: venue == .kraken ? "API key" : "Key name", text: $keyDraft, secure: false)
-            field(placeholder: venue == .kraken ? "Private key" : "Private key (PEM)", text: $secretDraft, secure: true)
-            HStack {
-                Spacer()
-                // A hand-rolled button that paints its own background must swap
-                // that background when disabled — `.disabled` dims a plain
-                // button's label, not your fill (honesty rule, prd §83).
-                let armed = !checking
-                    && !keyDraft.trimmingCharacters(in: .whitespaces).isEmpty
-                    && !secretDraft.trimmingCharacters(in: .whitespaces).isEmpty
-                Button { connect() } label: {
-                    Text(checking ? "Checking…" : (connected ? "Update" : "Connect"))
-                        .dsText(.callout15).fontWeight(.semibold)
-                        .foregroundStyle(armed ? AnyShapeStyle(.white) : AnyShapeStyle(DS.textTertiary))
-                        .padding(.horizontal, DS.Space.s4)
-                        .frame(height: 44)
-                        .background(armed ? AnyShapeStyle(DS.tint) : AnyShapeStyle(DS.gray200),
-                                    in: Capsule(style: .continuous))
-                        .animation(DS.Motion.standard, value: armed)
-                }
-                .buttonStyle(.plain)
-                .disabled(!armed)
-            }
-            .dsListCardRow()
-            BridgeSyncStatusRows(result: result, resultIsError: resultIsError)
-        } footer: {
-            Text("Your balances join your watched wallets in one combined total and one map.\n\nCasberi asks \(venue.display) what this key is allowed to do before storing it, and hands it back if it can move money — an API key works for whoever holds it, so the app keeps the weakest one that does the job.\n\nThe key lives in the Keychain and goes only to \(venue.display). Nothing here can place an order, withdraw, or transfer.")
-                .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-        }
-    }
-
-    private func field(placeholder: String, text: Binding<String>, secure: Bool) -> some View {
-        Group {
-            if secure {
-                SecureField(placeholder, text: text)
-            } else {
-                TextField(placeholder, text: text)
-            }
-        }
-        .textInputAutocapitalization(.never)
-        .autocorrectionDisabled()
-        .dsText(.callout15)
-        .padding(.horizontal, DS.Space.s3)
-        .frame(height: 44)
-        .background(DS.fillFaint, in: Capsule(style: .continuous))
-        .dsListCardRow()
+    /// A hand-rolled control must state its own disabled state (§83); the slab
+    /// field does that for us now, so this is just the arm condition.
+    private var armed: Bool {
+        !checking
+            && !keyDraft.trimmingCharacters(in: .whitespaces).isEmpty
+            && !secretDraft.trimmingCharacters(in: .whitespaces).isEmpty
     }
 
     private func connect() {

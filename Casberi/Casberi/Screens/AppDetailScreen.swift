@@ -15,6 +15,10 @@ struct AppDetailScreen: View {
     /// hue over the page via the shared `.connectBloom` — "connect ends in
     /// proof", the ruling turned into a moment.
     @State private var connectToken = 0
+    /// True while THIS page raised the connect form — so the payoff below
+    /// fires on the page that made the promise, and not on some other product
+    /// page that happens to be mounted under the same shared sheet.
+    @State private var raisedForm = false
 
     private var bridge: BridgeApp? {
         store.bridges.first { $0.name == offer.name }
@@ -22,6 +26,11 @@ struct AppDetailScreen: View {
     private var connected: Bool {
         bridge != nil && bridge?.status != .paused
     }
+    /// Connected AND healthy — the moment the raised form has finished its
+    /// job, so it can get out of the way. Distinct from `connected`, which an
+    /// `.attention` bridge also satisfies: the Fix path opens the same sheet,
+    /// and it should close when the connection is actually working again.
+    private var liveConnected: Bool { bridge?.status == .connected }
     // signalColor, not the tile hue: this paints the inline feed icon, where
     // Tokens' near-black tile would vanish on the dark page (its identity
     // there is the glyph's green). The wash keeps asking DS.washHue itself.
@@ -80,6 +89,18 @@ struct AppDetailScreen: View {
         .dsSoftScrollEdges()
         .navigationTitle(offer.name)
         .navigationBarTitleDisplayMode(.inline)
+        // The form's job is done the moment the connection goes live, so it
+        // leaves — and the payoff lands HERE, on the page that made the
+        // promise (prd §218): the hue blooms, the haptic fires, and Connect
+        // has already become Open behind it.
+        .onChange(of: liveConnected) { _, isLive in
+            guard isLive, raisedForm else { return }
+            raisedForm = false
+            HomeRoute.shared.connectForm = nil
+            connectToken += 1
+            DSHaptic.success()
+            chrome.flash(BridgeConnect.landingMessage(offer.name), tone: .success)
+        }
         .onAppear {
             // The preview streams in like every generated surface.
             if !connected, let doc = StorePreview.doc(for: offer.name) {
@@ -116,7 +137,7 @@ struct AppDetailScreen: View {
                 // A broken setup bridge (mail/wallet/token) is fixed by redoing
                 // its setup, not the one-tap connect path.
                 if offer.needsSetup {
-                    HomeRoute.shared.pushBridge(BridgeRouter.destination(forOffer: offer.name))
+                    openSetup()
                 } else {
                     doConnect()
                 }
@@ -127,7 +148,7 @@ struct AppDetailScreen: View {
             }
         } else if offer.connectable {
             if offer.needsSetup {
-                VerbCapsule(verb: .connect) { HomeRoute.shared.pushBridge(BridgeRouter.destination(forOffer: offer.name)) }
+                VerbCapsule(verb: .connect) { openSetup() }
             } else {
                 VerbCapsule(verb: .connect) {
                     doConnect()
@@ -136,6 +157,18 @@ struct AppDetailScreen: View {
         } else {
             VerbCapsule(verb: .soon)
         }
+    }
+
+    /// Where Connect goes for a setup bridge (prd §218, 2026-07-25). A FORM
+    /// rises as a sheet over this page: the reading stays behind it, there's
+    /// no back-stack to walk, and the promise gets redeemed on the page where
+    /// it was made. A MANAGER still pushes — a watch list isn't finished when
+    /// you connect it, so it deserves to be somewhere you can return to. The
+    /// decision (and the sheet) live on `HomeRoute`, shared with every other
+    /// Connect in the app.
+    private func openSetup() {
+        raisedForm = true
+        HomeRoute.shared.openSetup(forOffer: offer.name)
     }
 
     /// Fires the connect and turns success into a moment (delight): the app's

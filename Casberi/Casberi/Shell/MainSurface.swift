@@ -525,6 +525,14 @@ struct MainSurface: View {
                 }
             }
         }
+        // The connect form, raised over wherever the person is (prd §218) —
+        // mounted ONCE, on the stack itself, so it covers a pushed catalog or
+        // product page too. Every Connect in the app routes through
+        // `HomeRoute.openSetup`, so a tile, a peek preview and a product page
+        // can't drift into three different presentations of one act.
+        .sheet(item: $route.connectForm) { destination in
+            ConnectFormSheet(destination: destination)
+        }
         .tint(DS.tint)
     }
 }

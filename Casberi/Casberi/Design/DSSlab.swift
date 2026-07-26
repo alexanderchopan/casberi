@@ -104,14 +104,21 @@ struct DSSlabField: View {
                 .buttonStyle(.plain)
                 .transition(.opacity)
             }
-            Button(action: action) {
-                Text(actionLabel)
-                    .dsText(.subhead13).fontWeight(.bold)
-                    .foregroundStyle(armed ? DS.tint : DS.textTertiary)
-                    .animation(DS.Motion.standard, value: armed)
+            // An EMPTY verb means this slab is one of a pair — the first of
+            // two inputs a single act needs (Steam's profile beside its key,
+            // Mail's address beside its app password). The verb belongs to the
+            // last field, where the act completes; repeating it on both would
+            // read as two ways to connect.
+            if !actionLabel.isEmpty {
+                Button(action: action) {
+                    Text(actionLabel)
+                        .dsText(.subhead13).fontWeight(.bold)
+                        .foregroundStyle(armed ? DS.tint : DS.textTertiary)
+                        .animation(DS.Motion.standard, value: armed)
+                }
+                .buttonStyle(.plain)
+                .disabled(!armed)
             }
-            .buttonStyle(.plain)
-            .disabled(!armed)
         }
         .animation(DS.Motion.standard, value: secondaryArmed)
         .padding(.horizontal, DS.Space.s4)

@@ -14,6 +14,7 @@ import SwiftData
 /// and a read-only key makes that structural rather than a promise.
 struct BankrSetupScreen: View {
     @Environment(BridgeStore.self) private var store
+    @Environment(\.openURL) private var openURL
     @State private var keyDraft = ""
     @State private var checking = false
     @State private var result: String?
@@ -22,8 +23,8 @@ struct BankrSetupScreen: View {
 
     var body: some View {
         List {
-            stepsSection.listRowSeparator(.hidden)
-            connectSection.listRowSeparator(.hidden)
+            BridgeSetupHeader(name: "Bankr")
+            setupSection
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
@@ -33,67 +34,28 @@ struct BankrSetupScreen: View {
         .dsScreenTitle("Bankr")
     }
 
-    // MARK: - Steps (the key comes from Bankr's side — say so plainly)
-
-    private var stepsSection: some View {
+    /// The connect form — steps whole, furniture gone (prd §218,
+    /// 2026-07-25). Step one was "At bankr.bot/api-keys, sign in and open …", which is
+    /// the button below rather than a sentence you retype.
+    private var setupSection: some View {
         Section {
-            step(1, "At bankr.bot/api-keys, sign in and create a key.")
-            step(2, "Make it read-only, and enable agent access. Answers never trade — a read-only key keeps it that way.")
-            step(3, "Paste it below — it's checked with Bankr before it saves.")
-        } header: {
-            Text("Get your key").dsText(.label12)
-                .foregroundStyle(DS.textTertiary)
-        }
-    }
-
-    private func step(_ n: Int, _ text: String) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: DS.Space.s3) {
-            Text("\(n)")
-                .dsText(.subhead13).fontWeight(.bold)
-                .foregroundStyle(DS.tint)
-                .frame(width: 16)
-            Text(LocalizedStringKey(text))
-                .dsText(.callout15).foregroundStyle(DS.textPrimary)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-        .dsListCardRow()
-    }
-
-    // MARK: - Connect
-
-    private var connectSection: some View {
-        Section {
-            HStack(spacing: DS.Space.s3) {
-                SecureField(AgentProvider.bankr.placeholder, text: $keyDraft)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-                    .dsText(.callout15)
-                    .padding(.horizontal, DS.Space.s3)
-                    .frame(height: 44)
-                    .background(DS.fillFaint, in: Capsule(style: .continuous))
-                // A plain-style button with its own background gets no dimming
-                // from `.disabled` — it has to wear the off state itself, the
-                // way BridgeFieldRow does, or it reads live while inert.
-                let armed = !checking && !keyDraft.trimmingCharacters(in: .whitespaces).isEmpty
-                Button { connect() } label: {
-                    Text(checking ? "Checking…" : (configured ? "Update" : "Connect"))
-                        .dsText(.callout15).fontWeight(.semibold)
-                        .foregroundStyle(armed ? AnyShapeStyle(.white) : AnyShapeStyle(DS.textTertiary))
-                        .padding(.horizontal, DS.Space.s4)
-                        .frame(height: 44)
-                        .background(armed ? AnyShapeStyle(DS.tint) : AnyShapeStyle(DS.gray200),
-                                    in: Capsule(style: .continuous))
-                        .animation(DS.Motion.standard, value: armed)
+            VStack(alignment: .leading, spacing: DS.Space.s2) {
+                DSSlabButton(title: "Open bankr.bot/api-keys", systemImage: "arrow.up.right") {
+                    DSHaptic.tap()
+                    if let url = URL(string: "https://bankr.bot/api-keys") { openURL(url) }
                 }
-                .buttonStyle(.plain)
-                .disabled(!armed)
+                BridgeStepLines(steps: ["Make the key read-only, and enable agent access. Answers never trade — a read-only key keeps it that way.",
+                                     "Paste it below — it's checked with Bankr before it saves."])
+                DSSlabField(placeholder: AgentProvider.bankr.placeholder, text: $keyDraft,
+                            actionLabel: checking ? "CHECKING…" : (configured ? "UPDATE" : "CONNECT"),
+                            secure: true,
+                            isArmed: !checking && !keyDraft.trimmingCharacters(in: .whitespaces).isEmpty,
+                            action: connect)
+                BridgeSyncStatusRows(result: result, resultIsError: resultIsError)
+                DSSlabNote(text: "Your key powers \"Try with your key\": any answer re-runs on Bankr — which can weigh your wallet and live markets, not just your things — only when you tap. Every question says answer only: nothing here trades, sends, or swaps.\n\nThe key lives in the Keychain, goes only to Bankr, and Bankr bills you directly.")
             }
-            .dsListCardRow()
-            BridgeSyncStatusRows(result: result, resultIsError: resultIsError)
-        } footer: {
-            Text("Nothing reads in. Your key powers \"Try with your key\": any answer re-runs on Bankr — which can weigh your wallet and live markets, not just your things — straight from this iPhone, only when you tap.\n\nEvery question says answer only: nothing here trades, sends, or swaps.\n\nThe key lives in the Keychain, goes only to Bankr itself, and Bankr bills you directly. It also appears in Settings → Your key.")
-                .dsText(.subhead13).foregroundStyle(DS.textTertiary)
         }
+        .dsSlabSection()
     }
 
     /// Connects only after Bankr accepts the key — the seat registers with

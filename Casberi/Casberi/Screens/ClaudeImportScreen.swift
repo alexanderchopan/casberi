@@ -30,8 +30,7 @@ struct ClaudeImportScreen: View {
 
     var body: some View {
         List {
-            stepsSection.listRowSeparator(.hidden)
-            importSection.listRowSeparator(.hidden)
+            setupSection
             if !recent.isEmpty {
                 recentSection.listRowSeparator(.hidden)
             }
@@ -49,58 +48,24 @@ struct ClaudeImportScreen: View {
         }
     }
 
-    // MARK: - Steps (the export happens on Anthropic's side — say so plainly)
-
-    private var stepsSection: some View {
+    /// The connect form — steps whole, furniture gone (prd §218,
+    /// 2026-07-25). The export happens on Anthropic's side; the pick is the one
+    /// thing this screen actually does, so it wears the filled slab.
+    private var setupSection: some View {
         Section {
-            step(1, "In Claude, open Settings → Privacy → Export data.")
-            step(2, "Anthropic emails a download link. Save the zip to Files and tap it once to unzip.")
-            step(3, "Pick conversations.json below.")
-        } header: {
-            Text("Get your export").dsText(.label12)
-                .foregroundStyle(DS.textTertiary)
-        }
-    }
-
-    private func step(_ n: Int, _ text: String) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: DS.Space.s3) {
-            Text("\(n)")
-                .dsText(.subhead13).fontWeight(.bold)
-                .foregroundStyle(DS.tint)
-                .frame(width: 16)
-            Text(LocalizedStringKey(text))
-                .dsText(.callout15).foregroundStyle(DS.textPrimary)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-        .dsListCardRow()
-    }
-
-    // MARK: - Import
-
-    private var importSection: some View {
-        Section {
-            Button {
-                importing = true
-            } label: {
-                HStack(spacing: DS.Space.s3) {
-                    Image(systemName: "square.and.arrow.down")
-                        .font(.system(size: 15))
-                        .foregroundStyle(DS.tint)
-                        .frame(width: 28, height: 28)
-                        .background(DS.tintDim,
-                                    in: RoundedRectangle(cornerRadius: DS.Radius.appIcon(28), style: .continuous))
-                    Text("Choose conversations.json")
-                        .dsText(.body17).foregroundStyle(DS.textPrimary)
-                    Spacer()
+            VStack(alignment: .leading, spacing: DS.Space.s2) {
+                BridgeStepLines(steps: ["In Claude, open Settings → Privacy → Export data.",
+                                     "Anthropic emails a download link. Save the zip to Files and tap it once to unzip.",
+                                     "Pick conversations.json below."], startingAt: 1)
+                DSSlabButton(title: "Choose conversations.json", systemImage: "square.and.arrow.down") {
+                    DSHaptic.tap()
+                    importing = true
                 }
+                BridgeSyncStatusRows(result: result, resultIsError: resultIsError)
+                DSSlabNote(text: "One-time import — your chats become findable things. Re-importing later adds only what's new.")
             }
-            .buttonStyle(.plain)
-            .dsListCardRow()
-            BridgeSyncStatusRows(result: result, resultIsError: resultIsError)
-        } footer: {
-            Text("One-time import — your chats become findable things. Re-importing later adds only what's new.")
-                .dsText(.subhead13).foregroundStyle(DS.textTertiary)
         }
+        .dsSlabSection()
     }
 
     private var recentSection: some View {

@@ -48,15 +48,6 @@ struct TokenSetupScreen: View {
     /// a wall (mock review 2026-07-16). Paste-only bridges show it plainly.
     @State private var manualPathOpen = false
 
-    /// This bridge's things — cached per appearance and after each sync, rather
-    /// than re-fetched twice on every body pass. The source is per-bridge, so
-    /// this is the cache path rather than a static @Query.
-    @State private var recent: [Thing] = []
-
-    private func loadRecent() {
-        recent = recentBridgeThings(source: bridge.rawValue, context: modelContext)
-    }
-
     /// The credentials door, open (prd §186).
     @State private var showConnection = false
 
@@ -71,13 +62,10 @@ struct TokenSetupScreen: View {
                 feedsSection
                 watchSection
             }
-            // The ghost preview belongs to the UNCONNECTED screen only — it's
-            // the "what lands" sell, and a connected bridge has the real
-            // thing (honesty rule; review 2026-07-16). Recents dropped with
-            // prd §184/§185 — the feed shows what landed, a manager manages.
-            if !bridge.connected, recent.isEmpty {
-                GhostPreviewSection(name: bridge.rawValue)
-            }
+            // The ghost preview retired 2026-07-25 (prd §218): it was the
+            // SAME card the product page shows, and Connect now raises this
+            // form over that page — so the preview it duplicates is literally
+            // still on screen behind the sheet.
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
@@ -93,7 +81,6 @@ struct TokenSetupScreen: View {
             }
         }
         .onAppear {
-            loadRecent()
             if bridge.connected {
                 Task { await sync() }
             }
@@ -118,9 +105,16 @@ struct TokenSetupScreen: View {
         .listRowSeparator(.hidden)
     }
 
-    /// The connect form, UNCHANGED (user ruling, 2026-07-23: "I like the state
-    /// today for the form, it's important to know what the steps are"). It
-    /// leads the screen before connecting, and lives behind the Connection
+    /// The connect form. **The steps are still whole** — §186's ruling ("it's
+    /// important to know what the steps are") stands, and nothing is folded
+    /// behind a disclosure. What left in the §218 pass is the FURNITURE around
+    /// them: two gray section labels above each control, a gray paragraph
+    /// under each, and a numbered card set in body type. Every control is now
+    /// a slab, the way §190 already made every other manage page — this screen
+    /// was frozen when that pass ran, and stayed a Settings page while the
+    /// rest of the app moved on.
+    ///
+    /// It leads the screen before connecting, and lives behind the Connection
     /// door after — same sections either way, never rewritten.
     @ViewBuilder private var connectForm: some View {
         BridgeSetupHeader(name: bridge.rawValue, connected: bridge.connected)
@@ -135,9 +129,45 @@ struct TokenSetupScreen: View {
             manualPathToggleSection
         }
         if manualPathOpen || !deviceFlowOffered {
-            stepsSection
-            tokenSection
+            setupSection
         }
+    }
+
+    /// Door, steps, field, proof, one sentence — in that order, because that
+    /// is the order the person does them in.
+    private var setupSection: some View {
+        Section {
+            VStack(alignment: .leading, spacing: DS.Space.s2) {
+                if let url = bridge.setupURL {
+                    // Step one, doing itself (prd §218). This screen used to
+                    // say "Open readwise.io/access_token" in body text and
+                    // then leave you to retype it — an instruction the app
+                    // could have followed on your behalf the whole time.
+                    DSSlabButton(title: "Open \(bridge.setupURLLabel)",
+                                 systemImage: "arrow.up.right") {
+                        DSHaptic.tap()
+                        openURL(url)
+                    }
+                }
+                BridgeStepLines(steps: bridge.steps,
+                                startingAt: bridge.setupURL == nil ? 1 : 2)
+                DSSlabField(placeholder: bridge.placeholder, text: $tokenField,
+                            actionLabel: bridge.connected ? "UPDATE" : "CONNECT",
+                            secure: true, action: connect)
+                BridgeSyncStatusRows(syncing: syncing,
+                                     syncingLine: String(localized: "Fetching your \(bridge.noun)…"),
+                                     result: result, resultIsError: resultIsError)
+                DSSlabNote(text: keychainNote)
+            }
+        }
+        .dsSlabSection()
+    }
+
+    /// The screen's one gray sentence (§190's companion rule, finally applied
+    /// here). Three footers used to say this — the Keychain, the recipient,
+    /// and the read-only promise — which is one fact wearing three paragraphs.
+    private var keychainNote: String {
+        String(localized: "Your \(bridge.credentialNoun) stays in this iPhone's Keychain, goes only to \(bridge.rawValue), and only to read.")
     }
 
     /// The sign-in path — GitHub shows a short code here, you approve it on
@@ -147,20 +177,9 @@ struct TokenSetupScreen: View {
             VStack(alignment: .leading, spacing: DS.Space.s3) {
                 switch devicePhase {
                 case .idle:
-                    Button(action: startDeviceFlow) {
-                        HStack(spacing: DS.Space.s2) {
-                            Image(systemName: "person.badge.key")
-                                .font(.system(size: 15, weight: .semibold))
-                            Text("Sign in with GitHub")
-                                .dsText(.callout15).fontWeight(.semibold)
-                        }
-                        .foregroundStyle(.white)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 44)
-                        .background(DS.tint, in: Capsule(style: .continuous))
-                        .contentShape(Capsule(style: .continuous))
-                    }
-                    .buttonStyle(.plain)
+                    DSSlabButton(title: "Sign in with GitHub",
+                                 systemImage: "person.badge.key",
+                                 action: startDeviceFlow)
                 case .requesting:
                     HStack(spacing: DS.Space.s2) {
                         ProgressView()
@@ -195,23 +214,15 @@ struct TokenSetupScreen: View {
                     }
                     .padding(DS.Space.s3)
                     .frame(maxWidth: .infinity)
-                    .background(DS.surfaceWell,
-                                in: RoundedRectangle(cornerRadius: DS.Radius.control, style: .continuous))
+                    .background(DS.surfaceWell, in: DSSlab.shape)
                     Text("Enter this code on GitHub — approval lands the token here by itself.")
                         .dsText(.subhead13).foregroundStyle(DS.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
-                    Button {
+                    DSSlabButton(title: "Open github.com/login/device",
+                                 systemImage: "arrow.up.right") {
+                        DSHaptic.tap()
                         openURL(code.verificationURL)
-                    } label: {
-                        Text("Open github.com/login/device")
-                            .dsText(.callout15).fontWeight(.semibold)
-                            .foregroundStyle(.white)
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 44)
-                            .background(DS.tint, in: Capsule(style: .continuous))
-                            .contentShape(Capsule(style: .continuous))
                     }
-                    .buttonStyle(.plain)
                     HStack(spacing: DS.Space.s2) {
                         ProgressView()
                         Text("Waiting for your approval…")
@@ -222,15 +233,14 @@ struct TokenSetupScreen: View {
                             .buttonStyle(.plain)
                     }
                 }
+                // The sign-in path's one sentence — the scope, which is the
+                // only fact worth a gray line on a screen about trust. The
+                // "Sign in" header went with the furniture: the button says
+                // what it does (§190).
+                DSSlabNote(text: "Grants repo, profile and gist access — GitHub's smallest scope that reaches private issues and PRs. Read-only; Casberi never writes back.")
             }
-            .dsListCardRow()
-        } header: {
-            Text("Sign in").dsText(.label12)
-                .foregroundStyle(DS.textTertiary)
-        } footer: {
-            Text("Sign-in grants repo, profile, and gist access — GitHub's smallest scope that reaches private issues and PRs. Casberi only reads — it never writes back to GitHub.")
-                .dsText(.callout15).foregroundStyle(DS.textTertiary)
         }
+        .dsSlabSection()
     }
 
     private func startDeviceFlow() {
@@ -304,127 +314,56 @@ struct TokenSetupScreen: View {
                                  syncingLine: String(localized: "Fetching your \(bridge.noun)…"),
                                  result: result, resultIsError: resultIsError)
         }
+        .dsSlabSection()
     }
 
-    /// The fold: one quiet row that opens the token-by-hand path.
+    /// The fold: one quiet row that opens the token-by-hand path. Not a slab —
+    /// it's a disclosure over an alternate route, not a control that does
+    /// anything, and giving it a slab would put it on level with Sign in.
     private var manualPathToggleSection: some View {
         Section {
             Button {
                 withAnimation(DS.Motion.standard) { manualPathOpen.toggle() }
             } label: {
-                HStack(spacing: DS.Space.s3) {
+                HStack(spacing: DS.Space.s2) {
                     Text("Prefer a token by hand?")
-                        .dsText(.body17).foregroundStyle(DS.textPrimary)
-                    Spacer()
+                        .dsText(.callout15).foregroundStyle(DS.textSecondary)
                     Image(systemName: "chevron.down")
-                        .font(.system(size: 13, weight: .semibold))
+                        .font(.system(size: 11, weight: .semibold))
                         .foregroundStyle(DS.textTertiary)
                         .rotationEffect(.degrees(manualPathOpen ? 180 : 0))
+                    Spacer(minLength: 0)
                 }
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .dsListCardRow()
         }
-    }
-
-    private var stepsSection: some View {
-        // One list row holding the whole numbered list — a Section of ForEach
-        // rows draws a separator between them that survives row-level
-        // .listRowSeparator(.hidden) (SwiftUI won't suppress the first
-        // post-header separator); collapsing to a single row means no inter-row
-        // separator can exist. Design law: no hairlines, zero exceptions.
-        Section {
-            VStack(alignment: .leading, spacing: 0) {
-                ForEach(Array(bridge.steps.enumerated()), id: \.offset) { i, text in
-                    HStack(alignment: .firstTextBaseline, spacing: DS.Space.s3) {
-                        Text("\(i + 1)")
-                            .dsText(.body17).fontWeight(.bold)
-                            .foregroundStyle(DS.tint)
-                            .frame(width: 20)
-                        Text(LocalizedStringKey(text))
-                            .dsText(.body17).foregroundStyle(DS.textPrimary)
-                            .fixedSize(horizontal: false, vertical: true)
-                        Spacer(minLength: 0)
-                    }
-                    .padding(.vertical, DS.Space.s1)
-                }
-            }
-            .dsListCardRow()
-        } header: {
-            Text("Get your token")
-                .dsText(.label12)
-                .foregroundStyle(DS.textTertiary)
-        }
-    }
-
-    private var tokenSection: some View {
-        // Field + status in ONE list row (a VStack) — a headed Section of two
-        // rows leaks a hairline between them that row-level
-        // .listRowSeparator(.hidden) won't suppress (SwiftUI first-post-header
-        // separator). Design law: no hairlines, zero exceptions.
-        Section {
-            VStack(alignment: .leading, spacing: DS.Space.s2) {
-                BridgeFieldRow(placeholder: bridge.placeholder, text: $tokenField,
-                               buttonLabel: bridge.connected ? "Update" : "Connect",
-                               secure: true, action: connect)
-                BridgeSyncStatusRows(syncing: syncing,
-                                     syncingLine: String(localized: "Fetching your \(bridge.noun)…"),
-                                     result: result, resultIsError: resultIsError)
-            }
-            .dsListCardRow()
-        } header: {
-            Text("Token").dsText(.label12)
-                .foregroundStyle(DS.textTertiary)
-        } footer: {
-            Text("The token stays in this iPhone's Keychain and goes only to \(bridge.rawValue) itself. Read-only.")
-                .dsText(.callout15).foregroundStyle(DS.textTertiary)
-        }
+        .dsSlabSection()
     }
 
     /// GitHub only — the feed picker. One connection, several streams the
     /// person each turns on; toggling re-syncs so a newly-chosen feed lands
     /// now, not next foreground.
     private var feedsSection: some View {
-        // One list row holding every feed (a VStack) — separate rows leak a
-        // hairline between them that survives .listRowSeparator(.hidden) (the
-        // first-post-header-separator gotcha stepsSection documents). Design
-        // law: no hairlines, zero exceptions.
+        // Switch slabs (§190's picker-page shape): each row IS this
+        // connection's verb for one lane, the same as a chain on OpenSea, so
+        // it earns a full block instead of a line in a stacked toggle list.
         Section {
-            VStack(alignment: .leading, spacing: 0) {
+            VStack(alignment: .leading, spacing: DS.Space.s2) {
                 ForEach(GitHubFeed.allCases) { feed in
-                    Button {
-                        githubFeeds.toggle(feed)
-                        DSHaptic.tap()
-                        Task { await sync() }
-                    } label: {
-                        HStack(alignment: .firstTextBaseline, spacing: DS.Space.s3) {
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(feed.title)
-                                    .dsText(.body17).foregroundStyle(DS.textPrimary)
-                                Text(feed.blurb)
-                                    .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-                                    .fixedSize(horizontal: false, vertical: true)
-                            }
-                            Spacer(minLength: DS.Space.s2)
-                            if githubFeeds.isOn(feed) {
-                                Image(systemName: "checkmark")
-                                    .dsText(.body17).foregroundStyle(DS.tint)
-                            }
-                        }
-                        .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                    .padding(.vertical, DS.Space.s1)
+                    DSSlabSwitch(title: feed.title, detail: feed.blurb,
+                                 isOn: Binding(
+                                    get: { githubFeeds.isOn(feed) },
+                                    set: { _ in
+                                        githubFeeds.toggle(feed)
+                                        DSHaptic.tap()
+                                        Task { await sync() }
+                                    }))
                 }
+                DSSlabNote(text: "Saved things and things that happened — all of it lands under GitHub.")
             }
-            .dsListCardRow()
-        } header: {
-            Text("Feeds").dsText(.label12).foregroundStyle(DS.textTertiary)
-        } footer: {
-            Text("Pick what to watch. Stars and watched repos are what you saved; releases and contributions are what happened. Everything lands under GitHub.")
-                .dsText(.callout15).foregroundStyle(DS.textTertiary)
         }
+        .dsSlabSection()
     }
 
     /// GitHub only — watch a repo without starring or subscribing to it on
@@ -433,20 +372,16 @@ struct TokenSetupScreen: View {
     private var watchSection: some View {
         Section {
             VStack(alignment: .leading, spacing: DS.Space.s2) {
-                BridgeFieldRow(placeholder: String(localized: "owner/repo or a GitHub URL"),
-                               text: $watchField, buttonLabel: String(localized: "Watch"),
-                               action: watchRepo)
+                DSSlabField(placeholder: String(localized: "owner/repo or a GitHub URL"),
+                            text: $watchField, actionLabel: String(localized: "WATCH"),
+                            action: watchRepo)
                 BridgeSyncStatusRows(syncing: watching,
                                      syncingLine: String(localized: "Looking it up…"),
                                      result: watchResult, resultIsError: watchResultIsError)
+                DSSlabNote(text: "Private to this iPhone — watching here never touches your GitHub account.")
             }
-            .dsListCardRow()
-        } header: {
-            Text("Watch a repo").dsText(.label12).foregroundStyle(DS.textTertiary)
-        } footer: {
-            Text("Private to this iPhone — unlike a star or subscribe, watching here never touches your GitHub account. New releases land the way starred repos' do.")
-                .dsText(.callout15).foregroundStyle(DS.textTertiary)
         }
+        .dsSlabSection()
     }
 
     private func watchRepo() {
@@ -470,7 +405,6 @@ struct TokenSetupScreen: View {
             }
             watchField = ""
             watchResult = String(localized: "Watching \(thing.title)")
-            loadRecent()
             await sync()
         }
     }
@@ -522,7 +456,6 @@ struct TokenSetupScreen: View {
         repeat {
             syncPending = false
             let added = await TokenIngest.refresh(bridge, context: modelContext)
-            loadRecent()
             guard let added else {
                 if connecting {
                     // A fresh paste that fails doesn't stay: keeping it would show

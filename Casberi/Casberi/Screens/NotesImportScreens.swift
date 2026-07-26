@@ -27,13 +27,13 @@ struct DayOneImportScreen: View {
                 "Pick the .json inside below.",
             ])
             Section {
-                ImportPickRow(label: "Choose your Day One .json") { importing = true }
-                BridgeSyncStatusRows(result: result, resultIsError: resultIsError)
-            } footer: {
-                Text("One-time import — entries become findable notes, dated as you wrote them. Photos stay in the export for now. Re-importing adds only what's new.")
-                    .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                VStack(alignment: .leading, spacing: DS.Space.s2) {
+                    ImportPickRow(label: "Choose your Day One .json") { importing = true }
+                    BridgeSyncStatusRows(result: result, resultIsError: resultIsError)
+                    DSSlabNote(text: "One-time import — entries become findable notes, dated as you wrote them. Photos stay in the export for now. Re-importing adds only what's new.")
+                }
             }
-            .listRowSeparator(.hidden)
+            .dsSlabSection()
             if !recent.isEmpty {
                 RecentThingsSection(header: "Imported", things: Array(recent))
                     .listRowSeparator(.hidden)
@@ -104,13 +104,13 @@ struct JournalImportScreen: View {
                 "Pick the unzipped folder below.",
             ])
             Section {
-                ImportPickRow(label: "Choose the export folder") { importing = true }
-                BridgeSyncStatusRows(result: result, resultIsError: resultIsError)
-            } footer: {
-                Text("One-time import — entries become findable notes, dated as you wrote them. Photos stay in the export for now. Re-importing adds only what's new. (Apple offers no live read.)")
-                    .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                VStack(alignment: .leading, spacing: DS.Space.s2) {
+                    ImportPickRow(label: "Choose the export folder") { importing = true }
+                    BridgeSyncStatusRows(result: result, resultIsError: resultIsError)
+                    DSSlabNote(text: "One-time import — entries become findable notes, dated as you wrote them. Photos stay in the export for now. Re-importing adds only what's new. (Apple offers no live read.)")
+                }
             }
-            .listRowSeparator(.hidden)
+            .dsSlabSection()
             if !recent.isEmpty {
                 RecentThingsSection(header: "Imported", things: Array(recent))
                     .listRowSeparator(.hidden)
@@ -236,44 +236,37 @@ struct ImportStepRow: View {
 /// leaks a hairline that survives row-level .listRowSeparator(.hidden) (SwiftUI
 /// won't suppress the first separator after a section header). Design law: no
 /// hairlines, zero exceptions.
+/// The steps, plain (prd §218, 2026-07-25) — the card and its gray "Get your
+/// export" label went with the rest of the setup-screen furniture. The steps
+/// themselves are untouched: §186's ruling that they stay whole and visible
+/// is why this is a de-furnishing, not a disclosure.
+///
+/// The `header` argument is kept and ignored on purpose: every call site
+/// passes the same "Get your export", and removing the parameter would churn
+/// six screens to delete one word each.
 struct ImportStepsCard: View {
-    let header: String
     let steps: [String]
-    init(_ header: String, _ steps: [String]) { self.header = header; self.steps = steps }
+    init(_ header: String, _ steps: [String]) { self.steps = steps }
 
     var body: some View {
         Section {
-            VStack(alignment: .leading, spacing: 0) {
-                ForEach(Array(steps.enumerated()), id: \.offset) { i, text in
-                    ImportStepRow(i + 1, text)
-                }
-            }
-            .dsListCardRow()
-        } header: {
-            Text(LocalizedStringKey(header)).dsText(.label12).foregroundStyle(DS.textTertiary)
+            BridgeStepLines(steps: steps, startingAt: 1)
         }
+        .dsSlabSection()
     }
 }
 
+/// The pick, as the screen's one filled block — an import screen does exactly
+/// one thing, and it should look like it (prd §218). It used to be a tinted
+/// glyph beside plain body text, which read as a list row.
 struct ImportPickRow: View {
     let label: String
     let action: () -> Void
 
     var body: some View {
-        Button(action: action) {
-            HStack(spacing: DS.Space.s3) {
-                Image(systemName: "square.and.arrow.down")
-                    .font(.system(size: 15))
-                    .foregroundStyle(DS.tint)
-                    .frame(width: 28, height: 28)
-                    .background(DS.tintDim,
-                                in: RoundedRectangle(cornerRadius: DS.Radius.appIcon(28), style: .continuous))
-                Text(LocalizedStringKey(label))
-                    .dsText(.body17).foregroundStyle(DS.textPrimary)
-                Spacer()
-            }
+        DSSlabButton(title: label, systemImage: "square.and.arrow.down") {
+            DSHaptic.tap()
+            action()
         }
-        .buttonStyle(.plain)
-        .dsListCardRow()
     }
 }

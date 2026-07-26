@@ -70,6 +70,28 @@ final class HomeRoute {
         path.append(.appDetail(offerName))
     }
 
+    /// The connect FORM, raised over whatever the person was looking at (prd
+    /// §218, 2026-07-25). Mounted once, on `MainSurface`'s stack, so a Connect
+    /// tapped on a catalog tile, a peek preview, the Discover deck or a product
+    /// page all behave identically — and so the form itself is never a second
+    /// copy of anything: it's the bridge's own setup screen, rendered by the
+    /// same `BridgeDestinationView` the pushed route uses.
+    var connectForm: BridgeRouter.Destination?
+
+    /// Where an offer's Connect goes. A FORM you finish once (paste a key,
+    /// sign in, pick a file) rises as a sheet — you never leave the page that
+    /// sold you on it, and there's no back-stack to walk out of afterwards. A
+    /// MANAGER (a watch list, the wallet) still pushes, because connecting it
+    /// isn't finishing with it.
+    @MainActor func openSetup(forOffer name: String) {
+        guard let dest = BridgeRouter.destination(forOffer: name) else { return }
+        if dest.isForm {
+            connectForm = dest
+        } else {
+            path.append(.bridge(dest))
+        }
+    }
+
     /// An offer whose product page should open once the catalog lands — set
     /// by the empty feed's pile (a tile is a door to that app's page, not
     /// just to the shelf); AppsScreen consumes it on appear, after the

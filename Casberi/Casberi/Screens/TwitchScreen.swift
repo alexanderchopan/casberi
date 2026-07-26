@@ -118,30 +118,18 @@ struct TwitchScreen: View {
                 .padding(.vertical, DS.Space.s1)
                 .dsListCardRow()
             } else {
-                Button(action: connect) {
-                    HStack(spacing: DS.Space.s3) {
-                        Image(systemName: "person.badge.key")
-                            .font(.system(size: 17, weight: .medium))
-                        Text("Connect Twitch")
-                            .dsText(.body17).fontWeight(.semibold)
-                        Spacer()
-                    }
-                    .foregroundStyle(DS.tint)
-                    .padding(.vertical, DS.Space.s1)
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .dsListCardRow()
+                // The screen's one verb, as the screen's one filled block
+                // (prd §218) — it was a blue text row, which read as a link to
+                // somewhere rather than the act itself.
+                DSSlabButton(title: "Connect Twitch",
+                             systemImage: "person.badge.key",
+                             action: connect)
             }
             BridgeSyncStatusRows(syncing: syncing, syncingLine: String(localized: "Checking who's live…"),
                                  result: result, resultIsError: resultIsError)
-        } header: {
-            Text("Follows").dsText(.label12)
-                .foregroundStyle(DS.textTertiary)
-        } footer: {
-            Text("Sign-in happens on Twitch's own page — a short code, no password in the app. Read-only: it can never chat, follow, or subscribe.")
-                .dsText(.callout15).foregroundStyle(DS.textTertiary)
+            DSSlabNote(text: "Sign-in happens on Twitch's own page — a short code, no password in the app. Read-only: it can never chat, follow, or subscribe.")
         }
+        .dsSlabSection()
     }
 
     private var removeSection: some View {

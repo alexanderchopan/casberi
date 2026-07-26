@@ -65,6 +65,33 @@ enum BridgeRouter {
         /// Calendar, …) — the generic detail page, never EmptyView.
         case detail(id: String)
 
+        /// True when this screen is a FORM you finish, not a manager you live
+        /// in (prd §218, 2026-07-25). The distinction decides how Connect
+        /// presents it: a form rises as a sheet over the product page you were
+        /// reading — you never leave, and finishing drops you back where the
+        /// promise was made — while a manager is pushed, because you'll return
+        /// to it next month to add another feed.
+        ///
+        /// The test is whether there's anything left to do on the screen once
+        /// it's connected. A pasted key, a signed-in account, a picked file:
+        /// nothing. A watch list (§184's roster, §202's stars): everything.
+        var isForm: Bool {
+            switch self {
+            case .token, .steam, .obsidian, .twitch, .spotify,
+                 .icloudMail, .gmail, .exchange,
+                 .venice, .bankr, .openRouter,
+                 .chatgpt, .claude, .gemini,
+                 .kindle, .dayOne, .appleJournal, .appleNotes:
+                true
+            // Managers, every one: a roster or a ledger you come back to.
+            // `.wallet` covers Peer/0xBow's Connect too (§209) — routing a
+            // person into another app's manager inside a sheet would strand
+            // them there, which is exactly what pushing avoids.
+            default:
+                false
+            }
+        }
+
         var id: String {
             switch self {
             case .wallet:         "wallet"
@@ -239,6 +266,53 @@ struct BridgeDestinationView: View {
         case .walletHistory(let scope): WalletHistoryScreen(scope: scope)
         case .walletConnection: WalletConnectionScreen()
         case .detail(let id): BridgeDetailScreen(bridgeID: id)
+        }
+    }
+}
+
+/// The connect form as a RAISED sheet (prd §218, 2026-07-25) — the bridge's
+/// own setup screen, unedited, over the page that sold it to you.
+///
+/// It owns one rule the pushed route doesn't need: **a form leaves when it's
+/// done.** The moment this bridge's seat reads `.connected`, the sheet
+/// dismisses itself, so nobody is left staring at a manager they arrived at by
+/// pasting a key. The seat is watched rather than a per-screen callback
+/// because there are ~18 of these screens and not one of them had to change to
+/// gain this behaviour — `BridgeStore` already records the exact moment a
+/// connection becomes real, and it's the same record the product page's proof
+/// pill and `BridgeDetailScreen` read.
+struct ConnectFormSheet: View {
+    let destination: BridgeRouter.Destination
+    @Environment(BridgeStore.self) private var store
+    @Environment(\.dismiss) private var dismiss
+
+    /// Live and healthy. `.attention` deliberately doesn't count — the Fix
+    /// path raises this same sheet, and it should stay up until the
+    /// connection actually works again.
+    private var live: Bool {
+        store.bridges.first { $0.id == destination.id }?.status == .connected
+    }
+
+    var body: some View {
+        NavigationStack {
+            BridgeDestinationView(destination: destination)
+                .toolbar {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button("Close") { dismiss() }
+                            .dsText(.callout15).foregroundStyle(DS.tint)
+                    }
+                }
+        }
+        .presentationDragIndicator(.visible)
+        .onChange(of: live) { _, isLive in
+            // A beat, so the screen's own success moment (the icon's coin
+            // flip, the proof line counting up) is seen rather than cut off
+            // by the dismissal it triggers.
+            guard isLive else { return }
+            Task { @MainActor in
+                try? await Task.sleep(for: .milliseconds(700))
+                dismiss()
+            }
         }
     }
 }

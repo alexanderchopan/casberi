@@ -8669,3 +8669,170 @@ Verified: the retitle heal on a real corpus gave four screenshots four distinct 
 NOT yet seen on screen: the wide wordless tile, the coarsened tail and the floor — the demo corpus
 is dense, recent, and has no wordless screenshots, so none of those three conditions occur in it.
 Their logic is covered by `-photoHealProbe` and reading, not by a screenshot.
+
+## 219. The media feeds stop being squares (user: "how would you improve the media source feeds", then "numbers are annoyances tho… i mean more visually", then "do it all", 2026-07-25) — BUILD-BLOCKED, NOT YET SEEN
+
+The first answer offered was data — parse `itunes:duration`, sum a backlog, count what's
+unopened — and the user rejected the whole frame: **"numbers are annoyances."** The re-read
+that followed is the ruling. The media feeds' problem was never a missing fact. It was that
+**every medium was being squeezed into a square**: the row's leading slot is 26pt square
+(`BandRow`) and the head mosaic was a rigid 4-across grid of squares (`ImageMosaicHero`) —
+for YouTube stills, Steam headers, Pinterest pins and podcast covers alike. Only cover art is
+actually square. Center-cropping a 16:9 frame into a 26pt box destroys the one thing that
+makes it a media row: you get a smear of somebody's face.
+
+**The medium declares its own proportions, once** (`Model/MediaShape.swift`), and both the row
+and the head read them. Data, not layout — it says a Steam header is 460×215, not how big to
+draw it. Four forms: `cover` (1:1, podcasts/music), `still` (16:9, YouTube/Twitch), `capsule`
+(460:215, Steam), `pin` (2:3, Pinterest).
+
+- **Rows keep one height, vary in width.** `MediaRow` draws art 48pt tall — a still at 85, a
+  Steam capsule at 103, a cover at 48, a pin at 32. One rhythm, four shapes. This is the same
+  permission `MusicRow` has held since 2026-07-11 ("a source's shaped feed is allowed its
+  native anatomy"), which is also why music is NOT in the new `.media` shape: it already IS
+  this, under its own name. **The All feed is untouched** — 26pt squares everywhere, because
+  native anatomies relax only inside the source's own room.
+- **The head shelf speaks the medium too.** A wide form gets FEWER, LARGER tiles: two 16:9
+  frames instead of eight thumbnails engineered to shout individually, which in a grid read as
+  noise. Covers stay 4×2, stills and capsules go 2×1, pins 4×1. The block derives its own
+  height from `columns · aspect / rows`, so one card serves all four.
+- **Twitch finally cashes in §164's exception.** That ruling already granted that "a single
+  item may claim the head only while it is a LIVE STATE" — and Twitch had been spending the
+  grant on nothing but sort order, leading its feed with no head at all (a mosaic of expired
+  frames would claim broadcasts that ended). `LiveStreamHero` puts the live frame at the head
+  full-bleed. Honest twice over: derived from `TwitchIngest.liveRefs`, so when the stream ends
+  the card doesn't go stale, it stops existing; and loaded `perishable`, so a second broadcast
+  can never wear the first one's picture out of the cache.
+- **Saturation carries the backlog — the answer to the rejected numbers.** Media art drains of
+  color as it ages (`MediaShape.freshness`: flat for two days, easing to 0.45 over three
+  weeks), so "am I behind?" reads as color leaving the screen instead of a count scolding you.
+  It claims nothing the record can't support: it charts the item's own age, which the timestamp
+  beside it already says out loud. Explicitly NOT a played/watched state — the app cannot know
+  you listened in Overcast, so nothing here ever says "unplayed". A live row never decays.
+- **The wash.** The head glows in the medium's own color, averaged off the newest art
+  (`RemoteImageLoader.averageColor`) — one 1×1 redraw of a thumbnail the shelf downloads
+  anyway, so the tint costs no request. Restrained on purpose: media sources only (an OpenSea
+  or Shopify shelf is whatever the seller uploaded, so those cards stay neutral), behind the
+  art and never under the words, and it declines to render for a near-colorless average —
+  a grey wash is just dirt on the card.
+
+Also new: `RemoteArt`, the rectangular sibling of `RemoteThumb` (same loader, same cache, same
+dead-URL glyph fallback — width and height simply given separately).
+
+**NOT VERIFIED — no build, no screenshot.** A second Claude session was mid-refactor of
+`Screens/TokenSetupScreen.swift` throughout this work (it removed `loadRecent()` and left its
+call sites), so the module would not link across three attempts and the simulator was never
+reached. Every file here type-checked clean in all three passes and the SwiftData liveness
+audit is green, but nothing below the compiler has been exercised: the four shelf layouts, the
+live hero, the decay ramp and the wash have not been seen on screen. Build and walk the media
+feeds (`casberi://feed/source/YouTube`, `/Podcasts`, `/Steam`, `/Pinterest`, `/Twitch`) before
+this is called done.
+
+## 218. Connect stops being a page you read on the way to the page you use (user: "how would you improve our app connect pages? they have useful content but i worry uesr hs to read it before going to a subsequent page to connect, and i also think the pages themselves look too form-y", then "do your recommendations", 2026-07-25)
+
+Two complaints, and they turned out to be one problem seen from two sides.
+
+**The gate.** 48 of the 56 offers are `needsSetup`, so for almost every app in
+the catalog the Connect button did not connect — it pushed. And the page it
+pushed to opened with the same mark, the same tagline and the same ghost
+preview the person had just scrolled past, with the field last. The two pages
+were never a funnel; they were one page cut in half, with the reading on one
+side and the doing on the other.
+
+**The form feel has a date.** §186 (2026-07-23) deliberately froze the
+pre-connect form — *"nah, I like the state today for the form, it's important
+to know what the steps are"* — and every pass since flowed around it. §189/§190
+slabbed the watch-list pages and the connected managers; §202 rebuilt the
+wallet. The pre-connect keyed form was the one surface the slab rule was never
+allowed to touch, so ~20 screens kept Settings furniture while the rest of the
+app moved on. `TokenSetupScreen` alone carried **five section headers and five
+footer paragraphs**.
+
+Three directions were mocked (`design/connect-look/connect-mocks.html`); the
+user took the recommendation, A + C.
+
+**A — the form rises, it doesn't replace the page.** Connect now raises the
+bridge's own setup screen as a sheet over the product page. Not a copy of it:
+`ConnectFormSheet` (`Model/BridgeRouting.swift`) renders the same
+`BridgeDestinationView` the pushed route builds, so there is no second form to
+keep in step, and §186's ruling survives untouched — the steps are still whole,
+still visible, nothing folded behind a disclosure.
+
+Three things make it work:
+
+- **`BridgeRouter.Destination.isForm`** draws the line. A FORM is a screen with
+  nothing left to do once it's connected (a pasted key, a signed-in account, a
+  picked file) — it rises. A MANAGER is a watch list you'll come back to next
+  month to add another feed — it still pushes. `.wallet` is deliberately a
+  manager, which also covers Peer/0xBow's Connect (§209): routing someone into
+  another app's manager inside a sheet would strand them there.
+- **`HomeRoute.openSetup(forOffer:)` and one mounted sheet.** Every Connect in
+  the app — the catalog wall's row capsule, the Discover deck, both peek
+  previews, the product page — routes through one call, and `MainSurface`
+  mounts the sheet once. Four call sites can't drift into four presentations of
+  one act.
+- **A form leaves when it's done.** `ConnectFormSheet` watches its own seat in
+  `BridgeStore` and dismisses when it reads `.connected` (after a 700ms beat, so
+  the screen's own coin-flip and proof line are seen). Eighteen screens gained
+  this without one of them changing: `BridgeStore` already records the exact
+  moment a connection becomes real, and it's the same record the proof pill and
+  `BridgeDetailScreen` read. `.attention` deliberately doesn't count — the Fix
+  path raises the same sheet and should stay up until it works. The payoff
+  lands on `AppDetailScreen`, the page that made the promise: the hue blooms,
+  the haptic fires, and Connect has already become Open behind the sheet.
+
+**C — step one becomes the button it was describing.** Every keyed bridge's
+first step was literally `"Open <url>…"` set in body text, inside a card, under
+a gray label — an instruction to do something the app could have done the whole
+time, which the person then retyped into Safari. It is now the screen's one
+filled slab. `TokenBridge` gained `setupURL`/`setupURLLabel` (all 11 checked
+live 2026-07-25; `bitrefill.com` answers curl with a 403 from its bot filter,
+not a 404), and the same for `MailProvider`, Steam, both exchanges, the three
+agent-key screens and Gemini's Takeout. Steps go 3 → 2 **without deleting a
+word of instruction** — what the old step one said beyond "open the page" moved
+into the step after it.
+
+The rest of C is §190's rule, finally applied where it was blocked:
+
+- The gray section labels go ("Get your token", "Token", "Sign in", "Account",
+  "Get a free key", "Get your export", "Vault", "Follows", "Liked songs"). The
+  placeholder says what to type and the verb says what happens.
+- **One gray sentence per screen.** Three footers saying the Keychain, the
+  recipient and the read-only promise are one fact wearing three paragraphs.
+  Kept in full where the length is load-bearing trust content §192 protected:
+  the exchanges still say the §163 permission check happens before the key is
+  stored, and GitHub still names its scope — but in two sentences, not three
+  paragraphs.
+- Every control becomes a slab. `DSSlabField` gained an **empty-verb** mode for
+  the two-input screens (Steam's profile beside its key, Mail's address beside
+  its app password): the verb belongs to the last field, where the act
+  completes, and repeating it on both reads as two ways to connect.
+  `BridgeStepLines` (`Screens/BridgeSetupComponents.swift`) is the shared
+  numbered list, and `ImportPickRow` is now the filled slab it always meant to
+  be — an import screen does exactly one thing and should look like it.
+- **The duplicated ghost preview retires from the setup side.** It was the same
+  card the product page shows, and with A that page is literally still on
+  screen behind the sheet. (`GhostPreviewSection` stays for any screen still
+  reached by a push.)
+
+**What was deliberately NOT touched:** the shelves and rosters (§190's kept
+ruling); the content-ledger headers on the managers (Kalshi's Watchlist,
+Deals' Sources, Open Food Facts' scan row) — those head the person's own data,
+not controls; Disconnect, still the quiet centered red row outside the rhythm;
+and the numbered steps themselves, per §186.
+
+Applied to: `AppDetailScreen`, `AppsScreen` (4 call sites), `HomeRoute`,
+`MainSurface`, `BridgeRouting`, `DSSlab`, `BridgeSetupComponents`,
+`TokenSetupScreen` (11 bridges), `TokenBridges`, `MailBridge`, `MailScreen`,
+`SteamScreen`, `ExchangeSetupScreen`, `VeniceSetupScreen`,
+`OpenRouterSetupScreen`, `BankrSetupScreen`, `ObsidianScreen`, `TwitchScreen`,
+`SpotifyScreen`, `ChatGPTImportScreen`, `ClaudeImportScreen`,
+`GeminiImportScreen`, `KindleImportScreen`, `NotesImportScreens`.
+
+NOT SIMULATOR-VERIFIED — the user stopped the sim pass mid-way (*"forget the
+simulator it takes too much time and credits for me"*), so this shipped on a
+green build plus both static audits (`catalog-sync.sh`, the SwiftData liveness
+audit) and the diff. What has NOT been seen on screen: the sheet's rise and its
+self-dismissal on connect, the bloom landing on the product page behind it, and
+the slabbed forms' layout. Walk one keyed bridge (Notion or Readwise), one
+two-field bridge (Steam or Mail) and one import screen before calling it done.

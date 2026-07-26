@@ -1,0 +1,394 @@
+<title>The connect pages — read-then-go, and the form that stayed a form</title>
+<style>
+  :root {
+    --page: #0a0b0f; --ink: #f2f4f8; --muted: #99a1b4; --faint: #626b80;
+    --tint: #1673e6; --confirm: #32d74b; --down: #ff5a5f; --warn: #ffb340;
+    --card: rgba(22,24,31,.82);
+    --notion: #9aa3b2;
+    --money: ui-rounded, -apple-system, system-ui, sans-serif;
+    --text: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { background: var(--page); }
+  body {
+    font-family: var(--text); color: var(--ink);
+    background: radial-gradient(900px 420px at 18% -8%, rgba(154,163,178,.09), transparent 62%), var(--page);
+    padding: 48px 28px 90px;
+  }
+  .wrap { max-width: 1240px; margin: 0 auto; }
+  header.top { max-width: 820px; margin-bottom: 12px; }
+  .eyebrow { font-size: 12px; font-weight: 600; color: #b9c2d6; margin-bottom: 10px; }
+  h1 { font-size: clamp(26px,3.6vw,38px); font-weight: 800; letter-spacing: -.02em; line-height: 1.08; text-wrap: balance; margin-bottom: 14px; }
+  header.top p { font-size: 15px; line-height: 1.6; color: var(--muted); max-width: 70ch; margin-bottom: 10px; }
+  header.top p b { color: var(--ink); font-weight: 650; }
+
+  h2.sec { font-size: 20px; font-weight: 800; letter-spacing: -.015em; margin: 52px 0 6px; }
+  h2.sec span { color: var(--faint); font-weight: 600; font-size: 15px; }
+  p.lede { font-size: 14px; line-height: 1.6; color: var(--muted); max-width: 74ch; margin-bottom: 26px; }
+  p.lede b { color: var(--ink); font-weight: 650; }
+
+  .row { display: flex; flex-wrap: wrap; gap: 34px; align-items: flex-start; margin-bottom: 10px; }
+  .option { width: 316px; }
+  .phone { width: 316px; border-radius: 44px; padding: 9px; background: #16181d; box-shadow: 0 30px 70px rgba(0,0,0,.55); position: relative; }
+  .statebadge { position: absolute; top: -13px; left: 50%; transform: translateX(-50%);
+    font-size: 10.5px; font-weight: 800; padding: 5px 13px; border-radius: 999px;
+    background: #262b38; color: var(--muted); white-space: nowrap; z-index: 3; }
+  .statebadge.after { background: rgba(50,215,75,.16); color: var(--confirm); }
+  .statebadge.bad { background: rgba(255,90,95,.16); color: var(--down); }
+  .screen {
+    border-radius: 36px; overflow: hidden; position: relative; padding: 18px 15px 22px;
+    min-height: 640px; background: #000;
+  }
+  .screen.notion { background: linear-gradient(180deg, rgba(154,163,178,.22) 0%, rgba(154,163,178,.06) 42%, transparent 96%) top/100% 420px no-repeat, #000; }
+  .screen.dim { background: linear-gradient(180deg, rgba(154,163,178,.08) 0%, transparent 60%) top/100% 420px no-repeat, #000; }
+  .caption { margin-top: 18px; padding: 0 6px; }
+  .caption h3 { font-size: 16px; font-weight: 750; margin-bottom: 6px; }
+  .caption p { font-size: 13.5px; line-height: 1.58; color: var(--muted); }
+  .caption .risk { display: block; margin-top: 8px; font-size: 12.5px; color: var(--faint); }
+  .caption .risk b { color: #cbd2e2; font-weight: 650; }
+
+  /* iOS chrome */
+  .nav { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); margin-bottom: 14px; }
+  .nav .back { color: var(--tint); font-weight: 600; }
+  .nav .title { margin-left: auto; margin-right: auto; font-weight: 650; color: var(--ink); font-size: 13px; }
+  .navTitle { font-family: var(--money); font-size: 27px; font-weight: 800; letter-spacing: -.015em; margin: 2px 0 12px; }
+
+  /* product page atoms */
+  .prodhead { display: flex; gap: 13px; align-items: flex-start; margin-bottom: 16px; }
+  .mark { width: 66px; height: 66px; border-radius: 17px; flex: none; display: flex; align-items: center; justify-content: center;
+          font-size: 30px; font-weight: 800; color: #12141a; background: linear-gradient(160deg,#e6e9f0,#9aa3b2); }
+  .mark.sm { width: 48px; height: 48px; border-radius: 13px; font-size: 22px; }
+  .prodhead .t .grp { font-size: 11px; color: var(--faint); font-weight: 600; }
+  .prodhead .t .nm { font-size: 21px; font-weight: 800; letter-spacing: -.01em; margin-top: 1px; }
+  .prodhead .t .tag { font-size: 12.5px; color: var(--muted); margin-top: 3px; line-height: 1.4; }
+  .cta { display: inline-flex; align-items: center; gap: 6px; margin-top: 11px; font-size: 12.5px; font-weight: 750;
+         color: #fff; background: var(--tint); border-radius: 999px; padding: 7px 18px; }
+  .cta.ghosted { background: #2a3040; color: var(--muted); }
+  .needline { font-size: 11px; color: var(--faint); margin-top: 7px; line-height: 1.4; }
+
+  .lab { font-size: 10.5px; color: var(--faint); font-weight: 600; margin: 18px 0 7px; }
+  .body { font-size: 13px; line-height: 1.55; color: #dfe4ee; }
+  .body + .body { margin-top: 9px; }
+  .checks { margin-top: 10px; }
+  .checks li { list-style: none; display: flex; gap: 8px; font-size: 12px; color: var(--muted); margin: 6px 0; line-height: 1.45; }
+  .checks li::before { content: "✓"; color: var(--confirm); font-weight: 700; flex: none; }
+
+  .ghost { border-radius: 16px; background: rgba(255,255,255,.045); padding: 12px 13px; margin-top: 10px; opacity: .6; }
+  .ghost b { font-size: 12px; } .ghost p { font-size: 11px; color: var(--muted); margin-top: 3px; }
+  .ghost .gline { display: flex; gap: 9px; align-items: center; padding: 6px 0; }
+  .ghost .gline .sq { width: 26px; height: 26px; border-radius: 7px; background: #262b38; flex: none; }
+  .ghostcap { font-size: 10px; color: var(--faint); margin: 7px 2px 0; }
+
+  /* form atoms */
+  .seclab { font-size: 10.5px; color: var(--faint); font-weight: 600; margin: 16px 4px 7px; }
+  .card { background: var(--card); border-radius: 16px; padding: 12px 14px; }
+  .steps li { list-style: none; display: flex; gap: 10px; font-size: 13px; color: #dfe4ee; margin: 8px 0; line-height: 1.45; }
+  .steps li i { font-style: normal; color: var(--tint); font-weight: 800; flex: none; width: 13px; }
+  .field { display: flex; align-items: center; gap: 8px; background: rgba(255,255,255,.07); border-radius: 13px; padding: 11px 13px; }
+  .field span { color: var(--faint); font-size: 13px; }
+  .field .go { margin-left: auto; font-weight: 800; font-size: 11px; color: #fff; background: var(--tint); border-radius: 999px; padding: 5px 12px; }
+  .field .go.off { background: #2a3040; color: var(--faint); }
+  .foot { font-size: 11.5px; color: var(--faint); line-height: 1.5; margin: 8px 5px 0; }
+
+  /* slab kit */
+  .slab { height: 54px; border-radius: 16px; background: var(--card); display: flex; align-items: center; gap: 10px; padding: 0 15px; margin-bottom: 9px; }
+  .slab .k { font-size: 13.5px; color: var(--ink); font-weight: 600; }
+  .slab .k.ph { color: var(--faint); font-weight: 500; }
+  .slab .v { margin-left: auto; font-size: 11.5px; font-weight: 800; letter-spacing: .02em; color: var(--tint); }
+  .slab.filled { background: var(--tint); justify-content: center; }
+  .slab.filled .k { color: #fff; font-weight: 750; font-size: 14.5px; }
+  .slab.door .v { color: var(--faint); font-weight: 600; letter-spacing: 0; font-size: 12.5px; }
+  .note { font-size: 11.5px; color: var(--faint); margin: 4px 5px 0; line-height: 1.5; }
+
+  /* sheet */
+  .scrim { position: absolute; inset: 0; background: rgba(0,0,0,.55); border-radius: 36px; }
+  .sheet { position: absolute; left: 0; right: 0; bottom: 0; background: #14161c; border-radius: 26px 26px 36px 36px;
+           padding: 12px 16px 24px; box-shadow: 0 -20px 50px rgba(0,0,0,.6); }
+  .grab { width: 38px; height: 4.5px; border-radius: 3px; background: #3a4152; margin: 0 auto 12px; }
+  .sheethead { display: flex; align-items: center; gap: 11px; margin-bottom: 4px; }
+  .sheethead b { font-size: 16px; font-weight: 750; }
+  .sheethead span { display: block; font-size: 11.5px; color: var(--faint); margin-top: 1px; }
+
+  /* connected */
+  .proof { display: inline-flex; align-items: center; gap: 6px; margin: 10px 0 2px;
+           font-family: var(--money); font-size: 11.5px; font-weight: 700; color: var(--confirm);
+           background: rgba(50,215,75,.12); border-radius: 999px; padding: 5px 11px; }
+
+  /* annotations */
+  .flags { list-style: none; margin: 16px 0 0; padding: 0; }
+  .flags li { font-size: 12.5px; color: var(--muted); line-height: 1.5; margin: 8px 0; padding-left: 22px; position: relative; }
+  .flags li::before { content: "●"; position: absolute; left: 4px; color: var(--down); font-size: 9px; top: 4px; }
+  .flags li b { color: var(--ink); font-weight: 650; }
+
+  .verdict { margin-top: 44px; padding: 22px 24px; border-radius: 20px; background: rgba(22,115,230,.10); max-width: 900px; }
+  .verdict h3 { font-size: 17px; font-weight: 800; margin-bottom: 10px; }
+  .verdict p { font-size: 14px; line-height: 1.6; color: #cbd2e2; margin-bottom: 9px; }
+  .verdict p b { color: #fff; font-weight: 700; }
+  .rule { height: 1px; background: rgba(255,255,255,.07); margin: 46px 0 0; border: 0; }
+</style>
+
+<div class="wrap">
+<header class="top">
+  <div class="eyebrow">Connect pages · Notion as the running example (11 keyed bridges share one screen)</div>
+  <h1>Two pages, one job — and the form that every design pass flowed around</h1>
+  <p><b>48 of 56 offers need setup.</b> For every one of them, Connect on the product page doesn't connect — it pushes a second page, where the same icon, the same tagline and the same preview greet you again above a field.</p>
+  <p><b>The form-y look has a date.</b> §186 (2026-07-23) deliberately froze the pre-connect form — "it's important to know what the steps are" — and every pass since (§189 slabs, §190's one-sentence rule, §202's roster) flowed around it. Result: ~20 screens still wear Settings furniture — gray section labels above every control, gray paragraphs below, numbered steps set in 17pt body. <b>TokenSetupScreen alone carries 5 section headers and 5 footers.</b></p>
+</header>
+
+<h2 class="sec">Today <span>— Notion, not yet connected</span></h2>
+<p class="lede">Both screens are real, drawn from <code>AppDetailScreen</code> and <code>TokenSetupScreen</code>.</p>
+
+<div class="row">
+  <div class="option">
+    <div class="phone"><div class="statebadge">1 · Product page</div>
+      <div class="screen notion">
+        <div class="nav"><span class="back">‹ Apps</span><span class="title">Notion</span><span style="width:34px"></span></div>
+        <div class="prodhead">
+          <div class="mark">N</div>
+          <div class="t">
+            <div class="grp">Work</div>
+            <div class="nm">Notion</div>
+            <div class="tag">Your pages, in your feed</div>
+            <div class="cta">Connect</div>
+          </div>
+        </div>
+        <div class="lab">What it does</div>
+        <div class="body">Pages and databases you've shared with the integration land in your feed as things, searchable with everything else.</div>
+        <div class="body">Connects with an internal integration secret, stored in this iPhone's Keychain.</div>
+        <div class="body">Read-only — Casberi never writes back to Notion.</div>
+        <div class="lab">What lands in your feed</div>
+        <div class="ghost">
+          <div class="gline"><div class="sq"></div><div><b>Q3 planning</b><p>Notion · 2h ago</p></div></div>
+          <div class="gline"><div class="sq"></div><div><b>Reading list</b><p>Notion · yesterday</p></div></div>
+        </div>
+        <div class="ghostcap">A preview — your real things replace it when you connect.</div>
+      </div>
+    </div>
+    <div class="caption"><h3>Reading, with a button that navigates</h3>
+      <p>Everything here is worth reading. The problem is that the only thing you can <i>do</i> is go somewhere else.</p></div>
+  </div>
+
+  <div class="option">
+    <div class="phone"><div class="statebadge bad">2 · Setup page — the form</div>
+      <div class="screen dim">
+        <div class="nav"><span class="back">‹ Notion</span><span class="title"></span><span style="width:34px"></span></div>
+        <div class="navTitle">Notion</div>
+        <div class="prodhead" style="align-items:center;margin-bottom:6px">
+          <div class="mark sm">N</div>
+          <div class="t"><div class="body" style="font-size:13.5px">Your pages, in your feed</div></div>
+        </div>
+        <div class="seclab">Get your token</div>
+        <div class="card"><ul class="steps">
+          <li><i>1</i>Open notion.so/my-integrations and create an internal integration.</li>
+          <li><i>2</i>Copy its Internal Integration Secret and paste it below.</li>
+          <li><i>3</i>In Notion, open each page you want here → ⋯ → Connections → add your integration. Only connected pages land.</li>
+        </ul></div>
+        <div class="seclab">Token</div>
+        <div class="card"><div class="field"><span>ntn_…</span><span class="go off">Connect</span></div></div>
+        <div class="foot">The token stays in this iPhone's Keychain and goes only to Notion itself. Read-only.</div>
+        <div class="seclab">What lands — a preview</div>
+        <div class="ghost" style="margin-top:0">
+          <div class="gline"><div class="sq"></div><div><b>Q3 planning</b><p>Notion · 2h ago</p></div></div>
+        </div>
+        <div class="ghostcap">Your real things replace this when you connect.</div>
+      </div>
+    </div>
+    <div class="caption"><h3>Label · control · helper text — twice</h3>
+      <ul class="flags">
+        <li><b>The tagline, the preview and the mark all repeat</b> from the page you just left.</li>
+        <li><b>Step 1 says "Open notion.so/my-integrations" and isn't tappable.</b> Every one of the 11 keyed bridges begins with a URL it won't open for you.</li>
+        <li><b>Two gray labels and a gray paragraph</b> around one field — §190 killed exactly this everywhere it was allowed to reach.</li>
+        <li><b>The field is at the bottom.</b> The one thing you came to do is the last thing on screen.</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<hr class="rule">
+
+<h2 class="sec">A · Connect comes to you <span>— the form rises as a sheet, the page never leaves</span></h2>
+<p class="lede">Connect stops pushing. It raises the setup screen's <b>own form, verbatim</b>, as a sheet over the product page — the reading you were doing stays behind it, and finishing drops you back onto the same page, now connected. <b>The app already does this</b>: <code>BridgeConnectionSheet</code> renders <code>connectForm</code> in a sheet for editing a live connection (§186). This just uses it for the first connect too — one form, one presentation, before and after.</p>
+
+<div class="row">
+  <div class="option">
+    <div class="phone"><div class="statebadge">Tap Connect</div>
+      <div class="screen notion">
+        <div class="nav"><span class="back">‹ Apps</span><span class="title">Notion</span><span style="width:34px"></span></div>
+        <div class="prodhead">
+          <div class="mark">N</div>
+          <div class="t">
+            <div class="grp">Work</div>
+            <div class="nm">Notion</div>
+            <div class="tag">Your pages, in your feed</div>
+            <div class="cta ghosted">Connect</div>
+          </div>
+        </div>
+        <div class="lab">What it does</div>
+        <div class="body">Pages and databases you've shared with the integration land in your feed as things.</div>
+        <div class="scrim"></div>
+        <div class="sheet">
+          <div class="grab"></div>
+          <div class="sheethead"><div class="mark sm" style="width:38px;height:38px;border-radius:11px;font-size:18px">N</div>
+            <div><b>Connect Notion</b><span>Read-only · stays in your Keychain</span></div></div>
+          <div class="slab filled" style="margin-top:14px"><span class="k">Open notion.so/my-integrations ↗</span></div>
+          <ul class="steps" style="margin:2px 2px 12px">
+            <li><i>2</i>Copy its Internal Integration Secret.</li>
+            <li><i>3</i>In Notion: each page → ⋯ → Connections → add it. Only connected pages land.</li>
+          </ul>
+          <div class="slab"><span class="k ph">ntn_…</span><span class="v">CONNECT</span></div>
+          <div class="note">Goes only to Notion. Read-only.</div>
+        </div>
+      </div>
+    </div>
+    <div class="caption"><h3>One tap from wanting it to doing it</h3>
+      <p>No second page, no back-stack. The steps stay fully visible — nothing is collapsed behind a disclosure, which §186 already declined once.</p></div>
+  </div>
+
+  <div class="option">
+    <div class="phone"><div class="statebadge after">Connected — same page, in place</div>
+      <div class="screen notion">
+        <div class="nav"><span class="back">‹ Apps</span><span class="title">Notion</span><span style="width:34px"></span></div>
+        <div class="prodhead">
+          <div class="mark">N</div>
+          <div class="t">
+            <div class="grp">Work</div>
+            <div class="nm">Notion</div>
+            <div class="tag">Your pages, in your feed</div>
+            <div class="proof">✓ 34 pages in</div>
+          </div>
+        </div>
+        <div class="lab">What it does</div>
+        <div class="body">Pages and databases you've shared with the integration land in your feed as things.</div>
+        <ul class="checks">
+          <li>Reads the pages you've shared.</li>
+          <li>Never writes back to Notion.</li>
+        </ul>
+        <div class="lab" style="margin-top:20px">Manage</div>
+        <div class="slab door"><span class="k">Connection</span><span class="v">Your integration secret ›</span></div>
+        <div class="slab door"><span class="k">See in Feed</span><span class="v">34 things ›</span></div>
+      </div>
+    </div>
+    <div class="caption"><h3>The promise redeemed where it was made</h3>
+      <p>The preview retires (it already does, §191), the proof pill takes its place, and the Connection door holds the same form for later. <b>One destination per app, forever.</b></p>
+      <span class="risk"><b>Cost:</b> small. <code>AppDetailScreen</code>'s <code>needsSetup</code> branch flips from <code>pushBridge</code> to a sheet; the connected state is <code>BridgeConnectedState</code>, already built.</span></div>
+  </div>
+</div>
+
+<hr class="rule">
+
+<h2 class="sec">B · One page, three states <span>— the product page and the setup page were always the same page</span></h2>
+<p class="lede">Delete the split outright. The connect control sits in the header's action slot and expands in place; the reading falls below it, where it can be read while you decide. Connected, the same scroll becomes the manager.</p>
+
+<div class="row">
+  <div class="option">
+    <div class="phone"><div class="statebadge">One page, unconnected</div>
+      <div class="screen notion">
+        <div class="nav"><span class="back">‹ Apps</span><span class="title">Notion</span><span style="width:34px"></span></div>
+        <div class="prodhead">
+          <div class="mark">N</div>
+          <div class="t">
+            <div class="grp">Work</div>
+            <div class="nm">Notion</div>
+            <div class="tag">Your pages, in your feed</div>
+          </div>
+        </div>
+        <div class="slab filled"><span class="k">Open notion.so/my-integrations ↗</span></div>
+        <div class="slab"><span class="k ph">Paste your integration secret</span><span class="v">CONNECT</span></div>
+        <div class="note">Copy the Internal Integration Secret, then add the integration to each page you want (⋯ → Connections). Read-only, stays in your Keychain.</div>
+        <div class="lab">What it does</div>
+        <div class="body">Pages and databases you've shared land in your feed as things, searchable with everything else.</div>
+        <div class="lab">What lands in your feed</div>
+        <div class="ghost">
+          <div class="gline"><div class="sq"></div><div><b>Q3 planning</b><p>Notion · 2h ago</p></div></div>
+          <div class="gline"><div class="sq"></div><div><b>Reading list</b><p>Notion · yesterday</p></div></div>
+        </div>
+      </div>
+    </div>
+    <div class="caption"><h3>Nothing to navigate to at all</h3>
+      <p>The purest answer to "why is there a second page" — there isn't one. For the 20 keyless offers (Bluesky, RSS, Tokens, Wallet) this is plainly right: the field is one line and the page is short.</p>
+      <span class="risk"><b>The trade:</b> a browsing person now scrolls past a form to read. For the 11 keyed bridges the steps sit above the pitch, so the page opens on homework instead of on the promise. <b>Cost:</b> larger — ~20 bespoke <code>connectForm</code> bodies have to render inside <code>AppDetailScreen</code>.</span></div>
+  </div>
+
+  <div class="option">
+    <div class="phone"><div class="statebadge">Keyless — where B is unarguable</div>
+      <div class="screen dim" style="background:linear-gradient(180deg,rgba(22,115,230,.20) 0%,transparent 60%) top/100% 420px no-repeat,#000">
+        <div class="nav"><span class="back">‹ Apps</span><span class="title">Bluesky</span><span style="width:34px"></span></div>
+        <div class="prodhead">
+          <div class="mark" style="background:linear-gradient(160deg,#5fa8ff,#1673e6);color:#fff">B</div>
+          <div class="t">
+            <div class="grp">Social</div>
+            <div class="nm">Bluesky</div>
+            <div class="tag">Posts you follow, in your feed</div>
+          </div>
+        </div>
+        <div class="slab"><span class="k ph">Handle, or search a feed</span><span class="v">ADD</span></div>
+        <div class="note">Public posts only — no password, ever.</div>
+        <div class="lab">What it does</div>
+        <div class="body">Follow anyone by their public handle. Their posts, replies and quotes land in your feed on the open protocol — no sign-in.</div>
+        <div class="lab">What lands in your feed</div>
+        <div class="ghost">
+          <div class="gline"><div class="sq" style="border-radius:50%"></div><div><b>@pfrazee</b><p>Bluesky · 20m ago</p></div></div>
+        </div>
+      </div>
+    </div>
+    <div class="caption"><h3>A one-line field never needed its own page</h3>
+      <p>Half the catalog connects by typing a name. Sending those to a second screen to type it is the clearest waste in the flow — B and A agree here; only the keyed bridges are contested.</p></div>
+  </div>
+</div>
+
+<hr class="rule">
+
+<h2 class="sec">C · The form stops looking like a form <span>— composes with either A or B</span></h2>
+<p class="lede">This is the look fix, and it's independent of the page count. §190 set the rule and never reached these screens: <b>one shape per control, one gray sentence per page.</b></p>
+
+<div class="row">
+  <div class="option">
+    <div class="phone"><div class="statebadge">Before · 5 headers, 5 footers</div>
+      <div class="screen dim">
+        <div class="seclab" style="margin-top:4px">Get your token</div>
+        <div class="card"><ul class="steps">
+          <li><i>1</i>Open notion.so/my-integrations and create an internal integration.</li>
+          <li><i>2</i>Copy its Internal Integration Secret and paste it below.</li>
+          <li><i>3</i>In Notion, open each page you want here → ⋯ → Connections → add your integration. Only connected pages land.</li>
+        </ul></div>
+        <div class="seclab">Token</div>
+        <div class="card"><div class="field"><span>ntn_…</span><span class="go off">Connect</span></div></div>
+        <div class="foot">The token stays in this iPhone's Keychain and goes only to Notion itself. Read-only.</div>
+        <div class="seclab">What lands — a preview</div>
+        <div class="ghost" style="margin-top:0"><div class="gline"><div class="sq"></div><div><b>Q3 planning</b><p>Notion · 2h ago</p></div></div></div>
+        <div class="ghostcap">Your real things replace this when you connect.</div>
+      </div>
+    </div>
+    <div class="caption"><h3>Four furniture pieces, one field</h3></div>
+  </div>
+
+  <div class="option">
+    <div class="phone"><div class="statebadge after">After · the same content, no furniture</div>
+      <div class="screen dim">
+        <div class="slab filled" style="margin-top:6px"><span class="k">Open notion.so/my-integrations ↗</span></div>
+        <ul class="steps" style="margin:4px 3px 14px">
+          <li><i>2</i>Copy its Internal Integration Secret.</li>
+          <li><i>3</i>In Notion: each page → ⋯ → Connections → add it. Only connected pages land.</li>
+        </ul>
+        <div class="slab"><span class="k ph">ntn_…</span><span class="v">CONNECT</span></div>
+        <div class="note">Goes only to Notion, and only to read.</div>
+      </div>
+    </div>
+    <div class="caption"><h3>What changed, precisely</h3>
+      <ul class="flags" style="margin-top:10px">
+        <li style="padding-left:0"><b>Step 1 becomes the button it was describing.</b> Every keyed bridge's step 1 is literally "Open &lt;url&gt;" — as text it's a chore you retype; as a filled slab it's the action. Steps go 3 → 2 without deleting a word of instruction.</li>
+        <li style="padding-left:0"><b>"Get your token" / "Token" labels go.</b> The placeholder says what to type, the verb says what happens — §190's exact ruling.</li>
+        <li style="padding-left:0"><b>Five footers become one sentence.</b> The long version already lives on the product page you arrived from.</li>
+        <li style="padding-left:0"><b>The repeated mark, tagline and preview drop.</b> You read them on the way in.</li>
+      </ul>
+      <span class="risk"><b>§186 is respected:</b> the steps are still there, still visible, still numbered, nothing behind a disclosure. Only the furniture around them left.</span></div>
+  </div>
+</div>
+
+<div class="verdict">
+  <h3>Recommendation — A + C</h3>
+  <p><b>A</b> removes the read-before-you-act gate with the least invention: the sheet component already exists and already carries this exact form, so the "form" the user liked survives untouched — it just arrives when you ask for it instead of standing between you and the app.</p>
+  <p><b>C</b> is what actually fixes "form-y", and it's the bigger win of the two. Step 1 becoming a real button is worth doing on its own merits: right now ~20 screens tell you to open a URL and then refuse to open it.</p>
+  <p><b>B</b> is the purist answer and it's right for the keyless half of the catalog — but on a keyed bridge it opens the page on homework, and it re-litigates §186. If you want B, the honest version is <b>B for keyless, A for keyed</b>: the page grows a field when the field is one line, and raises a sheet when there are steps.</p>
+</div>
+</div>

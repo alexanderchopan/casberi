@@ -23,13 +23,13 @@ struct KindleImportScreen: View {
                 "Pick that file below.",
             ])
             Section {
-                ImportPickRow(label: "Choose My Clippings.txt") { importing = true }
-                BridgeSyncStatusRows(result: result, resultIsError: resultIsError)
-            } footer: {
-                Text("One-time import — highlights become findable notes, grouped by book. Re-importing adds only what's new. (Amazon offers no live read.)")
-                    .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                VStack(alignment: .leading, spacing: DS.Space.s2) {
+                    ImportPickRow(label: "Choose My Clippings.txt") { importing = true }
+                    BridgeSyncStatusRows(result: result, resultIsError: resultIsError)
+                    DSSlabNote(text: "One-time import — highlights become findable notes, grouped by book. Re-importing adds only what's new. (Amazon offers no live read.)")
+                }
             }
-            .listRowSeparator(.hidden)
+            .dsSlabSection()
             if !recent.isEmpty {
                 RecentThingsSection(header: "Imported", things: Array(recent))
                     .listRowSeparator(.hidden)
