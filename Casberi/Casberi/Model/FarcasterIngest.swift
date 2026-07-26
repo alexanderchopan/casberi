@@ -354,6 +354,7 @@ enum FarcasterIngest {
         }
         running = true
         healed = false
+        resurfaced = 0
         defer { running = false }
 
         var existing = IngestSupport.existingSourceRefs(context, source: "Farcaster")
@@ -430,8 +431,27 @@ enum FarcasterIngest {
 
     // MARK: - Likes, mentions, channels (2026-07-14)
 
+    /// How recent a like has to be to count as NEWS — the window inside which a
+    /// like may resurface a cast the corpus already holds. Mirrors the
+    /// alerts-are-news doctrine the Privacy Pools sweep follows: the first pass
+    /// over a curator's page walks their whole recent back catalogue, and a
+    /// month of old likes must not arrive as a month of new arrivals.
+    private static let likeNewsWindow: TimeInterval = 86_400
+
     /// The account's likes — each liked cast lands as a thing, stamped with
     /// the LIKE's time (when it entered your attention), not the cast's.
+    ///
+    /// A cast the corpus ALREADY holds is the case that used to fall through
+    /// (fixed 2026-07-26). The target dedupe below skipped it BEFORE the fetch,
+    /// so a watched account liking a post you already have changed nothing at
+    /// all: nothing landed, `land`'s heal never got its dedupe hit, and the post
+    /// kept its original date — which in a strictly newest-first feed
+    /// (`FeedScreen`'s `@Query` sorts on `capturedAt` alone) means it stayed
+    /// exactly as buried as it was. Your OWN cast is the sharpest version, since
+    /// watching yourself is what puts it in the corpus in the first place:
+    /// "vitalik liked my post and it isn't showing" was this, precisely.
+    ///
+    /// Such a target now RESURFACES — see `resurface`.
     @MainActor
     private static func landLikes(fid: Int, existing: inout Set<String>,
                                   landed: [String: Thing],
@@ -446,10 +466,16 @@ enum FarcasterIngest {
                   let body = data["reactionBody"] as? [String: Any],
                   let target = body["targetCastId"] as? [String: Any],
                   let targetFid = target["fid"] as? Int,
-                  let targetHash = target["hash"] as? String,
-                  !existing.contains("fc:\(targetHash)") else { continue }
-            targets.append((targetFid, targetHash,
-                            (data["timestamp"] as? Double).map { epoch.addingTimeInterval($0) }))
+                  let targetHash = target["hash"] as? String else { continue }
+            let liked = (data["timestamp"] as? Double).map { epoch.addingTimeInterval($0) }
+            // Already held: resurface it in place. Deliberately BEFORE the
+            // `targets` append, so the steady state still costs zero castById
+            // lookups — the property the ref dedupe was there to buy.
+            guard !existing.contains("fc:\(targetHash)") else {
+                resurface(landed["fc:\(targetHash)"], liked: liked)
+                continue
+            }
+            targets.append((targetFid, targetHash, liked))
         }
         guard !targets.isEmpty else { return 0 }
         // The liked casts' bodies, a few at a time — the ref dedupe above
@@ -473,6 +499,48 @@ enum FarcasterIngest {
         }
         return added
     }
+
+    /// Restamps a cast the corpus already holds with the moment a watched
+    /// account liked it, so a newest-first feed shows it again. No fetch: the
+    /// `Thing` is already in hand, which is what keeps the resurface free.
+    ///
+    /// The date it writes is the same one a freshly liked cast lands under —
+    /// the LIKE's time, not the cast's — so both halves of the flow answer
+    /// "when did this enter your attention?" the same way.
+    ///
+    /// Three guards, each load-bearing:
+    /// - **forward only** (`liked > capturedAt`) — a like can't predate the cast
+    ///   it likes, so this can only ever move a thing later, never rewrite the
+    ///   date of something that arrived after.
+    /// - **news only** (inside `likeNewsWindow`) — an old like heals nothing and
+    ///   stays silent, so enabling Likes on an account with a long history
+    ///   doesn't throw their back catalogue at the top of the feed.
+    /// - **live only** (`isLive`) — `landed` was captured at the start of the
+    ///   refresh and every bridge's foreground heal deletes upstream-gone rows,
+    ///   so a tombstoned model can reach here; reading `capturedAt` off one
+    ///   traps inside SwiftData.
+    ///
+    /// No cursor is needed to make this once-only: it CONVERGES. Once
+    /// `capturedAt` is the like's time the forward-only guard stops firing, so
+    /// re-reading the same like on the next refresh writes nothing.
+    @MainActor
+    private static func resurface(_ thing: Thing?, liked: Date?) {
+        guard let thing, thing.isLive, let liked,
+              liked > thing.capturedAt,
+              Date.now.timeIntervalSince(liked) < likeNewsWindow else { return }
+        thing.capturedAt = liked
+        // Joins the refresh's save condition — a pass that only resurfaced
+        // landed nothing new, and must still persist what it moved.
+        healed = true
+        resurfaced += 1
+    }
+
+    /// How many held casts the last refresh moved back into view. A resurface
+    /// lands no thing, so `refresh`'s count reports 0 for a pass that did the
+    /// whole job — without this a probe can't tell that from a pass that did
+    /// nothing. Reset per refresh, like `healed`, under the same single-flight
+    /// `running` guard.
+    @MainActor private(set) static var resurfaced = 0
 
     /// Casts by OTHERS that name this account — replies included, since a
     /// mention usually is one. New ones ride "while I was away" like any

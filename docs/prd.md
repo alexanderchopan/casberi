@@ -8880,3 +8880,76 @@ gates (`catalog-sync.sh`, the SwiftData liveness audit) pass, but `verify.sh`
 has not run. Build and open both venues before trusting the layout: the
 unnumbered line's left alignment against the slabs above and below it is the
 one thing a diff can't show.
+
+## 221. A like of a post you already have (user: "vitalik liked one of my posts on farcaster but it isn't showing", then "i'm following vitalik and i don't see the post (mine) that he liked. i'd like that to be fixed. the marker is fine too but separate", 2026-07-26)
+
+**The bug.** `FarcasterIngest.landLikes` walks a watched account's outbound
+likes (`reactionsByFid`) and lands each liked cast, stamped with the LIKE's
+time rather than the cast's — "when it entered your attention" (§74). But it
+skipped any target already in the corpus, and it skipped it BEFORE the fetch:
+
+```swift
+guard …, !existing.contains("fc:\(targetHash)") else { continue }
+```
+
+So a watched account liking a post you already hold did nothing at all.
+Nothing landed; `land`'s heal never even got its dedupe hit, because the
+target never reached `land`. The post kept its original `capturedAt`, and the
+feed's `@Query` sorts on `capturedAt` alone — so it stayed exactly as buried
+as it was.
+
+**Your own cast is the sharpest version of this**, and it's the reported case.
+Watching yourself is what puts your own post in the corpus in the first place,
+which is precisely what made it ineligible to ever come back. Following
+vitalik with Likes on was doing its job; the one post the person most wanted
+to see was the one shape the flow structurally could not surface.
+
+**The ruling.** A held cast RESURFACES: the like's time is restamped onto the
+`Thing` it already has. Same date a freshly liked cast lands under, so both
+halves of the flow answer "when did this enter your attention?" identically.
+No fetch — the `Thing` is in hand, which is what keeps the resurface free and
+preserves the zero-castById steady state the ref dedupe was there to buy.
+
+Three guards, each load-bearing: **forward only** (a like can't predate its
+cast, so this only ever moves a thing later); **news only** (a like older than
+`likeNewsWindow`, 24h, heals nothing and stays silent — the Privacy Pools
+alerts-are-news doctrine, so switching Likes on for an account with a long
+history doesn't throw their back catalogue at the top of the feed); **live
+only** (`landed` is snapshotted at refresh start and every bridge's foreground
+heal deletes upstream-gone rows, so a tombstoned model can reach here).
+
+No cursor is needed to make it once-only — it CONVERGES. Once `capturedAt` is
+the like's time, the forward-only guard stops firing.
+
+**Deliberately NOT in scope (user: "the marker is fine too but separate").**
+A resurfaced post's `socialContext` is left alone. Setting it would paint
+"Liked" / "you liked this" (§74's copy, written for likes you GAVE) onto a
+post that someone ELSE liked — false on your own cast, which is the main case
+here. Naming the liker is its own ruling and its own read; this one only makes
+the post visible. The pre-existing falsity in the not-yet-held branch (`land`
+sets `why: "liked"` regardless of whose like fetched it) is untouched and
+still open.
+
+**Also still open, unbuilt:** Casberi reads likes you GIVE, never likes you
+GET. `reactionsByCast` names every liker's fid but is only ever called by
+`engagement`, live on sheet-open, collapsed to `messages.count` with the fids
+discarded. So a like from someone you DON'T watch remains invisible, and
+`FarcasterStore.Account` still has no concept of which account is yours.
+
+**Tradeoff to rule on:** the restamp moves your own post's displayed date to
+the like's time, so a post from three weeks ago reads as "now" once it
+resurfaces. That is the app's `capturedAt` semantic applied honestly, but it
+is a visible shift for a cast that previously showed its true post date. The
+alternative — a separate resurface date the feed sorts on — is a much wider
+change (`FeedScreen`'s sort, day grouping, every derived array).
+
+Probe: `-fcLikes <username>` now reports `N new things, M resurfaced` — a
+resurface lands nothing, so "0 new things" is what a fully working pass says.
+
+Applied to: `Model/FarcasterIngest.swift`, `Shell/ProbeHooks.swift`.
+
+NOT BUILT, NOT SEEN — authored in a Linux session with no Xcode. The static
+gates (`catalog-sync.sh`, the SwiftData liveness audit) pass, but `verify.sh`
+has not run and the Snapchain node is unreachable from this host (port 3381
+blocked by egress), so the reaction envelope's `data.timestamp` parse is
+carried over from the existing code rather than re-measured.

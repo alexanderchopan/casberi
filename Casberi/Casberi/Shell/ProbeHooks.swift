@@ -170,8 +170,12 @@ enum ProbeHooks {
             FarcasterStore.shared.setLikes(true, for: n)
             Task { @MainActor in
                 let added = await FarcasterIngest.refresh(context: context)
-                NSLog("Farcaster likes probe: %@ new things",
-                      added.map(String.init) ?? "FAILED")
+                // Resurfaced is reported beside landed on purpose: a like of a
+                // cast the corpus already holds lands NOTHING, so "0 new things"
+                // is what a working pass says when the whole job was moving a
+                // held post back into view.
+                NSLog("Farcaster likes probe: %@ new things, %d resurfaced",
+                      added.map(String.init) ?? "FAILED", FarcasterIngest.resurfaced)
             }
         },
         // `-fcMentions <username>` watches MENTIONS of an account and syncs.
