@@ -280,6 +280,30 @@ struct FeedScreen: View {
         coarsenIfSparse(dayGroups(visible))
     }
 
+    /// Day grain for the last week, coarsened grain behind it (prd §218).
+    ///
+    /// `coarsenIfSparse` judges a feed as a WHOLE and is all-or-nothing, which
+    /// is right for one source's room. The All feed is different: it spans the
+    /// entire corpus, so its head is dense (dozens a day) while its tail is
+    /// always thin — and the whole-feed average, dragged up by the head, meant
+    /// All was the ONE chronological feed that never coarsened at all. Scroll
+    /// back far enough and it became the ladder of one-row day cards the
+    /// 2026-07-21 ruling killed for every other source.
+    ///
+    /// So the split is by recency, not by average: the last 7 days always keep
+    /// their own day cards (that's the part you're actually reading), and
+    /// everything older goes through the existing sparseness gate — which
+    /// leaves a genuinely dense older stretch day-grained, exactly as before.
+    private func recentDaysThenCoarseTail(_ visible: [Thing]) -> [(String, [Thing])] {
+        let cal = Self.groupingCalendar
+        guard let cutoff = cal.date(byAdding: .day, value: -7,
+                                    to: cal.startOfDay(for: .now))
+        else { return dayGroups(visible) }
+        let recent = visible.filter { $0.capturedAt >= cutoff }
+        let older = visible.filter { $0.capturedAt < cutoff }
+        return dayGroups(recent) + coarsenIfSparse(dayGroups(older))
+    }
+
     /// The sparseness gate + regroup, shared by the plain day path and the
     /// agent path (which builds its own day groups first). Judged on the
     /// SHOWN things (dayGroups already dropped future-dated rows), so the
@@ -434,6 +458,31 @@ struct FeedScreen: View {
     /// Machine bulk bundles; human captures never do. A screenshot, a voice
     /// note, or anything typed/pasted is one deliberate act each — an RSS
     /// sync or a wallet backfill is one act producing many rows.
+    /// A screenshot Vision read and found NO words in — `ocrAt` set (the read
+    /// happened) with nothing to show for it. Distinct from "not read yet",
+    /// which still wears the placeholder and is about to be retitled.
+    private func isWordless(_ t: Thing) -> Bool {
+        t.kind == .screenshot && t.ocrAt != nil && t.content.isEmpty
+    }
+
+    /// Which rows render as a picture with no title (prd §218) — the wordless
+    /// screenshots of each day, but ONLY while they're a MINORITY of that day.
+    ///
+    /// The gate is the whole design. One wordless shot among five rows is a
+    /// picture worth looking at; a day that's mostly wordless shots would
+    /// become a column of 58pt tiles — which is the Photos grid, a shape that
+    /// already exists behind its own chip. Past half a day, they fall back to
+    /// the ordinary band and keep the honest "Screenshot" label.
+    private func imageOnlyIDs(_ days: [(String, [Thing])]) -> Set<UUID> {
+        var ids: Set<UUID> = []
+        for (_, dayThings) in days {
+            let wordless = dayThings.filter(isWordless)
+            guard wordless.count * 2 < dayThings.count else { continue }
+            ids.formUnion(wordless.map(\.id))
+        }
+        return ids
+    }
+
     private func bundleable(_ t: Thing) -> Bool {
         t.kind != .screenshot && t.kind != .voice && t.kind != .approval
             && t.source != "You" && t.source != "Voice"
@@ -989,6 +1038,7 @@ struct FeedScreen: View {
                 // divider live here. A single source's shape IS that source;
                 // bundling there would collapse the whole screen into one row.
                 bundledSections(visible, nextEventID: nextEventID)
+                corpusFloorSection(visible)
             } else {
                 // Live-first in a source's own room (2026-07-21): a stream
                 // that's on RIGHT NOW is the one row whose relevance isn't
@@ -1118,9 +1168,10 @@ struct FeedScreen: View {
         // (as `newBoundaryID` and `dayGroups.first(where:)` were) they rebuilt
         // the whole chain per row/section — the Feed freeze (perf pass
         // 2026-07-13).
-        let days = dayGroups(visible)
+        let days = recentDaysThenCoarseTail(visible)
         let groups = bundle(days)
         let boundary = boundaryID(in: groups)
+        let imageOnly = imageOnlyIDs(days)
         let dayTotals = Dictionary(days.map { ($0.0, $0.1.count) },
                                    uniquingKeysWith: { first, _ in first })
         return ForEach(groups, id: \.0) { label, rows in
@@ -1139,24 +1190,59 @@ struct FeedScreen: View {
                     switch row.kind {
                     case .single(let thing):
                         shapedListRow(thing, index: i, nextEventID: nextEventID,
-                                      position: positions[i])
+                                      position: positions[i],
+                                      imageOnly: imageOnly.contains(thing.id))
                     case .bundle(let source, let word, let count, let newest, let art):
                         bundleListRow(source: source, word: word, count: count,
                                       newest: newest, art: art, index: i, position: positions[i])
                     }
                 }
             } header: {
+                // No count (prd §218, 2026-07-25). §213 retired volume as news
+                // in the brief ("people do not care how many things landed"),
+                // and the widget's own tally went the same day; this header was
+                // the last surface still counting. "Monday, Jun 15 · 1" was the
+                // clearest case against it — a number that can only ever say
+                // "one", under a header already carrying the date.
                 HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
                     Text(label).dsText(.heading22).foregroundStyle(DS.textPrimary)
-                    // The count stays the day's true total — a bundle
-                    // compresses rows, never the record.
-                    Text("\(dayTotals[label] ?? rows.count)")
-                        .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-                        .contentTransition(.numericText())
                 }
                 .textCase(nil)
                 .padding(.leading, DS.Space.s4)
                 .padding(.vertical, DS.Space.s1)
+            }
+        }
+    }
+
+    /// The floor (prd §218, 2026-07-25) — one quiet line at the very bottom of
+    /// the All feed naming when the corpus starts.
+    ///
+    /// Delight that is a FACT, not a compliment: it's the real date of the
+    /// oldest thing kept, it can't fire wrongly, and it can't fire twice. It
+    /// also does a structural job — a scroll with no visible end teaches you
+    /// never to reach one, and the newly coarsened tail finally has a bottom
+    /// worth walking to. Deliberately NOT a count of anything (§213).
+    ///
+    /// Withheld on a corpus too young to have a history: "this is where it
+    /// starts · today" is a fact nobody needs, and a floor under three rows
+    /// reads as an empty-state apology.
+    @ViewBuilder
+    private func corpusFloorSection(_ visible: [Thing]) -> some View {
+        // `.isLive` before reading `capturedAt`: this walks a DERIVED array to
+        // its oldest member, and a reconciliation or CloudKit delete can land
+        // in the same graph update (CLAUDE.md, the dead-Thing rule).
+        let live = visible.filter(\.isLive)
+        if live.count >= 8, let oldest = live.last?.capturedAt,
+           Date.now.timeIntervalSince(oldest) > 7 * 86_400 {
+            Section {
+                Text("This is where it starts · \(oldest.formatted(.dateTime.month(.abbreviated).day()))")
+                    .dsText(.subhead13)
+                    .foregroundStyle(DS.textTertiary)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, DS.Space.s6)
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+                    .accessibilityLabel("The oldest thing you kept is from \(oldest.formatted(.dateTime.month(.wide).day().year()))")
             }
         }
     }
@@ -2106,9 +2192,11 @@ struct FeedScreen: View {
 
     /// The row inside a list section, with the standard list plumbing attached.
     private func shapedListRow(_ thing: Thing, index: Int = 0, nextEventID: UUID?,
-                               position: RunPosition = .only) -> some View {
+                               position: RunPosition = .only,
+                               imageOnly: Bool = false) -> some View {
         // AnyView: same metadata-depth insurance as GenRender (crash fix).
-        return AnyView(shapedRow(thing, nextEventID: nextEventID, index: index))
+        return AnyView(shapedRow(thing, nextEventID: nextEventID, index: index,
+                                 imageOnly: imageOnly))
             .modifier(RowEntrance(index: index, wave: shapeWave, style: entranceStyle))
             .contentShape(Rectangle())
             .matchedTransitionSource(id: thing.id, in: zoomNS)
@@ -2150,7 +2238,8 @@ struct FeedScreen: View {
     }
 
     @ViewBuilder
-    private func shapedRow(_ thing: Thing, nextEventID: UUID?, index: Int = 0) -> some View {
+    private func shapedRow(_ thing: Thing, nextEventID: UUID?, index: Int = 0,
+                           imageOnly: Bool = false) -> some View {
         // Approval is the one rhythm-breaker everywhere: the consent card.
         if thing.kind == .approval, thing.mark != .done {
             ApprovalCard(thing: thing,
@@ -2193,7 +2282,8 @@ struct FeedScreen: View {
                 } else {
                     BandRow(thing: thing,
                             emphasized: thing.id == nextEventID,
-                            live: isLive(thing))
+                            live: isLive(thing),
+                            imageOnly: imageOnly)
                 }
             }
         }

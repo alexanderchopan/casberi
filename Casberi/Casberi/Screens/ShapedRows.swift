@@ -44,6 +44,14 @@ struct BandRow: View {
     /// of your own history. Modulo'd so a long feed still finishes the sweep
     /// quickly.
     var rippleIndex: Int = 0
+    /// A screenshot Vision found NO words in (prd §218, 2026-07-25). Such a row
+    /// used to wear the dead label "Screenshot"; it now drops the title
+    /// entirely and gives the picture the room the words would have had —
+    /// because the picture IS the content, and it's the only row you have to
+    /// look at to know what it is. Opt-in from the feed, which owns the
+    /// minority gate: past half a day's rows these fall back to the ordinary
+    /// band, or the All feed would quietly become the Photos grid.
+    var imageOnly: Bool = false
     @Environment(\.colorScheme) private var scheme
 
     private var done: Bool { thing.mark == .done }
@@ -258,6 +266,17 @@ struct BandRow: View {
                         .background(Circle().fill(.black.opacity(0.55)))
                 }
             }
+            if imageOnly {
+                // No title at all — deliberately not an empty Text, so nothing
+                // reserves a line for words that don't exist. 104×58: double a
+                // thumbnail's height, enough to actually read the shot, short
+                // of the tile that would dominate the scroll.
+                PhotoWell(thing: thing)
+                    .frame(width: 104, height: 58)
+                    .clipShape(RoundedRectangle(cornerRadius: DS.Radius.control,
+                                                style: .continuous))
+                Spacer(minLength: 0)
+            } else {
             Text(titleText)
                 .dsText(.body17)
                 // The ripple (prd §171): the title dissolves into its new
@@ -276,6 +295,7 @@ struct BandRow: View {
                 // mid-word at 2 lines (user, 2026-07-13).
                 .lineLimit(thing.source == "Kalshi" ? 3 : 2)
                 .frame(maxWidth: .infinity, alignment: .leading)
+            }
             // A post with a photo shows BOTH (ruling 2026-07-10: "keep faces
             // always but show pictures too"): the avatar keeps the leading
             // slot — who — and the attached image rides here before the
@@ -1121,10 +1141,23 @@ struct PhotoWell: View {
     let thing: Thing
     var size: CGFloat?   // nil = fill available
     @State private var image: UIImage?
+    /// The shell redacts itself on background (`RootShell.redactNow`, driven by
+    /// privacy.hidePreviews) so the app-switcher snapshot doesn't leak the
+    /// corpus. SwiftUI's `.redacted(.placeholder)` blanks Text and shapes but
+    /// NOT Image — so until 2026-07-25 every screenshot thumbnail survived into
+    /// that snapshot with the setting ON. Nothing in the app read this
+    /// environment value. A screenshot is the most sensitive thing this app
+    /// holds (a bank balance, a private message), so it opts out by hand.
+    @Environment(\.redactionReasons) private var redaction
 
     var body: some View {
         Group {
-            if size != nil {
+            if !redaction.isEmpty {
+                // A plain well, the same shape and size the image would be —
+                // the layout never shifts, the picture simply isn't there.
+                RoundedRectangle(cornerRadius: DS.Radius.control, style: .continuous)
+                    .fill(DS.fillFaint)
+            } else if size != nil {
                 content
             } else {
                 // Fill mode (the Photos grid): `.frame(maxWidth: .infinity)` only
