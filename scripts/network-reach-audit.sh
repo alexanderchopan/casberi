@@ -15,10 +15,15 @@ cd "$(dirname "$0")/.."
 REGISTRY="Casberi/Casberi/Model/NetworkReach.swift"
 
 # Hosts that are legitimately NOT data-fetch reaches, so they need no registry
-# entry. Two kinds: (1) permalink/display hosts a person opens in their OWN
+# entry. Three kinds: (1) permalink/display hosts a person opens in their OWN
 # browser when they tap a thing — the browser makes that request, not us;
-# (2) demo/placeholder hosts used only in seeded sample content. Adding a host
-# here is a conscious "this is not a call this app makes for your data."
+# (2) setup doors — the key/app-password page a connect screen OPENS for you
+# (prd §218), which is the same browser-makes-it case wearing a button; the
+# service's real API host is the registry entry, and it is a DIFFERENT host
+# (api.linear.app vs linear.app, api.privacy.com vs app.privacy.com), so a
+# door here can never stand in for an undisclosed fetch; (3) demo/placeholder
+# hosts used only in seeded sample content. Adding a host here is a conscious
+# "this is not a call this app makes for your data."
 KNOWN_NON_REACH=(
   # Block explorers & app permalinks — opened in the browser on tap
   etherscan.io basescan.org arbiscan.io optimistic.etherscan.io
@@ -27,6 +32,13 @@ KNOWN_NON_REACH=(
   app.0xbow.io app.cal.com app.todoist.com kalshi.com opensea.io
   dexscreener.com twitch.tv reddit.com stocktwits.com farcaster.xyz
   privacy.com
+  # Setup doors — `setupURL`/`openURL` only, never fetched. Each is the page
+  # that mints the key you then paste, opened in your browser.
+  app.privacy.com app.raindrop.io calendly.com linear.app www.notion.so
+  venice.ai bankr.bot www.kraken.com portal.cdp.coinbase.com
+  # Mail app-password pages, and the Google Takeout page you download your
+  # own Gemini export from — all opened in the browser, none read by us.
+  appleid.apple.com myaccount.google.com takeout.google.com
   # Demo / placeholder content only
   picsum.photos www.allbirds.com www.google.com www.nasa.gov
   developer.apple.com www. example.com
