@@ -661,6 +661,14 @@ struct WalletWorthALookTray: View {
     /// it) — one sheet, one piece of chrome, the tray's own scroll position
     /// preserved underneath exactly as before.
     @State private var path: [Thing] = []
+    /// The scrolling content's REAL height, measured once it lays out — the
+    /// tray's own height is derived from this rather than guessed (see
+    /// `estimatedContentHeight` for why the guess couldn't hold). Zero until
+    /// the first layout pass, which is the only time the estimate is used.
+    @State private var contentHeight: CGFloat = 0
+    /// The tray's heading scales with Dynamic Type, so the chrome allowance
+    /// around the content has to as well.
+    @ScaledMetric(relativeTo: .title2) private var trayTitleHeight: CGFloat = 28
 
     private var liquidation: [WalletWarning] { warnings.filter { $0.kind == .liquidation } }
     private var delegations: [WalletWarning] { warnings.filter { $0.kind == .delegation } }
@@ -739,22 +747,56 @@ struct WalletWorthALookTray: View {
     /// explainer beneath, so it's taller than a bare row.
     private static let headerHeight: CGFloat = 58
 
-    /// What the content WOULD be with nothing clipped — the honest measure
-    /// the overflow gate reads, before the cap flattens it. Reads
-    /// `awareExpanded`, so the sheet visibly grows when the spam pile is
-    /// opened and settles back when it's closed, both capped at
-    /// `maxTrayHeight`.
-    private var uncappedHeight: CGFloat {
-        var h: CGFloat = 150
+    /// The FIRST-FRAME guess only, and only for the content — what the rows
+    /// are probably worth before anything has actually been laid out, so the
+    /// sheet opens near its final size instead of animating up from nothing.
+    /// `contentHeight` (measured) replaces it on the very next pass, and
+    /// that swap is the fix (2026-07-26) for the whole class of bug this
+    /// guess kept producing: it prices every actionable row at a flat
+    /// `actionRowHeight`, but a real one carries a WRAPPING title
+    /// ("vitalik.eth delegates to 0x5a7f…6f6d on Ethereum" is two lines
+    /// beside a Revoke pill, not one), and no arithmetic here can know how
+    /// many lines a string takes at the user's type size. Understating three
+    /// delegation rows is what pushed the "Just so you know" line below the
+    /// fold (user, 2026-07-26: "spam transfers is below the fold and
+    /// shouldn't be"). The per-row and per-group `VStack` spacings the
+    /// earlier version also omitted ARE counted here now, so the opening
+    /// frame is close even before the measurement lands.
+    private var estimatedContentHeight: CGFloat {
+        var h: CGFloat = 0
         if hasActionable {
-            h += 46 // the "Worth doing" group label + its explainer line
+            h += 46 + DS.Space.s4 // the "Worth doing" group label + its explainer line
             h += CGFloat(actionableRowCount) * Self.actionRowHeight
+            h += CGFloat(actionableRowCount - 1) * DS.Space.s4
         }
+        if hasActionable && !flagged.isEmpty { h += DS.Space.s6 }
         if !flagged.isEmpty {
-            h += 30 + Self.headerHeight // the "Just so you know" label + the boxed summary row
+            // The "Just so you know" label + the boxed summary row.
+            h += 30 + Self.headerHeight
             if awareExpanded { h += CGFloat(flagged.count) * Self.rowHeight + 40 }
         }
-        return h
+        return h + DS.Space.s2 // the content VStack's own bottom padding
+    }
+
+    /// Everything the sheet spends before the scrolling content gets a
+    /// point: `DSTray`'s top padding, its heading, the gap beneath it, its
+    /// bottom padding, and the home-indicator inset — which the detent
+    /// height INCLUDES but the content can never draw into, and which the
+    /// old estimate left out entirely. Over-allowing it on a device without
+    /// one costs a little dead space; under-allowing it hides a row, and
+    /// only one of those is a bug.
+    private var chromeHeight: CGFloat {
+        DS.Space.s6 + trayTitleHeight + DS.Space.s4 + DS.Space.s6 + Self.homeIndicatorAllowance
+    }
+    private static let homeIndicatorAllowance: CGFloat = 34
+
+    /// What the tray WOULD be with nothing clipped — the honest measure the
+    /// overflow gate reads, before the cap flattens it. Reads
+    /// `awareExpanded` (through the measured content), so the sheet visibly
+    /// grows when the spam pile is opened and settles back when it's closed,
+    /// both capped at `maxTrayHeight`.
+    private var uncappedHeight: CGFloat {
+        (contentHeight > 0 ? contentHeight : estimatedContentHeight) + chromeHeight
     }
 
     /// Chips exist to save a SCROLL, so the gate is overflow — not a
@@ -764,12 +806,18 @@ struct WalletWorthALookTray: View {
     /// group to jump between (jumping within a lone group is a no-op) —
     /// which in practice now means "the spam pile is expanded and long",
     /// since a short, spam-free 'Worth doing' rarely overflows on its own.
+    /// Overflow is the MEASURED overflow now, so the bar shows when there
+    /// really is more here than fits, not when the guess said so.
     private var showsJumpBar: Bool {
         superSectionIDs.count > 1 && uncappedHeight > Self.maxTrayHeight
     }
 
+    /// The jump bar costs its own height plus the gap to the content below.
+    private static let jumpBarHeight: CGFloat = 44
+
     private var trayHeight: CGFloat {
-        min(Self.maxTrayHeight, uncappedHeight + (showsJumpBar ? 44 : 0))
+        min(Self.maxTrayHeight,
+            uncappedHeight + (showsJumpBar ? Self.jumpBarHeight + DS.Space.s3 : 0))
     }
 
     /// Resizable now (2026-07-24, user: "it could be taller") — opens at its
@@ -838,6 +886,23 @@ struct WalletWorthALookTray: View {
                             if !flagged.isEmpty { awareSection }
                         }
                         .padding(.bottom, DS.Space.s2)
+                        // The content's REAL height, which is what the tray
+                        // sizes itself to (see `uncappedHeight`). A
+                        // ScrollView never constrains its content
+                        // vertically, so this is the natural, unclipped
+                        // height AND it doesn't move when the sheet does —
+                        // dragging the tray to `.large` and back leaves it
+                        // untouched, so feeding it back into the detent
+                        // can't chase its own tail. Measuring the scroll
+                        // VIEWPORT instead would: a viewport reports
+                        // whatever height the sheet currently happens to
+                        // have, mid-drag included. Declared INSIDE
+                        // `scrollTargetLayout()` so that stays the outermost
+                        // modifier on the content, where `scrollPosition`
+                        // below expects to find it.
+                        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { h in
+                            contentHeight = h
+                        }
                         .scrollTargetLayout()
                     }
                     // `scrollPosition`, not `ScrollViewReader.scrollTo`
