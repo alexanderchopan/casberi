@@ -1078,6 +1078,27 @@ enum ProbeHooks {
         // `-reingestPhotos YES` calls the bare re-scan BridgeRefresh now
         // uses (no permission request) — headless test that a photo added
         // AFTER connect is picked up on the next pass (report 2026-07-09).
+        // `-photoHealProbe YES` runs the Photos HEAL directly — the pass that
+        // OCRs, thumbnails, retitles (§218) and prunes. `-reingestPhotos` only
+        // LANDS assets; OCR has always lived here, which is why a landing probe
+        // alone leaves every row still saying "Screenshot". Logs what the pass
+        // did, then every screenshot's title and how many OCR characters back
+        // it — the one view that separates "OCR found nothing" (wordless, so
+        // the row should be a picture) from "the retitle didn't fire".
+        Hook(key: "photoHealProbe") { _, context in
+            Task { @MainActor in
+                let r = await ScreenshotIngest.heal(context: context)
+                NSLog("[Casberi] photoHeal: thumbed=%d ocred=%d removed=%d",
+                      r.thumbed, r.ocred, r.removed)
+                let shots = (try? context.fetch(FetchDescriptor<Thing>(
+                    predicate: #Predicate { $0.source == "Photos" },
+                    sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]))) ?? []
+                for t in shots.prefix(12) {
+                    NSLog("[Casberi] photoHealRow| ocr=%d title=%@",
+                          t.content.count, t.title)
+                }
+            }
+        },
         Hook(key: "reingestPhotos") { _, context in
             let n = ScreenshotIngest.ingest(context: context)
             NSLog("Photos re-ingest probe: %d new", n)

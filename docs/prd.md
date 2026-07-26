@@ -8603,3 +8603,69 @@ miss.
 Verified end to end on sim, all three arms: greeting → Try it → fork → screenshots landed 4 real
 screenshots and the cover lifted onto the All feed showing them grouped by day; wallet landed on
 the manager; follow landed 23 things from a real Bluesky handle. `-startPick` / `-startFollow`.
+
+## 218. The All feed says what things are (user: "how if at all would you change our 'all' feed", then "i like all these", "what else would you add for surprise and delight", "do it", 2026-07-25) — VERIFIED
+
+Six changes to the landing screen, from one root cause: **the feed was titled by convention, and
+for its highest-volume source the convention was a constant.**
+
+**Screenshots get their own words.** `ScreenshotIngest` has always OCR'd every screenshot into
+`content` and handed it to search, Spotlight and the embedding index — then titled the row with
+the literal string "Screenshot", forever. The app read every screenshot and showed you the word
+"Screenshot"; a real feed had four identical rows in a row. `ScreenshotTitle.from` now reads the
+title off that same text, and the swap needed no new animation: `BandRow`'s title already carries
+the §171 ripple, keyed on the string, so a retitle crossfades and a scroll never does. A row
+literally becomes its words a beat after it lands.
+
+Two things measured rather than assumed. First: take the first LINE, never a prefix of the joined
+text — Vision returns one region per line, top to bottom, and a screenshot's first region is
+almost always the status bar, so a prefix would title half the corpus "9:41". Second, and only
+found by running it: the first line that PASSES the filters is still usually chrome. On home-screen
+shots the survivors were the widget labels "Apps" and "Fitness", which retitled three different
+screenshots identically — the exact defect this entry exists to fix, wearing a different word. So
+the pick prefers the first line with 3+ words, falling back through 2 to any survivor. A line with
+three words is nearly always content; a bare noun is nearly always a label.
+
+A RETITLE HEAL carries it to screenshots that landed before this: they have their text but wear the
+placeholder, and `ocrAt` means they are never re-read, so without it the words already on the device
+would have stayed invisible forever. It costs no Vision and no pixels — it re-reads `content`. Only
+ever overwrites the placeholder: a title a capture path chose is never clobbered by machine text.
+
+**A wordless screenshot stops apologising.** When Vision finds nothing, the row used to wear a dead
+grey "Screenshot". It now drops the title entirely and gives the picture the room the words would
+have had (104×58) — because the picture IS the content, and it's the only row you have to look at to
+know what it is. Gated to a MINORITY of the day: past half, they fall back to the ordinary band,
+because a column of tiles is the Photos grid, a shape that already exists behind its own chip.
+
+**The last surface stops counting.** §213 retired volume as news in the brief; the widget's tally
+went the same day (§215). The All feed's day headers were the last place still doing it, and
+"Monday, Jun 15 · 1" was the clearest case against — a number that can only say "one", under a
+header already carrying the date. Bundles keep their counts: a bundle's number is its contents, not
+a tally of the day.
+
+**The tail folds.** `coarsenIfSparse` judges a feed as a whole and is all-or-nothing, which is right
+for one source's room. All spans the entire corpus, so its head is dense and its tail is always
+thin — and the whole-feed average, dragged up by the head, made All the ONE chronological feed that
+never coarsened. Scroll back far enough and it became the ladder of one-row day cards the
+2026-07-21 ruling killed everywhere else. The split is by recency now: the last 7 days always keep
+their own day cards, everything older goes through the existing sparseness gate.
+
+**The floor.** One quiet line at the bottom naming the date of the oldest thing kept. Delight that
+is a FACT, not a compliment — it can't fire wrongly and it can't fire twice — and it does structural
+work: a scroll with no visible end teaches you never to reach one, and the newly folded tail
+deserves a bottom. Withheld under 8 things or a week of history, where it would read as an
+empty-state apology. Deliberately not a count (§213).
+
+**A privacy hole found on the way.** The shell redacts itself on background so the app-switcher
+snapshot can't leak the corpus — but SwiftUI's `.redacted(.placeholder)` blanks Text and shapes and
+NOT Image, and nothing in the app read `redactionReasons`. So every screenshot thumbnail has been
+surviving into that snapshot with privacy.hidePreviews ON (its default). `PhotoWell` opts out by
+hand now. Found because the wide tile would have made an existing leak 4× more legible — the fix is
+worth more than the feature that surfaced it.
+
+Verified: the retitle heal on a real corpus gave four screenshots four distinct human titles
+("Saturday's match — our view", "Match day — from Dani's story", "Sunday five-a-side", "Watch party
+— Sunday's final") from text already on device, `ocred=0`. Day headers render countless.
+NOT yet seen on screen: the wide wordless tile, the coarsened tail and the floor — the demo corpus
+is dense, recent, and has no wordless screenshots, so none of those three conditions occur in it.
+Their logic is covered by `-photoHealProbe` and reading, not by a screenshot.

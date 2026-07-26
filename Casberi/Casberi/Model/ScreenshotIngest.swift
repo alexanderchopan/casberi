@@ -5,6 +5,68 @@ import UIKit
 /// Screenshot ingestion through PhotoKit (M1 capture path). The permission ask
 /// happens in context — connecting the Photos bridge is the moment of unlock —
 /// and connect ends in proof: found screenshots land as things immediately.
+/// A screenshot's title, read off its own OCR text (prd §218, 2026-07-25).
+///
+/// Screenshots were titled with the literal string "Screenshot" forever, while
+/// their OCR text went straight into `content` and on to search, Spotlight and
+/// the embedding index. So the app read every screenshot and then showed the
+/// person the word "Screenshot" — four identical rows in a row on a real feed,
+/// and (since the onboarding fork) potentially a new user's first impression of
+/// the whole product.
+///
+/// The first meaningful LINE, not the first N characters: Vision returns one
+/// line per recognized text region, top to bottom, and a screenshot's first
+/// region is almost always the status bar — a bare clock. Taking a prefix of
+/// the joined text would title half the corpus "9:41".
+enum ScreenshotTitle {
+    /// What a screenshot is called before (or without) readable text. Also the
+    /// marker the retitle heal looks for, so it must stay in sync with the
+    /// title `land` assigns.
+    static let placeholder = "Screenshot"
+
+    /// A clock ("9:41", "12:05 AM") — the status bar, present in nearly every
+    /// iOS screenshot and never what the shot is about.
+    private static let clock = /^\d{1,2}[:.]\d{2}(\s?[APap]\.?[Mm]\.?)?$/
+
+    /// nil when the text carries nothing worth a title — the caller keeps the
+    /// placeholder rather than inventing one (the honesty rule: a row that
+    /// can't say what it is says "Screenshot", never a guess).
+    static func from(_ ocrText: String) -> String? {
+        let candidates = ocrText
+            .split(separator: "\n", omittingEmptySubsequences: true)
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { line in
+                // Too short to mean anything: a stray glyph, a badge count, "OK".
+                guard line.count >= 4 else { return false }
+                // Needs a letter — "100%", "5G", "23:59" are chrome, not content.
+                guard line.contains(where: { $0.isLetter }) else { return false }
+                guard line.wholeMatch(of: clock) == nil else { return false }
+                // Status-bar words that survive the tests above.
+                return !["searching…", "searching...", "no service",
+                         "wi-fi", "airplane mode"].contains(line.lowercased())
+            }
+
+        // Prefer the first line that reads like PROSE, not the first line
+        // that merely passes the filters (measured 2026-07-25). Vision returns
+        // regions top-to-bottom, and the top of a screenshot is chrome: on a
+        // home-screen shot the first survivors were the widget labels "Apps"
+        // and "Fitness" — which retitled three different screenshots
+        // identically, the exact problem this change exists to fix, wearing a
+        // different word. A line with three words is nearly always the content
+        // (a message, a headline, a receipt line); a bare noun is nearly always
+        // a label. Falls back through two words to any survivor, so a genuinely
+        // terse screenshot still gets the best available line rather than none.
+        func words(_ s: String) -> Int {
+            s.split(whereSeparator: { $0 == " " || $0 == "\t" }).count
+        }
+        let best = candidates.first(where: { words($0) >= 3 })
+            ?? candidates.first(where: { words($0) >= 2 })
+            ?? candidates.first
+        guard let best else { return nil }
+        return best.count > 80 ? String(best.prefix(79)) + "…" : best
+    }
+}
+
 enum ScreenshotIngest {
 
     /// Requests read access if needed and ingests recent screenshots.
@@ -266,7 +328,7 @@ enum ScreenshotIngest {
             let date = asset.creationDate ?? .now
             let thing = Thing(
                 kind: .screenshot,
-                title: "Screenshot",   // when it landed is capturedAt — no timestamp noise in the title
+                title: ScreenshotTitle.placeholder,   // the OCR pass retitles it once it can (§218)
                 source: "Photos",
                 createdAt: date,
                 capturedAt: date,
@@ -317,6 +379,7 @@ enum ScreenshotIngest {
         var thumbed = 0, ocred = 0, removed = 0
         var removedIDs: [UUID] = []
         var reindex: [Thing] = []
+        var retitled = 0
         for (thing, id) in zip(things, ids) {
             if let asset = assets[id] {
                 // Bound the per-refresh work — the rest heal on later passes.
@@ -332,9 +395,32 @@ enum ScreenshotIngest {
                         thing.content = text
                         thing.embedding = nil   // re-embed with the new words
                         reindex.append(thing)   // Spotlight learns them too
+                        // The row stops saying "Screenshot" and says what it
+                        // is (§218). The swap rides `BandRow`'s existing
+                        // ripple (prd §171) — that transition is keyed on the
+                        // title string, so a retitle crossfades and a scroll
+                        // never does. Only ever overwrites the PLACEHOLDER: a
+                        // title someone's own capture path gave this thing is
+                        // never clobbered by machine-read text.
+                        if thing.title == ScreenshotTitle.placeholder,
+                           let read = ScreenshotTitle.from(text) {
+                            thing.title = read
+                        }
                     }
                     thing.ocrAt = .now
                     ocred += 1
+                }
+                // The RETITLE HEAL: a screenshot OCR'd before §218 has its
+                // text but still wears the placeholder, and `ocrAt` means it
+                // is never re-read — so without this the words already on
+                // device would stay invisible forever. Cheap (no Vision, no
+                // pixels): it reads `content` the earlier pass already wrote.
+                else if thing.title == ScreenshotTitle.placeholder,
+                        !thing.content.isEmpty,
+                        let read = ScreenshotTitle.from(thing.content) {
+                    thing.title = read
+                    retitled += 1
+                    reindex.append(thing)
                 }
             } else if fullAccess, thing.previewImageData == nil, !found.contains(id) {
                 removedIDs.append(thing.id)
@@ -342,7 +428,7 @@ enum ScreenshotIngest {
                 removed += 1
             }
         }
-        if thumbed > 0 || ocred > 0 || removed > 0 {
+        if thumbed > 0 || ocred > 0 || removed > 0 || retitled > 0 {
             context.saveHonestly()
             SpotlightIndex.remove(ids: removedIDs)
             SpotlightIndex.index(reindex)
